@@ -60,9 +60,9 @@ notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInsta
 notifyUpdateToBAP searchPi orderPi updatedStatus = do
   -- Send callback to BAP
   bapOrg <- fetchBapOrganization $ orderPi ^. #_caseId
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  notifyTripDetailsToGateway searchPi orderPi callbackUrl
-  notifyStatusUpdateReq searchPi updatedStatus callbackUrl
+  bapCallbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  notifyTripDetailsToGateway searchPi orderPi bapCallbackUrl
+  notifyStatusUpdateReq searchPi updatedStatus bapCallbackUrl
   where
     fetchBapOrganization caseId = do
       prodCase <- fetchCase caseId >>= fromMaybeM CaseNotFound
@@ -186,17 +186,17 @@ assignDriver productInstanceId driverId = do
         ]
 
 notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Flow ()
-notifyTripDetailsToGateway searchPi orderPi callbackUrl = do
+notifyTripDetailsToGateway searchPi orderPi bapCallbackUrl = do
   trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #_caseId) Case.LOCATIONTRACKER
   transporter <- OQ.findOrganizationById . Id $ searchPi ^. #_organizationId
   let bppShortId = getShortId $ transporter ^. #_shortId
   parentCase <- CQ.findById (searchPi ^. #_caseId)
   case (trackerCase, parentCase) of
-    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y callbackUrl bppShortId
+    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y bapCallbackUrl bppShortId
     _ -> return ()
 
 notifyStatusUpdateReq :: PI.ProductInstance -> PI.ProductInstanceStatus -> BaseUrl -> Flow ()
-notifyStatusUpdateReq searchPi status callbackUrl = do
+notifyStatusUpdateReq searchPi status bapCallbackUrl = do
   transporterOrg <- findOrganization
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
   searchCase <- Case.findById $ searchPi ^. #_caseId
@@ -204,8 +204,7 @@ notifyStatusUpdateReq searchPi status callbackUrl = do
   case status of
     PI.CANCELLED -> do
       admins <- getAdmins transporterOrg
-      bapUri <- searchPi ^. #_udf4 & fromMaybeM (PIFieldNotPresent "udf4") >>= parseBaseUrl
-      BP.notifyCancelToGateway (searchPi ^. #_id) callbackUrl bppShortId txnId bapUri
+      BP.notifyCancelToGateway (searchPi ^. #_id) bapCallbackUrl bppShortId txnId
       Notify.notifyCancelReqByBP searchPi admins
     PI.TRIP_REASSIGNMENT -> do
       admins <- getAdmins transporterOrg
@@ -220,4 +219,4 @@ notifyStatusUpdateReq searchPi status callbackUrl = do
         else pure []
     notifyStatusToGateway bppShortId txnId = do
       trackerPi <- PIQ.findByParentIdType (searchPi ^. #_id) Case.LOCATIONTRACKER
-      BP.notifyServiceStatusToGateway (searchPi ^. #_id) trackerPi callbackUrl bppShortId txnId
+      BP.notifyServiceStatusToGateway (searchPi ^. #_id) trackerPi bapCallbackUrl bppShortId txnId

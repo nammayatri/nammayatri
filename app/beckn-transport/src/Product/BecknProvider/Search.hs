@@ -32,6 +32,7 @@ import qualified Product.BecknProvider.BP as BP
 import Product.FareCalculator
 import qualified Product.Location as Location
 import qualified Product.Person as Person
+import Servant.Client (BaseUrl)
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Location as Loc
 import qualified Storage.Queries.Organization as Org
@@ -59,13 +60,14 @@ search transporterId bapOrg req = withFlowHandlerBecknAPI $
       fromLocation <- mkFromStop now pickup
       toLocation <- mkFromStop now dropOff
       let bapOrgId = bapOrg ^. #_id
+      bapCallbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
       deadDistance <- calculateDeadDistance transporter fromLocation
       let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
       DB.runSqlDBTransaction $ do
         Loc.create fromLocation
         Loc.create toLocation
         QCase.create productCase
-      fork "OnSearchCallback" $ onSearchCallback productCase transporter fromLocation toLocation
+      fork "OnSearchCallback" $ onSearchCallback bapCallbackUrl productCase transporter fromLocation toLocation
     return Ack
 
 mkFromStop :: UTCTime -> Stop.Stop -> Flow Location.Location
@@ -150,8 +152,8 @@ calculateDeadDistance organization fromLocation = do
       pure Nothing
     Right mDistance -> return mDistance
 
-onSearchCallback :: Case.Case -> Org.Organization -> Location.Location -> Location.Location -> Flow ()
-onSearchCallback productCase transporter fromLocation toLocation = do
+onSearchCallback :: BaseUrl -> Case.Case -> Org.Organization -> Location.Location -> Location.Location -> Flow ()
+onSearchCallback bapUri productCase transporter fromLocation toLocation = do
   let transporterId = transporter ^. #_id
   result <- runSafeFlow $ do
     vehicleVariant :: Vehicle.Variant <-
@@ -181,10 +183,10 @@ onSearchCallback productCase transporter fromLocation toLocation = do
       let productStatus = prodInst ^. #_status
       logTagInfo "OnSearchCallback" $
         "Sending on_search callback with status " +|| productStatus ||+ " for product " +|| prodInst ^. #_id ||+ ""
-      void $ sendOnSearchSuccess productCase transporter prodInst
+      void $ sendOnSearchSuccess bapUri productCase transporter prodInst
     Left err -> do
       logTagError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
-      void $ sendOnSearchFailed productCase transporter err
+      void $ sendOnSearchFailed bapUri productCase transporter err
 
 mkProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
 mkProductInstance productCase price status transporterId = do
@@ -224,8 +226,8 @@ mkProductInstance productCase price status transporterId = do
           }
   pure productInstance
 
-sendOnSearchFailed :: Case.Case -> Org.Organization -> Text -> Flow AckResponse
-sendOnSearchFailed productCase transporterOrg err = do
+sendOnSearchFailed :: BaseUrl -> Case.Case -> Org.Organization -> Text -> Flow AckResponse
+sendOnSearchFailed bapUri productCase transporterOrg err = do
   appEnv <- ask
   currTime <- getCurrentTime
   let context =
@@ -238,7 +240,7 @@ sendOnSearchFailed productCase transporterOrg err = do
             _domain_version = Just "0.8.2",
             _transaction_id = last $ T.split (== '_') $ productCase ^. #_shortId,
             _message_id = productCase ^. #_shortId,
-            _bap_uri = Nothing,
+            _bap_uri = Just bapUri,
             _bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
             _timestamp = currTime,
             _ttl = Nothing
@@ -258,19 +260,19 @@ sendOnSearchFailed productCase transporterOrg err = do
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
   Gateway.onSearch payload bppShortId
 
-sendOnSearchSuccess :: Case.Case -> Org.Organization -> ProductInstance.ProductInstance -> Flow AckResponse
-sendOnSearchSuccess productCase transporterOrg productInstance = do
+sendOnSearchSuccess :: BaseUrl -> Case.Case -> Org.Organization -> ProductInstance.ProductInstance -> Flow AckResponse
+sendOnSearchSuccess bapUri productCase transporterOrg productInstance = do
   let piStatus = productInstance ^. #_status
   let productInstances =
         case piStatus of
           ProductInstance.OUTOFSTOCK -> []
           _ -> [productInstance]
-  onSearchPayload <- mkOnSearchPayload productCase productInstances transporterOrg
+  onSearchPayload <- mkOnSearchPayload bapUri productCase productInstances transporterOrg
   let bppShortId = getShortId $ transporterOrg ^. #_shortId
   Gateway.onSearch onSearchPayload bppShortId
 
-mkOnSearchPayload :: Case.Case -> [ProductInstance.ProductInstance] -> Org.Organization -> Flow API.OnSearchReq
-mkOnSearchPayload productCase productInstances transporterOrg = do
+mkOnSearchPayload :: BaseUrl -> Case.Case -> [ProductInstance.ProductInstance] -> Org.Organization -> Flow API.OnSearchReq
+mkOnSearchPayload bapUri productCase productInstances transporterOrg = do
   currTime <- getCurrentTime
   appEnv <- ask
   let context =
@@ -283,7 +285,7 @@ mkOnSearchPayload productCase productInstances transporterOrg = do
             _domain_version = Just "0.8.2",
             _transaction_id = last $ T.split (== '_') $ productCase ^. #_shortId,
             _message_id = productCase ^. #_shortId,
-            _bap_uri = Nothing,
+            _bap_uri = Just bapUri,
             _bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
             _timestamp = currTime,
             _ttl = Nothing

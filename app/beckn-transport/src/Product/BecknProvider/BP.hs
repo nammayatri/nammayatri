@@ -76,15 +76,14 @@ cancelRide rideId requestedByDriver = do
   orderCase <- Case.findById (orderPi ^. #_caseId)
   bapOrgId <- Case._udf4 orderCase & fromMaybeM (CaseFieldNotPresent "udf4")
   bapOrg <- Organization.findOrganizationById $ Id bapOrgId
-  callbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  bapCallbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let transporterId = Id $ ProductInstance._organizationId orderPi
   transporter <- Organization.findOrganizationById transporterId
   let bppShortId = getShortId $ transporter ^. #_shortId
   searchCaseId <- orderCase ^. #_parentCaseId & fromMaybeM (CaseFieldNotPresent "parentCaseId")
   searchCase <- Case.findById searchCaseId
   let txnId = last . T.splitOn "_" $ searchCase ^. #_shortId
-  bapUri <- searchCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4") >>= parseBaseUrl
-  notifyCancelToGateway searchPiId callbackUrl bppShortId txnId bapUri
+  notifyCancelToGateway searchPiId bapCallbackUrl bppShortId txnId
 
   case piList of
     [] -> pure ()
@@ -155,8 +154,9 @@ mkOnServiceStatusPayload piId trackerPi txnId = do
     fetchBapUri = do
       searchPi <- ProductInstance.findById piId
       searchCase <- Case.findById (searchPi ^. #_caseId)
-      (searchCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4"))
-        >>= parseBaseUrl
+      bapOrgId <- Case._udf4 searchCase & fromMaybeM (CaseFieldNotPresent "udf4")
+      Organization.findOrganizationById (Id bapOrgId)
+        >>= fromMaybeM (OrgFieldNotPresent "callback_url") . (^. #_callbackUrl)
     mkOrderRes prodInstId productId status = do
       now <- getCurrentTime
       return $
@@ -196,17 +196,17 @@ notifyTripUrlToGateway case_ context callbackUrl bppShortId = do
   return ()
 
 notifyTripInfoToGateway :: ProductInstance.ProductInstance -> Case.Case -> Case.Case -> BaseUrl -> Text -> Flow ()
-notifyTripInfoToGateway prodInst trackerCase parentCase callbackUrl bppShortId = do
-  onUpdatePayload <- mkOnUpdatePayload prodInst trackerCase parentCase
+notifyTripInfoToGateway prodInst trackerCase parentCase bapCallbackUrl bppShortId = do
+  onUpdatePayload <- mkOnUpdatePayload bapCallbackUrl prodInst trackerCase parentCase
   logTagInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
-  _ <- Gateway.onUpdate callbackUrl onUpdatePayload bppShortId
+  _ <- Gateway.onUpdate bapCallbackUrl onUpdatePayload bppShortId
   return ()
 
-notifyCancelToGateway :: Id ProductInstance.ProductInstance -> BaseUrl -> Text -> Text -> BaseUrl -> Flow ()
-notifyCancelToGateway prodInstId callbackUrl bppShortId txnId bapUri = do
-  onCancelPayload <- mkCancelRidePayload prodInstId txnId bapUri -- search product instance id
+notifyCancelToGateway :: Id ProductInstance.ProductInstance -> BaseUrl -> Text -> Text -> Flow ()
+notifyCancelToGateway prodInstId bapCallbackUrl bppShortId txnId = do
+  onCancelPayload <- mkCancelRidePayload prodInstId txnId bapCallbackUrl -- search product instance id
   logTagInfo "notifyGateway Request" $ show onCancelPayload
-  _ <- Gateway.onCancel callbackUrl onCancelPayload bppShortId
+  _ <- Gateway.onCancel bapCallbackUrl onCancelPayload bppShortId
   return ()
 
 mkOnTrackTripPayload :: Case.Case -> Context -> Flow API.OnTrackTripReq
@@ -239,10 +239,9 @@ mkTrip c orderPi = do
         route = Nothing
       }
 
-mkOnUpdatePayload :: ProductInstance.ProductInstance -> Case.Case -> Case.Case -> Flow API.OnUpdateReq
-mkOnUpdatePayload prodInst case_ pCase = do
+mkOnUpdatePayload :: BaseUrl -> ProductInstance.ProductInstance -> Case.Case -> Case.Case -> Flow API.OnUpdateReq
+mkOnUpdatePayload bapUri prodInst case_ pCase = do
   let txnId = last . T.splitOn "_" $ pCase ^. #_shortId
-  bapUri <- pCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4") >>= parseBaseUrl
   bppUri <- asks xAppUri
   context <- buildContext "on_update" txnId (Just bapUri) (Just bppUri)
   trip <- mkTrip case_ prodInst
