@@ -21,9 +21,10 @@ autoComplete ::
   Text ->
   Integer ->
   Text ->
+  Text ->
   FlowR r GoogleMaps.SearchLocationResp
-autoComplete url apiKey input location radius components = do
-  callAPI url (API.autoComplete apiKey input location radius components) "autoComplete"
+autoComplete url apiKey input location radius components lang = do
+  callAPI url (API.autoComplete apiKey input location radius components lang) "autoComplete"
     >>= fromEitherM (googleMapsError url)
 
 placeDetails ::

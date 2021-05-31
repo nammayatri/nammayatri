@@ -7,12 +7,12 @@ import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import EulerHS.Prelude
 import Utils.Common (withFlowHandlerAPI)
 
-autoComplete :: RegToken.RegistrationToken -> Text -> Text -> Integer -> FlowHandler GoogleMaps.SearchLocationResp
-autoComplete _auth input location radius = withFlowHandlerAPI $ do
+autoComplete :: RegToken.RegistrationToken -> Text -> Text -> Integer -> Text -> FlowHandler GoogleMaps.SearchLocationResp
+autoComplete _auth input location radius lang = withFlowHandlerAPI $ do
   url <- googleMapsUrl <$> ask
   apiKey <- googleMapsKey <$> ask
   let components = "country:in"
-  ClientGoogleMaps.autoComplete url apiKey input location radius components
+  ClientGoogleMaps.autoComplete url apiKey input location radius components lang
 
 placeDetails :: RegToken.RegistrationToken -> Text -> FlowHandler GoogleMaps.PlaceDetailsResp
 placeDetails _auth placeId = withFlowHandlerAPI $ do

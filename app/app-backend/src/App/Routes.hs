@@ -397,6 +397,7 @@ type GoogleMapsProxyAPI =
            :> MandatoryQueryParam "input" Text
            :> MandatoryQueryParam "location" Text -- Passing it as <latitude>,<longitude>
            :> MandatoryQueryParam "radius" Integer
+           :> MandatoryQueryParam "language" Text
            :> Get '[JSON] GoogleMaps.SearchLocationResp
            :<|> "placeDetails"
              :> TokenAuth
