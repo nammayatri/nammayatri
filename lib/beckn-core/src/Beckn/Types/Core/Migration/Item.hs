@@ -14,7 +14,10 @@ data Item = Item
     _category_id :: Maybe Text,
     _location_id :: Maybe Text,
     _time :: Maybe Time,
-    _tags :: Tags
+    _matched :: Maybe Bool,
+    _related :: Maybe Bool,
+    _recommended :: Maybe Bool,
+    _tags :: Maybe Tags
   }
   deriving (Generic, Show)
 

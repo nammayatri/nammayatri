@@ -1,4 +1,9 @@
-module Beckn.Types.Core.Migration.Fulfillment (Fulfillment (..), Agent (..), FulfillmentDetails (..)) where
+module Beckn.Types.Core.Migration.Fulfillment
+  ( Fulfillment (..),
+    FulfillmentParticipant (..),
+    FulfillmentDetails (..),
+  )
+where
 
 import Beckn.Types.Core.Migration.Contact (Contact)
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
@@ -8,7 +13,6 @@ import Beckn.Types.Core.Migration.State (State)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
-import Beckn.Utils.JSON (uniteObjects)
 import Data.Aeson (withObject, (.!=), (.:), (.:?))
 import EulerHS.Prelude hiding (State)
 
@@ -17,7 +21,8 @@ data Fulfillment = Fulfillment
     _type :: Maybe Text,
     _state :: Maybe State,
     _tracking :: Bool,
-    _agent :: Maybe Agent,
+    _customer :: Maybe FulfillmentParticipant,
+    _agent :: Maybe FulfillmentParticipant,
     _vehicle :: Maybe Vehicle,
     _start :: Maybe FulfillmentDetails,
     _end :: Maybe FulfillmentDetails,
@@ -33,6 +38,7 @@ instance FromJSON Fulfillment where
       <*> o .:? "type"
       <*> o .:? "state"
       <*> o .:? "tracking" .!= False
+      <*> o .:? "customer"
       <*> o .:? "agent"
       <*> o .:? "vehicle"
       <*> o .:? "start"
@@ -43,21 +49,24 @@ instance FromJSON Fulfillment where
 instance ToJSON Fulfillment where
   toJSON = genericToJSON stripLensPrefixOptions
 
--- allOf union
-data Agent = Agent Person [Contact]
+data FulfillmentParticipant = FulfillmentParticipant
+  { _person :: Maybe Person,
+    _contact :: Maybe Contact
+  }
   deriving (Generic, Show)
 
-instance FromJSON Agent where
-  parseJSON v = Agent <$> parseJSON v <*> parseJSON v
+instance FromJSON FulfillmentParticipant where
+  parseJSON = genericParseJSON stripLensPrefixOptions
 
-instance ToJSON Agent where
-  toJSON (Agent p cs) = uniteObjects [toJSON p, toJSON cs]
+instance ToJSON FulfillmentParticipant where
+  toJSON = genericToJSON stripLensPrefixOptions
 
 data FulfillmentDetails = FulfillmentDetails
   { _location :: Maybe Location,
     _time :: Maybe Time,
     _instructions :: Maybe Descriptor,
-    _contact :: [Contact]
+    _contact :: Contact,
+    _person :: Person
   }
   deriving (Generic, Show)
 

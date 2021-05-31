@@ -1,6 +1,6 @@
 module Beckn.Utils.JSON where
 
-import Data.Aeson (Options (..), Value (..), defaultOptions)
+import Data.Aeson (Options (..), SumEncoding (ObjectWithSingleField), Value (..), defaultOptions)
 import Data.HashMap.Strict (size, unions)
 import Data.Text (pack, replace, toLower, unpack)
 import EulerHS.Prelude hiding (pack, unpack)
@@ -46,3 +46,10 @@ uniteObjects values =
     unwrapObject (Object o) = o
     unwrapObject e = error ("expected Object, got " <> show e)
     sumOfSizes = sum $ map size objects
+
+objectWithSingleFieldParsing :: (String -> String) -> Options
+objectWithSingleFieldParsing constructorMapping =
+  defaultOptions
+    { sumEncoding = ObjectWithSingleField,
+      constructorTagModifier = constructorMapping
+    }

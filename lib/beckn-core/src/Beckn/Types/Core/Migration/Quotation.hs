@@ -7,7 +7,7 @@ import EulerHS.Prelude
 
 data Quotation = Quotation
   { _price :: Maybe Price,
-    _breakup :: [BreakupItem],
+    _breakup :: Maybe [BreakupItem],
     _ttl :: Maybe Duration
   }
   deriving (Generic, Show)

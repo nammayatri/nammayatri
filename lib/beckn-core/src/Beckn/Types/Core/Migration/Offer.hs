@@ -7,9 +7,9 @@ import EulerHS.Prelude
 data Offer = Offer
   { _id :: Maybe Text,
     _descriptor :: Maybe Descriptor,
-    _location_ids :: [Text],
-    _category_ids :: [Text],
-    _item_ids :: [Text],
+    _location_ids :: Maybe [Text],
+    _category_ids :: Maybe [Text],
+    _item_ids :: Maybe [Text],
     _time :: Maybe Time
   }
   deriving (Generic, Show)

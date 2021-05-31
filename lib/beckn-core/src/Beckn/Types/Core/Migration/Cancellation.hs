@@ -11,7 +11,7 @@ import EulerHS.Prelude
 data Cancellation = Cancellation
   { _type :: Maybe CancellationType,
     _ref_id :: Maybe Text,
-    _policies :: [Policy],
+    _policies :: Maybe [Policy],
     _time :: Maybe UTCTime,
     _cancelled_by :: Maybe Text,
     _reasons :: Maybe Option,

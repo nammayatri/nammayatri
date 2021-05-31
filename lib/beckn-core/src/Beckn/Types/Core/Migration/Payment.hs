@@ -7,8 +7,9 @@ module Beckn.Types.Core.Migration.Payment
 where
 
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
+import Beckn.Types.Core.Migration.Person (Person)
 import Beckn.Types.Core.Migration.Time (Time)
-import Beckn.Utils.JSON (constructorsWithHyphens, uniteObjects)
+import Beckn.Utils.JSON (constructorsWithHyphens, objectWithSingleFieldParsing, uniteObjects)
 import Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
 import Data.HashMap.Strict (delete)
@@ -19,6 +20,7 @@ data Payment = Payment
   { _uri :: Maybe BaseUrl,
     _tl_method :: Maybe TLMethod,
     _params :: Maybe Params,
+    _payee :: Maybe Payee,
     _type :: Maybe PaymentType,
     _status :: Maybe Status,
     _time :: Maybe Time
@@ -62,6 +64,35 @@ instance ToJSON Params where
         [ "transaction_id" .= _transaction_id,
           "amount" .= _amount
         ]
+
+data Payee = PersonPayee Person | VPA Text | BankAccPayment BankAccount
+  deriving (Generic, Eq, Show)
+
+instance FromJSON Payee where
+  parseJSON = genericParseJSON $ objectWithSingleFieldParsing payeeConstructorMapping
+
+instance ToJSON Payee where
+  toJSON = genericToJSON $ objectWithSingleFieldParsing payeeConstructorMapping
+
+payeeConstructorMapping :: String -> String
+payeeConstructorMapping = \case
+  "PersonPayee" -> "person"
+  "VPA" -> "vpa"
+  "BankAccPayment" -> "bank_account"
+  err -> error "Unexpected constructor name \"" <> err <> "\" in function payeeConstructorMapping"
+
+data BankAccount = BankAccount
+  { _ifsc_code :: Maybe Text,
+    _account_number :: Maybe Text,
+    _account_holder_name :: Maybe Text
+  }
+  deriving (Generic, Eq, Show)
+
+instance FromJSON BankAccount where
+  parseJSON = genericParseJSON stripAllLensPrefixOptions
+
+instance ToJSON BankAccount where
+  toJSON = genericToJSON stripAllLensPrefixOptions
 
 data PaymentType
   = ON_ORDER

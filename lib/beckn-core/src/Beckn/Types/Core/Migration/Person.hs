@@ -6,12 +6,12 @@ import Beckn.Types.Core.Migration.Tags (Tags)
 import EulerHS.Prelude
 
 data Person = Person
-  { _name :: Maybe Name,
+  { _name :: Name,
     _image :: Maybe Image,
     _dob :: Maybe Text, -- format: date
     _gender :: Maybe Text,
     _cred :: Maybe Text,
-    _tags :: Tags
+    _tags :: Maybe Tags
   }
   deriving (Eq, Generic, Show)
 

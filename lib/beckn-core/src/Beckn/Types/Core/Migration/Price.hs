@@ -3,7 +3,6 @@ module Beckn.Types.Core.Migration.Price (Price (..)) where
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
 import EulerHS.Prelude
 
--- allOf case
 data Price = Price
   { _currency :: Maybe Text,
     _value :: Maybe DecimalValue,
