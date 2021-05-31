@@ -17,6 +17,7 @@ import Utils.Common
 setDriverAcceptance :: SR.RegistrationToken -> SetDriverAcceptanceReq -> FlowHandler SetDriverAcceptanceRes
 setDriverAcceptance SR.RegistrationToken {..} SetDriverAcceptanceReq {..} = withFlowHandlerAPI $ do
   now <- getCurrentTime
+  logTagInfo "setDriverAcceptance" $ redisKey <> " " <> show _response
   Redis.setExRedis redisKey (driverResponse now) 600
   pure Success
   where
