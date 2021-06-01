@@ -9,6 +9,7 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as ET
+import qualified Servant.Client as S
 import Servant.Client.Core
 
 callAPI ::
@@ -44,3 +45,6 @@ callAPI' mbManagerSelector baseUrl eulerClient desc = do
         Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
         Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
         Left (ConnectionError _) -> "Connection error"
+
+parseBaseUrl :: MonadThrow m => Text -> m S.BaseUrl
+parseBaseUrl = S.parseBaseUrl . T.unpack

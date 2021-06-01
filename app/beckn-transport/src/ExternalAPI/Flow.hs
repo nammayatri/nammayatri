@@ -14,7 +14,6 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import EulerHS.Prelude
 import qualified ExternalAPI.Types as API
-import Servant.Client (BaseUrl)
 import Storage.Queries.Organization as Org
 import Types.Error
 import Utils.Auth

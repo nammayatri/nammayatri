@@ -25,7 +25,6 @@ import ExternalAPI.Transform as ExternalAPITransform
 import qualified Models.Case as Case
 import qualified Product.BecknProvider.BP as BP
 import Product.Person (calculateDriverPool, setDriverPool)
-import Servant.Client (BaseUrl)
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.ProductInstance as QProductInstance

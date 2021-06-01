@@ -12,7 +12,6 @@ import Beckn.Utils.Common
 import Data.Geospatial
 import EulerHS.Prelude
 import GHC.Records (HasField (..))
-import Servant.Client (BaseUrl)
 import Prelude (atan2)
 
 getRouteMb ::
@@ -22,7 +21,7 @@ getRouteMb ::
   MapSearch.Request ->
   FlowR r (Maybe MapSearch.Route)
 getRouteMb request =
-  (headMaybe . (^. #routes) <$> getRoute request)
+  (listToMaybe . (^. #routes) <$> getRoute request)
     `catch` \(_ :: RouteError) -> pure Nothing
 
 getRoute ::

@@ -32,7 +32,6 @@ import qualified Product.BecknProvider.BP as BP
 import Product.FareCalculator
 import qualified Product.Location as Location
 import qualified Product.Person as Person
-import Servant.Client (BaseUrl)
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Location as Loc
 import qualified Storage.Queries.Organization as Org

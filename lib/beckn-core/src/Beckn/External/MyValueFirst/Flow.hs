@@ -9,7 +9,6 @@ import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
-import Servant.Client
 
 submitSms :: HasCoreMetrics r => BaseUrl -> SubmitSms -> FlowR r ()
 submitSms url params = do

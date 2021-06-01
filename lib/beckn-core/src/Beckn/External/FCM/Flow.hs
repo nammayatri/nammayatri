@@ -36,7 +36,6 @@ import EulerHS.Prelude hiding ((^.))
 import qualified EulerHS.Types as ET
 import GHC.Records (HasField (..))
 import Servant
-import Servant.Client
 
 -- | Create FCM message
 -- Note that data should be formed as key-value pairs list

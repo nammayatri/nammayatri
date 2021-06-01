@@ -1,4 +1,9 @@
-module Beckn.Types.Logging where
+module Beckn.Types.Logging
+  ( LogLevel (..),
+    Log (..),
+    LoggerConfig (..),
+  )
+where
 
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude

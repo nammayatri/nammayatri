@@ -4,7 +4,7 @@ module Product.Status (status, onStatus) where
 
 import App.Types
 import Beckn.Types.APISuccess (APISuccess (Success))
-import Beckn.Types.Common hiding (status)
+import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Status as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id

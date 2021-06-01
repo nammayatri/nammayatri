@@ -435,7 +435,7 @@ mkCreateTaskReq order = do
 
     mkPersonDetails :: PickupOrDrop -> Flow PersonDetails
     mkPersonDetails PickupOrDrop {..} = do
-      phone <- headMaybe (_poc ^. #phones) & fromMaybeErr "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003)
+      phone <- listToMaybe (_poc ^. #phones) & fromMaybeErr "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003)
       return $
         PersonDetails
           { name = getName (_poc ^. #name),

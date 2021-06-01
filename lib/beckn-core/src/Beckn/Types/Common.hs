@@ -3,30 +3,20 @@
 
 module Beckn.Types.Common
   ( module Beckn.Types.Common,
-    module Beckn.Types.Flow,
-    module Beckn.Types.Logging,
-    module Beckn.Types.Time,
-    module Beckn.Types.MonadGuid,
-    module Beckn.Types.GuidLike,
+    module Common,
+    BaseUrl,
   )
 where
 
-import Beckn.Types.Flow
-import Beckn.Types.GuidLike
-import Beckn.Types.Logging
-import Beckn.Types.MonadGuid
-import Beckn.Types.Time
+import Beckn.Types.Flow as Common
+import Beckn.Types.GuidLike as Common
+import Beckn.Types.Logging as Common
+import Beckn.Types.MonadGuid as Common
+import Beckn.Types.Time as Common
 import Data.Aeson
 import Data.Generics.Labels ()
-import Data.Swagger hiding (tags)
 import EulerHS.Prelude
-
-data ErrorResponse = ErrorResponse
-  { status :: Text,
-    responseCode :: Text,
-    responseMessage :: Text
-  }
-  deriving (Show, Generic, ToJSON, ToSchema)
+import Servant.Client (BaseUrl)
 
 newtype IdObject = IdObject
   { id :: Text

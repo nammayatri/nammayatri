@@ -8,7 +8,6 @@ import qualified Beckn.Storage.Common as DB
 import Beckn.Storage.DB.Config hiding (schemaName)
 import qualified Beckn.Storage.DB.Config as DB
 import Beckn.Types.Schema
-import Beckn.Types.Time (MonadTime, getCurrentTime)
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import qualified Database.Beam as B

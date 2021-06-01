@@ -15,6 +15,8 @@ module Beckn.Utils.Logging
     logError,
     appendLogContext,
     withTransactionIdLogTag,
+    logOutput',
+    withLogTag',
   )
 where
 
@@ -24,11 +26,36 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text.Encoding as Txt
 import qualified Data.Time as Time
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Runtime
 import EulerHS.Types (LogContext)
 import qualified EulerHS.Types as T
 import GHC.Records
+import qualified Prelude as P
+
+logOutput' :: L.MonadFlow m => LogLevel -> T.Message -> m ()
+logOutput' logLevel message =
+  case logLevel of
+    DEBUG -> L.logDebug EmtpyTag message
+    INFO -> L.logInfo EmtpyTag message
+    WARNING -> L.logWarning EmtpyTag message
+    ERROR -> L.logError EmtpyTag message
+
+withLogTag' ::
+  L.MonadFlow m =>
+  Text ->
+  ReaderT r L.Flow a ->
+  ReaderT r m a
+withLogTag' lc flowR =
+  ReaderT $
+    L.withLoggerContext (appendLogContext lc)
+      . runReaderT flowR
+
+data EmtpyTag = EmtpyTag
+
+instance P.Show EmtpyTag where
+  show _ = ""
 
 logTagDebug :: Log m => Text -> Text -> m ()
 logTagDebug tag = withLogTag tag . logOutput DEBUG

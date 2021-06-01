@@ -253,7 +253,7 @@ mkItemDetails item =
 
 mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
 mkLocationDetails PickupOrDrop {..} = do
-  phone <- headMaybe (_poc ^. #phones) & fromMaybeM (InternalError "Person phone number is not present.")
+  phone <- listToMaybe (_poc ^. #phones) & fromMaybeM (InternalError "Person phone number is not present.")
   address <- mkAddress _location
   return $
     LocationDetails

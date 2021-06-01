@@ -9,7 +9,7 @@ import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import GHC.Records (HasField)
-import Servant.Client.Core (BaseUrl, ClientError)
+import Servant.Client.Core (ClientError)
 
 autoComplete ::
   ( HasField "dbCfg" r DBConfig,
