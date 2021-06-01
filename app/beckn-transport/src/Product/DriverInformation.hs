@@ -118,6 +118,6 @@ linkVehicle orgId personId req = withFlowHandlerAPI $ do
     )
     (throwError Unauthorized)
   prevPerson <- QPerson.findByVehicleId $ req.vehicleId
-  whenJust prevPerson (\p -> QPerson.updateVehicle (p.id) Nothing)
+  whenJust prevPerson $ \_ -> throwError VehicleAlreadyLinked
   QPerson.updateVehicle personId $ Just (req.vehicleId)
   return APISuccess.Success

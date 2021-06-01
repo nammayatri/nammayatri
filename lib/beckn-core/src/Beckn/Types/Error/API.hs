@@ -95,6 +95,7 @@ instance IsAPIError AuthPIError where
 data VehicleError
   = VehicleNotFound
   | VehicleDoesNotExist
+  | VehicleAlreadyLinked
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''VehicleError
@@ -103,9 +104,11 @@ instance IsAPIError VehicleError where
   toErrorCode = \case
     VehicleNotFound -> "VEHICLE_NOT_FOUND"
     VehicleDoesNotExist -> "VEHICLE_DOES_NOT_EXIST"
+    VehicleAlreadyLinked -> "VEHICLE_ALREADY_LINKED"
   toHttpCode = \case
     VehicleNotFound -> E500
     VehicleDoesNotExist -> E400
+    VehicleAlreadyLinked -> E400
 
 data PersonError
   = PersonNotFound
