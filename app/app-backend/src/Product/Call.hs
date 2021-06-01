@@ -24,10 +24,6 @@ import Types.Storage.Case as Case
 import Types.Storage.Person as Person
 import Types.Storage.ProductInstance as ProductInstance
 import Utils.Common
-  ( decodeFromText,
-    fromMaybeM,
-    withFlowHandlerAPI,
-  )
 
 -- | Try to initiate a call customer -> provider
 initiateCallToProvider :: Id Person.Person -> CallReq -> FlowHandler CallRes
@@ -35,6 +31,7 @@ initiateCallToProvider personId req = withFlowHandlerAPI . withPersonIdLogTag pe
   let piId = req.productInstanceId
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall customerPhone providerPhone
+  logTagInfo ("ProdInstId:" <> piId) "Call initiated from customer to provider."
   return Ack
 
 -- | Try to initiate a call provider -> customer
@@ -43,6 +40,7 @@ initiateCallToCustomer req = withFlowHandlerAPI $ do
   let piId = req.productInstanceId -- RIDESEARCH PI
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall providerPhone customerPhone
+  logTagInfo ("ProdInstId:" <> piId) "Call initiated from provider to customer."
   return Ack
 
 getDriver :: (MonadFlow m) => ProductInstance -> m Driver.Driver

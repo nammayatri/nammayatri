@@ -5,11 +5,12 @@ module Beckn.Types.Error where
 
 import Beckn.Types.Error.BaseError
 import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (fromResponse))
 import EulerHS.Prelude
 import EulerHS.Types (KVDBReply)
-import Network.HTTP.Types (Header)
+import Network.HTTP.Types (Header, Status (statusCode))
 import Network.HTTP.Types.Header (HeaderName)
-import Servant.Client (BaseUrl, ClientError, showBaseUrl)
+import Servant.Client (BaseUrl, ClientError, ResponseF (responseStatusCode), showBaseUrl)
 
 -- TODO: sort out proper codes, namings and usages for Unauthorized and AccessDenied
 data AuthError
@@ -553,3 +554,54 @@ instance IsHTTPError AgencyDisabled where
   toHttpCode AgencyDisabled = E503
 
 instance IsAPIError AgencyDisabled
+
+data ExotelError
+  = ExotelNotConfigured
+  | ExotelBadRequest
+  | ExotelUnauthorized
+  | ExitelPaymentRequired
+  | ExotelAccessDenied
+  | ExotelNotFound
+  | ExotelConflict
+  | ExotelTooManyRequests
+  | ExotelServerError
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''ExotelError
+
+instance FromResponse ExotelError where
+  fromResponse resp = case statusCode $ responseStatusCode resp of
+    400 -> Just ExotelBadRequest
+    401 -> Just ExotelUnauthorized
+    402 -> Just ExitelPaymentRequired
+    403 -> Just ExotelAccessDenied
+    404 -> Just ExotelNotFound
+    409 -> Just ExotelConflict
+    429 -> Just ExotelTooManyRequests
+    _ -> Just ExotelServerError
+
+instance IsBaseError ExotelError where
+  toMessage = \case
+    ExotelNotConfigured -> Just "Exotel env variables aren't properly set."
+    ExotelBadRequest -> Just "Something in your header or request body was malformed."
+    ExotelUnauthorized -> Just "Necessary credentials were either missing or invalid."
+    ExitelPaymentRequired -> Just "The action is not available on your plan, or you have exceeded usage limits for your current plan."
+    ExotelAccessDenied -> Just "Your credentials are valid, but you don’t have access to the requested resource."
+    ExotelNotFound -> Just "The object you’re requesting doesn’t exist."
+    ExotelConflict -> Just "You might be trying to update the same resource concurrently."
+    ExotelTooManyRequests -> Just "You are calling our APIs more frequently than we allow."
+    ExotelServerError -> Just "Something went wrong on our end. Please try again."
+
+instance IsHTTPError ExotelError where
+  toErrorCode = \case
+    ExotelNotConfigured -> "EXOTEL_NOT_CONFIGURED"
+    ExotelBadRequest -> "EXOTEL_BAD_REQUEST"
+    ExotelUnauthorized -> "EXOTEL_UNAUTHORIZED"
+    ExitelPaymentRequired -> "EXOTEL_PAYMENT_REQUIRED"
+    ExotelAccessDenied -> "EXOTEL_ACCESS_DENIED"
+    ExotelNotFound -> "EXOTEL_NOT_FOUND"
+    ExotelConflict -> "EXOTEL_CONFLICT"
+    ExotelTooManyRequests -> "EXOTEL_TOO_MANY_REQUESTS"
+    ExotelServerError -> "EXOTEL_SERVER_ERROR"
+
+instance IsAPIError ExotelError
