@@ -19,5 +19,6 @@ let appCfg = becknTransport //
 in
 
 { appCfg = appCfg
+, metricsPort = +9999
 , driverAllocationConfig = driverAllocationConfig
 }
