@@ -10,5 +10,5 @@ import Types.Beckn.Context
 withTransactionIdLogTag :: (HasField "context" b Context, Log m) => b -> m a -> m a
 withTransactionIdLogTag req = do
   let context = getField @"context" req
-      transaction_id = _transaction_id context
-  withLogTag ("txnId-" <> transaction_id)
+      transaction_id_ = transaction_id context
+  withLogTag ("txnId-" <> transaction_id_)

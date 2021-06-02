@@ -20,7 +20,7 @@ import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT))
 getDbTable =
-  DB._organization . DB.transporterDb <$> getSchemaName
+  DB.organization . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} = do
@@ -33,20 +33,20 @@ verifyToken regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken) >>= fromMaybeM (InvalidToken regToken)
   where
-    predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
+    predicate token Storage.Organization {..} = apiKey ==. B.val_ (Just token)
 
 findOrganizationById :: Id Storage.Organization -> Flow Storage.Organization
-findOrganizationById id = do
+findOrganizationById orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= fromMaybeM OrgDoesNotExist
   where
-    predicate Storage.Organization {..} = _id ==. B.val_ id
+    predicate Storage.Organization {..} = id ==. B.val_ orgId
 
 findOrganizationByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage.Organization)
-findOrganizationByShortId shortId = do
+findOrganizationByShortId shortId_ = do
   dbTable <- getDbTable
-  DB.findOne dbTable (\Storage.Organization {..} -> _shortId ==. B.val_ shortId)
+  DB.findOne dbTable (\Storage.Organization {..} -> shortId ==. B.val_ shortId_)
 
 listOrganizations ::
   Maybe Int ->
@@ -54,21 +54,21 @@ listOrganizations ::
   [Storage.OrganizationType] ->
   [Storage.Status] ->
   Flow [Storage.Organization]
-listOrganizations mlimit moffset oType status = do
+listOrganizations mlimit moffset oType status_ = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    orderByDesc Storage.Organization {..} = B.desc_ _createdAt
+    orderByDesc Storage.Organization {..} = B.desc_ createdAt
     predicate Storage.Organization {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _status `B.in_` (B.val_ <$> status) ||. complementVal status,
-          _domain ==. B.val_ (Just Storage.MOBILITY),
+        [ status `B.in_` (B.val_ <$> status_) ||. complementVal status_,
+          domain ==. B.val_ (Just Storage.MOBILITY),
           _type `B.in_` (B.val_ <$> oType) ||. complementVal oType,
-          _enabled ==. B.val_ True
+          enabled ==. B.val_ True
         ]
 
 loadAllProviders :: Flow [Storage.Organization]
@@ -77,10 +77,10 @@ loadAllProviders = do
   DB.findAll dbTable identity predicate
   where
     predicate Storage.Organization {..} =
-      _status ==. B.val_ Storage.APPROVED
-        &&. _domain ==. B.val_ (Just Storage.MOBILITY)
+      status ==. B.val_ Storage.APPROVED
+        &&. domain ==. B.val_ (Just Storage.MOBILITY)
         &&. _type ==. B.val_ Storage.PROVIDER
-        &&. _enabled ==. B.val_ True
+        &&. enabled ==. B.val_ True
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
@@ -91,44 +91,44 @@ update ::
   Id Storage.Organization ->
   Storage.Status ->
   Flow ()
-update id status = do
+update orgId status_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
-    (setClause status currTime)
-    (predicate id)
+    (setClause status_ currTime)
+    (predicate orgId)
   where
-    predicate oid Storage.Organization {..} = _id ==. B.val_ oid
+    predicate oid Storage.Organization {..} = id ==. B.val_ oid
     setClause scStatus currTime Storage.Organization {..} =
       mconcat
-        [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ scStatus
+        [ updatedAt <-. B.val_ currTime,
+          status <-. B.val_ scStatus
         ]
 
 updateOrganizationRec :: Storage.Organization -> Flow ()
 updateOrganizationRec org = do
   dbTable <- getDbTable
-  DB.update dbTable (setClause org) (predicate $ org ^. #_id)
+  DB.update dbTable (setClause org) (predicate $ org ^. #id)
   where
     setClause sOrg Storage.Organization {..} =
       mconcat
-        [ _name <-. B.val_ (Storage._name sOrg),
-          _description <-. B.val_ (Storage._description sOrg),
-          _headCount <-. B.val_ (Storage._headCount sOrg),
-          _enabled <-. B.val_ (Storage._enabled sOrg),
-          _updatedAt <-. B.val_ (Storage._updatedAt sOrg),
-          _fromTime <-. B.val_ (Storage._fromTime sOrg)
+        [ name <-. B.val_ (Storage.name sOrg),
+          description <-. B.val_ (Storage.description sOrg),
+          headCount <-. B.val_ (Storage.headCount sOrg),
+          enabled <-. B.val_ (Storage.enabled sOrg),
+          updatedAt <-. B.val_ (Storage.updatedAt sOrg),
+          fromTime <-. B.val_ (Storage.fromTime sOrg)
         ]
-    predicate id Storage.Organization {..} = _id ==. B.val_ id
+    predicate orgId Storage.Organization {..} = id ==. B.val_ orgId
 
 findOrgByApiKey :: APIKey -> Flow (Maybe Storage.Organization)
-findOrgByApiKey apiKey = do
+findOrgByApiKey apiKey_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Organization {..} =
-      _apiKey ==. B.val_ (Just apiKey)
+      apiKey ==. B.val_ (Just apiKey_)
 
 findOrgByCbUrl :: BaseUrl -> Flow Storage.Organization
 findOrgByCbUrl url = do
@@ -136,21 +136,21 @@ findOrgByCbUrl url = do
   DB.findOne dbTable predicate
     >>= fromMaybeM OrgDoesNotExist
   where
-    predicate Storage.Organization {..} = _callbackUrl ==. B.val_ (Just url)
+    predicate Storage.Organization {..} = callbackUrl ==. B.val_ (Just url)
 
 findOrgByShortId :: ShortId Storage.Organization -> Flow Storage.Organization
-findOrgByShortId shortId = do
+findOrgByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= fromMaybeM OrgDoesNotExist
   where
-    predicate Storage.Organization {..} = _shortId ==. B.val_ shortId
+    predicate Storage.Organization {..} = shortId ==. B.val_ shortId_
 
 findOrgByMobileNumber :: Text -> Text -> Flow (Maybe Storage.Organization)
-findOrgByMobileNumber countryCode mobileNumber = do
+findOrgByMobileNumber countryCode mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Organization {..} =
-      _mobileCountryCode ==. B.val_ (Just countryCode)
-        &&. _mobileNumber ==. B.val_ (Just mobileNumber)
+      mobileCountryCode ==. B.val_ (Just countryCode)
+        &&. mobileNumber ==. B.val_ (Just mobileNumber_)

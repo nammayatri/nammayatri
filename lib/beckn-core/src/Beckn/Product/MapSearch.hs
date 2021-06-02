@@ -9,7 +9,7 @@ import Beckn.Types.Error.API
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
-import Data.Geospatial
+import Data.Geospatial hiding (bbox)
 import EulerHS.Prelude
 import GHC.Records (HasField (..))
 import Prelude (atan2)
@@ -43,7 +43,7 @@ getRoute MapSearch.Request {..} = do
   return $
     MapSearch.Response
       { status = "OK",
-        routes = mapToRoute mode' <$> _paths
+        routes = mapToRoute mode' <$> paths
       }
   where
     isLatLong :: MapSearch.MapPoint -> Bool
@@ -52,11 +52,11 @@ getRoute MapSearch.Request {..} = do
     grphrReq :: [PointXY] -> Grphr.Vehicle -> Grphr.Request
     grphrReq points vehicle =
       Grphr.Request
-        { _points' = points,
-          _vehicle = vehicle,
-          _weighting = Nothing,
-          _elevation = Nothing,
-          _calcPoints = calcPoints
+        { points' = points,
+          vehicle = vehicle,
+          weighting = Nothing,
+          elevation = Nothing,
+          calcPoints = calcPoints
         }
 
 mapToVehicle :: MapSearch.TravelMode -> Grphr.Vehicle
@@ -68,12 +68,12 @@ mapToVehicle MapSearch.FOOT = Grphr.FOOT
 mapToRoute :: MapSearch.TravelMode -> Grphr.Path -> MapSearch.Route
 mapToRoute mode Grphr.Path {..} =
   MapSearch.Route
-    { distanceInM = _distance,
-      durationInS = div _time 1000,
-      boundingBox = _bbox,
-      snapped_waypoints = Just _snapped_waypoints,
+    { distanceInM = distance,
+      durationInS = div time 1000,
+      boundingBox = bbox,
+      snapped_waypoints = Just snapped_waypoints,
       mode = mode,
-      points = _points
+      points = points
     }
 
 deg2Rad :: Double -> Double

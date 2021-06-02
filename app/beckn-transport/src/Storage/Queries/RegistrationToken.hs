@@ -19,7 +19,7 @@ import Utils.Common
 getDbTable ::
   Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RegistrationTokenT))
 getDbTable =
-  DB._registrationToken . DB.transporterDb <$> getSchemaName
+  DB.registrationToken . DB.transporterDb <$> getSchemaName
 
 create :: Storage.RegistrationToken -> Flow ()
 create Storage.RegistrationToken {..} = do
@@ -27,24 +27,24 @@ create Storage.RegistrationToken {..} = do
   DB.createOne dbTable (Storage.insertExpression Storage.RegistrationToken {..})
 
 findRegistrationToken :: Text -> Flow (Maybe Storage.RegistrationToken)
-findRegistrationToken id = do
+findRegistrationToken tokenId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.RegistrationToken {..} = _id ==. B.val_ id
+    predicate Storage.RegistrationToken {..} = id ==. B.val_ tokenId
 
 updateVerified :: Text -> Bool -> Flow ()
-updateVerified id verified = do
+updateVerified rtId verified_ = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update dbTable (setClause verified now) (predicate id)
+  DB.update dbTable (setClause verified_ now) (predicate rtId)
   where
     setClause scVerified currTime Storage.RegistrationToken {..} =
       mconcat
-        [ _updatedAt <-. B.val_ currTime,
-          _verified <-. B.val_ scVerified
+        [ updatedAt <-. B.val_ currTime,
+          verified <-. B.val_ scVerified
         ]
-    predicate rtid Storage.RegistrationToken {..} = _id ==. B.val_ rtid
+    predicate rtid Storage.RegistrationToken {..} = id ==. B.val_ rtid
 
 verifyToken :: RegToken -> Flow Storage.RegistrationToken
 verifyToken regToken = do
@@ -56,22 +56,22 @@ findRegistrationTokenByToken regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
   where
-    predicate token Storage.RegistrationToken {..} = _token ==. B.val_ token
+    predicate token_ Storage.RegistrationToken {..} = token ==. B.val_ token_
 
 updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
-updateAttempts attemps id = do
+updateAttempts attemps rtId = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update dbTable (setClause attemps now) (predicate id)
-  findRegistrationToken id >>= fromMaybeM (TokenNotFound id)
+  DB.update dbTable (setClause attemps now) (predicate rtId)
+  findRegistrationToken rtId >>= fromMaybeM (TokenNotFound rtId)
   where
-    predicate i Storage.RegistrationToken {..} = _id ==. B.val_ i
+    predicate i Storage.RegistrationToken {..} = id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =
-      mconcat [_attempts <-. B.val_ a, _updatedAt <-. B.val_ n]
+      mconcat [attempts <-. B.val_ a, updatedAt <-. B.val_ n]
 
 deleteByEntitiyId :: Text -> Flow ()
-deleteByEntitiyId id = do
+deleteByEntitiyId rtId = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate id)
+  DB.delete dbTable (predicate rtId)
   where
-    predicate rtid Storage.RegistrationToken {..} = _EntityId ==. B.val_ rtid
+    predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid

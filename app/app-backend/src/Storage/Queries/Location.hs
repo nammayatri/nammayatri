@@ -9,12 +9,12 @@ import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.), (||.))
 import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.DB as DB
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.LocationT))
 getDbTable =
-  DB._location . DB.appDb <$> getSchemaName
+  DB.location . DB.appDb <$> getSchemaName
 
 createFlow :: Storage.Location -> Flow ()
 createFlow = do
@@ -27,11 +27,11 @@ create Storage.Location {..} = do
 
 findLocationById ::
   Id Storage.Location -> Flow (Maybe Storage.Location)
-findLocationById id = do
+findLocationById locId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Location {..} = _id ==. B.val_ id
+    predicate Storage.Location {..} = id ==. B.val_ locId
 
 findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Text] -> [Text] -> [Text] -> Maybe Int -> Maybe Int -> Flow [Storage.Location]
 findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = do
@@ -43,16 +43,16 @@ findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = 
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    orderByDesc Storage.Location {..} = B.desc_ _createdAt
+    orderByDesc Storage.Location {..} = B.desc_ createdAt
     predicate Storage.Location {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _pincode `B.in_` (B.val_ . Just <$> pins) ||. complementVal pins,
-          _city `B.in_` (B.val_ . Just <$> cities) ||. complementVal cities,
-          _state `B.in_` (B.val_ . Just <$> states) ||. complementVal states,
-          _district `B.in_` (B.val_ . Just <$> districts) ||. complementVal districts,
-          _ward `B.in_` (B.val_ . Just <$> wards) ||. complementVal wards
+        [ pincode `B.in_` (B.val_ . Just <$> pins) ||. complementVal pins,
+          city `B.in_` (B.val_ . Just <$> cities) ||. complementVal cities,
+          state `B.in_` (B.val_ . Just <$> states) ||. complementVal states,
+          district `B.in_` (B.val_ . Just <$> districts) ||. complementVal districts,
+          ward `B.in_` (B.val_ . Just <$> wards) ||. complementVal wards
         ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
@@ -66,4 +66,4 @@ findAllByIds locIds = do
   DB.findAll dbTable identity (predicate (Id <$> locIds))
   where
     predicate locationIds Storage.Location {..} =
-      B.in_ _id (B.val_ <$> locationIds)
+      B.in_ id (B.val_ <$> locationIds)

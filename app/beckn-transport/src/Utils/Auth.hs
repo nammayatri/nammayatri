@@ -13,7 +13,7 @@ import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Text as T
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant hiding (throwError)
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Person as QP
@@ -95,30 +95,30 @@ instance VerificationMethod DriverVerifyToken where
 
 verifyAdmin :: SP.Person -> Flow Text
 verifyAdmin user = do
-  when (user ^. #_role /= SP.ADMIN) $
+  when (user ^. #role /= SP.ADMIN) $
     throwError AccessDenied
-  case user ^. #_organizationId of
+  case user ^. #organizationId of
     Just orgId -> return orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
 verifyDriver :: SP.Person -> Flow Text
 verifyDriver user = do
-  unless ((user ^. #_role) `elem` [SP.ADMIN, SP.DRIVER]) $
+  unless ((user ^. #role) `elem` [SP.ADMIN, SP.DRIVER]) $
     throwError AccessDenied
-  case user ^. #_organizationId of
+  case user ^. #organizationId of
     Just orgId -> return orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
 validateAdmin :: RegToken -> Flow Text
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
-  user <- QP.findPersonById (Id _EntityId)
+  user <- QP.findPersonById (Id entityId)
   verifyAdmin user
 
 validateDriver :: RegToken -> Flow Text
 validateDriver regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
-  user <- QP.findPersonById (Id _EntityId)
+  user <- QP.findPersonById (Id entityId)
   verifyDriver user
 
 validateAdminAction :: VerificationAction AdminVerifyToken AppEnv

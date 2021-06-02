@@ -1,14 +1,15 @@
 module Beckn.Types.Core.Migration.Language where
 
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 newtype Language = Language
-  { _code :: Maybe Text
+  { code :: Maybe Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Language where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Language where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

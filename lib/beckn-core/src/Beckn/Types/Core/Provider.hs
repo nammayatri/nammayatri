@@ -3,26 +3,27 @@ module Beckn.Types.Core.Provider where
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Person
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
 data Provider = Provider
-  { _id :: Text,
-    _descriptor :: Descriptor,
-    _poc :: Maybe Person
+  { id :: Text,
+    descriptor :: Descriptor,
+    poc :: Maybe Person
   }
   deriving (Generic, Show)
 
 instance FromJSON Provider where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Provider where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Provider where
   example =
     Provider
-      { _id = idExample,
-        _descriptor = example,
-        _poc = example
+      { id = idExample,
+        descriptor = example,
+        poc = example
       }

@@ -41,9 +41,9 @@ fromFmdError :: FmdError -> Error
 fromFmdError fmd =
   Error
     { _type = DOMAIN_ERROR,
-      _code = fmdErrorCode fmd,
-      _path = Nothing,
-      _message = Just $ fmdErrorDesc fmd
+      code = fmdErrorCode fmd,
+      path = Nothing,
+      message = Just $ fmdErrorDesc fmd
     }
 
 allFmdErrors :: [FmdError]

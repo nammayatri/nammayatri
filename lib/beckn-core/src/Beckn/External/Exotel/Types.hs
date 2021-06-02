@@ -114,42 +114,42 @@ data ExotelDirection
 -- | Exotel response body
 data ExotelResponseBody = ExotelResponseBody
   { -- string; an alpha-numeric unique identifier of the call
-    _exoSid :: ExotelCallSID,
+    exoSid :: ExotelCallSID,
     -- Time in format YYYY-MM-DD HH:mm:ss
     -- Date and time at which the user initiated the API
-    _exoDateCreated :: Text,
+    exoDateCreated :: Text,
     -- Time in format YYYY-MM-DD HH:mm:ss
     -- Date and time at which the status of the call
     -- was last updated in our system
-    _exoDateUpdated :: Text,
+    exoDateUpdated :: Text,
     -- Exotel account SID
-    _exoAccountSid :: ExotelAccountSID,
+    exoAccountSid :: ExotelAccountSID,
     -- Your customer's phone number
-    _exoTo :: Text,
+    exoTo :: Text,
     -- The phone number that will be called first
-    _exoFrom :: Text,
+    exoFrom :: Text,
     -- This is your ExoPhone/Exotel Virtual Number
-    _exoPhoneNumberSid :: Text,
+    exoPhoneNumberSid :: Text,
     -- Overall call status
-    _exoStatus :: ExotelCallStatus,
+    exoStatus :: ExotelCallStatus,
     -- Time in format YYYY-MM-DD HH:mm:ss
     -- Date and time when the call request was initiated to the operator
-    _exoStartTime :: Text,
+    exoStartTime :: Text,
     -- Time in format YYYY-MM-DD HH:mm:ss
     -- Date and time when the call was completed
-    _exoEndTime :: Text,
+    exoEndTime :: Text,
     -- Call duration in seconds
-    _exoDuration :: Text,
+    exoDuration :: Text,
     -- Double; If present, this will be the amount (in INR or USD) you have been charged for the call
-    _exoPrice :: Text,
+    exoPrice :: Text,
     -- Call direction
-    _exoDirection :: ExotelDirection,
+    exoDirection :: ExotelDirection,
     -- human
-    _exoAnsweredBy :: Text,
+    exoAnsweredBy :: Text,
     -- Uri is the path of the CallSid
-    _exoUri :: Text,
+    exoUri :: Text,
     -- Link to the call recording
-    _exoRecordingUrl :: Text
+    exoRecordingUrl :: Text
   }
   deriving (Eq, Show)
 
@@ -159,7 +159,7 @@ $(deriveFromJSON (aesonPrefix snakeCase) ''ExotelResponseBody)
 
 -- | Exotel response on success
 newtype ExotelResponse = ExotelResponse
-  { _exoCall :: ExotelResponseBody
+  { exoCall :: ExotelResponseBody
   }
   deriving (Eq, Show)
 

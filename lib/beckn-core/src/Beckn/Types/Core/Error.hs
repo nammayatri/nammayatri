@@ -1,13 +1,13 @@
 module Beckn.Types.Core.Error where
 
-import Beckn.Utils.JSON (constructorsWithHyphens)
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Error = Error
   { _type :: ErrorType,
-    _code :: Text,
-    _path :: Maybe Text,
-    _message :: Maybe Text
+    code :: Text,
+    path :: Maybe Text,
+    message :: Maybe Text
   }
   deriving (Generic, Show, Eq)
 
@@ -27,7 +27,7 @@ instance ToJSON ErrorType where
   toJSON = genericToJSON constructorsWithHyphens
 
 instance FromJSON Error where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Error where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

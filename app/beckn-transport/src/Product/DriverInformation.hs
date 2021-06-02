@@ -9,7 +9,7 @@ import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.Registration as Registration
@@ -27,11 +27,11 @@ import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
 getInformation RegistrationToken {..} = withFlowHandlerAPI $ do
-  _ <- Registration.checkPersonExists _EntityId
-  let driverId = Id _EntityId
-  person <- QPerson.findPersonById (Id _EntityId)
+  _ <- Registration.checkPersonExists entityId
+  let driverId = Id entityId
+  person <- QPerson.findPersonById (Id entityId)
   personEntity <- Person.mkPersonRes person
-  orgId <- person ^. #_organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
+  orgId <- person ^. #organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   organization <- QOrganization.findOrganizationById $ Id orgId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   pure $
@@ -43,8 +43,8 @@ getInformation RegistrationToken {..} = withFlowHandlerAPI $ do
 
 setActivity :: RegistrationToken -> Bool -> App.FlowHandler APISuccess.APISuccess
 setActivity RegistrationToken {..} isActive = withFlowHandlerAPI $ do
-  _ <- Registration.checkPersonExists _EntityId
-  let driverId = Id _EntityId
+  _ <- Registration.checkPersonExists entityId
+  let driverId = Id entityId
   QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
 
@@ -54,13 +54,13 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
   case mbNotification of
     Nothing -> return $ DriverInformationAPI.GetRideInfoRes Nothing
     Just notification -> do
-      let productInstanceId = cast $ notification ^. #_rideId
-      let notificationExpiryTime = notification ^. #_expiresAt
+      let productInstanceId = cast $ notification ^. #rideId
+      let notificationExpiryTime = notification ^. #expiresAt
       productInstance <- QueryPI.findById productInstanceId
       driver <- QPerson.findPersonById $ cast driverId
-      driverLocation <- findLocationById (driver ^. #_locationId) >>= fromMaybeM (PersonFieldNotPresent "location_id")
-      fromLocation <- findLocationById (productInstance ^. #_fromLocation) >>= fromMaybeM (PIFieldNotPresent "location_id")
-      toLocation <- findLocationById (productInstance ^. #_toLocation) >>= fromMaybeM (PIFieldNotPresent "to_location_id")
+      driverLocation <- findLocationById (driver ^. #locationId) >>= fromMaybeM (PersonFieldNotPresent "location_id")
+      fromLocation <- findLocationById (productInstance ^. #fromLocation) >>= fromMaybeM (PIFieldNotPresent "location_id")
+      toLocation <- findLocationById (productInstance ^. #toLocation) >>= fromMaybeM (PIFieldNotPresent "to_location_id")
       (fromLat, fromLong) <- extractLatLong fromLocation & fromMaybeM (LocationFieldNotPresent "from")
       (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeM (LocationFieldNotPresent "driver")
       mbRoute <- Location.getRoute' driverLat driverLong fromLat fromLong
@@ -74,12 +74,12 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
                 etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
                 distanceToPickupLoc = distanceInM <$> mbRoute,
                 notificationExpiryTime = notificationExpiryTime,
-                estimatedPrice = amountToString <$> productInstance ^. #_price
+                estimatedPrice = amountToString <$> productInstance ^. #price
               }
   where
-    driverId = Id _EntityId
+    driverId = Id entityId
     findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ Id <$> mbId
-    extractLatLong = \loc -> (,) <$> loc ^. #_lat <*> loc ^. #_long
+    extractLatLong = \loc -> (,) <$> loc ^. #lat <*> loc ^. #long
 
 listDriver :: Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do
@@ -88,15 +88,15 @@ listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do
   return $ DriverInformationAPI.ListDriverRes respPersonList
   where
     convertToRes (person, driverInfo) = do
-      vehicle <- maybe (return Nothing) QVehicle.findVehicleById $ Id <$> person ^. #_udf1
+      vehicle <- maybe (return Nothing) QVehicle.findVehicleById $ Id <$> person ^. #udf1
       return $
         DriverInformationAPI.DriverEntityRes
-          { id = person ^. #_id,
-            firstName = person ^. #_firstName,
-            middleName = person ^. #_middleName,
-            lastName = person ^. #_lastName,
-            mobileNumber = person ^. #_mobileNumber,
+          { id = person ^. #id,
+            firstName = person ^. #firstName,
+            middleName = person ^. #middleName,
+            lastName = person ^. #lastName,
+            mobileNumber = person ^. #mobileNumber,
             linkedVehicle = vehicle,
-            active = driverInfo ^. #_active,
-            onRide = driverInfo ^. #_onRide
+            active = driverInfo ^. #active,
+            onRide = driverInfo ^. #onRide
           }

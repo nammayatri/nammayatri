@@ -1,16 +1,17 @@
 module Beckn.Types.Core.Migration.Option where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Option = Option
-  { _id :: Maybe Text,
-    _descriptor :: Maybe Descriptor
+  { id :: Maybe Text,
+    descriptor :: Maybe Descriptor
   }
   deriving (Generic, Show)
 
 instance FromJSON Option where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Option where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

@@ -15,7 +15,7 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
@@ -94,28 +94,28 @@ instance FromHttpApiData OrganizationDomain where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data OrganizationT f = Organization
-  { _id :: B.C f (Id Organization),
-    _name :: B.C f Text,
-    _description :: B.C f (Maybe Text),
-    _shortId :: B.C f (ShortId Organization),
-    _mobileNumber :: B.C f (Maybe Text),
-    _mobileCountryCode :: B.C f (Maybe Text),
-    _gstin :: B.C f (Maybe Text),
+  { id :: B.C f (Id Organization),
+    name :: B.C f Text,
+    description :: B.C f (Maybe Text),
+    shortId :: B.C f (ShortId Organization),
+    mobileNumber :: B.C f (Maybe Text),
+    mobileCountryCode :: B.C f (Maybe Text),
+    gstin :: B.C f (Maybe Text),
     _type :: B.C f OrganizationType,
-    _domain :: B.C f (Maybe OrganizationDomain),
-    _locationId :: B.C f (Maybe Text),
-    _fromTime :: B.C f (Maybe UTCTime),
-    _toTime :: B.C f (Maybe UTCTime),
-    _headCount :: B.C f (Maybe Int),
-    _status :: B.C f Status,
-    _verified :: B.C f Bool,
-    _enabled :: B.C f Bool,
-    _apiKey :: B.C f (Maybe Text),
-    _callbackUrl :: B.C f (Maybe BaseUrl),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime,
-    _callbackApiKey :: B.C f (Maybe Text),
-    _info :: B.C f (Maybe Text)
+    domain :: B.C f (Maybe OrganizationDomain),
+    locationId :: B.C f (Maybe Text),
+    fromTime :: B.C f (Maybe UTCTime),
+    toTime :: B.C f (Maybe UTCTime),
+    headCount :: B.C f (Maybe Int),
+    status :: B.C f Status,
+    verified :: B.C f Bool,
+    enabled :: B.C f Bool,
+    apiKey :: B.C f (Maybe Text),
+    callbackUrl :: B.C f (Maybe BaseUrl),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime,
+    callbackApiKey :: B.C f (Maybe Text),
+    info :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -126,17 +126,17 @@ type OrganizationPrimaryKey = B.PrimaryKey OrganizationT Identity
 instance B.Table OrganizationT where
   data PrimaryKey OrganizationT f = OrganizationPrimaryKey (B.C f (Id Organization))
     deriving (Generic, B.Beamable)
-  primaryKey = OrganizationPrimaryKey . _id
+  primaryKey = OrganizationPrimaryKey . id
 
 deriving instance Show Organization
 
 deriving instance Eq Organization
 
 instance ToJSON Organization where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Organization where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema Organization
 
@@ -145,16 +145,16 @@ fieldEMod ::
 fieldEMod =
   B.modifyTableFields
     B.tableModification
-      { _shortId = "short_id",
-        _createdAt = "created_at",
-        _updatedAt = "updated_at",
-        _locationId = "location_id",
-        _mobileNumber = "mobile_number",
-        _mobileCountryCode = "mobile_country_code",
-        _headCount = "head_count",
-        _apiKey = "api_key",
-        _fromTime = "from_time",
-        _toTime = "to_time",
-        _callbackUrl = "callback_url",
-        _callbackApiKey = "callback_api_key"
+      { shortId = "short_id",
+        createdAt = "created_at",
+        updatedAt = "updated_at",
+        locationId = "location_id",
+        mobileNumber = "mobile_number",
+        mobileCountryCode = "mobile_country_code",
+        headCount = "head_count",
+        apiKey = "api_key",
+        fromTime = "from_time",
+        toTime = "to_time",
+        callbackUrl = "callback_url",
+        callbackApiKey = "callback_api_key"
       }

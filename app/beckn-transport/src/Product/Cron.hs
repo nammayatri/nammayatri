@@ -24,18 +24,18 @@ expireCases :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireRes
 expireCases maybeAuth ExpireCaseReq {..} = withFlowHandlerAPI $ do
   authenticate maybeAuth
   cases <- MC.findAllExpiredByStatus [C.NEW, C.CONFIRMED] C.RIDESEARCH from to
-  productInstances <- CPQ.findAllByCaseIds (C._id <$> cases)
+  productInstances <- CPQ.findAllByCaseIds (C.id <$> cases)
   updateCases cases
   updateProductInstances productInstances
   notifyTransporters cases productInstances
   pure $ ExpireRes $ length cases
   where
     updateCases cases = do
-      mapM_ (\case_ -> C.validateStatusTransition (C._status case_) C.CLOSED & fromEitherM CaseInvalidStatus) cases
-      MC.updateStatusByIds (C._id <$> cases) C.CLOSED
+      mapM_ (\case_ -> C.validateStatusTransition (C.status case_) C.CLOSED & fromEitherM CaseInvalidStatus) cases
+      MC.updateStatusByIds (C.id <$> cases) C.CLOSED
     updateProductInstances productInstances = do
-      mapM_ (\pi -> PI.validateStatusTransition (PI._status pi) PI.EXPIRED & fromEitherM PIInvalidStatus) productInstances
-      MPI.updateStatusByIds (PI._id <$> productInstances) PI.EXPIRED
+      mapM_ (\pi -> PI.validateStatusTransition (PI.status pi) PI.EXPIRED & fromEitherM PIInvalidStatus) productInstances
+      MPI.updateStatusByIds (PI.id <$> productInstances) PI.EXPIRED
 
 notifyTransporters :: [C.Case] -> [PI.ProductInstance] -> Flow ()
 notifyTransporters cases =
@@ -44,8 +44,8 @@ notifyTransporters cases =
         do
           admins <-
             PSQ.findAllByOrgIds [PS.ADMIN] $
-              PI._organizationId <$> [cp]
-          let caseObj = filter (\x -> PI._caseId cp == C._id x) cases
+              PI.organizationId <$> [cp]
+          let caseObj = filter (\x -> PI.caseId cp == C.id x) cases
           case caseObj of
             [] -> pure ()
             x : _ -> Notify.notifyTransporterOnExpiration x admins
@@ -61,14 +61,14 @@ expireProductInstances maybeAuth = withFlowHandlerAPI $ do
     ( \pI ->
         case PI._type pI of
           C.RIDESEARCH -> do
-            PI.validateStatusTransition (PI._status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
-            MPI.updateStatus (PI._id pI) PI.EXPIRED
+            PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
+            MPI.updateStatus (PI.id pI) PI.EXPIRED
           C.RIDEORDER -> do
-            cs <- MC.findById (PI._caseId pI)
-            C.validateStatusTransition (cs ^. #_status) C.CLOSED & fromEitherM CaseInvalidStatus
-            MC.updateStatus (PI._caseId pI) C.CLOSED
-            PI.validateStatusTransition (PI._status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
-            MPI.updateStatus (PI._id pI) PI.EXPIRED
+            cs <- MC.findById (PI.caseId pI)
+            C.validateStatusTransition (cs ^. #status) C.CLOSED & fromEitherM CaseInvalidStatus
+            MC.updateStatus (PI.caseId pI) C.CLOSED
+            PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
+            MPI.updateStatus (PI.id pI) PI.EXPIRED
           _ -> return ()
     )
     piList

@@ -20,25 +20,25 @@ import Utils.Common (withFlowHandlerAPI)
 list :: Person.Person -> [SPI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
 list person status csTypes mlimit moffset = withFlowHandlerAPI $ do
   piList <-
-    ProductInstance.listAllProductInstanceWithOffset limit offset (SPI.ByCustomerId $ person ^. #_id) status csTypes
-  caseList <- Case.findAllByIds (SPI._caseId <$> piList)
-  prodList <- Products.findAllByIds (SPI._productId <$> piList)
-  locList <- Loc.findAllByIds ((Case._fromLocationId <$> caseList) <> (Case._toLocationId <$> caseList))
+    ProductInstance.listAllProductInstanceWithOffset limit offset (SPI.ByCustomerId $ person ^. #id) status csTypes
+  caseList <- Case.findAllByIds (SPI.caseId <$> piList)
+  prodList <- Products.findAllByIds (SPI.productId <$> piList)
+  locList <- Loc.findAllByIds ((Case.fromLocationId <$> caseList) <> (Case.toLocationId <$> caseList))
   return $ catMaybes $ joinIds prodList caseList locList <$> piList
   where
     limit = toInteger $ fromMaybe 50 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     joinIds :: [Product.Products] -> [Case.Case] -> [Loc.Location] -> SPI.ProductInstance -> Maybe ProductInstanceRes
     joinIds prodList caseList locList prodInst =
-      find (\x -> SPI._caseId prodInst == Case._id x) caseList
+      find (\x -> SPI.caseId prodInst == Case.id x) caseList
         >>= buildResponse
       where
-        buildResponse k = prepare locList prodInst k <$> find (\z -> SPI._productId prodInst == Product._id z) prodList
+        buildResponse k = prepare locList prodInst k <$> find (\z -> SPI.productId prodInst == Product.id z) prodList
         prepare locationList prodInstance cs prod =
           ProductInstanceRes
             { _case = cs,
-              _product = prod,
-              _productInstance = prodInstance,
-              _fromLocation = find (\x -> Case._fromLocationId cs == getId (Loc._id x)) locationList,
-              _toLocation = find (\x -> Case._toLocationId cs == getId (Loc._id x)) locationList
+              product = prod,
+              productInstance = prodInstance,
+              fromLocation = find (\x -> Case.fromLocationId cs == getId (Loc.id x)) locationList,
+              toLocation = find (\x -> Case.toLocationId cs == getId (Loc.id x)) locationList
             }

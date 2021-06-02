@@ -1,29 +1,30 @@
 module Beckn.Types.Core.Schedule where
 
+import Beckn.Utils.JSON
 import Data.Text
 import Data.Time
 import EulerHS.Prelude
 
 data Schedule = Schedule
-  { _day :: Text, -- "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"
-    _slots :: [Slot]
+  { day :: Text, -- "MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"
+    slots :: [Slot]
   }
   deriving (Generic, Show)
 
 instance FromJSON Schedule where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Schedule where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data Slot = Slot
-  { _open :: UTCTime,
-    _close :: UTCTime
+  { open :: UTCTime,
+    close :: UTCTime
   }
   deriving (Generic, Show)
 
 instance FromJSON Slot where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Slot where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

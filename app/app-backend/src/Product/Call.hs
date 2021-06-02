@@ -46,24 +46,24 @@ initiateCallToCustomer req = withFlowHandlerAPI $ do
 
 getDriver :: ProductInstance -> Flow Driver.Driver
 getDriver rideSearchPI = do
-  info <- ProductInstance._info rideSearchPI & fromMaybeM (PIFieldNotPresent "info")
+  info <- ProductInstance.info rideSearchPI & fromMaybeM (PIFieldNotPresent "info")
   productInfo <- decodeFromText info & fromMaybeM (InternalError "Parse error.")
-  tracker_ <- _tracker productInfo & fromMaybeM (PIFieldNotPresent "tracker")
-  let trip = _trip tracker_
-      driver_ = trip ^. #driver
+  tracker_ <- tracker productInfo & fromMaybeM (PIFieldNotPresent "tracker")
+  let trip_ = trip tracker_
+      driver_ = trip_ ^. #driver
   driver <- driver_ & fromMaybeM (PIFieldNotPresent "driver")
   return $ toBeckn driver
 
 getPerson :: ProductInstance -> Flow Person
 getPerson rideSearchPI = do
-  c <- Case.findById $ _caseId rideSearchPI
-  personId <- Case._requestor c & fromMaybeM (CaseFieldNotPresent "requestor")
+  c <- Case.findById $ caseId rideSearchPI
+  personId <- Case.requestor c & fromMaybeM (CaseFieldNotPresent "requestor")
   Person.findById (Id personId) >>= fromMaybeM PersonNotFound
 
 -- | Get person's mobile phone
 getPersonPhone :: Person -> Flow Text
 getPersonPhone Person {..} = do
-  let phonenum = (<>) <$> _mobileCountryCode <*> _mobileNumber
+  let phonenum = (<>) <$> mobileCountryCode <*> mobileNumber
   phonenum & fromMaybeM (InternalError "Customer has no phone number.")
 
 -- | Get phone from Person data type

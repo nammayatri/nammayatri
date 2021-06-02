@@ -4,12 +4,13 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Location as CL
 import Beckn.Types.Core.Tag
 import Beckn.Types.Mobility.Vehicle as MV
+import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 
 data LeadsReq = LeadsReq
-  { _context :: Context,
-    _message :: LeadsReqMsg
+  { context :: Context,
+    message :: LeadsReqMsg
   }
   deriving (Generic)
 
@@ -27,13 +28,13 @@ data LeadsReqMsg = LeadsReqMsg
     --       }
     --     }
     -- }
-    _fare_range :: FareRange,
-    _tags :: [Tag]
+    fare_range :: FareRange,
+    tags :: [Tag]
   }
   deriving (Generic)
 
 instance FromJSON LeadsReqMsg where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 data FareRange = FareRange
   { min :: Int,
@@ -43,4 +44,4 @@ data FareRange = FareRange
   deriving (Generic)
 
 instance FromJSON FareRange where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

@@ -190,9 +190,9 @@ instance ToBeckn Beckn.Error Error where
   toBeckn Error {..} =
     Beckn.Error
       { _type = Beckn.DOMAIN_ERROR,
-        _code = becknErrCode,
-        _path = Nothing,
-        _message = Just message
+        code = becknErrCode,
+        path = Nothing,
+        message = Just message
       }
     where
       becknErrCode = case code of

@@ -3,7 +3,7 @@
 module Product.BecknProvider.Feedback where
 
 import App.Types
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.API.Feedback as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
@@ -15,7 +15,7 @@ import Beckn.Types.Storage.Rating as Rating
     RatingT (..),
   )
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import qualified Product.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
@@ -24,7 +24,7 @@ import Types.Error
 import Utils.Common
 
 feedback :: Id Organization -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
-feedback _transporterId _organization req = withFlowHandlerBecknAPI $
+feedback _ _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "FeedbackAPI" "Received feedback API call."
     let context = req ^. #context
@@ -32,13 +32,13 @@ feedback _transporterId _organization req = withFlowHandlerBecknAPI $
     let productInstanceId = Id $ req ^. #message . #order_id
     productInstances <- ProductInstance.findAllByParentId productInstanceId
     personId <- getPersonId productInstances & fromMaybeM (PIFieldNotPresent "person")
-    orderPi <- ProductInstance.findByIdType (ProductInstance._id <$> productInstances) Case.RIDEORDER
-    unless (orderPi ^. #_status == ProductInstance.COMPLETED) $
+    orderPi <- ProductInstance.findByIdType (ProductInstance.id <$> productInstances) Case.RIDEORDER
+    unless (orderPi ^. #status == ProductInstance.COMPLETED) $
       throwError $ PIInvalidStatus "Order is not ready for rating."
     ratingValue :: Int <-
-      decodeFromText (req ^. #message . #rating . #_value)
+      decodeFromText (req ^. #message . #rating . #value)
         & fromMaybeM (InvalidRequest "Invalid rating type.")
-    let orderId = orderPi ^. #_id
+    let orderId = orderPi ^. #id
     mbRating <- Rating.findByProductInstanceId orderId
     case mbRating of
       Nothing -> do
@@ -48,20 +48,18 @@ feedback _transporterId _organization req = withFlowHandlerBecknAPI $
         Rating.create newRating
       Just rating -> do
         logTagInfo "FeedbackAPI" $
-          "Updating existing rating for " +|| orderPi ^. #_id ||+ " with new rating " +|| ratingValue ||+ "."
-        Rating.updateRatingValue (rating ^. #_id) ratingValue
+          "Updating existing rating for " +|| orderPi ^. #id ||+ " with new rating " +|| ratingValue ||+ "."
+        Rating.updateRatingValue (rating ^. #id) ratingValue
     Person.calculateAverageRating personId
     return Ack
   where
-    getPersonId (productI : _) = productI ^. #_personId
+    getPersonId (productI : _) = productI ^. #personId
     getPersonId _ = Nothing
 
 mkRating :: Id ProductInstance.ProductInstance -> Int -> Flow Rating.Rating
 mkRating productInstanceId ratingValue = do
-  _id <- Id <$> L.generateGUID
-  let _productInstanceId = productInstanceId
+  id <- Id <$> L.generateGUID
   now <- getCurrentTime
-  let _createdAt = now
-  let _updatedAt = now
-  let _ratingValue = ratingValue
+  let createdAt = now
+  let updatedAt = now
   pure $ Rating.Rating {..}

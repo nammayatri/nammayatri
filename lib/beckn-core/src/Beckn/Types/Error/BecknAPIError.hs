@@ -54,7 +54,7 @@ toBecknAPIError e =
   BecknAPIError
     Error.Error
       { _type = toType e,
-        _code = toErrorCode e,
-        _path = toPath e,
-        _message = toMessageIfNotInternal e
+        code = toErrorCode e,
+        path = toPath e,
+        message = toMessageIfNotInternal e
       }

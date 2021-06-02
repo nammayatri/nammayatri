@@ -10,7 +10,7 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Org
@@ -30,7 +30,7 @@ import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
 getDbTable =
-  DB._person . DB.transporterDb <$> getSchemaName
+  DB.person . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Person -> Flow ()
 create person = do
@@ -40,24 +40,24 @@ create person = do
 
 findPersonById ::
   Id Storage.Person -> Flow Storage.Person
-findPersonById id = do
+findPersonById pid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= fromMaybeM PersonDoesNotExist
     >>= decrypt
   where
-    predicate Storage.Person {..} = _id ==. B.val_ id
+    predicate Storage.Person {..} = id ==. B.val_ pid
 
 findPersonByIdAndRoleAndOrgId :: Id Storage.Person -> Storage.Role -> Id Org.Organization -> Flow (Maybe Storage.Person)
-findPersonByIdAndRoleAndOrgId id role orgId = do
+findPersonByIdAndRoleAndOrgId pid role_ orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =
-      _id ==. B.val_ id
-        &&. _role ==. B.val_ role
-        &&. _organizationId ==. B.val_ (Just $ getId orgId)
+      id ==. B.val_ pid
+        &&. role ==. B.val_ role_
+        &&. organizationId ==. B.val_ (Just $ getId orgId)
 
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> Flow [Storage.Person]
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
@@ -65,15 +65,15 @@ findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
     >>= decrypt
   where
-    orderByDesc Storage.Person {..} = B.desc_ _createdAt
+    orderByDesc Storage.Person {..} = B.desc_ createdAt
     limit = fromMaybe 100 mlimit
     offset = fromMaybe 0 moffset
     predicate Storage.Person {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
+        [ role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
+          organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
 findAllByOrgIds ::
@@ -87,8 +87,8 @@ findAllByOrgIds roles orgIds = do
       foldl
         (&&.)
         (B.val_ True)
-        [ _role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
+        [ role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
+          organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
         ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
@@ -98,34 +98,34 @@ complementVal l
 
 findByMobileNumber ::
   Text -> Text -> Flow (Maybe Storage.Person)
-findByMobileNumber countryCode mobileNumber = do
+findByMobileNumber countryCode mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =
-      _mobileCountryCode ==. B.val_ (Just countryCode)
-        &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mobileNumber)
+      mobileCountryCode ==. B.val_ (Just countryCode)
+        &&. (mobileNumber ^. #hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
 findByIdentifier ::
   Text -> Flow (Maybe Storage.Person)
-findByIdentifier identifier = do
+findByIdentifier identifier_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =
-      _identifier ==. B.val_ (Just identifier)
+      identifier ==. B.val_ (Just identifier_)
 
 findByEmail ::
   Text -> Flow (Maybe Storage.Person)
-findByEmail email = do
+findByEmail email_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =
-      _email ==. B.val_ (Just email)
+      email ==. B.val_ (Just email_)
 
 updateOrganizationIdAndMakeAdmin :: Id Storage.Person -> Text -> Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
@@ -135,11 +135,11 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
   where
     setClause sOrgId n Storage.Person {..} =
       mconcat
-        [ _organizationId <-. B.val_ (Just sOrgId),
-          _role <-. B.val_ Storage.ADMIN,
-          _updatedAt <-. B.val_ n
+        [ organizationId <-. B.val_ (Just sOrgId),
+          role <-. B.val_ Storage.ADMIN,
+          updatedAt <-. B.val_ n
         ]
-    predicate id Storage.Person {..} = _id ==. B.val_ id
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
 updatePersonRec :: Id Storage.Person -> Storage.Person -> Flow ()
 updatePersonRec personId uperson = do
@@ -150,44 +150,44 @@ updatePersonRec personId uperson = do
   where
     setClause person n Storage.Person {..} =
       mconcat
-        [ _firstName <-. B.val_ (Storage._firstName person),
-          _middleName <-. B.val_ (Storage._middleName person),
-          _lastName <-. B.val_ (Storage._lastName person),
-          _fullName <-. B.val_ (Storage._fullName person),
-          _role <-. B.val_ (Storage._role person),
-          _gender <-. B.val_ (Storage._gender person),
-          _email <-. B.val_ (Storage._email person),
-          _identifier <-. B.val_ (Storage._identifier person),
-          _rating <-. B.val_ (Storage._rating person),
-          _deviceToken <-. B.val_ (Storage._deviceToken person),
-          _udf1 <-. B.val_ (Storage._udf1 person),
-          _udf2 <-. B.val_ (Storage._udf2 person),
-          _organizationId <-. B.val_ (Storage._organizationId person),
-          _description <-. B.val_ (Storage._description person),
-          _locationId <-. B.val_ (Storage._locationId person),
-          _updatedAt <-. B.val_ n
+        [ firstName <-. B.val_ (Storage.firstName person),
+          middleName <-. B.val_ (Storage.middleName person),
+          lastName <-. B.val_ (Storage.lastName person),
+          fullName <-. B.val_ (Storage.fullName person),
+          role <-. B.val_ (Storage.role person),
+          gender <-. B.val_ (Storage.gender person),
+          email <-. B.val_ (Storage.email person),
+          identifier <-. B.val_ (Storage.identifier person),
+          rating <-. B.val_ (Storage.rating person),
+          deviceToken <-. B.val_ (Storage.deviceToken person),
+          udf1 <-. B.val_ (Storage.udf1 person),
+          udf2 <-. B.val_ (Storage.udf2 person),
+          organizationId <-. B.val_ (Storage.organizationId person),
+          description <-. B.val_ (Storage.description person),
+          locationId <-. B.val_ (Storage.locationId person),
+          updatedAt <-. B.val_ n
         ]
-    predicate id Storage.Person {..} = _id ==. B.val_ id
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
 updatePerson :: Id Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
-updatePerson personId verified identifier identifierType mobileNumber = do
+updatePerson personId verified_ identifier_ identifierType_ mobileNumber_ = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  mobileNumber' <- encrypt mobileNumber
+  mobileNumber' <- encrypt mobileNumber_
   DB.update
     dbTable
-    (setClause identifier identifierType mobileNumber' verified now)
+    (setClause identifier_ identifierType_ mobileNumber' verified_ now)
     (predicate personId)
   where
     setClause i it mn v n Storage.Person {..} =
       mconcat
-        [ _identifier <-. B.val_ (Just i),
-          _identifierType <-. B.val_ it,
-          _mobileNumber <-. B.val_ mn,
-          _verified <-. B.val_ v,
-          _updatedAt <-. B.val_ n
+        [ identifier <-. B.val_ (Just i),
+          identifierType <-. B.val_ it,
+          mobileNumber <-. B.val_ mn,
+          verified <-. B.val_ v,
+          updatedAt <-. B.val_ n
         ]
-    predicate id Storage.Person {..} = _id ==. B.val_ id
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
 update ::
   Id Storage.Person ->
@@ -195,29 +195,29 @@ update ::
   Bool ->
   Maybe FCM.FCMRecipientToken ->
   Flow ()
-update id status verified deviceTokenM = do
+update personId status_ verified_ deviceTokenM = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
-    (setClause status verified currTime deviceTokenM)
-    (predicate id)
+    (setClause status_ verified_ currTime deviceTokenM)
+    (predicate personId)
   where
-    setClause sStatus sVerified currTime deviceToken Storage.Person {..} =
+    setClause sStatus sVerified currTime deviceToken_ Storage.Person {..} =
       mconcat
-        [ _status <-. B.val_ sStatus,
-          _updatedAt <-. B.val_ currTime,
-          _verified <-. B.val_ sVerified,
-          _deviceToken <-. B.val_ deviceToken
+        [ status <-. B.val_ sStatus,
+          updatedAt <-. B.val_ currTime,
+          verified <-. B.val_ sVerified,
+          deviceToken <-. B.val_ deviceToken_
         ]
-    predicate pid Storage.Person {..} = _id ==. B.val_ pid
+    predicate pid Storage.Person {..} = id ==. B.val_ pid
 
 deleteById :: Id Storage.Person -> Flow ()
-deleteById id = do
+deleteById personId = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate id)
+  DB.delete dbTable (predicate personId)
   where
-    predicate pid Storage.Person {..} = _id ==. B.val_ pid
+    predicate pid Storage.Person {..} = id ==. B.val_ pid
 
 updateEntity :: Id Storage.Person -> Text -> Text -> Flow ()
 updateEntity personId entityId entityType = do
@@ -237,10 +237,10 @@ updateEntity personId entityId entityType = do
   where
     setClause mEntityId mEntityType Storage.Person {..} =
       mconcat
-        [ _udf1 <-. B.val_ mEntityId,
-          _udf2 <-. B.val_ mEntityType
+        [ udf1 <-. B.val_ mEntityId,
+          udf2 <-. B.val_ mEntityType
         ]
-    predicate pId Storage.Person {..} = _id ==. B.val_ pId
+    predicate pId Storage.Person {..} = id ==. B.val_ pId
 
 findByEntityId :: Text -> Flow (Maybe Storage.Person)
 findByEntityId entityId = do
@@ -249,7 +249,7 @@ findByEntityId entityId = do
     >>= decrypt
   where
     predicate Storage.Person {..} =
-      _udf1 ==. B.val_ (Just entityId)
+      udf1 ==. B.val_ (Just entityId)
 
 updateAverageRating :: Id Storage.Person -> Text -> Flow ()
 updateAverageRating personId newAverageRating = do
@@ -257,12 +257,12 @@ updateAverageRating personId newAverageRating = do
   now <- getCurrentTime
   DB.update dbTable (setClause newAverageRating now) (predicate personId)
   where
-    setClause rating now Storage.Person {..} =
+    setClause rating_ now Storage.Person {..} =
       mconcat
-        [ _rating <-. B.val_ (Just rating),
-          _updatedAt <-. B.val_ now
+        [ rating <-. B.val_ (Just rating_),
+          updatedAt <-. B.val_ now
         ]
-    predicate pId Storage.Person {..} = _id ==. B.val_ pId
+    predicate pId Storage.Person {..} = id ==. B.val_ pId
 
 {-
 -- This is an attempt to implement custom postgis query using beam.
@@ -296,21 +296,21 @@ getNearestDrivers point' radius' orgId' = do
                 . Storage.LocationPrimaryKey
                 . fmap Id
             )
-            (driver ^. #_locationId)
+            (driver ^. #locationId)
       dist <- distToPoint point location
       driver' <- B.filter_ (predicate orgId radius dist) (pure driver)
       return (driver', dist)
     orderBy (_, dist) = B.asc_ dist
     predicate orgId radius dist Storage.Person {..} =
-      _role ==. B.val_ Storage.DRIVER
-        &&. _organizationId ==. B.val_ orgId
+      role ==. B.val_ Storage.DRIVER
+        &&. organizationId ==. B.val_ orgId
         &&. dist <. B.val_ radius
 
     distToPoint' :: (Monoid a, IsString a) => a -> a -> a -> a
     distToPoint' lat lon point =
       point <> " <-> ST_Point(" <> lat <> ", " <> lon <> ")::geometry"
     distToPoint LatLong {..} location =
-      B.customExpr_ distToPoint' lat lon (location ^. #_point)
+      B.customExpr_ distToPoint' lat lon (location ^. #point)
 -}
 
 getNearestDrivers ::

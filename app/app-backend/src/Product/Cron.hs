@@ -24,9 +24,9 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandlerAPI $ do
   cases <- MC.findAllExpiredByStatus [Case.NEW] from to
   traverse_
     ( \caseObj -> do
-        let cId = Case._id caseObj
+        let cId = Case.id caseObj
         Metrics.incrementCaseCount Case.CLOSED (Case._type caseObj)
-        Case.validateStatusTransition (caseObj ^. #_status) Case.CLOSED & fromEitherM CaseInvalidStatus
+        Case.validateStatusTransition (caseObj ^. #status) Case.CLOSED & fromEitherM CaseInvalidStatus
         MC.updateStatus cId Case.CLOSED
         updateAllProductInstancesByCaseId cId
         Notify.notifyOnExpiration caseObj
@@ -36,7 +36,7 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandlerAPI $ do
   where
     updateAllProductInstancesByCaseId cId = do
       casePIs <- MPI.findAllByCaseId cId
-      mapM_ (\pi -> PI.validateStatusTransition (pi ^. #_status) PI.EXPIRED & fromEitherM PIInvalidStatus) casePIs
+      mapM_ (\pi -> PI.validateStatusTransition (pi ^. #status) PI.EXPIRED & fromEitherM PIInvalidStatus) casePIs
       MPI.updateAllProductInstancesByCaseId cId PI.EXPIRED
 
 expireProductInstances :: Maybe CronAuthKey -> FlowHandler API.ExpireRes
@@ -49,14 +49,14 @@ expireProductInstances maybeAuth = withFlowHandlerAPI $ do
     ( \pI ->
         case PI._type pI of
           Case.RIDESEARCH -> do
-            PI.validateStatusTransition (PI._status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
-            MPI.updateStatus (PI._id pI) PI.EXPIRED
+            PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
+            MPI.updateStatus (PI.id pI) PI.EXPIRED
           Case.RIDEORDER -> do
-            cs <- MC.findById (PI._caseId pI)
-            Case.validateStatusTransition (cs ^. #_status) Case.CLOSED & fromEitherM CaseInvalidStatus
-            MC.updateStatus (PI._caseId pI) Case.CLOSED
-            PI.validateStatusTransition (PI._status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
-            MPI.updateStatus (PI._id pI) PI.EXPIRED
+            cs <- MC.findById (PI.caseId pI)
+            Case.validateStatusTransition (cs ^. #status) Case.CLOSED & fromEitherM CaseInvalidStatus
+            MC.updateStatus (PI.caseId pI) Case.CLOSED
+            PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
+            MPI.updateStatus (PI.id pI) PI.EXPIRED
             Notify.notifyOnExpiration cs
           _ -> return ()
     )

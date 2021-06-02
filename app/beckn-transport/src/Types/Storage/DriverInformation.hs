@@ -2,16 +2,17 @@ module Types.Storage.DriverInformation where
 
 import Beckn.Types.Id
 import Beckn.Types.Storage.Person (Person)
+import Beckn.Utils.JSON
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
 
 data DriverInformationT f = DriverInformation
-  { _driverId :: B.C f (Id Person),
-    _active :: B.C f Bool,
-    _onRide :: B.C f Bool,
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+  { driverId :: B.C f (Id Person),
+    active :: B.C f Bool,
+    onRide :: B.C f Bool,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -22,13 +23,13 @@ type DriverInformationPrimaryKey = B.PrimaryKey DriverInformationT Identity
 instance B.Table DriverInformationT where
   data PrimaryKey DriverInformationT f = DriverInformationPrimaryKey (B.C f (Id Person))
     deriving (Generic, B.Beamable)
-  primaryKey = DriverInformationPrimaryKey . _driverId
+  primaryKey = DriverInformationPrimaryKey . driverId
 
 instance ToJSON DriverInformation where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON DriverInformation where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverInformationT)
@@ -36,8 +37,8 @@ fieldEMod =
   B.setEntityName "driver_information"
     <> B.modifyTableFields
       B.tableModification
-        { _driverId = "driver_id",
-          _onRide = "on_ride",
-          _createdAt = "created_at",
-          _updatedAt = "updated_at"
+        { driverId = "driver_id",
+          onRide = "on_ride",
+          createdAt = "created_at",
+          updatedAt = "updated_at"
         }

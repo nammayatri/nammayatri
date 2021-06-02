@@ -20,7 +20,7 @@ module Beckn.Utils.Logging
   )
 where
 
-import Beckn.Types.Core.Context (Context (_transaction_id))
+import Beckn.Types.Core.Context (Context (transaction_id))
 import Beckn.Types.Logging
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
@@ -153,5 +153,5 @@ logContextKey = "log_context"
 withTransactionIdLogTag :: (HasField "context" b Context, Log m) => b -> m a -> m a
 withTransactionIdLogTag req = do
   let context = getField @"context" req
-      transaction_id = _transaction_id context
-  withLogTag ("txnId-" <> transaction_id)
+      transaction_id_ = transaction_id context
+  withLogTag ("txnId-" <> transaction_id_)

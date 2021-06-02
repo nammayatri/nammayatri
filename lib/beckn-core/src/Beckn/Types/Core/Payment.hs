@@ -5,38 +5,39 @@ import Beckn.Types.Core.MonetaryValue
 import Beckn.Types.Core.PaymentEndpoint
 import Beckn.Types.Core.State
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude hiding (State)
 
 data Payment = Payment
-  { _transaction_id :: Maybe Text,
+  { transaction_id :: Maybe Text,
     _type :: Maybe Text, -- ON-ORDER, PRE-FULFILLMENT, ON-FULFILLMENT, POST-FULFILLMENT
-    _payer :: Maybe PaymentEndpoint,
-    _payee :: Maybe PaymentEndpoint,
-    _methods :: [Text], -- CASH, CHEQUE, DEMAND-DRAFT, UPI, RTGS, NEFT, IMPS
-    _amount :: MonetaryValue,
-    _state :: Maybe State,
-    _due_date :: Maybe UTCTime,
-    _duration :: Maybe Duration
+    payer :: Maybe PaymentEndpoint,
+    payee :: Maybe PaymentEndpoint,
+    methods :: [Text], -- CASH, CHEQUE, DEMAND-DRAFT, UPI, RTGS, NEFT, IMPS
+    amount :: MonetaryValue,
+    state :: Maybe State,
+    due_date :: Maybe UTCTime,
+    duration :: Maybe Duration
   }
   deriving (Generic, Show)
 
 instance FromJSON Payment where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Payment where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Payment where
   example =
     Payment
-      { _transaction_id = Just idExample,
+      { transaction_id = Just idExample,
         _type = Just "ON-ORDER",
-        _payer = example,
-        _payee = example,
-        _methods = ["CASH"],
-        _amount = example,
-        _state = Nothing,
-        _due_date = Just example,
-        _duration = Nothing
+        payer = example,
+        payee = example,
+        methods = ["CASH"],
+        amount = example,
+        state = Nothing,
+        due_date = Just example,
+        duration = Nothing
       }

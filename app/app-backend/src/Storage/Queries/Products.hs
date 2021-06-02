@@ -14,7 +14,7 @@ import qualified Types.Storage.DB as DB
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductsT))
 getDbTable =
-  DB._products . DB.appDb <$> getSchemaName
+  DB.products . DB.appDb <$> getSchemaName
 
 createFlow :: Storage.Products -> Flow ()
 createFlow =
@@ -30,7 +30,7 @@ findById pid = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate pid)
   where
-    predicate id Storage.Products {..} = _id ==. B.val_ id
+    predicate pid_ Storage.Products {..} = id ==. B.val_ pid_
 
 findAllByIds :: [Id Storage.Products] -> Flow [Storage.Products]
 findAllByIds pids = do
@@ -38,4 +38,4 @@ findAllByIds pids = do
   DB.findAll dbTable identity (predicate pids)
   where
     predicate ids Storage.Products {..} =
-      _id `B.in_` (B.val_ <$> ids)
+      id `B.in_` (B.val_ <$> ids)

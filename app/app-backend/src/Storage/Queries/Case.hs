@@ -42,14 +42,14 @@ findAllByTypeAndStatuses personId caseType caseStatuses mlimit moffset = do
       offset = fromMaybe 0 moffset
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
-    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    orderByDesc Storage.Case {..} = B.desc_ createdAt
     predicate Storage.Case {..} =
       foldl
         (&&.)
         (B.val_ True)
         [ _type ==. B.val_ caseType,
-          B.in_ _status (B.val_ <$> caseStatuses) ||. complementVal caseStatuses,
-          _requestor ==. B.val_ (Just $ getId personId)
+          B.in_ status (B.val_ <$> caseStatuses) ||. complementVal caseStatuses,
+          requestor ==. B.val_ (Just $ getId personId)
         ]
 
 findById :: Id Storage.Case -> Flow (Maybe Storage.Case)
@@ -57,7 +57,7 @@ findById caseId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Case {..} = _id ==. B.val_ caseId
+    predicate Storage.Case {..} = id ==. B.val_ caseId
 
 findByIdAndType :: Id Storage.Case -> Storage.CaseType -> Flow (Maybe Storage.Case)
 findByIdAndType caseId caseType = do
@@ -65,45 +65,45 @@ findByIdAndType caseId caseType = do
   DB.findOne dbTable predicate
   where
     predicate Storage.Case {..} =
-      (_id ==. B.val_ caseId)
+      (id ==. B.val_ caseId)
         &&. (_type ==. B.val_ caseType)
 
 findIdByPerson :: Person.Person -> Id Storage.Case -> Flow (Maybe Storage.Case)
 findIdByPerson person caseId = do
   dbTable <- getDbTable
-  let personId = getId $ person ^. #_id
+  let personId = getId $ person ^. #id
   DB.findOne dbTable (predicate personId)
   where
     predicate personId Storage.Case {..} =
-      _id ==. B.val_ caseId &&. _requestor ==. B.val_ (Just personId)
+      id ==. B.val_ caseId &&. requestor ==. B.val_ (Just personId)
 
 findAllByIds :: [Id Storage.Case] -> Flow [Storage.Case]
 findAllByIds caseIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate Storage.Case {..} = _id `B.in_` (B.val_ <$> caseIds)
+    predicate Storage.Case {..} = id `B.in_` (B.val_ <$> caseIds)
 
 findAllByParentIdsAndCaseType :: [Id Storage.Case] -> Storage.CaseType -> Flow [Storage.Case]
 findAllByParentIdsAndCaseType caseIds caseType = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate Storage.Case {..} = _parentCaseId `B.in_` (B.val_ . Just <$> caseIds) &&. (_type ==. B.val_ caseType)
+    predicate Storage.Case {..} = parentCaseId `B.in_` (B.val_ . Just <$> caseIds) &&. (_type ==. B.val_ caseType)
 
 findOneByParentIdAndCaseType :: Id Storage.Case -> Storage.CaseType -> Flow (Maybe Storage.Case)
 findOneByParentIdAndCaseType caseId caseType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Case {..} = _parentCaseId ==. B.val_ (Just caseId) &&. _type ==. B.val_ caseType
+    predicate Storage.Case {..} = parentCaseId ==. B.val_ (Just caseId) &&. _type ==. B.val_ caseType
 
 findAllByPerson :: Text -> Flow [Storage.Case]
 findAllByPerson perId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate Storage.Case {..} = _requestor ==. B.val_ (Just perId)
+    predicate Storage.Case {..} = requestor ==. B.val_ (Just perId)
 
 findAllExpiredByStatus :: [Storage.CaseStatus] -> Maybe UTCTime -> Maybe UTCTime -> Flow [Storage.Case]
 findAllExpiredByStatus statuses maybeFrom maybeTo = do
@@ -115,50 +115,50 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
       foldl
         (&&.)
         (B.val_ True)
-        ( [ _status `B.in_` (B.val_ <$> statuses),
-            _validTill B.<=. B.val_ now
+        ( [ status `B.in_` (B.val_ <$> statuses),
+            validTill B.<=. B.val_ now
           ]
-            <> maybe [] (\from -> [_createdAt B.>=. B.val_ from]) maybeFrom
-            <> maybe [] (\to -> [_createdAt B.<=. B.val_ to]) maybeTo
+            <> maybe [] (\from -> [createdAt B.>=. B.val_ from]) maybeFrom
+            <> maybe [] (\to -> [createdAt B.<=. B.val_ to]) maybeTo
         )
 
 updateValidTillFlow :: Id Storage.Case -> UTCTime -> Flow ()
 updateValidTillFlow id validTill = DB.runSqlDB (updateValidTill id validTill)
 
 updateValidTill :: Id Storage.Case -> UTCTime -> DB.SqlDB ()
-updateValidTill id validTill = do
+updateValidTill cid validTill_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- asks DB.currentTime
   DB.update'
     dbTable
-    (setClause validTill currTime)
-    (predicate id)
+    (setClause validTill_ currTime)
+    (predicate cid)
   where
     setClause scValidTill currTime Storage.Case {..} =
       mconcat
-        [ _validTill <-. B.val_ scValidTill,
-          _updatedAt <-. B.val_ currTime
+        [ validTill <-. B.val_ scValidTill,
+          updatedAt <-. B.val_ currTime
         ]
-    predicate cid Storage.Case {..} = _id ==. B.val_ cid
+    predicate cid_ Storage.Case {..} = id ==. B.val_ cid_
 
 updateStatusFlow :: Id Storage.Case -> Storage.CaseStatus -> Flow ()
 updateStatusFlow id status = DB.runSqlDB (updateStatus id status)
 
 updateStatus :: Id Storage.Case -> Storage.CaseStatus -> DB.SqlDB ()
-updateStatus id status = do
+updateStatus cid status_ = do
   dbTable <- getDbTable
   currTime <- asks DB.currentTime
   DB.update'
     dbTable
-    (setClause status currTime)
-    (predicate id)
+    (setClause status_ currTime)
+    (predicate cid)
   where
     setClause pStatus currTime Storage.Case {..} =
       mconcat
-        [ _status <-. B.val_ pStatus,
-          _updatedAt <-. B.val_ currTime
+        [ status <-. B.val_ pStatus,
+          updatedAt <-. B.val_ currTime
         ]
-    predicate cid Storage.Case {..} = _id ==. B.val_ cid
+    predicate cid_ Storage.Case {..} = id ==. B.val_ cid_
 
 findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Storage.CaseType] -> [Storage.CaseStatus] -> [Text] -> Maybe Int -> Maybe Int -> Flow [Storage.Case]
 findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset = do
@@ -170,16 +170,16 @@ findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s m
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    orderByDesc Storage.Case {..} = B.desc_ _createdAt
+    orderByDesc Storage.Case {..} = B.desc_ createdAt
     predicate Storage.Case {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _fromLocationId `B.in_` (B.val_ <$> fromLocationIds) ||. complementVal fromLocationIds,
-          _toLocationId `B.in_` (B.val_ <$> toLocationIds) ||. complementVal toLocationIds,
-          _status `B.in_` (B.val_ <$> statuses) ||. complementVal statuses,
+        [ fromLocationId `B.in_` (B.val_ <$> fromLocationIds) ||. complementVal fromLocationIds,
+          toLocationId `B.in_` (B.val_ <$> toLocationIds) ||. complementVal toLocationIds,
+          status `B.in_` (B.val_ <$> statuses) ||. complementVal statuses,
           _type `B.in_` (B.val_ <$> types) ||. complementVal types,
-          _udf1 `B.in_` (B.val_ . Just <$> udf1s) ||. complementVal udf1s
+          udf1 `B.in_` (B.val_ . Just <$> udf1s) ||. complementVal udf1s
         ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
@@ -199,7 +199,7 @@ updateInfo caseId csInfo = do
   where
     setClause cInfo currTime' Storage.Case {..} =
       mconcat
-        [ _info <-. B.val_ (Just cInfo),
-          _updatedAt <-. B.val_ currTime'
+        [ info <-. B.val_ (Just cInfo),
+          updatedAt <-. B.val_ currTime'
         ]
-    predicate pcaseId Storage.Case {..} = _id ==. B.val_ pcaseId
+    predicate pcaseId Storage.Case {..} = id ==. B.val_ pcaseId

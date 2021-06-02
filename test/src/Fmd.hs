@@ -33,18 +33,18 @@ buildContext act tid bapBaseUrl bppBaseUrl = do
   now <- getCurrentTime
   return
     Context
-      { _domain = FINAL_MILE_DELIVERY,
-        _action = act,
-        _country = Just "IND",
-        _city = Nothing,
-        _core_version = Just "0.8.0",
-        _domain_version = Just "0.8.3",
-        _bap_uri = bapBaseUrl,
-        _bpp_uri = bppBaseUrl,
-        _transaction_id = tid,
-        _message_id = tid,
-        _timestamp = now,
-        _ttl = Nothing
+      { domain = FINAL_MILE_DELIVERY,
+        action = act,
+        country = Just "IND",
+        city = Nothing,
+        core_version = Just "0.8.0",
+        domain_version = Just "0.8.3",
+        bap_uri = bapBaseUrl,
+        bpp_uri = bppBaseUrl,
+        transaction_id = tid,
+        message_id = tid,
+        timestamp = now,
+        ttl = Nothing
       }
 
 buildFMDSearchReq :: Context -> SearchReq
@@ -66,7 +66,7 @@ buildFMDInitReq context quoteId = do
   let order = example
   InitReq
     { context,
-      message = InitOrder $ order {_quotation = Just (Quotation quoteId Nothing Nothing Nothing)}
+      message = InitOrder $ order {quotation = Just (Quotation quoteId Nothing Nothing Nothing)}
     }
 
 buildFMDConfirmReq :: Context -> ConfirmReq

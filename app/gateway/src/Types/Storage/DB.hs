@@ -8,7 +8,7 @@ import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 
 newtype AppDb f = AppDb
-  { _organization :: f (B.TableEntity Organization.OrganizationT)
+  { organization :: f (B.TableEntity Organization.OrganizationT)
   }
   deriving (Generic, B.Database be)
 
@@ -16,7 +16,7 @@ appDb :: Text -> B.DatabaseSettings be AppDb
 appDb dbSchemaName =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { _organization = setSchema dbSchemaName <> Organization.fieldEMod
+      { organization = setSchema dbSchemaName <> Organization.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

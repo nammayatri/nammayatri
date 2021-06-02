@@ -43,8 +43,8 @@ spec = do
         statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
-        return . nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = AppCase._id productInstance
+        return . nonEmpty . filter (\p -> p ^. #organizationId == bppTransporterOrgId) $ productInstances statusRes
+      let productInstanceId = AppCase.id productInstance
       -- Confirm ride from app backend
       confirmResult <-
         runClient
@@ -59,10 +59,10 @@ spec = do
 
         -- Filter order productInstance
         let Right rideListRes = rideReqResult
-            tbePiList = TbePI._productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> PI._parentId pI) == Just (getId productInstanceId)) tbePiList
+            tbePiList = TbePI.productInstance <$> rideListRes
+            transporterOrdersPi = filter (\pI -> (getId <$> PI.parentId pI) == Just (getId productInstanceId)) tbePiList
         return $ nonEmpty transporterOrdersPi
-      let transporterOrderPiId = PI._id transporterOrderPi
+      let transporterOrderPiId = PI.id transporterOrderPi
 
       rideInfo <- poll $ do
         res <-
@@ -85,10 +85,10 @@ spec = do
         rideRequestResponse `shouldSatisfy` isRight
         let Right rideResponse = rideRequestResponse
         let orders =
-              rideResponse ^.. traverse . #_productInstance
-                & filter \p -> p ^. #_parentId == Just productInstanceId
+              rideResponse ^.. traverse . #productInstance
+                & filter \p -> p ^. #parentId == Just productInstanceId
         return $ nonEmpty orders
-      tripAssignedPI ^. #_status `shouldBe` PI.TRIP_ASSIGNED
+      tripAssignedPI ^. #status `shouldBe` PI.TRIP_ASSIGNED
 
       -- Driver updates RIDEORDER PI to TRIP_REASSIGNMENT
       cancelStatusResult <-
@@ -100,10 +100,10 @@ spec = do
       piCancelled :| [] <- poll $ do
         res <- runClient appClientEnv (buildListPIs PI.CANCELLED)
         let Right piListRes = res
-        let appPiList = AppPI._productInstance <$> piListRes
-        let appOrderPI = filter (\pI -> (getId <$> PI._parentId pI) == Just (getId productInstanceId)) appPiList
+        let appPiList = AppPI.productInstance <$> piListRes
+        let appOrderPI = filter (\pI -> (getId <$> PI.parentId pI) == Just (getId productInstanceId)) appPiList
         pure $ nonEmpty appOrderPI
-      piCancelled ^. #_status `shouldBe` PI.CANCELLED
+      piCancelled ^. #status `shouldBe` PI.CANCELLED
   where
-    productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
-    productInstances = AppCase._productInstance
+    productInstances :: AppCase.GetStatusRes -> [AppCase.ProdInstRes]
+    productInstances = AppCase.productInstance

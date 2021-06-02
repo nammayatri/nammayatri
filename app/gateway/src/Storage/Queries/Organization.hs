@@ -13,7 +13,7 @@ import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT))
 getDbTable =
-  DB._organization . DB.appDb <$> getSchemaName
+  DB.organization . DB.appDb <$> getSchemaName
 
 findOrgById :: Text -> Flow (Maybe Org.Organization)
 findOrgById oId = do
@@ -21,7 +21,7 @@ findOrgById oId = do
   DB.findOne dbTable predicate
   where
     predicate Org.Organization {..} =
-      _id ==. B.val_ (Id oId)
+      id ==. B.val_ (Id oId)
 
 findOrgByShortId :: ShortId Org.Organization -> Flow (Maybe Org.Organization)
 findOrgByShortId shortOrgId = do
@@ -29,16 +29,16 @@ findOrgByShortId shortOrgId = do
   DB.findOne dbTable predicate
   where
     predicate Org.Organization {..} =
-      _shortId ==. B.val_ shortOrgId
+      shortId ==. B.val_ shortOrgId
 
 findOrgByApiKey ::
   Org.OrganizationType -> App.APIKey -> Flow (Maybe Org.Organization)
-findOrgByApiKey oType apiKey = do
+findOrgByApiKey oType apiKey_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Org.Organization {..} =
-      _apiKey ==. B.val_ (Just apiKey)
+      apiKey ==. B.val_ (Just apiKey_)
         &&. _type ==. B.val_ oType
 
 listOrganizations ::
@@ -53,13 +53,13 @@ listOrganizations mlimit moffset oType oDomain = do
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    orderByDesc Org.Organization {..} = B.desc_ _createdAt
+    orderByDesc Org.Organization {..} = B.desc_ createdAt
     predicate Org.Organization {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _enabled ==. B.val_ True,
-          _verified ==. B.val_ True,
+        [ enabled ==. B.val_ True,
+          verified ==. B.val_ True,
           _type `B.in_` (B.val_ <$> oType),
-          _domain `B.in_` (B.val_ . Just <$> oDomain)
+          domain `B.in_` (B.val_ . Just <$> oDomain)
         ]

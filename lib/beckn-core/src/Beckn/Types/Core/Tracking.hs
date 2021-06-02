@@ -3,25 +3,26 @@
 module Beckn.Types.Core.Tracking where
 
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Tracking = Tracking
-  { _url :: Maybe Text,
-    _required_params :: Maybe Text,
-    _metadata :: Maybe Text
+  { url :: Maybe Text,
+    required_params :: Maybe Text,
+    metadata :: Maybe Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Tracking where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Tracking where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Tracking where
   example =
     Tracking
-      { _url = Just "https://api.example.com/track",
-        _required_params = Just "",
-        _metadata = Just ""
+      { url = Just "https://api.example.com/track",
+        required_params = Just "",
+        metadata = Just ""
       }

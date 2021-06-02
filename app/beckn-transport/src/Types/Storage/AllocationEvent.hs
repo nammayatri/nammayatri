@@ -3,19 +3,20 @@
 module Types.Storage.AllocationEvent where
 
 import Beckn.Types.Id (Id)
+import Beckn.Utils.JSON
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Types.App (Ride)
 
 data AllocationEventT f = AllocationEvent
-  { _id :: B.C f (Id AllocationEvent),
-    _eventType :: B.C f AllocationEventType,
-    _timestamp :: B.C f UTCTime,
-    _rideId :: B.C f (Id Ride)
+  { id :: B.C f (Id AllocationEvent),
+    eventType :: B.C f AllocationEventType,
+    timestamp :: B.C f UTCTime,
+    rideId :: B.C f (Id Ride)
   }
   deriving (Generic, B.Beamable)
 
@@ -44,13 +45,13 @@ type AllocationEventPrimaryKey = B.PrimaryKey AllocationEventT Identity
 instance B.Table AllocationEventT where
   data PrimaryKey AllocationEventT f = AllocationEventPrimaryKey (B.C f (Id AllocationEvent))
     deriving (Generic, B.Beamable)
-  primaryKey = AllocationEventPrimaryKey . _id
+  primaryKey = AllocationEventPrimaryKey . id
 
 instance ToJSON AllocationEvent where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON AllocationEvent where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity AllocationEventT)
@@ -58,8 +59,8 @@ fieldEMod =
   B.setEntityName "allocation_event"
     <> B.modifyTableFields
       B.tableModification
-        { _id = "id",
-          _eventType = "event_type",
-          _timestamp = "timestamp",
-          _rideId = "ride_id"
+        { id = "id",
+          eventType = "event_type",
+          timestamp = "timestamp",
+          rideId = "ride_id"
         }

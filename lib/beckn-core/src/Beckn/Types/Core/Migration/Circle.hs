@@ -2,16 +2,17 @@ module Beckn.Types.Core.Migration.Circle (Circle (..)) where
 
 import Beckn.Types.Core.Migration.Gps (Gps)
 import Beckn.Types.Core.Migration.Scalar (Scalar)
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Circle = Circle
-  { _gps :: Gps,
-    _radius :: Scalar
+  { gps :: Gps,
+    radius :: Scalar
   }
   deriving (Generic, Show)
 
 instance FromJSON Circle where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Circle where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

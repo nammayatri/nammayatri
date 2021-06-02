@@ -5,35 +5,36 @@ import qualified Beckn.Types.Storage.Location as Loc
 import Beckn.Types.Storage.ProductInstance
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Products as Product
+import Beckn.Utils.JSON
 import Data.Swagger
 import EulerHS.Prelude
 
 data ProdInstReq = ProdInstReq
-  { _status :: [ProductInstance.ProductInstanceStatus],
-    _limit :: Integer,
-    _offset :: Integer
+  { status :: [ProductInstance.ProductInstanceStatus],
+    limit :: Integer,
+    offset :: Integer
   }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON ProdInstReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON ProdInstReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data ProductInstanceRes = ProductInstanceRes
   { _case :: Case.Case,
-    _product :: Product.Products,
-    _productInstance :: ProductInstance,
-    _fromLocation :: Maybe Loc.Location,
-    _toLocation :: Maybe Loc.Location
+    product :: Product.Products,
+    productInstance :: ProductInstance,
+    fromLocation :: Maybe Loc.Location,
+    toLocation :: Maybe Loc.Location
   }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON ProductInstanceRes where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON ProductInstanceRes where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 type ProductInstanceList = [ProductInstanceRes]

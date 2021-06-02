@@ -4,7 +4,7 @@ module Product.BecknProvider.Confirm (confirm) where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.Ack
@@ -19,7 +19,7 @@ import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import ExternalAPI.Transform as ExternalAPITransform
 import qualified Models.Case as Case
@@ -39,38 +39,38 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "confirm API Flow" "Reached"
     BP.validateContext "confirm" $ req ^. #context
-    let prodInstId = Id $ req ^. #message . #order . #_id
+    let prodInstId = Id $ req ^. #message . #order . #id
     productInstance <- QProductInstance.findById' prodInstId >>= fromMaybeM PIDoesNotExist
-    let transporterId' = Id $ productInstance ^. #_organizationId
-    unless (productInstance ^. #_status == ProductInstance.INSTOCK) $
+    let transporterId' = Id $ productInstance ^. #organizationId
+    unless (productInstance ^. #status == ProductInstance.INSTOCK) $
       throwError $ PIInvalidStatus "This ride cannot be confirmed"
     transporterOrg <- Organization.findOrganizationById transporterId'
     unless (transporterId' == transporterId) $ throwError AccessDenied
-    let caseShortId = getId transporterId <> "_" <> req ^. #context . #_transaction_id
+    let caseShortId = getId transporterId <> "_" <> req ^. #context . #transaction_id
     searchCase <- Case.findBySid caseShortId
-    bapOrgId <- searchCase ^. #_udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
-    unless (bapOrg ^. #_id == Id bapOrgId) $ throwError AccessDenied
+    bapOrgId <- searchCase ^. #udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
+    unless (bapOrg ^. #id == Id bapOrgId) $ throwError AccessDenied
     orderCase <- mkOrderCase searchCase
-    orderProductInstance <- mkOrderProductInstance (orderCase ^. #_id) productInstance
-    rideRequest <- BP.mkRideReq (orderProductInstance ^. #_id) RideRequest.ALLOCATION
+    orderProductInstance <- mkOrderProductInstance (orderCase ^. #id) productInstance
+    rideRequest <- BP.mkRideReq (orderProductInstance ^. #id) RideRequest.ALLOCATION
     let newOrderCaseStatus = Case.INPROGRESS
     let newSearchCaseStatus = Case.COMPLETED
     let newProductInstanceStatus = ProductInstance.CONFIRMED
-    Case.validateStatusTransition (orderCase ^. #_status) newOrderCaseStatus & fromEitherM CaseInvalidStatus
-    Case.validateStatusTransition (searchCase ^. #_status) newSearchCaseStatus & fromEitherM CaseInvalidStatus
-    ProductInstance.validateStatusTransition (ProductInstance._status productInstance) newProductInstanceStatus
+    Case.validateStatusTransition (orderCase ^. #status) newOrderCaseStatus & fromEitherM CaseInvalidStatus
+    Case.validateStatusTransition (searchCase ^. #status) newSearchCaseStatus & fromEitherM CaseInvalidStatus
+    ProductInstance.validateStatusTransition (ProductInstance.status productInstance) newProductInstanceStatus
       & fromEitherM PIInvalidStatus
     (currTime, uuid, shortId) <- BP.getIdShortIdAndTime
     let trackerCase = mkTrackerCase searchCase uuid currTime shortId
-    trackerProductInstance <- mkTrackerProductInstance (trackerCase ^. #_id) productInstance currTime
+    trackerProductInstance <- mkTrackerProductInstance (trackerCase ^. #id) productInstance currTime
 
     DB.runSqlDBTransaction $ do
       QCase.create orderCase
       QProductInstance.create orderProductInstance
       RideRequest.create rideRequest
-      QCase.updateStatus (orderCase ^. #_id) newOrderCaseStatus
-      QCase.updateStatus (searchCase ^. #_id) newSearchCaseStatus
-      QProductInstance.updateStatus (productInstance ^. #_id) newProductInstanceStatus
+      QCase.updateStatus (orderCase ^. #id) newOrderCaseStatus
+      QCase.updateStatus (searchCase ^. #id) newSearchCaseStatus
+      QProductInstance.updateStatus (productInstance ^. #id) newProductInstanceStatus
       QCase.create trackerCase
       QProductInstance.create trackerProductInstance
 
@@ -87,18 +87,18 @@ onConfirmCallback ::
   Organization.Organization ->
   Flow ()
 onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg = do
-  let transporterId = transporterOrg ^. #_id
-  let prodInstId = productInstance ^. #_id
+  let transporterId = transporterOrg ^. #id
+  let prodInstId = productInstance ^. #id
   result <- runSafeFlow $ do
-    pickupPoint <- (productInstance ^. #_fromLocation) & fromMaybeM (PIFieldNotPresent "location_id")
+    pickupPoint <- (productInstance ^. #fromLocation) & fromMaybeM (PIFieldNotPresent "location_id")
     vehicleVariant :: Vehicle.Variant <-
-      (orderCase ^. #_udf1 >>= readMaybe . T.unpack)
+      (orderCase ^. #udf1 >>= readMaybe . T.unpack)
         & fromMaybeM (CaseFieldNotPresent "udf1")
     driverPool <- calculateDriverPool (Id pickupPoint) transporterId vehicleVariant
     setDriverPool prodInstId driverPool
     logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  bapCallbackUrl <- bapOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  let bppShortId = getShortId $ transporterOrg ^. #_shortId
+  bapCallbackUrl <- bapOrg ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  let bppShortId = getShortId $ transporterOrg ^. #shortId
   case result of
     Right () -> notifySuccessGateway bapCallbackUrl bppShortId
     Left err -> do
@@ -115,18 +115,18 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
       appEnv <- ask
       let context =
             Context.Context
-              { _domain = Domain.MOBILITY,
-                _country = Just "IND",
-                _city = Nothing,
-                _action = "on_confirm",
-                _core_version = Just "0.8.2",
-                _domain_version = Just "0.8.2",
-                _transaction_id = last $ T.split (== '_') $ searchCase ^. #_shortId,
-                _message_id = searchCase ^. #_shortId,
-                _bap_uri = Nothing,
-                _bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
-                _timestamp = currTime,
-                _ttl = Nothing
+              { domain = Domain.MOBILITY,
+                country = Just "IND",
+                city = Nothing,
+                action = "on_confirm",
+                core_version = Just "0.8.2",
+                domain_version = Just "0.8.2",
+                transaction_id = last $ T.split (== '_') $ searchCase ^. #shortId,
+                message_id = searchCase ^. #shortId,
+                bap_uri = Nothing,
+                bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
+                timestamp = currTime,
+                ttl = Nothing
               }
       let payload =
             API.CallbackReq
@@ -135,9 +135,9 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
                   Left $
                     Error.Error
                       { _type = Error.DOMAIN_ERROR,
-                        _code = err,
-                        _path = Nothing,
-                        _message = Nothing
+                        code = err,
+                        path = Nothing,
+                        message = Nothing
                       }
               }
       _ <- ExternalAPI.onConfirm bapCallbackUrl payload bppShortId
@@ -145,21 +145,21 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
-  (now, cid, shortId) <- BP.getIdShortIdAndTime
+  (now, cid, shortId_) <- BP.getIdShortIdAndTime
   return $
     Case.Case
-      { _id = cid,
-        _name = Nothing,
-        _description = Just "Case to order a Ride",
-        _shortId = shortId,
-        _industry = Case.MOBILITY,
+      { id = cid,
+        name = Nothing,
+        description = Just "Case to order a Ride",
+        shortId = shortId_,
+        industry = Case.MOBILITY,
         _type = Case.RIDEORDER,
-        _parentCaseId = Just _id,
-        _status = Case.INPROGRESS,
-        _fromLocationId = _fromLocationId,
-        _toLocationId = _toLocationId,
-        _createdAt = now,
-        _updatedAt = now,
+        parentCaseId = Just id,
+        status = Case.INPROGRESS,
+        fromLocationId = fromLocationId,
+        toLocationId = toLocationId,
+        createdAt = now,
+        updatedAt = now,
         ..
       }
 
@@ -169,50 +169,50 @@ mkOrderProductInstance caseId prodInst = do
   inAppOtpCode <- generateOTPCode
   return $
     ProductInstance.ProductInstance
-      { _id = Id pid,
-        _caseId = caseId,
-        _productId = prodInst ^. #_productId,
-        _personId = Nothing,
-        _personUpdatedAt = Nothing,
-        _entityType = ProductInstance.VEHICLE,
-        _entityId = Nothing,
-        _shortId = shortId,
-        _quantity = 1,
-        _price = prodInst ^. #_price,
+      { id = Id pid,
+        caseId = caseId,
+        productId = prodInst ^. #productId,
+        personId = Nothing,
+        personUpdatedAt = Nothing,
+        entityType = ProductInstance.VEHICLE,
+        entityId = Nothing,
+        shortId = shortId,
+        quantity = 1,
+        price = prodInst ^. #price,
         _type = Case.RIDEORDER,
-        _organizationId = prodInst ^. #_organizationId,
-        _fromLocation = prodInst ^. #_fromLocation,
-        _toLocation = prodInst ^. #_toLocation,
-        _startTime = prodInst ^. #_startTime,
-        _endTime = prodInst ^. #_endTime,
-        _validTill = prodInst ^. #_validTill,
-        _parentId = Just (prodInst ^. #_id),
-        _status = ProductInstance.CONFIRMED,
-        _info = Nothing,
-        _createdAt = now,
-        _updatedAt = now,
-        _udf1 = prodInst ^. #_udf1,
-        _udf2 = prodInst ^. #_udf2,
-        _udf3 = prodInst ^. #_udf3,
-        _udf4 = Just inAppOtpCode,
-        _udf5 = prodInst ^. #_udf5
+        organizationId = prodInst ^. #organizationId,
+        fromLocation = prodInst ^. #fromLocation,
+        toLocation = prodInst ^. #toLocation,
+        startTime = prodInst ^. #startTime,
+        endTime = prodInst ^. #endTime,
+        validTill = prodInst ^. #validTill,
+        parentId = Just (prodInst ^. #id),
+        status = ProductInstance.CONFIRMED,
+        info = Nothing,
+        createdAt = now,
+        updatedAt = now,
+        udf1 = prodInst ^. #udf1,
+        udf2 = prodInst ^. #udf2,
+        udf3 = prodInst ^. #udf3,
+        udf4 = Just inAppOtpCode,
+        udf5 = prodInst ^. #udf5
       }
 
 mkTrackerCase :: Case.Case -> Text -> UTCTime -> Text -> Case.Case
-mkTrackerCase case_@Case.Case {..} uuid now shortId =
+mkTrackerCase case_@Case.Case {..} uuid now shortId_ =
   Case.Case
-    { _id = Id uuid,
-      _name = Nothing,
-      _description = Just "Case to track a Ride",
-      _shortId = shortId,
-      _industry = Case.MOBILITY,
+    { id = Id uuid,
+      name = Nothing,
+      description = Just "Case to track a Ride",
+      shortId = shortId_,
+      industry = Case.MOBILITY,
       _type = Case.LOCATIONTRACKER,
-      _status = Case.NEW,
-      _parentCaseId = Just $ case_ ^. #_id,
-      _fromLocationId = case_ ^. #_fromLocationId,
-      _toLocationId = case_ ^. #_toLocationId,
-      _createdAt = now,
-      _updatedAt = now,
+      status = Case.NEW,
+      parentCaseId = Just $ case_ ^. #id,
+      fromLocationId = case_ ^. #fromLocationId,
+      toLocationId = case_ ^. #toLocationId,
+      createdAt = now,
+      updatedAt = now,
       ..
     }
 
@@ -222,38 +222,38 @@ mkTrackerProductInstance caseId prodInst currTime = do
   piId <- L.generateGUID
   return $
     ProductInstance.ProductInstance
-      { _id = Id piId,
-        _caseId = caseId,
-        _productId = prodInst ^. #_productId,
-        _personId = Nothing,
-        _personUpdatedAt = Nothing,
-        _shortId = shortId,
-        _entityType = ProductInstance.VEHICLE,
-        _parentId = Just (prodInst ^. #_id),
-        _organizationId = prodInst ^. #_organizationId,
-        _entityId = Nothing,
+      { id = Id piId,
+        caseId = caseId,
+        productId = prodInst ^. #productId,
+        personId = Nothing,
+        personUpdatedAt = Nothing,
+        shortId = shortId,
+        entityType = ProductInstance.VEHICLE,
+        parentId = Just (prodInst ^. #id),
+        organizationId = prodInst ^. #organizationId,
+        entityId = Nothing,
         _type = Case.LOCATIONTRACKER,
-        _startTime = prodInst ^. #_startTime,
-        _endTime = prodInst ^. #_endTime,
-        _fromLocation = prodInst ^. #_fromLocation,
-        _toLocation = prodInst ^. #_toLocation,
-        _validTill = prodInst ^. #_validTill,
-        _quantity = 1,
-        _price = Nothing,
-        _status = ProductInstance.INSTOCK,
-        _info = Nothing,
-        _createdAt = currTime,
-        _updatedAt = currTime,
-        _udf1 = prodInst ^. #_udf1,
-        _udf2 = prodInst ^. #_udf2,
-        _udf3 = prodInst ^. #_udf3,
-        _udf4 = prodInst ^. #_udf4,
-        _udf5 = prodInst ^. #_udf5
+        startTime = prodInst ^. #startTime,
+        endTime = prodInst ^. #endTime,
+        fromLocation = prodInst ^. #fromLocation,
+        toLocation = prodInst ^. #toLocation,
+        validTill = prodInst ^. #validTill,
+        quantity = 1,
+        price = Nothing,
+        status = ProductInstance.INSTOCK,
+        info = Nothing,
+        createdAt = currTime,
+        updatedAt = currTime,
+        udf1 = prodInst ^. #udf1,
+        udf2 = prodInst ^. #udf2,
+        udf3 = prodInst ^. #udf3,
+        udf4 = prodInst ^. #udf4,
+        udf5 = prodInst ^. #udf5
       }
 
 mkOnConfirmPayload :: BaseUrl -> Case.Case -> ProductInstance.ProductInstance -> Case.Case -> Flow API.OnConfirmReq
 mkOnConfirmPayload bapUri searchCase orderPI trackerCase = do
-  let txnId = last . T.splitOn "_" $ searchCase ^. #_shortId
+  let txnId = last . T.splitOn "_" $ searchCase ^. #shortId
   bppUri <- asks xAppUri
   context <- buildContext "on_confirm" txnId (Just bapUri) (Just bppUri)
   trip <- BP.mkTrip trackerCase orderPI

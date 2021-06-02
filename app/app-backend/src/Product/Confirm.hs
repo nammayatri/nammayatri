@@ -5,7 +5,7 @@ module Product.Confirm (confirm, onConfirm) where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.API.Confirm
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Order (OrderItem (..))
@@ -17,7 +17,7 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Models.Case as MCase
 import qualified Models.ProductInstance as MPI
@@ -35,20 +35,20 @@ confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
 confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
   lt <- getCurrentTime
   case_ <- MCase.findIdByPerson person $ Id caseId
-  when ((case_ ^. #_validTill) < lt) $
+  when ((case_ ^. #validTill) < lt) $
     throwError CaseExpired
   orderCase_ <- mkOrderCase case_
   productInstance <- MPI.findById (Id productInstanceId)
   organization <-
-    OQ.findOrganizationById (Id $ productInstance ^. #_organizationId)
+    OQ.findOrganizationById (Id $ productInstance ^. #organizationId)
       >>= fromMaybeM OrgNotFound
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
-  orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #_id) productInstance
+  orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #id) productInstance
   DB.runSqlDBTransaction $ do
     QCase.create orderCase_
     QPI.create orderProductInstance
   context <- buildContext "confirm" caseId Nothing Nothing
-  baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  baseUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
   ExternalAPI.confirm baseUrl (ConfirmReq context $ ConfirmOrder order)
     >>= checkAckResponseError (ExternalAPIResponseError "confirm")
@@ -58,17 +58,17 @@ confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
       now <- getCurrentTime
       return $
         BO.Order
-          { _id = getId $ productInstance ^. #_id,
-            _state = Nothing,
-            _created_at = now,
-            _updated_at = now,
-            _items = [OrderItem (getId $ productInstance ^. #_productId) Nothing],
-            _billing = Nothing,
-            _payment = Nothing,
-            _trip = Nothing,
-            _cancellation_reason_id = Nothing,
-            _cancellation_reasons = [],
-            _cancellation_policy = Nothing
+          { id = getId $ productInstance ^. #id,
+            state = Nothing,
+            created_at = now,
+            updated_at = now,
+            items = [OrderItem (getId $ productInstance ^. #productId) Nothing],
+            billing = Nothing,
+            payment = Nothing,
+            trip = Nothing,
+            cancellation_reason_id = Nothing,
+            cancellation_reasons = [],
+            cancellation_policy = Nothing
           }
 
 onConfirm :: Organization.Organization -> OnConfirmReq -> FlowHandler AckResponse
@@ -79,27 +79,27 @@ onConfirm _org req = withFlowHandlerBecknAPI $
     validateContext "on_confirm" $ req ^. #context
     case req ^. #contents of
       Right msg -> do
-        let trip = fromBeckn <$> msg ^. #order . #_trip
-            pid = Id $ msg ^. #order . #_id
+        let trip = fromBeckn <$> msg ^. #order . #trip
+            pid = Id $ msg ^. #order . #id
             tracker = flip Products.Tracker Nothing <$> trip
         prdInst <- MPI.findById pid
         -- TODO: update tracking prodInfo in .info
-        let mprdInfo = decodeFromText =<< (prdInst ^. #_info)
-        let uInfo = (\info -> info {Products._tracker = tracker}) <$> mprdInfo
+        let mprdInfo = decodeFromText =<< (prdInst ^. #info)
+        let uInfo = (\info -> info {Products.tracker = tracker}) <$> mprdInfo
         let uPrd =
               prdInst
-                { SPI._info = encodeToText <$> uInfo,
-                  SPI._udf4 = (^. #id) <$> trip,
-                  SPI._status = SPI.CONFIRMED
+                { SPI.info = encodeToText <$> uInfo,
+                  SPI.udf4 = (^. #id) <$> trip,
+                  SPI.status = SPI.CONFIRMED
                 }
         productInstance <- MPI.findById pid
         Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
         let newCaseStatus = Case.COMPLETED
-        case_ <- MCase.findById $ productInstance ^. #_caseId
-        Case.validateStatusTransition (case_ ^. #_status) newCaseStatus & fromEitherM CaseInvalidStatus
-        SPI.validateStatusTransition (SPI._status productInstance) SPI.CONFIRMED & fromEitherM PIInvalidStatus
+        case_ <- MCase.findById $ productInstance ^. #caseId
+        Case.validateStatusTransition (case_ ^. #status) newCaseStatus & fromEitherM CaseInvalidStatus
+        SPI.validateStatusTransition (SPI.status productInstance) SPI.CONFIRMED & fromEitherM PIInvalidStatus
         DB.runSqlDBTransaction $ do
-          QCase.updateStatus (productInstance ^. #_caseId) newCaseStatus
+          QCase.updateStatus (productInstance ^. #caseId) newCaseStatus
           QPI.updateMultiple pid uPrd
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack
@@ -108,23 +108,23 @@ mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
   now <- getCurrentTime
   caseId <- generateGUID
-  shortId <- generateShortId
+  shortId_ <- generateShortId
   return
     Case.Case
-      { _id = caseId,
-        _name = Nothing,
-        _description = Just "Case to order a Ride",
-        _shortId = shortId,
-        _status = Case.INPROGRESS,
-        _industry = Case.MOBILITY,
+      { id = caseId,
+        name = Nothing,
+        description = Just "Case to order a Ride",
+        shortId = shortId_,
+        status = Case.INPROGRESS,
+        industry = Case.MOBILITY,
         _type = Case.RIDEORDER,
-        _parentCaseId = Just _id,
-        _fromLocationId = _fromLocationId,
-        _toLocationId = _toLocationId,
-        _startTime = _startTime,
-        _requestor = _requestor,
-        _createdAt = now,
-        _updatedAt = now,
+        parentCaseId = Just id,
+        fromLocationId = fromLocationId,
+        toLocationId = toLocationId,
+        startTime = startTime,
+        requestor = requestor,
+        createdAt = now,
+        updatedAt = now,
         ..
       }
 
@@ -135,31 +135,31 @@ mkOrderProductInstance caseId prodInst = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return
     SPI.ProductInstance
-      { _id = Id piid,
-        _caseId = caseId,
-        _productId = prodInst ^. #_productId,
-        _personId = prodInst ^. #_personId,
-        _personUpdatedAt = prodInst ^. #_personUpdatedAt,
-        _entityType = SPI.VEHICLE,
-        _entityId = Nothing,
-        _shortId = shortId,
-        _quantity = 1,
-        _price = prodInst ^. #_price,
+      { id = Id piid,
+        caseId = caseId,
+        productId = prodInst ^. #productId,
+        personId = prodInst ^. #personId,
+        personUpdatedAt = prodInst ^. #personUpdatedAt,
+        entityType = SPI.VEHICLE,
+        entityId = Nothing,
+        shortId = shortId,
+        quantity = 1,
+        price = prodInst ^. #price,
         _type = Case.RIDEORDER,
-        _organizationId = prodInst ^. #_organizationId,
-        _fromLocation = prodInst ^. #_fromLocation,
-        _toLocation = prodInst ^. #_toLocation,
-        _startTime = prodInst ^. #_startTime,
-        _endTime = prodInst ^. #_endTime,
-        _validTill = prodInst ^. #_validTill,
-        _parentId = Just (prodInst ^. #_id),
-        _status = SPI.INSTOCK,
-        _info = prodInst ^. #_info,
-        _createdAt = now,
-        _updatedAt = now,
-        _udf1 = prodInst ^. #_udf1,
-        _udf2 = prodInst ^. #_udf2,
-        _udf3 = prodInst ^. #_udf3,
-        _udf4 = prodInst ^. #_udf4,
-        _udf5 = prodInst ^. #_udf5
+        organizationId = prodInst ^. #organizationId,
+        fromLocation = prodInst ^. #fromLocation,
+        toLocation = prodInst ^. #toLocation,
+        startTime = prodInst ^. #startTime,
+        endTime = prodInst ^. #endTime,
+        validTill = prodInst ^. #validTill,
+        parentId = Just (prodInst ^. #id),
+        status = SPI.INSTOCK,
+        info = prodInst ^. #info,
+        createdAt = now,
+        updatedAt = now,
+        udf1 = prodInst ^. #udf1,
+        udf2 = prodInst ^. #udf2,
+        udf3 = prodInst ^. #udf3,
+        udf4 = prodInst ^. #udf4,
+        udf5 = prodInst ^. #udf5
       }

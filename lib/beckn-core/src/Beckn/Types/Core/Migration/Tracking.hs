@@ -1,14 +1,14 @@
 module Beckn.Types.Core.Migration.Tracking where
 
-import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Beckn.Utils.JSON
 import Data.Aeson.Types (Value (..), typeMismatch)
 import EulerHS.Prelude
 import Servant.Client (BaseUrl)
 
 data Tracking = Tracking
-  { _tl_method :: Maybe TlMethod,
-    _url :: Maybe BaseUrl,
-    _status :: Maybe TrackingStatus
+  { tl_method :: Maybe TlMethod,
+    url :: Maybe BaseUrl,
+    status :: Maybe TrackingStatus
   }
   deriving (Generic, Show)
 
@@ -34,7 +34,7 @@ instance ToJSON TrackingStatus where
   toJSON = genericToJSON constructorsToLowerOptions
 
 instance FromJSON Tracking where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Tracking where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

@@ -9,6 +9,7 @@ module Beckn.Types.Storage.Person where
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -18,7 +19,7 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data Status = ACTIVE | INACTIVE
@@ -114,30 +115,30 @@ instance FromHttpApiData Gender where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data PersonTE e f = Person
-  { _id :: B.C f (Id Person),
-    _firstName :: B.C f (Maybe Text),
-    _middleName :: B.C f (Maybe Text),
-    _lastName :: B.C f (Maybe Text),
-    _fullName :: B.C f (Maybe Text),
-    _role :: B.C f Role,
-    _gender :: B.C f Gender,
-    _identifierType :: B.C f IdentifierType,
-    _email :: B.C f (Maybe Text),
-    _mobileNumber :: EncryptedHashedField e (B.Nullable f) Text,
-    _mobileCountryCode :: B.C f (Maybe Text),
-    _passwordHash :: B.C f (Maybe DbHash),
-    _identifier :: B.C f (Maybe Text),
-    _rating :: B.C f (Maybe Text),
-    _verified :: B.C f Bool,
-    _udf1 :: B.C f (Maybe Text),
-    _udf2 :: B.C f (Maybe Text),
-    _status :: B.C f Status,
-    _organizationId :: B.C f (Maybe Text),
-    _locationId :: B.C f (Maybe Text),
-    _deviceToken :: B.C f (Maybe FCM.FCMRecipientToken),
-    _description :: B.C f (Maybe Text),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+  { id :: B.C f (Id Person),
+    firstName :: B.C f (Maybe Text),
+    middleName :: B.C f (Maybe Text),
+    lastName :: B.C f (Maybe Text),
+    fullName :: B.C f (Maybe Text),
+    role :: B.C f Role,
+    gender :: B.C f Gender,
+    identifierType :: B.C f IdentifierType,
+    email :: B.C f (Maybe Text),
+    mobileNumber :: EncryptedHashedField e (B.Nullable f) Text,
+    mobileCountryCode :: B.C f (Maybe Text),
+    passwordHash :: B.C f (Maybe DbHash),
+    identifier :: B.C f (Maybe Text),
+    rating :: B.C f (Maybe Text),
+    verified :: B.C f Bool,
+    udf1 :: B.C f (Maybe Text),
+    udf2 :: B.C f (Maybe Text),
+    status :: B.C f Status,
+    organizationId :: B.C f (Maybe Text),
+    locationId :: B.C f (Maybe Text),
+    deviceToken :: B.C f (Maybe FCM.FCMRecipientToken),
+    description :: B.C f (Maybe Text),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic)
 
@@ -152,17 +153,17 @@ type PersonPrimaryKey = B.PrimaryKey PersonT Identity
 instance B.Table PersonT where
   data PrimaryKey PersonT f = PersonPrimaryKey (B.C f (Id Person))
     deriving (Generic, B.Beamable)
-  primaryKey = PersonPrimaryKey . _id
+  primaryKey = PersonPrimaryKey . id
 
 deriving instance Show Person
 
 deriving instance Eq Person
 
 instance ToJSON Person where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Person where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON (PersonT Identity)
 
@@ -173,7 +174,7 @@ deriveTableEncryption ''PersonTE
 -- TODO: move it to appropriate place
 maskPerson :: Person -> Person
 maskPerson person =
-  person {_deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> (person ^. #_deviceToken)}
+  person {deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> (person ^. #deviceToken)}
   where
     trimToken token =
       if length token > 6
@@ -185,21 +186,21 @@ fieldEMod ::
 fieldEMod =
   B.modifyTableFields $
     (B.tableModification @_ @PersonT)
-      { _createdAt = "created_at",
-        _updatedAt = "updated_at",
-        _firstName = "first_name",
-        _middleName = "middle_name",
-        _lastName = "last_name",
-        _fullName = "full_name",
-        _passwordHash = "password_hash",
-        _mobileNumber =
+      { createdAt = "created_at",
+        updatedAt = "updated_at",
+        firstName = "first_name",
+        middleName = "middle_name",
+        lastName = "last_name",
+        fullName = "full_name",
+        passwordHash = "password_hash",
+        mobileNumber =
           EncryptedHashed
-            { _encrypted = "mobile_number_encrypted",
-              _hash = "mobile_number_hash"
+            { encrypted = "mobile_number_encrypted",
+              hash = "mobile_number_hash"
             },
-        _organizationId = "organization_id",
-        _locationId = "location_id",
-        _mobileCountryCode = "mobile_country_code",
-        _identifierType = "identifier_type",
-        _deviceToken = "device_token"
+        organizationId = "organization_id",
+        locationId = "location_id",
+        mobileCountryCode = "mobile_country_code",
+        identifierType = "identifier_type",
+        deviceToken = "device_token"
       }

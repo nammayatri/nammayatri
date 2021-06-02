@@ -1,19 +1,20 @@
 module Beckn.Types.Core.Migration.Rating where
 
+import Beckn.Utils.JSON
 import Data.Aeson (withObject, (.!=), (.:?))
 import Data.Text (singleton)
 import EulerHS.Prelude
 
 data Rating = Rating
-  { _value :: Maybe Integer, -- FIXME: probably not integer
-    _unit :: Text,
-    _max_value :: Integer,
-    _direction :: RatingDirection
+  { value :: Maybe Integer, -- FIXME: probably not integer
+    unit :: Text,
+    max_value :: Integer,
+    direction :: RatingDirection
   }
   deriving (Generic, Show, Eq)
 
 instance ToJSON Rating where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Rating where
   parseJSON = withObject "Rating" $ \o ->

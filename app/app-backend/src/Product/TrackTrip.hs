@@ -28,18 +28,18 @@ track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track person req = withFlowHandlerAPI $ do
   let prodInstId = req ^. #rideId
   prodInst <- MPI.findById prodInstId
-  case_ <- MC.findIdByPerson person (prodInst ^. #_caseId)
-  let txnId = getId $ case_ ^. #_id
+  case_ <- MC.findIdByPerson person (prodInst ^. #caseId)
+  let txnId = getId $ case_ ^. #id
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
-    OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
+    OQ.findOrganizationById (Id $ prodInst ^. #organizationId)
       >>= fromMaybeM OrgNotFound
   (info :: ProductInfo) <-
-    (decodeFromText =<< (prodInst ^. #_info))
+    (decodeFromText =<< (prodInst ^. #info))
       & fromMaybeM (PIFieldNotPresent "info")
-  tracker <- info ^. #_tracker & fromMaybeM (InternalError "PI.info has no tracker field")
-  let gTripId = tracker ^. #_trip . #id
-  gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  tracker <- info ^. #tracker & fromMaybeM (InternalError "PI.info has no tracker field")
+  let gTripId = tracker ^. #trip . #id
+  gatewayUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.track gatewayUrl (API.TrackTripReq context $ API.TrackReqMessage gTripId Nothing)
     >>= checkAckResponseError (ExternalAPIResponseError "track")
   return Success
@@ -52,7 +52,7 @@ trackCb _org req = withFlowHandlerBecknAPI $
     case req ^. #contents of
       Right msg -> do
         let tracking = msg ^. #tracking
-            caseId = Id $ context ^. #_transaction_id
+            caseId = Id $ context ^. #transaction_id
         case_ <- MC.findById caseId
         prodInst <- MPI.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
         let confirmedProducts = prodInst
@@ -61,8 +61,8 @@ trackCb _org req = withFlowHandlerBecknAPI $
             0 -> return $ Right ()
             1 -> do
               let productInst = head confirmedProducts
-                  personId = Case._requestor case_
-              orderPi <- MPI.findByParentIdType (productInst ^. #_id) Case.RIDEORDER
+                  personId = Case.requestor case_
+              orderPi <- MPI.findByParentIdType (productInst ^. #id) Case.RIDEORDER
               mtracker <- updateTracker orderPi tracking
               whenJust mtracker (\t -> Notify.notifyOnTrackCb personId t case_)
               return $ Right ()
@@ -75,17 +75,17 @@ trackCb _org req = withFlowHandlerBecknAPI $
 
 updateTracker :: ProductInstance.ProductInstance -> Maybe Tracking -> Flow (Maybe Tracker)
 updateTracker prodInst mtracking = do
-  let minfo = decodeFromText =<< prodInst ^. #_info
+  let minfo = decodeFromText =<< prodInst ^. #info
   case minfo of
     Nothing -> return Nothing
     Just info -> do
       let mtracker = updTracker info mtracking
-          uInfo = info {ProductInfo._tracker = mtracker}
-          updatedPrd = prodInst {ProductInstance._info = Just $ encodeToText uInfo}
-      MPI.updateMultiple (prodInst ^. #_id) updatedPrd
+          uInfo = info {ProductInfo.tracker = mtracker}
+          updatedPrd = prodInst {ProductInstance.info = Just $ encodeToText uInfo}
+      MPI.updateMultiple (prodInst ^. #id) updatedPrd
       return mtracker
   where
     updTracker info tracking =
-      case info ^. #_tracker of
-        Just tracker -> Just (Tracker (tracker ^. #_trip) $ fromBeckn <$> tracking)
+      case info ^. #tracker of
+        Just tracker -> Just (Tracker (tracker ^. #trip) $ fromBeckn <$> tracking)
         Nothing -> Nothing

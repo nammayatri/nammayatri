@@ -22,7 +22,7 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.TypeClass.Transform
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Storage.Location (Location)
 import Beckn.Types.Storage.Organization (Organization)
@@ -34,7 +34,7 @@ import qualified Beckn.Types.Storage.Vehicle as SV
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time.Clock (diffUTCTime)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Models.Case as Case
 import qualified Models.ProductInstance as PI
 import qualified Storage.Queries.DriverInformation as QDriverInformation
@@ -55,18 +55,18 @@ import Utils.Common
 
 updatePerson :: SR.RegistrationToken -> Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ do
-  verifyPerson _EntityId
-  person <- QP.findPersonById (Id _EntityId)
+  verifyPerson entityId
+  person <- QP.findPersonById (Id entityId)
   isValidUpdate person
   updatedPerson <- modifyTransform req person
-  QP.updatePersonRec (Id _EntityId) updatedPerson
+  QP.updatePersonRec (Id entityId) updatedPerson
   return $ UpdatePersonRes updatedPerson
   where
-    verifyPerson entityId =
-      when (personId /= entityId) $
+    verifyPerson entityId_ =
+      when (personId /= entityId_) $
         throwError AccessDenied
     isValidUpdate person =
-      when (isJust (req ^. #_role) && person ^. #_role /= SP.ADMIN) $
+      when (isJust (req ^. #role) && person ^. #role /= SP.ADMIN) $
         throwError Unauthorized
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
@@ -74,20 +74,20 @@ createPerson orgId req = withFlowHandlerAPI $ do
   validateDriver req
   person <- addOrgId orgId <$> createTransform req
   QP.create person
-  when (person ^. #_role == SP.DRIVER) $ createDriverDetails (person ^. #_id)
+  when (person ^. #role == SP.DRIVER) $ createDriverDetails (person ^. #id)
   org <- OQ.findOrganizationById (Id orgId)
-  case (req ^. #_role, req ^. #_mobileNumber, req ^. #_mobileCountryCode) of
+  case (req ^. #role, req ^. #mobileNumber, req ^. #mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
       smsCfg <- smsCfg <$> ask
       inviteSmsTemplate <- inviteSmsTemplate <$> ask
-      sendInviteSms smsCfg inviteSmsTemplate (countryCode <> mobileNumber) (org ^. #_name)
+      sendInviteSms smsCfg inviteSmsTemplate (countryCode <> mobileNumber) (org ^. #name)
       return $ UpdatePersonRes person
     _ -> return $ UpdatePersonRes person
   where
     validateDriver :: CreatePersonReq -> Flow ()
     validateDriver preq =
-      when (preq ^. #_role == Just SP.DRIVER) $
-        case (preq ^. #_mobileNumber, req ^. #_mobileCountryCode) of
+      when (preq ^. #role == Just SP.DRIVER) $
+        case (preq ^. #mobileNumber, req ^. #mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
               throwError $ InvalidRequest "Person with this mobile number already exists."
@@ -98,11 +98,11 @@ createDriverDetails personId = do
   now <- getCurrentTime
   let driverInfo =
         DriverInformation.DriverInformation
-          { _driverId = personId,
-            _active = False,
-            _onRide = False,
-            _createdAt = now,
-            _updatedAt = now
+          { driverId = personId,
+            active = False,
+            onRide = False,
+            createdAt = now,
+            updatedAt = now
           }
   QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
@@ -126,7 +126,7 @@ getPerson ::
   FlowHandler PersonEntityRes
 getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM identifierTypeM =
   withFlowHandlerAPI $ do
-    user <- QP.findPersonById (Id _EntityId)
+    user <- QP.findPersonById (Id entityId)
     -- TODO: fix this to match based on identifierType
     -- And maybe have a way to handle the case when Id is
     -- passed and identifierType is null. Throw validation errors
@@ -151,15 +151,15 @@ getPerson SR.RegistrationToken {..} idM mobileM countryCodeM emailM identifierM 
     hasAccess :: SP.Person -> SP.Person -> Flow ()
     hasAccess user person =
       when
-        ( (user ^. #_role) /= SP.ADMIN && (user ^. #_id) /= (person ^. #_id)
-            || (user ^. #_organizationId) /= (person ^. #_organizationId)
+        ( (user ^. #role) /= SP.ADMIN && (user ^. #id) /= (person ^. #id)
+            || (user ^. #organizationId) /= (person ^. #organizationId)
         )
         $ throwError Unauthorized
 
 deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
 deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id personId)
-  if person ^. #_organizationId == Just orgId
+  if person ^. #organizationId == Just orgId
     then do
       QP.deleteById (Id personId)
       QDriverStats.deleteById $ Id personId
@@ -171,58 +171,58 @@ deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
 linkEntity :: Text -> Id SP.Person -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id personId)
-  _ <- case req ^. #_entityType of
+  _ <- case req ^. #entityType of
     VEHICLE ->
-      QV.findVehicleById (Id (req ^. #_entityId))
+      QV.findVehicleById (Id (req ^. #entityId))
         >>= fromMaybeM VehicleNotFound
     _ -> throwError $ InvalidRequest "Unsupported entity type."
   when
-    (person ^. #_organizationId /= Just orgId)
+    (person ^. #organizationId /= Just orgId)
     (throwError Unauthorized)
-  prevPerson <- QP.findByEntityId (req ^. #_entityId)
-  whenJust prevPerson (\p -> QP.updateEntity (p ^. #_id) T.empty T.empty)
-  QP.updateEntity (Id personId) (req ^. #_entityId) (T.pack $ show $ req ^. #_entityType)
-  updatedPerson <- QP.findPersonById $ person ^. #_id
+  prevPerson <- QP.findByEntityId (req ^. #entityId)
+  whenJust prevPerson (\p -> QP.updateEntity (p ^. #id) T.empty T.empty)
+  QP.updateEntity (Id personId) (req ^. #entityId) (T.pack $ show $ req ^. #entityType)
+  updatedPerson <- QP.findPersonById $ person ^. #id
   mkPersonRes updatedPerson
 
 -- Utility Functions
 
 addOrgId :: Text -> SP.Person -> SP.Person
-addOrgId orgId person = person {SP._organizationId = Just orgId}
+addOrgId orgId person = person {SP.organizationId = Just orgId}
 
 mkPersonRes :: SP.Person -> Flow PersonEntityRes
 mkPersonRes person = do
-  entity <- case person ^. #_udf2 >>= mapEntityType of
+  entity <- case person ^. #udf2 >>= mapEntityType of
     Just VEHICLE -> do
-      vehicle <- QV.findVehicleById $ Id $ fromMaybe "" (person ^. #_udf1)
+      vehicle <- QV.findVehicleById $ Id $ fromMaybe "" (person ^. #udf1)
       return $ Just $ LinkedEntity VEHICLE (Just $ encodeToText vehicle)
     _ -> return Nothing
   return $
     PersonEntityRes
-      { _id = person ^. #_id,
-        _firstName = person ^. #_firstName,
-        _middleName = person ^. #_middleName,
-        _lastName = person ^. #_lastName,
-        _fullName = person ^. #_fullName,
-        _role = person ^. #_role,
-        _gender = person ^. #_gender,
-        _email = person ^. #_email,
-        _identifier = person ^. #_identifier,
-        _identifierType = person ^. #_identifierType,
-        _mobileNumber = person ^. #_mobileNumber,
-        _mobileCountryCode = person ^. #_mobileCountryCode,
-        _verified = person ^. #_verified,
-        _rating = person ^. #_rating,
-        _status = person ^. #_status,
-        _deviceToken = person ^. #_deviceToken,
-        _udf1 = person ^. #_udf1,
-        _udf2 = person ^. #_udf2,
-        _organizationId = person ^. #_organizationId,
-        _description = person ^. #_description,
-        _locationId = person ^. #_locationId,
-        _createdAt = person ^. #_createdAt,
-        _updatedAt = person ^. #_updatedAt,
-        _linkedEntity = entity
+      { id = person ^. #id,
+        firstName = person ^. #firstName,
+        middleName = person ^. #middleName,
+        lastName = person ^. #lastName,
+        fullName = person ^. #fullName,
+        role = person ^. #role,
+        gender = person ^. #gender,
+        email = person ^. #email,
+        identifier = person ^. #identifier,
+        identifierType = person ^. #identifierType,
+        mobileNumber = person ^. #mobileNumber,
+        mobileCountryCode = person ^. #mobileCountryCode,
+        verified = person ^. #verified,
+        rating = person ^. #rating,
+        status = person ^. #status,
+        deviceToken = person ^. #deviceToken,
+        udf1 = person ^. #udf1,
+        udf2 = person ^. #udf2,
+        organizationId = person ^. #organizationId,
+        description = person ^. #description,
+        locationId = person ^. #locationId,
+        createdAt = person ^. #createdAt,
+        updatedAt = person ^. #updatedAt,
+        linkedEntity = entity
       }
 
 sendInviteSms :: SmsConfig -> Text -> Text -> Text -> Flow ()
@@ -233,11 +233,11 @@ sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
   SF.submitSms
     url
     SMS.SubmitSms
-      { SMS._username = smsCred ^. #username,
-        SMS._password = smsCred ^. #password,
-        SMS._from = sender,
-        SMS._to = phoneNumber,
-        SMS._text = SF.constructInviteSms orgName inviteTemplate
+      { SMS.username = smsCred ^. #username,
+        SMS.password = smsCred ^. #password,
+        SMS.from = sender,
+        SMS.to = phoneNumber,
+        SMS.text = SF.constructInviteSms orgName inviteTemplate
       }
 
 mapEntityType :: Text -> Maybe EntityType
@@ -249,7 +249,7 @@ calculateAverageRating :: Id SP.Person -> Flow ()
 calculateAverageRating personId = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   allRatings <- Rating.findAllRatingsForPerson personId
-  let ratings = sum $ Rating._ratingValue <$> allRatings
+  let ratings = sum $ Rating.ratingValue <$> allRatings
   let ratingCount = length allRatings
   when (ratingCount == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"
@@ -268,14 +268,14 @@ getDriverPool piId =
   where
     calcDriverPool = do
       prodInst <- PI.findById piId
-      case_ <- Case.findById (prodInst ^. #_caseId)
+      case_ <- Case.findById (prodInst ^. #caseId)
       vehicleVariant :: SV.Variant <-
-        (case_ ^. #_udf1 >>= readMaybe . T.unpack)
+        (case_ ^. #udf1 >>= readMaybe . T.unpack)
           & fromMaybeM (CaseFieldNotPresent "udf1")
       pickupPoint <-
-        Id <$> prodInst ^. #_fromLocation
+        Id <$> prodInst ^. #fromLocation
           & fromMaybeM (PIFieldNotPresent "location_id")
-      let orgId = Id (prodInst ^. #_organizationId)
+      let orgId = Id (prodInst ^. #organizationId)
       calculateDriverPool pickupPoint orgId vehicleVariant
 
 setDriverPool :: Id ProductInstance -> [Id Driver] -> Flow ()
@@ -289,8 +289,8 @@ calculateDriverPool ::
   Flow [Id Driver]
 calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM LocationNotFound
-  lat <- location ^. #_lat & fromMaybeM (LocationFieldNotPresent "lat")
-  long <- location ^. #_long & fromMaybeM (LocationFieldNotPresent "lon")
+  lat <- location ^. #lat & fromMaybeM (LocationFieldNotPresent "lat")
+  long <- location ^. #long & fromMaybeM (LocationFieldNotPresent "lon")
   radius <- getRadius
   getNearestDriversStartTime <- getCurrentTime
   driverPool <-
@@ -314,4 +314,4 @@ calculateDriverPool locId orgId variant = do
       fromMaybeM (InternalError "The radius is not a number.")
         . readMaybe
         . toString
-        $ conf ^. #_value
+        $ conf ^. #value

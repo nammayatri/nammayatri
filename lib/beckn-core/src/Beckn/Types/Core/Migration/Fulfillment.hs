@@ -13,21 +13,22 @@ import Beckn.Types.Core.Migration.State (State)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
+import Beckn.Utils.JSON
 import Data.Aeson (withObject, (.!=), (.:), (.:?))
 import EulerHS.Prelude hiding (State)
 
 data Fulfillment = Fulfillment
-  { _id :: Maybe Text,
+  { id :: Maybe Text,
     _type :: Maybe Text,
-    _state :: Maybe State,
-    _tracking :: Bool,
-    _customer :: Maybe FulfillmentParticipant,
-    _agent :: Maybe FulfillmentParticipant,
-    _vehicle :: Maybe Vehicle,
-    _start :: Maybe FulfillmentDetails,
-    _end :: Maybe FulfillmentDetails,
-    _purpose :: Maybe Text,
-    _tags :: Maybe Tags
+    state :: Maybe State,
+    tracking :: Bool,
+    customer :: Maybe FulfillmentParticipant,
+    agent :: Maybe FulfillmentParticipant,
+    vehicle :: Maybe Vehicle,
+    start :: Maybe FulfillmentDetails,
+    end :: Maybe FulfillmentDetails,
+    purpose :: Maybe Text,
+    tags :: Maybe Tags
   }
   deriving (Generic, Show)
 
@@ -47,31 +48,31 @@ instance FromJSON Fulfillment where
       <*> o .: "tags"
 
 instance ToJSON Fulfillment where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data FulfillmentParticipant = FulfillmentParticipant
-  { _person :: Maybe Person,
-    _contact :: Maybe Contact
+  { person :: Maybe Person,
+    contact :: Maybe Contact
   }
   deriving (Generic, Show)
 
 instance FromJSON FulfillmentParticipant where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON FulfillmentParticipant where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data FulfillmentDetails = FulfillmentDetails
-  { _location :: Maybe Location,
-    _time :: Maybe Time,
-    _instructions :: Maybe Descriptor,
-    _contact :: Contact,
-    _person :: Person
+  { location :: Maybe Location,
+    time :: Maybe Time,
+    instructions :: Maybe Descriptor,
+    contact :: Contact,
+    person :: Person
   }
   deriving (Generic, Show)
 
 instance FromJSON FulfillmentDetails where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON FulfillmentDetails where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

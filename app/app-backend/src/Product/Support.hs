@@ -23,31 +23,31 @@ import qualified Utils.SES as SES
 
 sendIssue :: Person.Person -> Support.SendIssueReq -> App.FlowHandler Support.SendIssueRes
 sendIssue person request@SendIssueReq {..} = withFlowHandlerAPI $ do
-  let personId = getId $ person ^. #_id
+  let personId = getId $ person ^. #id
   issuesConfig <- asks $ SesConfig.issuesConfig . App.sesCfg
   issueId <- L.generateGUID
   utcNow <- getCurrentTime
   Queries.insertIssue (mkDBIssue issueId personId request utcNow)
-  let mailSubject = mkMailSubject issueId (issue ^. #_reason)
+  let mailSubject = mkMailSubject issueId (issue ^. #reason)
   let mailBody = mkMailBody issueId personId request utcNow
   responseError <- L.runIO $ SES.sendEmail issuesConfig mailSubject mailBody
   case responseError of
     Just resError -> do
       logTagInfo "SES" resError
-      pure $ API.Ack {_action = "Error", _message = resError}
-    Nothing -> pure $ API.Ack {_action = "Successful", _message = ""}
+      pure $ API.Ack {action = "Error", message = resError}
+    Nothing -> pure $ API.Ack {action = "Successful", message = ""}
 
 mkDBIssue :: Text -> Text -> Support.SendIssueReq -> UTCTime -> SIssue.Issue
 mkDBIssue issueId customerId SendIssueReq {..} time =
   SIssue.Issue
-    { _id = Id issueId,
-      _customerId = customerId,
-      _productInstanceId = productInstanceId,
-      _contactEmail = contactEmail,
-      _reason = issue ^. #_reason,
-      _description = issue ^. #_description,
-      _createdAt = time,
-      _updatedAt = time
+    { id = Id issueId,
+      customerId = customerId,
+      productInstanceId = productInstanceId,
+      contactEmail = contactEmail,
+      reason = issue ^. #reason,
+      description = issue ^. #description,
+      createdAt = time,
+      updatedAt = time
     }
 
 mkMailSubject :: Text -> Text -> Text
@@ -65,9 +65,9 @@ mkMailBody issueId personId SendIssueReq {..} time =
     <> "\nCreation time: "
     <> show time
     <> "\n\nReason: "
-    <> issue ^. #_reason
+    <> issue ^. #reason
     <> "\n\nDetails: "
     <> description
   where
     orderId = fromMaybe "issue does not belong to specific order." productInstanceId
-    description = fromMaybe "no details provided by user." (issue ^. #_description)
+    description = fromMaybe "no details provided by user." (issue ^. #description)

@@ -3,6 +3,7 @@
 module Types.Notification where
 
 import Beckn.Types.Storage.Case
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data NotificationType
@@ -11,15 +12,15 @@ data NotificationType
   deriving (Generic, ToJSON)
 
 instance FromJSON NotificationType where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 data Notification a = Notification
   { _type :: NotificationType,
-    _payload :: a
+    payload :: a
   }
   deriving (Generic, ToJSON)
 
 instance FromJSON a => FromJSON (Notification a) where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 type CaseNotification = Notification Case

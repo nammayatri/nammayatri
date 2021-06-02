@@ -26,16 +26,15 @@ import "fmd-wrapper" Types.Beckn.Context
 import "fmd-wrapper" Types.Beckn.Descriptor
 import qualified "fmd-wrapper" Types.Beckn.Domain as Domain
 import qualified "fmd-wrapper" Types.Beckn.Error as Error
-import "fmd-wrapper" Types.Beckn.Item
 import qualified "fmd-wrapper" Types.Beckn.Location as Location
 import "fmd-wrapper" Types.Beckn.Price
 import Utils
 
 setPickupGps :: Setter' Search.SearchReq Location.GPS
-setPickupGps = #message . #intent . #_pickups . ix 0 . #_location . #_gps . _Just
+setPickupGps = #message . #intent . #pickups . ix 0 . #location . #gps . _Just
 
 setDropGps :: Setter' Search.SearchReq Location.GPS
-setDropGps = #message . #intent . #_drops . ix 0 . #_location . #_gps . _Just
+setDropGps = #message . #intent . #drops . ix 0 . #location . #gps . _Just
 
 gps1 :: Location.GPS
 gps1 = Location.GPS "12.9729391" "77.6294794"
@@ -58,37 +57,37 @@ runSearch clientEnv orgId searchReq = do
 
 verifyCallbackContext :: Bool -> Text -> Context -> IO ()
 verifyCallbackContext expectBppUri transactionId context = do
-  _country context `shouldBe` Just "IND"
-  _domain context `shouldBe` Domain.FINAL_MILE_DELIVERY
-  when expectBppUri $ _bpp_uri context `shouldSatisfy` isJust
-  _transaction_id context `shouldBe` transactionId
-  _action context `shouldBe` "on_search"
-  _message_id context `shouldBe` transactionId
-  _bap_uri context `shouldSatisfy` isJust
-  _domain_version context `shouldBe` Just "0.8.3"
-  _core_version context `shouldBe` Just "0.8.0"
+  context ^. #country `shouldBe` Just "IND"
+  context ^. #domain `shouldBe` Domain.FINAL_MILE_DELIVERY
+  when expectBppUri $ context ^. #bpp_uri `shouldSatisfy` isJust
+  context ^. #transaction_id `shouldBe` transactionId
+  context ^. #action `shouldBe` "on_search"
+  context ^. #message_id `shouldBe` transactionId
+  context ^. #bap_uri `shouldSatisfy` isJust
+  context ^. #domain_version `shouldBe` Just "0.8.3"
+  context ^. #core_version `shouldBe` Just "0.8.0"
 
 verifyDunzoCatalog :: Search.OnSearchServices -> IO ()
 verifyDunzoCatalog onSearchServices = do
   let catalog = Search.catalog onSearchServices
-  let items = _items catalog
-  let categories = _categories catalog
-  case categories of
+  let items_ = items catalog
+  let categories_ = categories catalog
+  case categories_ of
     [category] ->
       category
         `shouldBe` Category "1" Nothing (withName "single pickup single drop") []
     _ -> expectationFailure "Exactly one category expected."
-  let packageCategories = _package_categories catalog
-  map extractIndices items `shouldBe` expectedItemIndices
+  let packageCategories = package_categories catalog
+  map extractIndices items_ `shouldBe` expectedItemIndices
   map extractCategoryData packageCategories `shouldBe` expectedCategoryData
-  forM_ items $ \item -> do
-    let price = _price item
-    _currency price `shouldBe` "INR"
-    _estimated_value price `shouldSatisfy` isJust
-    _category_id item `shouldBe` Just "1"
+  forM_ items_ $ \item -> do
+    let price_ = item ^. #price
+    currency price_ `shouldBe` "INR"
+    estimated_value price_ `shouldSatisfy` isJust
+    item ^. #category_id `shouldBe` Just "1"
   where
-    extractCategoryData category = (category ^. #_id, category ^. #_descriptor . #_name)
-    extractIndices item = (item ^. #_id, item ^. #_package_category_id)
+    extractCategoryData category = (category ^. #id, category ^. #descriptor . #name)
+    extractIndices item = (item ^. #id, item ^. #package_category_id)
     expectedItemIndices =
       take numberOfDunzoCategores $
         zip stringNumbers maybeStringNumbers
@@ -163,7 +162,7 @@ successfulSearch clientEnv callbackData =
       _ -> expectationFailure "Expected one search result from Dunzo."
   where
     isDunzoResult result =
-      _bpp_uri (context result) == Just fmdWrapperBaseUrl
+      bpp_uri (context result) == Just fmdWrapperBaseUrl
 
 dunzoUnserviceableLocation :: ClientEnv -> CallbackData -> IO ()
 dunzoUnserviceableLocation =
@@ -198,7 +197,7 @@ dunzoDifferentCity =
 incorrectApiKey :: ClientEnv -> CallbackData -> IO ()
 incorrectApiKey clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
+  let searchReq = buildFMDSearchReq ctx {core_version = Nothing}
 
   gatewayResponse <- runSearch clientEnv "" searchReq
   verifyError 401 "UNAUTHORIZED" gatewayResponse
@@ -214,7 +213,7 @@ incorrectAction clientEnv _ = do
 incorrectCountry :: ClientEnv -> CallbackData -> IO ()
 incorrectCountry clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {_country = Just ""}
+  let searchReq = buildFMDSearchReq ctx {country = Just ""}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "INVALID_COUNTRY" gatewayResponse
@@ -222,7 +221,7 @@ incorrectCountry clientEnv _ = do
 incorrectDomainVersion :: ClientEnv -> CallbackData -> IO ()
 incorrectDomainVersion clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {_domain_version = Just "0.7.0"}
+  let searchReq = buildFMDSearchReq ctx {domain_version = Just "0.7.0"}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
@@ -230,7 +229,7 @@ incorrectDomainVersion clientEnv _ = do
 incorrectCoreVersion :: ClientEnv -> CallbackData -> IO ()
 incorrectCoreVersion clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {_core_version = Just "0.7.0"}
+  let searchReq = buildFMDSearchReq ctx {core_version = Just "0.7.0"}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
@@ -246,7 +245,7 @@ missingBapUri clientEnv _ = do
 missingCountry :: ClientEnv -> CallbackData -> IO ()
 missingCountry clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {_country = Nothing}
+  let searchReq = buildFMDSearchReq ctx {country = Nothing}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "INVALID_COUNTRY" gatewayResponse
@@ -254,7 +253,7 @@ missingCountry clientEnv _ = do
 missingDomainVersion :: ClientEnv -> CallbackData -> IO ()
 missingDomainVersion clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {_domain_version = Nothing}
+  let searchReq = buildFMDSearchReq ctx {domain_version = Nothing}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
@@ -262,7 +261,7 @@ missingDomainVersion clientEnv _ = do
 missingCoreVersion :: ClientEnv -> CallbackData -> IO ()
 missingCoreVersion clientEnv _ = do
   ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {_core_version = Nothing}
+  let searchReq = buildFMDSearchReq ctx {core_version = Nothing}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse

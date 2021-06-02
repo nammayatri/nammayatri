@@ -31,7 +31,7 @@ onSearch req bppShortId = do
       callAPI' (Just authKey) nsdlBaseUrl (API.nsdlOnSearch req) "on_search"
         >>= fromEitherM (ExternalAPICallError nsdlBaseUrl)
     "JUSPAY.BG.1" -> do
-      callbackUrl <- gatewayOrg ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+      callbackUrl <- gatewayOrg ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
       callAPI' (Just authKey) callbackUrl (API.onSearch req) "on_search"
         >>= fromEitherM (ExternalAPICallError callbackUrl)
     _ -> throwError GatewaySelectorNotSet

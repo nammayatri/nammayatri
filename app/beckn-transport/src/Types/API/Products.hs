@@ -2,28 +2,29 @@ module Types.API.Products where
 
 import Beckn.Types.Amount
 import qualified Beckn.Types.Storage.Products as Product
+import Beckn.Utils.JSON
 import Data.Swagger
 import EulerHS.Prelude
 
 data CreateProdReq = CreateProdReq
-  { _name :: Text,
-    _description :: Maybe Text,
-    _info :: Maybe Text,
-    _rating :: Maybe Text,
-    _review :: Maybe Text,
-    _udf1 :: Maybe Text,
-    _udf2 :: Maybe Text,
-    _udf3 :: Maybe Text,
-    _udf4 :: Maybe Text,
-    _udf5 :: Maybe Text,
-    _price :: Maybe Amount
+  { name :: Text,
+    description :: Maybe Text,
+    info :: Maybe Text,
+    rating :: Maybe Text,
+    review :: Maybe Text,
+    udf1 :: Maybe Text,
+    udf2 :: Maybe Text,
+    udf3 :: Maybe Text,
+    udf4 :: Maybe Text,
+    udf5 :: Maybe Text,
+    price :: Maybe Amount
   }
   deriving (Generic, ToSchema)
 
 instance FromJSON CreateProdReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON CreateProdReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 type ProdRes = Product.Products

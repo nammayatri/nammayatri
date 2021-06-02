@@ -13,7 +13,7 @@ import qualified Types.Storage.Tracker as Storage
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.TrackerT))
 getDbTable =
-  DB._tracker . DB.transporterDb <$> getSchemaName
+  DB.tracker . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Tracker -> Flow ()
 create Storage.Tracker {..} = do
@@ -22,8 +22,8 @@ create Storage.Tracker {..} = do
 
 findTrackerById ::
   Id Storage.Tracker -> Flow (Maybe Storage.Tracker)
-findTrackerById id = do
+findTrackerById trId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Tracker {..} = _id ==. B.val_ id
+    predicate Storage.Tracker {..} = id ==. B.val_ trId

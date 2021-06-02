@@ -1,30 +1,31 @@
 module Beckn.Types.Core.Customer where
 
 import Beckn.Types.Core.Person
+import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
 data Customer = Customer
   { _type :: Text, --"SINGLE", "GROUP"
-    _single :: Maybe Person,
-    _group :: Maybe GroupCustomer
+    single :: Maybe Person,
+    group :: Maybe GroupCustomer
   }
   deriving (Generic, Show)
 
 instance FromJSON Customer where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Customer where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data GroupCustomer = GroupCustomer
-  { _primary :: Person,
-    _count :: Integer
+  { primary :: Person,
+    count :: Integer
   }
   deriving (Generic, Show)
 
 instance FromJSON GroupCustomer where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON GroupCustomer where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

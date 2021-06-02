@@ -1,23 +1,24 @@
 module Beckn.Types.Core.Migration.Address (Address (..)) where
 
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Address = Address
-  { _door :: Maybe Text,
-    _name :: Maybe Text,
-    _building :: Maybe Text,
-    _street :: Maybe Text,
-    _locality :: Maybe Text,
-    _ward :: Maybe Text,
-    _city :: Maybe Text,
-    _state :: Maybe Text,
-    _country :: Maybe Text,
-    _area_code :: Maybe Text
+  { door :: Maybe Text,
+    name :: Maybe Text,
+    building :: Maybe Text,
+    street :: Maybe Text,
+    locality :: Maybe Text,
+    ward :: Maybe Text,
+    city :: Maybe Text,
+    state :: Maybe Text,
+    country :: Maybe Text,
+    area_code :: Maybe Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Address where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Address where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

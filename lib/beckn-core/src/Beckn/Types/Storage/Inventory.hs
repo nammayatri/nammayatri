@@ -6,6 +6,7 @@ module Beckn.Types.Storage.Inventory where
 import Beckn.Types.Id
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Types.Storage.Products (Products)
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -15,7 +16,7 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data InventoryStatus = INSTOCK | OUTOFSTOCK
@@ -35,13 +36,13 @@ instance FromHttpApiData InventoryStatus where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data InventoryT f = Inventory
-  { _id :: B.C f (Id Inventory),
-    _productId :: B.C f (Id Products),
-    _organizationId :: B.C f (Id Organization),
-    _status :: B.C f InventoryStatus,
-    _quantity :: B.C f Int,
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+  { id :: B.C f (Id Inventory),
+    productId :: B.C f (Id Products),
+    organizationId :: B.C f (Id Organization),
+    status :: B.C f InventoryStatus,
+    quantity :: B.C f Int,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -52,17 +53,17 @@ type InventoryPrimaryKey = B.PrimaryKey InventoryT Identity
 instance B.Table InventoryT where
   data PrimaryKey InventoryT f = InventoryPrimaryKey (B.C f (Id Inventory))
     deriving (Generic, B.Beamable)
-  primaryKey = InventoryPrimaryKey . _id
+  primaryKey = InventoryPrimaryKey . id
 
 deriving instance Show Inventory
 
 deriving instance Eq Inventory
 
 instance ToJSON Inventory where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Inventory where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema Inventory
 
@@ -72,8 +73,8 @@ fieldEMod =
   B.setEntityName "inventory"
     <> B.modifyTableFields
       B.tableModification
-        { _productId = "product_id",
-          _organizationId = "organization_id",
-          _createdAt = "created_at",
-          _updatedAt = "updated_at"
+        { productId = "product_id",
+          organizationId = "organization_id",
+          createdAt = "created_at",
+          updatedAt = "updated_at"
         }

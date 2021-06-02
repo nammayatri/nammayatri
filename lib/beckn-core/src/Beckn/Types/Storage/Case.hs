@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.Case where
 
 import Beckn.Types.Id
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -13,7 +14,7 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant
 
 data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
@@ -95,32 +96,32 @@ instance FromHttpApiData CaseType where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data CaseT f = Case
-  { _id :: B.C f (Id Case),
-    _name :: B.C f (Maybe Text),
-    _description :: B.C f (Maybe Text),
-    _shortId :: B.C f Text,
-    _industry :: B.C f Industry,
+  { id :: B.C f (Id Case),
+    name :: B.C f (Maybe Text),
+    description :: B.C f (Maybe Text),
+    shortId :: B.C f Text,
+    industry :: B.C f Industry,
     _type :: B.C f CaseType,
-    _exchangeType :: B.C f ExchangeType,
-    _status :: B.C f CaseStatus,
-    _startTime :: B.C f UTCTime,
-    _endTime :: B.C f (Maybe UTCTime),
-    _validTill :: B.C f UTCTime,
-    _provider :: B.C f (Maybe Text),
-    _providerType :: B.C f (Maybe ProviderType),
-    _requestor :: B.C f (Maybe Text),
-    _requestorType :: B.C f (Maybe RequestorType),
-    _parentCaseId :: B.C f (Maybe (Id Case)),
-    _fromLocationId :: B.C f Text,
-    _toLocationId :: B.C f Text,
-    _udf1 :: B.C f (Maybe Text),
-    _udf2 :: B.C f (Maybe Text),
-    _udf3 :: B.C f (Maybe Text),
-    _udf4 :: B.C f (Maybe Text),
-    _udf5 :: B.C f (Maybe Text),
-    _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+    exchangeType :: B.C f ExchangeType,
+    status :: B.C f CaseStatus,
+    startTime :: B.C f UTCTime,
+    endTime :: B.C f (Maybe UTCTime),
+    validTill :: B.C f UTCTime,
+    provider :: B.C f (Maybe Text),
+    providerType :: B.C f (Maybe ProviderType),
+    requestor :: B.C f (Maybe Text),
+    requestorType :: B.C f (Maybe RequestorType),
+    parentCaseId :: B.C f (Maybe (Id Case)),
+    fromLocationId :: B.C f Text,
+    toLocationId :: B.C f Text,
+    udf1 :: B.C f (Maybe Text),
+    udf2 :: B.C f (Maybe Text),
+    udf3 :: B.C f (Maybe Text),
+    udf4 :: B.C f (Maybe Text),
+    udf5 :: B.C f (Maybe Text),
+    info :: B.C f (Maybe Text),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -139,17 +140,17 @@ type CasePrimaryKey = B.PrimaryKey CaseT Identity
 instance B.Table CaseT where
   data PrimaryKey CaseT f = CasePrimaryKey (B.C f (Id Case))
     deriving (Generic, B.Beamable)
-  primaryKey = CasePrimaryKey . _id
+  primaryKey = CasePrimaryKey . id
 
 deriving instance Show Case
 
 deriving instance Eq Case
 
 instance ToJSON Case where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Case where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema Case
 
@@ -159,18 +160,18 @@ fieldEMod =
   B.setEntityName "case"
     <> B.modifyTableFields
       B.tableModification
-        { _shortId = "short_id",
-          _exchangeType = "exchange_type",
-          _startTime = "start_time",
-          _endTime = "end_time",
-          _validTill = "valid_till",
-          _providerType = "provider_type",
-          _requestorType = "requestor_type",
-          _parentCaseId = "parent_case_id",
-          _fromLocationId = "from_location_id",
-          _toLocationId = "to_location_id",
-          _createdAt = "created_at",
-          _updatedAt = "updated_at"
+        { shortId = "short_id",
+          exchangeType = "exchange_type",
+          startTime = "start_time",
+          endTime = "end_time",
+          validTill = "valid_till",
+          providerType = "provider_type",
+          requestorType = "requestor_type",
+          parentCaseId = "parent_case_id",
+          fromLocationId = "from_location_id",
+          toLocationId = "to_location_id",
+          createdAt = "created_at",
+          updatedAt = "updated_at"
         }
 
 validateStatusTransition :: CaseStatus -> CaseStatus -> Either Text ()

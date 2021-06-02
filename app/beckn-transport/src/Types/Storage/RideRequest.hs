@@ -3,6 +3,7 @@
 module Types.Storage.RideRequest where
 
 import Beckn.Types.Id
+import Beckn.Utils.JSON
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -23,9 +24,9 @@ instance FromBackendRow Postgres RideRequestType where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be RideRequestType
 
 data RideRequestT f = RideRequest
-  { _id :: B.C f (Id RideRequest),
-    _rideId :: B.C f (Id Ride),
-    _createdAt :: B.C f UTCTime,
+  { id :: B.C f (Id RideRequest),
+    rideId :: B.C f (Id Ride),
+    createdAt :: B.C f UTCTime,
     _type :: B.C f RideRequestType
   }
   deriving (Generic, B.Beamable)
@@ -37,13 +38,13 @@ type RideRequestPrimaryKey = B.PrimaryKey RideRequestT Identity
 instance B.Table RideRequestT where
   data PrimaryKey RideRequestT f = RideRequestPrimaryKey (B.C f (Id Ride))
     deriving (Generic, B.Beamable)
-  primaryKey = RideRequestPrimaryKey . _rideId
+  primaryKey = RideRequestPrimaryKey . rideId
 
 instance ToJSON RideRequest where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON RideRequest where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideRequestT)
@@ -51,7 +52,7 @@ fieldEMod =
   B.setEntityName "ride_request"
     <> B.modifyTableFields
       B.tableModification
-        { _rideId = "ride_id",
-          _createdAt = "created_at",
+        { rideId = "ride_id",
+          createdAt = "created_at",
           _type = "type"
         }

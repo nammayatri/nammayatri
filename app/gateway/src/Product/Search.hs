@@ -31,12 +31,12 @@ search :: SignaturePayload -> Org.Organization -> SearchReq -> FlowHandler AckRe
 search proxySign org req = withFlowHandlerBecknAPI $
   TempUtils.withTransactionIdLogTag req $ do
     validateContext "search" (req ^. #context)
-    unless (isJust (req ^. #context . #_bap_uri)) $
+    unless (isJust (req ^. #context . #bap_uri)) $
       throwError $ InvalidRequest "No bap URI in context."
     let gatewaySearchSignAuth = ET.client ExternalAPI.searchAPI
         context = req ^. #context
-        messageId = context ^. #_transaction_id
-    case (Org._callbackUrl org, Org._callbackApiKey org) of
+        messageId = context ^. #transaction_id
+    case (Org.callbackUrl org, Org.callbackApiKey org) of
       (Nothing, _) -> throwError (OrgFieldNotPresent "callback_url")
       (_, Nothing) -> throwError (OrgFieldNotPresent "callback_api_key")
       (Just cbUrl, Just cbApiKey) -> do
@@ -45,7 +45,7 @@ search proxySign org req = withFlowHandlerBecknAPI $
         BA.insert messageId bgSession
         when (null providers) $ throwError NoProviders
         forM_ providers $ \provider -> fork "Provider search" $ do
-          providerUrl <- provider ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
+          providerUrl <- provider ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
           -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
           eRes <-
             callAPI'
@@ -68,7 +68,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI 
   TempUtils.withTransactionIdLogTag req $ do
     validateContext "on_search" context
     let gatewayOnSearchSignAuth = ET.client ExternalAPI.onSearchAPI
-        messageId = req ^. #context . #_transaction_id
+        messageId = req ^. #context . #transaction_id
     bgSession <- BA.lookup messageId >>= fromMaybeM (InvalidRequest "Message not found.")
     let baseUrl = bgSession ^. #cbUrl
     eRes <-
@@ -77,7 +77,7 @@ searchCb proxySign provider req@CallbackReq {context} = withFlowHandlerBecknAPI 
         baseUrl
         (gatewayOnSearchSignAuth (Just proxySign) req)
         "on_search"
-    providerUrl <- provider ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
+    providerUrl <- provider ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
     logTagDebug "gateway_transaction" $
       messageId
         <> ", search_cb: "

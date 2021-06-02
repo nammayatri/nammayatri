@@ -37,42 +37,42 @@ defaultPickupLocation :: PickupLocation
 defaultPickupLocation =
   PickupLocation $
     Location.Location
-      { _id = Id "",
-        _locationType = Location.POINT,
-        _lat = Just 0.0,
-        _long = Just 0.0,
-        _ward = Nothing,
-        _district = Nothing,
-        _city = Nothing,
-        _state = Nothing,
-        _country = Nothing,
-        _pincode = Nothing,
-        _address = Nothing,
-        _bound = Nothing,
-        _point = Location.Point,
-        _createdAt = mockTime,
-        _updatedAt = mockTime
+      { id = Id "",
+        locationType = Location.POINT,
+        lat = Just 0.0,
+        long = Just 0.0,
+        ward = Nothing,
+        district = Nothing,
+        city = Nothing,
+        state = Nothing,
+        country = Nothing,
+        pincode = Nothing,
+        address = Nothing,
+        bound = Nothing,
+        point = Location.Point,
+        createdAt = mockTime,
+        updatedAt = mockTime
       }
 
 defaultDropLocation :: DropLocation
 defaultDropLocation =
   DropLocation $
     Location.Location
-      { _id = Id "",
-        _locationType = Location.POINT,
-        _lat = Just 0.0,
-        _long = Just 0.0,
-        _ward = Nothing,
-        _district = Nothing,
-        _city = Nothing,
-        _state = Nothing,
-        _country = Nothing,
-        _pincode = Nothing,
-        _address = Nothing,
-        _bound = Nothing,
-        _point = Location.Point,
-        _createdAt = mockTime,
-        _updatedAt = mockTime
+      { id = Id "",
+        locationType = Location.POINT,
+        lat = Just 0.0,
+        long = Just 0.0,
+        ward = Nothing,
+        district = Nothing,
+        city = Nothing,
+        state = Nothing,
+        country = Nothing,
+        pincode = Nothing,
+        address = Nothing,
+        bound = Nothing,
+        point = Location.Point,
+        createdAt = mockTime,
+        updatedAt = mockTime
       }
 
 mockTime :: UTCTime
@@ -127,7 +127,7 @@ sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ d
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
@@ -156,7 +156,7 @@ suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
@@ -188,7 +188,7 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTr
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
@@ -221,7 +221,7 @@ nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip f
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
@@ -254,7 +254,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
     distance = Just 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant ->
+        { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy
@@ -287,7 +287,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     distance = Just 0.0
     handle' =
       handle
-        { getFarePolicy = \_orgId _vehicleVariant -> pure Nothing
+        { getFarePolicy = \_orgId vehicleVariant -> pure Nothing
         }
 
 fareCalculator :: TestTree

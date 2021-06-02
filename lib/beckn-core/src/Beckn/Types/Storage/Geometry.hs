@@ -7,8 +7,8 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 
 data GeometryT f = Geometry
-  { _id :: B.C f Int,
-    _region :: B.C f Text
+  { id :: B.C f Int,
+    region :: B.C f Text
   }
   deriving (Generic, B.Beamable)
 
@@ -19,7 +19,7 @@ type GeometryPrimaryKey = B.PrimaryKey GeometryT Identity
 instance B.Table GeometryT where
   data PrimaryKey GeometryT f = GeometryPrimaryKey (B.C f Int)
     deriving (Generic, B.Beamable)
-  primaryKey = GeometryPrimaryKey . _id
+  primaryKey = GeometryPrimaryKey . id
 
 deriving instance Show Geometry
 
@@ -34,6 +34,6 @@ fieldEMod ::
 fieldEMod =
   B.modifyTableFields
     B.tableModification
-      { _id = "id",
-        _region = "region"
+      { id = "id",
+        region = "region"
       }

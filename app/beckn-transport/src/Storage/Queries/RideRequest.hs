@@ -13,7 +13,7 @@ import qualified Types.Storage.RideRequest as RideRequest
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity RideRequest.RideRequestT))
 getDbTable =
-  DB._rideRequest . DB.transporterDb <$> getSchemaName
+  DB.rideRequest . DB.transporterDb <$> getSchemaName
 
 createFlow :: RideRequest.RideRequest -> Flow ()
 createFlow =
@@ -27,7 +27,7 @@ create rideRequest = do
 fetchOldest :: Integer -> Flow [RideRequest.RideRequest]
 fetchOldest limit = do
   dbTable <- getDbTable
-  let order RideRequest.RideRequest {..} = B.asc_ _createdAt
+  let order RideRequest.RideRequest {..} = B.asc_ createdAt
   DB.findAll dbTable (B.limit_ limit . B.orderBy_ order) (const $ B.val_ True)
 
 removeRequest :: Id RideRequest.RideRequest -> Flow ()
@@ -35,4 +35,4 @@ removeRequest requestId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate requestId)
   where
-    predicate id RideRequest.RideRequest {..} = _id ==. B.val_ id
+    predicate reqId RideRequest.RideRequest {..} = id ==. B.val_ reqId

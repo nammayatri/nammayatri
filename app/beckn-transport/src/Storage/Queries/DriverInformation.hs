@@ -21,7 +21,7 @@ import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverInformation as DriverInformation
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
-getDbTable = DB._driverInformation . DB.transporterDb <$> getSchemaName
+getDbTable = DB.driverInformation . DB.transporterDb <$> getSchemaName
 
 create :: DriverInformation.DriverInformation -> Flow ()
 create DriverInformation.DriverInformation {..} = do
@@ -29,12 +29,12 @@ create DriverInformation.DriverInformation {..} = do
   DB.createOne dbTable (Storage.insertExpression DriverInformation.DriverInformation {..})
 
 findById :: Id Driver -> Flow (Maybe DriverInformation.DriverInformation)
-findById driverId = do
+findById driverId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    personId = cast driverId
-    predicate DriverInformation.DriverInformation {..} = _driverId ==. B.val_ personId
+    personId_ = cast driverId_
+    predicate DriverInformation.DriverInformation {..} = driverId ==. B.val_ personId_
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
@@ -51,24 +51,24 @@ fetchAllAvailableByIds driversIds = do
       foldr
         (&&.)
         (B.val_ True)
-        [ _driverId `B.in_` (B.val_ <$> personsIds),
-          _active ==. B.val_ True,
-          _onRide ==. B.val_ False
+        [ driverId `B.in_` (B.val_ <$> personsIds),
+          active ==. B.val_ True,
+          onRide ==. B.val_ False
         ]
 
 updateActivity :: Id Driver -> Bool -> Flow ()
-updateActivity driverId active = do
+updateActivity driverId_ active_ = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update dbTable (setClause active now) (predicate personId)
+  DB.update dbTable (setClause active_ now) (predicate personId_)
   where
-    personId = cast driverId
+    personId_ = cast driverId_
     setClause a now DriverInformation.DriverInformation {..} =
       mconcat
-        [ _active <-. B.val_ a,
-          _updatedAt <-. B.val_ now
+        [ active <-. B.val_ a,
+          updatedAt <-. B.val_ now
         ]
-    predicate id DriverInformation.DriverInformation {..} = _driverId ==. B.val_ id
+    predicate id DriverInformation.DriverInformation {..} = driverId ==. B.val_ id
 
 updateOnRideFlow :: Id Driver -> Bool -> Flow ()
 updateOnRideFlow driverId onRide =
@@ -78,26 +78,26 @@ updateOnRide ::
   Id Driver ->
   Bool ->
   DB.SqlDB ()
-updateOnRide driverId onRide = do
+updateOnRide driverId_ onRide_ = do
   dbTable <- getDbTable
   now <- asks DB.currentTime
-  DB.update' dbTable (setClause onRide now) (predicate personId)
+  DB.update' dbTable (setClause onRide_ now) (predicate personId_)
   where
-    personId = cast driverId
+    personId_ = cast driverId_
     setClause onR now' DriverInformation.DriverInformation {..} =
       mconcat
-        [ _onRide <-. B.val_ onR,
-          _updatedAt <-. B.val_ now'
+        [ onRide <-. B.val_ onR,
+          updatedAt <-. B.val_ now'
         ]
-    predicate id DriverInformation.DriverInformation {..} = _driverId ==. B.val_ id
+    predicate id DriverInformation.DriverInformation {..} = driverId ==. B.val_ id
 
 deleteById :: Id Driver -> Flow ()
-deleteById driverId = do
+deleteById driverId_ = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate personId)
+  DB.delete dbTable (predicate personId_)
   where
-    personId = cast driverId
-    predicate pid DriverInformation.DriverInformation {..} = _driverId ==. B.val_ pid
+    personId_ = cast driverId_
+    predicate pid DriverInformation.DriverInformation {..} = driverId ==. B.val_ pid
 
 findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Text] -> Flow [(Person.Person, DriverInformation.DriverInformation)]
 findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
@@ -107,13 +107,13 @@ findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
   DB.findAllByJoin (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (joinQuery personDbTable driverInfoDbTable)
     >>= traverse (bimapM decrypt return)
   where
-    orderByDesc (Person.Person {..}, _) = B.desc_ _createdAt
+    orderByDesc (Person.Person {..}, _) = B.desc_ createdAt
     limit = fromMaybe 100 mbLimit
     offset = fromMaybe 0 mbOffset
     joinQuery personDbTable driverInfoDbTable = do
       person <- B.all_ personDbTable
       driverInfo <- B.join_ driverInfoDbTable $ \row -> do
-        row ^. #_driverId B.==. person ^. #_id
+        row ^. #driverId B.==. person ^. #id
       B.guard_ $ predicate person
       return (person, driverInfo)
 
@@ -121,6 +121,6 @@ findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
       foldl
         (&&.)
         (B.val_ True)
-        [ _role B.==. B.val_ Person.DRIVER
-            B.&&. _organizationId `B.in_` (B.val_ . Just <$> orgIds) B.||. complementVal orgIds
+        [ role B.==. B.val_ Person.DRIVER
+            B.&&. organizationId `B.in_` (B.val_ . Just <$> orgIds) B.||. complementVal orgIds
         ]

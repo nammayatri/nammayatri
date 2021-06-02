@@ -330,8 +330,8 @@ instance IsAPIError ExternalAPICallError where
     ExternalAPICallErrorWithCode _ url err -> externalAPICallErrorMessage url err
     ExternalAPIResponseError ep err ->
       Just $
-        "Beckn " <> ep <> " request returned error code " <> _code err
-          <> maybe "" ("with message: " <>) (_message err)
+        "Beckn " <> ep <> " request returned error code " <> code err
+          <> maybe "" ("with message: " <>) (message err)
 
 externalAPICallErrorMessage :: BaseUrl -> ClientError -> Maybe Text
 externalAPICallErrorMessage baseUrl clientErr =

@@ -1,49 +1,50 @@
 module Beckn.Types.Mobility.Medium where
 
 import Beckn.Types.Core.Price
+import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
 data Medium = Medium
   { _type :: Text, -- "ROADWAY", "WATERWAY", "AIRWAY", "RAILWAY"
-    _roadway :: Maybe Roadway,
-    _waterway :: Maybe Waterway,
-    _airway :: Maybe Airway,
-    _railway :: Maybe Railway
+    roadway :: Maybe Roadway,
+    waterway :: Maybe Waterway,
+    airway :: Maybe Airway,
+    railway :: Maybe Railway
   }
   deriving (Generic, Show)
 
 instance FromJSON Medium where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Medium where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data Roadway = Roadway
   { _type :: Text, --"HIGHWAY", "LOCAL-ROAD"
-    _lanes :: Text,
-    _oneway :: Bool,
-    _toll :: Toll
+    lanes :: Text,
+    oneway :: Bool,
+    toll :: Toll
   }
   deriving (Generic, Show)
 
 instance FromJSON Roadway where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Roadway where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data Toll = Toll
-  { _has_toll :: Bool,
-    _price :: Price --not available in mobility in github, so taking from core.
+  { has_toll :: Bool,
+    price :: Price --not available in mobility in github, so taking from core.
   }
   deriving (Generic, Show)
 
 instance FromJSON Toll where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Toll where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 newtype Waterway = Waterway
   { _type :: Text --"SEA", "RIVER", "LAKE"
@@ -51,10 +52,10 @@ newtype Waterway = Waterway
   deriving (Generic, Show)
 
 instance FromJSON Waterway where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Waterway where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 newtype Airway = Airway
   { _type :: Text --"CIVILIAN", "MILITARY"
@@ -62,10 +63,10 @@ newtype Airway = Airway
   deriving (Generic, Show)
 
 instance FromJSON Airway where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Airway where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 newtype Railway = Railway
   { _type :: Text --"NARROW-GAUGE", "METER-GAUGE", "BROAD-GAUGE"
@@ -73,7 +74,7 @@ newtype Railway = Railway
   deriving (Generic, Show)
 
 instance FromJSON Railway where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Railway where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

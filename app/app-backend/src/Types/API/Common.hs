@@ -1,15 +1,16 @@
 module Types.API.Common where
 
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Ack = Ack
-  { _action :: Text,
-    _message :: Text
+  { action :: Text,
+    message :: Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Ack where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Ack where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

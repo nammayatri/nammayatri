@@ -16,7 +16,7 @@ import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.GeometryT))
 getDbTable =
-  DB._geometry . DB.appDb <$> getSchemaName
+  DB.geometry . DB.appDb <$> getSchemaName
 
 containsPoint :: (Monoid a, IsString a) => a -> a
 containsPoint point = "st_contains(geom, ST_GeomFromText(" <> point <> "))"
@@ -35,13 +35,13 @@ containsPredicate gps _ = containsPoint_ (B.val_ point)
     point = "POINT (" <> gps ^. #lon <> " " <> gps ^. #lat <> ")"
 
 findGeometriesContaining :: GPS -> Text -> Flow [Storage.Geometry]
-findGeometriesContaining gps region = do
+findGeometriesContaining gps region_ = do
   do
     dbTable <- getDbTable
     DB.findAll dbTable identity predicate
   where
     predicate geometry@Geometry {..} =
-      _region ==. B.val_ region &&. containsPredicate gps geometry
+      region ==. B.val_ region_ &&. containsPredicate gps geometry
 
 someGeometriesContain :: GPS -> Text -> Flow Bool
 someGeometriesContain gps region = do

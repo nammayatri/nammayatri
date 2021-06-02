@@ -82,7 +82,7 @@ deriving newtype instance FromBackendRow Postgres (Encrypted a)
 --
 -- If you need to lookup by encrypted data, put 'EncryptedHashedField'
 -- into table field, and in query match against field hash, e.g.
--- @ myfield ^. #_hash ==. val_ (evalDbHash seekedValue) @
+-- @ myfield ^. #hash ==. val_ (evalDbHash seekedValue) @
 instance
   TypeError
     ( 'Text "Matching on encrypted data is not allowed"
@@ -150,8 +150,8 @@ instance DbHashable Aeson.Value where
 -- If you need to mark a field as optional, pass @Nullable f@ as
 -- the last type argument.
 data EncryptedHashed a f = EncryptedHashed
-  { _encrypted :: Columnar f (Encrypted a),
-    _hash :: Columnar f DbHash
+  { encrypted :: Columnar f (Encrypted a),
+    hash :: Columnar f DbHash
   }
   deriving stock (Generic)
   deriving anyclass (Beamable)
@@ -171,10 +171,10 @@ instance
   where
   type Unencrypted (EncryptedHashed a Identity) = a
   encryptItem value = do
-    let _hash = evalDbHash value
-    _encrypted <- encryptItem value
+    let hash = evalDbHash value
+    encrypted <- encryptItem value
     return EncryptedHashed {..}
-  decryptItem = decryptItem . _encrypted
+  decryptItem = decryptItem . encrypted
 
 instance
   (ToJSON a, FromJSON a, DbHashable a) =>
@@ -182,10 +182,10 @@ instance
   where
   type Unencrypted (EncryptedHashed a (Nullable Identity)) = Maybe a
   encryptItem mvalue = do
-    let _hash = evalDbHash <$> mvalue
-    _encrypted <- encryptItem mvalue
+    let hash = evalDbHash <$> mvalue
+    encrypted <- encryptItem mvalue
     return EncryptedHashed {..}
-  decryptItem = decryptItem . _encrypted
+  decryptItem = decryptItem . encrypted
 
 -- | Mark a field as encrypted with hash or not, depending on @e@ argument.
 --

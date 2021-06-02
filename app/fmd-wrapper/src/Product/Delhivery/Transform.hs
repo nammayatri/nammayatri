@@ -43,8 +43,8 @@ import Utils.Common
 mkQuoteReqFromSearch :: SearchReq -> Flow QuoteReq
 mkQuoteReqFromSearch SearchReq {..} = do
   let intent = message ^. #intent
-      pickups = intent ^. #_pickups
-      drops = intent ^. #_drops
+      pickups = intent ^. #pickups
+      drops = intent ^. #drops
   case (pickups, drops) of
     ([pickup], [drop]) -> do
       pickupLoc <- mkLocDetails pickup
@@ -64,7 +64,7 @@ mkQuoteReqFromSearch SearchReq {..} = do
     onePickupLocationExpected = throwError $ InvalidRequest "One pickup location expected."
     oneDropLocationExpected = throwError $ InvalidRequest "One drop location expected"
     mkLocDetails loc = do
-      address <- mkAddress (loc ^. #_location)
+      address <- mkAddress (loc ^. #location)
       return $
         LocationDetails
           { eml = Nothing,
@@ -80,48 +80,48 @@ mkOnSearchReq _ context res@QuoteRes {..} = do
   itemId <- generateGUID
   return $
     CallbackReq
-      { context = context & #_action .~ "on_search",
+      { context = context & #action .~ "on_search",
         contents = Right $ OnSearchServices (catalog cid now itemId)
       }
   where
     catalog cid now itemId =
       Catalog
-        { _id = cid,
-          _categories = [],
-          _brands = [],
-          _models = [],
-          _ttl = now,
-          _items = [mkSearchItem itemId res],
-          _offers = [],
-          _package_categories = []
+        { id = cid,
+          categories = [],
+          brands = [],
+          models = [],
+          ttl = now,
+          items = [mkSearchItem itemId res],
+          offers = [],
+          package_categories = []
         }
 
 mkOnSearchErrReq :: Context -> Error -> OnSearchReq
 mkOnSearchErrReq context err =
   CallbackReq
-    { context = context & #_action .~ "on_search",
+    { context = context & #action .~ "on_search",
       contents = Left errResp
     }
   where
     errResp =
       CoreErr.Error
         { _type = CoreErr.DOMAIN_ERROR,
-          _code = "",
-          _path = Nothing,
-          _message = Just $ err ^. #message
+          code = "",
+          path = Nothing,
+          message = Just $ err ^. #message
         }
 
 mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
 mkQuoteReqFromSelect SelectReq {..} = do
   let order = message ^. #order
-      task = head $ order ^. #_tasks
-  pickupDet <- mkLocationDetails (task ^. #_pickup)
-  dropDet <- mkLocationDetails (task ^. #_drop)
+      task = head $ order ^. #tasks
+  pickupDet <- mkLocationDetails (task ^. #pickup)
+  dropDet <- mkLocationDetails (task ^. #drop)
   return $
     QuoteReq
       { inv = Nothing,
-        itm = mkItemDetails <$> (order ^. #_items),
-        oid = order ^. #_id,
+        itm = mkItemDetails <$> (order ^. #items),
+        oid = order ^. #id,
         cod = Nothing,
         src = pickupDet,
         tar = dropDet
@@ -130,88 +130,88 @@ mkQuoteReqFromSelect SelectReq {..} = do
 mkOnSelectOrder :: Order -> QuoteRes -> Flow SelectOrder
 mkOnSelectOrder order res@QuoteRes {..} = do
   quote <- mkQuote res
-  task <- updateTaskEta (head $ order ^. #_tasks) eta
+  task <- updateTaskEta (head $ order ^. #tasks) eta
   let order' =
-        order & #_tasks .~ [task]
-          & #_quotation ?~ quote
+        order & #tasks .~ [task]
+          & #quotation ?~ quote
   return $ SelectOrder order'
 
 mkOnSelectReq :: Context -> SelectOrder -> OnSelectReq
 mkOnSelectReq context msg =
   CallbackReq
-    { context = context & #_action .~ "on_select",
+    { context = context & #action .~ "on_select",
       contents = Right msg
     }
 
 updateTaskEta :: Task -> Integer -> Flow Task
 updateTaskEta task eta = do
   now <- getCurrentTime
-  let pickup = task ^. #_pickup
+  let pickup = task ^. #pickup
   let pickupEta = addUTCTime (fromInteger eta) now
-  let pickup' = pickup & #_time ?~ pickupEta
+  let pickup' = pickup & #time ?~ pickupEta
   return $
-    task & #_pickup .~ pickup'
+    task & #pickup .~ pickup'
 
 mkOnSelectErrReq :: Context -> Error -> OnSelectReq
 mkOnSelectErrReq context err =
   CallbackReq
-    { context = context & #_action .~ "on_search",
+    { context = context & #action .~ "on_search",
       contents = Left errResp
     }
   where
     errResp =
       CoreErr.Error
         { _type = CoreErr.DOMAIN_ERROR,
-          _code = "",
-          _path = Nothing,
-          _message = Just $ err ^. #message
+          code = "",
+          path = Nothing,
+          message = Just $ err ^. #message
         }
 
 mkOnInitMessage :: Text -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
 mkOnInitMessage orderId order payee req QuoteRes {..} = do
-  task <- updateTaskEta (head $ order ^. #_tasks) eta
+  task <- updateTaskEta (head $ order ^. #tasks) eta
   return $
     InitOrder $
-      order & #_id ?~ orderId
-        & #_payment ?~ mkPayment payee pricing
-        & #_billing .~ billing
-        & #_tasks .~ [task]
+      order & #id ?~ orderId
+        & #payment ?~ mkPayment payee pricing
+        & #billing .~ billing
+        & #tasks .~ [task]
   where
-    billing = req ^. #message . #order . #_billing
+    billing = req ^. #message . #order . #billing
 
 mkOnInitReq :: Context -> InitOrder -> OnInitReq
 mkOnInitReq context msg =
   CallbackReq
-    { context = context & #_action .~ "on_init",
+    { context = context & #action .~ "on_init",
       contents = Right msg
     }
 
 mkOnInitErrReq :: Context -> Error -> OnInitReq
 mkOnInitErrReq context err =
   CallbackReq
-    { context = context & #_action .~ "on_init",
+    { context = context & #action .~ "on_init",
       contents = Left errResp
     }
   where
     errResp =
       CoreErr.Error
         { _type = CoreErr.DOMAIN_ERROR,
-          _code = "",
-          _path = Nothing,
-          _message = Just $ err ^. #message
+          code = "",
+          path = Nothing,
+          message = Just $ err ^. #message
         }
 
 mkCreateOrderReq :: Order -> Flow CreateOrderReq
 mkCreateOrderReq order = do
-  let task = head $ order ^. #_tasks
-  pickupDet <- mkLocationDetails (task ^. #_pickup)
-  dropDet <- mkLocationDetails (task ^. #_drop)
+  let task = head $ order ^. #tasks
+  pickupDet <- mkLocationDetails (task ^. #pickup)
+  dropDet <- mkLocationDetails (task ^. #drop)
   returnDet <- mkLocationDetails (task ^. #_return)
   return $
     CreateOrderReq
       { inv = Nothing,
-        itm = mkItemDetails <$> (order ^. #_items),
-        oid = order ^. #_id,
+        itm = mkItemDetails <$> (order ^. #items),
+        oid = order ^. #id,
         cod = Nothing,
         src = pickupDet,
         ret = returnDet,
@@ -222,28 +222,28 @@ mkOnConfirmReq :: Context -> Order -> Flow OnConfirmReq
 mkOnConfirmReq context order =
   return $
     CallbackReq
-      { context = context & #_action .~ "on_confirm",
+      { context = context & #action .~ "on_confirm",
         contents = Right $ ConfirmResMessage order
       }
 
 mkOnConfirmErrReq :: Context -> Error -> OnConfirmReq
 mkOnConfirmErrReq context err =
   CallbackReq
-    { context = context & #_action .~ "on_confirm",
+    { context = context & #action .~ "on_confirm",
       contents = Left errResp
     }
   where
     errResp =
       CoreErr.Error
         { _type = CoreErr.DOMAIN_ERROR,
-          _code = "",
-          _path = Nothing,
-          _message = Just $ err ^. #message
+          code = "",
+          path = Nothing,
+          message = Just $ err ^. #message
         }
 
 mkItemDetails :: FMD.Item -> ItemDetails
 mkItemDetails item =
-  let prdDesc = fromMaybe "" (item ^? #_descriptor . _Just . #_short_desc . _Just)
+  let prdDesc = fromMaybe "" (item ^? #descriptor . _Just . #short_desc . _Just)
    in ItemDetails
         { prd = prdDesc,
           qty = 1,
@@ -253,113 +253,113 @@ mkItemDetails item =
 
 mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
 mkLocationDetails PickupOrDrop {..} = do
-  phone <- listToMaybe (_poc ^. #phones) & fromMaybeM (InternalError "Person phone number is not present.")
-  address <- mkAddress _location
+  phone <- listToMaybe (poc ^. #phones) & fromMaybeM (InternalError "Person phone number is not present.")
+  address <- mkAddress location
   return $
     LocationDetails
-      { eml = _poc ^. #email,
+      { eml = poc ^. #email,
         pho = phone,
-        nam = getName (_poc ^. #name),
+        nam = getName (poc ^. #name),
         det = address
       }
   where
     getName :: Name -> Text
     getName Name {..} =
       let def = maybe "" (" " <>)
-       in def _honorific_prefix
-            <> def _honorific_suffix
-            <> _given_name
-            <> def _additional_name
-            <> def _family_name
+       in def honorific_prefix
+            <> def honorific_suffix
+            <> given_name
+            <> def additional_name
+            <> def family_name
 
 mkAddress :: CoreLoc.Location -> Flow Address
 mkAddress location = do
-  (CoreLoc.GPS lat lon) <- CoreLoc._gps location & fromMaybeM (InternalError "Lat/long not found.")
-  address <- CoreLoc._address location & fromMaybeM (InternalError "Address not found.")
+  (CoreLoc.GPS lat lon) <- CoreLoc.gps location & fromMaybeM (InternalError "Lat/long not found.")
+  address <- CoreLoc.address location & fromMaybeM (InternalError "Address not found.")
   return $
     Address
-      { cty = CoreAddr._city address,
+      { cty = CoreAddr.city address,
         add =
-          CoreAddr._door address
+          CoreAddr.door address
             <> " "
-            <> fromMaybe "" (CoreAddr._name address)
+            <> fromMaybe "" (CoreAddr.name address)
             <> " "
-            <> fromMaybe "" (CoreAddr._building address),
-        cnt = Just $ CoreAddr._country address,
+            <> fromMaybe "" (CoreAddr.building address),
+        cnt = Just $ CoreAddr.country address,
         crd = lat <> "," <> lon,
-        reg = CoreAddr._state address,
-        zip = Just $ CoreAddr._area_code address
+        reg = CoreAddr.state address,
+        zip = Just $ CoreAddr.area_code address
       }
 
 mkSearchItem :: Text -> QuoteRes -> Core.Item
 mkSearchItem itemId QuoteRes {..} =
   Core.Item
-    { _id = itemId,
-      _parent_item_id = Nothing,
-      _descriptor = emptyDescriptor,
-      _price = price,
-      _model_id = Nothing,
-      _category_id = Nothing,
-      _package_category_id = Nothing,
-      _brand_id = Nothing,
-      _promotional = False,
-      _ttl = Nothing,
-      _tags = [Tag "eta" (T.pack $ show eta)]
+    { id = itemId,
+      parent_item_id = Nothing,
+      descriptor = emptyDescriptor,
+      price = price,
+      model_id = Nothing,
+      category_id = Nothing,
+      package_category_id = Nothing,
+      brand_id = Nothing,
+      promotional = False,
+      ttl = Nothing,
+      tags = [Tag "eta" (T.pack $ show eta)]
     }
   where
     price =
       Price
-        { _currency = "INR",
-          _value = Nothing,
-          _estimated_value = Just value,
-          _computed_value = Nothing,
-          _listed_value = Nothing,
-          _offered_value = Nothing,
-          _minimum_value = Nothing,
-          _maximum_value = Nothing
+        { currency = "INR",
+          value = Nothing,
+          estimated_value = Just value,
+          computed_value = Nothing,
+          listed_value = Nothing,
+          offered_value = Nothing,
+          minimum_value = Nothing,
+          maximum_value = Nothing
         }
     value = convertAmountToDecimalValue (Amount $ toRational pricing)
 
 mkQuote :: QuoteRes -> Flow Quotation
 mkQuote QuoteRes {..} = do
   qid <- generateGUID
-  return $ Quotation {_id = qid, _price = Just price, _ttl = Nothing, _breakup = Nothing}
+  return $ Quotation {id = qid, price = Just price, ttl = Nothing, breakup = Nothing}
   where
     price = mkPrice pricing
     mkPrice estimatedPrice =
       Price
-        { _currency = "INR",
-          _value = Nothing,
-          _estimated_value = Just $ convertAmountToDecimalValue $ Amount $ toRational estimatedPrice,
-          _computed_value = Nothing,
-          _listed_value = Nothing,
-          _offered_value = Nothing,
-          _minimum_value = Nothing,
-          _maximum_value = Nothing
+        { currency = "INR",
+          value = Nothing,
+          estimated_value = Just $ convertAmountToDecimalValue $ Amount $ toRational estimatedPrice,
+          computed_value = Nothing,
+          listed_value = Nothing,
+          offered_value = Nothing,
+          minimum_value = Nothing,
+          maximum_value = Nothing
         }
 
 mkPayment :: PaymentEndpoint -> Float -> Payment
 mkPayment payee estimated_price =
   Payment
-    { _transaction_id = Nothing,
+    { transaction_id = Nothing,
       _type = Just "PRE-FULFILLMENT",
-      _payer = Nothing,
-      _payee = Just payee,
-      _methods = ["RTGS"],
-      _amount = price,
-      _state = Nothing,
-      _due_date = Nothing,
-      _duration = Nothing
+      payer = Nothing,
+      payee = Just payee,
+      methods = ["RTGS"],
+      amount = price,
+      state = Nothing,
+      due_date = Nothing,
+      duration = Nothing
     }
   where
     price =
       MonetaryValue
-        { _currency = "INR",
-          _value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
+        { currency = "INR",
+          value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
         }
 
 updateBppUri :: Context -> BaseUrl -> Context
-updateBppUri Context {..} bpNwAddress = Context {_bpp_uri = Just bpNwAddress, ..}
+updateBppUri Context {..} bpNwAddress = Context {bpp_uri = Just bpNwAddress, ..}
 
 getDlBAPCreds :: Organization -> Flow DlBAConfig
 getDlBAPCreds = getClientConfig

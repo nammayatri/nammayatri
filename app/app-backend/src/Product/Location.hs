@@ -9,7 +9,7 @@ import qualified Types.API.Location as Location
 import Utils.Common
 
 getRoute :: Person.Person -> Location.Request -> FlowHandler Location.Response
-getRoute _person Location.Request {..} =
+getRoute _ Location.Request {..} =
   withFlowHandlerAPI $ MapSearch.getRoute getRouteRequest
   where
     getRouteRequest = do

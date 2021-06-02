@@ -1,17 +1,18 @@
 module Beckn.Types.Core.Migration.Contact (Contact (..)) where
 
 import Beckn.Types.Core.Migration.Tags (Tags)
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Contact = Contact
-  { _phone :: Maybe Text,
-    _email :: Maybe Text,
-    _tags :: Maybe Tags
+  { phone :: Maybe Text,
+    email :: Maybe Text,
+    tags :: Maybe Tags
   }
   deriving (Generic, Show)
 
 instance FromJSON Contact where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Contact where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

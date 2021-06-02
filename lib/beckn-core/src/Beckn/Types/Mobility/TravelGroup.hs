@@ -1,16 +1,17 @@
 module Beckn.Types.Mobility.TravelGroup where
 
 import Beckn.Types.Core.Person
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data TravelGroup = TravelGroup
-  { _primary_traveller :: Person, -- "PULL", "PUSH"
-    _group_size :: Int
+  { primary_traveller :: Person, -- "PULL", "PUSH"
+    group_size :: Int
   }
   deriving (Generic, Show)
 
 instance FromJSON TravelGroup where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON TravelGroup where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

@@ -4,51 +4,52 @@ import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Location
 import Beckn.Types.Mobility.Transfer
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 
 data Stop = Stop
-  { _id :: Text,
-    _descriptor :: Maybe Descriptor,
-    _location :: Location,
-    _arrival_time :: StopTime,
-    _departure_time :: StopTime,
-    _transfers :: [Transfer]
+  { id :: Text,
+    descriptor :: Maybe Descriptor,
+    location :: Location,
+    arrival_time :: StopTime,
+    departure_time :: StopTime,
+    transfers :: [Transfer]
   }
   deriving (Generic, Show)
 
 instance FromJSON Stop where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Stop where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data StopTime = StopTime
-  { _est :: UTCTime,
-    _act :: Maybe UTCTime
+  { est :: UTCTime,
+    act :: Maybe UTCTime
   }
   deriving (Generic, Show)
 
 instance FromJSON StopTime where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON StopTime where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example StopTime where
   example =
     StopTime
-      { _est = example,
-        _act = example
+      { est = example,
+        act = example
       }
 
 instance Example Stop where
   example =
     Stop
-      { _id = idExample,
-        _descriptor = example,
-        _location = example,
-        _arrival_time = example,
-        _departure_time = example,
-        _transfers = example
+      { id = idExample,
+        descriptor = example,
+        location = example,
+        arrival_time = example,
+        departure_time = example,
+        transfers = example
       }

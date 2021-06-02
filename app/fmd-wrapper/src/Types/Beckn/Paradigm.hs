@@ -1,61 +1,62 @@
 module Types.Beckn.Paradigm where
 
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 import Types.Beckn.Image
 
 data Paradigm = Paradigm
-  { _id :: Text,
-    _descriptor :: ParadigmDescriptor,
-    _policy_id :: Maybe Text
+  { id :: Text,
+    descriptor :: ParadigmDescriptor,
+    policy_id :: Maybe Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Paradigm where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Paradigm where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data ParadigmDescriptor = ParadigmDescriptor
-  { _id :: Text,
-    _name :: Maybe Text,
-    _sym :: Maybe Text,
-    _short_desc :: Maybe Text,
-    _long_desc :: Maybe Text,
-    _images :: [Image],
-    _audio :: Maybe Text,
+  { id :: Text,
+    name :: Maybe Text,
+    sym :: Maybe Text,
+    short_desc :: Maybe Text,
+    long_desc :: Maybe Text,
+    images :: [Image],
+    audio :: Maybe Text,
     _3d_render :: Maybe Text,
     -- FIXME: code field name clashes with the one from Core.Descriptor
     -- We have assumed the domain one here takes precedence
-    _code :: Text
+    code :: Text
   }
   deriving (Generic, Show)
 
 instance FromJSON ParadigmDescriptor where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON ParadigmDescriptor where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example ParadigmDescriptor where
   example =
     ParadigmDescriptor
-      { _id = idExample,
-        _name = Nothing,
-        _sym = Nothing,
-        _short_desc = Nothing,
-        _long_desc = Nothing,
-        _images = [],
-        _audio = Nothing,
+      { id = idExample,
+        name = Nothing,
+        sym = Nothing,
+        short_desc = Nothing,
+        long_desc = Nothing,
+        images = [],
+        audio = Nothing,
         _3d_render = Nothing,
-        _code = "SINGLE-PICKUP-SINGLE-DROP"
+        code = "SINGLE-PICKUP-SINGLE-DROP"
       }
 
 instance Example Paradigm where
   example =
     Paradigm
-      { _id = idExample,
-        _descriptor = example,
-        _policy_id = Nothing
+      { id = idExample,
+        descriptor = example,
+        policy_id = Nothing
       }

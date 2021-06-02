@@ -5,6 +5,7 @@
 module Types.Storage.Quotation where
 
 import Beckn.Types.Id
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -14,7 +15,7 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data Status = NEW | PENDING | EXPIRED | CONFIRMED | SYSTEM_CANCELLED
@@ -34,13 +35,13 @@ instance FromHttpApiData Status where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data QuotationT f = Quotation
-  { _id :: B.C f (Id Quotation),
-    _leadsId :: B.C f Text,
-    _amount :: B.C f Text,
-    _organizationId :: B.C f Text,
-    _status :: B.C f Status,
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+  { id :: B.C f (Id Quotation),
+    leadsId :: B.C f Text,
+    amount :: B.C f Text,
+    organizationId :: B.C f Text,
+    status :: B.C f Status,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -51,17 +52,17 @@ type QuotationPrimaryKey = B.PrimaryKey QuotationT Identity
 instance B.Table QuotationT where
   data PrimaryKey QuotationT f = QuotationPrimaryKey (B.C f (Id Quotation))
     deriving (Generic, B.Beamable)
-  primaryKey = QuotationPrimaryKey . _id
+  primaryKey = QuotationPrimaryKey . id
 
 deriving instance Show Quotation
 
 deriving instance Eq Quotation
 
 instance ToJSON Quotation where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Quotation where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema Quotation
 
@@ -70,8 +71,8 @@ fieldEMod ::
 fieldEMod =
   B.modifyTableFields
     B.tableModification
-      { _createdAt = "created_at",
-        _updatedAt = "updated_at",
-        _leadsId = "booking_reference_id",
-        _organizationId = "organization_id"
+      { createdAt = "created_at",
+        updatedAt = "updated_at",
+        leadsId = "booking_reference_id",
+        organizationId = "organization_id"
       }

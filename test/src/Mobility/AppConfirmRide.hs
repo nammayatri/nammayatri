@@ -46,8 +46,8 @@ spec = do
             statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
             statusResResult `shouldSatisfy` isRight
             let Right statusRes = statusResResult
-            return . nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-          let productInstanceId = getId $ AppCase._id productInstance
+            return . nonEmpty . filter (\p -> p ^. #organizationId == bppTransporterOrgId) $ productInstances statusRes
+          let productInstanceId = getId $ AppCase.id productInstance
           -- Confirm ride from app backend
           confirmResult <- runClient appClientEnv (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)
           confirmResult `shouldSatisfy` isRight
@@ -58,5 +58,5 @@ spec = do
     -- callResult <- runClient appClientEnv (appCallToProvider appRegistrationToken cReq)
     -- callResult `shouldSatisfy` isRight
 
-    productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
-    productInstances = AppCase._productInstance
+    productInstances :: AppCase.GetStatusRes -> [AppCase.ProdInstRes]
+    productInstances = AppCase.productInstance

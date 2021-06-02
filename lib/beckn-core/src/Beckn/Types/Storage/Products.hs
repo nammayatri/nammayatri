@@ -6,6 +6,7 @@ module Beckn.Types.Storage.Products where
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -15,7 +16,7 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data ProductsType = RIDE | PASS
@@ -55,24 +56,24 @@ instance FromHttpApiData ProductsStatus where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data ProductsT f = Products
-  { _id :: B.C f (Id Products),
-    _name :: B.C f Text,
-    _description :: B.C f (Maybe Text),
-    _industry :: B.C f ProductsIndustry,
+  { id :: B.C f (Id Products),
+    name :: B.C f Text,
+    description :: B.C f (Maybe Text),
+    industry :: B.C f ProductsIndustry,
     _type :: B.C f ProductsType,
-    _shortId :: B.C f Text,
-    _status :: B.C f ProductsStatus,
-    _price :: B.C f Amount,
-    _rating :: B.C f (Maybe Text),
-    _review :: B.C f (Maybe Text),
-    _info :: B.C f (Maybe Text),
-    _udf1 :: B.C f (Maybe Text),
-    _udf2 :: B.C f (Maybe Text),
-    _udf3 :: B.C f (Maybe Text),
-    _udf4 :: B.C f (Maybe Text),
-    _udf5 :: B.C f (Maybe Text),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+    shortId :: B.C f Text,
+    status :: B.C f ProductsStatus,
+    price :: B.C f Amount,
+    rating :: B.C f (Maybe Text),
+    review :: B.C f (Maybe Text),
+    info :: B.C f (Maybe Text),
+    udf1 :: B.C f (Maybe Text),
+    udf2 :: B.C f (Maybe Text),
+    udf3 :: B.C f (Maybe Text),
+    udf4 :: B.C f (Maybe Text),
+    udf5 :: B.C f (Maybe Text),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -83,17 +84,17 @@ type ProductsPrimaryKey = B.PrimaryKey ProductsT Identity
 instance B.Table ProductsT where
   data PrimaryKey ProductsT f = ProductsPrimaryKey (B.C f (Id Products))
     deriving (Generic, B.Beamable)
-  primaryKey = ProductsPrimaryKey . _id
+  primaryKey = ProductsPrimaryKey . id
 
 deriving instance Show Products
 
 deriving instance Eq Products
 
 instance ToJSON Products where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Products where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema Products
 
@@ -103,9 +104,9 @@ fieldEMod =
   B.setEntityName "product"
     <> B.modifyTableFields
       B.tableModification
-        { _shortId = "short_id",
-          _createdAt = "created_at",
-          _updatedAt = "updated_at"
+        { shortId = "short_id",
+          createdAt = "created_at",
+          updatedAt = "updated_at"
         }
 
 validateStatusTransition :: ProductsStatus -> ProductsStatus -> Either Text ()

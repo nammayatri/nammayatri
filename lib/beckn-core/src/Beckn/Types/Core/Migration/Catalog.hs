@@ -11,13 +11,13 @@ import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data Catalog = Catalog
-  { _bpp_descriptor :: Maybe Descriptor,
-    _bpp_categories :: Maybe [Category],
-    _bpp_fulfillments :: Maybe [Fulfillment],
-    _bpp_payments :: Maybe [Payment],
-    _bpp_offers :: Maybe [Offer],
-    _bpp_providers :: Maybe [Provider],
-    _exp :: Maybe UTCTime
+  { bpp_descriptor :: Maybe Descriptor,
+    bpp_categories :: Maybe [Category],
+    bpp_fulfillments :: Maybe [Fulfillment],
+    bpp_payments :: Maybe [Payment],
+    bpp_offers :: Maybe [Offer],
+    bpp_providers :: Maybe [Provider],
+    exp :: Maybe UTCTime
   }
   deriving (Generic)
 

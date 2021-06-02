@@ -16,15 +16,15 @@ import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 
 data AppDb f = AppDb
-  { _organization :: f (B.TableEntity Organization.OrganizationT),
-    _issues :: f (B.TableEntity Issue.IssueT),
-    _location :: f (B.TableEntity Location.LocationT),
-    _person :: f (B.TableEntity Person.PersonT),
+  { organization :: f (B.TableEntity Organization.OrganizationT),
+    issues :: f (B.TableEntity Issue.IssueT),
+    location :: f (B.TableEntity Location.LocationT),
+    person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
-    _productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
-    _products :: f (B.TableEntity Products.ProductsT),
-    _registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
-    _geometry :: f (B.TableEntity Geometry.GeometryT)
+    productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
+    products :: f (B.TableEntity Products.ProductsT),
+    registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
+    geometry :: f (B.TableEntity Geometry.GeometryT)
   }
   deriving (Generic, B.Database be)
 
@@ -32,15 +32,15 @@ appDb :: Text -> B.DatabaseSettings be AppDb
 appDb dbSchemaName =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { _organization = setSchema dbSchemaName <> Organization.fieldEMod,
-        _issues = setSchema dbSchemaName <> Issue.fieldEMod,
-        _location = setSchema dbSchemaName <> Location.fieldEMod,
-        _person = setSchema dbSchemaName <> Person.fieldEMod,
+      { organization = setSchema dbSchemaName <> Organization.fieldEMod,
+        issues = setSchema dbSchemaName <> Issue.fieldEMod,
+        location = setSchema dbSchemaName <> Location.fieldEMod,
+        person = setSchema dbSchemaName <> Person.fieldEMod,
         _case = setSchema dbSchemaName <> Case.fieldEMod,
-        _productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
-        _products = setSchema dbSchemaName <> Products.fieldEMod,
-        _registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
-        _geometry = setSchema dbSchemaName <> Geometry.fieldEMod
+        productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
+        products = setSchema dbSchemaName <> Products.fieldEMod,
+        registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
+        geometry = setSchema dbSchemaName <> Geometry.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

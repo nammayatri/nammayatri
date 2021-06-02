@@ -1,15 +1,16 @@
 module Beckn.Types.Core.Migration.Page (Page (..)) where
 
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Page = Page
-  { _id :: Maybe Text,
-    _next_id :: Maybe Text
+  { id :: Maybe Text,
+    next_id :: Maybe Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Page where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Page where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

@@ -13,15 +13,15 @@ import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT))
 getDbTable =
-  DB._organization . DB.appDb <$> getSchemaName
+  DB.organization . DB.appDb <$> getSchemaName
 
 findOrgByApiKey :: App.APIKey -> Flow (Maybe Org.Organization)
-findOrgByApiKey apiKey = do
+findOrgByApiKey apiKey_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Org.Organization {..} =
-      _apiKey ==. B.val_ (Just apiKey)
+      apiKey ==. B.val_ (Just apiKey_)
 
 listOrganizations ::
   Maybe Int ->
@@ -29,21 +29,21 @@ listOrganizations ::
   [Org.OrganizationType] ->
   [Org.Status] ->
   Flow [Org.Organization]
-listOrganizations mlimit moffset oType status = do
+listOrganizations mlimit moffset oType status_ = do
   dbTable <- getDbTable
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate status)
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate status_)
   where
     complementVal l
       | null l = B.val_ True
       | otherwise = B.val_ False
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    orderByDesc Org.Organization {..} = B.desc_ _createdAt
+    orderByDesc Org.Organization {..} = B.desc_ createdAt
     predicate pstatus Org.Organization {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _status `B.in_` (B.val_ <$> pstatus) ||. complementVal pstatus,
+        [ status `B.in_` (B.val_ <$> pstatus) ||. complementVal pstatus,
           _type `B.in_` (B.val_ <$> oType) ||. complementVal oType
         ]
 
@@ -53,13 +53,13 @@ findByBapUrl bapUrl = do
   DB.findOne dbTable predicate
   where
     predicate Org.Organization {..} =
-      _callbackUrl ==. B.val_ (Just bapUrl)
-        &&. _verified ==. B.val_ True
-        &&. _enabled ==. B.val_ True
+      callbackUrl ==. B.val_ (Just bapUrl)
+        &&. verified ==. B.val_ True
+        &&. enabled ==. B.val_ True
 
 findOrgByShortId :: ShortId Org.Organization -> Flow (Maybe Org.Organization)
-findOrgByShortId shortId = do
+findOrgByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Org.Organization {..} = _shortId ==. B.val_ shortId
+    predicate Org.Organization {..} = shortId ==. B.val_ shortId_

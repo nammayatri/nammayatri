@@ -1,6 +1,7 @@
 module Types.Beckn.Intent where
 
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Types.Beckn.Location
@@ -8,53 +9,53 @@ import Types.Beckn.Package
 import Types.Beckn.Tag
 
 data Intent = Intent
-  { _query_string :: Maybe Text,
-    _provider_id :: Maybe Text,
-    _category_id :: Maybe Text,
-    _item_id :: Maybe Text,
-    _pickups :: [PickupDrop],
-    _drops :: [PickupDrop],
-    _packages :: Maybe [Package],
+  { query_string :: Maybe Text,
+    provider_id :: Maybe Text,
+    category_id :: Maybe Text,
+    item_id :: Maybe Text,
+    pickups :: [PickupDrop],
+    drops :: [PickupDrop],
+    packages :: Maybe [Package],
     -- FIXME: tags field name clashes with the one from Core.Intent
     -- We have assumed the domain one here takes precedence
-    _tags :: Maybe [Tag]
+    tags :: Maybe [Tag]
   }
   deriving (Generic, Show)
 
 instance FromJSON Intent where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Intent where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Intent where
   example =
     Intent
-      { _query_string = Nothing,
-        _provider_id = Nothing,
-        _category_id = Nothing,
-        _item_id = Nothing,
-        _pickups = example,
-        _drops = example,
-        _packages = example,
-        _tags = example
+      { query_string = Nothing,
+        provider_id = Nothing,
+        category_id = Nothing,
+        item_id = Nothing,
+        pickups = example,
+        drops = example,
+        packages = example,
+        tags = example
       }
 
 data PickupDrop = PickupDrop
-  { _location :: Location,
-    _time :: Maybe UTCTime
+  { location :: Location,
+    time :: Maybe UTCTime
   }
   deriving (Generic, Show)
 
 instance FromJSON PickupDrop where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON PickupDrop where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example PickupDrop where
   example =
     PickupDrop
-      { _location = example,
-        _time = example
+      { location = example,
+        time = example
       }

@@ -14,7 +14,7 @@ import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CustomerT))
 getDbTable =
-  DB._customer . DB.transporterDb <$> getSchemaName
+  DB.customer . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Customer -> Flow ()
 create customer = do
@@ -24,9 +24,9 @@ create customer = do
 
 findCustomerById ::
   Id Storage.Customer -> Flow (Maybe Storage.Customer)
-findCustomerById id = do
+findCustomerById cid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= decrypt
   where
-    predicate Storage.Customer {..} = _id ==. B.val_ id
+    predicate Storage.Customer {..} = id ==. B.val_ cid

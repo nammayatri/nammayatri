@@ -7,97 +7,98 @@ import Beckn.Types.Storage.Location
 import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products
+import Beckn.Utils.JSON
 import Data.Swagger
 import Data.Time
 import EulerHS.Prelude
 
-data StatusRes = StatusRes
+data GetStatusRes = GetStatusRes
   { _case :: Case,
-    _productInstance :: [ProdInstRes],
-    _fromLocation :: Location,
-    _toLocation :: Location
+    productInstance :: [ProdInstRes],
+    fromLocation :: Location,
+    toLocation :: Location
   }
   deriving (Show, Generic, ToSchema)
 
-instance FromJSON StatusRes where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+instance FromJSON GetStatusRes where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
-instance ToJSON StatusRes where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+instance ToJSON GetStatusRes where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data UpdateCaseReq = UpdateCaseReq
-  { _quote :: Maybe Amount,
-    _transporterChoice :: Text
+  { quote :: Maybe Amount,
+    transporterChoice :: Text
   }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON UpdateCaseReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON UpdateCaseReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data CaseRes = CaseRes
   { _case :: Case,
-    _productInstance :: [ProdInstRes],
-    _fromLocation :: Maybe Location,
-    _toLocation :: Maybe Location
+    productInstance :: [ProdInstRes],
+    fromLocation :: Maybe Location,
+    toLocation :: Maybe Location
   }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON CaseRes where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON CaseRes where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 type CaseListRes = [CaseRes]
 
 data ProdInstRes = ProdInstRes
-  { _id :: Id ProductInstance,
-    _caseId :: Id Case,
-    _productId :: Id Products,
-    _personId :: Maybe (Id Person),
-    _shortId :: Text,
-    _entityType :: EntityType,
-    _entityId :: Maybe Text,
-    _quantity :: Int,
-    _price :: Maybe Amount,
-    _status :: ProductInstanceStatus,
-    _startTime :: UTCTime,
-    _endTime :: Maybe UTCTime,
-    _validTill :: UTCTime,
-    _fromLocation :: Maybe Text,
-    _toLocation :: Maybe Text,
-    _organizationId :: Text,
-    _parentId :: Maybe (Id ProductInstance),
-    _udf1 :: Maybe Text,
-    _udf2 :: Maybe Text,
-    _udf3 :: Maybe Text,
-    _udf4 :: Maybe Text,
-    _udf5 :: Maybe Text,
-    _info :: Maybe Text,
-    _createdAt :: UTCTime,
-    _updatedAt :: UTCTime,
-    _product :: Maybe Products
+  { id :: Id ProductInstance,
+    caseId :: Id Case,
+    productId :: Id Products,
+    personId :: Maybe (Id Person),
+    shortId :: Text,
+    entityType :: EntityType,
+    entityId :: Maybe Text,
+    quantity :: Int,
+    price :: Maybe Amount,
+    status :: ProductInstanceStatus,
+    startTime :: UTCTime,
+    endTime :: Maybe UTCTime,
+    validTill :: UTCTime,
+    fromLocation :: Maybe Text,
+    toLocation :: Maybe Text,
+    organizationId :: Text,
+    parentId :: Maybe (Id ProductInstance),
+    udf1 :: Maybe Text,
+    udf2 :: Maybe Text,
+    udf3 :: Maybe Text,
+    udf4 :: Maybe Text,
+    udf5 :: Maybe Text,
+    info :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
+    product :: Maybe Products
   }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON ProdInstRes where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON ProdInstRes where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data CaseInfo = CaseInfo
-  { _total :: Maybe Integer,
-    _accepted :: Maybe Integer,
-    _declined :: Maybe Integer
+  { total :: Maybe Integer,
+    accepted :: Maybe Integer,
+    declined :: Maybe Integer
   }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON CaseInfo where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON CaseInfo where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

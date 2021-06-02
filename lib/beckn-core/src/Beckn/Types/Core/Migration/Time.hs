@@ -1,32 +1,33 @@
 module Beckn.Types.Core.Migration.Time (Time (..), Range (..)) where
 
 import Beckn.Types.Core.Migration.Duration (Duration)
+import Beckn.Utils.JSON
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data Time = Time
-  { _label :: Maybe Text,
-    _timestamp :: Maybe UTCTime,
-    _duration :: Maybe Duration,
-    _range :: Maybe Range,
-    _days :: Text
+  { label :: Maybe Text,
+    timestamp :: Maybe UTCTime,
+    duration :: Maybe Duration,
+    range :: Maybe Range,
+    days :: Text
   }
   deriving (Generic, Show)
 
 data Range = Range
-  { _start :: UTCTime,
-    _end :: UTCTime
+  { start :: UTCTime,
+    end :: UTCTime
   }
   deriving (Generic, Show, Eq)
 
 instance FromJSON Range where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Range where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Time where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Time where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

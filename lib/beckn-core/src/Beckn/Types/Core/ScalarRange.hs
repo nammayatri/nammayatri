@@ -1,23 +1,24 @@
 module Beckn.Types.Core.ScalarRange where
 
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data ScalarRange = ScalarRange
-  { _min :: Double,
-    _max :: Double
+  { min :: Double,
+    max :: Double
   }
   deriving (Generic, Show)
 
 instance FromJSON ScalarRange where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON ScalarRange where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example ScalarRange where
   example =
     ScalarRange
-      { _min = 0.00,
-        _max = 10000.00
+      { min = 0.00,
+        max = 10000.00
       }

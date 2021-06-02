@@ -83,8 +83,8 @@ validateContext action context = do
 
 validateBapUrl :: Organization -> Context -> Flow ()
 validateBapUrl org context = do
-  let satisfied = case context ^. #_bap_uri of
+  let satisfied = case context ^. #bap_uri of
         Nothing -> False
-        Just bapUrl -> org ^. #_callbackUrl == Just bapUrl
+        Just bapUrl -> org ^. #callbackUrl == Just bapUrl
   unless satisfied $
     throwError (InvalidRequest "Invalid bap URL.")

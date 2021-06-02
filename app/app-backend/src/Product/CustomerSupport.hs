@@ -5,14 +5,14 @@
 module Product.CustomerSupport where
 
 import App.Types
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
 import Storage.Queries.Person as Person
@@ -25,11 +25,11 @@ import Utils.Common
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandlerAPI $ do
-  personM <- Person.findByUsernameAndPassword _email _password
+  personM <- Person.findByUsernameAndPassword email password
   case personM of
     Nothing -> throwError Unauthorized
     Just person ->
-      if person ^. #_status /= SP.ACTIVE && person ^. #_role /= SP.CUSTOMER_SUPPORT
+      if person ^. #status /= SP.ACTIVE && person ^. #role /= SP.CUSTOMER_SUPPORT
         then throwError Unauthorized
         else do
           token <- generateToken person
@@ -37,20 +37,20 @@ login T.LoginReq {..} = withFlowHandlerAPI $ do
 
 generateToken :: SP.Person -> Flow Text
 generateToken SP.Person {..} = do
-  let personId = getId _id
+  let personId = getId id
   regToken <- createSupportRegToken personId
   -- Clean Old Login Session
   RegistrationToken.deleteByPersonId personId
   RegistrationToken.create regToken
-  pure $ regToken ^. #_token
+  pure $ regToken ^. #token
 
 logout :: SP.Person -> FlowHandler T.LogoutRes
 logout person =
   withFlowHandlerAPI $
-    if person ^. #_role /= SP.CUSTOMER_SUPPORT
+    if person ^. #role /= SP.CUSTOMER_SUPPORT
       then throwError Unauthorized -- Do we need this Check?
       else do
-        RegistrationToken.deleteByPersonId (getId $ person ^. #_id)
+        RegistrationToken.deleteByPersonId (getId $ person ^. #id)
         pure $ T.LogoutRes "Logged out successfully"
 
 createSupportRegToken :: Text -> Flow SR.RegistrationToken
@@ -60,26 +60,26 @@ createSupportRegToken entityId = do
   now <- getCurrentTime
   return $
     SR.RegistrationToken
-      { _id = rtid,
-        _token = token,
-        _attempts = 1, -- Token
-        _authMedium = SR.EMAIL,
-        _authType = SR.PASSWORD,
-        _authValueHash = "CUSTOMER_SESSIONTOKEN",
-        _verified = False,
-        _authExpiry = 0,
-        _tokenExpiry = 30, -- Need to Make this Configuable
-        _EntityId = entityId,
-        _entityType = SR.CUSTOMER,
-        _createdAt = now,
-        _updatedAt = now,
-        _info = Nothing
+      { id = rtid,
+        token = token,
+        attempts = 1, -- Token
+        authMedium = SR.EMAIL,
+        authType = SR.PASSWORD,
+        authValueHash = "CUSTOMER_SESSIONTOKEN",
+        verified = False,
+        authExpiry = 0,
+        tokenExpiry = 30, -- Need to Make this Configuable
+        entityId = entityId,
+        entityType = SR.CUSTOMER,
+        createdAt = now,
+        updatedAt = now,
+        info = Nothing
       }
 
 listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
 listOrder supportP mCaseId mMobile mlimit moffset =
   withFlowHandlerAPI $
-    if supportP ^. #_role /= SP.ADMIN && supportP ^. #_role /= SP.CUSTOMER_SUPPORT
+    if supportP ^. #role /= SP.ADMIN && supportP ^. #role /= SP.CUSTOMER_SUPPORT
       then throwError AccessDenied
       else do
         T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
@@ -94,41 +94,41 @@ listOrder supportP mCaseId mMobile mlimit moffset =
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
           >>= fromMaybeM PersonDoesNotExist
       searchcases <-
-        Case.findAllByTypeAndStatuses (person ^. #_id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
+        Case.findAllByTypeAndStatuses (person ^. #id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
       return $ T.OrderInfo person searchcases
     getByCaseId caseId = do
       (_case :: C.Case) <-
         Case.findByIdAndType (Id caseId) C.RIDESEARCH
           >>= fromMaybeM CaseDoesNotExist
-      let personId = fromMaybe "_ID" (_case ^. #_requestor)
+      let personId = fromMaybe "_ID" (_case ^. #requestor)
       person <-
         Person.findById (Id personId)
           >>= fromMaybeM PersonDoesNotExist
       return $ T.OrderInfo person [_case]
 
 makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp
-makeCaseToOrder SP.Person {_fullName, _mobileNumber} C.Case {..} = do
+makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
-    Case.findOneByParentIdAndCaseType _id C.RIDEORDER
-  let (status :: Maybe CaseStatus) = ((\x -> Just $ x ^. #_status) =<< confiremedOrder) <|> Just _status
-  fromLocation <- Location.findLocationById $ Id _fromLocationId
-  toLocation <- Location.findLocationById $ Id _toLocationId
+    Case.findOneByParentIdAndCaseType id C.RIDEORDER
+  let (status_ :: Maybe CaseStatus) = ((\x -> Just $ x ^. #status) =<< confiremedOrder) <|> Just status
+  fromLocation <- Location.findLocationById $ Id fromLocationId
+  toLocation <- Location.findLocationById $ Id toLocationId
   trip <- makeTripDetails confiremedOrder
   --  Info: udf1 is vechicle variant
   let details =
         T.OrderDetails
-          { _id = getId _id,
-            _status = status,
-            _createdAt = _createdAt,
-            _updatedAt = _updatedAt,
-            _startTime = _startTime,
-            _endTime = _endTime,
-            _fromLocation = fromLocation,
-            _toLocation = toLocation,
-            _travellerName = _fullName,
-            _travellerPhone = _mobileNumber,
-            _vehicleVariant = _udf1, -- Note: UDF1 Contain _vehicleVariant info
-            _trip = trip
+          { id = getId id,
+            status = status_,
+            createdAt = createdAt,
+            updatedAt = updatedAt,
+            startTime = startTime,
+            endTime = endTime,
+            fromLocation = fromLocation,
+            toLocation = toLocation,
+            travellerName = fullName,
+            travellerPhone = mobileNumber,
+            vehicleVariant = udf1, -- Note: UDF1 Contain vehicleVariant info
+            trip = trip
           }
   pure $ T.OrderResp {_order = details}
 
@@ -137,22 +137,22 @@ makeTripDetails caseM = case caseM of
   Nothing -> pure Nothing
   Just _case -> do
     -- Note: In case of Confirmed Order only one Product Instance will be Present
-    ProductInstance.ProductInstance {_id, _status, _info, _price} <-
+    ProductInstance.ProductInstance {id, status, info, price} <-
       head
-        <$> PI.findAllByCaseId (_case ^. #_id)
-    let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< _info
-        provider = (\x -> x ^. #_provider) =<< mproductInfo
-        mtracker = (\x -> x ^. #_tracker) =<< mproductInfo
-        mtrip = (\x -> Just $ x ^. #_trip) =<< mtracker
+        <$> PI.findAllByCaseId (_case ^. #id)
+    let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< info
+        provider = (\x -> x ^. #provider) =<< mproductInfo
+        mtracker = (\x -> x ^. #tracker) =<< mproductInfo
+        mtrip = (\x -> Just $ x ^. #trip) =<< mtracker
         driver = (\x -> x ^. #driver) =<< mtrip
         vehicle = (\x -> x ^. #vehicle) =<< mtrip
     pure $
       Just $
         T.TripDetails
-          { _id = getId _id,
-            _status = _status,
-            _driver = driver,
-            _price = _price,
-            _provider = provider,
-            _vehicle = vehicle
+          { id = getId id,
+            status = status,
+            driver = driver,
+            price = price,
+            provider = provider,
+            vehicle = vehicle
           }

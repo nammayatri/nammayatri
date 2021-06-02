@@ -23,7 +23,7 @@ handle =
         if piId == Id "1"
           then pure rideProductInstance
           else pure searchProductInstance,
-      findPIsByParentId = \_parentId -> pure [rideProductInstance, trackerProductInstance],
+      findPIsByParentId = \parentId -> pure [rideProductInstance, trackerProductInstance],
       findCaseByIdsAndType = \_caseIds caseType ->
         if caseType == Case.LOCATIONTRACKER
           then pure trackerCase
@@ -35,42 +35,42 @@ handle =
 rideProductInstance :: ProductInstance.ProductInstance
 rideProductInstance =
   Fixtures.defaultProductInstance
-    { ProductInstance._status = ProductInstance.CONFIRMED,
-      ProductInstance._parentId = Just "2",
-      ProductInstance._udf4 = Just "otp"
+    { ProductInstance.status = ProductInstance.CONFIRMED,
+      ProductInstance.parentId = Just "2",
+      ProductInstance.udf4 = Just "otp"
     }
 
 searchProductInstance :: ProductInstance.ProductInstance
 searchProductInstance =
   Fixtures.defaultProductInstance
-    { ProductInstance._id = "2",
-      ProductInstance._caseId = "2",
+    { ProductInstance.id = "2",
+      ProductInstance.caseId = "2",
       ProductInstance._type = Case.RIDESEARCH,
-      ProductInstance._status = ProductInstance.CONFIRMED
+      ProductInstance.status = ProductInstance.CONFIRMED
     }
 
 trackerProductInstance :: ProductInstance.ProductInstance
 trackerProductInstance =
   Fixtures.defaultProductInstance
-    { ProductInstance._id = "3",
-      ProductInstance._caseId = "3",
+    { ProductInstance.id = "3",
+      ProductInstance.caseId = "3",
       ProductInstance._type = Case.LOCATIONTRACKER,
-      ProductInstance._status = ProductInstance.CONFIRMED
+      ProductInstance.status = ProductInstance.CONFIRMED
     }
 
 trackerCase :: Case.Case
 trackerCase =
   Fixtures.defaultCase
     { Case._type = Case.LOCATIONTRACKER,
-      Case._status = Case.CONFIRMED
+      Case.status = Case.CONFIRMED
     }
 
 rideCase :: Case.Case
 rideCase =
   Fixtures.defaultCase
-    { Case._id = "2",
+    { Case.id = "2",
       Case._type = Case.RIDEORDER,
-      Case._status = Case.CONFIRMED
+      Case.status = Case.CONFIRMED
     }
 
 startRide :: TestTree
@@ -106,7 +106,7 @@ failedStartRequestedByDriverNotAnOrderExecutor = do
         { StartRide.findPersonById = \personId ->
             pure
               Fixtures.defaultDriver
-                { Person._id = "2"
+                { Person.id = "2"
                 }
         }
 
@@ -121,7 +121,7 @@ failedStartRequestedNotByDriver = do
         { StartRide.findPersonById = \personId ->
             pure
               Fixtures.defaultDriver
-                { Person._role = Person.ADMIN
+                { Person.role = Person.ADMIN
                 }
         }
 
@@ -136,7 +136,7 @@ failedStartWhenProductInstanceStatusIsWrong = do
         { StartRide.findPIById = \piId ->
             pure
               rideProductInstance
-                { ProductInstance._status = ProductInstance.COMPLETED
+                { ProductInstance.status = ProductInstance.COMPLETED
                 }
         }
 
@@ -151,7 +151,7 @@ failedStartWhenRideDoesNotHaveParentProductInstance = do
         { StartRide.findPIById = \piId ->
             pure
               rideProductInstance
-                { ProductInstance._parentId = Nothing
+                { ProductInstance.parentId = Nothing
                 }
         }
 
@@ -166,7 +166,7 @@ failedStartWhenRideMissingOTP = do
         { StartRide.findPIById = \piId ->
             pure
               rideProductInstance
-                { ProductInstance._udf4 = Nothing
+                { ProductInstance.udf4 = Nothing
                 }
         }
 

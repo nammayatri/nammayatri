@@ -2,36 +2,37 @@ module Beckn.Types.Core.Price where
 
 import Beckn.Types.Core.DecimalValue
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
 data Price = Price
-  { _currency :: Text,
-    _value :: Maybe DecimalValue,
-    _estimated_value :: Maybe DecimalValue,
-    _computed_value :: Maybe DecimalValue,
-    _listed_value :: Maybe DecimalValue,
-    _offered_value :: Maybe DecimalValue,
-    _minimum_value :: Maybe DecimalValue,
-    _maximum_value :: Maybe DecimalValue
+  { currency :: Text,
+    value :: Maybe DecimalValue,
+    estimated_value :: Maybe DecimalValue,
+    computed_value :: Maybe DecimalValue,
+    listed_value :: Maybe DecimalValue,
+    offered_value :: Maybe DecimalValue,
+    minimum_value :: Maybe DecimalValue,
+    maximum_value :: Maybe DecimalValue
   }
   deriving (Generic, Show)
 
 instance FromJSON Price where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Price where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Price where
   example =
     Price
-      { _currency = "INR",
-        _value = example,
-        _estimated_value = example,
-        _computed_value = example,
-        _listed_value = example,
-        _offered_value = example,
-        _minimum_value = example,
-        _maximum_value = example
+      { currency = "INR",
+        value = example,
+        estimated_value = example,
+        computed_value = example,
+        listed_value = example,
+        offered_value = example,
+        minimum_value = example,
+        maximum_value = example
       }

@@ -48,8 +48,8 @@ spec = do
         statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
-        return . nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = getId $ AppCase._id productInstance
+        return . nonEmpty . filter (\p -> p ^. #organizationId == bppTransporterOrgId) $ productInstances statusRes
+      let productInstanceId = getId $ AppCase.id productInstance
       -- Confirm ride from app backend
       confirmResult <-
         runClient
@@ -64,10 +64,10 @@ spec = do
 
         -- Filter order productInstance
         let Right rideListRes = rideReqResult
-            tbePiList = TbePI._productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+            tbePiList = TbePI.productInstance <$> rideListRes
+            transporterOrdersPi = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
-      let transporterOrderPiId = PI._id transporterOrderPi
+      let transporterOrderPiId = PI.id transporterOrderPi
 
       -- Driver Rejects a ride
       let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.REJECT
@@ -83,12 +83,12 @@ spec = do
       -- Check if app RIDEORDER PI is not CANCELLED. Only Customer can cancel the order.
       checkPiInResult piListResult productInstanceId
   where
-    productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
-    productInstances = AppCase._productInstance
+    productInstances :: AppCase.GetStatusRes -> [AppCase.ProdInstRes]
+    productInstances = AppCase.productInstance
 
     checkPiInResult :: Either ClientError [AppPI.ProductInstanceRes] -> Text -> Expectation
     checkPiInResult piListResult productInstanceId =
       let Right piListRes = piListResult
-          appPiList = AppPI._productInstance <$> piListRes
-          appOrderPI = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) appPiList
+          appPiList = AppPI.productInstance <$> piListRes
+          appOrderPI = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) appPiList
        in length appOrderPI `shouldBe` 0

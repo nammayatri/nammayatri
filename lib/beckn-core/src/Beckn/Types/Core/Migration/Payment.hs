@@ -9,7 +9,7 @@ where
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
 import Beckn.Types.Core.Migration.Person (Person)
 import Beckn.Types.Core.Migration.Time (Time)
-import Beckn.Utils.JSON (constructorsWithHyphens, objectWithSingleFieldParsing, uniteObjects)
+import Beckn.Utils.JSON
 import Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
 import Data.HashMap.Strict (delete)
@@ -17,13 +17,13 @@ import EulerHS.Prelude hiding (State, (.=))
 import Servant.Client (BaseUrl)
 
 data Payment = Payment
-  { _uri :: Maybe BaseUrl,
-    _tl_method :: Maybe TLMethod,
-    _params :: Maybe Params,
-    _payee :: Maybe Payee,
+  { uri :: Maybe BaseUrl,
+    tl_method :: Maybe TLMethod,
+    params :: Maybe Params,
+    payee :: Maybe Payee,
     _type :: Maybe PaymentType,
-    _status :: Maybe Status,
-    _time :: Maybe Time
+    status :: Maybe Status,
+    time :: Maybe Time
   }
   deriving (Generic, Show)
 
@@ -40,9 +40,9 @@ instance ToJSON TLMethod where
   toJSON HttpPost = String "http/post"
 
 data Params = Params
-  { _transaction_id :: Maybe Text,
-    _amount :: Maybe DecimalValue,
-    _additional :: HashMap Text Text
+  { transaction_id :: Maybe Text,
+    amount :: Maybe DecimalValue,
+    additional :: HashMap Text Text
   }
   deriving (Generic, Eq, Show)
 
@@ -58,11 +58,11 @@ instance FromJSON Params where
       additional = delete "transaction_id" . delete "amount"
 
 instance ToJSON Params where
-  toJSON Params {..} = uniteObjects [object knownParams, Object (String <$> _additional)]
+  toJSON Params {..} = uniteObjects [object knownParams, Object (String <$> additional)]
     where
       knownParams =
-        [ "transaction_id" .= _transaction_id,
-          "amount" .= _amount
+        [ "transaction_id" .= transaction_id,
+          "amount" .= amount
         ]
 
 data Payee = PersonPayee Person | VPA Text | BankAccPayment BankAccount
@@ -82,17 +82,17 @@ payeeConstructorMapping = \case
   err -> error "Unexpected constructor name \"" <> err <> "\" in function payeeConstructorMapping"
 
 data BankAccount = BankAccount
-  { _ifsc_code :: Maybe Text,
-    _account_number :: Maybe Text,
-    _account_holder_name :: Maybe Text
+  { ifsc_code :: Maybe Text,
+    account_number :: Maybe Text,
+    account_holder_name :: Maybe Text
   }
   deriving (Generic, Eq, Show)
 
 instance FromJSON BankAccount where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON BankAccount where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data PaymentType
   = ON_ORDER
@@ -105,10 +105,10 @@ data Status = PAID | NOT_PAID
   deriving (Generic, Eq, Show)
 
 instance FromJSON Payment where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Payment where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON PaymentType where
   parseJSON = genericParseJSON constructorsWithHyphens

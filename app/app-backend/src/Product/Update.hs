@@ -25,21 +25,21 @@ onUpdate _org req = withFlowHandlerBecknAPI $
     validateContext "on_update" $ req ^. #context
     case req ^. #contents of
       Right msg -> do
-        let trip = msg ^. #order . #_trip
-            pid = Id $ msg ^. #order . #_id
+        let trip = msg ^. #order . #trip
+            pid = Id $ msg ^. #order . #id
         orderPi <- MPI.findByParentIdType pid Case.RIDEORDER
-        let mprdInfo = decodeFromText =<< (orderPi ^. #_info)
-            uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo._tracking =<< ProdInfo._tracker =<< mprdInfo)
+        let mprdInfo = decodeFromText =<< (orderPi ^. #info)
+            uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo.tracking =<< ProdInfo.tracker =<< mprdInfo)
             uPrd =
               orderPi
-                { SPI._info = encodeToText <$> uInfo
+                { SPI.info = encodeToText <$> uInfo
                 }
-        MPI.updateMultiple (orderPi ^. #_id) uPrd
+        MPI.updateMultiple (orderPi ^. #id) uPrd
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err
     return Ack
   where
     getUpdatedProdInfo :: Maybe Trip -> Maybe ProdInfo.ProductInfo -> Maybe Tracking -> Maybe ProdInfo.ProductInfo
     getUpdatedProdInfo (Just trip) (Just prdInfo) mtracking =
-      let utracker = ProdInfo.Tracker {_trip = fromBeckn trip, _tracking = fromBeckn <$> mtracking}
-       in Just $ prdInfo {ProdInfo._tracker = Just utracker}
+      let utracker = ProdInfo.Tracker {trip = fromBeckn trip, tracking = fromBeckn <$> mtracking}
+       in Just $ prdInfo {ProdInfo.tracker = Just utracker}
     getUpdatedProdInfo _ _ _ = Nothing

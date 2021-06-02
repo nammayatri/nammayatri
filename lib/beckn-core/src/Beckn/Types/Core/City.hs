@@ -1,16 +1,17 @@
 module Beckn.Types.Core.City where
 
+import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
 data City = City
-  { _name :: Text,
-    _code :: Text
+  { name :: Text,
+    code :: Text
   }
   deriving (Generic, Show)
 
 instance FromJSON City where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON City where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

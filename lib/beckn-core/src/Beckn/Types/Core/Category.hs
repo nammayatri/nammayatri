@@ -3,28 +3,29 @@ module Beckn.Types.Core.Category where
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Tag
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
 data Category = Category
-  { _id :: Text,
-    _parent_category_id :: Maybe Text,
-    _descriptor :: Descriptor,
-    _tags :: [Tag]
+  { id :: Text,
+    parent_category_id :: Maybe Text,
+    descriptor :: Descriptor,
+    tags :: [Tag]
   }
   deriving (Generic, Show, Eq)
 
 instance FromJSON Category where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Category where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Category where
   example =
     Category
-      { _id = idExample,
-        _parent_category_id = Just idExample,
-        _descriptor = example,
-        _tags = example
+      { id = idExample,
+        parent_category_id = Just idExample,
+        descriptor = example,
+        tags = example
       }

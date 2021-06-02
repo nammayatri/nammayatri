@@ -25,20 +25,20 @@ startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Id Person.Person
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
   requestor <- findPersonById requestorId
   orderPi <- findPIById $ cast rideId
-  case requestor ^. #_role of
+  case requestor ^. #role of
     Person.DRIVER -> do
-      rideDriver <- orderPi ^. #_personId & fromMaybeM (PIFieldNotPresent "person")
+      rideDriver <- orderPi ^. #personId & fromMaybeM (PIFieldNotPresent "person")
       unless (rideDriver == requestorId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
-  unless (isValidPiStatus (orderPi ^. #_status)) $ throwError $ PIInvalidStatus "This ride cannot be started"
-  searchPiId <- orderPi ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  unless (isValidPiStatus (orderPi ^. #status)) $ throwError $ PIInvalidStatus "This ride cannot be started"
+  searchPiId <- orderPi ^. #parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- findPIById searchPiId
-  inAppOtp <- orderPi ^. #_udf4 & fromMaybeM (PIFieldNotPresent "udf4")
+  inAppOtp <- orderPi ^. #udf4 & fromMaybeM (PIFieldNotPresent "udf4")
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   piList <- findPIsByParentId searchPiId
-  trackerCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.LOCATIONTRACKER
-  orderCase <- findCaseByIdsAndType (ProductInstance._caseId <$> piList) Case.RIDEORDER
-  startRide (ProductInstance._id <$> piList) (Case._id trackerCase) (Case._id orderCase)
+  trackerCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.LOCATIONTRACKER
+  orderCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.RIDEORDER
+  startRide (ProductInstance.id <$> piList) (Case.id trackerCase) (Case.id orderCase)
   notifyBAPRideStarted searchPi orderPi
   pure APISuccess.Success
   where

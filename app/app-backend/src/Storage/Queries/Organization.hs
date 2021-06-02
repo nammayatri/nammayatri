@@ -18,7 +18,7 @@ import Utils.Common
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.OrganizationT))
 getDbTable =
-  DB._organization . DB.appDb <$> getSchemaName
+  DB.organization . DB.appDb <$> getSchemaName
 
 create :: Storage.Organization -> Flow ()
 create Storage.Organization {..} = do
@@ -31,15 +31,15 @@ verifyApiKey regToken = do
   DB.findOne dbTable (predicate regToken)
     >>= fromMaybeM Unauthorized
   where
-    predicate token Storage.Organization {..} = _apiKey ==. B.val_ (Just token)
+    predicate token Storage.Organization {..} = apiKey ==. B.val_ (Just token)
 
 findOrganizationById ::
   Id Storage.Organization -> Flow (Maybe Storage.Organization)
-findOrganizationById id = do
+findOrganizationById orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Organization {..} = _id ==. B.val_ id
+    predicate Storage.Organization {..} = id ==. B.val_ orgId
 
 findOrganizationByCallbackUri ::
   Maybe BaseUrl -> Storage.OrganizationType -> Flow (Maybe Storage.Organization)
@@ -48,7 +48,7 @@ findOrganizationByCallbackUri url oType = do
   DB.findOne dbTable predicate
   where
     predicate Storage.Organization {..} =
-      _callbackUrl ==. B.val_ url
+      callbackUrl ==. B.val_ url
         &&. _type ==. B.val_ oType
 
 listOrganizations ::
@@ -57,18 +57,18 @@ listOrganizations ::
   [Storage.OrganizationType] ->
   [Storage.Status] ->
   Flow [Storage.Organization]
-listOrganizations mlimit moffset oType status = do
+listOrganizations mlimit moffset oType status_ = do
   dbTable <- getDbTable
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate oType status)
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate oType status_)
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    orderByDesc Storage.Organization {..} = B.desc_ _createdAt
+    orderByDesc Storage.Organization {..} = B.desc_ createdAt
     predicate pOType pStatus Storage.Organization {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _status `B.in_` (B.val_ <$> status) ||. complementVal pStatus,
+        [ status `B.in_` (B.val_ <$> status_) ||. complementVal pStatus,
           _type `B.in_` (B.val_ <$> oType) ||. complementVal pOType
         ]
 
@@ -81,24 +81,24 @@ update ::
   Id Storage.Organization ->
   Storage.Status ->
   Flow ()
-update id status = do
+update orgId status_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
-    (setClause status currTime)
-    (predicate id)
+    (setClause status_ currTime)
+    (predicate orgId)
   where
-    predicate pid Storage.Organization {..} = _id ==. B.val_ pid
+    predicate oid Storage.Organization {..} = id ==. B.val_ oid
     setClause pStatus currTime Storage.Organization {..} =
       mconcat
-        [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ pStatus
+        [ updatedAt <-. B.val_ currTime,
+          status <-. B.val_ pStatus
         ]
 
 findOrgByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage.Organization)
-findOrgByShortId shortId = do
+findOrgByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Organization {..} = _shortId ==. B.val_ shortId
+    predicate Storage.Organization {..} = shortId ==. B.val_ shortId_

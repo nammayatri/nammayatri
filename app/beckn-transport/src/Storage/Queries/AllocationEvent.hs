@@ -15,7 +15,7 @@ import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.AllocationEventT))
 getDbTable =
-  DB._allocationEvent . DB.transporterDb <$> getSchemaName
+  DB.allocationEvent . DB.transporterDb <$> getSchemaName
 
 create :: Storage.AllocationEvent -> Flow ()
 create allocationEvent = do
@@ -24,11 +24,11 @@ create allocationEvent = do
 
 findAllocationEventById ::
   Id Storage.AllocationEvent -> Flow (Maybe Storage.AllocationEvent)
-findAllocationEventById id = do
+findAllocationEventById aeId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.AllocationEvent {..} = _id ==. B.val_ id
+    predicate Storage.AllocationEvent {..} = id ==. B.val_ aeId
 
 logAllocationEvent :: Storage.AllocationEventType -> Id Ride -> Flow ()
 logAllocationEvent eventType rideId = do
@@ -36,8 +36,8 @@ logAllocationEvent eventType rideId = do
   now <- getCurrentTime
   create $
     Storage.AllocationEvent
-      { _id = uuid,
-        _eventType = eventType,
-        _timestamp = now,
-        _rideId = rideId
+      { id = uuid,
+        eventType = eventType,
+        timestamp = now,
+        rideId = rideId
       }

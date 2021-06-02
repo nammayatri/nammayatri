@@ -7,7 +7,7 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Organization (Organization)
@@ -21,7 +21,7 @@ import qualified Types.Storage.DB as DB
 
 getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.PersonT))
 getDbTable =
-  DB._person . DB.appDb <$> getSchemaName
+  DB.person . DB.appDb <$> getSchemaName
 
 create :: Storage.Person -> Flow ()
 create person = do
@@ -31,12 +31,12 @@ create person = do
 
 findById ::
   Id Storage.Person -> Flow (Maybe Storage.Person)
-findById id = do
+findById personId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= decrypt
   where
-    predicate Storage.Person {..} = _id ==. B.val_ id
+    predicate Storage.Person {..} = id ==. B.val_ personId
 
 findAllByOrgIds ::
   [Storage.Role] -> [Text] -> Flow [Storage.Person]
@@ -49,8 +49,8 @@ findAllByOrgIds roles orgIds = do
       foldl
         (&&.)
         (B.val_ True)
-        [ _role `B.in_` (B.val_ <$> pRoles) ||. complementVal roles,
-          _organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal pOrgIds
+        [ role `B.in_` (B.val_ <$> pRoles) ||. complementVal roles,
+          organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal pOrgIds
         ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
@@ -60,36 +60,36 @@ complementVal l
 
 findByUsernameAndPassword ::
   Text -> Text -> Flow (Maybe Storage.Person)
-findByUsernameAndPassword email password = do
+findByUsernameAndPassword email_ password = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =
-      _email ==. B.val_ (Just email)
-        &&. _passwordHash ==. B.val_ (Just $ evalDbHash password)
+      email ==. B.val_ (Just email_)
+        &&. passwordHash ==. B.val_ (Just $ evalDbHash password)
 
 findByRoleAndMobileNumber ::
   Storage.Role -> Text -> Text -> Flow (Maybe Storage.Person)
-findByRoleAndMobileNumber role countryCode mobileNumber = do
+findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =
-      _role ==. B.val_ role
-        &&. _mobileCountryCode ==. B.val_ (Just countryCode)
-        &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mobileNumber)
+      role ==. B.val_ role_
+        &&. mobileCountryCode ==. B.val_ (Just countryCode)
+        &&. (mobileNumber ^. #hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
 findByRoleAndMobileNumberWithoutCC :: Storage.Role -> Text -> Flow (Maybe Storage.Person)
-findByRoleAndMobileNumberWithoutCC role mobileNumber = do
+findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= decrypt
   where
     predicate Storage.Person {..} =
-      _role ==. B.val_ role
-        &&. (_mobileNumber ^. #_hash) ==. B.val_ (Just $ evalDbHash mobileNumber)
+      role ==. B.val_ role_
+        &&. (mobileNumber ^. #hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
 updateMultiple :: Id Storage.Person -> Storage.Person -> Flow ()
 updateMultiple personId person = do
@@ -99,25 +99,25 @@ updateMultiple personId person = do
   where
     setClause now (sPerson :: Storage.Person) Storage.Person {..} =
       mconcat
-        [ _updatedAt <-. B.val_ now,
-          _firstName <-. B.val_ (sPerson ^. #_firstName),
-          _middleName <-. B.val_ (sPerson ^. #_middleName),
-          _lastName <-. B.val_ (sPerson ^. #_lastName),
-          _fullName <-. B.val_ (sPerson ^. #_fullName),
-          _gender <-. B.val_ (sPerson ^. #_gender),
-          _email <-. B.val_ (sPerson ^. #_email),
-          _organizationId <-. B.val_ (sPerson ^. #_organizationId),
-          _locationId <-. B.val_ (sPerson ^. #_locationId),
-          _description <-. B.val_ (sPerson ^. #_description),
-          _status <-. B.val_ (sPerson ^. #_status),
-          _role <-. B.val_ (sPerson ^. #_role),
-          _identifier <-. B.val_ (sPerson ^. #_identifier),
-          _rating <-. B.val_ (sPerson ^. #_rating),
-          _deviceToken <-. B.val_ (sPerson ^. #_deviceToken),
-          _udf1 <-. B.val_ (sPerson ^. #_udf1),
-          _udf2 <-. B.val_ (sPerson ^. #_udf2)
+        [ updatedAt <-. B.val_ now,
+          firstName <-. B.val_ (sPerson ^. #firstName),
+          middleName <-. B.val_ (sPerson ^. #middleName),
+          lastName <-. B.val_ (sPerson ^. #lastName),
+          fullName <-. B.val_ (sPerson ^. #fullName),
+          gender <-. B.val_ (sPerson ^. #gender),
+          email <-. B.val_ (sPerson ^. #email),
+          organizationId <-. B.val_ (sPerson ^. #organizationId),
+          locationId <-. B.val_ (sPerson ^. #locationId),
+          description <-. B.val_ (sPerson ^. #description),
+          status <-. B.val_ (sPerson ^. #status),
+          role <-. B.val_ (sPerson ^. #role),
+          identifier <-. B.val_ (sPerson ^. #identifier),
+          rating <-. B.val_ (sPerson ^. #rating),
+          deviceToken <-. B.val_ (sPerson ^. #deviceToken),
+          udf1 <-. B.val_ (sPerson ^. #udf1),
+          udf2 <-. B.val_ (sPerson ^. #udf2)
         ]
-    predicate id Storage.Person {..} = _id ==. B.val_ id
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
 update ::
   Id Storage.Person ->
@@ -128,26 +128,26 @@ update ::
   Maybe Storage.IdentifierType ->
   Maybe Text ->
   Flow ()
-update id statusM nameM emailM roleM identTypeM identM = do
+update personId statusM nameM emailM roleM identTypeM identM = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause statusM nameM emailM roleM identM identTypeM currTime)
-    (predicate id)
+    (predicate personId)
   where
     setClause scStatusM scNameM scEmailM scRoleM scIdentM scIdentTypeM currTime Storage.Person {..} =
       mconcat
-        ( [ _updatedAt <-. B.val_ currTime
+        ( [ updatedAt <-. B.val_ currTime
           ]
-            <> (\name -> [_fullName <-. B.val_ name]) scNameM
-            <> (\email -> [_email <-. B.val_ email]) scEmailM
-            <> maybe [] (\role -> [_role <-. B.val_ role]) scRoleM
-            <> maybe [] (\status -> [_status <-. B.val_ status]) scStatusM
-            <> maybe [] (\iden -> [_identifier <-. B.val_ (Just iden)]) scIdentM
-            <> maybe [] (\idT -> [_identifierType <-. B.val_ idT]) scIdentTypeM
+            <> (\name -> [fullName <-. B.val_ name]) scNameM
+            <> (\email_ -> [email <-. B.val_ email_]) scEmailM
+            <> maybe [] (\role_ -> [role <-. B.val_ role_]) scRoleM
+            <> maybe [] (\status_ -> [status <-. B.val_ status_]) scStatusM
+            <> maybe [] (\iden -> [identifier <-. B.val_ (Just iden)]) scIdentM
+            <> maybe [] (\idT -> [identifierType <-. B.val_ idT]) scIdentTypeM
         )
-    predicate pid Storage.Person {..} = _id ==. B.val_ pid
+    predicate pid Storage.Person {..} = id ==. B.val_ pid
 
 updatePersonalInfo :: Id Storage.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Storage.Gender -> Maybe Text -> Maybe FCM.FCMRecipientToken -> Flow ()
 updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken = do
@@ -157,16 +157,16 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGen
   where
     setClause now mbFirstN mbMiddleN mbLastN mbFullN mbG mbE mbDToken Storage.Person {..} =
       mconcat
-        [ _updatedAt <-. B.val_ now,
-          maybe mempty (\x -> _firstName <-. B.val_ (Just x)) mbFirstN,
-          maybe mempty (\x -> _middleName <-. B.val_ (Just x)) mbMiddleN,
-          maybe mempty (\x -> _lastName <-. B.val_ (Just x)) mbLastN,
-          maybe mempty (\x -> _fullName <-. B.val_ (Just x)) mbFullN,
-          maybe mempty (\x -> _gender <-. B.val_ x) mbG,
-          maybe mempty (\x -> _email <-. B.val_ (Just x)) mbE,
-          maybe mempty (\x -> _deviceToken <-. B.val_ (Just x)) mbDToken
+        [ updatedAt <-. B.val_ now,
+          maybe mempty (\x -> firstName <-. B.val_ (Just x)) mbFirstN,
+          maybe mempty (\x -> middleName <-. B.val_ (Just x)) mbMiddleN,
+          maybe mempty (\x -> lastName <-. B.val_ (Just x)) mbLastN,
+          maybe mempty (\x -> fullName <-. B.val_ (Just x)) mbFullN,
+          maybe mempty (\x -> gender <-. B.val_ x) mbG,
+          maybe mempty (\x -> email <-. B.val_ (Just x)) mbE,
+          maybe mempty (\x -> deviceToken <-. B.val_ (Just x)) mbDToken
         ]
-    predicate id Storage.Person {..} = _id ==. B.val_ id
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
 findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [Id Organization] -> Flow [Storage.Person]
 findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
@@ -177,14 +177,14 @@ findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
     limit = toInteger $ fromMaybe 10 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     predicate pOrgIds [] Storage.Person {..} =
-      _organizationId `B.in_` (B.val_ . Just . getId <$> pOrgIds)
+      organizationId `B.in_` (B.val_ . Just . getId <$> pOrgIds)
     predicate pOrgIds pRoles Storage.Person {..} =
-      _organizationId `B.in_` (B.val_ . Just . getId <$> pOrgIds) &&. _role `B.in_` (B.val_ <$> pRoles)
-    orderByDesc Storage.Person {..} = B.desc_ _createdAt
+      organizationId `B.in_` (B.val_ . Just . getId <$> pOrgIds) &&. role `B.in_` (B.val_ <$> pRoles)
+    orderByDesc Storage.Person {..} = B.desc_ createdAt
 
 deleteById :: Id Storage.Person -> Flow ()
-deleteById id = do
+deleteById pid = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate id)
+  DB.delete dbTable (predicate pid)
   where
-    predicate pid Storage.Person {..} = _id ==. B.val_ pid
+    predicate pid_ Storage.Person {..} = id ==. B.val_ pid_

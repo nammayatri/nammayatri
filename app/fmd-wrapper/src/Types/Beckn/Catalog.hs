@@ -1,6 +1,7 @@
 module Types.Beckn.Catalog where
 
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Text
 import Data.Time (UTCTime)
 import EulerHS.Prelude
@@ -11,32 +12,32 @@ import Types.Beckn.Model
 import Types.Beckn.Offer
 
 data Catalog = Catalog
-  { _id :: Text,
-    _categories :: [Category],
-    _brands :: [Brand],
-    _models :: [Model],
-    _ttl :: UTCTime,
-    _items :: [Item],
-    _offers :: [Offer],
-    _package_categories :: [Category]
+  { id :: Text,
+    categories :: [Category],
+    brands :: [Brand],
+    models :: [Model],
+    ttl :: UTCTime,
+    items :: [Item],
+    offers :: [Offer],
+    package_categories :: [Category]
   }
   deriving (Generic, Show)
 
 instance FromJSON Catalog where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Catalog where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Catalog where
   example =
     Catalog
-      { _id = idExample,
-        _categories = example,
-        _brands = example,
-        _models = example,
-        _ttl = example,
-        _items = example,
-        _offers = example,
-        _package_categories = example
+      { id = idExample,
+        categories = example,
+        brands = example,
+        models = example,
+        ttl = example,
+        items = example,
+        offers = example,
+        package_categories = example
       }

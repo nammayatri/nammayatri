@@ -17,21 +17,21 @@ import Types.ProductInfo as ProductInfo
 import Utils.Common
 
 getProductInfo :: Person.Person -> Id SPI.ProductInstance -> FlowHandler GetProductInfoRes
-getProductInfo _person prodInstId = withFlowHandlerAPI $ do
+getProductInfo _ prodInstId = withFlowHandlerAPI $ do
   productInstance <- MPI.findById prodInstId
-  case decodeFromText =<< SPI._info productInstance of
+  case decodeFromText =<< SPI.info productInstance of
     Just info ->
-      case ProductInfo._tracker info of
+      case ProductInfo.tracker info of
         Nothing -> throwError $ PIFieldNotPresent "tracker"
         Just tracker -> do
-          let trip = ProductInfo._trip tracker
+          let trip = ProductInfo.trip tracker
           return $
             GetProductInfoRes
               { vehicle = trip ^. #vehicle,
                 driver = trip ^. #driver,
                 travellers = trip ^. #travellers,
                 fare = trip ^. #fare,
-                caseId = getId (SPI._caseId productInstance),
+                caseId = getId (SPI.caseId productInstance),
                 product = productInstance
               }
     Nothing ->
@@ -45,4 +45,4 @@ getLocation person caseId = withFlowHandlerAPI $ do
   productInstances <- MPI.listAllProductInstanceByPerson person (SPI.ByApplicationId caseId) [SPI.CONFIRMED]
   when (null productInstances) $ throwError PIDoesNotExist
   let pI = head productInstances
-  ExternalAPI.location baseUrl (getId $ pI ^. #_id)
+  ExternalAPI.location baseUrl (getId $ pI ^. #id)

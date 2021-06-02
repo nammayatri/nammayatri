@@ -5,38 +5,39 @@ module Beckn.Types.Core.Location where
 import Beckn.Types.Core.Address
 import Beckn.Types.Core.Scalar
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Default.Class (Default (..))
 import Data.Text
 import EulerHS.Prelude
 
 data Location = Location
-  { _gps :: Maybe GPS,
-    _address :: Maybe Address,
-    _station_code :: Maybe Text,
-    _city :: Maybe City,
-    _country :: Maybe Country,
-    _circle :: Maybe Circle,
-    _polygon :: Maybe Text,
+  { gps :: Maybe GPS,
+    address :: Maybe Address,
+    station_code :: Maybe Text,
+    city :: Maybe City,
+    country :: Maybe Country,
+    circle :: Maybe Circle,
+    polygon :: Maybe Text,
     _3dspace :: Maybe Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Location where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Location where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 emptyLocation :: Location
 emptyLocation =
   Location
-    { _gps = Nothing,
-      _address = Nothing,
-      _station_code = Nothing,
-      _city = Nothing,
-      _country = Nothing,
-      _circle = Nothing,
-      _polygon = Nothing,
+    { gps = Nothing,
+      address = Nothing,
+      station_code = Nothing,
+      city = Nothing,
+      country = Nothing,
+      circle = Nothing,
+      polygon = Nothing,
       _3dspace = Nothing
     }
 
@@ -46,20 +47,20 @@ instance Default Location where
 instance Example Location where
   example =
     emptyLocation
-      { _gps = example,
-        _address = example
+      { gps = example,
+        address = example
       }
 
 gpsLocation :: GPS -> Location
 gpsLocation gps =
   Location
-    { _gps = Just gps,
-      _address = Nothing,
-      _station_code = Nothing,
-      _city = Nothing,
-      _country = Nothing,
-      _circle = Nothing,
-      _polygon = Nothing,
+    { gps = Just gps,
+      address = Nothing,
+      station_code = Nothing,
+      city = Nothing,
+      country = Nothing,
+      circle = Nothing,
+      polygon = Nothing,
       _3dspace = Nothing
     }
 

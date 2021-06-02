@@ -2,23 +2,24 @@ module Beckn.Types.Core.MonetaryValue where
 
 import Beckn.Types.Core.DecimalValue
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data MonetaryValue = MonetaryValue
-  { _currency :: Text,
-    _value :: DecimalValue
+  { currency :: Text,
+    value :: DecimalValue
   }
   deriving (Eq, Generic, Show)
 
 instance FromJSON MonetaryValue where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON MonetaryValue where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example MonetaryValue where
   example =
     MonetaryValue
-      { _currency = "INR",
-        _value = example
+      { currency = "INR",
+        value = example
       }

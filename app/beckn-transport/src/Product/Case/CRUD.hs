@@ -4,7 +4,7 @@ module Product.Case.CRUD where
 
 import App.Types
 import Beckn.Types.Amount
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.API.Search
 import Beckn.Types.Core.Context
@@ -20,7 +20,7 @@ import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import ExternalAPI.Flow as ExternalAPI
 import ExternalAPI.Transform as ExternalAPITransform
 import Models.Case as Case
@@ -38,33 +38,33 @@ import qualified Utils.Defaults as Default
 
 list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
 list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandlerAPI $ do
-  person <- QP.findPersonById (Id _EntityId)
+  person <- QP.findPersonById (Id entityId)
   now <- getCurrentTime
-  case person ^. #_organizationId of
+  case person ^. #organizationId of
     Just orgId -> do
       org <- OQ.findOrganizationById (Id orgId)
-      when (org ^. #_status /= Organization.APPROVED) $
+      when (org ^. #status /= Organization.APPROVED) $
         throwError Unauthorized
       caseList <-
-        if not (org ^. #_enabled)
-          then Case.findAllByTypeStatusTime limit offset csType status orgId now $ fromMaybe now (org ^. #_fromTime)
+        if not (org ^. #enabled)
+          then Case.findAllByTypeStatusTime limit offset csType status orgId now $ fromMaybe now (org ^. #fromTime)
           else Case.findAllByTypeStatuses limit offset csType status orgId now
-      locList <- LQ.findAllByLocIds (Case._fromLocationId <$> caseList) (Case._toLocationId <$> caseList)
+      locList <- LQ.findAllByLocIds (Case.fromLocationId <$> caseList) (Case.toLocationId <$> caseList)
       return $ catMaybes $ joinByIds locList <$> caseList
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
   where
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM
     joinByIds locList cs =
-      find (\x -> Case._fromLocationId cs == getId (Location._id x)) locList
+      find (\x -> Case.fromLocationId cs == getId (Location.id x)) locList
         >>= buildResponse
       where
-        buildResponse k = prepare cs k <$> find (\x -> Case._toLocationId cs == getId (Location._id x)) locList
+        buildResponse k = prepare cs k <$> find (\x -> Case.toLocationId cs == getId (Location.id x)) locList
         prepare pcs from to =
           CaseRes
             { _case = pcs,
-              _fromLocation = from,
-              _toLocation = to
+              fromLocation = from,
+              toLocation = to
             }
 
 createProductInstance :: Case -> Products -> Maybe Amount -> Text -> PI.ProductInstanceStatus -> Flow ProductInstance
@@ -78,33 +78,33 @@ createProductInstance cs prod price orgId status = do
   where
     getProdInst piId shortId currTime =
       ProductInstance
-        { _id = Id piId,
-          _caseId = Case._id cs,
-          _productId = Product._id prod,
-          _personId = Nothing,
-          _personUpdatedAt = Nothing,
-          _shortId = T.pack shortId,
-          _entityType = PI.VEHICLE,
-          _entityId = Nothing,
-          _quantity = 1,
+        { id = Id piId,
+          caseId = Case.id cs,
+          productId = Product.id prod,
+          personId = Nothing,
+          personUpdatedAt = Nothing,
+          shortId = T.pack shortId,
+          entityType = PI.VEHICLE,
+          entityId = Nothing,
+          quantity = 1,
           _type = Case.RIDESEARCH,
-          _price = price,
-          _status = status,
-          _startTime = Case._startTime cs,
-          _endTime = Case._endTime cs,
-          _validTill = Case._validTill cs,
-          _fromLocation = Just (Case._fromLocationId cs),
-          _toLocation = Just (Case._toLocationId cs),
-          _organizationId = orgId,
-          _parentId = Nothing,
-          _udf1 = Case._udf1 cs,
-          _udf2 = Case._udf2 cs,
-          _udf3 = Case._udf3 cs,
-          _udf4 = Case._udf4 cs,
-          _udf5 = Case._udf5 cs,
-          _info = Case._info cs,
-          _createdAt = currTime,
-          _updatedAt = currTime
+          price = price,
+          status = status,
+          startTime = Case.startTime cs,
+          endTime = Case.endTime cs,
+          validTill = Case.validTill cs,
+          fromLocation = Just (Case.fromLocationId cs),
+          toLocation = Just (Case.toLocationId cs),
+          organizationId = orgId,
+          parentId = Nothing,
+          udf1 = Case.udf1 cs,
+          udf2 = Case.udf2 cs,
+          udf3 = Case.udf3 cs,
+          udf4 = Case.udf4 cs,
+          udf5 = Case.udf5 cs,
+          info = Case.info cs,
+          createdAt = currTime,
+          updatedAt = currTime
         }
 
 notifyGateway :: Case -> ProductInstance -> Text -> PI.ProductInstanceStatus -> Text -> Flow ()
@@ -125,20 +125,20 @@ mkOnSearchPayload c pis orgInfo = do
   appEnv <- ask
   let context =
         Context
-          { _domain = Domain.MOBILITY,
-            _country = Just "IND",
-            _city = Nothing,
-            _action = "on_search",
-            _core_version = Just "0.8.2",
-            _domain_version = Just "0.8.2",
-            _transaction_id = last $ T.split (== '_') $ c ^. #_shortId,
-            _message_id = c ^. #_shortId,
-            _bap_uri = Nothing,
-            _bpp_uri = Just $ makeBppUrl $ nwAddress appEnv,
-            _timestamp = currTime,
-            _ttl = Nothing
+          { domain = Domain.MOBILITY,
+            country = Just "IND",
+            city = Nothing,
+            action = "on_search",
+            core_version = Just "0.8.2",
+            domain_version = Just "0.8.2",
+            transaction_id = last $ T.split (== '_') $ c ^. #shortId,
+            message_id = c ^. #shortId,
+            bap_uri = Nothing,
+            bpp_uri = Just $ makeBppUrl $ nwAddress appEnv,
+            timestamp = currTime,
+            ttl = Nothing
           }
-  piCount <- MPI.getCountByStatus (getId $ orgInfo ^. #_id) Case.RIDEORDER
+  piCount <- MPI.getCountByStatus (getId $ orgInfo ^. #id) Case.RIDEORDER
   let stats = mkProviderStats piCount
       provider = mkProviderInfo orgInfo stats
   catalog <- ExternalAPITransform.mkCatalog c pis provider
@@ -149,7 +149,7 @@ mkOnSearchPayload c pis orgInfo = do
       }
   where
     makeBppUrl url =
-      let orgId = getId $ orgInfo ^. #_id
+      let orgId = getId $ orgInfo ^. #id
           newPath = baseUrlPath url <> "/" <> T.unpack orgId
        in url {baseUrlPath = newPath}
 
@@ -158,16 +158,16 @@ mkOnSearchPayload c pis orgInfo = do
 mkProviderInfo :: Organization -> ProviderStats -> ProviderInfo
 mkProviderInfo org stats =
   ProviderInfo
-    { _id = getId $ org ^. #_id,
-      _name = org ^. #_name,
-      _stats = encodeToText stats,
-      _contacts = fromMaybe "" (org ^. #_mobileNumber)
+    { id = getId $ org ^. #id,
+      name = org ^. #name,
+      stats = encodeToText stats,
+      contacts = fromMaybe "" (org ^. #mobileNumber)
     }
 
 mkProviderStats :: [(PI.ProductInstanceStatus, Int)] -> ProviderStats
 mkProviderStats piCount =
   ProviderStats
-    { _completed = List.lookup PI.COMPLETED piCount,
-      _inprogress = List.lookup PI.INPROGRESS piCount,
-      _confirmed = List.lookup PI.CONFIRMED piCount
+    { completed = List.lookup PI.COMPLETED piCount,
+      inprogress = List.lookup PI.INPROGRESS piCount,
+      confirmed = List.lookup PI.CONFIRMED piCount
     }

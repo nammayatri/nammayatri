@@ -8,38 +8,38 @@ import qualified Fixtures.Time as Fixtures
 defaultDriver :: Person.Person
 defaultDriver =
   Person.Person
-    { _id = Id "1",
-      _firstName = Just "Driver",
-      _middleName = Nothing,
-      _lastName = Just "Driverson",
-      _fullName = Nothing,
-      _role = Person.DRIVER,
-      _gender = Person.UNKNOWN,
-      _identifierType = Person.EMAIL,
-      _email = Just "driverson@cool-drivers.com",
-      _mobileNumber = Nothing,
-      _mobileCountryCode = Nothing,
-      _passwordHash = Nothing,
-      _identifier = Nothing,
-      _rating = Nothing,
-      _verified = False,
-      _udf1 = Nothing,
-      _udf2 = Nothing,
-      _status = Person.ACTIVE,
-      _organizationId = Nothing,
-      _locationId = Nothing,
-      _deviceToken = Nothing,
-      _description = Nothing,
-      _createdAt = Fixtures.defaultTime,
-      _updatedAt = Fixtures.defaultTime
+    { id = Id "1",
+      firstName = Just "Driver",
+      middleName = Nothing,
+      lastName = Just "Driverson",
+      fullName = Nothing,
+      role = Person.DRIVER,
+      gender = Person.UNKNOWN,
+      identifierType = Person.EMAIL,
+      email = Just "driverson@cool-drivers.com",
+      mobileNumber = Nothing,
+      mobileCountryCode = Nothing,
+      passwordHash = Nothing,
+      identifier = Nothing,
+      rating = Nothing,
+      verified = False,
+      udf1 = Nothing,
+      udf2 = Nothing,
+      status = Person.ACTIVE,
+      organizationId = Nothing,
+      locationId = Nothing,
+      deviceToken = Nothing,
+      description = Nothing,
+      createdAt = Fixtures.defaultTime,
+      updatedAt = Fixtures.defaultTime
     }
 
 defaultAdmin :: Person.Person
 defaultAdmin =
   defaultDriver
-    { Person._id = Id "admin",
-      Person._firstName = Just "Admin",
-      Person._lastName = Just "Adminson",
-      Person._role = Person.ADMIN,
-      Person._email = Just "adminson@cool-admins.com"
+    { Person.id = Id "admin",
+      Person.firstName = Just "Admin",
+      Person.lastName = Just "Adminson",
+      Person.role = Person.ADMIN,
+      Person.email = Just "adminson@cool-admins.com"
     }

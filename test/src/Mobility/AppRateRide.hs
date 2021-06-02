@@ -53,8 +53,8 @@ spec = do
         statusResult <- runClient appClient $ F.buildCaseStatusRes (getId appCaseId)
         statusResult `shouldSatisfy` isRight
         let Right statusResponse = statusResult
-        pure . nonEmpty . filter (\p -> p ^. #_organizationId == F.bppTransporterOrgId) $ statusResponse ^. #_productInstance
-      let appProductInstanceId = productInstance ^. #_id
+        pure . nonEmpty . filter (\p -> p ^. #organizationId == F.bppTransporterOrgId) $ statusResponse ^. #productInstance
+      let appProductInstanceId = productInstance ^. #id
       confirmResult <-
         runClient appClient
           . F.appConfirmRide F.appRegistrationToken
@@ -66,11 +66,11 @@ spec = do
         rideRequestResponse `shouldSatisfy` isRight
         let Right rideResponse = rideRequestResponse
         let orders =
-              rideResponse ^.. traverse . #_productInstance
-                & filter \pi -> pi ^. #_parentId == Just appProductInstanceId
+              rideResponse ^.. traverse . #productInstance
+                & filter \pi -> pi ^. #parentId == Just appProductInstanceId
         pure $ nonEmpty orders
 
-      let transporterOrderId = transporterOrder ^. #_id
+      let transporterOrderId = transporterOrder ^. #id
       rideInfo <- poll $ do
         res <-
           runClient
@@ -92,16 +92,16 @@ spec = do
         rideRequestRes `shouldSatisfy` isRight
         let Right rideResponse = rideRequestRes
         let orders =
-              rideResponse ^.. traverse . #_productInstance
-                & filter \pi -> pi ^. #_parentId == Just appProductInstanceId
+              rideResponse ^.. traverse . #productInstance
+                & filter \pi -> pi ^. #parentId == Just appProductInstanceId
         return $ nonEmpty orders
-      tripAssignedPI ^. #_status `shouldBe` PI.TRIP_ASSIGNED
+      tripAssignedPI ^. #status `shouldBe` PI.TRIP_ASSIGNED
 
       -- Update RIDEORDER PI to INPROGRESS once driver starts his trip
       inProgressStatusResult <-
         runClient
           transporterClient
-          $ F.rideStart F.driverToken transporterOrderId (F.buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrder ^. #_udf4)
+          $ F.rideStart F.driverToken transporterOrderId (F.buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrder ^. #udf4)
       inProgressStatusResult `shouldSatisfy` isRight
 
       inprogressPiListResult <- runClient appClient (F.buildListPIs PI.INPROGRESS)
@@ -125,5 +125,5 @@ spec = do
         runClient transporterClient $ F.callGetPerson (Id F.testDriverId)
       driverInfoResult `shouldSatisfy` isRight
       let Right driverInfoResponse = driverInfoResult
-      let driverRating = driverInfoResponse ^. #_rating
+      let driverRating = driverInfoResponse ^. #rating
       driverRating `shouldSatisfy` isJust

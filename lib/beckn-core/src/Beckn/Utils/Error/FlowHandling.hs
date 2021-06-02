@@ -110,7 +110,7 @@ becknAPIErrorFromAPIError e =
    in BecknAPIError
         Error
           { _type,
-            _code = toErrorCode e,
-            _path = Nothing,
-            _message = toMessageIfNotInternal e
+            code = toErrorCode e,
+            path = Nothing,
+            message = toMessageIfNotInternal e
           }

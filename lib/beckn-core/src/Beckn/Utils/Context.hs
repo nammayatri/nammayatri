@@ -13,18 +13,18 @@ buildContext action txnId bapUri bppUri = do
   msgId <- generateGUIDText
   return $
     Context
-      { _domain = MOBILITY,
-        _country = Just "IND",
-        _city = Nothing,
-        _action = action,
-        _core_version = Just "0.8.2",
-        _domain_version = Just "0.8.2",
-        _bap_uri = bapUri,
-        _bpp_uri = bppUri,
-        _transaction_id = txnId,
-        _message_id = msgId,
-        _timestamp = currTime,
-        _ttl = Nothing
+      { domain = MOBILITY,
+        country = Just "IND",
+        city = Nothing,
+        action = action,
+        core_version = Just "0.8.2",
+        domain_version = Just "0.8.2",
+        bap_uri = bapUri,
+        bpp_uri = bppUri,
+        transaction_id = txnId,
+        message_id = msgId,
+        timestamp = currTime,
+        ttl = Nothing
       }
 
 updateContext :: (MonadTime m, MonadGuid m) => Text -> Context -> m Context
@@ -32,6 +32,6 @@ updateContext action context = do
   currTime <- getCurrentTime
   msgId <- generateGUIDText
   return $
-    context & #_timestamp .~ currTime
-      & #_message_id .~ msgId
-      & #_action .~ action
+    context & #timestamp .~ currTime
+      & #message_id .~ msgId
+      & #action .~ action

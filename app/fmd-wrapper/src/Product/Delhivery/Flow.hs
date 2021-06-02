@@ -36,7 +36,7 @@ search org req = do
   config@DelhiveryConfig {..} <- dlConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
   let context = updateBppUri (req ^. #context) dlBPNwAddress
-  bapUrl <- context ^. #_bap_uri & fromMaybeM (InvalidRequest "You should pass bap uri.")
+  bapUrl <- context ^. #bap_uri & fromMaybeM (InvalidRequest "You should pass bap uri.")
   bap <- Org.findByBapUrl bapUrl >>= fromMaybeM OrgDoesNotExist
   dlBACreds <- getDlBAPCreds bap
   fork "Search" $ do
@@ -45,21 +45,21 @@ search org req = do
   return Ack
   where
     sendCb context res = do
-      cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+      cbUrl <- org ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
       case res of
         Right quoteRes -> do
           onSearchReq <- mkOnSearchReq org context quoteRes
-          logTagInfo (req ^. #context . #_transaction_id <> "_on_search req") $ encodeToText onSearchReq
+          logTagInfo (req ^. #context . #transaction_id <> "_on_search req") $ encodeToText onSearchReq
           onSearchResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onSearchAPI onSearchReq) "search"
-          logTagInfo (req ^. #context . #_transaction_id <> "_on_search res") $ show onSearchResp
+          logTagInfo (req ^. #context . #transaction_id <> "_on_search res") $ show onSearchResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onSearchErrReq = mkOnSearchErrReq context err
-              logTagInfo (req ^. #context . #_transaction_id <> "_on_search err req") $ encodeToText onSearchErrReq
+              logTagInfo (req ^. #context . #transaction_id <> "_on_search err req") $ encodeToText onSearchErrReq
               onSearchResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onSearchAPI onSearchErrReq) "search"
-              logTagInfo (req ^. #context . #_transaction_id <> "_on_search err res") $ show onSearchResp
+              logTagInfo (req ^. #context . #transaction_id <> "_on_search err res") $ show onSearchResp
         _ -> pass
 
 select :: Org.Organization -> API.SelectReq -> Flow API.SelectRes
@@ -67,12 +67,12 @@ select org req = do
   config@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
   --  validateOrderRequest $ req ^. #message . #order
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  cbUrl <- org ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   dlBACreds <- getDlBAPCreds org
   fork "Select" $ do
     quoteReq <- mkQuoteReqFromSelect req
     eres <- getQuote dlBACreds config quoteReq
-    logTagInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
+    logTagInfo (req ^. #context . #transaction_id <> "_QuoteRes") $ show eres
     sendCallback context cbUrl eres
   return Ack
   where
@@ -84,37 +84,37 @@ select org req = do
           let onSelectReq = mkOnSelectReq context onSelectMessage
           let order = onSelectMessage ^. #order
           -- onSelectMessage has quotation
-          let quote = fromJust $ onSelectMessage ^. #order . #_quotation
-          let quoteId = quote ^. #_id
+          let quote = fromJust $ onSelectMessage ^. #order . #quotation
+          let quoteId = quote ^. #id
           let orderDetails = OrderDetails order quote
           Storage.storeQuote quoteId orderDetails
-          logTagInfo (req ^. #context . #_transaction_id <> "_on_select req") $ encodeToText onSelectReq
+          logTagInfo (req ^. #context . #transaction_id <> "_on_select req") $ encodeToText onSelectReq
           onSelectResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onSelectAPI onSelectReq) "select"
-          logTagInfo (req ^. #context . #_transaction_id <> "_on_select res") $ show onSelectResp
+          logTagInfo (req ^. #context . #transaction_id <> "_on_select res") $ show onSelectResp
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onSelectReq = mkOnSelectErrReq context err
-              logTagInfo (req ^. #context . #_transaction_id <> "_on_select err req") $ encodeToText onSelectReq
+              logTagInfo (req ^. #context . #transaction_id <> "_on_select err req") $ encodeToText onSelectReq
               onSelectResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onSelectAPI onSelectReq) "select"
-              logTagInfo (req ^. #context . #_transaction_id <> "_on_select err res") $ show onSelectResp
+              logTagInfo (req ^. #context . #transaction_id <> "_on_select err res") $ show onSelectResp
         _ -> pass
 
 init :: Org.Organization -> API.InitReq -> Flow API.InitRes
 init org req = do
   conf@DelhiveryConfig {..} <- dlConfig <$> ask
   let context = updateBppUri (req ^. #context) dlBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  quote <- req ^. (#message . #order . #_quotation) & fromMaybeErr "INVALID_QUOTATION" (Just CORE003)
-  let quoteId = quote ^. #_id
+  cbUrl <- org ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  quote <- req ^. (#message . #order . #quotation) & fromMaybeErr "INVALID_QUOTATION" (Just CORE003)
+  let quoteId = quote ^. #id
   payeeDetails <- dlPayee & decodeFromText & fromMaybeM (InternalError "Decode error.")
   orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeErr "INVALID_QUOTATION_ID" (Just CORE003)
   dlBACreds <- getDlBAPCreds org
   fork "init" $ do
     quoteReq <- mkQuoteReqFromSelect $ API.SelectReq context (API.SelectOrder (orderDetails ^. #order))
     eres <- getQuote dlBACreds conf quoteReq
-    logTagInfo (req ^. #context . #_transaction_id <> "_QuoteRes") $ show eres
+    logTagInfo (req ^. #context . #transaction_id <> "_QuoteRes") $ show eres
     sendCb orderDetails context cbUrl payeeDetails quoteId eres
   return Ack
   where
@@ -128,51 +128,51 @@ init org req = do
           req
           res
       let onInitReq = mkOnInitReq context onInitMessage
-      createCaseIfNotPresent (getId $ org ^. #_id) (onInitMessage ^. #order) (orderDetails ^. #quote)
-      logTagInfo (req ^. #context . #_transaction_id <> "_on_init req") $ encodeToText onInitReq
+      createCaseIfNotPresent (getId $ org ^. #id) (onInitMessage ^. #order) (orderDetails ^. #quote)
+      logTagInfo (req ^. #context . #transaction_id <> "_on_init req") $ encodeToText onInitReq
       onInitResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onInitAPI onInitReq) "init"
-      logTagInfo (req ^. #context . #_transaction_id <> "_on_init res") $ show onInitResp
+      logTagInfo (req ^. #context . #transaction_id <> "_on_init res") $ show onInitResp
     sendCb _ context cbUrl _ _ (Left (FailureResponse _ (Response _ _ _ body))) =
       case decode body of
         Just err -> do
           let onInitReq = mkOnInitErrReq context err
-          logTagInfo (req ^. #context . #_transaction_id <> "_on_init err req") $ encodeToText onInitReq
+          logTagInfo (req ^. #context . #transaction_id <> "_on_init err req") $ encodeToText onInitReq
           onInitResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onInitAPI onInitReq) "init"
-          logTagInfo (req ^. #context . #_transaction_id <> "_on_init err res") $ show onInitResp
+          logTagInfo (req ^. #context . #transaction_id <> "_on_init err res") $ show onInitResp
         Nothing -> return ()
     sendCb _ _ _ _ _ _ = return ()
 
     createCaseIfNotPresent orgId order quote = do
       now <- getCurrentTime
-      let caseId = Id $ fromJust $ order ^. #_id
+      let caseId = Id $ fromJust $ order ^. #id
       let case_ =
             Case
-              { _id = caseId,
-                _name = Nothing,
-                _description = Nothing,
-                _shortId = "", -- FIX this
-                _industry = GROCERY,
+              { id = caseId,
+                name = Nothing,
+                description = Nothing,
+                shortId = "", -- FIX this
+                industry = GROCERY,
                 _type = RIDEORDER,
-                _exchangeType = ORDER,
-                _status = NEW,
-                _startTime = now,
-                _endTime = Nothing,
-                _validTill = now,
-                _provider = Just "Delhivery",
-                _providerType = Nothing,
-                _requestor = Just orgId,
-                _requestorType = Nothing,
-                _parentCaseId = Nothing,
-                _fromLocationId = "",
-                _toLocationId = "",
-                _udf1 = Just $ encodeToText (OrderDetails order quote),
-                _udf2 = Nothing,
-                _udf3 = Nothing,
-                _udf4 = Nothing,
-                _udf5 = Nothing,
-                _info = Nothing,
-                _createdAt = now,
-                _updatedAt = now
+                exchangeType = ORDER,
+                status = NEW,
+                startTime = now,
+                endTime = Nothing,
+                validTill = now,
+                provider = Just "Delhivery",
+                providerType = Nothing,
+                requestor = Just orgId,
+                requestorType = Nothing,
+                parentCaseId = Nothing,
+                fromLocationId = "",
+                toLocationId = "",
+                udf1 = Just $ encodeToText (OrderDetails order quote),
+                udf2 = Nothing,
+                udf3 = Nothing,
+                udf4 = Nothing,
+                udf5 = Nothing,
+                info = Nothing,
+                createdAt = now,
+                updatedAt = now
               }
       mcase <- Storage.findById caseId
       case mcase of
@@ -183,19 +183,19 @@ confirm :: Org.Organization -> API.ConfirmReq -> Flow API.ConfirmRes
 confirm org req = do
   dconf@DelhiveryConfig {..} <- dlConfig <$> ask
   let ctx = updateBppUri (req ^. #context) dlBPNwAddress
-  cbUrl <- org ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  cbUrl <- org ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req ^. (#message . #order)
-  orderId <- fromMaybeErr "INVALID_ORDER_ID" (Just CORE003) $ reqOrder ^. #_id
+  orderId <- fromMaybeErr "INVALID_ORDER_ID" (Just CORE003) $ reqOrder ^. #id
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  (orderDetails :: OrderDetails) <- case_ ^. #_udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  (orderDetails :: OrderDetails) <- case_ ^. #udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   let order = orderDetails ^. #order
   verifyPayment reqOrder order
   dlBACreds <- getDlBAPCreds org
   fork "confirm" $ do
     createOrderReq <- mkCreateOrderReq order
-    logTagInfo (req ^. #context . #_transaction_id <> "_CreateTaskReq") (encodeToText createOrderReq)
+    logTagInfo (req ^. #context . #transaction_id <> "_CreateTaskReq") (encodeToText createOrderReq)
     eres <- createOrderAPI dlBACreds dconf createOrderReq
-    logTagInfo (req ^. #context . #_transaction_id <> "_CreateTaskRes") $ show eres
+    logTagInfo (req ^. #context . #transaction_id <> "_CreateTaskRes") $ show eres
     sendCb order ctx cbUrl eres
   return Ack
   where
@@ -206,10 +206,10 @@ confirm org req = do
     verifyPayment :: Order -> Order -> Flow ()
     verifyPayment reqOrder order = do
       confirmAmount <-
-        reqOrder ^? #_payment . _Just . #_amount . #_value
+        reqOrder ^? #payment . _Just . #amount . #value
           & fromMaybeErr "INVALID_PAYMENT_AMOUNT" (Just CORE003)
       orderAmount <-
-        order ^? #_payment . _Just . #_amount . #_value
+        order ^? #payment . _Just . #amount . #value
           & fromMaybeErr "ORDER_AMOUNT_NOT_FOUND" (Just CORE003)
       if confirmAmount == orderAmount
         then pass
@@ -219,17 +219,17 @@ confirm org req = do
       case res of
         Right _ -> do
           onConfirmReq <- mkOnConfirmReq context order
-          logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm req") $ encodeToText onConfirmReq
+          logTagInfo (req ^. #context . #transaction_id <> "_on_confirm req") $ encodeToText onConfirmReq
           eres <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onConfirmAPI onConfirmReq) "confirm"
-          logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm res") $ show eres
+          logTagInfo (req ^. #context . #transaction_id <> "_on_confirm res") $ show eres
         Left (FailureResponse _ (Response _ _ _ body)) ->
           whenJust (decode body) handleError
           where
             handleError err = do
               let onConfirmReq = mkOnConfirmErrReq context err
-              logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm err req") $ encodeToText onConfirmReq
+              logTagInfo (req ^. #context . #transaction_id <> "_on_confirm err req") $ encodeToText onConfirmReq
               onConfirmResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onConfirmAPI onConfirmReq) "confirm"
-              logTagInfo (req ^. #context . #_transaction_id <> "_on_confirm err res") $ show onConfirmResp
+              logTagInfo (req ^. #context . #transaction_id <> "_on_confirm err res") $ show onConfirmResp
         _ -> pass
 
 fetchToken :: DlBAConfig -> DelhiveryConfig -> Flow Token

@@ -4,14 +4,14 @@ import EulerHS.Prelude
 
 data SubmitSms = SubmitSms
   { -- | Login of myfirstvalue.com account.
-    _username :: Text,
+    username :: Text,
     -- | Password of that account.
-    _password :: Text,
+    password :: Text,
     -- | Author name assigned to SMS.
-    _from :: Text,
+    from :: Text,
     -- | Phone number.
-    _to :: Text,
+    to :: Text,
     -- | SMS contents.
-    _text :: Text
+    text :: Text
   }
   deriving (Show)

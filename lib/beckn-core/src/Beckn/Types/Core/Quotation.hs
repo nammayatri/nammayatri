@@ -2,43 +2,44 @@ module Beckn.Types.Core.Quotation where
 
 import Beckn.Types.Core.Price
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Text
 import Data.Time
 import EulerHS.Prelude
 
 data BreakupItem = BreakupItem
-  { _item_id :: Text,
-    _offer_id :: Text,
-    _title :: Text,
-    _price :: Price
+  { item_id :: Text,
+    offer_id :: Text,
+    title :: Text,
+    price :: Price
   }
   deriving (Generic, Show)
 
 instance FromJSON BreakupItem where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON BreakupItem where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data Quotation = Quotation
-  { _id :: Text,
-    _price :: Maybe Price,
-    _ttl :: Maybe UTCTime,
-    _breakup :: Maybe [BreakupItem]
+  { id :: Text,
+    price :: Maybe Price,
+    ttl :: Maybe UTCTime,
+    breakup :: Maybe [BreakupItem]
   }
   deriving (Generic, Show)
 
 instance FromJSON Quotation where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Quotation where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Quotation where
   example =
     Quotation
-      { _id = idExample,
-        _price = example,
-        _ttl = example,
-        _breakup = Nothing
+      { id = idExample,
+        price = example,
+        ttl = example,
+        breakup = Nothing
       }

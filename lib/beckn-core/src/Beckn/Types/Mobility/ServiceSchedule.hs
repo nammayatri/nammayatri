@@ -14,28 +14,28 @@ newtype ServiceSchedule = ServiceSchedule
   deriving (Generic, Show)
 
 data Schedule = Schedule
-  { _id :: Text,
-    _descriptor :: Maybe Descriptor,
-    _location :: Location,
-    _arrival_time :: StopTime,
-    _departure_time :: StopTime,
-    _transfers :: [Transfer],
-    _status :: Text, -- ON-TIME, DELAYED, EARLY, CANCELLED, SKIP, RETURN
-    _alt_timings :: [UTCTime],
-    _alt_services :: [Text]
+  { id :: Text,
+    descriptor :: Maybe Descriptor,
+    location :: Location,
+    arrival_time :: StopTime,
+    departure_time :: StopTime,
+    transfers :: [Transfer],
+    status :: Text, -- ON-TIME, DELAYED, EARLY, CANCELLED, SKIP, RETURN
+    alt_timings :: [UTCTime],
+    alt_services :: [Text]
   }
   deriving (Generic, Show)
 
 instance Example Schedule where
   example =
     Schedule
-      { _id = idExample,
-        _descriptor = example,
-        _location = example,
-        _arrival_time = example,
-        _departure_time = example,
-        _transfers = example,
-        _status = "ON-TIME",
-        _alt_timings = example,
-        _alt_services = []
+      { id = idExample,
+        descriptor = example,
+        location = example,
+        arrival_time = example,
+        departure_time = example,
+        transfers = example,
+        status = "ON-TIME",
+        alt_timings = example,
+        alt_services = []
       }

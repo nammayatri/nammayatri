@@ -23,4 +23,4 @@ serviceAPI = Proxy
 
 submitSms :: SubmitSms -> ET.EulerClient ()
 submitSms SubmitSms {..} =
-  void $ ET.client serviceAPI _username _password _from _to _text
+  void $ ET.client serviceAPI username password from to text

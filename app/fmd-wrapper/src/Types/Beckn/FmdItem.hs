@@ -1,6 +1,7 @@
 module Types.Beckn.FmdItem where
 
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 import Types.Beckn.Descriptor
 import Types.Beckn.Duration
@@ -8,40 +9,40 @@ import Types.Beckn.Price
 import Types.Beckn.Tag
 
 data Item = Item
-  { _id :: Maybe Text,
-    _parent_item_id :: Maybe Text,
-    _descriptor :: Maybe Descriptor,
-    _price :: Maybe Price,
-    _model_id :: Maybe Text,
-    _category_id :: Maybe Text,
-    _package_category_id :: Maybe Text,
-    _brand_id :: Maybe Text,
-    _promotional :: Maybe Bool,
-    _ttl :: Maybe Duration,
-    _tags :: Maybe [Tag],
-    _fragile :: Maybe Bool
+  { id :: Maybe Text,
+    parent_item_id :: Maybe Text,
+    descriptor :: Maybe Descriptor,
+    price :: Maybe Price,
+    model_id :: Maybe Text,
+    category_id :: Maybe Text,
+    package_category_id :: Maybe Text,
+    brand_id :: Maybe Text,
+    promotional :: Maybe Bool,
+    ttl :: Maybe Duration,
+    tags :: Maybe [Tag],
+    fragile :: Maybe Bool
   }
   deriving (Generic, Show)
 
 instance FromJSON Item where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Item where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Item where
   example =
     Item
-      { _id = Just idExample,
-        _parent_item_id = Nothing,
-        _descriptor = example,
-        _price = example,
-        _model_id = Nothing,
-        _category_id = Just idExample,
-        _package_category_id = Just idExample,
-        _brand_id = Nothing,
-        _promotional = Nothing,
-        _ttl = Nothing,
-        _tags = example,
-        _fragile = Nothing
+      { id = Just idExample,
+        parent_item_id = Nothing,
+        descriptor = example,
+        price = example,
+        model_id = Nothing,
+        category_id = Just idExample,
+        package_category_id = Just idExample,
+        brand_id = Nothing,
+        promotional = Nothing,
+        ttl = Nothing,
+        tags = example,
+        fragile = Nothing
       }

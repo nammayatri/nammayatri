@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.Vehicle where
 
 import Beckn.Types.Id
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -13,7 +14,7 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
@@ -90,20 +91,20 @@ instance FromHttpApiData RegistrationCategory where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data VehicleT f = Vehicle
-  { _id :: B.C f (Id Vehicle),
-    _capacity :: B.C f (Maybe Int),
-    _organizationId :: B.C f Text,
-    _category :: B.C f (Maybe Category),
-    _make :: B.C f (Maybe Text),
-    _model :: B.C f (Maybe Text),
-    _size :: B.C f (Maybe Text),
-    _variant :: B.C f (Maybe Variant),
-    _color :: B.C f (Maybe Text),
-    _energyType :: B.C f (Maybe EnergyType),
-    _registrationNo :: B.C f Text,
-    _registrationCategory :: B.C f (Maybe RegistrationCategory),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+  { id :: B.C f (Id Vehicle),
+    capacity :: B.C f (Maybe Int),
+    organizationId :: B.C f Text,
+    category :: B.C f (Maybe Category),
+    make :: B.C f (Maybe Text),
+    model :: B.C f (Maybe Text),
+    size :: B.C f (Maybe Text),
+    variant :: B.C f (Maybe Variant),
+    color :: B.C f (Maybe Text),
+    energyType :: B.C f (Maybe EnergyType),
+    registrationNo :: B.C f Text,
+    registrationCategory :: B.C f (Maybe RegistrationCategory),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -114,17 +115,17 @@ type VehiclePrimaryKey = B.PrimaryKey VehicleT Identity
 instance B.Table VehicleT where
   data PrimaryKey VehicleT f = VehiclePrimaryKey (B.C f (Id Vehicle))
     deriving (Generic, B.Beamable)
-  primaryKey = VehiclePrimaryKey . _id
+  primaryKey = VehiclePrimaryKey . id
 
 deriving instance Show Vehicle
 
 deriving instance Eq Vehicle
 
 instance ToJSON Vehicle where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Vehicle where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema Vehicle
 
@@ -134,10 +135,10 @@ fieldEMod =
   B.setEntityName "vehicle"
     <> B.modifyTableFields
       B.tableModification
-        { _createdAt = "created_at",
-          _updatedAt = "updated_at",
-          _energyType = "energy_type",
-          _registrationNo = "registration_no",
-          _registrationCategory = "registration_category",
-          _organizationId = "organization_id"
+        { createdAt = "created_at",
+          updatedAt = "updated_at",
+          energyType = "energy_type",
+          registrationNo = "registration_no",
+          registrationCategory = "registration_category",
+          organizationId = "organization_id"
         }

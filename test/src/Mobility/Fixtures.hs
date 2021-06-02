@@ -71,24 +71,24 @@ vehicle =
 intentPayload :: Payload
 intentPayload =
   Payload
-    { _travellers = [],
-      _traveller_count = Just 2,
-      _luggage = Nothing,
-      _travel_group = Nothing
+    { travellers = [],
+      traveller_count = Just 2,
+      luggage = Nothing,
+      travel_group = Nothing
     }
 
 price :: Price
 price =
   let amt = DecimalValue "800" Nothing
    in Price
-        { _currency = "INR",
-          _value = Just amt,
-          _estimated_value = Just amt,
-          _computed_value = Just amt,
-          _listed_value = Just amt,
-          _offered_value = Just amt,
-          _minimum_value = Just amt,
-          _maximum_value = Just amt
+        { currency = "INR",
+          value = Just amt,
+          estimated_value = Just amt,
+          computed_value = Just amt,
+          listed_value = Just amt,
+          offered_value = Just amt,
+          minimum_value = Just amt,
+          maximum_value = Just amt
         }
 
 getStop :: UTCTime -> AppCommon.GPS -> AppCommon.Stop
@@ -162,7 +162,7 @@ data CaseClient = CaseClient
       Maybe Integer ->
       Maybe Integer ->
       ClientM AppCase.CaseListRes,
-    getCaseStatusRes :: Id Case.Case -> ClientM AppCase.StatusRes
+    getCaseStatusRes :: Id Case.Case -> ClientM AppCase.GetStatusRes
   }
 
 getCase :: CaseAPIClient
@@ -179,7 +179,7 @@ buildCaseListRes regToken = do
       CaseClient {..} = mkCaseClient regToken
   getCaseListRes Case.RIDESEARCH [Case.NEW] (Just 10) (Just 0)
 
-buildCaseStatusRes :: Text -> ClientM AppCase.StatusRes
+buildCaseStatusRes :: Text -> ClientM AppCase.GetStatusRes
 buildCaseStatusRes caseId = do
   let CaseAPIClient {..} = getCase
       CaseClient {..} = mkCaseClient appRegistrationToken
@@ -254,8 +254,8 @@ callGetPerson personId =
 buildUpdateCaseReq :: TbeCase.UpdateCaseReq
 buildUpdateCaseReq =
   TbeCase.UpdateCaseReq
-    { _quote = Just 150.50,
-      _transporterChoice = "ACCEPTED"
+    { quote = Just 150.50,
+      transporterChoice = "ACCEPTED"
     }
 
 buildStartRideReq :: Text -> RideAPI.StartRideReq
@@ -302,23 +302,23 @@ appInitiateLogin :<|> appVerifyLogin :<|> appReInitiateLogin = client (Proxy :: 
 buildInitiateLoginReq :: Reg.InitiateLoginReq
 buildInitiateLoginReq =
   Reg.InitiateLoginReq
-    { _medium = SR.SMS,
+    { medium = SR.SMS,
       __type = SR.OTP,
-      _mobileNumber = "90000900000",
-      _mobileCountryCode = "+91",
-      _role = Just Person.USER,
-      _deviceToken = Nothing
+      mobileNumber = "90000900000",
+      mobileCountryCode = "+91",
+      role = Just Person.USER,
+      deviceToken = Nothing
     }
 
 buildLoginReq :: Reg.LoginReq
 buildLoginReq =
   Reg.LoginReq
-    { _medium = SR.SMS,
+    { medium = SR.SMS,
       __type = SR.OTP,
-      _hash = "7891",
-      _mobileNumber = "90000900000",
-      _mobileCountryCode = "+91",
-      _deviceToken = Just $ FCMRecipientToken "AN_DEV_TOKEN"
+      hash = "7891",
+      mobileNumber = "90000900000",
+      mobileCountryCode = "+91",
+      deviceToken = Just $ FCMRecipientToken "AN_DEV_TOKEN"
     }
 
 initiateLoginReq :: ClientM Reg.InitiateLoginRes

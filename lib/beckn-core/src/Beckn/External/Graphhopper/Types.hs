@@ -1,5 +1,6 @@
 module Beckn.External.Graphhopper.Types where
 
+import Beckn.Utils.JSON
 import Data.Aeson
 import Data.Geospatial
 import EulerHS.Prelude hiding (Show)
@@ -12,55 +13,55 @@ data Vehicle = CAR | BIKE | FOOT | HIKE | MTB | RACINGBIKE | SCOOTER | TRUCK | S
   deriving (Show)
 
 data Request = Request
-  { _points' :: [PointXY],
-    _vehicle :: Vehicle,
-    _weighting :: Maybe Weighting,
-    _elevation :: Maybe Bool,
-    _calcPoints :: Maybe Bool
+  { points' :: [PointXY],
+    vehicle :: Vehicle,
+    weighting :: Maybe Weighting,
+    elevation :: Maybe Bool,
+    calcPoints :: Maybe Bool
   }
   deriving (Show)
 
 data Path = Path
-  { _distance :: Float, -- meters
-    _time :: Integer, -- miliseconds
-    _bbox :: Maybe BoundingBoxWithoutCRS, -- bbox and points fields are empty incase calcPoints
-    _points :: Maybe GeospatialGeometry, -- is set to False. Default - True
-    _snapped_waypoints :: GeospatialGeometry,
-    _transfers :: Integer,
-    _instructions :: Maybe [Instruction]
+  { distance :: Float, -- meters
+    time :: Integer, -- miliseconds
+    bbox :: Maybe BoundingBoxWithoutCRS, -- bbox and points fields are empty incase calcPoints
+    points :: Maybe GeospatialGeometry, -- is set to False. Default - True
+    snapped_waypoints :: GeospatialGeometry,
+    transfers :: Integer,
+    instructions :: Maybe [Instruction]
   }
   deriving (Generic, Show)
 
 instance FromJSON Path where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Path where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data Instruction = Instruction
-  { _distance :: Float,
-    _heading :: Maybe Float,
-    _sign :: Integer,
-    _interval :: [Integer],
-    _text :: String,
-    _time :: Int,
-    _street_name :: String
+  { distance :: Float,
+    heading :: Maybe Float,
+    sign :: Integer,
+    interval :: [Integer],
+    text :: String,
+    time :: Int,
+    street_name :: String
   }
   deriving (Generic, Show)
 
 instance FromJSON Instruction where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Instruction where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 newtype Response = Response
-  { _paths :: [Path]
+  { paths :: [Path]
   }
   deriving (Generic, Show)
 
 instance FromJSON Response where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Response where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

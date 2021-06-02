@@ -16,7 +16,7 @@ import Types.Error
 
 getClientConfig :: FromJSON a => Organization -> Flow a
 getClientConfig org =
-  let mconfig = org ^. #_info >>= decodeFromText
+  let mconfig = org ^. #info >>= decodeFromText
    in fromMaybeM (InternalError "Client config decode error.") mconfig
 
 fromMaybeErr :: Text -> Maybe ErrorCode -> Maybe a -> Flow a

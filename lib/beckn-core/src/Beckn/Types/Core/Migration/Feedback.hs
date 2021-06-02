@@ -1,16 +1,17 @@
 module Beckn.Types.Core.Migration.Feedback (Feedback) where
 
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Feedback = Feedback
-  { _id :: Maybe Text,
-    _descriptor :: Maybe Text,
-    _parent_id :: Maybe Text
+  { id :: Maybe Text,
+    descriptor :: Maybe Text,
+    parent_id :: Maybe Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Feedback where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Feedback where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

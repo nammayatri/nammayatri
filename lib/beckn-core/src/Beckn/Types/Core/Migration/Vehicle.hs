@@ -2,23 +2,24 @@
 
 module Beckn.Types.Core.Migration.Vehicle where
 
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Vehicle = Vehicle
-  { _category :: Maybe Text,
-    _capacity :: Maybe Int,
-    _make :: Maybe Text,
-    _model :: Maybe Text,
-    _size :: Maybe Text,
-    _variant :: Maybe Text,
-    _color :: Maybe Text,
-    _energy_type :: Maybe Text,
-    _registration :: Maybe Text
+  { category :: Maybe Text,
+    capacity :: Maybe Int,
+    make :: Maybe Text,
+    model :: Maybe Text,
+    size :: Maybe Text,
+    variant :: Maybe Text,
+    color :: Maybe Text,
+    energy_type :: Maybe Text,
+    registration :: Maybe Text
   }
   deriving (Generic, Show)
 
 instance FromJSON Vehicle where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Vehicle where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

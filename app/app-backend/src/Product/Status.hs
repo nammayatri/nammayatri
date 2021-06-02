@@ -26,13 +26,13 @@ import qualified Utils.Notifications as Notify
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
 status person StatusReq {..} = withFlowHandlerAPI $ do
   prodInst <- QPI.findById (Id productInstanceId)
-  case_ <- Case.findIdByPerson person (prodInst ^. #_caseId)
-  let caseId = getId $ case_ ^. #_id
+  case_ <- Case.findIdByPerson person (prodInst ^. #caseId)
+  let caseId = getId $ case_ ^. #id
   context <- buildContext "status" caseId Nothing Nothing
   organization <-
-    OQ.findOrganizationById (Id $ prodInst ^. #_organizationId)
+    OQ.findOrganizationById (Id $ prodInst ^. #organizationId)
       >>= fromMaybeM OrgNotFound
-  baseUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  baseUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
   ExternalAPI.status baseUrl (API.StatusReq context statusMessage)
     >>= checkAckResponseError (ExternalAPIResponseError "status")
@@ -43,14 +43,14 @@ onStatus _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     case req ^. #contents of
       Right msg -> do
-        let prodInstId = Id $ msg ^. #order . #_id
-            orderState = fromBeckn $ msg ^. #order . #_state
+        let prodInstId = Id $ msg ^. #order . #id
+            orderState = fromBeckn $ msg ^. #order . #state
         updateProductInstanceStatus prodInstId orderState
       Left err -> logTagError "on_status req" $ "on_status error: " <> show err
     return Ack
   where
     updateProductInstanceStatus prodInstId piStatus = do
       orderPi <- QPI.findByParentIdType prodInstId Case.RIDEORDER
-      PI.validateStatusTransition (PI._status orderPi) piStatus & fromEitherM PIInvalidStatus
-      QPI.updateStatus (orderPi ^. #_id) piStatus
+      PI.validateStatusTransition (PI.status orderPi) piStatus & fromEitherM PIInvalidStatus
+      QPI.updateStatus (orderPi ^. #id) piStatus
       Notify.notifyOnStatusUpdate orderPi piStatus

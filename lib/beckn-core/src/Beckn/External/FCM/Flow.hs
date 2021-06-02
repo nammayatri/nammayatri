@@ -27,7 +27,6 @@ import Beckn.Utils.Common
 import qualified Beckn.Utils.JWT as JWT
 import Control.Exception (IOException)
 import qualified Control.Exception as E (try)
-import Control.Lens
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Default.Class
@@ -42,32 +41,43 @@ import Servant
 -- recipientId::FCMToken is an app's registration token
 createMessage :: FCMAndroidData -> FCMRecipientToken -> FCMMessage
 createMessage msgData recipientId =
-  def & fcmToken ?~ recipientId
-    & fcmAndroid ?~ androidCfg
+  def
+    { fcmToken = Just recipientId,
+      fcmAndroid = Just androidCfg
+    }
   where
     androidCfg = createAndroidConfig msgData
 
 -- | Android Notification details
 createAndroidConfig :: FCMAndroidData -> FCMAndroidConfig
 createAndroidConfig cfgData =
-  def & fcmdData ?~ cfgData
+  def
+    { fcmdData = Just cfgData
+    }
 
 createAndroidNotification :: FCMNotificationTitle -> FCMNotificationBody -> FCMNotificationType -> FCMAndroidNotification
 createAndroidNotification title body notificationType =
   let notification = case notificationType of
         ALLOCATION_REQUEST ->
-          def & fcmdSound ?~ "notify_sound.mp3"
-            & fcmdChannelId ?~ "RINGING_ALERT"
+          def
+            { fcmdSound = Just "notify_sound.mp3",
+              fcmdChannelId = Just "RINGING_ALERT"
+            }
         TRIP_STARTED ->
-          def & fcmdSound ?~ "notify_otp_sound.mp3"
-            & fcmdChannelId ?~ "TRIP_STARTED"
+          def
+            { fcmdSound = Just "notify_otp_sound.mp3",
+              fcmdChannelId = Just "TRIP_STARTED"
+            }
         _ -> def
-   in notification & fcmdTitle ?~ title
-        & fcmdBody ?~ body
-        & fcmdIcon
-          ?~ FCMNotificationIconUrl
-            "https://api.sandbox.beckn.juspay.in/static/images/ride-success.png"
-        & fcmdTag ?~ notificationType
+   in notification
+        { fcmdTitle = Just title,
+          fcmdBody = Just body,
+          fcmdIcon =
+            Just $
+              FCMNotificationIconUrl
+                "https://api.sandbox.beckn.juspay.in/static/images/ride-success.png",
+          fcmdTag = Just notificationType
+        }
 
 -- | Send FCM message to a person
 notifyPerson ::
@@ -79,9 +89,9 @@ notifyPerson ::
   Person ->
   FlowR r ()
 notifyPerson msgData person =
-  let pid = getId $ Person._id person
+  let pid = getId $ Person.id person
       tokenNotFound = "device token of a person " <> pid <> " not found"
-   in case Person._deviceToken person of
+   in case Person.deviceToken person of
         Nothing -> do
           logTagInfo "FCM" tokenNotFound
           pure ()
@@ -133,7 +143,7 @@ getTokenText = do
   token <- getToken
   pure $ case token of
     Left err -> Left $ fromString err
-    Right t -> Right $ JWT._jwtTokenType t <> " " <> JWT._jwtAccessToken t
+    Right t -> Right $ JWT.jwtTokenType t <> " " <> JWT.jwtAccessToken t
 
 -- | Get token (refresh token if expired / invalid)
 getToken ::

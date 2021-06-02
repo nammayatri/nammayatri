@@ -5,6 +5,7 @@ import Beckn.Types.Storage.Case as C
 import Beckn.Types.Storage.Location as L
 import qualified Beckn.Types.Storage.Person as P
 import Beckn.Types.Storage.ProductInstance as SP
+import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 import Types.Common
@@ -13,48 +14,48 @@ newtype OrderResp = OrderResp {_order :: OrderDetails}
   deriving (Show, Generic)
 
 instance FromJSON OrderResp where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON OrderResp where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data OrderDetails = OrderDetails
-  { _id :: Text,
-    _status :: Maybe CaseStatus,
-    _createdAt :: UTCTime,
-    _updatedAt :: UTCTime,
-    _startTime :: UTCTime,
-    _endTime :: Maybe UTCTime,
-    _fromLocation :: Maybe L.Location,
-    _toLocation :: Maybe L.Location,
-    _vehicleVariant :: Maybe Text,
-    _travellerName :: Maybe Text,
-    _travellerPhone :: Maybe Text,
-    _trip :: Maybe TripDetails
+  { id :: Text,
+    status :: Maybe CaseStatus,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
+    startTime :: UTCTime,
+    endTime :: Maybe UTCTime,
+    fromLocation :: Maybe L.Location,
+    toLocation :: Maybe L.Location,
+    vehicleVariant :: Maybe Text,
+    travellerName :: Maybe Text,
+    travellerPhone :: Maybe Text,
+    trip :: Maybe TripDetails
   }
   deriving (Show, Generic)
 
 instance FromJSON OrderDetails where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON OrderDetails where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data TripDetails = TripDetails
-  { _id :: Text, -- Product Instance Id
-    _status :: SP.ProductInstanceStatus,
-    _driver :: Maybe Driver, -- _info -> driver
-    _vehicle :: Maybe Vehicle,
-    _provider :: Maybe Provider,
-    _price :: Maybe Amount
+  { id :: Text, -- Product Instance Id
+    status :: SP.ProductInstanceStatus,
+    driver :: Maybe Driver, -- info -> driver
+    vehicle :: Maybe Vehicle,
+    provider :: Maybe Provider,
+    price :: Maybe Amount
   }
   deriving (Show, Generic)
 
 instance FromJSON TripDetails where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON TripDetails where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data OrderInfo = OrderInfo
   { person :: P.Person,
@@ -63,34 +64,34 @@ data OrderInfo = OrderInfo
   deriving (Show, Generic)
 
 data LoginReq = LoginReq
-  { _email :: Text,
-    _password :: Text
+  { email :: Text,
+    password :: Text
   }
   deriving (Show, Generic)
 
 instance FromJSON LoginReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON LoginReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data LoginRes = LoginRes
-  { _auth_token :: Text,
-    _message :: Text
+  { auth_token :: Text,
+    message :: Text
   }
   deriving (Show, Generic)
 
 instance FromJSON LoginRes where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON LoginRes where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
-newtype LogoutRes = LogoutRes {_message :: Text}
+newtype LogoutRes = LogoutRes {message :: Text}
   deriving (Show, Generic)
 
 instance FromJSON LogoutRes where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON LogoutRes where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

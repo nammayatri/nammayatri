@@ -11,7 +11,7 @@ import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SVehicle
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.FarePolicy as QFarePolicy
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
@@ -23,51 +23,51 @@ import Utils.Common
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
 createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
-  person <- QP.findPersonById (Id _EntityId)
+  person <- QP.findPersonById (Id entityId)
   validate person
   organization <- createTransform req
   validateReq
-  sedanFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.SEDAN (organization ^. #_createdAt)
-  suvFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.SUV (organization ^. #_createdAt)
-  hatchbackFarePolicy <- mkFarePolicy (organization ^. #_id) SVehicle.HATCHBACK (organization ^. #_createdAt)
+  sedanFarePolicy <- mkFarePolicy (organization ^. #id) SVehicle.SEDAN (organization ^. #createdAt)
+  suvFarePolicy <- mkFarePolicy (organization ^. #id) SVehicle.SUV (organization ^. #createdAt)
+  hatchbackFarePolicy <- mkFarePolicy (organization ^. #id) SVehicle.HATCHBACK (organization ^. #createdAt)
   QO.create organization
   traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
-  QP.updateOrganizationIdAndMakeAdmin (Id _EntityId) (getId $ SO._id organization)
-  updatedPerson <- QP.findPersonById (Id _EntityId)
+  QP.updateOrganizationIdAndMakeAdmin (Id entityId) (getId $ SO.id organization)
+  updatedPerson <- QP.findPersonById (Id entityId)
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
-      unless (SP._verified person) $
+      unless (SP.verified person) $
         throwError AccessDenied
-      when (SP._role person /= SP.ADMIN) $
+      when (SP.role person /= SP.ADMIN) $
         throwError Unauthorized
-      when (isJust $ SP._organizationId person) $
+      when (isJust $ SP.organizationId person) $
         throwError PersonOrgExists
     validateReq = do
-      let countryCode = req ^. #_mobileCountryCode
-          mobileNumber = req ^. #_mobileNumber
+      let countryCode = req ^. #mobileCountryCode
+          mobileNumber = req ^. #mobileNumber
       whenJustM (QO.findOrgByMobileNumber countryCode mobileNumber) $
         \_ -> throwError OrgMobilePhoneUsed
     mkFarePolicy orgId vehicleVariant now = do
       farePolicyId <- L.generateGUID
       pure $
         SFarePolicy.FarePolicy
-          { _id = Id farePolicyId,
-            _vehicleVariant = vehicleVariant, -- TODO: variants should be looked up from DB
-            _organizationId = orgId,
-            _baseFare = Just DFarePolicy.defaultBaseFare,
-            _baseDistance = Just DFarePolicy.defaultBaseDistance,
-            _perExtraKmRate = DFarePolicy.defaultPerExtraKmRate,
-            _nightShiftStart = Nothing,
-            _nightShiftEnd = Nothing,
-            _nightShiftRate = Nothing,
-            _createdAt = now,
-            _updatedAt = now
+          { id = Id farePolicyId,
+            vehicleVariant = vehicleVariant, -- TODO: variants should be looked up from DB
+            organizationId = orgId,
+            baseFare = Just DFarePolicy.defaultBaseFare,
+            baseDistance = Just DFarePolicy.defaultBaseDistance,
+            perExtraKmRate = DFarePolicy.defaultPerExtraKmRate,
+            nightShiftStart = Nothing,
+            nightShiftEnd = Nothing,
+            nightShiftRate = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 updateTransporter :: SR.RegistrationToken -> Id SO.Organization -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
-  maybePerson <- QP.findPersonByIdAndRoleAndOrgId (Id _EntityId) SP.ADMIN orgId
+  maybePerson <- QP.findPersonByIdAndRoleAndOrgId (Id entityId) SP.ADMIN orgId
   now <- getCurrentTime
   case maybePerson of
     Just person -> do
@@ -82,17 +82,17 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
     Nothing -> throwError PersonDoesNotExist
   where
     validate person =
-      unless (SP._verified person) $ throwError AccessDenied
+      unless (SP.verified person) $ throwError AccessDenied
     addTime fromTime org =
-      return $ org {SO._fromTime = fromTime}
+      return $ org {SO.fromTime = fromTime}
 
 getTransporter :: SR.RegistrationToken -> FlowHandler TransporterRec
 getTransporter SR.RegistrationToken {..} = withFlowHandlerAPI $ do
-  person <- QP.findPersonById (Id _EntityId)
+  person <- QP.findPersonById (Id entityId)
   validate person
-  case person ^. #_organizationId of
+  case person ^. #organizationId of
     Just orgId -> TransporterRec <$> QO.findOrganizationById (Id orgId)
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
   where
     validate person =
-      unless (SP._verified person) $ throwError AccessDenied
+      unless (SP.verified person) $ throwError AccessDenied

@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.Location where
 
 import Beckn.Types.Id
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -16,7 +17,7 @@ import qualified Database.Beam.Backend.SQL.AST as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Syntax as B
 import qualified Database.PostgreSQL.Simple.FromField as Pg
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data LocationType = POINT | POLYGON | PINCODE | ADDRESS
@@ -38,21 +39,21 @@ instance FromHttpApiData LocationType where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data LocationT f = Location
-  { _id :: B.C f (Id Location),
-    _locationType :: B.C f LocationType,
-    _lat :: B.C f (Maybe Double),
-    _long :: B.C f (Maybe Double),
-    _point :: B.C f Point,
-    _ward :: B.C f (Maybe Text),
-    _district :: B.C f (Maybe Text),
-    _city :: B.C f (Maybe Text),
-    _state :: B.C f (Maybe Text),
-    _country :: B.C f (Maybe Text),
-    _pincode :: B.C f (Maybe Text),
-    _address :: B.C f (Maybe Text),
-    _bound :: B.C f (Maybe Text),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+  { id :: B.C f (Id Location),
+    locationType :: B.C f LocationType,
+    lat :: B.C f (Maybe Double),
+    long :: B.C f (Maybe Double),
+    point :: B.C f Point,
+    ward :: B.C f (Maybe Text),
+    district :: B.C f (Maybe Text),
+    city :: B.C f (Maybe Text),
+    state :: B.C f (Maybe Text),
+    country :: B.C f (Maybe Text),
+    pincode :: B.C f (Maybe Text),
+    address :: B.C f (Maybe Text),
+    bound :: B.C f (Maybe Text),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -63,17 +64,17 @@ type LocationPrimaryKey = B.PrimaryKey LocationT Identity
 instance B.Table LocationT where
   data PrimaryKey LocationT f = LocationPrimaryKey (B.C f (Id Location))
     deriving (Generic, B.Beamable)
-  primaryKey = LocationPrimaryKey . _id
+  primaryKey = LocationPrimaryKey . id
 
 deriving instance Show Location
 
 deriving instance Eq Location
 
 instance ToJSON Location where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Location where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema Location
 
@@ -83,9 +84,9 @@ fieldEMod =
   B.setEntityName "location"
     <> B.modifyTableFields
       B.tableModification
-        { _createdAt = "created_at",
-          _updatedAt = "updated_at",
-          _locationType = "location_type"
+        { createdAt = "created_at",
+          updatedAt = "updated_at",
+          locationType = "location_type"
         }
 
 data Point = Point

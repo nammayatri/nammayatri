@@ -13,12 +13,12 @@ import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.DB as DB
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
 getDbTable =
-  DB._location . DB.transporterDb <$> getSchemaName
+  DB.location . DB.transporterDb <$> getSchemaName
 
 createFlow :: Storage.Location -> Flow ()
 createFlow =
@@ -31,11 +31,11 @@ create location = do
 
 findLocationById ::
   Id Storage.Location -> Flow (Maybe Storage.Location)
-findLocationById id = do
+findLocationById locId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Location {..} = _id ==. B.val_ id
+    predicate Storage.Location {..} = id ==. B.val_ locId
 
 updateLocationRec :: Id Storage.Location -> Storage.Location -> Flow ()
 updateLocationRec locationId location = do
@@ -45,20 +45,20 @@ updateLocationRec locationId location = do
   where
     setClause loc n Storage.Location {..} =
       mconcat
-        [ _locationType <-. B.val_ (Storage._locationType loc),
-          _lat <-. B.val_ (Storage._lat loc),
-          _long <-. B.val_ (Storage._long loc),
-          _ward <-. B.val_ (Storage._ward loc),
-          _district <-. B.val_ (Storage._district loc),
-          _city <-. B.val_ (Storage._city loc),
-          _state <-. B.val_ (Storage._state loc),
-          _country <-. B.val_ (Storage._country loc),
-          _pincode <-. B.val_ (Storage._pincode loc),
-          _address <-. B.val_ (Storage._address loc),
-          _bound <-. B.val_ (Storage._bound loc),
-          _updatedAt <-. B.val_ n
+        [ locationType <-. B.val_ (Storage.locationType loc),
+          lat <-. B.val_ (Storage.lat loc),
+          long <-. B.val_ (Storage.long loc),
+          ward <-. B.val_ (Storage.ward loc),
+          district <-. B.val_ (Storage.district loc),
+          city <-. B.val_ (Storage.city loc),
+          state <-. B.val_ (Storage.state loc),
+          country <-. B.val_ (Storage.country loc),
+          pincode <-. B.val_ (Storage.pincode loc),
+          address <-. B.val_ (Storage.address loc),
+          bound <-. B.val_ (Storage.bound loc),
+          updatedAt <-. B.val_ n
         ]
-    predicate id Storage.Location {..} = _id ==. B.val_ id
+    predicate locId Storage.Location {..} = id ==. B.val_ locId
 
 findAllByLocIds :: [Text] -> [Text] -> Flow [Storage.Location]
 findAllByLocIds fromIds toIds = do
@@ -66,21 +66,21 @@ findAllByLocIds fromIds toIds = do
   DB.findAll dbTable identity (predicate (Id <$> fromIds) (Id <$> toIds))
   where
     predicate pFromIds pToIds Storage.Location {..} =
-      B.in_ _id (B.val_ <$> pFromIds)
-        ||. B.in_ _id (B.val_ <$> pToIds)
+      B.in_ id (B.val_ <$> pFromIds)
+        ||. B.in_ id (B.val_ <$> pToIds)
 
 updateGpsCoord :: Id Storage.Location -> Double -> Double -> Flow ()
-updateGpsCoord locationId lat long = do
+updateGpsCoord locationId lat_ long_ = do
   locTable <- getDbTable
   now <- getCurrentTime
-  DB.update locTable (setClause lat long now) (predicate locationId)
+  DB.update locTable (setClause lat_ long_ now) (predicate locationId)
   where
     setClause mLat mLong now Storage.Location {..} =
-      let point = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"
+      let point_ = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"
        in mconcat
-            [ _lat <-. B.val_ (Just mLat),
-              _long <-. B.val_ (Just mLong),
-              _updatedAt <-. B.val_ now,
-              _point <-. point
+            [ lat <-. B.val_ (Just mLat),
+              long <-. B.val_ (Just mLong),
+              updatedAt <-. B.val_ now,
+              point <-. point_
             ]
-    predicate locId Storage.Location {..} = _id B.==. B.val_ locId
+    predicate locId Storage.Location {..} = id B.==. B.val_ locId

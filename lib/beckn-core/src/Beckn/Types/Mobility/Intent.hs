@@ -9,55 +9,56 @@ import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
 data Intent = Intent
-  { _query_string :: Maybe Text,
-    _provider_id :: Maybe Text,
-    _category_id :: Maybe Text,
-    _item_id :: Maybe Text,
-    _tags :: Maybe [Tag],
+  { query_string :: Maybe Text,
+    provider_id :: Maybe Text,
+    category_id :: Maybe Text,
+    item_id :: Maybe Text,
+    tags :: Maybe [Tag],
     -- Mobility specific
-    _pickups :: [Stop],
-    _drops :: [Stop],
-    _vehicle :: Vehicle,
-    _payload :: Payload,
-    _transfer :: Maybe TransferAttrs,
-    _fare :: Price
+    pickups :: [Stop],
+    drops :: [Stop],
+    vehicle :: Vehicle,
+    payload :: Payload,
+    transfer :: Maybe TransferAttrs,
+    fare :: Price
   }
   deriving (Generic, Show)
 
 instance FromJSON Intent where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Intent where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data TransferAttrs = TransferAttrs
-  { _max_count :: Int,
-    _distance :: Scalar
+  { max_count :: Int,
+    distance :: Scalar
   }
   deriving (Generic, Show)
 
 instance FromJSON TransferAttrs where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON TransferAttrs where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Intent where
   example =
     Intent
-      { _query_string = Nothing,
-        _provider_id = Nothing,
-        _category_id = Nothing,
-        _item_id = Nothing,
-        _tags = Just example,
-        _pickups = example,
-        _drops = example,
-        _vehicle = example,
-        _payload = example,
-        _transfer = Nothing,
-        _fare = example
+      { query_string = Nothing,
+        provider_id = Nothing,
+        category_id = Nothing,
+        item_id = Nothing,
+        tags = Just example,
+        pickups = example,
+        drops = example,
+        vehicle = example,
+        payload = example,
+        transfer = Nothing,
+        fare = example
       }

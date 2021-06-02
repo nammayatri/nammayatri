@@ -5,16 +5,17 @@ module Types.API.Person where
 import App.Types
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Person as SP
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id, state)
 import Servant.API
 import qualified Storage.Queries.Location as QL
 import Types.Error
@@ -29,61 +30,61 @@ instance FromHttpApiData EntityType where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data UpdatePersonReq = UpdatePersonReq
-  { _firstName :: Maybe Text,
-    _middleName :: Maybe Text,
-    _lastName :: Maybe Text,
-    _fullName :: Maybe Text,
-    _role :: Maybe SP.Role,
-    _gender :: Maybe SP.Gender,
-    _email :: Maybe Text,
-    _identifier :: Maybe Text,
-    _rating :: Maybe Text,
-    _deviceToken :: Maybe FCM.FCMRecipientToken,
-    _udf1 :: Maybe Text,
-    _udf2 :: Maybe Text,
-    _organizationId :: Maybe Text,
-    _description :: Maybe Text,
-    _locationType :: Maybe SL.LocationType,
-    _lat :: Maybe Double,
-    _long :: Maybe Double,
-    _ward :: Maybe Text,
-    _district :: Maybe Text,
-    _city :: Maybe Text,
-    _state :: Maybe Text,
-    _country :: Maybe Text,
-    _pincode :: Maybe Text,
-    _address :: Maybe Text,
-    _bound :: Maybe Text
+  { firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    fullName :: Maybe Text,
+    role :: Maybe SP.Role,
+    gender :: Maybe SP.Gender,
+    email :: Maybe Text,
+    identifier :: Maybe Text,
+    rating :: Maybe Text,
+    deviceToken :: Maybe FCM.FCMRecipientToken,
+    udf1 :: Maybe Text,
+    udf2 :: Maybe Text,
+    organizationId :: Maybe Text,
+    description :: Maybe Text,
+    locationType :: Maybe SL.LocationType,
+    lat :: Maybe Double,
+    long :: Maybe Double,
+    ward :: Maybe Text,
+    district :: Maybe Text,
+    city :: Maybe Text,
+    state :: Maybe Text,
+    country :: Maybe Text,
+    pincode :: Maybe Text,
+    address :: Maybe Text,
+    bound :: Maybe Text
   }
   deriving (Generic)
 
 instance FromJSON UpdatePersonReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON UpdatePersonReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance ModifyTransform UpdatePersonReq SP.Person Flow where
   modifyTransform req person = do
-    location <- updateOrCreateLocation req $ SP._locationId person
+    location <- updateOrCreateLocation req $ SP.locationId person
     return
       person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-          SP._firstName = ifJust (req ^. #_firstName) (person ^. #_firstName),
-          SP._middleName = ifJust (req ^. #_middleName) (person ^. #_middleName),
-          SP._lastName = ifJust (req ^. #_lastName) (person ^. #_lastName),
-          SP._fullName = ifJust (req ^. #_fullName) (person ^. #_fullName),
-          SP._role = ifJustExtract (req ^. #_role) (person ^. #_role),
-          SP._gender = ifJustExtract (req ^. #_gender) (person ^. #_gender),
-          SP._email = ifJust (req ^. #_email) (person ^. #_email),
-          SP._identifier = ifJust (req ^. #_identifier) (person ^. #_identifier),
-          SP._rating = ifJust (req ^. #_rating) (person ^. #_rating),
-          SP._deviceToken = ifJust (req ^. #_deviceToken) (person ^. #_deviceToken),
-          SP._udf1 = ifJust (req ^. #_udf1) (person ^. #_udf1),
-          SP._udf2 = ifJust (req ^. #_udf2) (person ^. #_udf2),
-          SP._organizationId = ifJust (req ^. #_organizationId) (person ^. #_organizationId),
-          SP._description = ifJust (req ^. #_description) (person ^. #_description),
-          SP._locationId = Just (getId $ SL._id location)
+          SP.firstName = ifJust (req ^. #firstName) (person ^. #firstName),
+          SP.middleName = ifJust (req ^. #middleName) (person ^. #middleName),
+          SP.lastName = ifJust (req ^. #lastName) (person ^. #lastName),
+          SP.fullName = ifJust (req ^. #fullName) (person ^. #fullName),
+          SP.role = ifJustExtract (req ^. #role) (person ^. #role),
+          SP.gender = ifJustExtract (req ^. #gender) (person ^. #gender),
+          SP.email = ifJust (req ^. #email) (person ^. #email),
+          SP.identifier = ifJust (req ^. #identifier) (person ^. #identifier),
+          SP.rating = ifJust (req ^. #rating) (person ^. #rating),
+          SP.deviceToken = ifJust (req ^. #deviceToken) (person ^. #deviceToken),
+          SP.udf1 = ifJust (req ^. #udf1) (person ^. #udf1),
+          SP.udf2 = ifJust (req ^. #udf2) (person ^. #udf2),
+          SP.organizationId = ifJust (req ^. #organizationId) (person ^. #organizationId),
+          SP.description = ifJust (req ^. #description) (person ^. #description),
+          SP.locationId = Just (getId $ SL.id location)
         }
 
 updateOrCreateLocation :: UpdatePersonReq -> Maybe Text -> Flow SL.Location
@@ -101,28 +102,28 @@ updateOrCreateLocation req (Just locId) = do
 transformToLocation :: UpdatePersonReq -> SL.Location -> SL.Location
 transformToLocation req location =
   location
-    { SL._locationType = fromMaybe SL.PINCODE $ req ^. #_locationType,
-      SL._lat = req ^. #_lat,
-      SL._long = req ^. #_long,
-      SL._ward = req ^. #_ward,
-      SL._district = req ^. #_district,
-      SL._city = req ^. #_city,
-      SL._state = req ^. #_state,
-      SL._country = req ^. #_country,
-      SL._pincode = req ^. #_pincode,
-      SL._address = req ^. #_address,
-      SL._bound = req ^. #_bound
+    { SL.locationType = fromMaybe SL.PINCODE $ req ^. #locationType,
+      SL.lat = req ^. #lat,
+      SL.long = req ^. #long,
+      SL.ward = req ^. #ward,
+      SL.district = req ^. #district,
+      SL.city = req ^. #city,
+      SL.state = req ^. #state,
+      SL.country = req ^. #country,
+      SL.pincode = req ^. #pincode,
+      SL.address = req ^. #address,
+      SL.bound = req ^. #bound
     }
 
 createLocation :: UpdatePersonReq -> Flow SL.Location
 createLocation UpdatePersonReq {..} = do
-  _id <- generateGUID
-  _createdAt <- getCurrentTime
+  id <- generateGUID
+  createdAt <- getCurrentTime
   pure
     SL.Location
-      { _locationType = fromMaybe SL.PINCODE _locationType,
-        _updatedAt = _createdAt,
-        _point = SL.Point,
+      { locationType = fromMaybe SL.PINCODE locationType,
+        updatedAt = createdAt,
+        point = SL.Point,
         ..
       }
 
@@ -138,41 +139,41 @@ newtype UpdatePersonRes = UpdatePersonRes
 
 -- Create Person request and response
 data CreatePersonReq = CreatePersonReq
-  { _firstName :: Maybe Text,
-    _middleName :: Maybe Text,
-    _lastName :: Maybe Text,
-    _fullName :: Maybe Text,
-    _role :: Maybe SP.Role,
-    _gender :: Maybe SP.Gender,
-    _email :: Maybe Text,
-    _identifier :: Maybe Text,
-    _identifierType :: Maybe SP.IdentifierType,
-    _rating :: Maybe Text,
-    _deviceToken :: Maybe FCM.FCMRecipientToken,
-    _mobileNumber :: Maybe Text,
-    _mobileCountryCode :: Maybe Text,
-    _udf1 :: Maybe Text,
-    _udf2 :: Maybe Text,
-    _description :: Maybe Text,
-    _locationType :: Maybe SL.LocationType,
-    _lat :: Maybe Double,
-    _long :: Maybe Double,
-    _ward :: Maybe Text,
-    _district :: Maybe Text,
-    _city :: Maybe Text,
-    _state :: Maybe Text,
-    _country :: Maybe Text,
-    _pincode :: Maybe Text,
-    _address :: Maybe Text,
-    _bound :: Maybe Text
+  { firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    fullName :: Maybe Text,
+    role :: Maybe SP.Role,
+    gender :: Maybe SP.Gender,
+    email :: Maybe Text,
+    identifier :: Maybe Text,
+    identifierType :: Maybe SP.IdentifierType,
+    rating :: Maybe Text,
+    deviceToken :: Maybe FCM.FCMRecipientToken,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
+    udf1 :: Maybe Text,
+    udf2 :: Maybe Text,
+    description :: Maybe Text,
+    locationType :: Maybe SL.LocationType,
+    lat :: Maybe Double,
+    long :: Maybe Double,
+    ward :: Maybe Text,
+    district :: Maybe Text,
+    city :: Maybe Text,
+    state :: Maybe Text,
+    country :: Maybe Text,
+    pincode :: Maybe Text,
+    address :: Maybe Text,
+    bound :: Maybe Text
   }
   deriving (Generic)
 
 instance FromJSON CreatePersonReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON CreatePersonReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance CreateTransform CreatePersonReq SP.Person Flow where
   createTransform req = do
@@ -182,30 +183,30 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
     return
       SP.Person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-          SP._id = pid,
-          SP._firstName = req ^. #_firstName,
-          SP._middleName = req ^. #_middleName,
-          SP._lastName = req ^. #_lastName,
-          SP._fullName = req ^. #_fullName,
-          SP._role = ifJustExtract (req ^. #_role) SP.USER,
-          SP._gender = ifJustExtract (req ^. #_gender) SP.UNKNOWN,
-          SP._email = req ^. #_email,
-          SP._passwordHash = Nothing,
-          SP._identifier = req ^. #_identifier,
-          SP._identifierType = fromMaybe SP.MOBILENUMBER $ req ^. #_identifierType,
-          SP._mobileNumber = req ^. #_mobileNumber,
-          SP._mobileCountryCode = req ^. #_mobileCountryCode,
-          SP._verified = False,
-          SP._rating = req ^. #_rating,
-          SP._status = SP.INACTIVE,
-          SP._deviceToken = req ^. #_deviceToken,
-          SP._udf1 = req ^. #_udf1,
-          SP._udf2 = req ^. #_udf2,
-          SP._organizationId = Nothing,
-          SP._description = req ^. #_description,
-          SP._locationId = Just (getId $ SL._id location),
-          SP._createdAt = now,
-          SP._updatedAt = now
+          SP.id = pid,
+          SP.firstName = req ^. #firstName,
+          SP.middleName = req ^. #middleName,
+          SP.lastName = req ^. #lastName,
+          SP.fullName = req ^. #fullName,
+          SP.role = ifJustExtract (req ^. #role) SP.USER,
+          SP.gender = ifJustExtract (req ^. #gender) SP.UNKNOWN,
+          SP.email = req ^. #email,
+          SP.passwordHash = Nothing,
+          SP.identifier = req ^. #identifier,
+          SP.identifierType = fromMaybe SP.MOBILENUMBER $ req ^. #identifierType,
+          SP.mobileNumber = req ^. #mobileNumber,
+          SP.mobileCountryCode = req ^. #mobileCountryCode,
+          SP.verified = False,
+          SP.rating = req ^. #rating,
+          SP.status = SP.INACTIVE,
+          SP.deviceToken = req ^. #deviceToken,
+          SP.udf1 = req ^. #udf1,
+          SP.udf2 = req ^. #udf2,
+          SP.organizationId = Nothing,
+          SP.description = req ^. #description,
+          SP.locationId = Just (getId $ SL.id location),
+          SP.createdAt = now,
+          SP.updatedAt = now
         }
 
 createLocationT :: CreatePersonReq -> Flow SL.Location
@@ -215,11 +216,11 @@ createLocationT req = do
   return location
 
 -- FIXME? This is to silence hlint reusing as much code from `createLocation`
---   as possible, still we need fake _organizationId here ...
+--   as possible, still we need fake organizationId here ...
 -- Better solution in he long run is to factor out common data reducing this
 --   enormous amount of duplication ...
 createLocationRec :: CreatePersonReq -> Flow SL.Location
-createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {_organizationId = Nothing, ..}
+createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {organizationId = Nothing, ..}
 
 newtype ListPersonRes = ListPersonRes
   {users :: [PersonEntityRes]}
@@ -234,59 +235,59 @@ newtype DeletePersonRes = DeletePersonRes
   deriving (Generic, ToJSON, FromJSON)
 
 data LinkReq = LinkReq
-  { _entityId :: Text,
-    _entityType :: EntityType
+  { entityId :: Text,
+    entityType :: EntityType
   }
   deriving (Show, Generic)
 
 instance FromJSON LinkReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON LinkReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data LinkedEntity = LinkedEntity
-  { _entityType :: EntityType,
-    _entityValue :: Maybe Text
+  { entityType :: EntityType,
+    entityValue :: Maybe Text
   }
   deriving (Show, Generic)
 
 instance FromJSON LinkedEntity where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON LinkedEntity where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data PersonEntityRes = PersonEntityRes
-  { _id :: Id SP.Person,
-    _firstName :: Maybe Text,
-    _middleName :: Maybe Text,
-    _lastName :: Maybe Text,
-    _fullName :: Maybe Text,
-    _role :: SP.Role,
-    _gender :: SP.Gender,
-    _identifierType :: SP.IdentifierType,
-    _email :: Maybe Text,
-    _mobileNumber :: Maybe Text,
-    _mobileCountryCode :: Maybe Text,
-    _identifier :: Maybe Text,
-    _rating :: Maybe Text,
-    _verified :: Bool,
-    _udf1 :: Maybe Text,
-    _udf2 :: Maybe Text,
-    _status :: SP.Status,
-    _organizationId :: Maybe Text,
-    _locationId :: Maybe Text,
-    _deviceToken :: Maybe FCM.FCMRecipientToken,
-    _description :: Maybe Text,
-    _createdAt :: UTCTime,
-    _updatedAt :: UTCTime,
-    _linkedEntity :: Maybe LinkedEntity
+  { id :: Id SP.Person,
+    firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    fullName :: Maybe Text,
+    role :: SP.Role,
+    gender :: SP.Gender,
+    identifierType :: SP.IdentifierType,
+    email :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
+    identifier :: Maybe Text,
+    rating :: Maybe Text,
+    verified :: Bool,
+    udf1 :: Maybe Text,
+    udf2 :: Maybe Text,
+    status :: SP.Status,
+    organizationId :: Maybe Text,
+    locationId :: Maybe Text,
+    deviceToken :: Maybe FCM.FCMRecipientToken,
+    description :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
+    linkedEntity :: Maybe LinkedEntity
   }
   deriving (Show, Generic)
 
 instance FromJSON PersonEntityRes where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON PersonEntityRes where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

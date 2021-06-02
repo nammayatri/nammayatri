@@ -9,72 +9,73 @@ import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Intent = Intent
-  { _query_string :: Maybe Text,
-    _provider :: Maybe ProviderInfo,
-    _fulfillment :: Maybe FulFillmentInfo,
-    _payment :: Maybe Payment,
-    _category :: Maybe Category,
-    _offer :: Maybe Offer,
-    _item :: Maybe Item,
-    _purpose :: Maybe Text,
-    _tags :: Maybe Tags
+  { query_string :: Maybe Text,
+    provider :: Maybe ProviderInfo,
+    fulfillment :: Maybe FulFillmentInfo,
+    payment :: Maybe Payment,
+    category :: Maybe Category,
+    offer :: Maybe Offer,
+    item :: Maybe Item,
+    purpose :: Maybe Text,
+    tags :: Maybe Tags
   }
   deriving (Generic, Show)
 
 data ProviderInfo = ProviderInfo
-  { _id :: Maybe Text,
-    _descriptor :: Maybe DescriptorName,
-    _locations :: Maybe [IdObject]
+  { id :: Maybe Text,
+    descriptor :: Maybe DescriptorName,
+    locations :: Maybe [IdObject]
   }
   deriving (Generic, Show)
 
-newtype DescriptorName = DescriptorName {_name :: Text}
+newtype DescriptorName = DescriptorName {name :: Text}
   deriving (Generic, Show)
 
 data FulFillmentInfo = FulFillmentInfo
-  { _id :: Maybe Text,
-    _start :: Maybe LocationAndTime,
-    _end :: Maybe LocationAndTime,
-    _tags :: Maybe Tags,
-    _vehicle :: Vehicle
+  { id :: Maybe Text,
+    start :: Maybe LocationAndTime,
+    end :: Maybe LocationAndTime,
+    tags :: Maybe Tags,
+    vehicle :: Vehicle
   }
   deriving (Generic, Show)
 
 data LocationAndTime = LocationAndTime
-  { _location :: Maybe Location,
-    _time :: Maybe Time
+  { location :: Maybe Location,
+    time :: Maybe Time
   }
   deriving (Generic, Show)
 
 instance FromJSON Intent where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Intent where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON ProviderInfo where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON ProviderInfo where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON FulFillmentInfo where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON FulFillmentInfo where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON LocationAndTime where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON LocationAndTime where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON DescriptorName where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON DescriptorName where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

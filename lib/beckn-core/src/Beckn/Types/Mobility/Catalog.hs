@@ -7,38 +7,39 @@ import Beckn.Types.Core.Model
 import Beckn.Types.Core.Offer
 import Beckn.Types.Mobility.FareProduct
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Text
 import Data.Time
 import EulerHS.Prelude
 
 data Catalog = Catalog
-  { _id :: Text,
-    _categories :: [Category],
-    _brands :: [Brand],
-    _models :: [Model],
-    _ttl :: Maybe UTCTime,
-    _items :: [Item],
-    _offers :: [Offer],
+  { id :: Text,
+    categories :: [Category],
+    brands :: [Brand],
+    models :: [Model],
+    ttl :: Maybe UTCTime,
+    items :: [Item],
+    offers :: [Offer],
     -- Mobility specific
-    _fare_products :: [FareProduct]
+    fare_products :: [FareProduct]
   }
   deriving (Generic, Show)
 
 instance FromJSON Catalog where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Catalog where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Catalog where
   example =
     Catalog
-      { _id = idExample,
-        _categories = example,
-        _brands = example,
-        _models = example,
-        _ttl = example,
-        _items = example,
-        _offers = example,
-        _fare_products = example
+      { id = idExample,
+        categories = example,
+        brands = example,
+        models = example,
+        ttl = example,
+        items = example,
+        offers = example,
+        fare_products = example
       }

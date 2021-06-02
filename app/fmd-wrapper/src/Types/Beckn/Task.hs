@@ -14,29 +14,29 @@ import Types.Beckn.Person
 import Types.Beckn.State
 
 data PickupOrDrop = PickupOrDrop
-  { _location :: Location,
-    _instructions :: Maybe [Descriptor],
-    _poc :: Person,
-    _time :: Maybe UTCTime
+  { location :: Location,
+    instructions :: Maybe [Descriptor],
+    poc :: Person,
+    time :: Maybe UTCTime
   }
   deriving (Generic, Show)
 
 instance FromJSON PickupOrDrop where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON PickupOrDrop where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example PickupOrDrop where
   example =
     PickupOrDrop
-      { _location = example,
-        _instructions = example,
-        _poc = example,
-        _time = Nothing
+      { location = example,
+        instructions = example,
+        poc = example,
+        time = Nothing
       }
 
--- To be used as State._descriptor._code
+-- To be used as State.descriptor.code
 data TaskState
   = SEARCHING_FOR_FMD_AGENT
   | ASSIGNED_AGENT
@@ -65,42 +65,42 @@ instance FromJSON TaskState where
   parseJSON = genericParseJSON taskStateOptions
 
 data Task = Task
-  { _id :: Text,
-    _item_id :: Text,
-    _next_task_id :: Maybe Text,
-    _previous_task_id :: Maybe Text,
-    _state :: Maybe State,
-    _pickup :: PickupOrDrop,
-    _drop :: PickupOrDrop,
+  { id :: Text,
+    item_id :: Text,
+    next_task_id :: Maybe Text,
+    previous_task_id :: Maybe Text,
+    state :: Maybe State,
+    pickup :: PickupOrDrop,
+    drop :: PickupOrDrop,
     _return :: PickupOrDrop,
-    _package :: Package,
-    _agent :: Maybe Agent,
-    _vehicle :: Maybe Vehicle,
-    _created_at :: Maybe UTCTime,
-    _updated_at :: Maybe UTCTime
+    package :: Package,
+    agent :: Maybe Agent,
+    vehicle :: Maybe Vehicle,
+    created_at :: Maybe UTCTime,
+    updated_at :: Maybe UTCTime
   }
   deriving (Generic, Show)
 
 instance FromJSON Task where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Task where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Task where
   example =
     Task
-      { _id = idExample,
-        _item_id = idExample,
-        _next_task_id = Nothing,
-        _previous_task_id = Nothing,
-        _state = Nothing,
-        _pickup = example,
-        _drop = example,
+      { id = idExample,
+        item_id = idExample,
+        next_task_id = Nothing,
+        previous_task_id = Nothing,
+        state = Nothing,
+        pickup = example,
+        drop = example,
         _return = example,
-        _package = example,
-        _agent = example,
-        _vehicle = example,
-        _created_at = example,
-        _updated_at = example
+        package = example,
+        agent = example,
+        vehicle = example,
+        created_at = example,
+        updated_at = example
       }

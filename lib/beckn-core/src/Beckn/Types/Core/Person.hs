@@ -3,6 +3,7 @@
 module Beckn.Types.Core.Person where
 
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
@@ -31,61 +32,61 @@ instance Example Person where
 
 data Image = Image
   { _type :: Text, -- "url", "data"
-    _label :: Text,
-    _url :: Maybe Text,
+    label :: Text,
+    url :: Maybe Text,
     _data :: Maybe Text
   }
   deriving (Generic, Show, Eq)
 
 instance FromJSON Image where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Image where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Image where
   example =
     Image
       { _type = "data",
-        _label = "logo",
-        _url = Nothing,
+        label = "logo",
+        url = Nothing,
         _data = Just "https://i.imgur.com/MjeqeUP.gif"
       }
 
 data Name = Name
-  { _additional_name :: Maybe Text, -- An additional name for a Person, can be used for a middle name
-    _family_name :: Maybe Text, -- In India, it is the last name of an Person. This can be used along with givenName instead of the name property
-    _given_name :: Text, -- In India, it is the first name of a Person. This can be used along with familyName instead of the name property
-    _call_sign :: Maybe Text, -- A callsign, as used in broadcasting and radio communications to identify people
-    _honorific_prefix :: Maybe Text, -- An honorific prefix preceding a Person's name such as Dr/Mrs/Mr.
-    _honorific_suffix :: Maybe Text -- An honorific suffix preceding a Person's name such as M.D. /PhD/MSCSW.
+  { additional_name :: Maybe Text, -- An additional name for a Person, can be used for a middle name
+    family_name :: Maybe Text, -- In India, it is the last name of an Person. This can be used along with givenName instead of the name property
+    given_name :: Text, -- In India, it is the first name of a Person. This can be used along with familyName instead of the name property
+    call_sign :: Maybe Text, -- A callsign, as used in broadcasting and radio communications to identify people
+    honorific_prefix :: Maybe Text, -- An honorific prefix preceding a Person's name such as Dr/Mrs/Mr.
+    honorific_suffix :: Maybe Text -- An honorific suffix preceding a Person's name such as M.D. /PhD/MSCSW.
   }
   deriving (Generic, Show)
 
 instance FromJSON Name where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Name where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Name where
   example =
     Name
-      { _additional_name = Just "Smith",
-        _family_name = Nothing,
-        _given_name = "John",
-        _call_sign = Nothing,
-        _honorific_prefix = Just "Mr",
-        _honorific_suffix = Nothing
+      { additional_name = Just "Smith",
+        family_name = Nothing,
+        given_name = "John",
+        call_sign = Nothing,
+        honorific_prefix = Just "Mr",
+        honorific_suffix = Nothing
       }
 
 withGivenName :: Text -> Name
 withGivenName givenName =
   Name
-    { _additional_name = Nothing,
-      _family_name = Nothing,
-      _given_name = givenName,
-      _call_sign = Nothing,
-      _honorific_prefix = Nothing,
-      _honorific_suffix = Nothing
+    { additional_name = Nothing,
+      family_name = Nothing,
+      given_name = givenName,
+      call_sign = Nothing,
+      honorific_prefix = Nothing,
+      honorific_suffix = Nothing
     }

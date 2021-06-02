@@ -2,18 +2,19 @@ module Types.Storage.TransporterConfig where
 
 import Beckn.Types.Id
 import Beckn.Types.Storage.Organization (Organization)
+import Beckn.Utils.JSON
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Types.App (ConfigKey)
 
 data TransporterConfigT f = TransporterConfig
-  { _id :: B.C f (Id TransporterParameter),
-    _transporterId :: B.C f (Id Organization),
-    _key :: B.C f ConfigKey,
-    _value :: B.C f Text,
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+  { id :: B.C f (Id TransporterParameter),
+    transporterId :: B.C f (Id Organization),
+    key :: B.C f ConfigKey,
+    value :: B.C f Text,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -24,13 +25,13 @@ type TransporterConfigPrimaryKey = B.PrimaryKey TransporterConfigT Identity
 instance B.Table TransporterConfigT where
   data PrimaryKey TransporterConfigT f = TransporterConfigPrimaryKey (B.C f (Id TransporterParameter))
     deriving (Generic, B.Beamable)
-  primaryKey = TransporterConfigPrimaryKey . _id
+  primaryKey = TransporterConfigPrimaryKey . id
 
 instance ToJSON TransporterConfig where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON TransporterConfig where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity TransporterConfigT)
@@ -38,9 +39,9 @@ fieldEMod =
   B.setEntityName "transporter_config"
     <> B.modifyTableFields
       B.tableModification
-        { _transporterId = "transporter_id",
-          _createdAt = "created_at",
-          _updatedAt = "updated_at"
+        { transporterId = "transporter_id",
+          createdAt = "created_at",
+          updatedAt = "updated_at"
         }
 
 data TransporterParameter

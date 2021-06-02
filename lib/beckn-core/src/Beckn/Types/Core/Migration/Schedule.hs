@@ -1,18 +1,19 @@
 module Beckn.Types.Core.Migration.Schedule where
 
 import Beckn.Types.Core.Migration.Duration
+import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 
 data Schedule = Schedule
-  { _frequency :: Maybe Duration,
-    _holidays :: Maybe [UTCTime],
-    _times :: Maybe [UTCTime]
+  { frequency :: Maybe Duration,
+    holidays :: Maybe [UTCTime],
+    times :: Maybe [UTCTime]
   }
   deriving (Generic, Show)
 
 instance FromJSON Schedule where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Schedule where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

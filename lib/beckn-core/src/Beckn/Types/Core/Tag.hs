@@ -1,24 +1,25 @@
 module Beckn.Types.Core.Tag where
 
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
 data Tag = Tag
-  { _key :: Text,
-    _value :: Text
+  { key :: Text,
+    value :: Text
   }
   deriving (Generic, Show, Eq)
 
 instance FromJSON Tag where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Tag where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Tag where
   example =
     Tag
-      { _key = "key",
-        _value = "value"
+      { key = "key",
+        value = "value"
       }

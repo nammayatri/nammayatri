@@ -14,7 +14,7 @@ import Beckn.Utils.Servant.SignatureAuth
     LookupRegistry,
     lookupRegistryAction,
   )
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant hiding (Context)
 import Storage.Queries.Organization (findOrgByShortId)
 import qualified Storage.Queries.Organization as QOrganization
@@ -58,7 +58,7 @@ instance VerificationMethod VerifyToken where
 verifyPerson :: RegToken -> Flow Person.Person
 verifyPerson token = do
   sr <- verifyToken token
-  Person.findById (Id $ SR._EntityId sr)
+  Person.findById (Id $ SR.entityId sr)
     >>= Utils.fromMaybeM PersonNotFound
 
 verifyPersonAction :: VerificationAction VerifyToken AppEnv
@@ -72,7 +72,7 @@ verifyToken token =
 
 validateToken :: SR.RegistrationToken -> Flow SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
-  let nominal = realToFrac $ _tokenExpiry * 24 * 60 * 60
-  expired <- Utils.isExpired nominal _updatedAt
+  let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
+  expired <- Utils.isExpired nominal updatedAt
   when expired $ Utils.throwError TokenExpired
   return sr

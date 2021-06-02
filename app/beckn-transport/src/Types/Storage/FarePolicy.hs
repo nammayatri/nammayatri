@@ -7,23 +7,24 @@ module Types.Storage.FarePolicy where
 import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
+import Beckn.Utils.JSON
 import Data.Time (TimeOfDay, UTCTime)
 import qualified Database.Beam as B
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Types.Domain.FarePolicy as D
 
 data FarePolicyT f = FarePolicy
-  { _id :: B.C f (Id D.FarePolicy),
-    _vehicleVariant :: B.C f Vehicle.Variant,
-    _organizationId :: B.C f (Id Organization.Organization),
-    _baseFare :: B.C f (Maybe Double),
-    _baseDistance :: B.C f (Maybe Double),
-    _perExtraKmRate :: B.C f Double,
-    _nightShiftStart :: B.C f (Maybe TimeOfDay),
-    _nightShiftEnd :: B.C f (Maybe TimeOfDay),
-    _nightShiftRate :: B.C f (Maybe Double),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+  { id :: B.C f (Id D.FarePolicy),
+    vehicleVariant :: B.C f Vehicle.Variant,
+    organizationId :: B.C f (Id Organization.Organization),
+    baseFare :: B.C f (Maybe Double),
+    baseDistance :: B.C f (Maybe Double),
+    perExtraKmRate :: B.C f Double,
+    nightShiftStart :: B.C f (Maybe TimeOfDay),
+    nightShiftEnd :: B.C f (Maybe TimeOfDay),
+    nightShiftRate :: B.C f (Maybe Double),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -34,17 +35,17 @@ type FarePolicyPrimaryKey = B.PrimaryKey FarePolicyT Identity
 instance B.Table FarePolicyT where
   data PrimaryKey FarePolicyT f = FarePolicyPrimaryKey (B.C f (Id D.FarePolicy))
     deriving (Generic, B.Beamable)
-  primaryKey = FarePolicyPrimaryKey . _id
+  primaryKey = FarePolicyPrimaryKey . id
 
 deriving instance Show FarePolicy
 
 deriving instance Eq FarePolicy
 
 instance ToJSON FarePolicy where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON FarePolicy where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity FarePolicyT)
@@ -52,28 +53,28 @@ fieldEMod =
   B.setEntityName "fare_policy"
     <> B.modifyTableFields
       B.tableModification
-        { _vehicleVariant = "vehicle_variant",
-          _organizationId = "organization_id",
-          _baseFare = "base_fare",
-          _baseDistance = "base_distance",
-          _perExtraKmRate = "per_extra_km_rate",
-          _nightShiftStart = "night_shift_start",
-          _nightShiftEnd = "night_shift_end",
-          _nightShiftRate = "night_shift_rate",
-          _createdAt = "created_at",
-          _updatedAt = "updated_at"
+        { vehicleVariant = "vehicle_variant",
+          organizationId = "organization_id",
+          baseFare = "base_fare",
+          baseDistance = "base_distance",
+          perExtraKmRate = "per_extra_km_rate",
+          nightShiftStart = "night_shift_start",
+          nightShiftEnd = "night_shift_end",
+          nightShiftRate = "night_shift_rate",
+          createdAt = "created_at",
+          updatedAt = "updated_at"
         }
 
 fromTable :: FarePolicy -> D.FarePolicy
 fromTable sFarePolicy =
   D.FarePolicy
-    { id = sFarePolicy ^. #_id,
-      vehicleVariant = sFarePolicy ^. #_vehicleVariant,
-      organizationId = sFarePolicy ^. #_organizationId,
-      baseFare = toRational <$> sFarePolicy ^. #_baseFare,
-      baseDistance = toRational <$> sFarePolicy ^. #_baseDistance,
-      perExtraKmRate = toRational $ sFarePolicy ^. #_perExtraKmRate,
-      nightShiftStart = sFarePolicy ^. #_nightShiftStart,
-      nightShiftEnd = sFarePolicy ^. #_nightShiftEnd,
-      nightShiftRate = toRational <$> sFarePolicy ^. #_nightShiftRate
+    { id = sFarePolicy ^. #id,
+      vehicleVariant = sFarePolicy ^. #vehicleVariant,
+      organizationId = sFarePolicy ^. #organizationId,
+      baseFare = toRational <$> sFarePolicy ^. #baseFare,
+      baseDistance = toRational <$> sFarePolicy ^. #baseDistance,
+      perExtraKmRate = toRational $ sFarePolicy ^. #perExtraKmRate,
+      nightShiftStart = sFarePolicy ^. #nightShiftStart,
+      nightShiftEnd = sFarePolicy ^. #nightShiftEnd,
+      nightShiftRate = toRational <$> sFarePolicy ^. #nightShiftRate
     }

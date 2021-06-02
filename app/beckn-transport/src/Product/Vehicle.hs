@@ -8,7 +8,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle
@@ -24,7 +24,7 @@ createVehicle orgId req = withFlowHandlerAPI $ do
   return $ CreateVehicleRes vehicle
   where
     validateVehicle = do
-      mVehicle <- QV.findByRegistrationNo $ req ^. #_registrationNo
+      mVehicle <- QV.findByRegistrationNo $ req ^. #registrationNo
       when (isJust mVehicle) $
         throwError $ InvalidRequest "Registration number already exists."
 
@@ -50,7 +50,7 @@ deleteVehicle orgId vehicleId = withFlowHandlerAPI $ do
   vehicle <-
     QV.findVehicleById vehicleId
       >>= fromMaybeM VehicleNotFound
-  if vehicle ^. #_organizationId == orgId
+  if vehicle ^. #organizationId == orgId
     then do
       QV.deleteById vehicleId
       return . DeleteVehicleRes $ getId vehicleId
@@ -58,7 +58,7 @@ deleteVehicle orgId vehicleId = withFlowHandlerAPI $ do
 
 getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe (Id SV.Vehicle) -> FlowHandler CreateVehicleRes
 getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandlerAPI $ do
-  user <- QP.findPersonById (Id _EntityId)
+  user <- QP.findPersonById (Id entityId)
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."
     _ ->
@@ -69,34 +69,34 @@ getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandle
   where
     hasAccess :: SP.Person -> SV.Vehicle -> Flow ()
     hasAccess user vehicle =
-      when (user ^. #_organizationId /= Just (vehicle ^. #_organizationId)) $
+      when (user ^. #organizationId /= Just (vehicle ^. #organizationId)) $
         throwError Unauthorized
 
 addOrgId :: Text -> SV.Vehicle -> Flow SV.Vehicle
-addOrgId orgId vehicle = return $ vehicle {SV._organizationId = orgId}
+addOrgId orgId vehicle = return $ vehicle {SV.organizationId = orgId}
 
 mkVehicleRes :: [SP.Person] -> SV.Vehicle -> VehicleRes
 mkVehicleRes personList vehicle =
   let mdriver =
         find
           ( \person ->
-              SP._udf1 person == Just (getId $ vehicle ^. #_id)
+              SP.udf1 person == Just (getId $ vehicle ^. #id)
           )
           personList
    in VehicleRes
-        { _vehicle = vehicle,
-          _driver = mkDriverObj <$> mdriver
+        { vehicle = vehicle,
+          driver = mkDriverObj <$> mdriver
         }
 
 mkDriverObj :: SP.Person -> Driver
 mkDriverObj person =
   Driver
-    { _id = getId $ person ^. #_id,
-      _firstName = person ^. #_firstName,
-      _middleName = person ^. #_middleName,
-      _lastName = person ^. #_lastName,
-      _fullName = person ^. #_fullName,
-      _rating = person ^. #_rating,
-      _verified = person ^. #_verified,
-      _organizationId = person ^. #_organizationId
+    { id = getId $ person ^. #id,
+      firstName = person ^. #firstName,
+      middleName = person ^. #middleName,
+      lastName = person ^. #lastName,
+      fullName = person ^. #fullName,
+      rating = person ^. #rating,
+      verified = person ^. #verified,
+      organizationId = person ^. #organizationId
     }

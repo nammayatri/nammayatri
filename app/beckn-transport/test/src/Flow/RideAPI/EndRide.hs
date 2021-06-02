@@ -41,14 +41,14 @@ handle =
   Handle.ServiceHandle
     { findPersonById = \case
         Id "1" -> pure Fixtures.defaultDriver
-        Id "2" -> pure $ Fixtures.defaultDriver {Person._id = "2"}
+        Id "2" -> pure $ Fixtures.defaultDriver {Person.id = "2"}
         Id "admin" -> pure Fixtures.defaultAdmin
         _ -> throwError PersonDoesNotExist,
       findPIById = \piId -> pure $ case piId of
         Id "search" -> Just searchProductInstance
         Id "ride" -> Just rideProductInstance
         Id "tracker" -> Just trackerProductInstance
-        Id "completed_ride" -> Just rideProductInstance {PI._status = PI.COMPLETED}
+        Id "completed_ride" -> Just rideProductInstance {PI.status = PI.COMPLETED}
         _ -> Nothing,
       findAllPIByParentId = \case
         Id "search" -> pure [rideProductInstance, trackerProductInstance]
@@ -73,43 +73,43 @@ endRide = Handle.endRideHandler handle
 rideProductInstance :: PI.ProductInstance
 rideProductInstance =
   Fixtures.defaultProductInstance
-    { PI._status = PI.INPROGRESS,
-      PI._caseId = "ride",
-      PI._parentId = Just "ride"
+    { PI.status = PI.INPROGRESS,
+      PI.caseId = "ride",
+      PI.parentId = Just "ride"
     }
 
 searchProductInstance :: PI.ProductInstance
 searchProductInstance =
   Fixtures.defaultProductInstance
-    { PI._id = "search",
-      PI._caseId = "search",
+    { PI.id = "search",
+      PI.caseId = "search",
       PI._type = Case.RIDESEARCH,
-      PI._status = PI.INPROGRESS
+      PI.status = PI.INPROGRESS
     }
 
 trackerProductInstance :: PI.ProductInstance
 trackerProductInstance =
   Fixtures.defaultProductInstance
-    { PI._id = "tracker",
-      PI._caseId = "tracker",
+    { PI.id = "tracker",
+      PI.caseId = "tracker",
       PI._type = Case.LOCATIONTRACKER,
-      PI._status = PI.INPROGRESS
+      PI.status = PI.INPROGRESS
     }
 
 trackerCase :: Case.Case
 trackerCase =
   Fixtures.defaultCase
-    { Case._id = "tracker",
+    { Case.id = "tracker",
       Case._type = Case.LOCATIONTRACKER,
-      Case._status = Case.INPROGRESS
+      Case.status = Case.INPROGRESS
     }
 
 rideCase :: Case.Case
 rideCase =
   Fixtures.defaultCase
-    { Case._id = "ride",
+    { Case.id = "ride",
       Case._type = Case.RIDEORDER,
-      Case._status = Case.INPROGRESS
+      Case.status = Case.INPROGRESS
     }
 
 successfulEndByDriver :: TestTree

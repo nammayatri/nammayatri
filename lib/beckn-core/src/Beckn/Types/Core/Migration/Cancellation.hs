@@ -4,19 +4,19 @@ import Beckn.Types.Common (IdObject)
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Option (Option)
 import Beckn.Types.Core.Migration.Policy (Policy)
-import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Beckn.Utils.JSON
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data Cancellation = Cancellation
   { _type :: Maybe CancellationType,
-    _ref_id :: Maybe Text,
-    _policies :: Maybe [Policy],
-    _time :: Maybe UTCTime,
-    _cancelled_by :: Maybe Text,
-    _reasons :: Maybe Option,
-    _selected_reason :: Maybe IdObject,
-    _additional_description :: Maybe Descriptor
+    ref_id :: Maybe Text,
+    policies :: Maybe [Policy],
+    time :: Maybe UTCTime,
+    cancelled_by :: Maybe Text,
+    reasons :: Maybe Option,
+    selected_reason :: Maybe IdObject,
+    additional_description :: Maybe Descriptor
   }
   deriving (Generic, Show)
 
@@ -24,10 +24,10 @@ data CancellationType = FULL | PARTIAL
   deriving (Generic, Show)
 
 instance FromJSON Cancellation where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Cancellation where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON CancellationType where
   parseJSON = genericParseJSON constructorsToLowerOptions

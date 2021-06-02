@@ -14,19 +14,19 @@ getPersonDetails :: Person.Person -> FlowHandler Person.GetPersonDetailsRes
 getPersonDetails auth =
   pure $
     Person.GetPersonDetailsRes
-      { firstName = auth ^. #_firstName,
-        middleName = auth ^. #_middleName,
-        lastName = auth ^. #_lastName,
-        fullName = auth ^. #_fullName,
-        role = auth ^. #_role,
-        gender = auth ^. #_gender,
-        email = auth ^. #_email
+      { firstName = auth ^. #firstName,
+        middleName = auth ^. #middleName,
+        lastName = auth ^. #lastName,
+        fullName = auth ^. #fullName,
+        role = auth ^. #role,
+        gender = auth ^. #gender,
+        email = auth ^. #email
       }
 
 updatePerson :: Person.Person -> Person.UpdateReq -> FlowHandler APISuccess.APISuccess
 updatePerson auth req = withFlowHandlerAPI $ do
   QPerson.updatePersonalInfo
-    (auth ^. #_id)
+    (auth ^. #id)
     (req ^. #firstName)
     (req ^. #middleName)
     (req ^. #lastName)

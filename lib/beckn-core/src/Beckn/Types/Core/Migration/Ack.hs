@@ -2,18 +2,19 @@
 
 module Beckn.Types.Core.Migration.Ack where
 
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Status = ACK | NACK
   deriving (Generic, Show, FromJSON, ToJSON)
 
 newtype Ack = Ack
-  { _status :: Status
+  { status :: Status
   }
   deriving (Generic, Show)
 
 instance FromJSON Ack where
-  parseJSON = genericParseJSON stripLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Ack where
-  toJSON = genericToJSON stripLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

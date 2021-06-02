@@ -13,7 +13,7 @@ import qualified Types.Storage.Leads as Storage
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LeadsT))
 getDbTable =
-  DB._leads . DB.transporterDb <$> getSchemaName
+  DB.leads . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Leads -> Flow ()
 create Storage.Leads {..} = do
@@ -22,8 +22,8 @@ create Storage.Leads {..} = do
 
 findLeadsById ::
   Id Storage.Leads -> Flow (Maybe Storage.Leads)
-findLeadsById id = do
+findLeadsById lid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Leads {..} = _id ==. B.val_ id
+    predicate Storage.Leads {..} = id ==. B.val_ lid

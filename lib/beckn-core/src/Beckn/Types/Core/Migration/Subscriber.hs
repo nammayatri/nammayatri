@@ -1,23 +1,23 @@
 module Beckn.Types.Core.Migration.Subscriber where
 
 import Beckn.Types.Core.Migration.Domain
-import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 
 data Subscriber = Subscriber
-  { _subscriber_id :: Maybe Text,
+  { subscriber_id :: Maybe Text,
     _type :: Maybe SubscriberType,
-    _cb_url :: Maybe Text,
-    _domain :: Maybe Domain,
-    _city :: Maybe Text,
-    _country :: Maybe Text,
-    _signing_public_key :: Maybe Text,
-    _encryption_public_key :: Maybe Text,
-    _status :: Maybe SubscriberStatus,
-    _created :: Maybe UTCTime,
-    _updated :: Maybe UTCTime,
-    _expires :: Maybe UTCTime
+    cb_url :: Maybe Text,
+    domain :: Maybe Domain,
+    city :: Maybe Text,
+    country :: Maybe Text,
+    signing_public_key :: Maybe Text,
+    encryption_public_key :: Maybe Text,
+    status :: Maybe SubscriberStatus,
+    created :: Maybe UTCTime,
+    updated :: Maybe UTCTime,
+    expires :: Maybe UTCTime
   }
   deriving (Generic, Show)
 
@@ -44,7 +44,7 @@ instance ToJSON SubscriberType where
   toJSON = genericToJSON constructorsToLowerOptions
 
 instance FromJSON Subscriber where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Subscriber where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

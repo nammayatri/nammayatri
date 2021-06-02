@@ -13,9 +13,9 @@ import qualified Types.Beckn.Context as B
 import qualified Types.Beckn.Domain as B
 
 lookup :: B.Context -> Flow [Org.Organization]
-lookup _context = do
-  let orgDomain = domainToOrgType (_context ^. #_domain)
-  filter (isJust . Org._callbackUrl)
+lookup context = do
+  let orgDomain = domainToOrgType (context ^. #domain)
+  filter (isJust . Org.callbackUrl)
     <$> Provider.listProviders Org.PROVIDER orgDomain
   where
     domainToOrgType :: B.Domain -> Org.OrganizationDomain

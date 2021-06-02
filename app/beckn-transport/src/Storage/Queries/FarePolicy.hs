@@ -20,7 +20,7 @@ import qualified Types.Storage.FarePolicy as Storage
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyT))
 getDbTable =
-  DB._farePolicy . DB.transporterDb <$> getSchemaName
+  DB.farePolicy . DB.transporterDb <$> getSchemaName
 
 create :: Storage.FarePolicy -> Flow ()
 create Storage.FarePolicy {..} = do
@@ -29,43 +29,43 @@ create Storage.FarePolicy {..} = do
 
 findFarePolicyByOrgAndVehicleVariant ::
   Id Organization.Organization -> Vehicle.Variant -> Flow (Maybe Storage.FarePolicy)
-findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant = do
+findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.FarePolicy {..} =
-      _organizationId ==. B.val_ orgId
-        &&. _vehicleVariant ==. B.val_ vehicleVariant
+      organizationId ==. B.val_ orgId
+        &&. vehicleVariant ==. B.val_ vehicleVariant_
 
 findFarePoliciesByOrgId :: Id Organization.Organization -> Flow [Storage.FarePolicy]
 findFarePoliciesByOrgId orgId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate Storage.FarePolicy {..} = _organizationId ==. B.val_ orgId
+    predicate Storage.FarePolicy {..} = organizationId ==. B.val_ orgId
 
 findFarePolicyById :: Id D.FarePolicy -> Flow (Maybe Storage.FarePolicy)
 findFarePolicyById fpId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.FarePolicy {..} = _id ==. B.val_ fpId
+    predicate Storage.FarePolicy {..} = id ==. B.val_ fpId
 
 updateFarePolicy :: Storage.FarePolicy -> Flow ()
 updateFarePolicy farePolicy = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  let farePolicyId = farePolicy ^. #_id
+  let farePolicyId = farePolicy ^. #id
   DB.update dbTable (setClause farePolicy now) (predicate farePolicyId)
   where
     setClause fp now Storage.FarePolicy {..} =
       mconcat
-        [ _baseFare <-. B.val_ (fp ^. #_baseFare),
-          _baseDistance <-. B.val_ (fp ^. #_baseDistance),
-          _perExtraKmRate <-. B.val_ (fp ^. #_perExtraKmRate),
-          _nightShiftStart <-. B.val_ (fp ^. #_nightShiftStart),
-          _nightShiftEnd <-. B.val_ (fp ^. #_nightShiftEnd),
-          _nightShiftRate <-. B.val_ (fp ^. #_nightShiftRate),
-          _updatedAt <-. B.val_ now
+        [ baseFare <-. B.val_ (fp ^. #baseFare),
+          baseDistance <-. B.val_ (fp ^. #baseDistance),
+          perExtraKmRate <-. B.val_ (fp ^. #perExtraKmRate),
+          nightShiftStart <-. B.val_ (fp ^. #nightShiftStart),
+          nightShiftEnd <-. B.val_ (fp ^. #nightShiftEnd),
+          nightShiftRate <-. B.val_ (fp ^. #nightShiftRate),
+          updatedAt <-. B.val_ now
         ]
-    predicate id Storage.FarePolicy {..} = _id ==. B.val_ id
+    predicate fpId Storage.FarePolicy {..} = id ==. B.val_ fpId

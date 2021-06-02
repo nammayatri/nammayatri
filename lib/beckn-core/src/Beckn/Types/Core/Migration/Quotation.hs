@@ -2,21 +2,21 @@ module Beckn.Types.Core.Migration.Quotation where
 
 import Beckn.Types.Core.Migration.Duration
 import Beckn.Types.Core.Migration.Price
-import Beckn.Utils.JSON (constructorsWithHyphensToLowerOptions)
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Quotation = Quotation
-  { _price :: Maybe Price,
-    _breakup :: Maybe [BreakupItem],
-    _ttl :: Maybe Duration
+  { price :: Maybe Price,
+    breakup :: Maybe [BreakupItem],
+    ttl :: Maybe Duration
   }
   deriving (Generic, Show)
 
 data BreakupItem = BreakupItem
   { _type :: Maybe BreakupItemType,
-    _ref_id :: Maybe Text,
-    _title :: Maybe Text,
-    _price :: Maybe Price
+    ref_id :: Maybe Text,
+    title :: Maybe Text,
+    price :: Maybe Price
   }
   deriving (Generic, Show)
 
@@ -28,16 +28,16 @@ data BreakupItemType
   deriving (Generic, Show)
 
 instance FromJSON Quotation where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Quotation where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON BreakupItem where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON BreakupItem where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON BreakupItemType where
   parseJSON = genericParseJSON constructorsWithHyphensToLowerOptions

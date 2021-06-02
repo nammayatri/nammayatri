@@ -15,7 +15,7 @@ import qualified Beckn.Types.Core.API.Status as Status
 import qualified Beckn.Types.Core.API.Track as TrackTrip (OnTrackTripReq, OnTrackTripRes)
 import qualified Beckn.Types.Core.API.Update as Update
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Case as Case hiding (status)
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Servant.SignatureAuth
@@ -174,13 +174,13 @@ type CaseAPI =
            :> QueryParam "offset" Integer
            :> Get '[JSON] Case.CaseListRes
            :<|> Capture "caseId" (Id Case.Case)
-           :> Get '[JSON] Case.StatusRes
+           :> Get '[JSON] Case.GetStatusRes
        )
 
 caseFlow :: FlowServer CaseAPI
 caseFlow regToken =
   Case.list regToken
-    :<|> Case.status regToken
+    :<|> Case.getStatus regToken
 
 -------- Info Flow ------
 type InfoAPI =

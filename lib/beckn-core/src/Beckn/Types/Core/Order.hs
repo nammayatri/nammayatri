@@ -5,57 +5,58 @@ import Beckn.Types.Core.ItemQuantity
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.Quotation
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 
 data Order = Order
-  { _id :: Text,
-    _state :: Text,
-    _created_at :: UTCTime,
-    _updated_at :: UTCTime,
-    _items :: [OrderItem],
-    _billing :: Maybe Billing,
-    _payment :: Maybe Payment,
-    _update_action :: Maybe Text,
-    _quotation :: Maybe Quotation
+  { id :: Text,
+    state :: Text,
+    created_at :: UTCTime,
+    updated_at :: UTCTime,
+    items :: [OrderItem],
+    billing :: Maybe Billing,
+    payment :: Maybe Payment,
+    update_action :: Maybe Text,
+    quotation :: Maybe Quotation
   }
   deriving (Generic, Show)
 
 instance FromJSON Order where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Order where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Order where
   example =
     Order
-      { _id = idExample,
-        _state = "State",
-        _created_at = example,
-        _updated_at = example,
-        _items = example,
-        _billing = example,
-        _payment = example,
-        _update_action = Nothing,
-        _quotation = example
+      { id = idExample,
+        state = "State",
+        created_at = example,
+        updated_at = example,
+        items = example,
+        billing = example,
+        payment = example,
+        update_action = Nothing,
+        quotation = example
       }
 
 data OrderItem = OrderItem
-  { _id :: Text,
-    _quantity :: Maybe ItemQuantity
+  { id :: Text,
+    quantity :: Maybe ItemQuantity
   }
   deriving (Generic, Show)
 
 instance FromJSON OrderItem where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON OrderItem where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example OrderItem where
   example =
     OrderItem
-      { _id = idExample,
-        _quantity = example
+      { id = idExample,
+        quantity = example
       }

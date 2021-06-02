@@ -11,7 +11,7 @@ import EulerHS.Prelude
 import Servant
 
 newtype ConfigKey = ConfigKey
-  { _getConfigKey :: Text
+  { getConfigKey :: Text
   }
   deriving (Generic, Show)
 

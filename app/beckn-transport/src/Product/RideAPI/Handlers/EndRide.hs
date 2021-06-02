@@ -31,19 +31,19 @@ endRideHandler ::
 endRideHandler ServiceHandle {..} requestorId rideId = do
   requestor <- findPersonById requestorId
   orderPi <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
-  driverId <- orderPi ^. #_personId & fromMaybeM (PIFieldNotPresent "person")
-  case requestor ^. #_role of
+  driverId <- orderPi ^. #personId & fromMaybeM (PIFieldNotPresent "person")
+  case requestor ^. #role of
     Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
-  unless (orderPi ^. #_status == PI.INPROGRESS) $ throwError $ PIInvalidStatus "This ride cannot be ended"
+  unless (orderPi ^. #status == PI.INPROGRESS) $ throwError $ PIInvalidStatus "This ride cannot be ended"
 
-  searchPiId <- orderPi ^. #_parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  searchPiId <- orderPi ^. #parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- findPIById searchPiId >>= fromMaybeM PINotFound
   piList <- findAllPIByParentId searchPiId
-  trackerCase <- findCaseByIdAndType (PI._caseId <$> piList) Case.LOCATIONTRACKER
-  orderCase <- findCaseByIdAndType (PI._caseId <$> piList) Case.RIDEORDER
+  trackerCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.LOCATIONTRACKER
+  orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER
 
-  endRideTransaction (PI._id <$> piList) (trackerCase ^. #_id) (orderCase ^. #_id) (cast driverId)
+  endRideTransaction (PI.id <$> piList) (trackerCase ^. #id) (orderCase ^. #id) (cast driverId)
 
   notifyUpdateToBAP searchPi orderPi PI.COMPLETED
 

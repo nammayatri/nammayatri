@@ -4,11 +4,12 @@
 module Beckn.Types.Storage.ProductInstance where
 
 import Beckn.Types.Amount
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person (Person)
 import Beckn.Types.Storage.Products (Products)
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -18,7 +19,7 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant.API
 
 -- TODO: INVALID status seems to be unused
@@ -66,37 +67,37 @@ instance FromBackendRow Postgres EntityType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProductInstanceT f = ProductInstance
-  { _id :: B.C f (Id ProductInstance),
-    _caseId :: B.C f (Id Case.Case),
-    _productId :: B.C f (Id Products),
-    _personId :: B.C f (Maybe (Id Person)),
-    _personUpdatedAt :: B.C f (Maybe UTCTime),
-    _shortId :: B.C f Text,
-    _entityType :: B.C f EntityType,
-    _entityId :: B.C f (Maybe Text),
-    _quantity :: B.C f Int,
-    _price :: B.C f (Maybe Amount),
+  { id :: B.C f (Id ProductInstance),
+    caseId :: B.C f (Id Case.Case),
+    productId :: B.C f (Id Products),
+    personId :: B.C f (Maybe (Id Person)),
+    personUpdatedAt :: B.C f (Maybe UTCTime),
+    shortId :: B.C f Text,
+    entityType :: B.C f EntityType,
+    entityId :: B.C f (Maybe Text),
+    quantity :: B.C f Int,
+    price :: B.C f (Maybe Amount),
     _type :: B.C f ProductInstanceType,
-    _status :: B.C f ProductInstanceStatus,
-    _startTime :: B.C f UTCTime,
-    _endTime :: B.C f (Maybe UTCTime),
-    _validTill :: B.C f UTCTime,
-    _fromLocation :: B.C f (Maybe Text),
-    _toLocation :: B.C f (Maybe Text),
-    _organizationId :: B.C f Text,
-    _parentId :: B.C f (Maybe (Id ProductInstance)),
-    _udf1 :: B.C f (Maybe Text),
-    _udf2 :: B.C f (Maybe Text),
-    _udf3 :: B.C f (Maybe Text),
-    _udf4 :: B.C f (Maybe Text),
-    _udf5 :: B.C f (Maybe Text),
-    _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+    status :: B.C f ProductInstanceStatus,
+    startTime :: B.C f UTCTime,
+    endTime :: B.C f (Maybe UTCTime),
+    validTill :: B.C f UTCTime,
+    fromLocation :: B.C f (Maybe Text),
+    toLocation :: B.C f (Maybe Text),
+    organizationId :: B.C f Text,
+    parentId :: B.C f (Maybe (Id ProductInstance)),
+    udf1 :: B.C f (Maybe Text),
+    udf2 :: B.C f (Maybe Text),
+    udf3 :: B.C f (Maybe Text),
+    udf4 :: B.C f (Maybe Text),
+    udf5 :: B.C f (Maybe Text),
+    info :: B.C f (Maybe Text),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
---TODO: _organizationId - -- need to point to primarykey
+--TODO: organizationId - -- need to point to primarykey
 
 type ProductInstance = ProductInstanceT Identity
 
@@ -105,17 +106,17 @@ type ProductInstancePrimaryKey = B.PrimaryKey ProductInstanceT Identity
 instance B.Table ProductInstanceT where
   data PrimaryKey ProductInstanceT f = ProductInstancePrimaryKey (B.C f (Id ProductInstance))
     deriving (Generic, B.Beamable)
-  primaryKey = ProductInstancePrimaryKey . _id
+  primaryKey = ProductInstancePrimaryKey . id
 
 deriving instance Show ProductInstance
 
 deriving instance Eq ProductInstance
 
 instance ToJSON ProductInstance where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON ProductInstance where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema ProductInstance
 
@@ -125,22 +126,22 @@ fieldEMod =
   B.setEntityName "product_instance"
     <> B.modifyTableFields
       B.tableModification
-        { _caseId = "case_id",
-          _productId = "product_id",
-          _personId = "person_id",
-          _personUpdatedAt = "person_updated_at",
-          _entityType = "entity_type",
-          _entityId = "entity_id",
-          _startTime = "start_time",
-          _endTime = "end_time",
-          _shortId = "short_id",
-          _validTill = "valid_till",
-          _fromLocation = "from_location_id",
-          _toLocation = "to_location_id",
-          _parentId = "parent_id",
-          _organizationId = "organization_id",
-          _createdAt = "created_at",
-          _updatedAt = "updated_at"
+        { caseId = "case_id",
+          productId = "product_id",
+          personId = "person_id",
+          personUpdatedAt = "person_updated_at",
+          entityType = "entity_type",
+          entityId = "entity_id",
+          startTime = "start_time",
+          endTime = "end_time",
+          shortId = "short_id",
+          validTill = "valid_till",
+          fromLocation = "from_location_id",
+          toLocation = "to_location_id",
+          parentId = "parent_id",
+          organizationId = "organization_id",
+          createdAt = "created_at",
+          updatedAt = "updated_at"
         }
 
 validateStatusTransition :: ProductInstanceStatus -> ProductInstanceStatus -> Either Text ()

@@ -1,6 +1,7 @@
 module Types.Beckn.Service where
 
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 import Types.Beckn.Brand
@@ -13,57 +14,57 @@ import Types.Beckn.Policy
 import Types.Beckn.Provider
 
 data Service = Service
-  { _id :: Text,
-    _provider :: Provider,
-    _policies :: [Policy],
+  { id :: Text,
+    provider :: Provider,
+    policies :: [Policy],
     -- FIXME: Catalog field name clashes with the one from Core.Service
     -- We have assumed the domain one here takes precedence
-    _catalog :: ServiceCatalog
+    catalog :: ServiceCatalog
   }
   deriving (Generic, Show)
 
 instance FromJSON Service where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Service where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data ServiceCatalog = ServiceCatalog
-  { _id :: Text,
-    _categories :: [Category],
-    _brands :: [Brand],
-    _models :: [Model],
-    _ttl :: Maybe UTCTime,
-    _items :: [Item],
-    _offers :: [Offer],
-    _paradigms :: [Paradigm]
+  { id :: Text,
+    categories :: [Category],
+    brands :: [Brand],
+    models :: [Model],
+    ttl :: Maybe UTCTime,
+    items :: [Item],
+    offers :: [Offer],
+    paradigms :: [Paradigm]
   }
   deriving (Generic, Show)
 
 instance FromJSON ServiceCatalog where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON ServiceCatalog where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Service where
   example =
     Service
-      { _id = idExample,
-        _provider = example,
-        _policies = example,
-        _catalog = example
+      { id = idExample,
+        provider = example,
+        policies = example,
+        catalog = example
       }
 
 instance Example ServiceCatalog where
   example =
     ServiceCatalog
-      { _id = idExample,
-        _categories = example,
-        _brands = example,
-        _models = example,
-        _ttl = example,
-        _items = example,
-        _offers = example,
-        _paradigms = example
+      { id = idExample,
+        categories = example,
+        brands = example,
+        models = example,
+        ttl = example,
+        items = example,
+        offers = example,
+        paradigms = example
       }

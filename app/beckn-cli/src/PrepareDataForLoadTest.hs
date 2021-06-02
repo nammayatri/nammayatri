@@ -64,6 +64,6 @@ runK6Script url filePath nmbOfReq = do
 generateSearchRequest :: L.Flow API.SearchReq
 generateSearchRequest = do
   txnId <- L.generateGUID
-  let context = example @API.Context & #_transaction_id .~ txnId
+  let context = example @API.Context & #transaction_id .~ txnId
   let intent = example @API.SearchIntent
   pure $ API.SearchReq context intent

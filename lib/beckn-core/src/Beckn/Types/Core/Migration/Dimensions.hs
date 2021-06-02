@@ -1,17 +1,18 @@
 module Beckn.Types.Core.Migration.Dimensions where
 
 import Beckn.Types.Core.Migration.Scalar (Scalar)
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Dimensions = Dimensions
-  { _length :: Maybe Scalar,
-    _breadth :: Maybe Scalar,
-    _height :: Maybe Scalar
+  { length :: Maybe Scalar,
+    breadth :: Maybe Scalar,
+    height :: Maybe Scalar
   }
   deriving (Generic, Show)
 
 instance FromJSON Dimensions where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Dimensions where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

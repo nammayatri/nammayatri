@@ -32,7 +32,7 @@ constructorsWithHyphensToLowerOptions =
 slashedRecordFields :: Options
 slashedRecordFields =
   defaultOptions
-    { fieldLabelModifier = \('_' : xs) -> unpack . replace "_" "/" . pack $ xs
+    { fieldLabelModifier = unpack . replace "_" "/" . pack
     }
 
 uniteObjects :: [Value] -> Value
@@ -52,4 +52,12 @@ objectWithSingleFieldParsing constructorMapping =
   defaultOptions
     { sumEncoding = ObjectWithSingleField,
       constructorTagModifier = constructorMapping
+    }
+
+stripPrefixUnderscoreIfAny :: Options
+stripPrefixUnderscoreIfAny =
+  defaultOptions
+    { fieldLabelModifier = \case
+        ('_' : xs) -> xs
+        a -> a
     }

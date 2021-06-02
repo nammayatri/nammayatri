@@ -188,7 +188,7 @@ processCurrentNotification
         logInfo $ "getDriverResponse " <> show mResponse
         case mResponse of
           Just driverResponse ->
-            case driverResponse ^. #_status of
+            case driverResponse ^. #status of
               DriverResponse.ACCEPT -> do
                 logInfo $ "assigning driver" <> show driverId
                 assignDriver rideId driverId

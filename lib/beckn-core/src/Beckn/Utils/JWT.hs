@@ -27,16 +27,16 @@ import Web.JWT
 -- it contains key id, private key and other data needed to get JWT
 -- https://cloud.google.com/compute/docs/access/service-accounts
 data ServiceAccount = ServiceAccount
-  { _saType :: !T.Text,
-    _saProjectId :: !T.Text,
-    _saPrivateKeyId :: !T.Text,
-    _saPrivateKey :: !String,
-    _saClientEmail :: !T.Text,
-    _saClientId :: !T.Text,
-    _saAuthUri :: !T.Text,
-    _saTokenUri :: !T.Text,
-    _saAuthProviderX509CertUrl :: !T.Text,
-    _saClientX509CertUrl :: !T.Text
+  { saType :: !T.Text,
+    saProjectId :: !T.Text,
+    saPrivateKeyId :: !T.Text,
+    saPrivateKey :: !String,
+    saClientEmail :: !T.Text,
+    saClientId :: !T.Text,
+    saAuthUri :: !T.Text,
+    saTokenUri :: !T.Text,
+    saAuthProviderX509CertUrl :: !T.Text,
+    saClientX509CertUrl :: !T.Text
   }
   deriving (Show, Eq, Generic)
 
@@ -44,8 +44,8 @@ $(deriveJSON (aesonPrefix snakeCase) ''ServiceAccount)
 
 -- | JWT body format, is is used for retrieving JWT token
 data JWTBody = JWTBody
-  { _jwtAssertion :: !T.Text,
-    _jwtGrantType :: !T.Text
+  { jwtAssertion :: !T.Text,
+    jwtGrantType :: !T.Text
   }
   deriving (Show, Eq, Generic)
 
@@ -53,9 +53,9 @@ $(deriveJSON (aesonPrefix snakeCase) ''JWTBody)
 
 -- | JWT token returned from token url
 data JWToken = JWToken
-  { _jwtAccessToken :: !T.Text,
-    _jwtExpiresIn :: Integer,
-    _jwtTokenType :: !T.Text
+  { jwtAccessToken :: !T.Text,
+    jwtExpiresIn :: Integer,
+    jwtTokenType :: !T.Text
   }
   deriving (Show, Eq, Generic)
 
@@ -66,17 +66,17 @@ $(deriveJSON (aesonPrefix snakeCase) ''JWToken)
 -- Returns a pair of claims and assertion of these claims
 createJWT :: ServiceAccount -> [(Text, Value)] -> IO (Either String (JWTClaimsSet, Text))
 createJWT sa additionalClaims = do
-  let iss = stringOrURI . _saClientEmail $ sa
-  let aud = Left <$> (stringOrURI . _saTokenUri $ sa)
+  let iss = stringOrURI . saClientEmail $ sa
+  let aud = Left <$> (stringOrURI . saTokenUri $ sa)
   let unregisteredClaims = ClaimsMap $ Map.fromList additionalClaims
   let jwtHeader =
         JOSEHeader
           { typ = Just "JWT",
             cty = Nothing,
             alg = Just RS256,
-            kid = Just $ _saPrivateKeyId sa -- key id from sa json file
+            kid = Just $ saPrivateKeyId sa -- key id from sa json file
           }
-  let mkey = readRsaSecret . C8.pack $ _saPrivateKey sa
+  let mkey = readRsaSecret . C8.pack $ saPrivateKey sa
   case mkey of
     Nothing -> pure $ Left "Bad RSA key!"
     Just pkey -> do
@@ -116,20 +116,20 @@ doRefreshToken sa = do
       manager <- newManager tlsManagerSettings
       let body =
             JWTBody
-              { _jwtAssertion = assertion,
-                _jwtGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
+              { jwtAssertion = assertion,
+                jwtGrantType = "urn:ietf:params:oauth:grant-type:jwt-bearer"
               }
-      req <- jwtRequest (_saTokenUri sa) (J.encode body)
+      req <- jwtRequest (saTokenUri sa) (J.encode body)
       res <- httpLbs req manager
       let rBody = J.eitherDecode $ responseBody res
       case rBody of
         Left err -> pure $ Left err
         Right respBody@JWToken {..} -> do
-          let expiry = getExpiry issuedAt _jwtExpiresIn
+          let expiry = getExpiry issuedAt jwtExpiresIn
           pure $
             Right
               respBody
-                { _jwtExpiresIn = expiry
+                { jwtExpiresIn = expiry
                 }
 
 -- | Get token expiration date
@@ -150,7 +150,7 @@ $(deriveJSON (aesonPrefix snakeCase) ''JWTValidity)
 -- | Check token validity
 isValid :: JWToken -> IO JWTValidity
 isValid token = do
-  let expiry = _jwtExpiresIn token
+  let expiry = jwtExpiresIn token
   curInt <- round <$> getPOSIXTime
   -- check a signature here, not sure it is possible,
   -- for this we'd need to get a "public" key which is stored in google

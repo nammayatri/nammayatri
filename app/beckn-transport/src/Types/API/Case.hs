@@ -3,59 +3,60 @@ module Types.API.Case where
 import Beckn.Types.Amount
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
+import Beckn.Utils.JSON
 import Data.Swagger
 import EulerHS.Prelude
 
 data CaseRes = CaseRes
   { _case :: Case,
-    _fromLocation :: Location,
-    _toLocation :: Location
+    fromLocation :: Location,
+    toLocation :: Location
   }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON CaseRes where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON CaseRes where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 type CaseListRes = [CaseRes]
 
 data UpdateCaseReq = UpdateCaseReq
-  { _quote :: Maybe Amount,
-    _transporterChoice :: Text
+  { quote :: Maybe Amount,
+    transporterChoice :: Text
   }
   deriving (Show, Generic, ToSchema)
 
 instance FromJSON UpdateCaseReq where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON UpdateCaseReq where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data ProviderStats = ProviderStats
-  { _completed :: Maybe Int,
-    _inprogress :: Maybe Int,
-    _confirmed :: Maybe Int
+  { completed :: Maybe Int,
+    inprogress :: Maybe Int,
+    confirmed :: Maybe Int
   }
   deriving (Generic, Show)
 
 instance FromJSON ProviderStats where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON ProviderStats where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data ProviderInfo = ProviderInfo
-  { _id :: Text,
-    _name :: Text,
-    _stats :: Text,
-    _contacts :: Text
+  { id :: Text,
+    name :: Text,
+    stats :: Text,
+    contacts :: Text
   }
   deriving (Generic, Show)
 
 instance FromJSON ProviderInfo where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON ProviderInfo where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

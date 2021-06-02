@@ -5,6 +5,7 @@
 module Types.Storage.Tracker where
 
 import Beckn.Types.Id
+import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -14,7 +15,7 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
-import EulerHS.Prelude hiding (Type)
+import EulerHS.Prelude hiding (Type, id)
 import Servant.API
 
 data Type = DRIVER | CUSTOMER | TRIP
@@ -34,14 +35,14 @@ instance FromHttpApiData Type where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data TrackerT f = Tracker
-  { _id :: B.C f (Id Tracker),
+  { id :: B.C f (Id Tracker),
     _type :: B.C f Type,
-    _referenceId :: B.C f Text,
-    _long :: B.C f Text,
-    _lat :: B.C f Text,
-    _gps :: B.C f Text,
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+    referenceId :: B.C f Text,
+    long :: B.C f Text,
+    lat :: B.C f Text,
+    gps :: B.C f Text,
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -52,17 +53,17 @@ type TrackerPrimaryKey = B.PrimaryKey TrackerT Identity
 instance B.Table TrackerT where
   data PrimaryKey TrackerT f = TrackerPrimaryKey (B.C f (Id Tracker))
     deriving (Generic, B.Beamable)
-  primaryKey = TrackerPrimaryKey . _id
+  primaryKey = TrackerPrimaryKey . id
 
 deriving instance Show Tracker
 
 deriving instance Eq Tracker
 
 instance ToJSON Tracker where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Tracker where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema Tracker
 
@@ -72,7 +73,7 @@ fieldEMod =
   B.setEntityName "trip_reference"
     <> B.modifyTableFields
       B.tableModification
-        { _createdAt = "created_at",
-          _updatedAt = "updated_at",
-          _referenceId = "reference_id"
+        { createdAt = "created_at",
+          updatedAt = "updated_at",
+          referenceId = "reference_id"
         }

@@ -28,17 +28,17 @@ generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.random
 mkIntent :: API.SearchReq -> Intent
 mkIntent req =
   Intent
-    { _query_string = Nothing,
-      _provider_id = Nothing,
-      _category_id = Nothing,
-      _item_id = Nothing,
-      _tags = Nothing,
-      _pickups = [toBeckn (req ^. #origin)],
-      _drops = [toBeckn (req ^. #destination)],
-      _vehicle = toBeckn $ req ^. #vehicle,
-      _payload = Payload Nothing Nothing [] Nothing,
-      _transfer = Nothing,
-      _fare = toBeckn $ req ^. #fare
+    { query_string = Nothing,
+      provider_id = Nothing,
+      category_id = Nothing,
+      item_id = Nothing,
+      tags = Nothing,
+      pickups = [toBeckn (req ^. #origin)],
+      drops = [toBeckn (req ^. #destination)],
+      vehicle = toBeckn $ req ^. #vehicle,
+      payload = Payload Nothing Nothing [] Nothing,
+      transfer = Nothing,
+      fare = toBeckn $ req ^. #fare
     }
 
 validateContext :: Text -> Context -> Flow ()

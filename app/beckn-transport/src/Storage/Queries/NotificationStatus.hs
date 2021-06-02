@@ -15,7 +15,7 @@ import qualified Types.Storage.NotificationStatus as NotificationStatus
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity NotificationStatus.NotificationStatusT))
 getDbTable =
-  DB._notificationStatus . DB.transporterDb <$> getSchemaName
+  DB.notificationStatus . DB.transporterDb <$> getSchemaName
 
 create :: NotificationStatus.NotificationStatus -> Flow ()
 create NotificationStatus.NotificationStatus {..} = do
@@ -23,23 +23,23 @@ create NotificationStatus.NotificationStatus {..} = do
   DB.createOne dbTable (Storage.insertExpression NotificationStatus.NotificationStatus {..})
 
 updateStatus :: Id Ride -> Id Driver -> NotificationStatus.AnswerStatus -> Flow ()
-updateStatus rideId driverId status = do
+updateStatus rideId_ driverId_ status_ = do
   dbTable <- getDbTable
-  DB.update dbTable (setClause status) (predicate rideId driverId)
+  DB.update dbTable (setClause status_) (predicate rideId_ driverId_)
   where
-    setClause s NotificationStatus.NotificationStatus {..} = _status <-. B.val_ s
+    setClause s NotificationStatus.NotificationStatus {..} = status <-. B.val_ s
     predicate rId dId NotificationStatus.NotificationStatus {..} =
-      _rideId ==. B.val_ rId
-        &&. _driverId ==. B.val_ dId
+      rideId ==. B.val_ rId
+        &&. driverId ==. B.val_ dId
 
 fetchRefusedNotificationsByRideId :: Id Ride -> Flow [NotificationStatus.NotificationStatus]
-fetchRefusedNotificationsByRideId rideId = do
+fetchRefusedNotificationsByRideId rideId_ = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate NotificationStatus.NotificationStatus {..} =
-      _rideId ==. B.val_ rideId
-        &&. _status `B.in_` [B.val_ NotificationStatus.REJECTED, B.val_ NotificationStatus.IGNORED]
+      rideId ==. B.val_ rideId_
+        &&. status `B.in_` [B.val_ NotificationStatus.REJECTED, B.val_ NotificationStatus.IGNORED]
 
 fetchActiveNotifications :: Flow [NotificationStatus.NotificationStatus]
 fetchActiveNotifications = do
@@ -47,30 +47,30 @@ fetchActiveNotifications = do
   DB.findAll dbTable identity predicate
   where
     predicate NotificationStatus.NotificationStatus {..} =
-      _status ==. B.val_ NotificationStatus.NOTIFIED
+      status ==. B.val_ NotificationStatus.NOTIFIED
 
 findActiveNotificationByRideId :: Id Ride -> Flow (Maybe NotificationStatus.NotificationStatus)
-findActiveNotificationByRideId rideId = do
+findActiveNotificationByRideId rideId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate NotificationStatus.NotificationStatus {..} =
-      _rideId ==. B.val_ rideId
-        &&. _status ==. B.val_ NotificationStatus.NOTIFIED
+      rideId ==. B.val_ rideId_
+        &&. status ==. B.val_ NotificationStatus.NOTIFIED
 
 findActiveNotificationByDriverId :: Id Driver -> Maybe (Id Ride) -> Flow (Maybe NotificationStatus.NotificationStatus)
-findActiveNotificationByDriverId driverId rideId = do
+findActiveNotificationByDriverId driverId_ rideId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate NotificationStatus.NotificationStatus {..} =
-      _driverId ==. B.val_ driverId
-        &&. maybe (B.val_ True) (\v -> _rideId ==. B.val_ v) rideId
-        &&. _status ==. B.val_ NotificationStatus.NOTIFIED
+      driverId ==. B.val_ driverId_
+        &&. maybe (B.val_ True) (\v -> rideId ==. B.val_ v) rideId_
+        &&. status ==. B.val_ NotificationStatus.NOTIFIED
 
 cleanupNotifications :: Id Ride -> Flow ()
-cleanupNotifications rideId = do
+cleanupNotifications rideId_ = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate rideId)
+  DB.delete dbTable (predicate rideId_)
   where
-    predicate id NotificationStatus.NotificationStatus {..} = _rideId ==. B.val_ id
+    predicate rid NotificationStatus.NotificationStatus {..} = rideId ==. B.val_ rid

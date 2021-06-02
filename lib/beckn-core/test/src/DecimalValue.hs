@@ -10,8 +10,8 @@ import Test.Tasty.HUnit
 amountToDecimalValue :: TestTree
 amountToDecimalValue =
   testCase "Amount to DecimalValue" $ do
-    _integral decimalValue @?= "10"
-    _fractional decimalValue @?= Just "5"
+    integral decimalValue @?= "10"
+    fractional decimalValue @?= Just "5"
   where
     decimalValue = convertAmountToDecimalValue $ Amount 10.5
 
@@ -27,8 +27,8 @@ decimalValueToAmount =
 negativeAmountToDecimalValue :: TestTree
 negativeAmountToDecimalValue =
   testCase "Negative amount to DecimalValue" $ do
-    _integral decimalValue @?= "-10"
-    _fractional decimalValue @?= Nothing
+    integral decimalValue @?= "-10"
+    fractional decimalValue @?= Nothing
   where
     decimalValue = convertAmountToDecimalValue $ Amount (-10)
 

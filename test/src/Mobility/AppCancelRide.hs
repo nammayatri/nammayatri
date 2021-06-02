@@ -42,8 +42,8 @@ spec = do
         statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
-        return . nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = getId $ AppCase._id productInstance
+        return . nonEmpty . filter (\p -> p ^. #organizationId == bppTransporterOrgId) $ productInstances statusRes
+      let productInstanceId = getId $ AppCase.id productInstance
       -- Confirm ride from app backend
       confirmResult <-
         runClient
@@ -64,10 +64,10 @@ spec = do
       orderPI :| [] <- poll $ do
         res <- runClient tbeClientEnv (buildOrgRideReq PI.CANCELLED Case.RIDEORDER)
         let Right piListRes = res
-        let tbePiList = TbePI._productInstance <$> piListRes
-        let tbeOrderPI = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+        let tbePiList = TbePI.productInstance <$> piListRes
+        let tbeOrderPI = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) tbePiList
         pure $ nonEmpty tbeOrderPI
-      orderPI ^. #_status `shouldBe` PI.CANCELLED
+      orderPI ^. #status `shouldBe` PI.CANCELLED
   where
-    productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
-    productInstances = AppCase._productInstance
+    productInstances :: AppCase.GetStatusRes -> [AppCase.ProdInstRes]
+    productInstances = AppCase.productInstance

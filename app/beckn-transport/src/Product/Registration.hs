@@ -10,7 +10,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Product.Person as Person
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
@@ -22,18 +22,18 @@ import qualified Utils.Notifications as Notify
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
   withFlowHandlerAPI $
-    case (req ^. #_medium, req ^. #__type) of
+    case (req ^. #medium, req ^. #__type) of
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
       _ -> throwError $ InvalidRequest "medium and type fields must be SMS and OTP"
 
 initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
-  let mobileNumber = req ^. #_mobileNumber
-      countryCode = req ^. #_mobileCountryCode
+  let mobileNumber = req ^. #mobileNumber
+      countryCode = req ^. #mobileCountryCode
   person <-
     QP.findByMobileNumber countryCode mobileNumber
       >>= maybe (createPerson req) clearOldRegToken
-  let entityId = getId . SP._id $ person
+  let entityId = getId . SP.id $ person
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   regToken <- case useFakeOtpM of
@@ -45,44 +45,44 @@ initiateFlow req smsCfg = do
       token <- makeSession scfg req entityId SR.USER Nothing
       QR.create token
       otpSmsTemplate <- otpSmsTemplate <$> ask
-      SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR._authValueHash token)
+      SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
       return token
-  let attempts = SR._attempts regToken
-      tokenId = SR._id regToken
+  let attempts = SR.attempts regToken
+      tokenId = SR.id regToken
   Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
 
 makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
-  let role = fromMaybe SP.USER (req ^. #_role)
+  let role = fromMaybe SP.USER (req ^. #role)
   pid <- BC.generateGUID
   now <- getCurrentTime
   return $
     SP.Person
-      { _id = pid,
-        _firstName = Nothing,
-        _middleName = Nothing,
-        _lastName = Nothing,
-        _fullName = Nothing,
-        _role = role,
-        _gender = SP.UNKNOWN,
-        _identifierType = SP.MOBILENUMBER,
-        _email = Nothing,
-        _passwordHash = Nothing,
-        _mobileNumber = Just $ req ^. #_mobileNumber,
-        _mobileCountryCode = Just $ req ^. #_mobileCountryCode,
-        _identifier = Nothing,
-        _rating = Nothing,
-        _verified = False,
-        _status = SP.INACTIVE,
-        _udf1 = Nothing,
-        _udf2 = Nothing,
-        _deviceToken = req ^. #_deviceToken,
-        _organizationId = Nothing,
-        _locationId = Nothing,
-        _description = Nothing,
-        _createdAt = now,
-        _updatedAt = now
+      { id = pid,
+        firstName = Nothing,
+        middleName = Nothing,
+        lastName = Nothing,
+        fullName = Nothing,
+        role = role,
+        gender = SP.UNKNOWN,
+        identifierType = SP.MOBILENUMBER,
+        email = Nothing,
+        passwordHash = Nothing,
+        mobileNumber = Just $ req ^. #mobileNumber,
+        mobileCountryCode = Just $ req ^. #mobileCountryCode,
+        identifier = Nothing,
+        rating = Nothing,
+        verified = False,
+        status = SP.INACTIVE,
+        udf1 = Nothing,
+        udf2 = Nothing,
+        deviceToken = req ^. #deviceToken,
+        organizationId = Nothing,
+        locationId = Nothing,
+        description = Nothing,
+        createdAt = now,
+        updatedAt = now
       }
 
 makeSession ::
@@ -94,41 +94,41 @@ makeSession SmsSessionConfig {..} req entityId entityType fakeOtp = do
   now <- getCurrentTime
   return $
     SR.RegistrationToken
-      { _id = rtid,
-        _token = token,
-        _attempts = attempts,
-        _authMedium = req ^. #_medium,
-        _authType = req ^. #__type,
-        _authValueHash = otp,
-        _verified = False,
-        _authExpiry = authExpiry,
-        _tokenExpiry = tokenExpiry,
-        _EntityId = entityId,
-        _entityType = entityType,
-        _createdAt = now,
-        _updatedAt = now,
-        _info = Nothing
+      { id = rtid,
+        token = token,
+        attempts = attempts,
+        authMedium = req ^. #medium,
+        authType = req ^. #__type,
+        authValueHash = otp,
+        verified = False,
+        authExpiry = authExpiry,
+        tokenExpiry = tokenExpiry,
+        entityId = entityId,
+        entityType = entityType,
+        createdAt = now,
+        updatedAt = now,
+        info = Nothing
       }
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandlerAPI $ do
     SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-    when _verified $ throwError $ AuthBlocked "Already verified."
-    checkForExpiry _authExpiry _updatedAt
+    when verified $ throwError $ AuthBlocked "Already verified."
+    checkForExpiry authExpiry updatedAt
     let isValid =
-          _authMedium == req ^. #_medium && _authType == req ^. #__type
-            && _authValueHash
+          authMedium == req ^. #medium && authType == req ^. #__type
+            && authValueHash
               == req
-              ^. #_hash
+              ^. #hash
     if isValid
       then do
-        person <- checkPersonExists _EntityId
+        person <- checkPersonExists entityId
         QR.updateVerified tokenId True
-        let deviceToken = (req ^. #_deviceToken) <|> (person ^. #_deviceToken)
-        QP.update (SP._id person) SP.ACTIVE True deviceToken
-        updatedPerson <- QP.findPersonById (SP._id person)
-        return $ LoginRes _token (Just $ SP.maskPerson updatedPerson)
+        let deviceToken = (req ^. #deviceToken) <|> (person ^. #deviceToken)
+        QP.update (SP.id person) SP.ACTIVE True deviceToken
+        updatedPerson <- QP.findPersonById (SP.id person)
+        return $ LoginRes token (Just $ SP.maskPerson updatedPerson)
       else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =
@@ -143,30 +143,30 @@ createPerson :: InitiateLoginReq -> Flow SP.Person
 createPerson req = do
   person <- makePerson req
   QP.create person
-  when (person ^. #_role == SP.DRIVER) $ Person.createDriverDetails (person ^. #_id)
+  when (person ^. #role == SP.DRIVER) $ Person.createDriverDetails (person ^. #id)
   pure person
 
 checkPersonExists :: Text -> Flow SP.Person
-checkPersonExists _EntityId =
-  QP.findPersonById (Id _EntityId)
+checkPersonExists entityId =
+  QP.findPersonById (Id entityId)
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =
   withFlowHandlerAPI $ do
     SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
-    void $ checkPersonExists _EntityId
-    if _attempts > 0
+    void $ checkPersonExists entityId
+    if attempts > 0
       then do
         smsCfg <- smsCfg <$> ask
         otpSmsTemplate <- otpSmsTemplate <$> ask
-        let mobileNumber = req ^. #_mobileNumber
-            countryCode = req ^. #_mobileCountryCode
-        SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) _authValueHash
-        _ <- QR.updateAttempts (_attempts - 1) _id
-        return $ InitiateLoginRes tokenId (_attempts - 1)
+        let mobileNumber = req ^. #mobileNumber
+            countryCode = req ^. #mobileCountryCode
+        SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
+        _ <- QR.updateAttempts (attempts - 1) id
+        return $ InitiateLoginRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Limit exceeded."
 
 clearOldRegToken :: SP.Person -> Flow SP.Person
 clearOldRegToken person = do
-  QR.deleteByEntitiyId $ getId $ person ^. #_id
+  QR.deleteByEntitiyId $ getId $ person ^. #id
   pure person

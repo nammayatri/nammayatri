@@ -7,30 +7,31 @@ import Beckn.Types.Core.Order (OrderItem)
 import Beckn.Types.Core.Payment
 import Beckn.Types.Mobility.Trip
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 
 data Order = Order
-  { _id :: Text,
-    _state :: Maybe Text,
-    _created_at :: UTCTime,
-    _updated_at :: UTCTime,
-    _items :: [OrderItem],
-    _billing :: Maybe Billing,
-    _payment :: Maybe Payment,
+  { id :: Text,
+    state :: Maybe Text,
+    created_at :: UTCTime,
+    updated_at :: UTCTime,
+    items :: [OrderItem],
+    billing :: Maybe Billing,
+    payment :: Maybe Payment,
     -- Mobility specific
-    _trip :: Maybe Trip,
-    _cancellation_reason_id :: Maybe Text,
-    _cancellation_reasons :: [Option],
-    _cancellation_policy :: Maybe CancelPolicy
+    trip :: Maybe Trip,
+    cancellation_reason_id :: Maybe Text,
+    cancellation_reasons :: [Option],
+    cancellation_policy :: Maybe CancelPolicy
   }
   deriving (Generic, Show)
 
 instance FromJSON Order where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Order where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data CancelPolicy = CancelPolicy
   { cancellation_fee :: MonetaryValue,
@@ -41,10 +42,10 @@ data CancelPolicy = CancelPolicy
   deriving (Generic, Show)
 
 instance FromJSON CancelPolicy where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON CancelPolicy where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example CancelPolicy where
   example =

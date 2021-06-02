@@ -53,7 +53,7 @@ runTransporterBackendApp' appCfg = do
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
-        let allShortIds = map (getShortId . Organization._shortId) allProviders
+        let allShortIds = map (getShortId . Organization.shortId) allProviders
         getManagers <-
           prepareAuthManagers flowRt appEnv allShortIds
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "

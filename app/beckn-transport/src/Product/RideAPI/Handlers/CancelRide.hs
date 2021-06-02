@@ -26,15 +26,15 @@ cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
   prodInst <- findPIById $ cast rideId
   unless (isValidPI prodInst) $ throwError $ PIInvalidStatus "This ride cannot be canceled"
   authPerson <- findPersonById $ Id authorizedEntityId
-  case authPerson ^. #_role of
+  case authPerson ^. #role of
     Person.ADMIN -> cancelRide rideId False
     Person.DRIVER -> do
-      driverId <- prodInst ^. #_personId & fromMaybeM (PIFieldNotPresent "person")
-      unless (authPerson ^. #_id == driverId) $ throwError NotAnExecutor
+      driverId <- prodInst ^. #personId & fromMaybeM (PIFieldNotPresent "person")
+      unless (authPerson ^. #id == driverId) $ throwError NotAnExecutor
       cancelRide rideId True
     _ -> throwError AccessDenied
   pure APISuccess.Success
   where
     isValidPI prodInst =
       prodInst ^. #_type == Case.RIDEORDER
-        && (prodInst ^. #_status) `elem` [CONFIRMED, TRIP_ASSIGNED, TRIP_REASSIGNMENT]
+        && (prodInst ^. #status) `elem` [CONFIRMED, TRIP_ASSIGNED, TRIP_REASSIGNMENT]

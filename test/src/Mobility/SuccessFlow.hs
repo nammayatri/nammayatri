@@ -53,11 +53,11 @@ spec = do
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
         -- since all BPP can give quote for now we filter by orgId
-        return $ nonEmpty . filter (\p -> p ^. #_organizationId == bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = getId $ AppCase._id productInstance
+        return $ nonEmpty . filter (\p -> p ^. #organizationId == bppTransporterOrgId) $ productInstances statusRes
+      let productInstanceId = getId $ AppCase.id productInstance
 
       -- check if calculated price is greater than 0
-      let (Just prodPrice) = productInstance ^. #_price
+      let (Just prodPrice) = productInstance ^. #price
       prodPrice `shouldSatisfy` (> 100) -- should at least be more than 100
 
       -- Confirm ride from app backend
@@ -74,10 +74,10 @@ spec = do
 
         -- Filter order productInstance
         let Right rideListRes = rideReqResult
-            tbePiList = TbePI._productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+            tbePiList = TbePI.productInstance <$> rideListRes
+            transporterOrdersPi = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
-      let transporterOrderPiId = PI._id transporterOrderPi
+      let transporterOrderPiId = PI.id transporterOrderPi
 
       rideInfo <- poll $ do
         res <-
@@ -102,16 +102,16 @@ spec = do
 
         -- Filter order productInstance
         let Right rideListRes = rideReqRes
-            tbePiList = TbePI._productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) tbePiList
+            tbePiList = TbePI.productInstance <$> rideListRes
+            transporterOrdersPi = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
-      tripAssignedPI ^. #_status `shouldBe` PI.TRIP_ASSIGNED
+      tripAssignedPI ^. #status `shouldBe` PI.TRIP_ASSIGNED
 
       -- Update RIDEORDER PI to INPROGRESS once driver starts his trip
       inProgressStatusResult <-
         runClient
           tbeClientEnv
-          (rideStart driverToken transporterOrderPiId (buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrderPi ^. #_udf4))
+          (rideStart driverToken transporterOrderPiId (buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrderPi ^. #udf4))
       inProgressStatusResult `shouldSatisfy` isRight
 
       inprogressPiListResult <- runClient appClientEnv (buildListPIs PI.INPROGRESS)
@@ -127,12 +127,12 @@ spec = do
           (rideEnd driverToken transporterOrderPiId)
       completedStatusResult `shouldSatisfy` isRight
   where
-    productInstances :: AppCase.StatusRes -> [AppCase.ProdInstRes]
-    productInstances = AppCase._productInstance
+    productInstances :: AppCase.GetStatusRes -> [AppCase.ProdInstRes]
+    productInstances = AppCase.productInstance
 
     checkPiInResult :: Either ClientError [AppPI.ProductInstanceRes] -> Text -> Expectation
     checkPiInResult piListResult productInstanceId =
       let Right piListRes = piListResult
-          appPiList = AppPI._productInstance <$> piListRes
-          appOrderPI = filter (\pI -> (getId <$> PI._parentId pI) == Just productInstanceId) appPiList
+          appPiList = AppPI.productInstance <$> piListRes
+          appOrderPI = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) appPiList
        in length appOrderPI `shouldBe` 1

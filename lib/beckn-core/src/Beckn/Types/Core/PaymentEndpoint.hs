@@ -2,48 +2,49 @@ module Beckn.Types.Core.PaymentEndpoint where
 
 import Beckn.Types.Core.Person
 import Beckn.Utils.Example
+import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data PaymentEndpoint = PaymentEndpoint
   { _type :: Text, -- "bank_account", "vpa", "person"
-    _bank_account :: Maybe BankAccount,
-    _vpa :: Maybe Text, -- Virtual Payment Address like a UPI address
-    _person :: Maybe Person
+    bank_account :: Maybe BankAccount,
+    vpa :: Maybe Text, -- Virtual Payment Address like a UPI address
+    person :: Maybe Person
   }
   deriving (Generic, Show)
 
 instance FromJSON PaymentEndpoint where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON PaymentEndpoint where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example PaymentEndpoint where
   example =
     PaymentEndpoint
       { _type = "vpa",
-        _bank_account = Nothing,
-        _vpa = Just "someone@virtualAdress",
-        _person = Nothing
+        bank_account = Nothing,
+        vpa = Just "someone@virtualAdress",
+        person = Nothing
       }
 
 data BankAccount = BankAccount
-  { _account_number :: Text,
-    _account_holder_name :: Text,
-    _ifsc_code :: Text
+  { account_number :: Text,
+    account_holder_name :: Text,
+    ifsc_code :: Text
   }
   deriving (Generic, Show)
 
 instance FromJSON BankAccount where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON BankAccount where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example BankAccount where
   example =
     BankAccount
-      { _account_number = "1234567890",
-        _account_holder_name = "account holder",
-        _ifsc_code = "sbi123456"
+      { account_number = "1234567890",
+        account_holder_name = "account holder",
+        ifsc_code = "sbi123456"
       }

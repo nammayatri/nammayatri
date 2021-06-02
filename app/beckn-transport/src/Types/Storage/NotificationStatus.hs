@@ -3,12 +3,13 @@
 module Types.Storage.NotificationStatus where
 
 import Beckn.Types.Id
+import Beckn.Utils.JSON
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Types.App
 
 data AnswerStatus = NOTIFIED | REJECTED | IGNORED
@@ -23,11 +24,11 @@ instance FromBackendRow Postgres AnswerStatus where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerStatus
 
 data NotificationStatusT f = NotificationStatus
-  { _id :: B.C f (Id NotificationStatus),
-    _rideId :: B.C f (Id Ride),
-    _driverId :: B.C f (Id Driver),
-    _status :: B.C f AnswerStatus,
-    _expiresAt :: B.C f UTCTime
+  { id :: B.C f (Id NotificationStatus),
+    rideId :: B.C f (Id Ride),
+    driverId :: B.C f (Id Driver),
+    status :: B.C f AnswerStatus,
+    expiresAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -38,13 +39,13 @@ type NotificationStatusPrimaryKey = B.PrimaryKey NotificationStatusT Identity
 instance B.Table NotificationStatusT where
   data PrimaryKey NotificationStatusT f = NotificationStatusPrimaryKey (B.C f (Id NotificationStatus))
     deriving (Generic, B.Beamable)
-  primaryKey = NotificationStatusPrimaryKey . _id
+  primaryKey = NotificationStatusPrimaryKey . id
 
 instance ToJSON NotificationStatus where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON NotificationStatus where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity NotificationStatusT)
@@ -52,7 +53,7 @@ fieldEMod =
   B.setEntityName "notification_status"
     <> B.modifyTableFields
       B.tableModification
-        { _rideId = "ride_id",
-          _driverId = "driver_id",
-          _expiresAt = "expires_at"
+        { rideId = "ride_id",
+          driverId = "driver_id",
+          expiresAt = "expires_at"
         }

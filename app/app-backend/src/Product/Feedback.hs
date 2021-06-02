@@ -30,35 +30,35 @@ feedback person request = withFlowHandlerAPI $ do
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let prodInstId = request ^. #productInstanceId
   product <- ProductInstance.findById $ Id prodInstId
-  order <- Case.findIdByPerson person $ product ^. #_caseId
-  let txnId = getId $ order ^. #_id
+  order <- Case.findIdByPerson person $ product ^. #caseId
+  let txnId = getId $ order ^. #id
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
-    Organization.findOrganizationById (Id $ product ^. #_organizationId)
+    Organization.findOrganizationById (Id $ product ^. #organizationId)
       >>= fromMaybeM OrgNotFound
   let feedbackMsg =
         Beckn.FeedbackReqMessage
           { order_id = prodInstId,
             rating =
               Beckn.Rating
-                { _value = show ratingValue,
-                  _unit = "U+2B50",
-                  _max_value = Just "5",
-                  _direction = Just "UP"
+                { value = show ratingValue,
+                  unit = "U+2B50",
+                  max_value = Just "5",
+                  direction = Just "UP"
                 },
             description =
               Beckn.Description
-                { _name = "Ride order rating",
-                  _code = "RIDE_ORDER_RATING",
-                  _symbol = Nothing,
-                  _short_desc = Nothing,
-                  _long_desc = Nothing,
-                  _images = [],
-                  _audio = Nothing,
+                { name = "Ride order rating",
+                  code = "RIDE_ORDER_RATING",
+                  symbol = Nothing,
+                  short_desc = Nothing,
+                  long_desc = Nothing,
+                  images = [],
+                  audio = Nothing,
                   _3d_render = Nothing
                 }
           }
-  gatewayUrl <- organization ^. #_callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  gatewayUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.feedback gatewayUrl (Beckn.FeedbackReq context feedbackMsg)
     >>= checkAckResponseError (ExternalAPIResponseError "feedback")
   return Success

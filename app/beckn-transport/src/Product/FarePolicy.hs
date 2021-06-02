@@ -21,22 +21,22 @@ import qualified Types.Storage.FarePolicy as SFarePolicy
 import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
 listFarePolicies :: RegToken.RegistrationToken -> FlowHandler ListFarePolicyResponse
-listFarePolicies RegToken.RegistrationToken {_EntityId} = withFlowHandlerAPI $ do
-  person <- SPerson.findPersonById (Id _EntityId)
-  orgId <- person ^. #_organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
+listFarePolicies RegToken.RegistrationToken {entityId} = withFlowHandlerAPI $ do
+  person <- SPerson.findPersonById (Id entityId)
+  orgId <- person ^. #organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   farePolicies <- SFarePolicy.findFarePoliciesByOrgId (Id orgId)
   pure $ ListFarePolicyResponse $ toResponse <$> farePolicies
   where
     toResponse fp =
       FarePolicyResponse
-        { id = fp ^. #_id,
-          vehicleVariant = fp ^. #_vehicleVariant,
-          baseFare = fp ^. #_baseFare,
-          baseDistance = fp ^. #_baseDistance,
-          perExtraKmRate = fp ^. #_perExtraKmRate,
-          nightShiftStart = fp ^. #_nightShiftStart,
-          nightShiftEnd = fp ^. #_nightShiftEnd,
-          nightShiftRate = fp ^. #_nightShiftRate
+        { id = fp ^. #id,
+          vehicleVariant = fp ^. #vehicleVariant,
+          baseFare = fp ^. #baseFare,
+          baseDistance = fp ^. #baseDistance,
+          perExtraKmRate = fp ^. #perExtraKmRate,
+          nightShiftStart = fp ^. #nightShiftStart,
+          nightShiftEnd = fp ^. #nightShiftEnd,
+          nightShiftRate = fp ^. #nightShiftRate
         }
 
 updateFarePolicy :: RegToken.RegistrationToken -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler UpdateFarePolicyResponse
@@ -44,12 +44,12 @@ updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
   farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM NoFarePolicy
   let updatedFarePolicy =
         farePolicy
-          { SFarePolicy._baseFare = req ^. #baseFare,
-            SFarePolicy._baseDistance = req ^. #baseDistance,
-            SFarePolicy._perExtraKmRate = req ^. #perExtraKmRate,
-            SFarePolicy._nightShiftStart = req ^. #nightShiftStart,
-            SFarePolicy._nightShiftEnd = req ^. #nightShiftEnd,
-            SFarePolicy._nightShiftRate = req ^. #nightShiftRate
+          { SFarePolicy.baseFare = req ^. #baseFare,
+            SFarePolicy.baseDistance = req ^. #baseDistance,
+            SFarePolicy.perExtraKmRate = req ^. #perExtraKmRate,
+            SFarePolicy.nightShiftStart = req ^. #nightShiftStart,
+            SFarePolicy.nightShiftEnd = req ^. #nightShiftEnd,
+            SFarePolicy.nightShiftRate = req ^. #nightShiftRate
           }
   _ <- SFarePolicy.updateFarePolicy updatedFarePolicy
   pure Success

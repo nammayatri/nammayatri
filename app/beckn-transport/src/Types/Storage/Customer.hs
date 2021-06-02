@@ -8,20 +8,21 @@ module Types.Storage.Customer where
 
 import Beckn.External.Encryption
 import Beckn.Types.Id
+import Beckn.Utils.JSON
 import Data.Aeson
 import Data.Swagger
 import Data.Time
 import qualified Database.Beam as B
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data CustomerTE e f = Customer
-  { _id :: B.C f (Id Customer),
-    _referenceId :: B.C f Text,
-    _name :: B.C f Text,
-    _mobileNumber :: EncryptedHashedField e f Text,
-    _info :: B.C f (Maybe Text),
-    _createdAt :: B.C f UTCTime,
-    _updatedAt :: B.C f UTCTime
+  { id :: B.C f (Id Customer),
+    referenceId :: B.C f Text,
+    name :: B.C f Text,
+    mobileNumber :: EncryptedHashedField e f Text,
+    info :: B.C f (Maybe Text),
+    createdAt :: B.C f UTCTime,
+    updatedAt :: B.C f UTCTime
   }
   deriving (Generic)
 
@@ -36,17 +37,17 @@ type CustomerPrimaryKey = B.PrimaryKey CustomerT Identity
 instance B.Table CustomerT where
   data PrimaryKey CustomerT f = CustomerPrimaryKey (B.C f (Id Customer))
     deriving (Generic, B.Beamable)
-  primaryKey = CustomerPrimaryKey . _id
+  primaryKey = CustomerPrimaryKey . id
 
 deriving instance Show Customer
 
 deriving instance Eq Customer
 
 instance ToJSON Customer where
-  toJSON = genericToJSON stripAllLensPrefixOptions
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Customer where
-  parseJSON = genericParseJSON stripAllLensPrefixOptions
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToSchema Customer
 
@@ -61,12 +62,12 @@ fieldEMod ::
 fieldEMod =
   B.modifyTableFields
     (B.tableModification @_ @CustomerT)
-      { _createdAt = "created_at",
-        _updatedAt = "updated_at",
-        _mobileNumber =
+      { createdAt = "created_at",
+        updatedAt = "updated_at",
+        mobileNumber =
           EncryptedHashed
-            { _encrypted = "mobile_number_encrypted",
-              _hash = "mobile_number_hash"
+            { encrypted = "mobile_number_encrypted",
+              hash = "mobile_number_hash"
             },
-        _referenceId = "reference_id"
+        referenceId = "reference_id"
       }

@@ -3,7 +3,7 @@ module Storage.Queries.Quotation where
 import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Data.Time (UTCTime)
@@ -15,7 +15,7 @@ import qualified Types.Storage.Quotation as Storage
 
 getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.QuotationT))
 getDbTable =
-  DB._quotation . DB.transporterDb <$> getSchemaName
+  DB.quotation . DB.transporterDb <$> getSchemaName
 
 create :: Storage.Quotation -> Flow ()
 create Storage.Quotation {..} = do
@@ -24,25 +24,25 @@ create Storage.Quotation {..} = do
 
 findQuotationById ::
   Id Storage.Quotation -> Flow (Maybe Storage.Quotation)
-findQuotationById id = do
+findQuotationById qid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Quotation {..} = _id ==. B.val_ id
+    predicate Storage.Quotation {..} = id ==. B.val_ qid
 
 listQuotations :: Maybe Int -> Maybe Int -> [Storage.Status] -> Flow [Storage.Quotation]
-listQuotations mlimit moffset status = do
+listQuotations mlimit moffset status_ = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    orderByDesc Storage.Quotation {..} = B.desc_ _createdAt
+    orderByDesc Storage.Quotation {..} = B.desc_ createdAt
     predicate Storage.Quotation {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ _status `B.in_` (B.val_ <$> status) ||. complementVal status
+        [ status `B.in_` (B.val_ <$> status_) ||. complementVal status_
         ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
@@ -54,17 +54,17 @@ update ::
   Id Storage.Quotation ->
   Storage.Status ->
   Flow ()
-update id status = do
+update qid status_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
-    (setClause status currTime)
-    (predicate id)
+    (setClause status_ currTime)
+    (predicate qid)
   where
-    predicate qid Storage.Quotation {..} = _id ==. B.val_ qid
+    predicate qid_ Storage.Quotation {..} = id ==. B.val_ qid_
     setClause scStatus currTime Storage.Quotation {..} =
       mconcat
-        [ _updatedAt <-. B.val_ currTime,
-          _status <-. B.val_ scStatus
+        [ updatedAt <-. B.val_ currTime,
+          status <-. B.val_ scStatus
         ]
