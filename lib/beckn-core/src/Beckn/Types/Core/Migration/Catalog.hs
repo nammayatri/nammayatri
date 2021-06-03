@@ -19,7 +19,7 @@ data Catalog = Catalog
     bpp_providers :: Maybe [Provider],
     exp :: Maybe UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 instance FromJSON Catalog where
   parseJSON = genericParseJSON slashedRecordFields
