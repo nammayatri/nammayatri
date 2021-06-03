@@ -13,8 +13,8 @@ import qualified EulerHS.Runtime as R
 type FlowR r = ReaderT r L.Flow
 
 instance Log (FlowR r) where
-  logOutput = logOutput'
-  withLogTag = withLogTag'
+  logOutput = logOutputImplementation
+  withLogTag = withLogTagImplementation
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
 runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
