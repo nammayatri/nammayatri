@@ -35,7 +35,7 @@ initiateFlow req smsCfg = do
       countryCode = req ^. #mobileCountryCode
   person <-
     Person.findByRoleAndMobileNumber SP.USER countryCode mobileNumber
-      >>= maybe (createPerson req) clearOldRegToken
+      >>= maybe (createPerson req) return
   let entityId = getId . SP.id $ person
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -130,6 +130,7 @@ login tokenId req =
     if isValid
       then do
         person <- checkPersonExists entityId
+        clearOldRegToken person $ Id tokenId
         let personId = person ^. #id
             updatedPerson =
               person
@@ -178,10 +179,9 @@ reInitiateLogin tokenId req =
         return $ InitiateLoginRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Attempts limit exceed."
 
-clearOldRegToken :: SP.Person -> Flow SP.Person
-clearOldRegToken person = do
-  DB.runSqlDB (RegistrationToken.deleteByPersonId $ getId $ person ^. #id)
-  pure person
+clearOldRegToken :: SP.Person -> Id SR.RegistrationToken -> Flow ()
+clearOldRegToken person newRT = do
+  RegistrationToken.deleteByPersonIdExceptNew (getId $ person ^. #id) newRT
 
 logout :: SP.Person -> FlowHandler APISuccess
 logout person = withFlowHandlerAPI $ do

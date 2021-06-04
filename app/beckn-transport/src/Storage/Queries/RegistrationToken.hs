@@ -7,6 +7,7 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
 import Database.Beam ((<-.), (==.))
@@ -76,3 +77,12 @@ deleteByEntitiyId id_ = do
   DB.delete' dbTable (predicate id_)
   where
     predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid
+
+deleteByEntitiyIdExceptNew :: Text -> Id Storage.RegistrationToken -> Flow ()
+deleteByEntitiyIdExceptNew id_ (Id newRT) = do
+  dbTable <- getDbTable
+  DB.delete dbTable (predicate id_ newRT)
+  where
+    predicate rtid newRTId Storage.RegistrationToken {..} =
+      entityId ==. B.val_ rtid
+        B.&&. B.not_ (id B.==. B.val_ newRTId)

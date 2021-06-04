@@ -35,7 +35,7 @@ initiateFlow req smsCfg = do
       countryCode = req ^. #mobileCountryCode
   person <-
     QP.findByMobileNumber countryCode mobileNumber
-      >>= maybe (createPerson req) clearOldRegToken
+      >>= maybe (createPerson req) return
   let entityId = getId . SP.id $ person
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -127,6 +127,7 @@ login tokenId req =
     if isValid
       then do
         person <- checkPersonExists entityId
+        clearOldRegToken person $ Id tokenId
         QR.updateVerified tokenId True
         let deviceToken = (req ^. #deviceToken) <|> (person ^. #deviceToken)
         QP.update (SP.id person) SP.ACTIVE True deviceToken
@@ -169,10 +170,9 @@ reInitiateLogin tokenId req =
         return $ InitiateLoginRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Limit exceeded."
 
-clearOldRegToken :: SP.Person -> Flow SP.Person
-clearOldRegToken person = do
-  DB.runSqlDB (QR.deleteByEntitiyId $ getId $ person ^. #id)
-  pure person
+clearOldRegToken :: SP.Person -> Id SR.RegistrationToken -> Flow ()
+clearOldRegToken person newRTId = do
+  QR.deleteByEntitiyIdExceptNew (getId $ person ^. #id) newRTId
 
 logout :: SR.RegistrationToken -> FlowHandler APISuccess
 logout SR.RegistrationToken {..} = withFlowHandlerAPI $ do
