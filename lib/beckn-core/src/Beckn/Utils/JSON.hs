@@ -57,7 +57,9 @@ objectWithSingleFieldParsing constructorMapping =
 stripPrefixUnderscoreIfAny :: Options
 stripPrefixUnderscoreIfAny =
   defaultOptions
-    { fieldLabelModifier = \case
-        ('_' : xs) -> xs
-        a -> a
+    { fieldLabelModifier = recursiveStrip
     }
+  where
+    recursiveStrip = \case
+      ('_' : xs) -> recursiveStrip xs
+      a -> a
