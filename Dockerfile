@@ -1,3 +1,4 @@
+ARG NS=701342709052.dkr.ecr.ap-southeast-1.amazonaws.com
 ARG DEP_IMAGE=beckn
 ARG DEP_LABEL=master
 
