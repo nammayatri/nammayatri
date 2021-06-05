@@ -1,9 +1,13 @@
-NS ?= asia.gcr.io/jp-k8s-internal
-VERSION ?= latest
+PROD_AWS_REGION := ap-south-1
+PROD_AWS_ACCOUNT_ID := 147728078333
+
+SANDBOX_AWS_REGION := ap-southeast-1
+SANDBOX_AWS_ACCOUNT_ID := 701342709052
 
 IMAGE_NAME ?= beckn-uat
 
 SOURCE_COMMIT := $(shell git rev-parse HEAD)
+VERSION := $(shell git rev-parse --short HEAD)
 
 DEP_IMAGE ?= beckn
 
@@ -23,12 +27,19 @@ else
   DEP_LABEL := $(CHANGE_TARGET)
 endif
 
-# For production builds, use "beckn" as image name
-ifeq ($(BRANCH_NAME), production)
-  IMAGE_NAME := beckn
+IMAGE_REPO ?= SANDBOX
+
+ifeq ($(IMAGE_REPO), PRODUCTION)
+	AWS_REGION := $(PROD_AWS_REGION)
+	AWS_ACCOUNT_ID := $(PROD_AWS_ACCOUNT_ID)
+else
+	AWS_REGION := $(SANDBOX_AWS_REGION)
+	AWS_ACCOUNT_ID := $(SANDBOX_AWS_ACCOUNT_ID)
 endif
 
-.PHONY: build-dep push-dep build push aws-auth
+NS := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
+
+.PHONY: build-dep push-dep build push
 
 build-dep: Dockerfile.dep
 	$(info Building $(DEP_IMAGE):$(DEP_LABEL) / git-head: $(SOURCE_COMMIT))
@@ -36,6 +47,7 @@ build-dep: Dockerfile.dep
 	docker build -t $(DEP_IMAGE):$(DEP_LABEL) -f Dockerfile.dep .
 
 push-dep: Dockerfile.dep
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 	docker tag $(DEP_IMAGE):$(DEP_LABEL) $(NS)/$(DEP_IMAGE):$(DEP_LABEL)
 	docker push $(NS)/$(DEP_IMAGE):$(DEP_LABEL)
 
@@ -45,13 +57,6 @@ build: Dockerfile
 	docker build -t $(IMAGE_NAME):$(VERSION) -f Dockerfile --build-arg "NS=$(NS)" --build-arg "DEP_LABEL=$(DEP_LABEL)" --build-arg "DEP_IMAGE=$(DEP_IMAGE)" --build-arg "BUILD_ARGS=$(BUILD_ARGS)" .
 
 push:
+	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 	docker tag $(IMAGE_NAME):$(VERSION) $(NS)/$(IMAGE_NAME):$(VERSION)
 	docker push $(NS)/$(IMAGE_NAME):$(VERSION)
-
-default: build
-
-AWS_REGION := ap-south-1
-AWS_ACCOUNT_ID := 147728078333
-
-aws-auth:
-	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com 

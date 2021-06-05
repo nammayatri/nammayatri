@@ -31,9 +31,8 @@ pipeline {
 
       steps {
         sh 'make build-dep'
-        sh 'make push-dep'
-        sh 'make aws-auth && \
-            make push-dep -e VERSION=$(git rev-parse --short HEAD) -e NS="147728078333.dkr.ecr.ap-south-1.amazonaws.com"'
+        sh 'make push-dep -e IMAGE_REPO=SANDBOX'
+        sh 'make push-dep -e IMAGE_REPO=PRODUCTION'
       }
     }
 
@@ -50,7 +49,7 @@ pipeline {
       stages {
         stage('Docker build') {
           steps {
-            sh 'make build -e VERSION=$(git rev-parse --short HEAD)'
+            sh 'make build'
           }
         }
 
@@ -67,9 +66,8 @@ pipeline {
 
             stage('Docker push') {
               steps {
-                sh 'make push -e VERSION=$(git rev-parse --short HEAD)'
-                sh 'make aws-auth && \
-                    make push -e VERSION=$(git rev-parse --short HEAD) -e NS="147728078333.dkr.ecr.ap-south-1.amazonaws.com"'
+                sh 'make push -e IMAGE_REPO=SANDBOX'
+                sh 'make push -e IMAGE_REPO=PRODUCTION'
               }
             }
 
@@ -91,12 +89,12 @@ pipeline {
                   ) > deployment-configs/sandbox/beckn-dhall-config.yaml
                 '''
                 kubernetesDeploy(
-                      kubeconfigId: 'eks-user-staging',
+                      kubeconfigId: 'jenkins-baby-hulk-deployer',
                       configs: 'deployment-configs/sandbox/beckn-dhall-config.yaml',
                       enableConfigSubstitution: true
                     )
                 kubernetesDeploy(
-                      kubeconfigId: 'eks-user-staging',
+                      kubeconfigId: 'jenkins-baby-hulk-deployer',
                       configs: 'deployment-configs/sandbox/*deploy.yaml',
                       enableConfigSubstitution: true
                     )
@@ -107,7 +105,7 @@ pipeline {
               when { branch "master" }
               steps {
                 kubernetesDeploy(
-                      kubeconfigId: 'eks-user-staging',
+                      kubeconfigId: 'jenkins-baby-hulk-deployer',
                       configs: 'deployment-configs/sandbox/*deploy.yaml',
                       enableConfigSubstitution: true
                     )
@@ -118,22 +116,22 @@ pipeline {
               when { branch "sandbox" }
               steps {
                 kubernetesDeploy(
-                      kubeconfigId: 'eks-user-staging',
+                      kubeconfigId: 'jenkins-baby-hulk-deployer',
                       configs: 'deployment-configs/sandbox/app-backend-deploy.yaml',
                       enableConfigSubstitution: true
                     )
                 kubernetesDeploy(
-                      kubeconfigId: 'eks-user-staging',
+                      kubeconfigId: 'jenkins-baby-hulk-deployer',
                       configs: 'deployment-configs/sandbox/beckn-gateway-deploy.yaml',
                       enableConfigSubstitution: true
                     )
                 kubernetesDeploy(
-                      kubeconfigId: 'eks-user-staging',
+                      kubeconfigId: 'jenkins-baby-hulk-deployer',
                       configs: 'deployment-configs/sandbox/beckn-transport-deploy.yaml',
                       enableConfigSubstitution: true
                     )
                 kubernetesDeploy(
-                      kubeconfigId: 'eks-user-staging',
+                      kubeconfigId: 'jenkins-baby-hulk-deployer',
                       configs: 'deployment-configs/sandbox/beckn-transport-allocation-service-deploy.yaml',
                       enableConfigSubstitution: true
                     )
