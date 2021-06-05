@@ -15,7 +15,6 @@ data AuthError
   | InvalidAuthData
   | TokenExpired
   | TokenNotFound Text
-  | TokenAlreadyExists
   | InvalidToken Text
   | AuthBlocked Text
   | IncorrectOTP
@@ -30,7 +29,6 @@ instance IsAPIError AuthError where
     InvalidAuthData -> "INVALID_AUTH_DATA"
     TokenExpired -> "TOKEN_EXPIRED"
     TokenNotFound _ -> "TOKEN_NOT_FOUND"
-    TokenAlreadyExists -> "TOKEN_ALREADY_EXISTS"
     InvalidToken _ -> "INVALID_TOKEN"
     AuthBlocked _ -> "AUTH_BLOCKED"
     IncorrectOTP -> "INCORRECT_OTP"
@@ -45,7 +43,6 @@ instance IsAPIError AuthError where
     Unauthorized -> E401
     InvalidToken _ -> E401
     AccessDenied -> E403
-    TokenAlreadyExists -> E403
     _ -> E400
 
 data HeaderError
