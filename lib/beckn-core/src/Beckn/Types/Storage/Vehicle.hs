@@ -112,6 +112,8 @@ type Vehicle = VehicleT Identity
 
 type VehiclePrimaryKey = B.PrimaryKey VehicleT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table VehicleT where
   data PrimaryKey VehicleT f = VehiclePrimaryKey (B.C f (Id Vehicle))
     deriving (Generic, B.Beamable)

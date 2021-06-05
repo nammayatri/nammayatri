@@ -50,6 +50,8 @@ type Inventory = InventoryT Identity
 
 type InventoryPrimaryKey = B.PrimaryKey InventoryT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table InventoryT where
   data PrimaryKey InventoryT f = InventoryPrimaryKey (B.C f (Id Inventory))
     deriving (Generic, B.Beamable)

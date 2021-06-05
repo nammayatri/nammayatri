@@ -24,6 +24,8 @@ type Rating = RatingT Identity
 
 type RatingPrimaryId = B.PrimaryKey RatingT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table RatingT where
   data PrimaryKey RatingT f = RatingPrimaryKey (B.C f (Id Rating))
     deriving (Generic, B.Beamable)

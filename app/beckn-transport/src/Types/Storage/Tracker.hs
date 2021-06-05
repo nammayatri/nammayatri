@@ -50,6 +50,8 @@ type Tracker = TrackerT Identity
 
 type TrackerPrimaryKey = B.PrimaryKey TrackerT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table TrackerT where
   data PrimaryKey TrackerT f = TrackerPrimaryKey (B.C f (Id Tracker))
     deriving (Generic, B.Beamable)

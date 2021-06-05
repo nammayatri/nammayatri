@@ -137,6 +137,8 @@ type Case = CaseT Identity
 
 type CasePrimaryKey = B.PrimaryKey CaseT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table CaseT where
   data PrimaryKey CaseT f = CasePrimaryKey (B.C f (Id Case))
     deriving (Generic, B.Beamable)

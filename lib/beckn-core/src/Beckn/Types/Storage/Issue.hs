@@ -24,6 +24,8 @@ type Issue = IssueT Identity
 
 type IssuePrimaryKey = B.PrimaryKey IssueT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table IssueT where
   data PrimaryKey IssueT f = IssuePrimaryKey (B.C f (Id Issue))
     deriving (Generic, B.Beamable)

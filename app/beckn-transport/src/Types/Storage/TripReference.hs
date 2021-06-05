@@ -52,6 +52,8 @@ type TripReference = TripReferenceT Identity
 
 type TripReferencePrimaryKey = B.PrimaryKey TripReferenceT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table TripReferenceT where
   data PrimaryKey TripReferenceT f = TripReferencePrimaryKey (B.C f (Id TripReference))
     deriving (Generic, B.Beamable)

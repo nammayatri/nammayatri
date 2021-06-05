@@ -16,6 +16,8 @@ type Geometry = GeometryT Identity
 
 type GeometryPrimaryKey = B.PrimaryKey GeometryT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table GeometryT where
   data PrimaryKey GeometryT f = GeometryPrimaryKey (B.C f Int)
     deriving (Generic, B.Beamable)

@@ -22,6 +22,8 @@ type TransporterConfig = TransporterConfigT Identity
 
 type TransporterConfigPrimaryKey = B.PrimaryKey TransporterConfigT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table TransporterConfigT where
   data PrimaryKey TransporterConfigT f = TransporterConfigPrimaryKey (B.C f (Id TransporterParameter))
     deriving (Generic, B.Beamable)

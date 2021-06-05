@@ -103,6 +103,8 @@ type ProductInstance = ProductInstanceT Identity
 
 type ProductInstancePrimaryKey = B.PrimaryKey ProductInstanceT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table ProductInstanceT where
   data PrimaryKey ProductInstanceT f = ProductInstancePrimaryKey (B.C f (Id ProductInstance))
     deriving (Generic, B.Beamable)

@@ -42,6 +42,8 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be AllocationEventType
 
 type AllocationEventPrimaryKey = B.PrimaryKey AllocationEventT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table AllocationEventT where
   data PrimaryKey AllocationEventT f = AllocationEventPrimaryKey (B.C f (Id AllocationEvent))
     deriving (Generic, B.Beamable)

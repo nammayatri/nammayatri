@@ -123,6 +123,8 @@ type Organization = OrganizationT Identity
 
 type OrganizationPrimaryKey = B.PrimaryKey OrganizationT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table OrganizationT where
   data PrimaryKey OrganizationT f = OrganizationPrimaryKey (B.C f (Id Organization))
     deriving (Generic, B.Beamable)

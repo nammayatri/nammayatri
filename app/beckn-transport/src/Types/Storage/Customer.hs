@@ -34,6 +34,8 @@ instance B.Beamable CustomerT
 
 type CustomerPrimaryKey = B.PrimaryKey CustomerT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table CustomerT where
   data PrimaryKey CustomerT f = CustomerPrimaryKey (B.C f (Id Customer))
     deriving (Generic, B.Beamable)

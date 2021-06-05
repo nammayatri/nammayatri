@@ -150,6 +150,8 @@ instance B.Beamable PersonT
 
 type PersonPrimaryKey = B.PrimaryKey PersonT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table PersonT where
   data PrimaryKey PersonT f = PersonPrimaryKey (B.C f (Id Person))
     deriving (Generic, B.Beamable)

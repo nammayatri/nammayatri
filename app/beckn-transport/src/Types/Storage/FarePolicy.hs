@@ -32,6 +32,8 @@ type FarePolicy = FarePolicyT Identity
 
 type FarePolicyPrimaryKey = B.PrimaryKey FarePolicyT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table FarePolicyT where
   data PrimaryKey FarePolicyT f = FarePolicyPrimaryKey (B.C f (Id D.FarePolicy))
     deriving (Generic, B.Beamable)

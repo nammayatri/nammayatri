@@ -32,6 +32,8 @@ type Leads = LeadsT Identity
 
 type LeadsPrimaryKey = B.PrimaryKey LeadsT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table LeadsT where
   data PrimaryKey LeadsT f = LeadsPrimaryKey (B.C f (Id Leads))
     deriving (Generic, B.Beamable)

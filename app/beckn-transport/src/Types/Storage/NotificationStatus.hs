@@ -36,6 +36,8 @@ type NotificationStatus = NotificationStatusT Identity
 
 type NotificationStatusPrimaryKey = B.PrimaryKey NotificationStatusT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table NotificationStatusT where
   data PrimaryKey NotificationStatusT f = NotificationStatusPrimaryKey (B.C f (Id NotificationStatus))
     deriving (Generic, B.Beamable)

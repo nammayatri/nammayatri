@@ -69,6 +69,8 @@ type RegistrationToken = RegistrationTokenT Identity
 
 type RegistrationTokenPrimaryKey = B.PrimaryKey RegistrationTokenT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table RegistrationTokenT where
   data PrimaryKey RegistrationTokenT f = RegistrationTokenPrimaryKey (B.C f Text)
     deriving (Generic, B.Beamable)

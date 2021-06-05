@@ -49,6 +49,8 @@ type Quotation = QuotationT Identity
 
 type QuotationPrimaryKey = B.PrimaryKey QuotationT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table QuotationT where
   data PrimaryKey QuotationT f = QuotationPrimaryKey (B.C f (Id Quotation))
     deriving (Generic, B.Beamable)

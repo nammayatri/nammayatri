@@ -61,6 +61,8 @@ type Location = LocationT Identity
 
 type LocationPrimaryKey = B.PrimaryKey LocationT Identity
 
+{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
+
 instance B.Table LocationT where
   data PrimaryKey LocationT f = LocationPrimaryKey (B.C f (Id Location))
     deriving (Generic, B.Beamable)
