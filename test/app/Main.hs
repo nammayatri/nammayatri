@@ -62,8 +62,8 @@ specs = do
       [ TransporterBGTM.runBackgroundTaskManager $ \cfg ->
           cfg & #appCfg . #loggerConfig . #logToConsole .~ False
             & #appCfg . #loggerConfig . #logRawSql .~ False
-            & #driverAllocationConfig . #driverNotificationExpiry .~ 18
-            & #driverAllocationConfig . #rideAllocationExpiry .~ 18,
+            & #driverNotificationExpiry .~ 18
+            & #rideAllocationExpiry .~ 18,
         Gateway.runGateway $ \cfg ->
           cfg & #loggerConfig . #logToConsole .~ False
             & #loggerConfig . #logRawSql .~ False,

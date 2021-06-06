@@ -4,6 +4,7 @@ module Services.Allocation.Allocation where
 
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Storage.Organization
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
@@ -68,7 +69,7 @@ data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,
     getConfiguredNotificationTime :: m NominalDiffTime,
     getConfiguredAllocationTime :: m NominalDiffTime,
-    getRequests :: Integer -> m [RideRequest],
+    getRequests :: ShortId Organization -> Integer -> m [RideRequest],
     getDriverPool :: Id Ride -> m [Id Driver],
     getCurrentNotification :: Id Ride -> m (Maybe CurrentNotification),
     sendNewRideNotification :: Id Ride -> Id Driver -> m (),
@@ -84,17 +85,17 @@ data ServiceHandle m = ServiceHandle
     assignDriver :: Id Ride -> Id Driver -> m (),
     cancelRide :: Id Ride -> m (),
     cleanupNotifications :: Id Ride -> m (),
-    addAllocationRequest :: Id Ride -> m (),
+    addAllocationRequest :: ShortId Organization -> Id Ride -> m (),
     getRideInfo :: Id Ride -> m RideInfo,
     removeRequest :: Id SRR.RideRequest -> m (),
     logEvent :: AllocationEventType -> Id Ride -> m (),
     metricsHandle :: MetricsHandle m
   }
 
-process :: MonadHandler m => ServiceHandle m -> Integer -> m Int
-process handle@ServiceHandle {..} requestsNum = do
+process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer -> m Int
+process handle@ServiceHandle {..} shortOrgId requestsNum = do
   getRequestsStartTime <- getCurrentTime
-  rides <- getRequests requestsNum
+  rides <- getRequests shortOrgId requestsNum
   let ridesNum = length rides
   unless (ridesNum == 0) $
     withLogTag "Allocation service" $ do
@@ -103,15 +104,15 @@ process handle@ServiceHandle {..} requestsNum = do
       logInfo $ show getRequestsTime <> " time spent for getRequests"
 
       reqsHandlingStartTime <- getCurrentTime
-      traverse_ (processRequest handle) rides
+      traverse_ (processRequest handle shortOrgId) rides
       reqsHandlingEndTime <- getCurrentTime
       let reqsHandlingTime = diffUTCTime reqsHandlingEndTime reqsHandlingStartTime
       logInfo $
         "Handled " <> show ridesNum <> " ride requests for " <> show reqsHandlingTime
   pure ridesNum
 
-processRequest :: MonadHandler m => ServiceHandle m -> RideRequest -> m ()
-processRequest handle@ServiceHandle {..} rideRequest = do
+processRequest :: MonadHandler m => ServiceHandle m -> ShortId Organization -> RideRequest -> m ()
+processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
   incrementTaskCounter metricsHandle
   processStartTime <- getCurrentTime
   let requestId = rideRequest ^. #requestId
@@ -124,7 +125,7 @@ processRequest handle@ServiceHandle {..} rideRequest = do
       case rideRequest ^. #requestData of
         Allocation ->
           case rideStatus of
-            Confirmed -> processAllocation handle rideInfo
+            Confirmed -> processAllocation handle shortOrgId rideInfo
             Cancelled -> logInfo "Ride is cancelled, allocation request skipped"
             _ ->
               logWarning $ "Ride status is " <> show rideStatus <> ", allocation request skipped"
@@ -147,8 +148,13 @@ processRequest handle@ServiceHandle {..} rideRequest = do
   processEndTime <- getCurrentTime
   putTaskDuration metricsHandle . realToFrac $ diffUTCTime processEndTime processStartTime
 
-processAllocation :: MonadHandler m => ServiceHandle m -> RideInfo -> m ()
-processAllocation handle@ServiceHandle {..} rideInfo = do
+processAllocation ::
+  MonadHandler m =>
+  ServiceHandle m ->
+  ShortId Organization ->
+  RideInfo ->
+  m ()
+processAllocation handle@ServiceHandle {..} shortOrgId rideInfo = do
   let rideId = rideInfo ^. #rideId
   let orderTime = rideInfo ^. #orderTime
   allocationTimeFinished <- isAllocationTimeFinished handle orderTime
@@ -162,55 +168,70 @@ processAllocation handle@ServiceHandle {..} rideInfo = do
       logInfo $ "getCurrentNotification " <> show mCurrentNotification
       case mCurrentNotification of
         Just currentNotification ->
-          processCurrentNotification handle rideId currentNotification
+          processCurrentNotification handle shortOrgId rideId currentNotification
         Nothing ->
-          proceedToNextDriver handle rideId
+          proceedToNextDriver handle rideId shortOrgId
 
 processCurrentNotification ::
   MonadHandler m =>
   ServiceHandle m ->
+  ShortId Organization ->
   Id Ride ->
   CurrentNotification ->
   m ()
 processCurrentNotification
   handle@ServiceHandle {..}
+  shortOrgId
   rideId
-  (CurrentNotification driverId expiryTime) = do
-    notificationTimeFinished <- isNotificationTimeFinished handle expiryTime
-    logInfo $ "isNotificationTimeFinished " <> show notificationTimeFinished
-    if notificationTimeFinished
-      then do
-        logInfo $ "Notified ride not assigned to driver " <> getId driverId
-        sendRideNotAssignedNotification rideId driverId
-        processRejection handle True rideId driverId
-      else do
-        mResponse <- getDriverResponse rideId driverId
-        logInfo $ "getDriverResponse " <> show mResponse
-        case mResponse of
-          Just driverResponse ->
-            case driverResponse ^. #status of
-              DriverResponse.ACCEPT -> do
-                logInfo $ "assigning driver" <> show driverId
-                assignDriver rideId driverId
-                cleanupNotifications rideId
-                logEvent AcceptedByDriver rideId
-              DriverResponse.REJECT ->
-                processRejection handle False rideId driverId
-          Nothing ->
-            checkRideLater handle rideId
+  (CurrentNotification driverId expiryTime) =
+    do
+      notificationTimeFinished <- isNotificationTimeFinished handle expiryTime
+      logInfo $ "isNotificationTimeFinished " <> show notificationTimeFinished
+      if notificationTimeFinished
+        then do
+          logInfo $ "Notified ride not assigned to driver " <> getId driverId
+          sendRideNotAssignedNotification rideId driverId
+          processRejection handle True rideId driverId shortOrgId
+        else do
+          mResponse <- getDriverResponse rideId driverId
+          logInfo $ "getDriverResponse " <> show mResponse
+          case mResponse of
+            Just driverResponse ->
+              case driverResponse ^. #status of
+                DriverResponse.ACCEPT -> do
+                  logInfo $ "assigning driver" <> show driverId
+                  assignDriver rideId driverId
+                  cleanupNotifications rideId
+                  logEvent AcceptedByDriver rideId
+                DriverResponse.REJECT ->
+                  processRejection handle False rideId driverId shortOrgId
+            Nothing ->
+              checkRideLater handle shortOrgId rideId
 
-processRejection :: MonadHandler m => ServiceHandle m -> Bool -> Id Ride -> Id Driver -> m ()
-processRejection handle@ServiceHandle {..} ignored rideId driverId = do
+processRejection ::
+  MonadHandler m =>
+  ServiceHandle m ->
+  Bool ->
+  Id Ride ->
+  Id Driver ->
+  ShortId Organization ->
+  m ()
+processRejection handle@ServiceHandle {..} ignored rideId driverId shortOrgId = do
   logInfo "processing rejection"
   let status = if ignored then Ignored else Rejected
   let event = if ignored then IgnoredByDriver else RejectedByDriver
   resetLastRejectionTime driverId
   updateNotificationStatus rideId driverId status
   logEvent event rideId
-  proceedToNextDriver handle rideId
+  proceedToNextDriver handle rideId shortOrgId
 
-proceedToNextDriver :: MonadHandler m => ServiceHandle m -> Id Ride -> m ()
-proceedToNextDriver handle@ServiceHandle {..} rideId = do
+proceedToNextDriver ::
+  MonadHandler m =>
+  ServiceHandle m ->
+  Id Ride ->
+  ShortId Organization ->
+  m ()
+proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
   logInfo "proceed to next driver"
   driverPool <- getDriverPool rideId
   logInfo $ "DriverPool " <> T.intercalate ", " (getId <$> driverPool)
@@ -227,11 +248,17 @@ proceedToNextDriver handle@ServiceHandle {..} rideId = do
               && driver `notElem` driversWithNotification
 
       let filteredPool = filter canNotify driverPool
-      processFilteredPool handle rideId filteredPool
+      processFilteredPool handle rideId filteredPool shortOrgId
     [] -> cancel handle rideId
 
-processFilteredPool :: MonadHandler m => ServiceHandle m -> Id Ride -> [Id Driver] -> m ()
-processFilteredPool handle@ServiceHandle {..} rideId driverPool = do
+processFilteredPool ::
+  MonadHandler m =>
+  ServiceHandle m ->
+  Id Ride ->
+  [Id Driver] ->
+  ShortId Organization ->
+  m ()
+processFilteredPool handle@ServiceHandle {..} rideId driverPool shortOrgId = do
   case driverPool of
     driverId : driverIds -> do
       sortMode <- getDriverSortMode
@@ -246,14 +273,14 @@ processFilteredPool handle@ServiceHandle {..} rideId driverPool = do
       addNotificationStatus rideId firstDriver expiryTime
       logInfo $ "Notified driver " <> getId firstDriver
       logEvent NotificationSent rideId
-      checkRideLater handle rideId
+      checkRideLater handle shortOrgId rideId
     [] -> do
       cancel handle rideId
       logEvent EmptyDriverPool rideId
 
-checkRideLater :: MonadHandler m => ServiceHandle m -> Id Ride -> m ()
-checkRideLater ServiceHandle {..} rideId = do
-  addAllocationRequest rideId
+checkRideLater :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Id Ride -> m ()
+checkRideLater ServiceHandle {..} shortOrgId rideId = do
+  addAllocationRequest shortOrgId rideId
   logInfo "Check ride later"
 
 cancel :: MonadHandler m => ServiceHandle m -> Id Ride -> m ()

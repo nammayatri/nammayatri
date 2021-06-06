@@ -1,7 +1,8 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module App.BackgroundTaskManager.Types
   ( BTMCfg (),
     BTMEnv (..),
-    DriverAllocationConfig (..),
     Env,
     Flow,
     FlowHandler,
@@ -16,37 +17,45 @@ import App.Types as App (AppCfg, AppEnv (..))
 import qualified App.Types as App
 import Beckn.Types.App (EnvR, FlowHandlerR, FlowServerR)
 import Beckn.Types.Common
+import Beckn.Types.Id
+import Beckn.Types.Storage.Organization
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.SignatureAuth
+import qualified Data.Map as Map
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import Types.App (SortMode)
 import Types.Metrics
+import Types.Shard
 
 data BTMCfg = BTMCfg
   { appCfg :: App.AppCfg,
     metricsPort :: Int,
-    driverAllocationConfig :: DriverAllocationConfig
+    driverNotificationExpiry :: NominalDiffTime,
+    rideAllocationExpiry :: NominalDiffTime,
+    defaultSortMode :: SortMode,
+    requestsNumPerIteration :: Integer,
+    processDelay :: NominalDiffTime,
+    shards :: [Shard]
   }
   deriving (Generic, FromDhall)
 
 data BTMEnv = BTMEnv
   { appEnv :: App.AppEnv,
-    driverAllocationConfig :: DriverAllocationConfig,
+    driverNotificationExpiry :: NominalDiffTime,
+    rideAllocationExpiry :: NominalDiffTime,
+    defaultSortMode :: SortMode,
+    requestsNumPerIteration :: Integer,
+    processDelay :: NominalDiffTime,
+    shards :: Map Int (ShortId Organization),
     metricsBTMTaskCounter :: TaskCounterMetric,
     metricsBTMTaskDuration :: TaskDurationMetric,
     metricsBTMFailedTaskCounter :: FailedTaskCounterMetric
   }
   deriving (Generic)
 
-data DriverAllocationConfig = DriverAllocationConfig
-  { driverNotificationExpiry :: NominalDiffTime,
-    rideAllocationExpiry :: NominalDiffTime,
-    defaultSortMode :: SortMode,
-    requestsNumPerIteration :: Integer,
-    processDelay :: NominalDiffTime
-  }
-  deriving (Generic, FromDhall)
+shardToPair :: Shard -> (Int, ShortId Organization)
+shardToPair shard = (shard ^. #shardId, ShortId (shard ^. #shortOrgId))
 
 buildBTMEnv :: BTMCfg -> IO BTMEnv
 buildBTMEnv BTMCfg {..} = do
@@ -56,7 +65,8 @@ buildBTMEnv BTMCfg {..} = do
   metricsBTMFailedTaskCounter <- registerFailedTaskCounter
   return $
     BTMEnv
-      { ..
+      { shards = Map.fromList $ map shardToPair shards,
+        ..
       }
 
 type Env = EnvR BTMEnv

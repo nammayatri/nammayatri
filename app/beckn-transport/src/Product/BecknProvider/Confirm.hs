@@ -52,7 +52,11 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
     unless (bapOrg ^. #id == Id bapOrgId) $ throwError AccessDenied
     orderCase <- mkOrderCase searchCase
     orderProductInstance <- mkOrderProductInstance (orderCase ^. #id) productInstance
-    rideRequest <- BP.mkRideReq (orderProductInstance ^. #id) RideRequest.ALLOCATION
+    rideRequest <-
+      BP.mkRideReq
+        (orderProductInstance ^. #id)
+        (transporterOrg ^. #shortId)
+        RideRequest.ALLOCATION
     let newOrderCaseStatus = Case.INPROGRESS
     let newSearchCaseStatus = Case.COMPLETED
     let newProductInstanceStatus = ProductInstance.CONFIRMED

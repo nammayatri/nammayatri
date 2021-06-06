@@ -13,6 +13,12 @@ let mkSigningKey =
   , signPrivKey = signPrivKey
   }
 
+let mkShard =
+ \(shardId : Integer) -> \(shortOrgId : Text) ->
+  {
+    shardId = shardId
+  , shortOrgId = shortOrgId
+  }
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >
 
@@ -52,4 +58,5 @@ in { defaultPoolConfig = defaultPoolConfig
    , signatureExpiry = +600 -- in seconds
    , mkCredential = mkCredential
    , mkSigningKey = mkSigningKey
+   , mkShard = mkShard
    }

@@ -7,6 +7,7 @@ import qualified App.Types as AppFlow
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Storage.Organization
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Control.Monad.Reader (withReaderT)
 import Data.Time (NominalDiffTime, UTCTime)
@@ -33,19 +34,22 @@ import Utils.Common (throwError)
 import Utils.Notifications
 
 getDriverSortMode :: Flow SortMode
-getDriverSortMode = asks (defaultSortMode . driverAllocationConfig)
+getDriverSortMode = asks defaultSortMode
 
 getConfiguredNotificationTime :: Flow NominalDiffTime
-getConfiguredNotificationTime = asks (driverNotificationExpiry . driverAllocationConfig)
+getConfiguredNotificationTime = asks driverNotificationExpiry
 
 getConfiguredAllocationTime :: Flow NominalDiffTime
-getConfiguredAllocationTime = asks (rideAllocationExpiry . driverAllocationConfig)
+getConfiguredAllocationTime = asks rideAllocationExpiry
 
 getDriverPool :: Id Ride -> Flow [Id Driver]
 getDriverPool rideId = withAppEnv $ Person.getDriverPool (cast rideId)
 
-getRequests :: Integer -> Flow [RideRequest]
-getRequests = withAppEnv . fmap (map rideRequestToRideRequest) . QRR.fetchOldest
+getRequests :: ShortId Organization -> Integer -> Flow [RideRequest]
+getRequests shortOrgId numRequests =
+  withAppEnv $
+    map rideRequestToRideRequest
+      <$> QRR.fetchOldest shortOrgId numRequests
 
 assignDriver :: Id Ride -> Id Driver -> Flow ()
 assignDriver rideId driverId = withAppEnv $ PI.assignDriver (cast rideId) driverId
@@ -127,14 +131,15 @@ allocNotifStatusToStorageStatus = \case
   Alloc.Rejected -> SNS.REJECTED
   Alloc.Ignored -> SNS.IGNORED
 
-addAllocationRequest :: Id Ride -> Flow ()
-addAllocationRequest rideId = do
+addAllocationRequest :: ShortId Organization -> Id Ride -> Flow ()
+addAllocationRequest shortOrgId rideId = do
   guid <- generateGUID
   currTime <- getCurrentTime
   let rideRequest =
         SRR.RideRequest
           { id = Id guid,
             rideId = rideId,
+            shortOrgId = shortOrgId,
             createdAt = currTime,
             _type = SRR.ALLOCATION
           }

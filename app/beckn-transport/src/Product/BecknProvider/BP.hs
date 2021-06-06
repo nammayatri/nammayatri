@@ -54,15 +54,16 @@ import Utils.Common
 import qualified Utils.Notifications as Notify
 
 cancel :: Id Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler AckResponse
-cancel _ _bapOrg req = withFlowHandlerBecknAPI $
+cancel transporterId _bapOrg req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req ^. #context
     validateContext "cancel" context
     let prodInstId = req ^. #message . #order . #id -- transporter search productInstId
+    transporterOrg <- Organization.findOrganizationById transporterId
     prodInst <- ProductInstance.findById (Id prodInstId)
     piList <- ProductInstance.findAllByParentId (prodInst ^. #id)
     orderPi <- ProductInstance.findByIdType (ProductInstance.id <$> piList) Case.RIDEORDER
-    RideRequest.createFlow =<< mkRideReq (orderPi ^. #id) SRideRequest.CANCELLATION
+    RideRequest.createFlow =<< mkRideReq (orderPi ^. #id) (transporterOrg ^. #shortId) SRideRequest.CANCELLATION
     return Ack
 
 cancelRide :: Id Ride -> Bool -> Flow ()
@@ -303,14 +304,19 @@ validateContext action context = do
   validateDomain Domain.MOBILITY context
   validateContextCommons action context
 
-mkRideReq :: Id ProductInstance.ProductInstance -> SRideRequest.RideRequestType -> Flow SRideRequest.RideRequest
-mkRideReq prodInstID rideRequestType = do
+mkRideReq ::
+  Id ProductInstance.ProductInstance ->
+  ShortId Organization.Organization ->
+  SRideRequest.RideRequestType ->
+  Flow SRideRequest.RideRequest
+mkRideReq prodInstID shortOrgId rideRequestType = do
   guid <- generateGUID
   currTime <- getCurrentTime
   pure
     SRideRequest.RideRequest
       { id = Id guid,
         rideId = cast prodInstID,
+        shortOrgId = shortOrgId,
         createdAt = currTime,
         _type = rideRequestType
       }

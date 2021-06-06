@@ -3,6 +3,7 @@
 module Types.Storage.RideRequest where
 
 import Beckn.Types.Id
+import Beckn.Types.Storage.Organization
 import Beckn.Utils.JSON
 import qualified Data.Text as T
 import Data.Time (UTCTime)
@@ -26,6 +27,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be RideRequestType
 data RideRequestT f = RideRequest
   { id :: B.C f (Id RideRequest),
     rideId :: B.C f (Id Ride),
+    shortOrgId :: B.C f (ShortId Organization),
     createdAt :: B.C f UTCTime,
     _type :: B.C f RideRequestType
   }
@@ -53,6 +55,7 @@ fieldEMod =
     <> B.modifyTableFields
       B.tableModification
         { rideId = "ride_id",
+          shortOrgId = "short_org_id",
           createdAt = "created_at",
           _type = "type"
         }

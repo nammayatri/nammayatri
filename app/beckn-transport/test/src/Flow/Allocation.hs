@@ -5,6 +5,7 @@
 module Flow.Allocation where
 
 import Beckn.Types.Id
+import Beckn.Types.Storage.Organization
 import Beckn.Types.Storage.Person
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
@@ -20,6 +21,9 @@ import Types.App
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Metrics
 import Utils.SilentLogger ()
+
+org1 :: ShortId Organization
+org1 = ShortId "Org1"
 
 numRequestsToProcess :: Integer
 numRequestsToProcess = 10
@@ -92,7 +96,7 @@ handle repository@Repository {..} =
     { getDriverSortMode = pure ETA,
       getConfiguredAllocationTime = pure allocationTime,
       getConfiguredNotificationTime = pure notificationTime,
-      getRequests = \numRides -> do
+      getRequests = \_ numRides -> do
         rideRequests <- readIORef rideRequestsVar
         let requests = Map.elems rideRequests
         pure $ take (fromIntegral numRides) requests,
@@ -147,7 +151,7 @@ handle repository@Repository {..} =
       checkAvailability = pure . NonEmpty.toList,
       sendRideNotAssignedNotification = \_ _ -> pure (),
       removeRequest = modifyIORef rideRequestsVar . Map.delete,
-      addAllocationRequest = addRequest Allocation repository,
+      addAllocationRequest = \_ -> addRequest Allocation repository,
       getRideInfo = \rideId -> do
         rides <- readIORef ridesVar
         case Map.lookup rideId rides of
@@ -213,16 +217,16 @@ twoAllocations = testCase "Two allocations" $ do
   addRequest Allocation r ride01Id
   addRequest Allocation r ride02Id
 
-  process (handle r) numRequestsToProcess
+  process (handle r) org1 numRequestsToProcess
   addResponse r ride01Id (Id "driver01") Ride.REJECT
   addResponse r ride02Id (Id "driver05") Ride.REJECT
-  process (handle r) numRequestsToProcess
+  process (handle r) org1 numRequestsToProcess
   addResponse r ride01Id (Id "driver02") Ride.REJECT
   addResponse r ride02Id (Id "driver07") Ride.REJECT
-  process (handle r) numRequestsToProcess
+  process (handle r) org1 numRequestsToProcess
   addResponse r ride01Id (Id "driver03") Ride.ACCEPT
   addResponse r ride02Id (Id "driver08") Ride.ACCEPT
-  process (handle r) numRequestsToProcess
+  process (handle r) org1 numRequestsToProcess
 
   assignments <- readIORef assignmentsVar
   assignments @?= [(ride02Id, Id "driver08"), (ride01Id, Id "driver03")]
@@ -238,15 +242,15 @@ cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
   addRide r ride01Id
   addRequest Allocation r ride01Id
 
-  process (handle r) numRequestsToProcess
+  process (handle r) org1 numRequestsToProcess
   addResponse r ride01Id (Id "driver01") Ride.ACCEPT
 
-  process (handle r) numRequestsToProcess
+  process (handle r) org1 numRequestsToProcess
   checkRideStatus r ride01Id Assigned
 
   addRequest Cancellation r ride01Id
 
-  process (handle r) numRequestsToProcess
+  process (handle r) org1 numRequestsToProcess
   checkRideStatus r ride01Id Cancelled
 
 allocation :: TestTree
