@@ -83,7 +83,7 @@ cancelRide rideId requestedByDriver = do
   searchCaseId <- orderCase ^. #parentCaseId & fromMaybeM (CaseFieldNotPresent "parentCaseId")
   searchCase <- Case.findById searchCaseId
   let txnId = last . T.splitOn "_" $ searchCase ^. #shortId
-  notifyCancelToGateway searchPiId bapCallbackUrl bppShortId txnId
+  fork "Notify BAP" $ notifyCancelToGateway searchPiId bapCallbackUrl bppShortId txnId
 
   case piList of
     [] -> pure ()

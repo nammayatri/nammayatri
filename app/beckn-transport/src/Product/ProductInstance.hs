@@ -173,7 +173,7 @@ assignDriver productInstanceId driverId = do
 
   DB.runSqlDBTransaction (AQ.assignDriver productInstanceId piIdList vehicle driver)
 
-  notifyUpdateToBAP searchPi ordPi PI.TRIP_ASSIGNED
+  fork "Notify BAP" $ notifyUpdateToBAP searchPi ordPi PI.TRIP_ASSIGNED
   Notify.notifyDriver notificationType notificationTitle (message headPi) driver
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
