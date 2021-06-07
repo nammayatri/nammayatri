@@ -83,17 +83,17 @@ cancelRide rideId requestedByDriver = do
   searchCaseId <- orderCase ^. #parentCaseId & fromMaybeM (CaseFieldNotPresent "parentCaseId")
   searchCase <- Case.findById searchCaseId
   let txnId = last . T.splitOn "_" $ searchCase ^. #shortId
-  fork "Notify BAP" $ notifyCancelToGateway searchPiId bapCallbackUrl bppShortId txnId
-
-  case piList of
-    [] -> pure ()
-    prdInst : _ -> do
-      c <- Case.findById $ prdInst ^. #caseId
-      case prdInst ^. #personId of
-        Nothing -> pure ()
-        Just driverId -> do
-          driver <- Person.findPersonById driverId
-          Notify.notifyDriverOnCancel c driver
+  fork "cancelRide - Notify BAP" do
+    notifyCancelToGateway searchPiId bapCallbackUrl bppShortId txnId
+    case piList of
+      [] -> pure ()
+      prdInst : _ -> do
+        c <- Case.findById $ prdInst ^. #caseId
+        case prdInst ^. #personId of
+          Nothing -> pure ()
+          Just driverId -> do
+            driver <- Person.findPersonById driverId
+            Notify.notifyDriverOnCancel c driver
 
 cancelRideTransaction ::
   [ProductInstance.ProductInstance] ->
