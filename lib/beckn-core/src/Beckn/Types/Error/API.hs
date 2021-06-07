@@ -376,3 +376,16 @@ instance IsAPIError ServerError where
   toErrorCode ServerUnavailable = "SERVER_UNAVAILABLE"
   toMessage ServerUnavailable = Just "Server is working, but is not available."
   toHttpCode ServerUnavailable = E503
+
+newtype RedisError
+  = RedisError Text
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''RedisError
+
+instance IsAPIError RedisError where
+  toErrorCode = \case
+    RedisError _ -> "REDIS_ERROR"
+  toMessage = \case
+    RedisError err -> Just $ "Error: " <> err
+  toHttpCode _ = E500

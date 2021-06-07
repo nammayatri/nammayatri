@@ -15,6 +15,8 @@ module Beckn.Storage.Redis.Queries
   )
 where
 
+import Beckn.Types.Common
+import Beckn.Utils.Error.Throwing (thowRedisError)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as DT
@@ -23,173 +25,168 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types as T
 
-runKV :: (HasCallStack, L.MonadFlow mFlow) => L.KVDB a -> mFlow (T.KVDBAnswer a)
+runKV :: HasCallStack => L.KVDB a -> FlowR r (T.KVDBAnswer a)
 runKV = L.runKVDB "redis"
 
 -- KV
 setKeyRedis ::
   ( HasCallStack,
-    L.MonadFlow mFlow,
     A.ToJSON a
   ) =>
   Text ->
   a ->
-  mFlow ()
-setKeyRedis key val =
-  void $ runKV $ L.set (DTE.encodeUtf8 key) (BSL.toStrict $ A.encode val)
+  FlowR r ()
+setKeyRedis key val = do
+  resp <- runKV $ L.set (DTE.encodeUtf8 key) (BSL.toStrict $ A.encode val)
+  case resp of
+    -- TODO: check for "OK" in resp
+    Right _ -> return ()
+    Left err -> thowRedisError $ show err
 
 setExRedis ::
   ( HasCallStack,
-    L.MonadFlow mFlow,
     A.ToJSON a
   ) =>
   Text ->
   a ->
   Int ->
-  mFlow ()
-setExRedis key value ttl =
-  void $
-    runKV $
-      L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
+  FlowR r ()
+setExRedis key value ttl = do
+  resp <- runKV $ L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
+  case resp of
+    -- TODO: check for "OK" in resp
+    Right _ -> return ()
+    Left err -> thowRedisError $ show err
 
 getKeyRedis ::
   ( HasCallStack,
-    L.MonadFlow mFlow,
     A.FromJSON a
   ) =>
   Text ->
-  mFlow (Maybe a)
+  FlowR r (Maybe a)
 getKeyRedis key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
-  return $
-    case resp of
-      Right (Just v) -> A.decode $ BSL.fromStrict v
-      _ -> Nothing
+  case resp of
+    Right (Just v) -> return $ A.decode $ BSL.fromStrict v
+    Right Nothing -> return Nothing
+    Left err -> thowRedisError $ show err
 
 getKeyRedisWithError ::
   ( HasCallStack,
-    L.MonadFlow mFlow,
     A.FromJSON a
   ) =>
   Text ->
-  mFlow (Either String a)
+  FlowR r (Either String a)
 getKeyRedisWithError key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
-  return $
-    case resp of
-      Right (Just v) ->
+  case resp of
+    Right (Just v) ->
+      return $
         maybe (Left $ "decode failed for key: " <> show key) Right $
           A.decode (BSL.fromStrict v)
-      Right Nothing -> Left $ "No Value found for key : " <> show key
-      Left err -> Left $ show err
+    Right Nothing -> return $ Left $ "No Value found for key : " <> show key
+    Left err -> thowRedisError $ show err
 
 setHashRedis ::
   ( HasCallStack,
-    L.MonadFlow mFlow,
     ToJSON a
   ) =>
   Text ->
   Text ->
   a ->
-  mFlow ()
-setHashRedis key field value =
-  void $
+  FlowR r ()
+setHashRedis key field value = do
+  resp <-
     runKV $
       L.hset
         (DTE.encodeUtf8 key)
         (DTE.encodeUtf8 field)
         (BSL.toStrict $ A.encode value)
+  case resp of
+    -- TODO: check for "OK" in resp
+    Right _ -> return ()
+    Left err -> thowRedisError $ show err
 
 expireRedis ::
-  ( HasCallStack,
-    L.MonadFlow mFlow
-  ) =>
+  HasCallStack =>
   Text ->
   Int ->
-  mFlow ()
-expireRedis key ttl = void $ runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)
+  FlowR r ()
+expireRedis key ttl = do
+  resp <- runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)
+  case resp of
+    Right _ -> return ()
+    Left err -> thowRedisError $ show err
 
 getHashKeyRedis ::
   ( HasCallStack,
-    L.MonadFlow mFlow,
     FromJSON a
   ) =>
   Text ->
   Text ->
-  mFlow (Maybe a)
+  FlowR r (Maybe a)
 getHashKeyRedis key field = do
   resp <- runKV $ L.hget (DTE.encodeUtf8 key) (DTE.encodeUtf8 field)
-  return $
-    case resp of
-      Right (Just v) -> A.decode $ BSL.fromStrict v
-      _ -> Nothing
+  case resp of
+    Right (Just v) -> return $ A.decode $ BSL.fromStrict v
+    Right Nothing -> return Nothing
+    Left err -> thowRedisError $ show err
 
 deleteKeyRedis ::
-  ( HasCallStack,
-    L.MonadFlow mFlow
-  ) =>
+  HasCallStack =>
   Text ->
-  mFlow Int
+  FlowR r Int
 deleteKeyRedis = deleteKeysRedis . return
 
 deleteKeysRedis ::
-  ( HasCallStack,
-    L.MonadFlow mFlow
-  ) =>
+  HasCallStack =>
   [Text] ->
-  mFlow Int
+  FlowR r Int
 deleteKeysRedis rKeys = do
   resp <- runKV $ L.del $ map DTE.encodeUtf8 rKeys
-  return $
-    case resp of
-      Right x -> fromEnum x
-      Left _ -> -1
+  case resp of
+    Right x -> return $ fromEnum x
+    Left err -> thowRedisError $ show err
 
 incrementKeyRedis ::
-  ( HasCallStack,
-    L.MonadFlow mFlow
-  ) =>
+  HasCallStack =>
   Text ->
-  mFlow (Maybe Integer)
+  FlowR r (Maybe Integer)
 incrementKeyRedis key = do
-  val <- runKV . L.incr . DTE.encodeUtf8 $ key
-  return $ either (const Nothing) Just val
+  resp <- runKV . L.incr . DTE.encodeUtf8 $ key
+  case resp of
+    Right x -> return $ Just x
+    Left err -> thowRedisError $ show err
 
 getKeyRedisText ::
-  ( HasCallStack,
-    L.MonadFlow mFlow
-  ) =>
+  HasCallStack =>
   Text ->
-  mFlow (Maybe Text)
+  FlowR r (Maybe Text)
 getKeyRedisText key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
-  return $
-    case resp of
-      Right (Just v) -> Just $ DTE.decodeUtf8 v
-      _ -> Nothing
+  case resp of
+    Right (Just v) -> return $ Just $ DTE.decodeUtf8 v
+    Right Nothing -> return Nothing
+    Left err -> thowRedisError $ show err
 
 tryLockRedis ::
-  ( HasCallStack,
-    L.MonadFlow mFlow
-  ) =>
+  HasCallStack =>
   Text ->
   Int ->
-  mFlow Bool
+  FlowR r Bool
 tryLockRedis key expire = do
   resp <- runKV (L.rawRequest ["SET", buildLockResourceName key, "1", "NX", "EX", maxLockTime])
-  return $
-    case resp of
-      Right (Just ("OK" :: ByteString)) -> True
-      _ -> False
+  case resp of
+    Right (Just ("OK" :: ByteString)) -> return True
+    Right _ -> return False
+    Left err -> thowRedisError $ show err
   where
     maxLockTime = show expire
 
 unlockRedis ::
-  ( HasCallStack,
-    L.MonadFlow mFlow
-  ) =>
+  HasCallStack =>
   Text ->
-  mFlow ()
+  FlowR r ()
 unlockRedis key = do
   _ <- deleteKeyRedis $ buildLockResourceName key
   return ()

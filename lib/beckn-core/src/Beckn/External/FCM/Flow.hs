@@ -183,7 +183,7 @@ getAndParseFCMAccount = do
 getNewToken :: (HasField "fcmJsonPath" r (Maybe Text)) => FlowR r (Either String JWT.JWToken)
 getNewToken = getAndParseFCMAccount >>= either (pure . Left) refreshToken
 
-refreshToken :: (L.MonadFlow m, Log m) => JWT.ServiceAccount -> m (Either String JWT.JWToken)
+refreshToken :: JWT.ServiceAccount -> FlowR r (Either String JWT.JWToken)
 refreshToken fcmAcc = do
   logTagInfo fcmTag "Refreshing token"
   refreshRes <- L.runIO $ JWT.doRefreshToken fcmAcc
