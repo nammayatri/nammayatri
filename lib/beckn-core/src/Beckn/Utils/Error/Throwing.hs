@@ -32,5 +32,5 @@ throwDBError (ET.DBError dbErrType msg) = throwError $
 checkDBError :: (MonadThrow m, Log m) => ET.DBResult a -> m a
 checkDBError = either throwDBError pure
 
-thowRedisError :: (MonadThrow m, Log m) => Text -> m a
-thowRedisError = throwError . RedisError
+throwRedisError :: (MonadThrow m, Log m) => Text -> m a
+throwRedisError = throwError . RedisError

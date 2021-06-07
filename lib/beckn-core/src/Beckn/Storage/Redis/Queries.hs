@@ -16,7 +16,7 @@ module Beckn.Storage.Redis.Queries
 where
 
 import Beckn.Types.Common
-import Beckn.Utils.Error.Throwing (thowRedisError)
+import Beckn.Utils.Error.Throwing (throwRedisError)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as DT
@@ -41,7 +41,7 @@ setKeyRedis key val = do
   case resp of
     -- TODO: check for "OK" in resp
     Right _ -> return ()
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
 
 setExRedis ::
   ( HasCallStack,
@@ -56,7 +56,7 @@ setExRedis key value ttl = do
   case resp of
     -- TODO: check for "OK" in resp
     Right _ -> return ()
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
 
 getKeyRedis ::
   ( HasCallStack,
@@ -69,7 +69,7 @@ getKeyRedis key = do
   case resp of
     Right (Just v) -> return $ A.decode $ BSL.fromStrict v
     Right Nothing -> return Nothing
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
 
 getKeyRedisWithError ::
   ( HasCallStack,
@@ -85,7 +85,7 @@ getKeyRedisWithError key = do
         maybe (Left $ "decode failed for key: " <> show key) Right $
           A.decode (BSL.fromStrict v)
     Right Nothing -> return $ Left $ "No Value found for key : " <> show key
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
 
 setHashRedis ::
   ( HasCallStack,
@@ -105,7 +105,7 @@ setHashRedis key field value = do
   case resp of
     -- TODO: check for "OK" in resp
     Right _ -> return ()
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
 
 expireRedis ::
   HasCallStack =>
@@ -116,7 +116,7 @@ expireRedis key ttl = do
   resp <- runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)
   case resp of
     Right _ -> return ()
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
 
 getHashKeyRedis ::
   ( HasCallStack,
@@ -130,7 +130,7 @@ getHashKeyRedis key field = do
   case resp of
     Right (Just v) -> return $ A.decode $ BSL.fromStrict v
     Right Nothing -> return Nothing
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
 
 deleteKeyRedis ::
   HasCallStack =>
@@ -146,17 +146,17 @@ deleteKeysRedis rKeys = do
   resp <- runKV $ L.del $ map DTE.encodeUtf8 rKeys
   case resp of
     Right x -> return $ fromEnum x
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
 
 incrementKeyRedis ::
   HasCallStack =>
   Text ->
-  FlowR r (Maybe Integer)
+  FlowR r Integer
 incrementKeyRedis key = do
   resp <- runKV . L.incr . DTE.encodeUtf8 $ key
   case resp of
-    Right x -> return $ Just x
-    Left err -> thowRedisError $ show err
+    Right x -> return x
+    Left err -> throwRedisError $ show err
 
 getKeyRedisText ::
   HasCallStack =>
@@ -167,7 +167,7 @@ getKeyRedisText key = do
   case resp of
     Right (Just v) -> return $ Just $ DTE.decodeUtf8 v
     Right Nothing -> return Nothing
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
 
 tryLockRedis ::
   HasCallStack =>
@@ -179,7 +179,7 @@ tryLockRedis key expire = do
   case resp of
     Right (Just ("OK" :: ByteString)) -> return True
     Right _ -> return False
-    Left err -> thowRedisError $ show err
+    Left err -> throwRedisError $ show err
   where
     maxLockTime = show expire
 
