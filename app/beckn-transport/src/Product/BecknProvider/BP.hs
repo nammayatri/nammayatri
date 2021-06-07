@@ -73,17 +73,17 @@ cancelRide rideId requestedByDriver = do
   trackerPi <- ProductInstance.findByIdType (ProductInstance.id <$> piList) Case.LOCATIONTRACKER
   cancelRideTransaction piList searchPiId (trackerPi ^. #id) (orderPi ^. #id) requestedByDriver
 
-  orderCase <- Case.findById (orderPi ^. #caseId)
-  bapOrgId <- Case.udf4 orderCase & fromMaybeM (CaseFieldNotPresent "udf4")
-  bapOrg <- Organization.findOrganizationById $ Id bapOrgId
-  bapCallbackUrl <- bapOrg ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  let transporterId = Id $ ProductInstance.organizationId orderPi
-  transporter <- Organization.findOrganizationById transporterId
-  let bppShortId = getShortId $ transporter ^. #shortId
-  searchCaseId <- orderCase ^. #parentCaseId & fromMaybeM (CaseFieldNotPresent "parentCaseId")
-  searchCase <- Case.findById searchCaseId
-  let txnId = last . T.splitOn "_" $ searchCase ^. #shortId
-  fork "cancelRide - Notify BAP" do
+  fork "cancelRide - Notify BAP" $ do
+    orderCase <- Case.findById (orderPi ^. #caseId)
+    bapOrgId <- Case.udf4 orderCase & fromMaybeM (CaseFieldNotPresent "udf4")
+    bapOrg <- Organization.findOrganizationById $ Id bapOrgId
+    bapCallbackUrl <- bapOrg ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+    let transporterId = Id $ ProductInstance.organizationId orderPi
+    transporter <- Organization.findOrganizationById transporterId
+    let bppShortId = getShortId $ transporter ^. #shortId
+    searchCaseId <- orderCase ^. #parentCaseId & fromMaybeM (CaseFieldNotPresent "parentCaseId")
+    searchCase <- Case.findById searchCaseId
+    let txnId = last . T.splitOn "_" $ searchCase ^. #shortId
     notifyCancelToGateway searchPiId bapCallbackUrl bppShortId txnId
     case piList of
       [] -> pure ()
