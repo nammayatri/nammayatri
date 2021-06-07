@@ -4,8 +4,8 @@ import Beckn.Types.Amount
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
 import Beckn.Utils.JSON
-import Data.Swagger
-import EulerHS.Prelude
+import Data.Swagger hiding (name)
+import EulerHS.Prelude hiding (id)
 
 data CaseRes = CaseRes
   { _case :: Case,

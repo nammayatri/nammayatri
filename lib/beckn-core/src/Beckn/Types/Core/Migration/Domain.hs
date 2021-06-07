@@ -1,6 +1,5 @@
 module Beckn.Types.Core.Migration.Domain (Domain (..)) where
 
-import Data.Aeson
 import EulerHS.Prelude
 
 newtype Domain = Domain Text

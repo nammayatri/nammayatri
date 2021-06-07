@@ -2,7 +2,7 @@ module Types.Beckn.Paradigm where
 
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Types.Beckn.Image
 
 data Paradigm = Paradigm

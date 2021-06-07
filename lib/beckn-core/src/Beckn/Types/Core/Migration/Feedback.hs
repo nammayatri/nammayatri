@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Migration.Feedback (Feedback) where
 
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Feedback = Feedback
   { id :: Maybe Text,

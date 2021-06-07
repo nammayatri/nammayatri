@@ -10,8 +10,8 @@ import Beckn.Types.Mobility.Route
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Example
-import Data.Text
-import EulerHS.Prelude
+import Data.Text hiding (drop)
+import EulerHS.Prelude hiding (drop, id, state)
 
 data Trip = Trip
   { id :: Text,

@@ -3,7 +3,7 @@ module Types.Beckn.FmdOrder where
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Time
-import EulerHS.Prelude hiding (State)
+import EulerHS.Prelude hiding (State, id, state)
 import Types.Beckn.Billing
 import Types.Beckn.FmdItem (Item)
 import Types.Beckn.Option (Option)

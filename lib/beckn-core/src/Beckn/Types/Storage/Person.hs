@@ -7,14 +7,14 @@
 module Beckn.Types.Storage.Person where
 
 import Beckn.External.Encryption
-import Beckn.External.FCM.Types as FCM
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger
+import Data.Swagger hiding (description, email)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time

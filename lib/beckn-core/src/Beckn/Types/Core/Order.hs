@@ -7,7 +7,7 @@ import Beckn.Types.Core.Quotation
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Time
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id, state)
 
 data Order = Order
   { id :: Text,

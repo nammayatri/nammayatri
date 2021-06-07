@@ -326,20 +326,20 @@ getNearestDrivers LatLong {..} radius orgId variant =
       [sql|
         WITH a AS (
           SELECT
-            person.id as id,
-            location.point <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) as dist
-          FROM atlas_transporter.person
-          JOIN atlas_transporter.location
-            ON person.location_id = location.id
-          JOIN atlas_transporter.driver_information
-            ON person.id = driver_information.driver_id
-          JOIN atlas_transporter.vehicle
-            ON person.udf1 = vehicle.id
-          WHERE person.role = 'DRIVER'
-            AND person.organization_id = ?
-            AND driver_information.active
-            AND NOT driver_information.on_ride
-            AND vehicle.variant = ?
+            person."id" as id,
+            location."point" <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) as dist
+          FROM atlas_transporter."person"
+          JOIN atlas_transporter."location"
+            ON person."location_id" = location."id"
+          JOIN atlas_transporter."driver_information"
+            ON person."id" = driver_information."driver_id"
+          JOIN atlas_transporter."vehicle"
+            ON person."udf1" = vehicle."id"
+          WHERE person."role" = 'DRIVER'
+            AND person."organization_id" = ?
+            AND driver_information."active"
+            AND NOT driver_information."on_ride"
+            AND vehicle."variant" = ?
         )
         SELECT id, dist
         FROM a

@@ -6,7 +6,7 @@ import Beckn.Types.Mobility.Stop (StopTime)
 import Beckn.Types.Mobility.Transfer
 import Beckn.Utils.Example
 import Data.Time
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 newtype ServiceSchedule = ServiceSchedule
   { _stops :: Schedule

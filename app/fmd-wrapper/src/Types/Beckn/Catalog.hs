@@ -4,12 +4,12 @@ import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Text
 import Data.Time (UTCTime)
-import EulerHS.Prelude
-import Types.Beckn.Brand
-import Types.Beckn.Category
-import Types.Beckn.Item
-import Types.Beckn.Model
-import Types.Beckn.Offer
+import EulerHS.Prelude hiding (id)
+import Types.Beckn.Brand hiding (id)
+import Types.Beckn.Category hiding (id)
+import Types.Beckn.Item hiding (id)
+import Types.Beckn.Model hiding (id)
+import Types.Beckn.Offer hiding (id)
 
 data Catalog = Catalog
   { id :: Text,

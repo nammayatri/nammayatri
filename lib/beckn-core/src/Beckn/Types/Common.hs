@@ -15,7 +15,7 @@ import Beckn.Types.MonadGuid as Common
 import Beckn.Types.Time as Common
 import Data.Aeson
 import Data.Generics.Labels ()
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant.Client (BaseUrl)
 
 newtype IdObject = IdObject

@@ -6,7 +6,7 @@ import Beckn.Types.Core.Tag
 import Beckn.Types.Mobility.Vehicle as MV
 import Beckn.Utils.JSON
 import Data.Time
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (max, min)
 
 data LeadsReq = LeadsReq
   { context :: Context,

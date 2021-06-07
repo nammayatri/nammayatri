@@ -2,7 +2,7 @@ module Beckn.Types.Core.Migration.ItemQuantity where
 
 import Beckn.Types.Core.Migration.Scalar
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (maximum, minimum)
 
 data Quantity = Quantity
   { count :: Maybe Integer,

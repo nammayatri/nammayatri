@@ -7,7 +7,7 @@ import Beckn.Types.Core.Migration.Country (Country)
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Gps (Gps)
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Location = Location
   { id :: Maybe Text,

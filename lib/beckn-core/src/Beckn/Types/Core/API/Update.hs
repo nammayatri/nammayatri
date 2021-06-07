@@ -10,7 +10,7 @@ import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Order
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data UpdateReq = UpdateReq
   { context :: Context,

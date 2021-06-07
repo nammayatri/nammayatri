@@ -3,7 +3,7 @@ module Beckn.Types.Core.Migration.Offer (Offer (..)) where
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Offer = Offer
   { id :: Maybe Text,

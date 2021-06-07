@@ -17,7 +17,7 @@ import qualified Database.Beam.Backend.SQL.AST as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Syntax as B
 import qualified Database.PostgreSQL.Simple.FromField as Pg
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import Servant.API
 
 data LocationType = POINT | POLYGON | PINCODE | ADDRESS

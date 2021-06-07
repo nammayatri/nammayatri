@@ -3,7 +3,7 @@ module Beckn.Types.Core.Option where
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Example
 import Data.Text
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Option = Option
   { id :: Text,

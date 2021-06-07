@@ -15,7 +15,7 @@ import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
 import Beckn.Utils.JSON
 import Data.Aeson (withObject, (.!=), (.:), (.:?))
-import EulerHS.Prelude hiding (State)
+import EulerHS.Prelude hiding (State, id, state)
 
 data Fulfillment = Fulfillment
   { id :: Maybe Text,

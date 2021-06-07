@@ -48,6 +48,8 @@ default-extensions:
   - TypeOperators
   - ViewPatterns
   - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
 
 dependencies:
   - aeson
@@ -83,10 +85,13 @@ dependencies:
   - resource-pool
   - uuid
   - prometheus-client
+  - record-hasfield
+  - record-dot-preprocessor
 
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
+  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

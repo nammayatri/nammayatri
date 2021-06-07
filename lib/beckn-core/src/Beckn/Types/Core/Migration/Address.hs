@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Migration.Address (Address (..)) where
 
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (state)
 
 data Address = Address
   { door :: Maybe Text,

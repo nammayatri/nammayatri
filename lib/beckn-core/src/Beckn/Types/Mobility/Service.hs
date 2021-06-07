@@ -8,7 +8,7 @@ import Beckn.Types.Mobility.Catalog
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Text
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Service = Service
   { id :: Text,

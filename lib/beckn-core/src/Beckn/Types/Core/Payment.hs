@@ -7,7 +7,7 @@ import Beckn.Types.Core.State
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Time
-import EulerHS.Prelude hiding (State)
+import EulerHS.Prelude hiding (State, state)
 
 data Payment = Payment
   { transaction_id :: Maybe Text,

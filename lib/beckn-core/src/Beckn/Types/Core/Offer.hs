@@ -5,7 +5,7 @@ import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Text
 import Data.Time
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Offer = Offer
   { id :: Text,

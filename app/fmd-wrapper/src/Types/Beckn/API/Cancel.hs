@@ -4,7 +4,7 @@ module Types.Beckn.API.Cancel where
 
 import Beckn.Types.Core.Ack
 import Data.Generics.Labels ()
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 import Types.Beckn.API.Callback
 import Types.Beckn.Context

@@ -4,7 +4,7 @@ import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (TimeOfDay)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data FarePolicy = FarePolicy
   { id :: Id FarePolicy,

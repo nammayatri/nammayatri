@@ -10,7 +10,7 @@ import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (exp, id)
 
 data Provider = Provider
   { id :: Maybe Text,

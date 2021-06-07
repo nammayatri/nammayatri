@@ -1,6 +1,6 @@
 module Types.API.Location where
 
-import Beckn.Types.MapSearch as MapSearch
+import qualified Beckn.Types.MapSearch as MapSearch
 import EulerHS.Prelude
 
 data UpdateLocationReq = UpdateLocationReq
@@ -33,7 +33,7 @@ data LatLong = LatLong
 
 data Request = Request
   { waypoints :: [LatLong],
-    mode :: Maybe TravelMode,
+    mode :: Maybe MapSearch.TravelMode,
     calcPoints :: Maybe Bool
   }
   deriving (Show, Generic, ToJSON, FromJSON)

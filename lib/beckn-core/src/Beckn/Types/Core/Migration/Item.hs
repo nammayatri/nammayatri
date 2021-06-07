@@ -5,7 +5,7 @@ import Beckn.Types.Core.Migration.Price (Price)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Item = Item
   { id :: Maybe Text,

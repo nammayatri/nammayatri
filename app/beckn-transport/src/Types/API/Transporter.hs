@@ -10,7 +10,7 @@ import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Location as QL
 
 data TransporterReq = TransporterReq

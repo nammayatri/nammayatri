@@ -5,7 +5,7 @@ import Beckn.Types.Core.Person
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Text
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Provider = Provider
   { id :: Text,

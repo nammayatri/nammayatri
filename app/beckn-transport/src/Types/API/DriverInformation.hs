@@ -15,7 +15,7 @@ import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Beckn.Types.Storage.Vehicle (Vehicle)
 import Data.Aeson
 import Data.Time
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import qualified Types.API.Person as PersonAPI
 import Types.Storage.DriverInformation
 

@@ -7,7 +7,7 @@ import qualified Beckn.Types.Storage.Person as P
 import Beckn.Types.Storage.ProductInstance as SP
 import Beckn.Utils.JSON
 import Data.Time
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Types.Common
 
 newtype OrderResp = OrderResp {_order :: OrderDetails}

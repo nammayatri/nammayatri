@@ -1,6 +1,5 @@
 module Types.API.Support (SendIssueReq (..), SendIssueRes) where
 
-import Data.Text
 import EulerHS.Prelude
 import Types.API.Common (Ack)
 import Types.Issue (Issue)

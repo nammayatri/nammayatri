@@ -14,7 +14,7 @@ import Beckn.Types.Core.Migration.Quotation (Quotation)
 import Beckn.Utils.JSON (uniteObjects)
 import Data.Aeson (withObject, (.:))
 import Data.Aeson.Types (parseFail)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type SelectAPI =

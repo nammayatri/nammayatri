@@ -5,7 +5,6 @@ module Beckn.Utils.Common
   )
 where
 
-import Beckn.Types.App
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Ack as Common
 import Beckn.Types.Error.APIError as Common

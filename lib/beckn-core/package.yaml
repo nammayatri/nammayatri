@@ -49,6 +49,8 @@ default-extensions:
   - TypeOperators
   - ViewPatterns
   - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
 
 dependencies:
   - aeson
@@ -113,6 +115,8 @@ dependencies:
   - uuid
   - stm
   - unix
+  - record-hasfield
+  - record-dot-preprocessor
 
 ghc-options:
   - -fwrite-ide-info
@@ -122,6 +126,7 @@ ghc-options:
   - -Widentities
   - -fhide-source-paths
   - -Werror
+  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs:

@@ -50,6 +50,8 @@ default-extensions:
   - TypeOperators
   - ViewPatterns
   - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
 
 dependencies:
   - app-backend
@@ -81,6 +83,8 @@ dependencies:
   - hspec-core
   - tasty
   - tasty-hspec
+  - record-hasfield
+  - record-dot-preprocessor
 
 ghc-options:
   - -fwrite-ide-info
@@ -91,6 +95,7 @@ ghc-options:
   - -fhide-source-paths
   - -Werror
   - -Wno-unrecognised-pragmas
+  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs:

@@ -8,7 +8,7 @@ import Beckn.Types.Core.Migration.Payment
 import Beckn.Types.Core.Migration.Quotation
 import Beckn.Utils.JSON
 import Data.Time
-import EulerHS.Prelude hiding (State)
+import EulerHS.Prelude hiding (State, id, state)
 
 data Order = Order
   { id :: Maybe Text,

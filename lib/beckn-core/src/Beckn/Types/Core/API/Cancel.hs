@@ -11,7 +11,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Order
 import Beckn.Types.Mobility.Trip
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type CancelAPI =

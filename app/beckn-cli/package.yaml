@@ -48,6 +48,8 @@ default-extensions:
   - TypeOperators
   - ViewPatterns
   - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
 
 dependencies:
   - aeson
@@ -84,10 +86,13 @@ dependencies:
   - random-strings
   - optparse-applicative
   - directory
+  - record-hasfield
+  - record-dot-preprocessor
 
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
+  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

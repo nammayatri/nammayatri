@@ -8,7 +8,7 @@ import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Provider (Provider)
 import Beckn.Utils.JSON (slashedRecordFields)
 import Data.Time (UTCTime)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (exp, id)
 
 data Catalog = Catalog
   { bpp_descriptor :: Maybe Descriptor,

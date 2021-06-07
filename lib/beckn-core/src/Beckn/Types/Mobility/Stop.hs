@@ -6,7 +6,7 @@ import Beckn.Types.Mobility.Transfer
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Time
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Stop = Stop
   { id :: Text,

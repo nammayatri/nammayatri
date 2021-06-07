@@ -5,7 +5,7 @@ module Beckn.Types.Core.Model where
 import Beckn.Types.Core.Image
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Model = Model
   { id :: Text,

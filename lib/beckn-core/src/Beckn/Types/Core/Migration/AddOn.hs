@@ -3,7 +3,7 @@ module Beckn.Types.Core.Migration.AddOn (AddOn (..)) where
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Price (Price)
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data AddOn = AddOn
   { id :: Maybe Text,

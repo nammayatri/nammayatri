@@ -5,7 +5,7 @@ import Beckn.Types.Core.Migration.API.Types (BecknCallbackReq, BecknReq)
 import Beckn.Types.Core.Migration.Feedback (Feedback)
 import Data.Aeson (withObject, (.:))
 import Data.Aeson.Types (parseFail)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type RatingAPI =

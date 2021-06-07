@@ -20,7 +20,7 @@ import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Mobility.Vehicle as Vehicle
 import Control.Lens.Prism (_Just)
 import Data.Time (UTCTime)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (drop, id, state)
 
 data GPS = GPS
   { lat :: Text,

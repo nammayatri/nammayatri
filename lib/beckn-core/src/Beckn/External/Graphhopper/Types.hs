@@ -2,7 +2,7 @@ module Beckn.External.Graphhopper.Types where
 
 import Beckn.Utils.JSON
 import Data.Aeson
-import Data.Geospatial
+import Data.Geospatial hiding (bbox)
 import EulerHS.Prelude hiding (Show)
 import Prelude (Show (..))
 

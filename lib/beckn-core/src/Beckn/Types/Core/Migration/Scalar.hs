@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Migration.Scalar (Scalar (..), Range (..)) where
 
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (max, min)
 
 data Scalar = Scalar
   { _type :: Maybe ScalarType,

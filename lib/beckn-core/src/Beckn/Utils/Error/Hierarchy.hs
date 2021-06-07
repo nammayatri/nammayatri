@@ -3,7 +3,6 @@
 
 module Beckn.Utils.Error.Hierarchy where
 
-import Control.Exception
 import Data.Typeable (cast)
 import EulerHS.Prelude
 import Language.Haskell.TH

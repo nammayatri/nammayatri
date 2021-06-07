@@ -50,6 +50,8 @@ default-extensions:
   - TypeOperators
   - ViewPatterns
   - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
 
 dependencies:
   - base >= 4.7 && < 5
@@ -74,10 +76,13 @@ dependencies:
   - warp
   - time
   - generic-lens
+  - record-hasfield
+  - record-dot-preprocessor
 
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
+  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

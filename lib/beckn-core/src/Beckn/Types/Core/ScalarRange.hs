@@ -2,7 +2,7 @@ module Beckn.Types.Core.ScalarRange where
 
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (max, min)
 
 data ScalarRange = ScalarRange
   { min :: Double,

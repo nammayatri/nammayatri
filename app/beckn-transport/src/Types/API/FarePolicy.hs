@@ -10,7 +10,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (TimeOfDay)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Types.Domain.FarePolicy (FarePolicy)
 
 data FarePolicyResponse = FarePolicyResponse

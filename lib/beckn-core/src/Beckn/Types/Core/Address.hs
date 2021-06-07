@@ -3,7 +3,7 @@ module Beckn.Types.Core.Address where
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Text
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (state)
 
 data Address = Address
   { name :: Maybe Text,

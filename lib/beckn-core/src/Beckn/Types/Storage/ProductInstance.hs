@@ -14,7 +14,7 @@ import Beckn.Types.Storage.Products (Products)
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger
+import Data.Swagger hiding (info)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time

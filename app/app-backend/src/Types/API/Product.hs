@@ -1,7 +1,7 @@
 module Types.API.Product where
 
 import Beckn.Types.Storage.ProductInstance
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (product)
 import Types.Common
 
 data GetProductInfoRes = GetProductInfoRes

@@ -10,7 +10,7 @@ import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Types.App
 
 data RideRequestType = ALLOCATION | CANCELLATION

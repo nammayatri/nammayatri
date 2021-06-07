@@ -10,7 +10,7 @@ import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.JSON
 import Data.Swagger
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 -- Create Person request and response
 data CreateVehicleReq = CreateVehicleReq

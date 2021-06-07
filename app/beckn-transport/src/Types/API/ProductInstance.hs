@@ -6,7 +6,7 @@ import Beckn.Types.Storage.ProductInstance
 import qualified Beckn.Types.Storage.Products as Product
 import Beckn.Utils.JSON
 import Data.Swagger
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (product)
 
 data ProductInstanceRes = ProductInstanceRes
   { _case :: Case.Case,

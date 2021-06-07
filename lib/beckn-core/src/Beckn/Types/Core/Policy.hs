@@ -4,7 +4,7 @@ import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Text
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Policy = Policy
   { id :: Text,

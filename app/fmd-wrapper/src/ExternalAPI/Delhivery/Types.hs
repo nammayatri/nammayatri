@@ -6,7 +6,7 @@ module ExternalAPI.Delhivery.Types where
 import Beckn.Types.Error.APIError
 import Beckn.Types.Error.FromResponse
 import Data.Aeson hiding (Error)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (zip)
 import Types.Common
 import Web.FormUrlEncoded
 

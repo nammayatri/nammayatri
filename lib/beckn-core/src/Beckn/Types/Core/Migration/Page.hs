@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Migration.Page (Page (..)) where
 
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data Page = Page
   { id :: Maybe Text,

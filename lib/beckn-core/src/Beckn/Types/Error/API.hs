@@ -2,7 +2,6 @@
 
 module Beckn.Types.Error.API where
 
-import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
 import EulerHS.Prelude
 import EulerHS.Types (KVDBReply)

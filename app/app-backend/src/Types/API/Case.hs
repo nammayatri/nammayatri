@@ -9,9 +9,9 @@ import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products
 import Beckn.Utils.JSON
-import Data.Swagger
+import Data.Swagger hiding (info)
 import Data.Time
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id, product)
 
 data GetStatusRes = GetStatusRes
   { _case :: Case,

@@ -6,7 +6,7 @@
 module Beckn.Types.Storage.RegistrationToken where
 
 import Data.Aeson
-import Data.Swagger
+import Data.Swagger hiding (info)
 import qualified Data.Text as T
 import Data.Time
 import qualified Database.Beam as B

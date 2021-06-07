@@ -5,7 +5,6 @@
 
 module APIExceptions (apiExceptionTests) where
 
-import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
 import Beckn.Utils.Error.FlowHandling
 import Control.Arrow (left)

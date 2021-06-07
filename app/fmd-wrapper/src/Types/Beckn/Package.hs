@@ -2,7 +2,7 @@ module Types.Beckn.Package where
 
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Types.Beckn.Descriptor
 import Types.Beckn.Dimensions
 import Types.Beckn.FmdItem

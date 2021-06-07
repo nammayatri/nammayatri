@@ -9,7 +9,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger
+import Data.Swagger hiding (description, info, name)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time

@@ -2,8 +2,8 @@ module Beckn.Types.Core.Customer where
 
 import Beckn.Types.Core.Person
 import Beckn.Utils.JSON
-import Data.Text
-import EulerHS.Prelude
+import Data.Text hiding (count, group)
+import EulerHS.Prelude hiding (group)
 
 data Customer = Customer
   { _type :: Text, --"SINGLE", "GROUP"

@@ -3,7 +3,7 @@ module Beckn.Types.Core.Dimensions where
 import Beckn.Types.Core.Scalar
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (length)
 
 data Dimensions = Dimensions
   { length :: Scalar,

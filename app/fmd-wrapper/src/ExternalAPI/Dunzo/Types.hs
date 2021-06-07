@@ -10,7 +10,7 @@ import Beckn.Types.Error.APIError
 import Beckn.Types.Error.FromResponse
 import Data.Aeson hiding (Error)
 import Data.Char (toLower)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (state)
 import Servant (FromHttpApiData, ToHttpApiData)
 import qualified Types.Beckn.Error as Beckn
 import Types.Common
