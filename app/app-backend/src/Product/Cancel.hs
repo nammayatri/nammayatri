@@ -35,22 +35,17 @@ cancelProductInstance person req = do
   searchPI <- MPI.findById (Id prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
   cs <- MC.findIdByPerson person (searchPI ^. #caseId)
   orderPI <- MPI.findByParentIdType (searchPI ^. #id) Case.RIDEORDER
-  if isProductInstanceCancellable orderPI
-    then sendCancelReq searchPI cs
-    else throwError $ PIInvalidStatus "Cannot cancel with this ride"
-  where
-    sendCancelReq prodInst cs = do
-      let txnId = getId $ cs ^. #id
-      let prodInstId = getId $ prodInst ^. #id
-      let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
-      context <- buildContext "cancel" txnId Nothing Nothing
-      organization <-
-        OQ.findOrganizationById (Id $ prodInst ^. #organizationId)
-          >>= fromMaybeM OrgNotFound
-      baseUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-      ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
-        >>= checkAckResponseError (ExternalAPIResponseError "cancel")
-      return Success
+  unless (isProductInstanceCancellable orderPI) $
+    throwError $ PIInvalidStatus "Cannot cancel this ride"
+  let txnId = getId $ cs ^. #id
+  let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
+  context <- buildContext "cancel" txnId Nothing Nothing
+  organization <-
+    OQ.findOrganizationById (Id $ searchPI ^. #organizationId)
+      >>= fromMaybeM OrgNotFound
+  baseUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
+  return Success
 
 searchCancel :: Person.Person -> CancelReq -> Flow CancelRes
 searchCancel person req = do

@@ -248,6 +248,7 @@ instance IsAPIError ProductInstanceError where
 data GatewayError
   = GatewaySelectorNotSet
   | NSDLBaseUrlNotSet
+  | UnsupportedGatewaySelector
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''GatewayError
@@ -255,6 +256,7 @@ instanceExceptionWithParent 'APIException ''GatewayError
 instance IsAPIError GatewayError where
   toErrorCode GatewaySelectorNotSet = "GATEWAY_SELECTOR_NOT_SET"
   toErrorCode NSDLBaseUrlNotSet = "NSDL_BASEURL_NOT_SET"
+  toErrorCode UnsupportedGatewaySelector = "UNSUPPORTED_GATEWAY_SELECTOR"
 
 data DatabaseError
   = NotPostgresBackend
@@ -314,25 +316,14 @@ instance IsBecknAPIError ContextError where
   toType _ = CONTEXT_ERROR
 
 data ExternalAPICallError
-  = ExternalAPICallError BaseUrl ClientError
-  | ExternalAPICallErrorWithCode Text BaseUrl ClientError
-  | ExternalAPIResponseError Text Error
+  = ExternalAPICallError (Maybe Text) BaseUrl ClientError
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''ExternalAPICallError
 
 instance IsAPIError ExternalAPICallError where
-  toErrorCode = \case
-    ExternalAPICallError _ _ -> "EXTERNAL_API_CALL_ERROR"
-    ExternalAPICallErrorWithCode code _ _ -> code
-    ExternalAPIResponseError _ _ -> "EXTERNAL_API_RESPONSE_ERROR"
-  toMessage = \case
-    ExternalAPICallError url err -> externalAPICallErrorMessage url err
-    ExternalAPICallErrorWithCode _ url err -> externalAPICallErrorMessage url err
-    ExternalAPIResponseError ep err ->
-      Just $
-        "Beckn " <> ep <> " request returned error code " <> code err
-          <> maybe "" ("with message: " <>) (message err)
+  toErrorCode (ExternalAPICallError codeMb _ _) = fromMaybe "EXTERNAL_API_CALL_ERROR" codeMb
+  toMessage (ExternalAPICallError _ url err) = externalAPICallErrorMessage url err
 
 externalAPICallErrorMessage :: BaseUrl -> ClientError -> Maybe Text
 externalAPICallErrorMessage baseUrl clientErr =

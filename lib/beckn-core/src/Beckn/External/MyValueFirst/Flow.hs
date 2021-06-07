@@ -15,7 +15,7 @@ submitSms url params = do
   res <- callAPI url (API.submitSms params) "submitSms"
   whenRight res $ \_ ->
     logTagInfo "SMS" $ "Submitted sms successfully to " <> show (to params)
-  res & fromEitherM (ExternalAPICallErrorWithCode "UNABLE_TO_SEND_SMS" url)
+  res & fromEitherM (ExternalAPICallError (Just "UNABLE_TO_SEND_SMS") url)
 
 type OtpTemplate = Text
 

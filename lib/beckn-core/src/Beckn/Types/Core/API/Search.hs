@@ -40,14 +40,6 @@ type OnSearchAPI =
 onSearchAPI :: Proxy OnSearchAPI
 onSearchAPI = Proxy
 
-type NSDLOnSearchAPI =
-  "on_search"
-    :> ReqBody '[JSON] OnSearchReq
-    :> Post '[JSON] OnSearchRes
-
-nsdlOnSearchAPI :: Proxy NSDLOnSearchAPI
-nsdlOnSearchAPI = Proxy
-
 data SearchReq = SearchReq
   { context :: Context,
     message :: SearchIntent

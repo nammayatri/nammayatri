@@ -51,7 +51,6 @@ confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
   baseUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
   ExternalAPI.confirm baseUrl (ConfirmReq context $ ConfirmOrder order)
-    >>= checkAckResponseError (ExternalAPIResponseError "confirm")
   return Success
   where
     mkOrder productInstance = do

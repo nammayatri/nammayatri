@@ -10,6 +10,7 @@ where
 
 import qualified Beckn.Types.Core.Error as Error
 import Beckn.Types.Error.APIError
+import Beckn.Types.Error.FromResponse
 import Data.Aeson.Types
 import EulerHS.Prelude hiding (Show, show, (.=))
 import Prelude (Show (..))
@@ -35,6 +36,9 @@ instance ToJSON BecknAPIError where
     where
       ack = object ["ack" .= status]
       status = object ["status" .= ("NACK" :: Text)]
+
+instance FromResponse BecknAPIError where
+  fromResponse = fromJsonResponse
 
 data BecknAPIException = forall e. (Exception e, IsBecknAPIError e) => BecknAPIException e
 

@@ -1,8 +1,11 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module ExternalAPI.Delhivery.Types where
 
-import Data.Aeson
+import Beckn.Types.Error.APIError
+import Beckn.Types.Error.FromResponse
+import Data.Aeson hiding (Error)
 import EulerHS.Prelude
 import Types.Common
 import Web.FormUrlEncoded
@@ -68,6 +71,9 @@ newtype Error = Error
   }
   deriving (Show, Generic)
 
+instance FromResponse Error where
+  fromResponse = fromJsonResponse
+
 errMessageOptions :: Options
 errMessageOptions =
   defaultOptions
@@ -104,3 +110,10 @@ newtype CreateOrderRes = CreateOrderRes
   { idx :: Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+instance IsAPIError Error where
+  toErrorCode _ = "DELHIVERY_ERROR"
+  toHttpCode _ = E500
+  toMessage Error {message} = Just message
+
+instanceExceptionWithParent 'APIException ''Error

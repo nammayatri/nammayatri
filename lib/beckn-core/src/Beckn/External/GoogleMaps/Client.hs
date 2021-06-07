@@ -53,4 +53,4 @@ getPlaceName url latLng apiKey = do
     >>= fromEitherM (googleMapsError url)
 
 googleMapsError :: BaseUrl -> ClientError -> ExternalAPICallError
-googleMapsError = ExternalAPICallErrorWithCode "GOOGLE_MAPS_API_ERROR"
+googleMapsError = ExternalAPICallError (Just "GOOGLE_MAPS_API_ERROR")

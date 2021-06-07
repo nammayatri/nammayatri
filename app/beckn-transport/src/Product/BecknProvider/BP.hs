@@ -136,8 +136,7 @@ notifyServiceStatusToGateway :: Id ProductInstance.ProductInstance -> ProductIns
 notifyServiceStatusToGateway piId trackerPi callbackUrl bppShortId txnId = do
   onServiceStatusPayload <- mkOnServiceStatusPayload piId trackerPi txnId
   logTagInfo "notifyServiceStatusToGateway Request" $ show onServiceStatusPayload
-  _ <- ExternalAPI.onStatus callbackUrl onServiceStatusPayload bppShortId
-  return ()
+  ExternalAPI.onStatus callbackUrl onServiceStatusPayload bppShortId
 
 mkOnServiceStatusPayload :: Id ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> Text -> Flow API.OnStatusReq
 mkOnServiceStatusPayload piId trackerPi txnId = do
@@ -193,22 +192,19 @@ notifyTripUrlToGateway :: Case.Case -> Context -> BaseUrl -> Text -> Flow ()
 notifyTripUrlToGateway case_ context callbackUrl bppShortId = do
   onTrackTripPayload <- mkOnTrackTripPayload case_ context
   logTagInfo "notifyTripUrlToGateway Request" $ show onTrackTripPayload
-  _ <- ExternalAPI.onTrackTrip callbackUrl onTrackTripPayload bppShortId
-  return ()
+  ExternalAPI.onTrackTrip callbackUrl onTrackTripPayload bppShortId
 
 notifyTripInfoToGateway :: ProductInstance.ProductInstance -> Case.Case -> Case.Case -> BaseUrl -> Text -> Flow ()
 notifyTripInfoToGateway prodInst trackerCase parentCase bapCallbackUrl bppShortId = do
   onUpdatePayload <- mkOnUpdatePayload bapCallbackUrl prodInst trackerCase parentCase
   logTagInfo "notifyTripInfoToGateway Request" $ show onUpdatePayload
-  _ <- ExternalAPI.onUpdate bapCallbackUrl onUpdatePayload bppShortId
-  return ()
+  ExternalAPI.onUpdate bapCallbackUrl onUpdatePayload bppShortId
 
 notifyCancelToGateway :: Id ProductInstance.ProductInstance -> BaseUrl -> Text -> Text -> Flow ()
 notifyCancelToGateway prodInstId bapCallbackUrl bppShortId txnId = do
   onCancelPayload <- mkCancelRidePayload prodInstId txnId bapCallbackUrl -- search product instance id
   logTagInfo "notifyGateway Request" $ show onCancelPayload
-  _ <- ExternalAPI.onCancel bapCallbackUrl onCancelPayload bppShortId
-  return ()
+  ExternalAPI.onCancel bapCallbackUrl onCancelPayload bppShortId
 
 mkOnTrackTripPayload :: Case.Case -> Context -> Flow API.OnTrackTripReq
 mkOnTrackTripPayload trackerCase context = do

@@ -5,6 +5,7 @@ module Beckn.Types.Error.APIError
   )
 where
 
+import Beckn.Types.Error.FromResponse
 import Beckn.Types.Error.HttpCode
 import Beckn.Utils.Error.Hierarchy (instanceExceptionWithParent)
 import Control.Exception
@@ -19,6 +20,9 @@ data APIError = APIError
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+instance FromResponse APIError where
+  fromResponse = fromJsonResponse
+
 class IsAPIError e where
   toErrorCode :: e -> Text
 
@@ -31,12 +35,14 @@ class IsAPIError e where
   toCustomHeaders :: e -> [Header]
   toCustomHeaders _ = []
 
-data APIException = forall e. (Exception e, IsAPIError e) => APIException e
+data APIException = forall e. IsAPIException e => APIException e
 
 instance Show APIException where
   show (APIException e) = show e
 
 instance Exception APIException
+
+type IsAPIException e = (IsAPIError e, Exception e)
 
 toAPIError :: IsAPIError e => e -> APIError
 toAPIError e =

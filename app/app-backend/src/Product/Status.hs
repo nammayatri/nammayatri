@@ -35,7 +35,6 @@ status person StatusReq {..} = withFlowHandlerAPI $ do
   baseUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)
   ExternalAPI.status baseUrl (API.StatusReq context statusMessage)
-    >>= checkAckResponseError (ExternalAPIResponseError "status")
   return Success
 
 onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes

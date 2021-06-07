@@ -28,9 +28,6 @@ searchAPI = Proxy
 search :: Search.SearchReq -> EulerClient AckResponse
 search = client searchAPI
 
-nsdlSearch :: Search.SearchReq -> ET.EulerClient AckResponse
-nsdlSearch = client Search.nsdlSearchAPI
-
 type LocationAPI =
   "location"
     :> Capture "caseId" Text

@@ -66,7 +66,6 @@ search person req = withFlowHandlerAPI $ do
   let intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_ ^. #udf5)]
   ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
-    >>= checkAckResponseError (ExternalAPIResponseError "search")
   return $ API.SearchRes txnId
   where
     validateDateTime sreq = do

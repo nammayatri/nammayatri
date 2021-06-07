@@ -51,5 +51,5 @@ updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
             SFarePolicy.nightShiftEnd = req ^. #nightShiftEnd,
             SFarePolicy.nightShiftRate = req ^. #nightShiftRate
           }
-  _ <- SFarePolicy.updateFarePolicy updatedFarePolicy
+  SFarePolicy.updateFarePolicy updatedFarePolicy
   pure Success

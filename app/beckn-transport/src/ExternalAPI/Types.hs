@@ -3,7 +3,7 @@ module ExternalAPI.Types where
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.API.Cancel
 import Beckn.Types.Core.API.Confirm
-import Beckn.Types.Core.API.Search (OnSearchReq, OnSearchRes, nsdlOnSearchAPI)
+import Beckn.Types.Core.API.Search (OnSearchReq, OnSearchRes)
 import Beckn.Types.Core.API.Status
 import Beckn.Types.Core.API.Track
 import Beckn.Types.Core.API.Update
@@ -22,9 +22,6 @@ onSearchAPI = Proxy
 
 onSearch :: OnSearchReq -> ET.EulerClient AckResponse
 onSearch = ET.client onSearchAPI
-
-nsdlOnSearch :: OnSearchReq -> ET.EulerClient AckResponse
-nsdlOnSearch = ET.client nsdlOnSearchAPI
 
 type OnTrackAPI =
   "on_track"

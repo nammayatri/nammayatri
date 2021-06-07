@@ -112,8 +112,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
     notifySuccessGateway bapCallbackUrl bppShortId = do
       onConfirmPayload <- mkOnConfirmPayload bapCallbackUrl searchCase orderProductInstance trackerCase
       logTagInfo "OnConfirmCallback" $ "Sending OnConfirm payload to " +|| bapCallbackUrl ||+ " with payload " +|| onConfirmPayload ||+ ""
-      _ <- ExternalAPI.onConfirm bapCallbackUrl onConfirmPayload bppShortId
-      pure ()
+      ExternalAPI.onConfirm bapCallbackUrl onConfirmPayload bppShortId
     notifyErrorGateway err bapCallbackUrl bppShortId = do
       currTime <- getCurrentTime
       appEnv <- ask
@@ -144,8 +143,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
                         message = Nothing
                       }
               }
-      _ <- ExternalAPI.onConfirm bapCallbackUrl payload bppShortId
-      pure ()
+      ExternalAPI.onConfirm bapCallbackUrl payload bppShortId
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do

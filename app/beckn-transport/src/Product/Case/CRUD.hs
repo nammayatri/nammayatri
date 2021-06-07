@@ -116,8 +116,7 @@ notifyGateway c prodInst transporterOrgId piStatus bppShortId = do
     PI.OUTOFSTOCK -> mkOnSearchPayload c [] transporterOrg
     _ -> mkOnSearchPayload c [prodInst] transporterOrg
   logTagInfo "notifyGateway Request" $ show onSearchPayload
-  _ <- ExternalAPI.onSearch onSearchPayload bppShortId
-  return ()
+  ExternalAPI.onSearch onSearchPayload bppShortId
 
 mkOnSearchPayload :: Case -> [ProductInstance] -> Organization -> Flow OnSearchReq
 mkOnSearchPayload c pis orgInfo = do

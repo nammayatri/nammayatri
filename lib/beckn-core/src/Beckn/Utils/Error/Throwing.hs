@@ -1,13 +1,13 @@
-module Beckn.Utils.Error.Throwing where
+module Beckn.Utils.Error.Throwing
+  ( module Beckn.Utils.Error.Throwing,
+    IsAPIException,
+  )
+where
 
-import Beckn.Types.Common
-import Beckn.Types.Error.API
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error.APIError
 import Beckn.Utils.Logging
-import EulerHS.Prelude hiding (id)
-import qualified EulerHS.Types as ET
-
-type IsAPIException e = (IsAPIError e, Exception e)
+import EulerHS.Prelude
 
 throwError :: (MonadThrow m, Log m, IsAPIException e) => e -> m b
 throwError err = do
@@ -20,14 +20,12 @@ fromMaybeM err = maybe (throwError err) pure
 
 fromEitherM ::
   (MonadThrow m, Log m, IsAPIException e) => (left -> e) -> Either left b -> m b
-fromEitherM toerr = either (throwError . toerr) pure
+fromEitherM toerr = fromEitherM' (throwError . toerr)
 
-throwDBError :: (MonadThrow m, Log m) => ET.DBError -> m a
-throwDBError (ET.DBError dbErrType msg) = throwError $
-  case dbErrType of
-    ET.UnexpectedResult -> SQLResultError msg
-    ET.SQLError sqlErr -> SQLRequestError (show sqlErr) msg
-    _ -> DBUnknownError msg
+liftEither ::
+  (MonadThrow m, Log m, IsAPIException e) => Either e b -> m b
+liftEither = fromEitherM id
 
-checkDBError :: (MonadThrow m, Log m) => ET.DBResult a -> m a
-checkDBError = either throwDBError pure
+fromEitherM' ::
+  Applicative m => (l -> m r) -> Either l r -> m r
+fromEitherM' f = either f pure

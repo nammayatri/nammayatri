@@ -2,14 +2,13 @@
 
 module ExternalAPI.Dunzo.Flow where
 
-import Beckn.Types.Common (FlowR)
-import Beckn.Utils.Common (callAPI)
+import Beckn.Types.Common
+import Beckn.Types.Error.CallAPIError (unwrapEitherOnlyFromRawError)
+import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Dunzo.Types
-import GHC.Records
 import Servant (Capture, Get, Header, JSON, NoContent, Post, QueryParam, ReqBody, (:>))
-import Servant.Client (BaseUrl, ClientError)
 import Types.Common
 import Types.Metrics
 
@@ -22,8 +21,12 @@ type GetTokenAPI =
 getTokenAPI :: Proxy GetTokenAPI
 getTokenAPI = Proxy
 
-getToken :: HasField "metricsRequestLatency" e RequestLatencyMetric => BaseUrl -> TokenReq -> FlowR e (Either ClientError TokenRes)
-getToken url req = callAPI url tokenReq "getToken"
+getToken ::
+  HasCoreMetrics e =>
+  BaseUrl ->
+  TokenReq ->
+  FlowR e (Either Error TokenRes)
+getToken url req = callDunzoAPI url tokenReq "getToken"
   where
     clientId = Just $ getClientId $ req ^. #client_id
     clientSecret = Just $ getClientSecret $ req ^. #client_secret
@@ -43,8 +46,14 @@ type QuoteAPI =
 quoteAPI :: Proxy QuoteAPI
 quoteAPI = Proxy
 
-getQuote :: HasField "metricsRequestLatency" e RequestLatencyMetric => ClientId -> Token -> BaseUrl -> QuoteReq -> FlowR e (Either ClientError QuoteRes)
-getQuote clientId token url req = callAPI url quoteReq "getQuote"
+getQuote ::
+  HasCoreMetrics e =>
+  ClientId ->
+  Token ->
+  BaseUrl ->
+  QuoteReq ->
+  FlowR e (Either Error QuoteRes)
+getQuote clientId token url req = callDunzoAPI url quoteReq "getQuote"
   where
     quoteReq =
       T.client
@@ -68,8 +77,15 @@ type CreateTaskAPI =
 createTaskAPI :: Proxy CreateTaskAPI
 createTaskAPI = Proxy
 
-createTask :: HasField "metricsRequestLatency" e RequestLatencyMetric => ClientId -> Token -> BaseUrl -> Bool -> CreateTaskReq -> FlowR e (Either ClientError CreateTaskRes)
-createTask clientId token url isTestMode req = callAPI url task "createTask"
+createTask ::
+  HasCoreMetrics e =>
+  ClientId ->
+  Token ->
+  BaseUrl ->
+  Bool ->
+  CreateTaskReq ->
+  FlowR e (Either Error CreateTaskRes)
+createTask clientId token url isTestMode req = callDunzoAPI url task "createTask"
   where
     task =
       T.client
@@ -91,8 +107,15 @@ type TaskStatusAPI =
 taskStatusAPI :: Proxy TaskStatusAPI
 taskStatusAPI = Proxy
 
-taskStatus :: HasField "metricsRequestLatency" e RequestLatencyMetric => ClientId -> Token -> BaseUrl -> Bool -> TaskId -> FlowR e (Either ClientError TaskStatus)
-taskStatus clientId token url isTestMode taskId = callAPI url status "taskStatus"
+taskStatus ::
+  HasCoreMetrics e =>
+  ClientId ->
+  Token ->
+  BaseUrl ->
+  Bool ->
+  TaskId ->
+  FlowR e (Either Error TaskStatus)
+taskStatus clientId token url isTestMode taskId = callDunzoAPI url status "taskStatus"
   where
     status =
       T.client
@@ -115,8 +138,16 @@ type CancelTaskAPI =
 cancelTaskAPI :: Proxy CancelTaskAPI
 cancelTaskAPI = Proxy
 
-cancelTask :: HasField "metricsRequestLatency" e RequestLatencyMetric => ClientId -> Token -> BaseUrl -> Bool -> TaskId -> Text -> FlowR e (Either ClientError ())
-cancelTask clientId token url isTestMode taskId cancellationReason = callAPI url cancel "cancelTask"
+cancelTask ::
+  HasCoreMetrics e =>
+  ClientId ->
+  Token ->
+  BaseUrl ->
+  Bool ->
+  TaskId ->
+  Text ->
+  FlowR e (Either Error ())
+cancelTask clientId token url isTestMode taskId cancellationReason = callDunzoAPI url cancel "cancelTask"
   where
     cancel =
       void $
@@ -130,3 +161,8 @@ cancelTask clientId token url isTestMode taskId cancellationReason = callAPI url
 
 setTestQueryParam :: Bool -> Maybe Bool
 setTestQueryParam isTestMode = if isTestMode then Just True else Nothing
+
+callDunzoAPI :: CallAPI env a (Either Error a)
+callDunzoAPI url eulerClient method =
+  callApiExtractingApiError Nothing url eulerClient method
+    >>= unwrapEitherOnlyFromRawError Nothing url

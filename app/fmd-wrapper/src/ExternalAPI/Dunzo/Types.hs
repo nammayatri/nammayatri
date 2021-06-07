@@ -1,10 +1,13 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module ExternalAPI.Dunzo.Types where
 
 import Beckn.Types.Common
+import Beckn.Types.Error.APIError
+import Beckn.Types.Error.FromResponse
 import Data.Aeson hiding (Error)
 import Data.Char (toLower)
 import EulerHS.Prelude
@@ -186,27 +189,47 @@ data Error = Error
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
+instance FromResponse Error where
+  fromResponse = fromJsonResponse
+
 instance ToBeckn Beckn.Error Error where
   toBeckn Error {..} =
     Beckn.Error
       { _type = Beckn.DOMAIN_ERROR,
-        code = becknErrCode,
+        code = dunzoCodeToBecknCode code,
         path = Nothing,
         message = Just message
       }
-    where
-      becknErrCode = case code of
-        "unauthorized" -> "CORE001"
-        "rate_limit_exceeded" -> "CORE002"
-        "validation_failed" -> "CORE003"
-        "bad_request" -> "CORE003"
-        "unserviceable_location_error" -> "FMD001"
-        "stock_out_error" -> "FMD009"
-        "internal_server_error" -> "CORE002"
-        "duplicate_request" -> "CORE003"
-        "rain_error" -> "FMD009"
-        "different_city_error" -> "FMD001"
-        "near_by_location_error" -> "FMD001"
-        "service_unavailable" -> "CORE002"
-        "default" -> "CORE003"
-        _ -> "CORE003"
+
+dunzoCodeToBecknCode :: Text -> Text
+dunzoCodeToBecknCode = \case
+  "unauthorized" -> "CORE001"
+  "rate_limit_exceeded" -> "CORE002"
+  "validation_failed" -> "CORE003"
+  "bad_request" -> "CORE003"
+  "unserviceable_location_error" -> "FMD001"
+  "stock_out_error" -> "FMD009"
+  "internal_server_error" -> "CORE002"
+  "duplicate_request" -> "CORE003"
+  "rain_error" -> "FMD009"
+  "different_city_error" -> "FMD001"
+  "near_by_location_error" -> "FMD001"
+  "service_unavailable" -> "CORE002"
+  "default" -> "CORE003"
+  _ -> "CORE003"
+
+-- TODO: figure out all the codes
+dunzoCodeToHttpCode :: Text -> HttpCode
+dunzoCodeToHttpCode = \case
+  "unauthorized" -> E401
+  "bad_request" -> E400
+  "service_unavailable" -> E503
+  _ -> E500
+
+-- TODO: make it a beckn-specific error
+instance IsAPIError Error where
+  toErrorCode Error {code} = dunzoCodeToBecknCode code
+  toHttpCode Error {code} = dunzoCodeToHttpCode code
+  toMessage Error {message} = Just message
+
+instanceExceptionWithParent 'APIException ''Error

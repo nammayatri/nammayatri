@@ -1,7 +1,10 @@
 module Beckn.Utils.Servant.Client where
 
 import Beckn.Types.Common
+import Beckn.Types.Error.CallAPIError
+import Beckn.Types.Error.FromResponse
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
+import Beckn.Utils.Error.Throwing
 import Beckn.Utils.Logging (logInfo)
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as A
@@ -12,21 +15,23 @@ import qualified EulerHS.Types as ET
 import qualified Servant.Client as S
 import Servant.Client.Core
 
-callAPI ::
-  (HasCallStack, Log (FlowR r), HasCoreMetrics r, ET.JSONEx a, ToJSON a) =>
+type CallAPI env a a' =
+  ( HasCallStack,
+    HasCoreMetrics env,
+    ET.JSONEx a,
+    ToJSON a
+  ) =>
   BaseUrl ->
   ET.EulerClient a ->
   Text ->
-  FlowR r (Either ClientError a)
+  FlowR env a'
+
+callAPI :: CallAPI env a (Either ClientError a)
 callAPI = callAPI' Nothing
 
 callAPI' ::
-  (HasCallStack, Log (FlowR r), HasCoreMetrics r, ET.JSONEx a, ToJSON a) =>
   Maybe ET.ManagerSelector ->
-  BaseUrl ->
-  ET.EulerClient a ->
-  Text ->
-  FlowR r (Either ClientError a)
+  CallAPI env a (Either ClientError a)
 callAPI' mbManagerSelector baseUrl eulerClient desc = do
   withLogTag "callAPI" $ do
     endTracking <- Metrics.startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc
@@ -48,3 +53,23 @@ callAPI' mbManagerSelector baseUrl eulerClient desc = do
 
 parseBaseUrl :: MonadThrow m => Text -> m S.BaseUrl
 parseBaseUrl = S.parseBaseUrl . T.unpack
+
+callApiExtractingApiError ::
+  FromResponse err =>
+  Maybe ET.ManagerSelector ->
+  CallAPI env a (Either (CallAPIError err) a)
+callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc =
+  callAPI' mbManagerSelector baseUrl eulerClient desc
+    <&> extractApiError
+
+callApiUnwrappingApiError ::
+  ( FromResponse err,
+    IsAPIException exc
+  ) =>
+  (err -> exc) ->
+  Maybe ET.ManagerSelector ->
+  Maybe Text ->
+  CallAPI env a a
+callApiUnwrappingApiError toAPIException mbManagerSelector errorCodeMb baseUrl eulerClient desc =
+  callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc
+    >>= unwrapEitherCallAPIError errorCodeMb baseUrl toAPIException

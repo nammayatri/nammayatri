@@ -18,7 +18,6 @@ import qualified Types.API.Feedback as API
 import Types.Error
 import Utils.Common
   ( buildContext,
-    checkAckResponseError,
     fromMaybeM,
     throwError,
     withFlowHandlerAPI,
@@ -60,5 +59,4 @@ feedback person request = withFlowHandlerAPI $ do
           }
   gatewayUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.feedback gatewayUrl (Beckn.FeedbackReq context feedbackMsg)
-    >>= checkAckResponseError (ExternalAPIResponseError "feedback")
   return Success

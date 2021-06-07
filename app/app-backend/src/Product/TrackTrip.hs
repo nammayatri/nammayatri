@@ -41,7 +41,6 @@ track person req = withFlowHandlerAPI $ do
   let gTripId = tracker ^. #trip . #id
   gatewayUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.track gatewayUrl (API.TrackTripReq context $ API.TrackReqMessage gTripId Nothing)
-    >>= checkAckResponseError (ExternalAPIResponseError "track")
   return Success
 
 trackCb :: Organization.Organization -> API.OnTrackTripReq -> FlowHandler API.OnTrackTripRes

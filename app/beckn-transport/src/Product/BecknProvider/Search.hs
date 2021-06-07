@@ -258,6 +258,7 @@ sendOnSearchFailed bapUri productCase transporterOrg err = do
           }
   let bppShortId = getShortId $ transporterOrg ^. #shortId
   ExternalAPI.onSearch payload bppShortId
+  return Ack
 
 sendOnSearchSuccess :: BaseUrl -> Case.Case -> Org.Organization -> ProductInstance.ProductInstance -> Flow AckResponse
 sendOnSearchSuccess bapUri productCase transporterOrg productInstance = do
@@ -269,6 +270,7 @@ sendOnSearchSuccess bapUri productCase transporterOrg productInstance = do
   onSearchPayload <- mkOnSearchPayload bapUri productCase productInstances transporterOrg
   let bppShortId = getShortId $ transporterOrg ^. #shortId
   ExternalAPI.onSearch onSearchPayload bppShortId
+  return Ack
 
 mkOnSearchPayload :: BaseUrl -> Case.Case -> [ProductInstance.ProductInstance] -> Org.Organization -> Flow API.OnSearchReq
 mkOnSearchPayload bapUri productCase productInstances transporterOrg = do
