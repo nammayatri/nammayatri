@@ -9,7 +9,7 @@ import GHC.Records (HasField)
 type (name :: Symbol) ::: (ty :: Type) = '(name, ty)
 
 -- | Version of 'HasField' which complies with both record-dot-preprocessor
--- and @^. #field@ syntax supported by generics-lens.
+-- and @.field@ syntax supported by generics-lens.
 --
 -- Re-evaluate this once we decide on a uniform way to access fields.
 type HasFieldSuper name r ty = (HasField name r ty, GL.Field name r r ty ty)

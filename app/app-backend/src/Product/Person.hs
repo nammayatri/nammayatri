@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Person where
 
 import App.Types
@@ -14,25 +12,25 @@ getPersonDetails :: Person.Person -> FlowHandler Person.GetPersonDetailsRes
 getPersonDetails auth =
   pure $
     Person.GetPersonDetailsRes
-      { id = auth ^. #id,
-        firstName = auth ^. #firstName,
-        middleName = auth ^. #middleName,
-        lastName = auth ^. #lastName,
-        fullName = auth ^. #fullName,
-        role = auth ^. #role,
-        gender = auth ^. #gender,
-        email = auth ^. #email
+      { id = auth.id,
+        firstName = auth.firstName,
+        middleName = auth.middleName,
+        lastName = auth.lastName,
+        fullName = auth.fullName,
+        role = auth.role,
+        gender = auth.gender,
+        email = auth.email
       }
 
 updatePerson :: Person.Person -> Person.UpdateReq -> FlowHandler APISuccess.APISuccess
 updatePerson auth req = withFlowHandlerAPI $ do
   QPerson.updatePersonalInfo
-    (auth ^. #id)
-    (req ^. #firstName)
-    (req ^. #middleName)
-    (req ^. #lastName)
-    (req ^. #fullName)
-    (req ^. #gender)
-    (req ^. #email)
-    (req ^. #deviceToken)
+    (auth.id)
+    (req.firstName)
+    (req.middleName)
+    (req.lastName)
+    (req.fullName)
+    (req.gender)
+    (req.email)
+    (req.deviceToken)
   pure APISuccess.Success

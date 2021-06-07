@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
 module BackgroundTaskManager where
@@ -31,15 +30,15 @@ import qualified Utils.Metrics as Metrics
 runBackgroundTaskManager :: (BTMCfg -> BTMCfg) -> IO ()
 runBackgroundTaskManager configModifier = do
   btmCfg <- configModifier <$> readDhallConfigDefault "beckn-transport-btm"
-  Metrics.serve (btmCfg ^. #metricsPort)
-  let appCfg = btmCfg ^. #appCfg
+  Metrics.serve (btmCfg.metricsPort)
+  let appCfg = btmCfg.appCfg
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
-  let redisCfg = appCfg ^. #redisCfg
+  let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
+  let redisCfg = appCfg.redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
-  let port = appCfg ^. #bgtmPort
+  let port = appCfg.bgtmPort
   btmEnv <- buildBTMEnv btmCfg
-  let appEnv = btmEnv ^. #appEnv
+  let appEnv = btmEnv.appEnv
 
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
@@ -61,8 +60,8 @@ runBackgroundTaskManager configModifier = do
         return $ flowRt {R._httpClientManagers = managerMap}
     let settings =
           defaultSettings
-            & setGracefulShutdownTimeout (Just $ appCfg ^. #graceTerminationPeriod)
-            & setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
+            & setGracefulShutdownTimeout (Just $ appCfg.graceTerminationPeriod)
+            & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
             & setPort port
     void . forkIO . runSettings settings $ Server.run healthCheckAPI healthCheckServer EmptyContext (App.EnvR flowRt' appEnv)
     runFlowR flowRt' btmEnv Runner.run

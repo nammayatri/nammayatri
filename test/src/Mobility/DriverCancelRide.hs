@@ -35,7 +35,7 @@ spec = do
       searchResult `shouldSatisfy` isRight
       -- If we reach here, the 'Right' pattern match will always succeed
       let Right searchResponse = searchResult
-          appCaseid = searchResponse ^. #caseId
+          appCaseid = searchResponse.caseId
 
       productInstance :| [] <- poll $ do
         -- Do a Case Status request for getting case product to confirm ride
@@ -43,7 +43,7 @@ spec = do
         statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
-        return . nonEmpty . filter (\p -> p ^. #organizationId == Id bppTransporterOrgId) $ productInstances statusRes
+        return . nonEmpty . filter (\p -> p.organizationId == Id bppTransporterOrgId) $ productInstances statusRes
       let productInstanceId = AppCase.id productInstance
       -- Confirm ride from app backend
       confirmResult <-
@@ -69,8 +69,8 @@ spec = do
           runClient
             tbeClientEnv
             $ getNotificationInfo driverToken (Just $ cast transporterOrderPiId)
-        pure $ either (const Nothing) (^. #rideRequest) res
-      rideInfo ^. #productInstanceId `shouldBe` transporterOrderPiId
+        pure $ either (const Nothing) (.rideRequest) res
+      rideInfo.productInstanceId `shouldBe` transporterOrderPiId
 
       -- Driver Accepts a ride
       let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.ACCEPT
@@ -86,9 +86,9 @@ spec = do
         let Right rideResponse = rideRequestResponse
         let orders =
               rideResponse ^.. traverse . #productInstance
-                & filter \p -> p ^. #parentId == Just productInstanceId
+                & filter \p -> p.parentId == Just productInstanceId
         return $ nonEmpty orders
-      tripAssignedPI ^. #status `shouldBe` PI.TRIP_ASSIGNED
+      tripAssignedPI.status `shouldBe` PI.TRIP_ASSIGNED
 
       -- Driver updates RIDEORDER PI to TRIP_REASSIGNMENT
       cancelStatusResult <-
@@ -103,7 +103,7 @@ spec = do
         let appPiList = AppPI.productInstance <$> piListRes
         let appOrderPI = filter (\pI -> (getId <$> PI.parentId pI) == Just (getId productInstanceId)) appPiList
         pure $ nonEmpty appOrderPI
-      piCancelled ^. #status `shouldBe` PI.CANCELLED
+      piCancelled.status `shouldBe` PI.CANCELLED
   where
     productInstances :: AppCase.GetStatusRes -> [AppCase.ProdInstRes]
     productInstances = AppCase.productInstance

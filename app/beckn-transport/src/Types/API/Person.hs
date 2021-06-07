@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Types.API.Person where
 
 import App.Types
@@ -71,20 +69,20 @@ instance ModifyTransform UpdatePersonReq SP.Person Flow where
     return
       person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-          SP.firstName = ifJust (req ^. #firstName) (person ^. #firstName),
-          SP.middleName = ifJust (req ^. #middleName) (person ^. #middleName),
-          SP.lastName = ifJust (req ^. #lastName) (person ^. #lastName),
-          SP.fullName = ifJust (req ^. #fullName) (person ^. #fullName),
-          SP.role = ifJustExtract (req ^. #role) (person ^. #role),
-          SP.gender = ifJustExtract (req ^. #gender) (person ^. #gender),
-          SP.email = ifJust (req ^. #email) (person ^. #email),
-          SP.identifier = ifJust (req ^. #identifier) (person ^. #identifier),
-          SP.rating = ifJust (req ^. #rating) (person ^. #rating),
-          SP.deviceToken = ifJust (req ^. #deviceToken) (person ^. #deviceToken),
-          SP.udf1 = ifJust (req ^. #udf1) (person ^. #udf1),
-          SP.udf2 = ifJust (req ^. #udf2) (person ^. #udf2),
-          SP.organizationId = ifJust (req ^. #organizationId) (person ^. #organizationId),
-          SP.description = ifJust (req ^. #description) (person ^. #description),
+          SP.firstName = ifJust (req.firstName) (person.firstName),
+          SP.middleName = ifJust (req.middleName) (person.middleName),
+          SP.lastName = ifJust (req.lastName) (person.lastName),
+          SP.fullName = ifJust (req.fullName) (person.fullName),
+          SP.role = ifJustExtract (req.role) (person.role),
+          SP.gender = ifJustExtract (req.gender) (person.gender),
+          SP.email = ifJust (req.email) (person.email),
+          SP.identifier = ifJust (req.identifier) (person.identifier),
+          SP.rating = ifJust (req.rating) (person.rating),
+          SP.deviceToken = ifJust (req.deviceToken) (person.deviceToken),
+          SP.udf1 = ifJust (req.udf1) (person.udf1),
+          SP.udf2 = ifJust (req.udf2) (person.udf2),
+          SP.organizationId = ifJust (req.organizationId) (person.organizationId),
+          SP.description = ifJust (req.description) (person.description),
           SP.locationId = Just (SL.id location)
         }
 
@@ -103,17 +101,17 @@ updateOrCreateLocation req (Just locId) = do
 transformToLocation :: UpdatePersonReq -> SL.Location -> SL.Location
 transformToLocation req location =
   location
-    { SL.locationType = fromMaybe SL.PINCODE $ req ^. #locationType,
-      SL.lat = req ^. #lat,
-      SL.long = req ^. #long,
-      SL.ward = req ^. #ward,
-      SL.district = req ^. #district,
-      SL.city = req ^. #city,
-      SL.state = req ^. #state,
-      SL.country = req ^. #country,
-      SL.pincode = req ^. #pincode,
-      SL.address = req ^. #address,
-      SL.bound = req ^. #bound
+    { SL.locationType = fromMaybe SL.PINCODE $ req.locationType,
+      SL.lat = req.lat,
+      SL.long = req.long,
+      SL.ward = req.ward,
+      SL.district = req.district,
+      SL.city = req.city,
+      SL.state = req.state,
+      SL.country = req.country,
+      SL.pincode = req.pincode,
+      SL.address = req.address,
+      SL.bound = req.bound
     }
 
 createLocation :: UpdatePersonReq -> Flow SL.Location
@@ -185,27 +183,27 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
       SP.Person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
           SP.id = pid,
-          SP.firstName = req ^. #firstName,
-          SP.middleName = req ^. #middleName,
-          SP.lastName = req ^. #lastName,
-          SP.fullName = req ^. #fullName,
-          SP.role = ifJustExtract (req ^. #role) SP.USER,
-          SP.gender = ifJustExtract (req ^. #gender) SP.UNKNOWN,
-          SP.email = req ^. #email,
+          SP.firstName = req.firstName,
+          SP.middleName = req.middleName,
+          SP.lastName = req.lastName,
+          SP.fullName = req.fullName,
+          SP.role = ifJustExtract (req.role) SP.USER,
+          SP.gender = ifJustExtract (req.gender) SP.UNKNOWN,
+          SP.email = req.email,
           SP.passwordHash = Nothing,
-          SP.identifier = req ^. #identifier,
-          SP.identifierType = fromMaybe SP.MOBILENUMBER $ req ^. #identifierType,
-          SP.mobileNumber = req ^. #mobileNumber,
-          SP.mobileCountryCode = req ^. #mobileCountryCode,
+          SP.identifier = req.identifier,
+          SP.identifierType = fromMaybe SP.MOBILENUMBER $ req.identifierType,
+          SP.mobileNumber = req.mobileNumber,
+          SP.mobileCountryCode = req.mobileCountryCode,
           SP.verified = False,
-          SP.rating = req ^. #rating,
+          SP.rating = req.rating,
           SP.status = SP.INACTIVE,
-          SP.deviceToken = req ^. #deviceToken,
-          SP.udf1 = req ^. #udf1,
-          SP.udf2 = req ^. #udf2,
+          SP.deviceToken = req.deviceToken,
+          SP.udf1 = req.udf1,
+          SP.udf2 = req.udf2,
           SP.organizationId = Nothing,
-          SP.description = req ^. #description,
-          SP.locationId = Just (SL.id location),
+          SP.description = req.description,
+          SP.locationId = Just location.id,
           SP.createdAt = now,
           SP.updatedAt = now
         }

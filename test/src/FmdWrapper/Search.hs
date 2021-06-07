@@ -57,15 +57,15 @@ runSearch clientEnv orgId searchReq = do
 
 verifyCallbackContext :: Bool -> Text -> Context -> IO ()
 verifyCallbackContext expectBppUri transactionId context = do
-  context ^. #country `shouldBe` Just "IND"
-  context ^. #domain `shouldBe` Domain.FINAL_MILE_DELIVERY
-  when expectBppUri $ context ^. #bpp_uri `shouldSatisfy` isJust
-  context ^. #transaction_id `shouldBe` transactionId
-  context ^. #action `shouldBe` "on_search"
-  context ^. #message_id `shouldBe` transactionId
-  context ^. #bap_uri `shouldSatisfy` isJust
-  context ^. #domain_version `shouldBe` Just "0.8.3"
-  context ^. #core_version `shouldBe` Just "0.8.0"
+  context.country `shouldBe` Just "IND"
+  context.domain `shouldBe` Domain.FINAL_MILE_DELIVERY
+  when expectBppUri $ context.bpp_uri `shouldSatisfy` isJust
+  context.transaction_id `shouldBe` transactionId
+  context.action `shouldBe` "on_search"
+  context.message_id `shouldBe` transactionId
+  context.bap_uri `shouldSatisfy` isJust
+  context.domain_version `shouldBe` Just "0.8.3"
+  context.core_version `shouldBe` Just "0.8.0"
 
 verifyDunzoCatalog :: Search.OnSearchServices -> IO ()
 verifyDunzoCatalog onSearchServices = do
@@ -81,13 +81,13 @@ verifyDunzoCatalog onSearchServices = do
   map extractIndices items_ `shouldBe` expectedItemIndices
   map extractCategoryData packageCategories `shouldBe` expectedCategoryData
   forM_ items_ $ \item -> do
-    let price_ = item ^. #price
+    let price_ = item.price
     currency price_ `shouldBe` "INR"
     estimated_value price_ `shouldSatisfy` isJust
-    item ^. #category_id `shouldBe` Just "1"
+    item.category_id `shouldBe` Just "1"
   where
-    extractCategoryData category = (category ^. #id, category ^. #descriptor . #name)
-    extractIndices item = (item ^. #id, item ^. #package_category_id)
+    extractCategoryData category = (category.id, category.descriptor.name)
+    extractIndices item = (item.id, item.package_category_id)
     expectedItemIndices =
       take numberOfDunzoCategores $
         zip stringNumbers maybeStringNumbers
@@ -109,7 +109,7 @@ processResults transactionId callbackData = do
   where
     verifyContexts searchResults =
       forM_ searchResults \searchResult ->
-        verifyCallbackContext True transactionId $ searchResult ^. #context
+        verifyCallbackContext True transactionId $ searchResult.context
 
 dunzoLocationError ::
   Location.GPS ->

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.BecknProvider.Feedback where
 
 import App.Types
@@ -27,18 +25,18 @@ feedback :: Id Organization -> Organization -> API.FeedbackReq -> FlowHandler AP
 feedback _ _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "FeedbackAPI" "Received feedback API call."
-    let context = req ^. #context
+    let context = req.context
     BP.validateContext "feedback" context
-    let productInstanceId = Id $ req ^. #message . #order_id
+    let productInstanceId = Id $ req.message.order_id
     productInstances <- ProductInstance.findAllByParentId productInstanceId
     personId <- getPersonId productInstances & fromMaybeM (PIFieldNotPresent "person")
     orderPi <- ProductInstance.findByIdType (ProductInstance.id <$> productInstances) Case.RIDEORDER
-    unless (orderPi ^. #status == ProductInstance.COMPLETED) $
+    unless (orderPi.status == ProductInstance.COMPLETED) $
       throwError $ PIInvalidStatus "Order is not ready for rating."
     ratingValue :: Int <-
-      decodeFromText (req ^. #message . #rating . #value)
+      decodeFromText (req.message.rating.value)
         & fromMaybeM (InvalidRequest "Invalid rating type.")
-    let orderId = orderPi ^. #id
+    let orderId = orderPi.id
     mbRating <- Rating.findByProductInstanceId orderId
     case mbRating of
       Nothing -> do
@@ -48,12 +46,12 @@ feedback _ _ req = withFlowHandlerBecknAPI $
         Rating.create newRating
       Just rating -> do
         logTagInfo "FeedbackAPI" $
-          "Updating existing rating for " +|| orderPi ^. #id ||+ " with new rating " +|| ratingValue ||+ "."
-        Rating.updateRatingValue (rating ^. #id) ratingValue
+          "Updating existing rating for " +|| orderPi.id ||+ " with new rating " +|| ratingValue ||+ "."
+        Rating.updateRatingValue (rating.id) ratingValue
     Person.calculateAverageRating personId
     return Ack
   where
-    getPersonId (productI : _) = productI ^. #personId
+    getPersonId (productI : _) = productI.personId
     getPersonId _ = Nothing
 
 mkRating :: Id ProductInstance.ProductInstance -> Int -> Flow Rating.Rating

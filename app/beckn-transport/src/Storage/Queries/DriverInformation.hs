@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Storage.Queries.DriverInformation where
 
 import App.Types
@@ -114,7 +112,7 @@ findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
     joinQuery personDbTable driverInfoDbTable = do
       person <- B.all_ personDbTable
       driverInfo <- B.join_ driverInfoDbTable $ \row -> do
-        row ^. #driverId B.==. person ^. #id
+        row.driverId B.==. person.id
       B.guard_ $ predicate person
       return (person, driverInfo)
 

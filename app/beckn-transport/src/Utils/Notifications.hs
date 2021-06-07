@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Utils.Notifications where
 
 import App.Types
@@ -67,7 +65,7 @@ notifyTransporterOnExpiration c =
         { fcmNotificationType = FCM.EXPIRED_CASE,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Case,
-          fcmEntityIds = show . getId $ c ^. #id,
+          fcmEntityIds = show . getId $ c.id,
           fcmNotificationJSON = createAndroidNotification title body FCM.EXPIRED_CASE
         }
     title = FCMNotificationTitle $ T.pack "Ride expired!"
@@ -88,7 +86,7 @@ notifyCancelReqByBP p =
       FCM.FCMAndroidData
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
-          fcmEntityIds = show $ getId $ p ^. #id,
+          fcmEntityIds = show $ getId $ p.id,
           fcmEntityType = FCM.Organization,
           fcmNotificationJSON = createAndroidNotification title body FCM.CANCELLED_PRODUCT
         }
@@ -108,7 +106,7 @@ notifyDriverCancelledRideRequest p = traverse_ (notifyPerson notificationData)
       FCM.FCMAndroidData
         { fcmNotificationType = FCM.DRIVER_UNASSIGNED,
           fcmShowNotification = FCM.SHOW,
-          fcmEntityIds = show $ getId $ p ^. #id,
+          fcmEntityIds = show $ getId $ p.id,
           fcmEntityType = FCM.Organization,
           fcmNotificationJSON = createAndroidNotification title body FCM.DRIVER_UNASSIGNED
         }
@@ -129,7 +127,7 @@ notifyDriver notificationType notificationTitle message driver =
       FCM.FCMAndroidData
         { fcmNotificationType = notificationType,
           fcmShowNotification = FCM.SHOW,
-          fcmEntityIds = show . getId $ driver ^. #id,
+          fcmEntityIds = show . getId $ driver.id,
           fcmEntityType = FCM.Person,
           fcmNotificationJSON = createAndroidNotification title body notificationType
         }
@@ -152,7 +150,7 @@ notifyDriverNewAllocation productInstance = notifyPerson notificationData
         { fcmNotificationType = FCM.ALLOCATION_REQUEST,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId $ productInstance ^. #id,
+          fcmEntityIds = getId $ productInstance.id,
           fcmNotificationJSON = createAndroidNotification title body FCM.ALLOCATION_REQUEST
         }
 
@@ -171,6 +169,6 @@ notifyDriverUnassigned productInstance = notifyPerson notificationData
         { fcmNotificationType = FCM.ALLOCATION_REQUEST_UNASSIGNED,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId $ productInstance ^. #id,
+          fcmEntityIds = getId $ productInstance.id,
           fcmNotificationJSON = createAndroidNotification title body FCM.ALLOCATION_REQUEST_UNASSIGNED
         }

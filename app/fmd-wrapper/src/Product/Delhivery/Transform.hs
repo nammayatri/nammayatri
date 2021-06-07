@@ -42,9 +42,9 @@ import Utils.Common
 
 mkQuoteReqFromSearch :: SearchReq -> Flow QuoteReq
 mkQuoteReqFromSearch SearchReq {..} = do
-  let intent = message ^. #intent
-      pickups = intent ^. #pickups
-      drops = intent ^. #drops
+  let intent = message.intent
+      pickups = intent.pickups
+      drops = intent.drops
   case (pickups, drops) of
     ([pickup], [drop]) -> do
       pickupLoc <- mkLocDetails pickup
@@ -64,7 +64,7 @@ mkQuoteReqFromSearch SearchReq {..} = do
     onePickupLocationExpected = throwError $ InvalidRequest "One pickup location expected."
     oneDropLocationExpected = throwError $ InvalidRequest "One drop location expected"
     mkLocDetails loc = do
-      address <- mkAddress (loc ^. #location)
+      address <- mkAddress (loc.location)
       return $
         LocationDetails
           { eml = Nothing,
@@ -108,20 +108,20 @@ mkOnSearchErrReq context err =
         { _type = CoreErr.DOMAIN_ERROR,
           code = "",
           path = Nothing,
-          message = Just $ err ^. #message
+          message = Just $ err.message
         }
 
 mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
 mkQuoteReqFromSelect SelectReq {..} = do
-  let order = message ^. #order
-      task = head $ order ^. #tasks
-  pickupDet <- mkLocationDetails (task ^. #pickup)
-  dropDet <- mkLocationDetails (task ^. #drop)
+  let order = message.order
+      task = head $ order.tasks
+  pickupDet <- mkLocationDetails (task.pickup)
+  dropDet <- mkLocationDetails (task.drop)
   return $
     QuoteReq
       { inv = Nothing,
-        itm = mkItemDetails <$> (order ^. #items),
-        oid = order ^. #id,
+        itm = mkItemDetails <$> (order.items),
+        oid = order.id,
         cod = Nothing,
         src = pickupDet,
         tar = dropDet
@@ -130,7 +130,7 @@ mkQuoteReqFromSelect SelectReq {..} = do
 mkOnSelectOrder :: Order -> QuoteRes -> Flow SelectOrder
 mkOnSelectOrder order res@QuoteRes {..} = do
   quote <- mkQuote res
-  task <- updateTaskEta (head $ order ^. #tasks) eta
+  task <- updateTaskEta (head $ order.tasks) eta
   let order' =
         order & #tasks .~ [task]
           & #quotation ?~ quote
@@ -146,7 +146,7 @@ mkOnSelectReq context msg =
 updateTaskEta :: Task -> Integer -> Flow Task
 updateTaskEta task eta = do
   now <- getCurrentTime
-  let pickup = task ^. #pickup
+  let pickup = task.pickup
   let pickupEta = addUTCTime (fromInteger eta) now
   let pickup' = pickup & #time ?~ pickupEta
   return $
@@ -164,12 +164,12 @@ mkOnSelectErrReq context err =
         { _type = CoreErr.DOMAIN_ERROR,
           code = "",
           path = Nothing,
-          message = Just $ err ^. #message
+          message = Just $ err.message
         }
 
 mkOnInitMessage :: Text -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
 mkOnInitMessage orderId order payee req QuoteRes {..} = do
-  task <- updateTaskEta (head $ order ^. #tasks) eta
+  task <- updateTaskEta (head $ order.tasks) eta
   return $
     InitOrder $
       order & #id ?~ orderId
@@ -177,7 +177,7 @@ mkOnInitMessage orderId order payee req QuoteRes {..} = do
         & #billing .~ billing
         & #tasks .~ [task]
   where
-    billing = req ^. #message . #order . #billing
+    billing = req.message.order.billing
 
 mkOnInitReq :: Context -> InitOrder -> OnInitReq
 mkOnInitReq context msg =
@@ -198,20 +198,20 @@ mkOnInitErrReq context err =
         { _type = CoreErr.DOMAIN_ERROR,
           code = "",
           path = Nothing,
-          message = Just $ err ^. #message
+          message = Just $ err.message
         }
 
 mkCreateOrderReq :: Order -> Flow CreateOrderReq
 mkCreateOrderReq order = do
-  let task = head $ order ^. #tasks
-  pickupDet <- mkLocationDetails (task ^. #pickup)
-  dropDet <- mkLocationDetails (task ^. #drop)
-  returnDet <- mkLocationDetails (task ^. #_return)
+  let task = head $ order.tasks
+  pickupDet <- mkLocationDetails (task.pickup)
+  dropDet <- mkLocationDetails (task.drop)
+  returnDet <- mkLocationDetails (task._return)
   return $
     CreateOrderReq
       { inv = Nothing,
-        itm = mkItemDetails <$> (order ^. #items),
-        oid = order ^. #id,
+        itm = mkItemDetails <$> (order.items),
+        oid = order.id,
         cod = Nothing,
         src = pickupDet,
         ret = returnDet,
@@ -238,7 +238,7 @@ mkOnConfirmErrReq context err =
         { _type = CoreErr.DOMAIN_ERROR,
           code = "",
           path = Nothing,
-          message = Just $ err ^. #message
+          message = Just $ err.message
         }
 
 mkItemDetails :: FMD.Item -> ItemDetails
@@ -253,13 +253,13 @@ mkItemDetails item =
 
 mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
 mkLocationDetails PickupOrDrop {..} = do
-  phone <- listToMaybe (poc ^. #phones) & fromMaybeM (InternalError "Person phone number is not present.")
+  phone <- listToMaybe (poc.phones) & fromMaybeM (InternalError "Person phone number is not present.")
   address <- mkAddress location
   return $
     LocationDetails
-      { eml = poc ^. #email,
+      { eml = poc.email,
         pho = phone,
-        nam = getName (poc ^. #name),
+        nam = getName (poc.name),
         det = address
       }
   where

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Services.Allocation.Internal where
 
 import App.BackgroundTaskManager.Types
@@ -73,8 +71,8 @@ getCurrentNotification rideId = do
   where
     buildCurrentNotification notificationStatus =
       Alloc.CurrentNotification
-        (notificationStatus ^. #driverId)
-        (notificationStatus ^. #expiresAt)
+        (notificationStatus.driverId)
+        (notificationStatus.expiresAt)
 
 cleanupOldNotifications :: Flow Int
 cleanupOldNotifications = withAppEnv QNS.cleanupOldNotifications
@@ -100,10 +98,10 @@ resetLastRejectionTime = withAppEnv . QDS.updateIdleTimeFlow
 
 getAttemptedDrivers :: Id Ride -> Flow [Id Driver]
 getAttemptedDrivers rideId =
-  withAppEnv $ QNS.fetchRefusedNotificationsByRideId rideId <&> map (^. #driverId)
+  withAppEnv $ QNS.fetchRefusedNotificationsByRideId rideId <&> map (.driverId)
 
 getDriversWithNotification :: Flow [Id Driver]
-getDriversWithNotification = withAppEnv $ QNS.fetchActiveNotifications <&> fmap (^. #driverId)
+getDriversWithNotification = withAppEnv $ QNS.fetchActiveNotifications <&> fmap (.driverId)
 
 getFirstDriverInTheQueue :: NonEmpty (Id Driver) -> Flow (Id Driver)
 getFirstDriverInTheQueue = withAppEnv . QDS.getFirstDriverInTheQueue . toList
@@ -167,8 +165,8 @@ addNotificationStatus rideId driverId expiryTime = do
 
 addAvailableDriver :: SDriverInfo.DriverInformation -> [Id Driver] -> [Id Driver]
 addAvailableDriver driverInfo availableDriversIds =
-  if driverInfo ^. #active && not (driverInfo ^. #onRide)
-    then cast (driverInfo ^. #driverId) : availableDriversIds
+  if driverInfo.active && not (driverInfo.onRide)
+    then cast (driverInfo.driverId) : availableDriversIds
     else availableDriversIds
 
 logEvent :: AllocationEventType -> Id Ride -> Maybe (Id Driver) -> Flow ()
@@ -177,12 +175,12 @@ logEvent evType rideId = withAppEnv . logAllocationEvent evType rideId
 getRideInfo :: Id Ride -> Flow RideInfo
 getRideInfo rideId = do
   productInstance <- withAppEnv . QPI.findById $ cast rideId
-  rideStatus <- castToRideStatus $ productInstance ^. #status
+  rideStatus <- castToRideStatus $ productInstance.status
   pure
     RideInfo
       { rideId = rideId,
         rideStatus = rideStatus,
-        orderTime = OrderTime $ productInstance ^. #createdAt
+        orderTime = OrderTime $ productInstance.createdAt
       }
   where
     castToRideStatus = \case

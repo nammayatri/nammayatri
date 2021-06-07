@@ -82,7 +82,7 @@ deriving newtype instance FromBackendRow Postgres (Encrypted a)
 --
 -- If you need to lookup by encrypted data, put 'EncryptedHashedField'
 -- into table field, and in query match against field hash, e.g.
--- @ myfield ^. #hash ==. val_ (evalDbHash seekedValue) @
+-- @ myfield.hash ==. val_ (evalDbHash seekedValue) @
 instance
   TypeError
     ( 'Text "Matching on encrypted data is not allowed"

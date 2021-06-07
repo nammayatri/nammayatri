@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Storage.Queries.DriverStats where
 
 import App.Types (AppEnv (dbCfg), Flow)
@@ -35,7 +33,7 @@ getFirstDriverInTheQueue :: [Id Driver] -> Flow (Id Driver)
 getFirstDriverInTheQueue ids = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ 1 . B.orderBy_ order) predicate
-    >>= fromMaybeM EmptyDriverPool . listToMaybe . map (^. #driverId)
+    >>= fromMaybeM EmptyDriverPool . listToMaybe . map (.driverId)
   where
     predicate Storage.DriverStats {..} = driverId `B.in_` (B.val_ <$> ids)
     order Storage.DriverStats {..} = B.asc_ idleSince

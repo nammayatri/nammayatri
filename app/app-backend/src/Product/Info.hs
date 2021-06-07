@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Info where
 
 import App.Types
@@ -27,10 +25,10 @@ getProductInfo _ prodInstId = withFlowHandlerAPI $ do
           let trip = ProductInfo.trip tracker
           return $
             GetProductInfoRes
-              { vehicle = trip ^. #vehicle,
-                driver = trip ^. #driver,
-                travellers = trip ^. #travellers,
-                fare = trip ^. #fare,
+              { vehicle = trip.vehicle,
+                driver = trip.driver,
+                travellers = trip.travellers,
+                fare = trip.fare,
                 caseId = getId (SPI.caseId productInstance),
                 product = productInstance
               }
@@ -45,4 +43,4 @@ getLocation person caseId = withFlowHandlerAPI $ do
   productInstances <- MPI.listAllProductInstanceByPerson person (SPI.ByApplicationId caseId) [SPI.CONFIRMED]
   when (null productInstances) $ throwError PIDoesNotExist
   let pI = head productInstances
-  ExternalAPI.location baseUrl (getId $ pI ^. #id)
+  ExternalAPI.location baseUrl (getId $ pI.id)

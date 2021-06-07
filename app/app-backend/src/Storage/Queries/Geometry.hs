@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Storage.Queries.Geometry where
 
 import App.Types
@@ -32,7 +30,7 @@ containsPredicate ::
   B.QGenExpr B.QValueContext Postgres B.QBaseScope Bool
 containsPredicate gps _ = containsPoint_ (B.val_ point)
   where
-    point = "POINT (" <> gps ^. #lon <> " " <> gps ^. #lat <> ")"
+    point = "POINT (" <> gps.lon <> " " <> gps.lat <> ")"
 
 findGeometriesContaining :: GPS -> Text -> Flow [Storage.Geometry]
 findGeometriesContaining gps region_ = do

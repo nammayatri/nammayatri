@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
@@ -178,7 +177,7 @@ deriveTableEncryption ''PersonTE
 -- TODO: move it to appropriate place
 maskPerson :: Person -> Person
 maskPerson person =
-  person {deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> (person ^. #deviceToken)}
+  person {deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> (person.deviceToken)}
   where
     trimToken token =
       if length token > 6

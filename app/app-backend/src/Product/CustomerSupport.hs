@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -30,7 +29,7 @@ login T.LoginReq {..} = withFlowHandlerAPI $ do
   case personM of
     Nothing -> throwError Unauthorized
     Just person ->
-      if person ^. #status /= SP.ACTIVE && person ^. #role /= SP.CUSTOMER_SUPPORT
+      if person.status /= SP.ACTIVE && person.role /= SP.CUSTOMER_SUPPORT
         then throwError Unauthorized
         else do
           token <- generateToken person
@@ -44,15 +43,15 @@ generateToken SP.Person {..} = do
   DB.runSqlDBTransaction $ do
     RegistrationToken.deleteByPersonId personId
     RegistrationToken.create regToken
-  pure $ regToken ^. #token
+  pure $ regToken.token
 
 logout :: SP.Person -> FlowHandler T.LogoutRes
 logout person =
   withFlowHandlerAPI $
-    if person ^. #role /= SP.CUSTOMER_SUPPORT
+    if person.role /= SP.CUSTOMER_SUPPORT
       then throwError Unauthorized -- Do we need this Check?
       else do
-        DB.runSqlDB (RegistrationToken.deleteByPersonId (getId $ person ^. #id))
+        DB.runSqlDB (RegistrationToken.deleteByPersonId (getId $ person.id))
         pure $ T.LogoutRes "Logged out successfully"
 
 createSupportRegToken :: Text -> Flow SR.RegistrationToken
@@ -81,7 +80,7 @@ createSupportRegToken entityId = do
 listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
 listOrder supportP mCaseId mMobile mlimit moffset =
   withFlowHandlerAPI $
-    if supportP ^. #role /= SP.ADMIN && supportP ^. #role /= SP.CUSTOMER_SUPPORT
+    if supportP.role /= SP.ADMIN && supportP.role /= SP.CUSTOMER_SUPPORT
       then throwError AccessDenied
       else do
         T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
@@ -96,13 +95,13 @@ listOrder supportP mCaseId mMobile mlimit moffset =
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
           >>= fromMaybeM PersonDoesNotExist
       searchcases <-
-        Case.findAllByTypeAndStatuses (person ^. #id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
+        Case.findAllByTypeAndStatuses (person.id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
       return $ T.OrderInfo person searchcases
     getByCaseId caseId = do
       (_case :: C.Case) <-
         Case.findByIdAndType (Id caseId) C.RIDESEARCH
           >>= fromMaybeM CaseDoesNotExist
-      let personId = fromMaybe "_ID" (_case ^. #requestor)
+      let personId = fromMaybe "_ID" (_case.requestor)
       person <-
         Person.findById (Id personId)
           >>= fromMaybeM PersonDoesNotExist
@@ -112,7 +111,7 @@ makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp
 makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
     Case.findOneByParentIdAndCaseType id C.RIDEORDER
-  let (status_ :: Maybe CaseStatus) = ((\x -> Just $ x ^. #status) =<< confiremedOrder) <|> Just status
+  let (status_ :: Maybe CaseStatus) = ((\x -> Just $ x.status) =<< confiremedOrder) <|> Just status
   fromLocation <- Location.findLocationById fromLocationId
   toLocation <- Location.findLocationById toLocationId
   trip <- makeTripDetails confiremedOrder
@@ -141,13 +140,13 @@ makeTripDetails caseM = case caseM of
     -- Note: In case of Confirmed Order only one Product Instance will be Present
     ProductInstance.ProductInstance {id, status, info, price} <-
       head
-        <$> PI.findAllByCaseId (_case ^. #id)
+        <$> PI.findAllByCaseId (_case.id)
     let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< info
-        provider = (\x -> x ^. #provider) =<< mproductInfo
-        mtracker = (\x -> x ^. #tracker) =<< mproductInfo
-        mtrip = (\x -> Just $ x ^. #trip) =<< mtracker
-        driver = (\x -> x ^. #driver) =<< mtrip
-        vehicle = (\x -> x ^. #vehicle) =<< mtrip
+        provider = (\x -> x.provider) =<< mproductInfo
+        mtracker = (\x -> x.tracker) =<< mproductInfo
+        mtrip = (\x -> Just $ x.trip) =<< mtracker
+        driver = (\x -> x.driver) =<< mtrip
+        vehicle = (\x -> x.vehicle) =<< mtrip
     pure $
       Just $
         T.TripDetails

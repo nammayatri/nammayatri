@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Transporter where
 
 import App.Types
@@ -27,9 +25,9 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   validate person
   organization <- createTransform req
   validateReq
-  sedanFarePolicy <- mkFarePolicy (organization ^. #id) SVehicle.SEDAN (organization ^. #createdAt)
-  suvFarePolicy <- mkFarePolicy (organization ^. #id) SVehicle.SUV (organization ^. #createdAt)
-  hatchbackFarePolicy <- mkFarePolicy (organization ^. #id) SVehicle.HATCHBACK (organization ^. #createdAt)
+  sedanFarePolicy <- mkFarePolicy (organization.id) SVehicle.SEDAN (organization.createdAt)
+  suvFarePolicy <- mkFarePolicy (organization.id) SVehicle.SUV (organization.createdAt)
+  hatchbackFarePolicy <- mkFarePolicy (organization.id) SVehicle.HATCHBACK (organization.createdAt)
   QO.create organization
   traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
   QP.updateOrganizationIdAndMakeAdmin (Id entityId) (SO.id organization)
@@ -44,8 +42,8 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
       when (isJust $ SP.organizationId person) $
         throwError PersonOrgExists
     validateReq = do
-      let countryCode = req ^. #mobileCountryCode
-          mobileNumber = req ^. #mobileNumber
+      let countryCode = req.mobileCountryCode
+          mobileNumber = req.mobileNumber
       whenJustM (QO.findOrgByMobileNumber countryCode mobileNumber) $
         \_ -> throwError OrgMobilePhoneUsed
     mkFarePolicy orgId vehicleVariant now = do
@@ -74,7 +72,7 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
       validate person
       org <- QO.findOrganizationById orgId
       organization <-
-        if req ^. #enabled /= Just False
+        if req.enabled /= Just False
           then modifyTransform req org >>= addTime (Just now)
           else modifyTransform req org
       QO.updateOrganizationRec organization
@@ -90,7 +88,7 @@ getTransporter :: SR.RegistrationToken -> FlowHandler TransporterRec
 getTransporter SR.RegistrationToken {..} = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id entityId)
   validate person
-  case person ^. #organizationId of
+  case person.organizationId of
     Just orgId -> TransporterRec <$> QO.findOrganizationById orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
   where

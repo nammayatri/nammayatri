@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module FmdWrapper.Server where
 
 import Beckn.Types.Core.Ack
@@ -37,7 +35,7 @@ callbackServer = onSearch
 
 onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> OnSearchReq -> Handler AckResponse
 onSearch callbackData sPayload req = do
-  atomically $ modifyTVar (onSearchTVar callbackData) (CallbackResult (sPayload <&> (^. #params . #keyId . #subscriberId)) req :)
+  atomically $ modifyTVar (onSearchTVar callbackData) (CallbackResult (sPayload <&> (.params.keyId.subscriberId)) req :)
   pure Ack
 
 mkCallbackData :: IO CallbackData

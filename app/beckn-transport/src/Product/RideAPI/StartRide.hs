@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.RideAPI.StartRide where
 
 import App.Types (AppEnv (..), Flow, FlowHandler)
@@ -21,7 +19,7 @@ import Utils.Common (withFlowHandlerAPI)
 
 startRide :: SR.RegistrationToken -> Id ProductInstance.ProductInstance -> StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide SR.RegistrationToken {..} rideId req = withFlowHandlerAPI $ do
-  Handler.startRideHandler handle (Id entityId) (cast rideId) (req ^. #otp)
+  Handler.startRideHandler handle (Id entityId) (cast rideId) (req.otp)
   where
     handle =
       Handler.ServiceHandle

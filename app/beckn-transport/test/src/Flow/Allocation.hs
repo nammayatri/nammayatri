@@ -87,8 +87,8 @@ checkRideStatus :: Repository -> Id Ride -> RideStatus -> IO ()
 checkRideStatus Repository {..} rideId expectedStatus = do
   rides <- readIORef ridesVar
   case Map.lookup ride01Id rides of
-    Nothing -> assertFailure $ "Ride " <> show (rideId ^. #getId) <> " not found"
-    Just rideInfo -> rideInfo ^. #rideStatus @?= expectedStatus
+    Nothing -> assertFailure $ "Ride " <> show (rideId.getId) <> " not found"
+    Just rideInfo -> rideInfo.rideStatus @?= expectedStatus
 
 handle :: Repository -> ServiceHandle IO
 handle repository@Repository {..} =

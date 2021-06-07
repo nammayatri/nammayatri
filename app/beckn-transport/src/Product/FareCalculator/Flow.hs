@@ -1,6 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedLabels #-}
 
 module Product.FareCalculator.Flow where
 
@@ -83,7 +82,7 @@ calculateBaseFare ::
   FarePolicy ->
   m Amount
 calculateBaseFare farePolicy = do
-  let baseFare = fromMaybe 0 $ farePolicy ^. #baseFare
+  let baseFare = fromMaybe 0 $ farePolicy.baseFare
   pure $ Amount baseFare
 
 calculateDistanceFare ::
@@ -93,8 +92,8 @@ calculateDistanceFare ::
   JourneyTrip ->
   m Amount
 calculateDistanceFare farePolicy actualDistance journeyType = do
-  let baseDistance = fromMaybe 0 $ farePolicy ^. #baseDistance
-  let perKmRate = farePolicy ^. #perExtraKmRate
+  let baseDistance = fromMaybe 0 $ farePolicy.baseDistance
+  let perKmRate = farePolicy.perExtraKmRate
   let distanceMultiplier = case journeyType of
         OneWayTrip -> 1.0
         HalfReturnTrip -> 1.5
@@ -113,9 +112,9 @@ calculateNightShiftRate ::
 calculateNightShiftRate farePolicy startTime = do
   let timeZone = minutesToTimeZone 330 -- TODO: Should be configurable. Hardcoded to IST +0530
   let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone startTime
-  let nightShiftRate = fromMaybe 1 $ farePolicy ^. #nightShiftRate
-  let nightShiftStart = fromMaybe midnight $ farePolicy ^. #nightShiftStart
-  let nightShiftEnd = fromMaybe midnight $ farePolicy ^. #nightShiftEnd
+  let nightShiftRate = fromMaybe 1 $ farePolicy.nightShiftRate
+  let nightShiftStart = fromMaybe midnight $ farePolicy.nightShiftStart
+  let nightShiftEnd = fromMaybe midnight $ farePolicy.nightShiftEnd
   pure . Amount $
     if timeOfDay > nightShiftStart || timeOfDay < nightShiftEnd
       then nightShiftRate

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Confirm (confirm, onConfirm) where
 
 import App.Types
@@ -35,20 +33,20 @@ confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
 confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
   lt <- getCurrentTime
   case_ <- MCase.findIdByPerson person $ Id caseId
-  when ((case_ ^. #validTill) < lt) $
+  when ((case_.validTill) < lt) $
     throwError CaseExpired
   orderCase_ <- mkOrderCase case_
   productInstance <- MPI.findById (Id productInstanceId)
   organization <-
-    OQ.findOrganizationById (productInstance ^. #organizationId)
+    OQ.findOrganizationById (productInstance.organizationId)
       >>= fromMaybeM OrgNotFound
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
-  orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #id) productInstance
+  orderProductInstance <- mkOrderProductInstance (orderCase_.id) productInstance
   DB.runSqlDBTransaction $ do
     QCase.create orderCase_
     QPI.create orderProductInstance
   context <- buildContext "confirm" caseId Nothing Nothing
-  baseUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
   ExternalAPI.confirm baseUrl (ConfirmReq context $ ConfirmOrder order)
   return Success
@@ -57,11 +55,11 @@ confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
       now <- getCurrentTime
       return $
         BO.Order
-          { id = getId $ productInstance ^. #id,
+          { id = getId $ productInstance.id,
             state = Nothing,
             created_at = now,
             updated_at = now,
-            items = [OrderItem (getId $ productInstance ^. #productId) Nothing],
+            items = [OrderItem (getId $ productInstance.productId) Nothing],
             billing = Nothing,
             payment = Nothing,
             trip = Nothing,
@@ -75,30 +73,30 @@ onConfirm _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here
     logTagInfo "on_confirm req" (show req)
-    validateContext "on_confirm" $ req ^. #context
-    case req ^. #contents of
+    validateContext "on_confirm" $ req.context
+    case req.contents of
       Right msg -> do
-        let trip = fromBeckn <$> msg ^. #order . #trip
-            pid = Id $ msg ^. #order . #id
+        let trip = fromBeckn <$> msg.order.trip
+            pid = Id $ msg.order.id
             tracker = flip Products.Tracker Nothing <$> trip
         prdInst <- MPI.findById pid
-        -- TODO: update tracking prodInfo in .info
-        let mprdInfo = decodeFromText =<< (prdInst ^. #info)
+        -- TODO: update tracking prodInfo in.info
+        let mprdInfo = decodeFromText =<< (prdInst.info)
         let uInfo = (\info -> info {Products.tracker = tracker}) <$> mprdInfo
         let uPrd =
               prdInst
                 { SPI.info = encodeToText <$> uInfo,
-                  SPI.udf4 = (^. #id) <$> trip,
+                  SPI.udf4 = (.id) <$> trip,
                   SPI.status = SPI.CONFIRMED
                 }
         productInstance <- MPI.findById pid
         Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
         let newCaseStatus = Case.COMPLETED
-        case_ <- MCase.findById $ productInstance ^. #caseId
-        Case.validateStatusTransition (case_ ^. #status) newCaseStatus & fromEitherM CaseInvalidStatus
+        case_ <- MCase.findById $ productInstance.caseId
+        Case.validateStatusTransition (case_.status) newCaseStatus & fromEitherM CaseInvalidStatus
         SPI.validateStatusTransition (SPI.status productInstance) SPI.CONFIRMED & fromEitherM PIInvalidStatus
         DB.runSqlDBTransaction $ do
-          QCase.updateStatus (productInstance ^. #caseId) newCaseStatus
+          QCase.updateStatus (productInstance.caseId) newCaseStatus
           QPI.updateMultiple pid uPrd
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack
@@ -136,29 +134,29 @@ mkOrderProductInstance caseId prodInst = do
     SPI.ProductInstance
       { id = Id piid,
         caseId = caseId,
-        productId = prodInst ^. #productId,
-        personId = prodInst ^. #personId,
-        personUpdatedAt = prodInst ^. #personUpdatedAt,
+        productId = prodInst.productId,
+        personId = prodInst.personId,
+        personUpdatedAt = prodInst.personUpdatedAt,
         entityType = SPI.VEHICLE,
         entityId = Nothing,
         shortId = ShortId shortId,
         quantity = 1,
-        price = prodInst ^. #price,
+        price = prodInst.price,
         _type = Case.RIDEORDER,
-        organizationId = prodInst ^. #organizationId,
-        fromLocation = prodInst ^. #fromLocation,
-        toLocation = prodInst ^. #toLocation,
-        startTime = prodInst ^. #startTime,
-        endTime = prodInst ^. #endTime,
-        validTill = prodInst ^. #validTill,
-        parentId = Just (prodInst ^. #id),
+        organizationId = prodInst.organizationId,
+        fromLocation = prodInst.fromLocation,
+        toLocation = prodInst.toLocation,
+        startTime = prodInst.startTime,
+        endTime = prodInst.endTime,
+        validTill = prodInst.validTill,
+        parentId = Just (prodInst.id),
         status = SPI.INSTOCK,
-        info = prodInst ^. #info,
+        info = prodInst.info,
         createdAt = now,
         updatedAt = now,
-        udf1 = prodInst ^. #udf1,
-        udf2 = prodInst ^. #udf2,
-        udf3 = prodInst ^. #udf3,
-        udf4 = prodInst ^. #udf4,
-        udf5 = prodInst ^. #udf5
+        udf1 = prodInst.udf1,
+        udf2 = prodInst.udf2,
+        udf3 = prodInst.udf3,
+        udf4 = prodInst.udf4,
+        udf5 = prodInst.udf5
       }

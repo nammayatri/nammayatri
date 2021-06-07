@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Mobility.SuccessFlow where
 
 import Beckn.Types.Id
@@ -42,7 +40,7 @@ spec = do
       searchResult `shouldSatisfy` isRight
       -- If we reach here, the 'Right' pattern match will always succeed
       let Right searchResponse = searchResult
-          appCaseid = searchResponse ^. #caseId
+          appCaseid = searchResponse.caseId
 
       -- All rides are accepted by default and has fare calculated
 
@@ -53,11 +51,11 @@ spec = do
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
         -- since all BPP can give quote for now we filter by orgId
-        return $ nonEmpty . filter (\p -> p ^. #organizationId == Id bppTransporterOrgId) $ productInstances statusRes
+        return $ nonEmpty . filter (\p -> p.organizationId == Id bppTransporterOrgId) $ productInstances statusRes
       let productInstanceId = getId $ AppCase.id productInstance
 
       -- check if calculated price is greater than 0
-      let (Just prodPrice) = productInstance ^. #price
+      let (Just prodPrice) = productInstance.price
       prodPrice `shouldSatisfy` (> 100) -- should at least be more than 100
 
       -- Confirm ride from app backend
@@ -84,8 +82,8 @@ spec = do
           runClient
             tbeClientEnv
             $ getNotificationInfo driverToken (Just $ cast transporterOrderPiId)
-        pure $ either (const Nothing) (^. #rideRequest) res
-      rideInfo ^. #productInstanceId `shouldBe` transporterOrderPiId
+        pure $ either (const Nothing) (.rideRequest) res
+      rideInfo.productInstanceId `shouldBe` transporterOrderPiId
 
       -- Driver Accepts a ride
       let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.ACCEPT
@@ -105,13 +103,13 @@ spec = do
             tbePiList = TbePI.productInstance <$> rideListRes
             transporterOrdersPi = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
-      tripAssignedPI ^. #status `shouldBe` PI.TRIP_ASSIGNED
+      tripAssignedPI.status `shouldBe` PI.TRIP_ASSIGNED
 
       -- Update RIDEORDER PI to INPROGRESS once driver starts his trip
       inProgressStatusResult <-
         runClient
           tbeClientEnv
-          (rideStart driverToken transporterOrderPiId (buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrderPi ^. #udf4))
+          (rideStart driverToken transporterOrderPiId (buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrderPi.udf4))
       inProgressStatusResult `shouldSatisfy` isRight
 
       inprogressPiListResult <- runClient appClientEnv (buildListPIs PI.INPROGRESS)

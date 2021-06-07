@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.ProviderRegistry
   ( lookup,
   )
@@ -14,7 +12,7 @@ import qualified Types.Beckn.Domain as B
 
 lookup :: B.Context -> Flow [Org.Organization]
 lookup context = do
-  let orgDomain = domainToOrgType (context ^. #domain)
+  let orgDomain = domainToOrgType (context.domain)
   filter (isJust . Org.callbackUrl)
     <$> Provider.listProviders Org.PROVIDER orgDomain
   where

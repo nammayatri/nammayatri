@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module ExternalAPI.Transform where
 
 import App.Types
@@ -36,7 +34,7 @@ mkCatalog :: Case -> [ProductInstance] -> ProviderInfo -> Flow Mobility.Catalog
 mkCatalog c prodInsts provider =
   return
     Mobility.Catalog
-      { id = getId $ c ^. #id,
+      { id = getId $ c.id,
         categories = [mkCategory provider],
         brands = [mkBrand provider],
         models = [],
@@ -62,10 +60,10 @@ mkItemDescriptor _prodInst =
 mkBrand :: ProviderInfo -> Brand
 mkBrand provider =
   Brand
-    { id = provider ^. #id,
+    { id = provider.id,
       descriptor =
         Descriptor
-          { name = Just $ provider ^. #name,
+          { name = Just $ provider.name,
             code = Nothing,
             symbol = Nothing,
             short_desc = Nothing,
@@ -80,10 +78,10 @@ mkBrand provider =
 mkCategory :: ProviderInfo -> Category
 mkCategory provider =
   Category
-    { id = provider ^. #id,
+    { id = provider.id,
       descriptor =
         Descriptor
-          { name = Just $ provider ^. #name,
+          { name = Just $ provider.name,
             code = Nothing,
             symbol = Nothing,
             short_desc = Nothing,
@@ -94,15 +92,15 @@ mkCategory provider =
           },
       parent_category_id = Nothing,
       tags =
-        [ Tag "contacts" (provider ^. #contacts),
-          Tag "stats" (provider ^. #stats)
+        [ Tag "contacts" (provider.contacts),
+          Tag "stats" (provider.stats)
         ]
     }
 
 mkItem :: ProductInstance -> Item
 mkItem prodInst =
   Item
-    { id = getId $ prodInst ^. #id,
+    { id = getId $ prodInst.id,
       parent_item_id = Nothing,
       descriptor = mkItemDescriptor prodInst,
       price = mkPrice prodInst,
@@ -117,7 +115,7 @@ mkItem prodInst =
 
 mkPrice :: ProductInstance -> Price
 mkPrice prodInst =
-  let amt = convertAmountToDecimalValue <$> prodInst ^. #price
+  let amt = convertAmountToDecimalValue <$> prodInst.price
    in Price
         { currency = "INR", -- TODO : Fetch this from product
           value = amt,
@@ -132,11 +130,11 @@ mkPrice prodInst =
 mkOrder :: ProductInstance -> Maybe Trip -> Flow Mobility.Order
 mkOrder orderPI trip = do
   now <- getCurrentTime
-  searchPiId <- orderPI ^. #parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  searchPiId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   return
     Mobility.Order
       { id = getId searchPiId,
-        items = [OrderItem (getId $ orderPI ^. #productId) Nothing],
+        items = [OrderItem (getId $ orderPI.productId) Nothing],
         created_at = now,
         updated_at = now,
         state = Nothing,
@@ -163,13 +161,13 @@ mkDriverObj :: Person.Person -> Mobility.Driver
 mkDriverObj person =
   let bPerson = mkPerson person
    in Driver
-        { name = bPerson ^. #name,
-          image = bPerson ^. #image,
-          dob = bPerson ^. #dob,
-          organization_name = bPerson ^. #organization_name,
-          gender = fromMaybe "" $ bPerson ^. #gender,
-          email = bPerson ^. #email,
-          phones = bPerson ^. #phones,
+        { name = bPerson.name,
+          image = bPerson.image,
+          dob = bPerson.dob,
+          organization_name = bPerson.organization_name,
+          gender = fromMaybe "" $ bPerson.gender,
+          email = bPerson.email,
+          phones = bPerson.phones,
           experience = Nothing,
           rating = Nothing
         }
@@ -179,9 +177,9 @@ mkPerson person =
   BPerson.Person
     { name =
         Name
-          { additional_name = person ^. #middleName,
-            family_name = person ^. #lastName,
-            given_name = fromMaybe "" (person ^. #firstName),
+          { additional_name = person.middleName,
+            family_name = person.lastName,
+            given_name = fromMaybe "" (person.firstName),
             call_sign = Nothing,
             honorific_prefix = Nothing,
             honorific_suffix = Nothing
@@ -189,13 +187,13 @@ mkPerson person =
       image = Nothing,
       dob = Nothing,
       organization_name = Nothing,
-      gender = Just $ show $ person ^. #gender,
-      email = person ^. #email,
+      gender = Just $ show $ person.gender,
+      email = person.email,
       phones = maybeToList getPhone
     }
   where
     getPhone =
-      case (person ^. #mobileCountryCode, person ^. #mobileNumber) of
+      case (person.mobileCountryCode, person.mobileNumber) of
         (Just ccode, Just number) -> Just $ ccode <> number
         (Nothing, Just number) -> Just number
         _ -> Nothing
@@ -203,33 +201,33 @@ mkPerson person =
 mkVehicleObj :: Vehicle.Vehicle -> BVehicle.Vehicle
 mkVehicleObj vehicle =
   BVehicle.Vehicle
-    { category = show <$> vehicle ^. #category,
-      capacity = vehicle ^. #capacity,
-      make = vehicle ^. #make,
-      model = vehicle ^. #model,
-      size = vehicle ^. #size,
-      variant = maybe "" show (vehicle ^. #variant),
-      color = vehicle ^. #color,
-      energy_type = show <$> vehicle ^. #energyType,
+    { category = show <$> vehicle.category,
+      capacity = vehicle.capacity,
+      make = vehicle.make,
+      model = vehicle.model,
+      size = vehicle.size,
+      variant = maybe "" show (vehicle.variant),
+      color = vehicle.color,
+      energy_type = show <$> vehicle.energyType,
       registration =
         Just
           Registration
-            { category = maybe "COMMERCIAL" show (vehicle ^. #registrationCategory),
-              number = vehicle ^. #registrationNo
+            { category = maybe "COMMERCIAL" show (vehicle.registrationCategory),
+              number = vehicle.registrationNo
             }
     }
 
 mkProvider :: Organization -> Provider
 mkProvider orgInfo =
   Provider
-    { id = getId $ orgInfo ^. #id,
+    { id = getId $ orgInfo.id,
       descriptor =
         Descriptor
-          { name = Just $ orgInfo ^. #name,
+          { name = Just $ orgInfo.name,
             code = Nothing,
             symbol = Nothing,
             short_desc = Nothing,
-            long_desc = orgInfo ^. #info,
+            long_desc = orgInfo.info,
             images = Nothing,
             audio = Nothing,
             _3d_render = Nothing
@@ -248,9 +246,9 @@ mkProvider orgInfo =
                   },
               image = Nothing,
               dob = Nothing,
-              organization_name = Just $ orgInfo ^. #name,
+              organization_name = Just $ orgInfo.name,
               gender = Nothing,
               email = Nothing,
-              phones = maybeToList $ orgInfo ^. #mobileNumber
+              phones = maybeToList $ orgInfo.mobileNumber
             }
     }

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Registration (checkPersonExists, initiateLogin, login, reInitiateLogin, logout) where
 
 import App.Types
@@ -25,14 +23,14 @@ import qualified Utils.Notifications as Notify
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
   withFlowHandlerAPI $
-    case (req ^. #medium, req ^. #__type) of
+    case (req.medium, req.__type) of
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
       _ -> throwError $ InvalidRequest "medium and type fields must be SMS and OTP"
 
 initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
-  let mobileNumber = req ^. #mobileNumber
-      countryCode = req ^. #mobileCountryCode
+  let mobileNumber = req.mobileNumber
+      countryCode = req.mobileCountryCode
   person <-
     QP.findByMobileNumber countryCode mobileNumber
       >>= maybe (createPerson req) return
@@ -57,7 +55,7 @@ initiateFlow req smsCfg = do
 
 makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
-  let role = fromMaybe SP.USER (req ^. #role)
+  let role = fromMaybe SP.USER (req.role)
   pid <- BC.generateGUID
   now <- getCurrentTime
   return $
@@ -72,15 +70,15 @@ makePerson req = do
         identifierType = SP.MOBILENUMBER,
         email = Nothing,
         passwordHash = Nothing,
-        mobileNumber = Just $ req ^. #mobileNumber,
-        mobileCountryCode = Just $ req ^. #mobileCountryCode,
+        mobileNumber = Just $ req.mobileNumber,
+        mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
         verified = False,
         status = SP.INACTIVE,
         udf1 = Nothing,
         udf2 = Nothing,
-        deviceToken = req ^. #deviceToken,
+        deviceToken = req.deviceToken,
         organizationId = Nothing,
         locationId = Nothing,
         description = Nothing,
@@ -100,8 +98,8 @@ makeSession SmsSessionConfig {..} req entityId entityType fakeOtp = do
       { id = rtid,
         token = token,
         attempts = attempts,
-        authMedium = req ^. #medium,
-        authType = req ^. #__type,
+        authMedium = req.medium,
+        authType = req.__type,
         authValueHash = otp,
         verified = False,
         authExpiry = authExpiry,
@@ -120,16 +118,15 @@ login tokenId req =
     when verified $ throwError $ AuthBlocked "Already verified."
     checkForExpiry authExpiry updatedAt
     let isValid =
-          authMedium == req ^. #medium && authType == req ^. #__type
+          authMedium == req.medium && authType == req.__type
             && authValueHash
-              == req
-              ^. #hash
+              == req.hash
     if isValid
       then do
         person <- checkPersonExists entityId
         clearOldRegToken person $ Id tokenId
         QR.updateVerified tokenId True
-        let deviceToken = (req ^. #deviceToken) <|> (person ^. #deviceToken)
+        let deviceToken = (req.deviceToken) <|> (person.deviceToken)
         QP.update (SP.id person) SP.ACTIVE True deviceToken
         updatedPerson <- QP.findPersonById (SP.id person)
         return $ LoginRes token (Just $ SP.maskPerson updatedPerson)
@@ -147,7 +144,7 @@ createPerson :: InitiateLoginReq -> Flow SP.Person
 createPerson req = do
   person <- makePerson req
   QP.create person
-  when (person ^. #role == SP.DRIVER) $ Person.createDriverDetails (person ^. #id)
+  when (person.role == SP.DRIVER) $ Person.createDriverDetails (person.id)
   pure person
 
 checkPersonExists :: Text -> Flow SP.Person
@@ -163,8 +160,8 @@ reInitiateLogin tokenId req =
       then do
         smsCfg <- smsCfg <$> ask
         otpSmsTemplate <- otpSmsTemplate <$> ask
-        let mobileNumber = req ^. #mobileNumber
-            countryCode = req ^. #mobileCountryCode
+        let mobileNumber = req.mobileNumber
+            countryCode = req.mobileCountryCode
         SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
         _ <- QR.updateAttempts (attempts - 1) id
         return $ InitiateLoginRes tokenId (attempts - 1)
@@ -172,13 +169,13 @@ reInitiateLogin tokenId req =
 
 clearOldRegToken :: SP.Person -> Id SR.RegistrationToken -> Flow ()
 clearOldRegToken person newRTId = do
-  QR.deleteByEntitiyIdExceptNew (getId $ person ^. #id) newRTId
+  QR.deleteByEntitiyIdExceptNew (getId $ person.id) newRTId
 
 logout :: SR.RegistrationToken -> FlowHandler APISuccess
 logout SR.RegistrationToken {..} = withFlowHandlerAPI $ do
   uperson <- QP.findPersonById (Id entityId)
   eperson <- encrypt uperson
   DB.runSqlDBTransaction $ do
-    QP.updatePersonRec (uperson ^. #id) eperson {SP.deviceToken = Nothing}
+    QP.updatePersonRec (uperson.id) eperson {SP.deviceToken = Nothing}
     QR.deleteByEntitiyId entityId
   pure Success

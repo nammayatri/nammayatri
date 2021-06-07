@@ -41,33 +41,29 @@ import Servant
 -- recipientId::FCMToken is an app's registration token
 createMessage :: FCMAndroidData -> FCMRecipientToken -> FCMMessage
 createMessage msgData recipientId =
-  def
-    { fcmToken = Just recipientId,
+  def{fcmToken = Just recipientId,
       fcmAndroid = Just androidCfg
-    }
+     }
   where
     androidCfg = createAndroidConfig msgData
 
 -- | Android Notification details
 createAndroidConfig :: FCMAndroidData -> FCMAndroidConfig
 createAndroidConfig cfgData =
-  def
-    { fcmdData = Just cfgData
-    }
+  def{fcmdData = Just cfgData
+     }
 
 createAndroidNotification :: FCMNotificationTitle -> FCMNotificationBody -> FCMNotificationType -> FCMAndroidNotification
 createAndroidNotification title body notificationType =
   let notification = case notificationType of
         ALLOCATION_REQUEST ->
-          def
-            { fcmdSound = Just "notify_sound.mp3",
+          def{fcmdSound = Just "notify_sound.mp3",
               fcmdChannelId = Just "RINGING_ALERT"
-            }
+             }
         TRIP_STARTED ->
-          def
-            { fcmdSound = Just "notify_otp_sound.mp3",
+          def{fcmdSound = Just "notify_otp_sound.mp3",
               fcmdChannelId = Just "TRIP_STARTED"
-            }
+             }
         _ -> def
    in notification
         { fcmdTitle = Just title,

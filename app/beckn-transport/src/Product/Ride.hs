@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Ride
   ( setDriverAcceptance,
   )
@@ -22,6 +20,6 @@ setDriverAcceptance SR.RegistrationToken {..} SetDriverAcceptanceReq {..} = with
   pure Success
   where
     driverId = entityId
-    productInstanceId_ = productInstanceId ^. #getId
+    productInstanceId_ = productInstanceId.getId
     redisKey = "beckn:" <> productInstanceId_ <> ":" <> driverId <> ":response"
     driverResponse now = DriverResponse {status = response, respondedAt = now}

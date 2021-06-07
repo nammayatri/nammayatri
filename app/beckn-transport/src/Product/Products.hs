@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Products where
 
 import App.Types
@@ -29,21 +27,21 @@ mkProduct req = do
   return $
     Product.Products
       { Product.id = Id pid,
-        Product.name = req ^. #name,
-        Product.description = req ^. #description,
+        Product.name = req.name,
+        Product.description = req.description,
         Product.industry = Case.MOBILITY,
         Product._type = Product.RIDE,
         Product.status = Product.INSTOCK,
         Product.shortId = ShortId shortId,
-        Product.rating = req ^. #rating,
-        Product.review = req ^. #review,
-        Product.price = fromMaybe 0 (req ^. #price),
-        Product.info = req ^. #info,
-        Product.udf1 = req ^. #udf1,
-        Product.udf2 = req ^. #udf2,
-        Product.udf3 = req ^. #udf3,
-        Product.udf4 = req ^. #udf4,
-        Product.udf5 = req ^. #udf5,
+        Product.rating = req.rating,
+        Product.review = req.review,
+        Product.price = fromMaybe 0 (req.price),
+        Product.info = req.info,
+        Product.udf1 = req.udf1,
+        Product.udf2 = req.udf2,
+        Product.udf3 = req.udf3,
+        Product.udf4 = req.udf4,
+        Product.udf5 = req.udf5,
         Product.createdAt = now,
         Product.updatedAt = now
       }

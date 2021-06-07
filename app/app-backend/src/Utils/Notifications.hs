@@ -36,11 +36,11 @@ import Utils.Common (decodeFromText, showTimeIst)
 -- When case doesn't have any product, there is no notification.
 notifyOnStatusUpdate :: ProductInstance -> ProductInstanceStatus -> Flow ()
 notifyOnStatusUpdate prodInst piStatus =
-  when (prodInst ^. #status /= piStatus) $ do
-    c <- Case.findById $ prodInst ^. #caseId
+  when (prodInst.status /= piStatus) $ do
+    c <- Case.findById $ prodInst.caseId
     let mpersonId = Case.requestor c
-        productInstanceId = prodInst ^. #id
-        minfo :: (Maybe ProductInfo) = decodeFromText =<< prodInst ^. #info
+        productInstanceId = prodInst.id
+        minfo :: (Maybe ProductInfo) = decodeFromText =<< prodInst.info
     case (mpersonId, minfo) of
       (Just personId, Just info) -> do
         person <- Person.findById $ Id personId
@@ -195,7 +195,7 @@ notifyOnTrackCb personId tracker c =
       mperson <- Person.findById $ Id (fromJust personId)
       case mperson of
         Just p -> do
-          let trip = tracker ^. #trip
+          let trip = tracker.trip
               regNumber =
                 trip ^. #vehicle . _Just . #registrationNumber . _Just
               model =

@@ -21,7 +21,7 @@ getRouteMb ::
   MapSearch.Request ->
   FlowR r (Maybe MapSearch.Route)
 getRouteMb request =
-  (listToMaybe . (^. #routes) <$> getRoute request)
+  (listToMaybe . (.routes) <$> getRoute request)
     `catch` \(_ :: RouteError) -> pure Nothing
 
 getRoute ::

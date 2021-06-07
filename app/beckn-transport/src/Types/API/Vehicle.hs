@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Types.API.Vehicle where
 
 import App.Types
@@ -38,17 +36,17 @@ instance CreateTransform CreateVehicleReq SV.Vehicle Flow where
       SV.Vehicle
         { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
           SV.id = vid,
-          SV.capacity = req ^. #capacity,
-          SV.category = req ^. #category,
-          SV.make = req ^. #make,
-          SV.model = req ^. #model,
-          SV.size = req ^. #size,
+          SV.capacity = req.capacity,
+          SV.category = req.category,
+          SV.make = req.make,
+          SV.model = req.model,
+          SV.size = req.size,
           SV.organizationId = "WILL_BE_UPDATED_BEFORE_DB",
-          SV.variant = req ^. #variant,
-          SV.color = req ^. #color,
-          SV.energyType = req ^. #energyType,
-          SV.registrationNo = req ^. #registrationNo,
-          SV.registrationCategory = req ^. #registrationCategory,
+          SV.variant = req.variant,
+          SV.color = req.color,
+          SV.energyType = req.energyType,
+          SV.registrationNo = req.registrationNo,
+          SV.registrationCategory = req.registrationCategory,
           SV.createdAt = now,
           SV.updatedAt = now
         }
@@ -83,15 +81,15 @@ instance ModifyTransform UpdateVehicleReq SV.Vehicle Flow where
     return $
       vehicle
         { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
-          SV.capacity = (req ^. #capacity) <|> (vehicle ^. #capacity),
-          SV.category = (req ^. #category) <|> (vehicle ^. #category),
-          SV.make = (req ^. #make) <|> (vehicle ^. #make),
-          SV.model = (req ^. #model) <|> (vehicle ^. #model),
-          SV.size = (req ^. #size) <|> (vehicle ^. #size),
-          SV.variant = (req ^. #variant) <|> (vehicle ^. #variant),
-          SV.color = (req ^. #color) <|> (vehicle ^. #color),
-          SV.energyType = (req ^. #energyType) <|> (vehicle ^. #energyType),
-          SV.registrationCategory = (req ^. #registrationCategory) <|> (vehicle ^. #registrationCategory),
+          SV.capacity = (req.capacity) <|> (vehicle.capacity),
+          SV.category = (req.category) <|> (vehicle.category),
+          SV.make = (req.make) <|> (vehicle.make),
+          SV.model = (req.model) <|> (vehicle.model),
+          SV.size = (req.size) <|> (vehicle.size),
+          SV.variant = (req.variant) <|> (vehicle.variant),
+          SV.color = (req.color) <|> (vehicle.color),
+          SV.energyType = (req.energyType) <|> (vehicle.energyType),
+          SV.registrationCategory = (req.registrationCategory) <|> (vehicle.registrationCategory),
           SV.updatedAt = now
         }
 

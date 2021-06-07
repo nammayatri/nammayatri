@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -70,13 +69,13 @@ fieldEMod =
 fromTable :: FarePolicy -> D.FarePolicy
 fromTable sFarePolicy =
   D.FarePolicy
-    { id = sFarePolicy ^. #id,
-      vehicleVariant = sFarePolicy ^. #vehicleVariant,
-      organizationId = sFarePolicy ^. #organizationId,
-      baseFare = toRational <$> sFarePolicy ^. #baseFare,
-      baseDistance = toRational <$> sFarePolicy ^. #baseDistance,
-      perExtraKmRate = toRational $ sFarePolicy ^. #perExtraKmRate,
-      nightShiftStart = sFarePolicy ^. #nightShiftStart,
-      nightShiftEnd = sFarePolicy ^. #nightShiftEnd,
-      nightShiftRate = toRational <$> sFarePolicy ^. #nightShiftRate
+    { id = sFarePolicy.id,
+      vehicleVariant = sFarePolicy.vehicleVariant,
+      organizationId = sFarePolicy.organizationId,
+      baseFare = toRational <$> sFarePolicy.baseFare,
+      baseDistance = toRational <$> sFarePolicy.baseDistance,
+      perExtraKmRate = toRational $ sFarePolicy.perExtraKmRate,
+      nightShiftStart = sFarePolicy.nightShiftStart,
+      nightShiftEnd = sFarePolicy.nightShiftEnd,
+      nightShiftRate = toRational <$> sFarePolicy.nightShiftRate
     }

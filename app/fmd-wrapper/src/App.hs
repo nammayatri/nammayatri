@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
 module App
@@ -34,25 +33,25 @@ runFMDWrapper :: (AppCfg -> AppCfg) -> IO ()
 runFMDWrapper configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "fmd-wrapper"
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
+  let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <- buildAppEnv appCfg
   let settings =
         defaultSettings
-          & setGracefulShutdownTimeout (Just $ appCfg ^. #graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
-          & setPort (appCfg ^. #port)
+          & setGracefulShutdownTimeout (Just $ appCfg.graceTerminationPeriod)
+          & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
+          & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
-        let shortOrgId = appCfg ^. #selfId
+        let shortOrgId = appCfg.selfId
         getManager <-
           prepareAuthManager flowRt appEnv "Authorization" shortOrgId
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
         authManager <- L.runIO getManager
-        try (prepareRedisConnections $ appCfg ^. #redisCfg)
+        try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
-        migrateIfNeeded (appCfg ^. #migrationPath) (appCfg ^. #dbCfg) (appCfg ^. #autoMigrate)
+        migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-        logInfo ("Runtime created. Starting server at port " <> show (appCfg ^. #port))
+        logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     runSettings settings $ run $ App.EnvR flowRt' appEnv

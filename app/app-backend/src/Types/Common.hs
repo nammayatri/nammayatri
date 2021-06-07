@@ -123,7 +123,7 @@ data Provider = Provider
   deriving (Generic, Show, FromJSON, ToJSON)
 
 instance FromBeckn Location.City City where
-  fromBeckn city = City $ city ^. #name
+  fromBeckn city = City $ city.name
 
 instance ToBeckn Location.City City where
   toBeckn (City cityName) =
@@ -156,26 +156,26 @@ instance ToBeckn Text VehicleCategory where
 instance FromBeckn Vehicle.Vehicle Vehicle where
   fromBeckn vehicle =
     Vehicle
-      { category = fromBeckn <$> vehicle ^. #category,
-        capacity = vehicle ^. #capacity,
-        make = vehicle ^. #make,
-        model = vehicle ^. #model,
-        size = vehicle ^. #size,
-        variant = vehicle ^. #variant,
-        color = vehicle ^. #color,
-        registrationNumber = Vehicle.number <$> (vehicle ^. #registration)
+      { category = fromBeckn <$> vehicle.category,
+        capacity = vehicle.capacity,
+        make = vehicle.make,
+        model = vehicle.model,
+        size = vehicle.size,
+        variant = vehicle.variant,
+        color = vehicle.color,
+        registrationNumber = Vehicle.number <$> (vehicle.registration)
       }
 
 instance ToBeckn Vehicle.Vehicle Vehicle where
   toBeckn vehicle =
     Vehicle.Vehicle
-      { category = toBeckn <$> vehicle ^. #category,
-        capacity = vehicle ^. #capacity,
-        make = vehicle ^. #make,
-        model = vehicle ^. #model,
-        size = vehicle ^. #size,
-        variant = vehicle ^. #variant,
-        color = vehicle ^. #color,
+      { category = toBeckn <$> vehicle.category,
+        capacity = vehicle.capacity,
+        make = vehicle.make,
+        model = vehicle.model,
+        size = vehicle.size,
+        variant = vehicle.variant,
+        color = vehicle.color,
         energy_type = Nothing,
         registration = Nothing
       }
@@ -183,60 +183,60 @@ instance ToBeckn Vehicle.Vehicle Vehicle where
 instance FromBeckn Location.GPS GPS where
   fromBeckn gps =
     GPS
-      { lat = gps ^. #lat,
-        lon = gps ^. #lon
+      { lat = gps.lat,
+        lon = gps.lon
       }
 
 instance ToBeckn Location.GPS GPS where
   toBeckn gps =
     Location.GPS
-      { lat = gps ^. #lat,
-        lon = gps ^. #lon
+      { lat = gps.lat,
+        lon = gps.lon
       }
 
 instance FromBeckn Address.Address Address where
   fromBeckn addr =
     Address
-      { door = addr ^. #door,
-        building = fromMaybe "" $ addr ^. #building,
-        street = addr ^. #street,
-        area = fromMaybe "" $ addr ^. #locality,
-        city = addr ^. #city,
-        country = addr ^. #country,
-        areaCode = addr ^. #area_code,
-        state = addr ^. #state
+      { door = addr.door,
+        building = fromMaybe "" $ addr.building,
+        street = addr.street,
+        area = fromMaybe "" $ addr.locality,
+        city = addr.city,
+        country = addr.country,
+        areaCode = addr.area_code,
+        state = addr.state
       }
 
 instance ToBeckn Address.Address Address where
   toBeckn addr =
     Address.Address
       { name = Nothing,
-        door = addr ^. #door,
-        building = Just $ addr ^. #building,
-        street = addr ^. #street,
-        locality = Just $ addr ^. #area,
+        door = addr.door,
+        building = Just $ addr.building,
+        street = addr.street,
+        locality = Just $ addr.area,
         ward = Nothing,
-        city = addr ^. #city,
-        state = addr ^. #state,
-        country = addr ^. #country,
-        area_code = addr ^. #areaCode
+        city = addr.city,
+        state = addr.state,
+        country = addr.country,
+        area_code = addr.areaCode
       }
 
 instance FromBeckn Location.Location Location where
   fromBeckn loc =
     Location
-      { gps = fromBeckn <$> loc ^. #gps,
-        address = fromBeckn <$> loc ^. #address,
-        city = fromBeckn <$> loc ^. #city
+      { gps = fromBeckn <$> loc.gps,
+        address = fromBeckn <$> loc.address,
+        city = fromBeckn <$> loc.city
       }
 
 instance ToBeckn Location.Location Location where
   toBeckn loc =
     Location.Location
-      { gps = toBeckn <$> loc ^. #gps,
-        address = toBeckn <$> loc ^. #address,
+      { gps = toBeckn <$> loc.gps,
+        address = toBeckn <$> loc.address,
         station_code = Nothing,
-        city = toBeckn <$> loc ^. #city,
+        city = toBeckn <$> loc.city,
         country = Nothing,
         circle = Nothing,
         polygon = Nothing,
@@ -246,9 +246,9 @@ instance ToBeckn Location.Location Location where
 instance FromBeckn Stop.Stop Stop where
   fromBeckn stop =
     Stop
-      { location = fromBeckn $ stop ^. #location,
-        arrivalTime = StopTime (stop ^. #arrival_time . #est) (stop ^. #arrival_time . #act),
-        departureTime = StopTime (stop ^. #departure_time . #est) (stop ^. #departure_time . #act)
+      { location = fromBeckn $ stop.location,
+        arrivalTime = StopTime (stop.arrival_time.est) (stop.arrival_time.act),
+        departureTime = StopTime (stop.departure_time.est) (stop.departure_time.act)
       }
 
 instance ToBeckn Stop.Stop Stop where
@@ -256,24 +256,24 @@ instance ToBeckn Stop.Stop Stop where
     Stop.Stop
       { id = "",
         descriptor = Nothing,
-        location = toBeckn $ stop ^. #location,
-        arrival_time = Stop.StopTime (stop ^. #arrivalTime . #estimated) (stop ^. #arrivalTime . #actual),
-        departure_time = Stop.StopTime (stop ^. #departureTime . #estimated) (stop ^. #departureTime . #actual),
+        location = toBeckn $ stop.location,
+        arrival_time = Stop.StopTime (stop.arrivalTime.estimated) (stop.arrivalTime.actual),
+        departure_time = Stop.StopTime (stop.departureTime.estimated) (stop.departureTime.actual),
         transfers = []
       }
 
 instance FromBeckn DV.DecimalValue DecimalValue where
   fromBeckn value =
     DecimalValue
-      { integral = value ^. #integral,
-        fractional = value ^. #fractional
+      { integral = value.integral,
+        fractional = value.fractional
       }
 
 instance ToBeckn DV.DecimalValue DecimalValue where
   toBeckn value =
     DV.DecimalValue
-      { integral = value ^. #integral,
-        fractional = value ^. #fractional
+      { integral = value.integral,
+        fractional = value.fractional
       }
 
 instance FromBeckn Price.Price DecimalValue where
@@ -295,21 +295,21 @@ instance ToBeckn Price.Price DecimalValue where
 instance FromBeckn Driver.Driver Driver where
   fromBeckn driver =
     Driver
-      { name = driver ^. #name . #given_name,
-        gender = driver ^. #gender,
-        phones = driver ^. #phones
+      { name = driver.name.given_name,
+        gender = driver.gender,
+        phones = driver.phones
       }
 
 instance ToBeckn Driver.Driver Driver where
   toBeckn driver =
     Driver.Driver
-      { name = Person.Name Nothing Nothing (driver ^. #name) Nothing Nothing Nothing,
+      { name = Person.Name Nothing Nothing (driver.name) Nothing Nothing Nothing,
         image = Nothing,
         dob = Nothing,
         organization_name = Nothing,
-        gender = driver ^. #gender,
+        gender = driver.gender,
         email = Nothing,
-        phones = driver ^. #phones,
+        phones = driver.phones,
         experience = Nothing,
         rating = Nothing
       }
@@ -317,27 +317,27 @@ instance ToBeckn Driver.Driver Driver where
 instance FromBeckn Traveller.Traveller Traveller where
   fromBeckn traveller =
     Traveller
-      { name = traveller ^. #name . #given_name,
-        gender = traveller ^. #gender,
-        phones = traveller ^. #phones
+      { name = traveller.name.given_name,
+        gender = traveller.gender,
+        phones = traveller.phones
       }
 
 instance ToBeckn Traveller.Traveller Traveller where
   toBeckn traveller =
     Traveller.Traveller
-      { name = Person.Name Nothing Nothing (traveller ^. #name) Nothing Nothing Nothing,
+      { name = Person.Name Nothing Nothing (traveller.name) Nothing Nothing Nothing,
         image = Nothing,
         dob = Nothing,
         organization_name = Nothing,
-        gender = traveller ^. #gender,
+        gender = traveller.gender,
         email = Nothing,
-        phones = traveller ^. #phones,
+        phones = traveller.phones,
         origin_stop_id = "",
         destination_stop_id = ""
       }
 
 instance FromBeckn Payload.Payload [Traveller] where
-  fromBeckn payload = fromBeckn <$> payload ^. #travellers
+  fromBeckn payload = fromBeckn <$> payload.travellers
 
 instance ToBeckn Payload.Payload [Traveller] where
   toBeckn travellers =
@@ -350,16 +350,16 @@ instance ToBeckn Payload.Payload [Traveller] where
 
 instance FromBeckn Trip.Trip Trip where
   fromBeckn trip =
-    let mbPrice = trip ^. #fare
+    let mbPrice = trip.fare
         mbFare = case mbPrice of
           Nothing -> Nothing
-          Just p -> p ^. #value
+          Just p -> p.value
      in Trip
-          { id = trip ^. #id,
-            pickup = fromBeckn <$> trip ^. #pickup,
-            drop = fromBeckn <$> trip ^. #drop,
-            vehicle = fromBeckn <$> trip ^. #vehicle,
-            driver = fromBeckn <$> trip ^. #driver,
+          { id = trip.id,
+            pickup = fromBeckn <$> trip.pickup,
+            drop = fromBeckn <$> trip.drop,
+            vehicle = fromBeckn <$> trip.vehicle,
+            driver = fromBeckn <$> trip.driver,
             travellers = [],
             fare = fromBeckn <$> mbFare
           }
@@ -367,24 +367,24 @@ instance FromBeckn Trip.Trip Trip where
 instance ToBeckn Trip.Trip Trip where
   toBeckn trip =
     Trip.Trip
-      { id = trip ^. #id,
-        pickup = toBeckn <$> trip ^. #pickup,
-        drop = toBeckn <$> trip ^. #drop,
+      { id = trip.id,
+        pickup = toBeckn <$> trip.pickup,
+        drop = toBeckn <$> trip.drop,
         state = Nothing,
-        vehicle = toBeckn <$> trip ^. #vehicle,
-        driver = toBeckn <$> trip ^. #driver,
-        payload = toBeckn $ trip ^. #travellers,
-        fare = toBeckn <$> trip ^. #fare,
+        vehicle = toBeckn <$> trip.vehicle,
+        driver = toBeckn <$> trip.driver,
+        payload = toBeckn $ trip.travellers,
+        fare = toBeckn <$> trip.fare,
         route = Nothing
       }
 
 instance FromBeckn Tracking.Tracking Tracking where
-  fromBeckn tracking = Tracking {url = tracking ^. #url}
+  fromBeckn tracking = Tracking {url = tracking.url}
 
 instance ToBeckn Tracking.Tracking Tracking where
   toBeckn tracking =
     Tracking.Tracking
-      { url = tracking ^. #url,
+      { url = tracking.url,
         required_params = Nothing,
         metadata = Nothing
       }
@@ -392,19 +392,19 @@ instance ToBeckn Tracking.Tracking Tracking where
 instance FromBeckn Category.Category Provider where
   fromBeckn category =
     Provider
-      { id = category ^. #id,
-        name = category ^. #descriptor . #name,
-        phones = Tag.value <$> filter (\x -> x ^. #key == "contacts") (category ^. #tags),
-        info = Tag.value <$> find (\x -> x ^. #key == "stats") (category ^. #tags)
+      { id = category.id,
+        name = category.descriptor.name,
+        phones = Tag.value <$> filter (\x -> x.key == "contacts") (category.tags),
+        info = Tag.value <$> find (\x -> x.key == "stats") (category.tags)
       }
 
 instance ToBeckn Category.Category Provider where
   toBeckn category =
     Category.Category
-      { id = category ^. #id,
+      { id = category.id,
         descriptor =
           Descriptor.Descriptor
-            { name = category ^. #name,
+            { name = category.name,
               code = Nothing,
               symbol = Nothing,
               short_desc = Nothing,

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.RideAPI.Handlers.StartRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -25,15 +23,15 @@ startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Id Person.Person
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
   requestor <- findPersonById requestorId
   orderPi <- findPIById $ cast rideId
-  case requestor ^. #role of
+  case requestor.role of
     Person.DRIVER -> do
-      rideDriver <- orderPi ^. #personId & fromMaybeM (PIFieldNotPresent "person")
+      rideDriver <- orderPi.personId & fromMaybeM (PIFieldNotPresent "person")
       unless (rideDriver == requestorId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
-  unless (isValidPiStatus (orderPi ^. #status)) $ throwError $ PIInvalidStatus "This ride cannot be started"
-  searchPiId <- orderPi ^. #parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  unless (isValidPiStatus (orderPi.status)) $ throwError $ PIInvalidStatus "This ride cannot be started"
+  searchPiId <- orderPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- findPIById searchPiId
-  inAppOtp <- orderPi ^. #udf4 & fromMaybeM (PIFieldNotPresent "udf4")
+  inAppOtp <- orderPi.udf4 & fromMaybeM (PIFieldNotPresent "udf4")
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   piList <- findPIsByParentId searchPiId
   trackerCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.LOCATIONTRACKER

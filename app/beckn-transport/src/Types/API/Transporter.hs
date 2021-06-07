@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Types.API.Transporter where
 
 import App.Types
@@ -46,18 +44,18 @@ instance CreateTransform TransporterReq SO.Organization Flow where
     return $
       SO.Organization
         { SO.id = oid,
-          SO.name = req ^. #name,
+          SO.name = req.name,
           SO.shortId = shortId,
-          SO.description = req ^. #description,
-          SO.mobileNumber = Just $ req ^. #mobileNumber,
-          SO.mobileCountryCode = Just $ req ^. #mobileCountryCode,
-          SO.gstin = req ^. #gstin,
-          SO.locationId = Just $ SL.id location,
+          SO.description = req.description,
+          SO.mobileNumber = Just req.mobileNumber,
+          SO.mobileCountryCode = Just req.mobileCountryCode,
+          SO.gstin = req.gstin,
+          SO.locationId = Just location.id,
           SO._type = SO.PROVIDER,
           SO.domain = Just SO.MOBILITY,
           SO.fromTime = Nothing,
           SO.toTime = Nothing,
-          SO.headCount = req ^. #headCount,
+          SO.headCount = req.headCount,
           SO.apiKey = Nothing,
           SO.callbackUrl = Nothing,
           SO.status = SO.PENDING_VERIFICATION,
@@ -76,16 +74,16 @@ transformToLocation req = do
   return $
     SL.Location
       { SL.id = locId,
-        SL.locationType = fromMaybe SL.PINCODE $ req ^. #locationType,
-        SL.lat = req ^. #lat,
-        SL.long = req ^. #long,
-        SL.ward = req ^. #ward,
-        SL.district = Just $ req ^. #district,
-        SL.city = Just $ req ^. #city,
-        SL.state = req ^. #state,
-        SL.country = Just $ req ^. #country,
-        SL.pincode = req ^. #pincode,
-        SL.address = req ^. #address,
+        SL.locationType = fromMaybe SL.PINCODE $ req.locationType,
+        SL.lat = req.lat,
+        SL.long = req.long,
+        SL.ward = req.ward,
+        SL.district = Just $ req.district,
+        SL.city = Just $ req.city,
+        SL.state = req.state,
+        SL.country = Just $ req.country,
+        SL.pincode = req.pincode,
+        SL.address = req.address,
         SL.bound = Nothing,
         SL.point = SL.Point,
         SL.createdAt = now,
@@ -115,9 +113,9 @@ instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
   modifyTransform req org = do
     now <- getCurrentTime
     return $
-      org{SO.name = fromMaybe (org ^. #name) (req ^. #name),
-          SO.description = (req ^. #description) <|> (org ^. #description),
-          SO.headCount = (req ^. #headCount) <|> (org ^. #headCount),
-          SO.enabled = fromMaybe (org ^. #enabled) (req ^. #enabled),
+      org{SO.name = fromMaybe (org.name) (req.name),
+          SO.description = (req.description) <|> (org.description),
+          SO.headCount = (req.headCount) <|> (org.headCount),
+          SO.enabled = fromMaybe (org.enabled) (req.enabled),
           SO.updatedAt = now
          }

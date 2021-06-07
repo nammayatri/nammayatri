@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Product.Support
@@ -23,12 +22,12 @@ import qualified Utils.SES as SES
 
 sendIssue :: Person.Person -> Support.SendIssueReq -> App.FlowHandler Support.SendIssueRes
 sendIssue person request@SendIssueReq {..} = withFlowHandlerAPI $ do
-  let personId = getId $ person ^. #id
+  let personId = getId $ person.id
   issuesConfig <- asks $ SesConfig.issuesConfig . App.sesCfg
   issueId <- L.generateGUID
   utcNow <- getCurrentTime
   Queries.insertIssue (mkDBIssue issueId personId request utcNow)
-  let mailSubject = mkMailSubject issueId (issue ^. #reason)
+  let mailSubject = mkMailSubject issueId (issue.reason)
   let mailBody = mkMailBody issueId personId request utcNow
   responseError <- L.runIO $ SES.sendEmail issuesConfig mailSubject mailBody
   case responseError of
@@ -44,8 +43,8 @@ mkDBIssue issueId customerId SendIssueReq {..} time =
       customerId = Id customerId,
       productInstanceId = Id <$> productInstanceId,
       contactEmail = contactEmail,
-      reason = issue ^. #reason,
-      description = issue ^. #description,
+      reason = issue.reason,
+      description = issue.description,
       createdAt = time,
       updatedAt = time
     }
@@ -65,9 +64,9 @@ mkMailBody issueId personId SendIssueReq {..} time =
     <> "\nCreation time: "
     <> show time
     <> "\n\nReason: "
-    <> issue ^. #reason
+    <> issue.reason
     <> "\n\nDetails: "
     <> description
   where
     orderId = fromMaybe "issue does not belong to specific order." productInstanceId
-    description = fromMaybe "no details provided by user." (issue ^. #description)
+    description = fromMaybe "no details provided by user." (issue.description)

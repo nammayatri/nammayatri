@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Storage.Queries.FarePolicy where
 
 import App.Types (AppEnv (dbCfg), Flow)
@@ -55,17 +53,17 @@ updateFarePolicy :: Storage.FarePolicy -> Flow ()
 updateFarePolicy farePolicy = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  let farePolicyId = farePolicy ^. #id
+  let farePolicyId = farePolicy.id
   DB.update dbTable (setClause farePolicy now) (predicate farePolicyId)
   where
     setClause fp now Storage.FarePolicy {..} =
       mconcat
-        [ baseFare <-. B.val_ (fp ^. #baseFare),
-          baseDistance <-. B.val_ (fp ^. #baseDistance),
-          perExtraKmRate <-. B.val_ (fp ^. #perExtraKmRate),
-          nightShiftStart <-. B.val_ (fp ^. #nightShiftStart),
-          nightShiftEnd <-. B.val_ (fp ^. #nightShiftEnd),
-          nightShiftRate <-. B.val_ (fp ^. #nightShiftRate),
+        [ baseFare <-. B.val_ (fp.baseFare),
+          baseDistance <-. B.val_ (fp.baseDistance),
+          perExtraKmRate <-. B.val_ (fp.perExtraKmRate),
+          nightShiftStart <-. B.val_ (fp.nightShiftStart),
+          nightShiftEnd <-. B.val_ (fp.nightShiftEnd),
+          nightShiftRate <-. B.val_ (fp.nightShiftRate),
           updatedAt <-. B.val_ now
         ]
     predicate fpId Storage.FarePolicy {..} = id ==. B.val_ fpId

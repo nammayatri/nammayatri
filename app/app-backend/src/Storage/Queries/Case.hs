@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Storage.Queries.Case where
 
 import App.Types
@@ -72,7 +70,7 @@ findByIdAndType caseId caseType = do
 findIdByPerson :: Person.Person -> Id Storage.Case -> Flow (Maybe Storage.Case)
 findIdByPerson person caseId = do
   dbTable <- getDbTable
-  let personId = getId $ person ^. #id
+  let personId = getId $ person.id
   DB.findOne dbTable (predicate personId)
   where
     predicate personId Storage.Case {..} =

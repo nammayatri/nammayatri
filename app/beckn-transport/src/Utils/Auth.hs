@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Utils.Auth where
 
 import App.Types
@@ -95,17 +93,17 @@ instance VerificationMethod DriverVerifyToken where
 
 verifyAdmin :: SP.Person -> Flow Text
 verifyAdmin user = do
-  when (user ^. #role /= SP.ADMIN) $
+  when (user.role /= SP.ADMIN) $
     throwError AccessDenied
-  case user ^. #organizationId of
+  case user.organizationId of
     Just orgId -> return $ getId orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
 verifyDriver :: SP.Person -> Flow Text
 verifyDriver user = do
-  unless ((user ^. #role) `elem` [SP.ADMIN, SP.DRIVER]) $
+  unless ((user.role) `elem` [SP.ADMIN, SP.DRIVER]) $
     throwError AccessDenied
-  case user ^. #organizationId of
+  case user.organizationId of
     Just orgId -> return $ getId orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 

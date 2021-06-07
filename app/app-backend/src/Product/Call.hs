@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -31,7 +30,7 @@ import Utils.Common
 -- | Try to initiate a call customer -> provider
 initiateCallToProvider :: Person.Person -> CallReq -> FlowHandler CallRes
 initiateCallToProvider _ req = withFlowHandlerAPI $ do
-  let piId = req ^. #productInstanceId
+  let piId = req.productInstanceId
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall customerPhone providerPhone
   return Ack
@@ -39,7 +38,7 @@ initiateCallToProvider _ req = withFlowHandlerAPI $ do
 -- | Try to initiate a call provider -> customer
 initiateCallToCustomer :: CallReq -> FlowHandler CallRes
 initiateCallToCustomer req = withFlowHandlerAPI $ do
-  let piId = req ^. #productInstanceId -- RIDESEARCH PI
+  let piId = req.productInstanceId -- RIDESEARCH PI
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall providerPhone customerPhone
   return Ack
@@ -50,7 +49,7 @@ getDriver rideSearchPI = do
   productInfo <- decodeFromText info & fromMaybeM (InternalError "Parse error.")
   tracker_ <- tracker productInfo & fromMaybeM (PIFieldNotPresent "tracker")
   let trip_ = trip tracker_
-      driver_ = trip_ ^. #driver
+      driver_ = trip_.driver
   driver <- driver_ & fromMaybeM (PIFieldNotPresent "driver")
   return $ toBeckn driver
 

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.RideAPI.Handlers.CancelRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -26,15 +24,15 @@ cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
   prodInst <- findPIById $ cast rideId
   unless (isValidPI prodInst) $ throwError $ PIInvalidStatus "This ride cannot be canceled"
   authPerson <- findPersonById $ Id authorizedEntityId
-  case authPerson ^. #role of
+  case authPerson.role of
     Person.ADMIN -> cancelRide rideId False
     Person.DRIVER -> do
-      driverId <- prodInst ^. #personId & fromMaybeM (PIFieldNotPresent "person")
-      unless (authPerson ^. #id == driverId) $ throwError NotAnExecutor
+      driverId <- prodInst.personId & fromMaybeM (PIFieldNotPresent "person")
+      unless (authPerson.id == driverId) $ throwError NotAnExecutor
       cancelRide rideId True
     _ -> throwError AccessDenied
   pure APISuccess.Success
   where
     isValidPI prodInst =
-      prodInst ^. #_type == Case.RIDEORDER
-        && (prodInst ^. #status) `elem` [CONFIRMED, TRIP_ASSIGNED, TRIP_REASSIGNMENT]
+      prodInst._type == Case.RIDEORDER
+        && (prodInst.status) `elem` [CONFIRMED, TRIP_ASSIGNED, TRIP_REASSIGNMENT]

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Vehicle where
 
 import App.Types
@@ -25,7 +23,7 @@ createVehicle orgId req = withFlowHandlerAPI $ do
   return $ CreateVehicleRes vehicle
   where
     validateVehicle = do
-      mVehicle <- QV.findByRegistrationNo $ req ^. #registrationNo
+      mVehicle <- QV.findByRegistrationNo $ req.registrationNo
       when (isJust mVehicle) $
         throwError $ InvalidRequest "Registration number already exists."
 
@@ -51,7 +49,7 @@ deleteVehicle orgId vehicleId = withFlowHandlerAPI $ do
   vehicle <-
     QV.findVehicleById vehicleId
       >>= fromMaybeM VehicleNotFound
-  if vehicle ^. #organizationId == Id orgId
+  if vehicle.organizationId == Id orgId
     then do
       QV.deleteById vehicleId
       return . DeleteVehicleRes $ getId vehicleId
@@ -70,7 +68,7 @@ getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandle
   where
     hasAccess :: SP.Person -> SV.Vehicle -> Flow ()
     hasAccess user vehicle =
-      when (user ^. #organizationId /= Just (vehicle ^. #organizationId)) $
+      when (user.organizationId /= Just (vehicle.organizationId)) $
         throwError Unauthorized
 
 addOrgId :: Id Org.Organization -> SV.Vehicle -> Flow SV.Vehicle
@@ -81,7 +79,7 @@ mkVehicleRes personList vehicle =
   let mdriver =
         find
           ( \person ->
-              SP.udf1 person == Just (getId $ vehicle ^. #id)
+              SP.udf1 person == Just (getId $ vehicle.id)
           )
           personList
    in VehicleRes
@@ -92,12 +90,12 @@ mkVehicleRes personList vehicle =
 mkDriverObj :: SP.Person -> Driver
 mkDriverObj person =
   Driver
-    { id = getId $ person ^. #id,
-      firstName = person ^. #firstName,
-      middleName = person ^. #middleName,
-      lastName = person ^. #lastName,
-      fullName = person ^. #fullName,
-      rating = person ^. #rating,
-      verified = person ^. #verified,
-      organizationId = person ^. #organizationId
+    { id = getId $ person.id,
+      firstName = person.firstName,
+      middleName = person.middleName,
+      lastName = person.lastName,
+      fullName = person.fullName,
+      rating = person.rating,
+      verified = person.verified,
+      organizationId = person.organizationId
     }

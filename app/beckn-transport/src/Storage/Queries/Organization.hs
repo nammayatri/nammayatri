@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Storage.Queries.Organization where
 
 import App.Types
@@ -109,7 +107,7 @@ update orgId status_ = do
 updateOrganizationRec :: Storage.Organization -> Flow ()
 updateOrganizationRec org = do
   dbTable <- getDbTable
-  DB.update dbTable (setClause org) (predicate $ org ^. #id)
+  DB.update dbTable (setClause org) (predicate $ org.id)
   where
     setClause sOrg Storage.Organization {..} =
       mconcat

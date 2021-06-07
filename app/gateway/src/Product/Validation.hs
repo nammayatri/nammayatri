@@ -17,7 +17,7 @@ validateContext expectedAction context = do
 
 validateVersion :: Context -> Flow ()
 validateVersion context = do
-  let domain = context ^. #domain
+  let domain = context.domain
   (desiredCoreVersion, desiredDomainVersion) <-
     case domain of
       MOBILITY -> do
@@ -31,7 +31,7 @@ validateVersion context = do
       -- TODO: validate for these domains when enabled
       FOOD_AND_BEVERAGE -> return (Nothing, Nothing)
       HEALTHCARE -> return (Nothing, Nothing)
-  unless (context ^. #core_version == desiredCoreVersion) $
+  unless (context.core_version == desiredCoreVersion) $
     throwError UnsupportedCoreVer
-  unless (context ^. #domain_version == desiredDomainVersion) $
+  unless (context.domain_version == desiredDomainVersion) $
     throwError UnsupportedDomainVer

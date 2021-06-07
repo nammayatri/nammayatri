@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.DriverInformation where
 
 import App.Types
@@ -31,7 +29,7 @@ getInformation RegistrationToken {..} = withFlowHandlerAPI $ do
   let driverId = Id entityId
   person <- QPerson.findPersonById (Id entityId)
   personEntity <- Person.mkPersonRes person
-  orgId <- person ^. #organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
+  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   organization <- QOrganization.findOrganizationById orgId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   pure $
@@ -54,13 +52,13 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
   case mbNotification of
     Nothing -> return $ DriverInformationAPI.GetRideInfoRes Nothing
     Just notification -> do
-      let productInstanceId = cast $ notification ^. #rideId
-      let notificationExpiryTime = notification ^. #expiresAt
+      let productInstanceId = cast $ notification.rideId
+      let notificationExpiryTime = notification.expiresAt
       productInstance <- QueryPI.findById productInstanceId
       driver <- QPerson.findPersonById $ cast driverId
-      driverLocation <- findLocationById (driver ^. #locationId) >>= fromMaybeM (PersonFieldNotPresent "location_id")
-      fromLocation <- findLocationById (productInstance ^. #fromLocation) >>= fromMaybeM (PIFieldNotPresent "location_id")
-      toLocation <- findLocationById (productInstance ^. #toLocation) >>= fromMaybeM (PIFieldNotPresent "to_location_id")
+      driverLocation <- findLocationById (driver.locationId) >>= fromMaybeM (PersonFieldNotPresent "location_id")
+      fromLocation <- findLocationById (productInstance.fromLocation) >>= fromMaybeM (PIFieldNotPresent "location_id")
+      toLocation <- findLocationById (productInstance.toLocation) >>= fromMaybeM (PIFieldNotPresent "to_location_id")
       (fromLat, fromLong) <- extractLatLong fromLocation & fromMaybeM (LocationFieldNotPresent "from")
       (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeM (LocationFieldNotPresent "driver")
       mbRoute <- Location.getRoute' driverLat driverLong fromLat fromLong
@@ -74,12 +72,12 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
                 etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
                 distanceToPickupLoc = distanceInM <$> mbRoute,
                 notificationExpiryTime = notificationExpiryTime,
-                estimatedPrice = amountToString <$> productInstance ^. #price
+                estimatedPrice = amountToString <$> productInstance.price
               }
   where
     driverId = Id entityId
     findLocationById mbId = maybe (return Nothing) QLocation.findLocationById mbId
-    extractLatLong = \loc -> (,) <$> loc ^. #lat <*> loc ^. #long
+    extractLatLong = \loc -> (,) <$> loc.lat <*> loc.long
 
 listDriver :: Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do
@@ -88,15 +86,15 @@ listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do
   return $ DriverInformationAPI.ListDriverRes respPersonList
   where
     convertToRes (person, driverInfo) = do
-      vehicle <- maybe (return Nothing) QVehicle.findVehicleById $ Id <$> person ^. #udf1
+      vehicle <- maybe (return Nothing) QVehicle.findVehicleById $ Id <$> person.udf1
       return $
         DriverInformationAPI.DriverEntityRes
-          { id = person ^. #id,
-            firstName = person ^. #firstName,
-            middleName = person ^. #middleName,
-            lastName = person ^. #lastName,
-            mobileNumber = person ^. #mobileNumber,
+          { id = person.id,
+            firstName = person.firstName,
+            middleName = person.middleName,
+            lastName = person.lastName,
+            mobileNumber = person.mobileNumber,
             linkedVehicle = vehicle,
-            active = driverInfo ^. #active,
-            onRide = driverInfo ^. #onRide
+            active = driverInfo.active,
+            onRide = driverInfo.onRide
           }

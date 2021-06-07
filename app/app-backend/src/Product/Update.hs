@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Update where
 
 import App.Types
@@ -22,19 +20,19 @@ onUpdate _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here
     logTagInfo "on_update req" (show req)
-    validateContext "on_update" $ req ^. #context
-    case req ^. #contents of
+    validateContext "on_update" $ req.context
+    case req.contents of
       Right msg -> do
-        let trip = msg ^. #order . #trip
-            pid = Id $ msg ^. #order . #id
+        let trip = msg.order.trip
+            pid = Id $ msg.order.id
         orderPi <- MPI.findByParentIdType pid Case.RIDEORDER
-        let mprdInfo = decodeFromText =<< (orderPi ^. #info)
+        let mprdInfo = decodeFromText =<< (orderPi.info)
             uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo.tracking =<< ProdInfo.tracker =<< mprdInfo)
             uPrd =
               orderPi
                 { SPI.info = encodeToText <$> uInfo
                 }
-        MPI.updateMultiple (orderPi ^. #id) uPrd
+        MPI.updateMultiple (orderPi.id) uPrd
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err
     return Ack
   where

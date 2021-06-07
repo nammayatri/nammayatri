@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.ProductInstance where
 
 import App.Types
@@ -19,7 +17,7 @@ import Utils.Common (withFlowHandlerAPI)
 list :: Person.Person -> [SPI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
 list person status csTypes mlimit moffset = withFlowHandlerAPI $ do
   piList <-
-    ProductInstance.listAllProductInstanceWithOffset limit offset (SPI.ByCustomerId $ person ^. #id) status csTypes
+    ProductInstance.listAllProductInstanceWithOffset limit offset (SPI.ByCustomerId $ person.id) status csTypes
   caseList <- Case.findAllByIds (SPI.caseId <$> piList)
   prodList <- Products.findAllByIds (SPI.productId <$> piList)
   locList <- Loc.findAllByIds ((Case.fromLocationId <$> caseList) <> (Case.toLocationId <$> caseList))

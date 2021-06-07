@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Cron where
 
 import App.Types
@@ -65,7 +63,7 @@ expireProductInstances maybeAuth = withFlowHandlerAPI $ do
             MPI.updateStatus (PI.id pI) PI.EXPIRED
           C.RIDEORDER -> do
             cs <- MC.findById (PI.caseId pI)
-            C.validateStatusTransition (cs ^. #status) C.CLOSED & fromEitherM CaseInvalidStatus
+            C.validateStatusTransition (cs.status) C.CLOSED & fromEitherM CaseInvalidStatus
             MC.updateStatus (PI.caseId pI) C.CLOSED
             PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
             MPI.updateStatus (PI.id pI) PI.EXPIRED

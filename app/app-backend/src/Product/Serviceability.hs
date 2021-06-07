@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Serviceability where
 
 import App.Types
@@ -14,11 +12,11 @@ rideServiceable :: RideServiceabilityReq -> Flow Bool
 rideServiceable RideServiceabilityReq {..} = do
   geofencingConfig <- asks geofencingConfig
   originServiceable <-
-    case geofencingConfig ^. #origin of
+    case geofencingConfig.origin of
       Unrestricted -> pure True
       Region region -> someGeometriesContain origin region
   destinationServiceable <-
-    case geofencingConfig ^. #destination of
+    case geofencingConfig.destination of
       Unrestricted -> pure True
       Region region -> someGeometriesContain destination region
   pure $ originServiceable && destinationServiceable

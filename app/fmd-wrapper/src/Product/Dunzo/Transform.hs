@@ -57,17 +57,17 @@ getDzBAPCreds = getClientConfig
 
 mkQuoteReqFromSearch :: SearchReq -> Flow QuoteReq
 mkQuoteReqFromSearch SearchReq {..} = do
-  let intent = message ^. #intent
-      pickups = intent ^. #pickups
-      drops = intent ^. #drops
+  let intent = message.intent
+      pickups = intent.pickups
+      drops = intent.drops
   case (pickups, drops) of
     ([pickup], [drop]) ->
-      case (pickup ^. #location . #gps, drop ^. #location . #gps) of
+      case (pickup.location.gps, drop.location.gps) of
         (Just pgps, Just dgps) -> do
-          plat <- readCoord (pgps ^. #lat)
-          plon <- readCoord (pgps ^. #lon)
-          dlat <- readCoord (dgps ^. #lat)
-          dlon <- readCoord (dgps ^. #lon)
+          plat <- readCoord (pgps.lat)
+          plon <- readCoord (pgps.lon)
+          dlat <- readCoord (dgps.lat)
+          dlon <- readCoord (dgps.lon)
           return $
             QuoteReq
               { pickup_lat = plat,
@@ -88,16 +88,16 @@ mkQuoteReqFromSearch SearchReq {..} = do
 
 mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
 mkQuoteReqFromSelect SelectReq {..} = do
-  let tasks = message ^. (#order . #tasks)
+  let tasks = message.order.tasks
       task = head tasks
-      pickup = task ^. (#pickup . #location)
-      drop = task ^. (#drop . #location)
-      pgps = pickup ^. #gps
-      dgps = drop ^. #gps
-  plat <- readCoord (fromJust pgps ^. #lat)
-  plon <- readCoord (fromJust pgps ^. #lon)
-  dlat <- readCoord (fromJust dgps ^. #lat)
-  dlon <- readCoord (fromJust dgps ^. #lon)
+      pickup = task.pickup.location
+      drop = task.drop.location
+      pgps = fromJust pickup.gps
+      dgps = fromJust drop.gps
+  plat <- readCoord pgps.lat
+  plon <- readCoord pgps.lon
+  dlat <- readCoord dgps.lat
+  dlon <- readCoord dgps.lon
   return $
     QuoteReq
       { pickup_lat = plat,
@@ -211,7 +211,7 @@ mkQuote quotationTTLinMin QuoteRes {..} = do
 mkOnSelectOrder :: Order -> Integer -> QuoteRes -> Flow SelectOrder
 mkOnSelectOrder order quotationTTLinMin res@QuoteRes {..} = do
   quote <- mkQuote quotationTTLinMin res
-  task <- updateTaskEta (head $ order ^. #tasks) eta
+  task <- updateTaskEta (head $ order.tasks) eta
   let order' =
         order & #tasks .~ [task]
           & #quotation ?~ quote
@@ -233,10 +233,10 @@ mkOnSelectErrReq context err =
 
 mkOnInitMessage :: Text -> Integer -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
 mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
-  task <- updateTaskEta (head $ order ^. #tasks) eta
+  task <- updateTaskEta (head $ order.tasks) eta
   now <- getCurrentTime
   let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
-  quotation <- (order ^. #quotation) & fromMaybeM (InternalError "Invalid order, no quotation.")
+  quotation <- (order.quotation) & fromMaybeM (InternalError "Invalid order, no quotation.")
   return $
     InitOrder $
       order & #id ?~ orderId
@@ -245,7 +245,7 @@ mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
         & #billing .~ billing
         & #tasks .~ [task]
   where
-    billing = req ^. #message . #order . #billing
+    billing = req.message.order.billing
 
 mkOnInitReq :: Context -> InitOrder -> OnInitReq
 mkOnInitReq context msg =
@@ -270,45 +270,45 @@ mkOnStatusMessage orgName order payee status = do
 updateOrder :: Text -> UTCTime -> Order -> PaymentEndpoint -> TaskStatus -> Order
 updateOrder orgName cTime order payee status = do
   -- TODO: this assumes that there is one task per order
-  let orderState = mapTaskStateToOrderState (status ^. #state)
+  let orderState = mapTaskStateToOrderState (status.state)
   let cancellationReasonIfAny =
-        case status ^. #state of
+        case status.state of
           CANCELLED -> Just [Option "1" (withName "User cancelled")]
           RUNNER_CANCELLED -> Just [Option "1" (withName "Agent cancelled")]
           _ -> Nothing
-  let payment = mkPayment payee <$> status ^. #estimated_price
+  let payment = mkPayment payee <$> status.estimated_price
   order & #state ?~ orderState
     & #updated_at ?~ cTime
-    & #payment .~ (payment <|> order ^. #payment)
-    & #cancellation_reasons .~ (cancellationReasonIfAny <|> order ^. #cancellation_reasons)
-    & #tasks .~ (updateTask <$> (order ^. #tasks))
+    & #payment .~ (payment <|> order.payment)
+    & #cancellation_reasons .~ (cancellationReasonIfAny <|> order.cancellation_reasons)
+    & #tasks .~ (updateTask <$> (order.tasks))
   where
     updateTask task = do
-      let taskState = mapTaskState (status ^. #state)
-      let eta = status ^. #eta
-      let pickup = task ^. #pickup
-      let drop = task ^. #drop
+      let taskState = mapTaskState (status.state)
+      let eta = status.eta
+      let pickup = task.pickup
+      let drop = task.drop
 
-      let pickupEta = calcEta cTime <$> ((^. #pickup) =<< eta)
-      let dropEta = calcEta cTime . (^. #dropoff) <$> eta
-      let pickup' = pickup & #time .~ (pickupEta <|> pickup ^. #time)
-      let drop' = drop & #time .~ (dropEta <|> drop ^. #time)
+      let pickupEta = calcEta cTime <$> ((.pickup) =<< eta)
+      let dropEta = calcEta cTime . (.dropoff) <$> eta
+      let pickup' = pickup & #time .~ (pickupEta <|> pickup.time)
+      let drop' = drop & #time .~ (dropEta <|> drop.time)
 
-      task & #agent .~ (getAgent <$> status ^. #runner)
-        & #state .~ (taskState <|> task ^. #state)
+      task & #agent .~ (getAgent <$> status.runner)
+        & #state .~ (taskState <|> task.state)
         & #updated_at ?~ cTime
         & #pickup .~ pickup'
         & #drop .~ drop'
 
     getAgent runner =
       Operator
-        { name = withGivenName $ runner ^. #name,
+        { name = withGivenName $ runner.name,
           image = n,
           dob = n,
           organization_name = Just orgName,
           gender = n,
           email = n,
-          phones = [runner ^. #phone_number],
+          phones = [runner.phone_number],
           experience = n
         }
 
@@ -380,20 +380,20 @@ mkOnCancelErrReq context err =
 
 mkCreateTaskReq :: Order -> Flow CreateTaskReq
 mkCreateTaskReq order = do
-  orderId <- order ^. #id & fromMaybeErr "ORDER_ID_MISSING" (Just CORE003)
-  let [task] = order ^. #tasks
-  let pickup = task ^. #pickup
-  let drop = task ^. #drop
-  let package = task ^. #package
+  orderId <- order.id & fromMaybeErr "ORDER_ID_MISSING" (Just CORE003)
+  let [task] = order.tasks
+  let pickup = task.pickup
+  let drop = task.drop
+  let package = task.package
   pickupDet <- mkLocationDetails pickup
   dropDet <- mkLocationDetails drop
   senderDet <- mkPersonDetails pickup
   receiverDet <- mkPersonDetails drop
-  let pickupIntructions = formatInstructions "pickup" =<< pickup ^. #instructions
-  let dropIntructions = formatInstructions "drop" =<< drop ^. #instructions
+  let pickupIntructions = formatInstructions "pickup" =<< pickup.instructions
+  let dropIntructions = formatInstructions "drop" =<< drop.instructions
   let mTotalValue = (\(Amount a) -> fromRational a) <$> getPackageValue package
   packageContent <- do
-    (categoryId :: Int) <- fromMaybeErr "INVALID_CATEGORY_ID" (Just CORE003) ((readMaybe . T.unpack) =<< package ^. #package_category_id)
+    (categoryId :: Int) <- fromMaybeErr "INVALID_CATEGORY_ID" (Just CORE003) ((readMaybe . T.unpack) =<< package.package_category_id)
     -- Category id is the index value of dzPackageContentList
     dzPackageContentList ^? element (categoryId - 1)
       & fromMaybeErr "INVALID_CATEGORY_ID" (Just CORE003)
@@ -407,7 +407,7 @@ mkCreateTaskReq order = do
         special_instructions = joinInstructions orderId pickupIntructions dropIntructions,
         package_approx_value = mTotalValue,
         package_content = [packageContent],
-        reference_id = order ^. #prev_order_id
+        reference_id = order.prev_order_id
       }
   where
     mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
@@ -435,10 +435,10 @@ mkCreateTaskReq order = do
 
     mkPersonDetails :: PickupOrDrop -> Flow PersonDetails
     mkPersonDetails PickupOrDrop {..} = do
-      phone <- listToMaybe (poc ^. #phones) & fromMaybeErr "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003)
+      phone <- listToMaybe (poc.phones) & fromMaybeErr "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003)
       return $
         PersonDetails
-          { name = getName (poc ^. #name),
+          { name = getName (poc.name),
             phone_number = phone
           }
 
@@ -453,13 +453,13 @@ mkCreateTaskReq order = do
 
     getPackageValue :: Package -> Maybe Amount
     getPackageValue package = do
-      let mprice = package ^. #price
+      let mprice = package.price
       case mprice of
         Nothing -> Nothing
-        Just price -> convertDecimalValueToAmount =<< (price ^. #value)
+        Just price -> convertDecimalValueToAmount =<< (price.value)
 
     formatInstructions tag descriptors = do
-      let insts = mapMaybe (^. #name) descriptors
+      let insts = mapMaybe (.name) descriptors
       if null insts
         then Nothing
         else Just $ tag <> ": " <> T.intercalate ", " insts
@@ -538,11 +538,11 @@ mapTaskStateToOrderState s = do
 updateTaskEta :: Task -> Eta -> Flow Task
 updateTaskEta task eta = do
   now <- getCurrentTime
-  let pickup = task ^. #pickup
-  let drop = task ^. #drop
+  let pickup = task.pickup
+  let drop = task.drop
 
-  let pickupEta = calcEta now <$> (eta ^. #pickup) <|> (task ^. #pickup . #time)
-  let dropEta = calcEta now (eta ^. #dropoff)
+  let pickupEta = calcEta now <$> (eta.pickup) <|> (task.pickup.time)
+  let dropEta = calcEta now (eta.dropoff)
   let pickup' = pickup & #time .~ pickupEta
   let drop' = drop & #time ?~ dropEta
   return $

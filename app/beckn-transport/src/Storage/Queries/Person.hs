@@ -1,5 +1,4 @@
 {-# LANGUAGE NamedWildCards #-}
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE QuasiQuotes #-}
 
@@ -107,7 +106,7 @@ findByMobileNumber countryCode mobileNumber_ = do
   where
     predicate Storage.Person {..} =
       mobileCountryCode ==. B.val_ (Just countryCode)
-        &&. (mobileNumber ^. #hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
+        &&. (mobileNumber.hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
 findByIdentifier ::
   Text -> Flow (Maybe Storage.Person)
@@ -297,7 +296,7 @@ getNearestDrivers point' radius' orgId' = do
                 . Storage.LocationPrimaryKey
                 . fmap Id
             )
-            (driver ^. #locationId)
+            (driver.locationId)
       dist <- distToPoint point location
       driver' <- B.filter_ (predicate orgId radius dist) (pure driver)
       return (driver', dist)
@@ -311,7 +310,7 @@ getNearestDrivers point' radius' orgId' = do
     distToPoint' lat lon point =
       point <> " <-> ST_Point(" <> lat <> ", " <> lon <> ")::geometry"
     distToPoint LatLong {..} location =
-      B.customExpr_ distToPoint' lat lon (location ^. #point)
+      B.customExpr_ distToPoint' lat lon (location.point)
 -}
 
 getNearestDrivers ::

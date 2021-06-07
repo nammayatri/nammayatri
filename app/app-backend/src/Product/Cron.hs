@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Cron where
 
 import App.Types
@@ -26,7 +24,7 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandlerAPI $ do
     ( \caseObj -> do
         let cId = Case.id caseObj
         Metrics.incrementCaseCount Case.CLOSED (Case._type caseObj)
-        Case.validateStatusTransition (caseObj ^. #status) Case.CLOSED & fromEitherM CaseInvalidStatus
+        Case.validateStatusTransition (caseObj.status) Case.CLOSED & fromEitherM CaseInvalidStatus
         MC.updateStatus cId Case.CLOSED
         updateAllProductInstancesByCaseId cId
         Notify.notifyOnExpiration caseObj
@@ -36,7 +34,7 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandlerAPI $ do
   where
     updateAllProductInstancesByCaseId cId = do
       casePIs <- MPI.findAllByCaseId cId
-      mapM_ (\pi -> PI.validateStatusTransition (pi ^. #status) PI.EXPIRED & fromEitherM PIInvalidStatus) casePIs
+      mapM_ (\pi -> PI.validateStatusTransition (pi.status) PI.EXPIRED & fromEitherM PIInvalidStatus) casePIs
       MPI.updateAllProductInstancesByCaseId cId PI.EXPIRED
 
 expireProductInstances :: Maybe CronAuthKey -> FlowHandler API.ExpireRes
@@ -53,7 +51,7 @@ expireProductInstances maybeAuth = withFlowHandlerAPI $ do
             MPI.updateStatus (PI.id pI) PI.EXPIRED
           Case.RIDEORDER -> do
             cs <- MC.findById (PI.caseId pI)
-            Case.validateStatusTransition (cs ^. #status) Case.CLOSED & fromEitherM CaseInvalidStatus
+            Case.validateStatusTransition (cs.status) Case.CLOSED & fromEitherM CaseInvalidStatus
             MC.updateStatus (PI.caseId pI) Case.CLOSED
             PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
             MPI.updateStatus (PI.id pI) PI.EXPIRED

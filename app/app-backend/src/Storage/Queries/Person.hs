@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Storage.Queries.Person where
 
 import App.Types
@@ -82,7 +80,7 @@ findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
     predicate Storage.Person {..} =
       role ==. B.val_ role_
         &&. mobileCountryCode ==. B.val_ (Just countryCode)
-        &&. (mobileNumber ^. #hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
+        &&. (mobileNumber.hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
 findByRoleAndMobileNumberWithoutCC :: Storage.Role -> Text -> Flow (Maybe Storage.Person)
 findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
@@ -92,7 +90,7 @@ findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
   where
     predicate Storage.Person {..} =
       role ==. B.val_ role_
-        &&. (mobileNumber ^. #hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
+        &&. (mobileNumber.hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
 updateMultiple :: Id Storage.Person -> Storage.Person -> DB.SqlDB ()
 updateMultiple personId person = do
@@ -103,22 +101,22 @@ updateMultiple personId person = do
     setClause now (sPerson :: Storage.Person) Storage.Person {..} =
       mconcat
         [ updatedAt <-. B.val_ now,
-          firstName <-. B.val_ (sPerson ^. #firstName),
-          middleName <-. B.val_ (sPerson ^. #middleName),
-          lastName <-. B.val_ (sPerson ^. #lastName),
-          fullName <-. B.val_ (sPerson ^. #fullName),
-          gender <-. B.val_ (sPerson ^. #gender),
-          email <-. B.val_ (sPerson ^. #email),
-          organizationId <-. B.val_ (sPerson ^. #organizationId),
-          locationId <-. B.val_ (sPerson ^. #locationId),
-          description <-. B.val_ (sPerson ^. #description),
-          status <-. B.val_ (sPerson ^. #status),
-          role <-. B.val_ (sPerson ^. #role),
-          identifier <-. B.val_ (sPerson ^. #identifier),
-          rating <-. B.val_ (sPerson ^. #rating),
-          deviceToken <-. B.val_ (sPerson ^. #deviceToken),
-          udf1 <-. B.val_ (sPerson ^. #udf1),
-          udf2 <-. B.val_ (sPerson ^. #udf2)
+          firstName <-. B.val_ (sPerson.firstName),
+          middleName <-. B.val_ (sPerson.middleName),
+          lastName <-. B.val_ (sPerson.lastName),
+          fullName <-. B.val_ (sPerson.fullName),
+          gender <-. B.val_ (sPerson.gender),
+          email <-. B.val_ (sPerson.email),
+          organizationId <-. B.val_ (sPerson.organizationId),
+          locationId <-. B.val_ (sPerson.locationId),
+          description <-. B.val_ (sPerson.description),
+          status <-. B.val_ (sPerson.status),
+          role <-. B.val_ (sPerson.role),
+          identifier <-. B.val_ (sPerson.identifier),
+          rating <-. B.val_ (sPerson.rating),
+          deviceToken <-. B.val_ (sPerson.deviceToken),
+          udf1 <-. B.val_ (sPerson.udf1),
+          udf2 <-. B.val_ (sPerson.udf2)
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 

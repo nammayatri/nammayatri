@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Utils.Common
@@ -34,12 +33,12 @@ mkIntent req =
       category_id = Nothing,
       item_id = Nothing,
       tags = Nothing,
-      pickups = [toBeckn (req ^. #origin)],
-      drops = [toBeckn (req ^. #destination)],
-      vehicle = toBeckn $ req ^. #vehicle,
+      pickups = [toBeckn (req.origin)],
+      drops = [toBeckn (req.destination)],
+      vehicle = toBeckn $ req.vehicle,
       payload = Payload Nothing Nothing [] Nothing,
       transfer = Nothing,
-      fare = toBeckn $ req ^. #fare
+      fare = toBeckn $ req.fare
     }
 
 validateContext :: Text -> Context -> Flow ()

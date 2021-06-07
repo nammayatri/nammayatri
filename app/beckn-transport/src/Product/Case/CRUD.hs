@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Case.CRUD where
 
 import App.Types
@@ -40,14 +38,14 @@ list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe I
 list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id entityId)
   now <- getCurrentTime
-  case person ^. #organizationId of
+  case person.organizationId of
     Just orgId -> do
       org <- OQ.findOrganizationById orgId
-      when (org ^. #status /= Organization.APPROVED) $
+      when (org.status /= Organization.APPROVED) $
         throwError Unauthorized
       caseList <-
-        if not (org ^. #enabled)
-          then Case.findAllByTypeStatusTime limit offset csType status orgId now $ fromMaybe now (org ^. #fromTime)
+        if not (org.enabled)
+          then Case.findAllByTypeStatusTime limit offset csType status orgId now $ fromMaybe now (org.fromTime)
           else Case.findAllByTypeStatuses limit offset csType status orgId now
       locList <- LQ.findAllByLocIds (Case.fromLocationId <$> caseList) (Case.toLocationId <$> caseList)
       return $ catMaybes $ joinByIds locList <$> caseList
@@ -130,14 +128,14 @@ mkOnSearchPayload c pis orgInfo = do
             action = "on_search",
             core_version = Just "0.8.2",
             domain_version = Just "0.8.2",
-            transaction_id = last $ T.split (== '_') . getShortId $ c ^. #shortId,
-            message_id = getShortId $ c ^. #shortId,
+            transaction_id = last $ T.split (== '_') . getShortId $ c.shortId,
+            message_id = getShortId $ c.shortId,
             bap_uri = Nothing,
             bpp_uri = Just $ makeBppUrl $ nwAddress appEnv,
             timestamp = currTime,
             ttl = Nothing
           }
-  piCount <- MPI.getCountByStatus (orgInfo ^. #id) Case.RIDEORDER
+  piCount <- MPI.getCountByStatus (orgInfo.id) Case.RIDEORDER
   let stats = mkProviderStats piCount
       provider = mkProviderInfo orgInfo stats
   catalog <- ExternalAPITransform.mkCatalog c pis provider
@@ -148,7 +146,7 @@ mkOnSearchPayload c pis orgInfo = do
       }
   where
     makeBppUrl url =
-      let orgId = getId $ orgInfo ^. #id
+      let orgId = getId $ orgInfo.id
           newPath = baseUrlPath url <> "/" <> T.unpack orgId
        in url {baseUrlPath = newPath}
 
@@ -157,10 +155,10 @@ mkOnSearchPayload c pis orgInfo = do
 mkProviderInfo :: Organization -> ProviderStats -> ProviderInfo
 mkProviderInfo org stats =
   ProviderInfo
-    { id = getId $ org ^. #id,
-      name = org ^. #name,
+    { id = getId $ org.id,
+      name = org.name,
       stats = encodeToText stats,
-      contacts = fromMaybe "" (org ^. #mobileNumber)
+      contacts = fromMaybe "" (org.mobileNumber)
     }
 
 mkProviderStats :: [(PI.ProductInstanceStatus, Int)] -> ProviderStats

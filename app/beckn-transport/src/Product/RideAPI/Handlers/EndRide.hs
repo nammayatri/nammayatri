@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.RideAPI.Handlers.EndRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -31,19 +29,19 @@ endRideHandler ::
 endRideHandler ServiceHandle {..} requestorId rideId = do
   requestor <- findPersonById requestorId
   orderPi <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
-  driverId <- orderPi ^. #personId & fromMaybeM (PIFieldNotPresent "person")
-  case requestor ^. #role of
+  driverId <- orderPi.personId & fromMaybeM (PIFieldNotPresent "person")
+  case requestor.role of
     Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
-  unless (orderPi ^. #status == PI.INPROGRESS) $ throwError $ PIInvalidStatus "This ride cannot be ended"
+  unless (orderPi.status == PI.INPROGRESS) $ throwError $ PIInvalidStatus "This ride cannot be ended"
 
-  searchPiId <- orderPi ^. #parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  searchPiId <- orderPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- findPIById searchPiId >>= fromMaybeM PINotFound
   piList <- findAllPIByParentId searchPiId
   trackerCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.LOCATIONTRACKER
   orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER
 
-  endRideTransaction (PI.id <$> piList) (trackerCase ^. #id) (orderCase ^. #id) (cast driverId)
+  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId)
 
   notifyUpdateToBAP searchPi orderPi PI.COMPLETED
 

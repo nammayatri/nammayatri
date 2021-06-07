@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module ExternalAPI.Dunzo.Flow where
 
 import Beckn.Types.Common
@@ -28,8 +26,8 @@ getToken ::
   FlowR e (Either Error TokenRes)
 getToken url req = callDunzoAPI url tokenReq "getToken"
   where
-    clientId = Just $ getClientId $ req ^. #client_id
-    clientSecret = Just $ getClientSecret $ req ^. #client_secret
+    clientId = Just $ getClientId $ req.client_id
+    clientSecret = Just $ getClientSecret $ req.client_secret
     tokenReq = T.client getTokenAPI clientId clientSecret
 
 type QuoteAPI =
@@ -60,11 +58,11 @@ getQuote clientId token url req = callDunzoAPI url quoteReq "getQuote"
         quoteAPI
         (Just token)
         (Just clientId)
-        (Just $ req ^. #pickup_lat)
-        (Just $ req ^. #pickup_lng)
-        (Just $ req ^. #drop_lat)
-        (Just $ req ^. #drop_lng)
-        (Just $ req ^. #category_id)
+        (Just $ req.pickup_lat)
+        (Just $ req.pickup_lng)
+        (Just $ req.drop_lat)
+        (Just $ req.drop_lng)
+        (Just $ req.category_id)
 
 type CreateTaskAPI =
   "api" :> "v1" :> "tasks"

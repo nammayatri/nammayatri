@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
 module App where
@@ -32,24 +31,24 @@ import Utils.Common
 runAppBackend :: (AppCfg -> AppCfg) -> IO ()
 runAppBackend configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "app-backend"
-  Metrics.serve (appCfg ^. #metricsPort)
+  Metrics.serve (appCfg.metricsPort)
   runAppBackend' appCfg
 
 runAppBackend' :: AppCfg -> IO ()
 runAppBackend' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
+  let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <- buildAppEnv appCfg
   let settings =
         defaultSettings
-          & setGracefulShutdownTimeout (Just $ appCfg ^. #graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
-          & setPort (appCfg ^. #port)
+          & setGracefulShutdownTimeout (Just $ appCfg.graceTerminationPeriod)
+          & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
+          & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         logInfo "Setting up for signature auth..."
-        let shortOrgId = appCfg ^. #bapSelfId
+        let shortOrgId = appCfg.bapSelfId
         getManager <-
           prepareAuthManager flowRt appEnv "Authorization" shortOrgId
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
@@ -57,10 +56,10 @@ runAppBackend' appCfg = do
         logInfo "Initializing DB Connections..."
         _ <- prepareDBConnections >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
         logInfo "Initializing Redis Connections..."
-        try (prepareRedisConnections $ appCfg ^. #redisCfg)
+        try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
-        migrateIfNeeded (appCfg ^. #migrationPath) (appCfg ^. #dbCfg) (appCfg ^. #autoMigrate)
+        migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-        logInfo ("Runtime created. Starting server at port " <> show (appCfg ^. #port))
+        logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)

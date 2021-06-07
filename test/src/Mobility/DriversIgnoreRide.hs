@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Mobility.DriversIgnoreRide where
 
 import Beckn.Types.Id
@@ -40,7 +38,7 @@ spec = do
       searchResult `shouldSatisfy` isRight
       -- If we reach here, the 'Right' pattern match will always succeed
       let Right searchResponse = searchResult
-          appCaseid = searchResponse ^. #caseId
+          appCaseid = searchResponse.caseId
 
       productInstance :| [] <- poll $ do
         -- Do a Case Status request for getting case product to confirm ride
@@ -48,7 +46,7 @@ spec = do
         statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
-        return . nonEmpty . filter (\p -> p ^. #organizationId == Id bppTransporterOrgId) $ productInstances statusRes
+        return . nonEmpty . filter (\p -> p.organizationId == Id bppTransporterOrgId) $ productInstances statusRes
       let productInstanceId = getId $ AppCase.id productInstance
       -- Confirm ride from app backend
       confirmResult <-

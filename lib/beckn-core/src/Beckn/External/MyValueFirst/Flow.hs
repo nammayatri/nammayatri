@@ -34,15 +34,15 @@ constructInviteSms = T.replace "{#org#}"
 
 sendOTP :: HasCoreMetrics r => SmsConfig -> Text -> Text -> Text -> FlowR r ()
 sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
-  let smsCred = smsCfg ^. #credConfig
-  let url = smsCfg ^. #url
-  let otpHash = smsCred ^. #otpHash
+  let smsCred = smsCfg.credConfig
+  let url = smsCfg.url
+  let otpHash = smsCred.otpHash
   submitSms
     url
     SubmitSms
-      { username = smsCred ^. #username,
-        password = smsCred ^. #password,
-        from = smsCfg ^. #sender,
+      { username = smsCred.username,
+        password = smsCred.password,
+        from = smsCfg.sender,
         to = phoneNumber,
         text = constructOtpSms otpCode otpHash otpSmsTemplate
       }

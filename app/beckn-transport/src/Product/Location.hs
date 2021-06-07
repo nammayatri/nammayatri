@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Location where
 
 import App.Types
@@ -22,26 +20,26 @@ import Utils.Common
 updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   person <- Person.findPersonById $ Id entityId
-  driver <- if person ^. #role == Person.DRIVER then return person else throwError AccessDenied
+  driver <- if person.role == Person.DRIVER then return person else throwError AccessDenied
   locationId <-
-    driver ^. #locationId
+    driver.locationId
       & fromMaybeM (PersonFieldNotPresent "location_id")
-  Location.updateGpsCoord locationId (req ^. #lat) (req ^. #long)
+  Location.updateGpsCoord locationId (req.lat) (req.long)
   return $ UpdateLocationRes "ACK"
 
 getLocation :: Id QPI.ProductInstance -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandlerAPI $ do
   orderProductInstance <- ProductInstance.findByParentIdType piId Case.RIDEORDER
   driver <-
-    orderProductInstance ^. #personId & fromMaybeM (PIFieldNotPresent "person")
+    orderProductInstance.personId & fromMaybeM (PIFieldNotPresent "person")
       >>= Person.findPersonById
   currLocation <-
-    driver ^. #locationId
+    driver.locationId
       & fromMaybeM (PersonFieldNotPresent "location_id")
       >>= Location.findLocationById
       >>= fromMaybeM LocationNotFound
-  lat <- currLocation ^. #lat & fromMaybeM (LocationFieldNotPresent "lat")
-  long <- currLocation ^. #long & fromMaybeM (LocationFieldNotPresent "long")
+  lat <- currLocation.lat & fromMaybeM (LocationFieldNotPresent "lat")
+  long <- currLocation.long & fromMaybeM (LocationFieldNotPresent "long")
   return $ GetLocationRes {location = Location.LocationInfo lat long}
 
 getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
@@ -78,10 +76,10 @@ calculateDistance source destination = do
   fmap MapSearch.distanceInM <$> MapSearch.getRouteMb routeRequest
   where
     mkRouteRequest = do
-      sourceLat <- source ^. #lat & fromMaybeM (LocationFieldNotPresent "source.lat")
-      sourceLng <- source ^. #long & fromMaybeM (LocationFieldNotPresent "source.long")
-      destinationLat <- destination ^. #lat & fromMaybeM (LocationFieldNotPresent "dest.lat")
-      destinationLng <- destination ^. #long & fromMaybeM (LocationFieldNotPresent "dest.long")
+      sourceLat <- source.lat & fromMaybeM (LocationFieldNotPresent "source.lat")
+      sourceLng <- source.long & fromMaybeM (LocationFieldNotPresent "source.long")
+      destinationLat <- destination.lat & fromMaybeM (LocationFieldNotPresent "dest.lat")
+      destinationLng <- destination.long & fromMaybeM (LocationFieldNotPresent "dest.long")
       let sourceMapPoint = mkMapPoint sourceLat sourceLng
       let destinationMapPoint = mkMapPoint destinationLat destinationLng
       pure $

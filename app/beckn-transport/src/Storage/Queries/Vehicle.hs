@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Storage.Queries.Vehicle where
 
 import App.Types
@@ -75,7 +73,7 @@ complementVal l
 updateVehicleRec :: Storage.Vehicle -> Flow ()
 updateVehicleRec vehicle = do
   dbTable <- getDbTable
-  DB.update dbTable (setClause vehicle) (predicate $ vehicle ^. #id)
+  DB.update dbTable (setClause vehicle) (predicate $ vehicle.id)
   where
     setClause pVehicle Storage.Vehicle {..} =
       mconcat

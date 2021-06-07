@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
 module App where
@@ -33,19 +32,19 @@ import Utils.Common
 runTransporterBackendApp :: (AppCfg -> AppCfg) -> IO ()
 runTransporterBackendApp configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "beckn-transport"
-  Metrics.serve (appCfg ^. #metricsPort)
+  Metrics.serve (appCfg.metricsPort)
   runTransporterBackendApp' appCfg
 
 runTransporterBackendApp' :: AppCfg -> IO ()
 runTransporterBackendApp' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appCfg ^. #loggerConfig
+  let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <- buildAppEnv appCfg
   let settings =
         defaultSettings
-          & setGracefulShutdownTimeout (Just $ appCfg ^. #graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown $ appEnv ^. #isShuttingDown)
-          & setPort (appCfg ^. #port)
+          & setGracefulShutdownTimeout (Just $ appCfg.graceTerminationPeriod)
+          & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
+          & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
@@ -60,10 +59,10 @@ runTransporterBackendApp' appCfg = do
         managerMap <- L.runIO getManagers
         logInfo $ "Loaded http managers - " <> show (keys managerMap)
         logInfo "Initializing Redis Connections..."
-        try (prepareRedisConnections $ appCfg ^. #redisCfg)
+        try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
-        migrateIfNeeded (appCfg ^. #migrationPath) (appCfg ^. #dbCfg) (appCfg ^. #autoMigrate)
+        migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-        logInfo ("Runtime created. Starting server at port " <> show (appCfg ^. #port))
+        logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         return $ flowRt {R._httpClientManagers = managerMap}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)

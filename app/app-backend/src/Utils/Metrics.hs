@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Utils.Metrics
   ( module Utils.Metrics,
     module CoreMetrics,
@@ -33,7 +31,7 @@ searchDurationLockKey txnId = txnId <> ":on_search"
 
 startSearchMetrics :: Text -> Flow ()
 startSearchMetrics txnId = do
-  searchRedisExTime <- (^. #metricsSearchDurationTimeout) <$> ask
+  searchRedisExTime <- (.metricsSearchDurationTimeout) <$> ask
   (_, failureCounter) <- metricsSearchDuration <$> ask
   startTime <- getCurrentTime
   Redis.setExRedis (searchDurationKey txnId) startTime searchRedisExTime
@@ -49,7 +47,7 @@ startSearchMetrics txnId = do
 
 finishSearchMetrics :: Text -> Flow ()
 finishSearchMetrics txnId = do
-  searchRedisExTime <- (^. #metricsSearchDurationTimeout) <$> ask
+  searchRedisExTime <- (.metricsSearchDurationTimeout) <$> ask
   (searchDurationHistogram, _) <- metricsSearchDuration <$> ask
   endTime <- getCurrentTime
   whenM (Redis.tryLockRedis (searchDurationLockKey txnId) searchRedisExTime) $ do

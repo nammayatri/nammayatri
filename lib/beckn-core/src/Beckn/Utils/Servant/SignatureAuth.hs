@@ -101,7 +101,7 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
   let selfUrl = getSelfUrl appEnv
   let registry = getRegistry appEnv
   logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
-  let uniqueKeyId = signaturePayload ^. #params . #keyId . #uniqueKeyId
+  let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
   let mCred = Registry.lookupKey uniqueKeyId registry
   cred <- case mCred of
     Just c -> return c
@@ -109,11 +109,11 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
       logTagError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
       throwError Unauthorized
   org <-
-    findOrgByShortId (ShortId $ cred ^. #shortOrgId)
+    findOrgByShortId (ShortId $ cred.shortOrgId)
       >>= maybe (throwError OrgNotFound) pure
-  pk <- case Registry.decodeKey $ cred ^. #signPubKey of
+  pk <- case Registry.decodeKey $ cred.signPubKey of
     Nothing -> do
-      logTagError "SignatureAuth" $ "Invalid public key: " <> show (cred ^. #signPubKey)
+      logTagError "SignatureAuth" $ "Invalid public key: " <> show (cred.signPubKey)
       throwError $ InternalError "Invalid public key."
     Just key -> return key
   return (org, pk, selfUrl)
@@ -236,12 +236,12 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
       _ -> ""
     performVerification key host body = do
       let headers =
-            [ ("(created)", maybe "" show (signPayload ^. #params . #created)),
-              ("(expires)", maybe "" show (signPayload ^. #params . #expires)),
+            [ ("(created)", maybe "" show (signPayload.params.created)),
+              ("(expires)", maybe "" show (signPayload.params.expires)),
               ("digest", "")
             ]
-      let signatureParams = signPayload ^. #params
-      let signature = signPayload ^. #signature
+      let signatureParams = signPayload.params
+      let signature = signPayload.signature
       let signatureMsg = HttpSig.makeSignatureString signatureParams body headers
       logTagDebug logTag $
         "Start verifying. Signature: " +|| HttpSig.encode signPayload ||+ ", Signature Message: " +|| signatureMsg ||+ ", Body: " +|| body ||+ ""
@@ -293,10 +293,10 @@ prepareAuthManager flowRt appEnv header shortOrgId = do
   let mCred = Registry.lookupOrg shortOrgId registry
   let signatureExpiry = getSignatureExpiry appEnv
   creds <- mCred & maybeToRight ("No credentials for: " <> shortOrgId)
-  let uniqueKeyId = creds ^. #uniqueKeyId
+  let uniqueKeyId = creds.uniqueKeyId
   let mSigningKey = Registry.lookupSigningKey uniqueKeyId signingKeys
   encodedKey <- mSigningKey & maybeToRight ("No private key found for credential: " <> uniqueKeyId)
-  let mPrivateKey = Registry.decodeKey $ encodedKey ^. #signPrivKey
+  let mPrivateKey = Registry.decodeKey $ encodedKey.signPrivKey
   privateKey <- mPrivateKey & maybeToRight ("Could not decode private key for credential: " <> uniqueKeyId)
   pure $ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header privateKey uniqueKeyId
 

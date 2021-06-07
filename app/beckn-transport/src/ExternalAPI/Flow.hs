@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module ExternalAPI.Flow where
 
 import App.Types
@@ -26,8 +24,8 @@ onSearch req bppShortId = do
   gatewayShortId <- xGatewaySelector appConfig & fromMaybeM GatewaySelectorNotSet
   gatewayOrg <- Org.findOrgByShortId $ ShortId gatewayShortId
   callbackUrl <- case gatewayShortId of
-    "NSDL.BG.1" -> appConfig ^. #xGatewayNsdlUrl & fromMaybeM NSDLBaseUrlNotSet
-    "JUSPAY.BG.1" -> gatewayOrg ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+    "NSDL.BG.1" -> appConfig.xGatewayNsdlUrl & fromMaybeM NSDLBaseUrlNotSet
+    "JUSPAY.BG.1" -> gatewayOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     _ -> throwError UnsupportedGatewaySelector
   callBecknAPI (Just authKey) Nothing callbackUrl (API.onSearch req) "on_search"
 

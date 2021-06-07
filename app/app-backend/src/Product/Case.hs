@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
 {-# OPTIONS_GHC -Wno-missing-signatures #-}
 
 module Product.Case where
@@ -27,10 +26,10 @@ getStatus person caseId = withFlowHandlerAPI $ do
   prodInstRes <- getProdInstances case_
   fromLocation <-
     fromMaybeM LocationNotFound
-      =<< Location.findLocationById (case_ ^. #fromLocationId)
+      =<< Location.findLocationById (case_.fromLocationId)
   toLocation <-
     fromMaybeM LocationNotFound
-      =<< Location.findLocationById (case_ ^. #toLocationId)
+      =<< Location.findLocationById (case_.toLocationId)
   return $ GetStatusRes case_ prodInstRes fromLocation toLocation
 
 list ::
@@ -42,7 +41,7 @@ list ::
   FlowHandler CaseListRes
 list person caseType statuses mlimit moffset =
   withFlowHandlerAPI $
-    Case.findAllByTypeAndStatuses (person ^. #id) caseType statuses mlimit moffset
+    Case.findAllByTypeAndStatuses (person.id) caseType statuses mlimit moffset
       >>= traverse mapProductInstance
   where
     mapProductInstance case_@Case.Case {..} = do
@@ -55,32 +54,32 @@ list person caseType statuses mlimit moffset =
 mkProdRes :: [Products.Products] -> PI.ProductInstance -> ProdInstRes
 mkProdRes prodList prodInst =
   ProdInstRes
-    { id = prodInst ^. #id,
-      caseId = prodInst ^. #caseId,
-      productId = prodInst ^. #productId,
-      personId = prodInst ^. #personId,
-      shortId = prodInst ^. #shortId,
-      entityType = prodInst ^. #entityType,
-      entityId = prodInst ^. #entityId,
-      quantity = prodInst ^. #quantity,
-      price = prodInst ^. #price,
-      status = prodInst ^. #status,
-      startTime = prodInst ^. #startTime,
-      endTime = prodInst ^. #endTime,
-      validTill = prodInst ^. #validTill,
-      fromLocation = prodInst ^. #fromLocation,
-      toLocation = prodInst ^. #toLocation,
-      organizationId = prodInst ^. #organizationId,
-      parentId = prodInst ^. #parentId,
-      udf1 = prodInst ^. #udf1,
-      udf2 = prodInst ^. #udf2,
-      udf3 = prodInst ^. #udf3,
-      udf4 = prodInst ^. #udf4,
-      udf5 = prodInst ^. #udf5,
-      info = prodInst ^. #info,
-      createdAt = prodInst ^. #createdAt,
-      updatedAt = prodInst ^. #updatedAt,
-      product = find (\x -> x ^. #id == prodInst ^. #productId) prodList
+    { id = prodInst.id,
+      caseId = prodInst.caseId,
+      productId = prodInst.productId,
+      personId = prodInst.personId,
+      shortId = prodInst.shortId,
+      entityType = prodInst.entityType,
+      entityId = prodInst.entityId,
+      quantity = prodInst.quantity,
+      price = prodInst.price,
+      status = prodInst.status,
+      startTime = prodInst.startTime,
+      endTime = prodInst.endTime,
+      validTill = prodInst.validTill,
+      fromLocation = prodInst.fromLocation,
+      toLocation = prodInst.toLocation,
+      organizationId = prodInst.organizationId,
+      parentId = prodInst.parentId,
+      udf1 = prodInst.udf1,
+      udf2 = prodInst.udf2,
+      udf3 = prodInst.udf3,
+      udf4 = prodInst.udf4,
+      udf5 = prodInst.udf5,
+      info = prodInst.info,
+      createdAt = prodInst.createdAt,
+      updatedAt = prodInst.updatedAt,
+      product = find (\x -> x.id == prodInst.productId) prodList
     }
 
 getProdInstances :: Case.Case -> Flow [ProdInstRes]

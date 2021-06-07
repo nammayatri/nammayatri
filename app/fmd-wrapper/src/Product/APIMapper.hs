@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.APIMapper where
 
 import App.Types
@@ -24,56 +22,56 @@ import Utils.Common
 search :: Organization -> SearchReq -> FlowHandler SearchRes
 search org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContext "search" $ req ^. #context
+    validateContext "search" $ req.context
     DZ.search org req
 
 select :: Organization -> SelectReq -> FlowHandler SelectRes
 select org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContext "select" $ req ^. #context
-    validateBapUrl org $ req ^. #context
+    validateContext "select" $ req.context
+    validateBapUrl org $ req.context
     DZ.select org req
 
 init :: Organization -> InitReq -> FlowHandler InitRes
 init org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContext "init" $ req ^. #context
-    validateBapUrl org $ req ^. #context
+    validateContext "init" $ req.context
+    validateBapUrl org $ req.context
     DZ.init org req
 
 confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
 confirm org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContext "confirm" $ req ^. #context
-    validateBapUrl org $ req ^. #context
+    validateContext "confirm" $ req.context
+    validateBapUrl org $ req.context
     DZ.confirm org req
 
 track :: Organization -> TrackReq -> FlowHandler TrackRes
 track org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContext "track" $ req ^. #context
-    validateBapUrl org $ req ^. #context
+    validateContext "track" $ req.context
+    validateBapUrl org $ req.context
     DZ.track org req
 
 status :: Organization -> StatusReq -> FlowHandler StatusRes
 status org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContext "status" $ req ^. #context
-    validateBapUrl org $ req ^. #context
+    validateContext "status" $ req.context
+    validateBapUrl org $ req.context
     DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes
 cancel org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContext "cancel" $ req ^. #context
-    validateBapUrl org $ req ^. #context
+    validateContext "cancel" $ req.context
+    validateBapUrl org $ req.context
     DZ.cancel org req
 
 update :: Organization -> UpdateReq -> FlowHandler UpdateRes
 update org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContext "update" $ req ^. #context
-    validateBapUrl org $ req ^. #context
+    validateContext "update" $ req.context
+    validateBapUrl org $ req.context
     DZ.update org req
 
 validateContext :: Text -> Context -> Flow ()
@@ -83,8 +81,8 @@ validateContext action context = do
 
 validateBapUrl :: Organization -> Context -> Flow ()
 validateBapUrl org context = do
-  let satisfied = case context ^. #bap_uri of
+  let satisfied = case context.bap_uri of
         Nothing -> False
-        Just bapUrl -> org ^. #callbackUrl == Just bapUrl
+        Just bapUrl -> org.callbackUrl == Just bapUrl
   unless satisfied $
     throwError (InvalidRequest "Invalid bap URL.")

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module App.BackgroundTaskManager.Types
   ( BTMCfg (),
     BTMEnv (..),
@@ -55,7 +53,7 @@ data BTMEnv = BTMEnv
   deriving (Generic)
 
 shardToPair :: Shard -> (Int, ShortId Organization)
-shardToPair shard = (shard ^. #shardId, ShortId (shard ^. #shortOrgId))
+shardToPair shard = (shard.shardId, ShortId (shard.shortOrgId))
 
 buildBTMEnv :: BTMCfg -> IO BTMEnv
 buildBTMEnv BTMCfg {..} = do

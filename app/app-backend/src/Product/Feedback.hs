@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Feedback where
 
 import qualified App.Types as App
@@ -25,15 +23,15 @@ import Utils.Common
 
 feedback :: Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
 feedback person request = withFlowHandlerAPI $ do
-  let ratingValue = request ^. #rating
+  let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
-  let prodInstId = request ^. #productInstanceId
+  let prodInstId = request.productInstanceId
   product <- ProductInstance.findById $ Id prodInstId
-  order <- Case.findIdByPerson person $ product ^. #caseId
-  let txnId = getId $ order ^. #id
+  order <- Case.findIdByPerson person $ product.caseId
+  let txnId = getId $ order.id
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
-    Organization.findOrganizationById (product ^. #organizationId)
+    Organization.findOrganizationById (product.organizationId)
       >>= fromMaybeM OrgNotFound
   let feedbackMsg =
         Beckn.FeedbackReqMessage
@@ -57,6 +55,6 @@ feedback person request = withFlowHandlerAPI $ do
                   _3d_render = Nothing
                 }
           }
-  gatewayUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  gatewayUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.feedback gatewayUrl (Beckn.FeedbackReq context feedbackMsg)
   return Success

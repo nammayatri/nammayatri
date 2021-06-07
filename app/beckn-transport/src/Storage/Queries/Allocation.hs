@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Storage.Queries.Allocation where
 
 import qualified Beckn.Storage.Queries as DB
@@ -20,13 +18,13 @@ assignDriver ::
   SP.Person ->
   DB.SqlDB ()
 assignDriver productInstanceId piIdList vehicle driver = do
-  QPI.updateVehicle piIdList (Just $ vehicle ^. #id)
+  QPI.updateVehicle piIdList (Just $ vehicle.id)
   QPI.updateDriver piIdList (Just personId)
   QDI.updateOnRide driverId True
   QPI.updateStatusByIds piIdList SPI.TRIP_ASSIGNED
   updateInfo productInstanceId driver vehicle
   where
-    personId = driver ^. #id
+    personId = driver.id
     driverId = cast personId
 
 updateInfo ::

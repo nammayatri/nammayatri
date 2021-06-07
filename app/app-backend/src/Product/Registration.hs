@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.Registration (initiateLogin, login, reInitiateLogin, logout) where
 
 import App.Types
@@ -25,14 +23,14 @@ import qualified Utils.Notifications as Notify
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
   withFlowHandlerAPI $
-    case (req ^. #medium, req ^. #__type) of
+    case (req.medium, req.__type) of
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
       _ -> throwError $ InvalidRequest "medium and type must be sms and otp respectively"
 
 initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
-  let mobileNumber = req ^. #mobileNumber
-      countryCode = req ^. #mobileCountryCode
+  let mobileNumber = req.mobileNumber
+      countryCode = req.mobileCountryCode
   person <-
     Person.findByRoleAndMobileNumber SP.USER countryCode mobileNumber
       >>= maybe (createPerson req) return
@@ -57,7 +55,7 @@ initiateFlow req smsCfg = do
 
 makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
-  role <- (req ^. #role) & fromMaybeM (InvalidRequest "You should pass person's role.")
+  role <- (req.role) & fromMaybeM (InvalidRequest "You should pass person's role.")
   pid <- BC.generateGUID
   now <- getCurrentTime
   return $
@@ -72,13 +70,13 @@ makePerson req = do
         identifierType = SP.MOBILENUMBER,
         email = Nothing,
         passwordHash = Nothing,
-        mobileNumber = Just $ req ^. #mobileNumber,
-        mobileCountryCode = Just $ req ^. #mobileCountryCode,
+        mobileNumber = Just $ req.mobileNumber,
+        mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
         verified = False,
         status = SP.INACTIVE,
-        deviceToken = req ^. #deviceToken,
+        deviceToken = req.deviceToken,
         udf1 = Nothing,
         udf2 = Nothing,
         organizationId = Nothing,
@@ -100,8 +98,8 @@ makeSession SmsSessionConfig {..} req entityId fakeOtp = do
       { id = rtid,
         token = token,
         attempts = attempts,
-        authMedium = req ^. #medium,
-        authType = req ^. #__type,
+        authMedium = req.medium,
+        authType = req.__type,
         authValueHash = otp,
         verified = False,
         authExpiry = authExpiry,
@@ -124,19 +122,19 @@ login tokenId req =
     when verified $ throwError $ AuthBlocked "Already verified."
     checkForExpiry authExpiry updatedAt
     let isValid =
-          authMedium == req ^. #medium
-            && authType == req ^. #__type
-            && authValueHash == req ^. #hash
+          authMedium == req.medium
+            && authType == req.__type
+            && authValueHash == req.hash
     if isValid
       then do
         person <- checkPersonExists entityId
         clearOldRegToken person $ Id tokenId
-        let personId = person ^. #id
+        let personId = person.id
             updatedPerson =
               person
                 { SP.status = SP.ACTIVE,
                   SP.deviceToken =
-                    (req ^. #deviceToken) <|> (person ^. #deviceToken)
+                    (req.deviceToken) <|> (person.deviceToken)
                 }
         DB.runSqlDB (Person.updateMultiple personId updatedPerson)
         LoginRes token . SP.maskPerson
@@ -172,8 +170,8 @@ reInitiateLogin tokenId req =
       then do
         smsCfg <- smsCfg <$> ask
         otpSmsTemplate <- otpSmsTemplate <$> ask
-        let mobileNumber = req ^. #mobileNumber
-            countryCode = req ^. #mobileCountryCode
+        let mobileNumber = req.mobileNumber
+            countryCode = req.mobileCountryCode
         SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
         _ <- RegistrationToken.updateAttempts (attempts - 1) id
         return $ InitiateLoginRes tokenId (attempts - 1)
@@ -181,11 +179,11 @@ reInitiateLogin tokenId req =
 
 clearOldRegToken :: SP.Person -> Id SR.RegistrationToken -> Flow ()
 clearOldRegToken person newRT = do
-  RegistrationToken.deleteByPersonIdExceptNew (getId $ person ^. #id) newRT
+  RegistrationToken.deleteByPersonIdExceptNew (getId $ person.id) newRT
 
 logout :: SP.Person -> FlowHandler APISuccess
 logout person = withFlowHandlerAPI $ do
   DB.runSqlDBTransaction $ do
-    Person.updateMultiple (person ^. #id) person {SP.deviceToken = Nothing}
-    RegistrationToken.deleteByPersonId $ getId $ person ^. #id
+    Person.updateMultiple (person.id) person {SP.deviceToken = Nothing}
+    RegistrationToken.deleteByPersonId $ getId $ person.id
   pure Success

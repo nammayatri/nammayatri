@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Services.Allocation.Allocation where
 
 import Beckn.Types.Common
@@ -118,14 +116,14 @@ processRequest :: MonadHandler m => ServiceHandle m -> ShortId Organization -> R
 processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
   incrementTaskCounter metricsHandle
   processStartTime <- getCurrentTime
-  let requestId = rideRequest ^. #requestId
-  let rideId = rideRequest ^. #rideId
+  let requestId = rideRequest.requestId
+  let rideId = rideRequest.rideId
   rideInfo <- getRideInfo rideId
-  let rideStatus = rideInfo ^. #rideStatus
+  let rideStatus = rideInfo.rideStatus
   eres <- try $ do
-    withLogTag ("RideRequest_" <> rideId ^. #getId) $ do
+    withLogTag ("RideRequest_" <> rideId.getId) $ do
       logInfo "Start processing request"
-      case rideRequest ^. #requestData of
+      case rideRequest.requestData of
         Allocation ->
           case rideStatus of
             Confirmed -> processAllocation handle shortOrgId rideInfo
@@ -158,8 +156,8 @@ processAllocation ::
   RideInfo ->
   m ()
 processAllocation handle@ServiceHandle {..} shortOrgId rideInfo = do
-  let rideId = rideInfo ^. #rideId
-  let orderTime = rideInfo ^. #orderTime
+  let rideId = rideInfo.rideId
+  let orderTime = rideInfo.orderTime
   allocationTimeFinished <- isAllocationTimeFinished handle orderTime
   logInfo $ "isAllocationTimeFinished " <> show allocationTimeFinished
   if allocationTimeFinished
@@ -199,7 +197,7 @@ processCurrentNotification
         logInfo $ "getDriverResponse " <> show mResponse
         case mResponse of
           Just driverResponse ->
-            case driverResponse ^. #status of
+            case driverResponse.status of
               DriverResponse.ACCEPT -> do
                 logInfo $ "assigning driver" <> show driverId
                 assignDriver rideId driverId
@@ -295,7 +293,7 @@ isAllocationTimeFinished :: MonadHandler m => ServiceHandle m -> OrderTime -> m 
 isAllocationTimeFinished ServiceHandle {..} orderTime = do
   currentTime <- getCurrentTime
   configuredAllocationTime <- getConfiguredAllocationTime
-  let elapsedSearchTime = diffUTCTime currentTime (orderTime ^. #utcTime)
+  let elapsedSearchTime = diffUTCTime currentTime (orderTime.utcTime)
   pure $ elapsedSearchTime > configuredAllocationTime
 
 isNotificationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> m Bool
