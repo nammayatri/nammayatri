@@ -100,16 +100,9 @@ spec:
           - name: single-request-reopen
       terminationGracePeriodSeconds: 90
       volumes:
-        - emptyDir:
-            medium: Memory
-          name: istio-envoy
         - name: fcm-key
           secret:
             secretName: beckn-fcm-key
-        - name: istio-certs
-          secret:
-            optional: true
-            secretName: istio.default
         - name: dhall-configs
           configMap:
             name: beckn-dhall-config-production

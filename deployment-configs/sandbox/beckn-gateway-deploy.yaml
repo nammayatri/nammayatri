@@ -19,7 +19,6 @@ spec:
     metadata:
       annotations:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
-        sidecar.istio.io/status: '{"version":"761ebc5a63976754715f22fcf548f05270fb4b8db0732489A4aebdb31fa81d960","initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["istio-envoy","istio-certs"],"imagePullSecrets":null}'
       labels:
         app: beckn-gateway-$DEPLOY_VARIANT
         version: latest
@@ -74,110 +73,11 @@ spec:
           securityContext:
             privileged: false
           volumeMounts:
-          - name: dhall-configs
-            mountPath: "/tmp/dhall-configs"
-            readOnly: true
-          - name: dhall-secrets
-            mountPath: "/tmp/dhall-secrets"
-            readOnly: true
-        - args:
-            - proxy
-            - sidecar
-            - --domain
-            - $(POD_NAMESPACE).svc.cluster.local
-            - --configPath
-            - /etc/istio/proxy
-            - --binaryPath
-            - /usr/local/bin/envoy
-            - --serviceCluster
-            - beckn-gateway-$DEPLOY_VARIANT.$(POD_NAMESPACE)
-            - --drainDuration
-            - 45s
-            - --parentShutdownDuration
-            - 1m0s
-            - --discoveryAddress
-            - istio-pilot.istio-system:15010
-            - --zipkinAddress
-            - zipkin.istio-system:9411
-            - --dnsRefreshRate
-            - 300s
-            - --connectTimeout
-            - 10s
-            - --proxyAdminPort
-            - "15000"
-            - --concurrency
-            - "2"
-            - --controlPlaneAuthPolicy
-            - NONE
-            - --statusPort
-            - "15020"
-            - --applicationPorts
-            - "8015"
-          env:
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: INSTANCE_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: ISTIO_META_POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: ISTIO_META_CONFIG_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: ISTIO_META_INTERCEPTION_MODE
-              value: REDIRECT
-            - name: ISTIO_META_INCLUDE_INBOUND_PORTS
-              value: "8015"
-            - name: ISTIO_METAJSON_ANNOTATIONS
-              value: |
-                {"iam.amazonaws.com/role: arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"}
-            - name: ISTIO_METAJSON_LABELS
-              value: |
-                {"app":"beckn-gateway-$DEPLOY_VARIANT","version":"latest"}
-          image: asia.gcr.io/jp-k8s-internal/proxyv2:1.2.2
-          imagePullPolicy: IfNotPresent
-          lifecycle:
-            preStop:
-              exec:
-                command: ["/bin/bash", "-c", "sleep 60"]
-          name: istio-proxy
-          ports:
-            - containerPort: 15090
-              name: http-envoy-prom
-              protocol: TCP
-          readinessProbe:
-            failureThreshold: 30
-            httpGet:
-              path: /healthz/ready
-              port: 15020
-            initialDelaySeconds: 1
-            periodSeconds: 2
-          resources:
-            limits:
-              cpu: "2"
-              memory: 1Gi
-            requests:
-              cpu: 100m
-              memory: 128Mi
-          securityContext:
-            privileged: false
-            readOnlyRootFilesystem: true
-            runAsUser: 1337
-          volumeMounts:
-            - mountPath: /etc/istio/proxy
-              name: istio-envoy
-            - mountPath: /etc/certs/
-              name: istio-certs
+            - name: dhall-configs
+              mountPath: "/tmp/dhall-configs"
+              readOnly: true
+            - name: dhall-secrets
+              mountPath: "/tmp/dhall-secrets"
               readOnly: true
       dnsConfig:
         options:
@@ -186,65 +86,26 @@ spec:
           - name: single-request-reopen
       imagePullSecrets:
         - name: jp-gcr-ec
-      initContainers:
-        - args:
-            - -p
-            - "15001"
-            - -u
-            - "1337"
-            - -m
-            - REDIRECT
-            - -i
-            - ""
-            - -x
-            - ""
-            - -b
-            - "8015"
-            - -d
-            - "15020"
-          image: asia.gcr.io/jp-k8s-internal/proxy_init:1.2.2
-          imagePullPolicy: IfNotPresent
-          name: istio-init
-          resources:
-            limits:
-              cpu: 100m
-              memory: 50Mi
-            requests:
-              cpu: 10m
-              memory: 10Mi
-          securityContext:
-            capabilities:
-              add:
-                - NET_ADMIN
-            runAsNonRoot: false
-            runAsUser: 0
       terminationGracePeriodSeconds: 90
       volumes:
-        - emptyDir:
-            medium: Memory
-          name: istio-envoy
-        - name: istio-certs
-          secret:
-            optional: true
-            secretName: istio.default
         - name: dhall-configs
           configMap:
             name: beckn-dhall-config-$DEPLOY_VARIANT
             items:
-            - key: beckn-gateway.dhall
-              path: config/beckn-gateway.dhall
-            - key: common.dhall
-              path: config/common.dhall
-            - key: globalCommon.dhall
-              path: generic/common.dhall
+              - key: beckn-gateway.dhall
+                path: config/beckn-gateway.dhall
+              - key: common.dhall
+                path: config/common.dhall
+              - key: globalCommon.dhall
+                path: generic/common.dhall
         - name: dhall-secrets
           secret:
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
             items:
-            - key: beckn-gateway.dhall
-              path: config/secrets/beckn-gateway.dhall
-            - key: common.dhall
-              path: config/secrets/common.dhall
+              - key: beckn-gateway.dhall
+                path: config/secrets/beckn-gateway.dhall
+              - key: common.dhall
+                path: config/secrets/common.dhall
 status: {}
 ---
 apiVersion: v1

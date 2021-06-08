@@ -96,13 +96,6 @@ spec:
           - name: single-request-reopen
       terminationGracePeriodSeconds: 90
       volumes:
-        - emptyDir:
-            medium: Memory
-          name: istio-envoy
-        - name: istio-certs
-          secret:
-            optional: true
-            secretName: istio.default
         - name: dhall-configs
           configMap:
             name: beckn-dhall-config-production
