@@ -42,7 +42,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandlerAPI
   now <- getCurrentTime
   case person ^. #organizationId of
     Just orgId -> do
-      org <- OQ.findOrganizationById (Id orgId)
+      org <- OQ.findOrganizationById orgId
       when (org ^. #status /= Organization.APPROVED) $
         throwError Unauthorized
       caseList <-
@@ -56,10 +56,10 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandlerAPI
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM
     joinByIds locList cs =
-      find (\x -> Case.fromLocationId cs == getId (Location.id x)) locList
+      find (\x -> Case.fromLocationId cs == Location.id x) locList
         >>= buildResponse
       where
-        buildResponse k = prepare cs k <$> find (\x -> Case.toLocationId cs == getId (Location.id x)) locList
+        buildResponse k = prepare cs k <$> find (\x -> Case.toLocationId cs == Location.id x) locList
         prepare pcs from to =
           CaseRes
             { _case = pcs,
@@ -67,7 +67,7 @@ list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandlerAPI
               toLocation = to
             }
 
-createProductInstance :: Case -> Products -> Maybe Amount -> Text -> PI.ProductInstanceStatus -> Flow ProductInstance
+createProductInstance :: Case -> Products -> Maybe Amount -> Id Organization -> PI.ProductInstanceStatus -> Flow ProductInstance
 createProductInstance cs prod price orgId status = do
   piId <- L.generateGUID
   (currTime :: UTCTime) <- getCurrentTime
@@ -83,7 +83,7 @@ createProductInstance cs prod price orgId status = do
           productId = Product.id prod,
           personId = Nothing,
           personUpdatedAt = Nothing,
-          shortId = T.pack shortId,
+          shortId = ShortId $ T.pack shortId,
           entityType = PI.VEHICLE,
           entityId = Nothing,
           quantity = 1,
@@ -130,14 +130,14 @@ mkOnSearchPayload c pis orgInfo = do
             action = "on_search",
             core_version = Just "0.8.2",
             domain_version = Just "0.8.2",
-            transaction_id = last $ T.split (== '_') $ c ^. #shortId,
-            message_id = c ^. #shortId,
+            transaction_id = last $ T.split (== '_') . getShortId $ c ^. #shortId,
+            message_id = getShortId $ c ^. #shortId,
             bap_uri = Nothing,
             bpp_uri = Just $ makeBppUrl $ nwAddress appEnv,
             timestamp = currTime,
             ttl = Nothing
           }
-  piCount <- MPI.getCountByStatus (getId $ orgInfo ^. #id) Case.RIDEORDER
+  piCount <- MPI.getCountByStatus (orgInfo ^. #id) Case.RIDEORDER
   let stats = mkProviderStats piCount
       provider = mkProviderInfo orgInfo stats
   catalog <- ExternalAPITransform.mkCatalog c pis provider

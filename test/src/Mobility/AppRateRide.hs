@@ -53,7 +53,7 @@ spec = do
         statusResult <- runClient appClient $ F.buildCaseStatusRes (getId appCaseId)
         statusResult `shouldSatisfy` isRight
         let Right statusResponse = statusResult
-        pure . nonEmpty . filter (\p -> p ^. #organizationId == F.bppTransporterOrgId) $ statusResponse ^. #productInstance
+        pure . nonEmpty . filter (\p -> p ^. #organizationId == Id F.bppTransporterOrgId) $ statusResponse ^. #productInstance
       let appProductInstanceId = productInstance ^. #id
       confirmResult <-
         runClient appClient

@@ -5,6 +5,7 @@ module Product.Vehicle where
 import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.Id
+import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
@@ -19,7 +20,7 @@ import qualified Utils.Defaults as Default
 createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle orgId req = withFlowHandlerAPI $ do
   validateVehicle
-  vehicle <- createTransform req >>= addOrgId orgId
+  vehicle <- createTransform req >>= addOrgId (Id orgId)
   QV.create vehicle
   return $ CreateVehicleRes vehicle
   where
@@ -30,8 +31,8 @@ createVehicle orgId req = withFlowHandlerAPI $ do
 
 listVehicles :: Text -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
 listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandlerAPI $ do
-  personList <- QP.findAllByOrgIds [SP.DRIVER] [orgId]
-  vehicleList <- QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId
+  personList <- QP.findAllByOrgIds [SP.DRIVER] [Id orgId]
+  vehicleList <- QV.findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset $ Id orgId
   let respList = mkVehicleRes personList <$> vehicleList
   return $ ListVehicleRes respList
   where
@@ -40,7 +41,7 @@ listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandl
 
 updateVehicle :: Text -> Id SV.Vehicle -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandlerAPI $ do
-  vehicle <- QV.findByIdAndOrgId vehicleId orgId
+  vehicle <- QV.findByIdAndOrgId vehicleId $ Id orgId
   updatedVehicle <- modifyTransform req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
@@ -50,7 +51,7 @@ deleteVehicle orgId vehicleId = withFlowHandlerAPI $ do
   vehicle <-
     QV.findVehicleById vehicleId
       >>= fromMaybeM VehicleNotFound
-  if vehicle ^. #organizationId == orgId
+  if vehicle ^. #organizationId == Id orgId
     then do
       QV.deleteById vehicleId
       return . DeleteVehicleRes $ getId vehicleId
@@ -72,7 +73,7 @@ getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandle
       when (user ^. #organizationId /= Just (vehicle ^. #organizationId)) $
         throwError Unauthorized
 
-addOrgId :: Text -> SV.Vehicle -> Flow SV.Vehicle
+addOrgId :: Id Org.Organization -> SV.Vehicle -> Flow SV.Vehicle
 addOrgId orgId vehicle = return $ vehicle {SV.organizationId = orgId}
 
 mkVehicleRes :: [SP.Person] -> SV.Vehicle -> VehicleRes

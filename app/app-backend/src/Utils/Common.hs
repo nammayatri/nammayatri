@@ -12,6 +12,7 @@ import Beckn.Product.Validation.Context
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import Beckn.Types.Id
 import Beckn.Types.Mobility.Intent
 import Beckn.Types.Mobility.Payload
 import Beckn.Utils.Common as CoreCommon
@@ -22,8 +23,8 @@ import EulerHS.Prelude
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Search as API
 
-generateShortId :: Flow Text
-generateShortId = T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
+generateShortId :: Flow (ShortId a)
+generateShortId = ShortId . T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
 
 mkIntent :: API.SearchReq -> Intent
 mkIntent req =

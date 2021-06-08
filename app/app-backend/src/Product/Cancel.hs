@@ -41,7 +41,7 @@ cancelProductInstance person req = do
   let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
   context <- buildContext "cancel" txnId Nothing Nothing
   organization <-
-    OQ.findOrganizationById (Id $ searchPI ^. #organizationId)
+    OQ.findOrganizationById (searchPI ^. #organizationId)
       >>= fromMaybeM OrgNotFound
   baseUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)

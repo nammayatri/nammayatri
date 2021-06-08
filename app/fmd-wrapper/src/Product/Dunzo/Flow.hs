@@ -241,7 +241,7 @@ confirm org req = do
       let taskId = taskStatus ^. #task_id
       let updatedCase =
             case_
-              { shortId = getTaskId taskId,
+              { shortId = ShortId $ getTaskId taskId,
                 udf1 = Just $ encodeToText orderDetails,
                 udf2 = Just $ encodeToText taskStatus
               }
@@ -292,7 +292,7 @@ track org req = do
   cbUrl <- org ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   fork "track" do
-    let taskId = case_ ^. #shortId
+    let taskId = getShortId $ case_ ^. #shortId
     dzBACreds <- getDzBAPCreds org
     eStatusRes <- getStatus dzBACreds conf (TaskId taskId)
     logTagInfo "StatusRes" $ show eStatusRes
@@ -317,7 +317,7 @@ status org req = do
   payeeDetails <- payee & decodeFromText & fromMaybeM (InternalError "Decode error.")
   let orderId = req ^. (#message . #order_id)
   c <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  let taskId = c ^. #shortId
+  let taskId = getShortId $ c ^. #shortId
   (orderDetails :: OrderDetails) <-
     c ^. #udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
@@ -359,7 +359,7 @@ cancel org req = do
   let context = updateBppUri (req ^. #context) dzBPNwAddress
   cbUrl <- org ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id oId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  let taskId = case_ ^. #shortId
+  let taskId = getShortId $ case_ ^. #shortId
   orderDetails <- case_ ^. #udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
   fork "cancel" do

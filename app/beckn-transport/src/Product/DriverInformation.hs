@@ -32,7 +32,7 @@ getInformation RegistrationToken {..} = withFlowHandlerAPI $ do
   person <- QPerson.findPersonById (Id entityId)
   personEntity <- Person.mkPersonRes person
   orgId <- person ^. #organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
-  organization <- QOrganization.findOrganizationById $ Id orgId
+  organization <- QOrganization.findOrganizationById orgId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   pure $
     DriverInformationAPI.DriverInformationResponse
@@ -78,12 +78,12 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
               }
   where
     driverId = Id entityId
-    findLocationById mbId = maybe (return Nothing) QLocation.findLocationById $ Id <$> mbId
+    findLocationById mbId = maybe (return Nothing) QLocation.findLocationById mbId
     extractLatLong = \loc -> (,) <$> loc ^. #lat <*> loc ^. #long
 
 listDriver :: Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do
-  personList <- QDriverInformation.findAllWithLimitOffsetByOrgIds mbLimit mbOffset [orgId]
+  personList <- QDriverInformation.findAllWithLimitOffsetByOrgIds mbLimit mbOffset [Id orgId]
   respPersonList <- traverse convertToRes personList
   return $ DriverInformationAPI.ListDriverRes respPersonList
   where

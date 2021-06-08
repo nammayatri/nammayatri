@@ -61,7 +61,7 @@ data ProductsT f = Products
     description :: B.C f (Maybe Text),
     industry :: B.C f ProductsIndustry,
     _type :: B.C f ProductsType,
-    shortId :: B.C f Text,
+    shortId :: B.C f (ShortId Products),
     status :: B.C f ProductsStatus,
     price :: B.C f Amount,
     rating :: B.C f (Maybe Text),

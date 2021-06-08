@@ -5,6 +5,7 @@ module Beckn.Types.Storage.Organization where
 
 import Beckn.Types.App
 import Beckn.Types.Id
+import qualified Beckn.Types.Storage.Location as Loc
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -103,7 +104,7 @@ data OrganizationT f = Organization
     gstin :: B.C f (Maybe Text),
     _type :: B.C f OrganizationType,
     domain :: B.C f (Maybe OrganizationDomain),
-    locationId :: B.C f (Maybe Text),
+    locationId :: B.C f (Maybe (Id Loc.Location)),
     fromTime :: B.C f (Maybe UTCTime),
     toTime :: B.C f (Maybe UTCTime),
     headCount :: B.C f (Maybe Int),

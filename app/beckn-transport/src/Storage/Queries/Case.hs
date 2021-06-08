@@ -7,6 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Storage
+import Beckn.Types.Storage.Organization
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.))
@@ -55,7 +56,7 @@ findBySid sid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Case {..} = shortId ==. B.val_ sid
+    predicate Storage.Case {..} = shortId ==. B.val_ (ShortId sid)
 
 updateStatusFlow ::
   Id Storage.Case ->
@@ -138,7 +139,7 @@ findAllByIdType ids type_ = do
       _type ==. B.val_ type_
         &&. B.in_ id (B.val_ <$> ids)
 
-findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> Text -> UTCTime -> Flow [Storage.Case]
+findAllByTypeStatuses :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> Id Organization -> UTCTime -> Flow [Storage.Case]
 findAllByTypeStatuses limit offset csType statuses orgId now = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
@@ -146,11 +147,11 @@ findAllByTypeStatuses limit offset csType statuses orgId now = do
     orderByDesc Storage.Case {..} = B.desc_ createdAt
     predicate Storage.Case {..} =
       _type ==. B.val_ csType
-        &&. provider ==. B.val_ (Just orgId)
+        &&. provider ==. B.val_ (Just $ getId orgId)
         &&. B.in_ status (B.val_ <$> statuses)
         &&. validTill B.>. B.val_ now
 
-findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> Text -> UTCTime -> UTCTime -> Flow [Storage.Case]
+findAllByTypeStatusTime :: Integer -> Integer -> Storage.CaseType -> [Storage.CaseStatus] -> Id Organization -> UTCTime -> UTCTime -> Flow [Storage.Case]
 findAllByTypeStatusTime limit offset csType statuses orgId now fromTime = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
@@ -158,7 +159,7 @@ findAllByTypeStatusTime limit offset csType statuses orgId now fromTime = do
     orderByDesc Storage.Case {..} = B.desc_ createdAt
     predicate Storage.Case {..} =
       _type ==. B.val_ csType
-        &&. provider ==. B.val_ (Just orgId)
+        &&. provider ==. B.val_ (Just $ getId orgId)
         &&. B.in_ status (B.val_ <$> statuses)
         &&. validTill B.>. B.val_ now
         &&. createdAt B.<. B.val_ fromTime

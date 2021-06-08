@@ -3,6 +3,7 @@ module Models.Case where
 import App.Types
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
+import qualified Beckn.Types.Storage.Location as Loc
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.Person as Person
 import Data.Time
@@ -81,8 +82,8 @@ updateStatus cid status = do
 
 -- | Find Cases by locations
 findAllWithLimitOffsetWhere ::
-  [Text] ->
-  [Text] ->
+  [Id Loc.Location] ->
+  [Id Loc.Location] ->
   [CaseType] ->
   [CaseStatus] ->
   [Text] ->

@@ -5,6 +5,8 @@ module Types.API.Vehicle where
 import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common as BC
+import Beckn.Types.Id
+import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.JSON
 import Data.Swagger
@@ -119,7 +121,7 @@ data Driver = Driver
     fullName :: Maybe Text,
     rating :: Maybe Text,
     verified :: Bool,
-    organizationId :: Maybe Text
+    organizationId :: Maybe (Id Org.Organization)
   }
   deriving (Generic, ToSchema)
 

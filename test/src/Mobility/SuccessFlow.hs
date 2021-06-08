@@ -53,7 +53,7 @@ spec = do
         statusResResult `shouldSatisfy` isRight
         let Right statusRes = statusResResult
         -- since all BPP can give quote for now we filter by orgId
-        return $ nonEmpty . filter (\p -> p ^. #organizationId == bppTransporterOrgId) $ productInstances statusRes
+        return $ nonEmpty . filter (\p -> p ^. #organizationId == Id bppTransporterOrgId) $ productInstances statusRes
       let productInstanceId = getId $ AppCase.id productInstance
 
       -- check if calculated price is greater than 0

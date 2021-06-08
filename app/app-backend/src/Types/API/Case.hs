@@ -4,6 +4,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import Beckn.Types.Storage.Location
+import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Products
@@ -59,7 +60,7 @@ data ProdInstRes = ProdInstRes
     caseId :: Id Case,
     productId :: Id Products,
     personId :: Maybe (Id Person),
-    shortId :: Text,
+    shortId :: ShortId ProductInstance,
     entityType :: EntityType,
     entityId :: Maybe Text,
     quantity :: Int,
@@ -68,9 +69,9 @@ data ProdInstRes = ProdInstRes
     startTime :: UTCTime,
     endTime :: Maybe UTCTime,
     validTill :: UTCTime,
-    fromLocation :: Maybe Text,
-    toLocation :: Maybe Text,
-    organizationId :: Text,
+    fromLocation :: Maybe (Id Location),
+    toLocation :: Maybe (Id Location),
+    organizationId :: Id Organization,
     parentId :: Maybe (Id ProductInstance),
     udf1 :: Maybe Text,
     udf2 :: Maybe Text,

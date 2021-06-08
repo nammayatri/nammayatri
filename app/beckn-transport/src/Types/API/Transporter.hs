@@ -52,7 +52,7 @@ instance CreateTransform TransporterReq SO.Organization Flow where
           SO.mobileNumber = Just $ req ^. #mobileNumber,
           SO.mobileCountryCode = Just $ req ^. #mobileCountryCode,
           SO.gstin = req ^. #gstin,
-          SO.locationId = Just (getId $ SL.id location),
+          SO.locationId = Just $ SL.id location,
           SO._type = SO.PROVIDER,
           SO.domain = Just SO.MOBILITY,
           SO.fromTime = Nothing,
@@ -115,10 +115,9 @@ instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
   modifyTransform req org = do
     now <- getCurrentTime
     return $
-      org
-        { SO.name = fromMaybe (org ^. #name) (req ^. #name),
+      org{SO.name = fromMaybe (org ^. #name) (req ^. #name),
           SO.description = (req ^. #description) <|> (org ^. #description),
           SO.headCount = (req ^. #headCount) <|> (org ^. #headCount),
           SO.enabled = fromMaybe (org ^. #enabled) (req ^. #enabled),
           SO.updatedAt = now
-        }
+         }

@@ -8,7 +8,7 @@ import Beckn.Types.Storage.Organization (Organization)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Data.Text as T
 import Data.Time (UTCTime)
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Flow
   ( DropLocation (DropLocation),
     JourneyTrip (OneWayTrip),
@@ -19,6 +19,7 @@ import Product.FareCalculator.Flow
   )
 import qualified Product.Location as Location
 import qualified Storage.Queries.FarePolicy as FarePolicyS
+import Types.Domain.FarePolicy
 import qualified Types.Storage.FarePolicy as FarePolicyS
 import Utils.Common
 
@@ -53,8 +54,22 @@ serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do
         sFarePolicy <- FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
-        let farePolicy = FarePolicyS.fromTable <$> sFarePolicy
+        let farePolicy = fromTable <$> sFarePolicy
         pure farePolicy,
       getDistance = \(PickupLocation pickupLoc) (DropLocation dropLoc) ->
         Location.calculateDistance pickupLoc dropLoc
+    }
+
+fromTable :: FarePolicyS.FarePolicy -> FarePolicy
+fromTable FarePolicyS.FarePolicy {..} =
+  FarePolicy
+    { id = id,
+      vehicleVariant = vehicleVariant,
+      organizationId = organizationId,
+      baseFare = toRational <$> baseFare,
+      baseDistance = toRational <$> baseDistance,
+      perExtraKmRate = toRational perExtraKmRate,
+      nightShiftStart = nightShiftStart,
+      nightShiftEnd = nightShiftEnd,
+      nightShiftRate = toRational <$> nightShiftRate
     }

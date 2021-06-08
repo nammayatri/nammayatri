@@ -60,10 +60,10 @@ updateLocationRec locationId location = do
         ]
     predicate locId Storage.Location {..} = id ==. B.val_ locId
 
-findAllByLocIds :: [Text] -> [Text] -> Flow [Storage.Location]
+findAllByLocIds :: [Id Storage.Location] -> [Id Storage.Location] -> Flow [Storage.Location]
 findAllByLocIds fromIds toIds = do
   dbTable <- getDbTable
-  DB.findAll dbTable identity (predicate (Id <$> fromIds) (Id <$> toIds))
+  DB.findAll dbTable identity (predicate fromIds toIds)
   where
     predicate pFromIds pToIds Storage.Location {..} =
       B.in_ id (B.val_ <$> pFromIds)

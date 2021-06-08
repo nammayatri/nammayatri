@@ -24,7 +24,7 @@ updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   person <- Person.findPersonById $ Id entityId
   driver <- if person ^. #role == Person.DRIVER then return person else throwError AccessDenied
   locationId <-
-    driver ^. #locationId & (Id <$>)
+    driver ^. #locationId
       & fromMaybeM (PersonFieldNotPresent "location_id")
   Location.updateGpsCoord locationId (req ^. #lat) (req ^. #long)
   return $ UpdateLocationRes "ACK"
@@ -36,7 +36,7 @@ getLocation piId = withFlowHandlerAPI $ do
     orderProductInstance ^. #personId & fromMaybeM (PIFieldNotPresent "person")
       >>= Person.findPersonById
   currLocation <-
-    driver ^. #locationId & (Id <$>)
+    driver ^. #locationId
       & fromMaybeM (PersonFieldNotPresent "location_id")
       >>= Location.findLocationById
       >>= fromMaybeM LocationNotFound

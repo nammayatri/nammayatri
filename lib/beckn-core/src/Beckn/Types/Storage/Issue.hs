@@ -3,6 +3,8 @@
 module Beckn.Types.Storage.Issue where
 
 import Beckn.Types.Id
+import qualified Beckn.Types.Storage.Person as Person
+import qualified Beckn.Types.Storage.ProductInstance as ProdInst
 import Data.Aeson
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -10,8 +12,8 @@ import EulerHS.Prelude hiding (id)
 
 data IssueT f = Issue
   { id :: B.C f (Id Issue),
-    customerId :: B.C f Text,
-    productInstanceId :: B.C f (Maybe Text),
+    customerId :: B.C f (Id Person.Person),
+    productInstanceId :: B.C f (Maybe (Id ProdInst.ProductInstance)),
     contactEmail :: B.C f Text,
     reason :: B.C f Text,
     description :: B.C f (Maybe Text),

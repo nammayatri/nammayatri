@@ -8,7 +8,6 @@ import Beckn.Types.Storage.Organization (Organization)
 import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import Types.App (ConfigKey)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.TransporterConfig as TransporterConfig
 
@@ -16,7 +15,7 @@ getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Transpor
 getDbTable =
   DB.transporterConfig . DB.transporterDb <$> getSchemaName
 
-findValueByOrgIdAndKey :: Id Organization -> ConfigKey -> Flow (Maybe TransporterConfig.TransporterConfig)
+findValueByOrgIdAndKey :: Id Organization -> TransporterConfig.ConfigKey -> Flow (Maybe TransporterConfig.TransporterConfig)
 findValueByOrgIdAndKey orgId key_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

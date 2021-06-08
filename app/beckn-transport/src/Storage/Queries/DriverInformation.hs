@@ -9,6 +9,7 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
+import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import Data.Bitraversable
@@ -99,7 +100,7 @@ deleteById driverId_ = do
     personId_ = cast driverId_
     predicate pid DriverInformation.DriverInformation {..} = driverId ==. B.val_ pid
 
-findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Text] -> Flow [(Person.Person, DriverInformation.DriverInformation)]
+findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Id Org.Organization] -> Flow [(Person.Person, DriverInformation.DriverInformation)]
 findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
   personDbTable <- QPerson.getDbTable
   driverInfoDbTable <- getDbTable

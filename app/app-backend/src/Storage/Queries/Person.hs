@@ -11,6 +11,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Organization (Organization)
+import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
@@ -41,7 +42,7 @@ findById personId = do
     predicate Storage.Person {..} = id ==. B.val_ personId
 
 findAllByOrgIds ::
-  [Storage.Role] -> [Text] -> Flow [Storage.Person]
+  [Storage.Role] -> [Id Org.Organization] -> Flow [Storage.Person]
 findAllByOrgIds roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate roles orgIds)
@@ -179,9 +180,9 @@ findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
     limit = toInteger $ fromMaybe 10 mlimit
     offset = toInteger $ fromMaybe 0 moffset
     predicate pOrgIds [] Storage.Person {..} =
-      organizationId `B.in_` (B.val_ . Just . getId <$> pOrgIds)
+      organizationId `B.in_` (B.val_ . Just <$> pOrgIds)
     predicate pOrgIds pRoles Storage.Person {..} =
-      organizationId `B.in_` (B.val_ . Just . getId <$> pOrgIds) &&. role `B.in_` (B.val_ <$> pRoles)
+      organizationId `B.in_` (B.val_ . Just <$> pOrgIds) &&. role `B.in_` (B.val_ <$> pRoles)
     orderByDesc Storage.Person {..} = B.desc_ createdAt
 
 deleteById :: Id Storage.Person -> Flow ()

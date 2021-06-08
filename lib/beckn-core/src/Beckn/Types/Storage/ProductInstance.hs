@@ -7,6 +7,8 @@ import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Location as Loc
+import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person (Person)
 import Beckn.Types.Storage.Products (Products)
 import Beckn.Utils.JSON
@@ -72,7 +74,7 @@ data ProductInstanceT f = ProductInstance
     productId :: B.C f (Id Products),
     personId :: B.C f (Maybe (Id Person)),
     personUpdatedAt :: B.C f (Maybe UTCTime),
-    shortId :: B.C f Text,
+    shortId :: B.C f (ShortId ProductInstance),
     entityType :: B.C f EntityType,
     entityId :: B.C f (Maybe Text),
     quantity :: B.C f Int,
@@ -82,9 +84,9 @@ data ProductInstanceT f = ProductInstance
     startTime :: B.C f UTCTime,
     endTime :: B.C f (Maybe UTCTime),
     validTill :: B.C f UTCTime,
-    fromLocation :: B.C f (Maybe Text),
-    toLocation :: B.C f (Maybe Text),
-    organizationId :: B.C f Text,
+    fromLocation :: B.C f (Maybe (Id Loc.Location)),
+    toLocation :: B.C f (Maybe (Id Loc.Location)),
+    organizationId :: B.C f (Id Org.Organization),
     parentId :: B.C f (Maybe (Id ProductInstance)),
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),

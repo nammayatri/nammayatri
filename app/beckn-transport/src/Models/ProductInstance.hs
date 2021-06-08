@@ -3,6 +3,7 @@ module Models.ProductInstance where
 import App.Types
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case (Case)
+import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Types.Storage.ProductInstance
 import Data.Time (NominalDiffTime, UTCTime)
 import EulerHS.Prelude
@@ -47,7 +48,7 @@ findAllExpiredByStatus statuses expiryTime = do
   Q.findAllExpiredByStatus statuses expiryTime
 
 -- | Get ProductInstance By OrganizationId groupBy status
-getCountByStatus :: Text -> ProductInstanceType -> Flow [(ProductInstanceStatus, Int)]
+getCountByStatus :: Id Organization -> ProductInstanceType -> Flow [(ProductInstanceStatus, Int)]
 getCountByStatus orgId piType = do
   Q.getCountByStatus' orgId piType
 

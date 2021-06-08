@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.Vehicle where
 
 import Beckn.Types.Id
+import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -93,7 +94,7 @@ instance FromHttpApiData RegistrationCategory where
 data VehicleT f = Vehicle
   { id :: B.C f (Id Vehicle),
     capacity :: B.C f (Maybe Int),
-    organizationId :: B.C f Text,
+    organizationId :: B.C f (Id Org.Organization),
     category :: B.C f (Maybe Category),
     make :: B.C f (Maybe Text),
     model :: B.C f (Maybe Text),

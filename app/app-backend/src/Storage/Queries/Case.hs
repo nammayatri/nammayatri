@@ -9,6 +9,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Storage
+import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
@@ -160,7 +161,7 @@ updateStatus cid status_ = do
         ]
     predicate cid_ Storage.Case {..} = id ==. B.val_ cid_
 
-findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Storage.CaseType] -> [Storage.CaseStatus] -> [Text] -> Maybe Int -> Maybe Int -> Flow [Storage.Case]
+findAllWithLimitOffsetWhere :: [Id Loc.Location] -> [Id Loc.Location] -> [Storage.CaseType] -> [Storage.CaseStatus] -> [Text] -> Maybe Int -> Maybe Int -> Flow [Storage.Case]
 findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset = do
   dbTable <- getDbTable
   DB.findAll

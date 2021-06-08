@@ -8,6 +8,7 @@ import Beckn.TypeClass.Transform
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
+import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.JSON
 import Data.Aeson
@@ -42,7 +43,7 @@ data UpdatePersonReq = UpdatePersonReq
     deviceToken :: Maybe FCM.FCMRecipientToken,
     udf1 :: Maybe Text,
     udf2 :: Maybe Text,
-    organizationId :: Maybe Text,
+    organizationId :: Maybe (Id Org.Organization),
     description :: Maybe Text,
     locationType :: Maybe SL.LocationType,
     lat :: Maybe Double,
@@ -84,19 +85,19 @@ instance ModifyTransform UpdatePersonReq SP.Person Flow where
           SP.udf2 = ifJust (req ^. #udf2) (person ^. #udf2),
           SP.organizationId = ifJust (req ^. #organizationId) (person ^. #organizationId),
           SP.description = ifJust (req ^. #description) (person ^. #description),
-          SP.locationId = Just (getId $ SL.id location)
+          SP.locationId = Just (SL.id location)
         }
 
-updateOrCreateLocation :: UpdatePersonReq -> Maybe Text -> Flow SL.Location
+updateOrCreateLocation :: UpdatePersonReq -> Maybe (Id SL.Location) -> Flow SL.Location
 updateOrCreateLocation req Nothing = do
   location <- createLocation req
   QL.createFlow location
   return location
 updateOrCreateLocation req (Just locId) = do
   location <-
-    QL.findLocationById (Id locId)
+    QL.findLocationById locId
       >>= fromMaybeM LocationDoesNotExist
-  QL.updateLocationRec (Id locId) $ transformToLocation req location
+  QL.updateLocationRec locId $ transformToLocation req location
   return location
 
 transformToLocation :: UpdatePersonReq -> SL.Location -> SL.Location
@@ -204,7 +205,7 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
           SP.udf2 = req ^. #udf2,
           SP.organizationId = Nothing,
           SP.description = req ^. #description,
-          SP.locationId = Just (getId $ SL.id location),
+          SP.locationId = Just (SL.id location),
           SP.createdAt = now,
           SP.updatedAt = now
         }
@@ -276,8 +277,8 @@ data PersonEntityRes = PersonEntityRes
     udf1 :: Maybe Text,
     udf2 :: Maybe Text,
     status :: SP.Status,
-    organizationId :: Maybe Text,
-    locationId :: Maybe Text,
+    organizationId :: Maybe (Id Org.Organization),
+    locationId :: Maybe (Id SL.Location),
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     createdAt :: UTCTime,

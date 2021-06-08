@@ -32,7 +32,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   hatchbackFarePolicy <- mkFarePolicy (organization ^. #id) SVehicle.HATCHBACK (organization ^. #createdAt)
   QO.create organization
   traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
-  QP.updateOrganizationIdAndMakeAdmin (Id entityId) (getId $ SO.id organization)
+  QP.updateOrganizationIdAndMakeAdmin (Id entityId) (SO.id organization)
   updatedPerson <- QP.findPersonById (Id entityId)
   return $ TransporterRes updatedPerson organization
   where
@@ -91,7 +91,7 @@ getTransporter SR.RegistrationToken {..} = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id entityId)
   validate person
   case person ^. #organizationId of
-    Just orgId -> TransporterRec <$> QO.findOrganizationById (Id orgId)
+    Just orgId -> TransporterRec <$> QO.findOrganizationById orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
   where
     validate person =

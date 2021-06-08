@@ -50,9 +50,10 @@ import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Location (LatLong (..))
 import Types.API.Person
-import Types.App (ConfigKey (..), Driver)
+import Types.App (Driver)
 import Types.Error
 import qualified Types.Storage.DriverInformation as DriverInformation
+import Types.Storage.TransporterConfig (ConfigKey (ConfigKey))
 import Utils.Common
 
 updatePerson :: SR.RegistrationToken -> Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes
@@ -75,7 +76,7 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandlerAPI $ do
   validateDriver req
-  person <- addOrgId orgId <$> createTransform req
+  person <- addOrgId (Id orgId) <$> createTransform req
   QP.create person
   when (person ^. #role == SP.DRIVER) $ createDriverDetails (person ^. #id)
   org <- OQ.findOrganizationById (Id orgId)
@@ -120,14 +121,14 @@ getPersonDetails regToken = withFlowHandlerAPI $ do
 
 listPerson :: Text -> [SP.Role] -> Maybe Integer -> Maybe Integer -> FlowHandler ListPersonRes
 listPerson orgId roles limitM offsetM = withFlowHandlerAPI $ do
-  personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [orgId]
+  personList <- QP.findAllWithLimitOffsetByOrgIds limitM offsetM roles [Id orgId]
   respList <- traverse mkPersonRes personList
   return $ ListPersonRes respList
 
 deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
 deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
   person <- QP.findPersonById (Id personId)
-  unless (person ^. #organizationId == Just orgId) $ throwError Unauthorized
+  unless (person ^. #organizationId == Just (Id orgId)) $ throwError Unauthorized
   DB.runSqlDBTransaction $ do
     QP.deleteById (Id personId)
     QDriverStats.deleteById $ Id personId
@@ -144,7 +145,7 @@ linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do
         >>= fromMaybeM VehicleNotFound
     _ -> throwError $ InvalidRequest "Unsupported entity type."
   when
-    (person ^. #organizationId /= Just orgId)
+    (person ^. #organizationId /= Just (Id orgId))
     (throwError Unauthorized)
   prevPerson <- QP.findByEntityId (req ^. #entityId)
   whenJust prevPerson (\p -> QP.updateEntity (p ^. #id) T.empty T.empty)
@@ -154,7 +155,7 @@ linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do
 
 -- Utility Functions
 
-addOrgId :: Text -> SP.Person -> SP.Person
+addOrgId :: Id Organization -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP.organizationId = Just orgId}
 
 mkPersonRes :: SP.Person -> Flow PersonEntityRes
@@ -240,9 +241,9 @@ getDriverPool piId =
         (case_ ^. #udf1 >>= readMaybe . T.unpack)
           & fromMaybeM (CaseFieldNotPresent "udf1")
       pickupPoint <-
-        Id <$> prodInst ^. #fromLocation
+        prodInst ^. #fromLocation
           & fromMaybeM (PIFieldNotPresent "location_id")
-      let orgId = Id (prodInst ^. #organizationId)
+      let orgId = prodInst ^. #organizationId
       calculateDriverPool pickupPoint orgId vehicleVariant
 
 setDriverPool :: Id ProductInstance -> [Id Driver] -> Flow ()

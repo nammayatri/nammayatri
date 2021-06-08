@@ -79,12 +79,12 @@ cancelRide rideId requestedByDriver = do
     bapOrgId <- Case.udf4 orderCase & fromMaybeM (CaseFieldNotPresent "udf4")
     bapOrg <- Organization.findOrganizationById $ Id bapOrgId
     bapCallbackUrl <- bapOrg ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-    let transporterId = Id $ ProductInstance.organizationId orderPi
+    let transporterId = ProductInstance.organizationId orderPi
     transporter <- Organization.findOrganizationById transporterId
     let bppShortId = getShortId $ transporter ^. #shortId
     searchCaseId <- orderCase ^. #parentCaseId & fromMaybeM (CaseFieldNotPresent "parentCaseId")
     searchCase <- Case.findById searchCaseId
-    let txnId = last . T.splitOn "_" $ searchCase ^. #shortId
+    let txnId = last . T.splitOn "_" . getShortId $ searchCase ^. #shortId
     notifyCancelToGateway searchPiId bapCallbackUrl bppShortId txnId
     case piList of
       [] -> pure ()
@@ -238,7 +238,7 @@ mkTrip c orderPi = do
 
 mkOnUpdatePayload :: BaseUrl -> ProductInstance.ProductInstance -> Case.Case -> Case.Case -> Flow API.OnUpdateReq
 mkOnUpdatePayload bapUri prodInst case_ pCase = do
-  let txnId = last . T.splitOn "_" $ pCase ^. #shortId
+  let txnId = last . T.splitOn "_" . getShortId $ pCase ^. #shortId
   bppUri <- asks xAppUri
   context <- buildContext "on_update" txnId (Just bapUri) (Just bppUri)
   trip <- mkTrip case_ prodInst

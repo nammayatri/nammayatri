@@ -3,6 +3,7 @@ module Models.Case where
 import App.Types
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Organization (Organization)
 import Data.Maybe
 import Data.Text
 import Data.Time
@@ -71,7 +72,7 @@ findAllByTypeStatuses ::
   Integer ->
   CaseType ->
   [CaseStatus] ->
-  Text ->
+  Id Organization ->
   UTCTime ->
   Flow [Case]
 findAllByTypeStatuses limit offset csType statuses orgId now = do
@@ -83,7 +84,7 @@ findAllByTypeStatusTime ::
   Integer ->
   CaseType ->
   [CaseStatus] ->
-  Text ->
+  Id Organization ->
   UTCTime ->
   UTCTime ->
   Flow [Case]

@@ -24,7 +24,7 @@ listFarePolicies :: RegToken.RegistrationToken -> FlowHandler ListFarePolicyResp
 listFarePolicies RegToken.RegistrationToken {entityId} = withFlowHandlerAPI $ do
   person <- SPerson.findPersonById (Id entityId)
   orgId <- person ^. #organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
-  farePolicies <- SFarePolicy.findFarePoliciesByOrgId (Id orgId)
+  farePolicies <- SFarePolicy.findFarePoliciesByOrgId orgId
   pure $ ListFarePolicyResponse $ toResponse <$> farePolicies
   where
     toResponse fp =

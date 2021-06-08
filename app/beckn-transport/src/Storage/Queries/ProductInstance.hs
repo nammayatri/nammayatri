@@ -9,6 +9,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Case as Case
+import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Person (Person)
 import qualified Beckn.Types.Storage.ProductInstance as Storage
 import Beckn.Types.Storage.Products
@@ -235,7 +236,7 @@ productInstancejoinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
           B.&&. ProductsPrimaryKey (Storage.productId line) B.==. B.primaryKey j
   pure (i, j, k)
 
-productInstanceJoin :: Int -> Int -> [Case.CaseType] -> Text -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
+productInstanceJoin :: Int -> Int -> [Case.CaseType] -> Id Org.Organization -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
 productInstanceJoin limit_ offset_ csTypes orgId status_ = do
   dbTable <- getDbTable
   prodTable <- getProdTable
@@ -264,7 +265,7 @@ productInstanceJoin limit_ offset_ csTypes orgId status_ = do
           toLocation = Nothing
         }
 
-productInstanceJoinWithoutLimits :: Case.CaseType -> Text -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
+productInstanceJoinWithoutLimits :: Case.CaseType -> Id Org.Organization -> [Storage.ProductInstanceStatus] -> Flow ProductInstanceList
 productInstanceJoinWithoutLimits csType orgId status_ = do
   dbTable <- getDbTable
   csTable <- getCsTable
@@ -406,7 +407,7 @@ findAllExpiredByStatus statuses expiryTime = do
       B.in_ status (B.val_ <$> statuses)
         &&. startTime B.<=. B.val_ expiryTime
 
-getCountByStatus' :: Text -> Storage.ProductInstanceType -> Flow [(Storage.ProductInstanceStatus, Int)]
+getCountByStatus' :: Id Org.Organization -> Storage.ProductInstanceType -> Flow [(Storage.ProductInstanceStatus, Int)]
 getCountByStatus' orgId piType = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.aggregate_ aggregator) predicate

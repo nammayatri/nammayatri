@@ -60,10 +60,10 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-findAllByIds :: [Text] -> Flow [Storage.Location]
+findAllByIds :: [Id Storage.Location] -> Flow [Storage.Location]
 findAllByIds locIds = do
   dbTable <- getDbTable
-  DB.findAll dbTable identity (predicate (Id <$> locIds))
+  DB.findAll dbTable identity (predicate locIds)
   where
     predicate locationIds Storage.Location {..} =
       B.in_ id (B.val_ <$> locationIds)

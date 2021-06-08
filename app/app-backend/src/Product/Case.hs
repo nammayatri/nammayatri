@@ -27,10 +27,10 @@ getStatus person caseId = withFlowHandlerAPI $ do
   prodInstRes <- getProdInstances case_
   fromLocation <-
     fromMaybeM LocationNotFound
-      =<< Location.findLocationById (Id $ case_ ^. #fromLocationId)
+      =<< Location.findLocationById (case_ ^. #fromLocationId)
   toLocation <-
     fromMaybeM LocationNotFound
-      =<< Location.findLocationById (Id $ case_ ^. #toLocationId)
+      =<< Location.findLocationById (case_ ^. #toLocationId)
   return $ GetStatusRes case_ prodInstRes fromLocation toLocation
 
 list ::
@@ -47,8 +47,8 @@ list person caseType statuses mlimit moffset =
   where
     mapProductInstance case_@Case.Case {..} = do
       prodInstRes <- getProdInstances case_
-      fromLocation <- Location.findLocationById $ Id fromLocationId
-      toLocation <- Location.findLocationById $ Id toLocationId
+      fromLocation <- Location.findLocationById fromLocationId
+      toLocation <- Location.findLocationById toLocationId
       return $ API.CaseRes case_ prodInstRes fromLocation toLocation
 
 -- Core Utility functions are below

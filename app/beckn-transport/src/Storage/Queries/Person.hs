@@ -59,9 +59,9 @@ findPersonByIdAndRoleAndOrgId pid role_ orgId = do
     predicate Storage.Person {..} =
       id ==. B.val_ pid
         &&. role ==. B.val_ role_
-        &&. organizationId ==. B.val_ (Just $ getId orgId)
+        &&. organizationId ==. B.val_ (Just orgId)
 
-findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Text] -> Flow [Storage.Person]
+findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Id Org.Organization] -> Flow [Storage.Person]
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
@@ -79,7 +79,7 @@ findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
         ]
 
 findAllByOrgIds ::
-  [Storage.Role] -> [Text] -> Flow [Storage.Person]
+  [Storage.Role] -> [Id Org.Organization] -> Flow [Storage.Person]
 findAllByOrgIds roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -129,7 +129,7 @@ findByEmail email_ = do
     predicate Storage.Person {..} =
       email ==. B.val_ (Just email_)
 
-updateOrganizationIdAndMakeAdmin :: Id Storage.Person -> Text -> Flow ()
+updateOrganizationIdAndMakeAdmin :: Id Storage.Person -> Id Org.Organization -> Flow ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
   dbTable <- getDbTable
   now <- getCurrentTime

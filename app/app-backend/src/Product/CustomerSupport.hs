@@ -113,8 +113,8 @@ makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
     Case.findOneByParentIdAndCaseType id C.RIDEORDER
   let (status_ :: Maybe CaseStatus) = ((\x -> Just $ x ^. #status) =<< confiremedOrder) <|> Just status
-  fromLocation <- Location.findLocationById $ Id fromLocationId
-  toLocation <- Location.findLocationById $ Id toLocationId
+  fromLocation <- Location.findLocationById fromLocationId
+  toLocation <- Location.findLocationById toLocationId
   trip <- makeTripDetails confiremedOrder
   --  Info: udf1 is vechicle variant
   let details =

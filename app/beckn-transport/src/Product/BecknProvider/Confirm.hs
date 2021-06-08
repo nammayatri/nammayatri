@@ -41,7 +41,7 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
     BP.validateContext "confirm" $ req ^. #context
     let prodInstId = Id $ req ^. #message . #order . #id
     productInstance <- QProductInstance.findById' prodInstId >>= fromMaybeM PIDoesNotExist
-    let transporterId' = Id $ productInstance ^. #organizationId
+    let transporterId' = productInstance ^. #organizationId
     unless (productInstance ^. #status == ProductInstance.INSTOCK) $
       throwError $ PIInvalidStatus "This ride cannot be confirmed"
     transporterOrg <- Organization.findOrganizationById transporterId'
@@ -98,7 +98,7 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
     vehicleVariant :: Vehicle.Variant <-
       (orderCase ^. #udf1 >>= readMaybe . T.unpack)
         & fromMaybeM (CaseFieldNotPresent "udf1")
-    driverPool <- calculateDriverPool (Id pickupPoint) transporterId vehicleVariant
+    driverPool <- calculateDriverPool pickupPoint transporterId vehicleVariant
     setDriverPool prodInstId driverPool
     logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   bapCallbackUrl <- bapOrg ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
@@ -124,8 +124,8 @@ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCa
                 action = "on_confirm",
                 core_version = Just "0.8.2",
                 domain_version = Just "0.8.2",
-                transaction_id = last $ T.split (== '_') $ searchCase ^. #shortId,
-                message_id = searchCase ^. #shortId,
+                transaction_id = last $ T.split (== '_') . getShortId $ searchCase ^. #shortId,
+                message_id = getShortId $ searchCase ^. #shortId,
                 bap_uri = Nothing,
                 bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
                 timestamp = currTime,
@@ -153,7 +153,7 @@ mkOrderCase Case.Case {..} = do
       { id = cid,
         name = Nothing,
         description = Just "Case to order a Ride",
-        shortId = shortId_,
+        shortId = ShortId shortId_,
         industry = Case.MOBILITY,
         _type = Case.RIDEORDER,
         parentCaseId = Just id,
@@ -178,7 +178,7 @@ mkOrderProductInstance caseId prodInst = do
         personUpdatedAt = Nothing,
         entityType = ProductInstance.VEHICLE,
         entityId = Nothing,
-        shortId = shortId,
+        shortId = ShortId shortId,
         quantity = 1,
         price = prodInst ^. #price,
         _type = Case.RIDEORDER,
@@ -206,7 +206,7 @@ mkTrackerCase case_@Case.Case {..} uuid now shortId_ =
     { id = Id uuid,
       name = Nothing,
       description = Just "Case to track a Ride",
-      shortId = shortId_,
+      shortId = ShortId shortId_,
       industry = Case.MOBILITY,
       _type = Case.LOCATIONTRACKER,
       status = Case.NEW,
@@ -229,7 +229,7 @@ mkTrackerProductInstance caseId prodInst currTime = do
         productId = prodInst ^. #productId,
         personId = Nothing,
         personUpdatedAt = Nothing,
-        shortId = shortId,
+        shortId = ShortId shortId,
         entityType = ProductInstance.VEHICLE,
         parentId = Just (prodInst ^. #id),
         organizationId = prodInst ^. #organizationId,
@@ -255,7 +255,7 @@ mkTrackerProductInstance caseId prodInst currTime = do
 
 mkOnConfirmPayload :: BaseUrl -> Case.Case -> ProductInstance.ProductInstance -> Case.Case -> Flow API.OnConfirmReq
 mkOnConfirmPayload bapUri searchCase orderPI trackerCase = do
-  let txnId = last . T.splitOn "_" $ searchCase ^. #shortId
+  let txnId = last . T.splitOn "_" . getShortId $ searchCase ^. #shortId
   bppUri <- asks xAppUri
   context <- buildContext "on_confirm" txnId (Just bapUri) (Just bppUri)
   trip <- BP.mkTrip trackerCase orderPI

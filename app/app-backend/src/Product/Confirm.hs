@@ -40,7 +40,7 @@ confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
   orderCase_ <- mkOrderCase case_
   productInstance <- MPI.findById (Id productInstanceId)
   organization <-
-    OQ.findOrganizationById (Id $ productInstance ^. #organizationId)
+    OQ.findOrganizationById (productInstance ^. #organizationId)
       >>= fromMaybeM OrgNotFound
   Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
   orderProductInstance <- mkOrderProductInstance (orderCase_ ^. #id) productInstance
@@ -141,7 +141,7 @@ mkOrderProductInstance caseId prodInst = do
         personUpdatedAt = prodInst ^. #personUpdatedAt,
         entityType = SPI.VEHICLE,
         entityId = Nothing,
-        shortId = shortId,
+        shortId = ShortId shortId,
         quantity = 1,
         price = prodInst ^. #price,
         _type = Case.RIDEORDER,

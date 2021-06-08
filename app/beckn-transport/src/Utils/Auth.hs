@@ -98,7 +98,7 @@ verifyAdmin user = do
   when (user ^. #role /= SP.ADMIN) $
     throwError AccessDenied
   case user ^. #organizationId of
-    Just orgId -> return orgId
+    Just orgId -> return $ getId orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
 verifyDriver :: SP.Person -> Flow Text
@@ -106,7 +106,7 @@ verifyDriver user = do
   unless ((user ^. #role) `elem` [SP.ADMIN, SP.DRIVER]) $
     throwError AccessDenied
   case user ^. #organizationId of
-    Just orgId -> return orgId
+    Just orgId -> return $ getId orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
 validateAdmin :: RegToken -> Flow Text

@@ -112,7 +112,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
     { id = Id uuid,
       name = Nothing,
       description = Just "Case to search for a Ride",
-      shortId = tId <> "_" <> req ^. #context . #transaction_id,
+      shortId = ShortId $ tId <> "_" <> req ^. #context . #transaction_id,
       industry = Case.MOBILITY,
       _type = Case.RIDESEARCH,
       exchangeType = Case.FULFILLMENT,
@@ -125,8 +125,8 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
       requestor = Nothing,
       requestorType = Just Case.CONSUMER,
       parentCaseId = Nothing,
-      fromLocationId = getId $ fromLocation ^. #id,
-      toLocationId = getId $ toLocation ^. #id,
+      fromLocationId = fromLocation ^. #id,
+      toLocationId = toLocation ^. #id,
       udf1 = Just $ intent ^. #vehicle . #variant,
       udf2 = Just $ show $ length $ intent ^. #payload . #travellers,
       udf3 = encodeToText <$> deadDistance,
@@ -140,7 +140,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
 calculateDeadDistance :: Org.Organization -> Location.Location -> Flow (Maybe Float)
 calculateDeadDistance organization fromLocation = do
   eres <- runSafeFlow do
-    orgLocId <- Id <$> organization ^. #locationId & fromMaybeM (OrgFieldNotPresent "location_id")
+    orgLocId <- organization ^. #locationId & fromMaybeM (OrgFieldNotPresent "location_id")
     mbOrgLocation <- Loc.findLocationById orgLocId
     case mbOrgLocation of
       Nothing -> throwError LocationNotFound
@@ -200,7 +200,7 @@ mkProductInstance productCase price status transporterId = do
             productId = products ^. #id,
             personId = Nothing,
             personUpdatedAt = Nothing,
-            shortId = shortId,
+            shortId = ShortId shortId,
             entityType = ProductInstance.VEHICLE,
             entityId = Nothing,
             quantity = 1,
@@ -212,7 +212,7 @@ mkProductInstance productCase price status transporterId = do
             validTill = productCase ^. #validTill,
             fromLocation = Just $ productCase ^. #fromLocationId,
             toLocation = Just $ productCase ^. #toLocationId,
-            organizationId = getId transporterId,
+            organizationId = transporterId,
             parentId = Nothing,
             udf1 = productCase ^. #udf1,
             udf2 = productCase ^. #udf2,
@@ -237,8 +237,8 @@ sendOnSearchFailed bapUri productCase transporterOrg err = do
             action = "on_search",
             core_version = Just "0.8.2",
             domain_version = Just "0.8.2",
-            transaction_id = last $ T.split (== '_') $ productCase ^. #shortId,
-            message_id = productCase ^. #shortId,
+            transaction_id = last $ T.split (== '_') . getShortId $ productCase ^. #shortId,
+            message_id = getShortId $ productCase ^. #shortId,
             bap_uri = Just bapUri,
             bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
             timestamp = currTime,
@@ -284,14 +284,14 @@ mkOnSearchPayload bapUri productCase productInstances transporterOrg = do
             action = "on_search",
             core_version = Just "0.8.2",
             domain_version = Just "0.8.2",
-            transaction_id = last $ T.split (== '_') $ productCase ^. #shortId,
-            message_id = productCase ^. #shortId,
+            transaction_id = last $ T.split (== '_') . getShortId $ productCase ^. #shortId,
+            message_id = getShortId $ productCase ^. #shortId,
             bap_uri = Just bapUri,
             bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
             timestamp = currTime,
             ttl = Nothing
           }
-  piCount <- MPI.getCountByStatus (getId $ transporterOrg ^. #id) Case.RIDEORDER
+  piCount <- MPI.getCountByStatus (transporterOrg ^. #id) Case.RIDEORDER
   let stats = mkProviderStats piCount
   let provider = mkProviderInfo transporterOrg stats
   catalog <- ExternalAPITransform.mkCatalog productCase productInstances provider

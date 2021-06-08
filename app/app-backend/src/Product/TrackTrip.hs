@@ -32,7 +32,7 @@ track person req = withFlowHandlerAPI $ do
   let txnId = getId $ case_ ^. #id
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
-    OQ.findOrganizationById (Id $ prodInst ^. #organizationId)
+    OQ.findOrganizationById (prodInst ^. #organizationId)
       >>= fromMaybeM OrgNotFound
   (info :: ProductInfo) <-
     (decodeFromText =<< (prodInst ^. #info))

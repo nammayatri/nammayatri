@@ -30,7 +30,7 @@ status person StatusReq {..} = withFlowHandlerAPI $ do
   let caseId = getId $ case_ ^. #id
   context <- buildContext "status" caseId Nothing Nothing
   organization <-
-    OQ.findOrganizationById (Id $ prodInst ^. #organizationId)
+    OQ.findOrganizationById (prodInst ^. #organizationId)
       >>= fromMaybeM OrgNotFound
   baseUrl <- organization ^. #callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let statusMessage = API.StatusReqMessage (IdObject productInstanceId) (IdObject caseId)

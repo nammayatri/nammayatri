@@ -1,12 +1,17 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 module Types.Storage.TransporterConfig where
 
 import Beckn.Types.Id
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.JSON
+import Beckn.Utils.TH
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import Types.App (ConfigKey)
 
 data TransporterConfigT f = TransporterConfig
   { id :: B.C f (Id TransporterParameter),
@@ -47,3 +52,10 @@ fieldEMod =
         }
 
 data TransporterParameter
+
+newtype ConfigKey = ConfigKey
+  { getConfigKey :: Text
+  }
+  deriving (Generic, Show)
+
+deriveIdentifierInstances ''ConfigKey

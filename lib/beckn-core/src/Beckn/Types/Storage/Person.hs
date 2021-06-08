@@ -9,6 +9,8 @@ module Beckn.Types.Storage.Person where
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
+import qualified Beckn.Types.Storage.Location as Loc
+import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -133,8 +135,8 @@ data PersonTE e f = Person
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     status :: B.C f Status,
-    organizationId :: B.C f (Maybe Text),
-    locationId :: B.C f (Maybe Text),
+    organizationId :: B.C f (Maybe (Id Org.Organization)),
+    locationId :: B.C f (Maybe (Id Loc.Location)),
     deviceToken :: B.C f (Maybe FCM.FCMRecipientToken),
     description :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,

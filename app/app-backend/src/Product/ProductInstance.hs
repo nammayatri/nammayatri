@@ -3,7 +3,6 @@
 module Product.ProductInstance where
 
 import App.Types
-import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Person as Person
@@ -39,6 +38,6 @@ list person status csTypes mlimit moffset = withFlowHandlerAPI $ do
             { _case = cs,
               product = prod,
               productInstance = prodInstance,
-              fromLocation = find (\x -> Case.fromLocationId cs == getId (Loc.id x)) locationList,
-              toLocation = find (\x -> Case.toLocationId cs == getId (Loc.id x)) locationList
+              fromLocation = find (\x -> Case.fromLocationId cs == Loc.id x) locationList,
+              toLocation = find (\x -> Case.toLocationId cs == Loc.id x) locationList
             }

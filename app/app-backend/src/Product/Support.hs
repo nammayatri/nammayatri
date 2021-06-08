@@ -41,8 +41,8 @@ mkDBIssue :: Text -> Text -> Support.SendIssueReq -> UTCTime -> SIssue.Issue
 mkDBIssue issueId customerId SendIssueReq {..} time =
   SIssue.Issue
     { id = Id issueId,
-      customerId = customerId,
-      productInstanceId = productInstanceId,
+      customerId = Id customerId,
+      productInstanceId = Id <$> productInstanceId,
       contactEmail = contactEmail,
       reason = issue ^. #reason,
       description = issue ^. #description,

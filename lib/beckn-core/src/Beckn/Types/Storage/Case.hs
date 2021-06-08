@@ -4,6 +4,7 @@
 module Beckn.Types.Storage.Case where
 
 import Beckn.Types.Id
+import qualified Beckn.Types.Storage.Location as Loc
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -99,7 +100,7 @@ data CaseT f = Case
   { id :: B.C f (Id Case),
     name :: B.C f (Maybe Text),
     description :: B.C f (Maybe Text),
-    shortId :: B.C f Text,
+    shortId :: B.C f (ShortId Case),
     industry :: B.C f Industry,
     _type :: B.C f CaseType,
     exchangeType :: B.C f ExchangeType,
@@ -112,8 +113,8 @@ data CaseT f = Case
     requestor :: B.C f (Maybe Text),
     requestorType :: B.C f (Maybe RequestorType),
     parentCaseId :: B.C f (Maybe (Id Case)),
-    fromLocationId :: B.C f Text,
-    toLocationId :: B.C f Text,
+    fromLocationId :: B.C f (Id Loc.Location),
+    toLocationId :: B.C f (Id Loc.Location),
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     udf3 :: B.C f (Maybe Text),

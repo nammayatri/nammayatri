@@ -15,26 +15,16 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.AllocationEvent as AllocationEvent
-import qualified Types.Storage.Customer as Customer
 import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
-import qualified Types.Storage.Leads as Leads
 import qualified Types.Storage.NotificationStatus as NotificationStatus
-import qualified Types.Storage.Quotation as Quotation
 import qualified Types.Storage.RideRequest as RideRequest
-import qualified Types.Storage.Tracker as Tracker
 import qualified Types.Storage.TransporterConfig as TransporterConfig
-import qualified Types.Storage.TripReference as TripReference
 
 data TransporterDb f = TransporterDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
-    leads :: f (B.TableEntity Leads.LeadsT),
-    customer :: f (B.TableEntity Customer.CustomerT),
     location :: f (B.TableEntity Location.LocationT),
-    quotation :: f (B.TableEntity Quotation.QuotationT),
-    tracker :: f (B.TableEntity Tracker.TrackerT),
-    tripReference :: f (B.TableEntity TripReference.TripReferenceT),
     vehicle :: f (B.TableEntity Vehicle.VehicleT),
     person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
@@ -57,12 +47,7 @@ transporterDb dbSchemaName =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
       { organization = setSchema dbSchemaName <> Organization.fieldEMod,
-        leads = setSchema dbSchemaName <> Leads.fieldEMod,
-        customer = setSchema dbSchemaName <> Customer.fieldEMod,
         location = setSchema dbSchemaName <> Location.fieldEMod,
-        quotation = setSchema dbSchemaName <> Quotation.fieldEMod,
-        tracker = setSchema dbSchemaName <> Tracker.fieldEMod,
-        tripReference = setSchema dbSchemaName <> TripReference.fieldEMod,
         vehicle = setSchema dbSchemaName <> Vehicle.fieldEMod,
         person = setSchema dbSchemaName <> Person.fieldEMod,
         _case = setSchema dbSchemaName <> Case.fieldEMod,

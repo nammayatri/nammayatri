@@ -33,7 +33,7 @@ feedback person request = withFlowHandlerAPI $ do
   let txnId = getId $ order ^. #id
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
-    Organization.findOrganizationById (Id $ product ^. #organizationId)
+    Organization.findOrganizationById (product ^. #organizationId)
       >>= fromMaybeM OrgNotFound
   let feedbackMsg =
         Beckn.FeedbackReqMessage

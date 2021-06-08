@@ -52,8 +52,8 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandlerAP
         { _case = res ^. #_case,
           product = res ^. #product,
           productInstance = res ^. #productInstance,
-          fromLocation = find (\x -> Case.fromLocationId (res ^. #_case) == getId (Loc.id x)) locList,
-          toLocation = find (\x -> Case.toLocationId (res ^. #_case) == getId (Loc.id x)) locList
+          fromLocation = find (\x -> Case.fromLocationId (res ^. #_case) == Loc.id x) locList,
+          toLocation = find (\x -> Case.toLocationId (res ^. #_case) == Loc.id x) locList
         }
 
 notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> Flow ()
@@ -87,10 +87,10 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandlerAPI $ do
         )
         $ throwError Unauthorized
     joinByIds locList ride =
-      find (\x -> PI.fromLocation ride == Just (getId (Loc.id x))) locList
+      find (\x -> PI.fromLocation ride == Just (Loc.id x)) locList
         >>= buildResponse
       where
-        buildResponse k = prepare ride k <$> find (\x -> PI.toLocation ride == Just (getId (Loc.id x))) locList
+        buildResponse k = prepare ride k <$> find (\x -> PI.toLocation ride == Just (Loc.id x)) locList
         prepare pRide from to =
           RideRes
             { product = pRide,
@@ -114,10 +114,10 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandlerAPI $ do
         )
         $ throwError Unauthorized
     joinByIds locList ride =
-      find (\x -> PI.fromLocation ride == Just (getId (Loc.id x))) locList
+      find (\x -> PI.fromLocation ride == Just (Loc.id x)) locList
         >>= buildResponse
       where
-        buildResponse k = prepare ride k <$> find (\x -> PI.toLocation ride == Just (getId (Loc.id x))) locList
+        buildResponse k = prepare ride k <$> find (\x -> PI.toLocation ride == Just (Loc.id x)) locList
         prepare pRide from to =
           RideRes
             { product = pRide,
@@ -138,10 +138,10 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
   return $ catMaybes $ joinByIds locList <$> caseList
   where
     joinByIds locList cs =
-      find (\x -> Case.fromLocationId cs == getId (Loc.id x)) locList
+      find (\x -> Case.fromLocationId cs == Loc.id x) locList
         >>= buildResponse
       where
-        buildResponse k = prepare cs k <$> find (\x -> Case.toLocationId cs == getId (Loc.id x)) locList
+        buildResponse k = prepare cs k <$> find (\x -> Case.toLocationId cs == Loc.id x) locList
         prepare pcs from to =
           APICase.CaseRes
             { _case = pcs,
@@ -189,7 +189,7 @@ assignDriver productInstanceId driverId = do
 notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Flow ()
 notifyTripDetailsToGateway searchPi orderPi bapCallbackUrl = do
   trackerCase <- CQ.findByParentCaseIdAndType (searchPi ^. #caseId) Case.LOCATIONTRACKER
-  transporter <- OQ.findOrganizationById . Id $ searchPi ^. #organizationId
+  transporter <- OQ.findOrganizationById $ searchPi ^. #organizationId
   let bppShortId = getShortId $ transporter ^. #shortId
   parentCase <- CQ.findById (searchPi ^. #caseId)
   case (trackerCase, parentCase) of
@@ -201,7 +201,7 @@ notifyStatusUpdateReq searchPi status bapCallbackUrl = do
   transporterOrg <- findOrganization
   let bppShortId = getShortId $ transporterOrg ^. #shortId
   searchCase <- Case.findById $ searchPi ^. #caseId
-  let txnId = last . T.splitOn "_" $ searchCase ^. #shortId
+  let txnId = last . T.splitOn "_" . getShortId $ searchCase ^. #shortId
   case status of
     PI.CANCELLED -> do
       admins <- getAdmins transporterOrg
@@ -213,7 +213,7 @@ notifyStatusUpdateReq searchPi status bapCallbackUrl = do
       notifyStatusToGateway bppShortId txnId
     _ -> notifyStatusToGateway bppShortId txnId
   where
-    findOrganization = OQ.findOrganizationById $ Id $ searchPi ^. #organizationId
+    findOrganization = OQ.findOrganizationById $ searchPi ^. #organizationId
     getAdmins transporterOrg = do
       if transporterOrg ^. #enabled
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI.organizationId searchPi]
