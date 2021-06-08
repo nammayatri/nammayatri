@@ -6,26 +6,33 @@ import App.Types
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Common
+import qualified Beckn.Types.Core.Migration.Catalog as M.Catalog
+import qualified Beckn.Types.Core.Migration.Category as M.Category
+import qualified Beckn.Types.Core.Migration.Context as M.Context
+import qualified Beckn.Types.Core.Migration.DecimalValue as M.DecimalValue
+import qualified Beckn.Types.Core.Migration.Descriptor as M.Descriptor
+import qualified Beckn.Types.Core.Migration.Item as M.Item
+import qualified Beckn.Types.Core.Migration.Price as M.Price
+import qualified Beckn.Types.Core.Migration.Provider as M.Provider
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
+import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime)
 import EulerHS.Prelude hiding (State, drop)
 import ExternalAPI.Dunzo.Types
 import Types.Beckn.API.Init
-import Types.Beckn.API.Search
+import qualified Types.Beckn.API.Search as SearchAPI
 import Types.Beckn.API.Select
 import Types.Beckn.API.Status
 import Types.Beckn.API.Track
+import qualified Types.Beckn.API.Types as API
 import qualified Types.Beckn.Address as CoreAddr
-import Types.Beckn.Catalog
-import Types.Beckn.Category
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue
 import Types.Beckn.Descriptor
 import Types.Beckn.FmdOrder
-import Types.Beckn.Item
 import qualified Types.Beckn.Location as CoreLoc
 import Types.Beckn.MonetaryValue
 import Types.Beckn.Operator
@@ -50,34 +57,24 @@ dunzoServiceCategoryId = "1"
 getDzBAPCreds :: Organization -> Flow DzBAConfig
 getDzBAPCreds = getClientConfig
 
-mkQuoteReqFromSearch :: SearchReq -> Flow QuoteReq
-mkQuoteReqFromSearch SearchReq {..} = do
+mkQuoteReqFromSearch :: API.BecknReq SearchAPI.SearchIntent -> Flow QuoteReq
+mkQuoteReqFromSearch API.BecknReq {..} = do
   let intent = message.intent
-      pickups = intent.pickups
-      drops = intent.drops
-  case (pickups, drops) of
-    ([pickup], [drop]) ->
-      case (pickup.location.gps, drop.location.gps) of
-        (Just pgps, Just dgps) -> do
-          plat <- readCoord (pgps.lat)
-          plon <- readCoord (pgps.lon)
-          dlat <- readCoord (dgps.lat)
-          dlon <- readCoord (dgps.lon)
-          return $
-            QuoteReq
-              { pickup_lat = plat,
-                pickup_lng = plon,
-                drop_lat = dlat,
-                drop_lng = dlon,
-                category_id = "pickup_drop"
-              }
-        (Just _, Nothing) -> dropLocationNotFound
-        _ -> pickupLocationNotFound
-    ([_], _) -> oneDropLocationExpected
-    _ -> onePickupLocationExpected
+  let mbPickupGps = intent ^? #fulfillment . _Just . #start . _Just . #location . _Just . #gps . _Just
+  let mbDropGps = intent ^? #fulfillment . _Just . #end . _Just . #location . _Just . #gps . _Just
+  case (mbPickupGps, mbDropGps) of
+    (Just pickupGps, Just dropGps) -> do
+      return $
+        QuoteReq
+          { pickup_lat = pickupGps.lat,
+            pickup_lng = pickupGps.lon,
+            drop_lat = dropGps.lat,
+            drop_lng = dropGps.lon,
+            category_id = "pickup_drop"
+          }
+    (Just _, Nothing) -> dropLocationNotFound
+    _ -> pickupLocationNotFound
   where
-    onePickupLocationExpected = throwError $ InvalidRequest "One pickup location expected."
-    oneDropLocationExpected = throwError $ InvalidRequest "One drop location expected."
     pickupLocationNotFound = throwError $ InvalidRequest "Pickup location not found."
     dropLocationNotFound = throwError $ InvalidRequest "Drop location not found."
 
@@ -107,61 +104,96 @@ readCoord text = do
   readMaybe (T.unpack text)
     & fromMaybeM (InvalidRequest "Location read error.")
 
-mkOnSearchServices :: QuoteRes -> Flow OnSearchServices
-mkOnSearchServices res@QuoteRes {..} = do
-  now <- getCurrentTime
-  cid <- generateGUID
-  return $ OnSearchServices (catalog cid now)
+mkOnSearchCatalog :: QuoteRes -> SearchAPI.OnSearchCatalog
+mkOnSearchCatalog res@QuoteRes {..} =
+  SearchAPI.OnSearchCatalog catalog
   where
-    catalog cid now =
-      Catalog
-        { id = cid,
-          categories =
-            [ Category
-                { id = dunzoServiceCategoryId,
-                  parent_category_id = Nothing,
-                  descriptor = withName "single pickup single drop",
-                  tags = []
-                }
-            ],
-          brands = [],
-          models = [],
-          ttl = now,
-          items = foldWIndex (\index acc _ -> acc <> [mkSearchItem (index + 1) res]) [] dzPackageContentList,
-          offers = [],
-          package_categories = foldWIndex (\index acc category -> acc <> [mkCategory (index + 1) category]) [] dzPackageContentList
-        }
-
-    mkCategory idx category =
-      Category
-        { id = show idx,
-          parent_category_id = Nothing,
-          descriptor = withName $ content category,
-          tags = []
+    catalog =
+      M.Catalog.Catalog
+        { bpp_descriptor = Nothing,
+          bpp_categories = Nothing,
+          bpp_fulfillments = Nothing,
+          bpp_payments = Nothing,
+          bpp_offers = Nothing,
+          bpp_providers =
+            Just
+              [ M.Provider.Provider
+                  { id = Nothing, -- TBD: https://docs.google.com/document/d/1EqI0lpOXpIdy8uLOZbRevwqr25sn6_lKqLlgWPN1kTs/
+                    descriptor =
+                      Just
+                        M.Descriptor.Descriptor
+                          { name = Just "Dunzo Digital Private Limited",
+                            code = Nothing,
+                            symbol = Nothing,
+                            short_desc = Nothing,
+                            long_desc = Nothing,
+                            images = Nothing,
+                            audio = Nothing,
+                            _3d_render = Nothing
+                          },
+                    time = Nothing,
+                    categories =
+                      Just
+                        [ M.Category.Category
+                            { id = Just dunzoServiceCategoryId,
+                              parent_category_id = Nothing,
+                              descriptor =
+                                Just
+                                  M.Descriptor.emptyDescriptor
+                                    { M.Descriptor.name = Just "Pickup and drop",
+                                      M.Descriptor.code = Just "pickup_drop"
+                                    },
+                              time = Nothing,
+                              tags = Nothing
+                            }
+                        ],
+                    fulfillments = Nothing,
+                    payments = Nothing,
+                    locations = Nothing,
+                    offers = Nothing,
+                    items =
+                      Just $
+                        foldWIndex
+                          (\index acc packageContent -> acc <> [mkSearchItem (index + 1) packageContent res])
+                          []
+                          dzPackageContentList,
+                    exp = Nothing,
+                    tags = Nothing
+                  }
+              ],
+          exp = Nothing
         }
 
 updateBppUri :: Context -> BaseUrl -> Context
 updateBppUri Context {..} bpNwAddress = Context {bpp_uri = Just bpNwAddress, ..}
 
-mkSearchItem :: Integer -> QuoteRes -> Item
-mkSearchItem index QuoteRes {..} =
-  Item
-    { id = show index,
+updateBppUriMig :: M.Context.Context -> BaseUrl -> M.Context.Context
+updateBppUriMig M.Context.Context {..} bpNwAddress = M.Context.Context {bpp_uri = Just bpNwAddress, ..}
+
+mkSearchItem :: Integer -> PackageContent -> QuoteRes -> M.Item.Item
+mkSearchItem index packageContent QuoteRes {..} =
+  M.Item.Item
+    { id = Just $ show index,
       parent_item_id = Nothing,
-      descriptor = emptyDescriptor,
-      price = price,
-      model_id = Nothing,
+      descriptor =
+        Just $
+          M.Descriptor.emptyDescriptor
+            { M.Descriptor.name = Just $ packageContent.content,
+              M.Descriptor.code = Just $ packageContent.content
+            },
+      price = Just price,
       category_id = Just dunzoServiceCategoryId,
-      package_category_id = Just $ show index,
-      brand_id = Nothing,
-      promotional = False,
-      ttl = Nothing, -- FIX this
-      tags = []
+      location_id = Nothing,
+      time = Nothing,
+      matched = Nothing,
+      related = Nothing,
+      recommended = Nothing,
+      tags = Nothing
     }
   where
     price =
-      Price
-        { currency = "INR",
+      M.Price.Price
+        { currency = Just "INR",
           value = Nothing,
           estimated_value = Just value,
           computed_value = Nothing,
@@ -170,7 +202,7 @@ mkSearchItem index QuoteRes {..} =
           minimum_value = Nothing,
           maximum_value = Nothing
         }
-    value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
+    value = M.DecimalValue.convertAmountToDecimalValue (Amount $ toRational estimated_price)
 
 mkQuote :: Integer -> QuoteRes -> Flow Quotation
 mkQuote quotationTTLinMin QuoteRes {..} = do

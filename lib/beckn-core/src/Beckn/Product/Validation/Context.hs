@@ -3,6 +3,8 @@ module Beckn.Product.Validation.Context where
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import qualified Beckn.Types.Core.Migration.Context as Mig
+import qualified Beckn.Types.Core.Migration.Domain as Mig
 import Beckn.Types.Error
 import Beckn.Types.Field
 import Beckn.Utils.Common
@@ -14,9 +16,19 @@ validateDomain expectedDomain context =
   unless (context.domain == expectedDomain) $
     throwError InvalidDomain
 
+validateDomainMig :: (L.MonadFlow m, Log m) => Mig.Domain -> Mig.Context -> m ()
+validateDomainMig expectedDomain context =
+  unless (context.domain == expectedDomain) $
+    throwError InvalidDomain
+
 validateCountry :: (L.MonadFlow m, Log m) => Context -> m ()
 validateCountry context =
   unless (context.country == Just "IND") $
+    throwError InvalidCountry
+
+validateCountryMig :: (L.MonadFlow m, Log m) => Mig.Context -> m ()
+validateCountryMig context =
+  unless (context.country == "IND") $
     throwError InvalidCountry
 
 validateCity :: (L.MonadFlow m, Log m) => Context -> m ()
@@ -30,6 +42,11 @@ validateAction expectedAction context =
   unless (context.action == expectedAction) $
     throwError InvalidAction
 
+validateActionMig :: (L.MonadFlow m, Log m) => Text -> Mig.Context -> m ()
+validateActionMig expectedAction context =
+  unless (context.action == expectedAction) $
+    throwError InvalidAction
+
 validateCoreVersion ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],
     Log m
@@ -39,6 +56,17 @@ validateCoreVersion ::
 validateCoreVersion context = do
   supportedVersion <- view #coreVersion
   unless (context.core_version == Just supportedVersion) $
+    throwError UnsupportedCoreVer
+
+validateCoreVersionMig ::
+  ( HasFlowEnv m r '["coreVersion" ::: Text],
+    Log m
+  ) =>
+  Mig.Context ->
+  m ()
+validateCoreVersionMig context = do
+  supportedVersion <- view #coreVersion
+  unless (context.core_version == supportedVersion) $
     throwError UnsupportedCoreVer
 
 validateDomainVersion ::
@@ -65,3 +93,16 @@ validateContextCommons expectedAction context = do
   validateDomainVersion context
   validateCountry context
   validateCity context
+
+validateContextCommonsMig ::
+  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
+    Log m
+  ) =>
+  Text ->
+  Mig.Context ->
+  m ()
+validateContextCommonsMig expectedAction context = do
+  -- TODO: City validation
+  validateActionMig expectedAction context
+  validateCoreVersionMig context
+  validateCountryMig context

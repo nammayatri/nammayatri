@@ -14,7 +14,7 @@ data Error = Error
 data ErrorType
   = CONTEXT_ERROR
   | CORE_ERROR
-  | INTERNAL_ERROR
+  | INTERNAL_ERROR -- Not a spec value. TODO: get rid of it.
   | DOMAIN_ERROR
   | POLICY_ERROR
   | JSON_SCHEMA_ERROR

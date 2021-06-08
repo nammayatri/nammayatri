@@ -9,6 +9,7 @@ import Beckn.Types.Core.Migration.Offer (Offer)
 import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import EulerHS.Prelude hiding (exp, id)
 
@@ -32,6 +33,22 @@ instance FromJSON Provider where
 
 instance ToJSON Provider where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+instance Example Provider where
+  example =
+    Provider
+      { id = Nothing,
+        descriptor = Nothing,
+        time = Nothing,
+        categories = Nothing,
+        fulfillments = Nothing,
+        payments = Nothing,
+        locations = Nothing,
+        offers = Nothing,
+        items = Nothing,
+        exp = Nothing,
+        tags = Nothing
+      }
 
 data LocationAndTime = LocationAndTime
   { location :: Maybe Location,

@@ -1,9 +1,11 @@
-module Beckn.Utils.Callback (withBecknCallback, WithBecknCallback) where
+module Beckn.Utils.Callback (withBecknCallback, WithBecknCallback, withBecknCallbackMig, WithBecknCallbackMig) where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
+import qualified Beckn.Types.Core.Migration.API.Types as API
+import qualified Beckn.Types.Core.Migration.Context as M.Context
 import Beckn.Types.Error.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Error.BecknAPIError
@@ -24,6 +26,14 @@ someExceptionToCallbackReq :: Context -> SomeException -> CallbackReq a
 someExceptionToCallbackReq context exc =
   let BecknAPIError err = someExceptionToBecknApiError exc
    in CallbackReq
+        { contents = Left err,
+          context
+        }
+
+someExceptionToBecknCbReq :: M.Context.Context -> SomeException -> API.BecknCallbackReq a
+someExceptionToBecknCbReq context exc =
+  let BecknAPIError err = someExceptionToBecknApiError exc
+   in API.BecknCallbackReq
         { contents = Left err,
           context
         }
@@ -54,6 +64,37 @@ withBecknCallback auth action api context cbUrl f = do
   safeFork
     (someExceptionToCallbackReq context')
     (toCallbackReq context')
+    action
+    (callBecknAPI auth Nothing cbAction api cbUrl)
+    f
+  return Ack
+
+type WithBecknCallbackMig api callback_success r =
+  ( HasCoreMetrics r,
+    HasClient ET.EulerClient api,
+    Client ET.EulerClient api
+      ~ (API.BecknCallbackReq callback_success -> ET.EulerClient AckResponse)
+  ) =>
+  Text ->
+  Proxy api ->
+  M.Context.Context ->
+  BaseUrl ->
+  FlowR r callback_success ->
+  FlowR r AckResponse
+
+withBecknCallbackMig ::
+  Maybe ET.ManagerSelector ->
+  WithBecknCallbackMig api callback_success r
+withBecknCallbackMig auth action api context cbUrl f = do
+  now <- getCurrentTime
+  let cbAction = "on_" <> action
+  let cbContext =
+        context
+          & #action .~ cbAction
+          & #timestamp .~ now
+  safeFork
+    (someExceptionToBecknCbReq cbContext)
+    (API.BecknCallbackReq cbContext . Right)
     action
     (callBecknAPI auth Nothing cbAction api cbUrl)
     f

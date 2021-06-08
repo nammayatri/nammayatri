@@ -6,10 +6,11 @@ import EulerHS.Prelude
 import FmdWrapper.Common
 import Runner
 import Servant
-import "fmd-wrapper" Types.Beckn.API.Search (OnSearchReq)
+import "fmd-wrapper" Types.Beckn.API.Search (OnSearchCatalog)
+import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 
 newtype CallbackData = CallbackData
-  { onSearchTVar :: TVar [CallbackResult OnSearchReq]
+  { onSearchTVar :: TVar [CallbackResult (API.BecknCallbackReq OnSearchCatalog)]
   }
 
 withCallbackApp :: (CallbackData -> IO ()) -> IO ()
@@ -24,7 +25,7 @@ type CallbackAPI =
 type OnSearchAPI =
   "on_search"
     :> Header "Authorization" HttpSig.SignaturePayload
-    :> ReqBody '[JSON] OnSearchReq
+    :> ReqBody '[JSON] (API.BecknCallbackReq OnSearchCatalog)
     :> Post '[JSON] AckResponse
 
 callbackApp :: CallbackData -> Application
@@ -33,7 +34,7 @@ callbackApp callbackData = serve (Proxy :: Proxy CallbackAPI) $ callbackServer c
 callbackServer :: CallbackData -> Server CallbackAPI
 callbackServer = onSearch
 
-onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> OnSearchReq -> Handler AckResponse
+onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> (API.BecknCallbackReq OnSearchCatalog) -> Handler AckResponse
 onSearch callbackData sPayload req = do
   atomically $ modifyTVar (onSearchTVar callbackData) (CallbackResult (sPayload <&> (.params.keyId.subscriberId)) req :)
   pure Ack

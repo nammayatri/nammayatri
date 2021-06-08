@@ -12,7 +12,7 @@ data Time = Time
     range :: Maybe Range,
     days :: Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 data Range = Range
   { start :: UTCTime,

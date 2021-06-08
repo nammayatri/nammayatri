@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Migration.Gps (Gps (..)) where
 
+import Beckn.Utils.Example
 import Data.Aeson
 import Data.Aeson.Types (parseFail)
 import qualified Data.Text as T
@@ -9,29 +10,37 @@ import Text.Parsec
 -- Regular expression: ^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$
 
 data Gps = Gps
-  { lat :: Text,
-    lon :: Text
+  { lat :: Double,
+    lon :: Double
   }
   deriving (Generic, Show)
+
+instance Example Gps where
+  example =
+    Gps
+      { lat = 20.5937,
+        lon = 78.9629
+      }
 
 instance FromJSON Gps where
   parseJSON = withText "Gps" \gps -> do
     let res = parse parseGps "" $ T.unpack gps
-    either (\err -> parseFail $ "Error occurred while parsing Gps: " <> show err) pure res
+    (lat, lon) <- either (\err -> parseFail $ "Error occurred while parsing Gps: " <> show err) pure res
+    latDouble <- maybe (parseFail "Couldn't parse latitude from Gps.") pure (readMaybe lat)
+    lonDouble <- maybe (parseFail "Couldn't parse longitude from Gps.") pure (readMaybe lon)
+    pure $ Gps latDouble lonDouble
 
 instance ToJSON Gps where
-  toJSON (Gps lat lon) = String $ lat <> ", " <> lon
+  toJSON (Gps lat lon) = String $ show lat <> ", " <> show lon
 
-parseGps :: Parsec String st Gps
-parseGps = do
-  (lat, lon) <-
-    (,)
-      <$> parseLatitude
-      <* char ','
-      <* many (space <|> endOfLine <|> tab)
-      <*> parseLongitude
-      <* eof
-  pure $ Gps (T.pack lat) (T.pack lon)
+parseGps :: Parsec String st (String, String)
+parseGps =
+  (,)
+    <$> parseLatitude
+    <* char ','
+    <* many (space <|> endOfLine <|> tab)
+    <*> parseLongitude
+    <* eof
 
 parseLatitude :: Parsec String st String
 parseLatitude = do

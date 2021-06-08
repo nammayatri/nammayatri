@@ -4,6 +4,7 @@ import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.Migration.API.Types (BecknCallbackReq, BecknReq)
 import Beckn.Types.Core.Migration.Catalog (Catalog)
 import Beckn.Types.Core.Migration.Intent (Intent)
+import Beckn.Utils.Example
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
@@ -19,6 +20,9 @@ newtype SearchIntent = SearchIntent
   { intent :: Intent
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+instance Example SearchIntent where
+  example = SearchIntent example
 
 type OnSearchAPI =
   "on_search"

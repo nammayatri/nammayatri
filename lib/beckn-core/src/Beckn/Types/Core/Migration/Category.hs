@@ -13,7 +13,7 @@ data Category = Category
     time :: Maybe Time,
     tags :: Maybe Tags
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 instance FromJSON Category where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

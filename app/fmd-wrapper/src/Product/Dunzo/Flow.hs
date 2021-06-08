@@ -7,7 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
+import Beckn.Utils.Callback (WithBecknCallback, WithBecknCallbackMig, withBecknCallback, withBecknCallbackMig)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.Combinators hiding (Context)
 import qualified Data.List as List
@@ -24,10 +24,11 @@ import qualified Storage.Queries.Quote as Storage
 import qualified Types.Beckn.API.Cancel as API
 import qualified Types.Beckn.API.Confirm as API
 import qualified Types.Beckn.API.Init as API
-import qualified Types.Beckn.API.Search as API
+import qualified Types.Beckn.API.Search as SearchAPI
 import qualified Types.Beckn.API.Select as API
 import qualified Types.Beckn.API.Status as API
 import qualified Types.Beckn.API.Track as API
+import qualified Types.Beckn.API.Types as API
 import qualified Types.Beckn.API.Update as API
 import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
 import qualified Types.Beckn.FmdItem as Item
@@ -37,18 +38,17 @@ import Types.Error
 import Types.Wrapper
 import Utils.Common
 
-search :: Org.Organization -> API.SearchReq -> Flow API.SearchRes
+search :: Org.Organization -> API.BecknReq SearchAPI.SearchIntent -> Flow AckResponse
 search org req = do
   config@DunzoConfig {..} <- dzConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
-  let context = updateBppUri (req.context) dzBPNwAddress
-  bapUrl <- context.bap_uri & fromMaybeM (InvalidRequest "You should pass bap uri.")
-  bap <- Org.findByBapUrl bapUrl >>= fromMaybeM OrgDoesNotExist
+  let context = updateBppUriMig (req.context) dzBPNwAddress
+  bap <- Org.findByBapUrl context.bap_uri >>= fromMaybeM OrgDoesNotExist
   dzBACreds <- getDzBAPCreds bap
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  withCallback "search" API.onSearchAPI context cbUrl $
+  withCallbackMig "search" SearchAPI.onSearchAPI context cbUrl $
     getQuote dzBACreds config quoteReq
-      >>= mkOnSearchServices
+      <&> mkOnSearchCatalog
 
 select :: Org.Organization -> API.SelectReq -> Flow API.SelectRes
 select org req = do
@@ -335,3 +335,6 @@ validateReturn currOrder =
 
 withCallback :: WithBecknCallback api callback_success r
 withCallback = withBecknCallback (Just HttpSig.signatureAuthManagerKey)
+
+withCallbackMig :: WithBecknCallbackMig api callback_success r
+withCallbackMig = withBecknCallbackMig (Just HttpSig.signatureAuthManagerKey)

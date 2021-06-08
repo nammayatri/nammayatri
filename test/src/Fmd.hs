@@ -2,15 +2,19 @@ module Fmd where
 
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
+import qualified Beckn.Types.Core.Migration.Context as Mig
+import qualified Beckn.Types.Core.Migration.Domain as Mig
 import Beckn.Types.Core.Quotation
 import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
+import FmdWrapper.Common (fmdTestAppBaseUrl)
 import Servant.Client
 import "fmd-wrapper" Types.Beckn.API.Confirm
 import "fmd-wrapper" Types.Beckn.API.Init
 import "fmd-wrapper" Types.Beckn.API.Search
 import "fmd-wrapper" Types.Beckn.API.Select
+import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.API.Update
 import "fmd-wrapper" Types.Beckn.FmdOrder
 
@@ -42,14 +46,39 @@ buildContext act tid bapBaseUrl bppBaseUrl = do
         bap_uri = bapBaseUrl,
         bpp_uri = bppBaseUrl,
         transaction_id = tid,
-        message_id = tid,
+        message_id = tid, -- FIXME
         timestamp = now,
         ttl = Nothing
       }
 
-buildFMDSearchReq :: Context -> SearchReq
+buildContextMig ::
+  Text ->
+  Text ->
+  Maybe BaseUrl ->
+  IO Mig.Context
+buildContextMig act tid bppBaseUrl = do
+  now <- getCurrentTime
+  return
+    Mig.Context
+      { domain = Mig.Domain "FINAL-MILE-DELIVERY",
+        country = "IND",
+        city = "Bangalore",
+        action = act,
+        core_version = "0.9.1",
+        bap_id = fmdTestAppBaseUrl,
+        bap_uri = fmdTestAppBaseUrl,
+        bpp_id = Nothing,
+        bpp_uri = bppBaseUrl,
+        transaction_id = tid,
+        message_id = tid, -- FIXME
+        timestamp = now,
+        key = Nothing,
+        ttl = Nothing
+      }
+
+buildFMDSearchReq :: Mig.Context -> API.BecknReq SearchIntent
 buildFMDSearchReq context =
-  SearchReq
+  API.BecknReq
     { context,
       message = SearchIntent example
     }

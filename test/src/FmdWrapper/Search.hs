@@ -3,10 +3,14 @@
 module FmdWrapper.Search where
 
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Migration.Category as Mig
+import qualified Beckn.Types.Core.Migration.Context as Mig
+import qualified Beckn.Types.Core.Migration.Descriptor as M.Descriptor
+import qualified Beckn.Types.Core.Migration.Domain as Mig
+import qualified Beckn.Types.Core.Migration.Gps as Gps
 import Beckn.Utils.Example
 import Common
 import Control.Lens (Setter', _Just)
-import Control.Lens.At
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import ExternalAPI.Dunzo.Types
@@ -18,85 +22,84 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant (Header, type (:>))
 import Servant.Client
 import Test.Hspec hiding (context, example)
-import "fmd-wrapper" Types.Beckn.API.Callback
-import qualified "fmd-wrapper" Types.Beckn.API.Search as Search
-import "fmd-wrapper" Types.Beckn.Catalog
-import "fmd-wrapper" Types.Beckn.Category
-import "fmd-wrapper" Types.Beckn.Context
-import "fmd-wrapper" Types.Beckn.Descriptor
-import qualified "fmd-wrapper" Types.Beckn.Domain as Domain
+import qualified "fmd-wrapper" Types.Beckn.API.Search as SearchAPI
+import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import qualified "fmd-wrapper" Types.Beckn.Error as Error
-import qualified "fmd-wrapper" Types.Beckn.Location as Location
-import "fmd-wrapper" Types.Beckn.Price
 import Utils
 
-setPickupGps :: Setter' Search.SearchReq Location.GPS
-setPickupGps = #message . #intent . #pickups . ix 0 . #location . #gps . _Just
+setPickupGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) Gps.Gps
+setPickupGps = #message . #intent . #fulfillment . _Just . #start . _Just . #location . _Just . #gps . _Just
 
-setDropGps :: Setter' Search.SearchReq Location.GPS
-setDropGps = #message . #intent . #drops . ix 0 . #location . #gps . _Just
+setDropGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) Gps.Gps
+setDropGps = #message . #intent . #fulfillment . _Just . #end . _Just . #location . _Just . #gps . _Just
 
-gps1 :: Location.GPS
-gps1 = Location.GPS "12.9729391" "77.6294794"
+gps1 :: Gps.Gps
+gps1 = Gps.Gps 12.9729391 77.6294794
 
-gps2 :: Location.GPS
-gps2 = Location.GPS "12.9354504" "77.6146828"
+gps2 :: Gps.Gps
+gps2 = Gps.Gps 12.9354504 77.6146828
 
-gps3 :: Location.GPS
-gps3 = Location.GPS "13.0827" "80.2707"
+gps3 :: Gps.Gps
+gps3 = Gps.Gps 13.0827 80.2707
 
 numberOfDunzoCategores :: Int
 numberOfDunzoCategores = 6
 
-runSearch :: ClientEnv -> Text -> Search.SearchReq -> IO (Either ClientError AckResponse)
+runSearch :: ClientEnv -> Text -> API.BecknReq SearchAPI.SearchIntent -> IO (Either ClientError AckResponse)
 runSearch clientEnv orgId searchReq = do
   now <- getPOSIXTime
   let signature = decodeUtf8 $ signRequest searchReq now orgId (orgId <> "-key")
-  let searchAPI = Proxy :: Proxy (Header "Authorization" Text :> Search.SearchAPI)
+  let searchAPI = Proxy :: Proxy (Header "Authorization" Text :> SearchAPI.SearchAPI)
   runClient clientEnv $ client searchAPI (Just signature) searchReq
 
-verifyCallbackContext :: Bool -> Text -> Context -> IO ()
+verifyCallbackContext :: Bool -> Text -> Mig.Context -> IO ()
 verifyCallbackContext expectBppUri transactionId context = do
-  context.country `shouldBe` Just "IND"
-  context.domain `shouldBe` Domain.FINAL_MILE_DELIVERY
+  context.country `shouldBe` "IND"
+  context.domain `shouldBe` Mig.Domain "FINAL-MILE-DELIVERY"
   when expectBppUri $ context.bpp_uri `shouldSatisfy` isJust
   context.transaction_id `shouldBe` transactionId
   context.action `shouldBe` "on_search"
   context.message_id `shouldBe` transactionId
-  context.bap_uri `shouldSatisfy` isJust
-  context.domain_version `shouldBe` Just "0.8.3"
-  context.core_version `shouldBe` Just "0.8.0"
+  context.core_version `shouldBe` "0.9.1"
 
-verifyDunzoCatalog :: Search.OnSearchServices -> IO ()
-verifyDunzoCatalog onSearchServices = do
-  let catalog = Search.catalog onSearchServices
-  let items_ = items catalog
-  let categories_ = categories catalog
-  case categories_ of
+verifyDunzoCatalog :: SearchAPI.OnSearchCatalog -> IO ()
+verifyDunzoCatalog onSearchCatalog = do
+  let catalog = SearchAPI.catalog onSearchCatalog
+  let Just [provider] = catalog.bpp_providers
+  let items_ = fromMaybe [] provider.items
+  let categories = fromMaybe [] provider.categories
+  case categories of
     [category] ->
       category
-        `shouldBe` Category "1" Nothing (withName "single pickup single drop") []
+        `shouldBe` Mig.Category
+          (Just "1")
+          Nothing
+          ( Just
+              M.Descriptor.emptyDescriptor
+                { M.Descriptor.name = Just "Pickup and drop",
+                  M.Descriptor.code = Just "pickup_drop"
+                }
+          )
+          Nothing
+          Nothing
     _ -> expectationFailure "Exactly one category expected."
-  let packageCategories = package_categories catalog
-  map extractIndices items_ `shouldBe` expectedItemIndices
-  map extractCategoryData packageCategories `shouldBe` expectedCategoryData
+  map extractCategoryData items_ `shouldBe` expectedItemsCategoryData
   forM_ items_ $ \item -> do
-    let price_ = item.price
-    currency price_ `shouldBe` "INR"
-    estimated_value price_ `shouldSatisfy` isJust
+    let price_ = fromJust item.price
+    price_.currency `shouldBe` Just "INR"
+    price_.estimated_value `shouldSatisfy` isJust
     item.category_id `shouldBe` Just "1"
   where
-    extractCategoryData category = (category.id, category.descriptor.name)
-    extractIndices item = (item.id, item.package_category_id)
-    expectedItemIndices =
-      take numberOfDunzoCategores $
-        zip stringNumbers maybeStringNumbers
-    expectedCategoryData = zip stringNumbers $ map (Just . content) dzPackageContentList
+    extractCategoryData item =
+      let descriptor = fromJust (item.descriptor)
+       in (fromJust item.id, descriptor.name, descriptor.code)
+    expectedItemsCategoryData =
+      let catData = map (Just . content) dzPackageContentList
+       in zip3 stringNumbers catData catData
     stringNumbers = map show numbers
-    maybeStringNumbers = map Just stringNumbers
     numbers = [1 ..] :: [Int]
 
-processResults :: Text -> CallbackData -> IO [Search.OnSearchReq]
+processResults :: Text -> CallbackData -> IO [API.BecknCallbackReq SearchAPI.OnSearchCatalog]
 processResults transactionId callbackData = do
   callbackResults <- readTVarIO (onSearchTVar callbackData)
   let apiKeys = map apiKey callbackResults
@@ -112,15 +115,15 @@ processResults transactionId callbackData = do
         verifyCallbackContext True transactionId $ searchResult.context
 
 dunzoLocationError ::
-  Location.GPS ->
-  Location.GPS ->
+  Gps.Gps ->
+  Gps.Gps ->
   (Error.Error -> Expectation) ->
   ClientEnv ->
   CallbackData ->
   IO ()
 dunzoLocationError pickupGps dropGps check clientEnv callbackData =
   withNewUUID $ \transactionId -> do
-    ctx <- buildContext "search" transactionId (Just fmdTestAppBaseUrl) Nothing
+    ctx <- buildContextMig "search" transactionId Nothing
 
     let searchReq =
           buildFMDSearchReq ctx
@@ -133,7 +136,7 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
     waitForCallback
     searchResults <- processResults transactionId callbackData
 
-    let errorResults = filter isLeft $ map contents searchResults
+    let errorResults = filter isLeft $ map API.contents searchResults
     case errorResults of
       [Left err] -> check err
       _ -> expectationFailure "Exactly one error result expected."
@@ -141,7 +144,7 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
 successfulSearch :: ClientEnv -> CallbackData -> IO ()
 successfulSearch clientEnv callbackData =
   withNewUUID $ \transactionId -> do
-    ctx <- buildContext "search" transactionId (Just fmdTestAppBaseUrl) Nothing
+    ctx <- buildContextMig "search" transactionId Nothing
 
     let searchReq =
           buildFMDSearchReq ctx
@@ -156,13 +159,13 @@ successfulSearch clientEnv callbackData =
 
     let dunzoResults = filter isDunzoResult searchResults
 
-    case rights (map contents dunzoResults) of
+    case rights (map API.contents dunzoResults) of
       [message] ->
         verifyDunzoCatalog message
       _ -> expectationFailure "Expected one search result from Dunzo."
   where
     isDunzoResult result =
-      bpp_uri (context result) == Just fmdWrapperBaseUrl
+      result.context.bpp_uri == Just fmdWrapperBaseUrl
 
 dunzoUnserviceableLocation :: ClientEnv -> CallbackData -> IO ()
 dunzoUnserviceableLocation =
@@ -192,15 +195,15 @@ dunzoDifferentCity =
 
 incorrectApiKey :: ClientEnv -> CallbackData -> IO ()
 incorrectApiKey clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {core_version = Nothing}
+  ctx <- buildContextMig "search" "dummy-txn-id" Nothing
+  let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "" searchReq
   verifyError 401 "UNAUTHORIZED" gatewayResponse
 
 incorrectAction :: ClientEnv -> CallbackData -> IO ()
 incorrectAction clientEnv _ = do
-  ctx <- buildContext "" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
+  ctx <- buildContextMig "" "dummy-txn-id" Nothing
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
@@ -208,56 +211,16 @@ incorrectAction clientEnv _ = do
 
 incorrectCountry :: ClientEnv -> CallbackData -> IO ()
 incorrectCountry clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {country = Just ""}
+  ctx <- buildContextMig "search" "dummy-txn-id" Nothing
+  let searchReq = buildFMDSearchReq ctx {Mig.country = ""}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "INVALID_COUNTRY" gatewayResponse
-
-incorrectDomainVersion :: ClientEnv -> CallbackData -> IO ()
-incorrectDomainVersion clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {domain_version = Just "0.7.0"}
-
-  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
 
 incorrectCoreVersion :: ClientEnv -> CallbackData -> IO ()
 incorrectCoreVersion clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {core_version = Just "0.7.0"}
-
-  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
-
-missingBapUri :: ClientEnv -> CallbackData -> IO ()
-missingBapUri clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" Nothing Nothing
-  let searchReq = buildFMDSearchReq ctx
-
-  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "INVALID_REQUEST" gatewayResponse
-
-missingCountry :: ClientEnv -> CallbackData -> IO ()
-missingCountry clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {country = Nothing}
-
-  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "INVALID_COUNTRY" gatewayResponse
-
-missingDomainVersion :: ClientEnv -> CallbackData -> IO ()
-missingDomainVersion clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {domain_version = Nothing}
-
-  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "UNSUPPORTED_DOMAIN_VERSION" gatewayResponse
-
-missingCoreVersion :: ClientEnv -> CallbackData -> IO ()
-missingCoreVersion clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" (Just fmdTestAppBaseUrl) Nothing
-  let searchReq = buildFMDSearchReq ctx {core_version = Nothing}
+  ctx <- buildContextMig "search" "dummy-txn-id" Nothing
+  let searchReq = buildFMDSearchReq ctx {Mig.core_version = "0.7.0"}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
@@ -276,8 +239,3 @@ spec = do
       it "Incorrect action" $ incorrectAction appClientEnv
       it "Incorrect country" $ incorrectCountry appClientEnv
       it "Incorrect core version" $ incorrectCoreVersion appClientEnv
-      it "Incorrect domain version" $ incorrectDomainVersion appClientEnv
-      it "Missing BAP uri" $ missingBapUri appClientEnv
-      it "Missing country" $ missingCountry appClientEnv
-      it "Missing core version" $ missingCoreVersion appClientEnv
-      it "Missing domain version" $ missingDomainVersion appClientEnv

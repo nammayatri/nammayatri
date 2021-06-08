@@ -17,10 +17,12 @@ module Beckn.Utils.Logging
     withTransactionIdLogTag,
     logOutputImplementation,
     withLogTagImplementation,
+    withTransactionIdLogTagMig,
   )
 where
 
 import Beckn.Types.Core.Context (Context (transaction_id))
+import qualified Beckn.Types.Core.Migration.Context as M.Context
 import Beckn.Types.Logging
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
@@ -154,4 +156,10 @@ withTransactionIdLogTag :: (HasField "context" b Context, Log m) => b -> m a -> 
 withTransactionIdLogTag req = do
   let context = getField @"context" req
       transaction_id_ = transaction_id context
+  withLogTag ("txnId-" <> transaction_id_)
+
+withTransactionIdLogTagMig :: (HasField "context" b M.Context.Context, Log m) => b -> m a -> m a
+withTransactionIdLogTagMig req = do
+  let context = getField @"context" req
+      transaction_id_ = M.Context.transaction_id context
   withLogTag ("txnId-" <> transaction_id_)

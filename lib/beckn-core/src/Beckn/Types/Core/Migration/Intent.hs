@@ -9,6 +9,7 @@ import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import EulerHS.Prelude hiding (id)
 
@@ -24,6 +25,20 @@ data Intent = Intent
     tags :: Maybe Tags
   }
   deriving (Generic, Show)
+
+instance Example Intent where
+  example =
+    Intent
+      { query_string = Nothing,
+        provider = Nothing,
+        fulfillment = Nothing,
+        payment = Nothing,
+        category = Nothing,
+        offer = Nothing,
+        item = Nothing,
+        purpose = Nothing,
+        tags = Nothing
+      }
 
 data ProviderInfo = ProviderInfo
   { id :: Maybe Text,

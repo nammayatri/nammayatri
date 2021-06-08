@@ -6,6 +6,7 @@ import Beckn.Types.Core.Migration.Fulfillment (Fulfillment)
 import Beckn.Types.Core.Migration.Offer (Offer)
 import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Provider (Provider)
+import Beckn.Utils.Example
 import Beckn.Utils.JSON (slashedRecordFields)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (exp, id)
@@ -26,3 +27,15 @@ instance FromJSON Catalog where
 
 instance ToJSON Catalog where
   toJSON = genericToJSON slashedRecordFields
+
+instance Example Catalog where
+  example =
+    Catalog
+      { bpp_descriptor = Nothing,
+        bpp_categories = Nothing,
+        bpp_fulfillments = Nothing,
+        bpp_payments = Nothing,
+        bpp_offers = Nothing,
+        bpp_providers = Just $ one example,
+        exp = Nothing
+      }

@@ -2,16 +2,19 @@ module Product.APIMapper where
 
 import App.Types
 import Beckn.Product.Validation.Context
+import qualified Beckn.Types.Core.Migration.Context as Mig
+import qualified Beckn.Types.Core.Migration.Domain as Mig
 import Beckn.Types.Storage.Organization (Organization)
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
 import Types.Beckn.API.Cancel (CancelReq (..), CancelRes)
 import Types.Beckn.API.Confirm (ConfirmReq (..), ConfirmRes)
 import Types.Beckn.API.Init (InitReq (..), InitRes)
-import Types.Beckn.API.Search (SearchReq (..), SearchRes)
+import Types.Beckn.API.Search (SearchIntent)
 import Types.Beckn.API.Select (SelectReq (..), SelectRes)
 import Types.Beckn.API.Status (StatusReq (..), StatusRes)
 import Types.Beckn.API.Track (TrackReq (..), TrackRes)
+import qualified Types.Beckn.API.Types as API
 import Types.Beckn.API.Update (UpdateReq (..), UpdateRes)
 import Types.Beckn.Context
 import Types.Beckn.Domain
@@ -19,10 +22,10 @@ import Types.Error
 import Utils.Common
 
 -- TODO: add switching logic to figure out the client instance
-search :: Organization -> SearchReq -> FlowHandler SearchRes
+search :: Organization -> API.BecknReq SearchIntent -> FlowHandler AckResponse
 search org req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    validateContext "search" $ req.context
+  withTransactionIdLogTagMig req $ do
+    validateContextMig "search" $ req.context
     DZ.search org req
 
 select :: Organization -> SelectReq -> FlowHandler SelectRes
@@ -78,6 +81,11 @@ validateContext :: Text -> Context -> Flow ()
 validateContext action context = do
   validateDomain FINAL_MILE_DELIVERY context
   validateContextCommons action context
+
+validateContextMig :: Text -> Mig.Context -> Flow ()
+validateContextMig action context = do
+  validateDomainMig (Mig.Domain "FINAL-MILE-DELIVERY") context
+  validateContextCommonsMig action context
 
 validateBapUrl :: Organization -> Context -> Flow ()
 validateBapUrl org context = do
