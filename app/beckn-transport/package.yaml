@@ -59,6 +59,7 @@ dependencies:
   - cryptonite
   - containers
   - euler-hs
+  - exceptions
   - hspec
   - http-api-data
   - http-client

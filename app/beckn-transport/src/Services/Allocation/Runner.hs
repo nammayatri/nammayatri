@@ -3,8 +3,10 @@ module Services.Allocation.Runner where
 import App.BackgroundTaskManager.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
+import Beckn.Types.Error.API (RedisError (..))
 import qualified Beckn.Utils.Logging as Log
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
+import Control.Monad.Catch (Handler (..), catches)
 import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -49,22 +51,32 @@ handle =
 
 run :: Flow ()
 run = do
-  Redis.tryLockRedis "allocation" 10 >>= \case
-    False -> L.runIO $ threadDelay 5000000 -- sleep for a bit
-    _ -> do
-      now <- getCurrentTime
-      Redis.setKeyRedis "beckn:allocation:service" now
-      processStartTime <- getCurrentTime
-      requestsNum <- asks (requestsNumPerIteration . driverAllocationConfig)
-      eres <- runSafeFlow $ Allocation.process handle requestsNum
-      whenLeft eres $ Log.logTagError "Allocation service"
-      Redis.unlockRedis "allocation"
-      processEndTime <- getCurrentTime
-      let processTime = diffUTCTime processEndTime processStartTime
-      -- If process handling took less than processDelay we delay for remain to processDelay time
-      processDelay <- asks (processDelay . driverAllocationConfig)
-      L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (processDelay - processTime)
+  runnerHandler do
+    Redis.tryLockRedis "allocation" 10 >>= \case
+      False -> L.runIO $ threadDelay 5000000 -- sleep for a bit
+      _ -> do
+        now <- getCurrentTime
+        Redis.setKeyRedis "beckn:allocation:service" now
+        processStartTime <- getCurrentTime
+        requestsNum <- asks (requestsNumPerIteration . driverAllocationConfig)
+        eres <- runSafeFlow $ Allocation.process handle requestsNum
+        whenLeft eres $ Log.logTagError "Allocation service"
+        Redis.unlockRedis "allocation"
+        processEndTime <- getCurrentTime
+        let processTime = diffUTCTime processEndTime processStartTime
+        -- If process handling took less than processDelay we delay for remain to processDelay time
+        processDelay <- asks (processDelay . driverAllocationConfig)
+        L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (processDelay - processTime)
   isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (isShuttingDown . appEnv)
   when isRunning run
   where
     fromNominalToMicroseconds = floor . (1000000 *) . nominalDiffTimeToSeconds
+    runnerHandler =
+      flip
+        catches
+        [ Handler \(RedisError err) -> do
+            Log.logTagError "Allocation service" err
+            L.runIO $ threadDelay 1000000,
+          Handler \(APIException e) -> Log.logTagError "Allocation service" $ toLogMessageAPIError e,
+          Handler \(e :: SomeException) -> Log.logTagError "Allocation service" $ show e
+        ]
