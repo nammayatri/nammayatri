@@ -28,6 +28,7 @@ handle =
       getRequests = I.getRequests,
       getDriverPool = I.getDriverPool,
       getCurrentNotification = I.getCurrentNotification,
+      cleanupOldNotifications = I.cleanupOldNotifications,
       sendNewRideNotification = I.sendNewRideNotification,
       sendRideNotAssignedNotification = I.sendRideNotAssignedNotification,
       addNotificationStatus = I.addNotificationStatus,

@@ -6,6 +6,7 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
+import Data.Time (addUTCTime)
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -74,3 +75,11 @@ cleanupNotifications rideId_ = do
   DB.delete dbTable (predicate rideId_)
   where
     predicate rid NotificationStatus.NotificationStatus {..} = rideId ==. B.val_ rid
+
+cleanupOldNotifications :: Flow ()
+cleanupOldNotifications = do
+  dbTable <- getDbTable
+  compareTime <- getCurrentTime <&> addUTCTime (-300)
+  DB.delete dbTable (predicate compareTime)
+  where
+    predicate compareTime NotificationStatus.NotificationStatus {..} = expiresAt B.<=. B.val_ compareTime

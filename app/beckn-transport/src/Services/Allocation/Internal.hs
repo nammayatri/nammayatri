@@ -76,17 +76,20 @@ getCurrentNotification rideId = do
         (notificationStatus ^. #driverId)
         (notificationStatus ^. #expiresAt)
 
+cleanupOldNotifications :: Flow ()
+cleanupOldNotifications = withAppEnv QNS.cleanupOldNotifications
+
 sendNewRideNotification :: Id Ride -> Id Driver -> Flow ()
-sendNewRideNotification (Id rideId) (Id driverId) = do
-  prodInst <- withAppEnv $ QPI.findById (Id rideId)
-  person <- withAppEnv $ QP.findPersonById (Id driverId)
-  withAppEnv $ notifyDriverNewAllocation prodInst person
+sendNewRideNotification (Id rideId) (Id driverId) = withAppEnv $ do
+  prodInst <- QPI.findById (Id rideId)
+  person <- QP.findPersonById (Id driverId)
+  notifyDriverNewAllocation prodInst person
 
 sendRideNotAssignedNotification :: Id Ride -> Id Driver -> Flow ()
-sendRideNotAssignedNotification (Id rideId) (Id driverId) = do
-  prodInst <- withAppEnv $ QPI.findById (Id rideId)
-  person <- withAppEnv $ QP.findPersonById (Id driverId)
-  withAppEnv $ notifyDriverUnassigned prodInst person
+sendRideNotAssignedNotification (Id rideId) (Id driverId) = withAppEnv $ do
+  prodInst <- QPI.findById (Id rideId)
+  person <- QP.findPersonById (Id driverId)
+  notifyDriverUnassigned prodInst person
 
 updateNotificationStatus :: Id Ride -> Id Driver -> NotificationStatus -> Flow ()
 updateNotificationStatus rideId driverId =

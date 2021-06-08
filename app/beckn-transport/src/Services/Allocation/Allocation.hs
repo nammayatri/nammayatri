@@ -72,6 +72,7 @@ data ServiceHandle m = ServiceHandle
     getRequests :: ShortId Organization -> Integer -> m [RideRequest],
     getDriverPool :: Id Ride -> m [Id Driver],
     getCurrentNotification :: Id Ride -> m (Maybe CurrentNotification),
+    cleanupOldNotifications :: m (),
     sendNewRideNotification :: Id Ride -> Id Driver -> m (),
     sendRideNotAssignedNotification :: Id Ride -> Id Driver -> m (),
     addNotificationStatus :: Id Ride -> Id Driver -> UTCTime -> m (),
@@ -96,6 +97,7 @@ process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer 
 process handle@ServiceHandle {..} shortOrgId requestsNum = do
   getRequestsStartTime <- getCurrentTime
   rides <- getRequests shortOrgId requestsNum
+  cleanupOldNotifications
   let ridesNum = length rides
   unless (ridesNum == 0) $
     withLogTag "Allocation service" $ do
