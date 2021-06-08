@@ -114,7 +114,7 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
   let rideId = rideRequest.rideId
   rideInfo <- getRideInfo rideId
   let rideStatus = rideInfo.rideStatus
-  eres <- try $ do
+  eres <- try $
     withLogTag ("RideRequest_" <> rideId.getId) $ do
       logInfo "Start processing request"
       case rideRequest.requestData of
@@ -241,46 +241,51 @@ proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
 
   case driverPool of
     driverId : driverIds -> do
-      availableDrivers <- checkAvailability $ driverId :| driverIds
-      attemptedDrivers <- getAttemptedDrivers rideId
-      driversWithNotification <- getDriversWithNotification
-
-      let canNotify driver =
-            driver `elem` availableDrivers
-              && driver `notElem` attemptedDrivers
-              && driver `notElem` driversWithNotification
-
-      let filteredPool = filter canNotify driverPool
-      logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getId <$> filteredPool)
-      processFilteredPool handle rideId filteredPool shortOrgId
+      notAttemptedDriversPool <- getNotAttemptedDriversPool (driverId :| driverIds)
+      processNotAttemptedDriversPool handle rideId notAttemptedDriversPool shortOrgId
     [] -> cancel handle rideId
+  where
+    getNotAttemptedDriversPool pool = do
+      availableDrivers <- checkAvailability pool
+      attemptedDrivers <- getAttemptedDrivers rideId
+      return . filter (`notElem` attemptedDrivers) $ availableDrivers
 
-processFilteredPool ::
+processNotAttemptedDriversPool ::
   MonadHandler m =>
   ServiceHandle m ->
   Id Ride ->
   [Id Driver] ->
   ShortId Organization ->
   m ()
-processFilteredPool handle@ServiceHandle {..} rideId driverPool shortOrgId = do
-  case driverPool of
-    driverId : driverIds -> do
-      sortMode <- getDriverSortMode
-      firstDriver <-
-        case sortMode of
-          ETA -> pure driverId
-          IdleTime -> getFirstDriverInTheQueue $ driverId :| driverIds
-      currentTime <- getCurrentTime
-      notificationTime <- getConfiguredNotificationTime
-      let expiryTime = addUTCTime notificationTime currentTime
-      sendNewRideNotification rideId firstDriver
-      addNotificationStatus rideId firstDriver expiryTime
-      logInfo $ "Notified driver " <> getId firstDriver
-      logEvent NotificationSent rideId $ Just firstDriver
-      checkRideLater handle shortOrgId rideId
+processNotAttemptedDriversPool handle@ServiceHandle {..} rideId notAttemptedDriversPool shortOrgId =
+  case notAttemptedDriversPool of
+    _ : _ -> do
+      availableDrivers <- getNotNotifiedDrivers notAttemptedDriversPool
+      logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getId <$> availableDrivers)
+      case availableDrivers of
+        driverId : driverIds -> do
+          sortMode <- getDriverSortMode
+          firstDriver <-
+            case sortMode of
+              ETA -> pure driverId
+              IdleTime -> getFirstDriverInTheQueue $ driverId :| driverIds
+          currentTime <- getCurrentTime
+          notificationTime <- getConfiguredNotificationTime
+          let expiryTime = addUTCTime notificationTime currentTime
+          sendNewRideNotification rideId firstDriver
+          addNotificationStatus rideId firstDriver expiryTime
+          logInfo $ "Notified driver " <> getId firstDriver
+          logEvent NotificationSent rideId $ Just firstDriver
+          checkRideLater handle shortOrgId rideId
+        [] ->
+          logInfo "All free drivers already have notifications. Waiting."
     [] -> do
       cancel handle rideId
       logEvent EmptyDriverPool rideId Nothing
+  where
+    getNotNotifiedDrivers pool = do
+      driversWithNotification <- getDriversWithNotification
+      return $ filter (`notElem` driversWithNotification) pool
 
 checkRideLater :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Id Ride -> m ()
 checkRideLater ServiceHandle {..} shortOrgId rideId = do
