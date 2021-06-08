@@ -5,6 +5,7 @@ module Beckn.Types.Error.API where
 import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
 import EulerHS.Prelude
+import EulerHS.Types (KVDBReply)
 import Network.HTTP.Types (Header)
 import Network.HTTP.Types.Header (HeaderName)
 import Servant.Client (BaseUrl, ClientError, showBaseUrl)
@@ -378,7 +379,7 @@ instance IsAPIError ServerError where
   toHttpCode ServerUnavailable = E503
 
 newtype RedisError
-  = RedisError Text
+  = RedisError KVDBReply
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''RedisError
@@ -387,5 +388,5 @@ instance IsAPIError RedisError where
   toErrorCode = \case
     RedisError _ -> "REDIS_ERROR"
   toMessage = \case
-    RedisError err -> Just $ "Error: " <> err
+    RedisError err -> Just $ show err
   toHttpCode _ = E500

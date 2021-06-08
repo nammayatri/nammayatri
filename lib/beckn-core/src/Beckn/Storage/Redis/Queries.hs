@@ -16,17 +16,17 @@ module Beckn.Storage.Redis.Queries
 where
 
 import Beckn.Types.Common
-import Beckn.Utils.Error.Throwing (throwRedisError)
+import Beckn.Types.Error.API (RedisError (..))
+import Beckn.Utils.Error.Throwing (fromEitherM)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as DT
 import qualified Data.Text.Encoding as DTE
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import EulerHS.Types as T
 
-runKV :: HasCallStack => L.KVDB a -> FlowR r (T.KVDBAnswer a)
-runKV = L.runKVDB "redis"
+runKV :: HasCallStack => L.KVDB a -> FlowR r a
+runKV = L.runKVDB "redis" >=> fromEitherM RedisError
 
 -- KV
 setKeyRedis ::
@@ -36,12 +36,9 @@ setKeyRedis ::
   Text ->
   a ->
   FlowR r ()
-setKeyRedis key val = do
-  resp <- runKV $ L.set (DTE.encodeUtf8 key) (BSL.toStrict $ A.encode val)
-  case resp of
-    -- TODO: check for "OK" in resp
-    Right _ -> return ()
-    Left err -> throwRedisError $ show err
+setKeyRedis key val =
+  -- TODO: check for "OK" in resp
+  void $ runKV $ L.set (DTE.encodeUtf8 key) (BSL.toStrict $ A.encode val)
 
 setExRedis ::
   ( HasCallStack,
@@ -51,12 +48,9 @@ setExRedis ::
   a ->
   Int ->
   FlowR r ()
-setExRedis key value ttl = do
-  resp <- runKV $ L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
-  case resp of
-    -- TODO: check for "OK" in resp
-    Right _ -> return ()
-    Left err -> throwRedisError $ show err
+setExRedis key value ttl =
+  -- TODO: check for "OK" in resp
+  void $ runKV $ L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
 
 getKeyRedis ::
   ( HasCallStack,
@@ -66,10 +60,7 @@ getKeyRedis ::
   FlowR r (Maybe a)
 getKeyRedis key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
-  case resp of
-    Right (Just v) -> return $ A.decode $ BSL.fromStrict v
-    Right Nothing -> return Nothing
-    Left err -> throwRedisError $ show err
+  return $ A.decode . BSL.fromStrict =<< resp
 
 getKeyRedisWithError ::
   ( HasCallStack,
@@ -79,13 +70,12 @@ getKeyRedisWithError ::
   FlowR r (Either String a)
 getKeyRedisWithError key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
-  case resp of
-    Right (Just v) ->
-      return $
+  return $
+    case resp of
+      Just v ->
         maybe (Left $ "decode failed for key: " <> show key) Right $
           A.decode (BSL.fromStrict v)
-    Right Nothing -> return $ Left $ "No Value found for key : " <> show key
-    Left err -> throwRedisError $ show err
+      Nothing -> Left $ "No Value found for key : " <> show key
 
 setHashRedis ::
   ( HasCallStack,
@@ -95,28 +85,22 @@ setHashRedis ::
   Text ->
   a ->
   FlowR r ()
-setHashRedis key field value = do
-  resp <-
+setHashRedis key field value =
+  -- TODO: check for "OK" in resp
+  void $
     runKV $
       L.hset
         (DTE.encodeUtf8 key)
         (DTE.encodeUtf8 field)
         (BSL.toStrict $ A.encode value)
-  case resp of
-    -- TODO: check for "OK" in resp
-    Right _ -> return ()
-    Left err -> throwRedisError $ show err
 
 expireRedis ::
   HasCallStack =>
   Text ->
   Int ->
   FlowR r ()
-expireRedis key ttl = do
-  resp <- runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)
-  case resp of
-    Right _ -> return ()
-    Left err -> throwRedisError $ show err
+expireRedis key ttl =
+  void $ runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)
 
 getHashKeyRedis ::
   ( HasCallStack,
@@ -127,10 +111,7 @@ getHashKeyRedis ::
   FlowR r (Maybe a)
 getHashKeyRedis key field = do
   resp <- runKV $ L.hget (DTE.encodeUtf8 key) (DTE.encodeUtf8 field)
-  case resp of
-    Right (Just v) -> return $ A.decode $ BSL.fromStrict v
-    Right Nothing -> return Nothing
-    Left err -> throwRedisError $ show err
+  return $ A.decode . BSL.fromStrict =<< resp
 
 deleteKeyRedis ::
   HasCallStack =>
@@ -144,19 +125,14 @@ deleteKeysRedis ::
   FlowR r Int
 deleteKeysRedis rKeys = do
   resp <- runKV $ L.del $ map DTE.encodeUtf8 rKeys
-  case resp of
-    Right x -> return $ fromEnum x
-    Left err -> throwRedisError $ show err
+  return $ fromEnum resp
 
 incrementKeyRedis ::
   HasCallStack =>
   Text ->
   FlowR r Integer
-incrementKeyRedis key = do
-  resp <- runKV . L.incr . DTE.encodeUtf8 $ key
-  case resp of
-    Right x -> return x
-    Left err -> throwRedisError $ show err
+incrementKeyRedis =
+  runKV . L.incr . DTE.encodeUtf8
 
 getKeyRedisText ::
   HasCallStack =>
@@ -164,10 +140,7 @@ getKeyRedisText ::
   FlowR r (Maybe Text)
 getKeyRedisText key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
-  case resp of
-    Right (Just v) -> return $ Just $ DTE.decodeUtf8 v
-    Right Nothing -> return Nothing
-    Left err -> throwRedisError $ show err
+  return $ DTE.decodeUtf8 <$> resp
 
 tryLockRedis ::
   HasCallStack =>
@@ -177,9 +150,8 @@ tryLockRedis ::
 tryLockRedis key expire = do
   resp <- runKV (L.rawRequest ["SET", buildLockResourceName key, "1", "NX", "EX", maxLockTime])
   case resp of
-    Right (Just ("OK" :: ByteString)) -> return True
-    Right _ -> return False
-    Left err -> throwRedisError $ show err
+    Just ("OK" :: ByteString) -> return True
+    _ -> return False
   where
     maxLockTime = show expire
 
