@@ -97,7 +97,7 @@ process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer 
 process handle@ServiceHandle {..} shortOrgId requestsNum = do
   getRequestsStartTime <- getCurrentTime
   cleanedNotificationsCount <- cleanupOldNotifications
-  logInfo $ "Cleaned notifications count: " <> show cleanedNotificationsCount
+  when (cleanedNotificationsCount > 0) $ logInfo $ "Cleaned notifications count: " <> show cleanedNotificationsCount
   rides <- getRequests shortOrgId requestsNum
   let ridesNum = length rides
   unless (ridesNum == 0) $
