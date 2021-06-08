@@ -9,7 +9,7 @@ import Data.Time
 import EulerHS.Prelude hiding (id)
 
 newtype ServiceSchedule = ServiceSchedule
-  { _stops :: Schedule
+  { stops :: Schedule
   }
   deriving (Generic, Show)
 
