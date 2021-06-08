@@ -37,7 +37,7 @@ spec:
                   fieldPath: status.podIP
             - name: BECKN_TRANSPORT_BTM_CONFIG_PATH
               value: /etc/beckn/config/beckn-transport-btm.dhall
-          image: asia.gcr.io/jp-k8s-internal/beckn-uat:$BUILD_VERSION
+          image: 701342709052.dkr.ecr.ap-southeast-1.amazonaws.com/beckn-uat:$BUILD_VERSION
           name: beckn-transport-$DEPLOY_VARIANT
           ports:
             - containerPort: 8114
