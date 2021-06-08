@@ -76,7 +76,7 @@ getCurrentNotification rideId = do
         (notificationStatus ^. #driverId)
         (notificationStatus ^. #expiresAt)
 
-cleanupOldNotifications :: Flow ()
+cleanupOldNotifications :: Flow Int
 cleanupOldNotifications = withAppEnv QNS.cleanupOldNotifications
 
 sendNewRideNotification :: Id Ride -> Id Driver -> Flow ()

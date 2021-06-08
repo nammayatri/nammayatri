@@ -118,9 +118,10 @@ handle repository@Repository {..} =
             pure $ Just $ CurrentNotification driverId expiryTime
           _ -> pure Nothing,
       cleanupOldNotifications = do
-        currentTime <- Time.getCurrentTime
+        compareTime <- Time.getCurrentTime <&> Time.addUTCTime (-300)
         modifyIORef notificationStatusVar $
-          Map.filter (\(_, expiryTime) -> currentTime < expiryTime),
+          Map.filter (\(_, expiryTime) -> compareTime < expiryTime)
+        return 0,
       addNotificationStatus = \rideId driverId expiryTime -> do
         modifyIORef notificationStatusVar $
           Map.insert (rideId, driverId) (Notified, expiryTime),

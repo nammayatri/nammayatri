@@ -99,6 +99,13 @@ delete ::
   FlowWithDb r ()
 delete dbTable predicate = runSqlDB $ delete' dbTable predicate
 
+deleteReturning ::
+  (HasCallStack, ReadablePgTable table db) =>
+  Table table db ->
+  (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
+  FlowWithDb r [table Identity]
+deleteReturning dbTable predicate = runSqlDB $ deleteReturning' dbTable predicate
+
 update' ::
   (HasCallStack, ReadablePgTable table db) =>
   Table table db ->
@@ -120,6 +127,13 @@ delete' ::
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
   SqlDB ()
 delete' dbTable predicate = lift . L.deleteRows $ B.delete dbTable predicate
+
+deleteReturning' ::
+  (HasCallStack, ReadablePgTable table db) =>
+  Table table db ->
+  (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
+  SqlDB [table Identity]
+deleteReturning' dbTable predicate = lift . L.deleteRowsReturningListPG $ B.delete dbTable predicate
 
 runSqlDB' ::
   HasCallStack =>

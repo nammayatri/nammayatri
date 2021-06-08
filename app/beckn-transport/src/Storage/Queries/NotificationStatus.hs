@@ -76,10 +76,11 @@ cleanupNotifications rideId_ = do
   where
     predicate rid NotificationStatus.NotificationStatus {..} = rideId ==. B.val_ rid
 
-cleanupOldNotifications :: Flow ()
+cleanupOldNotifications :: Flow Int
 cleanupOldNotifications = do
   dbTable <- getDbTable
-  compareTime <- getCurrentTime <&> addUTCTime (-300)
-  DB.delete dbTable (predicate compareTime)
+  compareTime <- getCurrentTime <&> addUTCTime (-300) -- We only remove very old notifications (older than 5 minutes) as a fail-safe
+  rows <- DB.deleteReturning dbTable (predicate compareTime)
+  return $ length rows
   where
     predicate compareTime NotificationStatus.NotificationStatus {..} = expiresAt B.<=. B.val_ compareTime
