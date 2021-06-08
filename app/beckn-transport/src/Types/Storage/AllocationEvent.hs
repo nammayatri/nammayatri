@@ -10,10 +10,11 @@ import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
-import Types.App (Ride)
+import Types.App (Driver, Ride)
 
 data AllocationEventT f = AllocationEvent
   { id :: B.C f (Id AllocationEvent),
+    driverId :: B.C f (Maybe (Id Driver)),
     eventType :: B.C f AllocationEventType,
     timestamp :: B.C f UTCTime,
     rideId :: B.C f (Id Ride)
@@ -62,6 +63,7 @@ fieldEMod =
     <> B.modifyTableFields
       B.tableModification
         { id = "id",
+          driverId = "driver_id",
           eventType = "event_type",
           timestamp = "timestamp",
           rideId = "ride_id"

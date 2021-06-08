@@ -30,8 +30,8 @@ findAllocationEventById aeId = do
   where
     predicate Storage.AllocationEvent {..} = id ==. B.val_ aeId
 
-logAllocationEvent :: Storage.AllocationEventType -> Id Ride -> Flow ()
-logAllocationEvent eventType rideId = do
+logAllocationEvent :: Storage.AllocationEventType -> Id Ride -> Maybe (Id Driver) -> Flow ()
+logAllocationEvent eventType rideId driverId = do
   uuid <- generateGUID
   now <- getCurrentTime
   create $
@@ -39,5 +39,6 @@ logAllocationEvent eventType rideId = do
       { id = uuid,
         eventType = eventType,
         timestamp = now,
+        driverId = driverId,
         rideId = rideId
       }

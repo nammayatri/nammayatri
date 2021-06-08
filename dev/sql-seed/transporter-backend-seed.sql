@@ -691,6 +691,7 @@ CREATE TABLE atlas_transporter.notification_status (
 CREATE TABLE atlas_transporter.allocation_event (
     id character(36) PRIMARY KEY NOT NULL,
     ride_id character(36) NOT NULL,
+    driver_id character(36),
     event_type character varying(22) NOT NULL,
     timestamp timestamp with time zone NOT NULL
 );

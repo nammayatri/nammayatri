@@ -171,8 +171,8 @@ addAvailableDriver driverInfo availableDriversIds =
     then cast (driverInfo ^. #driverId) : availableDriversIds
     else availableDriversIds
 
-logEvent :: AllocationEventType -> Id Ride -> Flow ()
-logEvent evType = withAppEnv . logAllocationEvent evType
+logEvent :: AllocationEventType -> Id Ride -> Maybe (Id Driver) -> Flow ()
+logEvent evType rideId = withAppEnv . logAllocationEvent evType rideId
 
 getRideInfo :: Id Ride -> Flow RideInfo
 getRideInfo rideId = do

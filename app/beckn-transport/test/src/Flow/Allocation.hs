@@ -162,7 +162,7 @@ handle repository@Repository {..} =
         case Map.lookup rideId rides of
           Just rideInfo -> pure rideInfo
           Nothing -> assertFailure $ "Ride " <> show rideId <> " not found in the map.",
-      logEvent = \_ _ -> pure (),
+      logEvent = \_ _ _ -> pure (),
       metricsHandle =
         MetricsHandle
           { incrementTaskCounter = return (),
