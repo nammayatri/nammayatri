@@ -142,11 +142,11 @@ makeTripDetails caseM = case caseM of
       head
         <$> PI.findAllByCaseId (_case.id)
     let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< info
-        provider = (\x -> x.provider) =<< mproductInfo
-        mtracker = (\x -> x.tracker) =<< mproductInfo
+        provider = (.provider) =<< mproductInfo
+        mtracker = (.tracker) =<< mproductInfo
         mtrip = (\x -> Just $ x.trip) =<< mtracker
-        driver = (\x -> x.driver) =<< mtrip
-        vehicle = (\x -> x.vehicle) =<< mtrip
+        driver = (.driver) =<< mtrip
+        vehicle = (.vehicle) =<< mtrip
     pure $
       Just $
         T.TripDetails

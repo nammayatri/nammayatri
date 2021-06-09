@@ -98,11 +98,7 @@ jwtRequest :: T.Text -> BL.ByteString -> IO Request
 jwtRequest tokenUri body = do
   req <- parseRequest $ T.unpack tokenUri
   pure $
-    req
-      { method = "POST",
-        requestHeaders = [(hContentType, "application/json")],
-        requestBody = RequestBodyLBS body
-      }
+    req {method = "POST", requestHeaders = [(hContentType, "application/json")], requestBody = RequestBodyLBS body}
 
 -- | Geto or refresh JWT token
 -- Note at the moment it is used with FCM service so scope is hardcoded
