@@ -185,7 +185,12 @@ processCurrentNotification
   shortOrgId
   rideId
   (CurrentNotification driverId expiryTime) = do
-    notificationTimeFinished <- isNotificationTimeFinished handle expiryTime
+    mResponse <- getDriverResponse rideId driverId
+    notificationTimeFinished <- case mResponse of
+      Just driverResponse -> return $ driverResponse.respondedAt > expiryTime
+      Nothing -> do
+        now <- getCurrentTime
+        return $ now > expiryTime
     logInfo $ "isNotificationTimeFinished " <> show notificationTimeFinished
     if notificationTimeFinished
       then do
@@ -193,7 +198,6 @@ processCurrentNotification
         sendRideNotAssignedNotification rideId driverId
         processRejection handle True rideId driverId shortOrgId
       else do
-        mResponse <- getDriverResponse rideId driverId
         logInfo $ "getDriverResponse " <> show mResponse
         case mResponse of
           Just driverResponse ->
@@ -295,8 +299,3 @@ isAllocationTimeFinished ServiceHandle {..} orderTime = do
   configuredAllocationTime <- getConfiguredAllocationTime
   let elapsedSearchTime = diffUTCTime currentTime (orderTime.utcTime)
   pure $ elapsedSearchTime > configuredAllocationTime
-
-isNotificationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> m Bool
-isNotificationTimeFinished ServiceHandle {..} expiryTime = do
-  currentTime <- getCurrentTime
-  pure $ currentTime > expiryTime
