@@ -7,6 +7,7 @@ module Beckn.Utils.Servant.HeaderAuth where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Error
+import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.Server
@@ -62,7 +63,8 @@ instance
     HasEnvEntry r ctx,
     HasContextEntry ctx (VerificationAction verify r),
     VerificationMethod verify,
-    KnownSymbol header
+    KnownSymbol header,
+    HasCoreMetrics r
   ) =>
   HasServer (HeaderAuth header verify :> api) ctx
   where

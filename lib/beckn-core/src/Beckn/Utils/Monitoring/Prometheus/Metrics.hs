@@ -4,6 +4,7 @@
 
 module Beckn.Utils.Monitoring.Prometheus.Metrics where
 
+import Beckn.Types.Error.APIError (IsAPIError (toErrorCode, toHttpCode), IsAPIException)
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Monitoring.Prometheus.Servant
@@ -59,3 +60,11 @@ logRequestLatency requestLatencyMetric host serviceName start status = do
       requestLatencyMetric
       (host, serviceName, status)
       (`P.observe` latency)
+
+incrementErrorCounter :: (L.MonadFlow m, IsAPIException e) => ErrorCounterMetric -> e -> m ()
+incrementErrorCounter errorCounterMetric err = 
+  L.runIO $
+    P.withLabel
+      errorCounterMetric
+      (show $ toHttpCode err, toErrorCode err)
+      P.incCounter

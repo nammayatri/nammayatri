@@ -85,6 +85,7 @@ data AppEnv = AppEnv
     graphhopperUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
     metricsRequestLatency :: RequestLatencyMetric,
+    metricsErrorCounter :: ErrorCounterMetric,
     defaultRadiusOfSearch :: Integer
   }
   deriving (Generic)
@@ -92,6 +93,7 @@ data AppEnv = AppEnv
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   metricsRequestLatency <- registerRequestLatencyMetric
+  metricsErrorCounter <- registerErrorCounterMetric
   isShuttingDown <- newEmptyTMVarIO
   return $
     AppEnv

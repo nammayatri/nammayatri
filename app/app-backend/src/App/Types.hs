@@ -94,7 +94,8 @@ data AppEnv = AppEnv
     metricsCaseCounter :: CaseCounterMetric,
     metricsSearchDurationTimeout :: Int,
     metricsSearchDuration :: SearchDurationMetric,
-    metricsRequestLatency :: RequestLatencyMetric
+    metricsRequestLatency :: RequestLatencyMetric,
+    metricsErrorCounter :: ErrorCounterMetric
   }
   deriving (Generic)
 
@@ -104,6 +105,7 @@ buildAppEnv AppCfg {..} = do
   metricsCaseCounter <- registerCaseCounter
   metricsSearchDuration <- registerSearchDurationMetric metricsSearchDurationTimeout
   metricsRequestLatency <- registerRequestLatencyMetric
+  metricsErrorCounter <- registerErrorCounterMetric
   return $
     AppEnv
       { ..

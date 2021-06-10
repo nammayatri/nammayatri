@@ -9,6 +9,7 @@ import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Types.Storage.Organization
 import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
@@ -123,7 +124,8 @@ lookupRegistryAction findOrgByShortId = LookupAction $ \signaturePayload -> do
 instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,
-    KnownSymbol header
+    KnownSymbol header,
+    HasCoreMetrics r
   ) =>
   HasServer (SignatureAuth header :> api) ctx
   where
@@ -257,7 +259,7 @@ verifySignature headerName (LookupAction runLookup) signPayload req = do
       throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm headerName host]
 
 withBecknAuth ::
-  (HasField "isShuttingDown" r (TMVar ()), ToJSON req) =>
+  (HasCoreMetrics r, HasField "isShuttingDown" r (TMVar ()), ToJSON req) =>
   (LookupResult lookup -> req -> FlowHandlerR r b) ->
   LookupAction lookup r ->
   HttpSig.SignaturePayload ->
@@ -268,7 +270,7 @@ withBecknAuth handler lookupAction sign req = do
   handler lookupResult req
 
 withBecknAuthProxy ::
-  (HasField "isShuttingDown" r (TMVar ()), ToJSON req) =>
+  (HasCoreMetrics r, HasField "isShuttingDown" r (TMVar ()), ToJSON req) =>
   (LookupResult lookup -> req -> FlowHandlerR r b) ->
   LookupAction lookup r ->
   HttpSig.SignaturePayload ->
