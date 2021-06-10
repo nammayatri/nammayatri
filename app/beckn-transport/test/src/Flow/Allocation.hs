@@ -18,8 +18,8 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Types.API.Ride as Ride
 import Types.App
+import Types.Metrics
 import qualified Types.Storage.RideRequest as SRR
-import Utils.Metrics
 import Utils.SilentLogger ()
 
 org1 :: ShortId Organization
@@ -162,14 +162,13 @@ handle repository@Repository {..} =
         case Map.lookup rideId rides of
           Just rideInfo -> pure rideInfo
           Nothing -> assertFailure $ "Ride " <> show rideId <> " not found in the map.",
-      logEvent = \_ _ _ -> pure (),
-      metricsHandle =
-        MetricsHandle
-          { incrementTaskCounter = return (),
-            incrementFailedTaskCounter = return (),
-            putTaskDuration = \_ -> return ()
-          }
+      logEvent = \_ _ _ -> pure ()
     }
+
+instance BTMMetrics IO where
+  incrementTaskCounter = return ()
+  incrementFailedTaskCounter = return ()
+  putTaskDuration _ = return ()
 
 driverPool1 :: [Id Driver]
 driverPool1 = [Id "driver01", Id "driver02", Id "driver03"]

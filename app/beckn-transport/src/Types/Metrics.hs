@@ -8,6 +8,11 @@ import Beckn.Types.Monitoring.Prometheus.Metrics as CoreMetrics
 import EulerHS.Prelude
 import Prometheus as P
 
+class BTMMetrics m where
+  incrementTaskCounter :: m ()
+  incrementFailedTaskCounter :: m ()
+  putTaskDuration :: Double -> m ()
+
 type TaskCounterMetric = P.Counter
 
 type TaskDurationMetric = P.Histogram

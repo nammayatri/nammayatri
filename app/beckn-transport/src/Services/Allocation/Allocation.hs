@@ -9,6 +9,7 @@ import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude
 import qualified Types.API.Ride as DriverResponse (DriverResponse (..), NotificationStatus (..))
 import Types.App
+import qualified Types.Metrics as Metrics
 import Types.Storage.AllocationEvent (AllocationEventType (..))
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
@@ -55,13 +56,7 @@ data RideInfo = RideInfo
   }
   deriving (Generic)
 
-data MetricsHandle m = MetricsHandle
-  { incrementTaskCounter :: m (),
-    incrementFailedTaskCounter :: m (),
-    putTaskDuration :: Double -> m ()
-  }
-
-type MonadHandler m = (MonadCatch m, MonadTime m, Log m)
+type MonadHandler m = (Metrics.BTMMetrics m, MonadCatch m, MonadTime m, Log m)
 
 data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,
@@ -87,8 +82,7 @@ data ServiceHandle m = ServiceHandle
     addAllocationRequest :: ShortId Organization -> Id Ride -> m (),
     getRideInfo :: Id Ride -> m RideInfo,
     removeRequest :: Id SRR.RideRequest -> m (),
-    logEvent :: AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m (),
-    metricsHandle :: MetricsHandle m
+    logEvent :: AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m ()
   }
 
 process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer -> m Int
@@ -114,7 +108,7 @@ process handle@ServiceHandle {..} shortOrgId requestsNum = do
 
 processRequest :: MonadHandler m => ServiceHandle m -> ShortId Organization -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
-  incrementTaskCounter metricsHandle
+  Metrics.incrementTaskCounter
   processStartTime <- getCurrentTime
   let requestId = rideRequest.requestId
   let rideId = rideRequest.rideId
@@ -143,11 +137,11 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
     \(err :: SomeException) -> do
       let message = "Error processing request " <> show requestId <> ": " <> show err
       logError message
-      incrementFailedTaskCounter metricsHandle
+      Metrics.incrementFailedTaskCounter
 
   removeRequest requestId
   processEndTime <- getCurrentTime
-  putTaskDuration metricsHandle . realToFrac $ diffUTCTime processEndTime processStartTime
+  Metrics.putTaskDuration . realToFrac $ diffUTCTime processEndTime processStartTime
 
 processAllocation ::
   MonadHandler m =>

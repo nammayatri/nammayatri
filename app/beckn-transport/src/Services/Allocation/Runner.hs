@@ -17,7 +17,6 @@ import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
 import Types.ShardMappingError
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 
 handle :: Allocation.ServiceHandle Flow
 handle =
@@ -45,13 +44,7 @@ handle =
       getRideInfo = I.getRideInfo,
       cleanupNotifications = I.cleanupNotifications,
       removeRequest = I.removeRequest,
-      logEvent = I.logEvent,
-      metricsHandle =
-        Allocation.MetricsHandle
-          { incrementTaskCounter = Metrics.incrementTaskCounter,
-            incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter,
-            putTaskDuration = Metrics.putTaskDuration
-          }
+      logEvent = I.logEvent
     }
 
 getOrganizationLock :: Flow (ShortId Organization)
