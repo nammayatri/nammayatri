@@ -16,8 +16,8 @@ import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Cancel as Cancel
 import Types.Error
+import qualified Types.Metrics as Metrics
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 cancel :: Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes

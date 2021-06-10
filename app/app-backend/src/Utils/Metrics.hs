@@ -4,7 +4,6 @@ module Utils.Metrics
   )
 where
 
-import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Case as Case
@@ -14,10 +13,10 @@ import Data.Time (UTCTime, diffUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Prometheus as P
+import Types.Metrics
 
-incrementCaseCount :: Case.CaseStatus -> Case.CaseType -> Flow ()
-incrementCaseCount caseStatus caseType = do
-  caseCounter <- metricsCaseCounter <$> ask
+incrementCaseCount :: CaseCounterMetric -> Case.CaseStatus -> Case.CaseType -> FlowR k ()
+incrementCaseCount caseCounter caseStatus caseType =
   L.runIO $ P.withLabel caseCounter (show caseStatus, show caseType) P.incCounter
 
 putSearchDuration :: P.Histogram -> Double -> FlowR e ()
@@ -29,10 +28,8 @@ searchDurationKey txnId = "beckn:" <> txnId <> ":on_search:received"
 searchDurationLockKey :: Text -> Text
 searchDurationLockKey txnId = txnId <> ":on_search"
 
-startSearchMetrics :: Text -> Flow ()
-startSearchMetrics txnId = do
-  searchRedisExTime <- (.metricsSearchDurationTimeout) <$> ask
-  (_, failureCounter) <- metricsSearchDuration <$> ask
+startSearchMetrics :: SearchDurationMetric -> Int -> Text -> FlowR k ()
+startSearchMetrics (_, failureCounter) searchRedisExTime txnId = do
   startTime <- getCurrentTime
   Redis.setExRedis (searchDurationKey txnId) startTime searchRedisExTime
   fork "Gateway Search Metrics" $ do
@@ -45,10 +42,8 @@ startSearchMetrics txnId = do
         Nothing -> return ()
       Redis.unlockRedis $ searchDurationLockKey txnId
 
-finishSearchMetrics :: Text -> Flow ()
-finishSearchMetrics txnId = do
-  searchRedisExTime <- (.metricsSearchDurationTimeout) <$> ask
-  (searchDurationHistogram, _) <- metricsSearchDuration <$> ask
+finishSearchMetrics :: SearchDurationMetric -> Int -> Text -> FlowR k ()
+finishSearchMetrics (searchDurationHistogram, _) searchRedisExTime txnId = do
   endTime <- getCurrentTime
   whenM (Redis.tryLockRedis (searchDurationLockKey txnId) searchRedisExTime) $ do
     Redis.getKeyRedis (searchDurationKey txnId) >>= \case

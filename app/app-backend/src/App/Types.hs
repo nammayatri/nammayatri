@@ -23,6 +23,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Geofencing
 import Types.Metrics
+import qualified Utils.Metrics as Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -125,3 +126,16 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance BAPMetrics Flow where
+  startSearchMetrics txnId = do
+    searchRedisExTime <- asks (.metricsSearchDurationTimeout)
+    metricsSearchDuration <- asks metricsSearchDuration
+    Metrics.startSearchMetrics metricsSearchDuration searchRedisExTime txnId
+  finishSearchMetrics txnId = do
+    searchRedisExTime <- asks (.metricsSearchDurationTimeout)
+    metricsSearchDuration <- asks metricsSearchDuration
+    Metrics.finishSearchMetrics metricsSearchDuration searchRedisExTime txnId
+  incrementCaseCount cStatus cType = do
+    caseCounter <- asks metricsCaseCounter
+    Metrics.incrementCaseCount caseCounter cStatus cType

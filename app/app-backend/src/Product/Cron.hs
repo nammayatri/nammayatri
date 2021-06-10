@@ -13,7 +13,7 @@ import EulerHS.Prelude hiding (pi)
 import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
 import qualified Types.API.Cron as API
-import qualified Utils.Metrics as Metrics
+import qualified Types.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 updateCases :: Maybe CronAuthKey -> API.ExpireCaseReq -> FlowHandler API.ExpireRes

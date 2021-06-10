@@ -42,9 +42,9 @@ import qualified Types.API.Search as API
 import Types.API.Serviceability
 import qualified Types.Common as Common
 import Types.Error
+import qualified Types.Metrics as Metrics
 import Types.ProductInfo
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 
 search :: Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search person req = withFlowHandlerAPI $ do

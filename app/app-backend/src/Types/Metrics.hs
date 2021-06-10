@@ -5,8 +5,14 @@ module Types.Metrics
 where
 
 import Beckn.Types.Monitoring.Prometheus.Metrics as CoreMetrics
+import qualified Beckn.Types.Storage.Case as Case
 import EulerHS.Prelude
 import Prometheus as P
+
+class BAPMetrics m where
+  startSearchMetrics :: Text -> m ()
+  finishSearchMetrics :: Text -> m ()
+  incrementCaseCount :: Case.CaseStatus -> Case.CaseType -> m ()
 
 type CaseCounterMetric = P.Vector P.Label2 P.Counter
 
