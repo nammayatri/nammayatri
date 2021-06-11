@@ -35,9 +35,14 @@ initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
-  person <-
-    QP.findByMobileNumber countryCode mobileNumber
-      >>= maybe (createPerson req) return
+  mbPerson <- QP.findByMobileNumber countryCode mobileNumber
+  person <- case mbPerson of
+    Nothing -> do
+      whenJust
+        req.role
+        (\role -> when (role == SP.DRIVER) $ throwError $ InvalidRequest "error")
+      createPerson req
+    Just p -> pure p
   checkSlidingWindowLimit (initiateFlowHitsCountKey person)
   let entityId = getId . SP.id $ person
       useFakeOtpM = useFakeSms smsCfg
