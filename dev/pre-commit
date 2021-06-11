@@ -10,14 +10,14 @@ fi
 BAD_HS_FILES=""
 
 for file in $HS_FILES; do
-  if ! ormolu -m check "${file}"; then
+  if ! ormolu -m check -o '-fplugin=RecordDotPreprocessor' "${file}"; then
     BAD_HS_FILES+=" ${file}"
     ORMOLU_FAIL="true"
   fi
 done
 
 if [ -n "$ORMOLU_FAIL" ]; then
-  ORMOLU_CMD="ormolu -m inplace ${BAD_HS_FILES}"
+  ORMOLU_CMD="ormolu -m inplace -o -fplugin=RecordDotPreprocessor ${BAD_HS_FILES}"
 
   echo "Code style issues found in:"
   echo "${BAD_HS_FILES}"
