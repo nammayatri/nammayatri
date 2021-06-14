@@ -40,7 +40,7 @@ initiateFlow req smsCfg = do
     Nothing -> do
       whenJust
         req.role
-        (\role -> when (role == SP.DRIVER) $ throwError $ InvalidRequest "error")
+        (\role -> when (role == SP.DRIVER) $ throwError $ InvalidRequest "Driver must be registered by Transport Admin")
       createPerson req
     Just p -> pure p
   checkSlidingWindowLimit (initiateFlowHitsCountKey person)
