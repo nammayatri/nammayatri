@@ -186,31 +186,36 @@ processCurrentNotification
   rideId
   (CurrentNotification driverId expiryTime) = do
     mResponse <- getDriverResponse rideId driverId
-    notificationTimeFinished <- case mResponse of
-      Just driverResponse -> return $ driverResponse.respondedAt > expiryTime
+    case mResponse of
+      Just driverResponse ->
+        if driverResponse.respondedAt <= expiryTime
+          then case driverResponse.status of
+            DriverResponse.ACCEPT -> do
+              logInfo $ "assigning driver" <> show driverId
+              assignDriver rideId driverId
+              cleanupNotifications rideId
+              logEvent AcceptedByDriver rideId $ Just driverId
+            DriverResponse.REJECT ->
+              processRejection handle False rideId driverId shortOrgId
+          else processExpiredNotification handle shortOrgId rideId driverId
       Nothing -> do
         now <- getCurrentTime
-        return $ now > expiryTime
-    logInfo $ "isNotificationTimeFinished " <> show notificationTimeFinished
-    if notificationTimeFinished
-      then do
-        logInfo $ "Notified ride not assigned to driver " <> getId driverId
-        sendRideNotAssignedNotification rideId driverId
-        processRejection handle True rideId driverId shortOrgId
-      else do
-        logInfo $ "getDriverResponse " <> show mResponse
-        case mResponse of
-          Just driverResponse ->
-            case driverResponse.status of
-              DriverResponse.ACCEPT -> do
-                logInfo $ "assigning driver" <> show driverId
-                assignDriver rideId driverId
-                cleanupNotifications rideId
-                logEvent AcceptedByDriver rideId $ Just driverId
-              DriverResponse.REJECT ->
-                processRejection handle False rideId driverId shortOrgId
-          Nothing ->
-            checkRideLater handle shortOrgId rideId
+        let notificationTimeFinished = now > expiryTime
+        if notificationTimeFinished
+          then processExpiredNotification handle shortOrgId rideId driverId
+          else checkRideLater handle shortOrgId rideId
+
+processExpiredNotification ::
+  MonadHandler m =>
+  ServiceHandle m ->
+  ShortId Organization ->
+  Id Ride ->
+  Id Driver ->
+  m ()
+processExpiredNotification handle@ServiceHandle {..} shortOrgId rideId driverId = do
+  logInfo $ "Notified ride not assigned to driver " <> getId driverId
+  sendRideNotAssignedNotification rideId driverId
+  processRejection handle True rideId driverId shortOrgId
 
 processRejection ::
   MonadHandler m =>
