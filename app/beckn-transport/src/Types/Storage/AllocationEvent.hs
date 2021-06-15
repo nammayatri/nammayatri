@@ -25,9 +25,11 @@ type AllocationEvent = AllocationEventT Identity
 
 data AllocationEventType
   = NotificationSent
+  | MarkedAsAccepted
+  | MarkedAsRejected
+  | MarkedAsIgnored
   | AcceptedByDriver
   | RejectedByDriver
-  | IgnoredByDriver
   | ConsumerCancelled
   | EmptyDriverPool
   | AllocationTimeFinished

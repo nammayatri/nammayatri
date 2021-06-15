@@ -194,7 +194,7 @@ processCurrentNotification
               logInfo $ "assigning driver" <> show driverId
               assignDriver rideId driverId
               cleanupNotifications rideId
-              logEvent AcceptedByDriver rideId $ Just driverId
+              logEvent MarkedAsAccepted rideId $ Just driverId
             DriverResponse.REJECT ->
               processRejection handle False rideId driverId shortOrgId
           else processExpiredNotification handle shortOrgId rideId driverId
@@ -228,7 +228,7 @@ processRejection ::
 processRejection handle@ServiceHandle {..} ignored rideId driverId shortOrgId = do
   logInfo "processing rejection"
   let status = if ignored then Ignored else Rejected
-  let event = if ignored then IgnoredByDriver else RejectedByDriver
+  let event = if ignored then MarkedAsIgnored else MarkedAsRejected
   resetLastRejectionTime driverId
   updateNotificationStatus rideId driverId status
   logEvent event rideId $ Just driverId
