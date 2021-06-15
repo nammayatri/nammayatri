@@ -1,7 +1,8 @@
 module Beckn.Types.Monitoring.Prometheus.Metrics where
 
+import Beckn.Types.Error.APIError
 import EulerHS.Prelude as E
-import GHC.Records
+import GHC.Records.Extra
 import Prometheus as P
 
 type RequestLatencyMetric = P.Vector P.Label3 P.Histogram
@@ -12,6 +13,10 @@ type HasCoreMetrics r =
   ( HasField "metricsRequestLatency" r RequestLatencyMetric,
     HasField "metricsErrorCounter" r ErrorCounterMetric
   )
+
+class CoreMetrics m where
+  startRequestLatencyTracking :: Text -> Text -> m (Text -> m ())
+  incrementErrorCounter :: IsAPIException e => e -> m ()
 
 registerRequestLatencyMetric :: IO RequestLatencyMetric
 registerRequestLatencyMetric =

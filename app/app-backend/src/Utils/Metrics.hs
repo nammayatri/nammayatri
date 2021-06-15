@@ -15,7 +15,7 @@ import EulerHS.Prelude
 import Prometheus as P
 import Types.Metrics
 
-incrementCaseCount :: CaseCounterMetric -> Case.CaseStatus -> Case.CaseType -> FlowR k ()
+incrementCaseCount :: L.MonadFlow m => CaseCounterMetric -> Case.CaseStatus -> Case.CaseType -> m ()
 incrementCaseCount caseCounter caseStatus caseType =
   L.runIO $ P.withLabel caseCounter (show caseStatus, show caseType) P.incCounter
 

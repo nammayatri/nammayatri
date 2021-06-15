@@ -4,9 +4,8 @@ import Beckn.Types.Common
 import Beckn.Types.Error.APIError
 import Beckn.Types.Error.CallAPIError
 import Beckn.Types.Error.FromResponse
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
-import Beckn.Utils.Logging (logDebug)
-import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
+import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
+import Beckn.Utils.Logging 
 import qualified Data.Aeson as A
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -17,7 +16,7 @@ import Servant.Client.Core
 
 type CallAPI' env res res' =
   ( HasCallStack,
-    HasCoreMetrics env,
+    Metrics.HasCoreMetrics env,
     ET.JSONEx res,
     ToJSON res
   ) =>
@@ -34,7 +33,7 @@ callAPI = callAPI' Nothing
 callAPI' ::
   Maybe ET.ManagerSelector ->
   CallAPI' env res (Either ClientError res)
-callAPI' mbManagerSelector baseUrl eulerClient desc = do
+callAPI' mbManagerSelector baseUrl eulerClient desc =
   withLogTag "callAPI" $ do
     endTracking <- Metrics.startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc
     res <- L.callAPI' mbManagerSelector baseUrl eulerClient

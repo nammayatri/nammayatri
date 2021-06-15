@@ -17,8 +17,8 @@ import Beckn.Types.Error.API as Err
 import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
+import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Logging
-import Beckn.Utils.Monitoring.Prometheus.Metrics (incrementErrorCounter)
 import Control.Concurrent.STM (isEmptyTMVar)
 import Control.Monad.Reader
 import qualified Data.Aeson as A
@@ -44,9 +44,14 @@ withFlowHandlerBecknAPI' :: (HasCoreMetrics r, HasField "isShuttingDown" r (TMVa
 withFlowHandlerBecknAPI' = withFlowHandler . becknApiHandler . handleIfUp
 
 handleIfUp ::
-  (HasField "isShuttingDown" r (TMVar ()), HasCoreMetrics r) =>
-  FlowR r a ->
-  FlowR r a
+  ( L.MonadFlow m,
+    Log m,
+    MonadReader r m,
+    HasField "isShuttingDown" r (TMVar ()),
+    Metrics.CoreMetrics m
+  ) =>
+  m a ->
+  m a
 handleIfUp flow = do
   appEnv <- ask
   let shutdown = getField @"isShuttingDown" appEnv
@@ -55,18 +60,42 @@ handleIfUp flow = do
     then flow
     else throwApiError ServerUnavailable
 
-apiHandler :: (L.MonadFlow m, MonadReader r m, MonadCatch m, Log m, HasCoreMetrics r) => m a -> m a
+apiHandler ::
+  ( MonadCatch m,
+    Log m,
+    Metrics.CoreMetrics m
+  ) =>
+  m a ->
+  m a
 apiHandler = (`catch` someExceptionToApiErrorThrow)
 
-becknApiHandler :: (L.MonadFlow m, MonadReader r m, MonadCatch m, Log m, HasCoreMetrics r) => m a -> m a
+becknApiHandler ::
+  ( MonadCatch m,
+    Log m,
+    Metrics.CoreMetrics m
+  ) =>
+  m a ->
+  m a
 becknApiHandler = (`catch` someExceptionToBecknApiErrorThrow)
 
-someExceptionToApiErrorThrow :: (L.MonadFlow m, MonadReader r m, MonadCatch m, Log m, HasCoreMetrics r) => SomeException -> m a
+someExceptionToApiErrorThrow ::
+  ( MonadCatch m,
+    Log m,
+    Metrics.CoreMetrics m
+  ) =>
+  SomeException ->
+  m a
 someExceptionToApiErrorThrow exc
   | Just (APIException err) <- fromException exc = throwApiError err
   | otherwise = throwApiError . InternalError $ show exc
 
-someExceptionToBecknApiErrorThrow :: (L.MonadFlow m, MonadReader r m, MonadCatch m, Log m, HasCoreMetrics r) => SomeException -> m a
+someExceptionToBecknApiErrorThrow ::
+  ( MonadCatch m,
+    Log m,
+    Metrics.CoreMetrics m
+  ) =>
+  SomeException ->
+  m a
 someExceptionToBecknApiErrorThrow exc
   | Just (BecknAPIException err) <- fromException exc = throwBecknApiError err
   | Just (APIException err) <- fromException exc =
@@ -80,62 +109,42 @@ someExceptionToBecknApiError exc
   | Just (APIException err) <- fromException exc = becknAPIErrorFromAPIError err
   | otherwise = becknAPIErrorFromAPIError . InternalError $ show exc
 
-pushMetrics ::
-  ( L.MonadFlow m,
-    MonadReader r m,
-    MonadCatch m,
-    Log m,
-    HasCoreMetrics r,
-    IsAPIException e
-  ) =>
-  e ->
-  m ()
-pushMetrics err = do
-  errCounterMetric <- getField @"metricsErrorCounter" <$> ask
-  incrementErrorCounter errCounterMetric err
-
 throwApiError ::
-  ( L.MonadFlow m,
-    MonadReader r m,
-    Log m,
+  ( Log m,
     MonadThrow m,
     IsAPIError e,
     Exception e,
-    HasCoreMetrics r
+    Metrics.CoreMetrics m
   ) =>
   e ->
   m a
 throwApiError = throwIsApiError toAPIError
 
 throwBecknApiError ::
-  ( L.MonadFlow m,
-    MonadReader r m,
-    Log m,
+  ( Log m,
     MonadThrow m,
     IsBecknAPIError e,
     Exception e,
-    HasCoreMetrics r
+    Metrics.CoreMetrics m
   ) =>
   e ->
   m a
 throwBecknApiError = throwIsApiError toBecknAPIError
 
 throwIsApiError ::
-  ( L.MonadFlow m,
-    MonadReader r m,
-    ToJSON j,
+  ( ToJSON j,
     Log m,
     MonadThrow m,
     IsAPIError e,
     Exception e,
-    HasCoreMetrics r
+    Metrics.CoreMetrics m
   ) =>
   (e -> j) ->
   e ->
   m b
 throwIsApiError toJsonError err = do
   logError $ toLogMessageAPIError err
-  pushMetrics err
+  Metrics.incrementErrorCounter err
   throwServantError (toHttpCode err) (toCustomHeaders err) (toJsonError err)
 
 throwServantError ::

@@ -3,7 +3,10 @@
 module Beckn.Types.Flow (FlowR, HasFlowEnv, runFlowR) where
 
 import Beckn.Types.Field
+import Beckn.Types.Logging
+import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Logging
+import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -24,3 +27,12 @@ type HasFlowEnv m r fields =
 instance Log (FlowR r) where
   logOutput = logOutputImplementation
   withLogTag = withLogTagImplementation
+
+instance HasCoreMetrics r => CoreMetrics (FlowR r) where
+  startRequestLatencyTracking host serviceName = do
+    requestLatencyMetric <- (.metricsRequestLatency) <$> ask
+    Metrics.startRequestLatencyTracking requestLatencyMetric host serviceName
+
+  incrementErrorCounter err = do
+    errorCounterMetric <- (.metricsErrorCounter) <$> ask
+    Metrics.incrementErrorCounter errorCounterMetric err
