@@ -57,16 +57,14 @@ data AppEnv = AppEnv
     signingKeys :: [SigningKey],
     signatureExpiry :: NominalDiffTime,
     isShuttingDown :: TMVar (),
-    metricsRequestLatency :: RequestLatencyMetric,
-    metricsErrorCounter :: ErrorCounterMetric
+    coreMetrics :: CoreMetricsContainer
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
-  metricsRequestLatency <- registerRequestLatencyMetric
-  metricsErrorCounter <- registerErrorCounterMetric
+  coreMetrics <- registerCoreMetricsContainer
   return $
     AppEnv
       { ..

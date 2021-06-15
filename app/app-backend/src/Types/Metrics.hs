@@ -1,6 +1,8 @@
 module Types.Metrics
-  ( module Types.Metrics,
+  ( BAPMetrics (..),
+    BAPMetricsContainer (..),
     module CoreMetrics,
+    registerBAPMetricsContainer,
   )
 where
 
@@ -14,12 +16,24 @@ class BAPMetrics m where
   finishSearchMetrics :: Text -> m ()
   incrementCaseCount :: Case.CaseStatus -> Case.CaseType -> m ()
 
+data BAPMetricsContainer = BAPMetricsContainer
+  { caseCounter :: CaseCounterMetric,
+    searchDurationTimeout :: Int,
+    searchDuration :: SearchDurationMetric
+  }
+
 type CaseCounterMetric = P.Vector P.Label2 P.Counter
 
 type SearchDurationMetric = (P.Histogram, P.Counter)
 
-registerCaseCounter :: IO CaseCounterMetric
-registerCaseCounter = P.register $ P.vector ("status", "type") $ P.counter $ P.Info "case_count" ""
+registerBAPMetricsContainer :: Int -> IO BAPMetricsContainer
+registerBAPMetricsContainer searchDurationTimeout = do
+  caseCounter <- registerCaseCounterMetric
+  searchDuration <- registerSearchDurationMetric searchDurationTimeout
+  return $ BAPMetricsContainer {..}
+
+registerCaseCounterMetric :: IO CaseCounterMetric
+registerCaseCounterMetric = P.register $ P.vector ("status", "type") $ P.counter $ P.Info "case_count" ""
 
 registerSearchDurationMetric :: Int -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do

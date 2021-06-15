@@ -30,9 +30,9 @@ instance Log (FlowR r) where
 
 instance HasCoreMetrics r => CoreMetrics (FlowR r) where
   startRequestLatencyTracking host serviceName = do
-    requestLatencyMetric <- (.metricsRequestLatency) <$> ask
-    Metrics.startRequestLatencyTracking requestLatencyMetric host serviceName
+    cmContainer <- (.coreMetrics) <$> ask
+    Metrics.startRequestLatencyTracking cmContainer host serviceName
 
   incrementErrorCounter err = do
-    errorCounterMetric <- (.metricsErrorCounter) <$> ask
-    Metrics.incrementErrorCounter errorCounterMetric err
+    cmContainer <- (.coreMetrics) <$> ask
+    Metrics.incrementErrorCounter cmContainer err

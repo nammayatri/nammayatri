@@ -18,7 +18,7 @@ import Network.Wai.Middleware.Prometheus
 import Prometheus as P
 import Prometheus.Metric.GHC (ghcMetrics)
 import Prometheus.Metric.Proc
-import System.Clock (Clock (..), TimeSpec, diffTimeSpec, getTime, toNanoSecs)
+import System.Clock (Clock (..), diffTimeSpec, getTime, toNanoSecs)
 
 serve :: Int -> IO ()
 serve port = do
@@ -43,23 +43,24 @@ addServantInfo proxy app request respond =
       fullpath = DT.intercalate "/" (pathInfo request)
    in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
 
-startRequestLatencyTracking :: (L.MonadFlow m) => RequestLatencyMetric -> Text -> Text -> m (Text -> m ())
-startRequestLatencyTracking requestLatencyMetric host serviceName = do
+startRequestLatencyTracking :: (L.MonadFlow m) => CoreMetricsContainer -> Text -> Text -> m (Text -> m ())
+startRequestLatencyTracking cmContainers host serviceName = do
+  let requestLatencyMetric = cmContainers.requestLatency
   start <- L.runIO $ getTime Monotonic
-  return $ logRequestLatency requestLatencyMetric host serviceName start
+  return $ logRequestLatency requestLatencyMetric start
+  where
+    logRequestLatency requestLatencyMetric start status = do
+      end <- L.runIO $ getTime Monotonic
+      let latency = fromRational $ toNanoSecs (end `diffTimeSpec` start) % 1000000000
+      L.runIO $
+        P.withLabel
+          requestLatencyMetric
+          (host, serviceName, status)
+          (`P.observe` latency)
 
-logRequestLatency :: (L.MonadFlow m) => RequestLatencyMetric -> Text -> Text -> TimeSpec -> Text -> m ()
-logRequestLatency requestLatencyMetric host serviceName start status = do
-  end <- L.runIO $ getTime Monotonic
-  let latency = fromRational $ toNanoSecs (end `diffTimeSpec` start) % 1000000000
-  L.runIO $
-    P.withLabel
-      requestLatencyMetric
-      (host, serviceName, status)
-      (`P.observe` latency)
-
-incrementErrorCounter :: (L.MonadFlow m, IsAPIException e) => ErrorCounterMetric -> e -> m ()
-incrementErrorCounter errorCounterMetric err = 
+incrementErrorCounter :: (L.MonadFlow m, IsAPIException e) => CoreMetricsContainer -> e -> m ()
+incrementErrorCounter cmContainers err = do
+  let errorCounterMetric = cmContainers.errorCounter
   L.runIO $
     P.withLabel
       errorCounterMetric

@@ -84,16 +84,14 @@ data AppEnv = AppEnv
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
-    metricsRequestLatency :: RequestLatencyMetric,
-    metricsErrorCounter :: ErrorCounterMetric,
+    coreMetrics :: CoreMetricsContainer,
     defaultRadiusOfSearch :: Integer
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
-  metricsRequestLatency <- registerRequestLatencyMetric
-  metricsErrorCounter <- registerErrorCounterMetric
+  coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- newEmptyTMVarIO
   return $
     AppEnv

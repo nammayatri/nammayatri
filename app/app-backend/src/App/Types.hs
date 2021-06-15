@@ -92,21 +92,16 @@ data AppEnv = AppEnv
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
-    metricsCaseCounter :: CaseCounterMetric,
-    metricsSearchDurationTimeout :: Int,
-    metricsSearchDuration :: SearchDurationMetric,
-    metricsRequestLatency :: RequestLatencyMetric,
-    metricsErrorCounter :: ErrorCounterMetric
+    bapMetrics :: BAPMetricsContainer,
+    coreMetrics :: CoreMetricsContainer
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
-  metricsCaseCounter <- registerCaseCounter
-  metricsSearchDuration <- registerSearchDurationMetric metricsSearchDurationTimeout
-  metricsRequestLatency <- registerRequestLatencyMetric
-  metricsErrorCounter <- registerErrorCounterMetric
+  bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
+  coreMetrics <- registerCoreMetricsContainer
   return $
     AppEnv
       { ..
@@ -129,13 +124,11 @@ instance AuthenticatingEntity AppEnv where
 
 instance BAPMetrics Flow where
   startSearchMetrics txnId = do
-    searchRedisExTime <- asks (.metricsSearchDurationTimeout)
-    metricsSearchDuration <- asks metricsSearchDuration
-    Metrics.startSearchMetrics metricsSearchDuration searchRedisExTime txnId
+    bmContainer <- asks (.bapMetrics)
+    Metrics.startSearchMetrics bmContainer txnId
   finishSearchMetrics txnId = do
-    searchRedisExTime <- asks (.metricsSearchDurationTimeout)
-    metricsSearchDuration <- asks metricsSearchDuration
-    Metrics.finishSearchMetrics metricsSearchDuration searchRedisExTime txnId
+    bmContainer <- asks (.bapMetrics)
+    Metrics.finishSearchMetrics bmContainer txnId
   incrementCaseCount cStatus cType = do
-    caseCounter <- asks metricsCaseCounter
-    Metrics.incrementCaseCount caseCounter cStatus cType
+    bmContainer <- asks (.bapMetrics)
+    Metrics.incrementCaseCount bmContainer cStatus cType

@@ -1,4 +1,10 @@
-module Beckn.Types.Monitoring.Prometheus.Metrics where
+module Beckn.Types.Monitoring.Prometheus.Metrics
+  ( HasCoreMetrics,
+    CoreMetrics (..),
+    CoreMetricsContainer (..),
+    registerCoreMetricsContainer,
+  )
+where
 
 import Beckn.Types.Error.APIError
 import EulerHS.Prelude as E
@@ -10,13 +16,23 @@ type RequestLatencyMetric = P.Vector P.Label3 P.Histogram
 type ErrorCounterMetric = P.Vector P.Label2 P.Counter
 
 type HasCoreMetrics r =
-  ( HasField "metricsRequestLatency" r RequestLatencyMetric,
-    HasField "metricsErrorCounter" r ErrorCounterMetric
+  ( HasField "coreMetrics" r CoreMetricsContainer
   )
 
 class CoreMetrics m where
   startRequestLatencyTracking :: Text -> Text -> m (Text -> m ())
   incrementErrorCounter :: IsAPIException e => e -> m ()
+
+data CoreMetricsContainer = CoreMetricsContainer
+  { requestLatency :: RequestLatencyMetric,
+    errorCounter :: ErrorCounterMetric
+  }
+
+registerCoreMetricsContainer :: IO CoreMetricsContainer
+registerCoreMetricsContainer = do
+  requestLatency <- registerRequestLatencyMetric
+  errorCounter <- registerErrorCounterMetric
+  return CoreMetricsContainer {..}
 
 registerRequestLatencyMetric :: IO RequestLatencyMetric
 registerRequestLatencyMetric =

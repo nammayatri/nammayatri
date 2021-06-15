@@ -1,6 +1,8 @@
 module Types.Metrics
-  ( module Types.Metrics,
+  ( BTMMetrics (..),
+    BTMMetricsContainer (..),
     module CoreMetrics,
+    registerBTMMetricsContainer,
   )
 where
 
@@ -18,6 +20,19 @@ type TaskCounterMetric = P.Counter
 type TaskDurationMetric = P.Histogram
 
 type FailedTaskCounterMetric = P.Counter
+
+data BTMMetricsContainer = BTMMetricsContainer
+  { taskCounter :: TaskCounterMetric,
+    taskDuration :: TaskDurationMetric,
+    failedTaskCounter :: FailedTaskCounterMetric
+  }
+
+registerBTMMetricsContainer :: IO BTMMetricsContainer
+registerBTMMetricsContainer = do
+  taskCounter <- registerTaskCounter
+  taskDuration <- registerTaskDurationMetric
+  failedTaskCounter <- registerFailedTaskCounter
+  return $ BTMMetricsContainer {..}
 
 registerTaskCounter :: IO TaskCounterMetric
 registerTaskCounter = P.register . P.counter $ P.Info "BTM_task_count" ""

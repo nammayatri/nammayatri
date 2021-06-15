@@ -47,9 +47,7 @@ data BTMEnv = BTMEnv
     requestsNumPerIteration :: Integer,
     processDelay :: NominalDiffTime,
     shards :: Map Int (ShortId Organization),
-    metricsBTMTaskCounter :: TaskCounterMetric,
-    metricsBTMTaskDuration :: TaskDurationMetric,
-    metricsBTMFailedTaskCounter :: FailedTaskCounterMetric
+    btmMetrics :: BTMMetricsContainer
   }
   deriving (Generic)
 
@@ -59,9 +57,7 @@ shardToPair shard = (shard.shardId, ShortId (shard.shortOrgId))
 buildBTMEnv :: BTMCfg -> IO BTMEnv
 buildBTMEnv BTMCfg {..} = do
   appEnv <- App.buildAppEnv appCfg
-  metricsBTMTaskCounter <- registerTaskCounter
-  metricsBTMTaskDuration <- registerTaskDurationMetric
-  metricsBTMFailedTaskCounter <- registerFailedTaskCounter
+  btmMetrics <- registerBTMMetricsContainer
   return $
     BTMEnv
       { shards = Map.fromList $ map shardToPair shards,
@@ -85,11 +81,11 @@ instance AuthenticatingEntity BTMEnv where
 
 instance BTMMetrics Flow where
   incrementTaskCounter = do
-    taskCounter <- asks metricsBTMTaskCounter
-    Metrics.incrementTaskCounter taskCounter
+    bmContainer <- asks btmMetrics
+    Metrics.incrementTaskCounter bmContainer
   incrementFailedTaskCounter = do
-    failedTaskCounter <- asks metricsBTMFailedTaskCounter
-    Metrics.incrementFailedTaskCounter failedTaskCounter
+    bmContainer <- asks btmMetrics
+    Metrics.incrementFailedTaskCounter bmContainer
   putTaskDuration duration = do
-    taskDurationMetric <- asks metricsBTMTaskDuration
-    Metrics.putTaskDuration taskDurationMetric duration
+    bmContainer <- asks btmMetrics
+    Metrics.putTaskDuration bmContainer duration
