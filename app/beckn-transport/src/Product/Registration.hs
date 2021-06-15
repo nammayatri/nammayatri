@@ -46,7 +46,8 @@ initiateFlow req smsCfg = do
       token <- makeSession scfg req entityId SR.USER Nothing
       QR.create token
       otpSmsTemplate <- otpSmsTemplate <$> ask
-      SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
+      withLogTag ("personId_" <> getId person.id) $
+        SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
       return token
   let attempts = SR.attempts regToken
       tokenId = SR.id regToken
@@ -162,7 +163,8 @@ reInitiateLogin tokenId req =
         otpSmsTemplate <- otpSmsTemplate <$> ask
         let mobileNumber = req.mobileNumber
             countryCode = req.mobileCountryCode
-        SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
+        withLogTag ("personId_" <> entityId) $
+          SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
         _ <- QR.updateAttempts (attempts - 1) id
         return $ InitiateLoginRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Limit exceeded."

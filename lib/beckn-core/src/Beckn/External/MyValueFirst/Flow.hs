@@ -14,7 +14,7 @@ submitSms :: HasCoreMetrics r => BaseUrl -> SubmitSms -> FlowR r ()
 submitSms url params = do
   res <- callAPI url (API.submitSms params) "submitSms"
   whenRight res $ \_ ->
-    logTagInfo "SMS" $ "Submitted sms successfully to " <> show (to params)
+    logTagInfo "SMS" "Submitted sms successfully"
   res & fromEitherM (ExternalAPICallError (Just "UNABLE_TO_SEND_SMS") url)
 
 type OtpTemplate = Text
