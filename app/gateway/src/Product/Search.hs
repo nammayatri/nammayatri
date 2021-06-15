@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.Search
   ( search,
     searchCb,
@@ -8,6 +10,7 @@ import App.Types
 import Beckn.Types.Core.Ack
 import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
+import Beckn.Utils.Error.BecknAPIError (callBecknAPI')
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import Beckn.Utils.SignatureAuth (SignaturePayload)
 import EulerHS.Prelude
@@ -40,7 +43,7 @@ search proxySign org req = withFlowHandlerBecknAPI $
     forM_ providers $ \provider -> fork "Provider search" $ do
       providerUrl <- provider.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
       -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
-      callBecknAPI
+      callBecknAPI'
         (Just signatureAuthManagerKey)
         Nothing
         providerUrl
@@ -56,7 +59,7 @@ searchCb proxySign _ req@CallbackReq {context} = withFlowHandlerBecknAPI $
         messageId = req.context.transaction_id
     bgSession <- BA.lookup messageId >>= fromMaybeM (InvalidRequest "Message not found.")
     let baseUrl = bgSession.cbUrl
-    callBecknAPI
+    callBecknAPI'
       (Just signatureAuthManagerKey)
       Nothing
       baseUrl

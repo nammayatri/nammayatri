@@ -13,22 +13,17 @@ import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime)
 import EulerHS.Prelude hiding (State, drop)
 import ExternalAPI.Dunzo.Types
-import Types.Beckn.API.Callback
-import Types.Beckn.API.Cancel
-import Types.Beckn.API.Confirm
 import Types.Beckn.API.Init
 import Types.Beckn.API.Search
 import Types.Beckn.API.Select
 import Types.Beckn.API.Status
 import Types.Beckn.API.Track
-import Types.Beckn.API.Update
 import qualified Types.Beckn.Address as CoreAddr
 import Types.Beckn.Catalog
 import Types.Beckn.Category
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue
 import Types.Beckn.Descriptor
-import qualified Types.Beckn.Error as Err
 import Types.Beckn.FmdOrder
 import Types.Beckn.Item
 import qualified Types.Beckn.Location as CoreLoc
@@ -112,22 +107,11 @@ readCoord text = do
   readMaybe (T.unpack text)
     & fromMaybeM (InvalidRequest "Location read error.")
 
-mkOnSearchErrReq :: Context -> Error -> OnSearchReq
-mkOnSearchErrReq context err = do
-  CallbackReq
-    { context = context & #action .~ "on_search",
-      contents = Left $ toBeckn err
-    }
-
-mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
-mkOnSearchReq _ context res@QuoteRes {..} = do
+mkOnSearchServices :: QuoteRes -> Flow OnSearchServices
+mkOnSearchServices res@QuoteRes {..} = do
   now <- getCurrentTime
   cid <- generateGUID
-  return $
-    CallbackReq
-      { context = context & #action .~ "on_search",
-        contents = Right $ OnSearchServices (catalog cid now)
-      }
+  return $ OnSearchServices (catalog cid now)
   where
     catalog cid now =
       Catalog
@@ -217,20 +201,6 @@ mkOnSelectOrder order quotationTTLinMin res@QuoteRes {..} = do
           & #quotation ?~ quote
   return $ SelectOrder order'
 
-mkOnSelectReq :: Context -> SelectOrder -> OnSelectReq
-mkOnSelectReq context msg =
-  CallbackReq
-    { context = context & #action .~ "on_select",
-      contents = Right msg
-    }
-
-mkOnSelectErrReq :: Context -> Error -> OnSelectReq
-mkOnSelectErrReq context err =
-  CallbackReq
-    { context = context & #action .~ "on_select",
-      contents = Left $ toBeckn err
-    }
-
 mkOnInitMessage :: Text -> Integer -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
 mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
   task <- updateTaskEta (head $ order.tasks) eta
@@ -246,20 +216,6 @@ mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
         & #tasks .~ [task]
   where
     billing = req.message.order.billing
-
-mkOnInitReq :: Context -> InitOrder -> OnInitReq
-mkOnInitReq context msg =
-  CallbackReq
-    { context = context & #action .~ "on_init",
-      contents = Right msg
-    }
-
-mkOnInitErrReq :: Context -> Error -> OnInitReq
-mkOnInitErrReq context err =
-  CallbackReq
-    { context = context & #action .~ "on_init",
-      contents = Left $ toBeckn err
-    }
 
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
 mkOnStatusMessage :: Text -> Order -> PaymentEndpoint -> TaskStatus -> Flow StatusResMessage
@@ -314,12 +270,8 @@ updateOrder orgName cTime order payee status = do
 
     n = Nothing
 
-mkOnTrackReq :: Context -> Text -> Maybe Text -> OnTrackReq
-mkOnTrackReq context orderId trackingUrl = do
-  CallbackReq
-    { context = context & #action .~ "on_track",
-      contents = Right $ TrackResMessage tracking orderId
-    }
+mkOnTrackMessage :: Text -> Maybe Text -> TrackResMessage
+mkOnTrackMessage orderId trackingUrl = TrackResMessage tracking orderId
   where
     tracking =
       Tracking
@@ -328,55 +280,10 @@ mkOnTrackReq context orderId trackingUrl = do
           metadata = Nothing
         }
 
-mkOnStatusReq :: Context -> StatusResMessage -> Flow OnStatusReq
-mkOnStatusReq context msg =
-  return $
-    CallbackReq
-      { context = context & #action .~ "on_status",
-        contents = Right msg
-      }
-
-mkOnStatusErrReq :: Context -> Error -> OnStatusReq
-mkOnStatusErrReq context err =
-  CallbackReq
-    { context = context & #action .~ "on_status",
-      contents = Left $ toBeckn err
-    }
-
-mkOnTrackErrReq :: Context -> Text -> OnTrackReq
-mkOnTrackErrReq context message = do
-  CallbackReq
-    { context = context & #action .~ "on_track",
-      contents = Left mkError
-    }
-  where
-    mkError =
-      Err.Error
-        { _type = Err.DOMAIN_ERROR,
-          code = "FMD000",
-          path = Nothing,
-          message = Just message
-        }
-
-mkOnCancelReq :: Context -> Order -> Flow OnCancelReq
-mkOnCancelReq context order =
-  return $
-    CallbackReq
-      { context = context & #action .~ "on_cancel",
-        contents = Right (CancelResMessage order)
-      }
-
 cancelOrder :: Order -> Order
 cancelOrder o =
   o & #state ?~ withDescriptor (withCode "CANCELLED")
     & #cancellation_reasons ?~ [Option "1" (withName "User cancelled")]
-
-mkOnCancelErrReq :: Context -> Error -> OnCancelReq
-mkOnCancelErrReq context err =
-  CallbackReq
-    { context = context & #action .~ "on_cancel",
-      contents = Left $ toBeckn err
-    }
 
 mkCreateTaskReq :: Order -> Flow CreateTaskReq
 mkCreateTaskReq order = do
@@ -471,36 +378,6 @@ mkCreateTaskReq order = do
             (Nothing, Just dropInst) -> Just $ orderMsg <> ": " <> dropInst
             (Just pickupInst, Nothing) -> Just $ orderMsg <> ": " <> pickupInst
             _ -> Just orderMsg
-
-mkOnConfirmReq :: Context -> Order -> Flow OnConfirmReq
-mkOnConfirmReq context order = do
-  return $
-    CallbackReq
-      { context = context & #action .~ "on_confirm",
-        contents = Right $ ConfirmResMessage order
-      }
-
-mkOnConfirmErrReq :: Context -> Error -> OnConfirmReq
-mkOnConfirmErrReq context err =
-  CallbackReq
-    { context = context & #action .~ "on_confirm",
-      contents = Left $ toBeckn err
-    }
-
-mkOnUpdateErrReq :: Context -> OnUpdateReq
-mkOnUpdateErrReq context = do
-  CallbackReq
-    { context = context & #action .~ "on_update",
-      contents = Left mkError
-    }
-  where
-    mkError =
-      Err.Error
-        { _type = Err.DOMAIN_ERROR,
-          code = "FMD000",
-          path = Nothing,
-          message = Just "UPDATE_NOT_SUPPORTED"
-        }
 
 mapTaskState :: TaskState -> Maybe State
 mapTaskState s =

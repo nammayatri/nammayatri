@@ -19,6 +19,17 @@ type StatusAPI =
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
 
+status :: Proxy StatusAPI
+status = Proxy
+
+type OnStatusAPI =
+  "on_status"
+    :> ReqBody '[JSON] OnStatusReq
+    :> Post '[JSON] OnStatusRes
+
+onStatus :: Proxy OnStatusAPI
+onStatus = Proxy
+
 data StatusReq = StatusReq
   { context :: Context,
     message :: StatusReqMessage

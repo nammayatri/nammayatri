@@ -4,6 +4,7 @@
 module ExternalAPI.Delhivery.Types where
 
 import Beckn.Types.Error.APIError
+import Beckn.Types.Error.BecknAPIError hiding (Error)
 import Beckn.Types.Error.FromResponse
 import Data.Aeson hiding (Error)
 import EulerHS.Prelude hiding (zip)
@@ -113,7 +114,10 @@ newtype CreateOrderRes = CreateOrderRes
 
 instance IsAPIError Error where
   toErrorCode _ = "DELHIVERY_ERROR"
-  toHttpCode _ = E500
+  toHttpCode _ = E500 -- should not be thrown synchronously
   toMessage Error {message} = Just message
 
-instanceExceptionWithParent 'APIException ''Error
+instance IsBecknAPIError Error where
+  toType _ = DOMAIN_ERROR -- analogous to Dunzo, FIXME maybe
+
+instanceExceptionWithParent 'BecknAPIException ''Error

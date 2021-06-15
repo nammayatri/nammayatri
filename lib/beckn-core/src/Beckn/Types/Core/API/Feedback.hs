@@ -1,10 +1,4 @@
-module Beckn.Types.Core.API.Feedback
-  ( FeedbackAPI,
-    FeedbackReq (..),
-    FeedbackRes,
-    FeedbackReqMessage (..),
-  )
-where
+module Beckn.Types.Core.API.Feedback where
 
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Core
@@ -17,6 +11,9 @@ type FeedbackAPI =
   "feedback"
     :> ReqBody '[JSON] FeedbackReq
     :> Post '[JSON] FeedbackRes
+
+feedback :: Proxy FeedbackAPI
+feedback = Proxy
 
 data FeedbackReq = FeedbackReq
   { context :: Core.Context,

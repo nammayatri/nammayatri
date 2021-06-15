@@ -1,7 +1,8 @@
+{-# LANGUAGE TypeApplications #-}
+
 module ExternalAPI.Dunzo.Flow where
 
 import Beckn.Types.Common
-import Beckn.Types.Error.CallAPIError (unwrapEitherOnlyFromRawError)
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
@@ -23,7 +24,7 @@ getToken ::
   HasCoreMetrics e =>
   BaseUrl ->
   TokenReq ->
-  FlowR e (Either Error TokenRes)
+  FlowR e TokenRes
 getToken url req = callDunzoAPI url tokenReq "getToken"
   where
     clientId = Just $ getClientId $ req.client_id
@@ -50,7 +51,7 @@ getQuote ::
   Token ->
   BaseUrl ->
   QuoteReq ->
-  FlowR e (Either Error QuoteRes)
+  FlowR e QuoteRes
 getQuote clientId token url req = callDunzoAPI url quoteReq "getQuote"
   where
     quoteReq =
@@ -82,7 +83,7 @@ createTask ::
   BaseUrl ->
   Bool ->
   CreateTaskReq ->
-  FlowR e (Either Error CreateTaskRes)
+  FlowR e CreateTaskRes
 createTask clientId token url isTestMode req = callDunzoAPI url task "createTask"
   where
     task =
@@ -112,7 +113,7 @@ taskStatus ::
   BaseUrl ->
   Bool ->
   TaskId ->
-  FlowR e (Either Error TaskStatus)
+  FlowR e TaskStatus
 taskStatus clientId token url isTestMode taskId = callDunzoAPI url status "taskStatus"
   where
     status =
@@ -144,7 +145,7 @@ cancelTask ::
   Bool ->
   TaskId ->
   Text ->
-  FlowR e (Either Error ())
+  FlowR e ()
 cancelTask clientId token url isTestMode taskId cancellationReason = callDunzoAPI url cancel "cancelTask"
   where
     cancel =
@@ -160,7 +161,5 @@ cancelTask clientId token url isTestMode taskId cancellationReason = callDunzoAP
 setTestQueryParam :: Bool -> Maybe Bool
 setTestQueryParam isTestMode = if isTestMode then Just True else Nothing
 
-callDunzoAPI :: CallAPI env a (Either Error a)
-callDunzoAPI url eulerClient method =
-  callApiExtractingApiError Nothing url eulerClient method
-    >>= unwrapEitherOnlyFromRawError Nothing url
+callDunzoAPI :: CallAPI env res
+callDunzoAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing

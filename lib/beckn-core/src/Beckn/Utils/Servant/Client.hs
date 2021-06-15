@@ -1,11 +1,11 @@
 module Beckn.Utils.Servant.Client where
 
 import Beckn.Types.Common
+import Beckn.Types.Error.APIError
 import Beckn.Types.Error.CallAPIError
 import Beckn.Types.Error.FromResponse
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
-import Beckn.Utils.Error.Throwing
-import Beckn.Utils.Logging (logInfo)
+import Beckn.Utils.Logging (logDebug)
 import Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Data.Aeson as A
 import qualified Data.Text as T
@@ -15,30 +15,32 @@ import qualified EulerHS.Types as ET
 import qualified Servant.Client as S
 import Servant.Client.Core
 
-type CallAPI env a a' =
+type CallAPI' env res res' =
   ( HasCallStack,
     HasCoreMetrics env,
-    ET.JSONEx a,
-    ToJSON a
+    ET.JSONEx res,
+    ToJSON res
   ) =>
   BaseUrl ->
-  ET.EulerClient a ->
+  ET.EulerClient res ->
   Text ->
-  FlowR env a'
+  FlowR env res'
 
-callAPI :: CallAPI env a (Either ClientError a)
+type CallAPI env res = CallAPI' env res res
+
+callAPI :: CallAPI' env res (Either ClientError res)
 callAPI = callAPI' Nothing
 
 callAPI' ::
   Maybe ET.ManagerSelector ->
-  CallAPI env a (Either ClientError a)
+  CallAPI' env res (Either ClientError res)
 callAPI' mbManagerSelector baseUrl eulerClient desc = do
   withLogTag "callAPI" $ do
     endTracking <- Metrics.startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc
     res <- L.callAPI' mbManagerSelector baseUrl eulerClient
     case res of
-      Right r -> logInfo $ "Ok response: " <> decodeUtf8 (A.encode r)
-      Left err -> logInfo $ "Error occured during client call: " <> show err
+      Right r -> logDebug $ "Ok response: " <> decodeUtf8 (A.encode r)
+      Left err -> logDebug $ "Error occured during client call: " <> show err
     _ <- endTracking $ getResponseCode res
     return res
   where
@@ -57,7 +59,7 @@ parseBaseUrl = S.parseBaseUrl . T.unpack
 callApiExtractingApiError ::
   FromResponse err =>
   Maybe ET.ManagerSelector ->
-  CallAPI env a (Either (CallAPIError err) a)
+  CallAPI' env a (Either (CallAPIError err) a)
 callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc =
   callAPI' mbManagerSelector baseUrl eulerClient desc
     <&> extractApiError
@@ -69,7 +71,7 @@ callApiUnwrappingApiError ::
   (err -> exc) ->
   Maybe ET.ManagerSelector ->
   Maybe Text ->
-  CallAPI env a a
+  CallAPI env a
 callApiUnwrappingApiError toAPIException mbManagerSelector errorCodeMb baseUrl eulerClient desc =
   callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc
     >>= unwrapEitherCallAPIError errorCodeMb baseUrl toAPIException

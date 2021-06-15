@@ -18,6 +18,17 @@ type TrackAPI =
     :> ReqBody '[JSON] TrackTripReq
     :> Post '[JSON] TrackTripRes
 
+trackTrip :: Proxy TrackAPI
+trackTrip = Proxy
+
+type OnTrackAPI =
+  "on_track"
+    :> ReqBody '[JSON] OnTrackTripReq
+    :> Post '[JSON] OnTrackTripRes
+
+onTrackTrip :: Proxy OnTrackAPI
+onTrackTrip = Proxy
+
 data TrackTripReq = TrackTripReq
   { context :: Context,
     message :: TrackReqMessage

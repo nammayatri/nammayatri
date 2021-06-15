@@ -380,3 +380,13 @@ instance IsAPIError RedisError where
   toMessage = \case
     RedisError err -> Just $ show err
   toHttpCode _ = E500
+
+newtype ActionNotSupported = ActionNotSupported Text
+  deriving (Eq, Show)
+
+instance IsAPIError ActionNotSupported where
+  toErrorCode _ = "ACTION_NOT_SUPPORTED"
+  toMessage (ActionNotSupported action) = Just $ "Action " <> action <> " is not supported"
+  toHttpCode _ = E400
+
+instanceExceptionWithParent 'APIException ''ActionNotSupported

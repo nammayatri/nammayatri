@@ -1,15 +1,13 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.BecknProvider.Search (search) where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Amount
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.API.Callback as Callback
 import qualified Beckn.Types.Core.API.Search as API
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Context as Context
-import qualified Beckn.Types.Core.Domain as Domain
-import qualified Beckn.Types.Core.Error as Core
 import qualified Beckn.Types.Core.Tag as Tag
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Stop as Stop
@@ -17,7 +15,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
@@ -45,27 +42,27 @@ search transporterId bapOrg req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req.context
     BP.validateContext "search" context
-    uuid <- L.generateGUID
     transporter <- Org.findOrganizationById transporterId
-    when (transporter.enabled) $ do
-      let intent = req.message.intent
-      now <- getCurrentTime
-      let pickup = head $ intent.pickups
-      let dropOff = head $ intent.drops
-      let startTime = pickup.departure_time.est
-      validity <- getValidTime now startTime
-      fromLocation <- mkFromStop now pickup
-      toLocation <- mkFromStop now dropOff
-      let bapOrgId = bapOrg.id
-      bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-      deadDistance <- calculateDeadDistance transporter fromLocation
-      let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
-      DB.runSqlDBTransaction $ do
-        Loc.create fromLocation
-        Loc.create toLocation
-        QCase.create productCase
-      fork "OnSearchCallback" $ onSearchCallback bapCallbackUrl productCase transporter fromLocation toLocation
-    return Ack
+    unless (transporter.enabled) $ throwError ServiceUnavailable
+    let intent = req.message.intent
+    now <- getCurrentTime
+    let pickup = head $ intent.pickups
+    let dropOff = head $ intent.drops
+    let startTime = pickup.departure_time.est
+    validity <- getValidTime now startTime
+    fromLocation <- mkFromStop now pickup
+    toLocation <- mkFromStop now dropOff
+    let bapOrgId = bapOrg.id
+    deadDistance <- calculateDeadDistance transporter fromLocation
+    uuid <- L.generateGUID
+    let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
+    DB.runSqlDBTransaction $ do
+      Loc.create fromLocation
+      Loc.create toLocation
+      QCase.create productCase
+    callbackUrl <- ExternalAPI.getGatewayUrl
+    ExternalAPI.withCallback transporter "search" API.onSearch context callbackUrl $
+      onSearchCallback productCase transporter fromLocation toLocation
 
 mkFromStop :: UTCTime -> Stop.Stop -> Flow Location.Location
 mkFromStop now stop = do
@@ -77,14 +74,14 @@ mkFromStop now stop = do
     Location.Location
       { id = uuid,
         locationType = Location.POINT,
-        lat = read . T.unpack . (.lat) <$> mgps,
-        long = read . T.unpack . (.lon) <$> mgps,
-        ward = (.ward) =<< maddress,
+        lat = read . T.unpack . (^. #lat) <$> mgps,
+        long = read . T.unpack . (^. #lon) <$> mgps,
+        ward = (^. #ward) =<< maddress,
         district = Nothing,
-        city = (.city) <$> maddress,
-        state = (.state) <$> maddress,
-        country = (.country) <$> maddress,
-        pincode = (.area_code) <$> maddress,
+        city = (^. #city) <$> maddress,
+        state = (^. #state) <$> maddress,
+        country = (^. #country) <$> maddress,
+        pincode = (^. #area_code) <$> maddress,
         address = encodeToText <$> maddress,
         bound = Nothing,
         point = Location.Point,
@@ -126,7 +123,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
       fromLocationId = fromLocation.id,
       toLocationId = toLocation.id,
       udf1 = Just $ intent.vehicle.variant,
-      udf2 = Just . show . length $ intent.payload.travellers,
+      udf2 = Just $ show $ length $ intent.payload.travellers,
       udf3 = encodeToText <$> deadDistance,
       udf4 = Just bapId,
       udf5 = distance,
@@ -149,41 +146,40 @@ calculateDeadDistance organization fromLocation = do
       pure Nothing
     Right mDistance -> return mDistance
 
-onSearchCallback :: BaseUrl -> Case.Case -> Org.Organization -> Location.Location -> Location.Location -> Flow ()
-onSearchCallback bapUri productCase transporter fromLocation toLocation = do
+onSearchCallback ::
+  Case.Case ->
+  Org.Organization ->
+  Location.Location ->
+  Location.Location ->
+  Flow API.OnSearchServices
+onSearchCallback productCase transporter fromLocation toLocation = do
   let transporterId = transporter.id
-  result <- runSafeFlow $ do
-    vehicleVariant :: Vehicle.Variant <-
-      (productCase.udf1 >>= readMaybe . T.unpack)
-        & fromMaybeM (CaseFieldNotPresent "udf1")
-    pool <-
-      Person.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
-    logTagInfo "OnSearchCallback" $
-      "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId <$> pool) |+ ""
-    let piStatus =
-          if null pool
-            then ProductInstance.OUTOFSTOCK
-            else ProductInstance.INSTOCK
-    price <-
-      if null pool
-        then return Nothing
-        else Just <$> calculateFare transporterId vehicleVariant fromLocation toLocation (productCase.startTime) (productCase.udf5)
-    prodInst <- mkProductInstance productCase price piStatus transporterId
-    let caseStatus ProductInstance.INSTOCK = Case.CONFIRMED
-        caseStatus _ = Case.CLOSED
-    DB.runSqlDBTransaction $ do
-      ProductInstance.create prodInst
-      QCase.updateStatus (productCase.id) (caseStatus $ prodInst.status)
-    pure prodInst
-  case result of
-    Right prodInst -> do
-      let productStatus = prodInst.status
-      logTagInfo "OnSearchCallback" $
-        "Sending on_search callback with status " +|| productStatus ||+ " for product " +|| prodInst.id ||+ ""
-      void $ sendOnSearchSuccess bapUri productCase transporter prodInst
-    Left err -> do
-      logTagError "OnSearchCallback" $ "Error happened when sending on_search request. Error: " +|| err ||+ ""
-      void $ sendOnSearchFailed bapUri productCase transporter err
+  vehicleVariant <-
+    (productCase.udf1 >>= readMaybe . T.unpack)
+      & fromMaybeM (CaseFieldNotPresent "udf1")
+  pool <-
+    Person.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
+  logTagInfo "OnSearchCallback" $
+    "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId <$> pool) |+ ""
+  let piStatus =
+        if null pool
+          then ProductInstance.OUTOFSTOCK
+          else ProductInstance.INSTOCK
+  price <-
+    if null pool
+      then return Nothing
+      else Just <$> calculateFare transporterId vehicleVariant fromLocation toLocation (productCase.startTime) (productCase.udf5)
+  prodInst <- mkProductInstance productCase price piStatus transporterId
+  let caseStatus ProductInstance.INSTOCK = Case.CONFIRMED
+      caseStatus _ = Case.CLOSED
+  DB.runSqlDBTransaction $ do
+    ProductInstance.create prodInst
+    QCase.updateStatus (productCase.id) (caseStatus $ prodInst.status)
+  let productInstances =
+        case prodInst.status of
+          ProductInstance.OUTOFSTOCK -> []
+          _ -> [prodInst]
+  mkOnSearchPayload productCase productInstances transporter
 
 mkProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
 mkProductInstance productCase price status transporterId = do
@@ -191,113 +187,47 @@ mkProductInstance productCase price status transporterId = do
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   products <- SProduct.findByName $ fromMaybe "DONT MATCH" (productCase.udf1)
-  let productInstance =
-        ProductInstance.ProductInstance
-          { id = productInstanceId,
-            caseId = productCase.id,
-            productId = products.id,
-            personId = Nothing,
-            personUpdatedAt = Nothing,
-            shortId = ShortId shortId,
-            entityType = ProductInstance.VEHICLE,
-            entityId = Nothing,
-            quantity = 1,
-            _type = Case.RIDESEARCH,
-            price = price,
-            status = status,
-            startTime = productCase.startTime,
-            endTime = productCase.endTime,
-            validTill = productCase.validTill,
-            fromLocation = Just $ productCase.fromLocationId,
-            toLocation = Just $ productCase.toLocationId,
-            organizationId = transporterId,
-            parentId = Nothing,
-            udf1 = productCase.udf1,
-            udf2 = productCase.udf2,
-            udf3 = productCase.udf3,
-            udf4 = productCase.udf4,
-            udf5 = productCase.udf5,
-            info = productCase.info,
-            createdAt = now,
-            updatedAt = now
-          }
-  pure productInstance
-
-sendOnSearchFailed :: BaseUrl -> Case.Case -> Org.Organization -> Text -> Flow AckResponse
-sendOnSearchFailed bapUri productCase transporterOrg err = do
-  appEnv <- ask
-  currTime <- getCurrentTime
-  let context =
-        Context.Context
-          { domain = Domain.MOBILITY,
-            country = Just "IND",
-            city = Nothing,
-            action = "on_search",
-            core_version = Just "0.8.2",
-            domain_version = Just "0.8.2",
-            transaction_id = last $ T.split (== '_') . getShortId $ productCase.shortId,
-            message_id = getShortId $ productCase.shortId,
-            bap_uri = Just bapUri,
-            bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
-            timestamp = currTime,
-            ttl = Nothing
-          }
-  let payload =
-        Callback.CallbackReq
-          { context,
-            contents =
-              Left $
-                Core.Error
-                  { _type = Core.DOMAIN_ERROR,
-                    code = err,
-                    path = Nothing,
-                    message = Nothing
-                  }
-          }
-  let bppShortId = getShortId $ transporterOrg.shortId
-  ExternalAPI.onSearch payload bppShortId
-  return Ack
-
-sendOnSearchSuccess :: BaseUrl -> Case.Case -> Org.Organization -> ProductInstance.ProductInstance -> Flow AckResponse
-sendOnSearchSuccess bapUri productCase transporterOrg productInstance = do
-  let piStatus = productInstance.status
-  let productInstances =
-        case piStatus of
-          ProductInstance.OUTOFSTOCK -> []
-          _ -> [productInstance]
-  onSearchPayload <- mkOnSearchPayload bapUri productCase productInstances transporterOrg
-  let bppShortId = getShortId $ transporterOrg.shortId
-  ExternalAPI.onSearch onSearchPayload bppShortId
-  return Ack
-
-mkOnSearchPayload :: BaseUrl -> Case.Case -> [ProductInstance.ProductInstance] -> Org.Organization -> Flow API.OnSearchReq
-mkOnSearchPayload bapUri productCase productInstances transporterOrg = do
-  currTime <- getCurrentTime
-  appEnv <- ask
-  let context =
-        Context.Context
-          { domain = Domain.MOBILITY,
-            country = Just "IND",
-            city = Nothing,
-            action = "on_search",
-            core_version = Just "0.8.2",
-            domain_version = Just "0.8.2",
-            transaction_id = last $ T.split (== '_') . getShortId $ productCase.shortId,
-            message_id = getShortId $ productCase.shortId,
-            bap_uri = Just bapUri,
-            bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
-            timestamp = currTime,
-            ttl = Nothing
-          }
-  piCount <- MPI.getCountByStatus (transporterOrg.id) Case.RIDEORDER
-  let stats = mkProviderStats piCount
-  let provider = mkProviderInfo transporterOrg stats
-  catalog <- ExternalAPITransform.mkCatalog productCase productInstances provider
   return
-    Callback.CallbackReq
-      { context,
-        contents = Right $ API.OnSearchServices catalog
+    ProductInstance.ProductInstance
+      { id = productInstanceId,
+        caseId = productCase.id,
+        productId = products.id,
+        personId = Nothing,
+        personUpdatedAt = Nothing,
+        shortId = ShortId shortId,
+        entityType = ProductInstance.VEHICLE,
+        entityId = Nothing,
+        quantity = 1,
+        _type = Case.RIDESEARCH,
+        price = price,
+        status = status,
+        startTime = productCase.startTime,
+        endTime = productCase.endTime,
+        validTill = productCase.validTill,
+        fromLocation = Just $ productCase.fromLocationId,
+        toLocation = Just $ productCase.toLocationId,
+        organizationId = transporterId,
+        parentId = Nothing,
+        udf1 = productCase.udf1,
+        udf2 = productCase.udf2,
+        udf3 = productCase.udf3,
+        udf4 = productCase.udf4,
+        udf5 = productCase.udf5,
+        info = productCase.info,
+        createdAt = now,
+        updatedAt = now
       }
+
+mkOnSearchPayload ::
+  Case.Case ->
+  [ProductInstance.ProductInstance] ->
+  Org.Organization ->
+  Flow API.OnSearchServices
+mkOnSearchPayload productCase productInstances transporterOrg = do
+  MPI.getCountByStatus (transporterOrg.id) Case.RIDEORDER
+    <&> mkProviderInfo transporterOrg . mkProviderStats
+    >>= ExternalAPITransform.mkCatalog productCase productInstances
+    <&> API.OnSearchServices
 
 mkProviderInfo :: Org.Organization -> APICase.ProviderStats -> APICase.ProviderInfo
 mkProviderInfo org stats =

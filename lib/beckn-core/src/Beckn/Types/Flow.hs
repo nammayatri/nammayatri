@@ -1,9 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Beckn.Types.Flow (FlowR, runFlowR, HasFlowEnv) where
+module Beckn.Types.Flow (FlowR, HasFlowEnv, runFlowR) where
 
 import Beckn.Types.Field
-import Beckn.Types.Logging
 import Beckn.Utils.Logging
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
@@ -11,10 +10,6 @@ import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 
 type FlowR r = ReaderT r L.Flow
-
-instance Log (FlowR r) where
-  logOutput = logOutputImplementation
-  withLogTag = withLogTagImplementation
 
 runFlowR :: R.FlowRuntime -> r -> FlowR r a -> IO a
 runFlowR flowRt r x = I.runFlow flowRt . runReaderT x $ r
@@ -25,3 +20,7 @@ type HasFlowEnv m r fields =
     MonadReader r m,
     HasFields r fields
   )
+
+instance Log (FlowR r) where
+  logOutput = logOutputImplementation
+  withLogTag = withLogTagImplementation

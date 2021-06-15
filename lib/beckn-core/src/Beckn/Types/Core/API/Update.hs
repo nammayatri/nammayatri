@@ -11,6 +11,15 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Order
 import EulerHS.Prelude hiding (id)
+import Servant (JSON, Post, ReqBody, (:>))
+
+type UpdateAPI =
+  "on_update"
+    :> ReqBody '[JSON] OnUpdateReq
+    :> Post '[JSON] OnUpdateRes
+
+onUpdate :: Proxy UpdateAPI
+onUpdate = Proxy
 
 data UpdateReq = UpdateReq
   { context :: Context,

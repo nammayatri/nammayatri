@@ -1,60 +1,79 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module ExternalAPI.Flow where
 
 import App.Types
-import Beckn.Types.Core.API.Call
-import Beckn.Types.Core.API.Cancel
-import Beckn.Types.Core.API.Confirm
-import Beckn.Types.Core.API.Search
-import Beckn.Types.Core.API.Status
-import Beckn.Types.Core.API.Track
-import Beckn.Types.Core.API.Update
+import Beckn.Types.Core.API.Call as API
+import Beckn.Types.Core.API.Callback
+import Beckn.Types.Core.Error
 import Beckn.Types.Id
-import Beckn.Utils.Error.BecknAPIError
+import Beckn.Types.Storage.Case as Case
+import Beckn.Types.Storage.Organization as Org
+import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
+import qualified Beckn.Utils.Error.BecknAPIError as Beckn
+import Control.Arrow ((>>>))
+import Control.Lens.Operators ((?~))
+import qualified Data.Text as T
 import EulerHS.Prelude
-import qualified ExternalAPI.Types as API
+import Storage.Queries.Case as Case
 import Storage.Queries.Organization as Org
 import Types.Error
 import Utils.Auth
 import Utils.Common
 
-onSearch :: OnSearchReq -> Text -> Flow ()
-onSearch req bppShortId = do
+getGatewayUrl :: Flow BaseUrl
+getGatewayUrl = do
   appConfig <- ask
-  authKey <- getHttpManagerKey bppShortId
-  gatewayShortId <- xGatewaySelector appConfig & fromMaybeM GatewaySelectorNotSet
+  gatewayShortId <- appConfig.xGatewaySelector & fromMaybeM GatewaySelectorNotSet
   gatewayOrg <- Org.findOrgByShortId $ ShortId gatewayShortId
-  callbackUrl <- case gatewayShortId of
+  case gatewayShortId of
     "NSDL.BG.1" -> appConfig.xGatewayNsdlUrl & fromMaybeM NSDLBaseUrlNotSet
     "JUSPAY.BG.1" -> gatewayOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     _ -> throwError UnsupportedGatewaySelector
-  callBecknAPI (Just authKey) Nothing callbackUrl (API.onSearch req) "on_search"
 
-onTrackTrip :: BaseUrl -> OnTrackTripReq -> Text -> Flow ()
-onTrackTrip url req bppShortId = do
+withCallback ::
+  Org.Organization ->
+  WithBecknCallback api callback_success AppEnv
+withCallback transporter action api context cbUrl f = do
+  let bppShortId = getShortId $ transporter.shortId
   authKey <- getHttpManagerKey bppShortId
-  callBecknAPI (Just authKey) Nothing url (API.onTrackTrip req) "on_track"
+  bppUri <- makeBppUrl (transporter.id)
+  let context' = context & #bpp_uri ?~ bppUri
+  withBecknCallback (Just authKey) action api context' cbUrl f
 
-onUpdate :: BaseUrl -> OnUpdateReq -> Text -> Flow ()
-onUpdate url req bppShortId = do
+callBAP ::
+  Beckn.IsBecknAPI api (CallbackReq req) =>
+  Text ->
+  Proxy api ->
+  Org.Organization ->
+  Id Case ->
+  Either Error req ->
+  Flow ()
+callBAP action api transporter caseId contents = do
+  case_ <- Case.findById caseId >>= fromMaybeM CaseNotFound
+  bapCallbackUrl <-
+    (case_.udf4) & fromMaybeM (CaseFieldNotPresent "udf4")
+      >>= (Id >>> Org.findOrganizationById)
+      >>= ((^. #callbackUrl) >>> fromMaybeM (OrgFieldNotPresent "callback_url"))
+  let bppShortId = getShortId $ transporter.shortId
   authKey <- getHttpManagerKey bppShortId
-  callBecknAPI (Just authKey) Nothing url (API.onUpdate req) "on_update"
+  txnId <-
+    (getShortId case_.shortId)
+      & T.split (== '_')
+      & reverse
+      & listToMaybe
+      & fromMaybeM (InternalError "Cannot exctract transaction id from case.short_id")
+  bppUri <- makeBppUrl (transporter.id)
+  context <- buildContext action txnId (Just bapCallbackUrl) (Just bppUri)
+  Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $
+    CallbackReq {contents, context}
 
-onConfirm :: BaseUrl -> OnConfirmReq -> Text -> Flow ()
-onConfirm url req bppShortId = do
-  authKey <- getHttpManagerKey bppShortId
-  callBecknAPI (Just authKey) Nothing url (API.onConfirm req) "on_confirm"
-
-onCancel :: BaseUrl -> OnCancelReq -> Text -> Flow ()
-onCancel url req bppShortId = do
-  authKey <- getHttpManagerKey bppShortId
-  callBecknAPI (Just authKey) Nothing url (API.onCancel req) "on_cancel"
-
-onStatus :: BaseUrl -> OnStatusReq -> Text -> Flow ()
-onStatus url req bppShortId = do
-  authKey <- getHttpManagerKey bppShortId
-  callBecknAPI (Just authKey) Nothing url (API.onStatus req) "on_status"
+makeBppUrl :: Id Org.Organization -> Flow BaseUrl
+makeBppUrl (Id transporterId) =
+  asks nwAddress
+    <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
 initiateCall :: CallReq -> Flow ()
 initiateCall req = do
   url <- xAppUri <$> ask
-  callBecknAPI Nothing (Just "UNABLE_TO_CALL") url (API.initiateCall req) "call/to_customer"
+  Beckn.callBecknAPI Nothing (Just "UNABLE_TO_CALL") "call/to_customer" API.callsAPI url req

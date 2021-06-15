@@ -3,21 +3,18 @@ module Product.ProductInstance where
 import App.Types
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Loc
+import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
-import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
 import qualified Models.Case as CQ
-import qualified Models.Case as Case
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Allocation as AQ
-import qualified Storage.Queries.Case as QCase
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ
@@ -56,18 +53,10 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandlerAP
 
 notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> Flow ()
 notifyUpdateToBAP searchPi orderPi updatedStatus = do
-  -- Send callback to BAP
-  bapOrg <- fetchBapOrganization $ orderPi.caseId
-  bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  notifyTripDetailsToGateway searchPi orderPi bapCallbackUrl
-  notifyStatusUpdateReq searchPi updatedStatus bapCallbackUrl
-  where
-    fetchBapOrganization caseId = do
-      prodCase <- fetchCase caseId >>= fromMaybeM CaseNotFound
-      bapOrgId <- prodCase.udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
-      OQ.findOrganizationById $ Id bapOrgId
-    fetchCase caseId = do
-      QCase.findById caseId
+  -- Send callbacks to BAP
+  transporter <- OQ.findOrganizationById $ searchPi.organizationId
+  notifyTripDetailsToGateway transporter searchPi orderPi
+  notifyStatusUpdateReq transporter searchPi updatedStatus
 
 listDriverRides :: SR.RegistrationToken -> Id SP.Person -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandlerAPI $ do
@@ -184,38 +173,29 @@ assignDriver productInstanceId driverId = do
           "Check the app for more details."
         ]
 
-notifyTripDetailsToGateway :: PI.ProductInstance -> PI.ProductInstance -> BaseUrl -> Flow ()
-notifyTripDetailsToGateway searchPi orderPi bapCallbackUrl = do
-  trackerCase <- CQ.findByParentCaseIdAndType (searchPi.caseId) Case.LOCATIONTRACKER
-  transporter <- OQ.findOrganizationById $ searchPi.organizationId
-  let bppShortId = getShortId $ transporter.shortId
-  parentCase <- CQ.findById (searchPi.caseId)
-  case (trackerCase, parentCase) of
-    (Just x, y) -> BP.notifyTripInfoToGateway orderPi x y bapCallbackUrl bppShortId
-    _ -> return ()
+notifyTripDetailsToGateway :: SO.Organization -> PI.ProductInstance -> PI.ProductInstance -> Flow ()
+notifyTripDetailsToGateway transporter searchPi orderPi = do
+  trackerCaseMb <- CQ.findByParentCaseIdAndType (searchPi.caseId) Case.LOCATIONTRACKER
+  whenJust trackerCaseMb $ \trackerCase ->
+    BP.notifyTripInfoToGateway orderPi (trackerCase.id) transporter (searchPi.caseId)
 
-notifyStatusUpdateReq :: PI.ProductInstance -> PI.ProductInstanceStatus -> BaseUrl -> Flow ()
-notifyStatusUpdateReq searchPi status bapCallbackUrl = do
-  transporterOrg <- findOrganization
-  let bppShortId = getShortId $ transporterOrg.shortId
-  searchCase <- Case.findById $ searchPi.caseId
-  let txnId = last . T.splitOn "_" . getShortId $ searchCase.shortId
+notifyStatusUpdateReq :: SO.Organization -> PI.ProductInstance -> PI.ProductInstanceStatus -> Flow ()
+notifyStatusUpdateReq transporterOrg searchPi status = do
   case status of
     PI.CANCELLED -> do
-      admins <- getAdmins transporterOrg
-      BP.notifyCancelToGateway (searchPi.id) bapCallbackUrl bppShortId txnId
+      admins <- getAdmins
+      BP.notifyCancelToGateway searchPi transporterOrg
       Notify.notifyCancelReqByBP searchPi admins
     PI.TRIP_REASSIGNMENT -> do
-      admins <- getAdmins transporterOrg
+      admins <- getAdmins
       Notify.notifyDriverCancelledRideRequest searchPi admins
-      notifyStatusToGateway bppShortId txnId
-    _ -> notifyStatusToGateway bppShortId txnId
+      notifyStatusToGateway
+    _ -> notifyStatusToGateway
   where
-    findOrganization = OQ.findOrganizationById $ searchPi.organizationId
-    getAdmins transporterOrg = do
+    getAdmins = do
       if transporterOrg.enabled
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI.organizationId searchPi]
         else pure []
-    notifyStatusToGateway bppShortId txnId = do
+    notifyStatusToGateway = do
       trackerPi <- PIQ.findByParentIdType (searchPi.id) Case.LOCATIONTRACKER
-      BP.notifyServiceStatusToGateway (searchPi.id) trackerPi bapCallbackUrl bppShortId txnId
+      BP.notifyServiceStatusToGateway transporterOrg searchPi trackerPi

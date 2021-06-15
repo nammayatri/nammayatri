@@ -1,22 +1,19 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-{-# HLINT ignore "Reduce duplication" #-}
-
 module Product.Dunzo.Flow where
 
 import App.Types
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
+import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.Combinators hiding (Context)
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
-import qualified EulerHS.Types as ET
 import qualified ExternalAPI.Dunzo.Flow as API
 import ExternalAPI.Dunzo.Types
 import Product.Dunzo.Transform
@@ -48,61 +45,33 @@ search org req = do
   bapUrl <- context.bap_uri & fromMaybeM (InvalidRequest "You should pass bap uri.")
   bap <- Org.findByBapUrl bapUrl >>= fromMaybeM OrgDoesNotExist
   dzBACreds <- getDzBAPCreds bap
-  fork "Search" $ do
-    eres <- getQuote dzBACreds config quoteReq
-    logTagInfo (req.context.transaction_id <> "_QuoteRes") $ show eres
-    sendCb context eres
-  return Ack
-  where
-    sendCb context res = do
-      cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-      case res of
-        Right quoteRes -> do
-          onSearchReq <- mkOnSearchReq org context quoteRes
-          logTagInfo (req.context.transaction_id <> "_on_search req") $ encodeToText onSearchReq
-          onSearchResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onSearchAPI onSearchReq) "search"
-          logTagInfo (req.context.transaction_id <> "_on_search res") $ show onSearchResp
-        Left err -> do
-          let onSearchErrReq = mkOnSearchErrReq context err
-          logTagInfo (req.context.transaction_id <> "_on_search err req") $ encodeToText onSearchErrReq
-          onSearchResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onSearchAPI onSearchErrReq) "search"
-          logTagInfo (req.context.transaction_id <> "_on_search err res") $ show onSearchResp
+  cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  withCallback "search" API.onSearchAPI context cbUrl $
+    getQuote dzBACreds config quoteReq
+      >>= mkOnSearchServices
 
 select :: Org.Organization -> API.SelectReq -> Flow API.SelectRes
 select org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  let ctx = updateBppUri (req.context) dzBPNwAddress
+  let context = updateBppUri (req.context) dzBPNwAddress
   validateOrderRequest $ req.message.order
   validateReturn $ req.message.order
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   dzBACreds <- getDzBAPCreds org
-  fork "Select" do
-    quoteReq <- mkQuoteReqFromSelect req
-    eres <- getQuote dzBACreds conf quoteReq
-    logTagInfo (req.context.transaction_id <> "_QuoteRes") $ show eres
-    sendCallback ctx dzQuotationTTLinMin cbUrl eres
-  return Ack
+  withCallback "select" API.onSelectAPI context cbUrl $ do
+    quoteRes <-
+      mkQuoteReqFromSelect req
+        >>= getQuote dzBACreds conf
+    let reqOrder = req.message.order
+    onSelectMessage <- mkOnSelectOrder reqOrder dzQuotationTTLinMin quoteRes
+    let order = onSelectMessage.order
+    -- onSelectMessage has quotation
+    let quote = fromJust $ onSelectMessage.order.quotation
+    let quoteId = quote.id
+    let orderDetails = OrderDetails order quote
+    Storage.storeQuote quoteId orderDetails
+    return onSelectMessage
   where
-    sendCallback context quotationTTLinMin cbUrl = \case
-      Right quoteRes -> do
-        let reqOrder = req.message.order
-        onSelectMessage <- mkOnSelectOrder reqOrder quotationTTLinMin quoteRes
-        let onSelectReq = mkOnSelectReq context onSelectMessage
-        let order = onSelectMessage.order
-        -- onSelectMessage has quotation
-        let quote = fromJust $ onSelectMessage.order.quotation
-        let quoteId = quote.id
-        let orderDetails = OrderDetails order quote
-        Storage.storeQuote quoteId orderDetails
-        logTagInfo (req.context.transaction_id <> "_on_select req") $ encodeToText onSelectReq
-        onSelectResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onSelectAPI onSelectReq) "select"
-        logTagInfo (req.context.transaction_id <> "_on_select res") $ show onSelectResp
-      Left err -> do
-        let onSelectReq = mkOnSelectErrReq context err
-        logTagInfo (req.context.transaction_id <> "_on_select err req") $ encodeToText onSelectReq
-        onSelectResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onSelectAPI onSelectReq) "select"
-        logTagInfo (req.context.transaction_id <> "_on_select err res") $ show onSelectResp
-
     validateOrderRequest order = do
       let tasks = order.tasks
       when (length tasks /= 1) $ throwError (InvalidRequest "Currently processing only one task per order.")
@@ -131,34 +100,20 @@ init org req = do
   let order = orderDetails.order
   validateReturn order
   dzBACreds <- getDzBAPCreds org
-  fork "init" do
-    quoteReq <- mkQuoteReqFromSelect $ API.SelectReq context (API.SelectOrder (orderDetails.order))
-    eres <- getQuote dzBACreds conf quoteReq
-    logTagInfo (req.context.transaction_id <> "_QuoteRes") $ show eres
-    sendCb orderDetails context cbUrl payeeDetails quoteId dzQuotationTTLinMin eres
-  return Ack
-  where
-    sendCb orderDetails context cbUrl payeeDetails quoteId quotationTTLinMin (Right res) = do
-      -- quoteId will be used as orderId
-      onInitMessage <-
-        mkOnInitMessage
+  withCallback "init" API.onInitAPI context cbUrl $ do
+    -- quoteId will be used as orderId
+    onInitMessage <-
+      mkQuoteReqFromSelect (API.SelectReq context (API.SelectOrder (orderDetails.order)))
+        >>= getQuote dzBACreds conf
+        >>= mkOnInitMessage
           quoteId
-          quotationTTLinMin
+          dzQuotationTTLinMin
           (orderDetails.order)
           payeeDetails
           req
-          res
-      let onInitReq = mkOnInitReq context onInitMessage
-      createCaseIfNotPresent (getId $ org.id) (onInitMessage.order) (orderDetails.quote)
-      logTagInfo (req.context.transaction_id <> "_on_init req") $ encodeToText onInitReq
-      onInitResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onInitAPI onInitReq) "init"
-      logTagInfo (req.context.transaction_id <> "_on_init res") $ show onInitResp
-    sendCb _ context cbUrl _ _ _ (Left err) = do
-      let onInitReq = mkOnInitErrReq context err
-      logTagInfo (req.context.transaction_id <> "_on_init err req") $ encodeToText onInitReq
-      onInitResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onInitAPI onInitReq) "init"
-      logTagInfo (req.context.transaction_id <> "_on_init err res") $ show onInitResp
-
+    createCaseIfNotPresent (getId $ org.id) (onInitMessage.order) (orderDetails.quote)
+    return onInitMessage
+  where
     createCaseIfNotPresent orgId order quote = do
       now <- getCurrentTime
       let caseId = Id $ fromJust $ order.id
@@ -216,13 +171,13 @@ confirm org req = do
   let updatedOrderDetailsWTxn =
         orderDetails & ((#order . #payment . _Just . #transaction_id) .~ txnId)
   dzBACreds <- getDzBAPCreds org
-  fork "confirm" do
-    createTaskReq <- mkCreateTaskReq order
-    logTagInfo (req.context.transaction_id <> "_CreateTaskReq") (encodeToText createTaskReq)
-    eres <- createTaskAPI dzBACreds dconf createTaskReq
-    logTagInfo (req.context.transaction_id <> "_CreateTaskRes") $ show eres
-    sendCb case_ updatedOrderDetailsWTxn context cbUrl payeeDetails eres
-  return Ack
+  withCallback "confirm" API.onConfirmAPI context cbUrl $ do
+    taskStatus <- createTaskAPI dzBACreds dconf =<< mkCreateTaskReq order
+    currTime <- getCurrentTime
+    let uOrder = updateOrder (org.name) currTime (updatedOrderDetailsWTxn.order) payeeDetails taskStatus
+    checkAndLogPriceDiff (updatedOrderDetailsWTxn.order) uOrder
+    updateCase case_ (updatedOrderDetailsWTxn & #order .~ uOrder) taskStatus
+    return $ API.ConfirmResMessage uOrder
   where
     verifyPayment :: Order -> Order -> Flow ()
     verifyPayment reqOrder order = do
@@ -251,22 +206,6 @@ confirm org req = do
       token <- fetchToken dzBACreds conf
       API.createTask dzClientId token dzUrl dzTestMode req'
 
-    sendCb case_ orderDetails context cbUrl payeeDetails = \case
-      Right taskStatus -> do
-        currTime <- getCurrentTime
-        let uOrder = updateOrder (org.name) currTime (orderDetails.order) payeeDetails taskStatus
-        checkAndLogPriceDiff (orderDetails.order) uOrder
-        updateCase case_ (orderDetails & #order .~ uOrder) taskStatus
-        onConfirmReq <- mkOnConfirmReq context uOrder
-        logTagInfo (req.context.transaction_id <> "_on_confirm req") $ encodeToText onConfirmReq
-        eres <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onConfirmAPI onConfirmReq) "confirm"
-        logTagInfo (req.context.transaction_id <> "_on_confirm res") $ show eres
-      Left err -> do
-        let onConfirmReq = mkOnConfirmErrReq context err
-        logTagInfo (req.context.transaction_id <> "_on_confirm err req") $ encodeToText onConfirmReq
-        onConfirmResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onConfirmAPI onConfirmReq) "confirm"
-        logTagInfo (req.context.transaction_id <> "_on_confirm err res") $ show onConfirmResp
-
     checkAndLogPriceDiff initOrder confirmOrder = do
       let orderId = fromMaybe "" $ initOrder.id
       let initPrice = convertDecimalValueToAmount . (.amount.value) =<< initOrder.payment
@@ -291,23 +230,11 @@ track org req = do
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  fork "track" do
-    let taskId = getShortId $ case_.shortId
+  withCallback "track" API.onTrackAPI context cbUrl $ do
+    let taskId = getShortId case_.shortId
     dzBACreds <- getDzBAPCreds org
-    eStatusRes <- getStatus dzBACreds conf (TaskId taskId)
-    logTagInfo "StatusRes" $ show eStatusRes
-    case eStatusRes of
-      Left _ -> do
-        let onTrackErrReq = mkOnTrackErrReq context "Failed to fetch tracking URL"
-        logTagInfo (req.context.transaction_id <> "_on_track err req") $ encodeToText onTrackErrReq
-        eres <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onTrackAPI onTrackErrReq) "track"
-        logTagInfo (req.context.transaction_id <> "_on_track err res") $ show eres
-      Right statusRes -> do
-        let onTrackReq = mkOnTrackReq context orderId (statusRes.tracking_url)
-        logTagInfo (req.context.transaction_id <> "_on_track req") $ encodeToText onTrackReq
-        eres <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onTrackAPI onTrackReq) "track"
-        logTagInfo (req.context.transaction_id <> "_on_track res") $ show eres
-  return Ack
+    statusRes <- getStatus dzBACreds conf (TaskId taskId)
+    return $ mkOnTrackMessage orderId (statusRes.tracking_url)
 
 status :: Org.Organization -> API.StatusReq -> Flow API.StatusRes
 status org req = do
@@ -316,41 +243,24 @@ status org req = do
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   payeeDetails <- payee & decodeFromText & fromMaybeM (InternalError "Decode error.")
   let orderId = req.message.order_id
-  c <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  let taskId = getShortId $ c.shortId
+  case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  let taskId = getShortId case_.shortId
   (orderDetails :: OrderDetails) <-
-    c.udf1 >>= decodeFromText
+    case_.udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
   dzBACreds <- getDzBAPCreds org
-  fork "status" do
-    eres <- getStatus dzBACreds conf (TaskId taskId)
-    logTagInfo (req.context.transaction_id <> "_StatusRes") $ show eres
-    sendCb c orderDetails context cbUrl payeeDetails eres
-  return Ack
+  withCallback "status" API.onStatusAPI context cbUrl $ do
+    taskStatus <- getStatus dzBACreds conf (TaskId taskId)
+    let order = orderDetails.order
+    onStatusMessage <- mkOnStatusMessage (org.name) order payeeDetails taskStatus
+    let updatedOrder = onStatusMessage.order
+    let updatedOrderDetails = orderDetails & #order .~ updatedOrder
+    updateCase (case_.id) updatedOrderDetails taskStatus case_
+    return onStatusMessage
   where
     updateCase caseId orderDetails taskStatus case_ = do
       let updatedCase = case_ {udf1 = Just $ encodeToText orderDetails, udf2 = Just $ encodeToText taskStatus}
       Storage.update caseId updatedCase
-
-    callCbAPI cbUrl = callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl . ET.client API.onStatusAPI
-
-    sendCb case_ orderDetails context cbUrl payeeDetails res = do
-      let order = orderDetails.order
-      case res of
-        Right taskStatus -> do
-          onStatusMessage <- mkOnStatusMessage (org.name) order payeeDetails taskStatus
-          onStatusReq <- mkOnStatusReq context onStatusMessage
-          let updatedOrder = onStatusMessage.order
-          let updatedOrderDetails = orderDetails & #order .~ updatedOrder
-          updateCase (case_.id) updatedOrderDetails taskStatus case_
-          logTagInfo (req.context.transaction_id <> "_on_status req") $ encodeToText onStatusReq
-          onStatusRes <- callCbAPI cbUrl onStatusReq "status"
-          logTagInfo (req.context.transaction_id <> "_on_status res") $ show onStatusRes
-        Left err -> do
-          let onStatusReq = mkOnStatusErrReq context err
-          logTagInfo (req.context.transaction_id <> "_on_status err req") $ encodeToText onStatusReq
-          onStatusResp <- callCbAPI cbUrl onStatusReq "status"
-          logTagInfo (req.context.transaction_id <> "_on_status err res") $ show onStatusResp
 
 cancel :: Org.Organization -> API.CancelReq -> Flow API.CancelRes
 cancel org req = do
@@ -362,11 +272,12 @@ cancel org req = do
   let taskId = getShortId $ case_.shortId
   orderDetails <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
-  fork "cancel" do
-    eres <- callCancelAPI dzBACreds conf (TaskId taskId)
-    logTagInfo (req.context.transaction_id <> "_CancelRes") $ show eres
-    sendCb case_ orderDetails context cbUrl eres
-  return Ack
+  withCallback "cancel" API.onCancelAPI context cbUrl $ do
+    callCancelAPI dzBACreds conf (TaskId taskId)
+    let updatedOrder = cancelOrder (orderDetails.order)
+    let updatedOrderDetails = orderDetails & #order .~ updatedOrder
+    updateCase case_.id updatedOrderDetails case_
+    return $ API.CancelResMessage updatedOrder
   where
     callCancelAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
       token <- fetchToken dzBACreds conf
@@ -378,41 +289,22 @@ cancel org req = do
       let updatedCase = case_ {udf1 = Just $ encodeToText orderDetails}
       Storage.update caseId updatedCase
 
-    sendCb case_ orderDetails context cbUrl = \case
-      Right () -> do
-        let updatedOrder = cancelOrder (orderDetails.order)
-        onCancelReq <- mkOnCancelReq context updatedOrder
-        let updatedOrderDetails = orderDetails & #order .~ updatedOrder
-        updateCase (case_.id) updatedOrderDetails case_
-        logTagInfo (req.context.transaction_id <> "_on_cancel req") $ encodeToText onCancelReq
-        onCancelRes <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onCancelAPI onCancelReq) "cancel"
-        logTagInfo (req.context.transaction_id <> "_on_cancel res") $ show onCancelRes
-      Left err -> do
-        let onCancelReq = mkOnCancelErrReq context err
-        logTagInfo (req.context.transaction_id <> "_on_cancel err req") $ encodeToText onCancelReq
-        onCancelResp <- callAPI' (Just HttpSig.signatureAuthManagerKey) cbUrl (ET.client API.onCancelAPI onCancelReq) "cancel"
-        logTagInfo (req.context.transaction_id <> "_on_cancel err res") $ show onCancelResp
-
 update :: Org.Organization -> API.UpdateReq -> Flow API.UpdateRes
 update org req = do
   DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  fork "update" do
+  withCallback "update" API.onUpdateAPI context cbUrl $ do
     -- TODO: Dunzo doesnt have update
-    let onUpdateReq = mkOnUpdateErrReq context
-    logTagInfo (req.context.transaction_id <> "_on_update err req") $ encodeToText onUpdateReq
-    eres <- callAPI cbUrl (ET.client API.onUpdateAPI onUpdateReq) "update"
-    logTagInfo (req.context.transaction_id <> "_on_update err res") $ show eres
-  return Ack
+    throwError $ ActionNotSupported "update"
 
 -- Helpers
-getQuote :: DzBAConfig -> DunzoConfig -> QuoteReq -> Flow (Either Error QuoteRes)
+getQuote :: DzBAConfig -> DunzoConfig -> QuoteReq -> Flow QuoteRes
 getQuote ba@DzBAConfig {..} conf@DunzoConfig {..} quoteReq = do
   token <- fetchToken ba conf
   API.getQuote dzClientId token dzUrl quoteReq
 
-getStatus :: DzBAConfig -> DunzoConfig -> TaskId -> Flow (Either Error TaskStatus)
+getStatus :: DzBAConfig -> DunzoConfig -> TaskId -> Flow TaskStatus
 getStatus dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
   token <- fetchToken dzBACreds conf
   API.taskStatus dzClientId token dzUrl dzTestMode taskId
@@ -422,9 +314,7 @@ fetchToken DzBAConfig {..} DunzoConfig {..} = do
   mToken <- Dz.getToken dzClientId
   case mToken of
     Nothing -> do
-      TokenRes token <-
-        API.getToken dzTokenUrl (TokenReq dzClientId dzClientSecret)
-          >>= liftEither
+      TokenRes token <- API.getToken dzTokenUrl (TokenReq dzClientId dzClientSecret)
       Dz.insertToken dzClientId token
       return token
     Just token -> return token
@@ -442,3 +332,6 @@ validateReturn currOrder =
     -- would fail when there are duplicates in current order items
     unless (null $ (Item.id <$> currOrder.items) List.\\ (Item.id <$> prevOrder.items)) $
       throwError (InvalidRequest "Invalid return order.")
+
+withCallback :: WithBecknCallback api callback_success r
+withCallback = withBecknCallback (Just HttpSig.signatureAuthManagerKey)

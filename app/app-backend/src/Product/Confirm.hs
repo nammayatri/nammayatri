@@ -4,7 +4,7 @@ import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Common hiding (id)
-import Beckn.Types.Core.API.Confirm
+import qualified Beckn.Types.Core.API.Confirm as BecknAPI
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Order (OrderItem (..))
 import Beckn.Types.Id
@@ -48,7 +48,7 @@ confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
   context <- buildContext "confirm" caseId Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
-  ExternalAPI.confirm baseUrl (ConfirmReq context $ ConfirmOrder order)
+  ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)
   return Success
   where
     mkOrder productInstance = do
@@ -68,7 +68,7 @@ confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
             cancellation_policy = Nothing
           }
 
-onConfirm :: Organization.Organization -> OnConfirmReq -> FlowHandler AckResponse
+onConfirm :: Organization.Organization -> BecknAPI.OnConfirmReq -> FlowHandler AckResponse
 onConfirm _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here

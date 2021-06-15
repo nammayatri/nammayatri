@@ -185,13 +185,9 @@ dunzoDifferentCity =
   dunzoLocationError
     gps1
     gps3
-    ( `shouldBe`
-        Error.Error
-          Error.DOMAIN_ERROR
-          "FMD001"
-          Nothing
-          ( Just "Apologies, our services are limited to serviceable areas with in the city only."
-          )
+    ( \Error.Error {..} -> do
+        code `shouldBe` "FMD001"
+        _type `shouldBe` Error.DOMAIN_ERROR
     )
 
 incorrectApiKey :: ClientEnv -> CallbackData -> IO ()

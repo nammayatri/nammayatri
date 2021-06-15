@@ -23,7 +23,6 @@ import Types.Beckn.Catalog
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue
 import Types.Beckn.Descriptor
-import qualified Types.Beckn.Error as CoreErr
 import qualified Types.Beckn.FmdItem as FMD
 import Types.Beckn.FmdOrder
 import qualified Types.Beckn.Item as Core
@@ -73,43 +72,22 @@ mkQuoteReqFromSearch SearchReq {..} = do
             det = address
           }
 
-mkOnSearchReq :: Organization -> Context -> QuoteRes -> Flow OnSearchReq
-mkOnSearchReq _ context res@QuoteRes {..} = do
+mkOnSearchServices :: QuoteRes -> Flow OnSearchServices
+mkOnSearchServices res@QuoteRes {..} = do
   now <- getCurrentTime
   cid <- generateGUID
   itemId <- generateGUID
-  return $
-    CallbackReq
-      { context = context & #action .~ "on_search",
-        contents = Right $ OnSearchServices (catalog cid now itemId)
+  return . OnSearchServices $
+    Catalog
+      { id = cid,
+        categories = [],
+        brands = [],
+        models = [],
+        ttl = now,
+        items = [mkSearchItem itemId res],
+        offers = [],
+        package_categories = []
       }
-  where
-    catalog cid now itemId =
-      Catalog
-        { id = cid,
-          categories = [],
-          brands = [],
-          models = [],
-          ttl = now,
-          items = [mkSearchItem itemId res],
-          offers = [],
-          package_categories = []
-        }
-
-mkOnSearchErrReq :: Context -> Error -> OnSearchReq
-mkOnSearchErrReq context err =
-  CallbackReq
-    { context = context & #action .~ "on_search",
-      contents = Left errResp
-    }
-  where
-    errResp =
-      CoreErr.Error
-        { _type = CoreErr.DOMAIN_ERROR,
-          code = "",
-          path = Nothing,
-          message = Just $ err.message
-        }
 
 mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
 mkQuoteReqFromSelect SelectReq {..} = do
@@ -136,13 +114,6 @@ mkOnSelectOrder order res@QuoteRes {..} = do
           & #quotation ?~ quote
   return $ SelectOrder order'
 
-mkOnSelectReq :: Context -> SelectOrder -> OnSelectReq
-mkOnSelectReq context msg =
-  CallbackReq
-    { context = context & #action .~ "on_select",
-      contents = Right msg
-    }
-
 updateTaskEta :: Task -> Integer -> Flow Task
 updateTaskEta task eta = do
   now <- getCurrentTime
@@ -151,21 +122,6 @@ updateTaskEta task eta = do
   let pickup' = pickup & #time ?~ pickupEta
   return $
     task & #pickup .~ pickup'
-
-mkOnSelectErrReq :: Context -> Error -> OnSelectReq
-mkOnSelectErrReq context err =
-  CallbackReq
-    { context = context & #action .~ "on_search",
-      contents = Left errResp
-    }
-  where
-    errResp =
-      CoreErr.Error
-        { _type = CoreErr.DOMAIN_ERROR,
-          code = "",
-          path = Nothing,
-          message = Just $ err.message
-        }
 
 mkOnInitMessage :: Text -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
 mkOnInitMessage orderId order payee req QuoteRes {..} = do
@@ -178,28 +134,6 @@ mkOnInitMessage orderId order payee req QuoteRes {..} = do
         & #tasks .~ [task]
   where
     billing = req.message.order.billing
-
-mkOnInitReq :: Context -> InitOrder -> OnInitReq
-mkOnInitReq context msg =
-  CallbackReq
-    { context = context & #action .~ "on_init",
-      contents = Right msg
-    }
-
-mkOnInitErrReq :: Context -> Error -> OnInitReq
-mkOnInitErrReq context err =
-  CallbackReq
-    { context = context & #action .~ "on_init",
-      contents = Left errResp
-    }
-  where
-    errResp =
-      CoreErr.Error
-        { _type = CoreErr.DOMAIN_ERROR,
-          code = "",
-          path = Nothing,
-          message = Just $ err.message
-        }
 
 mkCreateOrderReq :: Order -> Flow CreateOrderReq
 mkCreateOrderReq order = do
@@ -225,21 +159,6 @@ mkOnConfirmReq context order =
       { context = context & #action .~ "on_confirm",
         contents = Right $ ConfirmResMessage order
       }
-
-mkOnConfirmErrReq :: Context -> Error -> OnConfirmReq
-mkOnConfirmErrReq context err =
-  CallbackReq
-    { context = context & #action .~ "on_confirm",
-      contents = Left errResp
-    }
-  where
-    errResp =
-      CoreErr.Error
-        { _type = CoreErr.DOMAIN_ERROR,
-          code = "",
-          path = Nothing,
-          message = Just $ err.message
-        }
 
 mkItemDetails :: FMD.Item -> ItemDetails
 mkItemDetails item =

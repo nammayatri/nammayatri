@@ -1,9 +1,9 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE TypeApplications #-}
 
 module ExternalAPI.Delhivery.Flow where
 
 import Beckn.Types.Common
-import Beckn.Types.Error.CallAPIError (unwrapEitherOnlyFromRawError)
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
@@ -24,7 +24,7 @@ getToken ::
   HasCoreMetrics r =>
   BaseUrl ->
   TokenReq ->
-  FlowR r (Either Error TokenRes)
+  FlowR r TokenRes
 getToken url req = callDelhiveryAPI url tokenReq "getToken"
   where
     tokenReq = T.client tokenAPI req
@@ -43,7 +43,7 @@ getQuote ::
   Token ->
   BaseUrl ->
   QuoteReq ->
-  FlowR r (Either Error QuoteRes)
+  FlowR r QuoteRes
 getQuote token url req = callDelhiveryAPI url quoteReq "getQuote"
   where
     quoteReq = T.client quoteAPI (Just token) req
@@ -62,12 +62,10 @@ createOrder ::
   Token ->
   BaseUrl ->
   CreateOrderReq ->
-  FlowR r (Either Error CreateOrderRes)
+  FlowR r CreateOrderRes
 createOrder token url req = callDelhiveryAPI url createOrderReq "createOrder"
   where
     createOrderReq = T.client createOrderAPI (Just token) req
 
-callDelhiveryAPI :: CallAPI env a (Either Error a)
-callDelhiveryAPI url eulerClient method =
-  callApiExtractingApiError Nothing url eulerClient method
-    >>= unwrapEitherOnlyFromRawError Nothing url
+callDelhiveryAPI :: CallAPI env res
+callDelhiveryAPI = callApiUnwrappingApiError (identity @Error) Nothing Nothing

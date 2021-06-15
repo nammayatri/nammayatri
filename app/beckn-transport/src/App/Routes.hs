@@ -26,7 +26,7 @@ import Product.BecknProvider.Confirm as BP
 import Product.BecknProvider.Feedback as BP
 import Product.BecknProvider.Search as BP
 import qualified Product.Call as Call
-import qualified Product.Case.CRUD as Case
+import qualified Product.Case as Case
 import qualified Product.Cron as Cron
 import qualified Product.DriverInformation as DriverInformation
 import qualified Product.HealthCheck as HealthCheck

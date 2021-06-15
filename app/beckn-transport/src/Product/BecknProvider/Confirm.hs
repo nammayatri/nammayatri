@@ -2,13 +2,8 @@ module Product.BecknProvider.Confirm (confirm) where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common hiding (id)
-import qualified Beckn.Types.Core.API.Callback as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Context as Context
-import qualified Beckn.Types.Core.Domain as Domain
-import qualified Beckn.Types.Core.Error as Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
@@ -76,72 +71,33 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
       QCase.create trackerCase
       QProductInstance.create trackerProductInstance
 
-    fork "OnConfirmRequest" $ onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg
-    return Ack
+    bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+    ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) bapCallbackUrl $
+      onConfirmCallback
+        orderProductInstance
+        productInstance
+        orderCase
+        (trackerCase.id)
+        transporterOrg
 
 onConfirmCallback ::
-  Organization.Organization ->
   ProductInstance.ProductInstance ->
   ProductInstance.ProductInstance ->
   Case.Case ->
-  Case.Case ->
-  Case.Case ->
+  Id Case.Case ->
   Organization.Organization ->
-  Flow ()
-onConfirmCallback bapOrg orderProductInstance productInstance orderCase searchCase trackerCase transporterOrg = do
+  Flow API.ConfirmOrder
+onConfirmCallback orderProductInstance productInstance orderCase trackerCaseId transporterOrg = do
   let transporterId = transporterOrg.id
   let prodInstId = productInstance.id
-  result <- runSafeFlow $ do
-    pickupPoint <- (productInstance.fromLocation) & fromMaybeM (PIFieldNotPresent "location_id")
-    vehicleVariant :: Vehicle.Variant <-
-      (orderCase.udf1 >>= readMaybe . T.unpack)
-        & fromMaybeM (CaseFieldNotPresent "udf1")
-    driverPool <- calculateDriverPool pickupPoint transporterId vehicleVariant
-    setDriverPool prodInstId driverPool
-    logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  let bppShortId = getShortId $ transporterOrg.shortId
-  case result of
-    Right () -> notifySuccessGateway bapCallbackUrl bppShortId
-    Left err -> do
-      logTagError "OnConfirmCallback" $ "Error happened when sending on_confirm request. Error: " +|| err ||+ ""
-      notifyErrorGateway err bapCallbackUrl bppShortId
-  where
-    notifySuccessGateway bapCallbackUrl bppShortId = do
-      onConfirmPayload <- mkOnConfirmPayload bapCallbackUrl searchCase orderProductInstance trackerCase
-      logTagInfo "OnConfirmCallback" $ "Sending OnConfirm payload to " +|| bapCallbackUrl ||+ " with payload " +|| onConfirmPayload ||+ ""
-      ExternalAPI.onConfirm bapCallbackUrl onConfirmPayload bppShortId
-    notifyErrorGateway err bapCallbackUrl bppShortId = do
-      currTime <- getCurrentTime
-      appEnv <- ask
-      let context =
-            Context.Context
-              { domain = Domain.MOBILITY,
-                country = Just "IND",
-                city = Nothing,
-                action = "on_confirm",
-                core_version = Just "0.8.2",
-                domain_version = Just "0.8.2",
-                transaction_id = last $ T.split (== '_') . getShortId $ searchCase.shortId,
-                message_id = getShortId $ searchCase.shortId,
-                bap_uri = Nothing,
-                bpp_uri = Just $ BP.makeBppUrl transporterOrg $ nwAddress appEnv,
-                timestamp = currTime,
-                ttl = Nothing
-              }
-      let payload =
-            API.CallbackReq
-              { context,
-                contents =
-                  Left $
-                    Error.Error
-                      { _type = Error.DOMAIN_ERROR,
-                        code = err,
-                        path = Nothing,
-                        message = Nothing
-                      }
-              }
-      ExternalAPI.onConfirm bapCallbackUrl payload bppShortId
+  pickupPoint <- (productInstance.fromLocation) & fromMaybeM (PIFieldNotPresent "location_id")
+  vehicleVariant :: Vehicle.Variant <-
+    (orderCase.udf1 >>= readMaybe . T.unpack)
+      & fromMaybeM (CaseFieldNotPresent "udf1")
+  driverPool <- calculateDriverPool pickupPoint transporterId vehicleVariant
+  setDriverPool prodInstId driverPool
+  logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
+  mkOnConfirmPayload orderProductInstance trackerCaseId
 
 mkOrderCase :: Case.Case -> Flow Case.Case
 mkOrderCase Case.Case {..} = do
@@ -151,7 +107,7 @@ mkOrderCase Case.Case {..} = do
       { id = cid,
         name = Nothing,
         description = Just "Case to order a Ride",
-        shortId = ShortId shortId_,
+        shortId = shortId_,
         industry = Case.MOBILITY,
         _type = Case.RIDEORDER,
         parentCaseId = Just id,
@@ -176,7 +132,7 @@ mkOrderProductInstance caseId prodInst = do
         personUpdatedAt = Nothing,
         entityType = ProductInstance.VEHICLE,
         entityId = Nothing,
-        shortId = ShortId shortId,
+        shortId = shortId,
         quantity = 1,
         price = prodInst.price,
         _type = Case.RIDEORDER,
@@ -198,13 +154,13 @@ mkOrderProductInstance caseId prodInst = do
         udf5 = prodInst.udf5
       }
 
-mkTrackerCase :: Case.Case -> Text -> UTCTime -> Text -> Case.Case
+mkTrackerCase :: Case.Case -> Text -> UTCTime -> ShortId Case.Case -> Case.Case
 mkTrackerCase case_@Case.Case {..} uuid now shortId_ =
   Case.Case
     { id = Id uuid,
       name = Nothing,
       description = Just "Case to track a Ride",
-      shortId = ShortId shortId_,
+      shortId = shortId_,
       industry = Case.MOBILITY,
       _type = Case.LOCATIONTRACKER,
       status = Case.NEW,
@@ -251,15 +207,8 @@ mkTrackerProductInstance caseId prodInst currTime = do
         udf5 = prodInst.udf5
       }
 
-mkOnConfirmPayload :: BaseUrl -> Case.Case -> ProductInstance.ProductInstance -> Case.Case -> Flow API.OnConfirmReq
-mkOnConfirmPayload bapUri searchCase orderPI trackerCase = do
-  let txnId = last . T.splitOn "_" . getShortId $ searchCase.shortId
-  bppUri <- asks xAppUri
-  context <- buildContext "on_confirm" txnId (Just bapUri) (Just bppUri)
-  trip <- BP.mkTrip trackerCase orderPI
+mkOnConfirmPayload :: ProductInstance.ProductInstance -> Id Case.Case -> Flow API.ConfirmOrder
+mkOnConfirmPayload orderPI trackerCaseId = do
+  trip <- BP.mkTrip trackerCaseId orderPI
   order <- ExternalAPITransform.mkOrder orderPI (Just trip)
-  return
-    API.CallbackReq
-      { context,
-        contents = Right $ API.ConfirmOrder order
-      }
+  return $ API.ConfirmOrder order

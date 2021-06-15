@@ -22,5 +22,5 @@ instance IsAPIError APICallError where
 callOwnAPI ::
   Maybe ET.ManagerSelector ->
   Maybe Text ->
-  CallAPI env a a
+  CallAPI env a
 callOwnAPI = callApiUnwrappingApiError APICallError

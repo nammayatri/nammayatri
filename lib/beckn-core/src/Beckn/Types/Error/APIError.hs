@@ -14,6 +14,8 @@ import EulerHS.Prelude hiding (Show, pack, show)
 import Network.HTTP.Types (Header)
 import Prelude (Show (..))
 
+type IsAPIException e = (IsAPIError e, Exception e)
+
 data APIError = APIError
   { errorCode :: Text,
     errorMessage :: Maybe Text
@@ -41,8 +43,6 @@ instance Show APIException where
   show (APIException e) = show e
 
 instance Exception APIException
-
-type IsAPIException e = (IsAPIError e, Exception e)
 
 toAPIError :: IsAPIError e => e -> APIError
 toAPIError e =

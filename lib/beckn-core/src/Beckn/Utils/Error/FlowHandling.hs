@@ -6,6 +6,7 @@ module Beckn.Utils.Error.FlowHandling
     withFlowHandlerBecknAPI',
     apiHandler,
     becknApiHandler,
+    someExceptionToBecknApiError,
   )
 where
 
@@ -17,7 +18,6 @@ import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError
 import Beckn.Utils.Logging
 import Control.Concurrent.STM (isEmptyTMVar)
-import Control.Monad.Catch (Handler (..), catches)
 import Control.Monad.Reader
 import qualified Data.Aeson as A
 import qualified EulerHS.Language as L
@@ -54,23 +54,29 @@ handleIfUp flow = do
     else throwApiError ServerUnavailable
 
 apiHandler :: (MonadCatch m, Log m) => m a -> m a
-apiHandler =
-  flip
-    catches
-    [ Handler \(APIException err) -> throwApiError err,
-      Handler \(SomeException e) -> throwApiError . InternalError $ show e
-    ]
+apiHandler = (`catch` someExceptionToApiErrorThrow)
 
-becknApiHandler :: (MonadCatch m, MonadThrow m, Log m) => m a -> m a
-becknApiHandler =
-  flip
-    catches
-    [ Handler \(BecknAPIException err) -> throwBecknApiError err,
-      Handler \(APIException err) ->
-        throwIsApiError becknAPIErrorFromAPIError err,
-      Handler \(SomeException e) ->
-        throwIsApiError becknAPIErrorFromAPIError (InternalError $ show e)
-    ]
+becknApiHandler :: (MonadCatch m, Log m) => m a -> m a
+becknApiHandler = (`catch` someExceptionToBecknApiErrorThrow)
+
+someExceptionToApiErrorThrow :: (MonadCatch m, Log m) => SomeException -> m a
+someExceptionToApiErrorThrow exc
+  | Just (APIException err) <- fromException exc = throwApiError err
+  | otherwise = throwApiError . InternalError $ show exc
+
+someExceptionToBecknApiErrorThrow :: (MonadCatch m, Log m) => SomeException -> m a
+someExceptionToBecknApiErrorThrow exc
+  | Just (BecknAPIException err) <- fromException exc = throwBecknApiError err
+  | Just (APIException err) <- fromException exc =
+    throwIsApiError becknAPIErrorFromAPIError err
+  | otherwise =
+    throwIsApiError becknAPIErrorFromAPIError . InternalError $ show exc
+
+someExceptionToBecknApiError :: SomeException -> BecknAPIError
+someExceptionToBecknApiError exc
+  | Just (BecknAPIException err) <- fromException exc = toBecknAPIError err
+  | Just (APIException err) <- fromException exc = becknAPIErrorFromAPIError err
+  | otherwise = becknAPIErrorFromAPIError . InternalError $ show exc
 
 throwApiError :: (Log m, MonadThrow m, IsAPIError e) => e -> m a
 throwApiError = throwIsApiError toAPIError

@@ -19,6 +19,17 @@ type CancelAPI =
     :> ReqBody '[JSON] CancelReq
     :> Post '[JSON] AckResponse
 
+cancel :: Proxy CancelAPI
+cancel = Proxy
+
+type OnCancelAPI =
+  "on_cancel"
+    :> ReqBody '[JSON] OnCancelReq
+    :> Post '[JSON] OnCancelRes
+
+onCancel :: Proxy OnCancelAPI
+onCancel = Proxy
+
 data CancelReq = CancelReq
   { context :: Context,
     message :: CancelReqMessage

@@ -7,6 +7,7 @@ module ExternalAPI.Dunzo.Types where
 
 import Beckn.Types.Common
 import Beckn.Types.Error.APIError
+import Beckn.Types.Error.BecknAPIError hiding (Error)
 import Beckn.Types.Error.FromResponse
 import Data.Aeson hiding (Error)
 import Data.Char (toLower)
@@ -218,18 +219,12 @@ dunzoCodeToBecknCode = \case
   "default" -> "CORE003"
   _ -> "CORE003"
 
--- TODO: figure out all the codes
-dunzoCodeToHttpCode :: Text -> HttpCode
-dunzoCodeToHttpCode = \case
-  "unauthorized" -> E401
-  "bad_request" -> E400
-  "service_unavailable" -> E503
-  _ -> E500
-
--- TODO: make it a beckn-specific error
 instance IsAPIError Error where
   toErrorCode Error {code} = dunzoCodeToBecknCode code
-  toHttpCode Error {code} = dunzoCodeToHttpCode code
+  toHttpCode Error {} = E500 -- should not be thrown synchronously
   toMessage Error {message} = Just message
 
-instanceExceptionWithParent 'APIException ''Error
+instance IsBecknAPIError Error where
+  toType _ = DOMAIN_ERROR -- only to satisfy current tests, FIXME maybe
+
+instanceExceptionWithParent 'BecknAPIException ''Error

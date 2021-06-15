@@ -18,6 +18,17 @@ type ConfirmAPI =
     :> ReqBody '[JSON] ConfirmReq
     :> Post '[JSON] AckResponse
 
+confirm :: Proxy ConfirmAPI
+confirm = Proxy
+
+type OnConfirmAPI =
+  "on_confirm"
+    :> ReqBody '[JSON] OnConfirmReq
+    :> Post '[JSON] OnConfirmRes
+
+onConfirm :: Proxy OnConfirmAPI
+onConfirm = Proxy
+
 data ConfirmReq = ConfirmReq
   { context :: Context,
     message :: ConfirmOrder

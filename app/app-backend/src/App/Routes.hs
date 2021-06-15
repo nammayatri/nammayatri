@@ -7,13 +7,13 @@ import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.APISuccess
 import Beckn.Types.App
-import qualified Beckn.Types.Core.API.Call as Call
-import qualified Beckn.Types.Core.API.Cancel as Cancel (OnCancelReq, OnCancelRes)
-import qualified Beckn.Types.Core.API.Confirm as Confirm
-import qualified Beckn.Types.Core.API.Search as Search (OnSearchAPI)
-import qualified Beckn.Types.Core.API.Status as Status
-import qualified Beckn.Types.Core.API.Track as TrackTrip (OnTrackTripReq, OnTrackTripRes)
-import qualified Beckn.Types.Core.API.Update as Update
+import qualified Beckn.Types.Core.API.Call as API
+import qualified Beckn.Types.Core.API.Cancel as API
+import qualified Beckn.Types.Core.API.Confirm as API
+import qualified Beckn.Types.Core.API.Search as API
+import qualified Beckn.Types.Core.API.Status as API
+import qualified Beckn.Types.Core.API.Track as API
+import qualified Beckn.Types.Core.API.Update as API
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case hiding (status)
 import qualified Beckn.Types.Storage.Person as Person
@@ -143,7 +143,7 @@ type SearchAPI =
     :> Post '[JSON] Search.SearchRes
     :<|> SignatureAuth "Authorization"
     :> SignatureAuth "Proxy-Authorization"
-    :> Search.OnSearchAPI
+    :> API.OnSearchAPI
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =
@@ -158,8 +158,8 @@ type ConfirmAPI =
       :> Post '[JSON] ConfirmAPI.ConfirmRes
       :<|> SignatureAuth "Authorization"
       :> "on_confirm"
-      :> ReqBody '[JSON] Confirm.OnConfirmReq
-      :> Post '[JSON] Confirm.OnConfirmRes
+      :> ReqBody '[JSON] API.OnConfirmReq
+      :> Post '[JSON] API.OnConfirmRes
   )
 
 confirmFlow :: FlowServer ConfirmAPI
@@ -210,8 +210,8 @@ type TrackTripAPI =
     :> Post '[JSON] TrackTrip.TrackTripRes
     :<|> SignatureAuth "Authorization"
     :> "on_track"
-    :> ReqBody '[JSON] TrackTrip.OnTrackTripReq
-    :> Post '[JSON] TrackTrip.OnTrackTripRes
+    :> ReqBody '[JSON] API.OnTrackTripReq
+    :> Post '[JSON] API.OnTrackTripRes
 
 trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =
@@ -222,8 +222,8 @@ trackTripFlow =
 type UpdateAPI =
   SignatureAuth "Authorization"
     :> "on_update"
-    :> ReqBody '[JSON] Update.OnUpdateReq
-    :> Post '[JSON] Update.OnUpdateRes
+    :> ReqBody '[JSON] API.OnUpdateReq
+    :> Post '[JSON] API.OnUpdateRes
 
 updateFlow :: FlowServer UpdateAPI
 updateFlow =
@@ -258,8 +258,8 @@ type CancelAPI =
     :> Post '[JSON] Cancel.CancelRes
     :<|> SignatureAuth "Authorization"
     :> "on_cancel"
-    :> ReqBody '[JSON] Cancel.OnCancelReq
-    :> Post '[JSON] Cancel.OnCancelRes
+    :> ReqBody '[JSON] API.OnCancelReq
+    :> Post '[JSON] API.OnCancelRes
 
 cancelFlow :: FlowServer CancelAPI
 cancelFlow =
@@ -287,11 +287,11 @@ type CallAPIs =
   "call"
     :> ( "to_provider"
            :> TokenAuth
-           :> ReqBody '[JSON] Call.CallReq
-           :> Post '[JSON] Call.CallRes
+           :> ReqBody '[JSON] API.CallReq
+           :> Post '[JSON] API.CallRes
            :<|> "to_customer"
-           :> ReqBody '[JSON] Call.CallReq
-           :> Post '[JSON] Call.CallRes
+           :> ReqBody '[JSON] API.CallReq
+           :> Post '[JSON] API.CallRes
        )
 
 callFlow :: FlowServer CallAPIs
@@ -316,8 +316,8 @@ type StatusAPI =
     :> Post '[JSON] StatusRes
     :<|> SignatureAuth "Authorization"
     :> "on_status"
-    :> ReqBody '[JSON] Status.OnStatusReq
-    :> Post '[JSON] Status.OnStatusRes
+    :> ReqBody '[JSON] API.OnStatusReq
+    :> Post '[JSON] API.OnStatusRes
 
 statusFlow :: FlowServer StatusAPI
 statusFlow =

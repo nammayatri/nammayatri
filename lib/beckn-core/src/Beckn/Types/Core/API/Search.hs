@@ -21,24 +21,16 @@ type SearchAPI =
     :> ReqBody '[JSON] SearchReq
     :> Post '[JSON] AckResponse
 
-searchAPI :: Proxy SearchAPI
-searchAPI = Proxy
-
-type NSDLSearchAPI =
-  "search"
-    :> ReqBody '[JSON] SearchReq
-    :> Post '[JSON] AckResponse
-
-nsdlSearchAPI :: Proxy NSDLSearchAPI
-nsdlSearchAPI = Proxy
+search :: Proxy SearchAPI
+search = Proxy
 
 type OnSearchAPI =
   "on_search"
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] OnSearchRes
 
-onSearchAPI :: Proxy OnSearchAPI
-onSearchAPI = Proxy
+onSearch :: Proxy OnSearchAPI
+onSearch = Proxy
 
 data SearchReq = SearchReq
   { context :: Context,
