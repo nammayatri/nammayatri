@@ -41,7 +41,6 @@ data UpdatePersonReq = UpdatePersonReq
     deviceToken :: Maybe FCM.FCMRecipientToken,
     udf1 :: Maybe Text,
     udf2 :: Maybe Text,
-    organizationId :: Maybe (Id Org.Organization),
     description :: Maybe Text,
     locationType :: Maybe SL.LocationType,
     lat :: Maybe Double,
@@ -81,7 +80,7 @@ instance ModifyTransform UpdatePersonReq SP.Person Flow where
           SP.deviceToken = ifJust (req.deviceToken) (person.deviceToken),
           SP.udf1 = ifJust (req.udf1) (person.udf1),
           SP.udf2 = ifJust (req.udf2) (person.udf2),
-          SP.organizationId = ifJust (req.organizationId) (person.organizationId),
+          SP.organizationId = person.organizationId,
           SP.description = ifJust (req.description) (person.description),
           SP.locationId = Just (SL.id location)
         }
@@ -219,7 +218,7 @@ createLocationT req = do
 -- Better solution in he long run is to factor out common data reducing this
 --   enormous amount of duplication ...
 createLocationRec :: CreatePersonReq -> Flow SL.Location
-createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {organizationId = Nothing, ..}
+createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {..}
 
 newtype ListPersonRes = ListPersonRes
   {users :: [PersonEntityRes]}
