@@ -36,6 +36,7 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   piList <- findPIsByParentId searchPiId
   trackerCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.LOCATIONTRACKER
   orderCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.RIDEORDER
+  logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
   startRide (ProductInstance.id <$> piList) (Case.id trackerCase) (Case.id orderCase)
   notifyBAPRideStarted searchPi orderPi
   pure APISuccess.Success

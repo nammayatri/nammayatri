@@ -24,6 +24,7 @@ updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   locationId <-
     driver.locationId
       & fromMaybeM (PersonFieldNotPresent "location_id")
+  logTagInfo "driverLocationUpdate" (entityId <> " " <> show req.lat <> "," <> show req.long)
   Location.updateGpsCoord locationId (req.lat) (req.long)
   return $ UpdateLocationRes "ACK"
 

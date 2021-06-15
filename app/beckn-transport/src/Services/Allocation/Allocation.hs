@@ -257,6 +257,7 @@ proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
               && driver `notElem` driversWithNotification
 
       let filteredPool = filter canNotify driverPool
+      logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getId <$> filteredPool)
       processFilteredPool handle rideId filteredPool shortOrgId
     [] -> cancel handle rideId
 

@@ -40,7 +40,8 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   piList <- findAllPIByParentId searchPiId
   trackerCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.LOCATIONTRACKER
   orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER
-
+  logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
+  
   endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId)
 
   notifyUpdateToBAP searchPi orderPi PI.COMPLETED
