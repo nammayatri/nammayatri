@@ -89,25 +89,25 @@ hashBodyForSignature f req respF = do
     anyAuthHeaders = any (`elem` headers) ["Authorization", "Proxy-Authorization"]
 
 logRequestAndResponse :: EnvR f -> Application -> Application
-logRequestAndResponse (EnvR flowRt appEnv) f req respF = do
-  logInfoIO "Request" . show $ toRequestInfo req
+logRequestAndResponse (EnvR flowRt appEnv) f req respF =
   f req loggedRespF
   where
     logInfoIO tag info = runFlowR flowRt appEnv $ logTagInfo tag info
     toRequestInfo Request {..} = RequestInfo {..}
-    logResponseInfo resp = do
+    toResponseInfo resp =
       let (status, headers, _) = responseToStream resp
           code = HTTP.statusCode status
           decodeHeader = bimap (decodeUtf8 . CI.original) decodeUtf8
-      when (code >= 300) $
-        logInfoIO "Error response" . show $
-          ResponseInfo
-            { statusCode = code,
-              statusMessage = decodeUtf8 $ HTTP.statusMessage status,
-              headers = decodeHeader <$> headers
-            }
+          respInfo =
+            ResponseInfo
+              { statusCode = code,
+                statusMessage = decodeUtf8 $ HTTP.statusMessage status,
+                headers = decodeHeader <$> headers
+              }
+       in if code >= 300 then show respInfo else "Successful response"
     loggedRespF resp = do
-      logResponseInfo resp
+      let respLogText = toResponseInfo resp
+      logInfoIO "Request&Response" $ "Request: " <> show (toRequestInfo req) <> " || Response: " <> respLogText
       respF resp
 
 withModifiedEnv :: (EnvR f -> Application) -> EnvR f -> Application
