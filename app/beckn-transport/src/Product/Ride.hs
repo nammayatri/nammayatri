@@ -7,13 +7,13 @@ import App.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
+import Beckn.Types.Id (Id (..), cast)
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
-import Types.API.Ride
-import Utils.Common
-import Beckn.Types.Id (cast, Id(..))
-import qualified Types.Storage.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
+import Types.API.Ride
+import qualified Types.Storage.AllocationEvent as AllocationEvent
+import Utils.Common
 
 setDriverAcceptance :: SR.RegistrationToken -> SetDriverAcceptanceReq -> FlowHandler SetDriverAcceptanceRes
 setDriverAcceptance SR.RegistrationToken {..} SetDriverAcceptanceReq {..} = withFlowHandlerAPI $ do
