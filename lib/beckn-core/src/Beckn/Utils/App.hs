@@ -11,14 +11,17 @@ where
 import Beckn.Types.App
 import Beckn.Utils.Common
 import Control.Concurrent.STM.TMVar
+import qualified Data.ByteString.Char8 as BS
 import qualified Data.CaseInsensitive as CI
+import Data.List (lookup)
+import qualified Data.Text as T
 import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (unpack)
 import Network.HTTP.Types (Method, RequestHeaders)
 import qualified Network.HTTP.Types as HTTP
 import Network.Wai
-import Network.Wai.Internal
+import Network.Wai.Internal as Wai
 import System.Exit (ExitCode)
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 
@@ -83,10 +86,14 @@ logRequestAndResponse (EnvR flowRt appEnv) f req respF = do
 
 withModifiedEnv :: (EnvR f -> Application) -> EnvR f -> Application
 withModifiedEnv f env = \req resp -> do
-  modifiedEnv <- modifyEnvR
+  requestId <- getRequestId $ Wai.requestHeaders req
+  modifiedEnv <- modifyEnvR requestId
   let app = f modifiedEnv
   app req resp
   where
-    modifyEnvR = do
-      uuid <- show <$> nextRandom
-      return $ env {flowRuntime = L.updateLoggerContext (appendLogContext uuid) $ flowRuntime env}
+    modifyEnvR requestId = return $ env {flowRuntime = L.updateLoggerContext (appendLogContext requestId) $ flowRuntime env}
+    getRequestId headers = do
+      let value = lookup "x-request-id" headers
+      case value of
+        Just val -> pure ("requestId-" <> T.pack (BS.unpack val))
+        Nothing -> pure "randomRequestId-" <> show <$> nextRandom
