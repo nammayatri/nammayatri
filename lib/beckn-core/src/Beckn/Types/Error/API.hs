@@ -19,6 +19,7 @@ data AuthError
   | AuthBlocked Text
   | IncorrectOTP
   | AccessDenied
+  | HitsLimitError Int
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''AuthError
@@ -33,16 +34,19 @@ instance IsAPIError AuthError where
     AuthBlocked _ -> "AUTH_BLOCKED"
     IncorrectOTP -> "INCORRECT_OTP"
     AccessDenied -> "ACCESS_DENIED"
+    HitsLimitError _ -> "HITS_LIMIT_EXCEED"
   toMessage = \case
     TokenNotFound tokenId -> Just $ "Token with tokenId \"" <> show tokenId <> "\" not found."
     InvalidToken token -> Just $ "Invalid token: " <> token
     AuthBlocked reason -> Just $ "Authentication process blocked: " <> reason
     AccessDenied -> Just "You have no access to this operation."
+    HitsLimitError hitsLimitResetTime -> Just $ "Hits limit reached. Try again in " <> show hitsLimitResetTime <> " sec."
     _ -> Nothing
   toHttpCode = \case
     Unauthorized -> E401
     InvalidToken _ -> E401
     AccessDenied -> E403
+    HitsLimitError _ -> E403
     _ -> E400
 
 data HeaderError

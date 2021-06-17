@@ -42,6 +42,11 @@ let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v1"
 
 let nsdlUrl = "https://gateway-1.beckn.nsdl.co.in"
 
+let registrationHitsOptions = 
+  { limit = +4
+  , limitResetTime = +600
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -76,4 +81,5 @@ in
 , graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
+, registrationHitsOpt = registrationHitsOptions
 }

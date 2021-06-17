@@ -40,6 +40,11 @@ let smsConfig =
 
 let appUri = "http://localhost:8013/v1"
 
+let registrationHitsOptions = 
+  { limit = +4
+  , limitResetTime = +600
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -74,4 +79,5 @@ in
 , graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
+, registrationHitsOpt = registrationHitsOptions
 }

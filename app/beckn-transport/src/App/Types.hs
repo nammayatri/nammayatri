@@ -16,6 +16,7 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
+import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
@@ -55,7 +56,8 @@ data AppCfg = AppCfg
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
     graceTerminationPeriod :: Int,
-    defaultRadiusOfSearch :: Integer
+    defaultRadiusOfSearch :: Integer,
+    registrationHitsOpt :: RegistrationHitsOptions
   }
   deriving (Generic, FromDhall)
 
@@ -85,6 +87,7 @@ data AppEnv = AppEnv
     graphhopperUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
+    registrationHitsOpt :: RegistrationHitsOptions,
     defaultRadiusOfSearch :: Integer
   }
   deriving (Generic)

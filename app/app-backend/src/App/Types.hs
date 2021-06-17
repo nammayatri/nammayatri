@@ -16,6 +16,7 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
+import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
@@ -60,7 +61,8 @@ data AppCfg = AppCfg
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
     metricsSearchDurationTimeout :: Int,
-    graceTerminationPeriod :: Int
+    graceTerminationPeriod :: Int,
+    registrationHitsOpt :: RegistrationHitsOptions
   }
   deriving (Generic, FromDhall)
 
@@ -91,6 +93,7 @@ data AppEnv = AppEnv
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
+    registrationHitsOpt :: RegistrationHitsOptions,
     isShuttingDown :: TMVar (),
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer

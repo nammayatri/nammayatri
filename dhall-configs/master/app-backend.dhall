@@ -62,6 +62,11 @@ let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v1"
 
 let nsdlUrl = "https://gateway-1.beckn.nsdl.co.in"
 
+let registrationHitsOptions = 
+  { limit = +4
+  , limitResetTime = +600
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -99,4 +104,5 @@ in
 , graphhopperUrl = common.graphhopperUrl
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
+, registrationHitsOpt = registrationHitsOptions
 }

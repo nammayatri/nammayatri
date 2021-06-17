@@ -10,6 +10,7 @@ import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.SlidingWindowLimiter
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -27,6 +28,9 @@ initiateLogin req =
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
       _ -> throwError $ InvalidRequest "medium and type must be sms and otp respectively"
 
+initiateFlowHitsCountKey :: SP.Person -> Text
+initiateFlowHitsCountKey person = "Registration:initiateFlow" <> getId person.id <> ":hitsCount"
+
 initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
   let mobileNumber = req.mobileNumber
@@ -34,6 +38,7 @@ initiateFlow req smsCfg = do
   person <-
     Person.findByRoleAndMobileNumber SP.USER countryCode mobileNumber
       >>= maybe (createPerson req) return
+  checkSlidingWindowLimit (initiateFlowHitsCountKey person)
   let entityId = getId . SP.id $ person
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -116,6 +121,9 @@ generateOTPCode :: Flow Text
 generateOTPCode =
   L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
 
+loginHitsCountKey :: SP.Person -> Text
+loginHitsCountKey person = "Registration:login:" <> getId person.id <> ":hitsCount"
+
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandlerAPI $ do
@@ -129,6 +137,7 @@ login tokenId req =
     if isValid
       then do
         person <- checkPersonExists entityId
+        checkSlidingWindowLimit (loginHitsCountKey person)
         clearOldRegToken person $ Id tokenId
         let personId = person.id
             updatedPerson =
@@ -180,8 +189,7 @@ reInitiateLogin tokenId req =
       else throwError $ AuthBlocked "Attempts limit exceed."
 
 clearOldRegToken :: SP.Person -> Id SR.RegistrationToken -> Flow ()
-clearOldRegToken person newRT = do
-  RegistrationToken.deleteByPersonIdExceptNew (getId $ person.id) newRT
+clearOldRegToken person = RegistrationToken.deleteByPersonIdExceptNew (getId $ person.id)
 
 logout :: SP.Person -> FlowHandler APISuccess
 logout person = withFlowHandlerAPI $ do

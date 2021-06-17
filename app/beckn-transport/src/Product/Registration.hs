@@ -10,6 +10,7 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.SlidingWindowLimiter
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Product.Person as Person
@@ -27,6 +28,9 @@ initiateLogin req =
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
       _ -> throwError $ InvalidRequest "medium and type fields must be SMS and OTP"
 
+initiateFlowHitsCountKey :: SP.Person -> Text
+initiateFlowHitsCountKey person = "Registration:initiateFlow" <> getId person.id <> ":hitsCount"
+
 initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
 initiateFlow req smsCfg = do
   let mobileNumber = req.mobileNumber
@@ -34,6 +38,7 @@ initiateFlow req smsCfg = do
   person <-
     QP.findByMobileNumber countryCode mobileNumber
       >>= maybe (createPerson req) return
+  checkSlidingWindowLimit (initiateFlowHitsCountKey person)
   let entityId = getId . SP.id $ person
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -112,6 +117,9 @@ makeSession SmsSessionConfig {..} req entityId entityType fakeOtp = do
         info = Nothing
       }
 
+loginHitsCountKey :: SP.Person -> Text
+loginHitsCountKey person = "Registration:login:" <> getId person.id <> ":hitsCount"
+
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandlerAPI $ do
@@ -125,6 +133,7 @@ login tokenId req =
     if isValid
       then do
         person <- checkPersonExists entityId
+        checkSlidingWindowLimit (loginHitsCountKey person)
         clearOldRegToken person $ Id tokenId
         QR.updateVerified tokenId True
         let deviceToken = (req.deviceToken) <|> (person.deviceToken)
@@ -170,8 +179,7 @@ reInitiateLogin tokenId req =
       else throwError $ AuthBlocked "Limit exceeded."
 
 clearOldRegToken :: SP.Person -> Id SR.RegistrationToken -> Flow ()
-clearOldRegToken person newRTId = do
-  QR.deleteByEntitiyIdExceptNew (getId $ person.id) newRTId
+clearOldRegToken person = QR.deleteByEntitiyIdExceptNew (getId $ person.id)
 
 logout :: SR.RegistrationToken -> FlowHandler APISuccess
 logout SR.RegistrationToken {..} = withFlowHandlerAPI $ do

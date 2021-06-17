@@ -59,6 +59,11 @@ let gwUri = "http://localhost:8015/v1"
 
 let providerUri = "http://localhost:8014/v1"
 
+let registrationHitsOptions = 
+  { limit = +4
+  , limitResetTime = +600
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -96,4 +101,5 @@ in
 , graphhopperUrl = common.graphhopperUrl
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
+, registrationHitsOpt = registrationHitsOptions
 }

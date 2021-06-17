@@ -5,6 +5,7 @@ import Amount
 import DecimalValue
 import EulerHS.Prelude
 import SignatureAuth
+import SlidingWindowLimiter
 import Test.Tasty
 
 main :: IO ()
@@ -19,5 +20,6 @@ specs = return $ testGroup "Tests" [unitTests]
         [ amountTests,
           decimalValueTests,
           signatureAuthTests,
-          apiExceptionTests
+          apiExceptionTests,
+          slidingWindowLimiterTests
         ]
