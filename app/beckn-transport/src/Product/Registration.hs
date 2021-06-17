@@ -38,9 +38,7 @@ initiateFlow req smsCfg = do
   mbPerson <- QP.findByMobileNumber countryCode mobileNumber
   person <- case mbPerson of
     Nothing -> do
-      whenJust
-        req.role
-        (\role -> when (role == SP.DRIVER) $ throwError $ InvalidRequest "Driver must be registered by Transport Admin")
+      when (req.role == SP.DRIVER) $ throwError $ InvalidRequest "Driver must be registered by Transport Admin"
       createPerson req
     Just p -> pure p
   checkSlidingWindowLimit (initiateFlowHitsCountKey person)
@@ -66,7 +64,6 @@ initiateFlow req smsCfg = do
 
 makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
-  let role = fromMaybe SP.USER (req.role)
   pid <- BC.generateGUID
   now <- getCurrentTime
   return $
@@ -76,7 +73,7 @@ makePerson req = do
         middleName = Nothing,
         lastName = Nothing,
         fullName = Nothing,
-        role = role,
+        role = req.role,
         gender = SP.UNKNOWN,
         identifierType = SP.MOBILENUMBER,
         email = Nothing,
