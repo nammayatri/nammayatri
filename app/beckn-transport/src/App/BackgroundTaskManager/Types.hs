@@ -80,12 +80,6 @@ instance AuthenticatingEntity BTMEnv where
   getSignatureExpiry = getSignatureExpiry . appEnv
 
 instance BTMMetrics Flow where
-  incrementTaskCounter = do
-    bmContainer <- asks btmMetrics
-    Metrics.incrementTaskCounter bmContainer
-  incrementFailedTaskCounter = do
-    bmContainer <- asks btmMetrics
-    Metrics.incrementFailedTaskCounter bmContainer
-  putTaskDuration duration = do
-    bmContainer <- asks btmMetrics
-    Metrics.putTaskDuration bmContainer duration
+  incrementTaskCounter = Metrics.incrementTaskCounterFlow
+  incrementFailedTaskCounter = Metrics.incrementFailedTaskCounterFlow
+  putTaskDuration = Metrics.putTaskDurationFlow

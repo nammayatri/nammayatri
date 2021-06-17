@@ -12,8 +12,24 @@ import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
 import Data.Time (UTCTime, diffUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
+import GHC.Records.Extra
 import Prometheus as P
-import Types.Metrics
+import Types.Metrics (BAPMetricsContainer)
+
+startSearchMetricsFlow :: HasField "bapMetrics" k BAPMetricsContainer => Text -> FlowR k ()
+startSearchMetricsFlow txnId = do
+  bmContainer <- asks (.bapMetrics)
+  startSearchMetrics bmContainer txnId
+
+finishSearchMetricsFlow :: HasField "bapMetrics" k BAPMetricsContainer => Text -> FlowR k ()
+finishSearchMetricsFlow txnId = do
+  bmContainer <- asks (.bapMetrics)
+  finishSearchMetrics bmContainer txnId
+
+incrementCaseCountFlow :: HasField "bapMetrics" k BAPMetricsContainer => Case.CaseStatus -> Case.CaseType -> FlowR k ()
+incrementCaseCountFlow caseStatus caseType = do
+  bmContainer <- asks (.bapMetrics)
+  incrementCaseCount bmContainer caseStatus caseType
 
 incrementCaseCount :: L.MonadFlow m => BAPMetricsContainer -> Case.CaseStatus -> Case.CaseType -> m ()
 incrementCaseCount bmContainer caseStatus caseType = do

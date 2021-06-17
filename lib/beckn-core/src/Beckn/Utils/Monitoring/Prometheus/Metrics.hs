@@ -5,12 +5,13 @@
 module Beckn.Utils.Monitoring.Prometheus.Metrics where
 
 import Beckn.Types.Error.APIError (IsAPIError (toErrorCode, toHttpCode), IsAPIException)
-import Beckn.Types.Monitoring.Prometheus.Metrics
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer)
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Data.Ratio ((%))
 import Data.Text as DT
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as E
+import GHC.Records.Extra
 import Network.Wai (Application, Request (..))
 import Network.Wai.Handler.Warp as W
 import Network.Wai.Internal (Response, ResponseReceived)
@@ -42,6 +43,27 @@ addServantInfo proxy app request respond =
   let mpath = getSanitizedUrl proxy request
       fullpath = DT.intercalate "/" (pathInfo request)
    in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
+
+startRequestLatencyTrackingFlow ::
+  (HasField "coreMetrics" r CoreMetricsContainer, L.MonadFlow m, MonadReader r m) =>
+  Text ->
+  Text ->
+  m (Text -> m ())
+startRequestLatencyTrackingFlow host serviceName = do
+  cmContainer <- asks (.coreMetrics)
+  startRequestLatencyTracking cmContainer host serviceName
+
+incrementErrorCounterFlow ::
+  ( HasField "coreMetrics" r CoreMetricsContainer,
+    L.MonadFlow m,
+    MonadReader r m,
+    IsAPIException e
+  ) =>
+  e ->
+  m ()
+incrementErrorCounterFlow err = do
+  cmContainer <- asks (.coreMetrics)
+  incrementErrorCounter cmContainer err
 
 startRequestLatencyTracking :: (L.MonadFlow m) => CoreMetricsContainer -> Text -> Text -> m (Text -> m ())
 startRequestLatencyTracking cmContainers host serviceName = do

@@ -123,12 +123,6 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = signatureExpiry
 
 instance BAPMetrics Flow where
-  startSearchMetrics txnId = do
-    bmContainer <- asks (.bapMetrics)
-    Metrics.startSearchMetrics bmContainer txnId
-  finishSearchMetrics txnId = do
-    bmContainer <- asks (.bapMetrics)
-    Metrics.finishSearchMetrics bmContainer txnId
-  incrementCaseCount cStatus cType = do
-    bmContainer <- asks (.bapMetrics)
-    Metrics.incrementCaseCount bmContainer cStatus cType
+  startSearchMetrics = Metrics.startSearchMetricsFlow
+  finishSearchMetrics = Metrics.finishSearchMetricsFlow
+  incrementCaseCount = Metrics.incrementCaseCountFlow
