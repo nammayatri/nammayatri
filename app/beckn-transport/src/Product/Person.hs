@@ -60,8 +60,7 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ 
   person <- QP.findPersonById (Id entityId)
   isValidUpdate person
   updatedPerson <- modifyTransform req person
-  encryptedPerson <- encrypt updatedPerson
-  DB.runSqlDB (QP.updatePersonRec (Id entityId) encryptedPerson)
+  DB.runSqlDB (QP.updatePersonRec (Id entityId) updatedPerson)
   return $ UpdatePersonRes updatedPerson
   where
     verifyPerson entityId_ =
@@ -163,6 +162,7 @@ mkPersonRes person = do
       vehicle <- QV.findVehicleById $ Id $ fromMaybe "" (person.udf1)
       return $ Just $ LinkedEntity VEHICLE (Just $ encodeToText vehicle)
     _ -> return Nothing
+  decMobNum <- decrypt person.mobileNumber
   return $
     PersonEntityRes
       { id = person.id,
@@ -175,7 +175,7 @@ mkPersonRes person = do
         email = person.email,
         identifier = person.identifier,
         identifierType = person.identifierType,
-        mobileNumber = person.mobileNumber,
+        mobileNumber = decMobNum,
         mobileCountryCode = person.mobileCountryCode,
         verified = person.verified,
         rating = person.rating,

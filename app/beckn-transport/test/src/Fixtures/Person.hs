@@ -1,7 +1,9 @@
 module Fixtures.Person where
 
+import Beckn.External.Encryption
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
+import Database.Beam (Nullable)
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
 
@@ -17,7 +19,7 @@ defaultDriver =
       gender = Person.UNKNOWN,
       identifierType = Person.EMAIL,
       email = Just "driverson@cool-drivers.com",
-      mobileNumber = Nothing,
+      mobileNumber = EncryptedHashed {encrypted = Nothing, hash = Nothing},
       mobileCountryCode = Nothing,
       passwordHash = Nothing,
       identifier = Nothing,

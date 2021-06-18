@@ -1,6 +1,7 @@
 module Product.Registration (initiateLogin, login, reInitiateLogin, logout) where
 
 import App.Types
+import Beckn.External.Encryption (encrypt)
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Queries as DB
@@ -64,6 +65,7 @@ makePerson req = do
   role <- (req.role) & fromMaybeM (InvalidRequest "You should pass person's role.")
   pid <- BC.generateGUID
   now <- getCurrentTime
+  encMobNum <- encrypt $ Just req.mobileNumber
   return $
     SP.Person
       { id = pid,
@@ -76,7 +78,7 @@ makePerson req = do
         identifierType = SP.MOBILENUMBER,
         email = Nothing,
         passwordHash = Nothing,
-        mobileNumber = Just $ req.mobileNumber,
+        mobileNumber = encMobNum,
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,

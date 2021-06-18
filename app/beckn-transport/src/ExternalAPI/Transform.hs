@@ -1,6 +1,7 @@
 module ExternalAPI.Transform where
 
 import App.Types
+import Beckn.External.Encryption
 import Beckn.Types.Common
 import Beckn.Types.Core.Brand
 import Beckn.Types.Core.Category
@@ -157,43 +158,47 @@ mkTracking method dataUrl =
       metadata = Nothing
     }
 
-mkDriverObj :: Person.Person -> Mobility.Driver
-mkDriverObj person =
-  let bPerson = mkPerson person
-   in Driver
-        { name = bPerson.name,
-          image = bPerson.image,
-          dob = bPerson.dob,
-          organization_name = bPerson.organization_name,
-          gender = fromMaybe "" $ bPerson.gender,
-          email = bPerson.email,
-          phones = bPerson.phones,
-          experience = Nothing,
-          rating = Nothing
-        }
+mkDriverObj :: Person.Person -> Flow Mobility.Driver
+mkDriverObj person = do
+  bPerson <- mkPerson person
+  return $
+    Driver
+      { name = bPerson.name,
+        image = bPerson.image,
+        dob = bPerson.dob,
+        organization_name = bPerson.organization_name,
+        gender = fromMaybe "" $ bPerson.gender,
+        email = bPerson.email,
+        phones = bPerson.phones,
+        experience = Nothing,
+        rating = Nothing
+      }
 
-mkPerson :: Person.Person -> BPerson.Person
-mkPerson person =
-  BPerson.Person
-    { name =
-        Name
-          { additional_name = person.middleName,
-            family_name = person.lastName,
-            given_name = fromMaybe "" (person.firstName),
-            call_sign = Nothing,
-            honorific_prefix = Nothing,
-            honorific_suffix = Nothing
-          },
-      image = Nothing,
-      dob = Nothing,
-      organization_name = Nothing,
-      gender = Just $ show $ person.gender,
-      email = person.email,
-      phones = maybeToList getPhone
-    }
+mkPerson :: Person.Person -> Flow BPerson.Person
+mkPerson person = do
+  phone <- getPhone
+  return $
+    BPerson.Person
+      { name =
+          Name
+            { additional_name = person.middleName,
+              family_name = person.lastName,
+              given_name = fromMaybe "" (person.firstName),
+              call_sign = Nothing,
+              honorific_prefix = Nothing,
+              honorific_suffix = Nothing
+            },
+        image = Nothing,
+        dob = Nothing,
+        organization_name = Nothing,
+        gender = Just $ show $ person.gender,
+        email = person.email,
+        phones = maybeToList phone
+      }
   where
-    getPhone =
-      case (person.mobileCountryCode, person.mobileNumber) of
+    getPhone = do
+      decMobNum <- decrypt person.mobileNumber
+      return $ case (person.mobileCountryCode, decMobNum) of
         (Just ccode, Just number) -> Just $ ccode <> number
         (Nothing, Just number) -> Just number
         _ -> Nothing

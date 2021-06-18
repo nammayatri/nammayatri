@@ -27,15 +27,13 @@ getDbTable =
 create :: Storage.Person -> Flow ()
 create person = do
   dbTable <- getDbTable
-  person' <- encrypt person
-  DB.createOne dbTable (Storage.insertExpression person')
+  DB.createOne dbTable (Storage.insertExpression person)
 
 findById ::
   Id Storage.Person -> Flow (Maybe Storage.Person)
 findById personId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} = id ==. B.val_ personId
 
@@ -44,7 +42,6 @@ findAllByOrgIds ::
 findAllByOrgIds roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate roles orgIds)
-    >>= decrypt
   where
     predicate pRoles pOrgIds Storage.Person {..} =
       foldl
@@ -64,7 +61,6 @@ findByUsernameAndPassword ::
 findByUsernameAndPassword email_ password = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} =
       email ==. B.val_ (Just email_)
@@ -75,7 +71,6 @@ findByRoleAndMobileNumber ::
 findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} =
       role ==. B.val_ role_
@@ -86,7 +81,6 @@ findByRoleAndMobileNumberWithoutCC :: Storage.Role -> Text -> Flow (Maybe Storag
 findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} =
       role ==. B.val_ role_
@@ -173,7 +167,6 @@ findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [Id Orga
 findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate orgIds roles)
-    >>= decrypt
   where
     limit = toInteger $ fromMaybe 10 mlimit
     offset = toInteger $ fromMaybe 0 moffset

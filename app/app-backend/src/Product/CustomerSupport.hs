@@ -4,6 +4,7 @@
 module Product.CustomerSupport where
 
 import App.Types
+import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -115,6 +116,7 @@ makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
   fromLocation <- Location.findLocationById fromLocationId
   toLocation <- Location.findLocationById toLocationId
   trip <- makeTripDetails confiremedOrder
+  decMobNum <- decrypt mobileNumber
   --  Info: udf1 is vechicle variant
   let details =
         T.OrderDetails
@@ -127,7 +129,7 @@ makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
             fromLocation = fromLocation,
             toLocation = toLocation,
             travellerName = fullName,
-            travellerPhone = mobileNumber,
+            travellerPhone = decMobNum,
             vehicleVariant = udf1, -- Note: UDF1 Contain vehicleVariant info
             trip = trip
           }

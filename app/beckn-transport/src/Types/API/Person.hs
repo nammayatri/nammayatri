@@ -3,6 +3,7 @@
 module Types.API.Person where
 
 import App.Types
+import Beckn.External.Encryption (encrypt)
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common hiding (id)
@@ -189,6 +190,7 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
     pid <- generateGUID
     now <- getCurrentTime
     location <- createLocationT req
+    mobileNumber <- encrypt req.mobileNumber
     return
       SP.Person
         { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
@@ -203,7 +205,7 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
           SP.passwordHash = Nothing,
           SP.identifier = req.identifier,
           SP.identifierType = fromMaybe SP.MOBILENUMBER $ req.identifierType,
-          SP.mobileNumber = req.mobileNumber,
+          SP.mobileNumber = mobileNumber,
           SP.mobileCountryCode = req.mobileCountryCode,
           SP.verified = False,
           SP.rating = req.rating,

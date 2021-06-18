@@ -2,6 +2,7 @@ module Product.DriverInformation where
 
 import App.Types
 import qualified App.Types as App
+import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Id
@@ -87,13 +88,14 @@ listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do
   where
     convertToRes (person, driverInfo) = do
       vehicle <- maybe (return Nothing) QVehicle.findVehicleById $ Id <$> person.udf1
+      decMobNum <- decrypt person.mobileNumber
       return $
         DriverInformationAPI.DriverEntityRes
           { id = person.id,
             firstName = person.firstName,
             middleName = person.middleName,
             lastName = person.lastName,
-            mobileNumber = person.mobileNumber,
+            mobileNumber = decMobNum,
             linkedVehicle = vehicle,
             active = driverInfo.active,
             onRide = driverInfo.onRide

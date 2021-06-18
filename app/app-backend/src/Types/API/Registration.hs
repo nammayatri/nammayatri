@@ -95,4 +95,4 @@ data LoginRes = LoginRes
   { registrationToken :: Text,
     user :: Person
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON)

@@ -28,7 +28,7 @@ spec = do
           initiateLoginRes `shouldSatisfy` isRight
           let Right Reg.InitiateLoginRes {..} = initiateLoginRes
           loginRes <- runClient appClientEnv (verifyLoginReq tokenId)
-          loginRes `shouldSatisfy` isRight
+          (loginRes $> ()) `shouldSatisfy` isRight
           let Right Reg.LoginRes {..} = loginRes
           result <- runClient appClientEnv (buildCaseListRes registrationToken)
           result `shouldSatisfy` isRight

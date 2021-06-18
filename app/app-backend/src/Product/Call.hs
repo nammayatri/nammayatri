@@ -4,6 +4,7 @@
 module Product.Call where
 
 import App.Types
+import Beckn.External.Encryption
 import Beckn.External.Exotel.Flow
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Call
@@ -62,7 +63,8 @@ getPerson rideSearchPI = do
 -- | Get person's mobile phone
 getPersonPhone :: Person -> Flow Text
 getPersonPhone Person {..} = do
-  let phonenum = (<>) <$> mobileCountryCode <*> mobileNumber
+  decMobNum <- decrypt mobileNumber
+  let phonenum = (<>) <$> mobileCountryCode <*> decMobNum
   phonenum & fromMaybeM (InternalError "Customer has no phone number.")
 
 -- | Get phone from Person data type

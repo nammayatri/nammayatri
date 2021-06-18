@@ -61,7 +61,7 @@ data OrderInfo = OrderInfo
   { person :: P.Person,
     searchcases :: [C.Case]
   }
-  deriving (Show, Generic)
+  deriving (Generic)
 
 data LoginReq = LoginReq
   { email :: Text,

@@ -66,6 +66,7 @@ makePerson :: InitiateLoginReq -> Flow SP.Person
 makePerson req = do
   pid <- BC.generateGUID
   now <- getCurrentTime
+  encMobNum <- encrypt $ Just req.mobileNumber
   return $
     SP.Person
       { id = pid,
@@ -78,7 +79,7 @@ makePerson req = do
         identifierType = SP.MOBILENUMBER,
         email = Nothing,
         passwordHash = Nothing,
-        mobileNumber = Just $ req.mobileNumber,
+        mobileNumber = encMobNum,
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
@@ -186,8 +187,7 @@ clearOldRegToken person = QR.deleteByEntitiyIdExceptNew (getId $ person.id)
 logout :: SR.RegistrationToken -> FlowHandler APISuccess
 logout SR.RegistrationToken {..} = withFlowHandlerAPI $ do
   uperson <- QP.findPersonById (Id entityId)
-  eperson <- encrypt uperson
   DB.runSqlDBTransaction $ do
-    QP.updatePersonRec (uperson.id) eperson {SP.deviceToken = Nothing}
+    QP.updatePersonRec (uperson.id) uperson {SP.deviceToken = Nothing}
     QR.deleteByEntitiyId entityId
   pure Success

@@ -212,7 +212,7 @@ mkOnUpdatePayload prodInst caseId = do
 mkDriverInfo :: Id Person.Person -> Flow Driver
 mkDriverInfo driverId = do
   person <- Person.findPersonById driverId
-  return $ ExternalAPITransform.mkDriverObj person
+  ExternalAPITransform.mkDriverObj person
 
 mkVehicleInfo :: Text -> Flow (Maybe BVehicle.Vehicle)
 mkVehicleInfo vehicleId = do

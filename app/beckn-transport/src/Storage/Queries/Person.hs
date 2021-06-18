@@ -36,8 +36,7 @@ getDbTable =
 create :: Storage.Person -> Flow ()
 create person = do
   dbTable <- getDbTable
-  person' <- encrypt person
-  DB.createOne dbTable (Storage.insertExpression person')
+  DB.createOne dbTable (Storage.insertExpression person)
 
 findPersonById ::
   Id Storage.Person -> Flow Storage.Person
@@ -45,7 +44,6 @@ findPersonById pid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
     >>= fromMaybeM PersonDoesNotExist
-    >>= decrypt
   where
     predicate Storage.Person {..} = id ==. B.val_ pid
 
@@ -53,7 +51,6 @@ findPersonByIdAndRoleAndOrgId :: Id Storage.Person -> Storage.Role -> Id Org.Org
 findPersonByIdAndRoleAndOrgId pid role_ orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} =
       id ==. B.val_ pid
@@ -64,7 +61,6 @@ findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Rol
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
-    >>= decrypt
   where
     orderByDesc Storage.Person {..} = B.desc_ createdAt
     limit = fromMaybe 100 mlimit
@@ -82,7 +78,6 @@ findAllByOrgIds ::
 findAllByOrgIds roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} =
       foldl
@@ -102,7 +97,6 @@ findByMobileNumber ::
 findByMobileNumber countryCode mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} =
       mobileCountryCode ==. B.val_ (Just countryCode)
@@ -113,7 +107,6 @@ findByIdentifier ::
 findByIdentifier identifier_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} =
       identifier ==. B.val_ (Just identifier_)
@@ -123,7 +116,6 @@ findByEmail ::
 findByEmail email_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} =
       email ==. B.val_ (Just email_)
@@ -246,7 +238,6 @@ findByEntityId :: Text -> Flow (Maybe Storage.Person)
 findByEntityId entityId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= decrypt
   where
     predicate Storage.Person {..} =
       udf1 ==. B.val_ (Just entityId)

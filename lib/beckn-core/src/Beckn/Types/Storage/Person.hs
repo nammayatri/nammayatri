@@ -1,5 +1,3 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -115,7 +113,7 @@ instance FromHttpApiData Gender where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-data PersonTE e f = Person
+data PersonT f = Person
   { id :: B.C f (Id Person),
     firstName :: B.C f (Maybe Text),
     middleName :: B.C f (Maybe Text),
@@ -125,7 +123,7 @@ data PersonTE e f = Person
     gender :: B.C f Gender,
     identifierType :: B.C f IdentifierType,
     email :: B.C f (Maybe Text),
-    mobileNumber :: EncryptedHashedField e (B.Nullable f) Text,
+    mobileNumber :: EncryptedHashedField 'AsEncrypted (B.Nullable f) Text,
     mobileCountryCode :: B.C f (Maybe Text),
     passwordHash :: B.C f (Maybe DbHash),
     identifier :: B.C f (Maybe Text),
@@ -143,9 +141,7 @@ data PersonTE e f = Person
   }
   deriving (Generic)
 
-type Person = PersonTE 'AsUnencrypted Identity
-
-type PersonT = PersonTE 'AsEncrypted
+type Person = PersonT Identity
 
 instance B.Beamable PersonT
 
@@ -158,21 +154,11 @@ instance B.Table PersonT where
     deriving (Generic, B.Beamable)
   primaryKey = PersonPrimaryKey . id
 
-deriving instance Show Person
-
-deriving instance Eq Person
-
 instance ToJSON Person where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance FromJSON Person where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON (PersonT Identity)
-
-instance FromJSON (PersonT Identity)
-
-deriveTableEncryption ''PersonTE
 
 -- TODO: move it to appropriate place
 maskPerson :: Person -> Person

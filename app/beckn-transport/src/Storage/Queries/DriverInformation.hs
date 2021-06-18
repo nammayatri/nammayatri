@@ -1,7 +1,6 @@
 module Storage.Queries.DriverInformation where
 
 import App.Types
-import Beckn.External.Encryption
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
@@ -10,7 +9,6 @@ import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
-import Data.Bitraversable
 import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -104,7 +102,6 @@ findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
   driverInfoDbTable <- getDbTable
 
   DB.findAllByJoin (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (joinQuery personDbTable driverInfoDbTable)
-    >>= traverse (bimapM decrypt return)
   where
     orderByDesc (Person.Person {..}, _) = B.desc_ createdAt
     limit = fromMaybe 100 mbLimit
