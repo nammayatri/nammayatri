@@ -9,6 +9,6 @@ data SendIssueReq = SendIssueReq
     issue :: Issue,
     productInstanceId :: Maybe Text
   }
-  deriving (Generic, Show, FromJSON)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 type SendIssueRes = Ack

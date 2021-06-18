@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Types.API.FarePolicy
   ( ListFarePolicyResponse (..),
     UpdateFarePolicyRequest (..),
@@ -9,7 +11,9 @@ where
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id)
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Data.Time (TimeOfDay)
+import Beckn.Types.Validation.Predicate
+import Beckn.Utils.Validation
+import Data.Time (TimeOfDay (..))
 import EulerHS.Prelude hiding (id)
 import Types.Domain.FarePolicy (FarePolicy)
 
@@ -38,6 +42,19 @@ data UpdateFarePolicyRequest = UpdateFarePolicyRequest
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show)
 
 type UpdateFarePolicyResponse = APISuccess
+
+instance FromJSON UpdateFarePolicyRequest where
+  parseJSON = genericParseJsonWithValidation "UpdateFarePolicyRequest" validateUpdateFarePolicyRequest
+
+validateUpdateFarePolicyRequest :: Validate UpdateFarePolicyRequest
+validateUpdateFarePolicyRequest UpdateFarePolicyRequest {..} =
+  sequenceA_
+    [ validateMaybe "baseFare" baseFare $ InRange @Double 0 1000,
+      validateMaybe "baseDistance" baseDistance $ InRange @Double 0 10000,
+      validateMaybe "nightShiftRate" nightShiftRate $ InRange @Double 1 2,
+      validateMaybe "nightShiftStart" nightShiftStart $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 0 0),
+      validateMaybe "nightShiftEnd" nightShiftEnd $ InRange (TimeOfDay 7 0 0) (TimeOfDay 12 30 0)
+    ]

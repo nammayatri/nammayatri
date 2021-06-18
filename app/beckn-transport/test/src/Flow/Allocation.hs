@@ -1,7 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-{-# HLINT ignore "Reduce duplication" #-}
-
 module Flow.Allocation where
 
 import Beckn.Types.Id

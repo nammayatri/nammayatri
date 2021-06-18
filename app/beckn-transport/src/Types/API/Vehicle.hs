@@ -6,7 +6,11 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Vehicle as SV
+import Beckn.Types.Validation.Predicate
+import qualified Beckn.Types.Validation.Regex as R
 import Beckn.Utils.JSON
+import Beckn.Utils.Validation
+import qualified Beckn.Utils.ValidationPredicates as P
 import Data.Swagger
 import EulerHS.Prelude hiding (id)
 
@@ -26,7 +30,18 @@ data CreateVehicleReq = CreateVehicleReq
   deriving (Generic, ToSchema)
 
 instance FromJSON CreateVehicleReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON = genericParseJsonWithValidation "CreateVehicleReq" validateCreateVehicleReq
+
+validateCreateVehicleReq :: Validate CreateVehicleReq
+validateCreateVehicleReq CreateVehicleReq {..} =
+  sequenceA_
+    [ validate "registrationNo" registrationNo $
+        LengthInRange 1 10 `And` R.Many (R.Any [R.latinUC, R.digit]),
+      validateMaybe "model" model $
+        NotEmpty `And` R.Many (R.Any $ R.alphanum <> [R.space]),
+      validateMaybe "make" make $ NotEmpty `And` P.name,
+      validateMaybe "color" color $ NotEmpty `And` P.name
+    ]
 
 instance CreateTransform CreateVehicleReq SV.Vehicle Flow where
   createTransform req = do

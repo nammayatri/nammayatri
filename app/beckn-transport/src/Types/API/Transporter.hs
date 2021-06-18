@@ -7,7 +7,10 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Utils.JSON
+import Beckn.Types.Validation.Predicate
+import qualified Beckn.Types.Validation.Regex as R
+import Beckn.Utils.Validation
+import qualified Beckn.Utils.ValidationPredicates as P
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Location as QL
 
@@ -32,7 +35,17 @@ data TransporterReq = TransporterReq
   deriving (Generic)
 
 instance FromJSON TransporterReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON = genericParseJsonWithValidation "TransporterReq" validateTransporterReq
+
+validateTransporterReq :: Validate TransporterReq
+validateTransporterReq TransporterReq {..} =
+  sequenceA_
+    [ validate "name" name $ MinLength 3 `And` P.name,
+      validateMaybe "description" description $ MinLength 3 `And` P.name,
+      validateMaybe "address" address $
+        NotEmpty `And` R.Many (R.Any $ R.alphanum <> map R.ExactChar " ,./"),
+      validate "mobileNumber" mobileNumber P.mobileNumber
+    ]
 
 instance CreateTransform TransporterReq SO.Organization Flow where
   createTransform req = do

@@ -3,7 +3,11 @@ module Types.API.Registration where
 import Beckn.External.FCM.Types
 import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.RegistrationToken
+import Beckn.Types.Validation.Predicate
+import qualified Beckn.Types.Validation.Regex as R
 import Beckn.Utils.JSON
+import Beckn.Utils.Validation
+import qualified Beckn.Utils.ValidationPredicates as P
 import EulerHS.Prelude
 
 data InitiateLoginReq = InitiateLoginReq
@@ -17,7 +21,16 @@ data InitiateLoginReq = InitiateLoginReq
   deriving (Generic)
 
 instance FromJSON InitiateLoginReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON =
+    genericParseJSON stripPrefixUnderscoreIfAny
+      >=> runValidationFromJson "InitiateLoginReq" validateInitiateLoginReq
+
+validateInitiateLoginReq :: Validate InitiateLoginReq
+validateInitiateLoginReq InitiateLoginReq {..} =
+  sequenceA_
+    [ validate "mobileNumber" mobileNumber P.mobileNumber,
+      validate "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    ]
 
 instance ToJSON InitiateLoginReq where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
@@ -32,7 +45,16 @@ data ReInitiateLoginReq = ReInitiateLoginReq
   deriving (Generic)
 
 instance FromJSON ReInitiateLoginReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON =
+    genericParseJSON stripPrefixUnderscoreIfAny
+      >=> runValidationFromJson "ReInitiateLoginReq" validateReInitiateLoginReq
+
+validateReInitiateLoginReq :: Validate ReInitiateLoginReq
+validateReInitiateLoginReq ReInitiateLoginReq {..} =
+  sequenceA_
+    [ validate "mobileNumber" mobileNumber P.mobileNumber,
+      validate "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    ]
 
 instance ToJSON ReInitiateLoginReq where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
@@ -55,7 +77,17 @@ data LoginReq = LoginReq
   deriving (Generic)
 
 instance FromJSON LoginReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON =
+    genericParseJSON stripPrefixUnderscoreIfAny
+      >=> runValidationFromJson "LoginReq" validateLoginReq
+
+validateLoginReq :: Validate LoginReq
+validateLoginReq LoginReq {..} =
+  sequenceA_
+    [ validate "mobileNumber" mobileNumber P.mobileNumber,
+      validate "mobileCountryCode" mobileCountryCode P.mobileCountryCode,
+      validate "hash" hash $ ExactLength 4 `And` R.Many (R.Ch R.digit)
+    ]
 
 instance ToJSON LoginReq where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny

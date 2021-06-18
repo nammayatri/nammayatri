@@ -298,7 +298,7 @@ buildInitiateLoginReq =
   Reg.InitiateLoginReq
     { medium = SR.SMS,
       __type = SR.OTP,
-      mobileNumber = "90000900000",
+      mobileNumber = "9000090000",
       mobileCountryCode = "+91",
       role = Just Person.USER,
       deviceToken = Nothing
@@ -310,7 +310,7 @@ buildLoginReq =
     { medium = SR.SMS,
       __type = SR.OTP,
       hash = "7891",
-      mobileNumber = "90000900000",
+      mobileNumber = "9000090000",
       mobileCountryCode = "+91",
       deviceToken = Just $ FCMRecipientToken "AN_DEV_TOKEN"
     }

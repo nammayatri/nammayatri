@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Types.API.Person where
 
 import App.Types
@@ -8,7 +10,10 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as SP
+import Beckn.Types.Validation.Predicate
 import Beckn.Utils.JSON
+import Beckn.Utils.Validation
+import qualified Beckn.Utils.ValidationPredicates as P
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
@@ -54,13 +59,14 @@ data UpdatePersonReq = UpdatePersonReq
     address :: Maybe Text,
     bound :: Maybe Text
   }
-  deriving (Generic)
+  deriving (Generic, ToJSON)
 
 instance FromJSON UpdatePersonReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  parseJSON = genericParseJsonWithValidation "UpdatePersonReq" validateUpdatePersonReq
 
-instance ToJSON UpdatePersonReq where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+validateUpdatePersonReq :: Validate UpdatePersonReq
+validateUpdatePersonReq UpdatePersonReq {..} =
+  validateMaybe "firstName" firstName $ MinLength 3 `And` P.name
 
 instance ModifyTransform UpdatePersonReq SP.Person Flow where
   modifyTransform req person = do
@@ -165,13 +171,18 @@ data CreatePersonReq = CreatePersonReq
     address :: Maybe Text,
     bound :: Maybe Text
   }
-  deriving (Generic)
+  deriving (Generic, ToJSON)
+
+validateCreatePersonReq :: Validate CreatePersonReq
+validateCreatePersonReq CreatePersonReq {..} =
+  sequenceA_
+    [ validateMaybe "firstName" firstName $ NotEmpty `And` P.name,
+      validateMaybe "mobileNumber" mobileNumber P.mobileNumber,
+      validateMaybe "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    ]
 
 instance FromJSON CreatePersonReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON CreatePersonReq where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  parseJSON = genericParseJsonWithValidation "CreatePersonReq" validateCreatePersonReq
 
 instance CreateTransform CreatePersonReq SP.Person Flow where
   createTransform req = do
