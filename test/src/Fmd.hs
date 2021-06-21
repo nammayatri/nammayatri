@@ -10,7 +10,6 @@ import Data.Time
 import EulerHS.Prelude
 import FmdWrapper.Common (fmdTestAppBaseUrl)
 import Servant.Client
-import "fmd-wrapper" Types.Beckn.API.Confirm
 import "fmd-wrapper" Types.Beckn.API.Init
 import "fmd-wrapper" Types.Beckn.API.Search
 import "fmd-wrapper" Types.Beckn.API.Select
@@ -98,11 +97,11 @@ buildFMDInitReq context quoteId = do
       message = InitOrder $ order {quotation = Just (Quotation quoteId Nothing Nothing Nothing)}
     }
 
-buildFMDConfirmReq :: Context -> ConfirmReq
+buildFMDConfirmReq :: Mig.Context -> API.BecknReq API.OrderObject
 buildFMDConfirmReq context =
-  ConfirmReq
+  API.BecknReq
     { context,
-      message = ConfirmReqMessage example
+      message = API.OrderObject example
     }
 
 buildFMDUpdateReq :: Context -> UpdateReq

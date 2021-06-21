@@ -8,16 +8,23 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Migration.Catalog as M.Catalog
 import qualified Beckn.Types.Core.Migration.Category as M.Category
+import qualified Beckn.Types.Core.Migration.Contact as M.Contact
 import qualified Beckn.Types.Core.Migration.Context as M.Context
 import qualified Beckn.Types.Core.Migration.DecimalValue as M.DecimalValue
 import qualified Beckn.Types.Core.Migration.Descriptor as M.Descriptor
+import qualified Beckn.Types.Core.Migration.Gps as M.Gps
 import qualified Beckn.Types.Core.Migration.Item as M.Item
+import qualified Beckn.Types.Core.Migration.Location as M.Location
+import qualified Beckn.Types.Core.Migration.Order as M.Order
+import qualified Beckn.Types.Core.Migration.Payment as M.Payment
+import qualified Beckn.Types.Core.Migration.Person as M.Person
 import qualified Beckn.Types.Core.Migration.Price as M.Price
 import qualified Beckn.Types.Core.Migration.Provider as M.Provider
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
 import Control.Lens.Prism (_Just)
+import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime)
 import EulerHS.Prelude hiding (State, drop)
@@ -28,16 +35,13 @@ import Types.Beckn.API.Select
 import Types.Beckn.API.Status
 import Types.Beckn.API.Track
 import qualified Types.Beckn.API.Types as API
-import qualified Types.Beckn.Address as CoreAddr
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue
 import Types.Beckn.Descriptor
 import Types.Beckn.FmdOrder
-import qualified Types.Beckn.Location as CoreLoc
 import Types.Beckn.MonetaryValue
 import Types.Beckn.Operator
 import Types.Beckn.Option
-import Types.Beckn.Package
 import Types.Beckn.Payment
 import Types.Beckn.PaymentEndpoint
 import Types.Beckn.Person
@@ -121,15 +125,8 @@ mkOnSearchCatalog res@QuoteRes {..} =
                   { id = Nothing, -- TBD: https://docs.google.com/document/d/1EqI0lpOXpIdy8uLOZbRevwqr25sn6_lKqLlgWPN1kTs/
                     descriptor =
                       Just
-                        M.Descriptor.Descriptor
-                          { name = Just "Dunzo Digital Private Limited",
-                            code = Nothing,
-                            symbol = Nothing,
-                            short_desc = Nothing,
-                            long_desc = Nothing,
-                            images = Nothing,
-                            audio = Nothing,
-                            _3d_render = Nothing
+                        M.Descriptor.emptyDescriptor
+                          { M.Descriptor.name = Just "Dunzo Digital Private Limited"
                           },
                     time = Nothing,
                     categories =
@@ -302,6 +299,15 @@ updateOrder orgName cTime order payee status = do
 
     n = Nothing
 
+updateOrderMig :: UTCTime -> M.Order.Order -> TaskStatus -> M.Order.Order
+updateOrderMig cTime order status = do
+  -- TODO: this assumes that there is one task per order
+  let orderState = mapTaskStateToOrderStateMig (status.state)
+  let mbPayment = mkPaymentMig <$> status.estimated_price
+  order & #state ?~ orderState
+    & #updated_at ?~ cTime
+    & #payment .~ fromMaybe order.payment mbPayment
+
 mkOnTrackMessage :: Text -> Maybe Text -> TrackResMessage
 mkOnTrackMessage orderId trackingUrl = TrackResMessage tracking orderId
   where
@@ -317,22 +323,27 @@ cancelOrder o =
   o & #state ?~ withDescriptor (withCode "CANCELLED")
     & #cancellation_reasons ?~ [Option "1" (withName "User cancelled")]
 
-mkCreateTaskReq :: Order -> Flow CreateTaskReq
+mkCreateTaskReq :: M.Order.Order -> Flow CreateTaskReq
 mkCreateTaskReq order = do
   orderId <- order.id & fromMaybeErr "ORDER_ID_MISSING" (Just CORE003)
-  let [task] = order.tasks
-  let pickup = task.pickup
-  let drop = task.drop
-  let package = task.package
-  pickupDet <- mkLocationDetails pickup
-  dropDet <- mkLocationDetails drop
-  senderDet <- mkPersonDetails pickup
-  receiverDet <- mkPersonDetails drop
-  let pickupIntructions = formatInstructions "pickup" =<< pickup.instructions
-  let dropIntructions = formatInstructions "drop" =<< drop.instructions
-  let mTotalValue = (\(Amount a) -> fromRational a) <$> getPackageValue package
+  pickUpLoc <- order ^? #fulfillment . #start . _Just . #location . _Just & fromMaybeM (InvalidRequest "Pick up location not specified.")
+  deliveryLoc <- order ^? #fulfillment . #end . _Just . #location . _Just & fromMaybeM (InvalidRequest "Delivery location not specified.")
+  packageCatId <-
+    case order.items of
+      [orderItem] -> pure orderItem.id
+      _ -> throwError $ InvalidRequest "Exactly one order item expected."
+  pickupDet <- mkLocationDetails pickUpLoc
+  dropDet <- mkLocationDetails deliveryLoc
+  pickUpPerson <- order ^? #fulfillment . #start . _Just . #person & fromMaybeM (InvalidRequest "Sending person not specified.")
+  pickUpContact <- order ^? #fulfillment . #start . _Just . #contact & fromMaybeM (InvalidRequest "Sending person contact not specified.")
+  recievingPerson <- order ^? #fulfillment . #end . _Just . #person & fromMaybeM (InvalidRequest "Recieving person not specified.")
+  recievingContact <- order ^? #fulfillment . #end . _Just . #contact & fromMaybeM (InvalidRequest "Recieving person contact not specified.")
+  senderDet <- mkPersonDetails pickUpPerson pickUpContact
+  receiverDet <- mkPersonDetails recievingPerson recievingContact
+  let pickupIntructions = formatInstructions "pickup" =<< order ^. #fulfillment . #start . _Just . #instructions
+  let dropIntructions = formatInstructions "drop" =<< order ^. #fulfillment . #end . _Just . #instructions
   packageContent <- do
-    (categoryId :: Int) <- fromMaybeErr "INVALID_CATEGORY_ID" (Just CORE003) ((readMaybe . T.unpack) =<< package.package_category_id)
+    (categoryId :: Int) <- fromMaybeErr "INVALID_CATEGORY_ID" (Just CORE003) (readMaybe $ T.unpack packageCatId)
     -- Category id is the index value of dzPackageContentList
     dzPackageContentList ^? element (categoryId - 1)
       & fromMaybeErr "INVALID_CATEGORY_ID" (Just CORE003)
@@ -344,58 +355,46 @@ mkCreateTaskReq order = do
         sender_details = senderDet,
         receiver_details = receiverDet,
         special_instructions = joinInstructions orderId pickupIntructions dropIntructions,
-        package_approx_value = mTotalValue,
+        package_approx_value = Nothing, -- FIXME. Don't know where BAP can specify this in the new spec.
         package_content = [packageContent],
-        reference_id = order.prev_order_id
+        reference_id = Nothing
       }
   where
-    mkLocationDetails :: PickupOrDrop -> Flow LocationDetails
-    mkLocationDetails PickupOrDrop {..} = do
-      (CoreLoc.GPS lat lon) <- CoreLoc.gps location & fromMaybeErr "LAT_LON_NOT_FOUND" (Just CORE003)
-      lat' <- readCoord lat
-      lon' <- readCoord lon
-      address <- CoreLoc.address location & fromMaybeErr "ADDRESS_NOT_FOUND" (Just CORE003)
+    mkLocationDetails :: M.Location.Location -> Flow LocationDetails
+    mkLocationDetails location = do
+      -- FIXME: Much of these can be optional I'm pretty sure.
+      (M.Gps.Gps lat lon) <- location.gps & fromMaybeErr "LAT_LON_NOT_FOUND" (Just CORE003)
+      address <- location.address & fromMaybeErr "ADDRESS_NOT_FOUND" (Just CORE003)
+      door <- address.door & fromMaybeErr "DOOR_NOT_FOUND" (Just CORE003)
+      street <- address.street & fromMaybeErr "STREET_NOT_FOUND" (Just CORE003)
+      city <- address.city & fromMaybeErr "CITY_NOT_FOUND" (Just CORE003)
+      state_ <- address.state & fromMaybeErr "STATE_NOT_FOUND" (Just CORE003)
+      country <- address.country & fromMaybeErr "COUNTRY_NOT_FOUND" (Just CORE003)
       return $
         LocationDetails
-          { lat = lat',
-            lng = lon',
+          { lat = lat,
+            lng = lon,
             address =
               Address
-                { apartment_address = Just (CoreAddr.door address <> maybe "" (" " <>) (CoreAddr.name address) <> maybe "" (" " <>) (CoreAddr.building address)),
-                  street_address_1 = CoreAddr.street address,
+                { apartment_address = Just (door <> maybe "" (" " <>) address.name <> maybe "" (" " <>) address.building),
+                  street_address_1 = street,
                   street_address_2 = "",
                   landmark = Nothing,
-                  city = Just $ CoreAddr.city address,
-                  state = CoreAddr.state address,
-                  pincode = Just $ CoreAddr.area_code address,
-                  country = Just $ CoreAddr.country address
+                  city = Just city,
+                  state = state_,
+                  pincode = address.area_code,
+                  country = Just country
                 }
           }
 
-    mkPersonDetails :: PickupOrDrop -> Flow PersonDetails
-    mkPersonDetails PickupOrDrop {..} = do
-      phone <- listToMaybe (poc.phones) & fromMaybeErr "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003)
+    mkPersonDetails :: M.Person.Person -> M.Contact.Contact -> Flow PersonDetails
+    mkPersonDetails person contact = do
+      phone <- contact.phone & fromMaybeErr "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003)
       return $
         PersonDetails
-          { name = getName (poc.name),
+          { name = show person.name,
             phone_number = phone
           }
-
-    getName :: Name -> Text
-    getName Name {..} =
-      let def = maybe "" (" " <>)
-       in def honorific_prefix
-            <> def honorific_suffix
-            <> given_name
-            <> def additional_name
-            <> def family_name
-
-    getPackageValue :: Package -> Maybe Amount
-    getPackageValue package = do
-      let mprice = package.price
-      case mprice of
-        Nothing -> Nothing
-        Just price -> convertDecimalValueToAmount =<< (price.value)
 
     formatInstructions tag descriptors = do
       let insts = mapMaybe (.name) descriptors
@@ -444,6 +443,20 @@ mapTaskStateToOrderState s = do
         RUNNER_CANCELLED -> "CANCELLED"
   withDescriptor $ withCode code
 
+mapTaskStateToOrderStateMig :: TaskState -> Text
+mapTaskStateToOrderStateMig s =
+  case s of
+    CREATED -> "ACTIVE"
+    QUEUED -> "ACTIVE"
+    RUNNER_ACCEPTED -> "ACTIVE"
+    REACHED_FOR_PICKUP -> "ACTIVE"
+    PICKUP_COMPLETE -> "ACTIVE"
+    STARTED_FOR_DELIVERY -> "ACTIVE"
+    REACHED_FOR_DELIVERY -> "ACTIVE"
+    DELIVERED -> "COMPLETED"
+    CANCELLED -> "CANCELLED"
+    RUNNER_CANCELLED -> "CANCELLED"
+
 updateTaskEta :: Task -> Eta -> Flow Task
 updateTaskEta task eta = do
   now <- getCurrentTime
@@ -477,6 +490,24 @@ mkPayment payee estimated_price =
         { currency = "INR",
           value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
         }
+
+mkPaymentMig :: Float -> M.Payment.Payment
+mkPaymentMig estimated_price =
+  M.Payment.Payment
+    { uri = Nothing,
+      tl_method = Nothing,
+      params =
+        Just
+          M.Payment.Params
+            { transaction_id = Nothing,
+              amount = Just . M.DecimalValue.DecimalValue $ show estimated_price,
+              additional = HMS.empty
+            },
+      payee = Nothing,
+      _type = Just M.Payment.PRE_FULFILLMENT,
+      status = Nothing,
+      time = Nothing
+    }
 
 calcEta :: UTCTime -> Float -> UTCTime
 calcEta now diffInMinutes = addUTCTime (fromRational $ toRational (diffInMinutes * 60.0)) now

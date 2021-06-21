@@ -9,6 +9,7 @@ where
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
 import Beckn.Types.Core.Migration.Person (Person)
 import Beckn.Types.Core.Migration.Time (Time)
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
@@ -109,6 +110,18 @@ instance FromJSON Payment where
 
 instance ToJSON Payment where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+instance Example Payment where
+  example =
+    Payment
+      { uri = Nothing,
+        tl_method = Nothing,
+        params = Nothing,
+        payee = Nothing,
+        _type = Nothing,
+        status = Nothing,
+        time = Nothing
+      }
 
 instance FromJSON PaymentType where
   parseJSON = genericParseJSON constructorsWithHyphens

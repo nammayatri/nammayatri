@@ -6,6 +6,7 @@ where
 import Beckn.Types.Core.Migration.Address (Address)
 import Beckn.Types.Core.Migration.Organization (Organization)
 import Beckn.Types.Core.Migration.Time (Time)
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Time (UTCTime)
 import EulerHS.Prelude
@@ -28,3 +29,17 @@ instance FromJSON Billing where
 
 instance ToJSON Billing where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+instance Example Billing where
+  example =
+    Billing
+      { name = "Mr. Payeerson",
+        organization = Nothing,
+        address = Nothing,
+        email = Nothing,
+        phone = "+919999999999",
+        time = Nothing,
+        tax_number = Nothing,
+        created_at = Nothing,
+        updated_at = Nothing
+      }

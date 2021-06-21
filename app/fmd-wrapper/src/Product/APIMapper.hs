@@ -8,7 +8,6 @@ import Beckn.Types.Storage.Organization (Organization)
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
 import Types.Beckn.API.Cancel (CancelReq (..), CancelRes)
-import Types.Beckn.API.Confirm (ConfirmReq (..), ConfirmRes)
 import Types.Beckn.API.Init (InitReq (..), InitRes)
 import Types.Beckn.API.Search (SearchIntent)
 import Types.Beckn.API.Select (SelectReq (..), SelectRes)
@@ -42,11 +41,11 @@ init org req = withFlowHandlerBecknAPI $
     validateBapUrl org $ req.context
     DZ.init org req
 
-confirm :: Organization -> ConfirmReq -> FlowHandler ConfirmRes
+confirm :: Organization -> API.BecknReq API.OrderObject -> FlowHandler AckResponse
 confirm org req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    validateContext "confirm" $ req.context
-    validateBapUrl org $ req.context
+  withTransactionIdLogTagMig req $ do
+    validateContextMig "confirm" $ req.context
+    validateBapUrlMig org $ req.context
     DZ.confirm org req
 
 track :: Organization -> TrackReq -> FlowHandler TrackRes
@@ -93,4 +92,9 @@ validateBapUrl org context = do
         Nothing -> False
         Just bapUrl -> org.callbackUrl == Just bapUrl
   unless satisfied $
+    throwError (InvalidRequest "Invalid bap URL.")
+
+validateBapUrlMig :: Organization -> Mig.Context -> Flow ()
+validateBapUrlMig org context =
+  unless (org.callbackUrl == Just context.bap_uri) $
     throwError (InvalidRequest "Invalid bap URL.")

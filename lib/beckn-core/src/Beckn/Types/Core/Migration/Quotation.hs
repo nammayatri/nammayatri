@@ -2,6 +2,7 @@ module Beckn.Types.Core.Migration.Quotation where
 
 import Beckn.Types.Core.Migration.Duration
 import Beckn.Types.Core.Migration.Price
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import EulerHS.Prelude
 
@@ -32,6 +33,14 @@ instance FromJSON Quotation where
 
 instance ToJSON Quotation where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+instance Example Quotation where
+  example =
+    Quotation
+      { price = Nothing,
+        breakup = Nothing,
+        ttl = Nothing
+      }
 
 instance FromJSON BreakupItem where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

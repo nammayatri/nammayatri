@@ -6,6 +6,7 @@ import Beckn.Types.Core.Migration.Fulfillment (Fulfillment)
 import Beckn.Types.Core.Migration.ItemQuantity
 import Beckn.Types.Core.Migration.Payment
 import Beckn.Types.Core.Migration.Quotation
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude hiding (State, id, state)
@@ -44,6 +45,23 @@ instance FromJSON Order where
 instance ToJSON Order where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
+instance Example Order where
+  example =
+    Order
+      { id = Nothing,
+        state = Nothing,
+        provider = example,
+        items = [],
+        add_ons = [],
+        offers = [],
+        billing = example,
+        fulfillment = example,
+        quote = example,
+        payment = example,
+        created_at = Nothing,
+        updated_at = Nothing
+      }
+
 instance FromJSON OrderItem where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
@@ -55,3 +73,10 @@ instance FromJSON IdAndLocations where
 
 instance ToJSON IdAndLocations where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+instance Example IdAndLocations where
+  example =
+    IdAndLocations
+      { id = "1",
+        locations = []
+      }

@@ -13,6 +13,7 @@ import Beckn.Types.Core.Migration.State (State)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Aeson (withObject, (.!=), (.:), (.:?))
 import EulerHS.Prelude hiding (State, id, state)
@@ -50,6 +51,22 @@ instance FromJSON Fulfillment where
 instance ToJSON Fulfillment where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
+instance Example Fulfillment where
+  example =
+    Fulfillment
+      { id = Nothing,
+        _type = Nothing,
+        state = Nothing,
+        tracking = False,
+        customer = Nothing,
+        agent = Nothing,
+        vehicle = Nothing,
+        start = Nothing,
+        end = Nothing,
+        purpose = Nothing,
+        tags = Nothing
+      }
+
 data FulfillmentParticipant = FulfillmentParticipant
   { person :: Maybe Person,
     contact :: Maybe Contact
@@ -65,7 +82,7 @@ instance ToJSON FulfillmentParticipant where
 data FulfillmentDetails = FulfillmentDetails
   { location :: Maybe Location,
     time :: Maybe Time,
-    instructions :: Maybe Descriptor,
+    instructions :: Maybe [Descriptor],
     contact :: Contact,
     person :: Person
   }
