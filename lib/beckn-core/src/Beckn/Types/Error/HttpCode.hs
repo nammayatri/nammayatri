@@ -9,6 +9,7 @@ data HttpCode
   | E402
   | E403
   | E404
+  | E429
   | E500
   | E501
   | E503
@@ -21,6 +22,13 @@ toServerError = \case
   E402 -> err402
   E403 -> err403
   E404 -> err404
+  E429 ->
+    ServerError
+      { errHTTPCode = 429,
+        errReasonPhrase = "Too Many Requests",
+        errBody = "",
+        errHeaders = []
+      }
   E500 -> err500
   E501 -> err501
   E503 -> err503
@@ -32,6 +40,7 @@ isInternalError = \case
   E402 -> False
   E403 -> False
   E404 -> False
+  E429 -> False
   E500 -> True
   E501 -> True
   E503 -> True

@@ -46,7 +46,7 @@ instance IsAPIError AuthError where
     Unauthorized -> E401
     InvalidToken _ -> E401
     AccessDenied -> E403
-    HitsLimitError _ -> E403
+    HitsLimitError _ -> E429
     _ -> E400
 
 data HeaderError
