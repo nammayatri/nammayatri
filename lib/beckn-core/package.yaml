@@ -70,6 +70,8 @@ dependencies:
   - http-client
   - http-client-tls
   - http-types
+  - kleene
+  - lattices
   - postgresql-simple
   - postgresql-simple-migration
   - prometheus-client
@@ -84,6 +86,7 @@ dependencies:
   - passetto-client
   - pureMD5
   - random-strings
+  - regex-applicative
   - servant
   - servant-client
   - servant-client-core

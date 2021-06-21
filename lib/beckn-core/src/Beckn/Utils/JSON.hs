@@ -1,8 +1,4 @@
-module Beckn.Utils.JSON
-  ( module Beckn.Utils.JSON,
-    defaultOptions,
-  )
-where
+module Beckn.Utils.JSON where
 
 import Data.Aeson (Options (..), SumEncoding (ObjectWithSingleField), Value (..), defaultOptions)
 import Data.HashMap.Strict (size, unions)

@@ -108,6 +108,8 @@ extra-deps:
   - unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269
   - mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
   - record-dot-preprocessor-0.2.7@sha256:bf7e83b2a01675577f81536fc3246e3b54e9d2dd28bb645599813dc5c486fbee,2440
+  - kleene-0.1@sha256:751db2ef4fea28a1abc42e0cd18d82d900bbb33d1b4e86f72271426c501ba7af,2424
+
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

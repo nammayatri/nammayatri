@@ -2,7 +2,7 @@ module Beckn.Utils.Validation where
 
 import Beckn.Types.Error.API
 import Beckn.Types.Flow
-import Beckn.Types.Validation.Predicate
+import Beckn.Types.Predicate
 import Beckn.Utils.Error.Throwing
 import qualified Data.Aeson.Types as A
 import Data.Either.Validation

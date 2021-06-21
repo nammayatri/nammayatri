@@ -7,13 +7,13 @@ import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Types.Predicate
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Types.Validation.Predicate
 import Beckn.Utils.JSON
+import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
-import qualified Beckn.Utils.ValidationPredicates as P
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T

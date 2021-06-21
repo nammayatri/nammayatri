@@ -1,11 +1,18 @@
-module Beckn.Types.Validation.Predicate where
+module Beckn.Types.Predicate
+  ( module Beckn.Types.Predicate,
+    module Kleene,
+    (\/),
+  )
+where
 
-import Beckn.Types.Validation.Regex (Regex, showRegex)
-import Beckn.Types.Validation.RegexParsecEngine
+import Algebra.Lattice
 import qualified Data.Foldable as F
 import Data.Ix (inRange)
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Kleene
+import qualified Kleene.DFA as KDFA
+import Kleene.Internal.Pretty (pretty)
 
 type PredShow p = p -> Text -> Text
 
@@ -17,11 +24,19 @@ class Predicate a p where
 class ShowablePredicate p where
   pShow :: PredShow p
 
+type Regex = RE Char
+
+anyOf :: [Char] -> Regex
+anyOf = joins . map (fromString . (: []))
+
+instance Predicate String Regex where
+  pFun = match . KDFA.fromRE
+
 instance Predicate Text Regex where
-  pFun = regexEngine
+  pFun re a = match (KDFA.fromRE re) (T.unpack a)
 
 instance ShowablePredicate Regex where
-  pShow regex var = var <> " matches regex /" <> showRegex regex <> "/"
+  pShow regex var = var <> " matches regex /" <> T.pack (pretty regex) <> "/"
 
 data And p1 p2 = And p1 p2
 

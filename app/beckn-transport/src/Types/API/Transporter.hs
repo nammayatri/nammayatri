@@ -4,13 +4,12 @@ import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Predicate
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Types.Validation.Predicate
-import qualified Beckn.Types.Validation.Regex as R
+import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
-import qualified Beckn.Utils.ValidationPredicates as P
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Location as QL
 
@@ -43,7 +42,7 @@ validateTransporterReq TransporterReq {..} =
     [ validate "name" name $ MinLength 3 `And` P.name,
       validateMaybe "description" description $ MinLength 3 `And` P.name,
       validateMaybe "address" address $
-        NotEmpty `And` R.Many (R.Any $ R.alphanum <> map R.ExactChar " ,./"),
+        NotEmpty `And` star (P.alphanum \/ anyOf " ,./"),
       validate "mobileNumber" mobileNumber P.mobileNumber
     ]
 

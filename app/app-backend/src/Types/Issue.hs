@@ -1,7 +1,7 @@
 module Types.Issue (Issue (..)) where
 
-import Beckn.Types.Validation.Predicate
-import qualified Beckn.Types.Validation.Regex as R
+import Beckn.Types.Predicate
+import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
 import Data.Text
 import EulerHS.Prelude
@@ -22,4 +22,4 @@ validateIssue Issue {..} =
       validateMaybe "description" description $ LengthInRange 2 255 `And` text
     ]
   where
-    text = R.Many (R.Any $ R.alphanum <> [R.space, R.ExactChar ','])
+    text = star $ alphanum \/ " " \/ ","

@@ -4,13 +4,12 @@ import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
+import Beckn.Types.Predicate
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Types.Storage.Vehicle as SV
-import Beckn.Types.Validation.Predicate
-import qualified Beckn.Types.Validation.Regex as R
 import Beckn.Utils.JSON
+import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
-import qualified Beckn.Utils.ValidationPredicates as P
 import Data.Swagger
 import EulerHS.Prelude hiding (id)
 
@@ -36,9 +35,9 @@ validateCreateVehicleReq :: Validate CreateVehicleReq
 validateCreateVehicleReq CreateVehicleReq {..} =
   sequenceA_
     [ validate "registrationNo" registrationNo $
-        LengthInRange 1 10 `And` R.Many (R.Any [R.latinUC, R.digit]),
+        LengthInRange 1 10 `And` star (P.latinUC \/ P.digit),
       validateMaybe "model" model $
-        NotEmpty `And` R.Many (R.Any $ R.alphanum <> [R.space]),
+        NotEmpty `And` star P.latinOrSpace,
       validateMaybe "make" make $ NotEmpty `And` P.name,
       validateMaybe "color" color $ NotEmpty `And` P.name
     ]

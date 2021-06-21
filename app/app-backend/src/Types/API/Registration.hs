@@ -1,13 +1,12 @@
 module Types.API.Registration where
 
 import Beckn.External.FCM.Types
+import Beckn.Types.Predicate
 import Beckn.Types.Storage.Person
 import Beckn.Types.Storage.RegistrationToken
-import Beckn.Types.Validation.Predicate
-import qualified Beckn.Types.Validation.Regex as R
 import Beckn.Utils.JSON
+import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
-import qualified Beckn.Utils.ValidationPredicates as P
 import EulerHS.Prelude
 
 data InitiateLoginReq = InitiateLoginReq
@@ -86,7 +85,7 @@ validateLoginReq LoginReq {..} =
   sequenceA_
     [ validate "mobileNumber" mobileNumber P.mobileNumber,
       validate "mobileCountryCode" mobileCountryCode P.mobileCountryCode,
-      validate "hash" hash $ ExactLength 4 `And` R.Many (R.Ch R.digit)
+      validate "hash" hash $ ExactLength 4 `And` star P.digit
     ]
 
 instance ToJSON LoginReq where
