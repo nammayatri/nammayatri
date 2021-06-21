@@ -39,12 +39,3 @@ data DlBAConfig = DlBAConfig
     dlClientSecret :: ClientSecret
   }
   deriving (Show, Generic, ToJSON, FromJSON)
-
-data DelhiveryConfig = DelhiveryConfig
-  { dlUrl :: BaseUrl,
-    dlTokenUrl :: BaseUrl,
-    dlBPId :: Text,
-    dlBPNwAddress :: BaseUrl,
-    dlPayee :: Text
-  }
-  deriving (Show, Generic, ToJSON, FromJSON, FromDhall)

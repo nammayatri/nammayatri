@@ -21,7 +21,7 @@ import Data.Time
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Metrics
-import Types.Wrapper (DelhiveryConfig, DunzoConfig)
+import Types.Wrapper (DunzoConfig)
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -36,7 +36,6 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     domainVersion :: Text,
     dzConfig :: DunzoConfig,
-    dlConfig :: DelhiveryConfig,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     signatureExpiry :: NominalDiffTime,
@@ -52,7 +51,6 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     dzConfig :: DunzoConfig,
-    dlConfig :: DelhiveryConfig,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     signatureExpiry :: NominalDiffTime,

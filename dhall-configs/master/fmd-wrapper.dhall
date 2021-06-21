@@ -38,14 +38,6 @@ let dunzoConfig =
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
 
-let delhiveryConfig =
-  { dlUrl = "https://pelorus.delhivery.com"
-  , dlTokenUrl = "https://key-cloak.delhivery.com"
-  , dlBPId = "fmd-wrapper.delhivery"
-  , dlBPNwAddress = "http://localhost:8018/v1"
-  , dlPayee = sec.dlPayee
-  }
-
 in
 
 { dbCfg = pgcfg
@@ -59,7 +51,6 @@ in
 , coreVersion = "0.8.0"
 , domainVersion = "0.8.3"
 , dzConfig = dunzoConfig
-, dlConfig = delhiveryConfig
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , signatureExpiry = common.signatureExpiry
