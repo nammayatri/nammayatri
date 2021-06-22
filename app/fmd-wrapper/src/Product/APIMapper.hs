@@ -10,7 +10,7 @@ import qualified Product.Dunzo.Flow as DZ
 import Types.Beckn.API.Cancel (CancelReq (..), CancelRes)
 import Types.Beckn.API.Init (InitOrder)
 import Types.Beckn.API.Search (SearchIntent)
-import Types.Beckn.API.Select (SelectReq (..), SelectRes)
+import Types.Beckn.API.Select (SelectedObject)
 import Types.Beckn.API.Status (StatusReq (..), StatusRes)
 import Types.Beckn.API.Track (TrackReq (..), TrackRes)
 import qualified Types.Beckn.API.Types as API
@@ -27,11 +27,11 @@ search org req = withFlowHandlerBecknAPI $
     validateContextMig "search" $ req.context
     DZ.search org req
 
-select :: Organization -> SelectReq -> FlowHandler SelectRes
+select :: Organization -> API.BecknReq SelectedObject -> FlowHandler AckResponse
 select org req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    validateContext "select" $ req.context
-    validateBapUrl org $ req.context
+  withTransactionIdLogTagMig req $ do
+    validateContextMig "select" $ req.context
+    validateBapUrlMig org $ req.context
     DZ.select org req
 
 init :: Organization -> API.BecknReq InitOrder -> FlowHandler AckResponse

@@ -37,7 +37,6 @@ import ExternalAPI.Dunzo.Types
 import Types.Beckn.API.Init
 import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
-import Types.Beckn.API.Select
 import Types.Beckn.API.Status
 import Types.Beckn.API.Track
 import qualified Types.Beckn.API.Types as API
@@ -87,27 +86,6 @@ mkQuoteReqFromSearch API.BecknReq {..} = do
   where
     pickupLocationNotFound = throwError $ InvalidRequest "Pickup location not found."
     dropLocationNotFound = throwError $ InvalidRequest "Drop location not found."
-
-mkQuoteReqFromSelect :: SelectReq -> Flow QuoteReq
-mkQuoteReqFromSelect SelectReq {..} = do
-  let tasks = message.order.tasks
-      task = head tasks
-      pickup = task.pickup.location
-      drop = task.drop.location
-      pgps = fromJust pickup.gps
-      dgps = fromJust drop.gps
-  plat <- readCoord pgps.lat
-  plon <- readCoord pgps.lon
-  dlat <- readCoord dgps.lat
-  dlon <- readCoord dgps.lon
-  return $
-    QuoteReq
-      { pickup_lat = plat,
-        pickup_lng = plon,
-        drop_lat = dlat,
-        drop_lng = dlon,
-        category_id = "pickup_drop"
-      }
 
 mkQuoteReqFromInitOrder :: InitAPI.InitOrder -> Flow QuoteReq
 mkQuoteReqFromInitOrder order = do
@@ -246,15 +224,6 @@ mkQuote quotationTTLinMin QuoteRes {..} = do
           minimum_value = Nothing,
           maximum_value = Nothing
         }
-
-mkOnSelectOrder :: Order -> Integer -> QuoteRes -> Flow SelectOrder
-mkOnSelectOrder order quotationTTLinMin res@QuoteRes {..} = do
-  quote <- mkQuote quotationTTLinMin res
-  task <- updateTaskEta (head $ order.tasks) eta
-  let order' =
-        order & #tasks .~ [task]
-          & #quotation ?~ quote
-  return $ SelectOrder order'
 
 mkOnInitMessage :: Integer -> InitAPI.InitOrder -> QuoteRes -> Flow InitAPI.Initialized
 mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do

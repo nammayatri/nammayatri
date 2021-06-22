@@ -13,7 +13,6 @@ import Beckn.Utils.Callback (WithBecknCallback, WithBecknCallbackMig, withBecknC
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.Combinators hiding (Context)
 import qualified Data.List as List
-import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
 import qualified ExternalAPI.Dunzo.Flow as API
@@ -22,12 +21,11 @@ import Product.Dunzo.Transform
 import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
 import qualified Storage.Queries.Organization as Org
-import qualified Storage.Queries.Quote as Storage
 import qualified Types.Beckn.API.Cancel as API
 import qualified Types.Beckn.API.Confirm as ConfirmAPI
 import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
-import qualified Types.Beckn.API.Select as API
+import qualified Types.Beckn.API.Select as SelectAPI
 import qualified Types.Beckn.API.Status as API
 import qualified Types.Beckn.API.Track as API
 import qualified Types.Beckn.API.Types as API
@@ -51,43 +49,8 @@ search org req = do
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog
 
-select :: Org.Organization -> API.SelectReq -> Flow API.SelectRes
-select org req = do
-  conf@DunzoConfig {..} <- dzConfig <$> ask
-  let context = updateBppUri (req.context) dzBPNwAddress
-  validateOrderRequest $ req.message.order
-  validateReturn $ req.message.order
-  cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  dzBACreds <- getDzBAPCreds org
-  withCallback "select" API.onSelectAPI context cbUrl $ do
-    quoteRes <-
-      mkQuoteReqFromSelect req
-        >>= getQuote dzBACreds conf
-    let reqOrder = req.message.order
-    onSelectMessage <- mkOnSelectOrder reqOrder dzQuotationTTLinMin quoteRes
-    let order = onSelectMessage.order
-    -- onSelectMessage has quotation
-    let quote = fromJust $ onSelectMessage.order.quotation
-    let quoteId = quote.id
-    let orderDetails = OrderDetails order quote
-    Storage.storeQuote quoteId orderDetails
-    return onSelectMessage
-  where
-    validateOrderRequest order = do
-      let tasks = order.tasks
-      when (length tasks /= 1) $ throwError (InvalidRequest "Currently processing only one task per order.")
-      let task = head tasks
-      let package = task.package
-      let pickup = task.pickup
-      let drop = task.drop
-      when (isJust $ pickup.time) $ throwError $ InvalidRequest "Scheduled pickup not supported."
-      when (isJust $ drop.time) $ throwError $ InvalidRequest "Scheduled drop not supported."
-      void $ case readMaybe . T.unpack =<< (package.package_category_id) of
-        Nothing -> throwError $ InvalidRequest "Invalid package category id."
-        -- Category id is the index value of dzPackageContentList
-        Just cid ->
-          unless (cid > 0 && cid <= length dzPackageContentList) $
-            throwError $ InvalidRequest "Invalid package category id."
+select :: Org.Organization -> API.BecknReq SelectAPI.SelectedObject -> Flow AckResponse
+select _org _req = throwError $ ActionNotSupported "select"
 
 init :: Org.Organization -> API.BecknReq InitAPI.InitOrder -> Flow AckResponse
 init org req = do

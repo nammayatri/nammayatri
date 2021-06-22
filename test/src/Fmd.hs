@@ -10,7 +10,6 @@ import EulerHS.Prelude
 import FmdWrapper.Common (fmdTestAppBaseUrl)
 import Servant.Client
 import "fmd-wrapper" Types.Beckn.API.Search
-import "fmd-wrapper" Types.Beckn.API.Select
 import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 
 fmdWrapperBaseUrl :: BaseUrl
@@ -76,13 +75,6 @@ buildFMDSearchReq context =
   API.BecknReq
     { context,
       message = SearchIntent example
-    }
-
-buildFMDSelectReq :: Context -> SelectReq
-buildFMDSelectReq context =
-  SelectReq
-    { context,
-      message = SelectOrder example
     }
 
 buildFMDConfirmReq :: Mig.Context -> API.BecknReq API.OrderObject
