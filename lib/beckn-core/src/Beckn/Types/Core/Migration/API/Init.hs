@@ -7,6 +7,7 @@ import Beckn.Types.Core.Migration.Billing (Billing)
 import Beckn.Types.Core.Migration.Fulfillment (Fulfillment)
 import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Quotation (Quotation)
+import Beckn.Utils.JSON (objectWithSingleFieldParsing)
 import Data.Aeson (withObject, (.:))
 import Data.Aeson.Types (parseFail)
 import EulerHS.Prelude hiding (id)
@@ -28,7 +29,18 @@ data InitOrder = InitOrder
     billing :: Billing,
     fulfillment :: Fulfillment
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show)
+
+instance FromJSON InitOrder where
+  parseJSON = genericParseJSON $ objectWithSingleFieldParsing initOrderConstructorMapping
+
+instance ToJSON InitOrder where
+  toJSON = genericToJSON $ objectWithSingleFieldParsing initOrderConstructorMapping
+
+initOrderConstructorMapping :: String -> String
+initOrderConstructorMapping = \case
+  "InitOrder" -> "order"
+  err -> error "Unexpected constructor name \"" <> err <> "\" in function initOrderConstructorMapping"
 
 data InitOrderProvider = InitOrderProvider
   { id :: IdObject,

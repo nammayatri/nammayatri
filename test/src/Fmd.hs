@@ -4,18 +4,15 @@ import Beckn.Types.Core.Context
 import Beckn.Types.Core.Domain
 import qualified Beckn.Types.Core.Migration.Context as Mig
 import qualified Beckn.Types.Core.Migration.Domain as Mig
-import Beckn.Types.Core.Quotation
 import Beckn.Utils.Example
 import Data.Time
 import EulerHS.Prelude
 import FmdWrapper.Common (fmdTestAppBaseUrl)
 import Servant.Client
-import "fmd-wrapper" Types.Beckn.API.Init
 import "fmd-wrapper" Types.Beckn.API.Search
 import "fmd-wrapper" Types.Beckn.API.Select
 import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.API.Update
-import "fmd-wrapper" Types.Beckn.FmdOrder
 
 fmdWrapperBaseUrl :: BaseUrl
 fmdWrapperBaseUrl =
@@ -87,14 +84,6 @@ buildFMDSelectReq context =
   SelectReq
     { context,
       message = SelectOrder example
-    }
-
-buildFMDInitReq :: Context -> Text -> InitReq
-buildFMDInitReq context quoteId = do
-  let order = example
-  InitReq
-    { context,
-      message = InitOrder $ order {quotation = Just (Quotation quoteId Nothing Nothing Nothing)}
     }
 
 buildFMDConfirmReq :: Mig.Context -> API.BecknReq API.OrderObject

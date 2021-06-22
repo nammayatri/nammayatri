@@ -8,7 +8,7 @@ import Beckn.Types.Storage.Organization (Organization)
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
 import Types.Beckn.API.Cancel (CancelReq (..), CancelRes)
-import Types.Beckn.API.Init (InitReq (..), InitRes)
+import Types.Beckn.API.Init (InitOrder)
 import Types.Beckn.API.Search (SearchIntent)
 import Types.Beckn.API.Select (SelectReq (..), SelectRes)
 import Types.Beckn.API.Status (StatusReq (..), StatusRes)
@@ -34,11 +34,11 @@ select org req = withFlowHandlerBecknAPI $
     validateBapUrl org $ req.context
     DZ.select org req
 
-init :: Organization -> InitReq -> FlowHandler InitRes
+init :: Organization -> API.BecknReq InitOrder -> FlowHandler AckResponse
 init org req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    validateContext "init" $ req.context
-    validateBapUrl org $ req.context
+  withTransactionIdLogTagMig req $ do
+    validateContextMig "init" $ req.context
+    validateBapUrlMig org $ req.context
     DZ.init org req
 
 confirm :: Organization -> API.BecknReq API.OrderObject -> FlowHandler AckResponse

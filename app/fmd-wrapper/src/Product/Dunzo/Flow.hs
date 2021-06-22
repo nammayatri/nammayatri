@@ -25,7 +25,7 @@ import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Quote as Storage
 import qualified Types.Beckn.API.Cancel as API
 import qualified Types.Beckn.API.Confirm as ConfirmAPI
-import qualified Types.Beckn.API.Init as API
+import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
 import qualified Types.Beckn.API.Select as API
 import qualified Types.Beckn.API.Status as API
@@ -89,35 +89,27 @@ select org req = do
           unless (cid > 0 && cid <= length dzPackageContentList) $
             throwError $ InvalidRequest "Invalid package category id."
 
-init :: Org.Organization -> API.InitReq -> Flow API.InitRes
+init :: Org.Organization -> API.BecknReq InitAPI.InitOrder -> Flow AckResponse
 init org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  let context = updateBppUri (req.context) dzBPNwAddress
+  let context = updateBppUriMig (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  quote <- req.message.order.quotation & fromMaybeErr "INVALID_QUOTATION" (Just CORE003)
-  let quoteId = quote.id
-  payeeDetails <- payee & decodeFromText & fromMaybeM (InternalError "Decode error.")
-  orderDetails <- Storage.lookupQuote quoteId >>= fromMaybeErr "INVALID_QUOTATION_ID" (Just CORE003)
-  let order = orderDetails.order
-  validateReturn order
+  -- validateReturn order FIXME
   dzBACreds <- getDzBAPCreds org
-  withCallback "init" API.onInitAPI context cbUrl $ do
-    -- quoteId will be used as orderId
+  withCallbackMig "init" InitAPI.onInitAPI context cbUrl $ do
+    let order = req.message
     onInitMessage <-
-      mkQuoteReqFromSelect (API.SelectReq context (API.SelectOrder (orderDetails.order)))
+      mkQuoteReqFromInitOrder order
         >>= getQuote dzBACreds conf
         >>= mkOnInitMessage
-          quoteId
           dzQuotationTTLinMin
-          (orderDetails.order)
-          payeeDetails
-          req
-    createCaseIfNotPresent (getId $ org.id) (onInitMessage.order) (orderDetails.quote)
-    return onInitMessage
+          order
+    createCaseIfNotPresent (getId $ org.id) onInitMessage
+    return $ InitAPI.InitializedObject onInitMessage
   where
-    createCaseIfNotPresent orgId order quote = do
+    createCaseIfNotPresent orgId onInitMessage = do
       now <- getCurrentTime
-      let caseId = Id $ fromJust $ order.id
+      let caseId = Id req.context.transaction_id
       let case_ =
             Case
               { id = caseId,
@@ -138,7 +130,7 @@ init org req = do
                 parentCaseId = Nothing,
                 fromLocationId = "",
                 toLocationId = "",
-                udf1 = Just $ encodeToText (OrderDetails order quote),
+                udf1 = Just $ encodeToText onInitMessage,
                 udf2 = Nothing,
                 udf3 = Nothing,
                 udf4 = Nothing,

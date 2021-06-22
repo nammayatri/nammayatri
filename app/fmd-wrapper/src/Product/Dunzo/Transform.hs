@@ -12,6 +12,8 @@ import qualified Beckn.Types.Core.Migration.Contact as M.Contact
 import qualified Beckn.Types.Core.Migration.Context as M.Context
 import qualified Beckn.Types.Core.Migration.DecimalValue as M.DecimalValue
 import qualified Beckn.Types.Core.Migration.Descriptor as M.Descriptor
+import qualified Beckn.Types.Core.Migration.Duration as M.Duration
+import qualified Beckn.Types.Core.Migration.Fulfillment as M.Fulfillment
 import qualified Beckn.Types.Core.Migration.Gps as M.Gps
 import qualified Beckn.Types.Core.Migration.Item as M.Item
 import qualified Beckn.Types.Core.Migration.Location as M.Location
@@ -20,6 +22,8 @@ import qualified Beckn.Types.Core.Migration.Payment as M.Payment
 import qualified Beckn.Types.Core.Migration.Person as M.Person
 import qualified Beckn.Types.Core.Migration.Price as M.Price
 import qualified Beckn.Types.Core.Migration.Provider as M.Provider
+import qualified Beckn.Types.Core.Migration.Quotation as M.Quotation
+import qualified Beckn.Types.Core.Migration.Time as M.Time
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
@@ -27,9 +31,11 @@ import Control.Lens.Prism (_Just)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime)
+import Data.Time.Format.ISO8601 (iso8601Show)
 import EulerHS.Prelude hiding (State, drop)
 import ExternalAPI.Dunzo.Types
 import Types.Beckn.API.Init
+import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
 import Types.Beckn.API.Select
 import Types.Beckn.API.Status
@@ -102,6 +108,26 @@ mkQuoteReqFromSelect SelectReq {..} = do
         drop_lng = dlon,
         category_id = "pickup_drop"
       }
+
+mkQuoteReqFromInitOrder :: InitAPI.InitOrder -> Flow QuoteReq
+mkQuoteReqFromInitOrder order = do
+  let mbPickupGps = order ^? #fulfillment . #start . _Just . #location . _Just . #gps . _Just
+  let mbDropGps = order ^? #fulfillment . #end . _Just . #location . _Just . #gps . _Just
+  case (mbPickupGps, mbDropGps) of
+    (Just pickupGps, Just dropGps) -> do
+      return $
+        QuoteReq
+          { pickup_lat = pickupGps.lat,
+            pickup_lng = pickupGps.lon,
+            drop_lat = dropGps.lat,
+            drop_lng = dropGps.lon,
+            category_id = "pickup_drop"
+          }
+    (Just _, Nothing) -> dropLocationNotFound
+    _ -> pickupLocationNotFound
+  where
+    pickupLocationNotFound = throwError $ InvalidRequest "Pickup location not found."
+    dropLocationNotFound = throwError $ InvalidRequest "Drop location not found."
 
 readCoord :: Text -> Flow Double
 readCoord text = do
@@ -230,21 +256,63 @@ mkOnSelectOrder order quotationTTLinMin res@QuoteRes {..} = do
           & #quotation ?~ quote
   return $ SelectOrder order'
 
-mkOnInitMessage :: Text -> Integer -> Order -> PaymentEndpoint -> InitReq -> QuoteRes -> Flow InitOrder
-mkOnInitMessage orderId quotationTTLinMin order payee req QuoteRes {..} = do
-  task <- updateTaskEta (head $ order.tasks) eta
+mkOnInitMessage :: Integer -> InitAPI.InitOrder -> QuoteRes -> Flow InitAPI.Initialized
+mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
+  orderItem <- getItem order.items -- probably quantity field must be validated
   now <- getCurrentTime
+
+  reqStartInfo <- order.fulfillment.start & fromMaybeM (InvalidRequest "Pickup location not found.")
+  reqEndInfo <- order.fulfillment.start & fromMaybeM (InvalidRequest "Drop location not found.")
+  (startInfo, endInfo) <- updateOrderEta reqStartInfo reqEndInfo now eta
+
   let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
-  quotation <- (order.quotation) & fromMaybeM (InternalError "Invalid order, no quotation.")
   return $
-    InitOrder $
-      order & #id ?~ orderId
-        & #quotation ?~ (quotation & #ttl ?~ validTill)
-        & #payment ?~ mkPayment payee estimated_price
-        & #billing .~ billing
-        & #tasks .~ [task]
+    InitAPI.Initialized
+      { provider = Nothing,
+        provider_location = Nothing,
+        items = Just [InitAPI.InitOrderItem orderItem.id 1],
+        add_ons = Nothing,
+        offers = Nothing,
+        billing = Just order.billing,
+        fulfillment =
+          Just $
+            M.Fulfillment.Fulfillment
+              { id = Nothing,
+                _type = Nothing,
+                state = Nothing,
+                tracking = False,
+                customer = Nothing,
+                agent = Nothing,
+                vehicle = Nothing,
+                start = Just startInfo,
+                end = Just endInfo,
+                purpose = Nothing,
+                tags = Nothing
+              },
+        quote =
+          Just $
+            M.Quotation.Quotation
+              { price = Just price,
+                breakup = Nothing,
+                ttl = Just . M.Duration.Duration . T.pack $ iso8601Show validTill
+              },
+        payment = Just $ mkPaymentMig estimated_price
+      }
   where
-    billing = req.message.order.billing
+    getItem [item] = pure item
+    getItem _ = throwError $ InvalidRequest "Exactly 1 order item expected."
+    price = mkPrice estimated_price
+    mkPrice estimatedPrice =
+      M.Price.Price
+        { currency = Just "INR",
+          value = Nothing,
+          estimated_value = Just $ M.DecimalValue.convertAmountToDecimalValue $ Amount $ toRational estimatedPrice,
+          computed_value = Nothing,
+          listed_value = Nothing,
+          offered_value = Nothing,
+          minimum_value = Nothing,
+          maximum_value = Nothing
+        }
 
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
 mkOnStatusMessage :: Text -> Order -> PaymentEndpoint -> TaskStatus -> Flow StatusResMessage
@@ -470,6 +538,23 @@ updateTaskEta task eta = do
   return $
     task & #pickup .~ pickup'
       & #drop .~ drop'
+
+updateOrderEta :: M.Fulfillment.FulfillmentDetails -> M.Fulfillment.FulfillmentDetails -> UTCTime -> Eta -> Flow (M.Fulfillment.FulfillmentDetails, M.Fulfillment.FulfillmentDetails)
+updateOrderEta startInfo endInfo now eta = do
+  let pickupEta = calcEta now <$> eta.pickup <|> (startInfo.time >>= (.timestamp))
+  let dropEta = calcEta now eta.dropoff
+  let pickupEtaTime = mkTimeObject <$> pickupEta
+  let dropEtaTime = mkTimeObject dropEta
+  return (startInfo & #time .~ pickupEtaTime, endInfo & #time ?~ dropEtaTime)
+  where
+    mkTimeObject time =
+      M.Time.Time
+        { label = Nothing,
+          timestamp = Just time,
+          duration = Nothing,
+          range = Nothing,
+          days = Nothing
+        }
 
 mkPayment :: PaymentEndpoint -> Float -> Payment
 mkPayment payee estimated_price =

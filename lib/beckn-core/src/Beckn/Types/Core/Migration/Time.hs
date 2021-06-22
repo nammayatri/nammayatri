@@ -10,7 +10,7 @@ data Time = Time
     timestamp :: Maybe UTCTime,
     duration :: Maybe Duration,
     range :: Maybe Range,
-    days :: Text
+    days :: Maybe Text
   }
   deriving (Generic, Show, Eq)
 
