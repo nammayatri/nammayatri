@@ -4,10 +4,10 @@ let becknTransport = ./beckn-transport.dhall
 let SortMode = < ETA | IdleTime >
 
 let shards =
-  [
-    globalCommon.mkShard +0 "JUSPAY.MOBILITY.PROVIDER.UAT.1"
-  , globalCommon.mkShard +1 "another-test-cabs"
-  ]
+ [ globalCommon.mkShard +0 "JUSPAY.MOBILITY.PROVIDER.UAT.1"
+ , globalCommon.mkShard +1 "another-test-cabs"
+ ]
+
 
 let appCfg = becknTransport //
   { loggerConfig = becknTransport.loggerConfig //
@@ -15,14 +15,18 @@ let appCfg = becknTransport //
     }
   }
 
+let driverAllocationConfig =
+  { defaultSortMode = SortMode.ETA
+  , driverNotificationExpiry = +25 -- seconds
+  , rideAllocationExpiry = +180 -- seconds
+  , requestsNumPerIteration = +50
+  , processDelay = +1 -- seconds
+  , shards = shards
+  }
+
 in
 
 { appCfg = appCfg
 , metricsPort = +9996
-, defaultSortMode = SortMode.ETA
-, driverNotificationExpiry = +25 -- seconds
-, rideAllocationExpiry = +180 -- seconds
-, requestsNumPerIteration = +50
-, processDelay = +1 -- seconds
-, shards = shards
+, driverAllocationConfig = driverAllocationConfig
 }

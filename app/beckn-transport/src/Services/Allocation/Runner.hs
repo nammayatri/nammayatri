@@ -49,7 +49,7 @@ handle =
 
 getOrganizationLock :: Flow (ShortId Organization)
 getOrganizationLock = do
-  shardMap <- asks shards
+  shardMap <- asks (.driverAllocationConfig.shards)
   let numShards = Map.size shardMap
   shardCounter <- Redis.incrementKeyRedis "beckn:allocation:shardCounter"
   let shardId = fromIntegral $ abs $ shardCounter `rem` fromIntegral numShards
@@ -71,14 +71,14 @@ run = do
     now <- getCurrentTime
     Redis.setKeyRedis "beckn:allocation:service" now
     processStartTime <- getCurrentTime
-    requestsNum <- asks requestsNumPerIteration
+    requestsNum <- asks (.driverAllocationConfig.requestsNumPerIteration)
     eres <- runSafeFlow $ Allocation.process handle shortOrgId requestsNum
     whenLeft eres $ Log.logTagError "Allocation service"
     Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
     processEndTime <- getCurrentTime
     let processTime = diffUTCTime processEndTime processStartTime
     -- If process handling took less than processDelay we delay for remain to processDelay time
-    processDelay <- asks processDelay
+    processDelay <- asks (.driverAllocationConfig.processDelay)
     L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (processDelay - processTime)
   isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (isShuttingDown . appEnv)
   when isRunning run

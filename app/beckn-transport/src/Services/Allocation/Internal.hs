@@ -32,13 +32,13 @@ import Utils.Common (throwError)
 import Utils.Notifications
 
 getDriverSortMode :: Flow SortMode
-getDriverSortMode = asks defaultSortMode
+getDriverSortMode = asks (.driverAllocationConfig.defaultSortMode)
 
 getConfiguredNotificationTime :: Flow NominalDiffTime
-getConfiguredNotificationTime = asks driverNotificationExpiry
+getConfiguredNotificationTime = asks (.driverAllocationConfig.driverNotificationExpiry)
 
 getConfiguredAllocationTime :: Flow NominalDiffTime
-getConfiguredAllocationTime = asks rideAllocationExpiry
+getConfiguredAllocationTime = asks (.driverAllocationConfig.rideAllocationExpiry)
 
 getDriverPool :: Id Ride -> Flow [Id Driver]
 getDriverPool rideId = withAppEnv $ Person.getDriverPool (cast rideId)

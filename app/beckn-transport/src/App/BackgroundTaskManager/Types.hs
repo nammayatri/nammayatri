@@ -15,11 +15,8 @@ import App.Types as App (AppCfg, AppEnv (..))
 import qualified App.Types as App
 import Beckn.Types.App (EnvR, FlowHandlerR, FlowServerR)
 import Beckn.Types.Common
-import Beckn.Types.Id
-import Beckn.Types.Storage.Organization
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.SignatureAuth
-import qualified Data.Map as Map
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import Types.App (SortMode)
@@ -30,29 +27,26 @@ import qualified Utils.Metrics as Metrics
 data BTMCfg = BTMCfg
   { appCfg :: App.AppCfg,
     metricsPort :: Int,
-    driverNotificationExpiry :: NominalDiffTime,
+    driverAllocationConfig :: DriverAllocationConfig
+  }
+  deriving (Generic, FromDhall)
+
+data DriverAllocationConfig = DriverAllocationConfig
+  { driverNotificationExpiry :: NominalDiffTime,
     rideAllocationExpiry :: NominalDiffTime,
     defaultSortMode :: SortMode,
     requestsNumPerIteration :: Integer,
     processDelay :: NominalDiffTime,
-    shards :: [Shard]
+    shards :: Shards
   }
   deriving (Generic, FromDhall)
 
 data BTMEnv = BTMEnv
   { appEnv :: App.AppEnv,
-    driverNotificationExpiry :: NominalDiffTime,
-    rideAllocationExpiry :: NominalDiffTime,
-    defaultSortMode :: SortMode,
-    requestsNumPerIteration :: Integer,
-    processDelay :: NominalDiffTime,
-    shards :: Map Int (ShortId Organization),
+    driverAllocationConfig :: DriverAllocationConfig,
     btmMetrics :: BTMMetricsContainer
   }
   deriving (Generic)
-
-shardToPair :: Shard -> (Int, ShortId Organization)
-shardToPair shard = (shard.shardId, ShortId (shard.shortOrgId))
 
 buildBTMEnv :: BTMCfg -> IO BTMEnv
 buildBTMEnv BTMCfg {..} = do
@@ -60,8 +54,7 @@ buildBTMEnv BTMCfg {..} = do
   btmMetrics <- registerBTMMetricsContainer
   return $
     BTMEnv
-      { shards = Map.fromList $ map shardToPair shards,
-        ..
+      { ..
       }
 
 type Env = EnvR BTMEnv

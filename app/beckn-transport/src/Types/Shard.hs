@@ -1,10 +1,7 @@
 module Types.Shard where
 
-import Beckn.Utils.Dhall
+import Beckn.Types.Id
+import Beckn.Types.Storage.Organization
 import EulerHS.Prelude
 
-data Shard = Shard
-  { shardId :: Int,
-    shortOrgId :: Text
-  }
-  deriving (Generic, FromDhall)
+type Shards = Map Int (ShortId Organization)

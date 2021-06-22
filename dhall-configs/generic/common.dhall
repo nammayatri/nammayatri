@@ -15,9 +15,8 @@ let mkSigningKey =
 
 let mkShard =
  \(shardId : Integer) -> \(shortOrgId : Text) ->
-  {
-    shardId = shardId
-  , shortOrgId = shortOrgId
+  { mapKey = shardId
+  , mapValue = shortOrgId
   }
 
 let LogLevel = < DEBUG | INFO | WARNING | ERROR >

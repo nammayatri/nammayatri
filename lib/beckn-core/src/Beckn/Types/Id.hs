@@ -15,6 +15,7 @@ import Database.Beam.Backend.SQL
   )
 import Database.Beam.Postgres (Postgres)
 import Database.Beam.Query (HasSqlEqualityCheck)
+import Dhall
 import EulerHS.Prelude
 import Servant (FromHttpApiData (parseUrlPiece), ToHttpApiData)
 
@@ -51,6 +52,9 @@ newtype ShortId domain = ShortId
   }
   deriving stock (Generic, Show, Eq)
   deriving newtype (ToJSON, FromJSON, ToSchema, ToHttpApiData)
+
+instance FromDhall (ShortId a) where
+  autoWith _ = ShortId <$> strictText
 
 instance IsString (ShortId d) where
   fromString = ShortId . Text.pack
