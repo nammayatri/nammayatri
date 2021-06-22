@@ -12,7 +12,6 @@ import Servant.Client
 import "fmd-wrapper" Types.Beckn.API.Search
 import "fmd-wrapper" Types.Beckn.API.Select
 import qualified "fmd-wrapper" Types.Beckn.API.Types as API
-import "fmd-wrapper" Types.Beckn.API.Update
 
 fmdWrapperBaseUrl :: BaseUrl
 fmdWrapperBaseUrl =
@@ -91,11 +90,4 @@ buildFMDConfirmReq context =
   API.BecknReq
     { context,
       message = API.OrderObject example
-    }
-
-buildFMDUpdateReq :: Context -> UpdateReq
-buildFMDUpdateReq context =
-  UpdateReq
-    { context,
-      message = UpdateReqMessage "update_pickup_location" example
     }

@@ -14,7 +14,7 @@ import Types.Beckn.API.Select (SelectReq (..), SelectRes)
 import Types.Beckn.API.Status (StatusReq (..), StatusRes)
 import Types.Beckn.API.Track (TrackReq (..), TrackRes)
 import qualified Types.Beckn.API.Types as API
-import Types.Beckn.API.Update (UpdateReq (..), UpdateRes)
+import Types.Beckn.API.Update (UpdateInfo)
 import Types.Beckn.Context
 import Types.Beckn.Domain
 import Types.Error
@@ -69,11 +69,11 @@ cancel org req = withFlowHandlerBecknAPI $
     validateBapUrl org $ req.context
     DZ.cancel org req
 
-update :: Organization -> UpdateReq -> FlowHandler UpdateRes
+update :: Organization -> API.BecknReq UpdateInfo -> FlowHandler AckResponse
 update org req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    validateContext "update" $ req.context
-    validateBapUrl org $ req.context
+  withTransactionIdLogTagMig req $ do
+    validateContextMig "update" $ req.context
+    validateBapUrlMig org $ req.context
     DZ.update org req
 
 validateContext :: Text -> Context -> Flow ()

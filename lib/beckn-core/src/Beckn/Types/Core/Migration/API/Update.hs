@@ -14,7 +14,7 @@ type UpdateAPI =
 updateAPI :: Proxy UpdateAPI
 updateAPI = Proxy
 
-data UpdateInfo = UodateInfo
+data UpdateInfo = UpdateInfo
   { update_target :: Text,
     order :: Order
   }

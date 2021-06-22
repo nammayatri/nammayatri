@@ -31,7 +31,7 @@ import qualified Types.Beckn.API.Select as API
 import qualified Types.Beckn.API.Status as API
 import qualified Types.Beckn.API.Track as API
 import qualified Types.Beckn.API.Types as API
-import qualified Types.Beckn.API.Update as API
+import qualified Types.Beckn.API.Update as UpdateAPI
 import qualified Types.Beckn.FmdItem as Item
 import Types.Beckn.FmdOrder
 import Types.Common
@@ -281,14 +281,8 @@ cancel org req = do
       let updatedCase = case_ {udf1 = Just $ encodeToText orderDetails}
       Storage.update caseId updatedCase
 
-update :: Org.Organization -> API.UpdateReq -> Flow API.UpdateRes
-update org req = do
-  DunzoConfig {..} <- dzConfig <$> ask
-  let context = updateBppUri (req.context) dzBPNwAddress
-  cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  withCallback "update" API.onUpdateAPI context cbUrl $ do
-    -- TODO: Dunzo doesnt have update
-    throwError $ ActionNotSupported "update"
+update :: Org.Organization -> API.BecknReq UpdateAPI.UpdateInfo -> Flow AckResponse
+update _org _req = throwError $ ActionNotSupported "update"
 
 -- Helpers
 getQuote :: DzBAConfig -> DunzoConfig -> QuoteReq -> Flow QuoteRes
