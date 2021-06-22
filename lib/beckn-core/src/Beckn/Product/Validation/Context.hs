@@ -48,8 +48,7 @@ validateActionMig expectedAction context =
     throwError InvalidAction
 
 validateCoreVersion ::
-  ( HasFlowEnv m r '["coreVersion" ::: Text],
-    Log m
+  ( HasFlowEnv m r '["coreVersion" ::: Text]
   ) =>
   Context ->
   m ()
@@ -70,8 +69,7 @@ validateCoreVersionMig context = do
     throwError UnsupportedCoreVer
 
 validateDomainVersion ::
-  ( HasFlowEnv m r '["domainVersion" ::: Text],
-    Log m
+  ( HasFlowEnv m r '["domainVersion" ::: Text]
   ) =>
   Context ->
   m ()
@@ -81,8 +79,7 @@ validateDomainVersion context = do
     throwError UnsupportedDomainVer
 
 validateContextCommons ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
-    Log m
+  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]
   ) =>
   Text ->
   Context ->

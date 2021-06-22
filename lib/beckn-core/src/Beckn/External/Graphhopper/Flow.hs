@@ -1,9 +1,7 @@
 module Beckn.External.Graphhopper.Flow where
 
 import qualified Beckn.External.Graphhopper.Types as GrphrSearch
-import Beckn.Types.App (MandatoryQueryParam)
 import Beckn.Types.Common
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common (callAPI)
 import Data.Geospatial
 import qualified Data.Text as T
@@ -25,7 +23,7 @@ type GrphrAPI =
 grphrAPI :: Proxy GrphrAPI
 grphrAPI = Proxy
 
-search :: HasCoreMetrics r => BaseUrl -> GrphrSearch.Request -> FlowR r (Either ClientError GrphrSearch.Response)
+search :: MonadFlow m => BaseUrl -> GrphrSearch.Request -> m (Either ClientError GrphrSearch.Response)
 search url GrphrSearch.Request {..} =
   callAPI url clientM "search"
   where

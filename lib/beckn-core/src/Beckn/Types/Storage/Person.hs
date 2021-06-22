@@ -215,7 +215,7 @@ data DecryptedPerson = DecryptedPerson
   }
   deriving (Generic, ToJSON, FromJSON)
 
-buildDecryptedPerson :: Person -> FlowWithEnc f DecryptedPerson
+buildDecryptedPerson :: HasFlowEncEnv m r => Person -> m DecryptedPerson
 buildDecryptedPerson Person {..} = do
   decMobileNumber <- decrypt mobileNumber
   return $

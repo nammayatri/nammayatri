@@ -6,7 +6,6 @@ module Utils.Common
   )
 where
 
-import App.Types
 import Beckn.Product.Validation.Context
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
@@ -22,7 +21,7 @@ import EulerHS.Prelude
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Search as API
 
-generateShortId :: Flow (ShortId a)
+generateShortId :: MonadFlow m => m (ShortId a)
 generateShortId = ShortId . T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
 
 mkIntent :: API.SearchReq -> Intent
@@ -41,7 +40,7 @@ mkIntent req =
       fare = toBeckn $ req.fare
     }
 
-validateContext :: Text -> Context -> Flow ()
+validateContext :: (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) => Text -> Context -> m ()
 validateContext action context = do
   validateDomain MOBILITY context
   validateContextCommons action context

@@ -8,9 +8,9 @@ import Types.API.Serviceability
 import Types.Geofencing
 import Utils.Common
 
-rideServiceable :: RideServiceabilityReq -> Flow Bool
+rideServiceable :: (HasFlowDBEnv m r, HasFlowEnv m r '["geofencingConfig" ::: GeofencingConfig]) => RideServiceabilityReq -> m Bool
 rideServiceable RideServiceabilityReq {..} = do
-  geofencingConfig <- asks geofencingConfig
+  geofencingConfig <- asks (.geofencingConfig)
   originServiceable <-
     case geofencingConfig.origin of
       Unrestricted -> pure True

@@ -66,7 +66,7 @@ getOrganizationLock = do
 
 run :: Flow ()
 run = do
-  runnerHandler do
+  runnerHandler $ do
     shortOrgId <- getOrganizationLock
     now <- getCurrentTime
     Redis.setKeyRedis "beckn:allocation:service" now
@@ -80,16 +80,16 @@ run = do
     -- If process handling took less than processDelay we delay for remain to processDelay time
     processDelay <- asks (.driverAllocationConfig.processDelay)
     L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (processDelay - processTime)
-  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (isShuttingDown . appEnv)
+  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (.appEnv.isShuttingDown)
   when isRunning run
   where
     fromNominalToMicroseconds = floor . (1000000 *) . nominalDiffTimeToSeconds
     runnerHandler =
       flip
         catches
-        [ Handler \(RedisError err) -> do
+        [ Handler $ \(RedisError err) -> do
             Log.logTagError "Allocation service" $ show err
             L.runIO $ threadDelay 1000000,
-          Handler \(APIException e) -> Log.logTagError "Allocation service" $ toLogMessageAPIError e,
-          Handler \(e :: SomeException) -> Log.logTagError "Allocation service" $ show e
+          Handler $ \(APIException e) -> Log.logTagError "Allocation service" $ toLogMessageAPIError e,
+          Handler $ \(e :: SomeException) -> Log.logTagError "Allocation service" $ show e
         ]

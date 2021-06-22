@@ -1,7 +1,7 @@
 module Storage.Queries.Location where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
+import Beckn.Storage.DB.Config
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -16,7 +16,7 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B
 getDbTable =
   DB.location . DB.appDb <$> getSchemaName
 
-createFlow :: Storage.Location -> Flow ()
+createFlow :: HasFlowDBEnv m r => Storage.Location -> m ()
 createFlow = do
   DB.runSqlDB . create
 
@@ -26,14 +26,25 @@ create Storage.Location {..} = do
   DB.createOne' dbTable (Storage.insertExpression Storage.Location {..})
 
 findLocationById ::
-  Id Storage.Location -> Flow (Maybe Storage.Location)
+  HasFlowDBEnv m r =>
+  Id Storage.Location ->
+  m (Maybe Storage.Location)
 findLocationById locId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Location {..} = id ==. B.val_ locId
 
-findAllWithLimitOffsetWhere :: [Text] -> [Text] -> [Text] -> [Text] -> [Text] -> Maybe Int -> Maybe Int -> Flow [Storage.Location]
+findAllWithLimitOffsetWhere ::
+  HasFlowDBEnv m r =>
+  [Text] ->
+  [Text] ->
+  [Text] ->
+  [Text] ->
+  [Text] ->
+  Maybe Int ->
+  Maybe Int ->
+  m [Storage.Location]
 findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = do
   dbTable <- getDbTable
   DB.findAll
@@ -60,7 +71,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-findAllByIds :: [Id Storage.Location] -> Flow [Storage.Location]
+findAllByIds :: HasFlowDBEnv m r => [Id Storage.Location] -> m [Storage.Location]
 findAllByIds locIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate locIds)

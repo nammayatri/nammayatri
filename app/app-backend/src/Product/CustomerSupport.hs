@@ -36,7 +36,7 @@ login T.LoginReq {..} = withFlowHandlerAPI $ do
           token <- generateToken person
           pure $ T.LoginRes token "Logged in successfully"
 
-generateToken :: SP.Person -> Flow Text
+generateToken :: HasFlowDBEnv m r => SP.Person -> m Text
 generateToken SP.Person {..} = do
   let personId = getId id
   regToken <- createSupportRegToken personId
@@ -55,7 +55,7 @@ logout person =
         DB.runSqlDB (RegistrationToken.deleteByPersonId (getId $ person.id))
         pure $ T.LogoutRes "Logged out successfully"
 
-createSupportRegToken :: Text -> Flow SR.RegistrationToken
+createSupportRegToken :: HasFlowDBEnv m r => Text -> m SR.RegistrationToken
 createSupportRegToken entityId = do
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -108,7 +108,7 @@ listOrder supportP mCaseId mMobile mlimit moffset =
           >>= fromMaybeM PersonDoesNotExist
       return $ T.OrderInfo person [_case]
 
-makeCaseToOrder :: SP.Person -> C.Case -> Flow T.OrderResp
+makeCaseToOrder :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => SP.Person -> C.Case -> m T.OrderResp
 makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
     Case.findOneByParentIdAndCaseType id C.RIDEORDER
@@ -135,7 +135,7 @@ makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
           }
   pure $ T.OrderResp {_order = details}
 
-makeTripDetails :: Maybe C.Case -> Flow (Maybe T.TripDetails)
+makeTripDetails :: HasFlowDBEnv m r => Maybe C.Case -> m (Maybe T.TripDetails)
 makeTripDetails caseM = case caseM of
   Nothing -> pure Nothing
   Just _case -> do

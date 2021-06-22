@@ -2,14 +2,13 @@
 
 module Beckn.Utils.Error.BecknAPIError where
 
+import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Error.BecknAPIError
-import Beckn.Types.Flow
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import Servant.Client (BaseUrl, Client, HasClient)
+import Servant.Client (Client, HasClient)
 
 data BecknAPICallError = BecknAPICallError Text Error
   deriving (Show)
@@ -29,7 +28,7 @@ type IsBecknAPI api req =
   )
 
 callBecknAPI ::
-  ( HasCoreMetrics env,
+  ( MonadFlow m,
     IsBecknAPI api req
   ) =>
   Maybe ET.ManagerSelector ->
@@ -38,15 +37,15 @@ callBecknAPI ::
   Proxy api ->
   BaseUrl ->
   req ->
-  FlowR env ()
+  m ()
 callBecknAPI mbManagerSelector errorCodeMb action api baseUrl req =
   callBecknAPI' mbManagerSelector errorCodeMb baseUrl (ET.client api req) action
 
 callBecknAPI' ::
-  HasCoreMetrics env =>
+  MonadFlow m =>
   Maybe ET.ManagerSelector ->
   Maybe Text ->
-  CallAPI' env AckResponse ()
+  CallAPI' m AckResponse ()
 callBecknAPI' mbManagerSelector errorCodeMb baseUrl eulerClient name =
   void $
     callApiUnwrappingApiError

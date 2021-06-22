@@ -1,6 +1,5 @@
 module ExternalAPI.Flow where
 
-import App.Types
 import Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.API.Feedback as API
@@ -13,47 +12,77 @@ import Beckn.Utils.Error.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import EulerHS.Prelude
 import qualified ExternalAPI.Types as API
+import GHC.Records.Extra
 import Servant.Client
 import Types.API.Location
 import Utils.Common
 
 search ::
-  BaseUrl -> SearchReq -> Flow ()
+  HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl] =>
+  BaseUrl ->
+  SearchReq ->
+  m ()
 search url req = do
   url' <-
-    asks xGatewaySelector
+    asks (.xGatewaySelector)
       >>= fromMaybeM GatewaySelectorNotSet
       >>= \case
-        "NSDL.BG.1" -> asks xGatewayNsdlUrl >>= fromMaybeM NSDLBaseUrlNotSet
+        "NSDL.BG.1" -> asks (.xGatewayNsdlUrl) >>= fromMaybeM NSDLBaseUrlNotSet
         "JUSPAY.BG.1" -> pure url
         _ -> throwError UnsupportedGatewaySelector
   callBecknAPIWithSignature "search" API.search url' req
 
-confirm :: BaseUrl -> ConfirmReq -> Flow ()
+confirm ::
+  MonadFlow m =>
+  BaseUrl ->
+  ConfirmReq ->
+  m ()
 confirm = callBecknAPIWithSignature "confirm" API.confirm
 
-location :: BaseUrl -> Text -> Flow GetLocationRes
+location ::
+  MonadFlow m =>
+  BaseUrl ->
+  Text ->
+  m GetLocationRes
 location url req = do
   -- TODO: fix authentication
   callOwnAPI Nothing Nothing url (API.location req) "location"
 
-track :: BaseUrl -> TrackTripReq -> Flow ()
+track ::
+  MonadFlow m =>
+  BaseUrl ->
+  TrackTripReq ->
+  m ()
 track = callBecknAPIWithSignature "track" API.trackTrip
 
-cancel :: BaseUrl -> CancelReq -> Flow ()
+cancel ::
+  MonadFlow m =>
+  BaseUrl ->
+  CancelReq ->
+  m ()
 cancel = callBecknAPIWithSignature "cancel" API.cancel
 
-status :: BaseUrl -> StatusReq -> Flow ()
+status ::
+  MonadFlow m =>
+  BaseUrl ->
+  StatusReq ->
+  m ()
 status = callBecknAPIWithSignature "status" API.status
 
-feedback :: BaseUrl -> FeedbackReq -> Flow ()
+feedback ::
+  MonadFlow m =>
+  BaseUrl ->
+  FeedbackReq ->
+  m ()
 feedback = callBecknAPIWithSignature "feedback" API.feedback
 
 callBecknAPIWithSignature ::
-  IsBecknAPI api req =>
+  ( MonadFlow m,
+    IsBecknAPI api req
+  ) =>
   Text ->
   Proxy api ->
   BaseUrl ->
   req ->
-  Flow ()
+  m ()
 callBecknAPIWithSignature = callBecknAPI (Just signatureAuthManagerKey) Nothing

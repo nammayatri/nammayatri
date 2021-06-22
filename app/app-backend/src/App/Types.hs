@@ -1,6 +1,5 @@
 module App.Types
   ( Env,
-    Flow,
     FlowHandler,
     FlowServer,
     AppCfg (),
@@ -112,8 +111,6 @@ buildAppEnv AppCfg {..} = do
 
 type Env = EnvR AppEnv
 
-type Flow = FlowR AppEnv
-
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
@@ -125,7 +122,7 @@ instance AuthenticatingEntity AppEnv where
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
 
-instance BAPMetrics Flow where
+instance BAPMetrics (FlowR AppEnv) where
   startSearchMetrics = Metrics.startSearchMetricsFlow
   finishSearchMetrics = Metrics.finishSearchMetricsFlow
   incrementCaseCount = Metrics.incrementCaseCountFlow

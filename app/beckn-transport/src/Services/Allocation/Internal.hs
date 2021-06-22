@@ -113,7 +113,8 @@ checkAvailability driverIds = do
 
 getDriverResponse :: Id Ride -> Id Driver -> Flow (Maybe DriverResponse)
 getDriverResponse rideId driverId =
-  Redis.getKeyRedis $ "beckn:" <> getId rideId <> ":" <> getId driverId <> ":response"
+  withAppEnv $
+    Redis.getKeyRedis $ "beckn:" <> getId rideId <> ":" <> getId driverId <> ":response"
 
 cancelRide :: Id Ride -> Flow ()
 cancelRide rideId = withAppEnv $ BP.cancelRide rideId False
@@ -192,4 +193,4 @@ getRideInfo rideId = do
       _ -> throwError $ InternalError "Unknown status to cast."
 
 withAppEnv :: AppFlow.Flow a -> Flow a
-withAppEnv = withReaderT appEnv
+withAppEnv = withReaderT (.appEnv)

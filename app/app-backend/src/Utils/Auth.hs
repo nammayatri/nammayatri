@@ -2,6 +2,7 @@ module Utils.Auth where
 
 import App.Types
 import Beckn.Types.App
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as SOrganization
 import qualified Beckn.Types.Storage.Person as Person
@@ -55,7 +56,7 @@ instance VerificationMethod VerifyToken where
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyPerson :: RegToken -> Flow Person.Person
+verifyPerson :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => RegToken -> m Person.Person
 verifyPerson token = do
   sr <- verifyToken token
   Person.findById (Id $ SR.entityId sr)
@@ -64,13 +65,13 @@ verifyPerson token = do
 verifyPersonAction :: VerificationAction VerifyToken AppEnv
 verifyPersonAction = VerificationAction verifyPerson
 
-verifyToken :: RegToken -> Flow SR.RegistrationToken
+verifyToken :: HasFlowDBEnv m r => RegToken -> m SR.RegistrationToken
 verifyToken token =
   RegistrationToken.findByToken token
     >>= Utils.fromMaybeM (InvalidToken token)
     >>= validateToken
 
-validateToken :: SR.RegistrationToken -> Flow SR.RegistrationToken
+validateToken :: HasFlowDBEnv m r => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal updatedAt

@@ -16,6 +16,7 @@ import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Cancel as Cancel
 import Types.Error
+import Types.Metrics
 import qualified Types.Metrics as Metrics
 import Utils.Common
 import qualified Utils.Notifications as Notify
@@ -27,7 +28,7 @@ cancel person req = withFlowHandlerAPI $ do
     Cancel.CASE -> searchCancel person req
     Cancel.PRODUCT_INSTANCE -> cancelProductInstance person req
 
-cancelProductInstance :: Person.Person -> CancelReq -> Flow CancelRes
+cancelProductInstance :: HasFlowDBEnv m r => Person.Person -> CancelReq -> m CancelRes
 cancelProductInstance person req = do
   let prodInstId = req.entityId
   searchPI <- MPI.findById (Id prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
@@ -45,7 +46,7 @@ cancelProductInstance person req = do
   ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
   return Success
 
-searchCancel :: Person.Person -> CancelReq -> Flow CancelRes
+searchCancel :: (BAPMetrics m, HasFlowDBEnv m r) => Person.Person -> CancelReq -> m CancelRes
 searchCancel person req = do
   let caseId = req.entityId
   case_ <- MC.findIdByPerson person (Id caseId)

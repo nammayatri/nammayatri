@@ -101,7 +101,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack
 
-mkOrderCase :: Case.Case -> Flow Case.Case
+mkOrderCase :: MonadFlow m => Case.Case -> m Case.Case
 mkOrderCase Case.Case {..} = do
   now <- getCurrentTime
   caseId <- generateGUID
@@ -125,7 +125,7 @@ mkOrderCase Case.Case {..} = do
         ..
       }
 
-mkOrderProductInstance :: Id Case.Case -> SPI.ProductInstance -> Flow SPI.ProductInstance
+mkOrderProductInstance :: MonadFlow m => Id Case.Case -> SPI.ProductInstance -> m SPI.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   now <- getCurrentTime
   piid <- generateGUID

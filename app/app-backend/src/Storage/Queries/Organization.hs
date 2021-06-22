@@ -1,7 +1,7 @@
 module Storage.Queries.Organization where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
+import Beckn.Storage.DB.Config
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -16,16 +16,16 @@ import Types.Error
 import qualified Types.Storage.DB as DB
 import Utils.Common
 
-getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.OrganizationT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.OrganizationT))
 getDbTable =
   DB.organization . DB.appDb <$> getSchemaName
 
-create :: Storage.Organization -> Flow ()
+create :: HasFlowDBEnv m r => Storage.Organization -> m ()
 create Storage.Organization {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
 
-verifyApiKey :: RegToken -> Flow Storage.Organization
+verifyApiKey :: HasFlowDBEnv m r => RegToken -> m Storage.Organization
 verifyApiKey regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
@@ -34,7 +34,9 @@ verifyApiKey regToken = do
     predicate token Storage.Organization {..} = apiKey ==. B.val_ (Just token)
 
 findOrganizationById ::
-  Id Storage.Organization -> Flow (Maybe Storage.Organization)
+  HasFlowDBEnv m r =>
+  Id Storage.Organization ->
+  m (Maybe Storage.Organization)
 findOrganizationById orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -42,7 +44,10 @@ findOrganizationById orgId = do
     predicate Storage.Organization {..} = id ==. B.val_ orgId
 
 findOrganizationByCallbackUri ::
-  Maybe BaseUrl -> Storage.OrganizationType -> Flow (Maybe Storage.Organization)
+  HasFlowDBEnv m r =>
+  Maybe BaseUrl ->
+  Storage.OrganizationType ->
+  m (Maybe Storage.Organization)
 findOrganizationByCallbackUri url oType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -52,11 +57,12 @@ findOrganizationByCallbackUri url oType = do
         &&. _type ==. B.val_ oType
 
 listOrganizations ::
+  HasFlowDBEnv m r =>
   Maybe Int ->
   Maybe Int ->
   [Storage.OrganizationType] ->
   [Storage.Status] ->
-  Flow [Storage.Organization]
+  m [Storage.Organization]
 listOrganizations mlimit moffset oType status_ = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate oType status_)
@@ -78,9 +84,10 @@ complementVal l
   | otherwise = B.val_ False
 
 update ::
+  HasFlowDBEnv m r =>
   Id Storage.Organization ->
   Storage.Status ->
-  Flow ()
+  m ()
 update orgId status_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -96,7 +103,7 @@ update orgId status_ = do
           status <-. B.val_ pStatus
         ]
 
-findOrgByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage.Organization)
+findOrgByShortId :: HasFlowDBEnv m r => ShortId Storage.Organization -> m (Maybe Storage.Organization)
 findOrgByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

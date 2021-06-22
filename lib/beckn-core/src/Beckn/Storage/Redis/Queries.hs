@@ -25,49 +25,61 @@ import qualified Data.Text.Encoding as DTE
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 
-runKV :: HasCallStack => L.KVDB a -> FlowR r a
+runKV :: (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) => L.KVDB a -> m a
 runKV = L.runKVDB "redis" >=> fromEitherM RedisError
 
 -- KV
 setKeyRedis ::
   ( HasCallStack,
+    L.MonadFlow m,
+    MonadThrow m,
+    Log m,
     A.ToJSON a
   ) =>
   Text ->
   a ->
-  FlowR r ()
+  m ()
 setKeyRedis key val =
   -- TODO: check for "OK" in resp
   void $ runKV $ L.set (DTE.encodeUtf8 key) (BSL.toStrict $ A.encode val)
 
 setExRedis ::
   ( HasCallStack,
+    L.MonadFlow m,
+    MonadThrow m,
+    Log m,
     A.ToJSON a
   ) =>
   Text ->
   a ->
   Int ->
-  FlowR r ()
+  m ()
 setExRedis key value ttl =
   -- TODO: check for "OK" in resp
   void $ runKV $ L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
 
 getKeyRedis ::
   ( HasCallStack,
+    L.MonadFlow m,
+    MonadThrow m,
+    Log m,
     A.FromJSON a
   ) =>
   Text ->
-  FlowR r (Maybe a)
+  m (Maybe a)
 getKeyRedis key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
   return $ A.decode . BSL.fromStrict =<< resp
 
 getKeyRedisWithError ::
   ( HasCallStack,
+    L.MonadFlow m,
+    MonadThrow m,
+    Log m,
     A.FromJSON a
   ) =>
   Text ->
-  FlowR r (Either String a)
+  m (Either String a)
 getKeyRedisWithError key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
   return $
@@ -79,12 +91,15 @@ getKeyRedisWithError key = do
 
 setHashRedis ::
   ( HasCallStack,
+    L.MonadFlow m,
+    MonadThrow m,
+    Log m,
     ToJSON a
   ) =>
   Text ->
   Text ->
   a ->
-  FlowR r ()
+  m ()
 setHashRedis key field value =
   -- TODO: check for "OK" in resp
   void $
@@ -95,58 +110,61 @@ setHashRedis key field value =
         (BSL.toStrict $ A.encode value)
 
 expireRedis ::
-  HasCallStack =>
+  (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) =>
   Text ->
   Int ->
-  FlowR r ()
+  m ()
 expireRedis key ttl =
   void $ runKV $ L.expire (DTE.encodeUtf8 key) (toEnum ttl)
 
 getHashKeyRedis ::
   ( HasCallStack,
+    L.MonadFlow m,
+    MonadThrow m,
+    Log m,
     FromJSON a
   ) =>
   Text ->
   Text ->
-  FlowR r (Maybe a)
+  m (Maybe a)
 getHashKeyRedis key field = do
   resp <- runKV $ L.hget (DTE.encodeUtf8 key) (DTE.encodeUtf8 field)
   return $ A.decode . BSL.fromStrict =<< resp
 
 deleteKeyRedis ::
-  HasCallStack =>
+  (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) =>
   Text ->
-  FlowR r Int
+  m Int
 deleteKeyRedis = deleteKeysRedis . return
 
 deleteKeysRedis ::
-  HasCallStack =>
+  (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) =>
   [Text] ->
-  FlowR r Int
+  m Int
 deleteKeysRedis rKeys = do
   resp <- runKV $ L.del $ map DTE.encodeUtf8 rKeys
   return $ fromEnum resp
 
 incrementKeyRedis ::
-  HasCallStack =>
+  (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) =>
   Text ->
-  FlowR r Integer
+  m Integer
 incrementKeyRedis =
   runKV . L.incr . DTE.encodeUtf8
 
 getKeyRedisText ::
-  HasCallStack =>
+  (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) =>
   Text ->
-  FlowR r (Maybe Text)
+  m (Maybe Text)
 getKeyRedisText key = do
   resp <- runKV (L.get (DTE.encodeUtf8 key))
   return $ DTE.decodeUtf8 <$> resp
 
 tryLockRedis ::
-  HasCallStack =>
+  (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) =>
   Text ->
   Int ->
-  FlowR r Bool
+  m Bool
 tryLockRedis key expire = do
   resp <- runKV (L.rawRequest ["SET", buildLockResourceName key, "1", "NX", "EX", maxLockTime])
   case resp of
@@ -156,9 +174,9 @@ tryLockRedis key expire = do
     maxLockTime = show expire
 
 unlockRedis ::
-  HasCallStack =>
+  (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) =>
   Text ->
-  FlowR r ()
+  m ()
 unlockRedis key = do
   _ <- deleteKeyRedis $ buildLockResourceName key
   return ()

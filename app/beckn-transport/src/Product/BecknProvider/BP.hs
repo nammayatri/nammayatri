@@ -243,7 +243,7 @@ getIdShortIdAndTime = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return (now, guid, ShortId shortId)
 
-validateContext :: Text -> Context -> Flow ()
+validateContext :: HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text] => Text -> Context -> m ()
 validateContext action context = do
   validateDomain Domain.MOBILITY context
   validateContextCommons action context

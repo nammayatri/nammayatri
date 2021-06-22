@@ -9,6 +9,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
+import Beckn.Types.SlidingWindowLimiter
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.SlidingWindowLimiter
@@ -32,7 +33,15 @@ initiateLogin req =
 initiateFlowHitsCountKey :: SP.Person -> Text
 initiateFlowHitsCountKey person = "Registration:initiateFlow" <> getId person.id <> ":hitsCount"
 
-initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
+initiateFlow ::
+  ( HasFlowEncEnv m r,
+    HasFlowDBEnv m r,
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions, "otpSmsTemplate" ::: Text]
+  ) =>
+  InitiateLoginReq ->
+  SmsConfig ->
+  m InitiateLoginRes
 initiateFlow req smsCfg = do
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
@@ -51,7 +60,7 @@ initiateFlow req smsCfg = do
     Nothing -> do
       token <- makeSession scfg req entityId Nothing
       DB.runSqlDB (RegistrationToken.create token)
-      otpSmsTemplate <- otpSmsTemplate <$> ask
+      otpSmsTemplate <- asks (.otpSmsTemplate)
       withLogTag ("personId_" <> getId person.id) $
         SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
       return token
@@ -60,7 +69,7 @@ initiateFlow req smsCfg = do
   Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
 
-makePerson :: InitiateLoginReq -> Flow SP.Person
+makePerson :: HasFlowEncEnv m r =>  InitiateLoginReq -> m SP.Person
 makePerson req = do
   role <- (req.role) & fromMaybeM (InvalidRequest "You should pass person's role.")
   pid <- BC.generateGUID
@@ -95,7 +104,12 @@ makePerson req = do
       }
 
 makeSession ::
-  SmsSessionConfig -> InitiateLoginReq -> Text -> Maybe Text -> Flow SR.RegistrationToken
+  HasFlowDBEnv m r =>
+  SmsSessionConfig ->
+  InitiateLoginReq ->
+  Text ->
+  Maybe Text ->
+  m SR.RegistrationToken
 makeSession SmsSessionConfig {..} req entityId fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
@@ -119,7 +133,7 @@ makeSession SmsSessionConfig {..} req entityId fakeOtp = do
         info = Nothing
       }
 
-generateOTPCode :: Flow Text
+generateOTPCode :: MonadFlow m => m Text
 generateOTPCode =
   L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
 
@@ -159,17 +173,17 @@ login tokenId req =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
 
-getRegistrationTokenE :: Text -> Flow SR.RegistrationToken
+getRegistrationTokenE :: HasFlowDBEnv m r => Text -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound tokenId)
 
-createPerson :: InitiateLoginReq -> Flow SP.Person
+createPerson :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => InitiateLoginReq -> m SP.Person
 createPerson req = do
   person <- makePerson req
   Person.create person
   pure person
 
-checkPersonExists :: Text -> Flow SP.Person
+checkPersonExists :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => Text -> m SP.Person
 checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
 
@@ -190,7 +204,7 @@ reInitiateLogin tokenId req =
         return $ InitiateLoginRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Attempts limit exceed."
 
-clearOldRegToken :: SP.Person -> Id SR.RegistrationToken -> Flow ()
+clearOldRegToken :: HasFlowDBEnv m r => SP.Person -> Id SR.RegistrationToken -> m ()
 clearOldRegToken person = RegistrationToken.deleteByPersonIdExceptNew (getId $ person.id)
 
 logout :: SP.Person -> FlowHandler APISuccess

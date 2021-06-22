@@ -44,7 +44,7 @@ initiateCallToCustomer req = withFlowHandlerAPI $ do
   initiateCall providerPhone customerPhone
   return Ack
 
-getDriver :: ProductInstance -> Flow Driver.Driver
+getDriver :: (MonadFlow m) => ProductInstance -> m Driver.Driver
 getDriver rideSearchPI = do
   info <- ProductInstance.info rideSearchPI & fromMaybeM (PIFieldNotPresent "info")
   productInfo <- decodeFromText info & fromMaybeM (InternalError "Parse error.")
@@ -54,26 +54,26 @@ getDriver rideSearchPI = do
   driver <- driver_ & fromMaybeM (PIFieldNotPresent "driver")
   return $ toBeckn driver
 
-getPerson :: ProductInstance -> Flow Person
+getPerson :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => ProductInstance -> m Person
 getPerson rideSearchPI = do
   c <- Case.findById $ caseId rideSearchPI
   personId <- Case.requestor c & fromMaybeM (CaseFieldNotPresent "requestor")
   Person.findById (Id personId) >>= fromMaybeM PersonNotFound
 
 -- | Get person's mobile phone
-getPersonPhone :: Person -> Flow Text
+getPersonPhone :: HasFlowEncEnv m r => Person -> m Text
 getPersonPhone Person {..} = do
   decMobNum <- decrypt mobileNumber
   let phonenum = (<>) <$> mobileCountryCode <*> decMobNum
   phonenum & fromMaybeM (InternalError "Customer has no phone number.")
 
 -- | Get phone from Person data type
-getDriverPhone :: Driver.Driver -> Flow Text
+getDriverPhone :: (MonadFlow m) => Driver.Driver -> m Text
 getDriverPhone Driver.Driver {..} =
   phones & listToMaybe & fromMaybeM (InternalError "Driver has no contacts")
 
 -- | Returns phones pair or throws an error
-getProductAndCustomerPhones :: Id ProductInstance -> Flow (Text, Text)
+getProductAndCustomerPhones :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => Id ProductInstance -> m (Text, Text)
 getProductAndCustomerPhones rideSearchPid = do
   rideSearchPI <- ProductInstance.findByParentIdType rideSearchPid Case.RIDEORDER
   person <- getPerson rideSearchPI

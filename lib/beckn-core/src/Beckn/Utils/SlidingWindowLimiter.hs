@@ -10,7 +10,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import EulerHS.Prelude hiding (id)
 import GHC.Records.Extra
 
-checkSlidingWindowLimit :: HasField "registrationHitsOpt" r RegistrationHitsOptions => Text -> FlowR r ()
+checkSlidingWindowLimit :: HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions] => Text -> m ()
 checkSlidingWindowLimit key = do
   hitsLimit <- asks (.registrationHitsOpt.limit)
   hitsLimitResetTime <- asks (.registrationHitsOpt.limitResetTime)
@@ -21,7 +21,7 @@ checkSlidingWindowLimit key = do
 -- Returns True if limit is not exceed and further
 -- actions should be allowed. False otherwise.
 
-slidingWindowLimiter :: Text -> Int -> Int -> FlowR r Bool
+slidingWindowLimiter :: MonadFlow m => Text -> Int -> Int -> m Bool
 slidingWindowLimiter key frameHitsLim frameLen = do
   currTime <- getCurrentTime
   hits <- fromMaybe [] <$> Redis.getKeyRedis key

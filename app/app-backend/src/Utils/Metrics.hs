@@ -16,17 +16,17 @@ import GHC.Records.Extra
 import Prometheus as P
 import Types.Metrics (BAPMetricsContainer)
 
-startSearchMetricsFlow :: HasField "bapMetrics" k BAPMetricsContainer => Text -> FlowR k ()
+startSearchMetricsFlow :: HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer] => Text -> m ()
 startSearchMetricsFlow txnId = do
   bmContainer <- asks (.bapMetrics)
   startSearchMetrics bmContainer txnId
 
-finishSearchMetricsFlow :: HasField "bapMetrics" k BAPMetricsContainer => Text -> FlowR k ()
+finishSearchMetricsFlow :: HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer] => Text -> m ()
 finishSearchMetricsFlow txnId = do
   bmContainer <- asks (.bapMetrics)
   finishSearchMetrics bmContainer txnId
 
-incrementCaseCountFlow :: HasField "bapMetrics" k BAPMetricsContainer => Case.CaseStatus -> Case.CaseType -> FlowR k ()
+incrementCaseCountFlow :: HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer] => Case.CaseStatus -> Case.CaseType -> m ()
 incrementCaseCountFlow caseStatus caseType = do
   bmContainer <- asks (.bapMetrics)
   incrementCaseCount bmContainer caseStatus caseType
@@ -36,7 +36,7 @@ incrementCaseCount bmContainer caseStatus caseType = do
   let caseCounter = bmContainer.caseCounter
   L.runIO $ P.withLabel caseCounter (show caseStatus, show caseType) P.incCounter
 
-putSearchDuration :: P.Histogram -> Double -> FlowR e ()
+putSearchDuration :: L.MonadFlow m => P.Histogram -> Double -> m ()
 putSearchDuration searchDurationHistogram duration = L.runIO $ P.observe searchDurationHistogram duration
 
 searchDurationKey :: Text -> Text
@@ -45,7 +45,7 @@ searchDurationKey txnId = "beckn:" <> txnId <> ":on_search:received"
 searchDurationLockKey :: Text -> Text
 searchDurationLockKey txnId = txnId <> ":on_search"
 
-startSearchMetrics :: BAPMetricsContainer -> Text -> FlowR k ()
+startSearchMetrics :: MonadFlow m => BAPMetricsContainer -> Text -> m ()
 startSearchMetrics bmContainer txnId = do
   let (_, failureCounter) = bmContainer.searchDuration
       searchRedisExTime = bmContainer.searchDurationTimeout
@@ -61,7 +61,7 @@ startSearchMetrics bmContainer txnId = do
         Nothing -> return ()
       Redis.unlockRedis $ searchDurationLockKey txnId
 
-finishSearchMetrics :: BAPMetricsContainer -> Text -> FlowR k ()
+finishSearchMetrics :: MonadFlow m => BAPMetricsContainer -> Text -> m ()
 finishSearchMetrics bmContainer txnId = do
   let (searchDurationHistogram, _) = bmContainer.searchDuration
       searchRedisExTime = bmContainer.searchDurationTimeout

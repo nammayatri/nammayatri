@@ -1,6 +1,6 @@
 module Storage.Queries.DriverStats where
 
-import App.Types (AppEnv (dbCfg), Flow)
+import App.Types (Flow)
 import qualified Beckn.Storage.Common as Storage.Common
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common

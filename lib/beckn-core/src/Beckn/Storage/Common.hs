@@ -1,6 +1,5 @@
 {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Beckn.Storage.Common
@@ -11,14 +10,12 @@ module Beckn.Storage.Common
 where
 
 import Beckn.Storage.DB.Config
-import Beckn.Types.Common
 import Beckn.Utils.Common
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import GHC.Records (HasField (..))
 
 insertExpression ::
   _ =>
@@ -27,16 +24,17 @@ insertExpression ::
 insertExpression value = B.insertValues [value]
 
 handleIt ::
-  (T.DBConfig Pg -> FlowR r (T.DBResult (T.SqlConn Pg))) ->
-  FlowWithDb r (T.DBResult (T.SqlConn Pg))
+  HasFlowDBEnv m r =>
+  (T.DBConfig Pg -> m (T.DBResult (T.SqlConn Pg))) ->
+  m (T.DBResult (T.SqlConn Pg))
 handleIt mf = do
-  env <- ask
-  mf . repack $ getField @"dbCfg" env
+  cfg <- asks (.dbCfg)
+  mf $ repack cfg
   where
     repack (DBConfig x y z _) = T.mkPostgresPoolConfig x y z
 
-prepareDBConnections :: FlowWithDb r (T.DBResult (T.SqlConn Pg))
+prepareDBConnections :: HasFlowDBEnv m r => m (T.DBResult (T.SqlConn Pg))
 prepareDBConnections = handleIt L.initSqlDBConnection
 
-getOrInitConn :: FlowWithDb r (T.SqlConn Pg)
+getOrInitConn :: HasFlowDBEnv m r => m (T.SqlConn Pg)
 getOrInitConn = handleIt L.getOrInitSqlConn >>= checkDBError

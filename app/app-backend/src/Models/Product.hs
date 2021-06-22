@@ -1,6 +1,5 @@
 module Models.Product where
 
-import App.Types
 import Beckn.Types.Id
 import Beckn.Types.Storage.Products
 import EulerHS.Prelude
@@ -15,14 +14,14 @@ import Utils.Common
 -- any possible database errors outside of this module.
 -- Convert it to DomainError with a proper description
 
-create :: Products -> Flow ()
+create :: HasFlowDBEnv m r => Products -> m ()
 create = Q.createFlow
 
 -- | Find Product by id
-findById :: Id Products -> Flow Products
+findById :: HasFlowDBEnv m r => Id Products -> m Products
 findById pid = do
   Q.findById pid >>= fromMaybeM CaseNotFound
 
-findAllByIds :: [Id Products] -> Flow [Products]
+findAllByIds :: HasFlowDBEnv m r => [Id Products] -> m [Products]
 findAllByIds pids = do
   Q.findAllByIds pids

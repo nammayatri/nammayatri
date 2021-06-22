@@ -13,7 +13,6 @@ where
 
 import App.Types as App (AppCfg, AppEnv (..))
 import qualified App.Types as App
-import Beckn.Types.App (EnvR, FlowHandlerR, FlowServerR)
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.SignatureAuth
@@ -66,11 +65,11 @@ type FlowHandler = FlowHandlerR BTMEnv
 type FlowServer api = FlowServerR BTMEnv api
 
 instance AuthenticatingEntity BTMEnv where
-  getSelfId = getSelfId . appEnv
-  getSelfUrl = getSelfUrl . appEnv
-  getRegistry = getRegistry . appEnv
-  getSigningKeys = getSigningKeys . appEnv
-  getSignatureExpiry = getSignatureExpiry . appEnv
+  getSelfId btmEnv = getSelfId btmEnv.appEnv
+  getSelfUrl btmEnv = getSelfUrl btmEnv.appEnv
+  getRegistry btmEnv = getRegistry btmEnv.appEnv
+  getSigningKeys btmEnv = getSigningKeys btmEnv.appEnv
+  getSignatureExpiry btmEnv = getSignatureExpiry btmEnv.appEnv
 
 instance BTMMetrics Flow where
   incrementTaskCounter = Metrics.incrementTaskCounterFlow

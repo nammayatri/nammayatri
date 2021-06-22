@@ -2,10 +2,8 @@
 
 module Storage.Queries.RegistrationToken where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.RegistrationToken as Storage
@@ -27,21 +25,21 @@ create Storage.RegistrationToken {..} = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertExpression Storage.RegistrationToken {..})
 
-findById :: Text -> Flow (Maybe Storage.RegistrationToken)
+findById :: HasFlowDBEnv m r => Text -> m (Maybe Storage.RegistrationToken)
 findById rtId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.RegistrationToken {..} = id ==. B.val_ rtId
 
-findByToken :: Text -> Flow (Maybe Storage.RegistrationToken)
+findByToken :: HasFlowDBEnv m r => Text -> m (Maybe Storage.RegistrationToken)
 findByToken token_ = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate token_)
   where
     predicate rtoken Storage.RegistrationToken {..} = token ==. B.val_ rtoken
 
-updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
+updateAttempts :: HasFlowDBEnv m r => Int -> Text -> m Storage.RegistrationToken
 updateAttempts attemps rtId = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -59,7 +57,7 @@ deleteByPersonId rtId = do
   where
     predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid
 
-deleteByPersonIdExceptNew :: Text -> Id Storage.RegistrationToken -> Flow ()
+deleteByPersonIdExceptNew :: HasFlowDBEnv m r => Text -> Id Storage.RegistrationToken -> m ()
 deleteByPersonIdExceptNew id_ (Id newRT) = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id_ newRT)

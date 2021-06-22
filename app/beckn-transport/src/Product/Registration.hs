@@ -62,7 +62,7 @@ initiateFlow req smsCfg = do
   Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
 
-makePerson :: InitiateLoginReq -> Flow SP.Person
+makePerson :: HasFlowEncEnv m r => InitiateLoginReq -> m SP.Person
 makePerson req = do
   pid <- BC.generateGUID
   now <- getCurrentTime

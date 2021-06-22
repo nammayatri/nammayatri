@@ -21,7 +21,6 @@ import Beckn.External.FCM.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import qualified Beckn.Utils.JWT as JWT
@@ -33,7 +32,6 @@ import Data.Default.Class
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding ((^.))
 import qualified EulerHS.Types as ET
-import GHC.Records (HasField (..))
 import Servant
 
 -- | Create FCM message
@@ -77,13 +75,11 @@ createAndroidNotification title body notificationType =
 
 -- | Send FCM message to a person
 notifyPerson ::
-  ( HasField "fcmUrl" r BaseUrl,
-    HasField "fcmJsonPath" r (Maybe Text),
-    HasCoreMetrics r
+  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
   ) =>
   FCMAndroidData ->
   Person ->
-  FlowR r ()
+  m ()
 notifyPerson msgData person =
   let pid = getId person.id
       tokenNotFound = "device token of a person " <> pid <> " not found"
@@ -105,18 +101,16 @@ fcmSendMessageAPI = Proxy
 
 -- | Send FCM message to a registered device
 sendMessage ::
-  ( HasField "fcmUrl" r BaseUrl,
-    HasField "fcmJsonPath" r (Maybe Text),
-    HasCoreMetrics r
+  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
   ) =>
   FCMRequest ->
   Text ->
-  FlowR r ()
+  m ()
 sendMessage fcmMsg toWhom = fork desc $ do
   authToken <- getTokenText
   case authToken of
     Right token -> do
-      fcmUrl <- getField @"fcmUrl" <$> ask
+      fcmUrl <- asks (.fcmUrl)
       res <- callAPI fcmUrl (callFCM (Just $ FCMAuthToken token) fcmMsg) "sendMessage"
       logTagInfo fcm $ case res of
         Right _ -> "message sent successfully to a person with id = " <> toWhom
@@ -132,9 +126,9 @@ sendMessage fcmMsg toWhom = fork desc $ do
 
 -- | try to get FCM text token
 getTokenText ::
-  ( HasField "fcmJsonPath" r (Maybe Text)
+  ( HasFlowEnv m r '["fcmJsonPath" ::: Maybe Text]
   ) =>
-  FlowR r (Either Text Text)
+  m (Either Text Text)
 getTokenText = do
   token <- getToken
   pure $ case token of
@@ -143,9 +137,9 @@ getTokenText = do
 
 -- | Get token (refresh token if expired / invalid)
 getToken ::
-  ( HasField "fcmJsonPath" r (Maybe Text)
+  ( HasFlowEnv m r '["fcmJsonPath" ::: Maybe Text]
   ) =>
-  FlowR r (Either String JWT.JWToken)
+  m (Either String JWT.JWToken)
 getToken = do
   tokenStatus <-
     Redis.getKeyRedis "beckn:fcm_token" >>= \case
@@ -163,10 +157,10 @@ getToken = do
     jwt -> pure jwt
 
 getAndParseFCMAccount ::
-  HasField "fcmJsonPath" r (Maybe Text) =>
-  FlowR r (Either String JWT.ServiceAccount)
+  HasFlowEnv m r '["fcmJsonPath" ::: Maybe Text] =>
+  m (Either String JWT.ServiceAccount)
 getAndParseFCMAccount = do
-  mbFcmFile <- getField @"fcmJsonPath" <$> ask
+  mbFcmFile <- asks (.fcmJsonPath)
   case mbFcmFile of
     Nothing -> pure $ Left "FCM JSON file is not set in configs"
     Just fcmFile -> do
@@ -176,10 +170,10 @@ getAndParseFCMAccount = do
     parseContent :: Either String BL.ByteString -> Either String JWT.ServiceAccount
     parseContent rawContent = rawContent >>= Aeson.eitherDecode
 
-getNewToken :: (HasField "fcmJsonPath" r (Maybe Text)) => FlowR r (Either String JWT.JWToken)
+getNewToken :: (HasFlowEnv m r '["fcmJsonPath" ::: Maybe Text]) => m (Either String JWT.JWToken)
 getNewToken = getAndParseFCMAccount >>= either (pure . Left) refreshToken
 
-refreshToken :: JWT.ServiceAccount -> FlowR r (Either String JWT.JWToken)
+refreshToken :: MonadFlow m => JWT.ServiceAccount -> m (Either String JWT.JWToken)
 refreshToken fcmAcc = do
   logTagInfo fcmTag "Refreshing token"
   refreshRes <- L.runIO $ JWT.doRefreshToken fcmAcc

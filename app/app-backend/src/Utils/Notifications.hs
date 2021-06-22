@@ -2,9 +2,9 @@
 
 module Utils.Notifications where
 
-import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
@@ -16,7 +16,7 @@ import EulerHS.Prelude
 import qualified Models.Case as Case
 import qualified Storage.Queries.Person as Person
 import Types.ProductInfo as ProductInfo
-import Utils.Common (decodeFromText, showTimeIst)
+import Utils.Common (decodeFromText, showTimeIst, (:::))
 
 -- Note:
 -- When customer searches case is created in the BA, and search request is
@@ -34,7 +34,14 @@ import Utils.Common (decodeFromText, showTimeIst)
 -- If the case with product is being cancelled, you have to send notification
 -- in the BP for each product. Here it would be mostly one product again.
 -- When case doesn't have any product, there is no notification.
-notifyOnStatusUpdate :: ProductInstance -> ProductInstanceStatus -> Flow ()
+notifyOnStatusUpdate ::
+  ( HasFlowEncEnv m r,
+    HasFlowDBEnv m r,
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ) =>
+  ProductInstance ->
+  ProductInstanceStatus ->
+  m ()
 notifyOnStatusUpdate prodInst piStatus =
   when (prodInst.status /= piStatus) $ do
     c <- Case.findById $ prodInst.caseId
@@ -139,7 +146,13 @@ notifyOnStatusUpdate prodInst piStatus =
           _ -> pure ()
       _ -> pure ()
 
-notifyOnExpiration :: Case -> Flow ()
+notifyOnExpiration ::
+  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    HasFlowEncEnv m r,
+    HasFlowDBEnv m r
+  ) =>
+  Case ->
+  m ()
 notifyOnExpiration caseObj = do
   let caseId = Case.id caseObj
   let personId = Case.requestor caseObj
@@ -167,7 +180,11 @@ notifyOnExpiration caseObj = do
         _ -> pure ()
     else pure ()
 
-notifyOnRegistration :: RegistrationToken -> Person -> Flow ()
+notifyOnRegistration ::
+  HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  RegistrationToken ->
+  Person ->
+  m ()
 notifyOnRegistration regToken person =
   let tokenId = RegToken.id regToken
       notificationData =
@@ -187,7 +204,15 @@ notifyOnRegistration regToken person =
             ]
    in notifyPerson notificationData person
 
-notifyOnTrackCb :: Maybe Text -> Tracker -> Case -> Flow ()
+notifyOnTrackCb ::
+  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    HasFlowEncEnv m r,
+    HasFlowDBEnv m r
+  ) =>
+  Maybe Text ->
+  Tracker ->
+  Case ->
+  m ()
 notifyOnTrackCb personId tracker c =
   if isJust personId
     then do

@@ -1,6 +1,5 @@
 module Models.ProductInstance where
 
-import App.Types
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
@@ -19,63 +18,63 @@ import Utils.Common
 -- any possible database errors outside of this module.
 -- Convert it to DomainError with a proper description
 
-create :: ProductInstance -> Flow ()
+create :: HasFlowDBEnv m r => ProductInstance -> m ()
 create prdInst = do
   Q.createFlow prdInst
 
 -- | Validate and update ProductInstance status
-updateStatus :: Id ProductInstance -> ProductInstanceStatus -> Flow ()
+updateStatus :: HasFlowDBEnv m r => Id ProductInstance -> ProductInstanceStatus -> m ()
 updateStatus piid status = do
   Q.updateStatus piid status
 
 -- | Bulk validate and update Case's ProductInstances statuses
-updateAllProductInstancesByCaseId :: Id Case.Case -> ProductInstanceStatus -> Flow ()
+updateAllProductInstancesByCaseId :: HasFlowDBEnv m r => Id Case.Case -> ProductInstanceStatus -> m ()
 updateAllProductInstancesByCaseId caseId status = do
   Q.updateAllProductInstancesByCaseId caseId status
 
-updateMultiple :: Id ProductInstance -> ProductInstance -> Flow ()
+updateMultiple :: HasFlowDBEnv m r => Id ProductInstance -> ProductInstance -> m ()
 updateMultiple piid prdInst = do
   Q.updateMultipleFlow piid prdInst
 
 -- | Find Product Instance by id
-findById :: Id ProductInstance -> Flow ProductInstance
+findById :: HasFlowDBEnv m r => Id ProductInstance -> m ProductInstance
 findById caseProductId = do
   Q.findById caseProductId >>= fromMaybeM PINotFound
 
 -- | Find Product Instances by Case Id
-findAllByCaseId :: Id Case.Case -> Flow [ProductInstance]
+findAllByCaseId :: HasFlowDBEnv m r => Id Case.Case -> m [ProductInstance]
 findAllByCaseId caseId = do
   Q.findAllByCaseId caseId
 
 -- | Find Product Instance by Product Id
-findByProductId :: Id Products -> Flow ProductInstance
+findByProductId :: HasFlowDBEnv m r => Id Products -> m ProductInstance
 findByProductId pId = do
   Q.findByProductId pId >>= fromMaybeM PINotFound
 
-listAllProductInstanceWithOffset :: Integer -> Integer -> ListById -> [ProductInstanceStatus] -> [Case.CaseType] -> Flow [ProductInstance]
+listAllProductInstanceWithOffset :: HasFlowDBEnv m r => Integer -> Integer -> ListById -> [ProductInstanceStatus] -> [Case.CaseType] -> m [ProductInstance]
 listAllProductInstanceWithOffset limit offset piid stats csTypes = do
   Q.listAllProductInstanceWithOffset limit offset piid stats csTypes
 
-listAllProductInstance :: ListById -> [ProductInstanceStatus] -> Flow [ProductInstance]
+listAllProductInstance :: HasFlowDBEnv m r => ListById -> [ProductInstanceStatus] -> m [ProductInstance]
 listAllProductInstance piid status = do
   Q.listAllProductInstance piid status
 
-listAllProductInstanceByPerson :: Person.Person -> ListById -> [ProductInstanceStatus] -> Flow [ProductInstance]
+listAllProductInstanceByPerson :: HasFlowDBEnv m r => Person.Person -> ListById -> [ProductInstanceStatus] -> m [ProductInstance]
 listAllProductInstanceByPerson person piid status = do
   Q.listAllProductInstanceByPerson person piid status
 
-findAllByParentId :: Id ProductInstance -> Flow [ProductInstance]
+findAllByParentId :: HasFlowDBEnv m r => Id ProductInstance -> m [ProductInstance]
 findAllByParentId piid = do
   Q.findAllByParentId piid
 
-findByParentIdType :: Id ProductInstance -> Case.CaseType -> Flow ProductInstance
+findByParentIdType :: HasFlowDBEnv m r => Id ProductInstance -> Case.CaseType -> m ProductInstance
 findByParentIdType mparentId csType = do
   Q.findByParentIdType mparentId csType >>= fromMaybeM PINotFound
 
-findAllByPerson :: Id Person.Person -> Flow [ProductInstance]
+findAllByPerson :: HasFlowDBEnv m r => Id Person.Person -> m [ProductInstance]
 findAllByPerson perId = do
   Q.findAllByPerson perId
 
-findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]
+findAllExpiredByStatus :: HasFlowDBEnv m r => [ProductInstanceStatus] -> UTCTime -> m [ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
   Q.findAllExpiredByStatus statuses expiryTime

@@ -6,7 +6,6 @@ module Beckn.Storage.Queries where
 
 import qualified Beckn.Storage.Common as DB
 import Beckn.Storage.DB.Config hiding (schemaName)
-import qualified Beckn.Storage.DB.Config as DB
 import Beckn.Types.Schema
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
@@ -52,16 +51,18 @@ instance MonadTime SqlDB where
 
 findOne ::
   ( HasCallStack,
+    HasFlowDBEnv m r,
     ReadablePgTable table db
   ) =>
   Table table db ->
   (table (B.QExpr Postgres B.QBaseScope) -> B.QExpr Postgres B.QBaseScope Bool) ->
-  FlowWithDb r (Maybe (table Identity))
+  m (Maybe (table Identity))
 findOne dbTable predicate = runSqlDB $ lift . L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
 findAll ::
   ( HasCallStack,
     ReadablePgTable table db,
+    HasFlowDBEnv m r,
     B.FromBackendRow Postgres (B.QExprToIdentity res),
     BI.ProjectibleWithPredicate
       BI.AnyType
@@ -74,36 +75,48 @@ findAll ::
     BI.Q Postgres db B.QBaseScope res
   ) ->
   (table (BI.QExpr Postgres s) -> BI.QExpr Postgres s Bool) ->
-  FlowWithDb r [B.QExprToIdentity res]
+  m [B.QExprToIdentity res]
 findAll dbTable commands predicate = runSqlDB $ lift . L.findRows . B.select . commands . B.filter_ predicate $ B.all_ dbTable
 
 update ::
-  (HasCallStack, ReadablePgTable table db) =>
+  ( HasCallStack,
+    HasFlowDBEnv m r,
+    ReadablePgTable table db
+  ) =>
   Table table db ->
   (forall s. table (B.QField s) -> B.QAssignment Postgres s) ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  FlowWithDb r ()
+  m ()
 update dbTable setClause predicate = runSqlDB $ update' dbTable setClause predicate
 
 createOne ::
-  (HasCallStack, PgTable table db) =>
+  ( HasCallStack,
+    HasFlowDBEnv m r,
+    PgTable table db
+  ) =>
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
-  FlowWithDb r ()
+  m ()
 createOne dbTable value = runSqlDB $ createOne' dbTable value
 
 delete ::
-  (HasCallStack, ReadablePgTable table db) =>
+  ( HasCallStack,
+    HasFlowDBEnv m r,
+    ReadablePgTable table db
+  ) =>
   Table table db ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  FlowWithDb r ()
+  m ()
 delete dbTable predicate = runSqlDB $ delete' dbTable predicate
 
 deleteReturning ::
-  (HasCallStack, ReadablePgTable table db) =>
+  ( HasCallStack,
+    HasFlowDBEnv m r,
+    ReadablePgTable table db
+  ) =>
   Table table db ->
   (forall s. table (B.QExpr Postgres s) -> B.QExpr Postgres s Bool) ->
-  FlowWithDb r [table Identity]
+  m [table Identity]
 deleteReturning dbTable predicate = runSqlDB $ deleteReturning' dbTable predicate
 
 update' ::
@@ -136,13 +149,15 @@ deleteReturning' ::
 deleteReturning' dbTable predicate = lift . L.deleteRowsReturningListPG $ B.delete dbTable predicate
 
 runSqlDB' ::
-  HasCallStack =>
+  ( HasCallStack,
+    HasFlowDBEnv m r
+  ) =>
   ( T.SqlConn Pg ->
     L.SqlDB Pg a ->
-    FlowR r (T.DBResult a)
+    m (T.DBResult a)
   ) ->
   SqlDB a ->
-  DB.FlowWithDb r a
+  m a
 runSqlDB' runSqlDBFunction query = do
   connection <- DB.getOrInitConn
   schemaName <- getSchemaName
@@ -151,19 +166,24 @@ runSqlDB' runSqlDBFunction query = do
   runSqlDBFunction connection (runReaderT query env) >>= checkDBError
 
 runSqlDB ::
-  HasCallStack =>
+  ( HasCallStack,
+    HasFlowDBEnv m r
+  ) =>
   SqlDB a ->
-  DB.FlowWithDb r a
+  m a
 runSqlDB = runSqlDB' L.runDB
 
 runSqlDBTransaction ::
-  HasCallStack =>
+  ( HasCallStack,
+    HasFlowDBEnv m r
+  ) =>
   SqlDB a ->
-  DB.FlowWithDb r a
+  m a
 runSqlDBTransaction = runSqlDB' L.runTransaction
 
 findAllByJoin ::
   ( HasCallStack,
+    HasFlowDBEnv m r,
     B.FromBackendRow Postgres (B.QExprToIdentity res),
     BI.ProjectibleWithPredicate
       BI.AnyType
@@ -173,6 +193,6 @@ findAllByJoin ::
   ) =>
   (_query -> BI.Q Postgres db B.QBaseScope res) ->
   _query ->
-  DB.FlowWithDb r [B.QExprToIdentity res]
+  m [B.QExprToIdentity res]
 findAllByJoin filters query =
   runSqlDB . lift . L.findRows . B.select $ filters query

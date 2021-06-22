@@ -1,6 +1,5 @@
 module Storage.Queries.Products where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
@@ -16,7 +15,7 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B
 getDbTable =
   DB.products . DB.appDb <$> getSchemaName
 
-createFlow :: Storage.Products -> Flow ()
+createFlow :: HasFlowDBEnv m r => Storage.Products -> m ()
 createFlow =
   DB.runSqlDB . create
 
@@ -25,14 +24,14 @@ create Storage.Products {..} = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertExpression Storage.Products {..})
 
-findById :: Id Storage.Products -> Flow (Maybe Storage.Products)
+findById :: HasFlowDBEnv m r => Id Storage.Products -> m (Maybe Storage.Products)
 findById pid = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate pid)
   where
     predicate pid_ Storage.Products {..} = id ==. B.val_ pid_
 
-findAllByIds :: [Id Storage.Products] -> Flow [Storage.Products]
+findAllByIds :: HasFlowDBEnv m r => [Id Storage.Products] -> m [Storage.Products]
 findAllByIds pids = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate pids)

@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.Product.MapSearch where
 
 import qualified Beckn.External.Graphhopper.Flow as Grphr
@@ -7,36 +5,32 @@ import qualified Beckn.External.Graphhopper.Types as Grphr
 import Beckn.Types.Common
 import Beckn.Types.Error.API
 import qualified Beckn.Types.MapSearch as MapSearch
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import Data.Geospatial hiding (bbox)
 import EulerHS.Prelude
-import GHC.Records (HasField (..))
 import Prelude (atan2)
 
 getRouteMb ::
-  ( HasField "graphhopperUrl" r BaseUrl,
-    HasCoreMetrics r
+  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
   MapSearch.Request ->
-  FlowR r (Maybe MapSearch.Route)
+  m (Maybe MapSearch.Route)
 getRouteMb request =
   (listToMaybe . (.routes) <$> getRoute request)
     `catch` \(_ :: RouteError) -> pure Nothing
 
 getRoute ::
-  ( HasField "graphhopperUrl" r BaseUrl,
-    HasCoreMetrics r
+  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
   MapSearch.Request ->
-  FlowR r MapSearch.Response
+  m MapSearch.Response
 getRoute MapSearch.Request {..} = do
   -- Currently integrated only with graphhopper
   unless (all isLatLong waypoints) $ throwError RouteNotLatLong
   let points = map (\(MapSearch.LatLong point) -> point) waypoints
       mode' = fromMaybe MapSearch.CAR mode
       vehicle = mapToVehicle mode'
-  graphhopperUrl <- getField @"graphhopperUrl" <$> ask
+  graphhopperUrl <- asks (.graphhopperUrl)
   Grphr.Response {..} <-
     Grphr.search graphhopperUrl (grphrReq points vehicle)
       >>= fromEitherM (RouteRequestError graphhopperUrl)

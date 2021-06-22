@@ -1,15 +1,15 @@
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Beckn.Storage.DB.Config where
 
-import Beckn.Types.Common
+import Beckn.Types.App (MonadFlow)
+import Beckn.Types.Flow
 import Beckn.Types.Schema
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import GHC.Records (HasField (..))
+import GHC.Records.Extra (HasField (..))
 
 data DBConfig = DBConfig
   { connTag :: T.ConnTag,
@@ -22,8 +22,13 @@ data DBConfig = DBConfig
 -- Make the compiler generate instances for us!
 type HasDbCfg r = (HasField "dbCfg" r DBConfig)
 
-type FlowWithDb r a = HasDbCfg r => FlowR r a
+type HasFlowDBEnv m r =
+  ( MonadReader r m,
+    HasField "dbCfg" r DBConfig,
+    MonadFlow m,
+    HasSchemaName m
+  )
 
 instance HasDbCfg r => HasSchemaName (FlowR r) where
   getSchemaName =
-    asks (schemaName <$> getField @"dbCfg")
+    asks (.dbCfg.schemaName)

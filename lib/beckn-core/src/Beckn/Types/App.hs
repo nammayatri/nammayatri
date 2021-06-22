@@ -8,12 +8,18 @@ module Beckn.Types.App
   )
 where
 
-import Beckn.Storage.DB.Config ()
+import Beckn.Types.Field (HasFields)
+import Beckn.Types.Forkable
+import Beckn.Types.Logging
+import Beckn.Types.MonadGuid
+import Beckn.Types.Monitoring.Prometheus.Metrics
+import Beckn.Types.Time
 import Control.Lens ((?~))
 import qualified Data.Swagger as S
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.Beam.Query
+import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Servant
@@ -23,6 +29,24 @@ data EnvR r = EnvR
   { flowRuntime :: R.FlowRuntime,
     appEnv :: r
   }
+
+type MonadFlow m =
+  ( Monad m,
+    L.MonadFlow m,
+    Forkable m,
+    Log m,
+    MonadGuid m,
+    MonadTime m,
+    MonadThrow m,
+    CoreMetrics m
+  )
+
+-- | Require monad to be Flow-based and have specified fields in Reader env.
+type HasFlowEnv m r fields =
+  ( MonadFlow m,
+    MonadReader r m,
+    HasFields r fields
+  )
 
 type FlowHandlerR r = ReaderT (EnvR r) IO
 

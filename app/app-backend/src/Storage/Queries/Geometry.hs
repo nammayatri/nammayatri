@@ -1,6 +1,5 @@
 module Storage.Queries.Geometry where
 
-import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Geometry as Storage
@@ -12,7 +11,7 @@ import EulerHS.Prelude hiding (id)
 import Types.Common
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.GeometryT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.GeometryT))
 getDbTable =
   DB.geometry . DB.appDb <$> getSchemaName
 
@@ -32,16 +31,15 @@ containsPredicate gps _ = containsPoint_ (B.val_ point)
   where
     point = "POINT (" <> gps.lon <> " " <> gps.lat <> ")"
 
-findGeometriesContaining :: GPS -> Text -> Flow [Storage.Geometry]
+findGeometriesContaining :: HasFlowDBEnv m r => GPS -> Text -> m [Storage.Geometry]
 findGeometriesContaining gps region_ = do
-  do
-    dbTable <- getDbTable
-    DB.findAll dbTable identity predicate
+  dbTable <- getDbTable
+  DB.findAll dbTable identity predicate
   where
     predicate geometry@Geometry {..} =
       region ==. B.val_ region_ &&. containsPredicate gps geometry
 
-someGeometriesContain :: GPS -> Text -> Flow Bool
+someGeometriesContain :: HasFlowDBEnv m r => GPS -> Text -> m Bool
 someGeometriesContain gps region = do
   geometries <- findGeometriesContaining gps region
   pure $ not $ null geometries

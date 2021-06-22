@@ -1,7 +1,7 @@
 module Storage.Queries.ProductInstance where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
+import Beckn.Storage.DB.Config
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -21,7 +21,7 @@ import qualified Types.Storage.DB as DB
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB.productInstance . DB.appDb <$> getSchemaName
 
-createFlow :: Storage.ProductInstance -> Flow ()
+createFlow :: HasFlowDBEnv m r => Storage.ProductInstance -> m ()
 createFlow = DB.runSqlDB . create
 
 create :: Storage.ProductInstance -> DB.SqlDB ()
@@ -29,14 +29,14 @@ create productInstance = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertExpression productInstance)
 
-findById :: Id Storage.ProductInstance -> Flow (Maybe Storage.ProductInstance)
+findById :: HasFlowDBEnv m r => Id Storage.ProductInstance -> m (Maybe Storage.ProductInstance)
 findById pid = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate pid)
   where
     predicate piid Storage.ProductInstance {..} = id ==. B.val_ piid
 
-findAllByCaseId :: Id Case.Case -> Flow [Storage.ProductInstance]
+findAllByCaseId :: HasFlowDBEnv m r => Id Case.Case -> m [Storage.ProductInstance]
 findAllByCaseId caseId_ = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -44,7 +44,7 @@ findAllByCaseId caseId_ = do
     predicate Storage.ProductInstance {..} =
       caseId ==. B.val_ caseId_
 
-findByProductId :: Id Products -> Flow (Maybe Storage.ProductInstance)
+findByProductId :: HasFlowDBEnv m r => Id Products -> m (Maybe Storage.ProductInstance)
 findByProductId pId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -52,7 +52,7 @@ findByProductId pId = do
     predicate Storage.ProductInstance {..} =
       productId ==. B.val_ pId
 
-findAllByPerson :: Id Person.Person -> Flow [Storage.ProductInstance]
+findAllByPerson :: HasFlowDBEnv m r => Id Person.Person -> m [Storage.ProductInstance]
 findAllByPerson perId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -60,9 +60,10 @@ findAllByPerson perId = do
     predicate Storage.ProductInstance {..} = personId ==. B.val_ (Just perId)
 
 updateCaseId ::
+  HasFlowDBEnv m r =>
   Id Storage.ProductInstance ->
   Id Case.Case ->
-  Flow ()
+  m ()
 updateCaseId piId caseId_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -79,9 +80,10 @@ updateCaseId piId caseId_ = do
         ]
 
 updateStatus ::
+  HasFlowDBEnv m r =>
   Id Storage.ProductInstance ->
   Storage.ProductInstanceStatus ->
-  Flow ()
+  m ()
 updateStatus piId status_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -97,7 +99,11 @@ updateStatus piId status_ = do
           status <-. B.val_ scStatus
         ]
 
-updateAllProductInstancesByCaseId :: Id Case.Case -> Storage.ProductInstanceStatus -> Flow ()
+updateAllProductInstancesByCaseId ::
+  HasFlowDBEnv m r =>
+  Id Case.Case ->
+  Storage.ProductInstanceStatus ->
+  m ()
 updateAllProductInstancesByCaseId caseId_ status_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -113,7 +119,14 @@ updateAllProductInstancesByCaseId caseId_ status_ = do
           status <-. B.val_ scStatus
         ]
 
-listAllProductInstanceWithOffset :: Integer -> Integer -> Storage.ListById -> [Storage.ProductInstanceStatus] -> [Case.CaseType] -> Flow [Storage.ProductInstance]
+listAllProductInstanceWithOffset ::
+  HasFlowDBEnv m r =>
+  Integer ->
+  Integer ->
+  Storage.ListById ->
+  [Storage.ProductInstanceStatus] ->
+  [Case.CaseType] ->
+  m [Storage.ProductInstance]
 listAllProductInstanceWithOffset limit offset lbid stats csTypes = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) (predicate lbid stats)
@@ -132,7 +145,11 @@ listAllProductInstanceWithOffset limit offset lbid stats csTypes = do
         &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
     orderBy Storage.ProductInstance {..} = B.desc_ updatedAt
 
-listAllProductInstance :: Storage.ListById -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
+listAllProductInstance ::
+  HasFlowDBEnv m r =>
+  Storage.ListById ->
+  [Storage.ProductInstanceStatus] ->
+  m [Storage.ProductInstance]
 listAllProductInstance piId status_ = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate piId status_)
@@ -144,14 +161,23 @@ listAllProductInstance piId status_ = do
     predicate (Storage.ById i) [] Storage.ProductInstance {..} = productId ==. B.val_ i
     predicate (Storage.ById i) s Storage.ProductInstance {..} = productId ==. B.val_ i &&. B.in_ status (B.val_ <$> s)
 
-listAllProductInstanceByPerson :: Person.Person -> Storage.ListById -> [Storage.ProductInstanceStatus] -> Flow [Storage.ProductInstance]
+listAllProductInstanceByPerson ::
+  HasFlowDBEnv m r =>
+  Person.Person ->
+  Storage.ListById ->
+  [Storage.ProductInstanceStatus] ->
+  m [Storage.ProductInstance]
 listAllProductInstanceByPerson person id status =
   case id of
     Storage.ByApplicationId caseId ->
       Case.findIdByPerson person caseId >> listAllProductInstance id status
     _ -> listAllProductInstance id status
 
-updateMultipleFlow :: Id Storage.ProductInstance -> Storage.ProductInstance -> Flow ()
+updateMultipleFlow ::
+  HasFlowDBEnv m r =>
+  Id Storage.ProductInstance ->
+  Storage.ProductInstance ->
+  m ()
 updateMultipleFlow id prdInst = DB.runSqlDB (updateMultiple id prdInst)
 
 updateMultiple :: Id Storage.ProductInstance -> Storage.ProductInstance -> DB.SqlDB ()
@@ -172,7 +198,11 @@ updateMultiple piId prdInst = do
           udf4 <-. B.val_ (Storage.udf4 prodInst)
         ]
 
-findByParentIdType :: Id Storage.ProductInstance -> Case.CaseType -> Flow (Maybe Storage.ProductInstance)
+findByParentIdType ::
+  HasFlowDBEnv m r =>
+  Id Storage.ProductInstance ->
+  Case.CaseType ->
+  m (Maybe Storage.ProductInstance)
 findByParentIdType mparentId csType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -181,7 +211,10 @@ findByParentIdType mparentId csType = do
       parentId ==. B.val_ (Just mparentId)
         &&. _type ==. B.val_ csType
 
-findAllByParentId :: Id Storage.ProductInstance -> Flow [Storage.ProductInstance]
+findAllByParentId ::
+  HasFlowDBEnv m r =>
+  Id Storage.ProductInstance ->
+  m [Storage.ProductInstance]
 findAllByParentId piId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate piId)
@@ -193,7 +226,11 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-findAllExpiredByStatus :: [Storage.ProductInstanceStatus] -> UTCTime -> Flow [Storage.ProductInstance]
+findAllExpiredByStatus ::
+  HasFlowDBEnv m r =>
+  [Storage.ProductInstanceStatus] ->
+  UTCTime ->
+  m [Storage.ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate

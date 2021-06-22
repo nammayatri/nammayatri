@@ -96,7 +96,7 @@ searchCb _bppOrg req = withFlowHandlerBecknAPI $
       Left err -> logTagError "on_search req" $ "on_search error: " <> show err
     return Ack
 
-searchCbService :: Search.OnSearchReq -> BM.Catalog -> Flow ()
+searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Integer], HasFlowDBEnv m r) => Search.OnSearchReq -> BM.Catalog -> m ()
 searchCbService req catalog = do
   let caseId = Id $ req.context.transaction_id --CaseId $ service.id
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
@@ -119,7 +119,7 @@ searchCbService req catalog = do
         products <- traverse (mkProduct case_) items
         productInstances <- traverse (mkProductInstance case_ bpp provider personId) items
         currTime <- getCurrentTime
-        confirmExpiry <- fromMaybe 1800 . searchConfirmExpiry <$> ask
+        confirmExpiry <- fromMaybe 1800 <$> asks (.searchConfirmExpiry)
         let newValidTill = fromInteger confirmExpiry `addUTCTime` currTime
         return $ do
           traverse_ QProducts.create products
@@ -137,7 +137,15 @@ searchCbService req catalog = do
         let uInfo = info & #accepted .~ accepted & #declined .~ declined
         QCase.updateInfo (case_.id) (encodeToText uInfo)
 
-mkCase :: API.SearchReq -> Text -> Location.Location -> Location.Location -> Flow Case.Case
+mkCase ::
+  ( (HasFlowEnv m r ["searchCaseExpiry" ::: Maybe Integer, "graphhopperUrl" ::: BaseUrl]),
+    HasFlowDBEnv m r
+  ) =>
+  API.SearchReq ->
+  Text ->
+  Location.Location ->
+  Location.Location ->
+  m Case.Case
 mkCase req userId from to = do
   now <- getCurrentTime
   cid <- generateGUID
@@ -180,16 +188,16 @@ mkCase req userId from to = do
         updatedAt = now
       }
   where
-    getCaseExpiry :: UTCTime -> Flow UTCTime
+    getCaseExpiry :: (HasFlowEnv m r '["searchCaseExpiry" ::: Maybe Integer]) => UTCTime -> m UTCTime
     getCaseExpiry startTime = do
       now <- getCurrentTime
-      caseExpiry <- fromMaybe 7200 . searchCaseExpiry <$> ask
+      caseExpiry <- fromMaybe 7200 <$> asks (.searchCaseExpiry)
       let minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffUTCTime` now
           validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-mkLocation :: BS.Stop -> Flow Location.Location
+mkLocation :: MonadFlow m => BS.Stop -> m Location.Location
 mkLocation BS.Stop {..} = do
   let loc = location
   now <- getCurrentTime
@@ -214,7 +222,7 @@ mkLocation BS.Stop {..} = do
         updatedAt = now
       }
 
-mkProduct :: Case.Case -> Core.Item -> Flow Products.Products
+mkProduct :: MonadFlow m => Case.Case -> Core.Item -> m Products.Products
 mkProduct case_ item = do
   now <- getCurrentTime
   price <-
@@ -247,7 +255,13 @@ mkProduct case_ item = do
       }
 
 mkProductInstance ::
-  Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> Core.Item -> Flow PI.ProductInstance
+  MonadFlow m =>
+  Case.Case ->
+  Org.Organization ->
+  Common.Provider ->
+  Id Person.Person ->
+  Core.Item ->
+  m PI.ProductInstance
 mkProductInstance case_ bppOrg provider personId item = do
   now <- getCurrentTime
   let info = ProductInfo (Just provider) Nothing
@@ -286,7 +300,7 @@ mkProductInstance case_ bppOrg provider personId item = do
         updatedAt = now
       }
 
-mkDeclinedProductInstance :: Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> Flow PI.ProductInstance
+mkDeclinedProductInstance :: MonadFlow m => Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> m PI.ProductInstance
 mkDeclinedProductInstance case_ bppOrg provider personId = do
   now <- getCurrentTime
   piId <- generateGUID
@@ -322,13 +336,13 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         updatedAt = now
       }
 
-getDistance :: API.SearchReq -> Flow (Maybe Float)
+getDistance :: HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl] => API.SearchReq -> m (Maybe Float)
 getDistance req =
   mkRouteRequest (req.origin.location) (req.destination.location)
     >>= MapSearch.getRouteMb
     <&> fmap MapSearch.distanceInM
 
-mkRouteRequest :: Common.Location -> Common.Location -> Flow MapSearch.Request
+mkRouteRequest :: MonadFlow m => Common.Location -> Common.Location -> m MapSearch.Request
 mkRouteRequest pickupLoc dropLoc = do
   (Common.GPS pickupLat pickupLon) <- Common.gps pickupLoc & fromMaybeM (InvalidRequest "No long / lat.")
   (Common.GPS dropLat dropLon) <- Common.gps dropLoc & fromMaybeM (InvalidRequest "No long / lat.")
@@ -343,12 +357,12 @@ mkRouteRequest pickupLoc dropLoc = do
         calcPoints = Just False
       }
 
-mkMapPoint :: Text -> Text -> Flow MapSearch.MapPoint
+mkMapPoint :: MonadFlow m => Text -> Text -> m MapSearch.MapPoint
 mkMapPoint lat' lon' = do
   lat <- readLatLng lat'
   lon <- readLatLng lon'
   return $ MapSearch.LatLong $ MapSearch.PointXY lat lon
 
-readLatLng :: Text -> Flow Double
+readLatLng :: MonadFlow m => Text -> m Double
 readLatLng text = do
   readMaybe (T.unpack text) & fromMaybeM (InternalError "Location read error")

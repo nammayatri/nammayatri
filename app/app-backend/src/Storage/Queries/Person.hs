@@ -1,6 +1,5 @@
 module Storage.Queries.Person where
 
-import App.Types
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
@@ -24,13 +23,15 @@ getDbTable ::
 getDbTable =
   DB.person . DB.appDb <$> getSchemaName
 
-create :: Storage.Person -> Flow ()
+create :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Storage.Person -> m ()
 create person = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression person)
 
 findById ::
-  Id Storage.Person -> Flow (Maybe Storage.Person)
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Id Storage.Person ->
+  m (Maybe Storage.Person)
 findById personId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -38,7 +39,10 @@ findById personId = do
     predicate Storage.Person {..} = id ==. B.val_ personId
 
 findAllByOrgIds ::
-  [Storage.Role] -> [Id Org.Organization] -> Flow [Storage.Person]
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  [Storage.Role] ->
+  [Id Org.Organization] ->
+  m [Storage.Person]
 findAllByOrgIds roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate roles orgIds)
@@ -57,7 +61,10 @@ complementVal l
   | otherwise = B.val_ False
 
 findByUsernameAndPassword ::
-  Text -> Text -> Flow (Maybe Storage.Person)
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Text ->
+  Text ->
+  m (Maybe Storage.Person)
 findByUsernameAndPassword email_ password = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -67,7 +74,11 @@ findByUsernameAndPassword email_ password = do
         &&. passwordHash ==. B.val_ (Just $ evalDbHash password)
 
 findByRoleAndMobileNumber ::
-  Storage.Role -> Text -> Text -> Flow (Maybe Storage.Person)
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Storage.Role ->
+  Text ->
+  Text ->
+  m (Maybe Storage.Person)
 findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -77,7 +88,7 @@ findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
         &&. mobileCountryCode ==. B.val_ (Just countryCode)
         &&. (mobileNumber.hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
-findByRoleAndMobileNumberWithoutCC :: Storage.Role -> Text -> Flow (Maybe Storage.Person)
+findByRoleAndMobileNumberWithoutCC :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Storage.Role -> Text -> m (Maybe Storage.Person)
 findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -115,6 +126,7 @@ updateMultiple personId person = do
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
 update ::
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
   Id Storage.Person ->
   Maybe Storage.Status ->
   Maybe Text ->
@@ -122,7 +134,7 @@ update ::
   Maybe Storage.Role ->
   Maybe Storage.IdentifierType ->
   Maybe Text ->
-  Flow ()
+  m ()
 update personId statusM nameM emailM roleM identTypeM identM = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -144,7 +156,17 @@ update personId statusM nameM emailM roleM identTypeM identM = do
         )
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
-updatePersonalInfo :: Id Storage.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Storage.Gender -> Maybe Text -> Maybe FCM.FCMRecipientToken -> Flow ()
+updatePersonalInfo ::
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Id Storage.Person ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Storage.Gender ->
+  Maybe Text ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
 updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -163,7 +185,7 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGen
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
-findAllWithLimitOffsetBy :: Maybe Int -> Maybe Int -> [Storage.Role] -> [Id Organization] -> Flow [Storage.Person]
+findAllWithLimitOffsetBy :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Maybe Int -> Maybe Int -> [Storage.Role] -> [Id Organization] -> m [Storage.Person]
 findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate orgIds roles)
@@ -176,7 +198,7 @@ findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
       organizationId `B.in_` (B.val_ . Just <$> pOrgIds) &&. role `B.in_` (B.val_ <$> pRoles)
     orderByDesc Storage.Person {..} = B.desc_ createdAt
 
-deleteById :: Id Storage.Person -> Flow ()
+deleteById :: HasFlowDBEnv m r => Id Storage.Person -> m ()
 deleteById pid = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate pid)

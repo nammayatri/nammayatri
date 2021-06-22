@@ -74,12 +74,12 @@ update org req = withFlowHandlerBecknAPI $
     validateBapUrl org $ req.context
     DZ.update org req
 
-validateContext :: Action -> Context -> Flow ()
+validateContext :: HasFlowEnv m r '["coreVersion" ::: Text] => Action -> Context -> m ()
 validateContext action context = do
   validateDomainMig Domain.FINAL_MILE_DELIVERY context
   validateContextCommonsMig action context
 
-validateBapUrl :: Organization -> Context -> Flow ()
+validateBapUrl :: MonadFlow m => Organization -> Context -> m ()
 validateBapUrl org context =
   unless (org.callbackUrl == Just context.bap_uri) $
     throwError (InvalidRequest "Invalid bap URL.")

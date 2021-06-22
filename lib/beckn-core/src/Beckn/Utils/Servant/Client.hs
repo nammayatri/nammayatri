@@ -14,25 +14,25 @@ import qualified EulerHS.Types as ET
 import qualified Servant.Client as S
 import Servant.Client.Core
 
-type CallAPI' env res res' =
+type CallAPI' m res res' =
   ( HasCallStack,
-    Metrics.HasCoreMetrics env,
+    MonadFlow m,
     ET.JSONEx res,
     ToJSON res
   ) =>
   BaseUrl ->
   ET.EulerClient res ->
   Text ->
-  FlowR env res'
+  m res'
 
-type CallAPI env res = CallAPI' env res res
+type CallAPI m res = CallAPI' m res res
 
-callAPI :: CallAPI' env res (Either ClientError res)
+callAPI :: CallAPI' m res (Either ClientError res)
 callAPI = callAPI' Nothing
 
 callAPI' ::
   Maybe ET.ManagerSelector ->
-  CallAPI' env res (Either ClientError res)
+  CallAPI' m res (Either ClientError res)
 callAPI' mbManagerSelector baseUrl eulerClient desc =
   withLogTag "callAPI" $ do
     endTracking <- Metrics.startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc
@@ -58,7 +58,7 @@ parseBaseUrl = S.parseBaseUrl . T.unpack
 callApiExtractingApiError ::
   FromResponse err =>
   Maybe ET.ManagerSelector ->
-  CallAPI' env a (Either (CallAPIError err) a)
+  CallAPI' m a (Either (CallAPIError err) a)
 callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc =
   callAPI' mbManagerSelector baseUrl eulerClient desc
     <&> extractApiError
@@ -70,7 +70,7 @@ callApiUnwrappingApiError ::
   (err -> exc) ->
   Maybe ET.ManagerSelector ->
   Maybe Text ->
-  CallAPI env a
+  CallAPI m a
 callApiUnwrappingApiError toAPIException mbManagerSelector errorCodeMb baseUrl eulerClient desc =
   callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc
     >>= unwrapEitherCallAPIError errorCodeMb baseUrl toAPIException
