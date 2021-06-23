@@ -25,6 +25,9 @@ data ItemQuantity = ItemQuantity
   }
   deriving (Generic, Show)
 
+emptyItemQuantity :: ItemQuantity
+emptyItemQuantity = ItemQuantity Nothing Nothing Nothing Nothing Nothing
+
 instance FromJSON ItemQuantity where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 

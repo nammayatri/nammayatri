@@ -3,8 +3,6 @@ module Types.Wrapper where
 import Beckn.Types.App
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
-import Types.Beckn.Order (Order)
-import Types.Beckn.Quotation (Quotation)
 import Types.Common
 
 -- BAP with Dunzo account will have these details
@@ -26,12 +24,6 @@ data DunzoConfig = DunzoConfig
     dzQuotationTTLinMin :: Integer
   }
   deriving (Show, Generic, ToJSON, FromJSON, FromDhall)
-
-data OrderDetails = OrderDetails
-  { order :: Order,
-    quote :: Quotation
-  }
-  deriving (Show, Generic, ToJSON, FromJSON)
 
 data DlBAConfig = DlBAConfig
   { bapId :: Text,

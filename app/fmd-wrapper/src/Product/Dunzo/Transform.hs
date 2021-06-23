@@ -30,8 +30,9 @@ import Types.Beckn.Duration (Duration (..))
 import Types.Beckn.Fulfillment (Fulfillment (..), FulfillmentDetails (..))
 import Types.Beckn.Gps (Gps (..))
 import Types.Beckn.Item (Item (..))
+import Types.Beckn.ItemQuantity (emptyItemQuantity)
 import Types.Beckn.Location (Location)
-import Types.Beckn.Order (Order)
+import Types.Beckn.Order (IdAndLocations (..), Order (..), OrderItem (..))
 import Types.Beckn.Payment (Params (..), Payment (..), PaymentType (..))
 import Types.Beckn.Person (Person)
 import Types.Beckn.Price (Price (..))
@@ -240,17 +241,49 @@ mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
           maximum_value = Nothing
         }
 
+mkOrderFromInititialized :: InitAPI.Initialized -> UTCTime -> Flow Order
+mkOrderFromInititialized initialized now = do
+  orderItems <- initialized.items & fromMaybeM (InternalError "OrderItems Initialized convertation error.")
+  orderItem <- getItem orderItems
+  billing <- initialized.billing & fromMaybeM (InternalError "Billing Initialized convertation error.")
+  fulfillment <- initialized.fulfillment & fromMaybeM (InternalError "Fulfilmment Initialized convertation error.")
+  quote <- initialized.quote & fromMaybeM (InternalError "Quotation Initialized convertation error.")
+  payment <- initialized.payment & fromMaybeM (InternalError "Payment Initialized convertation error.")
+  pure
+    Order
+      { id = Nothing,
+        state = Nothing,
+        provider =
+          IdAndLocations
+            { id = "Dunzo",
+              locations = []
+            },
+        items = [OrderItem orderItem.id emptyItemQuantity],
+        add_ons = [],
+        offers = [],
+        billing = billing,
+        fulfillment = fulfillment,
+        quote = quote,
+        payment = payment,
+        created_at = Just now,
+        updated_at = Just now
+      }
+  where
+    getItem [item] = pure item
+    getItem _ = throwError $ InternalError "OrderItem Initialized convertation error."
+
 mkOnStatusMessage :: Order -> TaskStatus -> Flow API.OrderObject
 mkOnStatusMessage order status = do
   now <- getCurrentTime
-  return . API.OrderObject $ updateOrder now order status
+  return . API.OrderObject $ updateOrder Nothing now order status
 
-updateOrder :: UTCTime -> Order -> TaskStatus -> Order
-updateOrder cTime order status = do
+updateOrder :: Maybe Text -> UTCTime -> Order -> TaskStatus -> Order
+updateOrder mbOrderId cTime order status = do
   -- TODO: this assumes that there is one task per order
   let orderState = mapTaskStateToOrderState (status.state)
   let mbPayment = mkPayment <$> status.estimated_price
-  order & #state ?~ orderState
+  order & #id .~ mbOrderId
+    & #state ?~ orderState
     & #updated_at ?~ cTime
     & #payment .~ fromMaybe order.payment mbPayment
 

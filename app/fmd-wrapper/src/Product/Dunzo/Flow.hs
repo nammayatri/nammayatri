@@ -54,7 +54,6 @@ init org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  -- validateReturn order FIXME
   dzBACreds <- getDzBAPCreds org
   withCallback "init" InitAPI.onInitAPI context cbUrl $ do
     let order = req.message
@@ -69,6 +68,7 @@ init org req = do
   where
     createCaseIfNotPresent orgId onInitMessage = do
       now <- getCurrentTime
+      order <- mkOrderFromInititialized onInitMessage now
       let caseId = Id req.context.transaction_id
       let case_ =
             Case
@@ -90,7 +90,7 @@ init org req = do
                 parentCaseId = Nothing,
                 fromLocationId = "",
                 toLocationId = "",
-                udf1 = Just $ encodeToText onInitMessage,
+                udf1 = Just $ encodeToText order,
                 udf2 = Nothing,
                 udf3 = Nothing,
                 udf4 = Nothing,
@@ -102,7 +102,7 @@ init org req = do
       mcase <- Storage.findById caseId
       case mcase of
         Nothing -> Storage.create case_
-        Just _ -> pass
+        Just _ -> pass -- Shouldn't we update case with a current request?
 
 confirm :: Org.Organization -> API.BecknReq API.OrderObject -> Flow AckResponse
 confirm org req = do
@@ -110,25 +110,25 @@ confirm org req = do
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req.message.order
-  orderId <- fromMaybeErr "INVALID_ORDER_ID" (Just CORE003) $ reqOrder.id
-  case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  (orderDetails :: OrderDetails) <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  let order = orderDetails.order
+  whenJust reqOrder.id \_ -> throwError $ InvalidRequest "Order id must not be presented."
+  let caseId = context.transaction_id
+  case_ <- Storage.findById (Id caseId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  order <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   validateDelayFromInit dzQuotationTTLinMin case_
   verifyPayment reqOrder order
-  -- validateReturn order FIXME
   txnId <-
     reqOrder ^? #payment . #params . _Just . #transaction_id
       & fromMaybeErr "TXN_ID_NOT_PRESENT" Nothing
-  let updatedOrderDetailsWTxn =
-        orderDetails & ((#order . #payment . #params . _Just . #transaction_id) .~ txnId)
+  let updatedOrderWTxn =
+        order & ((#payment . #params . _Just . #transaction_id) .~ txnId)
   dzBACreds <- getDzBAPCreds org
   withCallback "confirm" ConfirmAPI.onConfirmAPI context cbUrl $ do
     taskStatus <- createTaskAPI dzBACreds dconf =<< mkCreateTaskReq order
+    orderId <- generateGUID
     currTime <- getCurrentTime
-    let uOrder = updateOrder currTime (updatedOrderDetailsWTxn.order) taskStatus
-    checkAndLogPriceDiff (updatedOrderDetailsWTxn.order) uOrder
-    updateCase case_ (updatedOrderDetailsWTxn & #order .~ uOrder) taskStatus
+    let uOrder = updateOrder (Just orderId) currTime updatedOrderWTxn taskStatus
+    checkAndLogPriceDiff updatedOrderWTxn uOrder
+    updateCase case_ uOrder taskStatus
     return $ API.OrderObject uOrder
   where
     verifyPayment :: Order -> Order -> Flow ()
@@ -143,13 +143,13 @@ confirm org req = do
         then pass
         else throwError (InvalidRequest "Invalid order amount.")
 
-    updateCase case_ orderDetails taskStatus = do
+    updateCase case_ order taskStatus = do
       let caseId = case_.id
       let taskId = taskStatus.task_id
       let updatedCase =
             case_
               { shortId = ShortId $ getTaskId taskId,
-                udf1 = Just $ encodeToText orderDetails,
+                udf1 = Just $ encodeToText order,
                 udf2 = Just $ encodeToText taskStatus
               }
       Storage.update caseId updatedCase
@@ -193,41 +193,37 @@ status org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  let orderId = req.message.order_id
+  let orderId = context.transaction_id
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   let taskId = getShortId case_.shortId
-  (orderDetails :: OrderDetails) <-
+  order <-
     case_.udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
   dzBACreds <- getDzBAPCreds org
   withCallback "status" StatusAPI.onStatusAPI context cbUrl $ do
     taskStatus <- getStatus dzBACreds conf (TaskId taskId)
-    let order = orderDetails.order
     onStatusMessage <- mkOnStatusMessage order taskStatus
     let updatedOrder = onStatusMessage.order
-    let updatedOrderDetails = orderDetails & #order .~ updatedOrder
-    updateCase (case_.id) updatedOrderDetails taskStatus case_
+    updateCase (case_.id) updatedOrder taskStatus case_
     return onStatusMessage
   where
-    updateCase caseId orderDetails taskStatus case_ = do
-      let updatedCase = case_ {udf1 = Just $ encodeToText orderDetails, udf2 = Just $ encodeToText taskStatus}
+    updateCase caseId order taskStatus case_ = do
+      let updatedCase = case_ {udf1 = Just $ encodeToText order, udf2 = Just $ encodeToText taskStatus}
       Storage.update caseId updatedCase
 
 cancel :: Org.Organization -> API.BecknReq CancelAPI.CancellationInfo -> Flow AckResponse
 cancel org req = do
-  let oId = req.message.order_id
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  case_ <- Storage.findById (Id oId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  case_ <- Storage.findById (Id context.transaction_id) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   let taskId = getShortId $ case_.shortId
-  orderDetails <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  order <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
   withCallback "cancel" CancelAPI.onCancelAPI context cbUrl $ do
     callCancelAPI dzBACreds conf (TaskId taskId)
-    let updatedOrder = cancelOrder (orderDetails.order)
-    let updatedOrderDetails = orderDetails & #order .~ updatedOrder
-    updateCase case_.id updatedOrderDetails case_
+    let updatedOrder = cancelOrder order
+    updateCase case_.id updatedOrder case_
     return $ API.OrderObject updatedOrder
   where
     callCancelAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
@@ -235,9 +231,9 @@ cancel org req = do
       -- TODO get cancellation reason
       API.cancelTask dzClientId token dzUrl dzTestMode taskId ""
 
-    updateCase :: Id Case -> OrderDetails -> Case -> Flow ()
-    updateCase caseId orderDetails case_ = do
-      let updatedCase = case_ {udf1 = Just $ encodeToText orderDetails}
+    updateCase :: Id Case -> Order -> Case -> Flow ()
+    updateCase caseId order case_ = do
+      let updatedCase = case_ {udf1 = Just $ encodeToText order}
       Storage.update caseId updatedCase
 
 update :: Org.Organization -> API.BecknReq UpdateAPI.UpdateInfo -> Flow AckResponse
