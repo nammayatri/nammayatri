@@ -9,7 +9,6 @@ import qualified EulerHS.Types as T
 import ExternalAPI.Dunzo.Types
 import Servant (Capture, Get, Header, JSON, NoContent, Post, QueryParam, ReqBody, (:>))
 import Types.Common
-import Types.Metrics
 
 type GetTokenAPI =
   "api" :> "v1" :> "token"
@@ -21,10 +20,10 @@ getTokenAPI :: Proxy GetTokenAPI
 getTokenAPI = Proxy
 
 getToken ::
-  HasCoreMetrics e =>
+  MonadFlow m =>
   BaseUrl ->
   TokenReq ->
-  FlowR e TokenRes
+  m TokenRes
 getToken url req = callDunzoAPI url tokenReq "getToken"
   where
     clientId = Just $ getClientId $ req.client_id
@@ -46,12 +45,12 @@ quoteAPI :: Proxy QuoteAPI
 quoteAPI = Proxy
 
 getQuote ::
-  HasCoreMetrics e =>
+  MonadFlow m =>
   ClientId ->
   Token ->
   BaseUrl ->
   QuoteReq ->
-  FlowR e QuoteRes
+  m QuoteRes
 getQuote clientId token url req = callDunzoAPI url quoteReq "getQuote"
   where
     quoteReq =
@@ -77,13 +76,13 @@ createTaskAPI :: Proxy CreateTaskAPI
 createTaskAPI = Proxy
 
 createTask ::
-  HasCoreMetrics e =>
+  MonadFlow m =>
   ClientId ->
   Token ->
   BaseUrl ->
   Bool ->
   CreateTaskReq ->
-  FlowR e CreateTaskRes
+  m CreateTaskRes
 createTask clientId token url isTestMode req = callDunzoAPI url task "createTask"
   where
     task =
@@ -107,13 +106,13 @@ taskStatusAPI :: Proxy TaskStatusAPI
 taskStatusAPI = Proxy
 
 taskStatus ::
-  HasCoreMetrics e =>
+  MonadFlow m =>
   ClientId ->
   Token ->
   BaseUrl ->
   Bool ->
   TaskId ->
-  FlowR e TaskStatus
+  m TaskStatus
 taskStatus clientId token url isTestMode taskId = callDunzoAPI url status "taskStatus"
   where
     status =
@@ -138,14 +137,14 @@ cancelTaskAPI :: Proxy CancelTaskAPI
 cancelTaskAPI = Proxy
 
 cancelTask ::
-  HasCoreMetrics e =>
+  MonadFlow m =>
   ClientId ->
   Token ->
   BaseUrl ->
   Bool ->
   TaskId ->
   Text ->
-  FlowR e ()
+  m ()
 cancelTask clientId token url isTestMode taskId cancellationReason = callDunzoAPI url cancel "cancelTask"
   where
     cancel =

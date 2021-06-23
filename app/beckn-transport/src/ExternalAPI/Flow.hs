@@ -36,8 +36,9 @@ getGatewayUrl = do
     _ -> throwError UnsupportedGatewaySelector
 
 withCallback ::
+  HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
   Org.Organization ->
-  WithBecknCallback api callback_success AppEnv
+  WithBecknCallback api callback_success m AppEnv
 withCallback transporter action api context cbUrl f = do
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId

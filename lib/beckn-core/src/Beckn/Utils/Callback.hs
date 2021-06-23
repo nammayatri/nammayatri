@@ -8,11 +8,9 @@ import qualified Beckn.Types.Core.Migration.API.Types as API
 import qualified Beckn.Types.Core.Migration.Context as M.Context
 import Beckn.Types.Error
 import Beckn.Types.Error.BecknAPIError
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Error (fromMaybeM)
 import Beckn.Utils.Error.BecknAPIError
 import Beckn.Utils.Error.FlowHandling
-import Beckn.Utils.Flow
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant.Client
@@ -40,8 +38,8 @@ someExceptionToCallbackReqMig context exc =
           context
         }
 
-type WithBecknCallback api callback_success r =
-  ( HasCoreMetrics r,
+type WithBecknCallback api callback_success m r =
+  ( MonadFlow m,
     HasClient ET.EulerClient api,
     Client ET.EulerClient api
       ~ (CallbackReq callback_success -> ET.EulerClient AckResponse)
@@ -50,12 +48,12 @@ type WithBecknCallback api callback_success r =
   Proxy api ->
   Context ->
   BaseUrl ->
-  FlowR r callback_success ->
-  FlowR r AckResponse
+  m callback_success ->
+  m AckResponse
 
 withBecknCallback ::
   Maybe ET.ManagerSelector ->
-  WithBecknCallback api callback_success r
+  WithBecknCallback api callback_success m r
 withBecknCallback auth action api context cbUrl f = do
   now <- getCurrentTime
   let cbAction = "on_" <> action
@@ -71,8 +69,8 @@ withBecknCallback auth action api context cbUrl f = do
     f
   return Ack
 
-type WithBecknCallbackMig api callback_success r =
-  ( HasCoreMetrics r,
+type WithBecknCallbackMig api callback_success m =
+  ( MonadFlow m,
     HasClient ET.EulerClient api,
     Client ET.EulerClient api
       ~ (API.BecknCallbackReq callback_success -> ET.EulerClient AckResponse)
@@ -81,12 +79,12 @@ type WithBecknCallbackMig api callback_success r =
   Proxy api ->
   M.Context.Context ->
   BaseUrl ->
-  FlowR r callback_success ->
-  FlowR r AckResponse
+  m callback_success ->
+  m AckResponse
 
 withBecknCallbackMig ::
   Maybe ET.ManagerSelector ->
-  WithBecknCallbackMig api callback_success r
+  WithBecknCallbackMig api callback_success m
 withBecknCallbackMig auth action api context cbUrl f = do
   now <- getCurrentTime
   cbAction <-

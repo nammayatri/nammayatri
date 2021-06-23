@@ -20,13 +20,3 @@ runSafeFlow :: FlowR r a -> FlowR r (Either Text a)
 runSafeFlow flow = do
   env <- ask
   lift $ L.runSafeFlow $ runReaderT flow env
-
-safeFork ::
-  (SomeException -> result) ->
-  (success -> result) ->
-  Text ->
-  (result -> FlowR r ()) ->
-  FlowR r success ->
-  FlowR r ()
-safeFork toError toSuccess name doWithResult f =
-  fork name $ try f >>= doWithResult . either toError toSuccess

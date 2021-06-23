@@ -2,7 +2,6 @@ module App.Types
   ( AppCfg (),
     AppEnv (..),
     Env,
-    Flow,
     FlowHandler,
     FlowServer,
     buildAppEnv,
@@ -67,8 +66,6 @@ buildAppEnv AppCfg {..} = do
       }
 
 type Env = EnvR AppEnv
-
-type Flow = FlowR AppEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 

@@ -2,7 +2,6 @@
 
 module Product.Dunzo.Transform where
 
-import App.Types
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -47,10 +46,10 @@ import Utils.Common
 dunzoServiceCategoryId :: Text
 dunzoServiceCategoryId = "1"
 
-getDzBAPCreds :: Organization -> Flow DzBAConfig
+getDzBAPCreds :: MonadFlow m => Organization -> m DzBAConfig
 getDzBAPCreds = getClientConfig
 
-mkQuoteReqFromSearch :: API.BecknReq SearchAPI.SearchIntent -> Flow QuoteReq
+mkQuoteReqFromSearch :: MonadFlow m => API.BecknReq SearchAPI.SearchIntent -> m QuoteReq
 mkQuoteReqFromSearch API.BecknReq {..} = do
   let intent = message.intent
   let mbPickupGps = intent ^? #fulfillment . _Just . #start . _Just . #location . _Just . #gps . _Just
@@ -71,7 +70,7 @@ mkQuoteReqFromSearch API.BecknReq {..} = do
     pickupLocationNotFound = throwError $ InvalidRequest "Pickup location not found."
     dropLocationNotFound = throwError $ InvalidRequest "Drop location not found."
 
-mkQuoteReqFromInitOrder :: InitAPI.InitOrder -> Flow QuoteReq
+mkQuoteReqFromInitOrder :: MonadFlow m => InitAPI.InitOrder -> m QuoteReq
 mkQuoteReqFromInitOrder order = do
   let mbPickupGps = order ^? #fulfillment . #start . _Just . #location . _Just . #gps . _Just
   let mbDropGps = order ^? #fulfillment . #end . _Just . #location . _Just . #gps . _Just
@@ -91,7 +90,7 @@ mkQuoteReqFromInitOrder order = do
     pickupLocationNotFound = throwError $ InvalidRequest "Pickup location not found."
     dropLocationNotFound = throwError $ InvalidRequest "Drop location not found."
 
-readCoord :: Text -> Flow Double
+readCoord :: MonadFlow m => Text -> m Double
 readCoord text = do
   readMaybe (T.unpack text)
     & fromMaybeM (InvalidRequest "Location read error.")
@@ -183,7 +182,7 @@ mkSearchItem index packageContent QuoteRes {..} =
         }
     value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
 
-mkOnInitMessage :: Integer -> InitAPI.InitOrder -> QuoteRes -> Flow InitAPI.Initialized
+mkOnInitMessage :: MonadFlow m => Integer -> InitAPI.InitOrder -> QuoteRes -> m InitAPI.Initialized
 mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
   orderItem <- getItem order.items -- probably quantity field must be validated
   now <- getCurrentTime
@@ -241,7 +240,7 @@ mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
           maximum_value = Nothing
         }
 
-mkOrderFromInititialized :: InitAPI.Initialized -> UTCTime -> Flow Order
+mkOrderFromInititialized :: MonadFlow m => InitAPI.Initialized -> UTCTime -> m Order
 mkOrderFromInititialized initialized now = do
   orderItems <- initialized.items & fromMaybeM (InternalError "OrderItems Initialized convertation error.")
   orderItem <- getItem orderItems
@@ -272,7 +271,7 @@ mkOrderFromInititialized initialized now = do
     getItem [item] = pure item
     getItem _ = throwError $ InternalError "OrderItem Initialized convertation error."
 
-mkOnStatusMessage :: Order -> TaskStatus -> Flow API.OrderObject
+mkOnStatusMessage :: MonadFlow m => Order -> TaskStatus -> m API.OrderObject
 mkOnStatusMessage order status = do
   now <- getCurrentTime
   return . API.OrderObject $ updateOrder Nothing now order status
@@ -301,7 +300,7 @@ cancelOrder :: Order -> Order
 cancelOrder o =
   o & #state ?~ "CANCELLED"
 
-mkCreateTaskReq :: Order -> Flow CreateTaskReq
+mkCreateTaskReq :: MonadFlow m => Order -> m CreateTaskReq
 mkCreateTaskReq order = do
   orderId <- order.id & fromMaybeErr "ORDER_ID_MISSING" (Just CORE003)
   pickUpLoc <- order ^? #fulfillment . #start . _Just . #location . _Just & fromMaybeM (InvalidRequest "Pick up location not specified.")
@@ -338,7 +337,7 @@ mkCreateTaskReq order = do
         reference_id = Nothing
       }
   where
-    mkLocationDetails :: Location -> Flow LocationDetails
+    mkLocationDetails :: MonadFlow m => Location -> m LocationDetails
     mkLocationDetails location = do
       -- FIXME: Much of these can be optional I'm pretty sure.
       (Gps lat lon) <- location.gps & fromMaybeErr "LAT_LON_NOT_FOUND" (Just CORE003)
@@ -365,7 +364,7 @@ mkCreateTaskReq order = do
                 }
           }
 
-    mkPersonDetails :: Person -> Contact -> Flow PersonDetails
+    mkPersonDetails :: MonadFlow m => Person -> Contact -> m PersonDetails
     mkPersonDetails person contact = do
       phone <- contact.phone & fromMaybeErr "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003)
       return $
@@ -401,7 +400,7 @@ mapTaskStateToOrderState s =
     CANCELLED -> "CANCELLED"
     RUNNER_CANCELLED -> "CANCELLED"
 
-updateOrderEta :: FulfillmentDetails -> FulfillmentDetails -> UTCTime -> Eta -> Flow (FulfillmentDetails, FulfillmentDetails)
+updateOrderEta :: MonadFlow m => FulfillmentDetails -> FulfillmentDetails -> UTCTime -> Eta -> m (FulfillmentDetails, FulfillmentDetails)
 updateOrderEta startInfo endInfo now eta = do
   let pickupEta = calcEta now <$> eta.pickup <|> (startInfo.time >>= (.timestamp))
   let dropEta = calcEta now eta.dropoff

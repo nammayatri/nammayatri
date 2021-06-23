@@ -1,6 +1,5 @@
 module Storage.Queries.Case where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
@@ -12,23 +11,23 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT))
 getDbTable =
   DB._case . DB.appDb <$> getSchemaName
 
-create :: Storage.Case -> Flow ()
+create :: HasFlowDBEnv m r => Storage.Case -> m ()
 create Storage.Case {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
 
-findById :: Id Storage.Case -> Flow (Maybe Storage.Case)
+findById :: HasFlowDBEnv m r => Id Storage.Case -> m (Maybe Storage.Case)
 findById caseId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Case {..} = id ==. B.val_ caseId
 
-update :: Id Storage.Case -> Storage.Case -> Flow ()
+update :: HasFlowDBEnv m r => Id Storage.Case -> Storage.Case -> m ()
 update cid case_ = do
   dbTable <- getDbTable
   currTime <- getCurrentTime

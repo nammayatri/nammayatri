@@ -2,7 +2,6 @@
 
 module Product.Dunzo.Flow where
 
-import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
@@ -35,9 +34,15 @@ import Types.Error
 import Types.Wrapper
 import Utils.Common
 
-search :: Org.Organization -> API.BecknReq SearchAPI.SearchIntent -> Flow AckResponse
+search ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+  ) =>
+  Org.Organization ->
+  API.BecknReq SearchAPI.SearchIntent ->
+  m AckResponse
 search org req = do
-  config@DunzoConfig {..} <- dzConfig <$> ask
+  config@DunzoConfig {..} <- asks (.dzConfig)
   quoteReq <- mkQuoteReqFromSearch req
   let context = updateBppUri (req.context) dzBPNwAddress
   bap <- Org.findByBapUrl context.bap_uri >>= fromMaybeM OrgDoesNotExist
@@ -47,12 +52,18 @@ search org req = do
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog
 
-select :: Org.Organization -> API.BecknReq SelectAPI.SelectedObject -> Flow AckResponse
+select :: MonadFlow m => Org.Organization -> API.BecknReq SelectAPI.SelectedObject -> m AckResponse
 select _org _req = throwError $ ActionNotSupported "select"
 
-init :: Org.Organization -> API.BecknReq InitAPI.InitOrder -> Flow AckResponse
+init ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+  ) =>
+  Org.Organization ->
+  API.BecknReq InitAPI.InitOrder ->
+  m AckResponse
 init org req = do
-  conf@DunzoConfig {..} <- dzConfig <$> ask
+  conf@DunzoConfig {..} <- asks (.dzConfig)
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   dzBACreds <- getDzBAPCreds org
@@ -105,9 +116,15 @@ init org req = do
         Nothing -> Storage.create case_
         Just _ -> pass -- Shouldn't we update case with a current request?
 
-confirm :: Org.Organization -> API.BecknReq API.OrderObject -> Flow AckResponse
+confirm ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+  ) =>
+  Org.Organization ->
+  API.BecknReq API.OrderObject ->
+  m AckResponse
 confirm org req = do
-  dconf@DunzoConfig {..} <- dzConfig <$> ask
+  dconf@DunzoConfig {..} <- asks (.dzConfig)
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req.message.order
@@ -132,7 +149,6 @@ confirm org req = do
     updateCase case_ uOrder taskStatus
     return $ API.OrderObject uOrder
   where
-    verifyPayment :: Order -> Order -> Flow ()
     verifyPayment reqOrder order = do
       confirmAmount <-
         reqOrder ^? #payment . #params . _Just . #amount
@@ -176,9 +192,15 @@ confirm org req = do
       when (thresholdTime < now) $
         throwError (InvalidRequest "Took too long to confirm.")
 
-track :: Org.Organization -> API.BecknReq TrackAPI.TrackInfo -> Flow AckResponse
+track ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+  ) =>
+  Org.Organization ->
+  API.BecknReq TrackAPI.TrackInfo ->
+  m AckResponse
 track org req = do
-  conf@DunzoConfig {..} <- dzConfig <$> ask
+  conf@DunzoConfig {..} <- asks (.dzConfig)
   let orderId = req.message.order_id
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
@@ -189,9 +211,15 @@ track org req = do
     mbTrackingUrl <- getStatus dzBACreds conf (TaskId taskId) <&> (.tracking_url)
     return $ mkOnTrackMessage mbTrackingUrl
 
-status :: Org.Organization -> API.BecknReq StatusAPI.OrderId -> Flow AckResponse
+status ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+  ) =>
+  Org.Organization ->
+  API.BecknReq StatusAPI.OrderId ->
+  m AckResponse
 status org req = do
-  conf@DunzoConfig {..} <- dzConfig <$> ask
+  conf@DunzoConfig {..} <- asks (.dzConfig)
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let orderId = context.transaction_id
@@ -212,9 +240,15 @@ status org req = do
       let updatedCase = case_ {udf1 = Just $ encodeToText order, udf2 = Just $ encodeToText taskStatus}
       Storage.update caseId updatedCase
 
-cancel :: Org.Organization -> API.BecknReq CancelAPI.CancellationInfo -> Flow AckResponse
+cancel ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+  ) =>
+  Org.Organization ->
+  API.BecknReq CancelAPI.CancellationInfo ->
+  m AckResponse
 cancel org req = do
-  conf@DunzoConfig {..} <- dzConfig <$> ask
+  conf@DunzoConfig {..} <- asks (.dzConfig)
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id context.transaction_id) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
@@ -232,26 +266,26 @@ cancel org req = do
       -- TODO get cancellation reason
       API.cancelTask dzClientId token dzUrl dzTestMode taskId ""
 
-    updateCase :: Id Case -> Order -> Case -> Flow ()
+    updateCase :: HasFlowDBEnv m r => Id Case -> Order -> Case -> m ()
     updateCase caseId order case_ = do
       let updatedCase = case_ {udf1 = Just $ encodeToText order}
       Storage.update caseId updatedCase
 
-update :: Org.Organization -> API.BecknReq UpdateAPI.UpdateInfo -> Flow AckResponse
+update :: MonadFlow m => Org.Organization -> API.BecknReq UpdateAPI.UpdateInfo -> m AckResponse
 update _org _req = throwError $ ActionNotSupported "update"
 
 -- Helpers
-getQuote :: DzBAConfig -> DunzoConfig -> QuoteReq -> Flow QuoteRes
+getQuote :: MonadFlow m => DzBAConfig -> DunzoConfig -> QuoteReq -> m QuoteRes
 getQuote ba@DzBAConfig {..} conf@DunzoConfig {..} quoteReq = do
   token <- fetchToken ba conf
   API.getQuote dzClientId token dzUrl quoteReq
 
-getStatus :: DzBAConfig -> DunzoConfig -> TaskId -> Flow TaskStatus
+getStatus :: MonadFlow m => DzBAConfig -> DunzoConfig -> TaskId -> m TaskStatus
 getStatus dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
   token <- fetchToken dzBACreds conf
   API.taskStatus dzClientId token dzUrl dzTestMode taskId
 
-fetchToken :: DzBAConfig -> DunzoConfig -> Flow Token
+fetchToken :: MonadFlow m => DzBAConfig -> DunzoConfig -> m Token
 fetchToken DzBAConfig {..} DunzoConfig {..} = do
   mToken <- Dz.getToken dzClientId
   case mToken of
@@ -261,5 +295,5 @@ fetchToken DzBAConfig {..} DunzoConfig {..} = do
       return token
     Just token -> return token
 
-withCallback :: WithBecknCallbackMig api callback_success r
+withCallback :: WithBecknCallbackMig api callback_success m
 withCallback = withBecknCallbackMig (Just HttpSig.signatureAuthManagerKey)
