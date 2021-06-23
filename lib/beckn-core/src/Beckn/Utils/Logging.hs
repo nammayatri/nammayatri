@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.Utils.Logging
   ( Log (..),
     LogLevel (..),
@@ -33,7 +31,7 @@ import EulerHS.Prelude
 import EulerHS.Runtime
 import EulerHS.Types (LogContext)
 import qualified EulerHS.Types as T
-import GHC.Records
+import GHC.Records.Extra
 import qualified Prelude as P
 
 logOutputImplementation :: L.MonadFlow m => LogLevel -> T.Message -> m ()
@@ -154,7 +152,7 @@ logContextKey = "log_context"
 
 withTransactionIdLogTag :: (HasField "context" b Context, Log m) => b -> m a -> m a
 withTransactionIdLogTag req = do
-  let context = getField @"context" req
+  let context = req.context
       transaction_id_ = transaction_id context
   withLogTag ("txnId-" <> transaction_id_)
 

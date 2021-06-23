@@ -18,7 +18,7 @@ import qualified Utils.Defaults as Default
 createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle orgId req = withFlowHandlerAPI $ do
   validateVehicle
-  vehicle <- createTransform req >>= addOrgId (Id orgId)
+  vehicle <- createTransform req <&> addOrgId (Id orgId)
   QV.create vehicle
   return $ CreateVehicleRes vehicle
   where
@@ -66,13 +66,12 @@ getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandle
   hasAccess user vehicle
   return $ CreateVehicleRes vehicle
   where
-    hasAccess :: SP.Person -> SV.Vehicle -> Flow ()
     hasAccess user vehicle =
       when (user.organizationId /= Just (vehicle.organizationId)) $
         throwError Unauthorized
 
-addOrgId :: Id Org.Organization -> SV.Vehicle -> Flow SV.Vehicle
-addOrgId orgId vehicle = return $ vehicle {SV.organizationId = orgId}
+addOrgId :: Id Org.Organization -> SV.Vehicle -> SV.Vehicle
+addOrgId orgId vehicle = vehicle {SV.organizationId = orgId}
 
 mkVehicleRes :: [SP.Person] -> SV.Vehicle -> VehicleRes
 mkVehicleRes personList vehicle =

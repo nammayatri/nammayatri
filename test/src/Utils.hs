@@ -1,6 +1,5 @@
 module Utils where
 
-import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -57,8 +56,8 @@ getLoggerCfg t =
       T._isAsync = False
     }
 
-runTransportFlow :: Text -> BecknTransport.AppEnv -> BecknTransport.Flow a -> IO a
-runTransportFlow tag appEnv flow = do
+runFlow :: Text -> env -> FlowR env a -> IO a
+runFlow tag appEnv flow = do
   let loggerRt = getEulerLoggerRuntime (Just "Test_Transport_flow") defaultTestLoggerConfig
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlowR flowRt appEnv $ withLogTag tag flow

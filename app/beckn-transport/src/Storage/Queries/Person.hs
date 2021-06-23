@@ -4,7 +4,6 @@
 
 module Storage.Queries.Person where
 
-import App.Types
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Common as Storage
@@ -33,13 +32,15 @@ getDbTable ::
 getDbTable =
   DB.person . DB.transporterDb <$> getSchemaName
 
-create :: Storage.Person -> Flow ()
+create :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Storage.Person -> m ()
 create person = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression person)
 
 findPersonById ::
-  Id Storage.Person -> Flow Storage.Person
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Id Storage.Person ->
+  m Storage.Person
 findPersonById pid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -47,7 +48,12 @@ findPersonById pid = do
   where
     predicate Storage.Person {..} = id ==. B.val_ pid
 
-findPersonByIdAndRoleAndOrgId :: Id Storage.Person -> Storage.Role -> Id Org.Organization -> Flow (Maybe Storage.Person)
+findPersonByIdAndRoleAndOrgId ::
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Id Storage.Person ->
+  Storage.Role ->
+  Id Org.Organization ->
+  m (Maybe Storage.Person)
 findPersonByIdAndRoleAndOrgId pid role_ orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -57,7 +63,13 @@ findPersonByIdAndRoleAndOrgId pid role_ orgId = do
         &&. role ==. B.val_ role_
         &&. organizationId ==. B.val_ (Just orgId)
 
-findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Storage.Role] -> [Id Org.Organization] -> Flow [Storage.Person]
+findAllWithLimitOffsetByOrgIds ::
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Maybe Integer ->
+  Maybe Integer ->
+  [Storage.Role] ->
+  [Id Org.Organization] ->
+  m [Storage.Person]
 findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
@@ -74,7 +86,10 @@ findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
         ]
 
 findAllByOrgIds ::
-  [Storage.Role] -> [Id Org.Organization] -> Flow [Storage.Person]
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  [Storage.Role] ->
+  [Id Org.Organization] ->
+  m [Storage.Person]
 findAllByOrgIds roles orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -93,7 +108,10 @@ complementVal l
   | otherwise = B.val_ False
 
 findByMobileNumber ::
-  Text -> Text -> Flow (Maybe Storage.Person)
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Text ->
+  Text ->
+  m (Maybe Storage.Person)
 findByMobileNumber countryCode mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -103,7 +121,9 @@ findByMobileNumber countryCode mobileNumber_ = do
         &&. (mobileNumber.hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
 findByIdentifier ::
-  Text -> Flow (Maybe Storage.Person)
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Text ->
+  m (Maybe Storage.Person)
 findByIdentifier identifier_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -112,7 +132,9 @@ findByIdentifier identifier_ = do
       identifier ==. B.val_ (Just identifier_)
 
 findByEmail ::
-  Text -> Flow (Maybe Storage.Person)
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Text ->
+  m (Maybe Storage.Person)
 findByEmail email_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -120,7 +142,7 @@ findByEmail email_ = do
     predicate Storage.Person {..} =
       email ==. B.val_ (Just email_)
 
-updateOrganizationIdAndMakeAdmin :: Id Storage.Person -> Id Org.Organization -> Flow ()
+updateOrganizationIdAndMakeAdmin :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Storage.Person -> Id Org.Organization -> m ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -161,7 +183,7 @@ updatePersonRec personId person' = do
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
-updatePerson :: Id Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> Flow ()
+updatePerson :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> m ()
 updatePerson personId verified_ identifier_ identifierType_ mobileNumber_ = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -182,11 +204,12 @@ updatePerson personId verified_ identifier_ identifierType_ mobileNumber_ = do
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
 update ::
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
   Id Storage.Person ->
   Storage.Status ->
   Bool ->
   Maybe FCM.FCMRecipientToken ->
-  Flow ()
+  m ()
 update personId status_ verified_ deviceTokenM = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -211,7 +234,7 @@ deleteById personId = do
   where
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
-updateEntity :: Id Storage.Person -> Text -> Text -> Flow ()
+updateEntity :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Storage.Person -> Text -> Text -> m ()
 updateEntity personId entityId entityType = do
   dbTable <- getDbTable
   let mEntityId =
@@ -234,7 +257,7 @@ updateEntity personId entityId entityType = do
         ]
     predicate pId Storage.Person {..} = id ==. B.val_ pId
 
-findByEntityId :: Text -> Flow (Maybe Storage.Person)
+findByEntityId :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Text -> m (Maybe Storage.Person)
 findByEntityId entityId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -242,7 +265,7 @@ findByEntityId entityId = do
     predicate Storage.Person {..} =
       udf1 ==. B.val_ (Just entityId)
 
-updateAverageRating :: Id Storage.Person -> Text -> Flow ()
+updateAverageRating :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Storage.Person -> Text -> m ()
 updateAverageRating personId newAverageRating = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -305,11 +328,12 @@ getNearestDrivers point' radius' orgId' = do
 -}
 
 getNearestDrivers ::
+  HasFlowDBEnv m r =>
   LatLong ->
   Integer ->
   Id Org.Organization ->
   Vehicle.Variant ->
-  Flow [(Id Driver, Double)]
+  m [(Id Driver, Double)]
 getNearestDrivers LatLong {..} radius orgId variant =
   map (first Id)
     <$> postgreSQLSimpleQuery

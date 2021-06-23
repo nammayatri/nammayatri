@@ -33,9 +33,8 @@ verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM OrgNotFou
 lookup :: LookupAction LookupRegistry AppEnv
 lookup = lookupRegistryAction Org.findOrganizationByShortId
 
-getHttpManagerKey :: Text -> Flow String
-getHttpManagerKey keyId = do
-  pure $ signatureAuthManagerKey <> "-" <> T.unpack keyId
+getHttpManagerKey :: Text -> String
+getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId
 
 instance
   SanitizedUrl (sub :: Type) =>
@@ -91,7 +90,7 @@ instance VerificationMethod DriverVerifyToken where
   verificationDescription =
     "Checks whether token is registered and belongs to a person with admin or driver role."
 
-verifyAdmin :: SP.Person -> Flow Text
+verifyAdmin :: MonadFlow m => SP.Person -> m Text
 verifyAdmin user = do
   when (user.role /= SP.ADMIN) $
     throwError AccessDenied
@@ -99,7 +98,7 @@ verifyAdmin user = do
     Just orgId -> return $ getId orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
-verifyDriver :: SP.Person -> Flow Text
+verifyDriver :: MonadFlow m => SP.Person -> m Text
 verifyDriver user = do
   unless ((user.role) `elem` [SP.ADMIN, SP.DRIVER]) $
     throwError AccessDenied
@@ -107,13 +106,13 @@ verifyDriver user = do
     Just orgId -> return $ getId orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
-validateAdmin :: RegToken -> Flow Text
+validateAdmin :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => RegToken -> m Text
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
   user <- QP.findPersonById (Id entityId)
   verifyAdmin user
 
-validateDriver :: RegToken -> Flow Text
+validateDriver :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => RegToken -> m Text
 validateDriver regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
   user <- QP.findPersonById (Id entityId)

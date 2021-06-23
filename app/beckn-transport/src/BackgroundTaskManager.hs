@@ -38,10 +38,9 @@ runBackgroundTaskManager configModifier = do
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
   let port = appCfg.bgtmPort
   btmEnv <- buildBTMEnv btmCfg
-  let appEnv = btmEnv.appEnv
 
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    flowRt' <- runFlowR flowRt appEnv $ do
+    flowRt' <- runFlowR flowRt btmEnv $ do
       withLogTag "BTM startup" $ do
         _ <-
           try checkConnections
@@ -52,7 +51,7 @@ runBackgroundTaskManager configModifier = do
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map (getShortId . Organization.shortId) allProviders
         getManagers <-
-          prepareAuthManagers flowRt appEnv allShortIds
+          prepareAuthManagers flowRt btmEnv allShortIds
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
         managerMap <- L.runIO getManagers
         logInfo ("Loaded http managers - " <> show (keys managerMap))
@@ -61,7 +60,7 @@ runBackgroundTaskManager configModifier = do
     let settings =
           defaultSettings
             & setGracefulShutdownTimeout (Just $ appCfg.graceTerminationPeriod)
-            & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
+            & setInstallShutdownHandler (handleShutdown $ btmEnv.isShuttingDown)
             & setPort port
-    void . forkIO . runSettings settings $ Server.run healthCheckAPI healthCheckServer EmptyContext (App.EnvR flowRt' appEnv)
+    void . forkIO . runSettings settings $ Server.run healthCheckAPI healthCheckServer EmptyContext (App.EnvR flowRt' btmEnv)
     runFlowR flowRt' btmEnv Runner.run

@@ -1,6 +1,5 @@
 module Utils.PostgreSQLSimple (postgreSQLSimpleExecute, postgreSQLSimpleQuery) where
 
-import App.Types
 import Beckn.Storage.DB.Config (DBConfig (..))
 import Control.Exception (Handler (..), catches)
 import Data.Aeson
@@ -14,27 +13,28 @@ import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
 import Types.Error
 import Utils.Common
 
-postgreSQLSimpleExecute :: ToRow row => Query -> row -> Flow Int64
+postgreSQLSimpleExecute :: (HasFlowDBEnv m r, ToRow row) => Query -> row -> m Int64
 postgreSQLSimpleExecute q qargs = do
   logQuery q qargs
   withPostgreSQLSimple (\conn -> execute conn q qargs)
 
 postgreSQLSimpleQuery ::
-  ( FromJSON res,
+  ( HasFlowDBEnv m r,
+    FromJSON res,
     ToJSON res,
     FromRow res,
     ToRow row
   ) =>
   Query ->
   row ->
-  Flow [res]
+  m [res]
 postgreSQLSimpleQuery q qargs = do
   logQuery q qargs
   withPostgreSQLSimple (\conn -> query conn q qargs)
 
-withPostgreSQLSimple :: (FromJSON a, ToJSON a) => (Connection -> IO a) -> Flow a
+withPostgreSQLSimple :: (HasFlowDBEnv m r, FromJSON a, ToJSON a) => (Connection -> IO a) -> m a
 withPostgreSQLSimple f = do
-  DBConfig {..} <- asks dbCfg
+  DBConfig {..} <- asks (.dbCfg)
   pool <-
     L.getOrInitSqlConn (mkPostgresPoolConfig connTag pgConfig poolConfig)
       >>= checkDBError
@@ -65,7 +65,7 @@ showResultError (Incompatible sqlType _ _ hType msg) = "sql incompatible: " <> m
 showResultError (UnexpectedNull _ _ field _ msg) = "sql unexpected null: " <> msg <> " @ " <> field
 showResultError (ConversionFailed sqlType _ _ hType msg) = "sql conversion failed" <> msg <> " (" <> hType <> " ~ " <> sqlType <> ")"
 
-logQuery :: ToRow q => Query -> q -> Flow ()
+logQuery :: (HasFlowDBEnv m r, ToRow q) => Query -> q -> m ()
 logQuery q qargs =
   withPostgreSQLSimple (\conn -> decodeUtf8 <$> formatQuery conn q qargs)
     >>= logTagDebug "raw sql query"

@@ -1,6 +1,5 @@
 module ExternalAPI.Transform where
 
-import App.Types
 import Beckn.External.Encryption
 import Beckn.Types.Common
 import Beckn.Types.Core.Brand
@@ -31,7 +30,7 @@ import Types.API.Case
 import Types.Error
 import Utils.Common (fromMaybeM)
 
-mkCatalog :: Case -> [ProductInstance] -> ProviderInfo -> Flow Mobility.Catalog
+mkCatalog :: HasFlowDBEnv m r => Case -> [ProductInstance] -> ProviderInfo -> m Mobility.Catalog
 mkCatalog c prodInsts provider =
   return
     Mobility.Catalog
@@ -128,7 +127,7 @@ mkPrice prodInst =
           maximum_value = amt
         }
 
-mkOrder :: ProductInstance -> Maybe Trip -> Flow Mobility.Order
+mkOrder :: MonadFlow m => ProductInstance -> Maybe Trip -> m Mobility.Order
 mkOrder orderPI trip = do
   now <- getCurrentTime
   searchPiId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
@@ -158,7 +157,7 @@ mkTracking method dataUrl =
       metadata = Nothing
     }
 
-mkDriverObj :: Person.Person -> Flow Mobility.Driver
+mkDriverObj :: HasFlowEncEnv m r => Person.Person -> m Mobility.Driver
 mkDriverObj person = do
   bPerson <- mkPerson person
   return $
@@ -174,7 +173,7 @@ mkDriverObj person = do
         rating = Nothing
       }
 
-mkPerson :: Person.Person -> Flow BPerson.Person
+mkPerson :: HasFlowEncEnv m r => Person.Person -> m BPerson.Person
 mkPerson person = do
   phone <- getPhone
   return $

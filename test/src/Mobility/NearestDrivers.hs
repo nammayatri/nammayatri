@@ -21,21 +21,21 @@ spec = do
 testOrder :: BecknTransport.AppEnv -> IO ()
 testOrder appEnv = do
   res <-
-    runTransportFlow "Test ordering" appEnv $
+    runFlow "Test ordering" appEnv $
       Q.getNearestDrivers pickupPoint 5000 org1 SUV <&> map (getId . fst)
   res `shouldBe` ["002093df-4f7c-440f-ba-closest_driver", "001093df-4f7c-440f-b-furthest_driver"]
 
 testInRadius :: BecknTransport.AppEnv -> IO ()
 testInRadius appEnv = do
   res <-
-    runTransportFlow "Test readius filtration" appEnv $
+    runFlow "Test readius filtration" appEnv $
       Q.getNearestDrivers pickupPoint 800 org1 SUV <&> map (getId . fst)
   res `shouldBe` ["002093df-4f7c-440f-ba-closest_driver"]
 
 testNotInRadius :: BecknTransport.AppEnv -> IO ()
 testNotInRadius appEnv = do
   res <-
-    runTransportFlow "Test outside radius filtration" appEnv $
+    runFlow "Test outside radius filtration" appEnv $
       Q.getNearestDrivers pickupPoint 0 org1 SUV <&> map (getId . fst)
   res `shouldBe` []
 

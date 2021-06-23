@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.Utils.Cron where
 
 import Beckn.Types.App
@@ -9,7 +7,7 @@ import Beckn.Utils.Error
 import Control.Monad.Reader
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
-import GHC.Records (HasField (..))
+import GHC.Records.Extra (HasField (..))
 
 authenticate ::
   ( HasField "cronAuthKey" r (Maybe CronAuthKey)
@@ -17,6 +15,6 @@ authenticate ::
   Maybe CronAuthKey ->
   FlowR r ()
 authenticate rauth = do
-  key <- asks $ getField @"cronAuthKey"
+  key <- asks (.cronAuthKey)
   let parsed = T.stripPrefix "Basic " =<< rauth
   unless (key == parsed) $ throwError (AuthBlocked "Bad auth key")

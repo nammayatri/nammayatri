@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.Utils.Error.FlowHandling
   ( withFlowHandlerAPI,
     withFlowHandlerBecknAPI,
@@ -24,7 +22,7 @@ import Control.Monad.Reader
 import qualified Data.Aeson as A
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
-import GHC.Records
+import GHC.Records.Extra
 import Network.HTTP.Types (Header, hContentType)
 import Network.HTTP.Types.Header (HeaderName)
 import Servant (ServerError (..))
@@ -53,8 +51,7 @@ handleIfUp ::
   m a ->
   m a
 handleIfUp flow = do
-  appEnv <- ask
-  let shutdown = getField @"isShuttingDown" appEnv
+  shutdown <- asks (.isShuttingDown)
   shouldRun <- L.runIO $ atomically $ isEmptyTMVar shutdown
   if shouldRun
     then flow

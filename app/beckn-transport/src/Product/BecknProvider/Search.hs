@@ -64,7 +64,7 @@ search transporterId bapOrg req = withFlowHandlerBecknAPI $
     ExternalAPI.withCallback transporter "search" API.onSearch context callbackUrl $
       onSearchCallback productCase transporter fromLocation toLocation
 
-mkFromStop :: UTCTime -> Stop.Stop -> Flow Location.Location
+mkFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.Location
 mkFromStop now stop = do
   let loc = stop.location
   let mgps = loc.gps
@@ -89,9 +89,9 @@ mkFromStop now stop = do
         updatedAt = now
       }
 
-getValidTime :: UTCTime -> UTCTime -> Flow UTCTime
+getValidTime :: HasFlowEnv m r '["caseExpiry" ::: Maybe Integer] => UTCTime -> UTCTime -> m UTCTime
 getValidTime now startTime = do
-  caseExpiry_ <- fromMaybe 7200 . caseExpiry <$> ask
+  caseExpiry_ <- fromMaybe 7200 <$> asks (.caseExpiry)
   let minExpiry = 300 -- 5 minutes
       timeToRide = startTime `diffUTCTime` now
       validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
@@ -132,9 +132,13 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
       updatedAt = now
     }
 
-calculateDeadDistance :: Org.Organization -> Location.Location -> Flow (Maybe Float)
+calculateDeadDistance ::
+  (HasFlowDBEnv m r, HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]) =>
+  Org.Organization ->
+  Location.Location ->
+  m (Maybe Float)
 calculateDeadDistance organization fromLocation = do
-  eres <- runSafeFlow do
+  eres <- runSafe $ do
     orgLocId <- organization.locationId & fromMaybeM (OrgFieldNotPresent "location_id")
     mbOrgLocation <- Loc.findLocationById orgLocId
     case mbOrgLocation of
@@ -147,11 +151,15 @@ calculateDeadDistance organization fromLocation = do
     Right mDistance -> return mDistance
 
 onSearchCallback ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer],
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+  ) =>
   Case.Case ->
   Org.Organization ->
   Location.Location ->
   Location.Location ->
-  Flow API.OnSearchServices
+  m API.OnSearchServices
 onSearchCallback productCase transporter fromLocation toLocation = do
   let transporterId = transporter.id
   vehicleVariant <-
@@ -181,7 +189,13 @@ onSearchCallback productCase transporter fromLocation toLocation = do
           _ -> [prodInst]
   mkOnSearchPayload productCase productInstances transporter
 
-mkProductInstance :: Case.Case -> Maybe Amount -> ProductInstance.ProductInstanceStatus -> Id Org.Organization -> Flow ProductInstance.ProductInstance
+mkProductInstance ::
+  HasFlowDBEnv m r =>
+  Case.Case ->
+  Maybe Amount ->
+  ProductInstance.ProductInstanceStatus ->
+  Id Org.Organization ->
+  m ProductInstance.ProductInstance
 mkProductInstance productCase price status transporterId = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime
@@ -219,10 +233,11 @@ mkProductInstance productCase price status transporterId = do
       }
 
 mkOnSearchPayload ::
+  HasFlowDBEnv m r =>
   Case.Case ->
   [ProductInstance.ProductInstance] ->
   Org.Organization ->
-  Flow API.OnSearchServices
+  m API.OnSearchServices
 mkOnSearchPayload productCase productInstances transporterOrg = do
   MPI.getCountByStatus (transporterOrg.id) Case.RIDEORDER
     <&> mkProviderInfo transporterOrg . mkProviderStats

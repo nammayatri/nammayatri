@@ -1,6 +1,5 @@
 module Models.Product where
 
-import App.Types
 import Beckn.Types.Id
 import Beckn.Types.Storage.Products
 import EulerHS.Prelude
@@ -16,6 +15,6 @@ import Utils.Common
 -- Convert it to DomainError with a proper description
 
 -- | Find Product by id
-findById :: Id Products -> Flow Products
+findById :: HasFlowDBEnv m r => Id Products -> m Products
 findById pid = do
   Q.findById' pid >>= fromMaybeM CaseNotFound

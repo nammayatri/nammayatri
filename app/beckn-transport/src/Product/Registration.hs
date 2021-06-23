@@ -8,6 +8,7 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
+import Beckn.Types.SlidingWindowLimiter
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.SlidingWindowLimiter
@@ -31,7 +32,16 @@ initiateLogin req =
 initiateFlowHitsCountKey :: SP.Person -> Text
 initiateFlowHitsCountKey person = "Registration:initiateFlow" <> getId person.id <> ":hitsCount"
 
-initiateFlow :: InitiateLoginReq -> SmsConfig -> Flow InitiateLoginRes
+initiateFlow ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions],
+    HasFlowEnv m r '["otpSmsTemplate" ::: Text],
+    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ) =>
+  InitiateLoginReq ->
+  SmsConfig ->
+  m InitiateLoginRes
 initiateFlow req smsCfg = do
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
@@ -53,7 +63,7 @@ initiateFlow req smsCfg = do
     Nothing -> do
       token <- makeSession scfg req entityId SR.USER Nothing
       QR.create token
-      otpSmsTemplate <- otpSmsTemplate <$> ask
+      otpSmsTemplate <- asks (.otpSmsTemplate)
       withLogTag ("personId_" <> getId person.id) $
         SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
       return token
@@ -96,7 +106,13 @@ makePerson req = do
       }
 
 makeSession ::
-  SmsSessionConfig -> InitiateLoginReq -> Text -> SR.RTEntityType -> Maybe Text -> Flow SR.RegistrationToken
+  MonadFlow m =>
+  SmsSessionConfig ->
+  InitiateLoginReq ->
+  Text ->
+  SR.RTEntityType ->
+  Maybe Text ->
+  m SR.RegistrationToken
 makeSession SmsSessionConfig {..} req entityId entityType fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
@@ -149,18 +165,18 @@ login tokenId req =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
 
-checkRegistrationTokenExists :: Text -> Flow SR.RegistrationToken
+checkRegistrationTokenExists :: HasFlowDBEnv m r => Text -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findRegistrationToken tokenId >>= fromMaybeM (TokenNotFound tokenId)
 
-createPerson :: InitiateLoginReq -> Flow SP.Person
+createPerson :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => InitiateLoginReq -> m SP.Person
 createPerson req = do
   person <- makePerson req
   QP.create person
   when (person.role == SP.DRIVER) $ Person.createDriverDetails (person.id)
   pure person
 
-checkPersonExists :: Text -> Flow SP.Person
+checkPersonExists :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findPersonById (Id entityId)
 
@@ -181,7 +197,7 @@ reInitiateLogin tokenId req =
         return $ InitiateLoginRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Limit exceeded."
 
-clearOldRegToken :: SP.Person -> Id SR.RegistrationToken -> Flow ()
+clearOldRegToken :: HasFlowDBEnv m r => SP.Person -> Id SR.RegistrationToken -> m ()
 clearOldRegToken person = QR.deleteByEntitiyIdExceptNew (getId $ person.id)
 
 logout :: SR.RegistrationToken -> FlowHandler APISuccess

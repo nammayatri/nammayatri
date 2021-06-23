@@ -51,7 +51,16 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandlerAP
           toLocation = find (\x -> Case.toLocationId (res._case) == Loc.id x) locList
         }
 
-notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> Flow ()
+notifyUpdateToBAP ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ) =>
+  PI.ProductInstance ->
+  PI.ProductInstance ->
+  PI.ProductInstanceStatus ->
+  m ()
 notifyUpdateToBAP searchPi orderPi updatedStatus = do
   -- Send callbacks to BAP
   transporter <- OQ.findOrganizationById $ searchPi.organizationId
@@ -138,7 +147,15 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
 
 -- Core Utility methods are below
 
-assignDriver :: Id PI.ProductInstance -> Id Driver -> Flow ()
+assignDriver ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ) =>
+  Id PI.ProductInstance ->
+  Id Driver ->
+  m ()
 assignDriver productInstanceId driverId = do
   ordPi <- PIQ.findById productInstanceId
   searchPi <- PIQ.findById =<< fromMaybeM (PIFieldNotPresent "parent_id") (ordPi.parentId)
@@ -173,13 +190,30 @@ assignDriver productInstanceId driverId = do
           "Check the app for more details."
         ]
 
-notifyTripDetailsToGateway :: SO.Organization -> PI.ProductInstance -> PI.ProductInstance -> Flow ()
+notifyTripDetailsToGateway ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  SO.Organization ->
+  PI.ProductInstance ->
+  PI.ProductInstance ->
+  m ()
 notifyTripDetailsToGateway transporter searchPi orderPi = do
   trackerCaseMb <- CQ.findByParentCaseIdAndType (searchPi.caseId) Case.LOCATIONTRACKER
   whenJust trackerCaseMb $ \trackerCase ->
     BP.notifyTripInfoToGateway orderPi (trackerCase.id) transporter (searchPi.caseId)
 
-notifyStatusUpdateReq :: SO.Organization -> PI.ProductInstance -> PI.ProductInstanceStatus -> Flow ()
+notifyStatusUpdateReq ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ) =>
+  SO.Organization ->
+  PI.ProductInstance ->
+  PI.ProductInstanceStatus ->
+  m ()
 notifyStatusUpdateReq transporterOrg searchPi status = do
   case status of
     PI.CANCELLED -> do

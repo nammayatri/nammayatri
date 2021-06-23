@@ -15,6 +15,7 @@ import Beckn.Types.Forkable as Common
 import Beckn.Types.GuidLike as Common
 import Beckn.Types.Logging as Common
 import Beckn.Types.MonadGuid as Common
+import Beckn.Types.RunSafe as Common
 import Beckn.Types.Time as Common
 import Data.Aeson
 import Data.Generics.Labels ()

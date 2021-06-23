@@ -43,7 +43,13 @@ getLocation piId = withFlowHandlerAPI $ do
   long <- currLocation.long & fromMaybeM (LocationFieldNotPresent "long")
   return $ GetLocationRes {location = Location.LocationInfo lat long}
 
-getRoute' :: Double -> Double -> Double -> Double -> Flow (Maybe MapSearch.Route)
+getRoute' ::
+  HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl] =>
+  Double ->
+  Double ->
+  Double ->
+  Double ->
+  m (Maybe MapSearch.Route)
 getRoute' fromLat fromLon toLat toLon = MapSearch.getRouteMb getRouteRequest
   where
     getRouteRequest = do
@@ -71,7 +77,11 @@ getRoute _ Location.Request {..} =
           calcPoints
         }
 
-calculateDistance :: Location.Location -> Location.Location -> Flow (Maybe Float)
+calculateDistance ::
+  HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl] =>
+  Location.Location ->
+  Location.Location ->
+  m (Maybe Float)
 calculateDistance source destination = do
   routeRequest <- mkRouteRequest
   fmap MapSearch.distanceInM <$> MapSearch.getRouteMb routeRequest

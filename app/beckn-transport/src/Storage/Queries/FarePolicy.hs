@@ -1,6 +1,5 @@
 module Storage.Queries.FarePolicy where
 
-import App.Types (Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
@@ -16,17 +15,20 @@ import qualified Types.Domain.FarePolicy as D
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.FarePolicy as Storage
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyT))
 getDbTable =
   DB.farePolicy . DB.transporterDb <$> getSchemaName
 
-create :: Storage.FarePolicy -> Flow ()
+create :: HasFlowDBEnv m r => Storage.FarePolicy -> m ()
 create Storage.FarePolicy {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.FarePolicy {..})
 
 findFarePolicyByOrgAndVehicleVariant ::
-  Id Organization.Organization -> Vehicle.Variant -> Flow (Maybe Storage.FarePolicy)
+  HasFlowDBEnv m r =>
+  Id Organization.Organization ->
+  Vehicle.Variant ->
+  m (Maybe Storage.FarePolicy)
 findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -35,21 +37,21 @@ findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ = do
       organizationId ==. B.val_ orgId
         &&. vehicleVariant ==. B.val_ vehicleVariant_
 
-findFarePoliciesByOrgId :: Id Organization.Organization -> Flow [Storage.FarePolicy]
+findFarePoliciesByOrgId :: HasFlowDBEnv m r => Id Organization.Organization -> m [Storage.FarePolicy]
 findFarePoliciesByOrgId orgId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate Storage.FarePolicy {..} = organizationId ==. B.val_ orgId
 
-findFarePolicyById :: Id D.FarePolicy -> Flow (Maybe Storage.FarePolicy)
+findFarePolicyById :: HasFlowDBEnv m r => Id D.FarePolicy -> m (Maybe Storage.FarePolicy)
 findFarePolicyById fpId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.FarePolicy {..} = id ==. B.val_ fpId
 
-updateFarePolicy :: Storage.FarePolicy -> Flow ()
+updateFarePolicy :: HasFlowDBEnv m r => Storage.FarePolicy -> m ()
 updateFarePolicy farePolicy = do
   dbTable <- getDbTable
   now <- getCurrentTime

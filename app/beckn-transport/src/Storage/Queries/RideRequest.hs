@@ -1,8 +1,8 @@
 module Storage.Queries.RideRequest where
 
-import App.Types (Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Types.Storage.Organization
@@ -16,7 +16,7 @@ getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.rideRequest . DB.transporterDb <$> getSchemaName
 
-createFlow :: RideRequest.RideRequest -> Flow ()
+createFlow :: HasFlowDBEnv m r => RideRequest.RideRequest -> m ()
 createFlow =
   DB.runSqlDB . create
 
@@ -25,7 +25,7 @@ create rideRequest = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertExpression rideRequest)
 
-fetchOldest :: ShortId Organization -> Integer -> Flow [RideRequest.RideRequest]
+fetchOldest :: HasFlowDBEnv m r => ShortId Organization -> Integer -> m [RideRequest.RideRequest]
 fetchOldest shortId limit = do
   dbTable <- getDbTable
   let order RideRequest.RideRequest {..} = B.asc_ createdAt
@@ -33,7 +33,7 @@ fetchOldest shortId limit = do
   where
     predicate RideRequest.RideRequest {..} = shortOrgId ==. B.val_ shortId
 
-removeRequest :: Id RideRequest.RideRequest -> Flow ()
+removeRequest :: HasFlowDBEnv m r => Id RideRequest.RideRequest -> m ()
 removeRequest requestId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate requestId)

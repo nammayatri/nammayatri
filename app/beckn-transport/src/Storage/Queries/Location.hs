@@ -3,7 +3,6 @@
 
 module Storage.Queries.Location where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
@@ -20,7 +19,7 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.location . DB.transporterDb <$> getSchemaName
 
-createFlow :: Storage.Location -> Flow ()
+createFlow :: HasFlowDBEnv m r => Storage.Location -> m ()
 createFlow =
   DB.runSqlDB . create
 
@@ -30,14 +29,16 @@ create location = do
   DB.createOne' dbTable (Storage.insertExpression location)
 
 findLocationById ::
-  Id Storage.Location -> Flow (Maybe Storage.Location)
+  HasFlowDBEnv m r =>
+  Id Storage.Location ->
+  m (Maybe Storage.Location)
 findLocationById locId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Location {..} = id ==. B.val_ locId
 
-updateLocationRec :: Id Storage.Location -> Storage.Location -> Flow ()
+updateLocationRec :: HasFlowDBEnv m r => Id Storage.Location -> Storage.Location -> m ()
 updateLocationRec locationId location = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -60,7 +61,7 @@ updateLocationRec locationId location = do
         ]
     predicate locId Storage.Location {..} = id ==. B.val_ locId
 
-findAllByLocIds :: [Id Storage.Location] -> [Id Storage.Location] -> Flow [Storage.Location]
+findAllByLocIds :: HasFlowDBEnv m r => [Id Storage.Location] -> [Id Storage.Location] -> m [Storage.Location]
 findAllByLocIds fromIds toIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate fromIds toIds)
@@ -69,7 +70,7 @@ findAllByLocIds fromIds toIds = do
       B.in_ id (B.val_ <$> pFromIds)
         ||. B.in_ id (B.val_ <$> pToIds)
 
-updateGpsCoord :: Id Storage.Location -> Double -> Double -> Flow ()
+updateGpsCoord :: HasFlowDBEnv m r => Id Storage.Location -> Double -> Double -> m ()
 updateGpsCoord locationId lat_ long_ = do
   locTable <- getDbTable
   now <- getCurrentTime

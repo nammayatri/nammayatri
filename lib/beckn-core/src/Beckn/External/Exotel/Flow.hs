@@ -11,7 +11,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import GHC.Records (HasField (..))
+import GHC.Records.Extra (HasField (..))
 import Servant
 import Servant.Client
 
@@ -45,7 +45,7 @@ initiateCall ::
   T.Text ->
   FlowR r ()
 initiateCall from to = do
-  mbExotelCfg <- getField @"exotelCfg" <$> ask
+  mbExotelCfg <- asks (.exotelCfg)
   fork forkDesc $
     case mbExotelCfg of
       Just ExotelCfg {..} -> do

@@ -87,7 +87,7 @@ createPerson orgId req = withFlowHandlerAPI $ do
       return $ UpdatePersonRes decPerson
     _ -> return $ UpdatePersonRes decPerson
   where
-    validateDriver :: CreatePersonReq -> Flow ()
+    validateDriver :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => CreatePersonReq -> m ()
     validateDriver preq =
       when (preq.role == Just SP.DRIVER) $
         case (preq.mobileNumber, req.mobileCountryCode) of
@@ -96,7 +96,7 @@ createPerson orgId req = withFlowHandlerAPI $ do
               throwError $ InvalidRequest "Person with this mobile number already exists."
           _ -> throwError $ InvalidRequest "You should pass mobile number and country code."
 
-createDriverDetails :: Id SP.Person -> Flow ()
+createDriverDetails :: HasFlowDBEnv m r => Id SP.Person -> m ()
 createDriverDetails personId = do
   now <- getCurrentTime
   let driverInfo =
@@ -157,7 +157,7 @@ linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do
 addOrgId :: Id Organization -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP.organizationId = Just orgId}
 
-mkPersonRes :: SP.Person -> Flow PersonEntityRes
+mkPersonRes :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => SP.Person -> m PersonEntityRes
 mkPersonRes person = do
   entity <- case person.udf2 >>= mapEntityType of
     Just VEHICLE -> do
@@ -193,7 +193,7 @@ mkPersonRes person = do
         linkedEntity = entity
       }
 
-sendInviteSms :: SmsConfig -> Text -> Text -> Text -> Flow ()
+sendInviteSms :: HasFlowDBEnv m r => SmsConfig -> Text -> Text -> Text -> m ()
 sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
   let url = smsCfg.url
   let smsCred = smsCfg.credConfig
@@ -213,7 +213,10 @@ mapEntityType entityType = case entityType of
   "VEHICLE" -> Just VEHICLE
   _ -> Nothing
 
-calculateAverageRating :: Id SP.Person -> Flow ()
+calculateAverageRating ::
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  Id SP.Person ->
+  m ()
 calculateAverageRating personId = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   allRatings <- Rating.findAllRatingsForPerson personId
@@ -229,7 +232,10 @@ calculateAverageRating personId = do
 driverPoolKey :: Id ProductInstance -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
-getDriverPool :: Id ProductInstance -> Flow [Id Driver]
+getDriverPool ::
+  (HasFlowDBEnv m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]) =>
+  Id ProductInstance ->
+  m [Id Driver]
 getDriverPool piId =
   Redis.getKeyRedis (driverPoolKey piId)
     >>= maybe calcDriverPool (pure . map Id)
@@ -246,15 +252,16 @@ getDriverPool piId =
       let orgId = prodInst.organizationId
       calculateDriverPool pickupPoint orgId vehicleVariant
 
-setDriverPool :: Id ProductInstance -> [Id Driver] -> Flow ()
+setDriverPool :: HasFlowDBEnv m r => Id ProductInstance -> [Id Driver] -> m ()
 setDriverPool piId ids =
   Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
 
 calculateDriverPool ::
+  (HasFlowDBEnv m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]) =>
   Id Location ->
   Id Organization ->
   SV.Variant ->
-  Flow [Id Driver]
+  m [Id Driver]
 calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM LocationNotFound
   lat <- location.lat & fromMaybeM (LocationFieldNotPresent "lat")
@@ -276,7 +283,7 @@ calculateDriverPool locId orgId variant = do
     getRadius =
       QTC.findValueByOrgIdAndKey orgId (ConfigKey "radius")
         >>= maybe
-          (asks defaultRadiusOfSearch)
+          (asks (.defaultRadiusOfSearch))
           radiusFromTransporterConfig
     radiusFromTransporterConfig conf =
       fromMaybeM (InternalError "The radius is not a number.")

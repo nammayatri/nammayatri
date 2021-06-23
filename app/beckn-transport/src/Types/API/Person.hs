@@ -2,7 +2,6 @@
 
 module Types.API.Person where
 
-import App.Types
 import Beckn.External.Encryption (encrypt)
 import Beckn.External.FCM.Types as FCM
 import Beckn.TypeClass.Transform
@@ -69,7 +68,7 @@ validateUpdatePersonReq :: Validate UpdatePersonReq
 validateUpdatePersonReq UpdatePersonReq {..} =
   validateMaybe "firstName" firstName $ MinLength 3 `And` P.name
 
-instance ModifyTransform UpdatePersonReq SP.Person Flow where
+instance HasFlowDBEnv m r => ModifyTransform UpdatePersonReq SP.Person m where
   modifyTransform req person = do
     location <- updateOrCreateLocation req $ person.locationId
     return
@@ -91,7 +90,7 @@ instance ModifyTransform UpdatePersonReq SP.Person Flow where
              locationId = Just (SL.id location)
             }
 
-updateOrCreateLocation :: UpdatePersonReq -> Maybe (Id SL.Location) -> Flow SL.Location
+updateOrCreateLocation :: HasFlowDBEnv m r => UpdatePersonReq -> Maybe (Id SL.Location) -> m SL.Location
 updateOrCreateLocation req Nothing = do
   location <- createLocation req
   QL.createFlow location
@@ -119,7 +118,7 @@ transformToLocation req location =
       SL.bound = req.bound
     }
 
-createLocation :: UpdatePersonReq -> Flow SL.Location
+createLocation :: HasFlowDBEnv m r => UpdatePersonReq -> m SL.Location
 createLocation UpdatePersonReq {..} = do
   id <- generateGUID
   createdAt <- getCurrentTime
@@ -184,7 +183,7 @@ validateCreatePersonReq CreatePersonReq {..} =
 instance FromJSON CreatePersonReq where
   parseJSON = genericParseJsonWithValidation "CreatePersonReq" validateCreatePersonReq
 
-instance CreateTransform CreatePersonReq SP.Person Flow where
+instance (HasFlowDBEnv m r, HasFlowEncEnv m r) => CreateTransform CreatePersonReq SP.Person m where
   createTransform req = do
     pid <- generateGUID
     now <- getCurrentTime
@@ -219,7 +218,7 @@ instance CreateTransform CreatePersonReq SP.Person Flow where
           SP.updatedAt = now
         }
 
-createLocationT :: CreatePersonReq -> Flow SL.Location
+createLocationT :: HasFlowDBEnv m r => CreatePersonReq -> m SL.Location
 createLocationT req = do
   location <- createLocationRec req
   QL.createFlow location
@@ -229,7 +228,7 @@ createLocationT req = do
 --   as possible, still we need fake organizationId here ...
 -- Better solution in he long run is to factor out common data reducing this
 --   enormous amount of duplication ...
-createLocationRec :: CreatePersonReq -> Flow SL.Location
+createLocationRec :: HasFlowDBEnv m r => CreatePersonReq -> m SL.Location
 createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {..}
 
 newtype ListPersonRes = ListPersonRes

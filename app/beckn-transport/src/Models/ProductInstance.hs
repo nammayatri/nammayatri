@@ -1,6 +1,5 @@
 module Models.ProductInstance where
 
-import App.Types
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case (Case)
 import Beckn.Types.Storage.Organization (Organization)
@@ -19,39 +18,49 @@ import Utils.Common
 -- Convert it to DomainError with a proper description
 
 -- | Validate and update ProductInstance status
-updateStatus :: Id ProductInstance -> ProductInstanceStatus -> Flow ()
+updateStatus :: HasFlowDBEnv m r => Id ProductInstance -> ProductInstanceStatus -> m ()
 updateStatus prodInstId newStatus = do
   Q.updateStatusFlow prodInstId newStatus
 
 -- | Validate and update ProductInstances statusses
-updateStatusByIds :: [Id ProductInstance] -> ProductInstanceStatus -> Flow ()
+updateStatusByIds :: HasFlowDBEnv m r => [Id ProductInstance] -> ProductInstanceStatus -> m ()
 updateStatusByIds ids status = do
   Q.updateStatusByIdsFlow ids status
 
 -- | Find Product Instance by id
-findById :: Id ProductInstance -> Flow ProductInstance
+findById :: HasFlowDBEnv m r => Id ProductInstance -> m ProductInstance
 findById caseProductId = do
   Q.findById' caseProductId >>= fromMaybeM PINotFound
 
 -- | Find Product Instances by Case Id
-findAllByCaseId :: Id Case -> Flow [ProductInstance]
+findAllByCaseId :: HasFlowDBEnv m r => Id Case -> m [ProductInstance]
 findAllByCaseId caseId = do
   Q.findAllByCaseId' caseId
 
 -- | Find Product Instances
-findAllByIds :: [Id ProductInstance] -> Flow [ProductInstance]
+findAllByIds :: HasFlowDBEnv m r => [Id ProductInstance] -> m [ProductInstance]
 findAllByIds ids = do
   Q.findAllByIds' ids
 
-findAllExpiredByStatus :: [ProductInstanceStatus] -> UTCTime -> Flow [ProductInstance]
+findAllExpiredByStatus :: HasFlowDBEnv m r => [ProductInstanceStatus] -> UTCTime -> m [ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
   Q.findAllExpiredByStatus statuses expiryTime
 
 -- | Get ProductInstance By OrganizationId groupBy status
-getCountByStatus :: Id Organization -> ProductInstanceType -> Flow [(ProductInstanceStatus, Int)]
+getCountByStatus ::
+  HasFlowDBEnv m r =>
+  Id Organization ->
+  ProductInstanceType ->
+  m [(ProductInstanceStatus, Int)]
 getCountByStatus orgId piType = do
   Q.getCountByStatus' orgId piType
 
-findByStartTimeBuffer :: ProductInstanceType -> UTCTime -> NominalDiffTime -> [ProductInstanceStatus] -> Flow [ProductInstance]
+findByStartTimeBuffer ::
+  HasFlowDBEnv m r =>
+  ProductInstanceType ->
+  UTCTime ->
+  NominalDiffTime ->
+  [ProductInstanceStatus] ->
+  m [ProductInstance]
 findByStartTimeBuffer piType startTime buffer statuses = do
   Q.findByStartTimeBuffer piType startTime buffer statuses

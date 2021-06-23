@@ -1,6 +1,5 @@
 module Utils.Notifications where
 
-import App.Types
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
@@ -8,12 +7,16 @@ import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Types.Storage.RegistrationToken as RegToken
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
-import Utils.Common (showTimeIst)
 
 -- | Send FCM "cancel" notification to driver
-notifyDriverOnCancel :: Case -> Person -> Flow ()
+notifyDriverOnCancel ::
+  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  Case ->
+  Person ->
+  m ()
 notifyDriverOnCancel c =
   notifyPerson notificationData
   where
@@ -35,7 +38,11 @@ notifyDriverOnCancel c =
             "Check the app for more details."
           ]
 
-notifyOnRegistration :: RegistrationToken -> Person -> Flow ()
+notifyOnRegistration ::
+  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  RegistrationToken ->
+  Person ->
+  m ()
 notifyOnRegistration regToken =
   notifyPerson notificationData
   where
@@ -56,7 +63,11 @@ notifyOnRegistration regToken =
             "Click here to set up your account."
           ]
 
-notifyTransporterOnExpiration :: Case -> [Person] -> Flow ()
+notifyTransporterOnExpiration ::
+  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  Case ->
+  [Person] ->
+  m ()
 notifyTransporterOnExpiration c =
   traverse_ (notifyPerson notificationData)
   where
@@ -78,7 +89,11 @@ notifyTransporterOnExpiration c =
             "You can view more details in the app."
           ]
 
-notifyCancelReqByBP :: ProductInstance -> [Person] -> Flow ()
+notifyCancelReqByBP ::
+  HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ProductInstance ->
+  [Person] ->
+  m ()
 notifyCancelReqByBP p =
   traverse_ (notifyPerson notificationData)
   where
@@ -99,7 +114,11 @@ notifyCancelReqByBP p =
             "has been cancelled. Check the app for more details."
           ]
 
-notifyDriverCancelledRideRequest :: ProductInstance -> [Person] -> Flow ()
+notifyDriverCancelledRideRequest ::
+  HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ProductInstance ->
+  [Person] ->
+  m ()
 notifyDriverCancelledRideRequest p = traverse_ (notifyPerson notificationData)
   where
     notificationData =
@@ -119,7 +138,13 @@ notifyDriverCancelledRideRequest p = traverse_ (notifyPerson notificationData)
             "has been refused by driver. Check the app for more details."
           ]
 
-notifyDriver :: FCM.FCMNotificationType -> Text -> Text -> Person -> Flow ()
+notifyDriver ::
+  HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  FCM.FCMNotificationType ->
+  Text ->
+  Text ->
+  Person ->
+  m ()
 notifyDriver notificationType notificationTitle message driver =
   notifyPerson notificationData driver
   where
@@ -135,7 +160,11 @@ notifyDriver notificationType notificationTitle message driver =
     body =
       FCMNotificationBody message
 
-notifyDriverNewAllocation :: ProductInstance -> Person -> Flow ()
+notifyDriverNewAllocation ::
+  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ProductInstance ->
+  Person ->
+  m ()
 notifyDriverNewAllocation productInstance = notifyPerson notificationData
   where
     title = FCM.FCMNotificationTitle "New allocation request."
@@ -154,7 +183,11 @@ notifyDriverNewAllocation productInstance = notifyPerson notificationData
           fcmNotificationJSON = createAndroidNotification title body FCM.ALLOCATION_REQUEST
         }
 
-notifyDriverUnassigned :: ProductInstance -> Person -> Flow ()
+notifyDriverUnassigned ::
+  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ProductInstance ->
+  Person ->
+  m ()
 notifyDriverUnassigned productInstance = notifyPerson notificationData
   where
     title = FCM.FCMNotificationTitle "Ride not assigned."

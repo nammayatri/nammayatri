@@ -1,6 +1,5 @@
 module Product.FareCalculator.Interpreter (calculateFare) where
 
-import App.Types (Flow)
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Location
@@ -24,13 +23,16 @@ import qualified Types.Storage.FarePolicy as FarePolicyS
 import Utils.Common
 
 calculateFare ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+  ) =>
   Id Organization ->
   Vehicle.Variant ->
   Location.Location ->
   Location.Location ->
   UTCTime ->
   Maybe Text ->
-  Flow Amount
+  m Amount
 calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   fareParams <-
@@ -49,7 +51,7 @@ calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
     $ "Fare parameters calculated: " +|| fareParams ||+ ". Total fare: " +|| totalFare ||+ ""
   pure totalFare
 
-serviceHandle :: ServiceHandle Flow
+serviceHandle :: (HasFlowDBEnv m r, HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]) => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do

@@ -7,8 +7,8 @@ import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Case as C
 import qualified Beckn.Types.Storage.Person as PS
 import qualified Beckn.Types.Storage.ProductInstance as PI
+import Beckn.Utils.Common
 import Beckn.Utils.Cron (authenticate)
-import Beckn.Utils.Error
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (pi)
 import qualified Models.Case as MC
@@ -35,7 +35,14 @@ expireCases maybeAuth ExpireCaseReq {..} = withFlowHandlerAPI $ do
       mapM_ (\pi -> PI.validateStatusTransition (PI.status pi) PI.EXPIRED & fromEitherM PIInvalidStatus) productInstances
       MPI.updateStatusByIds (PI.id <$> productInstances) PI.EXPIRED
 
-notifyTransporters :: [C.Case] -> [PI.ProductInstance] -> Flow ()
+notifyTransporters ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ) =>
+  [C.Case] ->
+  [PI.ProductInstance] ->
+  m ()
 notifyTransporters cases =
   traverse_
     ( \cp ->

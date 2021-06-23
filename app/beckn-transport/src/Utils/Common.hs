@@ -13,6 +13,6 @@ import Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
-generateOTPCode :: Flow Text
+generateOTPCode :: MonadFlow m => m Text
 generateOTPCode =
   L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999

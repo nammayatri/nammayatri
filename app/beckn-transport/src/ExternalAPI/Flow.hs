@@ -21,7 +21,11 @@ import Types.Error
 import Utils.Auth
 import Utils.Common
 
-getGatewayUrl :: Flow BaseUrl
+getGatewayUrl ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl]
+  ) =>
+  m BaseUrl
 getGatewayUrl = do
   appConfig <- ask
   gatewayShortId <- appConfig.xGatewaySelector & fromMaybeM GatewaySelectorNotSet
@@ -36,19 +40,22 @@ withCallback ::
   WithBecknCallback api callback_success AppEnv
 withCallback transporter action api context cbUrl f = do
   let bppShortId = getShortId $ transporter.shortId
-  authKey <- getHttpManagerKey bppShortId
+      authKey = getHttpManagerKey bppShortId
   bppUri <- makeBppUrl (transporter.id)
   let context' = context & #bpp_uri ?~ bppUri
   withBecknCallback (Just authKey) action api context' cbUrl f
 
 callBAP ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
   Beckn.IsBecknAPI api (CallbackReq req) =>
   Text ->
   Proxy api ->
   Org.Organization ->
   Id Case ->
   Either Error req ->
-  Flow ()
+  m ()
 callBAP action api transporter caseId contents = do
   case_ <- Case.findById caseId >>= fromMaybeM CaseNotFound
   bapCallbackUrl <-
@@ -56,7 +63,7 @@ callBAP action api transporter caseId contents = do
       >>= (Id >>> Org.findOrganizationById)
       >>= ((^. #callbackUrl) >>> fromMaybeM (OrgFieldNotPresent "callback_url"))
   let bppShortId = getShortId $ transporter.shortId
-  authKey <- getHttpManagerKey bppShortId
+      authKey = getHttpManagerKey bppShortId
   txnId <-
     (getShortId case_.shortId)
       & T.split (== '_')
@@ -68,12 +75,12 @@ callBAP action api transporter caseId contents = do
   Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $
     CallbackReq {contents, context}
 
-makeBppUrl :: Id Org.Organization -> Flow BaseUrl
+makeBppUrl :: HasFlowEnv m r '["nwAddress" ::: BaseUrl] => Id Org.Organization -> m BaseUrl
 makeBppUrl (Id transporterId) =
-  asks nwAddress
+  asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
-initiateCall :: CallReq -> Flow ()
+initiateCall :: HasFlowEnv m r '["xAppUri" ::: BaseUrl] => CallReq -> m ()
 initiateCall req = do
-  url <- xAppUri <$> ask
+  url <- asks (.xAppUri)
   Beckn.callBecknAPI Nothing (Just "UNABLE_TO_CALL") "call/to_customer" API.callsAPI url req

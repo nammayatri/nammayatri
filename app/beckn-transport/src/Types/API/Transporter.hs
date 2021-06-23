@@ -1,6 +1,5 @@
 module Types.API.Transporter where
 
-import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -46,7 +45,7 @@ validateTransporterReq TransporterReq {..} =
       validate "mobileNumber" mobileNumber P.mobileNumber
     ]
 
-instance CreateTransform TransporterReq SO.Organization Flow where
+instance HasFlowDBEnv m r => CreateTransform TransporterReq SO.Organization m where
   createTransform req = do
     oid <- generateGUID
     let shortId = ShortId $ getId oid
@@ -79,7 +78,7 @@ instance CreateTransform TransporterReq SO.Organization Flow where
           SO.info = Nothing
         }
 
-transformToLocation :: TransporterReq -> Flow SL.Location
+transformToLocation :: HasFlowDBEnv m r => TransporterReq -> m SL.Location
 transformToLocation req = do
   locId <- generateGUID
   now <- getCurrentTime
@@ -121,7 +120,7 @@ data UpdateTransporterReq = UpdateTransporterReq
   }
   deriving (Generic, Show, FromJSON)
 
-instance ModifyTransform UpdateTransporterReq SO.Organization Flow where
+instance HasFlowDBEnv m r => ModifyTransform UpdateTransporterReq SO.Organization m where
   modifyTransform req org = do
     now <- getCurrentTime
     return $

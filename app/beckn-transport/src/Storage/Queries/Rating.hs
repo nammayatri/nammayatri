@@ -1,6 +1,5 @@
 module Storage.Queries.Rating where
 
-import App.Types (Flow)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
@@ -15,16 +14,16 @@ import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.ProductInstance as PI
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RatingT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RatingT))
 getDbTable =
   DB.rating . DB.transporterDb <$> getSchemaName
 
-create :: Storage.Rating -> Flow ()
+create :: HasFlowDBEnv m r => Storage.Rating -> m ()
 create rating = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression rating)
 
-updateRatingValue :: Id Storage.Rating -> Int -> Flow ()
+updateRatingValue :: HasFlowDBEnv m r => Id Storage.Rating -> Int -> m ()
 updateRatingValue ratingId newRatingValue = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -38,14 +37,14 @@ updateRatingValue ratingId newRatingValue = do
     )
     (\Storage.Rating {..} -> id ==. B.val_ ratingId)
 
-findByProductInstanceId :: Id PI.ProductInstance -> Flow (Maybe Storage.Rating)
+findByProductInstanceId :: HasFlowDBEnv m r => Id PI.ProductInstance -> m (Maybe Storage.Rating)
 findByProductInstanceId productInsId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Rating {..} = productInstanceId ==. B.val_ productInsId
 
-findAllRatingsForPerson :: Id Person -> Flow [Storage.Rating]
+findAllRatingsForPerson :: HasFlowDBEnv m r => Id Person -> m [Storage.Rating]
 findAllRatingsForPerson personId_ = do
   ratingTable <- getDbTable
   productInstanceTable <- PI.getDbTable

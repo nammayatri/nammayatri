@@ -1,6 +1,6 @@
 module Product.HealthCheck (healthCheck) where
 
-import qualified App.Types as App
+import App.BackgroundTaskManager.Types (FlowHandler)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Data.Time (diffUTCTime)
@@ -8,7 +8,7 @@ import EulerHS.Prelude
 import Types.Error
 import Utils.Common
 
-healthCheck :: App.FlowHandler Text
+healthCheck :: FlowHandler Text
 healthCheck = withFlowHandlerAPI $ do
   mbTime <- Redis.getKeyRedis "beckn:allocation:service"
   maybe markAsDead checkLastUpdateTime mbTime

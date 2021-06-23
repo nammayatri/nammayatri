@@ -1,6 +1,5 @@
 module Types.API.Vehicle where
 
-import App.Types
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
@@ -42,7 +41,7 @@ validateCreateVehicleReq CreateVehicleReq {..} =
       validateMaybe "color" color $ NotEmpty `And` P.name
     ]
 
-instance CreateTransform CreateVehicleReq SV.Vehicle Flow where
+instance HasFlowDBEnv m r => CreateTransform CreateVehicleReq SV.Vehicle m where
   createTransform req = do
     vid <- BC.generateGUID
     now <- getCurrentTime
@@ -89,7 +88,7 @@ data UpdateVehicleReq = UpdateVehicleReq
 instance FromJSON UpdateVehicleReq where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
-instance ModifyTransform UpdateVehicleReq SV.Vehicle Flow where
+instance HasFlowDBEnv m r => ModifyTransform UpdateVehicleReq SV.Vehicle m where
   modifyTransform req vehicle = do
     now <- getCurrentTime
     return $

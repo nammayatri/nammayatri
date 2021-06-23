@@ -16,7 +16,7 @@ fork desc f = do
     err e =
       logError $ "Thread " <> show desc <> " died with error: " <> show e
 
-runSafeFlow :: (FromJSON a, ToJSON a) => FlowR r a -> FlowR r (Either Text a)
+runSafeFlow :: FlowR r a -> FlowR r (Either Text a)
 runSafeFlow flow = do
   env <- ask
   lift $ L.runSafeFlow $ runReaderT flow env

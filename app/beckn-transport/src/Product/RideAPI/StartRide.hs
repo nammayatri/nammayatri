@@ -1,8 +1,9 @@
 module Product.RideAPI.StartRide where
 
-import App.Types (AppEnv (..), Flow, FlowHandler)
+import App.Types (FlowHandler)
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.APISuccess as APISuccess
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -31,7 +32,7 @@ startRide SR.RegistrationToken {..} rideId req = withFlowHandlerAPI $ do
           notifyBAPRideStarted = \searchPi orderPi -> notifyUpdateToBAP searchPi orderPi ProductInstance.INPROGRESS
         }
 
-startRideTransaction :: [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> Flow ()
+startRideTransaction :: HasFlowDBEnv m r => [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m ()
 startRideTransaction piIds trackerCaseId orderCaseId = DB.runSqlDBTransaction $ do
   QProductInstance.updateStatusByIds piIds ProductInstance.INPROGRESS
   QCase.updateStatus trackerCaseId Case.INPROGRESS

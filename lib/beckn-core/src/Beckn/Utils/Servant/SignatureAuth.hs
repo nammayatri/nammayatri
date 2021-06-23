@@ -32,7 +32,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.Exts (fromList)
-import GHC.Records (HasField)
+import GHC.Records.Extra (HasField)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as Http

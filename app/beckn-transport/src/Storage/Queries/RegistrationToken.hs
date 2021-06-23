@@ -2,7 +2,6 @@
 
 module Storage.Queries.RegistrationToken where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
@@ -23,19 +22,19 @@ getDbTable ::
 getDbTable =
   DB.registrationToken . DB.transporterDb <$> getSchemaName
 
-create :: Storage.RegistrationToken -> Flow ()
+create :: HasFlowDBEnv m r => Storage.RegistrationToken -> m ()
 create Storage.RegistrationToken {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.RegistrationToken {..})
 
-findRegistrationToken :: Text -> Flow (Maybe Storage.RegistrationToken)
+findRegistrationToken :: HasFlowDBEnv m r => Text -> m (Maybe Storage.RegistrationToken)
 findRegistrationToken tokenId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.RegistrationToken {..} = id ==. B.val_ tokenId
 
-updateVerified :: Text -> Bool -> Flow ()
+updateVerified :: HasFlowDBEnv m r => Text -> Bool -> m ()
 updateVerified rtId verified_ = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -48,19 +47,19 @@ updateVerified rtId verified_ = do
         ]
     predicate rtid Storage.RegistrationToken {..} = id ==. B.val_ rtid
 
-verifyToken :: RegToken -> Flow Storage.RegistrationToken
+verifyToken :: HasFlowDBEnv m r => RegToken -> m Storage.RegistrationToken
 verifyToken regToken = do
   logInfo "Verifying Token"
   findRegistrationTokenByToken regToken >>= fromMaybeM (InvalidToken regToken)
 
-findRegistrationTokenByToken :: RegToken -> Flow (Maybe Storage.RegistrationToken)
+findRegistrationTokenByToken :: HasFlowDBEnv m r => RegToken -> m (Maybe Storage.RegistrationToken)
 findRegistrationTokenByToken regToken = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate regToken)
   where
     predicate token_ Storage.RegistrationToken {..} = token ==. B.val_ token_
 
-updateAttempts :: Int -> Text -> Flow Storage.RegistrationToken
+updateAttempts :: HasFlowDBEnv m r => Int -> Text -> m Storage.RegistrationToken
 updateAttempts attemps rtId = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -78,7 +77,7 @@ deleteByEntitiyId id_ = do
   where
     predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid
 
-deleteByEntitiyIdExceptNew :: Text -> Id Storage.RegistrationToken -> Flow ()
+deleteByEntitiyIdExceptNew :: HasFlowDBEnv m r => Text -> Id Storage.RegistrationToken -> m ()
 deleteByEntitiyIdExceptNew id_ (Id newRT) = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id_ newRT)

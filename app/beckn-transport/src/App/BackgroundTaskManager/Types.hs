@@ -2,10 +2,10 @@ module App.BackgroundTaskManager.Types
   ( BTMCfg (),
     BTMEnv (..),
     Env,
-    Flow,
     FlowHandler,
     FlowServer,
     Log (..),
+    DriverAllocationConfig (..),
     buildBTMEnv,
     module App,
   )
@@ -13,7 +13,10 @@ where
 
 import App.Types as App (AppCfg, AppEnv (..))
 import qualified App.Types as App
+import Beckn.External.Exotel.Types (ExotelCfg)
+import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.Common
+import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
@@ -41,7 +44,19 @@ data DriverAllocationConfig = DriverAllocationConfig
   deriving (Generic, FromDhall)
 
 data BTMEnv = BTMEnv
-  { appEnv :: App.AppEnv,
+  { dbCfg :: DBConfig,
+    selfId :: Text,
+    nwAddress :: BaseUrl,
+    credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
+    encService :: (String, Word16),
+    fcmJsonPath :: Maybe Text,
+    exotelCfg :: Maybe ExotelCfg,
+    signatureExpiry :: NominalDiffTime,
+    fcmUrl :: BaseUrl,
+    isShuttingDown :: TMVar (),
+    coreMetrics :: CoreMetricsContainer,
+    defaultRadiusOfSearch :: Integer,
     driverAllocationConfig :: DriverAllocationConfig,
     btmMetrics :: BTMMetricsContainer
   }
@@ -49,7 +64,7 @@ data BTMEnv = BTMEnv
 
 buildBTMEnv :: BTMCfg -> IO BTMEnv
 buildBTMEnv BTMCfg {..} = do
-  appEnv <- App.buildAppEnv appCfg
+  App.AppEnv {..} <- App.buildAppEnv appCfg
   btmMetrics <- registerBTMMetricsContainer
   return $
     BTMEnv
@@ -58,20 +73,18 @@ buildBTMEnv BTMCfg {..} = do
 
 type Env = EnvR BTMEnv
 
-type Flow = FlowR BTMEnv
-
 type FlowHandler = FlowHandlerR BTMEnv
 
 type FlowServer api = FlowServerR BTMEnv api
 
 instance AuthenticatingEntity BTMEnv where
-  getSelfId btmEnv = getSelfId btmEnv.appEnv
-  getSelfUrl btmEnv = getSelfUrl btmEnv.appEnv
-  getRegistry btmEnv = getRegistry btmEnv.appEnv
-  getSigningKeys btmEnv = getSigningKeys btmEnv.appEnv
-  getSignatureExpiry btmEnv = getSignatureExpiry btmEnv.appEnv
+  getSelfId = selfId
+  getSelfUrl = nwAddress
+  getRegistry = credRegistry
+  getSigningKeys = signingKeys
+  getSignatureExpiry = signatureExpiry
 
-instance BTMMetrics Flow where
+instance BTMMetrics (FlowR BTMEnv) where
   incrementTaskCounter = Metrics.incrementTaskCounterFlow
   incrementFailedTaskCounter = Metrics.incrementFailedTaskCounterFlow
   putTaskDuration = Metrics.putTaskDurationFlow

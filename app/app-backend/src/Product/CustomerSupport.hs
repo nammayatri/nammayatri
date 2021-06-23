@@ -108,7 +108,7 @@ listOrder supportP mCaseId mMobile mlimit moffset =
           >>= fromMaybeM PersonDoesNotExist
       return $ T.OrderInfo person [_case]
 
-makeCaseToOrder :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => SP.Person -> C.Case -> m T.OrderResp
+makeCaseToOrder :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => SP.Person -> C.Case -> m T.OrderResp
 makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
   (confiremedOrder :: Maybe C.Case) <-
     Case.findOneByParentIdAndCaseType id C.RIDEORDER

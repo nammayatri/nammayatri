@@ -1,6 +1,5 @@
 module Storage.Queries.Organization where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
@@ -16,16 +15,16 @@ import Types.Error
 import qualified Types.Storage.DB as DB
 import Utils.Common
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT))
 getDbTable =
   DB.organization . DB.transporterDb <$> getSchemaName
 
-create :: Storage.Organization -> Flow ()
+create :: HasFlowDBEnv m r => Storage.Organization -> m ()
 create Storage.Organization {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
 
-verifyToken :: RegToken -> Flow Storage.Organization
+verifyToken :: HasFlowDBEnv m r => RegToken -> m Storage.Organization
 verifyToken regToken = do
   logInfo "Verifying Token"
   dbTable <- getDbTable
@@ -33,7 +32,7 @@ verifyToken regToken = do
   where
     predicate token Storage.Organization {..} = apiKey ==. B.val_ (Just token)
 
-findOrganizationById :: Id Storage.Organization -> Flow Storage.Organization
+findOrganizationById :: HasFlowDBEnv m r => Id Storage.Organization -> m Storage.Organization
 findOrganizationById orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -41,17 +40,18 @@ findOrganizationById orgId = do
   where
     predicate Storage.Organization {..} = id ==. B.val_ orgId
 
-findOrganizationByShortId :: ShortId Storage.Organization -> Flow (Maybe Storage.Organization)
+findOrganizationByShortId :: HasFlowDBEnv m r => ShortId Storage.Organization -> m (Maybe Storage.Organization)
 findOrganizationByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable (\Storage.Organization {..} -> shortId ==. B.val_ shortId_)
 
 listOrganizations ::
+  HasFlowDBEnv m r =>
   Maybe Int ->
   Maybe Int ->
   [Storage.OrganizationType] ->
   [Storage.Status] ->
-  Flow [Storage.Organization]
+  m [Storage.Organization]
 listOrganizations mlimit moffset oType status_ = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
@@ -69,7 +69,7 @@ listOrganizations mlimit moffset oType status_ = do
           enabled ==. B.val_ True
         ]
 
-loadAllProviders :: Flow [Storage.Organization]
+loadAllProviders :: HasFlowDBEnv m r => m [Storage.Organization]
 loadAllProviders = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -86,9 +86,10 @@ complementVal l
   | otherwise = B.val_ False
 
 update ::
+  HasFlowDBEnv m r =>
   Id Storage.Organization ->
   Storage.Status ->
-  Flow ()
+  m ()
 update orgId status_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
@@ -104,7 +105,7 @@ update orgId status_ = do
           status <-. B.val_ scStatus
         ]
 
-updateOrganizationRec :: Storage.Organization -> Flow ()
+updateOrganizationRec :: HasFlowDBEnv m r => Storage.Organization -> m ()
 updateOrganizationRec org = do
   dbTable <- getDbTable
   DB.update dbTable (setClause org) (predicate $ org.id)
@@ -120,7 +121,7 @@ updateOrganizationRec org = do
         ]
     predicate orgId Storage.Organization {..} = id ==. B.val_ orgId
 
-findOrgByApiKey :: APIKey -> Flow (Maybe Storage.Organization)
+findOrgByApiKey :: HasFlowDBEnv m r => APIKey -> m (Maybe Storage.Organization)
 findOrgByApiKey apiKey_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -128,7 +129,7 @@ findOrgByApiKey apiKey_ = do
     predicate Storage.Organization {..} =
       apiKey ==. B.val_ (Just apiKey_)
 
-findOrgByCbUrl :: BaseUrl -> Flow Storage.Organization
+findOrgByCbUrl :: HasFlowDBEnv m r => BaseUrl -> m Storage.Organization
 findOrgByCbUrl url = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -136,7 +137,7 @@ findOrgByCbUrl url = do
   where
     predicate Storage.Organization {..} = callbackUrl ==. B.val_ (Just url)
 
-findOrgByShortId :: ShortId Storage.Organization -> Flow Storage.Organization
+findOrgByShortId :: HasFlowDBEnv m r => ShortId Storage.Organization -> m Storage.Organization
 findOrgByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -144,7 +145,7 @@ findOrgByShortId shortId_ = do
   where
     predicate Storage.Organization {..} = shortId ==. B.val_ shortId_
 
-findOrgByMobileNumber :: Text -> Text -> Flow (Maybe Storage.Organization)
+findOrgByMobileNumber :: HasFlowDBEnv m r => Text -> Text -> m (Maybe Storage.Organization)
 findOrgByMobileNumber countryCode mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

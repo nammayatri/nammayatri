@@ -1,6 +1,5 @@
 module Storage.Queries.Vehicle where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
@@ -14,17 +13,19 @@ import Types.Error
 import qualified Types.Storage.DB as DB
 import Utils.Common
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.VehicleT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.VehicleT))
 getDbTable =
   DB.vehicle . DB.transporterDb <$> getSchemaName
 
-create :: Storage.Vehicle -> Flow ()
+create :: HasFlowDBEnv m r => Storage.Vehicle -> m ()
 create Storage.Vehicle {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Vehicle {..})
 
 findVehicleById ::
-  Id Storage.Vehicle -> Flow (Maybe Storage.Vehicle)
+  HasFlowDBEnv m r =>
+  Id Storage.Vehicle ->
+  m (Maybe Storage.Vehicle)
 findVehicleById vid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -32,7 +33,10 @@ findVehicleById vid = do
     predicate Storage.Vehicle {..} = id ==. B.val_ vid
 
 findByIdAndOrgId ::
-  Id Storage.Vehicle -> Id Org.Organization -> Flow Storage.Vehicle
+  HasFlowDBEnv m r =>
+  Id Storage.Vehicle ->
+  Id Org.Organization ->
+  m Storage.Vehicle
 findByIdAndOrgId vid orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -40,7 +44,12 @@ findByIdAndOrgId vid orgId = do
   where
     predicate Storage.Vehicle {..} = id ==. B.val_ vid &&. organizationId ==. B.val_ orgId
 
-findAllWithLimitOffsetByOrgIds :: Maybe Integer -> Maybe Integer -> [Id Org.Organization] -> Flow [Storage.Vehicle]
+findAllWithLimitOffsetByOrgIds ::
+  HasFlowDBEnv m r =>
+  Maybe Integer ->
+  Maybe Integer ->
+  [Id Org.Organization] ->
+  m [Storage.Vehicle]
 findAllWithLimitOffsetByOrgIds mlimit moffset orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
@@ -54,7 +63,7 @@ findAllWithLimitOffsetByOrgIds mlimit moffset orgIds = do
         (B.val_ True)
         [organizationId `B.in_` (B.val_ <$> orgIds) ||. complementVal orgIds]
 
-findAllByOrgIds :: [Id Org.Organization] -> Flow [Storage.Vehicle]
+findAllByOrgIds :: HasFlowDBEnv m r => [Id Org.Organization] -> m [Storage.Vehicle]
 findAllByOrgIds orgIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -70,7 +79,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-updateVehicleRec :: Storage.Vehicle -> Flow ()
+updateVehicleRec :: HasFlowDBEnv m r => Storage.Vehicle -> m ()
 updateVehicleRec vehicle = do
   dbTable <- getDbTable
   DB.update dbTable (setClause vehicle) (predicate $ vehicle.id)
@@ -90,14 +99,14 @@ updateVehicleRec vehicle = do
         ]
     predicate vid Storage.Vehicle {..} = id ==. B.val_ vid
 
-deleteById :: Id Storage.Vehicle -> Flow ()
+deleteById :: HasFlowDBEnv m r => Id Storage.Vehicle -> m ()
 deleteById vehId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate vehId)
   where
     predicate vid Storage.Vehicle {..} = id ==. B.val_ vid
 
-findByAnyOf :: Maybe Text -> Maybe (Id Storage.Vehicle) -> Flow (Maybe Storage.Vehicle)
+findByAnyOf :: HasFlowDBEnv m r => Maybe Text -> Maybe (Id Storage.Vehicle) -> m (Maybe Storage.Vehicle)
 findByAnyOf registrationNoM vehicleIdM = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -106,7 +115,15 @@ findByAnyOf registrationNoM vehicleIdM = do
       (B.val_ (isNothing vehicleIdM) ||. id ==. B.val_ (fromMaybe "DONT_MATCH" vehicleIdM))
         &&. (B.val_ (isNothing registrationNoM) ||. registrationNo ==. B.val_ (fromMaybe "DONT_MATCH" registrationNoM))
 
-findAllByVariantCatOrgId :: Maybe Storage.Variant -> Maybe Storage.Category -> Maybe Storage.EnergyType -> Integer -> Integer -> Id Org.Organization -> Flow [Storage.Vehicle]
+findAllByVariantCatOrgId ::
+  HasFlowDBEnv m r =>
+  Maybe Storage.Variant ->
+  Maybe Storage.Category ->
+  Maybe Storage.EnergyType ->
+  Integer ->
+  Integer ->
+  Id Org.Organization ->
+  m [Storage.Vehicle]
 findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
@@ -118,7 +135,7 @@ findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
         &&. (B.val_ (isNothing categoryM) ||. category ==. B.val_ categoryM)
         &&. (B.val_ (isNothing energyTypeM) ||. energyType ==. B.val_ energyTypeM)
 
-findByIds :: [Id Storage.Vehicle] -> Flow [Storage.Vehicle]
+findByIds :: HasFlowDBEnv m r => [Id Storage.Vehicle] -> m [Storage.Vehicle]
 findByIds ids = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -126,7 +143,9 @@ findByIds ids = do
     predicate Storage.Vehicle {..} = B.in_ id (B.val_ <$> ids)
 
 findByRegistrationNo ::
-  Text -> Flow (Maybe Storage.Vehicle)
+  HasFlowDBEnv m r =>
+  Text ->
+  m (Maybe Storage.Vehicle)
 findByRegistrationNo registrationNo_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

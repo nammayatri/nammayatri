@@ -8,7 +8,7 @@ import Beckn.Types.Error
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import EulerHS.Prelude
-import GHC.Records (HasField)
+import GHC.Records.Extra (HasField)
 import Servant.Client.Core (ClientError)
 
 autoComplete ::

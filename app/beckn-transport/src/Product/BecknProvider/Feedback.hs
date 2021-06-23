@@ -54,7 +54,7 @@ feedback _ _ req = withFlowHandlerBecknAPI $
     getPersonId (productI : _) = productI.personId
     getPersonId _ = Nothing
 
-mkRating :: Id ProductInstance.ProductInstance -> Int -> Flow Rating.Rating
+mkRating :: MonadFlow m => Id ProductInstance.ProductInstance -> Int -> m Rating.Rating
 mkRating productInstanceId ratingValue = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime

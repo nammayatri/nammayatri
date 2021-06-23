@@ -1,6 +1,5 @@
 module Storage.Queries.AllocationEvent where
 
-import App.Types
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
@@ -13,24 +12,26 @@ import Types.App
 import qualified Types.Storage.AllocationEvent as Storage
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.AllocationEventT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.AllocationEventT))
 getDbTable =
   DB.allocationEvent . DB.transporterDb <$> getSchemaName
 
-create :: Storage.AllocationEvent -> Flow ()
+create :: HasFlowDBEnv m r => Storage.AllocationEvent -> m ()
 create allocationEvent = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression allocationEvent)
 
 findAllocationEventById ::
-  Id Storage.AllocationEvent -> Flow (Maybe Storage.AllocationEvent)
+  HasFlowDBEnv m r =>
+  Id Storage.AllocationEvent ->
+  m (Maybe Storage.AllocationEvent)
 findAllocationEventById aeId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.AllocationEvent {..} = id ==. B.val_ aeId
 
-logAllocationEvent :: Storage.AllocationEventType -> Id Ride -> Maybe (Id Driver) -> Flow ()
+logAllocationEvent :: HasFlowDBEnv m r => Storage.AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m ()
 logAllocationEvent eventType rideId driverId = do
   uuid <- generateGUID
   now <- getCurrentTime

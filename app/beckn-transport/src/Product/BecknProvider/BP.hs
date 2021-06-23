@@ -1,6 +1,6 @@
 module Product.BecknProvider.BP where
 
-import App.Types (AppEnv (..), Flow, FlowHandler)
+import App.Types (FlowHandler)
 import Beckn.Product.Validation.Context
   ( validateContextCommons,
     validateDomain,
@@ -62,7 +62,15 @@ cancel transporterId _bapOrg req = withFlowHandlerBecknAPI $
     RideRequest.createFlow =<< mkRideReq (orderPi.id) (transporterOrg.shortId) SRideRequest.CANCELLATION
     return Ack
 
-cancelRide :: Id Ride -> Bool -> Flow ()
+cancelRide ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ) =>
+  Id Ride ->
+  Bool ->
+  m ()
 cancelRide rideId requestedByDriver = do
   orderPi <- ProductInstance.findById $ cast rideId
   searchPiId <- ProductInstance.parentId orderPi & fromMaybeM (PIFieldNotPresent "parent_id")
@@ -85,12 +93,13 @@ cancelRide rideId requestedByDriver = do
             Notify.notifyDriverOnCancel c driver
 
 cancelRideTransaction ::
+  HasFlowDBEnv m r =>
   [ProductInstance.ProductInstance] ->
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
   Bool ->
-  Flow ()
+  m ()
 cancelRideTransaction piList searchPiId trackerPiId orderPiId requestedByDriver = DB.runSqlDBTransaction $ do
   case piList of
     [] -> pure ()
@@ -119,15 +128,16 @@ serviceStatus transporterId bapOrg req = withFlowHandlerBecknAPI $ do
     mkOnServiceStatusPayload piId trackerPi
 
 notifyServiceStatusToGateway ::
+  (HasFlowDBEnv m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   Organization.Organization ->
   ProductInstance.ProductInstance ->
   ProductInstance.ProductInstance ->
-  Flow ()
+  m ()
 notifyServiceStatusToGateway transporter searchPi trackerPi = do
   mkOnServiceStatusPayload (searchPi.id) trackerPi
     >>= ExternalAPI.callBAP "on_status" API.onStatus transporter (searchPi.caseId) . Right
 
-mkOnServiceStatusPayload :: Id ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> Flow API.OnStatusReqMessage
+mkOnServiceStatusPayload :: MonadTime m => Id ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m API.OnStatusReqMessage
 mkOnServiceStatusPayload piId trackerPi = do
   mkOrderRes piId (getId $ trackerPi.productId) (show $ trackerPi.status)
     <&> API.OnStatusReqMessage
@@ -163,24 +173,32 @@ trackTrip transporterId org req = withFlowHandlerBecknAPI $
       return $ API.OnTrackReqMessage (Just tracking)
 
 notifyTripInfoToGateway ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
   ProductInstance.ProductInstance ->
   Id Case.Case ->
   Organization.Organization ->
   Id Case.Case ->
-  Flow ()
+  m ()
 notifyTripInfoToGateway prodInst trackerCaseId transporter parentCaseId = do
   mkOnUpdatePayload prodInst trackerCaseId
     >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter parentCaseId . Right
 
 notifyCancelToGateway ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
   ProductInstance.ProductInstance ->
   Organization.Organization ->
-  Flow ()
+  m ()
 notifyCancelToGateway searchPi transporter = do
   mkCancelTripObj searchPi
     >>= ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.caseId) . Right
 
-mkTrip :: Id Case.Case -> ProductInstance.ProductInstance -> Flow Trip
+mkTrip :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Case.Case -> ProductInstance.ProductInstance -> m Trip
 mkTrip cId orderPi = do
   prodInst <- ProductInstance.findByCaseId cId
   driver <- mapM mkDriverInfo $ prodInst.personId
@@ -201,25 +219,26 @@ mkTrip cId orderPi = do
       }
 
 mkOnUpdatePayload ::
+  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
   ProductInstance.ProductInstance ->
   Id Case.Case ->
-  Flow API.OnUpdateOrder
+  m API.OnUpdateOrder
 mkOnUpdatePayload prodInst caseId = do
   trip <- mkTrip caseId prodInst
   order <- ExternalAPITransform.mkOrder prodInst (Just trip)
   return $ API.OnUpdateOrder order
 
-mkDriverInfo :: Id Person.Person -> Flow Driver
+mkDriverInfo :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Person.Person -> m Driver
 mkDriverInfo driverId = do
   person <- Person.findPersonById driverId
   ExternalAPITransform.mkDriverObj person
 
-mkVehicleInfo :: Text -> Flow (Maybe BVehicle.Vehicle)
+mkVehicleInfo :: HasFlowDBEnv m r => Text -> m (Maybe BVehicle.Vehicle)
 mkVehicleInfo vehicleId = do
   vehicle <- Vehicle.findVehicleById (Id vehicleId)
   return $ ExternalAPITransform.mkVehicleObj <$> vehicle
 
-mkCancelTripObj :: ProductInstance.ProductInstance -> Flow Trip
+mkCancelTripObj :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => ProductInstance.ProductInstance -> m Trip
 mkCancelTripObj productInstance = do
   driver <- mapM mkDriverInfo $ productInstance.personId
   vehicle <- join <$> mapM mkVehicleInfo (productInstance.entityId)
@@ -236,7 +255,7 @@ mkCancelTripObj productInstance = do
         route = Nothing
       }
 
-getIdShortIdAndTime :: GuidLike Flow b => Flow (UTCTime, b, ShortId a)
+getIdShortIdAndTime :: (MonadFlow m, GuidLike m b) => m (UTCTime, b, ShortId a)
 getIdShortIdAndTime = do
   now <- getCurrentTime
   guid <- generateGUID
@@ -249,10 +268,11 @@ validateContext action context = do
   validateContextCommons action context
 
 mkRideReq ::
+  MonadFlow m =>
   Id ProductInstance.ProductInstance ->
   ShortId Organization.Organization ->
   SRideRequest.RideRequestType ->
-  Flow SRideRequest.RideRequest
+  m SRideRequest.RideRequest
 mkRideReq prodInstID shortOrgId rideRequestType = do
   guid <- generateGUID
   currTime <- getCurrentTime

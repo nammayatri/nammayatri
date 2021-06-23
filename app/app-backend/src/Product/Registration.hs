@@ -68,8 +68,7 @@ initiateFlow req smsCfg = do
       tokenId = SR.id regToken
   Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
-
-makePerson :: HasFlowEncEnv m r =>  InitiateLoginReq -> m SP.Person
+makePerson :: HasFlowEncEnv m r => InitiateLoginReq -> m SP.Person
 makePerson req = do
   role <- (req.role) & fromMaybeM (InvalidRequest "You should pass person's role.")
   pid <- BC.generateGUID

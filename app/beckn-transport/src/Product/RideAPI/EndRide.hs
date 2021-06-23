@@ -1,8 +1,9 @@
 module Product.RideAPI.EndRide where
 
-import App.Types (AppEnv (..), Flow, FlowHandler)
+import App.Types (FlowHandler)
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.APISuccess as APISuccess
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
@@ -33,7 +34,7 @@ endRide SR.RegistrationToken {..} rideId = withFlowHandlerAPI $ do
           endRideTransaction
         }
 
-endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Flow ()
+endRideTransaction :: HasFlowDBEnv m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> m ()
 endRideTransaction piIds trackerCaseId orderCaseId driverId = DB.runSqlDBTransaction $ do
   PI.updateStatusByIds piIds PI.COMPLETED
   Case.updateStatus trackerCaseId Case.COMPLETED

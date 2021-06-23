@@ -81,12 +81,16 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
         transporterOrg
 
 onConfirmCallback ::
+  ( HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]
+  ) =>
   ProductInstance.ProductInstance ->
   ProductInstance.ProductInstance ->
   Case.Case ->
   Id Case.Case ->
   Organization.Organization ->
-  Flow API.ConfirmOrder
+  m API.ConfirmOrder
 onConfirmCallback orderProductInstance productInstance orderCase trackerCaseId transporterOrg = do
   let transporterId = transporterOrg.id
   let prodInstId = productInstance.id
@@ -99,7 +103,7 @@ onConfirmCallback orderProductInstance productInstance orderCase trackerCaseId t
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   mkOnConfirmPayload orderProductInstance trackerCaseId
 
-mkOrderCase :: Case.Case -> Flow Case.Case
+mkOrderCase :: MonadFlow m => Case.Case -> m Case.Case
 mkOrderCase Case.Case {..} = do
   (now, cid, shortId_) <- BP.getIdShortIdAndTime
   return $
@@ -119,7 +123,7 @@ mkOrderCase Case.Case {..} = do
         ..
       }
 
-mkOrderProductInstance :: Id Case.Case -> ProductInstance.ProductInstance -> Flow ProductInstance.ProductInstance
+mkOrderProductInstance :: MonadFlow m => Id Case.Case -> ProductInstance.ProductInstance -> m ProductInstance.ProductInstance
 mkOrderProductInstance caseId prodInst = do
   (now, pid, shortId) <- BP.getIdShortIdAndTime
   inAppOtpCode <- generateOTPCode
@@ -172,7 +176,7 @@ mkTrackerCase case_@Case.Case {..} uuid now shortId_ =
       ..
     }
 
-mkTrackerProductInstance :: Id Case.Case -> ProductInstance.ProductInstance -> UTCTime -> Flow ProductInstance.ProductInstance
+mkTrackerProductInstance :: MonadFlow m => Id Case.Case -> ProductInstance.ProductInstance -> UTCTime -> m ProductInstance.ProductInstance
 mkTrackerProductInstance caseId prodInst currTime = do
   shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   piId <- L.generateGUID
@@ -207,7 +211,7 @@ mkTrackerProductInstance caseId prodInst currTime = do
         udf5 = prodInst.udf5
       }
 
-mkOnConfirmPayload :: ProductInstance.ProductInstance -> Id Case.Case -> Flow API.ConfirmOrder
+mkOnConfirmPayload :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => ProductInstance.ProductInstance -> Id Case.Case -> m API.ConfirmOrder
 mkOnConfirmPayload orderPI trackerCaseId = do
   trip <- BP.mkTrip trackerCaseId orderPI
   order <- ExternalAPITransform.mkOrder orderPI (Just trip)

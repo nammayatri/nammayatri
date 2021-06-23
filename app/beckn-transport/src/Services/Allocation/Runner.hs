@@ -1,6 +1,5 @@
 module Services.Allocation.Runner where
 
-import App.BackgroundTaskManager.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Error.API (RedisError (..))
@@ -15,10 +14,20 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
+import Types.Metrics (BTMMetrics)
 import Types.ShardMappingError
 import Utils.Common
+import App.BackgroundTaskManager.Types
 
-handle :: Allocation.ServiceHandle Flow
+handle ::
+  ( Allocation.MonadHandler m,
+    HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Integer, "nwAddress" ::: BaseUrl],
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ) =>
+  Allocation.ServiceHandle m
 handle =
   Allocation.ServiceHandle
     { getDriverSortMode = I.getDriverSortMode,
@@ -47,7 +56,8 @@ handle =
       logEvent = I.logEvent
     }
 
-getOrganizationLock :: Flow (ShortId Organization)
+getOrganizationLock ::
+  (HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig]) => m (ShortId Organization)
 getOrganizationLock = do
   shardMap <- asks (.driverAllocationConfig.shards)
   let numShards = Map.size shardMap
@@ -64,7 +74,16 @@ getOrganizationLock = do
       L.throwException $
         ShardMappingError $ "Shard " <> show shardId <> " does not have an associated organization."
 
-run :: Flow ()
+run ::
+  ( BTMMetrics m,
+    HasFlowDBEnv m r,
+    HasFlowEncEnv m r,
+    HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Integer, "nwAddress" ::: BaseUrl],
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    HasFlowEnv m r '["isShuttingDown" ::: TMVar ()]
+  ) =>
+  m ()
 run = do
   runnerHandler $ do
     shortOrgId <- getOrganizationLock
@@ -72,7 +91,7 @@ run = do
     Redis.setKeyRedis "beckn:allocation:service" now
     processStartTime <- getCurrentTime
     requestsNum <- asks (.driverAllocationConfig.requestsNumPerIteration)
-    eres <- runSafeFlow $ Allocation.process handle shortOrgId requestsNum
+    eres <- runSafe $ Allocation.process handle shortOrgId requestsNum
     whenLeft eres $ Log.logTagError "Allocation service"
     Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
     processEndTime <- getCurrentTime
@@ -80,7 +99,7 @@ run = do
     -- If process handling took less than processDelay we delay for remain to processDelay time
     processDelay <- asks (.driverAllocationConfig.processDelay)
     L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (processDelay - processTime)
-  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (.appEnv.isShuttingDown)
+  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)
   when isRunning run
   where
     fromNominalToMicroseconds = floor . (1000000 *) . nominalDiffTimeToSeconds

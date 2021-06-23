@@ -29,7 +29,6 @@ import qualified Product.Call as Call
 import qualified Product.Case as Case
 import qualified Product.Cron as Cron
 import qualified Product.DriverInformation as DriverInformation
-import qualified Product.HealthCheck as HealthCheck
 import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Product.ProductInstance as ProductInstance
@@ -416,11 +415,11 @@ rideFlow =
 
 type HealthCheckAPI = Get '[JSON] Text
 
-healthCheckServer :: FlowServer HealthCheckAPI
-healthCheckServer = HealthCheck.healthCheck
+-- healthCheckServer :: FlowServer HealthCheckAPI
+-- healthCheckServer = HealthCheck.healthCheck
 
-healthCheckAPI :: Proxy HealthCheckAPI
-healthCheckAPI = Proxy
+-- healthCheckAPI :: Proxy HealthCheckAPI
+-- healthCheckAPI = Proxy
 
 type GoogleMapsProxyAPI =
   "googleMaps"
