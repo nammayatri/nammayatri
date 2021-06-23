@@ -61,8 +61,6 @@ buildAppEnv AppCfg {..} = do
         ..
       }
 
-type Flow = FlowR AppEnv
-
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer r api = FlowServerR AppEnv api

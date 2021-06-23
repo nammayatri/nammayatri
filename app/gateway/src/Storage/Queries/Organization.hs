@@ -1,8 +1,8 @@
 module Storage.Queries.Organization where
 
-import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App as App
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Org
@@ -11,11 +11,11 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 
-getDbTable :: Flow (B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT))
 getDbTable =
   DB.organization . DB.appDb <$> getSchemaName
 
-findOrgById :: Text -> Flow (Maybe Org.Organization)
+findOrgById :: HasFlowDBEnv m r => Text -> m (Maybe Org.Organization)
 findOrgById oId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -23,7 +23,7 @@ findOrgById oId = do
     predicate Org.Organization {..} =
       id ==. B.val_ (Id oId)
 
-findOrgByShortId :: ShortId Org.Organization -> Flow (Maybe Org.Organization)
+findOrgByShortId :: HasFlowDBEnv m r => ShortId Org.Organization -> m (Maybe Org.Organization)
 findOrgByShortId shortOrgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -32,7 +32,10 @@ findOrgByShortId shortOrgId = do
       shortId ==. B.val_ shortOrgId
 
 findOrgByApiKey ::
-  Org.OrganizationType -> App.APIKey -> Flow (Maybe Org.Organization)
+  HasFlowDBEnv m r =>
+  Org.OrganizationType ->
+  App.APIKey ->
+  m (Maybe Org.Organization)
 findOrgByApiKey oType apiKey_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -42,11 +45,12 @@ findOrgByApiKey oType apiKey_ = do
         &&. _type ==. B.val_ oType
 
 listOrganizations ::
+  HasFlowDBEnv m r =>
   Maybe Int ->
   Maybe Int ->
   [Org.OrganizationType] ->
   [Org.OrganizationDomain] ->
-  Flow [Org.Organization]
+  m [Org.Organization]
 listOrganizations mlimit moffset oType oDomain = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate

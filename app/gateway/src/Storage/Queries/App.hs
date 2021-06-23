@@ -3,12 +3,12 @@ module Storage.Queries.App
   )
 where
 
-import App.Types
 import qualified Beckn.Types.App as App
+import Beckn.Types.Common
 import qualified Beckn.Types.Storage.Organization as Org
 import EulerHS.Prelude
 import Storage.Queries.Organization
 
 -- FIXME: this should take a RegToken
-lookupKey :: Org.OrganizationType -> App.APIKey -> Flow (Maybe Org.Organization)
+lookupKey :: HasFlowDBEnv m r => Org.OrganizationType -> App.APIKey -> m (Maybe Org.Organization)
 lookupKey = findOrgByApiKey
