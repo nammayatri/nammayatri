@@ -1,17 +1,13 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.External.Exotel.Flow where
 
 import Beckn.External.Exotel.Types
 import Beckn.Types.Common
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import GHC.Records.Extra (HasField (..))
 import Servant
 import Servant.Client
 
@@ -38,12 +34,10 @@ defaultBaseUrl sid =
     }
 
 initiateCall ::
-  ( HasField "exotelCfg" r (Maybe ExotelCfg),
-    HasCoreMetrics r
-  ) =>
+  HasFlowEnv m r '["exotelCfg" ::: Maybe ExotelCfg] =>
   T.Text ->
   T.Text ->
-  FlowR r ()
+  m ()
 initiateCall from to = do
   mbExotelCfg <- asks (.exotelCfg)
   fork forkDesc $

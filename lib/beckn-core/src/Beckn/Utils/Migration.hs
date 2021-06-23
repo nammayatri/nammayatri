@@ -15,7 +15,7 @@ import qualified EulerHS.Types as T
 connect :: T.PostgresConfig -> IO PS.Connection
 connect T.PostgresConfig {..} = PS.connect PS.ConnectInfo {..}
 
-migrateIfNeeded :: Maybe FilePath -> DBConfig -> Bool -> FlowR r (Either String ())
+migrateIfNeeded :: MonadFlow m => Maybe FilePath -> DBConfig -> Bool -> m (Either String ())
 migrateIfNeeded mPath dbCfg autoMigrate =
   case mPath of
     Just path | autoMigrate ->
