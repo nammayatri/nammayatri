@@ -27,7 +27,7 @@ import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
 import qualified Types.Beckn.API.Select as SelectAPI
 import qualified Types.Beckn.API.Status as API
-import qualified Types.Beckn.API.Track as API
+import qualified Types.Beckn.API.Track as TrackAPI
 import qualified Types.Beckn.API.Types as API
 import qualified Types.Beckn.API.Update as UpdateAPI
 import qualified Types.Beckn.FmdItem as Item
@@ -178,18 +178,18 @@ confirm org req = do
       when (thresholdTime < now) $
         throwError (InvalidRequest "Took too long to confirm.")
 
-track :: Org.Organization -> API.TrackReq -> Flow API.TrackRes
+track :: Org.Organization -> API.BecknReq TrackAPI.TrackInfo -> Flow AckResponse
 track org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let orderId = req.message.order_id
-  let context = updateBppUri (req.context) dzBPNwAddress
+  let context = updateBppUriMig (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  withCallback "track" API.onTrackAPI context cbUrl $ do
+  withCallbackMig "track" TrackAPI.onTrackAPI context cbUrl $ do
     let taskId = getShortId case_.shortId
     dzBACreds <- getDzBAPCreds org
-    statusRes <- getStatus dzBACreds conf (TaskId taskId)
-    return $ mkOnTrackMessage orderId (statusRes.tracking_url)
+    mbTrackingUrl <- getStatus dzBACreds conf (TaskId taskId) >>= (maybe (pure Nothing) ((Just <$>) . parseBaseUrl) . (.tracking_url))
+    return $ mkOnTrackMessage mbTrackingUrl
 
 status :: Org.Organization -> API.StatusReq -> Flow API.StatusRes
 status org req = do

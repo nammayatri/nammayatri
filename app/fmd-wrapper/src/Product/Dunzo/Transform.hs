@@ -24,6 +24,7 @@ import qualified Beckn.Types.Core.Migration.Price as M.Price
 import qualified Beckn.Types.Core.Migration.Provider as M.Provider
 import qualified Beckn.Types.Core.Migration.Quotation as M.Quotation
 import qualified Beckn.Types.Core.Migration.Time as M.Time
+import qualified Beckn.Types.Core.Migration.Tracking as M.Tracking
 import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
@@ -38,7 +39,7 @@ import Types.Beckn.API.Init
 import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
 import Types.Beckn.API.Status
-import Types.Beckn.API.Track
+import qualified Types.Beckn.API.Track as TrackAPI
 import qualified Types.Beckn.API.Types as API
 import Types.Beckn.Context
 import Types.Beckn.DecimalValue
@@ -55,7 +56,6 @@ import Types.Beckn.Quotation
 import Types.Beckn.State
 import Types.Beckn.Task hiding (TaskState)
 import qualified Types.Beckn.Task as Beckn (TaskState (..))
-import Types.Beckn.Tracking
 import Types.Error
 import Types.Wrapper
 import Utils.Common
@@ -345,14 +345,14 @@ updateOrderMig cTime order status = do
     & #updated_at ?~ cTime
     & #payment .~ fromMaybe order.payment mbPayment
 
-mkOnTrackMessage :: Text -> Maybe Text -> TrackResMessage
-mkOnTrackMessage orderId trackingUrl = TrackResMessage tracking orderId
+mkOnTrackMessage :: Maybe BaseUrl -> TrackAPI.OnTrackInfo
+mkOnTrackMessage mbTrackingUrl = TrackAPI.OnTrackInfo tracking
   where
     tracking =
-      Tracking
-        { url = trackingUrl,
-          required_params = Nothing,
-          metadata = Nothing
+      M.Tracking.Tracking
+        { tl_method = Nothing,
+          url = mbTrackingUrl,
+          status = Nothing
         }
 
 cancelOrder :: Order -> Order
