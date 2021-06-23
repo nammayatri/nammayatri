@@ -25,21 +25,21 @@ create Storage.RegistrationToken {..} = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertExpression Storage.RegistrationToken {..})
 
-findById :: HasFlowDBEnv m r => Text -> m (Maybe Storage.RegistrationToken)
+findById :: DBFlow m r => Text -> m (Maybe Storage.RegistrationToken)
 findById rtId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.RegistrationToken {..} = id ==. B.val_ rtId
 
-findByToken :: HasFlowDBEnv m r => Text -> m (Maybe Storage.RegistrationToken)
+findByToken :: DBFlow m r => Text -> m (Maybe Storage.RegistrationToken)
 findByToken token_ = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate token_)
   where
     predicate rtoken Storage.RegistrationToken {..} = token ==. B.val_ rtoken
 
-updateAttempts :: HasFlowDBEnv m r => Int -> Text -> m Storage.RegistrationToken
+updateAttempts :: DBFlow m r => Int -> Text -> m Storage.RegistrationToken
 updateAttempts attemps rtId = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -57,7 +57,7 @@ deleteByPersonId rtId = do
   where
     predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid
 
-deleteByPersonIdExceptNew :: HasFlowDBEnv m r => Text -> Id Storage.RegistrationToken -> m ()
+deleteByPersonIdExceptNew :: DBFlow m r => Text -> Id Storage.RegistrationToken -> m ()
 deleteByPersonIdExceptNew id_ (Id newRT) = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate id_ newRT)

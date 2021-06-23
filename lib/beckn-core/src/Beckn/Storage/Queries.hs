@@ -51,7 +51,7 @@ instance MonadTime SqlDB where
 
 findOne ::
   ( HasCallStack,
-    HasFlowDBEnv m r,
+    DBFlow m r,
     ReadablePgTable table db
   ) =>
   Table table db ->
@@ -62,7 +62,7 @@ findOne dbTable predicate = runSqlDB $ lift . L.findRow $ B.select $ B.filter_ p
 findAll ::
   ( HasCallStack,
     ReadablePgTable table db,
-    HasFlowDBEnv m r,
+    DBFlow m r,
     B.FromBackendRow Postgres (B.QExprToIdentity res),
     BI.ProjectibleWithPredicate
       BI.AnyType
@@ -80,7 +80,7 @@ findAll dbTable commands predicate = runSqlDB $ lift . L.findRows . B.select . c
 
 update ::
   ( HasCallStack,
-    HasFlowDBEnv m r,
+    DBFlow m r,
     ReadablePgTable table db
   ) =>
   Table table db ->
@@ -91,7 +91,7 @@ update dbTable setClause predicate = runSqlDB $ update' dbTable setClause predic
 
 createOne ::
   ( HasCallStack,
-    HasFlowDBEnv m r,
+    DBFlow m r,
     PgTable table db
   ) =>
   Table table db ->
@@ -101,7 +101,7 @@ createOne dbTable value = runSqlDB $ createOne' dbTable value
 
 delete ::
   ( HasCallStack,
-    HasFlowDBEnv m r,
+    DBFlow m r,
     ReadablePgTable table db
   ) =>
   Table table db ->
@@ -111,7 +111,7 @@ delete dbTable predicate = runSqlDB $ delete' dbTable predicate
 
 deleteReturning ::
   ( HasCallStack,
-    HasFlowDBEnv m r,
+    DBFlow m r,
     ReadablePgTable table db
   ) =>
   Table table db ->
@@ -150,7 +150,7 @@ deleteReturning' dbTable predicate = lift . L.deleteRowsReturningListPG $ B.dele
 
 runSqlDB' ::
   ( HasCallStack,
-    HasFlowDBEnv m r
+    DBFlow m r
   ) =>
   ( T.SqlConn Pg ->
     L.SqlDB Pg a ->
@@ -167,7 +167,7 @@ runSqlDB' runSqlDBFunction query = do
 
 runSqlDB ::
   ( HasCallStack,
-    HasFlowDBEnv m r
+    DBFlow m r
   ) =>
   SqlDB a ->
   m a
@@ -175,7 +175,7 @@ runSqlDB = runSqlDB' L.runDB
 
 runSqlDBTransaction ::
   ( HasCallStack,
-    HasFlowDBEnv m r
+    DBFlow m r
   ) =>
   SqlDB a ->
   m a
@@ -183,7 +183,7 @@ runSqlDBTransaction = runSqlDB' L.runTransaction
 
 findAllByJoin ::
   ( HasCallStack,
-    HasFlowDBEnv m r,
+    DBFlow m r,
     B.FromBackendRow Postgres (B.QExprToIdentity res),
     BI.ProjectibleWithPredicate
       BI.AnyType

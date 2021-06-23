@@ -29,11 +29,10 @@ type CallAPI' m res res' =
 type CallAPI m res = CallAPI' m res res
 
 callAPI ::
-  Metrics.CoreMetrics m => CallAPI' m res (Either ClientError res)
+  CallAPI' m res (Either ClientError res)
 callAPI = callAPI' Nothing
 
 callAPI' ::
-  Metrics.CoreMetrics m =>
   Maybe ET.ManagerSelector ->
   CallAPI' m res (Either ClientError res)
 callAPI' mbManagerSelector baseUrl eulerClient desc =

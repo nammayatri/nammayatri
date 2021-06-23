@@ -16,7 +16,7 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B
 getDbTable =
   DB.location . DB.appDb <$> getSchemaName
 
-createFlow :: HasFlowDBEnv m r => Storage.Location -> m ()
+createFlow :: DBFlow m r => Storage.Location -> m ()
 createFlow = do
   DB.runSqlDB . create
 
@@ -26,7 +26,7 @@ create Storage.Location {..} = do
   DB.createOne' dbTable (Storage.insertExpression Storage.Location {..})
 
 findLocationById ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Id Storage.Location ->
   m (Maybe Storage.Location)
 findLocationById locId = do
@@ -36,7 +36,7 @@ findLocationById locId = do
     predicate Storage.Location {..} = id ==. B.val_ locId
 
 findAllWithLimitOffsetWhere ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   [Text] ->
   [Text] ->
   [Text] ->
@@ -71,7 +71,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-findAllByIds :: HasFlowDBEnv m r => [Id Storage.Location] -> m [Storage.Location]
+findAllByIds :: DBFlow m r => [Id Storage.Location] -> m [Storage.Location]
 findAllByIds locIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate locIds)

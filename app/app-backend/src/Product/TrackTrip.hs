@@ -70,7 +70,7 @@ trackCb _org req = withFlowHandlerBecknAPI $
         logTagError "on_track_trip req" $ "on_track_trip error: " <> show err
         return Ack
 
-updateTracker :: HasFlowDBEnv m r => ProductInstance.ProductInstance -> Maybe Tracking -> m (Maybe Tracker)
+updateTracker :: DBFlow m r => ProductInstance.ProductInstance -> Maybe Tracking -> m (Maybe Tracker)
 updateTracker prodInst mtracking = do
   let minfo = decodeFromText =<< prodInst.info
   case minfo of

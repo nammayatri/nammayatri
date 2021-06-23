@@ -34,11 +34,11 @@ initiateFlowHitsCountKey :: SP.Person -> Text
 initiateFlowHitsCountKey person = "Registration:initiateFlow" <> getId person.id <> ":hitsCount"
 
 initiateFlow ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+  ( DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
-    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    FCMFlow m r,
     CoreMetrics m
   ) =>
   InitiateLoginReq ->
@@ -74,7 +74,7 @@ initiateFlow req smsCfg = do
   Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
 
-makePerson :: HasFlowEncEnv m r => InitiateLoginReq -> m SP.Person
+makePerson :: EncFlow m r => InitiateLoginReq -> m SP.Person
 makePerson req = do
   pid <- BC.generateGUID
   now <- getCurrentTime
@@ -167,18 +167,18 @@ login tokenId req =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
 
-checkRegistrationTokenExists :: HasFlowDBEnv m r => Text -> m SR.RegistrationToken
+checkRegistrationTokenExists :: DBFlow m r => Text -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findRegistrationToken tokenId >>= fromMaybeM (TokenNotFound tokenId)
 
-createPerson :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => InitiateLoginReq -> m SP.Person
+createPerson :: (DBFlow m r, EncFlow m r) => InitiateLoginReq -> m SP.Person
 createPerson req = do
   person <- makePerson req
   QP.create person
   when (person.role == SP.DRIVER) $ Person.createDriverDetails (person.id)
   pure person
 
-checkPersonExists :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Text -> m SP.Person
+checkPersonExists :: DBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findPersonById (Id entityId)
 
@@ -199,7 +199,7 @@ reInitiateLogin tokenId req =
         return $ InitiateLoginRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Limit exceeded."
 
-clearOldRegToken :: HasFlowDBEnv m r => SP.Person -> Id SR.RegistrationToken -> m ()
+clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()
 clearOldRegToken person = QR.deleteByEntitiyIdExceptNew (getId $ person.id)
 
 logout :: SR.RegistrationToken -> FlowHandler APISuccess

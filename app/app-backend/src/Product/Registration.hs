@@ -35,9 +35,9 @@ initiateFlowHitsCountKey :: SP.Person -> Text
 initiateFlowHitsCountKey person = "Registration:initiateFlow" <> getId person.id <> ":hitsCount"
 
 initiateFlow ::
-  ( HasFlowEncEnv m r,
-    HasFlowDBEnv m r,
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( EncFlow m r,
+    DBFlow m r,
+    FCMFlow m r,
     HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions, "otpSmsTemplate" ::: Text],
     CoreMetrics m
   ) =>
@@ -70,7 +70,8 @@ initiateFlow req smsCfg = do
       tokenId = SR.id regToken
   Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
-makePerson :: HasFlowEncEnv m r => InitiateLoginReq -> m SP.Person
+
+makePerson :: EncFlow m r => InitiateLoginReq -> m SP.Person
 makePerson req = do
   role <- (req.role) & fromMaybeM (InvalidRequest "You should pass person's role.")
   pid <- BC.generateGUID
@@ -105,7 +106,7 @@ makePerson req = do
       }
 
 makeSession ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   SmsSessionConfig ->
   InitiateLoginReq ->
   Text ->
@@ -174,17 +175,17 @@ login tokenId req =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
 
-getRegistrationTokenE :: HasFlowDBEnv m r => Text -> m SR.RegistrationToken
+getRegistrationTokenE :: DBFlow m r => Text -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound tokenId)
 
-createPerson :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => InitiateLoginReq -> m SP.Person
+createPerson :: (EncFlow m r, DBFlow m r) => InitiateLoginReq -> m SP.Person
 createPerson req = do
   person <- makePerson req
   Person.create person
   pure person
 
-checkPersonExists :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => Text -> m SP.Person
+checkPersonExists :: DBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
 
@@ -205,7 +206,7 @@ reInitiateLogin tokenId req =
         return $ InitiateLoginRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Attempts limit exceed."
 
-clearOldRegToken :: HasFlowDBEnv m r => SP.Person -> Id SR.RegistrationToken -> m ()
+clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()
 clearOldRegToken person = RegistrationToken.deleteByPersonIdExceptNew (getId $ person.id)
 
 logout :: SP.Person -> FlowHandler APISuccess

@@ -19,13 +19,13 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.farePolicy . DB.transporterDb <$> getSchemaName
 
-create :: HasFlowDBEnv m r => Storage.FarePolicy -> m ()
+create :: DBFlow m r => Storage.FarePolicy -> m ()
 create Storage.FarePolicy {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.FarePolicy {..})
 
 findFarePolicyByOrgAndVehicleVariant ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Id Organization.Organization ->
   Vehicle.Variant ->
   m (Maybe Storage.FarePolicy)
@@ -37,21 +37,21 @@ findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ = do
       organizationId ==. B.val_ orgId
         &&. vehicleVariant ==. B.val_ vehicleVariant_
 
-findFarePoliciesByOrgId :: HasFlowDBEnv m r => Id Organization.Organization -> m [Storage.FarePolicy]
+findFarePoliciesByOrgId :: DBFlow m r => Id Organization.Organization -> m [Storage.FarePolicy]
 findFarePoliciesByOrgId orgId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate Storage.FarePolicy {..} = organizationId ==. B.val_ orgId
 
-findFarePolicyById :: HasFlowDBEnv m r => Id D.FarePolicy -> m (Maybe Storage.FarePolicy)
+findFarePolicyById :: DBFlow m r => Id D.FarePolicy -> m (Maybe Storage.FarePolicy)
 findFarePolicyById fpId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.FarePolicy {..} = id ==. B.val_ fpId
 
-updateFarePolicy :: HasFlowDBEnv m r => Storage.FarePolicy -> m ()
+updateFarePolicy :: DBFlow m r => Storage.FarePolicy -> m ()
 updateFarePolicy farePolicy = do
   dbTable <- getDbTable
   now <- getCurrentTime

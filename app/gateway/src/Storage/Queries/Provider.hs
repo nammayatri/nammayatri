@@ -11,8 +11,8 @@ import EulerHS.Prelude
 import Storage.Queries.Organization
 
 -- FIXME: this should take a RegToken
-lookupKey :: HasFlowDBEnv m r => Org.OrganizationType -> App.APIKey -> m (Maybe Org.Organization)
+lookupKey :: DBFlow m r => Org.OrganizationType -> App.APIKey -> m (Maybe Org.Organization)
 lookupKey = findOrgByApiKey
 
-listProviders :: HasFlowDBEnv m r => Org.OrganizationType -> Org.OrganizationDomain -> m [Org.Organization]
+listProviders :: DBFlow m r => Org.OrganizationType -> Org.OrganizationDomain -> m [Org.Organization]
 listProviders orgType orgDomain = listOrganizations Nothing Nothing [orgType] [orgDomain]

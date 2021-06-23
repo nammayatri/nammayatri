@@ -19,12 +19,12 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.organization . DB.transporterDb <$> getSchemaName
 
-create :: HasFlowDBEnv m r => Storage.Organization -> m ()
+create :: DBFlow m r => Storage.Organization -> m ()
 create Storage.Organization {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
 
-verifyToken :: HasFlowDBEnv m r => RegToken -> m Storage.Organization
+verifyToken :: DBFlow m r => RegToken -> m Storage.Organization
 verifyToken regToken = do
   logInfo "Verifying Token"
   dbTable <- getDbTable
@@ -32,7 +32,7 @@ verifyToken regToken = do
   where
     predicate token Storage.Organization {..} = apiKey ==. B.val_ (Just token)
 
-findOrganizationById :: HasFlowDBEnv m r => Id Storage.Organization -> m Storage.Organization
+findOrganizationById :: DBFlow m r => Id Storage.Organization -> m Storage.Organization
 findOrganizationById orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -40,13 +40,13 @@ findOrganizationById orgId = do
   where
     predicate Storage.Organization {..} = id ==. B.val_ orgId
 
-findOrganizationByShortId :: HasFlowDBEnv m r => ShortId Storage.Organization -> m (Maybe Storage.Organization)
+findOrganizationByShortId :: DBFlow m r => ShortId Storage.Organization -> m (Maybe Storage.Organization)
 findOrganizationByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable (\Storage.Organization {..} -> shortId ==. B.val_ shortId_)
 
 listOrganizations ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Maybe Int ->
   Maybe Int ->
   [Storage.OrganizationType] ->
@@ -69,7 +69,7 @@ listOrganizations mlimit moffset oType status_ = do
           enabled ==. B.val_ True
         ]
 
-loadAllProviders :: HasFlowDBEnv m r => m [Storage.Organization]
+loadAllProviders :: DBFlow m r => m [Storage.Organization]
 loadAllProviders = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -86,7 +86,7 @@ complementVal l
   | otherwise = B.val_ False
 
 update ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Id Storage.Organization ->
   Storage.Status ->
   m ()
@@ -105,7 +105,7 @@ update orgId status_ = do
           status <-. B.val_ scStatus
         ]
 
-updateOrganizationRec :: HasFlowDBEnv m r => Storage.Organization -> m ()
+updateOrganizationRec :: DBFlow m r => Storage.Organization -> m ()
 updateOrganizationRec org = do
   dbTable <- getDbTable
   DB.update dbTable (setClause org) (predicate $ org.id)
@@ -121,7 +121,7 @@ updateOrganizationRec org = do
         ]
     predicate orgId Storage.Organization {..} = id ==. B.val_ orgId
 
-findOrgByApiKey :: HasFlowDBEnv m r => APIKey -> m (Maybe Storage.Organization)
+findOrgByApiKey :: DBFlow m r => APIKey -> m (Maybe Storage.Organization)
 findOrgByApiKey apiKey_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -129,7 +129,7 @@ findOrgByApiKey apiKey_ = do
     predicate Storage.Organization {..} =
       apiKey ==. B.val_ (Just apiKey_)
 
-findOrgByCbUrl :: HasFlowDBEnv m r => BaseUrl -> m Storage.Organization
+findOrgByCbUrl :: DBFlow m r => BaseUrl -> m Storage.Organization
 findOrgByCbUrl url = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -137,7 +137,7 @@ findOrgByCbUrl url = do
   where
     predicate Storage.Organization {..} = callbackUrl ==. B.val_ (Just url)
 
-findOrgByShortId :: HasFlowDBEnv m r => ShortId Storage.Organization -> m Storage.Organization
+findOrgByShortId :: DBFlow m r => ShortId Storage.Organization -> m Storage.Organization
 findOrgByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -145,7 +145,7 @@ findOrgByShortId shortId_ = do
   where
     predicate Storage.Organization {..} = shortId ==. B.val_ shortId_
 
-findOrgByMobileNumber :: HasFlowDBEnv m r => Text -> Text -> m (Maybe Storage.Organization)
+findOrgByMobileNumber :: DBFlow m r => Text -> Text -> m (Maybe Storage.Organization)
 findOrgByMobileNumber countryCode mobileNumber_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

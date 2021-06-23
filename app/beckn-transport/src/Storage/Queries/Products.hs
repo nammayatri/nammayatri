@@ -16,12 +16,12 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.products . DB.transporterDb <$> getSchemaName
 
-create :: HasFlowDBEnv m r => Storage.Products -> m ()
+create :: DBFlow m r => Storage.Products -> m ()
 create Storage.Products {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
 
-findAllById :: HasFlowDBEnv m r => [Id Storage.Products] -> m [Storage.Products]
+findAllById :: DBFlow m r => [Id Storage.Products] -> m [Storage.Products]
 findAllById ids = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate ids)
@@ -29,21 +29,21 @@ findAllById ids = do
     predicate pids Storage.Products {..} =
       B.in_ id (B.val_ <$> pids)
 
-findById :: HasFlowDBEnv m r => Id Storage.Products -> m Storage.Products
+findById :: DBFlow m r => Id Storage.Products -> m Storage.Products
 findById pid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate >>= fromMaybeM ProductsNotFound
   where
     predicate Storage.Products {..} = id ==. B.val_ pid
 
-findById' :: HasFlowDBEnv m r => Id Storage.Products -> m (Maybe Storage.Products)
+findById' :: DBFlow m r => Id Storage.Products -> m (Maybe Storage.Products)
 findById' pid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Products {..} = id ==. B.val_ pid
 
-findByName :: HasFlowDBEnv m r => Text -> m Storage.Products
+findByName :: DBFlow m r => Text -> m Storage.Products
 findByName name_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate >>= fromMaybeM ProductsNotFound

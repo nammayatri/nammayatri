@@ -19,55 +19,55 @@ import Utils.Common
 -- Convert it to DomainError with a proper description
 
 -- | Create Case
-create :: HasFlowDBEnv m r => Case -> m ()
+create :: DBFlow m r => Case -> m ()
 create c = do
   -- TODO add some validation checks
   -- and `throwDomainError CaseNotCreated` if needed
   Q.createFlow c
 
 -- | Find Case by id
-findById :: HasFlowDBEnv m r => Id Case -> m Case
+findById :: DBFlow m r => Id Case -> m Case
 findById caseId = do
   Q.findById caseId >>= fromMaybeM CaseNotFound
 
 -- | Find Cases by id list
-findAllByIds :: HasFlowDBEnv m r => [Id Case] -> m [Case]
+findAllByIds :: DBFlow m r => [Id Case] -> m [Case]
 findAllByIds ids = do
   Q.findAllByIds ids
 
 -- | Find Case by parent case id and type
-findByParentCaseIdAndType :: HasFlowDBEnv m r => Id Case -> CaseType -> m (Maybe Case)
+findByParentCaseIdAndType :: DBFlow m r => Id Case -> CaseType -> m (Maybe Case)
 findByParentCaseIdAndType pCaseId cType = do
   Q.findByParentCaseIdAndType pCaseId cType
 
 -- | Find Case by short id
-findBySid :: HasFlowDBEnv m r => Text -> m Case
+findBySid :: DBFlow m r => Text -> m Case
 findBySid sid = do
   Q.findBySid sid >>= fromMaybeM CaseNotFound
 
 -- | Validate and update Case status
-updateStatus :: HasFlowDBEnv m r => Id Case -> CaseStatus -> m ()
+updateStatus :: DBFlow m r => Id Case -> CaseStatus -> m ()
 updateStatus cid status = do
   Q.updateStatusFlow cid status
 
 -- | Validate and update Cases statuses
-updateStatusByIds :: HasFlowDBEnv m r => [Id Case] -> CaseStatus -> m ()
+updateStatusByIds :: DBFlow m r => [Id Case] -> CaseStatus -> m ()
 updateStatusByIds ids status = do
   Q.updateStatusByIdsFlow ids status
 
 -- | Find Case by id and type
-findByIdType :: HasFlowDBEnv m r => [Id Case] -> CaseType -> m Case
+findByIdType :: DBFlow m r => [Id Case] -> CaseType -> m Case
 findByIdType ids type_ = do
   Q.findByIdType ids type_ >>= fromMaybeM CaseNotFound
 
 -- | Find Cases by id and type
-findAllByIdType :: HasFlowDBEnv m r => [Id Case] -> CaseType -> m [Case]
+findAllByIdType :: DBFlow m r => [Id Case] -> CaseType -> m [Case]
 findAllByIdType ids type_ = do
   Q.findAllByIdType ids type_
 
 -- | Find Cases
 findAllByTypeStatuses ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Integer ->
   Integer ->
   CaseType ->
@@ -80,7 +80,7 @@ findAllByTypeStatuses limit offset csType statuses orgId now = do
 
 -- | Find Cases
 findAllByTypeStatusTime ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Integer ->
   Integer ->
   CaseType ->
@@ -93,6 +93,6 @@ findAllByTypeStatusTime limit offset csType statuses orgId now fromTime = do
   Q.findAllByTypeStatusTime limit offset csType statuses orgId now fromTime
 
 -- | Find Cases by status and expirtaion date
-findAllExpiredByStatus :: HasFlowDBEnv m r => [CaseStatus] -> CaseType -> UTCTime -> UTCTime -> m [Case]
+findAllExpiredByStatus :: DBFlow m r => [CaseStatus] -> CaseType -> UTCTime -> UTCTime -> m [Case]
 findAllExpiredByStatus statuses csType from to = do
   Q.findAllExpiredByStatus statuses csType from to

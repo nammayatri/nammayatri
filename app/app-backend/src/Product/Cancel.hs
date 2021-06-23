@@ -29,7 +29,7 @@ cancel person req = withFlowHandlerAPI $ do
     Cancel.PRODUCT_INSTANCE -> cancelProductInstance person req
 
 cancelProductInstance ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     CoreMetrics m
   ) =>
   Person.Person ->
@@ -52,7 +52,7 @@ cancelProductInstance person req = do
   ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
   return Success
 
-searchCancel :: (BAPMetrics m, HasFlowDBEnv m r) => Person.Person -> CancelReq -> m CancelRes
+searchCancel :: (BAPMetrics m, DBFlow m r) => Person.Person -> CancelReq -> m CancelRes
 searchCancel person req = do
   let caseId = req.entityId
   case_ <- MC.findIdByPerson person (Id caseId)

@@ -12,7 +12,6 @@ import Beckn.Types.Field (HasFields)
 import Beckn.Types.Forkable
 import Beckn.Types.Logging
 import Beckn.Types.MonadGuid
-import Beckn.Types.RunSafe
 import Beckn.Types.Time
 import Control.Lens ((?~))
 import qualified Data.Swagger as S
@@ -35,7 +34,6 @@ type MonadFlow m =
     L.MonadFlow m,
     Forkable m,
     Log m,
-    RunSafe m,
     MonadGuid m,
     MonadTime m,
     MonadThrow m

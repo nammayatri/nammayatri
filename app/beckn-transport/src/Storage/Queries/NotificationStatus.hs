@@ -17,12 +17,12 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.notificationStatus . DB.transporterDb <$> getSchemaName
 
-create :: HasFlowDBEnv m r => NotificationStatus.NotificationStatus -> m ()
+create :: DBFlow m r => NotificationStatus.NotificationStatus -> m ()
 create NotificationStatus.NotificationStatus {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression NotificationStatus.NotificationStatus {..})
 
-updateStatus :: HasFlowDBEnv m r => Id Ride -> Id Driver -> NotificationStatus.AnswerStatus -> m ()
+updateStatus :: DBFlow m r => Id Ride -> Id Driver -> NotificationStatus.AnswerStatus -> m ()
 updateStatus rideId_ driverId_ status_ = do
   dbTable <- getDbTable
   DB.update dbTable (setClause status_) (predicate rideId_ driverId_)
@@ -32,7 +32,7 @@ updateStatus rideId_ driverId_ status_ = do
       rideId ==. B.val_ rId
         &&. driverId ==. B.val_ dId
 
-fetchRefusedNotificationsByRideId :: HasFlowDBEnv m r => Id Ride -> m [NotificationStatus.NotificationStatus]
+fetchRefusedNotificationsByRideId :: DBFlow m r => Id Ride -> m [NotificationStatus.NotificationStatus]
 fetchRefusedNotificationsByRideId rideId_ = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -41,7 +41,7 @@ fetchRefusedNotificationsByRideId rideId_ = do
       rideId ==. B.val_ rideId_
         &&. status `B.in_` [B.val_ NotificationStatus.REJECTED, B.val_ NotificationStatus.IGNORED]
 
-fetchActiveNotifications :: HasFlowDBEnv m r => m [NotificationStatus.NotificationStatus]
+fetchActiveNotifications :: DBFlow m r => m [NotificationStatus.NotificationStatus]
 fetchActiveNotifications = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -49,7 +49,7 @@ fetchActiveNotifications = do
     predicate NotificationStatus.NotificationStatus {..} =
       status ==. B.val_ NotificationStatus.NOTIFIED
 
-findActiveNotificationByRideId :: HasFlowDBEnv m r => Id Ride -> m (Maybe NotificationStatus.NotificationStatus)
+findActiveNotificationByRideId :: DBFlow m r => Id Ride -> m (Maybe NotificationStatus.NotificationStatus)
 findActiveNotificationByRideId rideId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -58,7 +58,7 @@ findActiveNotificationByRideId rideId_ = do
       rideId ==. B.val_ rideId_
         &&. status ==. B.val_ NotificationStatus.NOTIFIED
 
-findActiveNotificationByDriverId :: HasFlowDBEnv m r => Id Driver -> Maybe (Id Ride) -> m (Maybe NotificationStatus.NotificationStatus)
+findActiveNotificationByDriverId :: DBFlow m r => Id Driver -> Maybe (Id Ride) -> m (Maybe NotificationStatus.NotificationStatus)
 findActiveNotificationByDriverId driverId_ rideId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -68,14 +68,14 @@ findActiveNotificationByDriverId driverId_ rideId_ = do
         &&. maybe (B.val_ True) (\v -> rideId ==. B.val_ v) rideId_
         &&. status ==. B.val_ NotificationStatus.NOTIFIED
 
-cleanupNotifications :: HasFlowDBEnv m r => Id Ride -> m ()
+cleanupNotifications :: DBFlow m r => Id Ride -> m ()
 cleanupNotifications rideId_ = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate rideId_)
   where
     predicate rid NotificationStatus.NotificationStatus {..} = rideId ==. B.val_ rid
 
-cleanupOldNotifications :: HasFlowDBEnv m r => m Int
+cleanupOldNotifications :: DBFlow m r => m Int
 cleanupOldNotifications = do
   dbTable <- getDbTable
   compareTime <- getCurrentTime <&> addUTCTime (-300) -- We only remove very old notifications (older than 5 minutes) as a fail-safe

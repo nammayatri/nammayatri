@@ -14,7 +14,7 @@ import EulerHS.Prelude
 
 -- | Send FCM "cancel" notification to driver
 notifyDriverOnCancel ::
-  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( FCMFlow m r,
     CoreMetrics m
   ) =>
   Case ->
@@ -42,7 +42,7 @@ notifyDriverOnCancel c =
           ]
 
 notifyOnRegistration ::
-  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( FCMFlow m r,
     CoreMetrics m
   ) =>
   RegistrationToken ->
@@ -69,7 +69,7 @@ notifyOnRegistration regToken =
           ]
 
 notifyTransporterOnExpiration ::
-  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( FCMFlow m r,
     CoreMetrics m
   ) =>
   Case ->
@@ -97,7 +97,7 @@ notifyTransporterOnExpiration c =
           ]
 
 notifyCancelReqByBP ::
-  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( FCMFlow m r,
     CoreMetrics m
   ) =>
   ProductInstance ->
@@ -124,7 +124,7 @@ notifyCancelReqByBP p =
           ]
 
 notifyDriverCancelledRideRequest ::
-  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( FCMFlow m r,
     CoreMetrics m
   ) =>
   ProductInstance ->
@@ -150,7 +150,7 @@ notifyDriverCancelledRideRequest p = traverse_ (notifyPerson notificationData)
           ]
 
 notifyDriver ::
-  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( FCMFlow m r,
     CoreMetrics m
   ) =>
   FCM.FCMNotificationType ->
@@ -174,7 +174,7 @@ notifyDriver notificationType notificationTitle message driver =
       FCMNotificationBody message
 
 notifyDriverNewAllocation ::
-  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( FCMFlow m r,
     CoreMetrics m
   ) =>
   ProductInstance ->
@@ -199,7 +199,7 @@ notifyDriverNewAllocation productInstance = notifyPerson notificationData
         }
 
 notifyDriverUnassigned ::
-  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( FCMFlow m r,
     CoreMetrics m
   ) =>
   ProductInstance ->

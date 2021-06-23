@@ -18,37 +18,37 @@ import Utils.Common
 -- Convert it to DomainError with a proper description
 
 -- | Validate and update ProductInstance status
-updateStatus :: HasFlowDBEnv m r => Id ProductInstance -> ProductInstanceStatus -> m ()
+updateStatus :: DBFlow m r => Id ProductInstance -> ProductInstanceStatus -> m ()
 updateStatus prodInstId newStatus = do
   Q.updateStatusFlow prodInstId newStatus
 
 -- | Validate and update ProductInstances statusses
-updateStatusByIds :: HasFlowDBEnv m r => [Id ProductInstance] -> ProductInstanceStatus -> m ()
+updateStatusByIds :: DBFlow m r => [Id ProductInstance] -> ProductInstanceStatus -> m ()
 updateStatusByIds ids status = do
   Q.updateStatusByIdsFlow ids status
 
 -- | Find Product Instance by id
-findById :: HasFlowDBEnv m r => Id ProductInstance -> m ProductInstance
+findById :: DBFlow m r => Id ProductInstance -> m ProductInstance
 findById caseProductId = do
   Q.findById' caseProductId >>= fromMaybeM PINotFound
 
 -- | Find Product Instances by Case Id
-findAllByCaseId :: HasFlowDBEnv m r => Id Case -> m [ProductInstance]
+findAllByCaseId :: DBFlow m r => Id Case -> m [ProductInstance]
 findAllByCaseId caseId = do
   Q.findAllByCaseId' caseId
 
 -- | Find Product Instances
-findAllByIds :: HasFlowDBEnv m r => [Id ProductInstance] -> m [ProductInstance]
+findAllByIds :: DBFlow m r => [Id ProductInstance] -> m [ProductInstance]
 findAllByIds ids = do
   Q.findAllByIds' ids
 
-findAllExpiredByStatus :: HasFlowDBEnv m r => [ProductInstanceStatus] -> UTCTime -> m [ProductInstance]
+findAllExpiredByStatus :: DBFlow m r => [ProductInstanceStatus] -> UTCTime -> m [ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
   Q.findAllExpiredByStatus statuses expiryTime
 
 -- | Get ProductInstance By OrganizationId groupBy status
 getCountByStatus ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Id Organization ->
   ProductInstanceType ->
   m [(ProductInstanceStatus, Int)]
@@ -56,7 +56,7 @@ getCountByStatus orgId piType = do
   Q.getCountByStatus' orgId piType
 
 findByStartTimeBuffer ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   ProductInstanceType ->
   UTCTime ->
   NominalDiffTime ->

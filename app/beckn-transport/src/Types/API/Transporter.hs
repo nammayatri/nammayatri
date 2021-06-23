@@ -45,7 +45,7 @@ validateTransporterReq TransporterReq {..} =
       validate "mobileNumber" mobileNumber P.mobileNumber
     ]
 
-instance HasFlowDBEnv m r => CreateTransform TransporterReq SO.Organization m where
+instance DBFlow m r => CreateTransform TransporterReq SO.Organization m where
   createTransform req = do
     oid <- generateGUID
     let shortId = ShortId $ getId oid
@@ -78,7 +78,7 @@ instance HasFlowDBEnv m r => CreateTransform TransporterReq SO.Organization m wh
           SO.info = Nothing
         }
 
-transformToLocation :: HasFlowDBEnv m r => TransporterReq -> m SL.Location
+transformToLocation :: DBFlow m r => TransporterReq -> m SL.Location
 transformToLocation req = do
   locId <- generateGUID
   now <- getCurrentTime
@@ -120,7 +120,7 @@ data UpdateTransporterReq = UpdateTransporterReq
   }
   deriving (Generic, Show, FromJSON)
 
-instance HasFlowDBEnv m r => ModifyTransform UpdateTransporterReq SO.Organization m where
+instance DBFlow m r => ModifyTransform UpdateTransporterReq SO.Organization m where
   modifyTransform req org = do
     now <- getCurrentTime
     return $

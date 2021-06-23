@@ -15,19 +15,19 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B
 getDbTable =
   DB._case . DB.appDb <$> getSchemaName
 
-create :: HasFlowDBEnv m r => Storage.Case -> m ()
+create :: DBFlow m r => Storage.Case -> m ()
 create Storage.Case {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
 
-findById :: HasFlowDBEnv m r => Id Storage.Case -> m (Maybe Storage.Case)
+findById :: DBFlow m r => Id Storage.Case -> m (Maybe Storage.Case)
 findById caseId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Case {..} = id ==. B.val_ caseId
 
-update :: HasFlowDBEnv m r => Id Storage.Case -> Storage.Case -> m ()
+update :: DBFlow m r => Id Storage.Case -> Storage.Case -> m ()
 update cid case_ = do
   dbTable <- getDbTable
   currTime <- getCurrentTime

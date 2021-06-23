@@ -64,10 +64,10 @@ cancel transporterId _bapOrg req = withFlowHandlerBecknAPI $
     return Ack
 
 cancelRide ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+  ( DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    FCMFlow m r,
     CoreMetrics m
   ) =>
   Id Ride ->
@@ -95,7 +95,7 @@ cancelRide rideId requestedByDriver = do
             Notify.notifyDriverOnCancel c driver
 
 cancelRideTransaction ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   [ProductInstance.ProductInstance] ->
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
@@ -130,7 +130,7 @@ serviceStatus transporterId bapOrg req = withFlowHandlerBecknAPI $ do
     mkOnServiceStatusPayload piId trackerPi
 
 notifyServiceStatusToGateway ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -178,8 +178,8 @@ trackTrip transporterId org req = withFlowHandlerBecknAPI $
       return $ API.OnTrackReqMessage (Just tracking)
 
 notifyTripInfoToGateway ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+  ( DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -193,8 +193,8 @@ notifyTripInfoToGateway prodInst trackerCaseId transporter parentCaseId = do
     >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter parentCaseId . Right
 
 notifyCancelToGateway ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+  ( DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -205,7 +205,7 @@ notifyCancelToGateway searchPi transporter = do
   mkCancelTripObj searchPi
     >>= ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.caseId) . Right
 
-mkTrip :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Case.Case -> ProductInstance.ProductInstance -> m Trip
+mkTrip :: (DBFlow m r, EncFlow m r) => Id Case.Case -> ProductInstance.ProductInstance -> m Trip
 mkTrip cId orderPi = do
   prodInst <- ProductInstance.findByCaseId cId
   driver <- mapM mkDriverInfo $ prodInst.personId
@@ -226,7 +226,7 @@ mkTrip cId orderPi = do
       }
 
 mkOnUpdatePayload ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  (DBFlow m r, EncFlow m r) =>
   ProductInstance.ProductInstance ->
   Id Case.Case ->
   m API.OnUpdateOrder
@@ -235,17 +235,17 @@ mkOnUpdatePayload prodInst caseId = do
   order <- ExternalAPITransform.mkOrder prodInst (Just trip)
   return $ API.OnUpdateOrder order
 
-mkDriverInfo :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Person.Person -> m Driver
+mkDriverInfo :: (DBFlow m r, EncFlow m r) => Id Person.Person -> m Driver
 mkDriverInfo driverId = do
   person <- Person.findPersonById driverId
   ExternalAPITransform.mkDriverObj person
 
-mkVehicleInfo :: HasFlowDBEnv m r => Text -> m (Maybe BVehicle.Vehicle)
+mkVehicleInfo :: DBFlow m r => Text -> m (Maybe BVehicle.Vehicle)
 mkVehicleInfo vehicleId = do
   vehicle <- Vehicle.findVehicleById (Id vehicleId)
   return $ ExternalAPITransform.mkVehicleObj <$> vehicle
 
-mkCancelTripObj :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => ProductInstance.ProductInstance -> m Trip
+mkCancelTripObj :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> m Trip
 mkCancelTripObj productInstance = do
   driver <- mapM mkDriverInfo $ productInstance.personId
   vehicle <- join <$> mapM mkVehicleInfo (productInstance.entityId)

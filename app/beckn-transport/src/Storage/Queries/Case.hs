@@ -18,7 +18,7 @@ getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB._case . DB.transporterDb <$> getSchemaName
 
-createFlow :: HasFlowDBEnv m r => Storage.Case -> m ()
+createFlow :: DBFlow m r => Storage.Case -> m ()
 createFlow = DB.runSqlDB . create
 
 create :: Storage.Case -> DB.SqlDB ()
@@ -26,7 +26,7 @@ create case_ = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertExpression case_)
 
-findAllByIds :: HasFlowDBEnv m r => [Id Storage.Case] -> m [Storage.Case]
+findAllByIds :: DBFlow m r => [Id Storage.Case] -> m [Storage.Case]
 findAllByIds ids = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -34,14 +34,14 @@ findAllByIds ids = do
     predicate Storage.Case {..} =
       B.in_ id (B.val_ <$> ids)
 
-findById :: HasFlowDBEnv m r => Id Storage.Case -> m (Maybe Storage.Case)
+findById :: DBFlow m r => Id Storage.Case -> m (Maybe Storage.Case)
 findById caseId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Case {..} = id ==. B.val_ caseId
 
-findByParentCaseIdAndType :: HasFlowDBEnv m r => Id Storage.Case -> Storage.CaseType -> m (Maybe Storage.Case)
+findByParentCaseIdAndType :: DBFlow m r => Id Storage.Case -> Storage.CaseType -> m (Maybe Storage.Case)
 findByParentCaseIdAndType pCaseId cType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -50,7 +50,7 @@ findByParentCaseIdAndType pCaseId cType = do
       parentCaseId ==. B.val_ (Just pCaseId)
         &&. _type ==. B.val_ cType
 
-findBySid :: HasFlowDBEnv m r => Text -> m (Maybe Storage.Case)
+findBySid :: DBFlow m r => Text -> m (Maybe Storage.Case)
 findBySid sid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -58,7 +58,7 @@ findBySid sid = do
     predicate Storage.Case {..} = shortId ==. B.val_ (ShortId sid)
 
 updateStatusFlow ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Id Storage.Case ->
   Storage.CaseStatus ->
   m ()
@@ -84,7 +84,7 @@ updateStatus caseId newStatus = do
         ]
 
 updateStatusByIdsFlow ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   [Id Storage.Case] ->
   Storage.CaseStatus ->
   m ()
@@ -122,7 +122,7 @@ updateStatusByIds ids newStatus = do
           status <-. B.val_ status_
         ]
 
-findByIdType :: HasFlowDBEnv m r => [Id Storage.Case] -> Storage.CaseType -> m (Maybe Storage.Case)
+findByIdType :: DBFlow m r => [Id Storage.Case] -> Storage.CaseType -> m (Maybe Storage.Case)
 findByIdType ids type_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -131,7 +131,7 @@ findByIdType ids type_ = do
       _type ==. B.val_ type_
         &&. B.in_ id (B.val_ <$> ids)
 
-findAllByIdType :: HasFlowDBEnv m r => [Id Storage.Case] -> Storage.CaseType -> m [Storage.Case]
+findAllByIdType :: DBFlow m r => [Id Storage.Case] -> Storage.CaseType -> m [Storage.Case]
 findAllByIdType ids type_ = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -141,7 +141,7 @@ findAllByIdType ids type_ = do
         &&. B.in_ id (B.val_ <$> ids)
 
 findAllByTypeStatuses ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Integer ->
   Integer ->
   Storage.CaseType ->
@@ -161,7 +161,7 @@ findAllByTypeStatuses limit offset csType statuses orgId now = do
         &&. validTill B.>. B.val_ now
 
 findAllByTypeStatusTime ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Integer ->
   Integer ->
   Storage.CaseType ->
@@ -182,7 +182,7 @@ findAllByTypeStatusTime limit offset csType statuses orgId now fromTime = do
         &&. validTill B.>. B.val_ now
         &&. createdAt B.<. B.val_ fromTime
 
-findAllExpiredByStatus :: HasFlowDBEnv m r => [Storage.CaseStatus] -> Storage.CaseType -> UTCTime -> UTCTime -> m [Storage.Case]
+findAllExpiredByStatus :: DBFlow m r => [Storage.CaseStatus] -> Storage.CaseType -> UTCTime -> UTCTime -> m [Storage.Case]
 findAllExpiredByStatus statuses csType from to = do
   dbTable <- getDbTable
   (now :: UTCTime) <- getCurrentTime

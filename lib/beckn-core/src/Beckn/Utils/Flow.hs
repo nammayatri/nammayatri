@@ -12,11 +12,6 @@ fork desc f = do
   lift $ L.forkFlow desc $ handleExc env $ runReaderT f env
   where
     handleExc env =
-      L.runSafeFlow >=> (`whenLeft` (\e -> runReaderT (err e) env))
-    err e =
+      try >=> (`whenLeft` (\e -> runReaderT (err e) env))
+    err (e :: SomeException) =
       logError $ "Thread " <> show desc <> " died with error: " <> show e
-
-runSafeFlow :: FlowR r a -> FlowR r (Either Text a)
-runSafeFlow flow = do
-  env <- ask
-  lift $ L.runSafeFlow $ runReaderT flow env

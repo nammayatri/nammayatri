@@ -15,7 +15,7 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B
 getDbTable =
   DB.organization . DB.appDb <$> getSchemaName
 
-findOrgById :: HasFlowDBEnv m r => Text -> m (Maybe Org.Organization)
+findOrgById :: DBFlow m r => Text -> m (Maybe Org.Organization)
 findOrgById oId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -23,7 +23,7 @@ findOrgById oId = do
     predicate Org.Organization {..} =
       id ==. B.val_ (Id oId)
 
-findOrgByShortId :: HasFlowDBEnv m r => ShortId Org.Organization -> m (Maybe Org.Organization)
+findOrgByShortId :: DBFlow m r => ShortId Org.Organization -> m (Maybe Org.Organization)
 findOrgByShortId shortOrgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -32,7 +32,7 @@ findOrgByShortId shortOrgId = do
       shortId ==. B.val_ shortOrgId
 
 findOrgByApiKey ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Org.OrganizationType ->
   App.APIKey ->
   m (Maybe Org.Organization)
@@ -45,7 +45,7 @@ findOrgByApiKey oType apiKey_ = do
         &&. _type ==. B.val_ oType
 
 listOrganizations ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Maybe Int ->
   Maybe Int ->
   [Org.OrganizationType] ->

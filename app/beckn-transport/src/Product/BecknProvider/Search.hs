@@ -134,7 +134,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
     }
 
 calculateDeadDistance ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -142,20 +142,20 @@ calculateDeadDistance ::
   Location.Location ->
   m (Maybe Float)
 calculateDeadDistance organization fromLocation = do
-  eres <- runSafe $ do
+  eres <- try $ do
     orgLocId <- organization.locationId & fromMaybeM (OrgFieldNotPresent "location_id")
     mbOrgLocation <- Loc.findLocationById orgLocId
     case mbOrgLocation of
       Nothing -> throwError LocationNotFound
       Just orgLocation -> Location.calculateDistance orgLocation fromLocation
   case eres of
-    Left err -> do
+    Left (err :: SomeException) -> do
       logTagWarning "calculateDeadDistance" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
       pure Nothing
     Right mDistance -> return mDistance
 
 onSearchCallback ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer],
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
     CoreMetrics m
@@ -195,7 +195,7 @@ onSearchCallback productCase transporter fromLocation toLocation = do
   mkOnSearchPayload productCase productInstances transporter
 
 mkProductInstance ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Case.Case ->
   Maybe Amount ->
   ProductInstance.ProductInstanceStatus ->
@@ -238,7 +238,7 @@ mkProductInstance productCase price status transporterId = do
       }
 
 mkOnSearchPayload ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Case.Case ->
   [ProductInstance.ProductInstance] ->
   Org.Organization ->

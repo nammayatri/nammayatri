@@ -32,7 +32,7 @@ startRide SR.RegistrationToken {..} rideId req = withFlowHandlerAPI $ do
           notifyBAPRideStarted = \searchPi orderPi -> notifyUpdateToBAP searchPi orderPi ProductInstance.INPROGRESS
         }
 
-startRideTransaction :: HasFlowDBEnv m r => [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m ()
+startRideTransaction :: DBFlow m r => [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m ()
 startRideTransaction piIds trackerCaseId orderCaseId = DB.runSqlDBTransaction $ do
   QProductInstance.updateStatusByIds piIds ProductInstance.INPROGRESS
   QCase.updateStatus trackerCaseId Case.INPROGRESS

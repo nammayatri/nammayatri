@@ -41,7 +41,7 @@ validateCreateVehicleReq CreateVehicleReq {..} =
       validateMaybe "color" color $ NotEmpty `And` P.name
     ]
 
-instance HasFlowDBEnv m r => CreateTransform CreateVehicleReq SV.Vehicle m where
+instance DBFlow m r => CreateTransform CreateVehicleReq SV.Vehicle m where
   createTransform req = do
     vid <- BC.generateGUID
     now <- getCurrentTime
@@ -88,7 +88,7 @@ data UpdateVehicleReq = UpdateVehicleReq
 instance FromJSON UpdateVehicleReq where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
-instance HasFlowDBEnv m r => ModifyTransform UpdateVehicleReq SV.Vehicle m where
+instance DBFlow m r => ModifyTransform UpdateVehicleReq SV.Vehicle m where
   modifyTransform req vehicle = do
     now <- getCurrentTime
     return $

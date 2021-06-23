@@ -15,7 +15,7 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B
 getDbTable =
   DB.organization . DB.appDb <$> getSchemaName
 
-findOrgByApiKey :: HasFlowDBEnv m r => App.APIKey -> m (Maybe Org.Organization)
+findOrgByApiKey :: DBFlow m r => App.APIKey -> m (Maybe Org.Organization)
 findOrgByApiKey apiKey_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -24,7 +24,7 @@ findOrgByApiKey apiKey_ = do
       apiKey ==. B.val_ (Just apiKey_)
 
 listOrganizations ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Maybe Int ->
   Maybe Int ->
   [Org.OrganizationType] ->
@@ -48,7 +48,7 @@ listOrganizations mlimit moffset oType status_ = do
           _type `B.in_` (B.val_ <$> oType) ||. complementVal oType
         ]
 
-findByBapUrl :: HasFlowDBEnv m r => BaseUrl -> m (Maybe Org.Organization)
+findByBapUrl :: DBFlow m r => BaseUrl -> m (Maybe Org.Organization)
 findByBapUrl bapUrl = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -58,7 +58,7 @@ findByBapUrl bapUrl = do
         &&. verified ==. B.val_ True
         &&. enabled ==. B.val_ True
 
-findOrgByShortId :: HasFlowDBEnv m r => ShortId Org.Organization -> m (Maybe Org.Organization)
+findOrgByShortId :: DBFlow m r => ShortId Org.Organization -> m (Maybe Org.Organization)
 findOrgByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

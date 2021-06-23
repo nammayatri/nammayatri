@@ -34,7 +34,7 @@ endRide SR.RegistrationToken {..} rideId = withFlowHandlerAPI $ do
           endRideTransaction
         }
 
-endRideTransaction :: HasFlowDBEnv m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> m ()
+endRideTransaction :: DBFlow m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> m ()
 endRideTransaction piIds trackerCaseId orderCaseId driverId = DB.runSqlDBTransaction $ do
   PI.updateStatusByIds piIds PI.COMPLETED
   Case.updateStatus trackerCaseId Case.COMPLETED

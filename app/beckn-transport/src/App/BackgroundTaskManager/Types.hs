@@ -1,11 +1,11 @@
 module App.BackgroundTaskManager.Types
   ( BTMCfg (),
     BTMEnv (..),
+    DriverAllocationConfig (..),
     Env,
     FlowHandler,
     FlowServer,
     Log (..),
-    DriverAllocationConfig (..),
     buildBTMEnv,
     module App,
   )

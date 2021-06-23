@@ -11,11 +11,11 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.TransporterConfig as TransporterConfig
 
-getDbTable :: HasFlowDBEnv m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity TransporterConfig.TransporterConfigT))
+getDbTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity TransporterConfig.TransporterConfigT))
 getDbTable =
   DB.transporterConfig . DB.transporterDb <$> getSchemaName
 
-findValueByOrgIdAndKey :: HasFlowDBEnv m r => Id Organization -> TransporterConfig.ConfigKey -> m (Maybe TransporterConfig.TransporterConfig)
+findValueByOrgIdAndKey :: DBFlow m r => Id Organization -> TransporterConfig.ConfigKey -> m (Maybe TransporterConfig.TransporterConfig)
 findValueByOrgIdAndKey orgId key_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate

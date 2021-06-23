@@ -31,7 +31,7 @@ containsPredicate gps _ = containsPoint_ (B.val_ point)
   where
     point = "POINT (" <> gps.lon <> " " <> gps.lat <> ")"
 
-findGeometriesContaining :: HasFlowDBEnv m r => GPS -> Text -> m [Storage.Geometry]
+findGeometriesContaining :: DBFlow m r => GPS -> Text -> m [Storage.Geometry]
 findGeometriesContaining gps region_ = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -39,7 +39,7 @@ findGeometriesContaining gps region_ = do
     predicate geometry@Geometry {..} =
       region ==. B.val_ region_ &&. containsPredicate gps geometry
 
-someGeometriesContain :: HasFlowDBEnv m r => GPS -> Text -> m Bool
+someGeometriesContain :: DBFlow m r => GPS -> Text -> m Bool
 someGeometriesContain gps region = do
   geometries <- findGeometriesContaining gps region
   pure $ not $ null geometries

@@ -81,8 +81,8 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
         transporterOrg
 
 onConfirmCallback ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+  ( DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]
   ) =>
   ProductInstance.ProductInstance ->
@@ -211,7 +211,7 @@ mkTrackerProductInstance caseId prodInst currTime = do
         udf5 = prodInst.udf5
       }
 
-mkOnConfirmPayload :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => ProductInstance.ProductInstance -> Id Case.Case -> m API.ConfirmOrder
+mkOnConfirmPayload :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> Id Case.Case -> m API.ConfirmOrder
 mkOnConfirmPayload orderPI trackerCaseId = do
   trip <- BP.mkTrip trackerCaseId orderPI
   order <- ExternalAPITransform.mkOrder orderPI (Just trip)

@@ -158,6 +158,6 @@ withTransactionIdLogTag req = do
 
 withTransactionIdLogTagMig :: (HasField "context" b M.Context.Context, Log m) => b -> m a -> m a
 withTransactionIdLogTagMig req = do
-  let context = getField @"context" req
+  let context = req.context
       transaction_id_ = M.Context.transaction_id context
   withLogTag ("txnId-" <> transaction_id_)

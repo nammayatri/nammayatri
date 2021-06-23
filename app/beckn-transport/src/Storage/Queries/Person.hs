@@ -32,13 +32,13 @@ getDbTable ::
 getDbTable =
   DB.person . DB.transporterDb <$> getSchemaName
 
-create :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Storage.Person -> m ()
+create :: DBFlow m r => Storage.Person -> m ()
 create person = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression person)
 
 findPersonById ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  DBFlow m r =>
   Id Storage.Person ->
   m Storage.Person
 findPersonById pid = do
@@ -49,7 +49,7 @@ findPersonById pid = do
     predicate Storage.Person {..} = id ==. B.val_ pid
 
 findPersonByIdAndRoleAndOrgId ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  DBFlow m r =>
   Id Storage.Person ->
   Storage.Role ->
   Id Org.Organization ->
@@ -64,7 +64,7 @@ findPersonByIdAndRoleAndOrgId pid role_ orgId = do
         &&. organizationId ==. B.val_ (Just orgId)
 
 findAllWithLimitOffsetByOrgIds ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  DBFlow m r =>
   Maybe Integer ->
   Maybe Integer ->
   [Storage.Role] ->
@@ -86,7 +86,7 @@ findAllWithLimitOffsetByOrgIds mlimit moffset roles orgIds = do
         ]
 
 findAllByOrgIds ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  DBFlow m r =>
   [Storage.Role] ->
   [Id Org.Organization] ->
   m [Storage.Person]
@@ -108,7 +108,7 @@ complementVal l
   | otherwise = B.val_ False
 
 findByMobileNumber ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  DBFlow m r =>
   Text ->
   Text ->
   m (Maybe Storage.Person)
@@ -121,7 +121,7 @@ findByMobileNumber countryCode mobileNumber_ = do
         &&. (mobileNumber.hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
 
 findByIdentifier ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  DBFlow m r =>
   Text ->
   m (Maybe Storage.Person)
 findByIdentifier identifier_ = do
@@ -132,7 +132,7 @@ findByIdentifier identifier_ = do
       identifier ==. B.val_ (Just identifier_)
 
 findByEmail ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  DBFlow m r =>
   Text ->
   m (Maybe Storage.Person)
 findByEmail email_ = do
@@ -142,7 +142,7 @@ findByEmail email_ = do
     predicate Storage.Person {..} =
       email ==. B.val_ (Just email_)
 
-updateOrganizationIdAndMakeAdmin :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Storage.Person -> Id Org.Organization -> m ()
+updateOrganizationIdAndMakeAdmin :: DBFlow m r => Id Storage.Person -> Id Org.Organization -> m ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -183,7 +183,7 @@ updatePersonRec personId person' = do
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
-updatePerson :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> m ()
+updatePerson :: (DBFlow m r, EncFlow m r) => Id Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> m ()
 updatePerson personId verified_ identifier_ identifierType_ mobileNumber_ = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -204,7 +204,7 @@ updatePerson personId verified_ identifier_ identifierType_ mobileNumber_ = do
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
 update ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  DBFlow m r =>
   Id Storage.Person ->
   Storage.Status ->
   Bool ->
@@ -234,7 +234,7 @@ deleteById personId = do
   where
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
-updateEntity :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Storage.Person -> Text -> Text -> m ()
+updateEntity :: DBFlow m r => Id Storage.Person -> Text -> Text -> m ()
 updateEntity personId entityId entityType = do
   dbTable <- getDbTable
   let mEntityId =
@@ -257,7 +257,7 @@ updateEntity personId entityId entityType = do
         ]
     predicate pId Storage.Person {..} = id ==. B.val_ pId
 
-findByEntityId :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Text -> m (Maybe Storage.Person)
+findByEntityId :: DBFlow m r => Text -> m (Maybe Storage.Person)
 findByEntityId entityId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -265,7 +265,7 @@ findByEntityId entityId = do
     predicate Storage.Person {..} =
       udf1 ==. B.val_ (Just entityId)
 
-updateAverageRating :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => Id Storage.Person -> Text -> m ()
+updateAverageRating :: DBFlow m r => Id Storage.Person -> Text -> m ()
 updateAverageRating personId newAverageRating = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -328,7 +328,7 @@ getNearestDrivers point' radius' orgId' = do
 -}
 
 getNearestDrivers ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   LatLong ->
   Integer ->
   Id Org.Organization ->

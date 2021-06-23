@@ -54,14 +54,14 @@ getDriver rideSearchPI = do
   driver <- driver_ & fromMaybeM (PIFieldNotPresent "driver")
   return $ toBeckn driver
 
-getPerson :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => ProductInstance -> m Person
+getPerson :: (DBFlow m r, EncFlow m r) => ProductInstance -> m Person
 getPerson rideSearchPI = do
   c <- Case.findById $ caseId rideSearchPI
   personId <- Case.requestor c & fromMaybeM (CaseFieldNotPresent "requestor")
   Person.findById (Id personId) >>= fromMaybeM PersonNotFound
 
 -- | Get person's mobile phone
-getPersonPhone :: HasFlowEncEnv m r => Person -> m Text
+getPersonPhone :: EncFlow m r => Person -> m Text
 getPersonPhone Person {..} = do
   decMobNum <- decrypt mobileNumber
   let phonenum = (<>) <$> mobileCountryCode <*> decMobNum
@@ -73,7 +73,7 @@ getDriverPhone Driver.Driver {..} =
   phones & listToMaybe & fromMaybeM (InternalError "Driver has no contacts")
 
 -- | Returns phones pair or throws an error
-getProductAndCustomerPhones :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => Id ProductInstance -> m (Text, Text)
+getProductAndCustomerPhones :: (EncFlow m r, DBFlow m r) => Id ProductInstance -> m (Text, Text)
 getProductAndCustomerPhones rideSearchPid = do
   rideSearchPI <- ProductInstance.findByParentIdType rideSearchPid Case.RIDEORDER
   person <- getPerson rideSearchPI

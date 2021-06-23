@@ -24,7 +24,7 @@ import qualified Types.Storage.FarePolicy as FarePolicyS
 import Utils.Common
 
 calculateFare ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -54,7 +54,7 @@ calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
   pure totalFare
 
 serviceHandle ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
     CoreMetrics m
   ) =>

@@ -13,7 +13,7 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B
 getDbTable =
   DB.issues . DB.appDb <$> getSchemaName
 
-insertIssue :: HasFlowDBEnv m r => Issue.Issue -> m ()
+insertIssue :: DBFlow m r => Issue.Issue -> m ()
 insertIssue Issue.Issue {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression Issue.Issue {..})

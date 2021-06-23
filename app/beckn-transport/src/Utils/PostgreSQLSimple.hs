@@ -13,13 +13,13 @@ import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
 import Types.Error
 import Utils.Common
 
-postgreSQLSimpleExecute :: (HasFlowDBEnv m r, ToRow row) => Query -> row -> m Int64
+postgreSQLSimpleExecute :: (DBFlow m r, ToRow row) => Query -> row -> m Int64
 postgreSQLSimpleExecute q qargs = do
   logQuery q qargs
   withPostgreSQLSimple (\conn -> execute conn q qargs)
 
 postgreSQLSimpleQuery ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     FromJSON res,
     ToJSON res,
     FromRow res,
@@ -32,7 +32,7 @@ postgreSQLSimpleQuery q qargs = do
   logQuery q qargs
   withPostgreSQLSimple (\conn -> query conn q qargs)
 
-withPostgreSQLSimple :: (HasFlowDBEnv m r, FromJSON a, ToJSON a) => (Connection -> IO a) -> m a
+withPostgreSQLSimple :: (DBFlow m r, FromJSON a, ToJSON a) => (Connection -> IO a) -> m a
 withPostgreSQLSimple f = do
   DBConfig {..} <- asks (.dbCfg)
   pool <-
@@ -65,7 +65,7 @@ showResultError (Incompatible sqlType _ _ hType msg) = "sql incompatible: " <> m
 showResultError (UnexpectedNull _ _ field _ msg) = "sql unexpected null: " <> msg <> " @ " <> field
 showResultError (ConversionFailed sqlType _ _ hType msg) = "sql conversion failed" <> msg <> " (" <> hType <> " ~ " <> sqlType <> ")"
 
-logQuery :: (HasFlowDBEnv m r, ToRow q) => Query -> q -> m ()
+logQuery :: (DBFlow m r, ToRow q) => Query -> q -> m ()
 logQuery q qargs =
   withPostgreSQLSimple (\conn -> decodeUtf8 <$> formatQuery conn q qargs)
     >>= logTagDebug "raw sql query"

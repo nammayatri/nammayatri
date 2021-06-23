@@ -1,6 +1,5 @@
 module Storage.Queries.DriverInformation where
 
-import Beckn.External.Encryption
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
@@ -20,12 +19,12 @@ import qualified Types.Storage.DriverInformation as DriverInformation
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
 getDbTable = DB.driverInformation . DB.transporterDb <$> getSchemaName
 
-create :: HasFlowDBEnv m r => DriverInformation.DriverInformation -> m ()
+create :: DBFlow m r => DriverInformation.DriverInformation -> m ()
 create DriverInformation.DriverInformation {..} = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression DriverInformation.DriverInformation {..})
 
-findById :: HasFlowDBEnv m r => Id Driver -> m (Maybe DriverInformation.DriverInformation)
+findById :: DBFlow m r => Id Driver -> m (Maybe DriverInformation.DriverInformation)
 findById driverId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -38,7 +37,7 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-fetchAllAvailableByIds :: HasFlowDBEnv m r => [Id Driver] -> m [DriverInformation.DriverInformation]
+fetchAllAvailableByIds :: DBFlow m r => [Id Driver] -> m [DriverInformation.DriverInformation]
 fetchAllAvailableByIds driversIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
@@ -53,7 +52,7 @@ fetchAllAvailableByIds driversIds = do
           onRide ==. B.val_ False
         ]
 
-updateActivity :: HasFlowDBEnv m r => Id Driver -> Bool -> m ()
+updateActivity :: DBFlow m r => Id Driver -> Bool -> m ()
 updateActivity driverId_ active_ = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -67,7 +66,7 @@ updateActivity driverId_ active_ = do
         ]
     predicate id DriverInformation.DriverInformation {..} = driverId ==. B.val_ id
 
-updateOnRideFlow :: HasFlowDBEnv m r => Id Driver -> Bool -> m ()
+updateOnRideFlow :: DBFlow m r => Id Driver -> Bool -> m ()
 updateOnRideFlow driverId onRide =
   DB.runSqlDB (updateOnRide driverId onRide)
 
@@ -97,7 +96,7 @@ deleteById driverId_ = do
     predicate pid DriverInformation.DriverInformation {..} = driverId ==. B.val_ pid
 
 findAllWithLimitOffsetByOrgIds ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  DBFlow m r =>
   Maybe Integer ->
   Maybe Integer ->
   [Id Org.Organization] ->

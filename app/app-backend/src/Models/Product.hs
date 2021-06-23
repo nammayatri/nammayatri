@@ -14,14 +14,14 @@ import Utils.Common
 -- any possible database errors outside of this module.
 -- Convert it to DomainError with a proper description
 
-create :: HasFlowDBEnv m r => Products -> m ()
+create :: DBFlow m r => Products -> m ()
 create = Q.createFlow
 
 -- | Find Product by id
-findById :: HasFlowDBEnv m r => Id Products -> m Products
+findById :: DBFlow m r => Id Products -> m Products
 findById pid = do
   Q.findById pid >>= fromMaybeM CaseNotFound
 
-findAllByIds :: HasFlowDBEnv m r => [Id Products] -> m [Products]
+findAllByIds :: DBFlow m r => [Id Products] -> m [Products]
 findAllByIds pids = do
   Q.findAllByIds pids

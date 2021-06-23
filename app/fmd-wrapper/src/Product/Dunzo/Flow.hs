@@ -36,7 +36,7 @@ import Types.Wrapper
 import Utils.Common
 
 search ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
     CoreMetrics m
   ) =>
@@ -58,7 +58,7 @@ select :: MonadFlow m => Org.Organization -> API.BecknReq SelectAPI.SelectedObje
 select _org _req = throwError $ ActionNotSupported "select"
 
 init ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
     CoreMetrics m
   ) =>
@@ -120,7 +120,7 @@ init org req = do
         Just _ -> pass -- Shouldn't we update case with a current request?
 
 confirm ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
     CoreMetrics m
   ) =>
@@ -197,7 +197,7 @@ confirm org req = do
         throwError (InvalidRequest "Took too long to confirm.")
 
 track ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
     CoreMetrics m
   ) =>
@@ -217,7 +217,7 @@ track org req = do
     return $ mkOnTrackMessage mbTrackingUrl
 
 status ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
     CoreMetrics m
   ) =>
@@ -247,7 +247,7 @@ status org req = do
       Storage.update caseId updatedCase
 
 cancel ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
     CoreMetrics m
   ) =>
@@ -273,7 +273,7 @@ cancel org req = do
       -- TODO get cancellation reason
       API.cancelTask dzClientId token dzUrl dzTestMode taskId ""
 
-    updateCase :: HasFlowDBEnv m r => Id Case -> Order -> Case -> m ()
+    updateCase :: DBFlow m r => Id Case -> Order -> Case -> m ()
     updateCase caseId order case_ = do
       let updatedCase = case_ {udf1 = Just $ encodeToText order}
       Storage.update caseId updatedCase

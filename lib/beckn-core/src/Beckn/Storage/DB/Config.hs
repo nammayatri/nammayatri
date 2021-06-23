@@ -22,7 +22,7 @@ data DBConfig = DBConfig
 -- Make the compiler generate instances for us!
 type HasDbCfg r = (HasField "dbCfg" r DBConfig)
 
-type HasFlowDBEnv m r =
+type DBFlow m r =
   ( MonadReader r m,
     HasField "dbCfg" r DBConfig,
     MonadFlow m,

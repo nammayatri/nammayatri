@@ -82,7 +82,7 @@ mkProdRes prodList prodInst =
       product = find (\x -> x.id == prodInst.productId) prodList
     }
 
-getProdInstances :: HasFlowDBEnv m r => Case.Case -> m [ProdInstRes]
+getProdInstances :: DBFlow m r => Case.Case -> m [ProdInstRes]
 getProdInstances case_@Case.Case {..} = do
   piList <- MPI.findAllByCaseId (Case.id case_)
   products <- Products.findAllByIds (PI.productId <$> piList)

@@ -8,14 +8,18 @@
 
 module Beckn.External.FCM.Types where
 
-import Beckn.Utils.Common (encodeToText)
+import Beckn.Types.App
+import Beckn.Types.Field ((:::))
 import Beckn.Utils.TH
+import Beckn.Utils.Text (encodeToText)
 import Control.Lens.TH
 import Data.Aeson
 import Data.Aeson.Casing
 import Data.Aeson.TH
 import Data.Default.Class
 import EulerHS.Prelude hiding ((.=))
+
+type FCMFlow m r = (HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text])
 
 -- | Device token
 newtype FCMRecipientToken = FCMRecipientToken

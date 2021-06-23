@@ -15,6 +15,6 @@ import Utils.Common
 -- Convert it to DomainError with a proper description
 
 -- | Find Product by id
-findById :: HasFlowDBEnv m r => Id Products -> m Products
+findById :: DBFlow m r => Id Products -> m Products
 findById pid = do
   Q.findById' pid >>= fromMaybeM CaseNotFound

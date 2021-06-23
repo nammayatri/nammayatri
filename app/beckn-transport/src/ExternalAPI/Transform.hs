@@ -30,7 +30,7 @@ import Types.API.Case
 import Types.Error
 import Utils.Common (fromMaybeM)
 
-mkCatalog :: HasFlowDBEnv m r => Case -> [ProductInstance] -> ProviderInfo -> m Mobility.Catalog
+mkCatalog :: DBFlow m r => Case -> [ProductInstance] -> ProviderInfo -> m Mobility.Catalog
 mkCatalog c prodInsts provider =
   return
     Mobility.Catalog
@@ -157,7 +157,7 @@ mkTracking method dataUrl =
       metadata = Nothing
     }
 
-mkDriverObj :: HasFlowEncEnv m r => Person.Person -> m Mobility.Driver
+mkDriverObj :: EncFlow m r => Person.Person -> m Mobility.Driver
 mkDriverObj person = do
   bPerson <- mkPerson person
   return $
@@ -173,7 +173,7 @@ mkDriverObj person = do
         rating = Nothing
       }
 
-mkPerson :: HasFlowEncEnv m r => Person.Person -> m BPerson.Person
+mkPerson :: EncFlow m r => Person.Person -> m BPerson.Person
 mkPerson person = do
   phone <- getPhone
   return $

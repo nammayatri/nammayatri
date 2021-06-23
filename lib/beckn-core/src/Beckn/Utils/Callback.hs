@@ -8,13 +8,11 @@ import qualified Beckn.Types.Core.Migration.API.Types as API
 import qualified Beckn.Types.Core.Migration.Context as M.Context
 import Beckn.Types.Error
 import Beckn.Types.Error.BecknAPIError
-import Beckn.Utils.Error.BecknAPIError
-import Beckn.Utils.Error.FlowHandling
+import Beckn.Types.Monitoring.Prometheus.Metrics
+import Beckn.Utils.Common
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant.Client
-import Beckn.Utils.Common
-import Beckn.Types.Monitoring.Prometheus.Metrics
 
 toCallbackReq :: Context -> a -> CallbackReq a
 toCallbackReq context a =
@@ -55,7 +53,7 @@ type WithBecknCallback api callback_success m =
 
 withBecknCallback ::
   Maybe ET.ManagerSelector ->
-  WithBecknCallback api callback_success m 
+  WithBecknCallback api callback_success m
 withBecknCallback auth action api context cbUrl f = do
   now <- getCurrentTime
   let cbAction = "on_" <> action

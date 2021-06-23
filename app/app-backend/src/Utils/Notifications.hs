@@ -17,7 +17,7 @@ import qualified Models.Case as Case
 import qualified Storage.Queries.Person as Person
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
-import Utils.Common (decodeFromText, showTimeIst, (:::))
+import Utils.Common (decodeFromText, showTimeIst)
 
 -- Note:
 -- When customer searches case is created in the BA, and search request is
@@ -36,9 +36,8 @@ import Utils.Common (decodeFromText, showTimeIst, (:::))
 -- in the BP for each product. Here it would be mostly one product again.
 -- When case doesn't have any product, there is no notification.
 notifyOnStatusUpdate ::
-  ( HasFlowEncEnv m r,
-    HasFlowDBEnv m r,
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( DBFlow m r,
+    FCMFlow m r,
     CoreMetrics m
   ) =>
   ProductInstance ->
@@ -149,9 +148,8 @@ notifyOnStatusUpdate prodInst piStatus =
       _ -> pure ()
 
 notifyOnExpiration ::
-  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
-    HasFlowEncEnv m r,
-    HasFlowDBEnv m r,
+  ( FCMFlow m r,
+    DBFlow m r,
     CoreMetrics m
   ) =>
   Case ->
@@ -184,7 +182,7 @@ notifyOnExpiration caseObj = do
     else pure ()
 
 notifyOnRegistration ::
-  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( FCMFlow m r,
     CoreMetrics m
   ) =>
   RegistrationToken ->
@@ -210,9 +208,8 @@ notifyOnRegistration regToken person =
    in notifyPerson notificationData person
 
 notifyOnTrackCb ::
-  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
-    HasFlowEncEnv m r,
-    HasFlowDBEnv m r,
+  ( FCMFlow m r,
+    DBFlow m r,
     CoreMetrics m
   ) =>
   Maybe Text ->

@@ -24,7 +24,7 @@ insertExpression ::
 insertExpression value = B.insertValues [value]
 
 handleIt ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   (T.DBConfig Pg -> m (T.DBResult (T.SqlConn Pg))) ->
   m (T.DBResult (T.SqlConn Pg))
 handleIt mf = do
@@ -33,8 +33,8 @@ handleIt mf = do
   where
     repack (DBConfig x y z _) = T.mkPostgresPoolConfig x y z
 
-prepareDBConnections :: HasFlowDBEnv m r => m (T.DBResult (T.SqlConn Pg))
+prepareDBConnections :: DBFlow m r => m (T.DBResult (T.SqlConn Pg))
 prepareDBConnections = handleIt L.initSqlDBConnection
 
-getOrInitConn :: HasFlowDBEnv m r => m (T.SqlConn Pg)
+getOrInitConn :: DBFlow m r => m (T.SqlConn Pg)
 getOrInitConn = handleIt L.getOrInitSqlConn >>= checkDBError

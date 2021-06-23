@@ -18,12 +18,12 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.rating . DB.transporterDb <$> getSchemaName
 
-create :: HasFlowDBEnv m r => Storage.Rating -> m ()
+create :: DBFlow m r => Storage.Rating -> m ()
 create rating = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression rating)
 
-updateRatingValue :: HasFlowDBEnv m r => Id Storage.Rating -> Int -> m ()
+updateRatingValue :: DBFlow m r => Id Storage.Rating -> Int -> m ()
 updateRatingValue ratingId newRatingValue = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -37,14 +37,14 @@ updateRatingValue ratingId newRatingValue = do
     )
     (\Storage.Rating {..} -> id ==. B.val_ ratingId)
 
-findByProductInstanceId :: HasFlowDBEnv m r => Id PI.ProductInstance -> m (Maybe Storage.Rating)
+findByProductInstanceId :: DBFlow m r => Id PI.ProductInstance -> m (Maybe Storage.Rating)
 findByProductInstanceId productInsId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Rating {..} = productInstanceId ==. B.val_ productInsId
 
-findAllRatingsForPerson :: HasFlowDBEnv m r => Id Person -> m [Storage.Rating]
+findAllRatingsForPerson :: DBFlow m r => Id Person -> m [Storage.Rating]
 findAllRatingsForPerson personId_ = do
   ratingTable <- getDbTable
   productInstanceTable <- PI.getDbTable

@@ -1,5 +1,6 @@
 module Services.Allocation.Runner where
 
+import App.BackgroundTaskManager.Types (DriverAllocationConfig)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Error.API (RedisError (..))
@@ -17,15 +18,14 @@ import qualified Services.Allocation.Internal as I
 import Types.Metrics (BTMMetrics, CoreMetrics)
 import Types.ShardMappingError
 import Utils.Common
-import App.BackgroundTaskManager.Types
 
 handle ::
   ( Allocation.MonadHandler m,
-    HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+    DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Integer, "nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    FCMFlow m r,
     CoreMetrics m
   ) =>
   Allocation.ServiceHandle m
@@ -58,7 +58,7 @@ handle =
     }
 
 getOrganizationLock ::
-  (HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig]) => m (ShortId Organization)
+  HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m (ShortId Organization)
 getOrganizationLock = do
   shardMap <- asks (.driverAllocationConfig.shards)
   let numShards = Map.size shardMap
@@ -77,11 +77,11 @@ getOrganizationLock = do
 
 run ::
   ( BTMMetrics m,
-    HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+    DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Integer, "nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    FCMFlow m r,
     HasFlowEnv m r '["isShuttingDown" ::: TMVar ()],
     CoreMetrics m
   ) =>
@@ -93,8 +93,8 @@ run = do
     Redis.setKeyRedis "beckn:allocation:service" now
     processStartTime <- getCurrentTime
     requestsNum <- asks (.driverAllocationConfig.requestsNumPerIteration)
-    eres <- runSafe $ Allocation.process handle shortOrgId requestsNum
-    whenLeft eres $ Log.logTagError "Allocation service"
+    eres <- try $ Allocation.process handle shortOrgId requestsNum
+    whenLeft eres $ \(exc :: SomeException) -> Log.logTagError "Allocation service" $ show exc
     Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
     processEndTime <- getCurrentTime
     let processTime = diffUTCTime processEndTime processStartTime

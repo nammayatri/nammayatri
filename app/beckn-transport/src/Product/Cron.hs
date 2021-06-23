@@ -37,9 +37,8 @@ expireCases maybeAuth ExpireCaseReq {..} = withFlowHandlerAPI $ do
       MPI.updateStatusByIds (PI.id <$> productInstances) PI.EXPIRED
 
 notifyTransporters ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
-    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+  ( DBFlow m r,
+    FCMFlow m r,
     CoreMetrics m
   ) =>
   [C.Case] ->

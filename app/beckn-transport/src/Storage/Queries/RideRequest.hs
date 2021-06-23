@@ -16,7 +16,7 @@ getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.rideRequest . DB.transporterDb <$> getSchemaName
 
-createFlow :: HasFlowDBEnv m r => RideRequest.RideRequest -> m ()
+createFlow :: DBFlow m r => RideRequest.RideRequest -> m ()
 createFlow =
   DB.runSqlDB . create
 
@@ -25,7 +25,7 @@ create rideRequest = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertExpression rideRequest)
 
-fetchOldest :: HasFlowDBEnv m r => ShortId Organization -> Integer -> m [RideRequest.RideRequest]
+fetchOldest :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest.RideRequest]
 fetchOldest shortId limit = do
   dbTable <- getDbTable
   let order RideRequest.RideRequest {..} = B.asc_ createdAt
@@ -33,7 +33,7 @@ fetchOldest shortId limit = do
   where
     predicate RideRequest.RideRequest {..} = shortOrgId ==. B.val_ shortId
 
-removeRequest :: HasFlowDBEnv m r => Id RideRequest.RideRequest -> m ()
+removeRequest :: DBFlow m r => Id RideRequest.RideRequest -> m ()
 removeRequest requestId = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate requestId)

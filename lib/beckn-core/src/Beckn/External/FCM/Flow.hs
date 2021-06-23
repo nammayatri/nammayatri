@@ -77,7 +77,7 @@ createAndroidNotification title body notificationType =
 -- | Send FCM message to a person
 notifyPerson ::
   ( CoreMetrics m,
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    FCMFlow m r
   ) =>
   FCMAndroidData ->
   Person ->
@@ -104,7 +104,7 @@ fcmSendMessageAPI = Proxy
 -- | Send FCM message to a registered device
 sendMessage ::
   ( CoreMetrics m,
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    FCMFlow m r
   ) =>
   FCMRequest ->
   Text ->
@@ -129,8 +129,7 @@ sendMessage fcmMsg toWhom = fork desc $ do
 
 -- | try to get FCM text token
 getTokenText ::
-  ( HasFlowEnv m r '["fcmJsonPath" ::: Maybe Text]
-  ) =>
+  FCMFlow m r =>
   m (Either Text Text)
 getTokenText = do
   token <- getToken
@@ -140,8 +139,7 @@ getTokenText = do
 
 -- | Get token (refresh token if expired / invalid)
 getToken ::
-  ( HasFlowEnv m r '["fcmJsonPath" ::: Maybe Text]
-  ) =>
+  FCMFlow m r =>
   m (Either String JWT.JWToken)
 getToken = do
   tokenStatus <-
@@ -160,7 +158,7 @@ getToken = do
     jwt -> pure jwt
 
 getAndParseFCMAccount ::
-  HasFlowEnv m r '["fcmJsonPath" ::: Maybe Text] =>
+  FCMFlow m r =>
   m (Either String JWT.ServiceAccount)
 getAndParseFCMAccount = do
   mbFcmFile <- asks (.fcmJsonPath)
@@ -173,7 +171,7 @@ getAndParseFCMAccount = do
     parseContent :: Either String BL.ByteString -> Either String JWT.ServiceAccount
     parseContent rawContent = rawContent >>= Aeson.eitherDecode
 
-getNewToken :: (HasFlowEnv m r '["fcmJsonPath" ::: Maybe Text]) => m (Either String JWT.JWToken)
+getNewToken :: FCMFlow m r => m (Either String JWT.JWToken)
 getNewToken = getAndParseFCMAccount >>= either (pure . Left) refreshToken
 
 refreshToken :: MonadFlow m => JWT.ServiceAccount -> m (Either String JWT.JWToken)

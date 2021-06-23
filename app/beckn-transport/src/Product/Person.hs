@@ -88,7 +88,7 @@ createPerson orgId req = withFlowHandlerAPI $ do
       return $ UpdatePersonRes decPerson
     _ -> return $ UpdatePersonRes decPerson
   where
-    validateDriver :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => CreatePersonReq -> m ()
+    validateDriver :: DBFlow m r => CreatePersonReq -> m ()
     validateDriver preq =
       when (preq.role == Just SP.DRIVER) $
         case (preq.mobileNumber, req.mobileCountryCode) of
@@ -97,7 +97,7 @@ createPerson orgId req = withFlowHandlerAPI $ do
               throwError $ InvalidRequest "Person with this mobile number already exists."
           _ -> throwError $ InvalidRequest "You should pass mobile number and country code."
 
-createDriverDetails :: HasFlowDBEnv m r => Id SP.Person -> m ()
+createDriverDetails :: DBFlow m r => Id SP.Person -> m ()
 createDriverDetails personId = do
   now <- getCurrentTime
   let driverInfo =
@@ -158,7 +158,7 @@ linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do
 addOrgId :: Id Organization -> SP.Person -> SP.Person
 addOrgId orgId person = person {SP.organizationId = Just orgId}
 
-mkPersonRes :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => SP.Person -> m PersonEntityRes
+mkPersonRes :: (DBFlow m r, EncFlow m r) => SP.Person -> m PersonEntityRes
 mkPersonRes person = do
   entity <- case person.udf2 >>= mapEntityType of
     Just VEHICLE -> do
@@ -195,7 +195,7 @@ mkPersonRes person = do
       }
 
 sendInviteSms ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     CoreMetrics m
   ) =>
   SmsConfig ->
@@ -223,7 +223,7 @@ mapEntityType entityType = case entityType of
   _ -> Nothing
 
 calculateAverageRating ::
-  (HasFlowDBEnv m r, HasFlowEncEnv m r) =>
+  (DBFlow m r, EncFlow m r) =>
   Id SP.Person ->
   m ()
 calculateAverageRating personId = do
@@ -242,7 +242,7 @@ driverPoolKey :: Id ProductInstance -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
 getDriverPool ::
-  (HasFlowDBEnv m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]) =>
+  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]) =>
   Id ProductInstance ->
   m [Id Driver]
 getDriverPool piId =
@@ -261,12 +261,12 @@ getDriverPool piId =
       let orgId = prodInst.organizationId
       calculateDriverPool pickupPoint orgId vehicleVariant
 
-setDriverPool :: HasFlowDBEnv m r => Id ProductInstance -> [Id Driver] -> m ()
+setDriverPool :: DBFlow m r => Id ProductInstance -> [Id Driver] -> m ()
 setDriverPool piId ids =
   Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
 
 calculateDriverPool ::
-  (HasFlowDBEnv m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]) =>
+  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]) =>
   Id Location ->
   Id Organization ->
   SV.Variant ->

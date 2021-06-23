@@ -53,10 +53,10 @@ list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandlerAP
         }
 
 notifyUpdateToBAP ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+  ( DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    FCMFlow m r,
     CoreMetrics m
   ) =>
   PI.ProductInstance ->
@@ -150,10 +150,10 @@ listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandl
 -- Core Utility methods are below
 
 assignDriver ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+  ( DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    FCMFlow m r,
     CoreMetrics m
   ) =>
   Id PI.ProductInstance ->
@@ -194,8 +194,8 @@ assignDriver productInstanceId driverId = do
         ]
 
 notifyTripDetailsToGateway ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+  ( DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -209,10 +209,10 @@ notifyTripDetailsToGateway transporter searchPi orderPi = do
     BP.notifyTripInfoToGateway orderPi (trackerCase.id) transporter (searchPi.caseId)
 
 notifyStatusUpdateReq ::
-  ( HasFlowDBEnv m r,
-    HasFlowEncEnv m r,
+  ( DBFlow m r,
+    EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    FCMFlow m r,
     CoreMetrics m
   ) =>
   SO.Organization ->

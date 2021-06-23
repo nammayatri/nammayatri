@@ -56,7 +56,7 @@ instance VerificationMethod VerifyToken where
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyPerson :: (HasFlowEncEnv m r, HasFlowDBEnv m r) => RegToken -> m Person.Person
+verifyPerson :: DBFlow m r => RegToken -> m Person.Person
 verifyPerson token = do
   sr <- verifyToken token
   Person.findById (Id $ SR.entityId sr)
@@ -65,13 +65,13 @@ verifyPerson token = do
 verifyPersonAction :: VerificationAction VerifyToken AppEnv
 verifyPersonAction = VerificationAction verifyPerson
 
-verifyToken :: HasFlowDBEnv m r => RegToken -> m SR.RegistrationToken
+verifyToken :: DBFlow m r => RegToken -> m SR.RegistrationToken
 verifyToken token =
   RegistrationToken.findByToken token
     >>= Utils.fromMaybeM (InvalidToken token)
     >>= validateToken
 
-validateToken :: HasFlowDBEnv m r => SR.RegistrationToken -> m SR.RegistrationToken
+validateToken :: DBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal updatedAt

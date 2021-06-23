@@ -106,13 +106,13 @@ verifyDriver user = do
     Just orgId -> return $ getId orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
-validateAdmin :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => RegToken -> m Text
+validateAdmin :: (DBFlow m r, EncFlow m r) => RegToken -> m Text
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
   user <- QP.findPersonById (Id entityId)
   verifyAdmin user
 
-validateDriver :: (HasFlowDBEnv m r, HasFlowEncEnv m r) => RegToken -> m Text
+validateDriver :: (DBFlow m r, EncFlow m r) => RegToken -> m Text
 validateDriver regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
   user <- QP.findPersonById (Id entityId)

@@ -14,7 +14,7 @@ module Beckn.External.Encryption
     DbHashable (..),
     EncKind (..),
     Encrypted (..),
-    HasFlowEncEnv,
+    EncFlow,
     EncryptedField,
     EncryptedHashed (..),
     EncryptedHashedField,
@@ -189,10 +189,10 @@ type family EncryptedHashedField (e :: EncKind) (f :: Type -> Type) (a :: Type) 
 -- * Encryption methods
 
 -- FIXME! Modify passetto to use BaseUrl and use it too!
-type HasFlowEncEnv m r = (HasFlowEnv m r '["encService" ::: (String, Word16)])
+type EncFlow m r = (HasFlowEnv m r '["encService" ::: (String, Word16)])
 
 -- Helper which allows running passetto client operations in our monad.
-withPassettoCtx :: HasFlowEncEnv m r => ReaderT PassettoContext IO a -> m a
+withPassettoCtx :: EncFlow m r => ReaderT PassettoContext IO a -> m a
 withPassettoCtx action = do
   (host, port) <- asks (.encService)
   L.runIO (mkDefPassettoContext host port) >>= L.runIO . runReaderT action
@@ -202,22 +202,22 @@ withPassettoCtx action = do
 -- Note: this performs not more than one call to server, so try to avoid using
 -- multiple subsequent invocations of this method in favor of passing complex
 -- structures (e.g. tuples) through it.
-encrypt :: HasFlowEncEnv m r => EncryptedItem e => Unencrypted e -> m e
+encrypt :: EncFlow m r => EncryptedItem e => Unencrypted e -> m e
 encrypt payload = withPassettoCtx $ throwLeft =<< cliEncrypt payload
 
 -- | Decrypt given value.
-decrypt :: (HasFlowEncEnv m r, EncryptedItem e) => e -> m (Unencrypted e)
+decrypt :: (EncFlow m r, EncryptedItem e) => e -> m (Unencrypted e)
 decrypt encrypted = withPassettoCtx $ throwLeft =<< cliDecrypt encrypted
 
 -- | Simplified version of 'encrypt'.
 --
 -- In some cases 'encrypt' requires specifying resulting type explicitly,
 -- but here it is not necessary.
-encryptOne :: (HasFlowEncEnv m r, ToJSON a, FromJSON a) => a -> m (Encrypted a)
+encryptOne :: (EncFlow m r, ToJSON a, FromJSON a) => a -> m (Encrypted a)
 encryptOne = encrypt
 
 -- | Simplified version of 'decrypt'.
-decryptOne :: (HasFlowEncEnv m r, ToJSON a, FromJSON a) => Encrypted a -> m a
+decryptOne :: (EncFlow m r, ToJSON a, FromJSON a) => Encrypted a -> m a
 decryptOne = decrypt
 
 -- | Derive an instance which allows running 'encrypt' and 'decrypt' on

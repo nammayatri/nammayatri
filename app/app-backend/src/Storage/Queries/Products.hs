@@ -15,7 +15,7 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B
 getDbTable =
   DB.products . DB.appDb <$> getSchemaName
 
-createFlow :: HasFlowDBEnv m r => Storage.Products -> m ()
+createFlow :: DBFlow m r => Storage.Products -> m ()
 createFlow =
   DB.runSqlDB . create
 
@@ -24,14 +24,14 @@ create Storage.Products {..} = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertExpression Storage.Products {..})
 
-findById :: HasFlowDBEnv m r => Id Storage.Products -> m (Maybe Storage.Products)
+findById :: DBFlow m r => Id Storage.Products -> m (Maybe Storage.Products)
 findById pid = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate pid)
   where
     predicate pid_ Storage.Products {..} = id ==. B.val_ pid_
 
-findAllByIds :: HasFlowDBEnv m r => [Id Storage.Products] -> m [Storage.Products]
+findAllByIds :: DBFlow m r => [Id Storage.Products] -> m [Storage.Products]
 findAllByIds pids = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate pids)

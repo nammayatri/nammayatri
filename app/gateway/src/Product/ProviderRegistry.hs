@@ -10,7 +10,7 @@ import qualified Storage.Queries.Provider as Provider
 import qualified Types.Beckn.Context as B
 import qualified Types.Beckn.Domain as B
 
-lookup :: HasFlowDBEnv m r => B.Context -> m [Org.Organization]
+lookup :: DBFlow m r => B.Context -> m [Org.Organization]
 lookup context = do
   let orgDomain = domainToOrgType (context.domain)
   filter (isJust . Org.callbackUrl)

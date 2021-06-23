@@ -19,7 +19,7 @@ createProduct _orgId req = withFlowHandlerAPI $ do
   PQ.create prod
   return prod
 
-mkProduct :: HasFlowDBEnv m r => CreateProdReq -> m Product.Products
+mkProduct :: DBFlow m r => CreateProdReq -> m Product.Products
 mkProduct req = do
   pid <- L.generateGUID
   now <- getCurrentTime

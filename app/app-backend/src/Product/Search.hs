@@ -97,7 +97,7 @@ searchCb _bppOrg req = withFlowHandlerBecknAPI $
       Left err -> logTagError "on_search req" $ "on_search error: " <> show err
     return Ack
 
-searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Integer], HasFlowDBEnv m r) => Search.OnSearchReq -> BM.Catalog -> m ()
+searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Integer], DBFlow m r) => Search.OnSearchReq -> BM.Catalog -> m ()
 searchCbService req catalog = do
   let caseId = Id $ req.context.transaction_id --CaseId $ service.id
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH
@@ -140,7 +140,7 @@ searchCbService req catalog = do
 
 mkCase ::
   ( (HasFlowEnv m r ["searchCaseExpiry" ::: Maybe Integer, "graphhopperUrl" ::: BaseUrl]),
-    HasFlowDBEnv m r,
+    DBFlow m r,
     CoreMetrics m
   ) =>
   API.SearchReq ->

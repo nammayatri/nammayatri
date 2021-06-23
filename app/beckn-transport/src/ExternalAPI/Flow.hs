@@ -22,7 +22,7 @@ import Utils.Auth
 import Utils.Common
 
 getGatewayUrl ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl]
   ) =>
   m BaseUrl
@@ -47,7 +47,7 @@ withCallback transporter action api context cbUrl f = do
   withBecknCallback (Just authKey) action api context' cbUrl f
 
 callBAP ::
-  ( HasFlowDBEnv m r,
+  ( DBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>

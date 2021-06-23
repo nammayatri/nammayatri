@@ -16,13 +16,13 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.allocationEvent . DB.transporterDb <$> getSchemaName
 
-create :: HasFlowDBEnv m r => Storage.AllocationEvent -> m ()
+create :: DBFlow m r => Storage.AllocationEvent -> m ()
 create allocationEvent = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression allocationEvent)
 
 findAllocationEventById ::
-  HasFlowDBEnv m r =>
+  DBFlow m r =>
   Id Storage.AllocationEvent ->
   m (Maybe Storage.AllocationEvent)
 findAllocationEventById aeId = do
@@ -31,7 +31,7 @@ findAllocationEventById aeId = do
   where
     predicate Storage.AllocationEvent {..} = id ==. B.val_ aeId
 
-logAllocationEvent :: HasFlowDBEnv m r => Storage.AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m ()
+logAllocationEvent :: DBFlow m r => Storage.AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m ()
 logAllocationEvent eventType rideId driverId = do
   uuid <- generateGUID
   now <- getCurrentTime
