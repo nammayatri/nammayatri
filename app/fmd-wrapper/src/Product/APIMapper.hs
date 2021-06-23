@@ -7,7 +7,7 @@ import qualified Beckn.Types.Core.Migration.Domain as Mig
 import Beckn.Types.Storage.Organization (Organization)
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
-import Types.Beckn.API.Cancel (CancelReq (..), CancelRes)
+import Types.Beckn.API.Cancel (CancellationInfo)
 import Types.Beckn.API.Init (InitOrder)
 import Types.Beckn.API.Search (SearchIntent)
 import Types.Beckn.API.Select (SelectedObject)
@@ -62,11 +62,11 @@ status org req = withFlowHandlerBecknAPI $
     validateBapUrlMig org $ req.context
     DZ.status org req
 
-cancel :: Organization -> CancelReq -> FlowHandler CancelRes
+cancel :: Organization -> API.BecknReq CancellationInfo -> FlowHandler AckResponse
 cancel org req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    validateContext "cancel" $ req.context
-    validateBapUrl org $ req.context
+  withTransactionIdLogTagMig req $ do
+    validateContextMig "cancel" $ req.context
+    validateBapUrlMig org $ req.context
     DZ.cancel org req
 
 update :: Organization -> API.BecknReq UpdateInfo -> FlowHandler AckResponse

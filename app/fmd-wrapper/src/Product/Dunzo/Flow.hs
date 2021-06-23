@@ -21,7 +21,7 @@ import Product.Dunzo.Transform
 import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
 import qualified Storage.Queries.Organization as Org
-import qualified Types.Beckn.API.Cancel as API
+import qualified Types.Beckn.API.Cancel as CancelAPI
 import qualified Types.Beckn.API.Confirm as ConfirmAPI
 import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
@@ -216,29 +216,29 @@ status org req = do
       let updatedCase = case_ {udf1 = Just $ encodeToText orderDetails, udf2 = Just $ encodeToText taskStatus}
       Storage.update caseId updatedCase
 
-cancel :: Org.Organization -> API.CancelReq -> Flow API.CancelRes
+cancel :: Org.Organization -> API.BecknReq CancelAPI.CancellationInfo -> Flow AckResponse
 cancel org req = do
-  let oId = req.message.order.id
+  let oId = req.message.order_id
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  let context = updateBppUri (req.context) dzBPNwAddress
+  let context = updateBppUriMig (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id oId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   let taskId = getShortId $ case_.shortId
   orderDetails <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
-  withCallback "cancel" API.onCancelAPI context cbUrl $ do
+  withCallbackMig "cancel" CancelAPI.onCancelAPI context cbUrl $ do
     callCancelAPI dzBACreds conf (TaskId taskId)
     let updatedOrder = cancelOrder (orderDetails.order)
     let updatedOrderDetails = orderDetails & #order .~ updatedOrder
     updateCase case_.id updatedOrderDetails case_
-    return $ API.CancelResMessage updatedOrder
+    return $ API.OrderObject updatedOrder
   where
     callCancelAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
       token <- fetchToken dzBACreds conf
       -- TODO get cancellation reason
       API.cancelTask dzClientId token dzUrl dzTestMode taskId ""
 
-    updateCase :: Id Case -> OrderDetails -> Case -> Flow ()
+    updateCase :: Id Case -> OrderDetailsMig -> Case -> Flow ()
     updateCase caseId orderDetails case_ = do
       let updatedCase = case_ {udf1 = Just $ encodeToText orderDetails}
       Storage.update caseId updatedCase

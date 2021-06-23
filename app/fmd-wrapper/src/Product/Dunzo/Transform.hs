@@ -354,10 +354,9 @@ mkOnTrackMessage mbTrackingUrl = TrackAPI.OnTrackInfo tracking
           status = Nothing
         }
 
-cancelOrder :: Order -> Order
+cancelOrder :: M.Order.Order -> M.Order.Order
 cancelOrder o =
-  o & #state ?~ withDescriptor (withCode "CANCELLED")
-    & #cancellation_reasons ?~ [Option "1" (withName "User cancelled")]
+  o & #state ?~ "CANCELLED"
 
 mkCreateTaskReq :: M.Order.Order -> Flow CreateTaskReq
 mkCreateTaskReq order = do
