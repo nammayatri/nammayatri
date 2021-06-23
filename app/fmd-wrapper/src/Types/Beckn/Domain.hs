@@ -1,3 +1,3 @@
 module Types.Beckn.Domain (module ReExport) where
 
-import Beckn.Types.Core.Domain as ReExport
+import Beckn.Types.Core.Migration.Domain as ReExport

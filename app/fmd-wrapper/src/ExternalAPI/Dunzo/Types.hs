@@ -5,7 +5,6 @@
 
 module ExternalAPI.Dunzo.Types where
 
-import Beckn.Types.Common
 import Beckn.Types.Error.APIError
 import Beckn.Types.Error.BecknAPIError hiding (Error)
 import Beckn.Types.Error.FromResponse
@@ -13,7 +12,6 @@ import Data.Aeson hiding (Error)
 import Data.Char (toLower)
 import EulerHS.Prelude hiding (state)
 import Servant (FromHttpApiData, ToHttpApiData)
-import qualified Types.Beckn.Error as Beckn
 import Types.Common
 
 newtype TaskId = TaskId {getTaskId :: Text}
@@ -192,15 +190,6 @@ data Error = Error
 
 instance FromResponse Error where
   fromResponse = fromJsonResponse
-
-instance ToBeckn Beckn.Error Error where
-  toBeckn Error {..} =
-    Beckn.Error
-      { _type = Beckn.DOMAIN_ERROR,
-        code = dunzoCodeToBecknCode code,
-        path = Nothing,
-        message = Just message
-      }
 
 dunzoCodeToBecknCode :: Text -> Text
 dunzoCodeToBecknCode = \case

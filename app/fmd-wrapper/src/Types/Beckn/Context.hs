@@ -1,3 +1,3 @@
 module Types.Beckn.Context (module ReExport) where
 
-import Beckn.Types.Core.Context as ReExport
+import Beckn.Types.Core.Migration.Context as ReExport

@@ -4,15 +4,12 @@ module Product.Dunzo.Flow where
 
 import App.Types
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Migration.DecimalValue as M.DecimalValue
-import qualified Beckn.Types.Core.Migration.Order as M.Order
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.Callback (WithBecknCallback, WithBecknCallbackMig, withBecknCallback, withBecknCallbackMig)
+import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.Combinators hiding (Context)
-import qualified Data.List as List
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
 import qualified ExternalAPI.Dunzo.Flow as API
@@ -30,8 +27,8 @@ import qualified Types.Beckn.API.Status as StatusAPI
 import qualified Types.Beckn.API.Track as TrackAPI
 import qualified Types.Beckn.API.Types as API
 import qualified Types.Beckn.API.Update as UpdateAPI
-import qualified Types.Beckn.FmdItem as Item
-import Types.Beckn.FmdOrder
+import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
+import Types.Beckn.Order (Order)
 import Types.Common
 import Types.Error
 import Types.Wrapper
@@ -41,11 +38,11 @@ search :: Org.Organization -> API.BecknReq SearchAPI.SearchIntent -> Flow AckRes
 search org req = do
   config@DunzoConfig {..} <- dzConfig <$> ask
   quoteReq <- mkQuoteReqFromSearch req
-  let context = updateBppUriMig (req.context) dzBPNwAddress
+  let context = updateBppUri (req.context) dzBPNwAddress
   bap <- Org.findByBapUrl context.bap_uri >>= fromMaybeM OrgDoesNotExist
   dzBACreds <- getDzBAPCreds bap
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  withCallbackMig "search" SearchAPI.onSearchAPI context cbUrl $
+  withCallback "search" SearchAPI.onSearchAPI context cbUrl $
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog
 
@@ -55,11 +52,11 @@ select _org _req = throwError $ ActionNotSupported "select"
 init :: Org.Organization -> API.BecknReq InitAPI.InitOrder -> Flow AckResponse
 init org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  let context = updateBppUriMig (req.context) dzBPNwAddress
+  let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   -- validateReturn order FIXME
   dzBACreds <- getDzBAPCreds org
-  withCallbackMig "init" InitAPI.onInitAPI context cbUrl $ do
+  withCallback "init" InitAPI.onInitAPI context cbUrl $ do
     let order = req.message
     onInitMessage <-
       mkQuoteReqFromInitOrder order
@@ -110,12 +107,12 @@ init org req = do
 confirm :: Org.Organization -> API.BecknReq API.OrderObject -> Flow AckResponse
 confirm org req = do
   dconf@DunzoConfig {..} <- dzConfig <$> ask
-  let context = updateBppUriMig (req.context) dzBPNwAddress
+  let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req.message.order
   orderId <- fromMaybeErr "INVALID_ORDER_ID" (Just CORE003) $ reqOrder.id
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  (orderDetails :: OrderDetailsMig) <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  (orderDetails :: OrderDetails) <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   let order = orderDetails.order
   validateDelayFromInit dzQuotationTTLinMin case_
   verifyPayment reqOrder order
@@ -126,15 +123,15 @@ confirm org req = do
   let updatedOrderDetailsWTxn =
         orderDetails & ((#order . #payment . #params . _Just . #transaction_id) .~ txnId)
   dzBACreds <- getDzBAPCreds org
-  withCallbackMig "confirm" ConfirmAPI.onConfirmAPI context cbUrl $ do
+  withCallback "confirm" ConfirmAPI.onConfirmAPI context cbUrl $ do
     taskStatus <- createTaskAPI dzBACreds dconf =<< mkCreateTaskReq order
     currTime <- getCurrentTime
-    let uOrder = updateOrderMig currTime (updatedOrderDetailsWTxn.order) taskStatus
+    let uOrder = updateOrder currTime (updatedOrderDetailsWTxn.order) taskStatus
     checkAndLogPriceDiff (updatedOrderDetailsWTxn.order) uOrder
     updateCase case_ (updatedOrderDetailsWTxn & #order .~ uOrder) taskStatus
     return $ API.OrderObject uOrder
   where
-    verifyPayment :: M.Order.Order -> M.Order.Order -> Flow ()
+    verifyPayment :: Order -> Order -> Flow ()
     verifyPayment reqOrder order = do
       confirmAmount <-
         reqOrder ^? #payment . #params . _Just . #amount
@@ -163,8 +160,8 @@ confirm org req = do
 
     checkAndLogPriceDiff initOrder confirmOrder = do
       let orderId = fromMaybe "" $ initOrder.id
-      let initPrice = M.DecimalValue.convertDecimalValueToAmount =<< (initOrder.payment ^? #params . _Just . #amount . _Just)
-      let confirmPrice = M.DecimalValue.convertDecimalValueToAmount =<< (confirmOrder.payment ^? #params . _Just . #amount . _Just)
+      let initPrice = convertDecimalValueToAmount =<< (initOrder.payment ^? #params . _Just . #amount . _Just)
+      let confirmPrice = convertDecimalValueToAmount =<< (confirmOrder.payment ^? #params . _Just . #amount . _Just)
       case (initPrice, confirmPrice) of
         (Just initAmount, Just confirmAmount) -> do
           when (initAmount /= confirmAmount) $
@@ -182,10 +179,10 @@ track :: Org.Organization -> API.BecknReq TrackAPI.TrackInfo -> Flow AckResponse
 track org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
   let orderId = req.message.order_id
-  let context = updateBppUriMig (req.context) dzBPNwAddress
+  let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  withCallbackMig "track" TrackAPI.onTrackAPI context cbUrl $ do
+  withCallback "track" TrackAPI.onTrackAPI context cbUrl $ do
     let taskId = getShortId case_.shortId
     dzBACreds <- getDzBAPCreds org
     mbTrackingUrl <- getStatus dzBACreds conf (TaskId taskId) >>= (maybe (pure Nothing) ((Just <$>) . parseBaseUrl) . (.tracking_url))
@@ -194,16 +191,16 @@ track org req = do
 status :: Org.Organization -> API.BecknReq StatusAPI.OrderId -> Flow AckResponse
 status org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  let context = updateBppUriMig (req.context) dzBPNwAddress
+  let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let orderId = req.message.order_id
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   let taskId = getShortId case_.shortId
-  (orderDetails :: OrderDetailsMig) <-
+  (orderDetails :: OrderDetails) <-
     case_.udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
   dzBACreds <- getDzBAPCreds org
-  withCallbackMig "status" StatusAPI.onStatusAPI context cbUrl $ do
+  withCallback "status" StatusAPI.onStatusAPI context cbUrl $ do
     taskStatus <- getStatus dzBACreds conf (TaskId taskId)
     let order = orderDetails.order
     onStatusMessage <- mkOnStatusMessage order taskStatus
@@ -220,13 +217,13 @@ cancel :: Org.Organization -> API.BecknReq CancelAPI.CancellationInfo -> Flow Ac
 cancel org req = do
   let oId = req.message.order_id
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  let context = updateBppUriMig (req.context) dzBPNwAddress
+  let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id oId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   let taskId = getShortId $ case_.shortId
   orderDetails <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
-  withCallbackMig "cancel" CancelAPI.onCancelAPI context cbUrl $ do
+  withCallback "cancel" CancelAPI.onCancelAPI context cbUrl $ do
     callCancelAPI dzBACreds conf (TaskId taskId)
     let updatedOrder = cancelOrder (orderDetails.order)
     let updatedOrderDetails = orderDetails & #order .~ updatedOrder
@@ -238,7 +235,7 @@ cancel org req = do
       -- TODO get cancellation reason
       API.cancelTask dzClientId token dzUrl dzTestMode taskId ""
 
-    updateCase :: Id Case -> OrderDetailsMig -> Case -> Flow ()
+    updateCase :: Id Case -> OrderDetails -> Case -> Flow ()
     updateCase caseId orderDetails case_ = do
       let updatedCase = case_ {udf1 = Just $ encodeToText orderDetails}
       Storage.update caseId updatedCase
@@ -267,22 +264,5 @@ fetchToken DzBAConfig {..} DunzoConfig {..} = do
       return token
     Just token -> return token
 
-validateReturn :: Order -> Flow ()
-validateReturn currOrder =
-  when (currOrder._type == Just "RETURN") $ do
-    prevOrderId <- currOrder.prev_order_id & fromMaybeM (InvalidRequest "Prev order id is null.")
-    prevOrderCase <- Storage.findById (Id prevOrderId) >>= fromMaybeM CaseDoesNotExist
-    (prevOrderDetails :: OrderDetails) <-
-      prevOrderCase.udf1 >>= decodeFromText
-        & fromMaybeM (InvalidRequest "Decode error.")
-    let prevOrder = prevOrderDetails.order
-    -- validating that the items which are returned should be a subset of items in the actual order.
-    -- would fail when there are duplicates in current order items
-    unless (null $ (Item.id <$> currOrder.items) List.\\ (Item.id <$> prevOrder.items)) $
-      throwError (InvalidRequest "Invalid return order.")
-
-withCallback :: WithBecknCallback api callback_success r
-withCallback = withBecknCallback (Just HttpSig.signatureAuthManagerKey)
-
-withCallbackMig :: WithBecknCallbackMig api callback_success r
-withCallbackMig = withBecknCallbackMig (Just HttpSig.signatureAuthManagerKey)
+withCallback :: WithBecknCallbackMig api callback_success r
+withCallback = withBecknCallbackMig (Just HttpSig.signatureAuthManagerKey)

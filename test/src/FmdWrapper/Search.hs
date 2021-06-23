@@ -3,11 +3,6 @@
 module FmdWrapper.Search where
 
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Migration.Category as Mig
-import qualified Beckn.Types.Core.Migration.Context as Mig
-import qualified Beckn.Types.Core.Migration.Descriptor as M.Descriptor
-import qualified Beckn.Types.Core.Migration.Domain as Mig
-import qualified Beckn.Types.Core.Migration.Gps as Gps
 import Beckn.Utils.Example
 import Common
 import Control.Lens (Setter', _Just)
@@ -24,23 +19,28 @@ import Servant.Client
 import Test.Hspec hiding (context, example)
 import qualified "fmd-wrapper" Types.Beckn.API.Search as SearchAPI
 import qualified "fmd-wrapper" Types.Beckn.API.Types as API
+import "fmd-wrapper" Types.Beckn.Category (Category (..))
+import "fmd-wrapper" Types.Beckn.Context (Context (..))
+import qualified "fmd-wrapper" Types.Beckn.Descriptor as Descriptor
+import "fmd-wrapper" Types.Beckn.Domain (Domain (..))
 import qualified "fmd-wrapper" Types.Beckn.Error as Error
+import "fmd-wrapper" Types.Beckn.Gps (Gps (..))
 import Utils
 
-setPickupGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) Gps.Gps
+setPickupGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) Gps
 setPickupGps = #message . #intent . #fulfillment . _Just . #start . _Just . #location . _Just . #gps . _Just
 
-setDropGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) Gps.Gps
+setDropGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) Gps
 setDropGps = #message . #intent . #fulfillment . _Just . #end . _Just . #location . _Just . #gps . _Just
 
-gps1 :: Gps.Gps
-gps1 = Gps.Gps 12.9729391 77.6294794
+gps1 :: Gps
+gps1 = Gps 12.9729391 77.6294794
 
-gps2 :: Gps.Gps
-gps2 = Gps.Gps 12.9354504 77.6146828
+gps2 :: Gps
+gps2 = Gps 12.9354504 77.6146828
 
-gps3 :: Gps.Gps
-gps3 = Gps.Gps 13.0827 80.2707
+gps3 :: Gps
+gps3 = Gps 13.0827 80.2707
 
 numberOfDunzoCategores :: Int
 numberOfDunzoCategores = 6
@@ -52,10 +52,10 @@ runSearch clientEnv orgId searchReq = do
   let searchAPI = Proxy :: Proxy (Header "Authorization" Text :> SearchAPI.SearchAPI)
   runClient clientEnv $ client searchAPI (Just signature) searchReq
 
-verifyCallbackContext :: Bool -> Text -> Mig.Context -> IO ()
+verifyCallbackContext :: Bool -> Text -> Context -> IO ()
 verifyCallbackContext expectBppUri transactionId context = do
   context.country `shouldBe` "IND"
-  context.domain `shouldBe` Mig.Domain "FINAL-MILE-DELIVERY"
+  context.domain `shouldBe` Domain "FINAL-MILE-DELIVERY"
   when expectBppUri $ context.bpp_uri `shouldSatisfy` isJust
   context.transaction_id `shouldBe` transactionId
   context.action `shouldBe` "on_search"
@@ -71,13 +71,13 @@ verifyDunzoCatalog onSearchCatalog = do
   case categories of
     [category] ->
       category
-        `shouldBe` Mig.Category
+        `shouldBe` Category
           (Just "1")
           Nothing
           ( Just
-              M.Descriptor.emptyDescriptor
-                { M.Descriptor.name = Just "Pickup and drop",
-                  M.Descriptor.code = Just "pickup_drop"
+              Descriptor.emptyDescriptor
+                { Descriptor.name = Just "Pickup and drop",
+                  Descriptor.code = Just "pickup_drop"
                 }
           )
           Nothing
@@ -115,15 +115,15 @@ processResults transactionId callbackData = do
         verifyCallbackContext True transactionId $ searchResult.context
 
 dunzoLocationError ::
-  Gps.Gps ->
-  Gps.Gps ->
+  Gps ->
+  Gps ->
   (Error.Error -> Expectation) ->
   ClientEnv ->
   CallbackData ->
   IO ()
 dunzoLocationError pickupGps dropGps check clientEnv callbackData =
   withNewUUID $ \transactionId -> do
-    ctx <- buildContextMig "search" transactionId Nothing
+    ctx <- buildContext "search" transactionId Nothing
 
     let searchReq =
           buildFMDSearchReq ctx
@@ -144,7 +144,7 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
 successfulSearch :: ClientEnv -> CallbackData -> IO ()
 successfulSearch clientEnv callbackData =
   withNewUUID $ \transactionId -> do
-    ctx <- buildContextMig "search" transactionId Nothing
+    ctx <- buildContext "search" transactionId Nothing
 
     let searchReq =
           buildFMDSearchReq ctx
@@ -195,7 +195,7 @@ dunzoDifferentCity =
 
 incorrectApiKey :: ClientEnv -> CallbackData -> IO ()
 incorrectApiKey clientEnv _ = do
-  ctx <- buildContextMig "search" "dummy-txn-id" Nothing
+  ctx <- buildContext "search" "dummy-txn-id" Nothing
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "" searchReq
@@ -203,7 +203,7 @@ incorrectApiKey clientEnv _ = do
 
 incorrectAction :: ClientEnv -> CallbackData -> IO ()
 incorrectAction clientEnv _ = do
-  ctx <- buildContextMig "" "dummy-txn-id" Nothing
+  ctx <- buildContext "" "dummy-txn-id" Nothing
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
@@ -211,16 +211,16 @@ incorrectAction clientEnv _ = do
 
 incorrectCountry :: ClientEnv -> CallbackData -> IO ()
 incorrectCountry clientEnv _ = do
-  ctx <- buildContextMig "search" "dummy-txn-id" Nothing
-  let searchReq = buildFMDSearchReq ctx {Mig.country = ""}
+  ctx <- buildContext "search" "dummy-txn-id" Nothing
+  let searchReq = buildFMDSearchReq ctx {country = ""}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "INVALID_COUNTRY" gatewayResponse
 
 incorrectCoreVersion :: ClientEnv -> CallbackData -> IO ()
 incorrectCoreVersion clientEnv _ = do
-  ctx <- buildContextMig "search" "dummy-txn-id" Nothing
-  let searchReq = buildFMDSearchReq ctx {Mig.core_version = "0.7.0"}
+  ctx <- buildContext "search" "dummy-txn-id" Nothing
+  let searchReq = buildFMDSearchReq ctx {core_version = "0.7.0"}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse

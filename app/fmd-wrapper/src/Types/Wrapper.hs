@@ -1,12 +1,10 @@
 module Types.Wrapper where
 
 import Beckn.Types.App
-import qualified Beckn.Types.Core.Migration.Order as Mig
-import qualified Beckn.Types.Core.Migration.Quotation as Mig
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
-import Types.Beckn.FmdOrder
-import Types.Beckn.Quotation
+import Types.Beckn.Order (Order)
+import Types.Beckn.Quotation (Quotation)
 import Types.Common
 
 -- BAP with Dunzo account will have these details
@@ -32,12 +30,6 @@ data DunzoConfig = DunzoConfig
 data OrderDetails = OrderDetails
   { order :: Order,
     quote :: Quotation
-  }
-  deriving (Show, Generic, ToJSON, FromJSON)
-
-data OrderDetailsMig = OrderDetailsMig
-  { order :: Mig.Order,
-    quote :: Mig.Quotation
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 

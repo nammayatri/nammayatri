@@ -6,27 +6,7 @@ import App.Types
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Migration.Catalog as M.Catalog
-import qualified Beckn.Types.Core.Migration.Category as M.Category
-import qualified Beckn.Types.Core.Migration.Contact as M.Contact
-import qualified Beckn.Types.Core.Migration.Context as M.Context
-import qualified Beckn.Types.Core.Migration.DecimalValue as M.DecimalValue
-import qualified Beckn.Types.Core.Migration.Descriptor as M.Descriptor
-import qualified Beckn.Types.Core.Migration.Duration as M.Duration
-import qualified Beckn.Types.Core.Migration.Fulfillment as M.Fulfillment
-import qualified Beckn.Types.Core.Migration.Gps as M.Gps
-import qualified Beckn.Types.Core.Migration.Item as M.Item
-import qualified Beckn.Types.Core.Migration.Location as M.Location
-import qualified Beckn.Types.Core.Migration.Order as M.Order
-import qualified Beckn.Types.Core.Migration.Payment as M.Payment
-import qualified Beckn.Types.Core.Migration.Person as M.Person
-import qualified Beckn.Types.Core.Migration.Price as M.Price
-import qualified Beckn.Types.Core.Migration.Provider as M.Provider
-import qualified Beckn.Types.Core.Migration.Quotation as M.Quotation
-import qualified Beckn.Types.Core.Migration.Time as M.Time
-import qualified Beckn.Types.Core.Migration.Tracking as M.Tracking
 import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Utils.JSON
 import Control.Lens (element, (?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.HashMap.Strict as HMS
@@ -40,21 +20,25 @@ import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
 import qualified Types.Beckn.API.Track as TrackAPI
 import qualified Types.Beckn.API.Types as API
-import Types.Beckn.Context
-import Types.Beckn.DecimalValue
-import Types.Beckn.Descriptor
-import Types.Beckn.FmdOrder
-import Types.Beckn.MonetaryValue
-import Types.Beckn.Operator
-import Types.Beckn.Option
-import Types.Beckn.Payment
-import Types.Beckn.PaymentEndpoint
-import Types.Beckn.Person
-import Types.Beckn.Price
-import Types.Beckn.Quotation
-import Types.Beckn.State
-import Types.Beckn.Task hiding (TaskState)
-import qualified Types.Beckn.Task as Beckn (TaskState (..))
+import Types.Beckn.Catalog (Catalog (..))
+import Types.Beckn.Category (Category (..))
+import Types.Beckn.Contact (Contact)
+import Types.Beckn.Context (Context (..))
+import Types.Beckn.DecimalValue (DecimalValue (..), convertAmountToDecimalValue)
+import Types.Beckn.Descriptor (emptyDescriptor)
+import Types.Beckn.Duration (Duration (..))
+import Types.Beckn.Fulfillment (Fulfillment (..), FulfillmentDetails (..))
+import Types.Beckn.Gps (Gps (..))
+import Types.Beckn.Item (Item (..))
+import Types.Beckn.Location (Location)
+import Types.Beckn.Order (Order)
+import Types.Beckn.Payment (Params (..), Payment (..), PaymentType (..))
+import Types.Beckn.Person (Person)
+import Types.Beckn.Price (Price (..))
+import Types.Beckn.Provider (Provider (..))
+import Types.Beckn.Quotation (Quotation (..))
+import Types.Beckn.Time (Time (..))
+import Types.Beckn.Tracking (Tracking (..))
 import Types.Error
 import Types.Wrapper
 import Utils.Common
@@ -116,7 +100,7 @@ mkOnSearchCatalog res@QuoteRes {..} =
   SearchAPI.OnSearchCatalog catalog
   where
     catalog =
-      M.Catalog.Catalog
+      Catalog
         { bpp_descriptor = Nothing,
           bpp_categories = Nothing,
           bpp_fulfillments = Nothing,
@@ -124,25 +108,23 @@ mkOnSearchCatalog res@QuoteRes {..} =
           bpp_offers = Nothing,
           bpp_providers =
             Just
-              [ M.Provider.Provider
+              [ Provider
                   { id = Nothing, -- TBD: https://docs.google.com/document/d/1EqI0lpOXpIdy8uLOZbRevwqr25sn6_lKqLlgWPN1kTs/
                     descriptor =
-                      Just
-                        M.Descriptor.emptyDescriptor
-                          { M.Descriptor.name = Just "Dunzo Digital Private Limited"
-                          },
+                      Just $
+                        emptyDescriptor
+                          & #name ?~ "Dunzo Digital Private Limited",
                     time = Nothing,
                     categories =
                       Just
-                        [ M.Category.Category
+                        [ Category
                             { id = Just dunzoServiceCategoryId,
                               parent_category_id = Nothing,
                               descriptor =
-                                Just
-                                  M.Descriptor.emptyDescriptor
-                                    { M.Descriptor.name = Just "Pickup and drop",
-                                      M.Descriptor.code = Just "pickup_drop"
-                                    },
+                                Just $
+                                  emptyDescriptor
+                                    & #name ?~ "Pickup and drop"
+                                    & #code ?~ "pickup_drop",
                               time = Nothing,
                               tags = Nothing
                             }
@@ -167,20 +149,16 @@ mkOnSearchCatalog res@QuoteRes {..} =
 updateBppUri :: Context -> BaseUrl -> Context
 updateBppUri Context {..} bpNwAddress = Context {bpp_uri = Just bpNwAddress, ..}
 
-updateBppUriMig :: M.Context.Context -> BaseUrl -> M.Context.Context
-updateBppUriMig M.Context.Context {..} bpNwAddress = M.Context.Context {bpp_uri = Just bpNwAddress, ..}
-
-mkSearchItem :: Integer -> PackageContent -> QuoteRes -> M.Item.Item
+mkSearchItem :: Integer -> PackageContent -> QuoteRes -> Item
 mkSearchItem index packageContent QuoteRes {..} =
-  M.Item.Item
+  Item
     { id = Just $ show index,
       parent_item_id = Nothing,
       descriptor =
         Just $
-          M.Descriptor.emptyDescriptor
-            { M.Descriptor.name = Just $ packageContent.content,
-              M.Descriptor.code = Just $ packageContent.content
-            },
+          emptyDescriptor
+            & #name ?~ packageContent.content
+            & #code ?~ packageContent.content,
       price = Just price,
       category_id = Just dunzoServiceCategoryId,
       location_id = Nothing,
@@ -192,7 +170,7 @@ mkSearchItem index packageContent QuoteRes {..} =
     }
   where
     price =
-      M.Price.Price
+      Price
         { currency = Just "INR",
           value = Nothing,
           estimated_value = Just value,
@@ -202,27 +180,7 @@ mkSearchItem index packageContent QuoteRes {..} =
           minimum_value = Nothing,
           maximum_value = Nothing
         }
-    value = M.DecimalValue.convertAmountToDecimalValue (Amount $ toRational estimated_price)
-
-mkQuote :: Integer -> QuoteRes -> Flow Quotation
-mkQuote quotationTTLinMin QuoteRes {..} = do
-  qid <- generateGUID
-  now <- getCurrentTime
-  let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
-  return $ Quotation {id = qid, price = Just price, ttl = Just validTill, breakup = Nothing}
-  where
-    price = mkPrice estimated_price
-    mkPrice estimatedPrice =
-      Price
-        { currency = "INR",
-          value = Nothing,
-          estimated_value = Just $ convertAmountToDecimalValue $ Amount $ toRational estimatedPrice,
-          computed_value = Nothing,
-          listed_value = Nothing,
-          offered_value = Nothing,
-          minimum_value = Nothing,
-          maximum_value = Nothing
-        }
+    value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
 
 mkOnInitMessage :: Integer -> InitAPI.InitOrder -> QuoteRes -> Flow InitAPI.Initialized
 mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
@@ -244,7 +202,7 @@ mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
         billing = Just order.billing,
         fulfillment =
           Just $
-            M.Fulfillment.Fulfillment
+            Fulfillment
               { id = Nothing,
                 _type = Nothing,
                 state = Nothing,
@@ -259,22 +217,22 @@ mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
               },
         quote =
           Just $
-            M.Quotation.Quotation
+            Quotation
               { price = Just price,
                 breakup = Nothing,
-                ttl = Just . M.Duration.Duration . T.pack $ iso8601Show validTill
+                ttl = Just . Duration . T.pack $ iso8601Show validTill
               },
-        payment = Just $ mkPaymentMig estimated_price
+        payment = Just $ mkPayment estimated_price
       }
   where
     getItem [item] = pure item
     getItem _ = throwError $ InvalidRequest "Exactly 1 order item expected."
     price = mkPrice estimated_price
     mkPrice estimatedPrice =
-      M.Price.Price
+      Price
         { currency = Just "INR",
           value = Nothing,
-          estimated_value = Just $ M.DecimalValue.convertAmountToDecimalValue $ Amount $ toRational estimatedPrice,
+          estimated_value = Just $ convertAmountToDecimalValue $ Amount $ toRational estimatedPrice,
           computed_value = Nothing,
           listed_value = Nothing,
           offered_value = Nothing,
@@ -282,64 +240,16 @@ mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
           maximum_value = Nothing
         }
 
-{-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
-mkOnStatusMessage :: M.Order.Order -> TaskStatus -> Flow API.OrderObject
+mkOnStatusMessage :: Order -> TaskStatus -> Flow API.OrderObject
 mkOnStatusMessage order status = do
   now <- getCurrentTime
-  return . API.OrderObject $ updateOrderMig now order status
+  return . API.OrderObject $ updateOrder now order status
 
-updateOrder :: Text -> UTCTime -> Order -> PaymentEndpoint -> TaskStatus -> Order
-updateOrder orgName cTime order payee status = do
+updateOrder :: UTCTime -> Order -> TaskStatus -> Order
+updateOrder cTime order status = do
   -- TODO: this assumes that there is one task per order
   let orderState = mapTaskStateToOrderState (status.state)
-  let cancellationReasonIfAny =
-        case status.state of
-          CANCELLED -> Just [Option "1" (withName "User cancelled")]
-          RUNNER_CANCELLED -> Just [Option "1" (withName "Agent cancelled")]
-          _ -> Nothing
-  let payment = mkPayment payee <$> status.estimated_price
-  order & #state ?~ orderState
-    & #updated_at ?~ cTime
-    & #payment .~ (payment <|> order.payment)
-    & #cancellation_reasons .~ (cancellationReasonIfAny <|> order.cancellation_reasons)
-    & #tasks .~ (updateTask <$> (order.tasks))
-  where
-    updateTask task = do
-      let taskState = mapTaskState (status.state)
-      let eta = status.eta
-      let pickup = task.pickup
-      let drop = task.drop
-
-      let pickupEta = calcEta cTime <$> ((.pickup) =<< eta)
-      let dropEta = calcEta cTime . (.dropoff) <$> eta
-      let pickup' = pickup & #time .~ (pickupEta <|> pickup.time)
-      let drop' = drop & #time .~ (dropEta <|> drop.time)
-
-      task & #agent .~ (getAgent <$> status.runner)
-        & #state .~ (taskState <|> task.state)
-        & #updated_at ?~ cTime
-        & #pickup .~ pickup'
-        & #drop .~ drop'
-
-    getAgent runner =
-      Operator
-        { name = withGivenName $ runner.name,
-          image = n,
-          dob = n,
-          organization_name = Just orgName,
-          gender = n,
-          email = n,
-          phones = [runner.phone_number],
-          experience = n
-        }
-
-    n = Nothing
-
-updateOrderMig :: UTCTime -> M.Order.Order -> TaskStatus -> M.Order.Order
-updateOrderMig cTime order status = do
-  -- TODO: this assumes that there is one task per order
-  let orderState = mapTaskStateToOrderStateMig (status.state)
-  let mbPayment = mkPaymentMig <$> status.estimated_price
+  let mbPayment = mkPayment <$> status.estimated_price
   order & #state ?~ orderState
     & #updated_at ?~ cTime
     & #payment .~ fromMaybe order.payment mbPayment
@@ -348,17 +258,17 @@ mkOnTrackMessage :: Maybe BaseUrl -> TrackAPI.OnTrackInfo
 mkOnTrackMessage mbTrackingUrl = TrackAPI.OnTrackInfo tracking
   where
     tracking =
-      M.Tracking.Tracking
+      Tracking
         { tl_method = Nothing,
           url = mbTrackingUrl,
           status = Nothing
         }
 
-cancelOrder :: M.Order.Order -> M.Order.Order
+cancelOrder :: Order -> Order
 cancelOrder o =
   o & #state ?~ "CANCELLED"
 
-mkCreateTaskReq :: M.Order.Order -> Flow CreateTaskReq
+mkCreateTaskReq :: Order -> Flow CreateTaskReq
 mkCreateTaskReq order = do
   orderId <- order.id & fromMaybeErr "ORDER_ID_MISSING" (Just CORE003)
   pickUpLoc <- order ^? #fulfillment . #start . _Just . #location . _Just & fromMaybeM (InvalidRequest "Pick up location not specified.")
@@ -395,10 +305,10 @@ mkCreateTaskReq order = do
         reference_id = Nothing
       }
   where
-    mkLocationDetails :: M.Location.Location -> Flow LocationDetails
+    mkLocationDetails :: Location -> Flow LocationDetails
     mkLocationDetails location = do
       -- FIXME: Much of these can be optional I'm pretty sure.
-      (M.Gps.Gps lat lon) <- location.gps & fromMaybeErr "LAT_LON_NOT_FOUND" (Just CORE003)
+      (Gps lat lon) <- location.gps & fromMaybeErr "LAT_LON_NOT_FOUND" (Just CORE003)
       address <- location.address & fromMaybeErr "ADDRESS_NOT_FOUND" (Just CORE003)
       door <- address.door & fromMaybeErr "DOOR_NOT_FOUND" (Just CORE003)
       street <- address.street & fromMaybeErr "STREET_NOT_FOUND" (Just CORE003)
@@ -422,7 +332,7 @@ mkCreateTaskReq order = do
                 }
           }
 
-    mkPersonDetails :: M.Person.Person -> M.Contact.Contact -> Flow PersonDetails
+    mkPersonDetails :: Person -> Contact -> Flow PersonDetails
     mkPersonDetails person contact = do
       phone <- contact.phone & fromMaybeErr "PERSON_PHONENUMBER_NOT_FOUND" (Just CORE003)
       return $
@@ -445,41 +355,8 @@ mkCreateTaskReq order = do
             (Just pickupInst, Nothing) -> Just $ orderMsg <> ": " <> pickupInst
             _ -> Just orderMsg
 
-mapTaskState :: TaskState -> Maybe State
-mapTaskState s =
-  let mstate = case s of
-        CREATED -> Just Beckn.SEARCHING_FOR_FMD_AGENT
-        QUEUED -> Just Beckn.SEARCHING_FOR_FMD_AGENT
-        RUNNER_ACCEPTED -> Just Beckn.ASSIGNED_AGENT
-        REACHED_FOR_PICKUP -> Just Beckn.AT_PICKUP_LOCATION
-        PICKUP_COMPLETE -> Just Beckn.PICKED_UP_PACKAGE
-        STARTED_FOR_DELIVERY -> Just Beckn.EN_ROUTE_TO_DROP
-        REACHED_FOR_DELIVERY -> Just Beckn.AT_DROP_LOCATION
-        DELIVERED -> Just Beckn.DROPPED_PACKAGE
-        CANCELLED -> Nothing
-        RUNNER_CANCELLED -> Nothing
-   in toState <$> mstate
-  where
-    toState taskState =
-      withDescriptor $ withCode $ replaceUnderscores $ show taskState
-
-mapTaskStateToOrderState :: TaskState -> State
-mapTaskStateToOrderState s = do
-  let code = case s of
-        CREATED -> "ACTIVE"
-        QUEUED -> "ACTIVE"
-        RUNNER_ACCEPTED -> "ACTIVE"
-        REACHED_FOR_PICKUP -> "ACTIVE"
-        PICKUP_COMPLETE -> "ACTIVE"
-        STARTED_FOR_DELIVERY -> "ACTIVE"
-        REACHED_FOR_DELIVERY -> "ACTIVE"
-        DELIVERED -> "COMPLETED"
-        CANCELLED -> "CANCELLED"
-        RUNNER_CANCELLED -> "CANCELLED"
-  withDescriptor $ withCode code
-
-mapTaskStateToOrderStateMig :: TaskState -> Text
-mapTaskStateToOrderStateMig s =
+mapTaskStateToOrderState :: TaskState -> Text
+mapTaskStateToOrderState s =
   case s of
     CREATED -> "ACTIVE"
     QUEUED -> "ACTIVE"
@@ -492,21 +369,7 @@ mapTaskStateToOrderStateMig s =
     CANCELLED -> "CANCELLED"
     RUNNER_CANCELLED -> "CANCELLED"
 
-updateTaskEta :: Task -> Eta -> Flow Task
-updateTaskEta task eta = do
-  now <- getCurrentTime
-  let pickup = task.pickup
-  let drop = task.drop
-
-  let pickupEta = calcEta now <$> (eta.pickup) <|> (task.pickup.time)
-  let dropEta = calcEta now (eta.dropoff)
-  let pickup' = pickup & #time .~ pickupEta
-  let drop' = drop & #time ?~ dropEta
-  return $
-    task & #pickup .~ pickup'
-      & #drop .~ drop'
-
-updateOrderEta :: M.Fulfillment.FulfillmentDetails -> M.Fulfillment.FulfillmentDetails -> UTCTime -> Eta -> Flow (M.Fulfillment.FulfillmentDetails, M.Fulfillment.FulfillmentDetails)
+updateOrderEta :: FulfillmentDetails -> FulfillmentDetails -> UTCTime -> Eta -> Flow (FulfillmentDetails, FulfillmentDetails)
 updateOrderEta startInfo endInfo now eta = do
   let pickupEta = calcEta now <$> eta.pickup <|> (startInfo.time >>= (.timestamp))
   let dropEta = calcEta now eta.dropoff
@@ -515,7 +378,7 @@ updateOrderEta startInfo endInfo now eta = do
   return (startInfo & #time .~ pickupEtaTime, endInfo & #time ?~ dropEtaTime)
   where
     mkTimeObject time =
-      M.Time.Time
+      Time
         { label = Nothing,
           timestamp = Just time,
           duration = Nothing,
@@ -523,40 +386,20 @@ updateOrderEta startInfo endInfo now eta = do
           days = Nothing
         }
 
-mkPayment :: PaymentEndpoint -> Float -> Payment
-mkPayment payee estimated_price =
+mkPayment :: Float -> Payment
+mkPayment estimated_price =
   Payment
-    { transaction_id = Nothing,
-      _type = Just "PRE-FULFILLMENT",
-      payer = Nothing,
-      payee = Just payee,
-      methods = ["RTGS"],
-      amount = price,
-      state = Nothing,
-      due_date = Nothing,
-      duration = Nothing
-    }
-  where
-    price =
-      MonetaryValue
-        { currency = "INR",
-          value = convertAmountToDecimalValue $ Amount $ toRational estimated_price
-        }
-
-mkPaymentMig :: Float -> M.Payment.Payment
-mkPaymentMig estimated_price =
-  M.Payment.Payment
     { uri = Nothing,
       tl_method = Nothing,
       params =
         Just
-          M.Payment.Params
+          Params
             { transaction_id = Nothing,
-              amount = Just . M.DecimalValue.DecimalValue $ show estimated_price,
+              amount = Just . DecimalValue $ show estimated_price,
               additional = HMS.empty
             },
       payee = Nothing,
-      _type = Just M.Payment.PRE_FULFILLMENT,
+      _type = Just PRE_FULFILLMENT,
       status = Nothing,
       time = Nothing
     }
