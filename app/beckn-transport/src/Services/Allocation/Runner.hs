@@ -14,7 +14,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
-import Types.Metrics (BTMMetrics)
+import Types.Metrics (BTMMetrics, CoreMetrics)
 import Types.ShardMappingError
 import Utils.Common
 import App.BackgroundTaskManager.Types
@@ -25,7 +25,8 @@ handle ::
     HasFlowEncEnv m r,
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Integer, "nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   Allocation.ServiceHandle m
 handle =
@@ -81,7 +82,8 @@ run ::
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Integer, "nwAddress" ::: BaseUrl],
     HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
-    HasFlowEnv m r '["isShuttingDown" ::: TMVar ()]
+    HasFlowEnv m r '["isShuttingDown" ::: TMVar ()],
+    CoreMetrics m
   ) =>
   m ()
 run = do

@@ -50,6 +50,7 @@ import Types.API.Location (LatLong (..))
 import Types.API.Person
 import Types.App (Driver)
 import Types.Error
+import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.DriverInformation as DriverInformation
 import Types.Storage.TransporterConfig (ConfigKey (ConfigKey))
 import Utils.Common
@@ -193,7 +194,15 @@ mkPersonRes person = do
         linkedEntity = entity
       }
 
-sendInviteSms :: HasFlowDBEnv m r => SmsConfig -> Text -> Text -> Text -> m ()
+sendInviteSms ::
+  ( HasFlowDBEnv m r,
+    CoreMetrics m
+  ) =>
+  SmsConfig ->
+  Text ->
+  Text ->
+  Text ->
+  m ()
 sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
   let url = smsCfg.url
   let smsCred = smsCfg.credConfig

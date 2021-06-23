@@ -19,12 +19,14 @@ import Product.FareCalculator.Flow
 import qualified Product.Location as Location
 import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Domain.FarePolicy
+import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.FarePolicy as FarePolicyS
 import Utils.Common
 
 calculateFare ::
   ( HasFlowDBEnv m r,
-    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    CoreMetrics m
   ) =>
   Id Organization ->
   Vehicle.Variant ->
@@ -51,7 +53,12 @@ calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
     $ "Fare parameters calculated: " +|| fareParams ||+ ". Total fare: " +|| totalFare ||+ ""
   pure totalFare
 
-serviceHandle :: (HasFlowDBEnv m r, HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]) => ServiceHandle m
+serviceHandle ::
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do

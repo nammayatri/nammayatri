@@ -28,7 +28,13 @@ cancel person req = withFlowHandlerAPI $ do
     Cancel.CASE -> searchCancel person req
     Cancel.PRODUCT_INSTANCE -> cancelProductInstance person req
 
-cancelProductInstance :: HasFlowDBEnv m r => Person.Person -> CancelReq -> m CancelRes
+cancelProductInstance ::
+  ( HasFlowDBEnv m r,
+    CoreMetrics m
+  ) =>
+  Person.Person ->
+  CancelReq ->
+  m CancelRes
 cancelProductInstance person req = do
   let prodInstId = req.entityId
   searchPI <- MPI.findById (Id prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product

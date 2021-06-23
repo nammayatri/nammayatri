@@ -20,6 +20,7 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.Registration
 import Types.Error
+import Types.Metrics
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -37,7 +38,8 @@ initiateFlow ::
   ( HasFlowEncEnv m r,
     HasFlowDBEnv m r,
     HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
-    HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions, "otpSmsTemplate" ::: Text]
+    HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions, "otpSmsTemplate" ::: Text],
+    CoreMetrics m
   ) =>
   InitiateLoginReq ->
   SmsConfig ->

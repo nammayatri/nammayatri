@@ -16,6 +16,7 @@ import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Person as PSQ
 import qualified Storage.Queries.ProductInstance as CPQ
 import Types.API.Cron
+import Types.Metrics
 import qualified Utils.Notifications as Notify
 
 expireCases :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireRes
@@ -38,7 +39,8 @@ expireCases maybeAuth ExpireCaseReq {..} = withFlowHandlerAPI $ do
 notifyTransporters ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
-    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   [C.Case] ->
   [PI.ProductInstance] ->

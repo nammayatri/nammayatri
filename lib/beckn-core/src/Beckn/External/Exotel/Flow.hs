@@ -2,6 +2,7 @@ module Beckn.External.Exotel.Flow where
 
 import Beckn.External.Exotel.Types
 import Beckn.Types.Common
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T
@@ -34,7 +35,9 @@ defaultBaseUrl sid =
     }
 
 initiateCall ::
-  HasFlowEnv m r '["exotelCfg" ::: Maybe ExotelCfg] =>
+  ( CoreMetrics m,
+    HasFlowEnv m r '["exotelCfg" ::: Maybe ExotelCfg]
+  ) =>
   T.Text ->
   T.Text ->
   m ()

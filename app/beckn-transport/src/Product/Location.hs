@@ -15,6 +15,7 @@ import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import Types.API.Location as Location
+import Types.Metrics
 import Utils.Common
 
 updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
@@ -44,7 +45,9 @@ getLocation piId = withFlowHandlerAPI $ do
   return $ GetLocationRes {location = Location.LocationInfo lat long}
 
 getRoute' ::
-  HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl] =>
+  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
   Double ->
   Double ->
   Double ->
@@ -78,7 +81,9 @@ getRoute _ Location.Request {..} =
         }
 
 calculateDistance ::
-  HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl] =>
+  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
   Location.Location ->
   Location.Location ->
   m (Maybe Float)

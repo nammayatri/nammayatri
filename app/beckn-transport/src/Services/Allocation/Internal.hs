@@ -22,6 +22,7 @@ import Types.API.Ride (DriverResponse (..))
 import App.BackgroundTaskManager.Types
 import Types.App
 import Types.Error
+import Types.Metrics (CoreMetrics)
 import Types.Storage.AllocationEvent (AllocationEventType)
 import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
@@ -50,7 +51,8 @@ assignDriver ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   Id Ride ->
   Id Driver ->
@@ -86,7 +88,8 @@ cleanupOldNotifications = QNS.cleanupOldNotifications
 sendNewRideNotification ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
-    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   Id Ride ->
   Id Driver ->
@@ -99,7 +102,8 @@ sendNewRideNotification rideId driverId = do
 sendRideNotAssignedNotification ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
-    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   Id Ride ->
   Id Driver ->
@@ -139,7 +143,8 @@ cancelRide ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   Id Ride ->
   m ()

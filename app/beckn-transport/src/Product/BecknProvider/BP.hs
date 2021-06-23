@@ -45,6 +45,7 @@ import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
 import Types.App (Ride)
 import Types.Error
+import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.RideRequest as SRideRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
@@ -66,7 +67,8 @@ cancelRide ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   Id Ride ->
   Bool ->
@@ -128,7 +130,10 @@ serviceStatus transporterId bapOrg req = withFlowHandlerBecknAPI $ do
     mkOnServiceStatusPayload piId trackerPi
 
 notifyServiceStatusToGateway ::
-  (HasFlowDBEnv m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
   Organization.Organization ->
   ProductInstance.ProductInstance ->
   ProductInstance.ProductInstance ->
@@ -175,7 +180,8 @@ trackTrip transporterId org req = withFlowHandlerBecknAPI $
 notifyTripInfoToGateway ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
   ) =>
   ProductInstance.ProductInstance ->
   Id Case.Case ->
@@ -189,7 +195,8 @@ notifyTripInfoToGateway prodInst trackerCaseId transporter parentCaseId = do
 notifyCancelToGateway ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
   ) =>
   ProductInstance.ProductInstance ->
   Organization.Organization ->

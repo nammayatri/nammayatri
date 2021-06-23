@@ -5,13 +5,15 @@ import qualified Beckn.External.Graphhopper.Types as Grphr
 import Beckn.Types.Common
 import Beckn.Types.Error.API
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import Data.Geospatial hiding (bbox)
 import EulerHS.Prelude
 import Prelude (atan2)
 
 getRouteMb ::
-  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+  ( CoreMetrics m,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
   MapSearch.Request ->
   m (Maybe MapSearch.Route)
@@ -20,7 +22,8 @@ getRouteMb request =
     `catch` \(_ :: RouteError) -> pure Nothing
 
 getRoute ::
-  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+  ( CoreMetrics m,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
   MapSearch.Request ->
   m MapSearch.Response

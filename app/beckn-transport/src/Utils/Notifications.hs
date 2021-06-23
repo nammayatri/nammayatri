@@ -3,6 +3,7 @@ module Utils.Notifications where
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance as ProductInstance
@@ -13,7 +14,9 @@ import EulerHS.Prelude
 
 -- | Send FCM "cancel" notification to driver
 notifyDriverOnCancel ::
-  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
+  ) =>
   Case ->
   Person ->
   m ()
@@ -39,7 +42,9 @@ notifyDriverOnCancel c =
           ]
 
 notifyOnRegistration ::
-  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
+  ) =>
   RegistrationToken ->
   Person ->
   m ()
@@ -64,7 +69,9 @@ notifyOnRegistration regToken =
           ]
 
 notifyTransporterOnExpiration ::
-  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
+  ) =>
   Case ->
   [Person] ->
   m ()
@@ -90,7 +97,9 @@ notifyTransporterOnExpiration c =
           ]
 
 notifyCancelReqByBP ::
-  HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
+  ) =>
   ProductInstance ->
   [Person] ->
   m ()
@@ -115,7 +124,9 @@ notifyCancelReqByBP p =
           ]
 
 notifyDriverCancelledRideRequest ::
-  HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
+  ) =>
   ProductInstance ->
   [Person] ->
   m ()
@@ -139,7 +150,9 @@ notifyDriverCancelledRideRequest p = traverse_ (notifyPerson notificationData)
           ]
 
 notifyDriver ::
-  HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
+  ) =>
   FCM.FCMNotificationType ->
   Text ->
   Text ->
@@ -161,7 +174,9 @@ notifyDriver notificationType notificationTitle message driver =
       FCMNotificationBody message
 
 notifyDriverNewAllocation ::
-  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
+  ) =>
   ProductInstance ->
   Person ->
   m ()
@@ -184,7 +199,9 @@ notifyDriverNewAllocation productInstance = notifyPerson notificationData
         }
 
 notifyDriverUnassigned ::
-  HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ( HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
+  ) =>
   ProductInstance ->
   Person ->
   m ()

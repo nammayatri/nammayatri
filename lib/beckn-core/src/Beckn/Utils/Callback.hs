@@ -8,12 +8,13 @@ import qualified Beckn.Types.Core.Migration.API.Types as API
 import qualified Beckn.Types.Core.Migration.Context as M.Context
 import Beckn.Types.Error
 import Beckn.Types.Error.BecknAPIError
-import Beckn.Utils.Error (fromMaybeM)
 import Beckn.Utils.Error.BecknAPIError
 import Beckn.Utils.Error.FlowHandling
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant.Client
+import Beckn.Utils.Common
+import Beckn.Types.Monitoring.Prometheus.Metrics
 
 toCallbackReq :: Context -> a -> CallbackReq a
 toCallbackReq context a =
@@ -38,8 +39,9 @@ someExceptionToCallbackReqMig context exc =
           context
         }
 
-type WithBecknCallback api callback_success m r =
+type WithBecknCallback api callback_success m =
   ( MonadFlow m,
+    CoreMetrics m,
     HasClient ET.EulerClient api,
     Client ET.EulerClient api
       ~ (CallbackReq callback_success -> ET.EulerClient AckResponse)
@@ -53,7 +55,7 @@ type WithBecknCallback api callback_success m r =
 
 withBecknCallback ::
   Maybe ET.ManagerSelector ->
-  WithBecknCallback api callback_success m r
+  WithBecknCallback api callback_success m 
 withBecknCallback auth action api context cbUrl f = do
   now <- getCurrentTime
   let cbAction = "on_" <> action
@@ -71,6 +73,7 @@ withBecknCallback auth action api context cbUrl f = do
 
 type WithBecknCallbackMig api callback_success m =
   ( MonadFlow m,
+    CoreMetrics m,
     HasClient ET.EulerClient api,
     Client ET.EulerClient api
       ~ (API.BecknCallbackReq callback_success -> ET.EulerClient AckResponse)

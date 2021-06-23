@@ -2,7 +2,6 @@
 
 module ExternalAPI.Flow where
 
-import App.Types
 import Beckn.Types.Core.API.Call as API
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Error
@@ -18,6 +17,7 @@ import EulerHS.Prelude
 import Storage.Queries.Case as Case
 import Storage.Queries.Organization as Org
 import Types.Error
+import Types.Metrics (CoreMetrics)
 import Utils.Auth
 import Utils.Common
 
@@ -38,7 +38,7 @@ getGatewayUrl = do
 withCallback ::
   HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
   Org.Organization ->
-  WithBecknCallback api callback_success m AppEnv
+  WithBecknCallback api callback_success m
 withCallback transporter action api context cbUrl f = do
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
@@ -48,7 +48,8 @@ withCallback transporter action api context cbUrl f = do
 
 callBAP ::
   ( HasFlowDBEnv m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
   ) =>
   Beckn.IsBecknAPI api (CallbackReq req) =>
   Text ->
@@ -76,12 +77,22 @@ callBAP action api transporter caseId contents = do
   Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $
     CallbackReq {contents, context}
 
-makeBppUrl :: HasFlowEnv m r '["nwAddress" ::: BaseUrl] => Id Org.Organization -> m BaseUrl
+makeBppUrl ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  Id Org.Organization ->
+  m BaseUrl
 makeBppUrl (Id transporterId) =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
 
-initiateCall :: HasFlowEnv m r '["xAppUri" ::: BaseUrl] => CallReq -> m ()
+initiateCall ::
+  ( HasFlowEnv m r '["xAppUri" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  CallReq ->
+  m ()
 initiateCall req = do
   url <- asks (.xAppUri)
   Beckn.callBecknAPI Nothing (Just "UNABLE_TO_CALL") "call/to_customer" API.callsAPI url req

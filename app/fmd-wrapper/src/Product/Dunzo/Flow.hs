@@ -31,12 +31,14 @@ import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
 import Types.Beckn.Order (Order)
 import Types.Common
 import Types.Error
+import Types.Metrics (CoreMetrics)
 import Types.Wrapper
 import Utils.Common
 
 search ::
   ( HasFlowDBEnv m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
+    CoreMetrics m
   ) =>
   Org.Organization ->
   API.BecknReq SearchAPI.SearchIntent ->
@@ -57,7 +59,8 @@ select _org _req = throwError $ ActionNotSupported "select"
 
 init ::
   ( HasFlowDBEnv m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
+    CoreMetrics m
   ) =>
   Org.Organization ->
   API.BecknReq InitAPI.InitOrder ->
@@ -118,7 +121,8 @@ init org req = do
 
 confirm ::
   ( HasFlowDBEnv m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
+    CoreMetrics m
   ) =>
   Org.Organization ->
   API.BecknReq API.OrderObject ->
@@ -194,7 +198,8 @@ confirm org req = do
 
 track ::
   ( HasFlowDBEnv m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
+    CoreMetrics m
   ) =>
   Org.Organization ->
   API.BecknReq TrackAPI.TrackInfo ->
@@ -213,7 +218,8 @@ track org req = do
 
 status ::
   ( HasFlowDBEnv m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
+    CoreMetrics m
   ) =>
   Org.Organization ->
   API.BecknReq StatusAPI.OrderId ->
@@ -242,7 +248,8 @@ status org req = do
 
 cancel ::
   ( HasFlowDBEnv m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig]
+    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
+    CoreMetrics m
   ) =>
   Org.Organization ->
   API.BecknReq CancelAPI.CancellationInfo ->
@@ -275,17 +282,37 @@ update :: MonadFlow m => Org.Organization -> API.BecknReq UpdateAPI.UpdateInfo -
 update _org _req = throwError $ ActionNotSupported "update"
 
 -- Helpers
-getQuote :: MonadFlow m => DzBAConfig -> DunzoConfig -> QuoteReq -> m QuoteRes
+getQuote ::
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
+  DzBAConfig ->
+  DunzoConfig ->
+  QuoteReq ->
+  m QuoteRes
 getQuote ba@DzBAConfig {..} conf@DunzoConfig {..} quoteReq = do
   token <- fetchToken ba conf
   API.getQuote dzClientId token dzUrl quoteReq
 
-getStatus :: MonadFlow m => DzBAConfig -> DunzoConfig -> TaskId -> m TaskStatus
+getStatus ::
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
+  DzBAConfig ->
+  DunzoConfig ->
+  TaskId ->
+  m TaskStatus
 getStatus dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
   token <- fetchToken dzBACreds conf
   API.taskStatus dzClientId token dzUrl dzTestMode taskId
 
-fetchToken :: MonadFlow m => DzBAConfig -> DunzoConfig -> m Token
+fetchToken ::
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
+  DzBAConfig ->
+  DunzoConfig ->
+  m Token
 fetchToken DzBAConfig {..} DunzoConfig {..} = do
   mToken <- Dz.getToken dzClientId
   case mToken of

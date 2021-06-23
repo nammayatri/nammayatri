@@ -15,10 +15,13 @@ import qualified ExternalAPI.Types as API
 import GHC.Records.Extra
 import Servant.Client
 import Types.API.Location
+import Types.Metrics (CoreMetrics)
 import Utils.Common
 
 search ::
-  HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl] =>
+  ( HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl],
+    CoreMetrics m
+  ) =>
   BaseUrl ->
   SearchReq ->
   m ()
@@ -33,14 +36,18 @@ search url req = do
   callBecknAPIWithSignature "search" API.search url' req
 
 confirm ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   BaseUrl ->
   ConfirmReq ->
   m ()
 confirm = callBecknAPIWithSignature "confirm" API.confirm
 
 location ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   BaseUrl ->
   Text ->
   m GetLocationRes
@@ -49,28 +56,36 @@ location url req = do
   callOwnAPI Nothing Nothing url (API.location req) "location"
 
 track ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   BaseUrl ->
   TrackTripReq ->
   m ()
 track = callBecknAPIWithSignature "track" API.trackTrip
 
 cancel ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   BaseUrl ->
   CancelReq ->
   m ()
 cancel = callBecknAPIWithSignature "cancel" API.cancel
 
 status ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   BaseUrl ->
   StatusReq ->
   m ()
 status = callBecknAPIWithSignature "status" API.status
 
 feedback ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   BaseUrl ->
   FeedbackReq ->
   m ()
@@ -78,6 +93,7 @@ feedback = callBecknAPIWithSignature "feedback" API.feedback
 
 callBecknAPIWithSignature ::
   ( MonadFlow m,
+    CoreMetrics m,
     IsBecknAPI api req
   ) =>
   Text ->

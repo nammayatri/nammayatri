@@ -24,6 +24,7 @@ import qualified Types.API.Case as APICase
 import Types.API.ProductInstance
 import Types.App
 import Types.Error
+import Types.Metrics (CoreMetrics)
 import Utils.Common
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
@@ -55,7 +56,8 @@ notifyUpdateToBAP ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r '["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   PI.ProductInstance ->
   PI.ProductInstance ->
@@ -151,7 +153,8 @@ assignDriver ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   Id PI.ProductInstance ->
   Id Driver ->
@@ -193,7 +196,8 @@ assignDriver productInstanceId driverId = do
 notifyTripDetailsToGateway ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
   ) =>
   SO.Organization ->
   PI.ProductInstance ->
@@ -208,7 +212,8 @@ notifyStatusUpdateReq ::
   ( HasFlowDBEnv m r,
     HasFlowEncEnv m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   SO.Organization ->
   PI.ProductInstance ->

@@ -15,6 +15,7 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Models.Case as Case
 import qualified Storage.Queries.Person as Person
+import Types.Metrics
 import Types.ProductInfo as ProductInfo
 import Utils.Common (decodeFromText, showTimeIst, (:::))
 
@@ -37,7 +38,8 @@ import Utils.Common (decodeFromText, showTimeIst, (:::))
 notifyOnStatusUpdate ::
   ( HasFlowEncEnv m r,
     HasFlowDBEnv m r,
-    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
   ) =>
   ProductInstance ->
   ProductInstanceStatus ->
@@ -149,7 +151,8 @@ notifyOnStatusUpdate prodInst piStatus =
 notifyOnExpiration ::
   ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
     HasFlowEncEnv m r,
-    HasFlowDBEnv m r
+    HasFlowDBEnv m r,
+    CoreMetrics m
   ) =>
   Case ->
   m ()
@@ -181,7 +184,9 @@ notifyOnExpiration caseObj = do
     else pure ()
 
 notifyOnRegistration ::
-  HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text] =>
+  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
+    CoreMetrics m
+  ) =>
   RegistrationToken ->
   Person ->
   m ()
@@ -207,7 +212,8 @@ notifyOnRegistration regToken person =
 notifyOnTrackCb ::
   ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text],
     HasFlowEncEnv m r,
-    HasFlowDBEnv m r
+    HasFlowDBEnv m r,
+    CoreMetrics m
   ) =>
   Maybe Text ->
   Tracker ->

@@ -21,6 +21,7 @@ import Beckn.External.FCM.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import qualified Beckn.Utils.JWT as JWT
@@ -75,7 +76,8 @@ createAndroidNotification title body notificationType =
 
 -- | Send FCM message to a person
 notifyPerson ::
-  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ( CoreMetrics m,
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
   ) =>
   FCMAndroidData ->
   Person ->
@@ -101,7 +103,8 @@ fcmSendMessageAPI = Proxy
 
 -- | Send FCM message to a registered device
 sendMessage ::
-  ( HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
+  ( CoreMetrics m,
+    HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text]
   ) =>
   FCMRequest ->
   Text ->

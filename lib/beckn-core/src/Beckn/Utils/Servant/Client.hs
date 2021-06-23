@@ -16,6 +16,7 @@ import Servant.Client.Core
 
 type CallAPI' m res res' =
   ( HasCallStack,
+    Metrics.CoreMetrics m,
     MonadFlow m,
     ET.JSONEx res,
     ToJSON res
@@ -27,10 +28,12 @@ type CallAPI' m res res' =
 
 type CallAPI m res = CallAPI' m res res
 
-callAPI :: CallAPI' m res (Either ClientError res)
+callAPI ::
+  Metrics.CoreMetrics m => CallAPI' m res (Either ClientError res)
 callAPI = callAPI' Nothing
 
 callAPI' ::
+  Metrics.CoreMetrics m =>
   Maybe ET.ManagerSelector ->
   CallAPI' m res (Either ClientError res)
 callAPI' mbManagerSelector baseUrl eulerClient desc =
@@ -56,7 +59,9 @@ parseBaseUrl :: MonadThrow m => Text -> m S.BaseUrl
 parseBaseUrl = S.parseBaseUrl . T.unpack
 
 callApiExtractingApiError ::
-  FromResponse err =>
+  ( Metrics.CoreMetrics m,
+    FromResponse err
+  ) =>
   Maybe ET.ManagerSelector ->
   CallAPI' m a (Either (CallAPIError err) a)
 callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc =
@@ -64,7 +69,8 @@ callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc =
     <&> extractApiError
 
 callApiUnwrappingApiError ::
-  ( FromResponse err,
+  ( Metrics.CoreMetrics m,
+    FromResponse err,
     IsAPIException exc
   ) =>
   (err -> exc) ->

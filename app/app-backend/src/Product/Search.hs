@@ -42,6 +42,7 @@ import qualified Types.API.Search as API
 import Types.API.Serviceability
 import qualified Types.Common as Common
 import Types.Error
+import Types.Metrics (CoreMetrics)
 import qualified Types.Metrics as Metrics
 import Types.ProductInfo
 import Utils.Common
@@ -139,7 +140,8 @@ searchCbService req catalog = do
 
 mkCase ::
   ( (HasFlowEnv m r ["searchCaseExpiry" ::: Maybe Integer, "graphhopperUrl" ::: BaseUrl]),
-    HasFlowDBEnv m r
+    HasFlowDBEnv m r,
+    CoreMetrics m
   ) =>
   API.SearchReq ->
   Text ->
@@ -336,7 +338,12 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         updatedAt = now
       }
 
-getDistance :: HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl] => API.SearchReq -> m (Maybe Float)
+getDistance ::
+  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  API.SearchReq ->
+  m (Maybe Float)
 getDistance req =
   mkRouteRequest (req.origin.location) (req.destination.location)
     >>= MapSearch.getRouteMb

@@ -12,7 +12,6 @@ import Beckn.Types.Field (HasFields)
 import Beckn.Types.Forkable
 import Beckn.Types.Logging
 import Beckn.Types.MonadGuid
-import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Types.RunSafe
 import Beckn.Types.Time
 import Control.Lens ((?~))
@@ -39,8 +38,7 @@ type MonadFlow m =
     RunSafe m,
     MonadGuid m,
     MonadTime m,
-    MonadThrow m,
-    CoreMetrics m
+    MonadThrow m
   )
 
 -- | Require monad to be Flow-based and have specified fields in Reader env.

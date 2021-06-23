@@ -35,6 +35,7 @@ import qualified Storage.Queries.Products as SProduct
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
 import Types.Error
+import Types.Metrics (CoreMetrics)
 import Utils.Common
 
 search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler AckResponse
@@ -133,7 +134,10 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
     }
 
 calculateDeadDistance ::
-  (HasFlowDBEnv m r, HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]) =>
+  ( HasFlowDBEnv m r,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
   Org.Organization ->
   Location.Location ->
   m (Maybe Float)
@@ -153,7 +157,8 @@ calculateDeadDistance organization fromLocation = do
 onSearchCallback ::
   ( HasFlowDBEnv m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer],
-    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    CoreMetrics m
   ) =>
   Case.Case ->
   Org.Organization ->

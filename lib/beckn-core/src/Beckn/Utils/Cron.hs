@@ -3,7 +3,6 @@ module Beckn.Utils.Cron where
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Utils.Common
-import Beckn.Utils.Error
 import Control.Monad.Reader
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)

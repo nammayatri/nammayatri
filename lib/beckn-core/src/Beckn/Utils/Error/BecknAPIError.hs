@@ -5,6 +5,7 @@ module Beckn.Utils.Error.BecknAPIError where
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Error.BecknAPIError
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -29,6 +30,7 @@ type IsBecknAPI api req =
 
 callBecknAPI ::
   ( MonadFlow m,
+    CoreMetrics m,
     IsBecknAPI api req
   ) =>
   Maybe ET.ManagerSelector ->

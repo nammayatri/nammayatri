@@ -9,6 +9,7 @@ import qualified EulerHS.Types as T
 import ExternalAPI.Dunzo.Types
 import Servant (Capture, Get, Header, JSON, NoContent, Post, QueryParam, ReqBody, (:>))
 import Types.Common
+import Types.Metrics (CoreMetrics)
 
 type GetTokenAPI =
   "api" :> "v1" :> "token"
@@ -20,7 +21,9 @@ getTokenAPI :: Proxy GetTokenAPI
 getTokenAPI = Proxy
 
 getToken ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   BaseUrl ->
   TokenReq ->
   m TokenRes
@@ -45,7 +48,9 @@ quoteAPI :: Proxy QuoteAPI
 quoteAPI = Proxy
 
 getQuote ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   ClientId ->
   Token ->
   BaseUrl ->
@@ -76,7 +81,9 @@ createTaskAPI :: Proxy CreateTaskAPI
 createTaskAPI = Proxy
 
 createTask ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   ClientId ->
   Token ->
   BaseUrl ->
@@ -106,7 +113,9 @@ taskStatusAPI :: Proxy TaskStatusAPI
 taskStatusAPI = Proxy
 
 taskStatus ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   ClientId ->
   Token ->
   BaseUrl ->
@@ -137,7 +146,9 @@ cancelTaskAPI :: Proxy CancelTaskAPI
 cancelTaskAPI = Proxy
 
 cancelTask ::
-  MonadFlow m =>
+  ( MonadFlow m,
+    CoreMetrics m
+  ) =>
   ClientId ->
   Token ->
   BaseUrl ->
