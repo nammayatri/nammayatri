@@ -11,7 +11,7 @@ import Types.Beckn.API.Cancel (CancelReq (..), CancelRes)
 import Types.Beckn.API.Init (InitOrder)
 import Types.Beckn.API.Search (SearchIntent)
 import Types.Beckn.API.Select (SelectedObject)
-import Types.Beckn.API.Status (StatusReq (..), StatusRes)
+import Types.Beckn.API.Status (OrderId)
 import Types.Beckn.API.Track (TrackInfo)
 import qualified Types.Beckn.API.Types as API
 import Types.Beckn.API.Update (UpdateInfo)
@@ -55,11 +55,11 @@ track org req = withFlowHandlerBecknAPI $
     validateBapUrlMig org $ req.context
     DZ.track org req
 
-status :: Organization -> StatusReq -> FlowHandler StatusRes
+status :: Organization -> API.BecknReq OrderId -> FlowHandler AckResponse
 status org req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    validateContext "status" $ req.context
-    validateBapUrl org $ req.context
+  withTransactionIdLogTagMig req $ do
+    validateContextMig "status" $ req.context
+    validateBapUrlMig org $ req.context
     DZ.status org req
 
 cancel :: Organization -> CancelReq -> FlowHandler CancelRes

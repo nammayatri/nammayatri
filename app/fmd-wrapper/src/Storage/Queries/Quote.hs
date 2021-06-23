@@ -5,6 +5,8 @@ import Beckn.Storage.Redis.Queries
 import EulerHS.Prelude
 import Types.Wrapper (OrderDetails)
 
+-- To be deleted after migration tested
+
 lookupQuote :: Text -> Flow (Maybe OrderDetails)
 lookupQuote key =
   getKeyRedis ("Quote_" <> key)

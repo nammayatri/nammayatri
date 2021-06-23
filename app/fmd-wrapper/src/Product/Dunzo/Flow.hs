@@ -26,7 +26,7 @@ import qualified Types.Beckn.API.Confirm as ConfirmAPI
 import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
 import qualified Types.Beckn.API.Select as SelectAPI
-import qualified Types.Beckn.API.Status as API
+import qualified Types.Beckn.API.Status as StatusAPI
 import qualified Types.Beckn.API.Track as TrackAPI
 import qualified Types.Beckn.API.Types as API
 import qualified Types.Beckn.API.Update as UpdateAPI
@@ -191,23 +191,22 @@ track org req = do
     mbTrackingUrl <- getStatus dzBACreds conf (TaskId taskId) >>= (maybe (pure Nothing) ((Just <$>) . parseBaseUrl) . (.tracking_url))
     return $ mkOnTrackMessage mbTrackingUrl
 
-status :: Org.Organization -> API.StatusReq -> Flow API.StatusRes
+status :: Org.Organization -> API.BecknReq StatusAPI.OrderId -> Flow AckResponse
 status org req = do
   conf@DunzoConfig {..} <- dzConfig <$> ask
-  let context = updateBppUri (req.context) dzBPNwAddress
+  let context = updateBppUriMig (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  payeeDetails <- payee & decodeFromText & fromMaybeM (InternalError "Decode error.")
   let orderId = req.message.order_id
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   let taskId = getShortId case_.shortId
-  (orderDetails :: OrderDetails) <-
+  (orderDetails :: OrderDetailsMig) <-
     case_.udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
   dzBACreds <- getDzBAPCreds org
-  withCallback "status" API.onStatusAPI context cbUrl $ do
+  withCallbackMig "status" StatusAPI.onStatusAPI context cbUrl $ do
     taskStatus <- getStatus dzBACreds conf (TaskId taskId)
     let order = orderDetails.order
-    onStatusMessage <- mkOnStatusMessage (org.name) order payeeDetails taskStatus
+    onStatusMessage <- mkOnStatusMessage order taskStatus
     let updatedOrder = onStatusMessage.order
     let updatedOrderDetails = orderDetails & #order .~ updatedOrder
     updateCase (case_.id) updatedOrderDetails taskStatus case_

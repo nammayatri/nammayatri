@@ -38,7 +38,6 @@ import ExternalAPI.Dunzo.Types
 import Types.Beckn.API.Init
 import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
-import Types.Beckn.API.Status
 import qualified Types.Beckn.API.Track as TrackAPI
 import qualified Types.Beckn.API.Types as API
 import Types.Beckn.Context
@@ -284,10 +283,10 @@ mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
         }
 
 {-# ANN mkOnStatusMessage ("HLint: ignore Use <$>" :: String) #-}
-mkOnStatusMessage :: Text -> Order -> PaymentEndpoint -> TaskStatus -> Flow StatusResMessage
-mkOnStatusMessage orgName order payee status = do
+mkOnStatusMessage :: M.Order.Order -> TaskStatus -> Flow API.OrderObject
+mkOnStatusMessage order status = do
   now <- getCurrentTime
-  return $ StatusResMessage (updateOrder orgName now order payee status)
+  return . API.OrderObject $ updateOrderMig now order status
 
 updateOrder :: Text -> UTCTime -> Order -> PaymentEndpoint -> TaskStatus -> Order
 updateOrder orgName cTime order payee status = do
