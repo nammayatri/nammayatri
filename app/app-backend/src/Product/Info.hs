@@ -7,8 +7,8 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Case as Case
+import qualified Storage.Queries.ProductInstance as MPI
 import Types.API.Location
 import Types.API.Product
 import Types.Error
@@ -17,7 +17,7 @@ import Utils.Common
 
 getProductInfo :: Person.Person -> Id SPI.ProductInstance -> FlowHandler GetProductInfoRes
 getProductInfo _ prodInstId = withFlowHandlerAPI $ do
-  productInstance <- MPI.findById prodInstId
+  productInstance <- MPI.findById prodInstId >>= fromMaybeM PIDoesNotExist
   case decodeFromText =<< SPI.info productInstance of
     Just info ->
       case ProductInfo.tracker info of

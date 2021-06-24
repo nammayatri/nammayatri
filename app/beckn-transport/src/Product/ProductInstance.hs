@@ -125,7 +125,7 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandlerAPI $ do
 
 listCasesByProductInstance :: SR.RegistrationToken -> Id PI.ProductInstance -> Maybe Case.CaseType -> FlowHandler APICase.CaseListRes
 listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandlerAPI $ do
-  prodInst <- PIQ.findById piId
+  prodInst <- PIQ.findById piId >>= fromMaybeM PIDoesNotExist
   piList <-
     prodInst.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
       >>= PIQ.findAllByParentId
@@ -160,8 +160,9 @@ assignDriver ::
   Id Driver ->
   m ()
 assignDriver productInstanceId driverId = do
-  ordPi <- PIQ.findById productInstanceId
-  searchPi <- PIQ.findById =<< fromMaybeM (PIFieldNotPresent "parent_id") (ordPi.parentId)
+  ordPi <- PIQ.findById productInstanceId >>= fromMaybeM PIDoesNotExist
+  searchPIId <- ordPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  searchPi <- PIQ.findById searchPIId >>= fromMaybeM PINotFound
   piList <-
     ordPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
       >>= PIQ.findAllByParentId

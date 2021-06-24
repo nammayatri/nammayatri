@@ -17,9 +17,9 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as OQ
+import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
@@ -35,7 +35,7 @@ confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
   when ((case_.validTill) < lt) $
     throwError CaseExpired
   orderCase_ <- mkOrderCase case_
-  productInstance <- MPI.findById (Id productInstanceId)
+  productInstance <- MPI.findById (Id productInstanceId) >>= fromMaybeM PIDoesNotExist
   organization <-
     OQ.findOrganizationById (productInstance.organizationId)
       >>= fromMaybeM OrgNotFound
@@ -78,7 +78,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
         let trip = fromBeckn <$> msg.order.trip
             pid = Id $ msg.order.id
             tracker = flip Products.Tracker Nothing <$> trip
-        prdInst <- MPI.findById pid
+        prdInst <- MPI.findById pid >>= fromMaybeM PIDoesNotExist
         -- TODO: update tracking prodInfo in.info
         let mprdInfo = decodeFromText =<< (prdInst.info)
         let uInfo = (\info -> info {Products.tracker = tracker}) <$> mprdInfo
@@ -88,14 +88,13 @@ onConfirm _org req = withFlowHandlerBecknAPI $
                   SPI.udf4 = (.id) <$> trip,
                   SPI.status = SPI.CONFIRMED
                 }
-        productInstance <- MPI.findById pid
         Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
         let newCaseStatus = Case.COMPLETED
-        case_ <- QCase.findById (productInstance.caseId) >>= fromMaybeM CaseNotFound
+        case_ <- QCase.findById (prdInst.caseId) >>= fromMaybeM CaseNotFound
         Case.validateStatusTransition (case_.status) newCaseStatus & fromEitherM CaseInvalidStatus
-        SPI.validateStatusTransition (SPI.status productInstance) SPI.CONFIRMED & fromEitherM PIInvalidStatus
+        SPI.validateStatusTransition (SPI.status prdInst) SPI.CONFIRMED & fromEitherM PIInvalidStatus
         DB.runSqlDBTransaction $ do
-          QCase.updateStatus (productInstance.caseId) newCaseStatus
+          QCase.updateStatus (prdInst.caseId) newCaseStatus
           QPI.updateMultiple pid uPrd
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack

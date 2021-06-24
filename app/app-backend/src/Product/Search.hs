@@ -29,12 +29,12 @@ import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.ProductInstance as MPI
 import Product.Serviceability
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Organization as Org
+import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Products as QProducts
 import qualified Types.API.Case as API

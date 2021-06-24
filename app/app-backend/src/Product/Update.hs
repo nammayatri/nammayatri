@@ -11,7 +11,8 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import EulerHS.Prelude
-import qualified Models.ProductInstance as MPI
+import qualified Storage.Queries.ProductInstance as MPI
+import Types.Error
 import qualified Types.ProductInfo as ProdInfo
 import Utils.Common
 
@@ -25,14 +26,14 @@ onUpdate _org req = withFlowHandlerBecknAPI $
       Right msg -> do
         let trip = msg.order.trip
             pid = Id $ msg.order.id
-        orderPi <- MPI.findByParentIdType pid Case.RIDEORDER
+        orderPi <- MPI.findByParentIdType pid Case.RIDEORDER >>= fromMaybeM PIDoesNotExist
         let mprdInfo = decodeFromText =<< (orderPi.info)
             uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo.tracking =<< ProdInfo.tracker =<< mprdInfo)
             uPrd =
               orderPi
                 { SPI.info = encodeToText <$> uInfo
                 }
-        MPI.updateMultiple (orderPi.id) uPrd
+        MPI.updateMultipleFlow (orderPi.id) uPrd
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err
     return Ack
   where

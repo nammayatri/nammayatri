@@ -13,9 +13,9 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.Organization as OQ
+import qualified Storage.Queries.ProductInstance as MPI
 import Types.API.Track
 import Types.Error
 import Types.ProductInfo as ProductInfo
@@ -25,7 +25,7 @@ import qualified Utils.Notifications as Notify
 track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track person req = withFlowHandlerAPI $ do
   let prodInstId = req.rideId
-  prodInst <- MPI.findById prodInstId
+  prodInst <- MPI.findById prodInstId >>= fromMaybeM PIDoesNotExist
   case_ <- MC.findIdByPerson person (prodInst.caseId) >>= fromMaybeM CaseNotFound
   let txnId = getId $ case_.id
   context <- buildContext "feedback" txnId Nothing Nothing
@@ -51,15 +51,16 @@ trackCb _org req = withFlowHandlerBecknAPI $
         let tracking = msg.tracking
             caseId = Id $ context.transaction_id
         case_ <- MC.findById caseId >>= fromMaybeM CaseDoesNotExist
-        prodInst <- MPI.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
-        let confirmedProducts = prodInst
+        confirmedProducts <- MPI.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
         res <-
           case length confirmedProducts of
             0 -> return $ Right ()
             1 -> do
               let productInst = head confirmedProducts
                   personId = Case.requestor case_
-              orderPi <- MPI.findByParentIdType (productInst.id) Case.RIDEORDER
+              orderPi <-
+                MPI.findByParentIdType (productInst.id) Case.RIDEORDER
+                  >>= fromMaybeM PINotFound
               mtracker <- updateTracker orderPi tracking
               whenJust mtracker (\t -> Notify.notifyOnTrackCb personId t case_)
               return $ Right ()
@@ -79,7 +80,7 @@ updateTracker prodInst mtracking = do
       let mtracker = updTracker info mtracking
           uInfo = info {ProductInfo.tracker = mtracker}
           updatedPrd = prodInst {ProductInstance.info = Just $ encodeToText uInfo}
-      MPI.updateMultiple (prodInst.id) updatedPrd
+      MPI.updateMultipleFlow (prodInst.id) updatedPrd
       return mtracker
   where
     updTracker info tracking =

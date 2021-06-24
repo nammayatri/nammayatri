@@ -14,14 +14,14 @@ import Utils.Common
 type MonadHandler m = (MonadThrow m, Log m)
 
 data ServiceHandle m = ServiceHandle
-  { findPIById :: Id ProductInstance -> m ProductInstance,
+  { findPIById :: Id ProductInstance -> m (Maybe ProductInstance),
     findPersonById :: Id Person.Person -> m Person.Person,
     cancelRide :: Id Ride -> Bool -> m ()
   }
 
 cancelRideHandler :: MonadHandler m => ServiceHandle m -> Text -> Id Ride -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
-  prodInst <- findPIById $ cast rideId
+  prodInst <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
   unless (isValidPI prodInst) $ throwError $ PIInvalidStatus "This ride cannot be canceled"
   authPerson <- findPersonById $ Id authorizedEntityId
   case authPerson.role of

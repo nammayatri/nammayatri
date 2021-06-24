@@ -11,9 +11,9 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.Organization as OQ
+import qualified Storage.Queries.ProductInstance as MPI
 import Types.API.Cancel as Cancel
 import Types.Error
 import Types.Metrics
@@ -37,9 +37,9 @@ cancelProductInstance ::
   m CancelRes
 cancelProductInstance person req = do
   let prodInstId = req.entityId
-  searchPI <- MPI.findById (Id prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
+  searchPI <- MPI.findById (Id prodInstId) >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
   cs <- MC.findIdByPerson person (searchPI.caseId) >>= fromMaybeM CaseNotFound
-  orderPI <- MPI.findByParentIdType (searchPI.id) Case.RIDEORDER
+  orderPI <- MPI.findByParentIdType (searchPI.id) Case.RIDEORDER >>= fromMaybeM PINotFound
   unless (isProductInstanceCancellable orderPI) $
     throwError $ PIInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ cs.id
@@ -97,7 +97,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
             Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
             MC.updateStatusFlow (PI.caseId orderPi) Case.CLOSED
             return ()
-        productInstance <- MPI.findById prodInstId
+        productInstance <- MPI.findById prodInstId >>= fromMaybeM PIDoesNotExist
         PI.validateStatusTransition (PI.status productInstance) PI.CANCELLED & fromEitherM PIInvalidStatus
         MPI.updateStatus prodInstId PI.CANCELLED
         let caseId = productInstance.caseId

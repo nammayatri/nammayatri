@@ -35,13 +35,13 @@ import Data.Maybe
 import qualified Data.Text as T
 import Data.Time.Clock (diffUTCTime)
 import EulerHS.Prelude hiding (id)
-import qualified Models.ProductInstance as PI
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.TransporterConfig as QTC
@@ -250,7 +250,7 @@ getDriverPool piId =
     >>= maybe calcDriverPool (pure . map Id)
   where
     calcDriverPool = do
-      prodInst <- PI.findById piId
+      prodInst <- QPI.findById piId >>= fromMaybeM PIDoesNotExist
       case_ <- Case.findById (prodInst.caseId) >>= fromMaybeM CaseNotFound
       vehicleVariant :: SV.Variant <-
         (case_.udf1 >>= readMaybe . T.unpack)

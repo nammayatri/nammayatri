@@ -10,8 +10,8 @@ import Beckn.Utils.Cron (authenticate)
 import Beckn.Utils.Error
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (pi)
-import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Case as MC
+import qualified Storage.Queries.ProductInstance as MPI
 import qualified Types.API.Cron as API
 import qualified Types.Metrics as Metrics
 import qualified Utils.Notifications as Notify

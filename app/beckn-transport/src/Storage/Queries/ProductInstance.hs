@@ -294,10 +294,10 @@ productInstanceJoinWithoutLimits csType orgId status_ = do
           toLocation = Nothing
         }
 
-findById :: DBFlow m r => Id Storage.ProductInstance -> m Storage.ProductInstance
+findById :: DBFlow m r => Id Storage.ProductInstance -> m (Maybe Storage.ProductInstance)
 findById pid = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate >>= fromMaybeM PINotFound
+  DB.findOne dbTable predicate
   where
     predicate Storage.ProductInstance {..} = id ==. B.val_ pid
 
@@ -409,8 +409,8 @@ findAllExpiredByStatus statuses expiryTime = do
       B.in_ status (B.val_ <$> statuses)
         &&. startTime B.<=. B.val_ expiryTime
 
-getCountByStatus' :: DBFlow m r => Id Org.Organization -> Storage.ProductInstanceType -> m [(Storage.ProductInstanceStatus, Int)]
-getCountByStatus' orgId piType = do
+getCountByStatus :: DBFlow m r => Id Org.Organization -> Storage.ProductInstanceType -> m [(Storage.ProductInstanceStatus, Int)]
+getCountByStatus orgId piType = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.aggregate_ aggregator) predicate
   where

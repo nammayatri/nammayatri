@@ -55,7 +55,7 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
     Just notification -> do
       let productInstanceId = cast $ notification.rideId
       let notificationExpiryTime = notification.expiresAt
-      productInstance <- QueryPI.findById productInstanceId
+      productInstance <- QueryPI.findById productInstanceId >>= fromMaybeM PINotFound
       driver <- QPerson.findPersonById $ cast driverId
       driverLocation <- findLocationById (driver.locationId) >>= fromMaybeM (PersonFieldNotPresent "location_id")
       fromLocation <- findLocationById (productInstance.fromLocation) >>= fromMaybeM (PIFieldNotPresent "location_id")

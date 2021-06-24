@@ -12,7 +12,7 @@ import Utils.Common
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m Person.Person,
-    findPIById :: Id ProductInstance.ProductInstance -> m ProductInstance.ProductInstance,
+    findPIById :: Id ProductInstance.ProductInstance -> m (Maybe ProductInstance.ProductInstance),
     findPIsByParentId :: Id ProductInstance.ProductInstance -> m [ProductInstance.ProductInstance],
     findCaseByIdsAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
     startRide :: [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m (),
@@ -22,7 +22,7 @@ data ServiceHandle m = ServiceHandle
 startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Id Person.Person -> Id ProductInstance.ProductInstance -> Text -> m APISuccess.APISuccess
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
   requestor <- findPersonById requestorId
-  orderPi <- findPIById $ cast rideId
+  orderPi <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
   case requestor.role of
     Person.DRIVER -> do
       rideDriver <- orderPi.personId & fromMaybeM (PIFieldNotPresent "person")
@@ -30,7 +30,7 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
     _ -> throwError AccessDenied
   unless (isValidPiStatus (orderPi.status)) $ throwError $ PIInvalidStatus "This ride cannot be started"
   searchPiId <- orderPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
-  searchPi <- findPIById searchPiId
+  searchPi <- findPIById searchPiId >>= fromMaybeM PINotFound
   inAppOtp <- orderPi.udf4 & fromMaybeM (PIFieldNotPresent "udf4")
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   piList <- findPIsByParentId searchPiId

@@ -22,7 +22,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified ExternalAPI.Transform as ExternalAPITransform
-import qualified Models.ProductInstance as MPI
 import qualified Product.BecknProvider.BP as BP
 import Product.FareCalculator
 import qualified Product.Location as Location
@@ -244,7 +243,7 @@ mkOnSearchPayload ::
   Org.Organization ->
   m API.OnSearchServices
 mkOnSearchPayload productCase productInstances transporterOrg = do
-  MPI.getCountByStatus (transporterOrg.id) Case.RIDEORDER
+  ProductInstance.getCountByStatus (transporterOrg.id) Case.RIDEORDER
     <&> mkProviderInfo transporterOrg . mkProviderStats
     >>= ExternalAPITransform.mkCatalog productCase productInstances
     <&> API.OnSearchServices

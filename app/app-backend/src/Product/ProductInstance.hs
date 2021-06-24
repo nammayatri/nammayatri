@@ -7,9 +7,9 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
 import qualified Beckn.Types.Storage.Products as Products
 import EulerHS.Prelude
-import qualified Models.ProductInstance as ProductInstance
 import qualified Storage.Queries.Case as Case
 import Storage.Queries.Location as Loc
+import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.API.ProductInstance
 import Utils.Common (withFlowHandlerAPI)

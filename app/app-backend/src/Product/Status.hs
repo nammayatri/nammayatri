@@ -13,9 +13,9 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Error
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.ProductInstance as QPI
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Organization as OQ
+import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Status
 import Types.Error
 import Utils.Common
@@ -23,7 +23,7 @@ import qualified Utils.Notifications as Notify
 
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
 status person StatusReq {..} = withFlowHandlerAPI $ do
-  prodInst <- QPI.findById (Id productInstanceId)
+  prodInst <- QPI.findById (Id productInstanceId) >>= fromMaybeM PINotFound
   case_ <- Case.findIdByPerson person (prodInst.caseId) >>= fromMaybeM CaseNotFound
   let caseId = getId $ case_.id
   context <- buildContext "status" caseId Nothing Nothing
@@ -47,7 +47,7 @@ onStatus _org req = withFlowHandlerBecknAPI $
     return Ack
   where
     updateProductInstanceStatus prodInstId piStatus = do
-      orderPi <- QPI.findByParentIdType prodInstId Case.RIDEORDER
+      orderPi <- QPI.findByParentIdType prodInstId Case.RIDEORDER >>= fromMaybeM PIDoesNotExist
       PI.validateStatusTransition (PI.status orderPi) piStatus & fromEitherM PIInvalidStatus
       QPI.updateStatus (orderPi.id) piStatus
       Notify.notifyOnStatusUpdate orderPi piStatus

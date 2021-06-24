@@ -57,7 +57,7 @@ cancel transporterId _bapOrg req = withFlowHandlerBecknAPI $
     validateContext "cancel" context
     let prodInstId = req.message.order.id -- transporter search productInstId
     transporterOrg <- Organization.findOrganizationById transporterId
-    prodInst <- ProductInstance.findById (Id prodInstId)
+    prodInst <- ProductInstance.findById (Id prodInstId) >>= fromMaybeM PIDoesNotExist
     piList <- ProductInstance.findAllByParentId (prodInst.id)
     orderPi <- ProductInstance.findByIdType (ProductInstance.id <$> piList) Case.RIDEORDER
     RideRequest.createFlow =<< mkRideReq (orderPi.id) (transporterOrg.shortId) SRideRequest.CANCELLATION
@@ -74,9 +74,9 @@ cancelRide ::
   Bool ->
   m ()
 cancelRide rideId requestedByDriver = do
-  orderPi <- ProductInstance.findById $ cast rideId
+  orderPi <- ProductInstance.findById (cast rideId) >>= fromMaybeM PIDoesNotExist
   searchPiId <- ProductInstance.parentId orderPi & fromMaybeM (PIFieldNotPresent "parent_id")
-  searchPi <- ProductInstance.findById searchPiId
+  searchPi <- ProductInstance.findById searchPiId >>= fromMaybeM PINotFound
   piList <- ProductInstance.findAllByParentId searchPiId
   trackerPi <- ProductInstance.findByIdType (ProductInstance.id <$> piList) Case.LOCATIONTRACKER
   cancelRideTransaction piList searchPiId (trackerPi.id) (orderPi.id) requestedByDriver

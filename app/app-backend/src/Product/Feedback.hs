@@ -9,9 +9,9 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Person as Person
 import EulerHS.Prelude hiding (product)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.ProductInstance as ProductInstance
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Organization as Organization
+import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Types.API.Feedback as API
 import Types.Error
 import Utils.Common
@@ -26,7 +26,7 @@ feedback person request = withFlowHandlerAPI $ do
   let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let prodInstId = request.productInstanceId
-  product <- ProductInstance.findById $ Id prodInstId
+  product <- ProductInstance.findById (Id prodInstId) >>= fromMaybeM PIDoesNotExist
   order <- Case.findIdByPerson person (product.caseId) >>= fromMaybeM CaseNotFound
   let txnId = getId $ order.id
   context <- buildContext "feedback" txnId Nothing Nothing

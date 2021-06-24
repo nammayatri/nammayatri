@@ -13,7 +13,7 @@ import Utils.Common
 
 initiateCall :: SR.RegistrationToken -> CallReq -> FlowHandler CallRes
 initiateCall _ req = withFlowHandlerAPI $ do
-  prdInstance <- PI.findById $ Id $ req.productInstanceId -- RIDEORDER PI
+  prdInstance <- PI.findById (Id req.productInstanceId) >>= fromMaybeM PIDoesNotExist -- RIDEORDER PI
   Id rideSearchProductInstanceId <- prdInstance.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   ExternalAPI.initiateCall $ CallReq rideSearchProductInstanceId -- RIDESEARCH PI
   return Ack
