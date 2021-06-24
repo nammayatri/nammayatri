@@ -47,6 +47,7 @@ let sesConfig =
     , replyTo = ["support@supportyatri.freshdesk.com"]
     , cc = ["beckn_mobility@juspay.in"]
     , region = "eu-west-1"
+    , fromArn = None Text
     }
   }
 let geofencingConfig =

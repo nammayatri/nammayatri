@@ -42,11 +42,12 @@ let smsConfig =
 
 let sesConfig =
   { issuesConfig = {
-      from = "support@juspay.in"
+      from = "no-reply@juspay,in"
     , to = ["support@supportyatri.freshdesk.com"]
     , replyTo = ["support@supportyatri.freshdesk.com"]
     , cc = ["beckn_mobility@juspay.in"]
     , region = "eu-west-1"
+    , fromArn = Some "arn:aws:ses:eu-west-1:980691203742:identity/no-reply@juspay.in"
     }
   }
 let geofencingConfig =

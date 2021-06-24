@@ -13,6 +13,7 @@ data EmailRequestConfig = EmailRequestConfig
     to :: [Text],
     replyTo :: [Text],
     cc :: [Text],
-    region :: Text
+    region :: Text,
+    fromArn :: Maybe Text
   }
   deriving (Generic, FromDhall)
