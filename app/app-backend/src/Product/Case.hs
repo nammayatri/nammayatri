@@ -9,10 +9,10 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Products
 import EulerHS.Prelude hiding (id)
-import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
+import qualified Storage.Queries.Products as Products
 import Types.API.Case as API
 import Types.Error
 import Utils.Common
