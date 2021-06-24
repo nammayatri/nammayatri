@@ -340,6 +340,16 @@ externalAPICallErrorMessage baseUrl clientErr =
       <> ": "
       <> show clientErr
 
+newtype EmailSendingError
+  = EmailSendingError Text
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''EmailSendingError
+
+instance IsAPIError EmailSendingError where
+  toErrorCode (EmailSendingError _) = "EMAIL_SENDING_ERROR"
+  toMessage (EmailSendingError msg) = Just msg
+
 data HealthCheckError
   = ServiceUnavailable
   deriving (Eq, Show)

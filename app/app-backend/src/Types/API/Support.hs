@@ -1,7 +1,7 @@
 module Types.API.Support (SendIssueReq (..), SendIssueRes) where
 
+import Beckn.Types.APISuccess
 import EulerHS.Prelude
-import Types.API.Common (Ack)
 import Types.Issue (Issue)
 
 data SendIssueReq = SendIssueReq
@@ -11,4 +11,4 @@ data SendIssueReq = SendIssueReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-type SendIssueRes = Ack
+type SendIssueRes = APISuccess
