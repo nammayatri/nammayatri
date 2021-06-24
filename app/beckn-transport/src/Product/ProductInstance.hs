@@ -12,9 +12,9 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as V
 import EulerHS.Prelude hiding (id)
-import qualified Models.Case as CQ
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Allocation as AQ
+import qualified Storage.Queries.Case as CQ
 import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ

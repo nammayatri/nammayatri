@@ -9,9 +9,9 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Products
 import EulerHS.Prelude hiding (id)
-import qualified Models.Case as Case
 import qualified Models.Product as Products
 import qualified Models.ProductInstance as MPI
+import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
 import Types.API.Case as API
 import Types.Error
@@ -22,7 +22,7 @@ getStatus ::
   Id Case.Case ->
   FlowHandler GetStatusRes
 getStatus person caseId = withFlowHandlerAPI $ do
-  case_ <- Case.findIdByPerson person caseId
+  case_ <- Case.findIdByPerson person caseId >>= fromMaybeM CaseDoesNotExist
   prodInstRes <- getProdInstances case_
   fromLocation <-
     fromMaybeM LocationNotFound

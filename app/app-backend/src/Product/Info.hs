@@ -8,6 +8,7 @@ import qualified Beckn.Types.Storage.ProductInstance as SPI
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Models.ProductInstance as MPI
+import qualified Storage.Queries.Case as Case
 import Types.API.Location
 import Types.API.Product
 import Types.Error
@@ -39,8 +40,9 @@ getProductInfo _ prodInstId = withFlowHandlerAPI $ do
 -- TODO: fetch tracking URL from tracker info
 getLocation :: Person.Person -> Id SC.Case -> FlowHandler GetLocationRes
 getLocation person caseId = withFlowHandlerAPI $ do
+  _ <- Case.findIdByPerson person caseId >>= fromMaybeM CaseDoesNotExist
   baseUrl <- xProviderUri <$> ask
-  productInstances <- MPI.listAllProductInstanceByPerson person (SPI.ByApplicationId caseId) [SPI.CONFIRMED]
+  productInstances <- MPI.listAllProductInstance (SPI.ByApplicationId caseId) [SPI.CONFIRMED]
   when (null productInstances) $ throwError PIDoesNotExist
   let pI = head productInstances
   ExternalAPI.location baseUrl (getId $ pI.id)

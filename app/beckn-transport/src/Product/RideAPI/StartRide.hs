@@ -9,7 +9,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
-import qualified Models.Case
 import Product.ProductInstance (notifyUpdateToBAP)
 import qualified Product.RideAPI.Handlers.StartRide as Handler
 import qualified Storage.Queries.Case as QCase
@@ -27,7 +26,7 @@ startRide SR.RegistrationToken {..} rideId req = withFlowHandlerAPI $ do
         { findPersonById = QPerson.findPersonById,
           findPIById = QProductInstance.findById,
           findPIsByParentId = QProductInstance.findAllByParentId,
-          findCaseByIdsAndType = Models.Case.findByIdType,
+          findCaseByIdsAndType = QCase.findByIdType,
           startRide = startRideTransaction,
           notifyBAPRideStarted = \searchPi orderPi -> notifyUpdateToBAP searchPi orderPi ProductInstance.INPROGRESS
         }

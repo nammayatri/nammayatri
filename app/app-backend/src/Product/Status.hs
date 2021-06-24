@@ -13,8 +13,8 @@ import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Error
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.Case as Case
 import qualified Models.ProductInstance as QPI
+import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Status
 import Types.Error
@@ -24,7 +24,7 @@ import qualified Utils.Notifications as Notify
 status :: Person.Person -> StatusReq -> FlowHandler StatusRes
 status person StatusReq {..} = withFlowHandlerAPI $ do
   prodInst <- QPI.findById (Id productInstanceId)
-  case_ <- Case.findIdByPerson person (prodInst.caseId)
+  case_ <- Case.findIdByPerson person (prodInst.caseId) >>= fromMaybeM CaseNotFound
   let caseId = getId $ case_.id
   context <- buildContext "status" caseId Nothing Nothing
   organization <-

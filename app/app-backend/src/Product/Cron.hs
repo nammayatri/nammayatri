@@ -10,8 +10,8 @@ import Beckn.Utils.Cron (authenticate)
 import Beckn.Utils.Error
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (pi)
-import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
+import qualified Storage.Queries.Case as MC
 import qualified Types.API.Cron as API
 import qualified Types.Metrics as Metrics
 import qualified Utils.Notifications as Notify
@@ -25,7 +25,7 @@ updateCases maybeAuth API.ExpireCaseReq {..} = withFlowHandlerAPI $ do
         let cId = Case.id caseObj
         Metrics.incrementCaseCount Case.CLOSED (Case._type caseObj)
         Case.validateStatusTransition (caseObj.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-        MC.updateStatus cId Case.CLOSED
+        MC.updateStatusFlow cId Case.CLOSED
         updateAllProductInstancesByCaseId cId
         Notify.notifyOnExpiration caseObj
     )
@@ -50,9 +50,9 @@ expireProductInstances maybeAuth = withFlowHandlerAPI $ do
             PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
             MPI.updateStatus (PI.id pI) PI.EXPIRED
           Case.RIDEORDER -> do
-            cs <- MC.findById (PI.caseId pI)
+            cs <- MC.findById (PI.caseId pI) >>= fromMaybeM CaseNotFound
             Case.validateStatusTransition (cs.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-            MC.updateStatus (PI.caseId pI) Case.CLOSED
+            MC.updateStatusFlow (PI.caseId pI) Case.CLOSED
             PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
             MPI.updateStatus (PI.id pI) PI.EXPIRED
             Notify.notifyOnExpiration cs

@@ -11,8 +11,8 @@ import Beckn.Utils.Common
 import Beckn.Utils.Cron (authenticate)
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (pi)
-import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
+import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.Person as PSQ
 import qualified Storage.Queries.ProductInstance as CPQ
 import Types.API.Cron
@@ -31,7 +31,7 @@ expireCases maybeAuth ExpireCaseReq {..} = withFlowHandlerAPI $ do
   where
     updateCases cases = do
       mapM_ (\case_ -> C.validateStatusTransition (C.status case_) C.CLOSED & fromEitherM CaseInvalidStatus) cases
-      MC.updateStatusByIds (C.id <$> cases) C.CLOSED
+      MC.updateStatusByIdsFlow (C.id <$> cases) C.CLOSED
     updateProductInstances productInstances = do
       mapM_ (\pi -> PI.validateStatusTransition (PI.status pi) PI.EXPIRED & fromEitherM PIInvalidStatus) productInstances
       MPI.updateStatusByIds (PI.id <$> productInstances) PI.EXPIRED
@@ -70,9 +70,9 @@ expireProductInstances maybeAuth = withFlowHandlerAPI $ do
             PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
             MPI.updateStatus (PI.id pI) PI.EXPIRED
           C.RIDEORDER -> do
-            cs <- MC.findById (PI.caseId pI)
+            cs <- MC.findById (PI.caseId pI) >>= fromMaybeM CaseNotFound
             C.validateStatusTransition (cs.status) C.CLOSED & fromEitherM CaseInvalidStatus
-            MC.updateStatus (PI.caseId pI) C.CLOSED
+            MC.updateStatusFlow (PI.caseId pI) C.CLOSED
             PI.validateStatusTransition (PI.status pI) PI.EXPIRED & fromEitherM PIInvalidStatus
             MPI.updateStatus (PI.id pI) PI.EXPIRED
           _ -> return ()

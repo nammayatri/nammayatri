@@ -56,8 +56,8 @@ handle =
       findCaseByIdAndType = \caseIds caseType ->
         if caseIds `isSubsequenceOf` ["search", "ride", "tracker"]
           then case caseType of
-            Case.LOCATIONTRACKER -> pure trackerCase
-            Case.RIDEORDER -> pure rideCase
+            Case.LOCATIONTRACKER -> pure $ Just trackerCase
+            Case.RIDEORDER -> pure $ Just rideCase
             _ -> throwError CaseNotFound
           else throwError CaseNotFound,
       notifyUpdateToBAP = \_ _ _ -> pure (),

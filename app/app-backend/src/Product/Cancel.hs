@@ -11,8 +11,8 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
+import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Cancel as Cancel
 import Types.Error
@@ -38,7 +38,7 @@ cancelProductInstance ::
 cancelProductInstance person req = do
   let prodInstId = req.entityId
   searchPI <- MPI.findById (Id prodInstId) -- TODO: Handle usecase where multiple productinstances exists for one product
-  cs <- MC.findIdByPerson person (searchPI.caseId)
+  cs <- MC.findIdByPerson person (searchPI.caseId) >>= fromMaybeM CaseNotFound
   orderPI <- MPI.findByParentIdType (searchPI.id) Case.RIDEORDER
   unless (isProductInstanceCancellable orderPI) $
     throwError $ PIInvalidStatus "Cannot cancel this ride"
@@ -55,13 +55,13 @@ cancelProductInstance person req = do
 searchCancel :: (BAPMetrics m, DBFlow m r) => Person.Person -> CancelReq -> m CancelRes
 searchCancel person req = do
   let caseId = req.entityId
-  case_ <- MC.findIdByPerson person (Id caseId)
+  case_ <- MC.findIdByPerson person (Id caseId) >>= fromMaybeM CaseDoesNotExist
   unless (isCaseCancellable case_) $ throwError (CaseInvalidStatus "Cannot cancel with this case")
   Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
   piList <- MPI.findAllByCaseId (case_.id)
   traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI.id <$> filter isProductInstanceCancellable piList)
   Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-  MC.updateStatus (case_.id) Case.CLOSED
+  MC.updateStatusFlow (case_.id) Case.CLOSED
   return Success
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
@@ -93,9 +93,9 @@ onCancel _org req = withFlowHandlerBecknAPI $
             -- wrap everything in a transaction
             PI.validateStatusTransition (PI.status orderPi) PI.CANCELLED & fromEitherM PIInvalidStatus
             MPI.updateStatus (PI.id orderPi) PI.CANCELLED
-            case_ <- MC.findById $ PI.caseId orderPi
+            case_ <- MC.findById (PI.caseId orderPi) >>= fromMaybeM CaseDoesNotExist
             Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-            MC.updateStatus (PI.caseId orderPi) Case.CLOSED
+            MC.updateStatusFlow (PI.caseId orderPi) Case.CLOSED
             return ()
         productInstance <- MPI.findById prodInstId
         PI.validateStatusTransition (PI.status productInstance) PI.CANCELLED & fromEitherM PIInvalidStatus
@@ -119,9 +119,9 @@ onCancel _org req = withFlowHandlerBecknAPI $
           (length arrTerminalPI == length arrPICase)
           ( do
               Metrics.incrementCaseCount Case.CLOSED Case.RIDEORDER
-              case_ <- MC.findById caseId
+              case_ <- MC.findById caseId >>= fromMaybeM CaseDoesNotExist
               Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-              MC.updateStatus caseId Case.CLOSED
+              MC.updateStatusFlow caseId Case.CLOSED
           )
       Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err
     return Ack

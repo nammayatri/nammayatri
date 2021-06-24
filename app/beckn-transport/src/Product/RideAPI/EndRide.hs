@@ -9,7 +9,6 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
-import qualified Models.Case
 import Product.ProductInstance as PI
 import qualified Product.RideAPI.Handlers.EndRide as Handler
 import qualified Storage.Queries.Case as Case
@@ -29,7 +28,7 @@ endRide SR.RegistrationToken {..} rideId = withFlowHandlerAPI $ do
         { findPersonById = Person.findPersonById,
           findPIById = PI.findById',
           findAllPIByParentId = PI.findAllByParentId,
-          findCaseByIdAndType = Models.Case.findByIdType,
+          findCaseByIdAndType = Case.findByIdType,
           notifyUpdateToBAP = PI.notifyUpdateToBAP,
           endRideTransaction
         }

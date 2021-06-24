@@ -15,7 +15,6 @@ import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Models.Case as Case
 import qualified Types.Storage.DB as DB
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductInstanceT))
@@ -160,18 +159,6 @@ listAllProductInstance piId status_ = do
     predicate (Storage.ByCustomerId i) s Storage.ProductInstance {..} = personId ==. B.val_ (Just i) &&. B.in_ status (B.val_ <$> s)
     predicate (Storage.ById i) [] Storage.ProductInstance {..} = productId ==. B.val_ i
     predicate (Storage.ById i) s Storage.ProductInstance {..} = productId ==. B.val_ i &&. B.in_ status (B.val_ <$> s)
-
-listAllProductInstanceByPerson ::
-  DBFlow m r =>
-  Person.Person ->
-  Storage.ListById ->
-  [Storage.ProductInstanceStatus] ->
-  m [Storage.ProductInstance]
-listAllProductInstanceByPerson person id status =
-  case id of
-    Storage.ByApplicationId caseId ->
-      Case.findIdByPerson person caseId >> listAllProductInstance id status
-    _ -> listAllProductInstance id status
 
 updateMultipleFlow ::
   DBFlow m r =>

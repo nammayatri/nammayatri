@@ -33,7 +33,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified ExternalAPI.Transform as ExternalAPITransform
-import qualified Models.Case as Case
+import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -87,7 +87,7 @@ cancelRide rideId requestedByDriver = do
     case piList of
       [] -> pure ()
       prdInst : _ -> do
-        c <- Case.findById $ prdInst.caseId
+        c <- Case.findById (prdInst.caseId) >>= fromMaybeM CaseNotFound
         case prdInst.personId of
           Nothing -> pure ()
           Just driverId -> do
@@ -169,7 +169,7 @@ trackTrip transporterId org req = withFlowHandlerBecknAPI $
     let context = req.context
     validateContext "track" context
     let tripId = req.message.order_id
-    trackerCase <- Case.findById $ Id tripId
+    trackerCase <- Case.findById (Id tripId) >>= fromMaybeM CaseDoesNotExist
     callbackUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     transporter <- Organization.findOrganizationById transporterId
     ExternalAPI.withCallback transporter "track" API.onTrackTrip context callbackUrl $ do

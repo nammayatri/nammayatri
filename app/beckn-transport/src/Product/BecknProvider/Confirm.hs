@@ -15,9 +15,9 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import ExternalAPI.Transform as ExternalAPITransform
-import qualified Models.Case as Case
 import qualified Product.BecknProvider.BP as BP
 import Product.Person (calculateDriverPool, setDriverPool)
+import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.ProductInstance as QProductInstance
@@ -40,7 +40,7 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
     transporterOrg <- Organization.findOrganizationById transporterId'
     unless (transporterId' == transporterId) $ throwError AccessDenied
     let caseShortId = getId transporterId <> "_" <> req.context.transaction_id
-    searchCase <- Case.findBySid caseShortId
+    searchCase <- Case.findBySid caseShortId >>= fromMaybeM CaseNotFound
     bapOrgId <- searchCase.udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
     unless (bapOrg.id == Id bapOrgId) $ throwError AccessDenied
     orderCase <- mkOrderCase searchCase

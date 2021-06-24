@@ -26,8 +26,8 @@ handle =
       findPIsByParentId = \parentId -> pure [rideProductInstance, trackerProductInstance],
       findCaseByIdsAndType = \_caseIds caseType ->
         if caseType == Case.LOCATIONTRACKER
-          then pure trackerCase
-          else pure rideCase,
+          then pure $ Just trackerCase
+          else pure $ Just rideCase,
       startRide = \_piIds _trackerCaseId _orderCaseId -> pure (),
       notifyBAPRideStarted = \_searchPi _orderPi -> pure ()
     }

@@ -8,7 +8,7 @@ import Beckn.Types.Storage.Location as Location
 import Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
-import Models.Case as Case
+import qualified Storage.Queries.Case as Case
 import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP

@@ -59,10 +59,6 @@ listAllProductInstance :: DBFlow m r => ListById -> [ProductInstanceStatus] -> m
 listAllProductInstance piid status = do
   Q.listAllProductInstance piid status
 
-listAllProductInstanceByPerson :: DBFlow m r => Person.Person -> ListById -> [ProductInstanceStatus] -> m [ProductInstance]
-listAllProductInstanceByPerson person piid status = do
-  Q.listAllProductInstanceByPerson person piid status
-
 findAllByParentId :: DBFlow m r => Id ProductInstance -> m [ProductInstance]
 findAllByParentId piid = do
   Q.findAllByParentId piid

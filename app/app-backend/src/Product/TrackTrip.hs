@@ -13,8 +13,8 @@ import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.Case as MC
 import qualified Models.ProductInstance as MPI
+import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.Organization as OQ
 import Types.API.Track
 import Types.Error
@@ -26,7 +26,7 @@ track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
 track person req = withFlowHandlerAPI $ do
   let prodInstId = req.rideId
   prodInst <- MPI.findById prodInstId
-  case_ <- MC.findIdByPerson person (prodInst.caseId)
+  case_ <- MC.findIdByPerson person (prodInst.caseId) >>= fromMaybeM CaseNotFound
   let txnId = getId $ case_.id
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
@@ -50,7 +50,7 @@ trackCb _org req = withFlowHandlerBecknAPI $
       Right msg -> do
         let tracking = msg.tracking
             caseId = Id $ context.transaction_id
-        case_ <- MC.findById caseId
+        case_ <- MC.findById caseId >>= fromMaybeM CaseDoesNotExist
         prodInst <- MPI.listAllProductInstance (ProductInstance.ByApplicationId caseId) [ProductInstance.CONFIRMED]
         let confirmedProducts = prodInst
         res <-

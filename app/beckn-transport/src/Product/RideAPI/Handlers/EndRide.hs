@@ -16,7 +16,7 @@ data ServiceHandle m = ServiceHandle
     findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
     findAllPIByParentId :: Id PI.ProductInstance -> m [PI.ProductInstance],
     endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> m (),
-    findCaseByIdAndType :: [Id Case.Case] -> Case.CaseType -> m Case.Case,
+    findCaseByIdAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
     notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> m ()
   }
 
@@ -38,8 +38,8 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   searchPiId <- orderPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- findPIById searchPiId >>= fromMaybeM PINotFound
   piList <- findAllPIByParentId searchPiId
-  trackerCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.LOCATIONTRACKER
-  orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER
+  trackerCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.LOCATIONTRACKER >>= fromMaybeM CaseNotFound
+  orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER >>= fromMaybeM CaseNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId)

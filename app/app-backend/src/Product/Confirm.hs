@@ -17,7 +17,6 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Models.Case as MCase
 import qualified Models.ProductInstance as MPI
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as OQ
@@ -32,7 +31,7 @@ import Utils.Common
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
 confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
   lt <- getCurrentTime
-  case_ <- MCase.findIdByPerson person $ Id caseId
+  case_ <- QCase.findIdByPerson person (Id caseId) >>= fromMaybeM CaseDoesNotExist
   when ((case_.validTill) < lt) $
     throwError CaseExpired
   orderCase_ <- mkOrderCase case_
@@ -92,7 +91,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
         productInstance <- MPI.findById pid
         Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
         let newCaseStatus = Case.COMPLETED
-        case_ <- MCase.findById $ productInstance.caseId
+        case_ <- QCase.findById (productInstance.caseId) >>= fromMaybeM CaseNotFound
         Case.validateStatusTransition (case_.status) newCaseStatus & fromEitherM CaseInvalidStatus
         SPI.validateStatusTransition (SPI.status productInstance) SPI.CONFIRMED & fromEitherM PIInvalidStatus
         DB.runSqlDBTransaction $ do

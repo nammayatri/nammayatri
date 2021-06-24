@@ -17,8 +17,8 @@ import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Data.Maybe
 import Data.Semigroup
 import EulerHS.Prelude hiding (id)
-import Models.Case as Case
 import Models.ProductInstance as ProductInstance
+import qualified Storage.Queries.Case as Case
 import Storage.Queries.Person as Person
 import Types.Error
 import Types.ProductInfo as ProductInfo
@@ -56,7 +56,7 @@ getDriver rideSearchPI = do
 
 getPerson :: (DBFlow m r, EncFlow m r) => ProductInstance -> m Person
 getPerson rideSearchPI = do
-  c <- Case.findById $ caseId rideSearchPI
+  c <- Case.findById rideSearchPI.caseId >>= fromMaybeM CaseDoesNotExist
   personId <- Case.requestor c & fromMaybeM (CaseFieldNotPresent "requestor")
   Person.findById (Id personId) >>= fromMaybeM PersonNotFound
 

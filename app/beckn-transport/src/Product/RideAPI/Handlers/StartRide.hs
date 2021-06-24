@@ -14,7 +14,7 @@ data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m Person.Person,
     findPIById :: Id ProductInstance.ProductInstance -> m ProductInstance.ProductInstance,
     findPIsByParentId :: Id ProductInstance.ProductInstance -> m [ProductInstance.ProductInstance],
-    findCaseByIdsAndType :: [Id Case.Case] -> Case.CaseType -> m Case.Case,
+    findCaseByIdsAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
     startRide :: [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m (),
     notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m ()
   }
@@ -34,8 +34,8 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   inAppOtp <- orderPi.udf4 & fromMaybeM (PIFieldNotPresent "udf4")
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   piList <- findPIsByParentId searchPiId
-  trackerCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.LOCATIONTRACKER
-  orderCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.RIDEORDER
+  trackerCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.LOCATIONTRACKER >>= fromMaybeM CaseNotFound
+  orderCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.RIDEORDER >>= fromMaybeM CaseNotFound
   logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
   startRide (ProductInstance.id <$> piList) (Case.id trackerCase) (Case.id orderCase)
   notifyBAPRideStarted searchPi orderPi

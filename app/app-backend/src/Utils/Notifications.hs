@@ -5,6 +5,7 @@ module Utils.Notifications where
 import Beckn.External.FCM.Flow
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Common
+import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Storage.Case as Case
 import Beckn.Types.Storage.Person as Person
@@ -13,11 +14,11 @@ import Beckn.Types.Storage.RegistrationToken as RegToken
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import EulerHS.Prelude
-import qualified Models.Case as Case
+import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Person as Person
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
-import Utils.Common (decodeFromText, showTimeIst)
+import Utils.Common (decodeFromText, showTimeIst, fromMaybeM)
 
 -- Note:
 -- When customer searches case is created in the BA, and search request is
@@ -45,7 +46,7 @@ notifyOnStatusUpdate ::
   m ()
 notifyOnStatusUpdate prodInst piStatus =
   when (prodInst.status /= piStatus) $ do
-    c <- Case.findById $ prodInst.caseId
+    c <- Case.findById (prodInst.caseId) >>= fromMaybeM CaseNotFound
     let mpersonId = Case.requestor c
         productInstanceId = prodInst.id
         minfo :: (Maybe ProductInfo) = decodeFromText =<< prodInst.info
