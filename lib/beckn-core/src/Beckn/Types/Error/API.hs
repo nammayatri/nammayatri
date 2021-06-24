@@ -394,3 +394,14 @@ instance IsAPIError ActionNotSupported where
   toHttpCode _ = E400
 
 instanceExceptionWithParent 'APIException ''ActionNotSupported
+
+newtype SMSError = SMSError Text
+  deriving (Eq, Show)
+
+instanceExceptionWithParent 'APIException ''SMSError
+
+instance IsAPIError SMSError where
+  toErrorCode = \case
+    SMSError _ -> "SMS_NOT_SENT"
+  toMessage = \case
+    SMSError err -> Just err

@@ -13,9 +13,8 @@ import EulerHS.Prelude
 submitSms :: HasCoreMetrics r => BaseUrl -> SubmitSms -> FlowR r ()
 submitSms url params = do
   res <- callAPI url (API.submitSms params) "submitSms"
-  whenRight res $ \_ ->
-    logTagInfo "SMS" "Submitted sms successfully"
-  res & fromEitherM (ExternalAPICallError (Just "UNABLE_TO_SEND_SMS") url)
+  body <- res & fromEitherM (ExternalAPICallError (Just "UNABLE_TO_SEND_SMS") url)
+  unless (T.isPrefixOf "Sent" body) $ throwError $ SMSError body
 
 type OtpTemplate = Text
 
