@@ -26,8 +26,7 @@ validateVersion context = do
         return (Just mobilityCoreVersion, Just mobilityDomainVersion)
       FINAL_MILE_DELIVERY -> do
         fmdCoreVersion <- view #fmdCoreVersion
-        fmdDomainVersion <- view #fmdDomainVersion
-        return (Just fmdCoreVersion, Just fmdDomainVersion)
+        return (Just fmdCoreVersion, Nothing)
       -- TODO: validate for these domains when enabled
       FOOD_AND_BEVERAGE -> return (Nothing, Nothing)
       HEALTHCARE -> return (Nothing, Nothing)

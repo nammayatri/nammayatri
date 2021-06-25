@@ -31,7 +31,7 @@ instance Example Intent where
     Intent
       { query_string = Nothing,
         provider = Nothing,
-        fulfillment = Nothing,
+        fulfillment = example,
         payment = Nothing,
         category = Nothing,
         offer = Nothing,
@@ -55,15 +55,32 @@ data FulFillmentInfo = FulFillmentInfo
     start :: Maybe LocationAndTime,
     end :: Maybe LocationAndTime,
     tags :: Maybe Tags,
-    vehicle :: Vehicle
+    vehicle :: Maybe Vehicle
   }
   deriving (Generic, Show)
+
+instance Example FulFillmentInfo where
+  example =
+    FulFillmentInfo
+      { id = Nothing,
+        start = example,
+        end = example,
+        tags = Nothing,
+        vehicle = Nothing
+      }
 
 data LocationAndTime = LocationAndTime
   { location :: Maybe Location,
     time :: Maybe Time
   }
   deriving (Generic, Show)
+
+instance Example LocationAndTime where
+  example =
+    LocationAndTime
+      { location = example,
+        time = Nothing
+      }
 
 instance FromJSON Intent where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

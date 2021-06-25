@@ -49,8 +49,7 @@ in
 , migrationPath = Some (env:FMD_WRAPPER_MIGRATION_PATH as Text ? "dev/migrations/fmd-wrapper")
 , autoMigrate = True
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
-, coreVersion = "0.8.0"
-, domainVersion = "0.8.3"
+, coreVersion = "0.9.1"
 , dzConfig = dunzoConfig
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys

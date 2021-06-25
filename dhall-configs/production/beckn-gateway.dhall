@@ -42,8 +42,7 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-gateway.log"}
 , mobilityCoreVersion = "0.8.2"
 , mobilityDomainVersion = "0.8.2"
-, fmdCoreVersion = "0.8.0"
-, fmdDomainVersion = "0.8.3"
+, fmdCoreVersion = "0.9.1"
 , signatureExpiry = common.signatureExpiry
 , graceTerminationPeriod = +90
 }

@@ -28,7 +28,6 @@ data AppCfg = AppCfg
     mobilityCoreVersion :: Text,
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
-    fmdDomainVersion :: Text,
     signatureExpiry :: NominalDiffTime,
     graceTerminationPeriod :: Int
   }
@@ -44,7 +43,6 @@ data AppEnv = AppEnv
     mobilityCoreVersion :: Text,
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
-    fmdDomainVersion :: Text,
     signatureExpiry :: NominalDiffTime,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer

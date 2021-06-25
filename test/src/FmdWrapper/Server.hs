@@ -34,7 +34,7 @@ callbackApp callbackData = serve (Proxy :: Proxy CallbackAPI) $ callbackServer c
 callbackServer :: CallbackData -> Server CallbackAPI
 callbackServer = onSearch
 
-onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> (API.BecknCallbackReq OnSearchCatalog) -> Handler AckResponse
+onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> API.BecknCallbackReq OnSearchCatalog -> Handler AckResponse
 onSearch callbackData sPayload req = do
   atomically $ modifyTVar (onSearchTVar callbackData) (CallbackResult (sPayload <&> (.params.keyId.subscriberId)) req :)
   pure Ack

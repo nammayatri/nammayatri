@@ -5,7 +5,7 @@ module FmdWrapper.Search where
 import Beckn.Types.Core.Ack
 import Beckn.Utils.Example
 import Common
-import Control.Lens (Setter', _Just)
+import Control.Lens (Setter', (?~), _Just)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import ExternalAPI.Dunzo.Types
@@ -27,11 +27,11 @@ import qualified "fmd-wrapper" Types.Beckn.Error as Error
 import "fmd-wrapper" Types.Beckn.Gps (Gps (..))
 import Utils
 
-setPickupGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) Gps
-setPickupGps = #message . #intent . #fulfillment . _Just . #start . _Just . #location . _Just . #gps . _Just
+setPickupGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) (Maybe Gps)
+setPickupGps = #message . #intent . #fulfillment . _Just . #start . _Just . #location . _Just . #gps
 
-setDropGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) Gps
-setDropGps = #message . #intent . #fulfillment . _Just . #end . _Just . #location . _Just . #gps . _Just
+setDropGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) (Maybe Gps)
+setDropGps = #message . #intent . #fulfillment . _Just . #end . _Just . #location . _Just . #gps
 
 gps1 :: Gps
 gps1 = Gps 12.9729391 77.6294794
@@ -127,8 +127,8 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
 
     let searchReq =
           buildFMDSearchReq ctx
-            & setPickupGps .~ pickupGps
-            & setDropGps .~ dropGps
+            & setPickupGps ?~ pickupGps
+            & setDropGps ?~ dropGps
 
     gatewayResp <- runSearch clientEnv "fmd-test-app" searchReq
     assertAck gatewayResp
@@ -148,8 +148,8 @@ successfulSearch clientEnv callbackData =
 
     let searchReq =
           buildFMDSearchReq ctx
-            & setPickupGps .~ gps1
-            & setDropGps .~ gps2
+            & setPickupGps ?~ gps1
+            & setDropGps ?~ gps2
 
     gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
     assertAck gatewayResponse

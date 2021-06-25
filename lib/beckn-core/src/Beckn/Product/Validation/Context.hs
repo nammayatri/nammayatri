@@ -95,7 +95,7 @@ validateContextCommons expectedAction context = do
   validateCity context
 
 validateContextCommonsMig ::
-  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
+  ( HasFlowEnv m r '["coreVersion" ::: Text],
     Log m
   ) =>
   Text ->
