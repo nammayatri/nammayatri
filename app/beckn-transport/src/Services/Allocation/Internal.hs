@@ -95,7 +95,9 @@ sendNewRideNotification ::
   m ()
 sendNewRideNotification rideId driverId = do
   prodInst <- QPI.findById (cast rideId) >>= fromMaybeM PINotFound
-  person <- QP.findPersonById $ cast driverId
+  person <-
+    QP.findPersonById (cast driverId)
+      >>= fromMaybeM PersonNotFound
   notifyDriverNewAllocation prodInst person
 
 sendRideNotAssignedNotification ::
@@ -108,7 +110,9 @@ sendRideNotAssignedNotification ::
   m ()
 sendRideNotAssignedNotification (Id rideId) (Id driverId) = do
   prodInst <- QPI.findById (Id rideId) >>= fromMaybeM PINotFound
-  person <- QP.findPersonById (Id driverId)
+  person <-
+    QP.findPersonById (Id driverId)
+      >>= fromMaybeM PersonNotFound
   notifyDriverUnassigned prodInst person
 
 updateNotificationStatus :: DBFlow m r => Id Ride -> Id Driver -> NotificationStatus -> m ()

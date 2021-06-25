@@ -42,7 +42,9 @@ search transporterId bapOrg req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req.context
     BP.validateContext "search" context
-    transporter <- Org.findOrganizationById transporterId
+    transporter <-
+      Org.findOrganizationById transporterId
+        >>= fromMaybeM OrgDoesNotExist
     unless (transporter.enabled) $ throwError ServiceUnavailable
     let intent = req.message.intent
     now <- getCurrentTime
@@ -204,7 +206,9 @@ mkProductInstance productCase price status transporterId = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
-  products <- SProduct.findByName $ fromMaybe "DONT MATCH" (productCase.udf1)
+  products <-
+    SProduct.findByName (fromMaybe "DONT MATCH" (productCase.udf1))
+      >>= fromMaybeM ProductsNotFound
   return
     ProductInstance.ProductInstance
       { id = productInstanceId,

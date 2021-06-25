@@ -21,7 +21,7 @@ import Utils.Common
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
 createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
-  person <- QP.findPersonById (Id entityId)
+  person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
   validate person
   organization <- createTransform req
   validateReq
@@ -31,7 +31,10 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   QO.create organization
   traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
   QP.updateOrganizationIdAndMakeAdmin (Id entityId) (SO.id organization)
-  updatedPerson <- QP.findPersonById (Id entityId) >>= SP.buildDecryptedPerson
+  updatedPerson <-
+    QP.findPersonById (Id entityId)
+      >>= fromMaybeM PersonNotFound
+      >>= SP.buildDecryptedPerson
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
@@ -70,7 +73,9 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
   case maybePerson of
     Just person -> do
       validate person
-      org <- QO.findOrganizationById orgId
+      org <-
+        QO.findOrganizationById orgId
+          >>= fromMaybeM OrgDoesNotExist
       organization <-
         if req.enabled /= Just False
           then modifyTransform req org >>= addTime (Just now)
@@ -86,10 +91,12 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
 
 getTransporter :: SR.RegistrationToken -> FlowHandler TransporterRec
 getTransporter SR.RegistrationToken {..} = withFlowHandlerAPI $ do
-  person <- QP.findPersonById (Id entityId)
+  person <-
+    QP.findPersonById (Id entityId)
+      >>= fromMaybeM PersonNotFound
   validate person
   case person.organizationId of
-    Just orgId -> TransporterRec <$> QO.findOrganizationById orgId
+    Just orgId -> TransporterRec <$> (QO.findOrganizationById orgId >>= fromMaybeM OrgNotFound)
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
   where
     validate person =

@@ -159,7 +159,10 @@ login tokenId req =
         QR.updateVerified tokenId True
         let deviceToken = (req.deviceToken) <|> (person.deviceToken)
         QP.update person.id SP.ACTIVE True deviceToken
-        updatedPerson <- QP.findPersonById person.id >>= SP.buildDecryptedPerson
+        updatedPerson <-
+          QP.findPersonById person.id
+            >>= fromMaybeM PersonNotFound
+            >>= SP.buildDecryptedPerson
         return $ LoginRes token (Just $ SP.maskPerson updatedPerson)
       else throwError InvalidAuthData
   where
@@ -180,7 +183,7 @@ createPerson req = do
 
 checkPersonExists :: DBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
-  QP.findPersonById (Id entityId)
+  QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
 
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =
@@ -204,7 +207,9 @@ clearOldRegToken person = QR.deleteByEntitiyIdExceptNew (getId $ person.id)
 
 logout :: SR.RegistrationToken -> FlowHandler APISuccess
 logout SR.RegistrationToken {..} = withFlowHandlerAPI $ do
-  uperson <- QP.findPersonById (Id entityId)
+  uperson <-
+    QP.findPersonById (Id entityId)
+      >>= fromMaybeM PersonNotFound
   DB.runSqlDBTransaction $ do
     QP.updatePersonRec (uperson.id) uperson {SP.deviceToken = Nothing}
     QR.deleteByEntitiyId entityId

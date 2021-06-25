@@ -37,7 +37,9 @@ confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
     let transporterId' = productInstance.organizationId
     unless (productInstance.status == ProductInstance.INSTOCK) $
       throwError $ PIInvalidStatus "This ride cannot be confirmed"
-    transporterOrg <- Organization.findOrganizationById transporterId'
+    transporterOrg <-
+      Organization.findOrganizationById transporterId'
+        >>= fromMaybeM OrgNotFound
     unless (transporterId' == transporterId) $ throwError AccessDenied
     let caseShortId = getId transporterId <> "_" <> req.context.transaction_id
     searchCase <- Case.findBySid caseShortId >>= fromMaybeM CaseNotFound

@@ -29,7 +29,7 @@ getGatewayUrl ::
 getGatewayUrl = do
   appConfig <- ask
   gatewayShortId <- appConfig.xGatewaySelector & fromMaybeM GatewaySelectorNotSet
-  gatewayOrg <- Org.findOrgByShortId $ ShortId gatewayShortId
+  gatewayOrg <- Org.findOrgByShortId (ShortId gatewayShortId) >>= fromMaybeM OrgNotFound
   case gatewayShortId of
     "NSDL.BG.1" -> appConfig.xGatewayNsdlUrl & fromMaybeM NSDLBaseUrlNotSet
     "JUSPAY.BG.1" -> gatewayOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
@@ -63,7 +63,8 @@ callBAP action api transporter caseId contents = do
   bapCallbackUrl <-
     (case_.udf4) & fromMaybeM (CaseFieldNotPresent "udf4")
       >>= (Id >>> Org.findOrganizationById)
-      >>= ((^. #callbackUrl) >>> fromMaybeM (OrgFieldNotPresent "callback_url"))
+      >>= fromMaybeM OrgNotFound
+      >>= ((.callbackUrl) >>> fromMaybeM (OrgFieldNotPresent "callback_url"))
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
   txnId <-

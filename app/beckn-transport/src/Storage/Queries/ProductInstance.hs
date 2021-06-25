@@ -20,7 +20,6 @@ import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.API.ProductInstance
-import Types.Error
 import qualified Types.Storage.DB as DB
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
@@ -59,10 +58,10 @@ findAllByCaseId piId = do
   where
     predicate Storage.ProductInstance {..} = caseId ==. B.val_ piId
 
-findByCaseId :: DBFlow m r => Id Case.Case -> m Storage.ProductInstance
+findByCaseId :: DBFlow m r => Id Case.Case -> m (Maybe Storage.ProductInstance)
 findByCaseId piId = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate >>= fromMaybeM CaseNotFound
+  DB.findOne dbTable predicate
   where
     predicate Storage.ProductInstance {..} = caseId ==. B.val_ piId
 
@@ -382,19 +381,19 @@ findAllByParentId piId = do
   where
     predicate Storage.ProductInstance {..} = parentId ==. B.val_ (Just piId)
 
-findByIdType :: DBFlow m r => [Id Storage.ProductInstance] -> Case.CaseType -> m Storage.ProductInstance
+findByIdType :: DBFlow m r => [Id Storage.ProductInstance] -> Case.CaseType -> m (Maybe Storage.ProductInstance)
 findByIdType ids csType = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate >>= fromMaybeM PINotFound
+  DB.findOne dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
       id `B.in_` (B.val_ <$> ids)
         &&. _type ==. B.val_ csType
 
-findByParentIdType :: DBFlow m r => Id Storage.ProductInstance -> Case.CaseType -> m Storage.ProductInstance
+findByParentIdType :: DBFlow m r => Id Storage.ProductInstance -> Case.CaseType -> m (Maybe Storage.ProductInstance)
 findByParentIdType mparentId csType = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate >>= fromMaybeM PINotFound
+  DB.findOne dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
       parentId ==. B.val_ (Just mparentId)

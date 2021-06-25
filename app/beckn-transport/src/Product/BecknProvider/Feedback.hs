@@ -30,7 +30,9 @@ feedback _ _ req = withFlowHandlerBecknAPI $
     let productInstanceId = Id $ req.message.order_id
     productInstances <- ProductInstance.findAllByParentId productInstanceId
     personId <- getPersonId productInstances & fromMaybeM (PIFieldNotPresent "person")
-    orderPi <- ProductInstance.findByIdType (ProductInstance.id <$> productInstances) Case.RIDEORDER
+    orderPi <-
+      ProductInstance.findByIdType (ProductInstance.id <$> productInstances) Case.RIDEORDER
+        >>= fromMaybeM PINotFound
     unless (orderPi.status == ProductInstance.COMPLETED) $
       throwError $ PIInvalidStatus "Order is not ready for rating."
     ratingValue :: Int <-

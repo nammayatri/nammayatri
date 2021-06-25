@@ -18,11 +18,11 @@ import Utils.SilentLogger ()
 handle :: StartRide.ServiceHandle IO
 handle =
   StartRide.ServiceHandle
-    { findPersonById = \_personid -> pure Fixtures.defaultDriver,
+    { findPersonById = \_personid -> pure $ Just Fixtures.defaultDriver,
       findPIById = \piId ->
         if piId == Id "1"
-          then pure rideProductInstance
-          else pure searchProductInstance,
+          then pure $ Just rideProductInstance
+          else pure $ Just searchProductInstance,
       findPIsByParentId = \parentId -> pure [rideProductInstance, trackerProductInstance],
       findCaseByIdsAndType = \_caseIds caseType ->
         if caseType == Case.LOCATIONTRACKER
@@ -104,9 +104,10 @@ failedStartRequestedByDriverNotAnOrderExecutor = do
     handleCase =
       handle
         { StartRide.findPersonById = \personId ->
-            pure
-              Fixtures.defaultDriver{id = "2"
-                                    }
+            pure $
+              Just
+                Fixtures.defaultDriver{id = "2"
+                                      }
         }
 
 failedStartRequestedNotByDriver :: TestTree
@@ -118,9 +119,10 @@ failedStartRequestedNotByDriver = do
     handleCase =
       handle
         { StartRide.findPersonById = \personId ->
-            pure
-              Fixtures.defaultDriver{role = Person.ADMIN
-                                    }
+            pure $
+              Just
+                Fixtures.defaultDriver{role = Person.ADMIN
+                                      }
         }
 
 failedStartWhenProductInstanceStatusIsWrong :: TestTree
@@ -132,10 +134,11 @@ failedStartWhenProductInstanceStatusIsWrong = do
     handleCase =
       handle
         { StartRide.findPIById = \piId ->
-            pure
-              rideProductInstance
-                { ProductInstance.status = ProductInstance.COMPLETED
-                }
+            pure $
+              Just
+                rideProductInstance
+                  { ProductInstance.status = ProductInstance.COMPLETED
+                  }
         }
 
 failedStartWhenRideDoesNotHaveParentProductInstance :: TestTree
@@ -147,10 +150,11 @@ failedStartWhenRideDoesNotHaveParentProductInstance = do
     handleCase =
       handle
         { StartRide.findPIById = \piId ->
-            pure
-              rideProductInstance
-                { ProductInstance.parentId = Nothing
-                }
+            pure $
+              Just
+                rideProductInstance
+                  { ProductInstance.parentId = Nothing
+                  }
         }
 
 failedStartWhenRideMissingOTP :: TestTree
@@ -162,10 +166,11 @@ failedStartWhenRideMissingOTP = do
     handleCase =
       handle
         { StartRide.findPIById = \piId ->
-            pure
-              rideProductInstance
-                { ProductInstance.udf4 = Nothing
-                }
+            pure $
+              Just
+                rideProductInstance
+                  { ProductInstance.udf4 = Nothing
+                  }
         }
 
 failedStartWithWrongOTP :: TestTree

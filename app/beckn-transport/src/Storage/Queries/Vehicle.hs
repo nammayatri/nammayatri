@@ -9,7 +9,6 @@ import qualified Beckn.Types.Storage.Vehicle as Storage
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import Types.Error
 import qualified Types.Storage.DB as DB
 import Utils.Common
 
@@ -36,11 +35,10 @@ findByIdAndOrgId ::
   DBFlow m r =>
   Id Storage.Vehicle ->
   Id Org.Organization ->
-  m Storage.Vehicle
+  m (Maybe Storage.Vehicle)
 findByIdAndOrgId vid orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= fromMaybeM VehicleNotFound
   where
     predicate Storage.Vehicle {..} = id ==. B.val_ vid &&. organizationId ==. B.val_ orgId
 

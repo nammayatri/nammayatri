@@ -9,7 +9,6 @@ import Beckn.Utils.Common
 import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import Types.Error
 import qualified Types.Storage.DB as DB
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductsT))
@@ -29,10 +28,10 @@ findAllById ids = do
     predicate pids Storage.Products {..} =
       B.in_ id (B.val_ <$> pids)
 
-findById :: DBFlow m r => Id Storage.Products -> m Storage.Products
+findById :: DBFlow m r => Id Storage.Products -> m (Maybe Storage.Products)
 findById pid = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate >>= fromMaybeM ProductsNotFound
+  DB.findOne dbTable predicate
   where
     predicate Storage.Products {..} = id ==. B.val_ pid
 
@@ -43,10 +42,10 @@ findById' pid = do
   where
     predicate Storage.Products {..} = id ==. B.val_ pid
 
-findByName :: DBFlow m r => Text -> m Storage.Products
+findByName :: DBFlow m r => Text -> m (Maybe Storage.Products)
 findByName name_ = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate >>= fromMaybeM ProductsNotFound
+  DB.findOne dbTable predicate
   where
     predicate Storage.Products {..} =
       name ==. B.val_ name_

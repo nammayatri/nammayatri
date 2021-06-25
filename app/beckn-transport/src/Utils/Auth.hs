@@ -109,13 +109,17 @@ verifyDriver user = do
 validateAdmin :: (DBFlow m r, EncFlow m r) => RegToken -> m Text
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
-  user <- QP.findPersonById (Id entityId)
+  user <-
+    QP.findPersonById (Id entityId)
+      >>= fromMaybeM PersonNotFound
   verifyAdmin user
 
 validateDriver :: (DBFlow m r, EncFlow m r) => RegToken -> m Text
 validateDriver regToken = do
   SR.RegistrationToken {..} <- QR.verifyToken regToken
-  user <- QP.findPersonById (Id entityId)
+  user <-
+    QP.findPersonById (Id entityId)
+      >>= fromMaybeM PersonNotFound
   verifyDriver user
 
 validateAdminAction :: VerificationAction AdminVerifyToken AppEnv

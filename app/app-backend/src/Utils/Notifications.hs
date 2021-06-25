@@ -18,7 +18,7 @@ import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Person as Person
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
-import Utils.Common (decodeFromText, showTimeIst, fromMaybeM)
+import Utils.Common (decodeFromText, fromMaybeM, showTimeIst)
 
 -- Note:
 -- When customer searches case is created in the BA, and search request is

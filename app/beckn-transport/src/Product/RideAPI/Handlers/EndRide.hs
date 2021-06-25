@@ -12,7 +12,7 @@ import Types.Error
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle
-  { findPersonById :: Id Person.Person -> m Person.Person,
+  { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
     findAllPIByParentId :: Id PI.ProductInstance -> m [PI.ProductInstance],
     endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> m (),
@@ -27,7 +27,7 @@ endRideHandler ::
   Id PI.ProductInstance ->
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} requestorId rideId = do
-  requestor <- findPersonById requestorId
+  requestor <- findPersonById requestorId >>= fromMaybeM PersonNotFound
   orderPi <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
   driverId <- orderPi.personId & fromMaybeM (PIFieldNotPresent "person")
   case requestor.role of

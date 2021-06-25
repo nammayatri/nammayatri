@@ -21,7 +21,6 @@ import Database.PostgreSQL.Simple.SqlQQ (sql)
 import EulerHS.Prelude hiding (id)
 import Types.API.Location (LatLong (..))
 import Types.App
-import Types.Error
 import qualified Types.Storage.DB as DB
 import Utils.Common
 import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
@@ -40,11 +39,10 @@ create person = do
 findPersonById ::
   DBFlow m r =>
   Id Storage.Person ->
-  m Storage.Person
+  m (Maybe Storage.Person)
 findPersonById pid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= fromMaybeM PersonDoesNotExist
   where
     predicate Storage.Person {..} = id ==. B.val_ pid
 

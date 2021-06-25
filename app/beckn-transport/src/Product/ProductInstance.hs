@@ -31,7 +31,9 @@ import qualified Utils.Notifications as Notify
 
 list :: SR.RegistrationToken -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
 list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandlerAPI $ do
-  person <- PersQ.findPersonById (Id entityId)
+  person <-
+    PersQ.findPersonById (Id entityId)
+      >>= fromMaybeM PersonNotFound
   case person.organizationId of
     Just orgId -> do
       result <- PIQ.productInstanceJoin limit offset csTypes orgId status
@@ -65,14 +67,16 @@ notifyUpdateToBAP ::
   m ()
 notifyUpdateToBAP searchPi orderPi updatedStatus = do
   -- Send callbacks to BAP
-  transporter <- OQ.findOrganizationById $ searchPi.organizationId
+  transporter <-
+    OQ.findOrganizationById searchPi.organizationId
+      >>= fromMaybeM OrgNotFound
   notifyTripDetailsToGateway transporter searchPi orderPi
   notifyStatusUpdateReq transporter searchPi updatedStatus
 
 listDriverRides :: SR.RegistrationToken -> Id SP.Person -> FlowHandler RideListRes
 listDriverRides SR.RegistrationToken {..} personId = withFlowHandlerAPI $ do
-  user <- PersQ.findPersonById (Id entityId)
-  person <- PersQ.findPersonById personId
+  user <- PersQ.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
+  person <- PersQ.findPersonById personId >>= fromMaybeM PersonDoesNotExist
   hasAccess user person
   rideList <- PIQ.findAllByPersonId person.id
   locList <- LQ.findAllByLocIds (catMaybes (PI.fromLocation <$> rideList)) (catMaybes (PI.toLocation <$> rideList))
@@ -98,7 +102,7 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandlerAPI $ do
 
 listVehicleRides :: SR.RegistrationToken -> Id V.Vehicle -> FlowHandler RideListRes
 listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandlerAPI $ do
-  user <- PersQ.findPersonById (Id entityId)
+  user <- PersQ.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
   vehicle <- VQ.findVehicleById vehicleId
   hasAccess user vehicle
   rideList <- PIQ.findAllByVehicleId (Just vehicleId)
@@ -169,7 +173,9 @@ assignDriver productInstanceId driverId = do
   headPi <- case piList of
     p : _ -> pure p
     [] -> throwError PIDoesNotExist
-  driver <- PersQ.findPersonById $ cast driverId
+  driver <-
+    PersQ.findPersonById (cast driverId)
+      >>= fromMaybeM PersonDoesNotExist
   vehicleId <-
     driver.udf1
       & fromMaybeM (PersonFieldNotPresent "udf1 - vehicle")
@@ -237,5 +243,7 @@ notifyStatusUpdateReq transporterOrg searchPi status = do
         then PersQ.findAllByOrgIds [SP.ADMIN] [PI.organizationId searchPi]
         else pure []
     notifyStatusToGateway = do
-      trackerPi <- PIQ.findByParentIdType (searchPi.id) Case.LOCATIONTRACKER
+      trackerPi <-
+        PIQ.findByParentIdType (searchPi.id) Case.LOCATIONTRACKER
+          >>= fromMaybeM PINotFound
       BP.notifyServiceStatusToGateway transporterOrg searchPi trackerPi

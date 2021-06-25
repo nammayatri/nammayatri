@@ -20,7 +20,9 @@ import Utils.Common
 
 updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
 updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
-  person <- Person.findPersonById $ Id entityId
+  person <-
+    Person.findPersonById (Id entityId)
+      >>= fromMaybeM PersonNotFound
   driver <- if person.role == Person.DRIVER then return person else throwError AccessDenied
   locationId <-
     driver.locationId
@@ -31,10 +33,13 @@ updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
 
 getLocation :: Id QPI.ProductInstance -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandlerAPI $ do
-  orderProductInstance <- ProductInstance.findByParentIdType piId Case.RIDEORDER
+  orderProductInstance <-
+    ProductInstance.findByParentIdType piId Case.RIDEORDER
+      >>= fromMaybeM PIDoesNotExist
   driver <-
     orderProductInstance.personId & fromMaybeM (PIFieldNotPresent "person")
       >>= Person.findPersonById
+      >>= fromMaybeM PersonNotFound
   currLocation <-
     driver.locationId
       & fromMaybeM (PersonFieldNotPresent "location_id")

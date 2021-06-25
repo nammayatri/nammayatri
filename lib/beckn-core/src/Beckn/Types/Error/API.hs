@@ -94,14 +94,18 @@ instance IsAPIError AuthPIError where
 
 data VehicleError
   = VehicleNotFound
+  | VehicleDoesNotExist
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''VehicleError
 
 instance IsAPIError VehicleError where
-  -- TODO: make two different errors (400 and 500) out of this:
-  toErrorCode VehicleNotFound = "VEHICLE_NOT_FOUND"
-  toHttpCode VehicleNotFound = E400
+  toErrorCode = \case
+    VehicleNotFound -> "VEHICLE_NOT_FOUND"
+    VehicleDoesNotExist -> "VEHICLE_DOES_NOT_EXIST"
+  toHttpCode = \case
+    VehicleNotFound -> E500
+    VehicleDoesNotExist -> E400
 
 data PersonError
   = PersonNotFound

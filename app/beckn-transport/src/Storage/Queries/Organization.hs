@@ -32,11 +32,10 @@ verifyToken regToken = do
   where
     predicate token Storage.Organization {..} = apiKey ==. B.val_ (Just token)
 
-findOrganizationById :: DBFlow m r => Id Storage.Organization -> m Storage.Organization
+findOrganizationById :: DBFlow m r => Id Storage.Organization -> m (Maybe Storage.Organization)
 findOrganizationById orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = id ==. B.val_ orgId
 
@@ -129,19 +128,17 @@ findOrgByApiKey apiKey_ = do
     predicate Storage.Organization {..} =
       apiKey ==. B.val_ (Just apiKey_)
 
-findOrgByCbUrl :: DBFlow m r => BaseUrl -> m Storage.Organization
+findOrgByCbUrl :: DBFlow m r => BaseUrl -> m (Maybe Storage.Organization)
 findOrgByCbUrl url = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = callbackUrl ==. B.val_ (Just url)
 
-findOrgByShortId :: DBFlow m r => ShortId Storage.Organization -> m Storage.Organization
+findOrgByShortId :: DBFlow m r => ShortId Storage.Organization -> m (Maybe Storage.Organization)
 findOrgByShortId shortId_ = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
-    >>= fromMaybeM OrgDoesNotExist
   where
     predicate Storage.Organization {..} = shortId ==. B.val_ shortId_
 

@@ -11,7 +11,7 @@ import Types.Error
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle
-  { findPersonById :: Id Person.Person -> m Person.Person,
+  { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id ProductInstance.ProductInstance -> m (Maybe ProductInstance.ProductInstance),
     findPIsByParentId :: Id ProductInstance.ProductInstance -> m [ProductInstance.ProductInstance],
     findCaseByIdsAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
@@ -21,7 +21,7 @@ data ServiceHandle m = ServiceHandle
 
 startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Id Person.Person -> Id ProductInstance.ProductInstance -> Text -> m APISuccess.APISuccess
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
-  requestor <- findPersonById requestorId
+  requestor <- findPersonById requestorId >>= fromMaybeM PersonNotFound
   orderPi <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
   case requestor.role of
     Person.DRIVER -> do

@@ -19,11 +19,11 @@ import qualified Utils.Defaults as Default
 
 list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
 list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandlerAPI $ do
-  person <- QP.findPersonById (Id entityId)
+  person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
   now <- getCurrentTime
   case person.organizationId of
     Just orgId -> do
-      org <- OQ.findOrganizationById orgId
+      org <- OQ.findOrganizationById orgId >>= fromMaybeM OrgNotFound
       when (org.status /= Organization.APPROVED) $
         throwError Unauthorized
       caseList <-

@@ -20,7 +20,9 @@ import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
 listFarePolicies :: RegToken.RegistrationToken -> FlowHandler ListFarePolicyResponse
 listFarePolicies RegToken.RegistrationToken {entityId} = withFlowHandlerAPI $ do
-  person <- SPerson.findPersonById (Id entityId)
+  person <-
+    SPerson.findPersonById (Id entityId)
+      >>= fromMaybeM PersonNotFound
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   farePolicies <- SFarePolicy.findFarePoliciesByOrgId orgId
   pure $ ListFarePolicyResponse $ toResponse <$> farePolicies

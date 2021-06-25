@@ -20,8 +20,8 @@ import Utils.SilentLogger ()
 handle :: CancelRide.ServiceHandle IO
 handle =
   CancelRide.ServiceHandle
-    { findPIById = \_piId -> pure rideProductInstance,
-      findPersonById = \_personid -> pure Fixtures.defaultDriver,
+    { findPIById = \_piId -> pure $ Just rideProductInstance,
+      findPersonById = \_personid -> pure $ Just Fixtures.defaultDriver,
       cancelRide = \_rideReq _requestedByAdmin -> pure ()
     }
 
@@ -59,7 +59,7 @@ successfulCancellationByAdmin =
     runHandler handleCase "1" "1"
       `shouldReturn` APISuccess.Success
   where
-    handleCase = handle {CancelRide.findPersonById = \personId -> pure admin}
+    handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just admin}
     admin =
       Fixtures.defaultDriver{id = Id "adminId",
                              role = Person.ADMIN
@@ -73,8 +73,8 @@ successfulCancellationWithoutDriverByAdmin =
   where
     handleCase =
       handle
-        { CancelRide.findPIById = \piId -> pure piWithoutDriver,
-          CancelRide.findPersonById = \personId -> pure admin
+        { CancelRide.findPIById = \piId -> pure $ Just piWithoutDriver,
+          CancelRide.findPersonById = \personId -> pure $ Just admin
         }
     piWithoutDriver = rideProductInstance {ProductInstance.personId = Nothing}
     admin =
@@ -88,7 +88,7 @@ failedCancellationByAnotherDriver =
     runHandler handleCase "driverNotExecutorId" "1"
       `shouldThrow` (== NotAnExecutor)
   where
-    handleCase = handle {CancelRide.findPersonById = \personId -> pure driverNotExecutor}
+    handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just driverNotExecutor}
     driverNotExecutor = Fixtures.defaultDriver{id = Id "driverNotExecutorId"}
 
 failedCancellationByNotDriverAndNotAdmin :: TestTree
@@ -97,7 +97,7 @@ failedCancellationByNotDriverAndNotAdmin =
     runHandler handleCase "managerId" "1"
       `shouldThrow` (== AccessDenied)
   where
-    handleCase = handle {CancelRide.findPersonById = \personId -> pure manager}
+    handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just manager}
     manager =
       Fixtures.defaultDriver{id = Id "managerId",
                              role = Person.MANAGER
@@ -109,7 +109,7 @@ failedCancellationWithoutDriverByDriver =
     runHandler handleCase "1" "1"
       `shouldThrow` (== PIFieldNotPresent "person")
   where
-    handleCase = handle {CancelRide.findPIById = \piId -> pure piWithoutDriver}
+    handleCase = handle {CancelRide.findPIById = \piId -> pure $ Just piWithoutDriver}
     piWithoutDriver = rideProductInstance {ProductInstance.personId = Nothing}
 
 failedCancellationWhenProductInstanceStatusIsWrong :: TestTree
@@ -118,5 +118,5 @@ failedCancellationWhenProductInstanceStatusIsWrong =
     runHandler handleCase "1" "1"
       `shouldThrow` (\(PIInvalidStatus _) -> True)
   where
-    handleCase = handle {CancelRide.findPIById = \piId -> pure completedPI}
+    handleCase = handle {CancelRide.findPIById = \piId -> pure $ Just completedPI}
     completedPI = rideProductInstance {ProductInstance.status = ProductInstance.COMPLETED}

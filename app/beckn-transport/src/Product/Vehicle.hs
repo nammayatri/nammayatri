@@ -39,7 +39,7 @@ listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandl
 
 updateVehicle :: Text -> Id SV.Vehicle -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandlerAPI $ do
-  vehicle <- QV.findByIdAndOrgId vehicleId $ Id orgId
+  vehicle <- QV.findByIdAndOrgId vehicleId (Id orgId) >>= fromMaybeM VehicleDoesNotExist
   updatedVehicle <- modifyTransform req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
@@ -48,7 +48,7 @@ deleteVehicle :: Text -> Id SV.Vehicle -> FlowHandler DeleteVehicleRes
 deleteVehicle orgId vehicleId = withFlowHandlerAPI $ do
   vehicle <-
     QV.findVehicleById vehicleId
-      >>= fromMaybeM VehicleNotFound
+      >>= fromMaybeM VehicleDoesNotExist
   if vehicle.organizationId == Id orgId
     then do
       QV.deleteById vehicleId
@@ -57,12 +57,14 @@ deleteVehicle orgId vehicleId = withFlowHandlerAPI $ do
 
 getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe (Id SV.Vehicle) -> FlowHandler CreateVehicleRes
 getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandlerAPI $ do
-  user <- QP.findPersonById (Id entityId)
+  user <-
+    QP.findPersonById (Id entityId)
+      >>= fromMaybeM PersonNotFound
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."
     _ ->
       QV.findByAnyOf registrationNoM vehicleIdM
-        >>= fromMaybeM VehicleNotFound
+        >>= fromMaybeM VehicleDoesNotExist
   hasAccess user vehicle
   return $ CreateVehicleRes vehicle
   where

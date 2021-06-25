@@ -58,7 +58,7 @@ import Utils.Common
 updatePerson :: SR.RegistrationToken -> Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ do
   verifyPerson entityId
-  person <- QP.findPersonById (Id entityId)
+  person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
   isValidUpdate person
   updatedPerson <- modifyTransform req person
   DB.runSqlDB (QP.updatePersonRec (Id entityId) updatedPerson)
@@ -78,7 +78,9 @@ createPerson orgId req = withFlowHandlerAPI $ do
   person <- addOrgId (Id orgId) <$> createTransform req
   QP.create person
   when (person.role == SP.DRIVER) $ createDriverDetails (person.id)
-  org <- OQ.findOrganizationById (Id orgId)
+  org <-
+    OQ.findOrganizationById (Id orgId)
+      >>= fromMaybeM OrgDoesNotExist
   decPerson <- SP.buildDecryptedPerson person
   case (req.role, req.mobileNumber, req.mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
@@ -115,7 +117,9 @@ createDriverDetails personId = do
 
 getPersonDetails :: SR.RegistrationToken -> FlowHandler GetPersonDetailsRes
 getPersonDetails regToken = withFlowHandlerAPI $ do
-  SP.Person {..} <- QP.findPersonById (Id $ regToken.entityId)
+  SP.Person {..} <-
+    QP.findPersonById (Id $ regToken.entityId)
+      >>= fromMaybeM PersonNotFound
   pure $
     GetPersonDetailsRes {..}
 
@@ -127,7 +131,9 @@ listPerson orgId roles limitM offsetM = withFlowHandlerAPI $ do
 
 deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
 deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
-  person <- QP.findPersonById (Id personId)
+  person <-
+    QP.findPersonById (Id personId)
+      >>= fromMaybeM PersonDoesNotExist
   unless (person.organizationId == Just (Id orgId)) $ throwError Unauthorized
   DB.runSqlDBTransaction $ do
     QP.deleteById (Id personId)
@@ -138,7 +144,9 @@ deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
 
 linkEntity :: Text -> Id SP.Person -> LinkReq -> FlowHandler PersonEntityRes
 linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do
-  person <- QP.findPersonById (Id personId)
+  person <-
+    QP.findPersonById (Id personId)
+      >>= fromMaybeM PersonDoesNotExist
   _ <- case req.entityType of
     VEHICLE ->
       QV.findVehicleById (Id (req.entityId))
@@ -150,7 +158,9 @@ linkEntity orgId (Id personId) req = withFlowHandlerAPI $ do
   prevPerson <- QP.findByEntityId (req.entityId)
   whenJust prevPerson (\p -> QP.updateEntity (p.id) T.empty T.empty)
   QP.updateEntity (Id personId) (req.entityId) (T.pack $ show $ req.entityType)
-  updatedPerson <- QP.findPersonById $ person.id
+  updatedPerson <-
+    QP.findPersonById person.id
+      >>= fromMaybeM PersonNotFound
   mkPersonRes updatedPerson
 
 -- Utility Functions

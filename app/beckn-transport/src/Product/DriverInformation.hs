@@ -28,10 +28,12 @@ getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.Driv
 getInformation RegistrationToken {..} = withFlowHandlerAPI $ do
   _ <- Registration.checkPersonExists entityId
   let driverId = Id entityId
-  person <- QPerson.findPersonById (Id entityId)
+  person <- QPerson.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
   personEntity <- Person.mkPersonRes person
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
-  organization <- QOrganization.findOrganizationById orgId
+  organization <-
+    QOrganization.findOrganizationById orgId
+      >>= fromMaybeM OrgNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   pure $
     DriverInformationAPI.DriverInformationResponse
@@ -56,7 +58,7 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
       let productInstanceId = cast $ notification.rideId
       let notificationExpiryTime = notification.expiresAt
       productInstance <- QueryPI.findById productInstanceId >>= fromMaybeM PINotFound
-      driver <- QPerson.findPersonById $ cast driverId
+      driver <- QPerson.findPersonById (cast driverId) >>= fromMaybeM PersonNotFound
       driverLocation <- findLocationById (driver.locationId) >>= fromMaybeM (PersonFieldNotPresent "location_id")
       fromLocation <- findLocationById (productInstance.fromLocation) >>= fromMaybeM (PIFieldNotPresent "location_id")
       toLocation <- findLocationById (productInstance.toLocation) >>= fromMaybeM (PIFieldNotPresent "to_location_id")

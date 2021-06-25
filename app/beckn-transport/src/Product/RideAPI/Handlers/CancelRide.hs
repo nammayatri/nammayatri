@@ -15,7 +15,7 @@ type MonadHandler m = (MonadThrow m, Log m)
 
 data ServiceHandle m = ServiceHandle
   { findPIById :: Id ProductInstance -> m (Maybe ProductInstance),
-    findPersonById :: Id Person.Person -> m Person.Person,
+    findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     cancelRide :: Id Ride -> Bool -> m ()
   }
 
@@ -23,7 +23,9 @@ cancelRideHandler :: MonadHandler m => ServiceHandle m -> Text -> Id Ride -> m A
 cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
   prodInst <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
   unless (isValidPI prodInst) $ throwError $ PIInvalidStatus "This ride cannot be canceled"
-  authPerson <- findPersonById $ Id authorizedEntityId
+  authPerson <-
+    findPersonById (Id authorizedEntityId)
+      >>= fromMaybeM PersonNotFound
   case authPerson.role of
     Person.ADMIN -> cancelRide rideId False
     Person.DRIVER -> do
