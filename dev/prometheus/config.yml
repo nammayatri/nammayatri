@@ -1,0 +1,33 @@
+global:
+  scrape_interval: "15s"
+
+# Replace 192.168.29.32 with your local host ip
+scrape_configs:
+  - job_name: "beckn-app-backend"
+    static_configs:
+      - targets:
+          - "192.168.29.32:9999"
+        labels:
+          service: "beckn-app-backend"
+          namespace: "atlas"
+  - job_name: "beckn-gateway"
+    static_configs:
+      - targets:
+          - "192.168.29.32:9998"
+        labels:
+          service: "beckn-gateway"
+          namespace: "atlas"
+  - job_name: "beckn-transport-backend"
+    static_configs:
+      - targets:
+          - "192.168.29.32:9997"
+        labels:
+          service: "beckn-transport-backend"
+          namespace: "atlas"
+  - job_name: "beckn-transport-allocation-service"
+    static_configs:
+      - targets:
+          - "192.168.29.32:9996"
+        labels:
+          service: "beckn-transport-allocation-service"
+          namespace: "atlas"

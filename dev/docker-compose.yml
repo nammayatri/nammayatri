@@ -56,7 +56,7 @@ services:
       - POSTGRES_PASSWORD=atlas
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
-  transporter-redis:
+  redis:
     image: "redis:5"
     ports:
       - "6379:6379"
@@ -81,3 +81,32 @@ services:
       - "8021:8012"
     environment:
       - "PASSETTO_PG_BACKEND_CONN_STRING=postgresql://passetto:passetto@passetto-enc-db:5432/passetto"
+  prometheus:
+    image: prom/prometheus:v2.27.1
+    container_name: beckn-prom
+    command: "--config.file=/etc/prometheus/config.yml"
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus-volume:/prometheus
+      - ./prometheus/config.yml:/etc/prometheus/config.yml
+    profiles:
+      - monitoring
+  grafana:
+    image: grafana/grafana:7.5.9
+    container_name: beckn-grafana
+    ports:
+      - 3000:3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=beckn
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/config.ini:/etc/grafana/config.ini
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+volumes: 
+  prometheus-volume:

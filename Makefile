@@ -39,7 +39,7 @@ endif
 
 NS := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 
-.PHONY: build-dep push-dep build push
+.PHONY: build-dep push-dep build push run-svc run-monitoring stop-all-containers
 
 build-dep: Dockerfile.dep
 	$(info Building $(DEP_IMAGE):$(DEP_LABEL) / git-head: $(SOURCE_COMMIT))
@@ -63,3 +63,15 @@ push:
 	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 	docker tag $(IMAGE_NAME):$(VERSION) $(NS)/$(IMAGE_NAME):$(VERSION)
 	docker push $(NS)/$(IMAGE_NAME):$(VERSION)
+
+run-svc: ./dev/docker-compose.yml
+	# Setup and run DB, redis and passetto instances in docker containers
+	docker-compose -f ./dev/docker-compose.yml up -d
+
+run-monitoring: ./dev/docker-compose.yml
+	# Run monitoring stack - Prometheus and grafana in docker containers
+	docker-compose -f ./dev/docker-compose.yml --profile monitoring up -d
+
+stop-all-containers: ./dev/docker-compose.yml
+	# Stop all docker containers
+	docker-compose -f ./dev/docker-compose.yml down
