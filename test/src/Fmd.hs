@@ -20,7 +20,7 @@ fmdWrapperBaseUrl =
     }
 
 buildContext ::
-  Text ->
+  Action ->
   Text ->
   Maybe BaseUrl ->
   IO Context

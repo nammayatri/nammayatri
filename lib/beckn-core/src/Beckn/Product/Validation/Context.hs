@@ -42,7 +42,7 @@ validateAction expectedAction context =
   unless (context.action == expectedAction) $
     throwError InvalidAction
 
-validateActionMig :: (L.MonadFlow m, Log m) => Text -> Mig.Context -> m ()
+validateActionMig :: (L.MonadFlow m, Log m) => Mig.Action -> Mig.Context -> m ()
 validateActionMig expectedAction context =
   unless (context.action == expectedAction) $
     throwError InvalidAction
@@ -98,7 +98,7 @@ validateContextCommonsMig ::
   ( HasFlowEnv m r '["coreVersion" ::: Text],
     Log m
   ) =>
-  Text ->
+  Mig.Action ->
   Mig.Context ->
   m ()
 validateContextCommonsMig expectedAction context = do

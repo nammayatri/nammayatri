@@ -27,6 +27,7 @@ import qualified Types.Beckn.API.Status as StatusAPI
 import qualified Types.Beckn.API.Track as TrackAPI
 import qualified Types.Beckn.API.Types as API
 import qualified Types.Beckn.API.Update as UpdateAPI
+import Types.Beckn.Context (Action (..))
 import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
 import Types.Beckn.Order (Order)
 import Types.Common
@@ -42,7 +43,7 @@ search org req = do
   bap <- Org.findByBapUrl context.bap_uri >>= fromMaybeM OrgDoesNotExist
   dzBACreds <- getDzBAPCreds bap
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  withCallback "search" SearchAPI.onSearchAPI context cbUrl $
+  withCallback SEARCH SearchAPI.onSearchAPI context cbUrl $
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog
 
@@ -55,7 +56,7 @@ init org req = do
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   dzBACreds <- getDzBAPCreds org
-  withCallback "init" InitAPI.onInitAPI context cbUrl $ do
+  withCallback INIT InitAPI.onInitAPI context cbUrl $ do
     let order = req.message
     onInitMessage <-
       mkQuoteReqFromInitOrder order
@@ -122,7 +123,7 @@ confirm org req = do
   let updatedOrderWTxn =
         order & ((#payment . #params . _Just . #transaction_id) .~ txnId)
   dzBACreds <- getDzBAPCreds org
-  withCallback "confirm" ConfirmAPI.onConfirmAPI context cbUrl $ do
+  withCallback CONFIRM ConfirmAPI.onConfirmAPI context cbUrl $ do
     taskStatus <- createTaskAPI dzBACreds dconf =<< mkCreateTaskReq order
     orderId <- generateGUID
     currTime <- getCurrentTime
@@ -182,7 +183,7 @@ track org req = do
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  withCallback "track" TrackAPI.onTrackAPI context cbUrl $ do
+  withCallback TRACK TrackAPI.onTrackAPI context cbUrl $ do
     let taskId = getShortId case_.shortId
     dzBACreds <- getDzBAPCreds org
     mbTrackingUrl <- getStatus dzBACreds conf (TaskId taskId) >>= pure . (.tracking_url)
@@ -200,7 +201,7 @@ status org req = do
     case_.udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
   dzBACreds <- getDzBAPCreds org
-  withCallback "status" StatusAPI.onStatusAPI context cbUrl $ do
+  withCallback STATUS StatusAPI.onStatusAPI context cbUrl $ do
     taskStatus <- getStatus dzBACreds conf (TaskId taskId)
     onStatusMessage <- mkOnStatusMessage order taskStatus
     let updatedOrder = onStatusMessage.order
@@ -220,7 +221,7 @@ cancel org req = do
   let taskId = getShortId $ case_.shortId
   order <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
-  withCallback "cancel" CancelAPI.onCancelAPI context cbUrl $ do
+  withCallback CANCEL CancelAPI.onCancelAPI context cbUrl $ do
     callCancelAPI dzBACreds conf (TaskId taskId)
     let updatedOrder = cancelOrder order
     updateCase case_.id updatedOrder case_

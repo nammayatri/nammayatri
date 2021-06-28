@@ -20,7 +20,7 @@ import Test.Hspec hiding (context, example)
 import qualified "fmd-wrapper" Types.Beckn.API.Search as SearchAPI
 import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.Category (Category (..))
-import "fmd-wrapper" Types.Beckn.Context (Context (..))
+import "fmd-wrapper" Types.Beckn.Context (Action (..), Context (..))
 import qualified "fmd-wrapper" Types.Beckn.Descriptor as Descriptor
 import qualified "fmd-wrapper" Types.Beckn.Domain as Domain
 import qualified "fmd-wrapper" Types.Beckn.Error as Error
@@ -58,7 +58,7 @@ verifyCallbackContext expectBppUri transactionId context = do
   context.domain `shouldBe` Domain.FINAL_MILE_DELIVERY
   when expectBppUri $ context.bpp_uri `shouldSatisfy` isJust
   context.transaction_id `shouldBe` transactionId
-  context.action `shouldBe` "on_search"
+  context.action `shouldBe` ON_SEARCH
   context.message_id `shouldBe` transactionId
   context.core_version `shouldBe` "0.9.1"
 
@@ -123,7 +123,7 @@ dunzoLocationError ::
   IO ()
 dunzoLocationError pickupGps dropGps check clientEnv callbackData =
   withNewUUID $ \transactionId -> do
-    ctx <- buildContext "search" transactionId Nothing
+    ctx <- buildContext SEARCH transactionId Nothing
 
     let searchReq =
           buildFMDSearchReq ctx
@@ -144,7 +144,7 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
 successfulSearch :: ClientEnv -> CallbackData -> IO ()
 successfulSearch clientEnv callbackData =
   withNewUUID $ \transactionId -> do
-    ctx <- buildContext "search" transactionId Nothing
+    ctx <- buildContext SEARCH transactionId Nothing
 
     let searchReq =
           buildFMDSearchReq ctx
@@ -195,7 +195,7 @@ dunzoDifferentCity =
 
 incorrectApiKey :: ClientEnv -> CallbackData -> IO ()
 incorrectApiKey clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" Nothing
+  ctx <- buildContext SEARCH "dummy-txn-id" Nothing
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "" searchReq
@@ -203,7 +203,7 @@ incorrectApiKey clientEnv _ = do
 
 incorrectAction :: ClientEnv -> CallbackData -> IO ()
 incorrectAction clientEnv _ = do
-  ctx <- buildContext "" "dummy-txn-id" Nothing
+  ctx <- buildContext ON_UPDATE "dummy-txn-id" Nothing
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
@@ -211,7 +211,7 @@ incorrectAction clientEnv _ = do
 
 incorrectCountry :: ClientEnv -> CallbackData -> IO ()
 incorrectCountry clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" Nothing
+  ctx <- buildContext SEARCH "dummy-txn-id" Nothing
   let searchReq = buildFMDSearchReq ctx {country = ""}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
@@ -219,7 +219,7 @@ incorrectCountry clientEnv _ = do
 
 incorrectCoreVersion :: ClientEnv -> CallbackData -> IO ()
 incorrectCoreVersion clientEnv _ = do
-  ctx <- buildContext "search" "dummy-txn-id" Nothing
+  ctx <- buildContext SEARCH "dummy-txn-id" Nothing
   let searchReq = buildFMDSearchReq ctx {core_version = "0.7.0"}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq

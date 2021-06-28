@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Migration.Context (Context (..)) where
+module Beckn.Types.Core.Migration.Context (Context (..), Action (..)) where
 
 import Beckn.Types.Core.Migration.Domain (Domain)
 import Beckn.Types.Core.Migration.Duration (Duration)
@@ -12,7 +12,7 @@ data Context = Context
   { domain :: Domain,
     country :: Text,
     city :: Text,
-    action :: Text,
+    action :: Action,
     core_version :: Text,
     bap_id :: BaseUrl,
     bap_uri :: BaseUrl,
@@ -31,3 +31,32 @@ instance FromJSON Context where
 
 instance ToJSON Context where
   toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+
+data Action
+  = SEARCH
+  | SELECT
+  | INIT
+  | CONFIRM
+  | UPDATE
+  | STATUS
+  | TRACK
+  | CANCEL
+  | FEEDBACK
+  | SUPPORT
+  | ON_SEARCH
+  | ON_SELECT
+  | ON_INIT
+  | ON_CONFIRM
+  | ON_UPDATE
+  | ON_STATUS
+  | ON_TRACK
+  | ON_CANCEL
+  | ON_FEEDBACK
+  | ON_SUPPORT
+  deriving (Generic, Show, Eq)
+
+instance FromJSON Action where
+  parseJSON = genericParseJSON constructorsToLowerOptions
+
+instance ToJSON Action where
+  toJSON = genericToJSON constructorsToLowerOptions

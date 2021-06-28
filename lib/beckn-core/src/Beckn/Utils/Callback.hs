@@ -6,8 +6,10 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import qualified Beckn.Types.Core.Migration.API.Types as API
 import qualified Beckn.Types.Core.Migration.Context as M.Context
+import Beckn.Types.Error
 import Beckn.Types.Error.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
+import Beckn.Utils.Common (throwError)
 import Beckn.Utils.Error.BecknAPIError
 import Beckn.Utils.Error.FlowHandling
 import Beckn.Utils.Flow
@@ -75,7 +77,7 @@ type WithBecknCallbackMig api callback_success r =
     Client ET.EulerClient api
       ~ (API.BecknCallbackReq callback_success -> ET.EulerClient AckResponse)
   ) =>
-  Text ->
+  M.Context.Action ->
   Proxy api ->
   M.Context.Context ->
   BaseUrl ->
@@ -87,7 +89,7 @@ withBecknCallbackMig ::
   WithBecknCallbackMig api callback_success r
 withBecknCallbackMig auth action api context cbUrl f = do
   now <- getCurrentTime
-  let cbAction = "on_" <> action
+  cbAction <- mapToCbAction action
   let cbContext =
         context
           & #action .~ cbAction
@@ -95,7 +97,19 @@ withBecknCallbackMig auth action api context cbUrl f = do
   safeFork
     (someExceptionToBecknCbReq cbContext)
     (API.BecknCallbackReq cbContext . Right)
-    action
-    (callBecknAPI auth Nothing cbAction api cbUrl)
+    (show action)
+    (callBecknAPI auth Nothing (show cbAction) api cbUrl)
     f
   return Ack
+  where
+    mapToCbAction M.Context.SEARCH = pure M.Context.ON_SEARCH
+    mapToCbAction M.Context.SELECT = pure M.Context.ON_SELECT
+    mapToCbAction M.Context.INIT = pure M.Context.ON_INIT
+    mapToCbAction M.Context.CONFIRM = pure M.Context.ON_CONFIRM
+    mapToCbAction M.Context.UPDATE = pure M.Context.ON_UPDATE
+    mapToCbAction M.Context.STATUS = pure M.Context.ON_STATUS
+    mapToCbAction M.Context.TRACK = pure M.Context.ON_TRACK
+    mapToCbAction M.Context.CANCEL = pure M.Context.ON_CANCEL
+    mapToCbAction M.Context.FEEDBACK = pure M.Context.ON_FEEDBACK
+    mapToCbAction M.Context.SUPPORT = pure M.Context.ON_SUPPORT
+    mapToCbAction invalidAction = throwError . InvalidRequest $ "Beckn " <> show invalidAction <> " action doesn't have callback"

@@ -22,59 +22,59 @@ import Utils.Common
 search :: Organization -> API.BecknReq SearchIntent -> FlowHandler AckResponse
 search org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTagMig req $ do
-    validateContext "search" $ req.context
+    validateContext SEARCH $ req.context
     DZ.search org req
 
 select :: Organization -> API.BecknReq SelectedObject -> FlowHandler AckResponse
 select org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTagMig req $ do
-    validateContext "select" $ req.context
+    validateContext SELECT $ req.context
     validateBapUrl org $ req.context
     DZ.select org req
 
 init :: Organization -> API.BecknReq InitOrder -> FlowHandler AckResponse
 init org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTagMig req $ do
-    validateContext "init" $ req.context
+    validateContext INIT $ req.context
     validateBapUrl org $ req.context
     DZ.init org req
 
 confirm :: Organization -> API.BecknReq API.OrderObject -> FlowHandler AckResponse
 confirm org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTagMig req $ do
-    validateContext "confirm" $ req.context
+    validateContext CONFIRM $ req.context
     validateBapUrl org $ req.context
     DZ.confirm org req
 
 track :: Organization -> API.BecknReq TrackInfo -> FlowHandler AckResponse
 track org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTagMig req $ do
-    validateContext "track" $ req.context
+    validateContext TRACK $ req.context
     validateBapUrl org $ req.context
     DZ.track org req
 
 status :: Organization -> API.BecknReq OrderId -> FlowHandler AckResponse
 status org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTagMig req $ do
-    validateContext "status" $ req.context
+    validateContext STATUS $ req.context
     validateBapUrl org $ req.context
     DZ.status org req
 
 cancel :: Organization -> API.BecknReq CancellationInfo -> FlowHandler AckResponse
 cancel org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTagMig req $ do
-    validateContext "cancel" $ req.context
+    validateContext CANCEL $ req.context
     validateBapUrl org $ req.context
     DZ.cancel org req
 
 update :: Organization -> API.BecknReq UpdateInfo -> FlowHandler AckResponse
 update org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTagMig req $ do
-    validateContext "update" $ req.context
+    validateContext UPDATE $ req.context
     validateBapUrl org $ req.context
     DZ.update org req
 
-validateContext :: Text -> Context -> Flow ()
+validateContext :: Action -> Context -> Flow ()
 validateContext action context = do
   validateDomainMig Domain.FINAL_MILE_DELIVERY context
   validateContextCommonsMig action context
