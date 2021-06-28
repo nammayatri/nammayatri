@@ -32,8 +32,8 @@ someExceptionToCallbackReq context exc =
           context
         }
 
-someExceptionToBecknCbReq :: M.Context.Context -> SomeException -> API.BecknCallbackReq a
-someExceptionToBecknCbReq context exc =
+someExceptionToCallbackReqMig :: M.Context.Context -> SomeException -> API.BecknCallbackReq a
+someExceptionToCallbackReqMig context exc =
   let BecknAPIError err = someExceptionToBecknApiError exc
    in API.BecknCallbackReq
         { contents = Left err,
@@ -95,7 +95,7 @@ withBecknCallbackMig auth action api context cbUrl f = do
           & #action .~ cbAction
           & #timestamp .~ now
   safeFork
-    (someExceptionToBecknCbReq cbContext)
+    (someExceptionToCallbackReqMig cbContext)
     (API.BecknCallbackReq cbContext . Right)
     (show action)
     (callBecknAPI auth Nothing (show cbAction) api cbUrl)
