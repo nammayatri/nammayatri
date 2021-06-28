@@ -1,6 +1,6 @@
 module Beckn.Types.Core.Migration.Domain (Domain (..)) where
 
-import Beckn.Utils.JSON (replaceUnderscoresString)
+import Beckn.Utils.JSON (constructorsWithHyphens)
 import Data.Aeson
 import EulerHS.Prelude
 
@@ -9,14 +9,8 @@ data Domain
   | FINAL_MILE_DELIVERY
   deriving (Eq, Generic, Show)
 
-domainOptions :: Options
-domainOptions =
-  defaultOptions
-    { constructorTagModifier = replaceUnderscoresString
-    }
-
 instance ToJSON Domain where
-  toJSON = genericToJSON domainOptions
+  toJSON = genericToJSON constructorsWithHyphens
 
 instance FromJSON Domain where
-  parseJSON = genericParseJSON domainOptions
+  parseJSON = genericParseJSON constructorsWithHyphens

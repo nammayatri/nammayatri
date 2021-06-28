@@ -12,17 +12,11 @@ data Domain
   | HEALTHCARE
   deriving (Eq, Generic, Show)
 
-domainOptions :: Options
-domainOptions =
-  defaultOptions
-    { constructorTagModifier = replaceUnderscoresString
-    }
-
 instance Example Domain where
   example = MOBILITY
 
 instance ToJSON Domain where
-  toJSON = genericToJSON domainOptions
+  toJSON = genericToJSON constructorsWithHyphens
 
 instance FromJSON Domain where
-  parseJSON = genericParseJSON domainOptions
+  parseJSON = genericParseJSON constructorsWithHyphens

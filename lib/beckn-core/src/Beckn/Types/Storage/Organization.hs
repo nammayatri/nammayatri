@@ -67,17 +67,11 @@ data OrganizationDomain
   | HEALTHCARE
   deriving (Show, Eq, Read, Generic, ToSchema)
 
-orgDomainOptions :: Options
-orgDomainOptions =
-  defaultOptions
-    { constructorTagModifier = replaceUnderscoresString
-    }
-
 instance ToJSON OrganizationDomain where
-  toJSON = genericToJSON orgDomainOptions
+  toJSON = genericToJSON constructorsWithHyphens
 
 instance FromJSON OrganizationDomain where
-  parseJSON = genericParseJSON orgDomainOptions
+  parseJSON = genericParseJSON constructorsWithHyphens
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationDomain where
   sqlValueSyntax = autoSqlValueSyntax
