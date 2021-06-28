@@ -12,6 +12,7 @@ import Data.Aeson hiding (Error)
 import Data.Char (toLower)
 import EulerHS.Prelude hiding (state)
 import Servant (FromHttpApiData, ToHttpApiData)
+import Servant.Client (BaseUrl)
 import Types.Common
 
 newtype TaskId = TaskId {getTaskId :: Text}
@@ -133,7 +134,7 @@ data TaskStatus = TaskStatus
     estimated_price :: Maybe Float,
     event_timestamp :: Maybe Integer,
     request_timestamp :: Maybe Integer,
-    tracking_url :: Maybe Text,
+    tracking_url :: Maybe BaseUrl,
     runner :: Maybe RunnerDetails,
     price :: Maybe Float,
     total_time :: Maybe Float, -- minutes
