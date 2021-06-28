@@ -3,7 +3,6 @@ module Beckn.Types.Core.Migration.Agent (Agent (..)) where
 import Beckn.Types.Core.Migration.Image (Image)
 import Beckn.Types.Core.Migration.Name (Name)
 import Beckn.Types.Core.Migration.Tags (Tags)
-import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Agent = Agent
@@ -16,10 +15,4 @@ data Agent = Agent
     email :: Maybe Text,
     tags :: Maybe Tags
   }
-  deriving (Eq, Generic, Show)
-
-instance FromJSON Agent where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Agent where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Eq, Generic, Show, FromJSON, ToJSON)
