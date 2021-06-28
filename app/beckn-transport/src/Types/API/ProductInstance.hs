@@ -25,12 +25,6 @@ instance ToJSON ProductInstanceRes where
 
 type ProductInstanceList = [ProductInstanceRes]
 
-data DriverVehicleInfo = DriverVehicleInfo
-  { driverInfo :: Text,
-    vehicleInfo :: Text
-  }
-  deriving (Show, Generic, ToJSON, FromJSON)
-
 data RideRes = RideRes
   { product :: ProductInstance,
     fromLocation :: Loc.Location,

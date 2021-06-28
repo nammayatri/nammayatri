@@ -158,7 +158,7 @@ assignDriver productInstanceId driverId = do
       >>= fromMaybeM VehicleNotFound
   let piIdList = PI.id <$> piList
   decDriver <- SP.buildDecryptedPerson driver
-  DB.runSqlDBTransaction (AQ.assignDriver productInstanceId piIdList vehicle decDriver)
+  DB.runSqlDBTransaction (AQ.assignDriver piIdList vehicle decDriver)
 
   fork "assignDriver - Notify BAP" $ do
     notifyUpdateToBAP searchPi ordPi PI.TRIP_ASSIGNED
