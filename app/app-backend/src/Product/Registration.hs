@@ -1,7 +1,7 @@
 module Product.Registration (initiateLogin, login, reInitiateLogin, logout) where
 
 import App.Types
-import Beckn.External.Encryption (encrypt)
+import Beckn.External.Encryption (decrypt, encrypt)
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Queries as DB
@@ -168,7 +168,7 @@ login tokenId req =
         LoginRes token . SP.maskPerson
           <$> ( Person.findById personId
                   >>= fromMaybeM PersonNotFound
-                  >>= SP.buildDecryptedPerson
+                  >>= decrypt
               )
       else throwError InvalidAuthData
   where

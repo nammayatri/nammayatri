@@ -62,7 +62,7 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ 
   isValidUpdate person
   updatedPerson <- modifyTransform req person
   DB.runSqlDB (QP.updatePersonRec (Id entityId) updatedPerson)
-  decPerson <- SP.buildDecryptedPerson updatedPerson
+  decPerson <- decrypt updatedPerson
   return $ UpdatePersonRes decPerson
   where
     verifyPerson entityId_ =
@@ -81,7 +81,7 @@ createPerson orgId req = withFlowHandlerAPI $ do
   org <-
     OQ.findOrganizationById (Id orgId)
       >>= fromMaybeM OrgDoesNotExist
-  decPerson <- SP.buildDecryptedPerson person
+  decPerson <- decrypt person
   case (req.role, req.mobileNumber, req.mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
       smsCfg <- smsCfg <$> ask

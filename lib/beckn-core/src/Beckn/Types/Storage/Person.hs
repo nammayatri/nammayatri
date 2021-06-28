@@ -1,3 +1,5 @@
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -112,7 +114,7 @@ instance FromHttpApiData Gender where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-data PersonT f = Person
+data PersonTE e f = Person
   { id :: B.C f (Id Person),
     firstName :: B.C f (Maybe Text),
     middleName :: B.C f (Maybe Text),
@@ -122,7 +124,7 @@ data PersonT f = Person
     gender :: B.C f Gender,
     identifierType :: B.C f IdentifierType,
     email :: B.C f (Maybe Text),
-    mobileNumber :: EncryptedHashedField 'AsEncrypted (B.Nullable f) Text,
+    mobileNumber :: EncryptedHashedField e (B.Nullable f) Text,
     mobileCountryCode :: B.C f (Maybe Text),
     passwordHash :: B.C f (Maybe DbHash),
     identifier :: B.C f (Maybe Text),
@@ -142,6 +144,14 @@ data PersonT f = Person
 
 type Person = PersonT Identity
 
+type PersonT = PersonTE 'AsEncrypted
+
+type DecryptedPerson = PersonTE 'AsUnencrypted Identity
+
+instance ToJSON DecryptedPerson
+
+instance FromJSON DecryptedPerson
+
 instance B.Beamable PersonT
 
 type PersonPrimaryKey = B.PrimaryKey PersonT Identity
@@ -152,6 +162,8 @@ instance B.Table PersonT where
   data PrimaryKey PersonT f = PersonPrimaryKey (B.C f (Id Person))
     deriving (Generic, B.Beamable)
   primaryKey t = PersonPrimaryKey t.id
+
+deriveTableEncryption ''PersonTE
 
 -- TODO: move it to appropriate place
 maskPerson :: DecryptedPerson -> DecryptedPerson
@@ -166,8 +178,8 @@ maskPerson person =
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)
 fieldEMod =
-  B.modifyTableFields @PersonT $
-    B.tableModification
+  B.modifyTableFields
+    (B.tableModification @_ @PersonT)
       { createdAt = "created_at",
         updatedAt = "updated_at",
         firstName = "first_name",
@@ -185,41 +197,4 @@ fieldEMod =
         mobileCountryCode = "mobile_country_code",
         identifierType = "identifier_type",
         deviceToken = "device_token"
-      }
-
-data DecryptedPerson = DecryptedPerson
-  { id :: Id Person,
-    firstName :: Maybe Text,
-    middleName :: Maybe Text,
-    lastName :: Maybe Text,
-    fullName :: Maybe Text,
-    role :: Role,
-    gender :: Gender,
-    identifierType :: IdentifierType,
-    email :: Maybe Text,
-    mobileNumber :: Maybe Text,
-    mobileCountryCode :: Maybe Text,
-    passwordHash :: Maybe DbHash,
-    identifier :: Maybe Text,
-    rating :: Maybe Text,
-    verified :: Bool,
-    udf1 :: Maybe Text,
-    udf2 :: Maybe Text,
-    status :: Status,
-    organizationId :: Maybe (Id Org.Organization),
-    locationId :: Maybe (Id Loc.Location),
-    deviceToken :: Maybe FCM.FCMRecipientToken,
-    description :: Maybe Text,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Generic, ToJSON, FromJSON)
-
-buildDecryptedPerson :: EncFlow m r => Person -> m DecryptedPerson
-buildDecryptedPerson Person {..} = do
-  decMobileNumber <- decrypt mobileNumber
-  return $
-    DecryptedPerson
-      { mobileNumber = decMobileNumber,
-        ..
       }

@@ -1,6 +1,7 @@
 module Product.ProductInstance where
 
 import App.Types
+import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
@@ -184,7 +185,7 @@ assignDriver productInstanceId driverId = do
     VQ.findVehicleById vehicleId
       >>= fromMaybeM VehicleNotFound
   let piIdList = PI.id <$> piList
-  decDriver <- SP.buildDecryptedPerson driver
+  decDriver <- decrypt driver
   DB.runSqlDBTransaction (AQ.assignDriver piIdList vehicle decDriver)
 
   fork "assignDriver - Notify BAP" $ do

@@ -163,7 +163,7 @@ login tokenId req =
             >>= fromMaybeM PersonNotFound
         when (person.status == SP.INACTIVE) $
           Notify.notifyOnRegistration regToken updatedPerson
-        decPerson <- SP.buildDecryptedPerson updatedPerson
+        decPerson <- decrypt updatedPerson
         return $ LoginRes token (Just $ SP.maskPerson decPerson)
       else throwError InvalidAuthData
   where

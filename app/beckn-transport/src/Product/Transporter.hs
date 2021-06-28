@@ -1,6 +1,7 @@
 module Product.Transporter where
 
 import App.Types
+import Beckn.External.Encryption
 import Beckn.TypeClass.Transform
 import Beckn.Types.Common
 import Beckn.Types.Id (Id (..))
@@ -34,7 +35,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   updatedPerson <-
     QP.findPersonById (Id entityId)
       >>= fromMaybeM PersonNotFound
-      >>= SP.buildDecryptedPerson
+      >>= decrypt
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
