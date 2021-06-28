@@ -79,7 +79,7 @@ mkVehicleRes personList vehicle =
   let mdriver =
         find
           ( \person ->
-              SP.udf1 person == Just (getId $ vehicle.id)
+              person.udf1 == Just (getId $ vehicle.id)
           )
           personList
    in VehicleRes

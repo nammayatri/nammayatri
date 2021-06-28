@@ -31,15 +31,15 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   QO.create organization
   traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
   QP.updateOrganizationIdAndMakeAdmin (Id entityId) (SO.id organization)
-  updatedPerson <- QP.findPersonById (Id entityId)
+  updatedPerson <- QP.findPersonById (Id entityId) >>= SP.buildDecryptedPerson
   return $ TransporterRes updatedPerson organization
   where
     validate person = do
-      unless (SP.verified person) $
+      unless (person.verified) $
         throwError AccessDenied
-      when (SP.role person /= SP.ADMIN) $
+      when (person.role /= SP.ADMIN) $
         throwError Unauthorized
-      when (isJust $ SP.organizationId person) $
+      when (isJust person.organizationId) $
         throwError PersonOrgExists
     validateReq = do
       let countryCode = req.mobileCountryCode
@@ -80,7 +80,7 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
     Nothing -> throwError PersonDoesNotExist
   where
     validate person =
-      unless (SP.verified person) $ throwError AccessDenied
+      unless (person.verified) $ throwError AccessDenied
     addTime fromTime org =
       return $ org {SO.fromTime = fromTime}
 
@@ -93,4 +93,4 @@ getTransporter SR.RegistrationToken {..} = withFlowHandlerAPI $ do
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
   where
     validate person =
-      unless (SP.verified person) $ throwError AccessDenied
+      unless (person.verified) $ throwError AccessDenied

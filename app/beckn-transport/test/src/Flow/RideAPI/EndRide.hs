@@ -41,7 +41,7 @@ handle =
   Handle.ServiceHandle
     { findPersonById = \case
         Id "1" -> pure Fixtures.defaultDriver
-        Id "2" -> pure $ Fixtures.defaultDriver {Person.id = "2"}
+        Id "2" -> pure $ Fixtures.defaultDriver{id = "2"}
         Id "admin" -> pure Fixtures.defaultAdmin
         _ -> throwError PersonDoesNotExist,
       findPIById = \piId -> pure $ case piId of

@@ -105,9 +105,8 @@ failedStartRequestedByDriverNotAnOrderExecutor = do
       handle
         { StartRide.findPersonById = \personId ->
             pure
-              Fixtures.defaultDriver
-                { Person.id = "2"
-                }
+              Fixtures.defaultDriver{id = "2"
+                                    }
         }
 
 failedStartRequestedNotByDriver :: TestTree
@@ -120,9 +119,8 @@ failedStartRequestedNotByDriver = do
       handle
         { StartRide.findPersonById = \personId ->
             pure
-              Fixtures.defaultDriver
-                { Person.role = Person.ADMIN
-                }
+              Fixtures.defaultDriver{role = Person.ADMIN
+                                    }
         }
 
 failedStartWhenProductInstanceStatusIsWrong :: TestTree

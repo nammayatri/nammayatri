@@ -61,10 +61,9 @@ successfulCancellationByAdmin =
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure admin}
     admin =
-      Fixtures.defaultDriver
-        { Person.id = Id "adminId",
-          Person.role = Person.ADMIN
-        }
+      Fixtures.defaultDriver{id = Id "adminId",
+                             role = Person.ADMIN
+                            }
 
 successfulCancellationWithoutDriverByAdmin :: TestTree
 successfulCancellationWithoutDriverByAdmin =
@@ -79,10 +78,9 @@ successfulCancellationWithoutDriverByAdmin =
         }
     piWithoutDriver = rideProductInstance {ProductInstance.personId = Nothing}
     admin =
-      Fixtures.defaultDriver
-        { Person.id = Id "adminId",
-          Person.role = Person.ADMIN
-        }
+      Fixtures.defaultDriver{id = Id "adminId",
+                             role = Person.ADMIN
+                            }
 
 failedCancellationByAnotherDriver :: TestTree
 failedCancellationByAnotherDriver =
@@ -91,7 +89,7 @@ failedCancellationByAnotherDriver =
       `shouldThrow` (== NotAnExecutor)
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure driverNotExecutor}
-    driverNotExecutor = Fixtures.defaultDriver {Person.id = Id "driverNotExecutorId"}
+    driverNotExecutor = Fixtures.defaultDriver{id = Id "driverNotExecutorId"}
 
 failedCancellationByNotDriverAndNotAdmin :: TestTree
 failedCancellationByNotDriverAndNotAdmin =
@@ -101,10 +99,9 @@ failedCancellationByNotDriverAndNotAdmin =
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure manager}
     manager =
-      Fixtures.defaultDriver
-        { Person.id = Id "managerId",
-          Person.role = Person.MANAGER
-        }
+      Fixtures.defaultDriver{id = Id "managerId",
+                             role = Person.MANAGER
+                            }
 
 failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =

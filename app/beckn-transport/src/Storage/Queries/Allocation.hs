@@ -15,7 +15,7 @@ assignDriver ::
   Id SPI.ProductInstance ->
   [Id SPI.ProductInstance] ->
   SV.Vehicle ->
-  SP.Person ->
+  SP.DecryptedPerson ->
   DB.SqlDB ()
 assignDriver productInstanceId piIdList vehicle driver = do
   QPI.updateVehicle piIdList (Just $ vehicle.id)
@@ -29,7 +29,7 @@ assignDriver productInstanceId piIdList vehicle driver = do
 
 updateInfo ::
   Id SPI.ProductInstance ->
-  SP.Person ->
+  SP.DecryptedPerson ->
   SV.Vehicle ->
   DB.SqlDB ()
 updateInfo piId driver vehicle =

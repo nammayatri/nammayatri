@@ -142,21 +142,21 @@ updatePersonRec personId person' = do
   where
     setClause person n Storage.Person {..} =
       mconcat
-        [ firstName <-. B.val_ (Storage.firstName person),
-          middleName <-. B.val_ (Storage.middleName person),
-          lastName <-. B.val_ (Storage.lastName person),
-          fullName <-. B.val_ (Storage.fullName person),
-          role <-. B.val_ (Storage.role person),
-          gender <-. B.val_ (Storage.gender person),
-          email <-. B.val_ (Storage.email person),
-          identifier <-. B.val_ (Storage.identifier person),
-          rating <-. B.val_ (Storage.rating person),
-          deviceToken <-. B.val_ (Storage.deviceToken person),
-          udf1 <-. B.val_ (Storage.udf1 person),
-          udf2 <-. B.val_ (Storage.udf2 person),
-          organizationId <-. B.val_ (Storage.organizationId person),
-          description <-. B.val_ (Storage.description person),
-          locationId <-. B.val_ (Storage.locationId person),
+        [ firstName <-. B.val_ (person.firstName),
+          middleName <-. B.val_ (person.middleName),
+          lastName <-. B.val_ (person.lastName),
+          fullName <-. B.val_ (person.fullName),
+          role <-. B.val_ (person.role),
+          gender <-. B.val_ (person.gender),
+          email <-. B.val_ (person.email),
+          identifier <-. B.val_ (person.identifier),
+          rating <-. B.val_ (person.rating),
+          deviceToken <-. B.val_ (person.deviceToken),
+          udf1 <-. B.val_ (person.udf1),
+          udf2 <-. B.val_ (person.udf2),
+          organizationId <-. B.val_ (person.organizationId),
+          description <-. B.val_ (person.description),
+          locationId <-. B.val_ (person.locationId),
           updatedAt <-. B.val_ n
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_

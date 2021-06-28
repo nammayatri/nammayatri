@@ -84,6 +84,6 @@ validateLoginReq LoginReq {..} =
 
 data LoginRes = LoginRes
   { registrationToken :: Text,
-    user :: Maybe Person
+    user :: Maybe DecryptedPerson
   }
   deriving (Generic, ToJSON)

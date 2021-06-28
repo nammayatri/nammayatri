@@ -71,26 +71,25 @@ validateUpdatePersonReq UpdatePersonReq {..} =
 
 instance ModifyTransform UpdatePersonReq SP.Person Flow where
   modifyTransform req person = do
-    location <- updateOrCreateLocation req $ SP.locationId person
+    location <- updateOrCreateLocation req $ person.locationId
     return
-      person
-        { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-          SP.firstName = ifJust (req.firstName) (person.firstName),
-          SP.middleName = ifJust (req.middleName) (person.middleName),
-          SP.lastName = ifJust (req.lastName) (person.lastName),
-          SP.fullName = ifJust (req.fullName) (person.fullName),
-          SP.role = ifJustExtract (req.role) (person.role),
-          SP.gender = ifJustExtract (req.gender) (person.gender),
-          SP.email = ifJust (req.email) (person.email),
-          SP.identifier = ifJust (req.identifier) (person.identifier),
-          SP.rating = ifJust (req.rating) (person.rating),
-          SP.deviceToken = ifJust (req.deviceToken) (person.deviceToken),
-          SP.udf1 = ifJust (req.udf1) (person.udf1),
-          SP.udf2 = ifJust (req.udf2) (person.udf2),
-          SP.organizationId = person.organizationId,
-          SP.description = ifJust (req.description) (person.description),
-          SP.locationId = Just (SL.id location)
-        }
+      -- only these below will be updated in the person table. if you want to add something extra please add in queries also
+      person{firstName = ifJust (req.firstName) (person.firstName),
+             middleName = ifJust (req.middleName) (person.middleName),
+             lastName = ifJust (req.lastName) (person.lastName),
+             fullName = ifJust (req.fullName) (person.fullName),
+             role = ifJustExtract (req.role) (person.role),
+             gender = ifJustExtract (req.gender) (person.gender),
+             email = ifJust (req.email) (person.email),
+             identifier = ifJust (req.identifier) (person.identifier),
+             rating = ifJust (req.rating) (person.rating),
+             deviceToken = ifJust (req.deviceToken) (person.deviceToken),
+             udf1 = ifJust (req.udf1) (person.udf1),
+             udf2 = ifJust (req.udf2) (person.udf2),
+             organizationId = person.organizationId,
+             description = ifJust (req.description) (person.description),
+             locationId = Just (SL.id location)
+            }
 
 updateOrCreateLocation :: UpdatePersonReq -> Maybe (Id SL.Location) -> Flow SL.Location
 updateOrCreateLocation req Nothing = do
@@ -139,7 +138,7 @@ ifJustExtract :: Maybe a -> a -> a
 ifJustExtract a b = fromMaybe b a
 
 newtype UpdatePersonRes = UpdatePersonRes
-  {user :: SP.Person}
+  {user :: SP.DecryptedPerson}
   deriving (Generic, ToJSON, FromJSON)
 
 -- Create Person request and response
@@ -238,7 +237,7 @@ newtype ListPersonRes = ListPersonRes
   deriving (Generic, ToJSON, FromJSON)
 
 newtype PersonRes = PersonRes
-  {user :: SP.Person}
+  {user :: SP.DecryptedPerson}
   deriving (Generic, ToJSON, FromJSON)
 
 newtype DeletePersonRes = DeletePersonRes

@@ -8,7 +8,6 @@ import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Location as Loc
 import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger hiding (description, email)
@@ -152,16 +151,10 @@ type PersonPrimaryKey = B.PrimaryKey PersonT Identity
 instance B.Table PersonT where
   data PrimaryKey PersonT f = PersonPrimaryKey (B.C f (Id Person))
     deriving (Generic, B.Beamable)
-  primaryKey = PersonPrimaryKey . id
-
-instance ToJSON Person where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance FromJSON Person where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  primaryKey t = PersonPrimaryKey t.id
 
 -- TODO: move it to appropriate place
-maskPerson :: Person -> Person
+maskPerson :: DecryptedPerson -> DecryptedPerson
 maskPerson person =
   person {deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> (person.deviceToken)}
   where
@@ -173,8 +166,8 @@ maskPerson person =
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)
 fieldEMod =
-  B.modifyTableFields $
-    (B.tableModification @_ @PersonT)
+  B.modifyTableFields @PersonT $
+    B.tableModification
       { createdAt = "created_at",
         updatedAt = "updated_at",
         firstName = "first_name",
@@ -192,4 +185,41 @@ fieldEMod =
         mobileCountryCode = "mobile_country_code",
         identifierType = "identifier_type",
         deviceToken = "device_token"
+      }
+
+data DecryptedPerson = DecryptedPerson
+  { id :: Id Person,
+    firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    fullName :: Maybe Text,
+    role :: Role,
+    gender :: Gender,
+    identifierType :: IdentifierType,
+    email :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text,
+    passwordHash :: Maybe DbHash,
+    identifier :: Maybe Text,
+    rating :: Maybe Text,
+    verified :: Bool,
+    udf1 :: Maybe Text,
+    udf2 :: Maybe Text,
+    status :: Status,
+    organizationId :: Maybe (Id Org.Organization),
+    locationId :: Maybe (Id Loc.Location),
+    deviceToken :: Maybe FCM.FCMRecipientToken,
+    description :: Maybe Text,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+buildDecryptedPerson :: Person -> FlowWithEnc f DecryptedPerson
+buildDecryptedPerson Person {..} = do
+  decMobileNumber <- decrypt mobileNumber
+  return $
+    DecryptedPerson
+      { mobileNumber = decMobileNumber,
+        ..
       }

@@ -31,7 +31,7 @@ import qualified Utils.Notifications as Notify
 list :: SR.RegistrationToken -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
 list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandlerAPI $ do
   person <- PersQ.findPersonById (Id entityId)
-  case SP.organizationId person of
+  case person.organizationId of
     Just orgId -> do
       result <- PIQ.productInstanceJoin limit offset csTypes orgId status
       locList <- LQ.findAllByLocIds (Case.fromLocationId <$> (_case <$> result)) (Case.toLocationId <$> (_case <$> result))
@@ -63,7 +63,7 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandlerAPI $ do
   user <- PersQ.findPersonById (Id entityId)
   person <- PersQ.findPersonById personId
   hasAccess user person
-  rideList <- PIQ.findAllByPersonId (SP.id person)
+  rideList <- PIQ.findAllByPersonId person.id
   locList <- LQ.findAllByLocIds (catMaybes (PI.fromLocation <$> rideList)) (catMaybes (PI.toLocation <$> rideList))
   return $ catMaybes $ joinByIds locList <$> rideList
   where
@@ -96,8 +96,8 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandlerAPI $ do
   where
     hasAccess user vehicle =
       when
-        ( isNothing (SP.organizationId user)
-            || (SP.organizationId user /= (V.organizationId <$> vehicle))
+        ( isNothing user.organizationId
+            || (user.organizationId /= (V.organizationId <$> vehicle))
         )
         $ throwError Unauthorized
     joinByIds locList ride =
@@ -157,8 +157,8 @@ assignDriver productInstanceId driverId = do
     VQ.findVehicleById vehicleId
       >>= fromMaybeM VehicleNotFound
   let piIdList = PI.id <$> piList
-
-  DB.runSqlDBTransaction (AQ.assignDriver productInstanceId piIdList vehicle driver)
+  decDriver <- SP.buildDecryptedPerson driver
+  DB.runSqlDBTransaction (AQ.assignDriver productInstanceId piIdList vehicle decDriver)
 
   fork "assignDriver - Notify BAP" $ do
     notifyUpdateToBAP searchPi ordPi PI.TRIP_ASSIGNED

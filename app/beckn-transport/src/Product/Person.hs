@@ -61,7 +61,8 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ 
   isValidUpdate person
   updatedPerson <- modifyTransform req person
   DB.runSqlDB (QP.updatePersonRec (Id entityId) updatedPerson)
-  return $ UpdatePersonRes updatedPerson
+  decPerson <- SP.buildDecryptedPerson updatedPerson
+  return $ UpdatePersonRes decPerson
   where
     verifyPerson entityId_ =
       when (personId /= entityId_) $
@@ -77,13 +78,14 @@ createPerson orgId req = withFlowHandlerAPI $ do
   QP.create person
   when (person.role == SP.DRIVER) $ createDriverDetails (person.id)
   org <- OQ.findOrganizationById (Id orgId)
+  decPerson <- SP.buildDecryptedPerson person
   case (req.role, req.mobileNumber, req.mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
       smsCfg <- smsCfg <$> ask
       inviteSmsTemplate <- inviteSmsTemplate <$> ask
       sendInviteSms smsCfg inviteSmsTemplate (countryCode <> mobileNumber) (org.name)
-      return $ UpdatePersonRes person
-    _ -> return $ UpdatePersonRes person
+      return $ UpdatePersonRes decPerson
+    _ -> return $ UpdatePersonRes decPerson
   where
     validateDriver :: CreatePersonReq -> Flow ()
     validateDriver preq =

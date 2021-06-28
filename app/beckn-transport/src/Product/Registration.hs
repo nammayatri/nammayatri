@@ -42,7 +42,7 @@ initiateFlow req smsCfg = do
       createPerson req
     Just p -> pure p
   checkSlidingWindowLimit (initiateFlowHitsCountKey person)
-  let entityId = getId . SP.id $ person
+  let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   regToken <- case useFakeOtpM of
@@ -140,8 +140,8 @@ login tokenId req =
         clearOldRegToken person $ Id tokenId
         QR.updateVerified tokenId True
         let deviceToken = (req.deviceToken) <|> (person.deviceToken)
-        QP.update (SP.id person) SP.ACTIVE True deviceToken
-        updatedPerson <- QP.findPersonById (SP.id person)
+        QP.update person.id SP.ACTIVE True deviceToken
+        updatedPerson <- QP.findPersonById person.id >>= SP.buildDecryptedPerson
         return $ LoginRes token (Just $ SP.maskPerson updatedPerson)
       else throwError InvalidAuthData
   where

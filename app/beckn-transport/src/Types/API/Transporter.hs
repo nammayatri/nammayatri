@@ -103,7 +103,7 @@ transformToLocation req = do
       }
 
 data TransporterRes = TransporterRes
-  { user :: SP.Person,
+  { user :: SP.DecryptedPerson,
     organization :: SO.Organization
   }
   deriving (Generic, ToJSON)

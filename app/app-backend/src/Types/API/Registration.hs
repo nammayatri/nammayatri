@@ -93,6 +93,6 @@ instance ToJSON LoginReq where
 
 data LoginRes = LoginRes
   { registrationToken :: Text,
-    user :: Person
+    user :: DecryptedPerson
   }
   deriving (Generic, FromJSON, ToJSON)

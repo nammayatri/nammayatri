@@ -15,6 +15,7 @@ module Beckn.External.Encryption
     EncKind (..),
     Encrypted (..),
     EncryptedField,
+    FlowWithEnc,
     EncryptedHashed (..),
     EncryptedHashedField,
     EncryptedBase64 (..),
@@ -155,15 +156,6 @@ data EncryptedHashed a f = EncryptedHashed
   }
   deriving stock (Generic)
   deriving anyclass (Beamable)
-
--- These json instances are necessary for Euler's ART system only
-instance ToJSON (EncryptedHashed a Identity)
-
-instance ToJSON (EncryptedHashed a (Nullable Identity))
-
-instance FromJSON (EncryptedHashed a Identity)
-
-instance FromJSON (EncryptedHashed a (Nullable Identity))
 
 instance
   (ToJSON a, FromJSON a, DbHashable a) =>

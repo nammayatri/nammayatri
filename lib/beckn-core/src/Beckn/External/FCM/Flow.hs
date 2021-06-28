@@ -85,9 +85,9 @@ notifyPerson ::
   Person ->
   FlowR r ()
 notifyPerson msgData person =
-  let pid = getId $ Person.id person
+  let pid = getId person.id
       tokenNotFound = "device token of a person " <> pid <> " not found"
-   in case Person.deviceToken person of
+   in case person.deviceToken of
         Nothing -> do
           logTagInfo "FCM" tokenNotFound
           pure ()

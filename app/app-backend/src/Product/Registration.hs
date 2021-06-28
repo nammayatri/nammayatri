@@ -40,7 +40,7 @@ initiateFlow req smsCfg = do
     Person.findByRoleAndMobileNumber SP.USER countryCode mobileNumber
       >>= maybe (createPerson req) return
   checkSlidingWindowLimit (initiateFlowHitsCountKey person)
-  let entityId = getId . SP.id $ person
+  let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   regToken <- case useFakeOtpM of
@@ -143,15 +143,15 @@ login tokenId req =
         clearOldRegToken person $ Id tokenId
         let personId = person.id
             updatedPerson =
-              person
-                { SP.status = SP.ACTIVE,
-                  SP.deviceToken =
-                    (req.deviceToken) <|> (person.deviceToken)
-                }
+              person{status = SP.ACTIVE,
+                     deviceToken =
+                       (req.deviceToken) <|> (person.deviceToken)
+                    }
         DB.runSqlDB (Person.updateMultiple personId updatedPerson)
         LoginRes token . SP.maskPerson
           <$> ( Person.findById personId
                   >>= fromMaybeM PersonNotFound
+                  >>= SP.buildDecryptedPerson
               )
       else throwError InvalidAuthData
   where
