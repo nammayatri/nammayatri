@@ -1,10 +1,12 @@
 module Beckn.Types.Error.APIError
   ( module Beckn.Types.Error.APIError,
     module Beckn.Types.Error.HttpCode,
+    module Beckn.Types.Error.BaseError,
     instanceExceptionWithParent,
   )
 where
 
+import Beckn.Types.Error.BaseError
 import Beckn.Types.Error.FromResponse
 import Beckn.Types.Error.HttpCode
 import Beckn.Utils.Error.Hierarchy (instanceExceptionWithParent)
@@ -27,11 +29,8 @@ data APIError = APIError
 instance FromResponse APIError where
   fromResponse = fromJsonResponse
 
-class IsAPIError e where
+class IsBaseError e => IsAPIError e where
   toErrorCode :: e -> Text
-
-  toMessage :: e -> Maybe Text
-  toMessage _ = Nothing
 
   toHttpCode :: e -> HttpCode
   toHttpCode _ = E500

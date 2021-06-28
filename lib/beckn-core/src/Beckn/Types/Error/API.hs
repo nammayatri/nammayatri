@@ -2,6 +2,7 @@
 
 module Beckn.Types.Error.API where
 
+import Beckn.Types.Error.BaseError
 import Beckn.Types.Error.BecknAPIError
 import EulerHS.Prelude
 import EulerHS.Types (KVDBReply)
@@ -24,6 +25,15 @@ data AuthError
 
 instanceExceptionWithParent 'APIException ''AuthError
 
+instance IsBaseError AuthError where
+  toMessage = \case
+    TokenNotFound tokenId -> Just $ "Token with tokenId \"" <> show tokenId <> "\" not found."
+    InvalidToken token -> Just $ "Invalid token: " <> token
+    AuthBlocked reason -> Just $ "Authentication process blocked: " <> reason
+    AccessDenied -> Just "You have no access to this operation."
+    HitsLimitError hitsLimitResetTime -> Just $ "Hits limit reached. Try again in " <> show hitsLimitResetTime <> " sec."
+    _ -> Nothing
+
 instance IsAPIError AuthError where
   toErrorCode = \case
     Unauthorized -> "UNAUTHORIZED"
@@ -35,13 +45,6 @@ instance IsAPIError AuthError where
     IncorrectOTP -> "INCORRECT_OTP"
     AccessDenied -> "ACCESS_DENIED"
     HitsLimitError _ -> "HITS_LIMIT_EXCEED"
-  toMessage = \case
-    TokenNotFound tokenId -> Just $ "Token with tokenId \"" <> show tokenId <> "\" not found."
-    InvalidToken token -> Just $ "Invalid token: " <> token
-    AuthBlocked reason -> Just $ "Authentication process blocked: " <> reason
-    AccessDenied -> Just "You have no access to this operation."
-    HitsLimitError hitsLimitResetTime -> Just $ "Hits limit reached. Try again in " <> show hitsLimitResetTime <> " sec."
-    _ -> Nothing
   toHttpCode = \case
     Unauthorized -> E401
     InvalidToken _ -> E401
@@ -56,13 +59,15 @@ data HeaderError
 
 instanceExceptionWithParent 'APIException ''HeaderError
 
+instance IsBaseError HeaderError where
+  toMessage = \case
+    MissingHeader headerName -> Just $ "Header " +|| headerName ||+ " is missing"
+    InvalidHeader headerName err -> Just $ "Header " +|| headerName ||+ " is invalid: " +|| err ||+ ""
+
 instance IsAPIError HeaderError where
   toErrorCode = \case
     MissingHeader _ -> "MISSING_HEADER"
     InvalidHeader _ _ -> "INVALID_HEADER"
-  toMessage = \case
-    MissingHeader headerName -> Just $ "Header " +|| headerName ||+ " is missing"
-    InvalidHeader headerName err -> Just $ "Header " +|| headerName ||+ " is invalid: " +|| err ||+ ""
   toHttpCode _ = E400
 
 data SignatureError
@@ -72,13 +77,15 @@ data SignatureError
 
 instanceExceptionWithParent 'APIException ''SignatureError
 
+instance IsBaseError SignatureError where
+  toMessage = \case
+    CannotDecodeSignature err -> Just (fromString err)
+    _ -> Nothing
+
 instance IsAPIError SignatureError where
   toErrorCode = \case
     SignatureVerificationFailure _ -> "SIGNATURE_VERIFICATION_FAILURE"
     CannotDecodeSignature _ -> "CANNOT_DECODE_SIGNATURE"
-  toMessage = \case
-    CannotDecodeSignature err -> Just (fromString err)
-    _ -> Nothing
   toHttpCode _ = E401
   toCustomHeaders (SignatureVerificationFailure headers) = headers
   toCustomHeaders _ = []
@@ -87,9 +94,11 @@ data AuthPIError = NotAnExecutor deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''AuthPIError
 
+instance IsBaseError AuthPIError where
+  toMessage NotAnExecutor = Just "You are not an executor of this ride."
+
 instance IsAPIError AuthPIError where
   toErrorCode NotAnExecutor = "NOT_AN_EXECUTOR"
-  toMessage NotAnExecutor = Just "You are not an executor of this ride."
   toHttpCode NotAnExecutor = E403
 
 data VehicleError
@@ -99,6 +108,8 @@ data VehicleError
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''VehicleError
+
+instance IsBaseError VehicleError
 
 instance IsAPIError VehicleError where
   toErrorCode = \case
@@ -119,17 +130,19 @@ data PersonError
 
 instanceExceptionWithParent 'APIException ''PersonError
 
+instance IsBaseError PersonError where
+  toMessage = \case
+    PersonFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this person."
+    PersonDoesNotExist -> Just "No person matches passed data."
+    PersonOrgExists -> Just "Person is already registered in the organization."
+    _ -> Nothing
+
 instance IsAPIError PersonError where
   toErrorCode = \case
     PersonNotFound -> "PERSON_NOT_FOUND"
     PersonDoesNotExist -> "PERSON_DOES_NOT_EXIST"
     PersonFieldNotPresent _ -> "PERSON_FIELD_NOT_PRESENT"
     PersonOrgExists -> "PERSON_ORG_ALREADY_EXISTS"
-  toMessage = \case
-    PersonFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this person."
-    PersonDoesNotExist -> Just "No person matches passed data."
-    PersonOrgExists -> Just "Person is already registered in the organization."
-    _ -> Nothing
   toHttpCode = \case
     PersonNotFound -> E500
     PersonDoesNotExist -> E400
@@ -144,15 +157,17 @@ data LocationError
 
 instanceExceptionWithParent 'APIException ''LocationError
 
+instance IsBaseError LocationError where
+  toMessage = \case
+    LocationDoesNotExist -> Just "No location matches passed data."
+    LocationFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this location."
+    _ -> Nothing
+
 instance IsAPIError LocationError where
   toErrorCode = \case
     LocationNotFound -> "LOCATION_NOT_FOUND"
     LocationDoesNotExist -> "LOCATION_DOES_NOT_EXISTS"
     LocationFieldNotPresent _ -> "LOCATION_FIELD_NOT_PRESENT"
-  toMessage = \case
-    LocationDoesNotExist -> Just "No location matches passed data."
-    LocationFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this location."
-    _ -> Nothing
   toHttpCode = \case
     LocationNotFound -> E500
     LocationDoesNotExist -> E400
@@ -165,13 +180,15 @@ data GenericError
 
 instanceExceptionWithParent 'APIException ''GenericError
 
+instance IsBaseError GenericError where
+  toMessage = \case
+    InternalError msg -> Just msg
+    InvalidRequest msg -> Just msg
+
 instance IsAPIError GenericError where
   toErrorCode = \case
     InternalError _ -> "INTERNAL_ERROR"
     InvalidRequest _ -> "INVALID_REQUEST"
-  toMessage = \case
-    InternalError msg -> Just msg
-    InvalidRequest msg -> Just msg
   toHttpCode = \case
     InternalError _ -> E500
     InvalidRequest _ -> E400
@@ -185,17 +202,19 @@ data OrganizationError
 
 instanceExceptionWithParent 'APIException ''OrganizationError
 
+instance IsBaseError OrganizationError where
+  toMessage = \case
+    OrgDoesNotExist -> Just "No organization matches passed data."
+    OrgFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this organization."
+    OrgMobilePhoneUsed -> Just "Mobile phone already used by another organization."
+    _ -> Nothing
+
 instance IsAPIError OrganizationError where
   toErrorCode = \case
     OrgNotFound -> "ORGANIZATION_NOT_FOUND"
     OrgDoesNotExist -> "ORGANIZATION_DOES_NOT_EXISTS"
     OrgFieldNotPresent _ -> "ORGANIZATION_FIELD_NOT_PRESENT"
     OrgMobilePhoneUsed -> "ORGANIZATION_MOBILE_PHONE_USED"
-  toMessage = \case
-    OrgDoesNotExist -> Just "No organization matches passed data."
-    OrgFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this organization."
-    OrgMobilePhoneUsed -> Just "Mobile phone already used by another organization."
-    _ -> Nothing
   toHttpCode OrgDoesNotExist = E400
   toHttpCode OrgMobilePhoneUsed = E400
   toHttpCode _ = E500
@@ -210,6 +229,13 @@ data CaseError
 
 instanceExceptionWithParent 'APIException ''CaseError
 
+instance IsBaseError CaseError where
+  toMessage = \case
+    CaseDoesNotExist -> Just "No case matches passed data."
+    CaseFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this case."
+    CaseInvalidStatus msg -> Just $ "Attempted to do some action in wrong case status. " <> msg
+    _ -> Nothing
+
 instance IsAPIError CaseError where
   toErrorCode = \case
     CaseNotFound -> "CASE_NOT_FOUND"
@@ -217,11 +243,6 @@ instance IsAPIError CaseError where
     CaseExpired -> "CASE_EXPIRED"
     CaseFieldNotPresent _ -> "CASE_FIELD_NOT_PRESENT"
     CaseInvalidStatus _ -> "CASE_INVALID_STATUS"
-  toMessage = \case
-    CaseDoesNotExist -> Just "No case matches passed data."
-    CaseFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this case."
-    CaseInvalidStatus msg -> Just $ "Attempted to do some action in wrong case status. " <> msg
-    _ -> Nothing
   toHttpCode = \case
     CaseNotFound -> E500
     CaseDoesNotExist -> E400
@@ -238,17 +259,19 @@ data ProductInstanceError
 
 instanceExceptionWithParent 'APIException ''ProductInstanceError
 
+instance IsBaseError ProductInstanceError where
+  toMessage = \case
+    PIDoesNotExist -> Just "No product instance matches passed data."
+    PIFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this product instance."
+    PIInvalidStatus msg -> Just $ "Attempted to do some action in wrong PI status. " <> msg
+    _ -> Nothing
+
 instance IsAPIError ProductInstanceError where
   toErrorCode = \case
     PINotFound -> "PI_NOT_FOUND"
     PIDoesNotExist -> "PI_DOES_NOT_EXISTS"
     PIFieldNotPresent _ -> "PI_FIELD_NOT_PRESENT"
     PIInvalidStatus _ -> "PI_INVALID_STATUS"
-  toMessage = \case
-    PIDoesNotExist -> Just "No product instance matches passed data."
-    PIFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this product instance."
-    PIInvalidStatus msg -> Just $ "Attempted to do some action in wrong PI status. " <> msg
-    _ -> Nothing
   toHttpCode = \case
     PINotFound -> E500
     PIDoesNotExist -> E400
@@ -262,6 +285,8 @@ data GatewayError
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''GatewayError
+
+instance IsBaseError GatewayError
 
 instance IsAPIError GatewayError where
   toErrorCode GatewaySelectorNotSet = "GATEWAY_SELECTOR_NOT_SET"
@@ -277,17 +302,19 @@ data DatabaseError
 
 instanceExceptionWithParent 'APIException ''DatabaseError
 
+instance IsBaseError DatabaseError where
+  toMessage = \case
+    SQLRequestError sqlErr desc -> Just $ "SQL request error: " <> sqlErr <> ". Description: " <> desc
+    SQLResultError msg -> Just msg
+    DBUnknownError msg -> Just msg
+    _ -> Nothing
+
 instance IsAPIError DatabaseError where
   toErrorCode = \case
     NotPostgresBackend -> "DB_NOT_POSTGRES_BACKEND"
     SQLRequestError _ _ -> "DB_SQL_REQUEST_ERROR"
     SQLResultError _ -> "DB_SQL_RESULT_ERROR"
     DBUnknownError _ -> "DB_UNKNOWN_ERROR"
-  toMessage = \case
-    SQLRequestError sqlErr desc -> Just $ "SQL request error: " <> sqlErr <> ". Description: " <> desc
-    SQLResultError msg -> Just msg
-    DBUnknownError msg -> Just msg
-    _ -> Nothing
   toHttpCode _ = E500
 
 data FCMTokenError
@@ -296,6 +323,8 @@ data FCMTokenError
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''FCMTokenError
+
+instance IsBaseError FCMTokenError
 
 instance IsAPIError FCMTokenError where
   toErrorCode FCMJSONPathNotConfigured = "FCM_JSON_PATH_NOT_CONFIGURED"
@@ -312,6 +341,8 @@ data ContextError
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''ContextError
+
+instance IsBaseError ContextError
 
 instance IsAPIError ContextError where
   toErrorCode UnsupportedCoreVer = "UNSUPPORTED_CORE_VERSION"
@@ -331,9 +362,11 @@ data ExternalAPICallError
 
 instanceExceptionWithParent 'APIException ''ExternalAPICallError
 
+instance IsBaseError ExternalAPICallError where
+  toMessage (ExternalAPICallError _ url err) = externalAPICallErrorMessage url err
+
 instance IsAPIError ExternalAPICallError where
   toErrorCode (ExternalAPICallError codeMb _ _) = fromMaybe "EXTERNAL_API_CALL_ERROR" codeMb
-  toMessage (ExternalAPICallError _ url err) = externalAPICallErrorMessage url err
 
 externalAPICallErrorMessage :: BaseUrl -> ClientError -> Maybe Text
 externalAPICallErrorMessage baseUrl clientErr =
@@ -359,6 +392,8 @@ data HealthCheckError
 
 instanceExceptionWithParent 'APIException ''HealthCheckError
 
+instance IsBaseError HealthCheckError
+
 instance IsAPIError HealthCheckError where
   toErrorCode ServiceUnavailable = "SERVICE_UNAVAILABLE"
   toHttpCode ServiceUnavailable = E503
@@ -370,13 +405,15 @@ data RouteError
 
 instanceExceptionWithParent 'APIException ''RouteError
 
+instance IsBaseError RouteError where
+  toMessage = \case
+    RouteRequestError url err -> externalAPICallErrorMessage url err
+    RouteNotLatLong -> Just "Not supporting waypoints other than LatLong."
+
 instance IsAPIError RouteError where
   toErrorCode = \case
     RouteRequestError _ _ -> "UNABLE_TO_GET_ROUTE"
     RouteNotLatLong -> "GET_ROUTE_UNSUPPORTED_FORMAT"
-  toMessage = \case
-    RouteRequestError url err -> externalAPICallErrorMessage url err
-    RouteNotLatLong -> Just "Not supporting waypoints other than LatLong."
 
 data ServerError
   = ServerUnavailable
@@ -384,9 +421,11 @@ data ServerError
 
 instanceExceptionWithParent 'APIException ''ServerError
 
+instance IsBaseError ServerError where
+  toMessage ServerUnavailable = Just "Server is working, but is not available."
+
 instance IsAPIError ServerError where
   toErrorCode ServerUnavailable = "SERVER_UNAVAILABLE"
-  toMessage ServerUnavailable = Just "Server is working, but is not available."
   toHttpCode ServerUnavailable = E503
 
 newtype RedisError
@@ -395,30 +434,36 @@ newtype RedisError
 
 instanceExceptionWithParent 'APIException ''RedisError
 
+instance IsBaseError RedisError where
+  toMessage = \case
+    RedisError err -> Just $ show err
+
 instance IsAPIError RedisError where
   toErrorCode = \case
     RedisError _ -> "REDIS_ERROR"
-  toMessage = \case
-    RedisError err -> Just $ show err
   toHttpCode _ = E500
 
 newtype ActionNotSupported = ActionNotSupported Text
   deriving (Eq, Show)
 
+instanceExceptionWithParent 'APIException ''ActionNotSupported
+
+instance IsBaseError ActionNotSupported where
+  toMessage (ActionNotSupported action) = Just $ "Action " <> action <> " is not supported"
+
 instance IsAPIError ActionNotSupported where
   toErrorCode _ = "ACTION_NOT_SUPPORTED"
-  toMessage (ActionNotSupported action) = Just $ "Action " <> action <> " is not supported"
   toHttpCode _ = E400
-
-instanceExceptionWithParent 'APIException ''ActionNotSupported
 
 newtype SMSError = SMSError Text
   deriving (Eq, Show)
 
 instanceExceptionWithParent 'APIException ''SMSError
 
+instance IsBaseError SMSError where
+  toMessage = \case
+    SMSError err -> Just err
+
 instance IsAPIError SMSError where
   toErrorCode = \case
     SMSError _ -> "SMS_NOT_SENT"
-  toMessage = \case
-    SMSError err -> Just err

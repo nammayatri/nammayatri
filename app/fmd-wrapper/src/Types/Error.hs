@@ -42,6 +42,8 @@ data ErrorCode
 
 instanceExceptionWithParent 'BecknAPIException ''ErrorCode
 
+instance IsBaseError ErrorCode
+
 instance IsAPIError ErrorCode where
   toErrorCode = show
   toHttpCode _ = E400
@@ -51,9 +53,11 @@ instance IsBecknAPIError ErrorCode where
 
 data ErrorCodeWithMessage = ErrorCodeWithMessage Text ErrorCode deriving (Show)
 
+instance IsBaseError ErrorCodeWithMessage where
+  toMessage (ErrorCodeWithMessage msg _) = Just msg
+
 instance IsAPIError ErrorCodeWithMessage where
   toErrorCode (ErrorCodeWithMessage _ e) = toErrorCode e
-  toMessage (ErrorCodeWithMessage msg _) = Just msg
   toHttpCode (ErrorCodeWithMessage _ e) = toHttpCode e
   toCustomHeaders (ErrorCodeWithMessage _ e) = toCustomHeaders e
 

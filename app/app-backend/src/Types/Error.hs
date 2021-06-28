@@ -12,6 +12,8 @@ data RatingError
 
 instanceExceptionWithParent 'APIException ''RatingError
 
+instance IsBaseError RatingError
+
 instance IsAPIError RatingError where
   toErrorCode InvalidRatingValue = "INVALID_RATING_VALUE"
   toHttpCode InvalidRatingValue = E400
@@ -22,7 +24,9 @@ newtype ServiceabilityError
 
 instanceExceptionWithParent 'APIException ''ServiceabilityError
 
+instance IsBaseError ServiceabilityError where
+  toMessage (ProductNotServiceable reason) = Just $ "Requested product is not serviceable " <> reason <> "."
+
 instance IsAPIError ServiceabilityError where
   toErrorCode (ProductNotServiceable _) = "PRODUCT_NOT_SERVICEABLE"
-  toMessage (ProductNotServiceable reason) = Just $ "Requested product is not serviceable " <> reason <> "."
   toHttpCode (ProductNotServiceable _) = E400

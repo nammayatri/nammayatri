@@ -22,12 +22,16 @@ import TestSilentIOLogger ()
 
 data SomeAPIError = SomeAPIError deriving (Show)
 
+instance IsBaseError SomeAPIError
+
 instance IsAPIError SomeAPIError where
   toErrorCode SomeAPIError = "SOME_API_ERROR"
 
 instanceExceptionWithParent 'APIException ''SomeAPIError
 
 data SomeBecknAPIError = SomeBecknAPIError deriving (Show)
+
+instance IsBaseError SomeBecknAPIError
 
 instance IsAPIError SomeBecknAPIError where
   toErrorCode SomeBecknAPIError = "SOME_BECKN_API_ERROR"

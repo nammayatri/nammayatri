@@ -16,12 +16,14 @@ data BecknAPICallError = BecknAPICallError Text Error
 
 instanceExceptionWithParent 'APIException ''BecknAPICallError
 
-instance IsAPIError BecknAPICallError where
-  toErrorCode (BecknAPICallError _ _) = "BECKN_API_CALL_ERROR"
+instance IsBaseError BecknAPICallError where
   toMessage (BecknAPICallError action Error {..}) =
     Just $
       "Beckn " <> action <> " request returned error code " <> code
         <> maybe "" ("with message: " <>) message
+
+instance IsAPIError BecknAPICallError where
+  toErrorCode (BecknAPICallError _ _) = "BECKN_API_CALL_ERROR"
 
 type IsBecknAPI api req =
   ( HasClient ET.EulerClient api,

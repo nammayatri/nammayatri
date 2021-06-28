@@ -12,12 +12,14 @@ newtype APICallError = APICallError APIError
 
 instanceExceptionWithParent 'APIException ''APICallError
 
-instance IsAPIError APICallError where
-  toErrorCode (APICallError _) = "API_CALL_ERROR"
+instance IsBaseError APICallError where
   toMessage (APICallError APIError {..}) =
     Just $
       "Request to own API returned error code " <> errorCode
         <> maybe "" ("with message: " <>) errorMessage
+
+instance IsAPIError APICallError where
+  toErrorCode (APICallError _) = "API_CALL_ERROR"
 
 callOwnAPI ::
   Maybe ET.ManagerSelector ->

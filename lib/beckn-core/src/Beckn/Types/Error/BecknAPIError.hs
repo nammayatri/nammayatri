@@ -42,9 +42,11 @@ instance FromResponse BecknAPIError where
 
 data BecknAPIException = forall e. (Exception e, IsBecknAPIError e) => BecknAPIException e
 
+instance IsBaseError BecknAPIException where
+  toMessage (BecknAPIException e) = toMessage e
+
 instance IsAPIError BecknAPIException where
   toErrorCode (BecknAPIException e) = toErrorCode e
-  toMessage (BecknAPIException e) = toMessage e
   toHttpCode (BecknAPIException e) = toHttpCode e
   toCustomHeaders (BecknAPIException e) = toCustomHeaders e
 

@@ -209,10 +209,12 @@ dunzoCodeToBecknCode = \case
   "default" -> "CORE003"
   _ -> "CORE003"
 
+instance IsBaseError Error where
+  toMessage Error {message} = Just message
+
 instance IsAPIError Error where
   toErrorCode Error {code} = dunzoCodeToBecknCode code
   toHttpCode Error {} = E500 -- should not be thrown synchronously
-  toMessage Error {message} = Just message
 
 instance IsBecknAPIError Error where
   toType _ = DOMAIN_ERROR -- only to satisfy current tests, FIXME maybe

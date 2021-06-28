@@ -16,6 +16,8 @@ data GatewayError
 
 instanceExceptionWithParent 'BecknAPIException ''GatewayError
 
+instance IsBaseError GatewayError
+
 instance IsAPIError GatewayError where
   toErrorCode NoProviders = "CORE001"
 
