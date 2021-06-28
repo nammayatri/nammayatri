@@ -5,6 +5,7 @@ module Beckn.Types.Core.Migration.Fulfillment
   )
 where
 
+import Beckn.Types.Core.Migration.Agent (Agent)
 import Beckn.Types.Core.Migration.Contact (Contact)
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Location (Location)
@@ -24,7 +25,7 @@ data Fulfillment = Fulfillment
     state :: Maybe State,
     tracking :: Bool,
     customer :: Maybe FulfillmentParticipant,
-    agent :: Maybe FulfillmentParticipant,
+    agent :: Maybe Agent,
     vehicle :: Maybe Vehicle,
     start :: Maybe FulfillmentDetails,
     end :: Maybe FulfillmentDetails,

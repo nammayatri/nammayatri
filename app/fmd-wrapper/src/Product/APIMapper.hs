@@ -14,7 +14,7 @@ import Types.Beckn.API.Track (TrackInfo)
 import qualified Types.Beckn.API.Types as API
 import Types.Beckn.API.Update (UpdateInfo)
 import Types.Beckn.Context
-import Types.Beckn.Domain
+import qualified Types.Beckn.Domain as Domain
 import Types.Error
 import Utils.Common
 
@@ -76,7 +76,7 @@ update org req = withFlowHandlerBecknAPI $
 
 validateContext :: Text -> Context -> Flow ()
 validateContext action context = do
-  validateDomainMig (Domain "FINAL-MILE-DELIVERY") context
+  validateDomainMig Domain.FINAL_MILE_DELIVERY context
   validateContextCommonsMig action context
 
 validateBapUrl :: Organization -> Context -> Flow ()

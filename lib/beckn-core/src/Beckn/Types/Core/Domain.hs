@@ -19,7 +19,7 @@ domainOptions =
     }
 
 instance Example Domain where
-  example = MOBILITY -- TODO :: add randomized values maybe?
+  example = MOBILITY
 
 instance ToJSON Domain where
   toJSON = genericToJSON domainOptions

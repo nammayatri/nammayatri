@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Migration.Person (Person (..)) where
+module Beckn.Types.Core.Migration.Agent (Agent (..)) where
 
 import Beckn.Types.Core.Migration.Image (Image)
 import Beckn.Types.Core.Migration.Name (Name)
@@ -6,18 +6,20 @@ import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Utils.JSON
 import EulerHS.Prelude
 
-data Person = Person
+data Agent = Agent
   { name :: Maybe Name,
     image :: Maybe Image,
     dob :: Maybe Text, -- format: date
     gender :: Maybe Text,
-    cred :: Maybe Text,
+    cred :: Text,
+    phone :: Maybe Text,
+    email :: Maybe Text,
     tags :: Maybe Tags
   }
   deriving (Eq, Generic, Show)
 
-instance FromJSON Person where
+instance FromJSON Agent where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
-instance ToJSON Person where
+instance ToJSON Agent where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny

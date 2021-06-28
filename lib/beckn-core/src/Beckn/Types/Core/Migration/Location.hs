@@ -6,6 +6,7 @@ import Beckn.Types.Core.Migration.City (City)
 import Beckn.Types.Core.Migration.Country (Country)
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Gps (Gps)
+import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import EulerHS.Prelude hiding (id)
@@ -20,7 +21,8 @@ data Location = Location
     country :: Maybe Country,
     circle :: Maybe Circle,
     polygon :: Maybe Text,
-    _3dspace :: Maybe Text
+    _3dspace :: Maybe Text,
+    time :: Maybe Time
   }
   deriving (Generic, Show)
 
@@ -36,7 +38,8 @@ instance Example Location where
         country = Nothing,
         circle = Nothing,
         polygon = Nothing,
-        _3dspace = Nothing
+        _3dspace = Nothing,
+        time = Nothing
       }
 
 instance FromJSON Location where

@@ -22,7 +22,7 @@ import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.Category (Category (..))
 import "fmd-wrapper" Types.Beckn.Context (Context (..))
 import qualified "fmd-wrapper" Types.Beckn.Descriptor as Descriptor
-import "fmd-wrapper" Types.Beckn.Domain (Domain (..))
+import qualified "fmd-wrapper" Types.Beckn.Domain as Domain
 import qualified "fmd-wrapper" Types.Beckn.Error as Error
 import "fmd-wrapper" Types.Beckn.Gps (Gps (..))
 import Utils
@@ -55,7 +55,7 @@ runSearch clientEnv orgId searchReq = do
 verifyCallbackContext :: Bool -> Text -> Context -> IO ()
 verifyCallbackContext expectBppUri transactionId context = do
   context.country `shouldBe` "IND"
-  context.domain `shouldBe` Domain "FINAL-MILE-DELIVERY"
+  context.domain `shouldBe` Domain.FINAL_MILE_DELIVERY
   when expectBppUri $ context.bpp_uri `shouldSatisfy` isJust
   context.transaction_id `shouldBe` transactionId
   context.action `shouldBe` "on_search"

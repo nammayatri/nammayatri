@@ -8,7 +8,7 @@ import Servant.Client
 import "fmd-wrapper" Types.Beckn.API.Search
 import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.Context
-import "fmd-wrapper" Types.Beckn.Domain
+import qualified "fmd-wrapper" Types.Beckn.Domain as Domain
 
 fmdWrapperBaseUrl :: BaseUrl
 fmdWrapperBaseUrl =
@@ -28,7 +28,7 @@ buildContext act tid bppBaseUrl = do
   now <- getCurrentTime
   return
     Context
-      { domain = Domain "FINAL-MILE-DELIVERY",
+      { domain = Domain.FINAL_MILE_DELIVERY,
         country = "IND",
         city = "Bangalore",
         action = act,

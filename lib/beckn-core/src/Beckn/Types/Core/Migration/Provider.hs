@@ -20,7 +20,7 @@ data Provider = Provider
     categories :: Maybe [Category],
     fulfillments :: Maybe [Fulfillment],
     payments :: Maybe [Payment],
-    locations :: Maybe [LocationAndTime],
+    locations :: Maybe [Location],
     offers :: Maybe [Offer],
     items :: Maybe [Item],
     exp :: Maybe Text,
@@ -49,15 +49,3 @@ instance Example Provider where
         exp = Nothing,
         tags = Nothing
       }
-
-data LocationAndTime = LocationAndTime
-  { location :: Maybe Location,
-    time :: Maybe Time
-  }
-  deriving (Generic, Show)
-
-instance FromJSON LocationAndTime where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON LocationAndTime where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
