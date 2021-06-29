@@ -57,7 +57,7 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9999
-, xGatewaySelector = Some "NSDL.BG.1"
+, xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = Some nsdlUrl
 , xAppUri = appUri
 , selfId = "JUSPAY.MOBILITY.PROVIDER.UAT.1"
