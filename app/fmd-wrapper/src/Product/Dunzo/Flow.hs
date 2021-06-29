@@ -186,7 +186,7 @@ track org req = do
   withCallback TRACK TrackAPI.onTrackAPI context cbUrl $ do
     let taskId = getShortId case_.shortId
     dzBACreds <- getDzBAPCreds org
-    mbTrackingUrl <- getStatus dzBACreds conf (TaskId taskId) >>= pure . (.tracking_url)
+    mbTrackingUrl <- getStatus dzBACreds conf (TaskId taskId) <&> (.tracking_url)
     return $ mkOnTrackMessage mbTrackingUrl
 
 status :: Org.Organization -> API.BecknReq StatusAPI.OrderId -> Flow AckResponse

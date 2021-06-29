@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Migration.Context (Context (..), Action (..)) where
+module Beckn.Types.Core.Migration.Context where
 
 import Beckn.Types.Core.Migration.Domain (Domain)
 import Beckn.Types.Core.Migration.Duration (Duration)
@@ -60,3 +60,17 @@ instance FromJSON Action where
 
 instance ToJSON Action where
   toJSON = genericToJSON constructorsToLowerOptions
+
+mapToCbAction :: Action -> Maybe Action
+mapToCbAction = \case
+  SEARCH -> Just ON_SEARCH
+  SELECT -> Just ON_SELECT
+  INIT -> Just ON_INIT
+  CONFIRM -> Just ON_CONFIRM
+  UPDATE -> Just ON_UPDATE
+  STATUS -> Just ON_STATUS
+  TRACK -> Just ON_TRACK
+  CANCEL -> Just ON_CANCEL
+  FEEDBACK -> Just ON_FEEDBACK
+  SUPPORT -> Just ON_SUPPORT
+  _ -> Nothing

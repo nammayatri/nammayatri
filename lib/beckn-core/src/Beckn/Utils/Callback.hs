@@ -9,7 +9,7 @@ import qualified Beckn.Types.Core.Migration.Context as M.Context
 import Beckn.Types.Error
 import Beckn.Types.Error.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
-import Beckn.Utils.Common (throwError)
+import Beckn.Utils.Error (fromMaybeM)
 import Beckn.Utils.Error.BecknAPIError
 import Beckn.Utils.Error.FlowHandling
 import Beckn.Utils.Flow
@@ -89,7 +89,9 @@ withBecknCallbackMig ::
   WithBecknCallbackMig api callback_success r
 withBecknCallbackMig auth action api context cbUrl f = do
   now <- getCurrentTime
-  cbAction <- mapToCbAction action
+  cbAction <-
+    M.Context.mapToCbAction action
+      & fromMaybeM (InternalError $ "Beckn " <> show action <> " action doesn't have callback")
   let cbContext =
         context
           & #action .~ cbAction
@@ -101,15 +103,3 @@ withBecknCallbackMig auth action api context cbUrl f = do
     (callBecknAPI auth Nothing (show cbAction) api cbUrl)
     f
   return Ack
-  where
-    mapToCbAction M.Context.SEARCH = pure M.Context.ON_SEARCH
-    mapToCbAction M.Context.SELECT = pure M.Context.ON_SELECT
-    mapToCbAction M.Context.INIT = pure M.Context.ON_INIT
-    mapToCbAction M.Context.CONFIRM = pure M.Context.ON_CONFIRM
-    mapToCbAction M.Context.UPDATE = pure M.Context.ON_UPDATE
-    mapToCbAction M.Context.STATUS = pure M.Context.ON_STATUS
-    mapToCbAction M.Context.TRACK = pure M.Context.ON_TRACK
-    mapToCbAction M.Context.CANCEL = pure M.Context.ON_CANCEL
-    mapToCbAction M.Context.FEEDBACK = pure M.Context.ON_FEEDBACK
-    mapToCbAction M.Context.SUPPORT = pure M.Context.ON_SUPPORT
-    mapToCbAction invalidAction = throwError . InvalidRequest $ "Beckn " <> show invalidAction <> " action doesn't have callback"
