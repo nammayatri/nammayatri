@@ -83,7 +83,7 @@ instance ToJSON FulfillmentParticipant where
 data FulfillmentDetails = FulfillmentDetails
   { location :: Maybe Location,
     time :: Maybe Time,
-    instructions :: Maybe [Descriptor],
+    instructions :: Maybe Descriptor,
     contact :: Contact,
     person :: Person
   }

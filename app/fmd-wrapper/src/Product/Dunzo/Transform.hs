@@ -318,8 +318,8 @@ mkCreateTaskReq order = do
   recievingContact <- order ^? #fulfillment . #end . _Just . #contact & fromMaybeM (InvalidRequest "Recieving person contact not specified.")
   senderDet <- mkPersonDetails pickUpPerson pickUpContact
   receiverDet <- mkPersonDetails recievingPerson recievingContact
-  let pickupIntructions = formatInstructions "pickup" =<< order ^. #fulfillment . #start . _Just . #instructions
-  let dropIntructions = formatInstructions "drop" =<< order ^. #fulfillment . #end . _Just . #instructions
+  let pickupIntructions = formatInstructions "pickup" =<< order ^? #fulfillment . #start . _Just . #instructions
+  let dropIntructions = formatInstructions "drop" =<< order ^? #fulfillment . #end . _Just . #instructions
   packageContent <- do
     (categoryId :: Int) <- fromMaybeErr "INVALID_CATEGORY_ID" (Just CORE003) (readMaybe $ T.unpack packageCatId)
     -- Category id is the index value of dzPackageContentList
@@ -374,11 +374,10 @@ mkCreateTaskReq order = do
             phone_number = phone
           }
 
-    formatInstructions tag descriptors = do
-      let insts = mapMaybe (.name) descriptors
-      if null insts
-        then Nothing
-        else Just $ tag <> ": " <> T.intercalate ", " insts
+    formatInstructions tag descriptor =
+      descriptor
+        >>= (.name)
+        >>= Just . ((tag <> ": ") <>)
 
     joinInstructions orderId pickupInstructions dropInstructions =
       let orderMsg = "Order " <> orderId
