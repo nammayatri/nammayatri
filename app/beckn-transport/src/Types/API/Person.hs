@@ -22,6 +22,7 @@ import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id, state)
 import Servant.API
 import qualified Storage.Queries.Location as QL
+import Types.API.Registration
 import Types.Error
 import Utils.Common
 
@@ -137,7 +138,7 @@ ifJustExtract :: Maybe a -> a -> a
 ifJustExtract a b = fromMaybe b a
 
 newtype UpdatePersonRes = UpdatePersonRes
-  {user :: SP.DecryptedPerson}
+  {user :: UserInfoRes}
   deriving (Generic, ToJSON, FromJSON)
 
 -- Create Person request and response
@@ -236,7 +237,7 @@ newtype ListPersonRes = ListPersonRes
   deriving (Generic, ToJSON, FromJSON)
 
 newtype PersonRes = PersonRes
-  {user :: SP.DecryptedPerson}
+  {user :: UserInfoRes}
   deriving (Generic, ToJSON, FromJSON)
 
 newtype DeletePersonRes = DeletePersonRes

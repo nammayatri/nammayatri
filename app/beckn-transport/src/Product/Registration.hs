@@ -164,7 +164,7 @@ login tokenId req =
         when (person.status == SP.INACTIVE) $
           Notify.notifyOnRegistration regToken updatedPerson
         decPerson <- decrypt updatedPerson
-        return $ LoginRes token (Just $ SP.maskPerson decPerson)
+        return $ LoginRes token (Just . makeUserInfoRes $ SP.maskPerson decPerson)
       else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =

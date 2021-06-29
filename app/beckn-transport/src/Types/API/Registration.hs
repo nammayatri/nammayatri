@@ -1,20 +1,22 @@
 module Types.API.Registration where
 
 import Beckn.External.FCM.Types
+import Beckn.Types.Id
 import Beckn.Types.Predicate
-import Beckn.Types.Storage.Person
+import qualified Beckn.Types.Storage.Organization as Org
+import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.RegistrationToken
 import Beckn.Utils.JSON
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
 
 data InitiateLoginReq = InitiateLoginReq
   { medium :: Medium,
     __type :: LoginType,
     mobileNumber :: Text,
     mobileCountryCode :: Text,
-    role :: Role,
+    role :: Person.Role,
     deviceToken :: Maybe FCMRecipientToken
   }
   deriving (Generic)
@@ -84,6 +86,21 @@ validateLoginReq LoginReq {..} =
 
 data LoginRes = LoginRes
   { registrationToken :: Text,
-    user :: Maybe DecryptedPerson
+    user :: Maybe UserInfoRes
   }
   deriving (Generic, ToJSON)
+
+data UserInfoRes = UserInfoRes
+  { id :: Id Person.Person,
+    firstName :: Maybe Text,
+    lastName :: Maybe Text,
+    fullName :: Maybe Text,
+    role :: Person.Role,
+    mobileNumber :: Maybe Text,
+    organizationId :: Maybe (Id Org.Organization),
+    deviceToken :: Maybe FCMRecipientToken
+  }
+  deriving (Generic, FromJSON, ToJSON)
+
+makeUserInfoRes :: Person.DecryptedPerson -> UserInfoRes
+makeUserInfoRes Person.Person {..} = UserInfoRes {..}

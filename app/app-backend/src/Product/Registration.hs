@@ -165,7 +165,7 @@ login tokenId req =
         when (person.status == SP.INACTIVE) $
           Notify.notifyOnRegistration regToken updatedPerson
         DB.runSqlDB (Person.updateMultiple personId updatedPerson)
-        LoginRes token . SP.maskPerson
+        LoginRes token . makeUserInfoRes . SP.maskPerson
           <$> ( Person.findById personId
                   >>= fromMaybeM PersonNotFound
                   >>= decrypt

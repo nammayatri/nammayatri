@@ -6,11 +6,11 @@ import Beckn.Types.Id
 import Beckn.Types.Predicate
 import qualified Beckn.Types.Storage.Location as SL
 import qualified Beckn.Types.Storage.Organization as SO
-import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Location as QL
+import Types.API.Registration
 
 data TransporterReq = TransporterReq
   { name :: Text,
@@ -102,7 +102,7 @@ transformToLocation req = do
       }
 
 data TransporterRes = TransporterRes
-  { user :: SP.DecryptedPerson,
+  { user :: UserInfoRes,
     organization :: SO.Organization
   }
   deriving (Generic, ToJSON)

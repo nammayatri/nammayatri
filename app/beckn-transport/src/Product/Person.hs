@@ -48,6 +48,7 @@ import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Location (LatLong (..))
 import Types.API.Person
+import Types.API.Registration (makeUserInfoRes)
 import Types.App (Driver)
 import Types.Error
 import Types.Metrics (CoreMetrics)
@@ -63,7 +64,7 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ 
   updatedPerson <- modifyTransform req person
   DB.runSqlDB (QP.updatePersonRec (Id entityId) updatedPerson)
   decPerson <- decrypt updatedPerson
-  return $ UpdatePersonRes decPerson
+  return . UpdatePersonRes $ makeUserInfoRes decPerson
   where
     verifyPerson entityId_ =
       when (personId /= entityId_) $
@@ -87,8 +88,8 @@ createPerson orgId req = withFlowHandlerAPI $ do
       smsCfg <- smsCfg <$> ask
       inviteSmsTemplate <- inviteSmsTemplate <$> ask
       sendInviteSms smsCfg inviteSmsTemplate (countryCode <> mobileNumber) (org.name)
-      return $ UpdatePersonRes decPerson
-    _ -> return $ UpdatePersonRes decPerson
+      return . UpdatePersonRes $ makeUserInfoRes decPerson
+    _ -> return . UpdatePersonRes $ makeUserInfoRes decPerson
   where
     validateDriver :: DBFlow m r => CreatePersonReq -> m ()
     validateDriver preq =

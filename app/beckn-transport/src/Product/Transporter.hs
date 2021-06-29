@@ -14,6 +14,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.FarePolicy as QFarePolicy
 import qualified Storage.Queries.Organization as QO
 import qualified Storage.Queries.Person as QP
+import Types.API.Registration (makeUserInfoRes)
 import Types.API.Transporter
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import Types.Error
@@ -36,7 +37,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
     QP.findPersonById (Id entityId)
       >>= fromMaybeM PersonNotFound
       >>= decrypt
-  return $ TransporterRes updatedPerson organization
+  return $ TransporterRes (makeUserInfoRes updatedPerson) organization
   where
     validate person = do
       unless (person.verified) $
