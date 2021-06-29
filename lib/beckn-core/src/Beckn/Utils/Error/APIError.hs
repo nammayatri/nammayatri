@@ -2,7 +2,7 @@
 
 module Beckn.Utils.Error.APIError where
 
-import Beckn.Types.Error.APIError
+import Beckn.Types.Error.BaseError.APIError
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET

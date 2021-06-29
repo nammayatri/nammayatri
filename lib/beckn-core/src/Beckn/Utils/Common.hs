@@ -7,7 +7,7 @@ where
 
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Ack as Common
-import Beckn.Types.Error.APIError as Common
+import Beckn.Types.Error.BaseError.APIError as Common
 import Beckn.Types.Field as Common
 import Beckn.Utils.Context as Common
 import Beckn.Utils.Error as Common

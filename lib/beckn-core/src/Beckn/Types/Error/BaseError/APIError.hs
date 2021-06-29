@@ -1,14 +1,14 @@
-module Beckn.Types.Error.APIError
-  ( module Beckn.Types.Error.APIError,
-    module Beckn.Types.Error.HttpCode,
+module Beckn.Types.Error.BaseError.APIError
+  ( module Beckn.Types.Error.BaseError.APIError,
+    module Beckn.Types.Error.BaseError.APIError.HttpCode,
     module Beckn.Types.Error.BaseError,
     instanceExceptionWithParent,
   )
 where
 
 import Beckn.Types.Error.BaseError
-import Beckn.Types.Error.FromResponse
-import Beckn.Types.Error.HttpCode
+import Beckn.Types.Error.BaseError.APIError.FromResponse
+import Beckn.Types.Error.BaseError.APIError.HttpCode
 import Beckn.Utils.Error.Hierarchy (instanceExceptionWithParent)
 import Control.Exception
 import Data.Aeson (Value (..))

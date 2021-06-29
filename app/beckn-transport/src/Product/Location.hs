@@ -2,7 +2,7 @@ module Product.Location where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
-import Beckn.Types.Error.API
+import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import EulerHS.Prelude hiding (id, state)

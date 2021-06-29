@@ -7,8 +7,8 @@ module Types.Error
 where
 
 import Beckn.Types.Error
-import Beckn.Types.Error.APIError
-import Beckn.Types.Error.BecknAPIError
+import Beckn.Types.Error.BaseError.APIError
+import Beckn.Types.Error.BaseError.APIError.BecknAPIError
 import EulerHS.Prelude
 
 data ErrorCode

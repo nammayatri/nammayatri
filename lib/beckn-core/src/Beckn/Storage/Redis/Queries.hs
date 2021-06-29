@@ -16,7 +16,7 @@ module Beckn.Storage.Redis.Queries
 where
 
 import Beckn.Types.Common
-import Beckn.Types.Error.API (RedisError (..))
+import Beckn.Types.Error (RedisError (..))
 import Beckn.Utils.Error.Throwing (fromEitherM)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL

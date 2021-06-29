@@ -3,7 +3,7 @@ module Beckn.Product.MapSearch where
 import qualified Beckn.External.Graphhopper.Flow as Grphr
 import qualified Beckn.External.Graphhopper.Types as Grphr
 import Beckn.Types.Common
-import Beckn.Types.Error.API
+import Beckn.Types.Error
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common

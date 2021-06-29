@@ -6,7 +6,7 @@ module Beckn.Utils.Validation
   )
 where
 
-import Beckn.Types.Error.APIError
+import Beckn.Types.Error.BaseError.APIError
 import Beckn.Types.Logging
 import Beckn.Types.Predicate
 import Beckn.Types.Validation
@@ -24,7 +24,7 @@ runRequestValidation validator obj =
     & fromEitherM RequestValidationFailure
 
 newtype RequestValidationFailure = RequestValidationFailure [ValidationDescription]
-  deriving (Show)
+  deriving (Show, IsBaseError)
 
 instance IsAPIError RequestValidationFailure where
   toErrorCode (RequestValidationFailure _failures) = "REQUEST_VALIDATION_FAILURE"

@@ -11,9 +11,9 @@ where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import Beckn.Types.Error.API as Err
-import Beckn.Types.Error.APIError
-import Beckn.Types.Error.BecknAPIError
+import Beckn.Types.Error as Err
+import Beckn.Types.Error.BaseError.APIError
+import Beckn.Types.Error.BaseError.APIError.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Logging

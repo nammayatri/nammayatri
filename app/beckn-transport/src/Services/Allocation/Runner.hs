@@ -5,7 +5,7 @@ module Services.Allocation.Runner where
 import App.BackgroundTaskManager.Types (DriverAllocationConfig)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Beckn.Types.Error.API (RedisError (..))
+import Beckn.Types.Error (RedisError (..))
 import Beckn.Types.Id
 import qualified Beckn.Utils.Logging as Log
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)

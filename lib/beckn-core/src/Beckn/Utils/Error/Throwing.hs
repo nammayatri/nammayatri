@@ -5,7 +5,7 @@ module Beckn.Utils.Error.Throwing
 where
 
 import Beckn.Types.Common hiding (id)
-import Beckn.Types.Error.APIError
+import Beckn.Types.Error.BaseError.APIError
 import Beckn.Utils.Logging
 import qualified Data.Text as T
 import EulerHS.Prelude

@@ -4,7 +4,7 @@
 
 module Beckn.Utils.Monitoring.Prometheus.Metrics where
 
-import Beckn.Types.Error.APIError (IsAPIError (toErrorCode, toHttpCode), IsAPIException)
+import Beckn.Types.Error.BaseError.APIError (IsAPIError (toErrorCode, toHttpCode), IsAPIException)
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, HasCoreMetrics)
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Data.Text as DT

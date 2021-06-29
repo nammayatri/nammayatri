@@ -1,16 +1,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Beckn.Types.Error.BecknAPIError
-  ( module Beckn.Types.Error.BecknAPIError,
-    module Beckn.Types.Error.APIError,
+module Beckn.Types.Error.BaseError.APIError.BecknAPIError
+  ( module Beckn.Types.Error.BaseError.APIError.BecknAPIError,
+    module Beckn.Types.Error.BaseError.APIError,
     Error.Error (..),
     Error.ErrorType (..),
   )
 where
 
 import qualified Beckn.Types.Core.Error as Error
-import Beckn.Types.Error.APIError
-import Beckn.Types.Error.FromResponse
+import Beckn.Types.Error.BaseError.APIError
+import Beckn.Types.Error.BaseError.APIError.FromResponse
 import Data.Aeson.Types
 import EulerHS.Prelude hiding (Show, show, (.=))
 import Prelude (Show (..))

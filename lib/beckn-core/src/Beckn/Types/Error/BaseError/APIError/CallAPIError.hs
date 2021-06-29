@@ -1,8 +1,8 @@
-module Beckn.Types.Error.CallAPIError where
+module Beckn.Types.Error.BaseError.APIError.CallAPIError where
 
 import Beckn.Types.Common
-import Beckn.Types.Error.API
-import Beckn.Types.Error.FromResponse
+import Beckn.Types.Error
+import Beckn.Types.Error.BaseError.APIError.FromResponse
 import Beckn.Utils.Error.Throwing
 import EulerHS.Prelude
 import Servant.Client (ClientError (..))

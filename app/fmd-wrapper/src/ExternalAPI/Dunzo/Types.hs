@@ -5,9 +5,9 @@
 
 module ExternalAPI.Dunzo.Types where
 
-import Beckn.Types.Error.APIError
-import Beckn.Types.Error.BecknAPIError hiding (Error)
-import Beckn.Types.Error.FromResponse
+import Beckn.Types.Error.BaseError.APIError
+import Beckn.Types.Error.BaseError.APIError.BecknAPIError hiding (Error)
+import Beckn.Types.Error.BaseError.APIError.FromResponse
 import Data.Aeson hiding (Error)
 import Data.Char (toLower)
 import EulerHS.Prelude hiding (state)

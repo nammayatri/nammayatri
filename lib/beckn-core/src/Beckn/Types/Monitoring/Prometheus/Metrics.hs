@@ -6,7 +6,7 @@ module Beckn.Types.Monitoring.Prometheus.Metrics
   )
 where
 
-import Beckn.Types.Error.APIError
+import Beckn.Types.Error.BaseError.APIError
 import EulerHS.Prelude as E
 import GHC.Records.Extra
 import Prometheus as P

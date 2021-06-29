@@ -7,7 +7,7 @@ import Beckn.Types.Core.Context
 import qualified Beckn.Types.Core.Migration.API.Types as API
 import qualified Beckn.Types.Core.Migration.Context as M.Context
 import Beckn.Types.Error
-import Beckn.Types.Error.BecknAPIError
+import Beckn.Types.Error.BaseError.APIError.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Common
 import EulerHS.Prelude

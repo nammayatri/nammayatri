@@ -7,7 +7,7 @@ module Types.Error
 where
 
 import Beckn.Types.Error hiding (GatewayError)
-import Beckn.Types.Error.BecknAPIError
+import Beckn.Types.Error.BaseError.APIError.BecknAPIError
 import EulerHS.Prelude
 
 data GatewayError

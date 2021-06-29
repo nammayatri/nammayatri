@@ -1,8 +1,8 @@
 module Beckn.Utils.Error.DB where
 
 import Beckn.Types.Common
-import Beckn.Types.Error.API
-import Beckn.Types.Error.APIError
+import Beckn.Types.Error
+import Beckn.Types.Error.BaseError.APIError
 import Beckn.Utils.Error.Throwing
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET

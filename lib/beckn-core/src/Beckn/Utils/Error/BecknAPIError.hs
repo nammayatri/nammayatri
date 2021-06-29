@@ -4,7 +4,7 @@ module Beckn.Utils.Error.BecknAPIError where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import Beckn.Types.Error.BecknAPIError
+import Beckn.Types.Error.BaseError.APIError.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
