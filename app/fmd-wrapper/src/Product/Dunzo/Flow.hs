@@ -85,12 +85,12 @@ init org req = do
       now <- getCurrentTime
       order <- mkOrderFromInititialized onInitMessage now
       let caseId = Id req.context.transaction_id
-      let case_ =
+      let newCase =
             Case
               { id = caseId,
                 name = Nothing,
                 description = Nothing,
-                shortId = "", -- FIX this
+                shortId = "",
                 industry = GROCERY,
                 _type = RIDEORDER,
                 exchangeType = ORDER,
@@ -114,10 +114,13 @@ init org req = do
                 createdAt = now,
                 updatedAt = now
               }
-      mcase <- Storage.findById caseId
-      case mcase of
-        Nothing -> Storage.create case_
-        Just _ -> pass -- Shouldn't we update case with a current request?
+      mbCase <- Storage.findById caseId
+      case mbCase of
+        Nothing -> Storage.create newCase
+        Just currCase ->
+          if currCase.status == NEW
+            then Storage.update caseId newCase
+            else throwError (InvalidRequest "Invalid order status.")
 
 confirm ::
   ( DBFlow m r,
