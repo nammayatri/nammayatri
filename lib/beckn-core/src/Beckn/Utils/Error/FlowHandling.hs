@@ -2,7 +2,7 @@ module Beckn.Utils.Error.FlowHandling
   ( withFlowHandler,
     withFlowHandlerAPI,
     withFlowHandlerBecknAPI,
-    apiHandler,
+    domainHandler,
     becknApiHandler,
     someExceptionToBecknApiError,
   )
@@ -14,6 +14,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Error as Err
 import Beckn.Types.Error.BaseError.APIError
 import Beckn.Types.Error.BaseError.APIError.BecknAPIError
+import Beckn.Types.Error.BaseError.APIError.DomainError
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Logging
@@ -33,7 +34,7 @@ withFlowHandler flow = do
   liftIO . runFlowR flowRt appEnv $ flow
 
 withFlowHandlerAPI :: (HasCoreMetrics r, HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
-withFlowHandlerAPI = withFlowHandler . apiHandler . handleIfUp
+withFlowHandlerAPI = withFlowHandler . domainHandler . handleIfUp
 
 withFlowHandlerBecknAPI ::
   ( HasCoreMetrics r,
@@ -57,16 +58,16 @@ handleIfUp flow = do
   shouldRun <- L.runIO $ atomically $ isEmptyTMVar shutdown
   if shouldRun
     then flow
-    else throwApiError ServerUnavailable
+    else throwDomainError ServerUnavailable
 
-apiHandler ::
+domainHandler ::
   ( MonadCatch m,
     Log m,
     Metrics.CoreMetrics m
   ) =>
   m a ->
   m a
-apiHandler = (`catch` someExceptionToApiErrorThrow)
+domainHandler = (`catch` someExceptionToDomainErrorThrow)
 
 becknApiHandler ::
   ( MonadCatch m,
@@ -77,16 +78,16 @@ becknApiHandler ::
   m a
 becknApiHandler = (`catch` someExceptionToBecknApiErrorThrow)
 
-someExceptionToApiErrorThrow ::
+someExceptionToDomainErrorThrow ::
   ( MonadCatch m,
     Log m,
     Metrics.CoreMetrics m
   ) =>
   SomeException ->
   m a
-someExceptionToApiErrorThrow exc
-  | Just (APIException err) <- fromException exc = throwApiError err
-  | otherwise = throwApiError . InternalError $ show exc
+someExceptionToDomainErrorThrow exc
+  | Just (DomainException err) <- fromException exc = throwDomainError err
+  | otherwise = throwDomainError . InternalError $ show exc
 
 someExceptionToBecknApiErrorThrow ::
   ( MonadCatch m,
@@ -97,27 +98,27 @@ someExceptionToBecknApiErrorThrow ::
   m a
 someExceptionToBecknApiErrorThrow exc
   | Just (BecknAPIException err) <- fromException exc = throwBecknApiError err
-  | Just (APIException err) <- fromException exc =
-    throwIsApiError becknAPIErrorFromAPIError err
+  | Just (DomainException err) <- fromException exc =
+    throwIsApiError becknAPIErrorFromDomainError err
   | otherwise =
-    throwIsApiError becknAPIErrorFromAPIError . InternalError $ show exc
+    throwIsApiError becknAPIErrorFromDomainError . InternalError $ show exc
 
 someExceptionToBecknApiError :: SomeException -> BecknAPIError
 someExceptionToBecknApiError exc
   | Just (BecknAPIException err) <- fromException exc = toBecknAPIError err
-  | Just (APIException err) <- fromException exc = becknAPIErrorFromAPIError err
-  | otherwise = becknAPIErrorFromAPIError . InternalError $ show exc
+  | Just (DomainException err) <- fromException exc = becknAPIErrorFromDomainError err
+  | otherwise = becknAPIErrorFromDomainError . InternalError $ show exc
 
-throwApiError ::
+throwDomainError ::
   ( Log m,
     MonadThrow m,
-    IsAPIError e,
+    IsDomainError e,
     Exception e,
     Metrics.CoreMetrics m
   ) =>
   e ->
   m a
-throwApiError = throwIsApiError toAPIError
+throwDomainError = throwIsApiError toDomainError
 
 throwBecknApiError ::
   ( Log m,
@@ -164,8 +165,8 @@ throwServantError httpCode customHeaders jsonError = withLogTag "HTTP_ERROR" $ d
     jsonHeader :: (HeaderName, ByteString)
     jsonHeader = (hContentType, "application/json;charset=utf-8")
 
-becknAPIErrorFromAPIError :: IsAPIError e => e -> BecknAPIError
-becknAPIErrorFromAPIError e =
+becknAPIErrorFromDomainError :: IsDomainError e => e -> BecknAPIError
+becknAPIErrorFromDomainError e =
   let _type =
         if isInternalError (toHttpCode e)
           then INTERNAL_ERROR

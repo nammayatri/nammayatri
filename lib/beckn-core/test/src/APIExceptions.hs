@@ -8,6 +8,7 @@ module APIExceptions (apiExceptionTests) where
 
 import Beckn.Types.Error.BaseError.APIError
 import Beckn.Types.Error.BaseError.APIError.BecknAPIError
+import Beckn.Types.Error.BaseError.APIError.DomainError
 import Beckn.Types.Monitoring.Prometheus.Metrics
 import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Error.FlowHandling
@@ -20,14 +21,16 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import TestSilentIOLogger ()
 
-data SomeAPIError = SomeAPIError deriving (Show)
+data SomeDomainError = SomeDomainError deriving (Show)
 
-instance IsBaseError SomeAPIError
+instance IsBaseError SomeDomainError
 
-instance IsAPIError SomeAPIError where
-  toErrorCode SomeAPIError = "SOME_API_ERROR"
+instance IsAPIError SomeDomainError where
+  toErrorCode SomeDomainError = "SOME_API_ERROR"
 
-instanceExceptionWithParent 'APIException ''SomeAPIError
+instance IsDomainError SomeDomainError
+
+instanceExceptionWithParent 'DomainException ''SomeDomainError
 
 data SomeBecknAPIError = SomeBecknAPIError deriving (Show)
 
@@ -51,37 +54,37 @@ apiExceptionTests =
     "Endpoint exception catchers tests"
     [ testGroup
         "Throwing any error in our endpoints must return APIError"
-        [ apiErrorInEndpoint,
+        [ domainErrorInEndpoint,
           becknApiErrorInEndpoint,
           someErrorInEndpoint
         ],
       testGroup
         "Throwing any error in Beckn endpoints must return BecknAPIError"
-        [ apiErrorInBecknEndpoint,
+        [ domainErrorInBecknEndpoint,
           becknApiErrorInBecknEndpoint,
           someErrorInBecknEndpoint
         ]
     ]
 
-apiErrorInEndpoint :: TestTree
-apiErrorInEndpoint =
-  testCase "Throwing some API error" $
-    mustThrow @APIError $ apiHandler (throwM SomeAPIError)
+domainErrorInEndpoint :: TestTree
+domainErrorInEndpoint =
+  testCase "Throwing some Domain error" $
+    mustThrow @DomainError $ domainHandler (throwM SomeDomainError)
 
 becknApiErrorInEndpoint :: TestTree
 becknApiErrorInEndpoint =
   testCase "Throwing some Beckn API error" $
-    mustThrow @APIError $ apiHandler (throwM SomeBecknAPIError)
+    mustThrow @DomainError $ domainHandler (throwM SomeBecknAPIError)
 
 someErrorInEndpoint :: TestTree
 someErrorInEndpoint =
   testCase "Throwing SomeException" $
-    mustThrow @APIError $ apiHandler (error "Some error")
+    mustThrow @DomainError $ domainHandler (error "Some error")
 
-apiErrorInBecknEndpoint :: TestTree
-apiErrorInBecknEndpoint =
-  testCase "Throwing some API error" $
-    mustThrow @BecknAPIError $ becknApiHandler (throwM SomeAPIError)
+domainErrorInBecknEndpoint :: TestTree
+domainErrorInBecknEndpoint =
+  testCase "Throwing some Domain error" $
+    mustThrow @BecknAPIError $ becknApiHandler (throwM SomeDomainError)
 
 becknApiErrorInBecknEndpoint :: TestTree
 becknApiErrorInBecknEndpoint =

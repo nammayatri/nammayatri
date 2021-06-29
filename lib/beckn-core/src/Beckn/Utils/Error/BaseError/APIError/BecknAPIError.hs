@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Beckn.Utils.Error.BecknAPIError where
+module Beckn.Utils.Error.BaseError.APIError.BecknAPIError where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack

@@ -7,7 +7,6 @@ module Beckn.Types.Error.BaseError.APIError
 where
 
 import Beckn.Types.Error.BaseError
-import Beckn.Types.Error.BaseError.APIError.FromResponse
 import Beckn.Types.Error.BaseError.APIError.HttpCode
 import Beckn.Utils.Error.Hierarchy (instanceExceptionWithParent)
 import Control.Exception
@@ -18,16 +17,6 @@ import Network.HTTP.Types (Header)
 import qualified Prelude as P
 
 type IsAPIException e = (IsAPIError e, Exception e)
-
-data APIError = APIError
-  { errorCode :: Text,
-    errorMessage :: Maybe Text,
-    errorPayload :: Value
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-instance FromResponse APIError where
-  fromResponse = fromJsonResponse
 
 class IsBaseError e => IsAPIError e where
   toErrorCode :: e -> Text
@@ -47,14 +36,6 @@ instance P.Show APIException where
   show (APIException e) = show e
 
 instance Exception APIException
-
-toAPIError :: IsAPIError e => e -> APIError
-toAPIError e =
-  APIError
-    { errorCode = toErrorCode e,
-      errorMessage = toMessageIfNotInternal e,
-      errorPayload = toPayload e
-    }
 
 toMessageIfNotInternal :: IsAPIError e => e -> Maybe Text
 toMessageIfNotInternal e = if isInternalError (toHttpCode e) then Nothing else toMessage e

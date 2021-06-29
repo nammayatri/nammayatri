@@ -14,12 +14,14 @@ import Control.Exception
 import Data.Text (pack)
 import EulerHS.Prelude hiding (Show, pack, show)
 import Prelude (Show (..))
+import Data.Aeson (Value)
 
 type IsDomainException e = (IsDomainError e, Exception e)
 
 data DomainError = DomainError
   { errorCode :: Text,
-    errorMessage :: Maybe Text
+    errorMessage :: Maybe Text,
+    errorPayload :: Value
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -39,7 +41,8 @@ toDomainError :: IsDomainError e => e -> DomainError
 toDomainError e =
   DomainError
     { errorCode = toErrorCode e,
-      errorMessage = toMessageIfNotInternal e
+      errorMessage = toMessageIfNotInternal e,
+      errorPayload = toPayload e
     }
 
 toLogMessageDomainError :: IsDomainError e => e -> Text

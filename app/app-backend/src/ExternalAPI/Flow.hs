@@ -7,8 +7,8 @@ import Beckn.Types.Core.API.Search as API
 import Beckn.Types.Core.API.Status as API
 import Beckn.Types.Core.API.Track as API
 import Beckn.Types.Error
-import Beckn.Utils.Error.APIError
-import Beckn.Utils.Error.BecknAPIError (IsBecknAPI)
+import Beckn.Utils.Error.BaseError.APIError.BecknAPIError (IsBecknAPI)
+import Beckn.Utils.Error.BaseError.APIError.DomainError
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import EulerHS.Prelude
 import qualified ExternalAPI.Types as API

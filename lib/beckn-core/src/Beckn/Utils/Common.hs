@@ -11,7 +11,7 @@ import Beckn.Types.Error.BaseError.APIError as Common
 import Beckn.Types.Field as Common
 import Beckn.Utils.Context as Common
 import Beckn.Utils.Error as Common
-import Beckn.Utils.Error.BecknAPIError (callBecknAPI)
+import Beckn.Utils.Error.BaseError.APIError.BecknAPIError (callBecknAPI)
 import Beckn.Utils.Error.DB as Common
 import Beckn.Utils.Forkable as Common
 import Beckn.Utils.Logging as Common

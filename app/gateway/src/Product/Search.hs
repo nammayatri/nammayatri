@@ -7,7 +7,7 @@ where
 import App.Types
 import Beckn.Types.Core.Ack
 import Beckn.Types.Error
-import Beckn.Utils.Error.BecknAPIError (callBecknAPI')
+import Beckn.Utils.Error.BaseError.APIError.BecknAPIError (callBecknAPI')
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..), signatureAuthManagerKey)
 import qualified Data.Text as T
 import EulerHS.Prelude
