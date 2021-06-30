@@ -76,10 +76,10 @@ addRequest requestData Repository {..} rideId = do
   modifyIORef rideRequestsVar $ Map.insert requestId request
 
 addResponse :: Repository -> Id Ride -> Id Driver -> Ride.NotificationStatus -> IO ()
-addResponse Repository {..} rideId driverId status = do
+addResponse repository@Repository {..} rideId driverId status = do
   currentTime <- Time.getCurrentTime
-  let response = Ride.DriverResponse status currentTime
-  modifyIORef responsesVar $ Map.insert (rideId, driverId) response
+  let driverResponse = Ride.DriverResponse driverId status currentTime
+  addRequest (DriverResponse driverResponse) repository rideId
 
 checkRideStatus :: Repository -> Id Ride -> RideStatus -> IO ()
 checkRideStatus Repository {..} rideId expectedStatus = do
@@ -140,11 +140,7 @@ handle repository@Repository {..} =
         notificationStatus <- readIORef notificationStatusVar
         let filtered = fmap snd $ Map.keys $ Map.filter (isNotified currentTime) notificationStatus
         pure filtered,
-      getDriverResponse = \rideId driverId -> do
-        responses <- readIORef responsesVar
-        pure $ Map.lookup (rideId, driverId) responses,
       assignDriver = \rideId driverId -> do
-        modifyIORef responsesVar $ Map.delete (rideId, driverId)
         modifyIORef assignmentsVar $ (:) (rideId, driverId)
         modifyIORef ridesVar $ Map.adjust (#rideStatus .~ Assigned) rideId,
       cancelRide = modifyIORef ridesVar . Map.adjust (#rideStatus .~ Cancelled),
@@ -183,8 +179,7 @@ data Repository = Repository
     ridesVar :: IORef (Map (Id Ride) RideInfo),
     rideRequestsVar :: IORef (Map (Id SRR.RideRequest) RideRequest),
     notificationStatusVar :: IORef (Map (Id Ride, Id Driver) (NotificationStatus, UTCTime)),
-    assignmentsVar :: IORef [(Id Ride, Id Driver)],
-    responsesVar :: IORef (Map (Id Ride, Id Driver) Ride.DriverResponse)
+    assignmentsVar :: IORef [(Id Ride, Id Driver)]
   }
 
 initRepository :: IO Repository
@@ -195,7 +190,6 @@ initRepository = do
   initRideRequest <- newIORef Map.empty
   initNotificationStatus <- newIORef Map.empty
   initAssignments <- newIORef []
-  initResponses <- newIORef Map.empty
 
   let repository =
         Repository
@@ -205,7 +199,6 @@ initRepository = do
           initRideRequest
           initNotificationStatus
           initAssignments
-          initResponses
 
   pure repository
 

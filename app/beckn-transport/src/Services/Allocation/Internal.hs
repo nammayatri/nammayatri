@@ -1,7 +1,6 @@
 module Services.Allocation.Internal where
 
 import App.BackgroundTaskManager.Types (DriverAllocationConfig)
-import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Storage.Organization
@@ -19,7 +18,6 @@ import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as QRR
-import Types.API.Ride (DriverResponse (..))
 import Types.App
 import Types.Error
 import Types.Metrics (CoreMetrics)
@@ -43,9 +41,12 @@ getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integ
 getDriverPool rideId = Person.getDriverPool (cast rideId)
 
 getRequests :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest]
-getRequests shortOrgId numRequests =
-  map rideRequestToRideRequest
-    <$> QRR.fetchOldest shortOrgId numRequests
+getRequests shortOrgId numRequests = do
+  allRequests <- QRR.fetchOldest shortOrgId numRequests
+  let (errors, requests) =
+        partitionEithers $ map toRideRequest allRequests
+  traverse_ logError errors
+  pure requests
 
 assignDriver ::
   ( DBFlow m r,
@@ -59,15 +60,25 @@ assignDriver ::
   m ()
 assignDriver rideId = PI.assignDriver (cast rideId)
 
-rideRequestToRideRequest :: SRR.RideRequest -> Alloc.RideRequest
-rideRequestToRideRequest SRR.RideRequest {..} =
-  Alloc.RideRequest
-    { requestId = id,
-      rideId = rideId,
-      requestData = case _type of
-        SRR.ALLOCATION -> Alloc.Allocation
-        SRR.CANCELLATION -> Alloc.Cancellation
-    }
+toRideRequest :: SRR.RideRequest -> Either Text Alloc.RideRequest
+toRideRequest req =
+  case eRequestData of
+    Right requestData ->
+      Right
+        Alloc.RideRequest
+          { requestId = req.id,
+            rideId = req.rideId,
+            requestData = requestData
+          }
+    Left err -> Left err
+  where
+    eRequestData = case req._type of
+      SRR.ALLOCATION -> Right Alloc.Allocation
+      SRR.CANCELLATION -> Right Alloc.Cancellation
+      SRR.DRIVER_RESPONSE ->
+        case req.info >>= decodeFromText of
+          Just driverResponse -> Right $ DriverResponse driverResponse
+          Nothing -> Left $ "Error decoding driver response: " <> show req.info
 
 getCurrentNotification ::
   DBFlow m r =>
@@ -137,10 +148,6 @@ checkAvailability driverIds = do
   driversInfo <- QDriverInfo.fetchAllAvailableByIds $ toList driverIds
   pure $ map (cast . SDriverInfo.driverId) driversInfo
 
-getDriverResponse :: DBFlow m r => Id Ride -> Id Driver -> m (Maybe DriverResponse)
-getDriverResponse rideId driverId =
-  Redis.getKeyRedis $ "beckn:" <> getId rideId <> ":" <> getId driverId <> ":response"
-
 cancelRide ::
   ( DBFlow m r,
     EncFlow m r,
@@ -176,7 +183,8 @@ addAllocationRequest shortOrgId rideId = do
             rideId = rideId,
             shortOrgId = shortOrgId,
             createdAt = currTime,
-            _type = SRR.ALLOCATION
+            _type = SRR.ALLOCATION,
+            info = Nothing
           }
   QRR.createFlow rideRequest
 

@@ -13,7 +13,7 @@ import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
 import Types.App
 
-data RideRequestType = ALLOCATION | CANCELLATION
+data RideRequestType = ALLOCATION | CANCELLATION | DRIVER_RESPONSE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RideRequestType where
@@ -29,7 +29,8 @@ data RideRequestT f = RideRequest
     rideId :: B.C f (Id Ride),
     shortOrgId :: B.C f (ShortId Organization),
     createdAt :: B.C f UTCTime,
-    _type :: B.C f RideRequestType
+    _type :: B.C f RideRequestType,
+    info :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

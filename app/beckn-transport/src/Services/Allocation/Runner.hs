@@ -47,7 +47,6 @@ handle =
       getDriversWithNotification = I.getDriversWithNotification,
       getFirstDriverInTheQueue = I.getFirstDriverInTheQueue,
       checkAvailability = I.checkAvailability,
-      getDriverResponse = I.getDriverResponse,
       assignDriver = I.assignDriver,
       cancelRide = I.cancelRide,
       addAllocationRequest = I.addAllocationRequest,

@@ -320,5 +320,6 @@ mkRideReq prodInstID shortOrgId rideRequestType = do
         rideId = cast prodInstID,
         shortOrgId = shortOrgId,
         createdAt = currTime,
-        _type = rideRequestType
+        _type = rideRequestType,
+        info = Nothing
       }
