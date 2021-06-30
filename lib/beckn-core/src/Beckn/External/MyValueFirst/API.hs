@@ -4,6 +4,7 @@ import Beckn.External.MyValueFirst.Types
 import Beckn.Types.App
   ( MandatoryQueryParam,
   )
+import Beckn.Utils.Servant.API
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
@@ -16,7 +17,7 @@ type ServiceAPI =
     :> MandatoryQueryParam "from" Text
     :> MandatoryQueryParam "to" Text
     :> MandatoryQueryParam "text" Text
-    :> Post '[PlainText] Text
+    :> Post '[PlainText_ISO_8859_1] Text
 
 serviceAPI :: Proxy ServiceAPI
 serviceAPI = Proxy

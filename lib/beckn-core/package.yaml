@@ -70,6 +70,7 @@ dependencies:
   - http-client
   - http-client-tls
   - http-types
+  - http-media
   - kleene
   - lattices
   - postgresql-simple
