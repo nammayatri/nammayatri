@@ -1,6 +1,5 @@
 module Utils.Auth where
 
-import App.Types
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -10,11 +9,7 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
-import Beckn.Utils.Servant.SignatureAuth
-  ( LookupAction,
-    LookupRegistry,
-    lookupRegistryAction,
-  )
+import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude hiding (id)
 import Servant hiding (Context)
 import Storage.Queries.Organization (findOrgByShortId)
@@ -33,11 +28,11 @@ instance VerificationMethod VerifyAPIKey where
     "Checks whether gateway/provider is registered.\
     \If you don't have an API key, register the gateway/provider."
 
-verifyApiKey :: VerificationAction VerifyAPIKey AppEnv
+verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction QOrganization.verifyApiKey
 
-lookup :: LookupAction LookupRegistry AppEnv
-lookup = lookupRegistryAction findOrgByShortId
+lookup :: (DBFlow m r, HttpSig.AuthenticatingEntity r) => HttpSig.LookupAction HttpSig.LookupRegistry m
+lookup = HttpSig.lookupRegistryAction findOrgByShortId
 
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken
@@ -62,7 +57,7 @@ verifyPerson token = do
   Person.findById (Id $ SR.entityId sr)
     >>= Utils.fromMaybeM PersonNotFound
 
-verifyPersonAction :: VerificationAction VerifyToken AppEnv
+verifyPersonAction :: DBFlow m r => VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction verifyPerson
 
 verifyToken :: DBFlow m r => RegToken -> m SR.RegistrationToken

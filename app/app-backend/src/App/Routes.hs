@@ -19,7 +19,6 @@ import qualified Beckn.Types.Storage.Case as Case hiding (status)
 import qualified Beckn.Types.Storage.Person as Person
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Servant.SignatureAuth
-import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
@@ -58,7 +57,7 @@ import Types.API.Status
 import qualified Types.API.Support as Support
 import qualified Types.API.Track as TrackTrip
 import Types.Geofencing
-import Utils.Auth (TokenAuth, lookup)
+import Utils.Auth (TokenAuth)
 
 type AppAPI =
   "v1"
@@ -141,14 +140,14 @@ type SearchAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Search.SearchReq
     :> Post '[JSON] Search.SearchRes
-    :<|> SignatureAuth "Authorization"
-    :> SignatureAuth "Proxy-Authorization"
+    :<|> SignatureAuth "Authorization" LookupRegistry
+    :> SignatureAuth "Proxy-Authorization" LookupRegistry
     :> API.OnSearchAPI
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> HttpSig.withBecknAuthProxy Search.searchCb lookup
+    :<|> Search.searchCb
 
 -------- Confirm Flow --------
 type ConfirmAPI =
@@ -156,7 +155,7 @@ type ConfirmAPI =
       :> TokenAuth
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] ConfirmAPI.ConfirmRes
-      :<|> SignatureAuth "Authorization"
+      :<|> SignatureAuth "Authorization" LookupRegistry
       :> "on_confirm"
       :> ReqBody '[JSON] API.OnConfirmReq
       :> Post '[JSON] API.OnConfirmRes
@@ -165,7 +164,7 @@ type ConfirmAPI =
 confirmFlow :: FlowServer ConfirmAPI
 confirmFlow =
   Confirm.confirm
-    :<|> HttpSig.withBecknAuth Confirm.onConfirm lookup
+    :<|> Confirm.onConfirm
 
 ------- Case Flow -------
 type CaseAPI =
@@ -208,7 +207,7 @@ type TrackTripAPI =
     :> TokenAuth
     :> ReqBody '[JSON] TrackTrip.TrackTripReq
     :> Post '[JSON] TrackTrip.TrackTripRes
-    :<|> SignatureAuth "Authorization"
+    :<|> SignatureAuth "Authorization" LookupRegistry
     :> "on_track"
     :> ReqBody '[JSON] API.OnTrackTripReq
     :> Post '[JSON] API.OnTrackTripRes
@@ -216,18 +215,18 @@ type TrackTripAPI =
 trackTripFlow :: FlowServer TrackTripAPI
 trackTripFlow =
   TrackTrip.track
-    :<|> HttpSig.withBecknAuth TrackTrip.trackCb lookup
+    :<|> TrackTrip.trackCb
 
 ------- Update Flow -------
 type UpdateAPI =
-  SignatureAuth "Authorization"
+  SignatureAuth "Authorization" LookupRegistry
     :> "on_update"
     :> ReqBody '[JSON] API.OnUpdateReq
     :> Post '[JSON] API.OnUpdateRes
 
 updateFlow :: FlowServer UpdateAPI
 updateFlow =
-  HttpSig.withBecknAuth Update.onUpdate lookup
+  Update.onUpdate
 
 -------- ProductInstance Flow----------
 type ProductInstanceAPI =
@@ -256,7 +255,7 @@ type CancelAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
-    :<|> SignatureAuth "Authorization"
+    :<|> SignatureAuth "Authorization" LookupRegistry
     :> "on_cancel"
     :> ReqBody '[JSON] API.OnCancelReq
     :> Post '[JSON] API.OnCancelRes
@@ -264,7 +263,7 @@ type CancelAPI =
 cancelFlow :: FlowServer CancelAPI
 cancelFlow =
   Cancel.cancel
-    :<|> HttpSig.withBecknAuth Cancel.onCancel lookup
+    :<|> Cancel.onCancel
 
 -------- Cron API --------
 type CronAPI =
@@ -314,7 +313,7 @@ type StatusAPI =
     :> TokenAuth
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
-    :<|> SignatureAuth "Authorization"
+    :<|> SignatureAuth "Authorization" LookupRegistry
     :> "on_status"
     :> ReqBody '[JSON] API.OnStatusReq
     :> Post '[JSON] API.OnStatusRes
@@ -322,7 +321,7 @@ type StatusAPI =
 statusFlow :: FlowServer StatusAPI
 statusFlow =
   Status.status
-    :<|> HttpSig.withBecknAuth Status.onStatus lookup
+    :<|> Status.onStatus
 
 -------- Support Flow----------
 type SupportAPI =

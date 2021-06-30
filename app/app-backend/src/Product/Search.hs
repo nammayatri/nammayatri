@@ -21,6 +21,7 @@ import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Products
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map as Map
@@ -85,8 +86,12 @@ search person req = withFlowHandlerAPI $ do
       unlessM (rideServiceable serviceabilityReq) $
         throwError $ ProductNotServiceable "due to georestrictions"
 
-searchCb :: Org.Organization -> Search.OnSearchReq -> FlowHandler Search.OnSearchRes
-searchCb _bppOrg req = withFlowHandlerBecknAPI $
+searchCb ::
+  SignatureAuthResult Org.Organization ->
+  SignatureAuthResult Org.Organization ->
+  Search.OnSearchReq ->
+  FlowHandler Search.OnSearchRes
+searchCb _ _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "on_search" $ req.context
     Metrics.finishSearchMetrics $ req.context.transaction_id

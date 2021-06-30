@@ -19,7 +19,6 @@ import Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.ProductInstance
 import Beckn.Types.Storage.Vehicle
 import Beckn.Utils.Servant.SignatureAuth
-import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
 import Product.BecknProvider.Confirm as BP
@@ -54,7 +53,7 @@ import qualified Types.API.Ride as RideAPI
 import Types.API.Transporter
 import Types.API.Vehicle
 import Types.App (Ride)
-import Utils.Auth (AdminTokenAuth, DriverTokenAuth, TokenAuth, lookup)
+import Utils.Auth (AdminTokenAuth, DriverTokenAuth, TokenAuth)
 
 type TransportAPI =
   "v1"
@@ -295,33 +294,33 @@ transporterServer =
 
 type OrgBecknAPI =
   Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
-    :> SignatureAuth "Proxy-Authorization"
+    :> SignatureAuth "Authorization" LookupRegistry
+    :> SignatureAuth "Proxy-Authorization" LookupRegistry
     :> API.SearchAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth "Authorization" LookupRegistry
     :> API.ConfirmAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth "Authorization" LookupRegistry
     :> API.CancelAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth "Authorization" LookupRegistry
     :> API.StatusAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth "Authorization" LookupRegistry
     :> API.TrackAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
+    :> SignatureAuth "Authorization" LookupRegistry
     :> API.FeedbackAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
-  (\orgId -> HttpSig.withBecknAuthProxy (BP.search orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.confirm orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.cancel orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.serviceStatus orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.trackTrip orgId) lookup)
-    :<|> (\orgId -> HttpSig.withBecknAuth (BP.feedback orgId) lookup)
+  BP.search
+    :<|> BP.confirm
+    :<|> BP.cancel
+    :<|> BP.serviceStatus
+    :<|> BP.trackTrip
+    :<|> BP.feedback
 
 type CronAPI =
   "cron"

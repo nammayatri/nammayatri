@@ -14,7 +14,6 @@ import EulerHS.Prelude as E
 import GHC.Records.Extra
 import Network.Wai (Application, Request (..))
 import Network.Wai.Handler.Warp as W
-import Network.Wai.Internal (Response, ResponseReceived)
 import Network.Wai.Middleware.Prometheus
 import Prometheus as P
 import Prometheus.Metric.GHC (ghcMetrics)
@@ -34,11 +33,7 @@ addServantInfo ::
   SanitizedUrl a =>
   Proxy a ->
   Application ->
-  Request ->
-  ( Network.Wai.Internal.Response ->
-    IO Network.Wai.Internal.ResponseReceived
-  ) ->
-  IO Network.Wai.Internal.ResponseReceived
+  Application
 addServantInfo proxy app request respond =
   let mpath = getSanitizedUrl proxy request
       fullpath = DT.intercalate "/" (pathInfo request)

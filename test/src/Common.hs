@@ -36,7 +36,8 @@ privateKey = fromJust $ decodeKey "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
 signRequest :: ToJSON req => req -> POSIXTime -> Text -> Text -> ByteString
 signRequest req now orgId keyId =
   let body = BL.toStrict $ J.encode req
+      bodyHash = HttpSig.becknSignatureHash body
       headers = [("(created)", ""), ("(expires)", ""), ("digest", "")]
       params = HttpSig.mkSignatureParams orgId keyId now 600 HttpSig.Ed25519
-      signature = fromJust $ HttpSig.sign privateKey params body headers
+      signature = fromJust $ HttpSig.sign privateKey params bodyHash headers
    in HttpSig.encode $ HttpSig.SignaturePayload signature params

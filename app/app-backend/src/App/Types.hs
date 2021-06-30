@@ -23,6 +23,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Geofencing
 import Types.Metrics
+import Utils.Auth
 import qualified Utils.Metrics as Metrics
 
 data AppCfg = AppCfg
@@ -121,6 +122,9 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance HasLookupAction LookupRegistry (FlowR AppEnv) where
+  runLookup = lookup
 
 instance BAPMetrics (FlowR AppEnv) where
   startSearchMetrics = Metrics.startSearchMetricsFlow

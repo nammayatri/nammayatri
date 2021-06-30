@@ -13,6 +13,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as SPI
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -67,7 +68,10 @@ confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
             cancellation_policy = Nothing
           }
 
-onConfirm :: Organization.Organization -> BecknAPI.OnConfirmReq -> FlowHandler AckResponse
+onConfirm ::
+  SignatureAuthResult Organization.Organization ->
+  BecknAPI.OnConfirmReq ->
+  FlowHandler AckResponse
 onConfirm _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here

@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module App.Server
   ( run,
   )
@@ -5,6 +7,7 @@ where
 
 import App.Handlers (fmdWrapperBackendServer, wrapperAPI)
 import App.Types
+import Beckn.Types.Flow
 import Beckn.Utils.App
 import qualified Beckn.Utils.Servant.Server as BU
 import EulerHS.Prelude
@@ -13,7 +16,8 @@ import Utils.Auth
 
 run :: Env -> Application
 run = withModifiedEnv $ \modifiedEnv ->
-  logRequestAndResponse modifiedEnv $
-    BU.run wrapperAPI fmdWrapperBackendServer context modifiedEnv
+  BU.run wrapperAPI fmdWrapperBackendServer context modifiedEnv
+    & logRequestAndResponse modifiedEnv
+    & hashBodyForSignature
   where
-    context = verifyApiKey :. EmptyContext
+    context = verifyApiKey @(FlowR AppEnv) :. EmptyContext

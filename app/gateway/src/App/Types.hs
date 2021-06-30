@@ -10,6 +10,7 @@ import qualified Data.Cache as C
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import Storage.Queries.Organization (findOrgByShortId)
 import Types.Metrics
 
 data AppCfg = AppCfg
@@ -71,3 +72,6 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance HasLookupAction LookupRegistry (FlowR AppEnv) where
+  runLookup = lookupRegistryAction findOrgByShortId

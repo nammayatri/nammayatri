@@ -1,6 +1,7 @@
 module Utils.PostgreSQLSimple (postgreSQLSimpleExecute, postgreSQLSimpleQuery) where
 
 import Beckn.Storage.DB.Config (DBConfig (..))
+import Beckn.Utils.Common
 import Control.Exception (Handler (..), catches)
 import Data.Aeson
 import Data.Pool (withResource)
@@ -11,7 +12,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (decodeUtf8, encodeUtf8, pack, (.=))
 import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
 import Types.Error
-import Utils.Common
 
 postgreSQLSimpleExecute :: (DBFlow m r, ToRow row) => Query -> row -> m Int64
 postgreSQLSimpleExecute q qargs = do

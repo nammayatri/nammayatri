@@ -9,8 +9,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Error
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Error.BecknAPIError (callBecknAPI')
-import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
-import Beckn.Utils.SignatureAuth (SignaturePayload)
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..), signatureAuthManagerKey)
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
@@ -23,8 +22,11 @@ import Types.Beckn.API.Callback
 import Types.Error
 import Utils.Common
 
-search :: SignaturePayload -> Org.Organization -> SearchReq -> FlowHandler AckResponse
-search proxySign org req = withFlowHandlerBecknAPI $
+search ::
+  SignatureAuthResult Org.Organization ->
+  SearchReq ->
+  FlowHandler AckResponse
+search (SignatureAuthResult proxySign org) req = withFlowHandlerBecknAPI $
   TempUtils.withTransactionIdLogTag req $ do
     validateContext "search" (req.context)
     unless (isJust (req.context.bap_uri)) $
@@ -49,8 +51,11 @@ search proxySign org req = withFlowHandlerBecknAPI $
         "search"
     return Ack
 
-searchCb :: SignaturePayload -> Org.Organization -> OnSearchReq -> FlowHandler AckResponse
-searchCb proxySign _ req@CallbackReq {context} = withFlowHandlerBecknAPI $
+searchCb ::
+  SignatureAuthResult Org.Organization ->
+  OnSearchReq ->
+  FlowHandler AckResponse
+searchCb (SignatureAuthResult proxySign _) req@CallbackReq {context} = withFlowHandlerBecknAPI $
   TempUtils.withTransactionIdLogTag req $ do
     validateContext "on_search" context
     let gatewayOnSearchSignAuth = ET.client ExternalAPI.onSearchAPI

@@ -1,6 +1,5 @@
 module Utils.Auth where
 
-import App.Types
 import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Types.Storage.Organization (Organization)
@@ -27,10 +26,10 @@ instance VerificationMethod VerifyAPIKey where
     "Checks whether app/gateway is registered.\
     \If you don't have an API key, register the app/gateway."
 
-verifyApiKey :: VerificationAction VerifyAPIKey AppEnv
+verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM OrgNotFound
 
-lookup :: LookupAction LookupRegistry AppEnv
+lookup :: (DBFlow m r, AuthenticatingEntity r) => LookupAction LookupRegistry m
 lookup = lookupRegistryAction Org.findOrganizationByShortId
 
 getHttpManagerKey :: Text -> String
@@ -65,7 +64,7 @@ instance VerificationMethod VerifyToken where
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyTokenAction :: VerificationAction VerifyToken AppEnv
+verifyTokenAction :: DBFlow m r => VerificationAction VerifyToken m
 verifyTokenAction = VerificationAction QR.verifyToken
 
 -- | Verifies admin's token.
@@ -122,8 +121,8 @@ validateDriver regToken = do
       >>= fromMaybeM PersonNotFound
   verifyDriver user
 
-validateAdminAction :: VerificationAction AdminVerifyToken AppEnv
+validateAdminAction :: (DBFlow m r, EncFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin
 
-validateDriverAction :: VerificationAction DriverVerifyToken AppEnv
+validateDriverAction :: (DBFlow m r, EncFlow m r) => VerificationAction DriverVerifyToken m
 validateDriverAction = VerificationAction validateAdmin

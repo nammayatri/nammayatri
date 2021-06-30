@@ -5,6 +5,7 @@ module Beckn.Utils.SignatureAuth
     SignatureParams (..),
     SignaturePayload (..),
     KeyId (..),
+    Hash,
     decode,
     encode,
     sign,
@@ -16,6 +17,9 @@ module Beckn.Utils.SignatureAuth
     makeSignatureString,
     mkSignatureParams,
     generateKeyPair,
+    becknSignatureHash,
+    hashFromByteString,
+    bodyHashHeader,
   )
 where
 
@@ -33,7 +37,7 @@ import Data.Time.Clock (NominalDiffTime)
 import Data.Time.Clock.POSIX (POSIXTime)
 import Data.Time.Format
 import EulerHS.Prelude
-import Network.HTTP.Types (Header)
+import Network.HTTP.Types (Header, HeaderName)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import Text.ParserCombinators.Parsec
 
@@ -54,8 +58,16 @@ data SignatureAlgorithm
   | Ed25519
   deriving (Eq, Show)
 
-blake2b512 :: ByteString -> Hash.Digest Hash.Blake2b_512
-blake2b512 = Hash.hash
+type Hash = Hash.Digest Hash.Blake2b_512
+
+hashFromByteString :: ByteString -> Maybe Hash
+hashFromByteString = Hash.digestFromByteString
+
+bodyHashHeader :: HeaderName
+bodyHashHeader = "Beckn-Body-Hash"
+
+becknSignatureHash :: ByteString -> Hash
+becknSignatureHash = Hash.hash
 
 defaultHeaderFields :: [Text]
 defaultHeaderFields = ["(created)", "(expires)", "digest"]
@@ -191,8 +203,8 @@ encode SignaturePayload {..} =
     maybeTime h (Just v) = fromString $ h <> "=" <> formatTime defaultTimeLocale "%s" v <> ","
     maybeTime _ Nothing = ""
 
-makeSignatureString :: SignatureParams -> ByteString -> [Header] -> ByteString
-makeSignatureString params body allHeaders =
+makeSignatureString :: SignatureParams -> Hash -> [Header] -> ByteString
+makeSignatureString params bodyHash allHeaders =
   let signHeaders =
         catMaybes $
           fmap makeHeaderLine . findHeader <$> headers params
@@ -210,7 +222,7 @@ makeSignatureString params body allHeaders =
               "(expires)" | alg == Hs2019 || alg == Ed25519 -> (show :: Int -> ByteString) . floor <$> expires params
               "(created)" -> Nothing -- FIXME: this should error out
               "(expires)" -> Nothing -- FIXME: this should error out
-              "digest" -> pure $ "BLAKE-512=" <> Base64.encode (show $ blake2b512 body)
+              "digest" -> pure $ "BLAKE-512=" <> Base64.encode (show bodyHash)
               _ ->
                 -- Find all instances of this header, concatenate values separated by a comma
                 let ciHeader = CI.mk $ encodeUtf8 h
@@ -222,17 +234,17 @@ makeSignatureString params body allHeaders =
     bsToMaybe b = if null b then Nothing else Just b
 
 -- | Sign a request given the key, parameters and request headers
-sign :: PrivateKey -> SignatureParams -> ByteString -> [Header] -> Maybe Signature
-sign key params body allHeaders =
-  let msg = makeSignatureString params body allHeaders
+sign :: PrivateKey -> SignatureParams -> Hash -> [Header] -> Maybe Signature
+sign key params bodyHash allHeaders =
+  let msg = makeSignatureString params bodyHash allHeaders
       sk = Ed25519.secretKey key
       pk = Ed25519.toPublic <$> sk
       signature = Ed25519.sign <$> sk <*> pk <*> pure msg
    in Crypto.maybeCryptoError $ BA.convert <$> signature
 
-verify :: PublicKey -> SignatureParams -> ByteString -> [Header] -> Signature -> Either Crypto.CryptoError Bool
-verify key params body allHeaders signatureBs =
-  let msg = makeSignatureString params body allHeaders
+verify :: PublicKey -> SignatureParams -> Hash -> [Header] -> Signature -> Either Crypto.CryptoError Bool
+verify key params bodyHash allHeaders signatureBs =
+  let msg = makeSignatureString params bodyHash allHeaders
       pk = Ed25519.publicKey key
       signature = Ed25519.signature signatureBs
    in Crypto.eitherCryptoError $ Ed25519.verify <$> pk <*> pure msg <*> signature

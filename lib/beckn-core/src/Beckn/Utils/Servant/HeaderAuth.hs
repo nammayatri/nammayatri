@@ -48,12 +48,12 @@ class VerificationMethod verify where
   verificationDescription :: Text
 
 -- | Implementation of verification.
-data VerificationAction verify r = VerificationMethod verify =>
+data VerificationAction verify m = VerificationMethod verify =>
   VerificationAction
   { -- | Check given header value and extract the information which
     -- identifies the current user.
     -- This is allowed to fail with 'ServantError'.
-    runVerifyMethod :: Text -> FlowR r (VerificationResult verify)
+    runVerifyMethod :: Text -> m (VerificationResult verify)
   }
 
 -- | This server part implementation accepts token in @token@ header,
@@ -61,7 +61,7 @@ data VerificationAction verify r = VerificationMethod verify =>
 instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,
-    HasContextEntry ctx (VerificationAction verify r),
+    HasContextEntry ctx (VerificationAction verify (FlowR r)),
     VerificationMethod verify,
     KnownSymbol header,
     HasCoreMetrics r
@@ -84,7 +84,7 @@ instance
           >>= (parseHeader >>> fromEitherM (InvalidHeader headerName))
           >>= verifyMethod
       env = getEnvEntry ctx
-      VerificationAction verifyMethod = getContextEntry ctx :: VerificationAction verify r
+      VerificationAction verifyMethod = getContextEntry ctx :: VerificationAction verify (FlowR r)
 
   hoistServerWithContext _ ctxp hst serv =
     hoistServerWithContext (Proxy @api) ctxp hst . serv

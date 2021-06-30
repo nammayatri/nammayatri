@@ -10,13 +10,17 @@ import Beckn.Types.Mobility.Trip
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.ProductInstance as SPI
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as MPI
 import Types.Error
 import qualified Types.ProductInfo as ProdInfo
 import Utils.Common
 
-onUpdate :: Organization.Organization -> OnUpdateReq -> FlowHandler AckResponse
+onUpdate ::
+  SignatureAuthResult Organization.Organization ->
+  OnUpdateReq ->
+  FlowHandler AckResponse
 onUpdate _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here

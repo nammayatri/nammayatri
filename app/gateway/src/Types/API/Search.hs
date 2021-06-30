@@ -25,7 +25,7 @@ data SearchReq = SearchReq
 type OnSearchReq = CallbackReq Value
 
 type SearchAPI =
-  SignatureAuth "Authorization"
+  SignatureAuth "Authorization" LookupRegistry
     :> "search"
     :> ReqBody '[JSON] SearchReq
     :> Post '[JSON] AckResponse
@@ -34,7 +34,7 @@ searchAPI :: Proxy SearchAPI
 searchAPI = Proxy
 
 type OnSearchAPI =
-  SignatureAuth "Authorization"
+  SignatureAuth "Authorization" LookupRegistry
     :> "on_search"
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] AckResponse

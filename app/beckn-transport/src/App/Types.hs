@@ -22,6 +22,7 @@ import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Metrics
+import Utils.Auth
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -112,3 +113,6 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
+
+instance HasLookupAction LookupRegistry (FlowR AppEnv) where
+  runLookup = lookup

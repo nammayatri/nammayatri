@@ -6,7 +6,6 @@ module Utils.Common
   )
 where
 
-import App.Types
 import Beckn.Utils.Common as CoreCommon
 import qualified Crypto.Number.Generate as Cryptonite
 import Data.Text as T

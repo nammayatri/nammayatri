@@ -27,6 +27,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
@@ -50,8 +51,12 @@ import qualified Types.Storage.RideRequest as SRideRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
-cancel :: Id Organization.Organization -> Organization.Organization -> API.CancelReq -> FlowHandler AckResponse
-cancel transporterId _bapOrg req = withFlowHandlerBecknAPI $
+cancel ::
+  Id Organization.Organization ->
+  SignatureAuthResult Organization.Organization ->
+  API.CancelReq ->
+  FlowHandler AckResponse
+cancel transporterId _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req.context
     validateContext "cancel" context
@@ -126,8 +131,12 @@ cancelRideTransaction piList searchPiId trackerPiId orderPiId requestedByDriver 
       DriverInformation.updateOnRide driverId False
       when requestedByDriver $ QDriverStats.updateIdleTime driverId
 
-serviceStatus :: Id Organization.Organization -> Organization.Organization -> API.StatusReq -> FlowHandler API.StatusRes
-serviceStatus transporterId bapOrg req = withFlowHandlerBecknAPI $ do
+serviceStatus ::
+  Id Organization.Organization ->
+  SignatureAuthResult Organization.Organization ->
+  API.StatusReq ->
+  FlowHandler API.StatusRes
+serviceStatus transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $ do
   logTagInfo "serviceStatus API Flow" $ show req
   let piId = Id $ req.message.order.id -- transporter search product instance id
   trackerPi <-
@@ -174,15 +183,19 @@ mkOnServiceStatusPayload piId trackerPi = do
             quotation = Nothing
           }
 
-trackTrip :: Id Organization.Organization -> Organization.Organization -> API.TrackTripReq -> FlowHandler API.TrackTripRes
-trackTrip transporterId org req = withFlowHandlerBecknAPI $
+trackTrip ::
+  Id Organization.Organization ->
+  SignatureAuthResult Organization.Organization ->
+  API.TrackTripReq ->
+  FlowHandler API.TrackTripRes
+trackTrip transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "track trip API Flow" $ show req
     let context = req.context
     validateContext "track" context
     let tripId = req.message.order_id
     trackerCase <- Case.findById (Id tripId) >>= fromMaybeM CaseDoesNotExist
-    callbackUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+    callbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     transporter <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound

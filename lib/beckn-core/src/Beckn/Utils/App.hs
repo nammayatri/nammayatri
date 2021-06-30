@@ -1,27 +1,33 @@
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-warnings-deprecations #-}
 
 module Beckn.Utils.App
   ( handleLeft,
     handleShutdown,
     logRequestAndResponse,
     withModifiedEnv,
+    hashBodyForSignature,
   )
 where
 
 import Beckn.Types.App
 import Beckn.Utils.Common
+import qualified Beckn.Utils.SignatureAuth as HttpSig
 import Control.Concurrent.STM.TMVar
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteArray as BA
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Base64 as Base64
+import qualified Data.ByteString.Lazy as LB
 import qualified Data.CaseInsensitive as CI
 import Data.List (lookup)
-import qualified Data.Text as T
 import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (unpack)
 import Network.HTTP.Types (Method, RequestHeaders)
 import qualified Network.HTTP.Types as HTTP
 import Network.Wai
-import Network.Wai.Internal as Wai
+import qualified Network.Wai as Wai
+import Network.Wai.Internal
 import System.Exit (ExitCode)
 import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 
@@ -62,6 +68,26 @@ handleShutdown shutdown closeSocket = do
       when isLocked $ do
         putStrLn @String $ "Shutting down by " <> reason
 
+hashBodyForSignature :: Application -> Application
+hashBodyForSignature f req respF = do
+  req' <-
+    if anyAuthHeaders
+      then do
+        body <- strictRequestBody req <&> LB.toStrict
+        mvar <- newMVar body
+        let requestHeaders =
+              ( HttpSig.bodyHashHeader,
+                Base64.encode $ BA.convert $ HttpSig.becknSignatureHash body
+              ) :
+              Wai.requestHeaders req
+        pure req {requestBody = mkRequestBody mvar, requestHeaders}
+      else pure req
+  f req' respF
+  where
+    mkRequestBody mvar = tryTakeMVar mvar <&> fromMaybe B.empty
+    headers = map fst $ Wai.requestHeaders req
+    anyAuthHeaders = any (`elem` headers) ["Authorization", "Proxy-Authorization"]
+
 logRequestAndResponse :: EnvR f -> Application -> Application
 logRequestAndResponse (EnvR flowRt appEnv) f req respF = do
   logInfoIO "Request" . show $ toRequestInfo req
@@ -87,13 +113,13 @@ logRequestAndResponse (EnvR flowRt appEnv) f req respF = do
 withModifiedEnv :: (EnvR f -> Application) -> EnvR f -> Application
 withModifiedEnv f env = \req resp -> do
   requestId <- getRequestId $ Wai.requestHeaders req
-  modifiedEnv <- modifyEnvR requestId
+  let modifiedEnv = modifyEnvR requestId
   let app = f modifiedEnv
   app req resp
   where
-    modifyEnvR requestId = return $ env {flowRuntime = L.updateLoggerContext (appendLogContext requestId) $ flowRuntime env}
+    modifyEnvR requestId = env {flowRuntime = L.updateLoggerContext (appendLogContext requestId) $ flowRuntime env}
     getRequestId headers = do
       let value = lookup "x-request-id" headers
       case value of
-        Just val -> pure ("requestId-" <> T.pack (BS.unpack val))
+        Just val -> pure ("requestId-" <> decodeUtf8 val)
         Nothing -> pure "randomRequestId-" <> show <$> nextRandom

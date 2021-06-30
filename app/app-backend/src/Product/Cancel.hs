@@ -9,6 +9,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Case as MC
@@ -75,7 +76,10 @@ isCaseCancellable case_ =
     Case.CONFIRMED -> True
     _ -> False
 
-onCancel :: Organization.Organization -> API.OnCancelReq -> FlowHandler API.OnCancelRes
+onCancel ::
+  SignatureAuthResult Organization.Organization ->
+  API.OnCancelReq ->
+  FlowHandler API.OnCancelRes
 onCancel _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "on_cancel" $ req.context

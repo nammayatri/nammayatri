@@ -12,6 +12,7 @@ import Beckn.Types.Storage.Rating as Rating
   ( Rating,
     RatingT (..),
   )
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
@@ -21,7 +22,11 @@ import qualified Storage.Queries.Rating as Rating
 import Types.Error
 import Utils.Common
 
-feedback :: Id Organization -> Organization -> API.FeedbackReq -> FlowHandler API.FeedbackRes
+feedback ::
+  Id Organization ->
+  SignatureAuthResult Organization ->
+  API.FeedbackReq ->
+  FlowHandler API.FeedbackRes
 feedback _ _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "FeedbackAPI" "Received feedback API call."

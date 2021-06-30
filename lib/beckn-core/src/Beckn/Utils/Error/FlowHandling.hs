@@ -1,7 +1,6 @@
 module Beckn.Utils.Error.FlowHandling
   ( withFlowHandlerAPI,
     withFlowHandlerBecknAPI,
-    withFlowHandlerBecknAPI',
     apiHandler,
     becknApiHandler,
     someExceptionToBecknApiError,
@@ -35,11 +34,13 @@ withFlowHandler flow = do
 withFlowHandlerAPI :: (HasCoreMetrics r, HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
 withFlowHandlerAPI = withFlowHandler . apiHandler . handleIfUp
 
-withFlowHandlerBecknAPI :: (HasCoreMetrics r, HasField "isShuttingDown" r (TMVar ())) => FlowR r AckResponse -> FlowHandlerR r AckResponse
-withFlowHandlerBecknAPI = withFlowHandlerBecknAPI'
-
-withFlowHandlerBecknAPI' :: (HasCoreMetrics r, HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
-withFlowHandlerBecknAPI' = withFlowHandler . becknApiHandler . handleIfUp
+withFlowHandlerBecknAPI ::
+  ( HasCoreMetrics r,
+    HasField "isShuttingDown" r (TMVar ())
+  ) =>
+  FlowR r AckResponse ->
+  FlowHandlerR r AckResponse
+withFlowHandlerBecknAPI = withFlowHandler . becknApiHandler . handleIfUp
 
 handleIfUp ::
   ( L.MonadFlow m,

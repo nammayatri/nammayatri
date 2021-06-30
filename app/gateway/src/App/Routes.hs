@@ -7,14 +7,12 @@ where
 
 import App.Types
 import Beckn.Types.App (FlowServerR)
-import Beckn.Utils.Servant.SignatureAuth (lookupRegistryAction)
 import EulerHS.Prelude
 import qualified Product.Search as P
 import Servant hiding (throwError)
-import Storage.Queries.Organization
 import Types.API.Search
-import qualified Utils.Servant.SignatureAuth as HttpSig
 
+-- TODO: unify these two into one
 type HealthAPI =
   "healthz" :> Get '[JSON] Text
 
@@ -35,12 +33,11 @@ gatewayServer =
   healthHandler :<|> gatewayHandler
 
 healthHandler :: FlowServerR AppEnv HealthAPI
-healthHandler = pure "UP"
+healthHandler =
+  pure "UP"
 
 gatewayHandler :: FlowServerR AppEnv GatewayAPI'
-gatewayHandler = do
+gatewayHandler =
   pure "Gateway is UP"
-    :<|> HttpSig.withBecknAuthProxy P.search lookup
-    :<|> HttpSig.withBecknAuthProxy P.searchCb lookup
-  where
-    lookup = lookupRegistryAction findOrgByShortId
+    :<|> P.search
+    :<|> P.searchCb

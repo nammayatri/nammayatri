@@ -37,10 +37,11 @@ prepareDataForLoadTest privateKey nmbOfReq filePath = do
     request <- generateSearchRequest
     now <- L.runIO Time.getPOSIXTime
     pure $ do
-      let body = J.encode request
+      let body = LBS.toStrict $ J.encode request
+      let bodyHash = S.becknSignatureHash body
       let headers = [("(created)", ""), ("(expires)", ""), ("digest", "")]
       let signatureParams = S.mkSignatureParams "JUSPAY.MOBILITY.APP.UAT.1" "juspay-mobility-bap-1-key" now 600 S.Ed25519
-      signature <- S.sign (Base64.decodeLenient privateKey) signatureParams (LBS.toStrict body) headers
+      signature <- S.sign (Base64.decodeLenient privateKey) signatureParams bodyHash headers
       pure $ RequestForLoadTest (decodeUtf8 body) (decodeUtf8 $ S.encode $ S.SignaturePayload signature signatureParams)
   L.runIO . writeFile (T.unpack filePath) . decodeUtf8 . J.encode . catMaybes $ reqs
 

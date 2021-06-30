@@ -9,6 +9,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
@@ -27,8 +28,12 @@ import Types.Error
 import qualified Types.Storage.RideRequest as RideRequest
 import Utils.Common
 
-confirm :: Id Organization.Organization -> Organization.Organization -> API.ConfirmReq -> FlowHandler AckResponse
-confirm transporterId bapOrg req = withFlowHandlerBecknAPI $
+confirm ::
+  Id Organization.Organization ->
+  SignatureAuthResult Organization.Organization ->
+  API.ConfirmReq ->
+  FlowHandler AckResponse
+confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "confirm API Flow" "Reached"
     BP.validateContext "confirm" $ req.context

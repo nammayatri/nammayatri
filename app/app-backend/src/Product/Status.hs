@@ -11,6 +11,7 @@ import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Error
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Case as Case
@@ -35,7 +36,10 @@ status person StatusReq {..} = withFlowHandlerAPI $ do
   ExternalAPI.status baseUrl (API.StatusReq context statusMessage)
   return Success
 
-onStatus :: Organization.Organization -> API.OnStatusReq -> FlowHandler API.OnStatusRes
+onStatus ::
+  SignatureAuthResult Organization.Organization ->
+  API.OnStatusReq ->
+  FlowHandler API.OnStatusRes
 onStatus _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     case req.contents of

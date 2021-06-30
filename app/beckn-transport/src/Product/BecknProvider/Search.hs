@@ -15,6 +15,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Location as Location
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
@@ -37,9 +38,14 @@ import Types.Error
 import Types.Metrics (CoreMetrics)
 import Utils.Common
 
-search :: Id Org.Organization -> Org.Organization -> API.SearchReq -> FlowHandler AckResponse
-search transporterId bapOrg req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
+search ::
+  Id Org.Organization ->
+  SignatureAuthResult Org.Organization ->
+  SignatureAuthResult Org.Organization ->
+  API.SearchReq ->
+  FlowHandler AckResponse
+search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gateway) req =
+  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     let context = req.context
     BP.validateContext "search" context
     transporter <-

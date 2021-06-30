@@ -11,6 +11,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Case as MC
@@ -41,7 +42,10 @@ track person req = withFlowHandlerAPI $ do
   ExternalAPI.track gatewayUrl (API.TrackTripReq context $ API.TrackReqMessage gTripId Nothing)
   return Success
 
-trackCb :: Organization.Organization -> API.OnTrackTripReq -> FlowHandler API.OnTrackTripRes
+trackCb ::
+  SignatureAuthResult Organization.Organization ->
+  API.OnTrackTripReq ->
+  FlowHandler API.OnTrackTripRes
 trackCb _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "on_track" $ req.context

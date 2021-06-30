@@ -39,8 +39,8 @@ exampleHeaders =
     ("content-length", "18")
   ]
 
-exampleBody :: ByteString
-exampleBody = "{\"hello\": \"world\"}"
+exampleBodyHash :: HttpSig.Hash
+exampleBodyHash = HttpSig.becknSignatureHash "{\"hello\": \"world\"}"
 
 exampleKeyId :: ByteString
 exampleKeyId = "example-bg.com|bg432|ed25519"
@@ -122,7 +122,7 @@ simpleEncode =
 checkSignatureMessage :: TestTree
 checkSignatureMessage =
   testCase "Check Signature Message" $ do
-    let message = HttpSig.makeSignatureString exampleParams exampleBody $ first (CI.mk . encodeUtf8) <$> exampleHeaders
+    let message = HttpSig.makeSignatureString exampleParams exampleBodyHash $ first (CI.mk . encodeUtf8) <$> exampleHeaders
     -- filtering '\n'
     dropNewline message @?= dropNewline exampleSignatureMessage
 
@@ -130,7 +130,7 @@ signRequest :: TestTree
 signRequest =
   testCase "Sign a request" $ do
     let mSig =
-          HttpSig.sign secretKey exampleParams exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeaders)
+          HttpSig.sign secretKey exampleParams exampleBodyHash (first (CI.mk . encodeUtf8) <$> exampleHeaders)
     case mSig of
       Nothing -> assertFailure "Could not sign request"
       Just sig ->
@@ -144,7 +144,7 @@ verifyRequest =
     case eSig of
       Left err -> assertFailure $ "Could not decode request: " <> show err
       Right sig -> do
-        case HttpSig.verify publicKey exampleParams exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeaders) sig of
+        case HttpSig.verify publicKey exampleParams exampleBodyHash (first (CI.mk . encodeUtf8) <$> exampleHeaders) sig of
           Left err -> assertFailure $ "Could not verify signature: " <> show err
           Right isVerified -> assertBool "Signature is valid" isVerified
 
@@ -154,11 +154,11 @@ signAndVerifyWithGeneratedKeyPair =
     (privateKeyB64, publicKeyB64) <- Registry.prepareSigningKeyPair
     let (Right privateKey, Right publicKey') = (Base64.decode privateKeyB64, Base64.decode publicKeyB64)
     let mSig =
-          HttpSig.sign privateKey exampleParams exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeaders)
+          HttpSig.sign privateKey exampleParams exampleBodyHash (first (CI.mk . encodeUtf8) <$> exampleHeaders)
     case mSig of
       Nothing -> assertFailure "Could not sign request"
       Just sig -> do
-        case HttpSig.verify publicKey' exampleParams exampleBody (first (CI.mk . encodeUtf8) <$> exampleHeaders) sig of
+        case HttpSig.verify publicKey' exampleParams exampleBodyHash (first (CI.mk . encodeUtf8) <$> exampleHeaders) sig of
           Left err -> assertFailure $ "Could not verify signature: " <> show err
           Right isVerified -> assertBool "Signature is valid" isVerified
 

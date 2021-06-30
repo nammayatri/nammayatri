@@ -14,13 +14,12 @@ import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.SignatureAuth
-  ( AuthenticatingEntity (..),
-  )
 import Data.Time
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Metrics
 import Types.Wrapper (DunzoConfig)
+import Utils.Auth
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -55,6 +54,9 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer
   }
   deriving (Generic)
+
+instance HasLookupAction LookupRegistry (FlowR AppEnv) where
+  runLookup = lookup
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
