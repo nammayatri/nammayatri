@@ -4,7 +4,7 @@ module Product.Dunzo.Flow where
 
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Storage.Case
+import Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
@@ -133,24 +133,29 @@ confirm org req = do
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req.message.order
   whenJust reqOrder.id \_ -> throwError $ InvalidRequest "Order id must not be presented."
-  let caseId = context.transaction_id
-  case_ <- Storage.findById (Id caseId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  order <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  validateDelayFromInit dzQuotationTTLinMin case_
-  verifyPayment reqOrder order
   txnId <-
     reqOrder ^? #payment . #params . _Just . #transaction_id
       & fromMaybeErr "TXN_ID_NOT_PRESENT" Nothing
-  let updatedOrderWTxn =
-        order & ((#payment . #params . _Just . #transaction_id) .~ txnId)
+  let caseId = context.transaction_id
+  mbCase <- Storage.findById $ Id caseId
+  order <- case mbCase of
+    Nothing -> pure reqOrder
+    Just case_ -> do
+      initOrder <- case_.udf1 >>= decodeFromText & fromMaybeErr "INIT_ORDER_NOT_FOUND" (Just CORE003)
+      validateDelayFromInit dzQuotationTTLinMin case_
+      verifyPayment reqOrder initOrder
+      pure $ initOrder & ((#payment . #params . _Just . #transaction_id) .~ txnId)
   dzBACreds <- getDzBAPCreds org
   withCallback CONFIRM ConfirmAPI.onConfirmAPI context cbUrl $ do
     taskStatus <- createTaskAPI dzBACreds dconf =<< mkCreateTaskReq order
     orderId <- generateGUID
     currTime <- getCurrentTime
-    let uOrder = updateOrder (Just orderId) currTime updatedOrderWTxn taskStatus
-    checkAndLogPriceDiff updatedOrderWTxn uOrder
-    updateCase case_ uOrder taskStatus
+    let uOrder = updateOrder (Just orderId) currTime order taskStatus
+    checkAndLogPriceDiff order uOrder
+    maybe
+      (createCase uOrder taskStatus currTime)
+      (\c -> updateCase c uOrder taskStatus)
+      mbCase
     return $ API.OrderObject uOrder
   where
     verifyPayment reqOrder order = do
@@ -164,12 +169,46 @@ confirm org req = do
         then pass
         else throwError (InvalidRequest "Invalid order amount.")
 
+    createCase order taskStatus now = do
+      let caseId = Id req.context.transaction_id
+      let case_ =
+            Case
+              { id = caseId,
+                name = Nothing,
+                description = Nothing,
+                shortId = ShortId taskStatus.task_id.getTaskId,
+                industry = GROCERY,
+                _type = RIDEORDER,
+                exchangeType = ORDER,
+                status = CONFIRMED,
+                startTime = now,
+                endTime = Nothing,
+                validTill = now,
+                provider = Just "Dunzo",
+                providerType = Nothing,
+                requestor = Just org.id.getId,
+                requestorType = Nothing,
+                parentCaseId = Nothing,
+                fromLocationId = "",
+                toLocationId = "",
+                udf1 = Just $ encodeToText order,
+                udf2 = Nothing,
+                udf3 = Nothing,
+                udf4 = Nothing,
+                udf5 = Nothing,
+                info = Nothing,
+                createdAt = now,
+                updatedAt = now
+              }
+      Storage.create case_
+
     updateCase case_ order taskStatus = do
       let caseId = case_.id
       let taskId = taskStatus.task_id
       let updatedCase =
             case_
               { shortId = ShortId $ getTaskId taskId,
+                Case.status = CONFIRMED,
                 udf1 = Just $ encodeToText order,
                 udf2 = Just $ encodeToText taskStatus
               }
