@@ -68,3 +68,11 @@ instance IsAPIError ProductsError where
     ProductsNotFound -> E500
 
 instance IsDomainError ProductsError
+
+newtype ShardMappingError = ShardMappingError Text
+  deriving (Show, Typeable)
+
+instance IsBaseError ShardMappingError where
+  toMessage (ShardMappingError msg) = Just msg
+
+instanceExceptionWithParent 'BaseException ''ShardMappingError

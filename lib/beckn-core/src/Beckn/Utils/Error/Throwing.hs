@@ -10,26 +10,31 @@ import Beckn.Utils.Logging
 import qualified Data.Text as T
 import EulerHS.Prelude
 
-throwError :: (HasCallStack, MonadThrow m, Log m, IsAPIException e) => e -> m b
-throwError err = do
-  logWarning $ toLogMessageAPIError err
+throwError :: (HasCallStack, MonadThrow m, Log m, IsBaseException e) => e -> m b
+throwError exc = do
+  logWarning properLog
   logCallStack
-  throwM err
+  throwM someExc
   where
     logCallStack =
       withLogTag "CallStack" $
         logDebug . T.pack $ prettyCallStack callStack
+    someExc = toException exc
+    properLog
+      | Just (APIException err) <- fromException someExc = toLogMessageAPIError err
+      | Just (BaseException err) <- fromException someExc = fromMaybe "" $ toMessage err
+      | otherwise = show exc
 
 fromMaybeM ::
-  (HasCallStack, MonadThrow m, Log m, IsAPIException e) => e -> Maybe b -> m b
+  (HasCallStack, MonadThrow m, Log m, IsBaseException e) => e -> Maybe b -> m b
 fromMaybeM err = maybe (throwError err) pure
 
 fromEitherM ::
-  (HasCallStack, MonadThrow m, Log m, IsAPIException e) => (left -> e) -> Either left b -> m b
+  (HasCallStack, MonadThrow m, Log m, IsBaseException e) => (left -> e) -> Either left b -> m b
 fromEitherM toerr = fromEitherM' (throwError . toerr)
 
 liftEither ::
-  (HasCallStack, MonadThrow m, Log m, IsAPIException e) => Either e b -> m b
+  (HasCallStack, MonadThrow m, Log m, IsBaseException e) => Either e b -> m b
 liftEither = fromEitherM id
 
 fromEitherM' ::

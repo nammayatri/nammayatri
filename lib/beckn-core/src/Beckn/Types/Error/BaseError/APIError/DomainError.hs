@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Beckn.Types.Error.BaseError.APIError.DomainError
   ( module Beckn.Types.Error.BaseError.APIError.DomainError,
     module Beckn.Types.Error.BaseError.APIError.HttpCode,
@@ -35,7 +37,15 @@ data DomainException = forall e. IsDomainException e => DomainException e
 instance Show DomainException where
   show (DomainException e) = show e
 
-instance Exception DomainException
+instance IsBaseError DomainException where
+  toMessage (DomainException e) = toMessage e
+
+instance IsAPIError DomainException where
+  toErrorCode (DomainException e) = toErrorCode e
+  toHttpCode (DomainException e) = toHttpCode e
+  toCustomHeaders (DomainException e) = toCustomHeaders e
+
+instanceExceptionWithParent 'APIException ''DomainException
 
 toDomainError :: IsDomainError e => e -> DomainError
 toDomainError e =

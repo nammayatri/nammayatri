@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Beckn.Types.Error.BaseError.APIError
   ( module Beckn.Types.Error.BaseError.APIError,
     module Beckn.Types.Error.BaseError.APIError.HttpCode,
@@ -35,7 +37,10 @@ data APIException = forall e. IsAPIException e => APIException e
 instance P.Show APIException where
   show (APIException e) = show e
 
-instance Exception APIException
+instance IsBaseError APIException where
+  toMessage (APIException e) = toMessage e
+
+instanceExceptionWithParent 'BaseException ''APIException
 
 toMessageIfNotInternal :: IsAPIError e => e -> Maybe Text
 toMessageIfNotInternal e = if isInternalError (toHttpCode e) then Nothing else toMessage e
