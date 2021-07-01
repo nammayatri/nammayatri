@@ -270,7 +270,7 @@ getDriverPool piId =
         prodInst.fromLocation
           & fromMaybeM (PIFieldNotPresent "location_id")
       let orgId = prodInst.organizationId
-      calculateDriverPool pickupPoint orgId vehicleVariant
+      map fst <$> calculateDriverPool pickupPoint orgId vehicleVariant
 
 setDriverPool :: DBFlow m r => Id ProductInstance -> [Id Driver] -> m ()
 setDriverPool piId ids =
@@ -281,7 +281,7 @@ calculateDriverPool ::
   Id Location ->
   Id Organization ->
   SV.Variant ->
-  m [Id Driver]
+  m [(Id Driver, Double)]
 calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM LocationNotFound
   lat <- location.lat & fromMaybeM (LocationFieldNotPresent "lat")
@@ -289,12 +289,11 @@ calculateDriverPool locId orgId variant = do
   radius <- getRadius
   getNearestDriversStartTime <- getCurrentTime
   driverPool <-
-    map fst
-      <$> QP.getNearestDrivers
-        (LatLong lat long)
-        radius
-        orgId
-        variant
+    QP.getNearestDrivers
+      (LatLong lat long)
+      radius
+      orgId
+      variant
   getNearestDriversEndTime <- getCurrentTime
   let getNearestDriversTime = diffUTCTime getNearestDriversEndTime getNearestDriversStartTime
   logTagInfo "calculateDriverPool" $ show getNearestDriversTime <> " time spent for getNearestDrivers"

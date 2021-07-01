@@ -105,7 +105,7 @@ onConfirmCallback orderProductInstance productInstance orderCase trackerCaseId t
   vehicleVariant :: Vehicle.Variant <-
     (orderCase.udf1 >>= readMaybe . T.unpack)
       & fromMaybeM (CaseFieldNotPresent "udf1")
-  driverPool <- calculateDriverPool pickupPoint transporterId vehicleVariant
+  driverPool <- map fst <$> calculateDriverPool pickupPoint transporterId vehicleVariant
   setDriverPool prodInstId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   mkOnConfirmPayload orderProductInstance trackerCaseId

@@ -107,7 +107,7 @@ mkItem prodInst =
       package_category_id = Nothing,
       model_id = Nothing,
       brand_id = Nothing,
-      tags = [],
+      tags = maybe [] (\dist -> [Tag "nearestDriverDist" dist]) prodInst.udf1,
       ttl = Nothing
     }
 

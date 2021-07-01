@@ -177,19 +177,21 @@ onSearchCallback productCase transporter fromLocation toLocation = do
   vehicleVariant <-
     (productCase.udf1 >>= readMaybe . T.unpack)
       & fromMaybeM (CaseFieldNotPresent "udf1")
-  pool <-
-    Person.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
+  pool <- Person.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
   logTagInfo "OnSearchCallback" $
-    "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId <$> pool) |+ ""
+    "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId . fst <$> pool) |+ ""
   let piStatus =
         if null pool
           then ProductInstance.OUTOFSTOCK
           else ProductInstance.INSTOCK
-  price <-
-    if null pool
-      then return Nothing
-      else Just <$> calculateFare transporterId vehicleVariant fromLocation toLocation (productCase.startTime) (productCase.udf5)
-  prodInst <- mkProductInstance productCase price piStatus transporterId
+  (price, nearestDriverDist) <-
+    case pool of
+      [] -> return (Nothing, Nothing)
+      (fstDriverValue : _) -> do
+        fare <- Just <$> calculateFare transporterId vehicleVariant fromLocation toLocation (productCase.startTime) (productCase.udf5)
+        let nearestDist = Just $ snd fstDriverValue
+        return (fare, nearestDist)
+  prodInst <- mkProductInstance productCase price piStatus transporterId nearestDriverDist
   let caseStatus ProductInstance.INSTOCK = Case.CONFIRMED
       caseStatus _ = Case.CLOSED
   DB.runSqlDBTransaction $ do
@@ -207,8 +209,9 @@ mkProductInstance ::
   Maybe Amount ->
   ProductInstance.ProductInstanceStatus ->
   Id Org.Organization ->
+  Maybe Double ->
   m ProductInstance.ProductInstance
-mkProductInstance productCase price status transporterId = do
+mkProductInstance productCase price status transporterId nearestDriverDist = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
@@ -236,11 +239,11 @@ mkProductInstance productCase price status transporterId = do
         toLocation = Just $ productCase.toLocationId,
         organizationId = transporterId,
         parentId = Nothing,
-        udf1 = productCase.udf1,
-        udf2 = productCase.udf2,
-        udf3 = productCase.udf3,
-        udf4 = productCase.udf4,
-        udf5 = productCase.udf5,
+        udf1 = show <$> nearestDriverDist,
+        udf2 = Nothing,
+        udf3 = Nothing,
+        udf4 = Nothing,
+        udf5 = Nothing,
         info = productCase.info,
         createdAt = now,
         updatedAt = now

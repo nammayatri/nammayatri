@@ -8,6 +8,7 @@ import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Person as Person
 import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Beckn.Types.Storage.Products as Products
+import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Location as Location
@@ -86,4 +87,13 @@ getProdInstances :: DBFlow m r => Case.Case -> m [ProdInstRes]
 getProdInstances case_@Case.Case {..} = do
   piList <- MPI.findAllByCaseId (Case.id case_)
   products <- Products.findAllByIds (PI.productId <$> piList)
-  return $ mkProdRes products <$> piList
+  return $ mkProdRes products <$> sortBy sortPI piList
+  where
+    sortPI pi1 pi2 =
+      let dist1 :: Maybe Double = readMaybe . T.unpack =<< (pi1.udf1)
+          dist2 :: Maybe Double = readMaybe . T.unpack =<< (pi2.udf1)
+       in case (dist1, dist2) of
+            (Just d1, Just d2) -> compare d1 d2
+            (Just _, _) -> GT
+            (_, Just _) -> LT
+            (_, _) -> EQ
