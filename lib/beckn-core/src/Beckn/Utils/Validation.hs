@@ -6,7 +6,8 @@ module Beckn.Utils.Validation
   )
 where
 
-import Beckn.Types.Error.BaseError.APIError
+import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Types.Error.BaseError.HTTPError.APIError
 import Beckn.Types.Logging
 import Beckn.Types.Predicate
 import Beckn.Types.Validation
@@ -26,10 +27,12 @@ runRequestValidation validator obj =
 newtype RequestValidationFailure = RequestValidationFailure [ValidationDescription]
   deriving (Show, IsBaseError)
 
-instance IsAPIError RequestValidationFailure where
+instance IsHTTPError RequestValidationFailure where
   toErrorCode (RequestValidationFailure _failures) = "REQUEST_VALIDATION_FAILURE"
   toHttpCode (RequestValidationFailure _failures) = E400
   toPayload (RequestValidationFailure failures) = toJSON failures
+
+instance IsAPIError RequestValidationFailure
 
 instanceExceptionWithParent 'APIException ''RequestValidationFailure
 

@@ -1,4 +1,4 @@
-module Beckn.Types.Error.BaseError.APIError.HttpCode where
+module Beckn.Types.Error.BaseError.HTTPError.HttpCode where
 
 import EulerHS.Prelude
 import Servant.Server.Internal

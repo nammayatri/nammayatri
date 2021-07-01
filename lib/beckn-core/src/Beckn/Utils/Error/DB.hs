@@ -2,7 +2,7 @@ module Beckn.Utils.Error.DB where
 
 import Beckn.Types.Common
 import Beckn.Types.Error
-import Beckn.Types.Error.BaseError.APIError
+import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Utils.Error.Throwing
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -18,7 +18,7 @@ checkDBError :: (MonadThrow m, Log m) => ET.DBResult a -> m a
 checkDBError = either throwDBError pure
 
 checkDBErrorOrEmpty ::
-  (MonadThrow m, Log m, IsAPIException b) =>
+  (MonadThrow m, Log m, IsHTTPException b) =>
   ET.DBResult (Maybe a) ->
   b ->
   m a

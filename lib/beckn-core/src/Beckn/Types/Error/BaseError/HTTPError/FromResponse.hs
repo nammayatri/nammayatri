@@ -1,4 +1,4 @@
-module Beckn.Types.Error.BaseError.APIError.FromResponse where
+module Beckn.Types.Error.BaseError.HTTPError.FromResponse where
 
 import qualified Data.Aeson as A
 import EulerHS.Prelude

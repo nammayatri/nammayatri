@@ -7,8 +7,8 @@ module Types.Error
 where
 
 import Beckn.Types.Error
-import Beckn.Types.Error.BaseError.APIError
-import Beckn.Types.Error.BaseError.APIError.BecknAPIError
+import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import EulerHS.Prelude
 
 data ErrorCode
@@ -44,7 +44,7 @@ instanceExceptionWithParent 'BecknAPIException ''ErrorCode
 
 instance IsBaseError ErrorCode
 
-instance IsAPIError ErrorCode where
+instance IsHTTPError ErrorCode where
   toErrorCode = show
   toHttpCode _ = E400
 
@@ -56,7 +56,7 @@ data ErrorCodeWithMessage = ErrorCodeWithMessage Text ErrorCode deriving (Show)
 instance IsBaseError ErrorCodeWithMessage where
   toMessage (ErrorCodeWithMessage msg _) = Just msg
 
-instance IsAPIError ErrorCodeWithMessage where
+instance IsHTTPError ErrorCodeWithMessage where
   toErrorCode (ErrorCodeWithMessage _ e) = toErrorCode e
   toHttpCode (ErrorCodeWithMessage _ e) = toHttpCode e
   toCustomHeaders (ErrorCodeWithMessage _ e) = toCustomHeaders e

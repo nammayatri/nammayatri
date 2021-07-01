@@ -4,7 +4,7 @@
 
 module Beckn.Utils.Monitoring.Prometheus.Metrics where
 
-import Beckn.Types.Error.BaseError.APIError (IsAPIError (toErrorCode, toHttpCode), IsAPIException)
+import Beckn.Types.Error.BaseError.HTTPError (IsHTTPError (toErrorCode, toHttpCode), IsHTTPException)
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, HasCoreMetrics)
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Data.Text as DT
@@ -41,7 +41,7 @@ incrementErrorCounterFlow ::
   ( HasCoreMetrics r,
     L.MonadFlow m,
     MonadReader r m,
-    IsAPIException e
+    IsHTTPException e
   ) =>
   e ->
   m ()
@@ -77,7 +77,7 @@ addRequestLatencyFlow host serviceName dur status = do
         Left (UnsupportedContentType _ (Response code _ _ _)) -> show code
         Left (ConnectionError _) -> "Connection error"
 
-incrementErrorCounter :: (L.MonadFlow m, IsAPIException e) => CoreMetricsContainer -> e -> m ()
+incrementErrorCounter :: (L.MonadFlow m, IsHTTPException e) => CoreMetricsContainer -> e -> m ()
 incrementErrorCounter cmContainers err = do
   let errorCounterMetric = cmContainers.errorCounter
   L.runIO $

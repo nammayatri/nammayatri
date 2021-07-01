@@ -77,7 +77,7 @@ instance
       subserver `addAuthCheck` withRequest authCheck
     where
       authCheck :: Request -> DelayedIO (VerificationResult verify)
-      authCheck req = runFlowRDelayedIO env . domainHandler $ do
+      authCheck req = runFlowRDelayedIO env . apiHandler $ do
         let headerName = fromString $ symbolVal (Proxy @header)
         requestHeaders req
           & (lookup headerName >>> fromMaybeM (MissingHeader headerName))

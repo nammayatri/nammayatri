@@ -7,7 +7,7 @@ import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Error
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
-import qualified Beckn.Utils.Error.BaseError.APIError.BecknAPIError as Beckn
+import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Control.Arrow ((>>>))
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T

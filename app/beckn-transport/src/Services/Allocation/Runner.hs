@@ -115,6 +115,5 @@ run = do
         [ Handler $ \(RedisError err) -> do
             Log.logTagError "Allocation service" $ show err
             L.runIO $ threadDelay 1000000,
-          Handler $ \(APIException e) -> Log.logTagError "Allocation service" $ toLogMessageAPIError e,
-          Handler $ \(e :: SomeException) -> Log.logTagError "Allocation service" $ show e
+          Handler $ \(e :: SomeException) -> Log.logTagError "Allocation service" $ makeLogSomeException e
         ]

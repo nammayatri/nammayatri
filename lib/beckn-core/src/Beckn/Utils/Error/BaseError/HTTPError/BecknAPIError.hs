@@ -1,10 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Beckn.Utils.Error.BaseError.APIError.BecknAPIError where
+module Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import Beckn.Types.Error.BaseError.APIError.BecknAPIError
+import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
@@ -14,7 +14,7 @@ import Servant.Client (Client, HasClient)
 data BecknAPICallError = BecknAPICallError Text Error
   deriving (Show)
 
-instanceExceptionWithParent 'APIException ''BecknAPICallError
+instanceExceptionWithParent 'BaseException ''BecknAPICallError
 
 instance IsBaseError BecknAPICallError where
   toMessage (BecknAPICallError action Error {..}) =
@@ -22,7 +22,7 @@ instance IsBaseError BecknAPICallError where
       "Beckn " <> action <> " request returned error code " <> code
         <> maybe "" ("with message: " <>) message
 
-instance IsAPIError BecknAPICallError where
+instance IsHTTPError BecknAPICallError where
   toErrorCode (BecknAPICallError _ _) = "BECKN_API_CALL_ERROR"
 
 type IsBecknAPI api req =

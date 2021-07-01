@@ -4,8 +4,8 @@
 module Types.Error (module Types.Error) where
 
 import Beckn.Types.Error as Types.Error
-import Beckn.Types.Error.BaseError.APIError
-import Beckn.Types.Error.BaseError.APIError.DomainError
+import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Types.Error.BaseError.HTTPError.APIError
 import EulerHS.Prelude
 
 data FarePolicyError
@@ -13,61 +13,61 @@ data FarePolicyError
   | CantCalculateDistance
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-instanceExceptionWithParent 'DomainException ''FarePolicyError
+instanceExceptionWithParent 'APIException ''FarePolicyError
 
 instance IsBaseError FarePolicyError where
   toMessage NoFarePolicy = Just "No fare policy matches passed data."
   toMessage _ = Nothing
 
-instance IsAPIError FarePolicyError where
+instance IsHTTPError FarePolicyError where
   toErrorCode NoFarePolicy = "NO_FARE_POLICY"
   toErrorCode CantCalculateDistance = "CANT_CALCULATE_DISTANCE"
   toHttpCode NoFarePolicy = E400
   toHttpCode CantCalculateDistance = E500
 
-instance IsDomainError FarePolicyError
+instance IsAPIError FarePolicyError
 
 data AllocationError
   = EmptyDriverPool
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''AllocationError
+instanceExceptionWithParent 'APIException ''AllocationError
 
 instance IsBaseError AllocationError
 
-instance IsAPIError AllocationError where
+instance IsHTTPError AllocationError where
   toErrorCode EmptyDriverPool = "EMPTY_DRIVER_POOL"
 
-instance IsDomainError AllocationError
+instance IsAPIError AllocationError
 
 data DriverInformationError
   = DriverInfoNotFound
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''DriverInformationError
+instanceExceptionWithParent 'APIException ''DriverInformationError
 
 instance IsBaseError DriverInformationError
 
-instance IsAPIError DriverInformationError where
+instance IsHTTPError DriverInformationError where
   toErrorCode DriverInfoNotFound = "DRIVER_INFORMATON_NOT_FOUND"
 
-instance IsDomainError DriverInformationError
+instance IsAPIError DriverInformationError
 
 data ProductsError
   = ProductsNotFound
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''ProductsError
+instanceExceptionWithParent 'APIException ''ProductsError
 
 instance IsBaseError ProductsError
 
-instance IsAPIError ProductsError where
+instance IsHTTPError ProductsError where
   toErrorCode = \case
     ProductsNotFound -> "PRODUCTS_NOT_FOUND"
   toHttpCode = \case
     ProductsNotFound -> E500
 
-instance IsDomainError ProductsError
+instance IsAPIError ProductsError
 
 newtype ShardMappingError = ShardMappingError Text
   deriving (Show, Typeable)

@@ -5,9 +5,9 @@
 
 module ExternalAPI.Dunzo.Types where
 
-import Beckn.Types.Error.BaseError.APIError
-import Beckn.Types.Error.BaseError.APIError.BecknAPIError hiding (Error)
-import Beckn.Types.Error.BaseError.APIError.FromResponse
+import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError hiding (Error)
+import Beckn.Types.Error.BaseError.HTTPError.FromResponse
 import Data.Aeson hiding (Error)
 import Data.Char (toLower)
 import EulerHS.Prelude hiding (state)
@@ -212,7 +212,7 @@ dunzoCodeToBecknCode = \case
 instance IsBaseError Error where
   toMessage Error {message} = Just message
 
-instance IsAPIError Error where
+instance IsHTTPError Error where
   toErrorCode Error {code} = dunzoCodeToBecknCode code
   toHttpCode Error {} = E500 -- should not be thrown synchronously
 

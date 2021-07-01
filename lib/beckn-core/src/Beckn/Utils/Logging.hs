@@ -16,11 +16,14 @@ module Beckn.Utils.Logging
     logOutputImplementation,
     withLogTagImplementation,
     withTransactionIdLogTagMig,
+    makeLogSomeException,
   )
 where
 
 import Beckn.Types.Core.Context (Context (transaction_id))
 import qualified Beckn.Types.Core.Migration.Context as M.Context
+import Beckn.Types.Error.BaseError.HTTPError.APIError
+import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import Beckn.Types.Logging
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
@@ -161,3 +164,16 @@ withTransactionIdLogTagMig req = do
   let context = req.context
       transaction_id_ = M.Context.transaction_id context
   withLogTag ("txnId-" <> transaction_id_)
+
+makeLogSomeException :: SomeException -> Text
+makeLogSomeException someExc
+  | Just (APIException err) <- fromException someExc = logHTTPError err
+  | Just (BecknAPIException err) <- fromException someExc = logHTTPError err
+  | Just (BaseException err) <- fromException someExc = show err
+  | otherwise = show someExc
+  where
+    logHTTPError err =
+      show (toHttpCode err)
+        <> " "
+        <> toErrorCode err
+        <> maybe "" (": " <>) (toMessage err)

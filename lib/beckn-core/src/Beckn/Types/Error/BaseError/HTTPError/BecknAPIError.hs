@@ -1,21 +1,21 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Beckn.Types.Error.BaseError.APIError.BecknAPIError
-  ( module Beckn.Types.Error.BaseError.APIError.BecknAPIError,
-    module Beckn.Types.Error.BaseError.APIError,
+module Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
+  ( module Beckn.Types.Error.BaseError.HTTPError.BecknAPIError,
+    module Beckn.Types.Error.BaseError.HTTPError,
     Error.Error (..),
     Error.ErrorType (..),
   )
 where
 
 import qualified Beckn.Types.Core.Error as Error
-import Beckn.Types.Error.BaseError.APIError
-import Beckn.Types.Error.BaseError.APIError.FromResponse
+import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Types.Error.BaseError.HTTPError.FromResponse
 import Data.Aeson.Types
 import EulerHS.Prelude hiding (Show, show, (.=))
 import Prelude (Show (..))
 
-class IsAPIError e => IsBecknAPIError e where
+class IsHTTPError e => IsBecknAPIError e where
   toType :: e -> Error.ErrorType
 
   toPath :: e -> Maybe Text
@@ -45,7 +45,7 @@ data BecknAPIException = forall e. (Exception e, IsBecknAPIError e) => BecknAPIE
 instance IsBaseError BecknAPIException where
   toMessage (BecknAPIException e) = toMessage e
 
-instance IsAPIError BecknAPIException where
+instance IsHTTPError BecknAPIException where
   toErrorCode (BecknAPIException e) = toErrorCode e
   toHttpCode (BecknAPIException e) = toHttpCode e
   toCustomHeaders (BecknAPIException e) = toCustomHeaders e
@@ -53,7 +53,7 @@ instance IsAPIError BecknAPIException where
 instance Show BecknAPIException where
   show (BecknAPIException e) = show e
 
-instanceExceptionWithParent 'APIException ''BecknAPIException
+instanceExceptionWithParent 'BaseException ''BecknAPIException
 
 toBecknAPIError :: IsBecknAPIError e => e -> BecknAPIError
 toBecknAPIError e =

@@ -20,6 +20,6 @@ specs = return $ testGroup "Tests" [unitTests]
         [ amountTests,
           decimalValueTests,
           signatureAuthTests,
-          apiExceptionTests,
+          httpExceptionTests,
           slidingWindowLimiterTests
         ]

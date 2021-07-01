@@ -2,9 +2,9 @@ module Beckn.Utils.Servant.Client where
 
 import Beckn.Types.Common
 import Beckn.Types.Error (ExternalAPICallError (..))
-import Beckn.Types.Error.BaseError.APIError
-import Beckn.Types.Error.BaseError.APIError.CallAPIError
-import Beckn.Types.Error.BaseError.APIError.FromResponse
+import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Types.Error.BaseError.HTTPError.CallAPIError
+import Beckn.Types.Error.BaseError.HTTPError.FromResponse
 import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.Throwing
@@ -78,7 +78,7 @@ callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc =
 callApiUnwrappingApiError ::
   ( Metrics.CoreMetrics m,
     FromResponse err,
-    IsAPIException exc
+    IsHTTPException exc
   ) =>
   (err -> exc) ->
   Maybe ET.ManagerSelector ->

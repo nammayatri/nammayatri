@@ -1,28 +1,28 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Beckn.Utils.Error.BaseError.APIError.DomainError where
+module Beckn.Utils.Error.BaseError.HTTPError.APIError where
 
-import Beckn.Types.Error.BaseError.APIError
-import Beckn.Types.Error.BaseError.APIError.DomainError
+import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Types.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 
-newtype APICallError = APICallError DomainError
+newtype APICallError = APICallError APIError
   deriving (Show)
 
-instanceExceptionWithParent 'DomainException ''APICallError
+instanceExceptionWithParent 'APIException ''APICallError
 
 instance IsBaseError APICallError where
-  toMessage (APICallError DomainError {..}) =
+  toMessage (APICallError APIError {..}) =
     Just $
       "Request to own API returned error code " <> errorCode
         <> maybe "" ("with message: " <>) errorMessage
 
-instance IsAPIError APICallError where
+instance IsHTTPError APICallError where
   toErrorCode (APICallError _) = "API_CALL_ERROR"
 
-instance IsDomainError APICallError
+instance IsAPIError APICallError
 
 callOwnAPI ::
   Maybe ET.ManagerSelector ->

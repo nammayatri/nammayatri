@@ -6,7 +6,7 @@ module Beckn.Types.Monitoring.Prometheus.Metrics
   )
 where
 
-import Beckn.Types.Error.BaseError.APIError
+import Beckn.Types.Error.BaseError.HTTPError
 import EulerHS.Prelude as E
 import GHC.Records.Extra
 import Prometheus as P
@@ -27,7 +27,7 @@ class CoreMetrics m where
     Double ->
     Either ClientError a ->
     m ()
-  incrementErrorCounter :: IsAPIException e => e -> m ()
+  incrementErrorCounter :: IsHTTPException e => e -> m ()
 
 data CoreMetricsContainer = CoreMetricsContainer
   { requestLatency :: RequestLatencyMetric,

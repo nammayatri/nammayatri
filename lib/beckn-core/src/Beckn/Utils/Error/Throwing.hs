@@ -1,29 +1,25 @@
 module Beckn.Utils.Error.Throwing
   ( module Beckn.Utils.Error.Throwing,
-    IsAPIException,
+    IsHTTPException,
   )
 where
 
 import Beckn.Types.Common hiding (id)
-import Beckn.Types.Error.BaseError.APIError
+import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Utils.Logging
 import qualified Data.Text as T
 import EulerHS.Prelude
 
 throwError :: (HasCallStack, MonadThrow m, Log m, IsBaseException e) => e -> m b
 throwError exc = do
-  logWarning properLog
+  let someExc = toException exc
+  logWarning $ makeLogSomeException someExc
   logCallStack
   throwM someExc
   where
     logCallStack =
       withLogTag "CallStack" $
         logDebug . T.pack $ prettyCallStack callStack
-    someExc = toException exc
-    properLog
-      | Just (APIException err) <- fromException someExc = toLogMessageAPIError err
-      | Just (BaseException err) <- fromException someExc = fromMaybe "" $ toMessage err
-      | otherwise = show exc
 
 fromMaybeM ::
   (HasCallStack, MonadThrow m, Log m, IsBaseException e) => e -> Maybe b -> m b

@@ -3,8 +3,8 @@
 module Beckn.Types.Error where
 
 import Beckn.Types.Error.BaseError
-import Beckn.Types.Error.BaseError.APIError.BecknAPIError
-import Beckn.Types.Error.BaseError.APIError.DomainError
+import Beckn.Types.Error.BaseError.HTTPError.APIError
+import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import EulerHS.Prelude
 import EulerHS.Types (KVDBReply)
 import Network.HTTP.Types (Header)
@@ -24,7 +24,7 @@ data AuthError
   | HitsLimitError Int
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''AuthError
+instanceExceptionWithParent 'APIException ''AuthError
 
 instance IsBaseError AuthError where
   toMessage = \case
@@ -35,7 +35,7 @@ instance IsBaseError AuthError where
     HitsLimitError hitsLimitResetTime -> Just $ "Hits limit reached. Try again in " <> show hitsLimitResetTime <> " sec."
     _ -> Nothing
 
-instance IsAPIError AuthError where
+instance IsHTTPError AuthError where
   toErrorCode = \case
     Unauthorized -> "UNAUTHORIZED"
     InvalidAuthData -> "INVALID_AUTH_DATA"
@@ -53,41 +53,41 @@ instance IsAPIError AuthError where
     HitsLimitError _ -> E429
     _ -> E400
 
-instance IsDomainError AuthError
+instance IsAPIError AuthError
 
 data HeaderError
   = MissingHeader HeaderName
   | InvalidHeader HeaderName Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''HeaderError
+instanceExceptionWithParent 'APIException ''HeaderError
 
 instance IsBaseError HeaderError where
   toMessage = \case
     MissingHeader headerName -> Just $ "Header " +|| headerName ||+ " is missing"
     InvalidHeader headerName err -> Just $ "Header " +|| headerName ||+ " is invalid: " +|| err ||+ ""
 
-instance IsAPIError HeaderError where
+instance IsHTTPError HeaderError where
   toErrorCode = \case
     MissingHeader _ -> "MISSING_HEADER"
     InvalidHeader _ _ -> "INVALID_HEADER"
   toHttpCode _ = E400
 
-instance IsDomainError HeaderError
+instance IsAPIError HeaderError
 
 data SignatureError
   = SignatureVerificationFailure [Header]
   | CannotDecodeSignature String
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''SignatureError
+instanceExceptionWithParent 'APIException ''SignatureError
 
 instance IsBaseError SignatureError where
   toMessage = \case
     CannotDecodeSignature err -> Just (fromString err)
     _ -> Nothing
 
-instance IsAPIError SignatureError where
+instance IsHTTPError SignatureError where
   toErrorCode = \case
     SignatureVerificationFailure _ -> "SIGNATURE_VERIFICATION_FAILURE"
     CannotDecodeSignature _ -> "CANNOT_DECODE_SIGNATURE"
@@ -95,20 +95,20 @@ instance IsAPIError SignatureError where
   toCustomHeaders (SignatureVerificationFailure headers) = headers
   toCustomHeaders _ = []
 
-instance IsDomainError SignatureError
+instance IsAPIError SignatureError
 
 data AuthPIError = NotAnExecutor deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''AuthPIError
+instanceExceptionWithParent 'APIException ''AuthPIError
 
 instance IsBaseError AuthPIError where
   toMessage NotAnExecutor = Just "You are not an executor of this ride."
 
-instance IsAPIError AuthPIError where
+instance IsHTTPError AuthPIError where
   toErrorCode NotAnExecutor = "NOT_AN_EXECUTOR"
   toHttpCode NotAnExecutor = E403
 
-instance IsDomainError AuthPIError
+instance IsAPIError AuthPIError
 
 data VehicleError
   = VehicleNotFound
@@ -116,11 +116,11 @@ data VehicleError
   | VehicleAlreadyLinked
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''VehicleError
+instanceExceptionWithParent 'APIException ''VehicleError
 
 instance IsBaseError VehicleError
 
-instance IsAPIError VehicleError where
+instance IsHTTPError VehicleError where
   toErrorCode = \case
     VehicleNotFound -> "VEHICLE_NOT_FOUND"
     VehicleDoesNotExist -> "VEHICLE_DOES_NOT_EXIST"
@@ -130,7 +130,7 @@ instance IsAPIError VehicleError where
     VehicleDoesNotExist -> E400
     VehicleAlreadyLinked -> E400
 
-instance IsDomainError VehicleError
+instance IsAPIError VehicleError
 
 data PersonError
   = PersonNotFound
@@ -139,7 +139,7 @@ data PersonError
   | PersonOrgExists
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''PersonError
+instanceExceptionWithParent 'APIException ''PersonError
 
 instance IsBaseError PersonError where
   toMessage = \case
@@ -148,7 +148,7 @@ instance IsBaseError PersonError where
     PersonOrgExists -> Just "Person is already registered in the organization."
     _ -> Nothing
 
-instance IsAPIError PersonError where
+instance IsHTTPError PersonError where
   toErrorCode = \case
     PersonNotFound -> "PERSON_NOT_FOUND"
     PersonDoesNotExist -> "PERSON_DOES_NOT_EXIST"
@@ -160,7 +160,7 @@ instance IsAPIError PersonError where
     PersonFieldNotPresent _ -> E500
     PersonOrgExists -> E400
 
-instance IsDomainError PersonError
+instance IsAPIError PersonError
 
 data LocationError
   = LocationNotFound
@@ -168,7 +168,7 @@ data LocationError
   | LocationFieldNotPresent Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''LocationError
+instanceExceptionWithParent 'APIException ''LocationError
 
 instance IsBaseError LocationError where
   toMessage = \case
@@ -176,7 +176,7 @@ instance IsBaseError LocationError where
     LocationFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this location."
     _ -> Nothing
 
-instance IsAPIError LocationError where
+instance IsHTTPError LocationError where
   toErrorCode = \case
     LocationNotFound -> "LOCATION_NOT_FOUND"
     LocationDoesNotExist -> "LOCATION_DOES_NOT_EXISTS"
@@ -186,21 +186,21 @@ instance IsAPIError LocationError where
     LocationDoesNotExist -> E400
     LocationFieldNotPresent _ -> E500
 
-instance IsDomainError LocationError
+instance IsAPIError LocationError
 
 data GenericError
   = InternalError Text
   | InvalidRequest Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''GenericError
+instanceExceptionWithParent 'APIException ''GenericError
 
 instance IsBaseError GenericError where
   toMessage = \case
     InternalError msg -> Just msg
     InvalidRequest msg -> Just msg
 
-instance IsAPIError GenericError where
+instance IsHTTPError GenericError where
   toErrorCode = \case
     InternalError _ -> "INTERNAL_ERROR"
     InvalidRequest _ -> "INVALID_REQUEST"
@@ -208,7 +208,7 @@ instance IsAPIError GenericError where
     InternalError _ -> E500
     InvalidRequest _ -> E400
 
-instance IsDomainError GenericError
+instance IsAPIError GenericError
 
 data OrganizationError
   = OrgNotFound
@@ -217,7 +217,7 @@ data OrganizationError
   | OrgMobilePhoneUsed
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''OrganizationError
+instanceExceptionWithParent 'APIException ''OrganizationError
 
 instance IsBaseError OrganizationError where
   toMessage = \case
@@ -226,7 +226,7 @@ instance IsBaseError OrganizationError where
     OrgMobilePhoneUsed -> Just "Mobile phone already used by another organization."
     _ -> Nothing
 
-instance IsAPIError OrganizationError where
+instance IsHTTPError OrganizationError where
   toErrorCode = \case
     OrgNotFound -> "ORGANIZATION_NOT_FOUND"
     OrgDoesNotExist -> "ORGANIZATION_DOES_NOT_EXISTS"
@@ -236,7 +236,7 @@ instance IsAPIError OrganizationError where
   toHttpCode OrgMobilePhoneUsed = E400
   toHttpCode _ = E500
 
-instance IsDomainError OrganizationError
+instance IsAPIError OrganizationError
 
 data CaseError
   = CaseNotFound
@@ -246,7 +246,7 @@ data CaseError
   | CaseFieldNotPresent Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''CaseError
+instanceExceptionWithParent 'APIException ''CaseError
 
 instance IsBaseError CaseError where
   toMessage = \case
@@ -255,7 +255,7 @@ instance IsBaseError CaseError where
     CaseInvalidStatus msg -> Just $ "Attempted to do some action in wrong case status. " <> msg
     _ -> Nothing
 
-instance IsAPIError CaseError where
+instance IsHTTPError CaseError where
   toErrorCode = \case
     CaseNotFound -> "CASE_NOT_FOUND"
     CaseDoesNotExist -> "CASE_DOES_NOT_EXISTS"
@@ -269,7 +269,7 @@ instance IsAPIError CaseError where
     CaseFieldNotPresent _ -> E500
     CaseInvalidStatus _ -> E400
 
-instance IsDomainError CaseError
+instance IsAPIError CaseError
 
 data ProductInstanceError
   = PINotFound
@@ -278,7 +278,7 @@ data ProductInstanceError
   | PIInvalidStatus Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''ProductInstanceError
+instanceExceptionWithParent 'APIException ''ProductInstanceError
 
 instance IsBaseError ProductInstanceError where
   toMessage = \case
@@ -287,7 +287,7 @@ instance IsBaseError ProductInstanceError where
     PIInvalidStatus msg -> Just $ "Attempted to do some action in wrong PI status. " <> msg
     _ -> Nothing
 
-instance IsAPIError ProductInstanceError where
+instance IsHTTPError ProductInstanceError where
   toErrorCode = \case
     PINotFound -> "PI_NOT_FOUND"
     PIDoesNotExist -> "PI_DOES_NOT_EXISTS"
@@ -299,7 +299,7 @@ instance IsAPIError ProductInstanceError where
     PIFieldNotPresent _ -> E500
     PIInvalidStatus _ -> E400
 
-instance IsDomainError ProductInstanceError
+instance IsAPIError ProductInstanceError
 
 data GatewayError
   = GatewaySelectorNotSet
@@ -307,16 +307,16 @@ data GatewayError
   | UnsupportedGatewaySelector
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''GatewayError
+instanceExceptionWithParent 'APIException ''GatewayError
 
 instance IsBaseError GatewayError
 
-instance IsAPIError GatewayError where
+instance IsHTTPError GatewayError where
   toErrorCode GatewaySelectorNotSet = "GATEWAY_SELECTOR_NOT_SET"
   toErrorCode NSDLBaseUrlNotSet = "NSDL_BASEURL_NOT_SET"
   toErrorCode UnsupportedGatewaySelector = "UNSUPPORTED_GATEWAY_SELECTOR"
 
-instance IsDomainError GatewayError
+instance IsAPIError GatewayError
 
 data DatabaseError
   = NotPostgresBackend
@@ -325,7 +325,7 @@ data DatabaseError
   | DBUnknownError Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''DatabaseError
+instanceExceptionWithParent 'APIException ''DatabaseError
 
 instance IsBaseError DatabaseError where
   toMessage = \case
@@ -334,7 +334,7 @@ instance IsBaseError DatabaseError where
     DBUnknownError msg -> Just msg
     _ -> Nothing
 
-instance IsAPIError DatabaseError where
+instance IsHTTPError DatabaseError where
   toErrorCode = \case
     NotPostgresBackend -> "DB_NOT_POSTGRES_BACKEND"
     SQLRequestError _ _ -> "DB_SQL_REQUEST_ERROR"
@@ -342,23 +342,23 @@ instance IsAPIError DatabaseError where
     DBUnknownError _ -> "DB_UNKNOWN_ERROR"
   toHttpCode _ = E500
 
-instance IsDomainError DatabaseError
+instance IsAPIError DatabaseError
 
 data FCMTokenError
   = FCMJSONPathNotConfigured
   | UnableToReadFCMJSONFile
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''FCMTokenError
+instanceExceptionWithParent 'APIException ''FCMTokenError
 
 instance IsBaseError FCMTokenError
 
-instance IsAPIError FCMTokenError where
+instance IsHTTPError FCMTokenError where
   toErrorCode FCMJSONPathNotConfigured = "FCM_JSON_PATH_NOT_CONFIGURED"
   toErrorCode UnableToReadFCMJSONFile = "UNABLE_TO_READ_FCM_JSON_FILE"
   toHttpCode _ = E500
 
-instance IsDomainError FCMTokenError
+instance IsAPIError FCMTokenError
 
 data ContextError
   = UnsupportedCoreVer
@@ -369,11 +369,11 @@ data ContextError
   | InvalidAction
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''ContextError
+instanceExceptionWithParent 'APIException ''ContextError
 
 instance IsBaseError ContextError
 
-instance IsAPIError ContextError where
+instance IsHTTPError ContextError where
   toErrorCode UnsupportedCoreVer = "UNSUPPORTED_CORE_VERSION"
   toErrorCode UnsupportedDomainVer = "UNSUPPORTED_DOMAIN_VERSION"
   toErrorCode InvalidDomain = "INVALID_DOMAIN"
@@ -382,7 +382,7 @@ instance IsAPIError ContextError where
   toErrorCode InvalidAction = "INVALID_ACTION"
   toHttpCode _ = E400
 
-instance IsDomainError ContextError
+instance IsAPIError ContextError
 
 instance IsBecknAPIError ContextError where
   toType _ = CONTEXT_ERROR
@@ -391,15 +391,15 @@ data ExternalAPICallError
   = ExternalAPICallError (Maybe Text) BaseUrl ClientError
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''ExternalAPICallError
+instanceExceptionWithParent 'APIException ''ExternalAPICallError
 
 instance IsBaseError ExternalAPICallError where
   toMessage (ExternalAPICallError _ url err) = externalAPICallErrorMessage url err
 
-instance IsAPIError ExternalAPICallError where
+instance IsHTTPError ExternalAPICallError where
   toErrorCode (ExternalAPICallError codeMb _ _) = fromMaybe "EXTERNAL_API_CALL_ERROR" codeMb
 
-instance IsDomainError ExternalAPICallError
+instance IsAPIError ExternalAPICallError
 
 externalAPICallErrorMessage :: BaseUrl -> ClientError -> Maybe Text
 externalAPICallErrorMessage baseUrl clientErr =
@@ -413,106 +413,106 @@ newtype EmailSendingError
   = EmailSendingError Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''EmailSendingError
+instanceExceptionWithParent 'APIException ''EmailSendingError
 
 instance IsBaseError EmailSendingError where
   toMessage (EmailSendingError msg) = Just msg
 
-instance IsAPIError EmailSendingError where
+instance IsHTTPError EmailSendingError where
   toErrorCode (EmailSendingError _) = "EMAIL_SENDING_ERROR"
 
-instance IsDomainError EmailSendingError
+instance IsAPIError EmailSendingError
 
 data HealthCheckError
   = ServiceUnavailable
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''HealthCheckError
+instanceExceptionWithParent 'APIException ''HealthCheckError
 
 instance IsBaseError HealthCheckError
 
-instance IsAPIError HealthCheckError where
+instance IsHTTPError HealthCheckError where
   toErrorCode ServiceUnavailable = "SERVICE_UNAVAILABLE"
   toHttpCode ServiceUnavailable = E503
 
-instance IsDomainError HealthCheckError
+instance IsAPIError HealthCheckError
 
 data RouteError
   = RouteRequestError BaseUrl ClientError
   | RouteNotLatLong
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''RouteError
+instanceExceptionWithParent 'APIException ''RouteError
 
 instance IsBaseError RouteError where
   toMessage = \case
     RouteRequestError url err -> externalAPICallErrorMessage url err
     RouteNotLatLong -> Just "Not supporting waypoints other than LatLong."
 
-instance IsAPIError RouteError where
+instance IsHTTPError RouteError where
   toErrorCode = \case
     RouteRequestError _ _ -> "UNABLE_TO_GET_ROUTE"
     RouteNotLatLong -> "GET_ROUTE_UNSUPPORTED_FORMAT"
 
-instance IsDomainError RouteError
+instance IsAPIError RouteError
 
 data ServerError
   = ServerUnavailable
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''ServerError
+instanceExceptionWithParent 'APIException ''ServerError
 
 instance IsBaseError ServerError where
   toMessage ServerUnavailable = Just "Server is working, but is not available."
 
-instance IsAPIError ServerError where
+instance IsHTTPError ServerError where
   toErrorCode ServerUnavailable = "SERVER_UNAVAILABLE"
   toHttpCode ServerUnavailable = E503
 
-instance IsDomainError ServerError
+instance IsAPIError ServerError
 
 newtype RedisError
   = RedisError KVDBReply
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''RedisError
+instanceExceptionWithParent 'APIException ''RedisError
 
 instance IsBaseError RedisError where
   toMessage = \case
     RedisError err -> Just $ show err
 
-instance IsAPIError RedisError where
+instance IsHTTPError RedisError where
   toErrorCode = \case
     RedisError _ -> "REDIS_ERROR"
   toHttpCode _ = E500
 
-instance IsDomainError RedisError
+instance IsAPIError RedisError
 
 newtype ActionNotSupported = ActionNotSupported Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''ActionNotSupported
+instanceExceptionWithParent 'APIException ''ActionNotSupported
 
 instance IsBaseError ActionNotSupported where
   toMessage (ActionNotSupported action) = Just $ "Action " <> action <> " is not supported"
 
-instance IsAPIError ActionNotSupported where
+instance IsHTTPError ActionNotSupported where
   toErrorCode _ = "ACTION_NOT_SUPPORTED"
   toHttpCode _ = E400
 
-instance IsDomainError ActionNotSupported
+instance IsAPIError ActionNotSupported
 
 newtype SMSError = SMSError Text
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'DomainException ''SMSError
+instanceExceptionWithParent 'APIException ''SMSError
 
 instance IsBaseError SMSError where
   toMessage = \case
     SMSError err -> Just err
 
-instance IsAPIError SMSError where
+instance IsHTTPError SMSError where
   toErrorCode = \case
     SMSError _ -> "SMS_NOT_SENT"
 
-instance IsDomainError SMSError
+instance IsAPIError SMSError
