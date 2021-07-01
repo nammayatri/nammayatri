@@ -148,7 +148,7 @@ confirm org req = do
   dzBACreds <- getDzBAPCreds org
   withCallback CONFIRM ConfirmAPI.onConfirmAPI context cbUrl $ do
     taskStatus <- createTaskAPI dzBACreds dconf =<< mkCreateTaskReq order
-    orderId <- generateGUID
+    let orderId = taskStatus.task_id.getTaskId
     currTime <- getCurrentTime
     let uOrder = updateOrder (Just orderId) currTime order taskStatus
     checkAndLogPriceDiff order uOrder
@@ -192,7 +192,7 @@ confirm org req = do
                 fromLocationId = "",
                 toLocationId = "",
                 udf1 = Just $ encodeToText order,
-                udf2 = Nothing,
+                udf2 = Just $ encodeToText taskStatus,
                 udf3 = Nothing,
                 udf4 = Nothing,
                 udf5 = Nothing,
@@ -207,7 +207,7 @@ confirm org req = do
       let taskId = taskStatus.task_id
       let updatedCase =
             case_
-              { shortId = ShortId $ getTaskId taskId,
+              { shortId = ShortId taskId.getTaskId,
                 Case.status = CONFIRMED,
                 udf1 = Just $ encodeToText order,
                 udf2 = Just $ encodeToText taskStatus
