@@ -2,15 +2,10 @@
 
 module Beckn.Utils.Servant.API
   ( type (:>|),
-    PlainText_ISO_8859_1,
   )
 where
 
-import Data.ByteString.Lazy (toStrict)
-import Data.Text
-import Data.Text.Encoding
-import EulerHS.Prelude hiding (toStrict)
-import qualified Network.HTTP.Media as M
+import Data.Kind (Type)
 import Servant
 
 -- | This behaves similarly to ':>' from API point of view, but in implementation
@@ -42,11 +37,3 @@ type family (:>|) (pre :: k) (api :: Type) where
   pre :>| api = pre :> api
 
 infixr 2 :>|
-
-data PlainText_ISO_8859_1 deriving (Typeable)
-
-instance Accept PlainText_ISO_8859_1 where
-  contentType _ = "text" M.// "plain" M./: ("charset", "ISO-8859-1")
-
-instance MimeUnrender PlainText_ISO_8859_1 Text where
-  mimeUnrender _ = Right . decodeLatin1 . toStrict

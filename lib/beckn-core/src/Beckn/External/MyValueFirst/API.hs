@@ -4,7 +4,7 @@ import Beckn.External.MyValueFirst.Types
 import Beckn.Types.App
   ( MandatoryQueryParam,
   )
-import Beckn.Utils.Servant.API
+import Beckn.Types.Servant
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant
