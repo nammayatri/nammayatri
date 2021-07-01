@@ -71,7 +71,6 @@ initiateFlow req smsCfg = do
       return token
   let attempts = SR.attempts regToken
       tokenId = SR.id regToken
-  Notify.notifyOnRegistration regToken person
   return $ InitiateLoginRes {attempts, tokenId}
 
 makePerson :: EncFlow m r => InitiateLoginReq -> m SP.Person
@@ -144,7 +143,7 @@ loginHitsCountKey person = "Registration:login:" <> getId person.id <> ":hitsCou
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandlerAPI $ do
-    SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
+    regToken@SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
     when verified $ throwError $ AuthBlocked "Already verified."
     checkForExpiry authExpiry updatedAt
     let isValid =
@@ -162,8 +161,10 @@ login tokenId req =
         updatedPerson <-
           QP.findPersonById person.id
             >>= fromMaybeM PersonNotFound
-            >>= SP.buildDecryptedPerson
-        return $ LoginRes token (Just $ SP.maskPerson updatedPerson)
+        when (person.status == SP.INACTIVE) $
+          Notify.notifyOnRegistration regToken updatedPerson
+        decPerson <- SP.buildDecryptedPerson updatedPerson
+        return $ LoginRes token (Just $ SP.maskPerson decPerson)
       else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =
