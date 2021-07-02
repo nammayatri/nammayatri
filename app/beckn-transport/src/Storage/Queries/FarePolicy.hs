@@ -7,7 +7,6 @@ import Beckn.Types.Id (Id)
 import Beckn.Types.Schema
 import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Beckn.Types.Storage.Vehicle as Vehicle
-import Beckn.Utils.Common
 import Database.Beam
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -40,8 +39,9 @@ findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ = do
 findFarePoliciesByOrgId :: DBFlow m r => Id Organization.Organization -> m [Storage.FarePolicy]
 findFarePoliciesByOrgId orgId = do
   dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
+  DB.findAll dbTable (B.orderBy_ orderByAsc) predicate
   where
+    orderByAsc Storage.FarePolicy {..} = B.asc_ vehicleVariant
     predicate Storage.FarePolicy {..} = organizationId ==. B.val_ orgId
 
 findFarePolicyById :: DBFlow m r => Id D.FarePolicy -> m (Maybe Storage.FarePolicy)
