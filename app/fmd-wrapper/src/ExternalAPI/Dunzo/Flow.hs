@@ -3,7 +3,7 @@
 module ExternalAPI.Dunzo.Flow where
 
 import Beckn.Types.Common
-import Beckn.Utils.Common
+import Beckn.Utils.Common hiding (Error)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Dunzo.Types

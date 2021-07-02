@@ -7,8 +7,6 @@
 module APIExceptions (httpExceptionTests) where
 
 import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Error.BaseError.HTTPError.APIError
-import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics
 import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Error.FlowHandling
@@ -30,7 +28,9 @@ instance IsHTTPError SomeAPIError where
 
 instance IsAPIError SomeAPIError
 
-instanceExceptionWithParent 'APIException ''SomeAPIError
+instance IsBecknAPIError SomeAPIError
+
+instanceExceptionWithParent 'HTTPException ''SomeAPIError
 
 data SomeBecknAPIError = SomeBecknAPIError deriving (Show)
 
@@ -39,10 +39,12 @@ instance IsBaseError SomeBecknAPIError
 instance IsHTTPError SomeBecknAPIError where
   toErrorCode SomeBecknAPIError = "SOME_BECKN_API_ERROR"
 
+instance IsAPIError SomeBecknAPIError
+
 instance IsBecknAPIError SomeBecknAPIError where
   toType SomeBecknAPIError = INTERNAL_ERROR
 
-instanceExceptionWithParent 'BecknAPIException ''SomeBecknAPIError
+instanceExceptionWithParent 'HTTPException ''SomeBecknAPIError
 
 instance Metrics.CoreMetrics IO where
   addRequestLatency _ _ _ _ = return ()

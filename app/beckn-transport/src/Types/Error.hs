@@ -5,15 +5,14 @@ module Types.Error (module Types.Error) where
 
 import Beckn.Types.Error as Types.Error
 import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Error.BaseError.HTTPError.APIError
 import EulerHS.Prelude
 
 data FarePolicyError
   = NoFarePolicy
   | CantCalculateDistance
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''FarePolicyError
+instanceExceptionWithParent 'HTTPException ''FarePolicyError
 
 instance IsBaseError FarePolicyError where
   toMessage NoFarePolicy = Just "No fare policy matches passed data."
@@ -29,9 +28,9 @@ instance IsAPIError FarePolicyError
 
 data AllocationError
   = EmptyDriverPool
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''AllocationError
+instanceExceptionWithParent 'HTTPException ''AllocationError
 
 instance IsBaseError AllocationError
 
@@ -42,9 +41,9 @@ instance IsAPIError AllocationError
 
 data DriverInformationError
   = DriverInfoNotFound
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''DriverInformationError
+instanceExceptionWithParent 'HTTPException ''DriverInformationError
 
 instance IsBaseError DriverInformationError
 
@@ -55,9 +54,9 @@ instance IsAPIError DriverInformationError
 
 data ProductsError
   = ProductsNotFound
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''ProductsError
+instanceExceptionWithParent 'HTTPException ''ProductsError
 
 instance IsBaseError ProductsError
 

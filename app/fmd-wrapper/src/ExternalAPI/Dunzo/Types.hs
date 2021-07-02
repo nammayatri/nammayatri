@@ -5,8 +5,7 @@
 
 module ExternalAPI.Dunzo.Types where
 
-import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError hiding (Error)
+import Beckn.Types.Error.BaseError.HTTPError hiding (Error)
 import Beckn.Types.Error.BaseError.HTTPError.FromResponse
 import Data.Aeson hiding (Error)
 import Data.Char (toLower)
@@ -187,7 +186,7 @@ data Error = Error
     message :: Text,
     details :: Value
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, IsAPIError)
 
 instance FromResponse Error where
   fromResponse = fromJsonResponse
@@ -219,4 +218,4 @@ instance IsHTTPError Error where
 instance IsBecknAPIError Error where
   toType _ = DOMAIN_ERROR -- only to satisfy current tests, FIXME maybe
 
-instanceExceptionWithParent 'BecknAPIException ''Error
+instanceExceptionWithParent 'HTTPException ''Error

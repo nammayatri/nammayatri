@@ -7,14 +7,14 @@ module Types.Error
 where
 
 import Beckn.Types.Error hiding (GatewayError)
-import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
+import Beckn.Types.Error.BaseError.HTTPError
 import EulerHS.Prelude
 
 data GatewayError
   = NoProviders
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsAPIError)
 
-instanceExceptionWithParent 'BecknAPIException ''GatewayError
+instanceExceptionWithParent 'HTTPException ''GatewayError
 
 instance IsBaseError GatewayError
 

@@ -18,7 +18,7 @@ checkDBError :: (MonadThrow m, Log m) => ET.DBResult a -> m a
 checkDBError = either throwDBError pure
 
 checkDBErrorOrEmpty ::
-  (MonadThrow m, Log m, IsHTTPException b) =>
+  (MonadThrow m, Log m, IsBaseException b) =>
   ET.DBResult (Maybe a) ->
   b ->
   m a

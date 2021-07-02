@@ -1,10 +1,11 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError where
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
+import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
@@ -12,9 +13,9 @@ import qualified EulerHS.Types as ET
 import Servant.Client (Client, HasClient)
 
 data BecknAPICallError = BecknAPICallError Text Error
-  deriving (Show)
+  deriving (Show, IsAPIError, IsBecknAPIError)
 
-instanceExceptionWithParent 'BaseException ''BecknAPICallError
+instanceExceptionWithParent 'HTTPException ''BecknAPICallError
 
 instance IsBaseError BecknAPICallError where
   toMessage (BecknAPICallError action Error {..}) =
@@ -62,3 +63,13 @@ callBecknAPI' mbManagerSelector errorCodeMb baseUrl eulerClient name =
 
 becknAPIErrorToException :: Text -> BecknAPIError -> BecknAPICallError
 becknAPIErrorToException name (BecknAPIError becknErr) = BecknAPICallError name becknErr
+
+toBecknAPIError :: (IsHTTPError e, IsBecknAPIError e) => e -> BecknAPIError
+toBecknAPIError e =
+  BecknAPIError
+    Error
+      { _type = toType e,
+        code = toErrorCode e,
+        path = toPath e,
+        message = toMessageIfNotInternal e
+      }

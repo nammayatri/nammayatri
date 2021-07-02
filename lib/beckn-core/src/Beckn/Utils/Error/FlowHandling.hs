@@ -13,10 +13,10 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Error as Err
 import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Error.BaseError.HTTPError.APIError
-import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
+import Beckn.Utils.Error.BaseError.HTTPError.APIError (toAPIError)
+import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (toBecknAPIError)
 import Beckn.Utils.Logging
 import Control.Concurrent.STM (isEmptyTMVar)
 import Control.Monad.Reader
@@ -86,9 +86,9 @@ someExceptionToAPIErrorThrow ::
   SomeException ->
   m a
 someExceptionToAPIErrorThrow exc
-  | Just (APIException err) <- fromException exc = throwAPIError err
+  | Just (HTTPException err) <- fromException exc = throwAPIError err
   | Just (BaseException err) <- fromException exc =
-    throwAPIError . InternalError . show $ toMessage err
+    throwAPIError . InternalError . fromMaybe (show err) $ toMessage err
   | otherwise = throwAPIError . InternalError $ show exc
 
 someExceptionToBecknApiErrorThrow ::
@@ -99,52 +99,49 @@ someExceptionToBecknApiErrorThrow ::
   SomeException ->
   m a
 someExceptionToBecknApiErrorThrow exc
-  | Just (BecknAPIException err) <- fromException exc = throwBecknApiError err
-  | Just (APIException err) <- fromException exc =
-    throwIsApiError becknAPIErrorFromAPIError err
+  | Just (HTTPException err) <- fromException exc = throwBecknApiError err
   | otherwise =
-    throwIsApiError becknAPIErrorFromAPIError . InternalError $ show exc
+    throwBecknApiError . InternalError $ show exc
 
 someExceptionToBecknApiError :: SomeException -> BecknAPIError
 someExceptionToBecknApiError exc
-  | Just (BecknAPIException err) <- fromException exc = toBecknAPIError err
-  | Just (APIException err) <- fromException exc = becknAPIErrorFromAPIError err
-  | otherwise = becknAPIErrorFromAPIError . InternalError $ show exc
+  | Just (HTTPException err) <- fromException exc = toBecknAPIError err
+  | otherwise = toBecknAPIError . InternalError $ show exc
 
 throwAPIError ::
   ( Log m,
     MonadThrow m,
-    IsAPIError e,
+    IsHTTPException e,
     Exception e,
     Metrics.CoreMetrics m
   ) =>
   e ->
   m a
-throwAPIError = throwIsApiError toAPIError
+throwAPIError = throwHTTPError toAPIError
 
 throwBecknApiError ::
   ( Log m,
     MonadThrow m,
-    IsBecknAPIError e,
+    IsHTTPException e,
     Exception e,
     Metrics.CoreMetrics m
   ) =>
   e ->
   m a
-throwBecknApiError = throwIsApiError toBecknAPIError
+throwBecknApiError = throwHTTPError toBecknAPIError
 
-throwIsApiError ::
+throwHTTPError ::
   ( ToJSON j,
     Log m,
     MonadThrow m,
-    IsHTTPError e,
+    IsHTTPException e,
     Exception e,
     Metrics.CoreMetrics m
   ) =>
   (e -> j) ->
   e ->
   m b
-throwIsApiError toJsonError err = do
+throwHTTPError toJsonError err = do
   let someExc = toException err
   logError $ makeLogSomeException someExc
   Metrics.incrementErrorCounter err
@@ -167,17 +164,3 @@ throwServantError httpCode customHeaders jsonError = withLogTag "HTTP_ERROR" $ d
   where
     jsonHeader :: (HeaderName, ByteString)
     jsonHeader = (hContentType, "application/json;charset=utf-8")
-
-becknAPIErrorFromAPIError :: IsAPIError e => e -> BecknAPIError
-becknAPIErrorFromAPIError e =
-  let _type =
-        if isInternalError (toHttpCode e)
-          then INTERNAL_ERROR
-          else DOMAIN_ERROR
-   in BecknAPIError
-        Error
-          { _type,
-            code = toErrorCode e,
-            path = Nothing,
-            message = toMessageIfNotInternal e
-          }

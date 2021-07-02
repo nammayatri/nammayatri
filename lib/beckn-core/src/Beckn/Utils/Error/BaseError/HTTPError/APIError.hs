@@ -1,17 +1,17 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Beckn.Utils.Error.BaseError.HTTPError.APIError where
 
 import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 
 newtype APICallError = APICallError APIError
-  deriving (Show)
+  deriving (Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''APICallError
+instanceExceptionWithParent 'HTTPException ''APICallError
 
 instance IsBaseError APICallError where
   toMessage (APICallError APIError {..}) =
@@ -29,3 +29,11 @@ callOwnAPI ::
   Maybe Text ->
   CallAPI env a
 callOwnAPI = callApiUnwrappingApiError APICallError
+
+toAPIError :: (IsHTTPError e, IsAPIError e) => e -> APIError
+toAPIError e =
+  APIError
+    { errorCode = toErrorCode e,
+      errorMessage = toMessageIfNotInternal e,
+      errorPayload = toPayload e
+    }

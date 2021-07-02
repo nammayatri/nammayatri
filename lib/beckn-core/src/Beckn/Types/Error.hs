@@ -1,10 +1,10 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Beckn.Types.Error where
 
 import Beckn.Types.Error.BaseError
-import Beckn.Types.Error.BaseError.HTTPError.APIError
-import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
+import Beckn.Types.Error.BaseError.HTTPError
 import EulerHS.Prelude
 import EulerHS.Types (KVDBReply)
 import Network.HTTP.Types (Header)
@@ -22,9 +22,9 @@ data AuthError
   | IncorrectOTP
   | AccessDenied
   | HitsLimitError Int
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''AuthError
+instanceExceptionWithParent 'HTTPException ''AuthError
 
 instance IsBaseError AuthError where
   toMessage = \case
@@ -58,9 +58,9 @@ instance IsAPIError AuthError
 data HeaderError
   = MissingHeader HeaderName
   | InvalidHeader HeaderName Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''HeaderError
+instanceExceptionWithParent 'HTTPException ''HeaderError
 
 instance IsBaseError HeaderError where
   toMessage = \case
@@ -78,9 +78,9 @@ instance IsAPIError HeaderError
 data SignatureError
   = SignatureVerificationFailure [Header]
   | CannotDecodeSignature String
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''SignatureError
+instanceExceptionWithParent 'HTTPException ''SignatureError
 
 instance IsBaseError SignatureError where
   toMessage = \case
@@ -97,9 +97,9 @@ instance IsHTTPError SignatureError where
 
 instance IsAPIError SignatureError
 
-data AuthPIError = NotAnExecutor deriving (Eq, Show)
+data AuthPIError = NotAnExecutor deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''AuthPIError
+instanceExceptionWithParent 'HTTPException ''AuthPIError
 
 instance IsBaseError AuthPIError where
   toMessage NotAnExecutor = Just "You are not an executor of this ride."
@@ -114,9 +114,9 @@ data VehicleError
   = VehicleNotFound
   | VehicleDoesNotExist
   | VehicleAlreadyLinked
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''VehicleError
+instanceExceptionWithParent 'HTTPException ''VehicleError
 
 instance IsBaseError VehicleError
 
@@ -137,9 +137,9 @@ data PersonError
   | PersonDoesNotExist
   | PersonFieldNotPresent Text
   | PersonOrgExists
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''PersonError
+instanceExceptionWithParent 'HTTPException ''PersonError
 
 instance IsBaseError PersonError where
   toMessage = \case
@@ -166,9 +166,9 @@ data LocationError
   = LocationNotFound
   | LocationDoesNotExist
   | LocationFieldNotPresent Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''LocationError
+instanceExceptionWithParent 'HTTPException ''LocationError
 
 instance IsBaseError LocationError where
   toMessage = \case
@@ -191,9 +191,9 @@ instance IsAPIError LocationError
 data GenericError
   = InternalError Text
   | InvalidRequest Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''GenericError
+instanceExceptionWithParent 'HTTPException ''GenericError
 
 instance IsBaseError GenericError where
   toMessage = \case
@@ -215,9 +215,9 @@ data OrganizationError
   | OrgDoesNotExist
   | OrgFieldNotPresent Text
   | OrgMobilePhoneUsed
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''OrganizationError
+instanceExceptionWithParent 'HTTPException ''OrganizationError
 
 instance IsBaseError OrganizationError where
   toMessage = \case
@@ -244,9 +244,9 @@ data CaseError
   | CaseExpired
   | CaseInvalidStatus Text
   | CaseFieldNotPresent Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''CaseError
+instanceExceptionWithParent 'HTTPException ''CaseError
 
 instance IsBaseError CaseError where
   toMessage = \case
@@ -276,9 +276,9 @@ data ProductInstanceError
   | PIDoesNotExist
   | PIFieldNotPresent Text
   | PIInvalidStatus Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''ProductInstanceError
+instanceExceptionWithParent 'HTTPException ''ProductInstanceError
 
 instance IsBaseError ProductInstanceError where
   toMessage = \case
@@ -305,9 +305,9 @@ data GatewayError
   = GatewaySelectorNotSet
   | NSDLBaseUrlNotSet
   | UnsupportedGatewaySelector
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''GatewayError
+instanceExceptionWithParent 'HTTPException ''GatewayError
 
 instance IsBaseError GatewayError
 
@@ -323,9 +323,9 @@ data DatabaseError
   | SQLRequestError Text Text
   | SQLResultError Text
   | DBUnknownError Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''DatabaseError
+instanceExceptionWithParent 'HTTPException ''DatabaseError
 
 instance IsBaseError DatabaseError where
   toMessage = \case
@@ -347,9 +347,9 @@ instance IsAPIError DatabaseError
 data FCMTokenError
   = FCMJSONPathNotConfigured
   | UnableToReadFCMJSONFile
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''FCMTokenError
+instanceExceptionWithParent 'HTTPException ''FCMTokenError
 
 instance IsBaseError FCMTokenError
 
@@ -369,7 +369,7 @@ data ContextError
   | InvalidAction
   deriving (Eq, Show)
 
-instanceExceptionWithParent 'APIException ''ContextError
+instanceExceptionWithParent 'HTTPException ''ContextError
 
 instance IsBaseError ContextError
 
@@ -389,9 +389,9 @@ instance IsBecknAPIError ContextError where
 
 data ExternalAPICallError
   = ExternalAPICallError (Maybe Text) BaseUrl ClientError
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''ExternalAPICallError
+instanceExceptionWithParent 'HTTPException ''ExternalAPICallError
 
 instance IsBaseError ExternalAPICallError where
   toMessage (ExternalAPICallError _ url err) = externalAPICallErrorMessage url err
@@ -411,9 +411,9 @@ externalAPICallErrorMessage baseUrl clientErr =
 
 newtype EmailSendingError
   = EmailSendingError Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''EmailSendingError
+instanceExceptionWithParent 'HTTPException ''EmailSendingError
 
 instance IsBaseError EmailSendingError where
   toMessage (EmailSendingError msg) = Just msg
@@ -425,9 +425,9 @@ instance IsAPIError EmailSendingError
 
 data HealthCheckError
   = ServiceUnavailable
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''HealthCheckError
+instanceExceptionWithParent 'HTTPException ''HealthCheckError
 
 instance IsBaseError HealthCheckError
 
@@ -440,9 +440,9 @@ instance IsAPIError HealthCheckError
 data RouteError
   = RouteRequestError BaseUrl ClientError
   | RouteNotLatLong
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''RouteError
+instanceExceptionWithParent 'HTTPException ''RouteError
 
 instance IsBaseError RouteError where
   toMessage = \case
@@ -458,9 +458,9 @@ instance IsAPIError RouteError
 
 data ServerError
   = ServerUnavailable
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''ServerError
+instanceExceptionWithParent 'HTTPException ''ServerError
 
 instance IsBaseError ServerError where
   toMessage ServerUnavailable = Just "Server is working, but is not available."
@@ -473,9 +473,9 @@ instance IsAPIError ServerError
 
 newtype RedisError
   = RedisError KVDBReply
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''RedisError
+instanceExceptionWithParent 'HTTPException ''RedisError
 
 instance IsBaseError RedisError where
   toMessage = \case
@@ -489,9 +489,9 @@ instance IsHTTPError RedisError where
 instance IsAPIError RedisError
 
 newtype ActionNotSupported = ActionNotSupported Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''ActionNotSupported
+instanceExceptionWithParent 'HTTPException ''ActionNotSupported
 
 instance IsBaseError ActionNotSupported where
   toMessage (ActionNotSupported action) = Just $ "Action " <> action <> " is not supported"
@@ -503,9 +503,9 @@ instance IsHTTPError ActionNotSupported where
 instance IsAPIError ActionNotSupported
 
 newtype SMSError = SMSError Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''SMSError
+instanceExceptionWithParent 'HTTPException ''SMSError
 
 instance IsBaseError SMSError where
   toMessage = \case

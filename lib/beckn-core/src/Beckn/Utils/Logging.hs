@@ -22,8 +22,7 @@ where
 
 import Beckn.Types.Core.Context (Context (transaction_id))
 import qualified Beckn.Types.Core.Migration.Context as M.Context
-import Beckn.Types.Error.BaseError.HTTPError.APIError
-import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
+import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Logging
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
@@ -167,9 +166,9 @@ withTransactionIdLogTagMig req = do
 
 makeLogSomeException :: SomeException -> Text
 makeLogSomeException someExc
-  | Just (APIException err) <- fromException someExc = logHTTPError err
-  | Just (BecknAPIException err) <- fromException someExc = logHTTPError err
-  | Just (BaseException err) <- fromException someExc = show err
+  | Just (HTTPException err) <- fromException someExc = logHTTPError err
+  | Just (BaseException err) <- fromException someExc =
+    fromMaybe (show err) $ toMessage err
   | otherwise = show someExc
   where
     logHTTPError err =

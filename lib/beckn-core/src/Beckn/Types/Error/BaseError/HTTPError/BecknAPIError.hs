@@ -1,22 +1,19 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
   ( module Beckn.Types.Error.BaseError.HTTPError.BecknAPIError,
-    module Beckn.Types.Error.BaseError.HTTPError,
     Error.Error (..),
     Error.ErrorType (..),
   )
 where
 
 import qualified Beckn.Types.Core.Error as Error
-import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Error.BaseError.HTTPError.FromResponse
 import Data.Aeson.Types
 import EulerHS.Prelude hiding (Show, show, (.=))
 import Prelude (Show (..))
 
-class IsHTTPError e => IsBecknAPIError e where
+class IsBecknAPIError e where
   toType :: e -> Error.ErrorType
+  toType _ = Error.INTERNAL_ERROR
 
   toPath :: e -> Maybe Text
   toPath _ = Nothing
@@ -39,28 +36,3 @@ instance ToJSON BecknAPIError where
 
 instance FromResponse BecknAPIError where
   fromResponse = fromJsonResponse
-
-data BecknAPIException = forall e. (Exception e, IsBecknAPIError e) => BecknAPIException e
-
-instance IsBaseError BecknAPIException where
-  toMessage (BecknAPIException e) = toMessage e
-
-instance IsHTTPError BecknAPIException where
-  toErrorCode (BecknAPIException e) = toErrorCode e
-  toHttpCode (BecknAPIException e) = toHttpCode e
-  toCustomHeaders (BecknAPIException e) = toCustomHeaders e
-
-instance Show BecknAPIException where
-  show (BecknAPIException e) = show e
-
-instanceExceptionWithParent 'BaseException ''BecknAPIException
-
-toBecknAPIError :: IsBecknAPIError e => e -> BecknAPIError
-toBecknAPIError e =
-  BecknAPIError
-    Error.Error
-      { _type = toType e,
-        code = toErrorCode e,
-        path = toPath e,
-        message = toMessageIfNotInternal e
-      }

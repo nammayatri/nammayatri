@@ -8,7 +8,6 @@ where
 
 import Beckn.Types.Error
 import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import EulerHS.Prelude
 
 data ErrorCode
@@ -38,9 +37,9 @@ data ErrorCode
   | FMD014
   | FMD015
   | FMD016
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsAPIError)
 
-instanceExceptionWithParent 'BecknAPIException ''ErrorCode
+instanceExceptionWithParent 'HTTPException ''ErrorCode
 
 instance IsBaseError ErrorCode
 
@@ -51,7 +50,7 @@ instance IsHTTPError ErrorCode where
 instance IsBecknAPIError ErrorCode where
   toType _ = DOMAIN_ERROR
 
-data ErrorCodeWithMessage = ErrorCodeWithMessage Text ErrorCode deriving (Show)
+data ErrorCodeWithMessage = ErrorCodeWithMessage Text ErrorCode deriving (Show, IsAPIError)
 
 instance IsBaseError ErrorCodeWithMessage where
   toMessage (ErrorCodeWithMessage msg _) = Just msg
@@ -65,4 +64,4 @@ instance IsBecknAPIError ErrorCodeWithMessage where
   toType (ErrorCodeWithMessage _ e) = toType e
   toPath (ErrorCodeWithMessage _ e) = toPath e
 
-instanceExceptionWithParent 'BecknAPIException ''ErrorCodeWithMessage
+instanceExceptionWithParent 'HTTPException ''ErrorCodeWithMessage

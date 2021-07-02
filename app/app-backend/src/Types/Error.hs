@@ -1,17 +1,17 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Types.Error (module Types.Error) where
 
 import Beckn.Types.Error as Types.Error
 import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Error.BaseError.HTTPError.APIError
 import EulerHS.Prelude
 
 data RatingError
   = InvalidRatingValue
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''RatingError
+instanceExceptionWithParent 'HTTPException ''RatingError
 
 instance IsBaseError RatingError
 
@@ -23,9 +23,9 @@ instance IsAPIError RatingError
 
 newtype ServiceabilityError
   = ProductNotServiceable Text
-  deriving (Eq, Show)
+  deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'APIException ''ServiceabilityError
+instanceExceptionWithParent 'HTTPException ''ServiceabilityError
 
 instance IsBaseError ServiceabilityError where
   toMessage (ProductNotServiceable reason) = Just $ "Requested product is not serviceable " <> reason <> "."
