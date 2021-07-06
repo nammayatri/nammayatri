@@ -155,7 +155,7 @@ data ExotelResponseBody = ExotelResponseBody
 
 $(makeLenses ''ExotelResponseBody)
 
-$(deriveFromJSON (aesonPrefix snakeCase) ''ExotelResponseBody)
+$(deriveFromJSON (aesonPrefix pascalCase) ''ExotelResponseBody)
 
 -- | Exotel response on success
 newtype ExotelResponse = ExotelResponse
@@ -165,4 +165,4 @@ newtype ExotelResponse = ExotelResponse
 
 $(makeLenses ''ExotelResponse)
 
-$(deriveFromJSON (aesonPrefix snakeCase) ''ExotelResponse)
+$(deriveFromJSON (aesonPrefix pascalCase) ''ExotelResponse)
