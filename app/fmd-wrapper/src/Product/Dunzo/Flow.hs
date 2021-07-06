@@ -8,6 +8,7 @@ import Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
+import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
@@ -70,21 +71,30 @@ init org req = do
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   dzBACreds <- getDzBAPCreds org
+  let order = req.message
+  validateOrder order
+
+  let caseId = Id req.context.transaction_id
+  mbCase <- Storage.findById caseId
+  mbCaseValidated <- case mbCase of
+    Nothing -> pure Nothing
+    Just currCase ->
+      if currCase.status == NEW
+        then pure $ Just currCase
+        else throwError (InvalidRequest "Invalid order status.")
+
+  quoteReq <- mkQuoteReqFromInitOrder order
   withCallback INIT InitAPI.onInitAPI context cbUrl $ do
-    let order = req.message
     onInitMessage <-
-      mkQuoteReqFromInitOrder order
-        >>= getQuote dzBACreds conf
-        >>= mkOnInitMessage
-          dzQuotationTTLinMin
-          order
-    createCaseIfNotPresent (getId $ org.id) onInitMessage
+      getQuote dzBACreds conf quoteReq
+        >>= mkOnInitMessage dzQuotationTTLinMin order
+    createOrUpdateCase (getId $ org.id) onInitMessage caseId mbCaseValidated
+
     return $ InitAPI.InitializedObject onInitMessage
   where
-    createCaseIfNotPresent orgId onInitMessage = do
+    createOrUpdateCase orgId onInitMessage caseId mbCaseValidated = do
       now <- getCurrentTime
       order <- mkOrderFromInititialized onInitMessage now
-      let caseId = Id req.context.transaction_id
       let newCase =
             Case
               { id = caseId,
@@ -114,13 +124,14 @@ init org req = do
                 createdAt = now,
                 updatedAt = now
               }
-      mbCase <- Storage.findById caseId
-      case mbCase of
-        Nothing -> Storage.create newCase
-        Just currCase ->
-          if currCase.status == NEW
-            then Storage.update caseId newCase
-            else throwError (InvalidRequest "Invalid order status.")
+      maybe (Storage.create newCase) (const $ Storage.update caseId newCase) mbCaseValidated
+
+    validateOrder order = do
+      void $ order.fulfillment.start & fromMaybeM (InvalidRequest "Pickup location not found.")
+      void $ order.fulfillment.end & fromMaybeM (InvalidRequest "Drop location not found.")
+      void $ getItem order.items
+    getItem [item] = pure item
+    getItem _ = throwError $ InvalidRequest "Exactly 1 order item expected."
 
 confirm ::
   ( DBFlow m r,
@@ -137,7 +148,7 @@ confirm org req = do
   let reqOrder = req.message.order
   whenJust reqOrder.id \_ -> throwError $ InvalidRequest "Order id must not be presented."
   txnId <-
-    reqOrder ^? #payment . #params . _Just . #transaction_id
+    reqOrder ^. #payment . #params . _Just . #transaction_id
       & fromMaybeErr "TXN_ID_NOT_PRESENT" Nothing
   let caseId = context.transaction_id
   mbCase <- Storage.findById $ Id caseId
@@ -147,17 +158,18 @@ confirm org req = do
       initOrder <- case_.udf1 >>= decodeFromText & fromMaybeErr "INIT_ORDER_NOT_FOUND" (Just CORE003)
       validateDelayFromInit dzQuotationTTLinMin case_
       verifyPayment reqOrder initOrder
-      pure $ initOrder & ((#payment . #params . _Just . #transaction_id) .~ txnId)
+      pure $ initOrder & ((#payment . #params . _Just . #transaction_id) ?~ txnId)
   dzBACreds <- getDzBAPCreds org
+  orderId <- generateGUID
+  currTime <- getCurrentTime
+  taskReq <- mkCreateTaskReq orderId order
   withCallback CONFIRM ConfirmAPI.onConfirmAPI context cbUrl $ do
-    taskStatus <- createTaskAPI dzBACreds dconf =<< mkCreateTaskReq order
-    let orderId = taskStatus.task_id.getTaskId
-    currTime <- getCurrentTime
+    taskStatus <- createTaskAPI dzBACreds dconf taskReq
     let uOrder = updateOrder (Just orderId) currTime order taskStatus
     checkAndLogPriceDiff order uOrder
     maybe
-      (createCase uOrder taskStatus currTime)
-      (\c -> updateCase c uOrder taskStatus)
+      (createCase orderId uOrder taskStatus currTime)
+      (\c -> updateCase c orderId uOrder taskStatus)
       mbCase
     return $ API.OrderObject uOrder
   where
@@ -172,14 +184,14 @@ confirm org req = do
         then pass
         else throwError (InvalidRequest "Invalid order amount.")
 
-    createCase order taskStatus now = do
+    createCase orderId order taskStatus now = do
       let caseId = Id req.context.transaction_id
       let case_ =
             Case
               { id = caseId,
                 name = Nothing,
                 description = Nothing,
-                shortId = ShortId taskStatus.task_id.getTaskId,
+                shortId = ShortId orderId,
                 industry = GROCERY,
                 _type = RIDEORDER,
                 exchangeType = ORDER,
@@ -205,12 +217,11 @@ confirm org req = do
               }
       Storage.create case_
 
-    updateCase case_ order taskStatus = do
+    updateCase case_ orderId order taskStatus = do
       let caseId = case_.id
-      let taskId = taskStatus.task_id
       let updatedCase =
             case_
-              { shortId = ShortId taskId.getTaskId,
+              { shortId = ShortId orderId,
                 Case.status = CONFIRMED,
                 udf1 = Just $ encodeToText order,
                 udf2 = Just $ encodeToText taskStatus
@@ -252,11 +263,10 @@ track org req = do
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  withCallback TRACK TrackAPI.onTrackAPI context cbUrl $ do
-    let taskId = getShortId case_.shortId
-    dzBACreds <- getDzBAPCreds org
-    mbTrackingUrl <- getStatus dzBACreds conf (TaskId taskId) <&> (.tracking_url)
-    return $ mkOnTrackMessage mbTrackingUrl
+  let taskId = getShortId case_.shortId
+  dzBACreds <- getDzBAPCreds org
+  withCallback TRACK TrackAPI.onTrackAPI context cbUrl $
+    getStatus dzBACreds conf (TaskId taskId) <&> mkOnTrackMessage . (.tracking_url)
 
 status ::
   ( DBFlow m r,

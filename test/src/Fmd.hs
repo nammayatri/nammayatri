@@ -22,9 +22,8 @@ fmdWrapperBaseUrl =
 buildContext ::
   Action ->
   Text ->
-  Maybe BaseUrl ->
   IO Context
-buildContext act tid bppBaseUrl = do
+buildContext act tid = do
   now <- getCurrentTime
   return
     Context
@@ -36,7 +35,7 @@ buildContext act tid bppBaseUrl = do
         bap_id = fmdTestAppBaseUrl,
         bap_uri = fmdTestAppBaseUrl,
         bpp_id = Nothing,
-        bpp_uri = bppBaseUrl,
+        bpp_uri = Nothing,
         transaction_id = tid,
         message_id = tid, -- FIXME
         timestamp = now,

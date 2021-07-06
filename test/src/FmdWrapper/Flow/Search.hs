@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module FmdWrapper.Search where
+module FmdWrapper.Flow.Search where
 
 import Beckn.Types.Core.Ack
 import Beckn.Utils.Example
@@ -123,7 +123,7 @@ dunzoLocationError ::
   IO ()
 dunzoLocationError pickupGps dropGps check clientEnv callbackData =
   withNewUUID $ \transactionId -> do
-    ctx <- buildContext SEARCH transactionId Nothing
+    ctx <- buildContext SEARCH transactionId
 
     let searchReq =
           buildFMDSearchReq ctx
@@ -144,7 +144,7 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
 successfulSearch :: ClientEnv -> CallbackData -> IO ()
 successfulSearch clientEnv callbackData =
   withNewUUID $ \transactionId -> do
-    ctx <- buildContext SEARCH transactionId Nothing
+    ctx <- buildContext SEARCH transactionId
 
     let searchReq =
           buildFMDSearchReq ctx
@@ -195,7 +195,7 @@ dunzoDifferentCity =
 
 incorrectApiKey :: ClientEnv -> CallbackData -> IO ()
 incorrectApiKey clientEnv _ = do
-  ctx <- buildContext SEARCH "dummy-txn-id" Nothing
+  ctx <- buildContext SEARCH "dummy-txn-id"
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "" searchReq
@@ -203,7 +203,7 @@ incorrectApiKey clientEnv _ = do
 
 incorrectAction :: ClientEnv -> CallbackData -> IO ()
 incorrectAction clientEnv _ = do
-  ctx <- buildContext ON_UPDATE "dummy-txn-id" Nothing
+  ctx <- buildContext ON_UPDATE "dummy-txn-id"
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
@@ -211,7 +211,7 @@ incorrectAction clientEnv _ = do
 
 incorrectCountry :: ClientEnv -> CallbackData -> IO ()
 incorrectCountry clientEnv _ = do
-  ctx <- buildContext SEARCH "dummy-txn-id" Nothing
+  ctx <- buildContext SEARCH "dummy-txn-id"
   let searchReq = buildFMDSearchReq ctx {country = ""}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
@@ -219,7 +219,7 @@ incorrectCountry clientEnv _ = do
 
 incorrectCoreVersion :: ClientEnv -> CallbackData -> IO ()
 incorrectCoreVersion clientEnv _ = do
-  ctx <- buildContext SEARCH "dummy-txn-id" Nothing
+  ctx <- buildContext SEARCH "dummy-txn-id"
   let searchReq = buildFMDSearchReq ctx {core_version = "0.7.0"}
 
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq

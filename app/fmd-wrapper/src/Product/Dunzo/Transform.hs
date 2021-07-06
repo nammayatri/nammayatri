@@ -188,7 +188,7 @@ mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
   now <- getCurrentTime
 
   reqStartInfo <- order.fulfillment.start & fromMaybeM (InvalidRequest "Pickup location not found.")
-  reqEndInfo <- order.fulfillment.start & fromMaybeM (InvalidRequest "Drop location not found.")
+  reqEndInfo <- order.fulfillment.end & fromMaybeM (InvalidRequest "Drop location not found.")
   (startInfo, endInfo) <- updateOrderEta reqStartInfo reqEndInfo now eta
 
   let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
@@ -285,6 +285,7 @@ updateOrder mbOrderId cTime order status = do
     & #state ?~ orderState
     & #updated_at ?~ cTime
     & #payment .~ fromMaybe order.payment mbPayment
+    & #fulfillment . #id ?~ status.task_id.getTaskId
 
 mkOnTrackMessage :: Maybe BaseUrl -> TrackAPI.OnTrackInfo
 mkOnTrackMessage mbTrackingUrl = TrackAPI.OnTrackInfo tracking
@@ -300,9 +301,8 @@ cancelOrder :: Order -> Order
 cancelOrder o =
   o & #state ?~ "CANCELLED"
 
-mkCreateTaskReq :: MonadFlow m => Order -> m CreateTaskReq
-mkCreateTaskReq order = do
-  orderId <- order.id & fromMaybeErr "ORDER_ID_MISSING" (Just CORE003)
+mkCreateTaskReq :: MonadFlow m => Text -> Order -> m CreateTaskReq
+mkCreateTaskReq orderId order = do
   pickUpLoc <- order ^? #fulfillment . #start . _Just . #location . _Just & fromMaybeM (InvalidRequest "Pick up location not specified.")
   deliveryLoc <- order ^? #fulfillment . #end . _Just . #location . _Just & fromMaybeM (InvalidRequest "Delivery location not specified.")
   packageCatId <-
@@ -331,7 +331,7 @@ mkCreateTaskReq order = do
         drop_details = dropDet,
         sender_details = senderDet,
         receiver_details = receiverDet,
-        special_instructions = joinInstructions orderId pickupIntructions dropIntructions,
+        special_instructions = joinInstructions pickupIntructions dropIntructions,
         package_approx_value = Nothing, -- FIXME. Don't know where BAP can specify this in the new spec.
         package_content = [packageContent],
         reference_id = Nothing
@@ -346,6 +346,7 @@ mkCreateTaskReq order = do
       street <- address.street & fromMaybeErr "STREET_NOT_FOUND" (Just CORE003)
       city <- address.city & fromMaybeErr "CITY_NOT_FOUND" (Just CORE003)
       state_ <- address.state & fromMaybeErr "STATE_NOT_FOUND" (Just CORE003)
+      pincode <- address.area_code & fromMaybeErr "AREA_CODE_NOT_FOUND" (Just CORE003)
       country <- address.country & fromMaybeErr "COUNTRY_NOT_FOUND" (Just CORE003)
       return $
         LocationDetails
@@ -359,7 +360,7 @@ mkCreateTaskReq order = do
                   landmark = Nothing,
                   city = Just city,
                   state = state_,
-                  pincode = address.area_code,
+                  pincode = Just pincode,
                   country = Just country
                 }
           }
@@ -378,7 +379,7 @@ mkCreateTaskReq order = do
         >>= (.name)
         >>= Just . ((tag <> ": ") <>)
 
-    joinInstructions orderId pickupInstructions dropInstructions =
+    joinInstructions pickupInstructions dropInstructions =
       let orderMsg = "Order " <> orderId
        in case (pickupInstructions, dropInstructions) of
             (Just pickupInst, Just dropInst) -> Just $ orderMsg <> ": " <> pickupInst <> " and " <> dropInst
@@ -430,7 +431,7 @@ mkPayment estimated_price =
               additional = HMS.empty
             },
       payee = Nothing,
-      _type = Just PRE_FULFILLMENT,
+      _type = Just POST_FULFILLMENT,
       status = Nothing,
       time = Nothing
     }
