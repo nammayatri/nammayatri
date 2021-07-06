@@ -62,7 +62,8 @@ data AppCfg = AppCfg
     graphhopperUrl :: BaseUrl,
     metricsSearchDurationTimeout :: Int,
     graceTerminationPeriod :: Int,
-    registrationHitsOpt :: RegistrationHitsOptions
+    registrationHitsOpt :: RegistrationHitsOptions,
+    httpClientTimoutMs :: Int
   }
   deriving (Generic, FromDhall)
 

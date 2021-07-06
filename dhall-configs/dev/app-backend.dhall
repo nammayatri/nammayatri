@@ -60,7 +60,7 @@ let gwUri = "http://localhost:8015/v1"
 
 let providerUri = "http://localhost:8014/v1"
 
-let registrationHitsOptions = 
+let registrationHitsOptions =
   { limit = +4
   , limitResetTime = +600
   }
@@ -103,4 +103,5 @@ in
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
 , registrationHitsOpt = registrationHitsOptions
+, httpClientTimoutMs = +2000
 }

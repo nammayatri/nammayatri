@@ -47,4 +47,5 @@ in
 , foodAndBeverageCoreVersion = "0.9.1"
 , signatureExpiry = common.signatureExpiry
 , graceTerminationPeriod = +90
+, httpClientTimoutMs = +2000
 }

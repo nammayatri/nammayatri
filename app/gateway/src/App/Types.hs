@@ -32,7 +32,8 @@ data AppCfg = AppCfg
     localRetailCoreVersion :: Text,
     foodAndBeverageCoreVersion :: Text,
     signatureExpiry :: NominalDiffTime,
-    graceTerminationPeriod :: Int
+    graceTerminationPeriod :: Int,
+    httpClientTimoutMs :: Int
   }
   deriving (Generic, FromDhall)
 

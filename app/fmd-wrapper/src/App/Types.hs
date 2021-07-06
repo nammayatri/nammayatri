@@ -36,7 +36,8 @@ data AppCfg = AppCfg
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     signatureExpiry :: NominalDiffTime,
-    graceTerminationPeriod :: Int
+    graceTerminationPeriod :: Int,
+    httpClientTimoutMs :: Int
   }
   deriving (Generic, FromDhall)
 

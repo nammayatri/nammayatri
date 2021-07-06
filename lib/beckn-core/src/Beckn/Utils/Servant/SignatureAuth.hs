@@ -207,10 +207,9 @@ signatureAuthManager ::
   Text ->
   HttpSig.PrivateKey ->
   Text ->
-  IO Http.Manager
-signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueKeyId = do
-  Http.newManager
-    Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
+  Http.ManagerSettings
+signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueKeyId =
+  Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
     doSignature req = do
       now <- L.runIO getPOSIXTime
@@ -290,7 +289,7 @@ prepareAuthManager ::
   r ->
   Text ->
   Text ->
-  Either Text (IO Http.Manager)
+  Either Text Http.ManagerSettings
 prepareAuthManager flowRt appEnv header shortOrgId = do
   let registry = getRegistry appEnv
   let signingKeys = getSigningKeys appEnv
@@ -304,7 +303,7 @@ prepareAuthManager flowRt appEnv header shortOrgId = do
   privateKey <- mPrivateKey & maybeToRight ("Could not decode private key for credential: " <> uniqueKeyId)
   pure $ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header privateKey uniqueKeyId
 
-makeManagerMap :: [String] -> [Http.Manager] -> Map String Http.Manager
+makeManagerMap :: [String] -> [Http.ManagerSettings] -> Map String Http.ManagerSettings
 makeManagerMap managerKeys managers = Map.fromList $ zip managerKeys managers
 
 prepareAuthManagers ::
@@ -312,12 +311,11 @@ prepareAuthManagers ::
   R.FlowRuntime ->
   r ->
   [Text] ->
-  Either Text (IO (Map String Http.Manager))
+  Either Text (Map String Http.ManagerSettings)
 prepareAuthManagers flowRt appEnv allShortIds = do
   let managerKeys = map (\shortId -> signatureAuthManagerKey <> "-" <> T.unpack shortId) allShortIds
-  let managerCreationActionEithers = map (prepareAuthManager flowRt appEnv "Authorization") allShortIds
-  managerCreationActions <- sequence managerCreationActionEithers
-  pure $ makeManagerMap managerKeys <$> sequence managerCreationActions
+  mapM (prepareAuthManager flowRt appEnv "Authorization") allShortIds
+    <&> makeManagerMap managerKeys
 
 instance
   ( S.HasSwagger api,

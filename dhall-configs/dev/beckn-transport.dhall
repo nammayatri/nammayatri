@@ -40,7 +40,7 @@ let smsConfig =
 
 let appUri = "http://localhost:8013/v1"
 
-let registrationHitsOptions = 
+let registrationHitsOptions =
   { limit = +4
   , limitResetTime = +600
   }
@@ -80,4 +80,5 @@ in
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
 , registrationHitsOpt = registrationHitsOptions
+, httpClientTimoutMs = +2000
 }

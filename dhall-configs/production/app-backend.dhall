@@ -17,7 +17,7 @@ let pgcfg =
   , poolConfig = common.defaultPoolConfig
   , schemaName = "atlas_app"
   }
-  
+
 let rcfg =
   { connectHost = "cache.primary.beckn.juspay.net"
   , connectPort = 6379
@@ -61,7 +61,7 @@ let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v1"
 
 let nsdlUrl = "https://gateway-1.beckn.nsdl.co.in"
 
-let registrationHitsOptions = 
+let registrationHitsOptions =
   { limit = +4
   , limitResetTime = +600
   }
@@ -104,4 +104,5 @@ in
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
 , registrationHitsOpt = registrationHitsOptions
+, httpClientTimoutMs = +2000
 }

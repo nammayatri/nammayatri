@@ -7,10 +7,13 @@ import Beckn.Types.Error.FromResponse
 import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Logging
 import qualified Data.Aeson as A
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as ET
+import qualified Network.HTTP.Client as Http
+import qualified Network.HTTP.Client.TLS as Http
 import qualified Servant.Client as S
 import Servant.Client.Core
 
@@ -38,7 +41,8 @@ callAPI' ::
 callAPI' mbManagerSelector baseUrl eulerClient desc =
   withLogTag "callAPI" $ do
     endTracking <- Metrics.startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc
-    res <- L.callAPI' mbManagerSelector baseUrl eulerClient
+    let managerSelector = fromMaybe defaultHttpManager mbManagerSelector
+    res <- L.callAPI' (Just managerSelector) baseUrl eulerClient
     case res of
       Right r -> logDebug $ "Ok response: " <> decodeUtf8 (A.encode r)
       Left err -> logDebug $ "Error occured during client call: " <> show err
@@ -79,3 +83,16 @@ callApiUnwrappingApiError ::
 callApiUnwrappingApiError toAPIException mbManagerSelector errorCodeMb baseUrl eulerClient desc =
   callApiExtractingApiError mbManagerSelector baseUrl eulerClient desc
     >>= unwrapEitherCallAPIError errorCodeMb baseUrl toAPIException
+
+defaultHttpManager :: String
+defaultHttpManager = "default"
+
+setResponseTimeout :: Int -> Http.ManagerSettings -> Http.ManagerSettings
+setResponseTimeout timeout settings =
+  settings {Http.managerResponseTimeout = Http.responseTimeoutMicro (timeout * 1000)}
+
+createManagers :: Int -> Map String Http.ManagerSettings -> IO (Map String Http.Manager)
+createManagers timeout =
+  mapM Http.newManager
+    . fmap (setResponseTimeout timeout)
+    . Map.insert defaultHttpManager Http.tlsManagerSettings

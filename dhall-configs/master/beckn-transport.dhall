@@ -42,7 +42,7 @@ let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v1"
 
 let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 
-let registrationHitsOptions = 
+let registrationHitsOptions =
   { limit = +4
   , limitResetTime = +600
   }
@@ -82,4 +82,5 @@ in
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
 , registrationHitsOpt = registrationHitsOptions
+, httpClientTimoutMs = +2000
 }

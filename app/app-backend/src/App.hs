@@ -49,10 +49,12 @@ runAppBackend' appCfg = do
       withLogTag "Server startup" $ do
         logInfo "Setting up for signature auth..."
         let shortOrgId = appCfg.bapSelfId
-        getManager <-
+        authManager <-
           prepareAuthManager flowRt appEnv "Authorization" shortOrgId
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
-        authManager <- L.runIO getManager
+        managers <-
+          L.runIO . createManagers appCfg.httpClientTimoutMs $
+            Map.singleton signatureAuthManagerKey authManager
         logInfo "Initializing DB Connections..."
         _ <- prepareDBConnections >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
         logInfo "Initializing Redis Connections..."
@@ -61,5 +63,5 @@ runAppBackend' appCfg = do
         migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
-        return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+        return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)

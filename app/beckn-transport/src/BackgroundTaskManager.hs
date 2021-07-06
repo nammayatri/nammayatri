@@ -50,13 +50,13 @@ runBackgroundTaskManager configModifier = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map (getShortId . Organization.shortId) allProviders
-        getManagers <-
+        managersSettings <-
           prepareAuthManagers flowRt btmEnv allShortIds
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
-        managerMap <- L.runIO getManagers
-        logInfo ("Loaded http managers - " <> show (keys managerMap))
+        managers <- L.runIO $ createManagers appCfg.httpClientTimoutMs managersSettings
+        logInfo ("Loaded http managers - " <> show (keys managers))
         logInfo $ "Starting Background Task Manager on port " <> show port
-        return $ flowRt {R._httpClientManagers = managerMap}
+        return $ flowRt {R._httpClientManagers = managers}
     let settings =
           defaultSettings
             & setGracefulShutdownTimeout (Just $ appCfg.graceTerminationPeriod)

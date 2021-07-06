@@ -53,16 +53,16 @@ runTransporterBackendApp' appCfg = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map (getShortId . Organization.shortId) allProviders
-        getManagers <-
+        managersSettings <-
           prepareAuthManagers flowRt appEnv allShortIds
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
-        managerMap <- L.runIO getManagers
-        logInfo $ "Loaded http managers - " <> show (keys managerMap)
+        managers <- L.runIO $ createManagers appCfg.httpClientTimoutMs managersSettings
+        logInfo $ "Loaded http managers - " <> show (keys managers)
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
         migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
-        return $ flowRt {R._httpClientManagers = managerMap}
+        return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)

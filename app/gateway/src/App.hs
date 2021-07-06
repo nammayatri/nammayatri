@@ -56,10 +56,12 @@ runGateway configModifier = do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         let shortOrgId = appEnv.gwId
-        getManager <-
+        authManager <-
           handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: " $
             prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId
-        authManager <- L.runIO getManager
+        managers <-
+          L.runIO . createManagers appCfg.httpClientTimoutMs $
+            Map.singleton signatureAuthManagerKey authManager
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
@@ -69,5 +71,5 @@ runGateway configModifier = do
         migrateIfNeeded migrationPath dbCfg autoMigrate
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show port)
-        return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+        return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ run (App.EnvR flowRt' appEnv)

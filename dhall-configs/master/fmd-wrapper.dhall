@@ -55,4 +55,5 @@ in
 , signatureExpiry = common.signatureExpiry
 , selfId = "JUSPAY.DUNZO.FMD.BPP.DEV"
 , graceTerminationPeriod = +90
+, httpClientTimoutMs = +2000
 }

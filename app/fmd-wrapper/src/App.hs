@@ -44,14 +44,16 @@ runFMDWrapper configModifier = do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         let shortOrgId = appCfg.selfId
-        getManager <-
+        authManager <-
           prepareAuthManager flowRt appEnv "Authorization" shortOrgId
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
-        authManager <- L.runIO getManager
+        managers <-
+          L.runIO . createManagers appCfg.httpClientTimoutMs $
+            Map.singleton signatureAuthManagerKey authManager
         try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
         migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
-        return $ flowRt {R._httpClientManagers = Map.singleton signatureAuthManagerKey authManager}
+        return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ run $ App.EnvR flowRt' appEnv

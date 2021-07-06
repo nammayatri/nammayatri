@@ -56,4 +56,5 @@ in
 , signatureExpiry = common.signatureExpiry
 , selfId = "JUSPAY.FMD.UAT.1"
 , graceTerminationPeriod = +90
+, httpClientTimoutMs = +2000
 }
