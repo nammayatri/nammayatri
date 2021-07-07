@@ -13,11 +13,6 @@ import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Track as API
 import Beckn.Types.Id
-import Beckn.Types.Storage.Case
-import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Types.Storage.Person as SP
-import Beckn.Types.Storage.ProductInstance
-import Beckn.Types.Storage.Vehicle
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
@@ -53,7 +48,12 @@ import qualified Types.API.Ride as RideAPI
 import Types.API.Transporter
 import Types.API.Vehicle
 import Types.App (Ride)
-import Utils.Auth (AdminTokenAuth, DriverTokenAuth, TokenAuth)
+import Types.Storage.Case
+import Types.Storage.Organization (Organization)
+import Types.Storage.Person as SP
+import Types.Storage.ProductInstance
+import Types.Storage.Vehicle
+import Utils.Auth (AdminTokenAuth, DriverTokenAuth, LookupRegistryOrg, TokenAuth)
 
 type TransportAPI =
   "v1"
@@ -284,23 +284,23 @@ transporterServer =
 
 type OrgBecknAPI =
   Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistry
-    :> SignatureAuth "Proxy-Authorization" LookupRegistry
+    :> SignatureAuth "Authorization" LookupRegistryOrg
+    :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
     :> API.SearchAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistry
+    :> SignatureAuth "Authorization" LookupRegistryOrg
     :> API.ConfirmAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistry
+    :> SignatureAuth "Authorization" LookupRegistryOrg
     :> API.CancelAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistry
+    :> SignatureAuth "Authorization" LookupRegistryOrg
     :> API.StatusAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistry
+    :> SignatureAuth "Authorization" LookupRegistryOrg
     :> API.TrackAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistry
+    :> SignatureAuth "Authorization" LookupRegistryOrg
     :> API.FeedbackAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI

@@ -7,7 +7,6 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Error.API (RedisError (..))
 import Beckn.Types.Id
-import Beckn.Types.Storage.Organization
 import qualified Beckn.Utils.Logging as Log
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import Control.Monad.Catch (Handler (..), catches)
@@ -18,6 +17,7 @@ import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
 import Types.Metrics (BTMMetrics, CoreMetrics)
 import Types.ShardMappingError
+import Types.Storage.Organization
 import Utils.Common
 
 handle ::

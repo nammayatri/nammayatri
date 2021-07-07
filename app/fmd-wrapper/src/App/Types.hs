@@ -58,7 +58,7 @@ data AppEnv = AppEnv
   }
   deriving (Generic)
 
-instance HasLookupAction LookupRegistry (FlowR AppEnv) where
+instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
   runLookup = lookup
 
 buildAppEnv :: AppCfg -> IO AppEnv

@@ -6,9 +6,6 @@ module Product.FareCalculator.Flow where
 import Beckn.Types.Amount (Amount (..))
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
-import qualified Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time
   ( LocalTime (localTimeOfDay),
     UTCTime,
@@ -19,6 +16,9 @@ import Data.Time
 import EulerHS.Prelude
 import Types.Domain.FarePolicy (FarePolicy)
 import Types.Error
+import qualified Types.Storage.Location as Location
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
 newtype PickupLocation = PickupLocation {getPickupLocation :: Location.Location}

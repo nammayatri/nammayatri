@@ -1,9 +1,9 @@
 module Types.API.Location where
 
 import qualified Beckn.Types.MapSearch as MapSearch
-import qualified Beckn.Types.Storage.Location as SL
 import Data.Swagger
 import EulerHS.Prelude hiding (state)
+import qualified Types.Storage.Location as SL
 
 data LocationInfo = LocationInfo
   { locationType :: Maybe SL.LocationType,

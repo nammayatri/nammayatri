@@ -3,8 +3,6 @@
 module Flow.Allocation where
 
 import Beckn.Types.Id
-import Beckn.Types.Storage.Organization
-import Beckn.Types.Storage.Person
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
@@ -17,6 +15,8 @@ import Test.Tasty.HUnit
 import qualified Types.API.Ride as Ride
 import Types.App
 import Types.Metrics
+import Types.Storage.Organization
+import Types.Storage.Person
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.SilentLogger ()

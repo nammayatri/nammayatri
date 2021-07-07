@@ -2,9 +2,6 @@ module Utils.Auth where
 
 import Beckn.Types.App
 import Beckn.Types.Id
-import Beckn.Types.Storage.Organization (Organization)
-import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.Common as CoreCommon
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
@@ -16,6 +13,9 @@ import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.Error
+import Types.Storage.Organization (Organization)
+import qualified Types.Storage.Person as SP
+import qualified Types.Storage.RegistrationToken as SR
 
 -- | TODO: Perform some API key verification.
 data VerifyAPIKey = VerifyAPIKey
@@ -26,10 +26,12 @@ instance VerificationMethod VerifyAPIKey where
     "Checks whether app/gateway is registered.\
     \If you don't have an API key, register the app/gateway."
 
+type LookupRegistryOrg = LookupRegistry Organization
+
 verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM OrgNotFound
 
-lookup :: (DBFlow m r, AuthenticatingEntity r) => LookupAction LookupRegistry m
+lookup :: (DBFlow m r, AuthenticatingEntity r) => LookupAction LookupRegistryOrg m
 lookup = lookupRegistryAction Org.findOrganizationByShortId
 
 getHttpManagerKey :: Text -> String

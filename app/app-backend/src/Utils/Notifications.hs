@@ -2,15 +2,11 @@
 
 module Utils.Notifications where
 
-import Beckn.External.FCM.Flow
+import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Order (CancellationReason (..))
-import Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.Person as Person
-import Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.RegistrationToken as RegToken
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -19,6 +15,10 @@ import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
+import Types.Storage.Case as Case
+import Types.Storage.Person as Person
+import Types.Storage.ProductInstance as ProductInstance
+import Types.Storage.RegistrationToken as RegToken
 import Utils.Common
 
 -- Note:
@@ -63,7 +63,7 @@ notifyOnStatusUpdate prodInst piStatus =
                         fcmShowNotification = FCM.SHOW,
                         fcmEntityType = FCM.Product,
                         fcmEntityIds = show $ getId productInstanceId,
-                        fcmNotificationJSON = createAndroidNotification title body FCM.CANCELLED_PRODUCT
+                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CANCELLED_PRODUCT
                       }
                   title = FCMNotificationTitle $ T.pack "Ride cancelled!"
                   providerName = info ^. #provider . _Just . #name . _Just
@@ -83,7 +83,7 @@ notifyOnStatusUpdate prodInst piStatus =
                         fcmShowNotification = FCM.SHOW,
                         fcmEntityType = FCM.Product,
                         fcmEntityIds = show $ getId productInstanceId,
-                        fcmNotificationJSON = createAndroidNotification title body FCM.TRIP_STARTED
+                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_STARTED
                       }
                   title = FCMNotificationTitle $ T.pack "Trip started!"
                   driverName = info ^. #tracker . _Just . #trip . #driver . _Just . #name
@@ -101,7 +101,7 @@ notifyOnStatusUpdate prodInst piStatus =
                         fcmShowNotification = FCM.SHOW,
                         fcmEntityType = FCM.Product,
                         fcmEntityIds = show $ getId productInstanceId,
-                        fcmNotificationJSON = createAndroidNotification title body FCM.TRIP_FINISHED
+                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_FINISHED
                       }
                   title = FCMNotificationTitle $ T.pack "Trip finished!"
                   driverName = info ^. #tracker . _Just . #trip . #driver . _Just . #name
@@ -119,7 +119,7 @@ notifyOnStatusUpdate prodInst piStatus =
                         fcmShowNotification = FCM.SHOW,
                         fcmEntityType = FCM.Product,
                         fcmEntityIds = show $ getId productInstanceId,
-                        fcmNotificationJSON = createAndroidNotification title body FCM.DRIVER_UNASSIGNED
+                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_UNASSIGNED
                       }
                   title = FCMNotificationTitle $ T.pack "Assigning another driver for the ride!"
                   body =
@@ -134,7 +134,7 @@ notifyOnStatusUpdate prodInst piStatus =
                         fcmShowNotification = FCM.SHOW,
                         fcmEntityType = FCM.Product,
                         fcmEntityIds = show $ getId productInstanceId,
-                        fcmNotificationJSON = createAndroidNotification title body FCM.DRIVER_ASSIGNMENT
+                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ASSIGNMENT
                       }
                   title = FCMNotificationTitle $ T.pack "Driver assigned!"
                   driverName = info ^. #tracker . _Just . #trip . #driver . _Just . #name
@@ -170,7 +170,7 @@ notifyOnExpiration caseObj = do
                     fcmShowNotification = FCM.SHOW,
                     fcmEntityType = FCM.Case,
                     fcmEntityIds = show $ getId caseId,
-                    fcmNotificationJSON = createAndroidNotification title body FCM.EXPIRED_CASE
+                    fcmNotificationJSON = FCM.createAndroidNotification title body FCM.EXPIRED_CASE
                   }
               title = FCMNotificationTitle $ T.pack "Ride expired!"
               body =
@@ -198,7 +198,7 @@ notifyOnRegistration regToken person =
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Organization,
             fcmEntityIds = show tokenId,
-            fcmNotificationJSON = createAndroidNotification title body FCM.REGISTRATION_APPROVED
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED
           }
       title = FCMNotificationTitle $ T.pack "Registration Completed!"
       body =
@@ -250,7 +250,7 @@ notifyOnTrackCb personId tracker c =
                     fcmShowNotification = FCM.SHOW,
                     fcmEntityType = FCM.Case,
                     fcmEntityIds = show caseId,
-                    fcmNotificationJSON = createAndroidNotification title body FCM.TRACKING_CALLBACK
+                    fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRACKING_CALLBACK
                   }
           notifyPerson notificationData p
         _ -> pure ()
@@ -267,7 +267,7 @@ notifyOnCancel rideSearchPI person reason = do
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
           fcmEntityIds = show $ getId rideSearchPI.caseId,
-          fcmNotificationJSON = createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
+          fcmNotificationJSON = FCM.createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     body orgName =
@@ -306,3 +306,13 @@ notifyOnCancel rideSearchPI person reason = do
             "has been cancelled as there are no drivers nearby.",
             "Please try again in sometime."
           ]
+
+notifyPerson ::
+  ( CoreMetrics m,
+    FCMFlow m r
+  ) =>
+  FCMAndroidData ->
+  Person ->
+  m ()
+notifyPerson d person =
+  FCM.notifyPerson d $ FCMNotificationRecipient person.id.getId person.deviceToken

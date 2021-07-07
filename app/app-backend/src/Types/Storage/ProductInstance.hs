@@ -1,16 +1,11 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.ProductInstance where
+module Types.Storage.ProductInstance where
 
 import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Loc
-import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Types.Storage.Person (Person)
-import Beckn.Types.Storage.Products (Products)
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -23,6 +18,11 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Location as Loc
+import qualified Types.Storage.Organization as Org
+import Types.Storage.Person (Person)
+import Types.Storage.Products (Products)
 
 -- TODO: INVALID status seems to be unused
 data ProductInstanceStatus

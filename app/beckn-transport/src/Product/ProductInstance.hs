@@ -6,13 +6,6 @@ import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Order (CancellationReason (..))
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Loc
-import qualified Beckn.Types.Storage.Organization as SO
-import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.ProductInstance as PI
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Types.Storage.Vehicle as V
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Allocation as AQ
@@ -27,6 +20,13 @@ import Types.API.ProductInstance
 import Types.App
 import Types.Error
 import Types.Metrics (CoreMetrics)
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Location as Loc
+import qualified Types.Storage.Organization as SO
+import qualified Types.Storage.Person as SP
+import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.RegistrationToken as SR
+import qualified Types.Storage.Vehicle as V
 import Utils.Common
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify

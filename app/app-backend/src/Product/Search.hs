@@ -15,12 +15,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Mobility.Catalog as BM
 import Beckn.Types.Mobility.Stop as BS
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Organization as Org
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as PI
-import qualified Beckn.Types.Storage.Products as Products
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
@@ -46,6 +40,12 @@ import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Metrics as Metrics
 import Types.ProductInfo
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Location as Location
+import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.Products as Products
 import Utils.Common
 
 search :: Person.Person -> API.SearchReq -> FlowHandler API.SearchRes

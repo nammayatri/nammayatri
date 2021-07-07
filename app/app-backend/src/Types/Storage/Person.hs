@@ -3,13 +3,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.Person where
+module Types.Storage.Person where
 
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Location as Loc
-import qualified Beckn.Types.Storage.Organization as Org
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger hiding (description, email)
@@ -21,6 +19,8 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
+import qualified Types.Storage.Location as Loc
+import qualified Types.Storage.Organization as Org
 
 data Status = ACTIVE | INACTIVE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

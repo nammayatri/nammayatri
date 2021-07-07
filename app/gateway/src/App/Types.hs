@@ -13,6 +13,7 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Storage.Queries.Organization (findOrgByShortId)
 import Types.Metrics
+import Types.Storage.Organization (Organization)
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -82,5 +83,5 @@ instance AuthenticatingEntity AppEnv where
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
 
-instance HasLookupAction LookupRegistry (FlowR AppEnv) where
+instance HasLookupAction (LookupRegistry Organization) (FlowR AppEnv) where
   runLookup = lookupRegistryAction findOrgByShortId

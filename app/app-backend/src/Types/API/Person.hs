@@ -2,8 +2,8 @@ module Types.API.Person where
 
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Person as SPerson
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.Person as SPerson
 
 data GetPersonDetailsRes = GetPersonDetailsRes
   { id :: Id SPerson.Person,

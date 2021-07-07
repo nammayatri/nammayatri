@@ -1,12 +1,12 @@
 module Types.API.ProductInstance where
 
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Loc
-import Beckn.Types.Storage.ProductInstance
-import qualified Beckn.Types.Storage.Products as Product
 import Beckn.Utils.JSON
 import Data.Swagger
 import EulerHS.Prelude hiding (product)
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Location as Loc
+import Types.Storage.ProductInstance
+import qualified Types.Storage.Products as Product
 
 data ProductInstanceRes = ProductInstanceRes
   { _case :: Case.Case,

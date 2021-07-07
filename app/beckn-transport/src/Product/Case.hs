@@ -3,10 +3,6 @@ module Product.Case where
 import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.Location as Location
-import Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Case as Case
 import Storage.Queries.Location as LQ
@@ -14,6 +10,10 @@ import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import Types.API.Case
 import Types.Error
+import Types.Storage.Case as Case
+import Types.Storage.Location as Location
+import Types.Storage.Organization as Organization
+import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common
 import qualified Utils.Defaults as Default
 

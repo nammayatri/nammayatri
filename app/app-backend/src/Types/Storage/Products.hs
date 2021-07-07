@@ -1,11 +1,10 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.Products where
+module Types.Storage.Products where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -18,6 +17,7 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
+import qualified Types.Storage.Case as Case
 
 data ProductsType = RIDE | PASS
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)

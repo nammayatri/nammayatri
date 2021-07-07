@@ -6,8 +6,6 @@ import Beckn.Types.Core.API.Call as API
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Error
 import Beckn.Types.Id
-import Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
 import qualified Beckn.Utils.Error.BecknAPIError as Beckn
 import Control.Arrow ((>>>))
@@ -18,6 +16,8 @@ import Storage.Queries.Case as Case
 import Storage.Queries.Organization as Org
 import Types.Error
 import Types.Metrics (CoreMetrics)
+import Types.Storage.Case as Case
+import Types.Storage.Organization as Org
 import Utils.Auth
 import Utils.Common
 

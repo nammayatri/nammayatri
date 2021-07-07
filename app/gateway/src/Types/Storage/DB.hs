@@ -2,10 +2,10 @@
 
 module Types.Storage.DB where
 
-import qualified Beckn.Types.Storage.Organization as Organization
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.Organization as Organization
 
 newtype AppDb f = AppDb
   { organization :: f (B.TableEntity Organization.OrganizationT)

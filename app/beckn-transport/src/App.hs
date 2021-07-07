@@ -8,7 +8,6 @@ import Beckn.Exit
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
@@ -26,6 +25,7 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.Queries.Organization as Storage
 import System.Environment
+import qualified Types.Storage.Organization as Organization
 import Utils.Common
 
 runTransporterBackendApp :: (AppCfg -> AppCfg) -> IO ()

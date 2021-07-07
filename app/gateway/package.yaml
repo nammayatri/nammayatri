@@ -90,6 +90,8 @@ library:
     - wai
     - wai-extra
     - warp
+    - servant
+    - postgresql-simple
 
 executables:
   beckn-gateway-exe:

@@ -11,14 +11,14 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Issue as SIssue
-import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Validation (runRequestValidation)
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length)
 import qualified Storage.Queries.Issues as Queries
 import Types.API.Support as Support
+import qualified Types.Storage.Issue as SIssue
+import Types.Storage.Person as Person
 import Utils.Common
 import qualified Utils.SES as SES
 

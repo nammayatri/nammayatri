@@ -2,11 +2,11 @@ module Fixtures.ProductInstance where
 
 import qualified Beckn.Types.Amount as Amount
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Data.Ratio ((%))
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.ProductInstance as ProductInstance
 
 defaultProductInstance :: ProductInstance.ProductInstance
 defaultProductInstance =

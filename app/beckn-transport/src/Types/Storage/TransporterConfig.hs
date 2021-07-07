@@ -6,12 +6,12 @@
 module Types.Storage.TransporterConfig where
 
 import Beckn.Types.Id
-import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.JSON
 import Beckn.Utils.TH
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import Types.Storage.Organization (Organization)
 
 data TransporterConfigT f = TransporterConfig
   { id :: B.C f (Id TransporterParameter),

@@ -11,10 +11,6 @@ import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Tag as Tag
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Stop as Stop
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Organization as Org
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List as List
 import qualified Data.Text as T
@@ -36,6 +32,10 @@ import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
 import Types.Error
 import Types.Metrics (CoreMetrics)
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Location as Location
+import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.ProductInstance as ProductInstance
 import Utils.Common
 
 search ::

@@ -3,14 +3,14 @@ module Product.Products where
 import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Products as Product
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Storage.Queries.Products as PQ
 import qualified Test.RandomStrings as RS
 import Types.API.Products
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Products as Product
 import Utils.Common (withFlowHandlerAPI)
 
 createProduct :: Text -> CreateProdReq -> FlowHandler ProdRes

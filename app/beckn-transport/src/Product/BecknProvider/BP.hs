@@ -24,10 +24,6 @@ import Beckn.Types.Mobility.Order (CancellationReason (..))
 import Beckn.Types.Mobility.Payload (Payload (..))
 import Beckn.Types.Mobility.Trip (Trip (..))
 import qualified Beckn.Types.Mobility.Vehicle as BVehicle
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import Data.Time (UTCTime)
@@ -48,6 +44,10 @@ import qualified Test.RandomStrings as RS
 import Types.App (Ride)
 import Types.Error
 import Types.Metrics (CoreMetrics)
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RideRequest as SRideRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify

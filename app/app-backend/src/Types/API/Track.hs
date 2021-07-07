@@ -2,8 +2,8 @@ module Types.API.Track where
 
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
-import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import EulerHS.Prelude
+import Types.Storage.ProductInstance (ProductInstance)
 
 newtype TrackTripReq = TrackTripReq
   { rideId :: Id ProductInstance

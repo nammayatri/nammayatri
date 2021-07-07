@@ -2,18 +2,18 @@
 
 module Types.Storage.DB where
 
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Geometry as Geometry
-import qualified Beckn.Types.Storage.Issue as Issue
-import qualified Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.Products as Products
-import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Geometry as Geometry
+import qualified Types.Storage.Issue as Issue
+import qualified Types.Storage.Location as Location
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Products as Products
+import qualified Types.Storage.RegistrationToken as RegistrationToken
 
 data AppDb f = AppDb
   { organization :: f (B.TableEntity Organization.OrganizationT),

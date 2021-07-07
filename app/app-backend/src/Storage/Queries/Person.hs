@@ -7,15 +7,15 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import Beckn.Types.Storage.Organization (Organization)
-import qualified Beckn.Types.Storage.Organization as Org
-import qualified Beckn.Types.Storage.Person as Storage
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
+import Types.Storage.Organization (Organization)
+import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.Person as Storage
 
 getDbTable ::
   (Functor m, HasSchemaName m) =>

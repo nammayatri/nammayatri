@@ -4,11 +4,11 @@ import Beckn.Storage.DB.Config
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import Beckn.Types.Storage.Organization (Organization)
 import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
+import Types.Storage.Organization (Organization)
 import qualified Types.Storage.TransporterConfig as TransporterConfig
 
 getDbTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity TransporterConfig.TransporterConfigT))

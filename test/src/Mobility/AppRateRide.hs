@@ -3,8 +3,6 @@
 module Mobility.AppRateRide where
 
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude hiding (pi)
@@ -24,6 +22,9 @@ import Servant.Client
   )
 import Test.Hspec (Spec, describe, it, runIO, shouldBe, shouldSatisfy)
 import qualified "beckn-transport" Types.API.Ride as RideAPI
+import qualified "beckn-transport" Types.Storage.Case as TCase
+import qualified "app-backend" Types.Storage.ProductInstance as BPI
+import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
 import Utils (poll, runClient)
 
 spec :: Spec
@@ -54,7 +55,7 @@ spec = do
         statusResult `shouldSatisfy` isRight
         let Right statusResponse = statusResult
         pure . nonEmpty . filter (\p -> p.organizationId == Id F.bppTransporterOrgId) $ statusResponse.productInstance
-      let appProductInstanceId = productInstance.id
+      let appProductInstanceId = cast productInstance.id
       confirmResult <-
         runClient appClient
           . F.appConfirmRide F.appRegistrationToken
@@ -62,7 +63,7 @@ spec = do
       confirmResult `shouldSatisfy` isRight
 
       transporterOrder :| [] <- poll $ do
-        rideRequestResponse <- runClient transporterClient $ F.buildOrgRideReq PI.CONFIRMED Case.RIDEORDER
+        rideRequestResponse <- runClient transporterClient $ F.buildOrgRideReq TPI.CONFIRMED TCase.RIDEORDER
         rideRequestResponse `shouldSatisfy` isRight
         let Right rideResponse = rideRequestResponse
         let orders =
@@ -88,14 +89,14 @@ spec = do
       driverAcceptRideRequestResult `shouldSatisfy` isRight
 
       tripAssignedPI :| [] <- poll $ do
-        rideRequestRes <- runClient transporterClient $ F.buildOrgRideReq PI.TRIP_ASSIGNED Case.RIDEORDER
+        rideRequestRes <- runClient transporterClient $ F.buildOrgRideReq TPI.TRIP_ASSIGNED TCase.RIDEORDER
         rideRequestRes `shouldSatisfy` isRight
         let Right rideResponse = rideRequestRes
         let orders =
               rideResponse ^.. traverse . #productInstance
                 & filter \pi -> pi.parentId == Just appProductInstanceId
         return $ nonEmpty orders
-      tripAssignedPI.status `shouldBe` PI.TRIP_ASSIGNED
+      tripAssignedPI.status `shouldBe` TPI.TRIP_ASSIGNED
 
       -- Update RIDEORDER PI to INPROGRESS once driver starts his trip
       inProgressStatusResult <-
@@ -104,7 +105,7 @@ spec = do
           $ F.rideStart F.driverToken transporterOrderId (F.buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrder.udf4)
       inProgressStatusResult `shouldSatisfy` isRight
 
-      inprogressPiListResult <- runClient appClient (F.buildListPIs PI.INPROGRESS)
+      inprogressPiListResult <- runClient appClient (F.buildListPIs BPI.INPROGRESS)
       inprogressPiListResult `shouldSatisfy` isRight
 
       completeStatusResult <-
@@ -113,7 +114,7 @@ spec = do
           $ F.rideEnd F.driverToken transporterOrderId
       completeStatusResult `shouldSatisfy` isRight
 
-      appPiListResult <- runClient appClient $ F.buildListPIs PI.COMPLETED
+      appPiListResult <- runClient appClient $ F.buildListPIs BPI.COMPLETED
       appPiListResult `shouldSatisfy` isRight
 
       appFeedbackResult <-

@@ -5,14 +5,14 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import Beckn.Types.Storage.Person (Person)
-import qualified Beckn.Types.Storage.ProductInstance as PI
-import qualified Beckn.Types.Storage.Rating as Storage
 import Database.Beam (SqlEq ((==.)), (<-.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.ProductInstance as PI
 import qualified Types.Storage.DB as DB
+import Types.Storage.Person (Person)
+import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.Rating as Storage
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RatingT))
 getDbTable =

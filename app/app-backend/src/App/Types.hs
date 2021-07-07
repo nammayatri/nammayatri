@@ -126,7 +126,7 @@ instance AuthenticatingEntity AppEnv where
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
 
-instance HasLookupAction LookupRegistry (FlowR AppEnv) where
+instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
   runLookup = lookup
 
 instance BAPMetrics (FlowR AppEnv) where

@@ -19,14 +19,14 @@ import Beckn.Types.Mobility.Driver as Mobility
 import Beckn.Types.Mobility.Order as Mobility
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
-import Beckn.Types.Storage.Case
-import Beckn.Types.Storage.Organization as Organization
-import Beckn.Types.Storage.Person as Person
-import Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Text as T
 import EulerHS.Prelude
 import Types.API.Case
+import Types.Storage.Case
+import Types.Storage.Organization as Organization
+import Types.Storage.Person as Person
+import Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Vehicle as Vehicle
 
 mkCatalog :: DBFlow m r => Case -> [ProductInstance] -> ProviderInfo -> m Mobility.Catalog
 mkCatalog c prodInsts provider =

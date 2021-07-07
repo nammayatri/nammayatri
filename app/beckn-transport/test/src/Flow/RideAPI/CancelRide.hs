@@ -2,8 +2,6 @@ module Flow.RideAPI.CancelRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import Control.Monad.Identity
 import EulerHS.Prelude
 import qualified Fixtures
@@ -14,6 +12,8 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App
 import Types.Error
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as ProductInstance
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 

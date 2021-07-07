@@ -2,7 +2,6 @@ module Product.APIMapper where
 
 import App.Types
 import Beckn.Product.Validation.Context
-import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
@@ -17,6 +16,7 @@ import Types.Beckn.API.Update (UpdateInfo)
 import Types.Beckn.Context
 import qualified Types.Beckn.Domain as Domain
 import Types.Error
+import Types.Storage.Organization (Organization)
 import Utils.Common
 
 -- TODO: add switching logic to figure out the client instance

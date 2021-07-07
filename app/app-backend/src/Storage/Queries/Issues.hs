@@ -4,10 +4,10 @@ import qualified Beckn.Storage.Common as Storage
 import Beckn.Storage.DB.Config
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Schema
-import qualified Beckn.Types.Storage.Issue as Issue
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Issue as Issue
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Issue.IssueT))
 getDbTable =

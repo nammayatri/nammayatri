@@ -7,9 +7,6 @@ import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
-import qualified Beckn.Types.Storage.Location as SL
-import qualified Beckn.Types.Storage.Organization as Org
-import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Utils.JSON
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
@@ -23,6 +20,9 @@ import Servant.API
 import qualified Storage.Queries.Location as QL
 import Types.API.Registration
 import Types.Error
+import qualified Types.Storage.Location as SL
+import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.Person as SP
 import Utils.Common
 
 data EntityType = VEHICLE | PASS | TICKET

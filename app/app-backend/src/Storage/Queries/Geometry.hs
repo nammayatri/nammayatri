@@ -2,7 +2,6 @@ module Storage.Queries.Geometry where
 
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Schema
-import Beckn.Types.Storage.Geometry as Storage
 import Beckn.Utils.Common
 import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
@@ -10,6 +9,7 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Types.Common
 import qualified Types.Storage.DB as DB
+import Types.Storage.Geometry as Storage
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.GeometryT))
 getDbTable =

@@ -4,8 +4,6 @@ import App.BackgroundTaskManager.Types (DriverAllocationConfig)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Order (CancellationReason (..))
-import Beckn.Types.Storage.Organization
-import qualified Beckn.Types.Storage.ProductInstance as PI
 import Data.Time (NominalDiffTime, UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
@@ -25,6 +23,8 @@ import Types.Metrics (CoreMetrics)
 import Types.Storage.AllocationEvent (AllocationEventType)
 import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
+import Types.Storage.Organization
+import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.Notifications

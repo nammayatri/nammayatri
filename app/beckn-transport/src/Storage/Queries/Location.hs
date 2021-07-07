@@ -8,12 +8,12 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import qualified Beckn.Types.Storage.Location as Storage
 import Beckn.Utils.Common
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Location as Storage
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
 getDbTable =

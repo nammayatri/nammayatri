@@ -3,9 +3,6 @@ module Utils.Auth where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Organization as SOrganization
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
@@ -17,6 +14,9 @@ import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.Error
+import qualified Types.Storage.Organization as SOrganization
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.RegistrationToken as SR
 
 type VerificationAPIKey = APIKeyAuth VerifyAPIKey
 
@@ -28,10 +28,12 @@ instance VerificationMethod VerifyAPIKey where
     "Checks whether gateway/provider is registered.\
     \If you don't have an API key, register the gateway/provider."
 
+type LookupRegistryOrg = (HttpSig.LookupRegistry SOrganization.Organization)
+
 verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction QOrganization.verifyApiKey
 
-lookup :: (DBFlow m r, HttpSig.AuthenticatingEntity r) => HttpSig.LookupAction HttpSig.LookupRegistry m
+lookup :: (DBFlow m r, HttpSig.AuthenticatingEntity r) => HttpSig.LookupAction LookupRegistryOrg m
 lookup = HttpSig.lookupRegistryAction findOrgByShortId
 
 -- | Performs simple token verification.

@@ -1,11 +1,11 @@
 module Types.API.Case where
 
 import Beckn.Types.Amount
-import Beckn.Types.Storage.Case
-import Beckn.Types.Storage.Location
 import Beckn.Utils.JSON
 import Data.Swagger hiding (name)
 import EulerHS.Prelude hiding (id)
+import Types.Storage.Case
+import Types.Storage.Location
 
 data CaseRes = CaseRes
   { _case :: Case,

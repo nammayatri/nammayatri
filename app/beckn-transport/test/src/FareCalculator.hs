@@ -3,9 +3,6 @@ module FareCalculator where
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time hiding (parseTime)
 import EulerHS.Prelude
 import Product.FareCalculator.Flow
@@ -15,6 +12,9 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Domain.FarePolicy
 import Types.Error
+import qualified Types.Storage.Location as Location
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Vehicle as Vehicle
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 import Utils.Time

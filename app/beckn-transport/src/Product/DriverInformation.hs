@@ -9,8 +9,6 @@ import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
-import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Beckn.Utils.Validation
 import EulerHS.Prelude hiding (id)
 import qualified Product.Location as Location
@@ -32,6 +30,8 @@ import Types.API.Vehicle (createVehicle)
 import Types.App
 import Types.Error
 import qualified Types.Storage.DriverInformation as DriverInfo
+import qualified Types.Storage.Person as SP
+import Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 
 createDriver :: Text -> DriverInformationAPI.CreateDriverReq -> FlowHandler DriverInformationAPI.CreateDriverRes

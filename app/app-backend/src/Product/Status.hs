@@ -6,10 +6,6 @@ import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Status as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Error
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
@@ -19,6 +15,10 @@ import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Status
 import Types.Error
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as PI
 import Utils.Common
 import qualified Utils.Notifications as Notify
 

@@ -2,9 +2,6 @@ module Product.FareCalculator.Interpreter (calculateFare) where
 
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Location as Location
-import Beckn.Types.Storage.Organization (Organization)
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
@@ -21,6 +18,9 @@ import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Domain.FarePolicy
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.FarePolicy as FarePolicyS
+import qualified Types.Storage.Location as Location
+import Types.Storage.Organization (Organization)
+import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
 calculateFare ::

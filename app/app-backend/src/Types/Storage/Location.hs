@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.Location where
+module Types.Storage.Location where
 
 import Beckn.Types.Id
 import Beckn.Utils.JSON

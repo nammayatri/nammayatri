@@ -7,20 +7,20 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Types.Storage.Person (Person)
-import qualified Beckn.Types.Storage.ProductInstance as Storage
-import Beckn.Types.Storage.Products
-import qualified Beckn.Types.Storage.Products as Product
-import Beckn.Types.Storage.Vehicle (Vehicle)
 import Beckn.Utils.Common
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.API.ProductInstance
+import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Organization as Org
+import Types.Storage.Person (Person)
+import qualified Types.Storage.ProductInstance as Storage
+import Types.Storage.Products
+import qualified Types.Storage.Products as Product
+import Types.Storage.Vehicle (Vehicle)
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB.productInstance . DB.transporterDb <$> getSchemaName

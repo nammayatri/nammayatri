@@ -4,8 +4,6 @@ module Product.Dunzo.Flow where
 
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens ((?~))
@@ -34,6 +32,8 @@ import Types.Beckn.Order (Order)
 import Types.Common
 import Types.Error
 import Types.Metrics (CoreMetrics)
+import Types.Storage.Case as Case
+import qualified Types.Storage.Organization as Org
 import Types.Wrapper
 import Utils.Common
 
@@ -115,8 +115,6 @@ init org req = do
                 requestor = Just orgId,
                 requestorType = Nothing,
                 parentCaseId = Nothing,
-                fromLocationId = "",
-                toLocationId = "",
                 udf1 = Just $ encodeToText order,
                 udf2 = Nothing,
                 udf3 = Nothing,
@@ -206,8 +204,6 @@ confirm org req = do
                 requestor = Just org.id.getId,
                 requestorType = Nothing,
                 parentCaseId = Nothing,
-                fromLocationId = "",
-                toLocationId = "",
                 udf1 = Just $ encodeToText order,
                 udf2 = Just $ encodeToText taskStatus,
                 udf3 = Nothing,

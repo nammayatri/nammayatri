@@ -14,20 +14,20 @@ where
 
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Location as Loc
-import qualified Beckn.Types.Storage.Organization as Organization
-import Beckn.Types.Storage.Person (Person)
-import Beckn.Types.Storage.ProductInstance (ProductInstance)
-import Beckn.Types.Storage.Vehicle (Vehicle)
 import Beckn.Utils.Validation
 import Data.Aeson
 import Data.Time
 import EulerHS.Prelude hiding (id)
-import Types.API.Person (PersonReqEntity, validatePersonReqEntity)
+import Types.API.Person (validatePersonReqEntity)
 import qualified Types.API.Person as PersonAPI
 import Types.API.Registration
 import qualified Types.API.Vehicle as VehAPI
 import Types.Storage.DriverInformation
+import qualified Types.Storage.Location as Loc
+import qualified Types.Storage.Organization as Organization
+import Types.Storage.Person (Person)
+import Types.Storage.ProductInstance (ProductInstance)
+import Types.Storage.Vehicle (Vehicle)
 
 data DriverInformationResponse = DriverInformationResponse
   { transporter :: Organization.Organization,
@@ -77,7 +77,7 @@ type LinkVehicleRes = APISuccess
 
 -- Create Person request and response
 data CreateDriverReq = CreateDriverReq
-  { person :: PersonReqEntity,
+  { person :: PersonAPI.PersonReqEntity,
     vehicle :: VehAPI.CreateVehicleReq
   }
   deriving (Generic, ToJSON, FromJSON)

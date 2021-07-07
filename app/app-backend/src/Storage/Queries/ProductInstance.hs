@@ -6,16 +6,16 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as Storage
-import Beckn.Types.Storage.Products
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as Storage
+import Types.Storage.Products
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB.productInstance . DB.appDb <$> getSchemaName

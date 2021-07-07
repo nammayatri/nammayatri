@@ -15,9 +15,6 @@ import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Track as API
 import qualified Beckn.Types.Core.API.Update as API
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case hiding (status)
-import qualified Beckn.Types.Storage.Person as Person
-import Beckn.Types.Storage.ProductInstance
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified Product.Call as Call
@@ -57,7 +54,10 @@ import Types.API.Status
 import qualified Types.API.Support as Support
 import qualified Types.API.Track as TrackTrip
 import Types.Geofencing
-import Utils.Auth (TokenAuth)
+import qualified Types.Storage.Case as Case hiding (status)
+import qualified Types.Storage.Person as Person
+import Types.Storage.ProductInstance
+import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
 type AppAPI =
   "v1"
@@ -140,8 +140,8 @@ type SearchAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Search.SearchReq
     :> Post '[JSON] Search.SearchRes
-    :<|> SignatureAuth "Authorization" LookupRegistry
-    :> SignatureAuth "Proxy-Authorization" LookupRegistry
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
     :> API.OnSearchAPI
 
 searchFlow :: FlowServer SearchAPI
@@ -155,7 +155,7 @@ type ConfirmAPI =
       :> TokenAuth
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] ConfirmAPI.ConfirmRes
-      :<|> SignatureAuth "Authorization" LookupRegistry
+      :<|> SignatureAuth "Authorization" LookupRegistryOrg
       :> "on_confirm"
       :> ReqBody '[JSON] API.OnConfirmReq
       :> Post '[JSON] API.OnConfirmRes
@@ -207,7 +207,7 @@ type TrackTripAPI =
     :> TokenAuth
     :> ReqBody '[JSON] TrackTrip.TrackTripReq
     :> Post '[JSON] TrackTrip.TrackTripRes
-    :<|> SignatureAuth "Authorization" LookupRegistry
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
     :> "on_track"
     :> ReqBody '[JSON] API.OnTrackTripReq
     :> Post '[JSON] API.OnTrackTripRes
@@ -219,7 +219,7 @@ trackTripFlow =
 
 ------- Update Flow -------
 type UpdateAPI =
-  SignatureAuth "Authorization" LookupRegistry
+  SignatureAuth "Authorization" LookupRegistryOrg
     :> "on_update"
     :> ReqBody '[JSON] API.OnUpdateReq
     :> Post '[JSON] API.OnUpdateRes
@@ -255,7 +255,7 @@ type CancelAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
-    :<|> SignatureAuth "Authorization" LookupRegistry
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
     :> "on_cancel"
     :> ReqBody '[JSON] API.OnCancelReq
     :> Post '[JSON] API.OnCancelRes
@@ -313,7 +313,7 @@ type StatusAPI =
     :> TokenAuth
     :> ReqBody '[JSON] StatusReq
     :> Post '[JSON] StatusRes
-    :<|> SignatureAuth "Authorization" LookupRegistry
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
     :> "on_status"
     :> ReqBody '[JSON] API.OnStatusReq
     :> Post '[JSON] API.OnStatusRes

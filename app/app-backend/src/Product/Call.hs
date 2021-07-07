@@ -11,9 +11,6 @@ import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Driver as Driver
-import Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.Person as Person
-import Beckn.Types.Storage.ProductInstance as ProductInstance
 import Data.Maybe
 import Data.Semigroup
 import EulerHS.Prelude hiding (id)
@@ -22,6 +19,9 @@ import Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import Types.Error
 import Types.ProductInfo as ProductInfo
+import Types.Storage.Case as Case
+import Types.Storage.Person as Person
+import Types.Storage.ProductInstance as ProductInstance
 import Utils.Common
   ( decodeFromText,
     fromMaybeM,

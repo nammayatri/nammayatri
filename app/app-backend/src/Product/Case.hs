@@ -4,10 +4,6 @@ module Product.Case where
 
 import App.Types
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as PI
-import qualified Beckn.Types.Storage.Products as Products
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Case as Case
@@ -16,6 +12,10 @@ import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.Products as Products
 import Types.API.Case as API
 import Types.Error
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.Products as Products
 import Utils.Common
 
 getStatus ::

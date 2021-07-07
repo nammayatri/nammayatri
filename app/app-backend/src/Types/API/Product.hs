@@ -1,8 +1,8 @@
 module Types.API.Product where
 
-import Beckn.Types.Storage.ProductInstance
 import EulerHS.Prelude hiding (product)
 import Types.Common
+import Types.Storage.ProductInstance
 
 data GetProductInfoRes = GetProductInfoRes
   { vehicle :: Maybe Vehicle,

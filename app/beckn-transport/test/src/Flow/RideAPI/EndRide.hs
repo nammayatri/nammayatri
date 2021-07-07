@@ -2,9 +2,6 @@ module Flow.RideAPI.EndRide (endRideTests) where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as PI
 import Data.List (isSubsequenceOf)
 import EulerHS.Prelude
 import qualified Fixtures
@@ -15,6 +12,9 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App
 import Types.Error
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as PI
 import Utils.Common (throwError)
 import Utils.SilentLogger ()
 

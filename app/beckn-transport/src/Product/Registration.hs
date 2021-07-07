@@ -9,8 +9,6 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.SlidingWindowLimiter
-import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified EulerHS.Language as L
@@ -20,6 +18,8 @@ import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
 import Types.Error
 import Types.Metrics (CoreMetrics)
+import qualified Types.Storage.Person as SP
+import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common
 import qualified Utils.Notifications as Notify
 

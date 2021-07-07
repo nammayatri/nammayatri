@@ -2,25 +2,25 @@
 
 module Types.Storage.DB where
 
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.Products as Product
-import qualified Beckn.Types.Storage.Rating as Rating
-import qualified Beckn.Types.Storage.RegistrationToken as RegistrationToken
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.AllocationEvent as AllocationEvent
+import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
+import qualified Types.Storage.Location as Location
 import qualified Types.Storage.NotificationStatus as NotificationStatus
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Products as Product
+import qualified Types.Storage.Rating as Rating
+import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.TransporterConfig as TransporterConfig
+import qualified Types.Storage.Vehicle as Vehicle
 
 data TransporterDb f = TransporterDb
   { organization :: f (B.TableEntity Organization.OrganizationT),

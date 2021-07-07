@@ -15,6 +15,7 @@ import EulerHS.Prelude
 import Servant hiding (Context)
 import Types.Beckn.API.Callback
 import Types.Beckn.Context
+import Types.Storage.Organization (Organization)
 
 data SearchReq = SearchReq
   { context :: Context,
@@ -25,7 +26,7 @@ data SearchReq = SearchReq
 type OnSearchReq = CallbackReq Value
 
 type SearchAPI =
-  SignatureAuth "Authorization" LookupRegistry
+  SignatureAuth "Authorization" (LookupRegistry Organization)
     :> "search"
     :> ReqBody '[JSON] SearchReq
     :> Post '[JSON] AckResponse
@@ -34,7 +35,7 @@ searchAPI :: Proxy SearchAPI
 searchAPI = Proxy
 
 type OnSearchAPI =
-  SignatureAuth "Authorization" LookupRegistry
+  SignatureAuth "Authorization" (LookupRegistry Organization)
     :> "on_search"
     :> ReqBody '[JSON] OnSearchReq
     :> Post '[JSON] AckResponse

@@ -2,9 +2,9 @@
 
 module Types.Notification where
 
-import Beckn.Types.Storage.Case
 import Beckn.Utils.JSON
 import EulerHS.Prelude
+import Types.Storage.Case
 
 data NotificationType
   = LEAD

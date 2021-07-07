@@ -1,11 +1,11 @@
 module Types.Storage.DriverInformation where
 
 import Beckn.Types.Id
-import Beckn.Types.Storage.Person (Person)
 import Beckn.Utils.JSON
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
+import Types.Storage.Person (Person)
 
 data DriverInformationT f = DriverInformation
   { driverId :: B.C f (Id Person),

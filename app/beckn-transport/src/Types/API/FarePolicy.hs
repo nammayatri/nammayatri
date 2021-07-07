@@ -12,11 +12,11 @@ where
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id)
 import Beckn.Types.Predicate
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Validation
 import Data.Time (TimeOfDay (..))
 import EulerHS.Prelude hiding (id)
 import Types.Domain.FarePolicy (FarePolicy)
+import qualified Types.Storage.Vehicle as Vehicle
 
 data FarePolicyResponse = FarePolicyResponse
   { id :: Id FarePolicy,

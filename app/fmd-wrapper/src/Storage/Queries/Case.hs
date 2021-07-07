@@ -5,10 +5,10 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import qualified Beckn.Types.Storage.Case as Storage
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.Case as Storage
 import qualified Types.Storage.DB as DB
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT))

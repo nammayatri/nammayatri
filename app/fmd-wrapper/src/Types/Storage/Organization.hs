@@ -1,15 +1,13 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.Organization where
+module Types.Storage.Organization where
 
 import Beckn.Types.App
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Location as Loc
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger hiding (description, info, name)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -20,7 +18,7 @@ import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
@@ -29,8 +27,6 @@ instance B.HasSqlEqualityCheck Postgres Status
 
 instance FromBackendRow Postgres Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToParamSchema Status
 
 instance FromHttpApiData Status where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -43,7 +39,7 @@ data OrganizationType
   = PROVIDER
   | APP
   | GATEWAY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -52,8 +48,6 @@ instance B.HasSqlEqualityCheck Postgres OrganizationType
 
 instance FromBackendRow Postgres OrganizationType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToParamSchema OrganizationType
 
 instance FromHttpApiData OrganizationType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -66,7 +60,7 @@ data OrganizationDomain
   | LOCAL_RETAIL
   | FOOD_AND_BEVERAGE
   | HEALTHCARE
-  deriving (Show, Eq, Read, Generic, ToSchema)
+  deriving (Show, Eq, Read, Generic)
 
 instance ToJSON OrganizationDomain where
   toJSON = genericToJSON constructorsWithHyphens
@@ -81,8 +75,6 @@ instance B.HasSqlEqualityCheck Postgres OrganizationDomain
 
 instance FromBackendRow Postgres OrganizationDomain where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToParamSchema OrganizationDomain
 
 instance FromHttpApiData OrganizationDomain where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -99,7 +91,6 @@ data OrganizationT f = Organization
     gstin :: B.C f (Maybe Text),
     _type :: B.C f OrganizationType,
     domain :: B.C f (Maybe OrganizationDomain),
-    locationId :: B.C f (Maybe (Id Loc.Location)),
     fromTime :: B.C f (Maybe UTCTime),
     toTime :: B.C f (Maybe UTCTime),
     headCount :: B.C f (Maybe Int),
@@ -136,8 +127,6 @@ instance ToJSON Organization where
 instance FromJSON Organization where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
-instance ToSchema Organization
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity OrganizationT)
 fieldEMod =
@@ -146,7 +135,6 @@ fieldEMod =
       { shortId = "short_id",
         createdAt = "created_at",
         updatedAt = "updated_at",
-        locationId = "location_id",
         mobileNumber = "mobile_number",
         mobileCountryCode = "mobile_country_code",
         headCount = "head_count",

@@ -9,11 +9,6 @@ import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Price
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Payload
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as PI
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Types.Storage.Vehicle as SV
 import Data.Time
 import EulerHS.Prelude
 import Servant hiding (Context)
@@ -33,6 +28,14 @@ import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 import "beckn-transport" Types.App
 import qualified "app-backend" Types.Common as AppCommon
+import qualified "app-backend" Types.Storage.Case as BCase
+import qualified "beckn-transport" Types.Storage.Case as TCase
+import qualified "app-backend" Types.Storage.Person as BPerson
+import qualified "beckn-transport" Types.Storage.Person as TPerson
+import qualified "app-backend" Types.Storage.ProductInstance as BPI
+import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
+import qualified "app-backend" Types.Storage.RegistrationToken as BSR
+import qualified Types.Storage.Vehicle as SV
 
 address :: AppCommon.Address
 address =
@@ -135,9 +138,9 @@ cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
 rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriverAcceptanceRes
-rideStart :: Text -> Id PI.ProductInstance -> RideAPI.StartRideReq -> ClientM APISuccess
-rideEnd :: Text -> Id PI.ProductInstance -> ClientM APISuccess
-rideCancel :: Text -> Id PI.ProductInstance -> ClientM APISuccess
+rideStart :: Text -> Id TPI.ProductInstance -> RideAPI.StartRideReq -> ClientM APISuccess
+rideEnd :: Text -> Id TPI.ProductInstance -> ClientM APISuccess
+rideCancel :: Text -> Id TPI.ProductInstance -> ClientM APISuccess
 rideRespond :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 getDriverInfo :: Text -> ClientM DriverInformationAPI.DriverInformationResponse
@@ -158,12 +161,12 @@ newtype CaseAPIClient = CaseAPIClient {mkCaseClient :: Text -> CaseClient}
 
 data CaseClient = CaseClient
   { getCaseListRes ::
-      Case.CaseType ->
-      [Case.CaseStatus] ->
+      BCase.CaseType ->
+      [BCase.CaseStatus] ->
       Maybe Integer ->
       Maybe Integer ->
       ClientM AppCase.CaseListRes,
-    getCaseStatusRes :: Id Case.Case -> ClientM AppCase.GetStatusRes
+    getCaseStatusRes :: Id BCase.Case -> ClientM AppCase.GetStatusRes
   }
 
 getCase :: CaseAPIClient
@@ -178,7 +181,7 @@ buildCaseListRes :: Text -> ClientM AppCase.CaseListRes
 buildCaseListRes regToken = do
   let CaseAPIClient {..} = getCase
       CaseClient {..} = mkCaseClient regToken
-  getCaseListRes Case.RIDESEARCH [Case.NEW] (Just 10) (Just 0)
+  getCaseListRes BCase.RIDESEARCH [BCase.NEW] (Just 10) (Just 0)
 
 buildCaseStatusRes :: Text -> ClientM AppCase.GetStatusRes
 buildCaseStatusRes caseId = do
@@ -193,7 +196,7 @@ appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
 
-callAppFeedback :: Int -> Id PI.ProductInstance -> Id Case.Case -> ClientM APISuccess
+callAppFeedback :: Int -> Id TPI.ProductInstance -> Id TCase.Case -> ClientM APISuccess
 callAppFeedback ratingValue productInstanceId caseId =
   let request =
         AppFeedback.FeedbackReq
@@ -210,27 +213,27 @@ buildAppConfirmReq cid pid =
       productInstanceId = pid
     }
 
-listLeads :: Text -> [Case.CaseStatus] -> Case.CaseType -> Maybe Int -> Maybe Int -> ClientM [TbeCase.CaseRes]
+listLeads :: Text -> [TCase.CaseStatus] -> TCase.CaseType -> Maybe Int -> Maybe Int -> ClientM [TbeCase.CaseRes]
 listLeads = client (Proxy :: Proxy TbeRoutes.CaseAPI)
 
 buildListLeads :: ClientM [TbeCase.CaseRes]
-buildListLeads = listLeads appRegistrationToken [Case.NEW] Case.RIDESEARCH (Just 50) Nothing
+buildListLeads = listLeads appRegistrationToken [TCase.NEW] TCase.RIDESEARCH (Just 50) Nothing
 
-listOrgRides :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM TbePI.ProductInstanceList
-listDriverRides :: Text -> Id Person.Person -> ClientM TbePI.RideListRes
+listOrgRides :: Text -> [TPI.ProductInstanceStatus] -> [TCase.CaseType] -> Maybe Int -> Maybe Int -> ClientM TbePI.ProductInstanceList
+listDriverRides :: Text -> Id TPerson.Person -> ClientM TbePI.RideListRes
 listVehicleRides :: Text -> Id SV.Vehicle -> ClientM TbePI.RideListRes
-listCasesByProductInstance :: Text -> Id PI.ProductInstance -> Maybe Case.CaseType -> ClientM [TbeCase.CaseRes]
+listCasesByProductInstance :: Text -> Id TPI.ProductInstance -> Maybe TCase.CaseType -> ClientM [TbeCase.CaseRes]
 listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
 
-listPIs :: Text -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> ClientM AppPI.ProductInstanceList
+listPIs :: Text -> [BPI.ProductInstanceStatus] -> [BCase.CaseType] -> Maybe Int -> Maybe Int -> ClientM AppPI.ProductInstanceList
 listPIs = client (Proxy :: Proxy AbeRoutes.ProductInstanceAPI)
 
-buildListPIs :: PI.ProductInstanceStatus -> ClientM AppPI.ProductInstanceList
-buildListPIs status = listPIs appRegistrationToken [status] [Case.RIDEORDER] (Just 50) Nothing
+buildListPIs :: BPI.ProductInstanceStatus -> ClientM AppPI.ProductInstanceList
+buildListPIs status = listPIs appRegistrationToken [status] [BCase.RIDEORDER] (Just 50) Nothing
 
-listPerson :: Text -> [Person.Role] -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
-updatePerson :: Text -> Id Person.Person -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
-deletePerson :: Text -> Id Person.Person -> ClientM TbePerson.DeletePersonRes
+listPerson :: Text -> [TPerson.Role] -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
+updatePerson :: Text -> Id TPerson.Person -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
+deletePerson :: Text -> Id TPerson.Person -> ClientM TbePerson.DeletePersonRes
 _
   :<|> listPerson
   :<|> updatePerson
@@ -264,7 +267,7 @@ rideServiceability regToken = ride
   where
     _ :<|> _ :<|> ride = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
-buildOrgRideReq :: PI.ProductInstanceStatus -> Case.CaseType -> ClientM TbePI.ProductInstanceList
+buildOrgRideReq :: TPI.ProductInstanceStatus -> TCase.CaseType -> ClientM TbePI.ProductInstanceList
 buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csType] (Just 50) Nothing
 
 appRegistrationToken :: Text
@@ -292,19 +295,19 @@ appInitiateLogin
 buildInitiateLoginReq :: Reg.InitiateLoginReq
 buildInitiateLoginReq =
   Reg.InitiateLoginReq
-    { medium = SR.SMS,
-      __type = SR.OTP,
+    { medium = BSR.SMS,
+      __type = BSR.OTP,
       mobileNumber = "9000090000",
       mobileCountryCode = "+91",
-      role = Just Person.USER,
+      role = Just BPerson.USER,
       deviceToken = Nothing
     }
 
 buildLoginReq :: Reg.LoginReq
 buildLoginReq =
   Reg.LoginReq
-    { medium = SR.SMS,
-      __type = SR.OTP,
+    { medium = BSR.SMS,
+      __type = BSR.OTP,
       hash = "7891",
       mobileNumber = "9000090000",
       mobileCountryCode = "+91",

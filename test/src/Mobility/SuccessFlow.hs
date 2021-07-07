@@ -1,8 +1,6 @@
 module Mobility.SuccessFlow where
 
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.ProductInstance as PI
 -- import Data.Text (isSuffixOf)
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
@@ -17,6 +15,9 @@ import qualified "app-backend" Types.API.Case as AppCase
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "beckn-transport" Types.API.Ride as RideAPI
+import qualified "beckn-transport" Types.Storage.Case as TCase
+import qualified "app-backend" Types.Storage.ProductInstance as BPI
+import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
 import Utils
 
 spec :: Spec
@@ -67,15 +68,15 @@ spec = do
 
       transporterOrderPi :| [] <- poll $ do
         -- List all confirmed rides (type = RIDEORDER)
-        rideReqResult <- runClient tbeClientEnv (buildOrgRideReq PI.CONFIRMED Case.RIDEORDER)
+        rideReqResult <- runClient tbeClientEnv (buildOrgRideReq TPI.CONFIRMED TCase.RIDEORDER)
         rideReqResult `shouldSatisfy` isRight
 
         -- Filter order productInstance
         let Right rideListRes = rideReqResult
             tbePiList = TbePI.productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) tbePiList
+            transporterOrdersPi = filter (\pI -> (getId <$> TPI.parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
-      let transporterOrderPiId = PI.id transporterOrderPi
+      let transporterOrderPiId = TPI.id transporterOrderPi
 
       rideInfo <- poll $ do
         res <-
@@ -95,15 +96,15 @@ spec = do
 
       tripAssignedPI :| [] <- poll $ do
         -- List all confirmed rides (type = RIDEORDER)
-        rideReqRes <- runClient tbeClientEnv (buildOrgRideReq PI.TRIP_ASSIGNED Case.RIDEORDER)
+        rideReqRes <- runClient tbeClientEnv (buildOrgRideReq TPI.TRIP_ASSIGNED TCase.RIDEORDER)
         rideReqRes `shouldSatisfy` isRight
 
         -- Filter order productInstance
         let Right rideListRes = rideReqRes
             tbePiList = TbePI.productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) tbePiList
+            transporterOrdersPi = filter (\pI -> (getId <$> TPI.parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
-      tripAssignedPI.status `shouldBe` PI.TRIP_ASSIGNED
+      tripAssignedPI.status `shouldBe` TPI.TRIP_ASSIGNED
 
       -- Update RIDEORDER PI to INPROGRESS once driver starts his trip
       inProgressStatusResult <-
@@ -112,7 +113,7 @@ spec = do
           (rideStart driverToken transporterOrderPiId (buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrderPi.udf4))
       inProgressStatusResult `shouldSatisfy` isRight
 
-      inprogressPiListResult <- runClient appClientEnv (buildListPIs PI.INPROGRESS)
+      inprogressPiListResult <- runClient appClientEnv (buildListPIs BPI.INPROGRESS)
       inprogressPiListResult `shouldSatisfy` isRight
 
       -- Check if app RIDEORDER PI got updated to status INPROGRESS
@@ -132,5 +133,5 @@ spec = do
     checkPiInResult piListResult productInstanceId =
       let Right piListRes = piListResult
           appPiList = AppPI.productInstance <$> piListRes
-          appOrderPI = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) appPiList
+          appOrderPI = filter (\pI -> (getId <$> BPI.parentId pI) == Just productInstanceId) appPiList
        in length appOrderPI `shouldBe` 1

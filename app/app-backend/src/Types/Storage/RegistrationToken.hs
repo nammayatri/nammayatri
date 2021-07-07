@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.RegistrationToken where
+module Types.Storage.RegistrationToken where
 
 import Data.Aeson
 import Data.Swagger hiding (info)

@@ -5,14 +5,14 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Beckn.Types.Schema
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Database.Beam
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Domain.FarePolicy as D
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.FarePolicy as Storage
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Vehicle as Vehicle
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyT))
 getDbTable =

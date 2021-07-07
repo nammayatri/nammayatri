@@ -20,9 +20,7 @@ module Beckn.External.FCM.Flow where
 import Beckn.External.FCM.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Beckn.Types.Id
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
-import Beckn.Types.Storage.Person as Person
 import Beckn.Utils.Common
 import qualified Beckn.Utils.JWT as JWT
 import Control.Exception (IOException)
@@ -80,17 +78,15 @@ notifyPerson ::
     FCMFlow m r
   ) =>
   FCMAndroidData ->
-  Person ->
+  FCMNotificationRecipient ->
   m ()
-notifyPerson msgData person =
-  let pid = getId person.id
-      tokenNotFound = "device token of a person " <> pid <> " not found"
-   in case person.deviceToken of
-        Nothing -> do
-          logTagInfo "FCM" tokenNotFound
-          pure ()
-        Just token ->
-          sendMessage (FCMRequest (createMessage msgData token)) pid
+notifyPerson msgData recipient = do
+  let tokenNotFound = "device token of a person " <> recipient.id <> " not found"
+  case recipient.token of
+    Nothing -> do
+      logTagInfo "FCM" tokenNotFound
+      pure ()
+    Just token -> sendMessage (FCMRequest (createMessage msgData token)) recipient.id
 
 -- | Google API interface
 type FCMSendMessageAPI =

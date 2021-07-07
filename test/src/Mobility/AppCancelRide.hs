@@ -1,8 +1,6 @@
 module Mobility.AppCancelRide where
 
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
@@ -14,6 +12,8 @@ import Test.Hspec
 import qualified Types.API.Cancel as CancelAPI
 import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
+import qualified "beckn-transport" Types.Storage.Case as Case
+import qualified "beckn-transport" Types.Storage.ProductInstance as PI
 import Utils
 
 spec :: Spec

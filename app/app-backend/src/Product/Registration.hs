@@ -10,8 +10,6 @@ import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.SlidingWindowLimiter
-import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified Crypto.Number.Generate as Cryptonite
@@ -22,6 +20,8 @@ import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.Registration
 import Types.Error
 import Types.Metrics
+import qualified Types.Storage.Person as SP
+import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common
 import qualified Utils.Notifications as Notify
 

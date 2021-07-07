@@ -11,7 +11,6 @@ import Beckn.Types.Credentials
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
-import Beckn.Types.Storage.Organization
 import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import qualified Beckn.Utils.Registry as Registry
@@ -90,10 +89,10 @@ type LookupAction lookup m =
   HttpSig.SignaturePayload ->
   m (LookupResult lookup, HttpSig.PublicKey, BaseUrl)
 
-data LookupRegistry = LookupRegistry
+data LookupRegistry r = LookupRegistry
 
-instance LookupMethod LookupRegistry where
-  type LookupResult LookupRegistry = Organization
+instance LookupMethod (LookupRegistry (r :: Type)) where
+  type LookupResult (LookupRegistry r) = r
   lookupDescription =
     "Looks up the given key Id in the Beckn registry."
 
@@ -103,8 +102,8 @@ lookupRegistryAction ::
     Log m,
     AuthenticatingEntity r
   ) =>
-  (ShortId Organization -> m (Maybe Organization)) ->
-  LookupAction LookupRegistry m
+  (ShortId a -> m (Maybe a)) ->
+  LookupAction (LookupRegistry a) m
 lookupRegistryAction findOrgByShortId signaturePayload = do
   appEnv <- ask
   let selfUrl = getSelfUrl appEnv

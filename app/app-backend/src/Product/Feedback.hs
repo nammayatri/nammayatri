@@ -6,7 +6,6 @@ import qualified Beckn.Types.Core.API.Feedback as Beckn
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Person as Person
 import EulerHS.Prelude hiding (product)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Case as Case
@@ -14,6 +13,7 @@ import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Types.API.Feedback as API
 import Types.Error
+import qualified Types.Storage.Person as Person
 import Utils.Common
   ( buildContext,
     fromMaybeM,

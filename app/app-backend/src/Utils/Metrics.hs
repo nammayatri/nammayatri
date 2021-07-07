@@ -6,7 +6,6 @@ where
 
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import qualified Beckn.Types.Storage.Case as Case
 import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
 import Data.Time (UTCTime, diffUTCTime)
@@ -15,6 +14,7 @@ import EulerHS.Prelude
 import GHC.Records.Extra
 import Prometheus as P
 import Types.Metrics (BAPMetricsContainer)
+import qualified Types.Storage.Case as Case
 
 type HasBAPMetrics m r = HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer]
 

@@ -9,7 +9,6 @@ import Beckn.Storage.Common
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Organization as Organization
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.Servant.Server as Server
@@ -23,6 +22,7 @@ import Servant
 import qualified Services.Allocation.Runner as Runner
 import qualified Storage.Queries.Organization as Storage
 import System.Environment
+import qualified Types.Storage.Organization as Organization
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 

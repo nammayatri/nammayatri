@@ -5,13 +5,6 @@ import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.API.Feedback as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import Beckn.Types.Storage.Organization (Organization)
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import Beckn.Types.Storage.Rating as Rating
-  ( Rating,
-    RatingT (..),
-  )
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -20,6 +13,13 @@ import qualified Product.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Rating as Rating
 import Types.Error
+import qualified Types.Storage.Case as Case
+import Types.Storage.Organization (Organization)
+import qualified Types.Storage.ProductInstance as ProductInstance
+import Types.Storage.Rating as Rating
+  ( Rating,
+    RatingT (..),
+  )
 import Utils.Common
 
 feedback ::

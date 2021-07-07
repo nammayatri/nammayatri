@@ -3,13 +3,13 @@ module Types.API.Vehicle where
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.Predicate
-import qualified Beckn.Types.Storage.Organization as Org
-import Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.JSON
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.Swagger
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.Organization as Org
+import Types.Storage.Vehicle as SV
 
 -- Create Person request and response
 data CreateVehicleReq = CreateVehicleReq

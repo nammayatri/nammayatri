@@ -2,16 +2,16 @@ module Types.API.Case where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Beckn.Types.Storage.Case
-import Beckn.Types.Storage.Location
-import Beckn.Types.Storage.Organization (Organization)
-import Beckn.Types.Storage.Person
-import Beckn.Types.Storage.ProductInstance
-import Beckn.Types.Storage.Products
 import Beckn.Utils.JSON
 import Data.Swagger hiding (info)
 import Data.Time
 import EulerHS.Prelude hiding (id, product)
+import Types.Storage.Case
+import Types.Storage.Location
+import Types.Storage.Organization (Organization)
+import Types.Storage.Person
+import Types.Storage.ProductInstance
+import Types.Storage.Products
 
 data GetStatusRes = GetStatusRes
   { _case :: Case,

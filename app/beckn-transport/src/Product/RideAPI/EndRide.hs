@@ -5,9 +5,6 @@ import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.ProductInstance as PI
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import Product.ProductInstance as PI
 import qualified Product.RideAPI.Handlers.EndRide as Handler
@@ -17,6 +14,9 @@ import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as PI
 import Types.App (Driver)
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common (withFlowHandlerAPI)
 
 endRide :: SR.RegistrationToken -> Id PI.ProductInstance -> FlowHandler APISuccess.APISuccess

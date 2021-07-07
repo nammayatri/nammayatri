@@ -2,10 +2,10 @@ module Fixtures.Person where
 
 import Beckn.External.Encryption
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Person as Person
 import Database.Beam (Nullable)
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
+import qualified Types.Storage.Person as Person
 
 defaultDriver :: Person.Person
 defaultDriver =

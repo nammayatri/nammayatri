@@ -1,10 +1,9 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.Vehicle where
+module Types.Storage.Vehicle where
 
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -17,6 +16,7 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
+import qualified Types.Storage.Organization as Org
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)

@@ -1,10 +1,10 @@
 module Types.Domain.FarePolicy where
 
 import Beckn.Types.Id (Id)
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (TimeOfDay)
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Vehicle as Vehicle
 
 data FarePolicy = FarePolicy
   { id :: Id FarePolicy,

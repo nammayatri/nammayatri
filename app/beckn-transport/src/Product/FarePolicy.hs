@@ -3,7 +3,6 @@ module Product.FarePolicy where
 import App.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
-import qualified Beckn.Types.Storage.RegistrationToken as RegToken
 import Beckn.Utils.Validation (runRequestValidation)
 import EulerHS.Prelude
 import qualified Storage.Queries.FarePolicy as SFarePolicy
@@ -12,6 +11,7 @@ import Types.API.FarePolicy
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import Types.Error
 import qualified Types.Storage.FarePolicy as SFarePolicy
+import qualified Types.Storage.RegistrationToken as RegToken
 import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
 listFarePolicies :: RegToken.RegistrationToken -> FlowHandler ListFarePolicyResponse

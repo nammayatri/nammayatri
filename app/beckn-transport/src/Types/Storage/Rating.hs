@@ -1,15 +1,15 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Types.Storage.Rating where
+module Types.Storage.Rating where
 
 import Beckn.Types.Id
-import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Beckn.Utils.JSON
 import Data.Swagger (ToSchema)
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import Types.Storage.ProductInstance (ProductInstance)
 
 data RatingT f = Rating
   { id :: B.C f (Id Rating),

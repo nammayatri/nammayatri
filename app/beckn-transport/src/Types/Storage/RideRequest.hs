@@ -3,7 +3,6 @@
 module Types.Storage.RideRequest where
 
 import Beckn.Types.Id
-import Beckn.Types.Storage.Organization
 import Beckn.Utils.JSON
 import qualified Data.Text as T
 import Data.Time (UTCTime)
@@ -12,6 +11,7 @@ import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyn
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
 import Types.App
+import Types.Storage.Organization
 
 data RideRequestType = ALLOCATION | CANCELLATION | DRIVER_RESPONSE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

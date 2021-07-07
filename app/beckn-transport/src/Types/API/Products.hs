@@ -1,10 +1,10 @@
 module Types.API.Products where
 
 import Beckn.Types.Amount
-import qualified Beckn.Types.Storage.Products as Product
 import Beckn.Utils.JSON
 import Data.Swagger hiding (description, info, name)
 import EulerHS.Prelude
+import qualified Types.Storage.Products as Product
 
 data CreateProdReq = CreateProdReq
   { name :: Text,

@@ -2,11 +2,11 @@ module Types.API.Ride where
 
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
-import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 import Types.App
+import Types.Storage.ProductInstance (ProductInstance)
 
 data SetDriverAcceptanceReq = SetDriverAcceptanceReq
   { productInstanceId :: Id ProductInstance,

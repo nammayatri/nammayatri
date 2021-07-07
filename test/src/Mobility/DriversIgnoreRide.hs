@@ -1,8 +1,6 @@
 module Mobility.DriversIgnoreRide where
 
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.ProductInstance as PI
 import qualified Data.UUID as UUID
 import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
@@ -15,6 +13,9 @@ import qualified "app-backend" Types.API.Case as AppCase
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "beckn-transport" Types.API.Ride as RideAPI
+import qualified "beckn-transport" Types.Storage.Case as TCase
+import qualified "app-backend" Types.Storage.ProductInstance as BPI
+import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
 import Utils
 
 spec :: Spec
@@ -57,15 +58,15 @@ spec = do
 
       transporterOrderPi :| [] <- poll $ do
         -- List all confirmed rides (type = RIDEORDER)
-        rideReqResult <- runClient tbeClientEnv (buildOrgRideReq PI.CONFIRMED Case.RIDEORDER)
+        rideReqResult <- runClient tbeClientEnv (buildOrgRideReq TPI.CONFIRMED TCase.RIDEORDER)
         rideReqResult `shouldSatisfy` isRight
 
         -- Filter order productInstance
         let Right rideListRes = rideReqResult
             tbePiList = TbePI.productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) tbePiList
+            transporterOrdersPi = filter (\pI -> (getId <$> TPI.parentId pI) == Just productInstanceId) tbePiList
         return $ nonEmpty transporterOrdersPi
-      let transporterOrderPiId = PI.id transporterOrderPi
+      let transporterOrderPiId = TPI.id transporterOrderPi
 
       -- Driver Rejects a ride
       let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.REJECT
@@ -75,7 +76,7 @@ spec = do
           $ rideRespond driverToken respondBody
       driverAcceptRideRequestResult `shouldSatisfy` isRight
 
-      piListResult <- runClient appClientEnv (buildListPIs PI.CANCELLED)
+      piListResult <- runClient appClientEnv (buildListPIs BPI.CANCELLED)
       piListResult `shouldSatisfy` isRight
 
       -- Check if app RIDEORDER PI is not CANCELLED. Only Customer can cancel the order.
@@ -88,5 +89,5 @@ spec = do
     checkPiInResult piListResult productInstanceId =
       let Right piListRes = piListResult
           appPiList = AppPI.productInstance <$> piListRes
-          appOrderPI = filter (\pI -> (getId <$> PI.parentId pI) == Just productInstanceId) appPiList
+          appOrderPI = filter (\pI -> (getId <$> BPI.parentId pI) == Just productInstanceId) appPiList
        in length appOrderPI `shouldBe` 0

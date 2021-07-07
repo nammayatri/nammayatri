@@ -6,13 +6,13 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import qualified Beckn.Types.Storage.Organization as Storage
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Error
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Organization as Storage
 import Utils.Common
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT))

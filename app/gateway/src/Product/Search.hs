@@ -7,7 +7,6 @@ where
 import App.Types
 import Beckn.Types.Core.Ack
 import Beckn.Types.Error
-import qualified Beckn.Types.Storage.Organization as Org
 import Beckn.Utils.Error.BecknAPIError (callBecknAPI')
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..), signatureAuthManagerKey)
 import qualified Data.Text as T
@@ -22,6 +21,7 @@ import qualified Types.API.Gateway.Search as ExternalAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
 import Types.Beckn.API.Callback
 import Types.Error
+import qualified Types.Storage.Organization as Org
 import Utils.Common
 
 search ::

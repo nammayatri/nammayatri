@@ -7,9 +7,9 @@ module Types.Metrics
 where
 
 import Beckn.Types.Monitoring.Prometheus.Metrics as CoreMetrics
-import qualified Beckn.Types.Storage.Case as Case
 import EulerHS.Prelude
 import Prometheus as P
+import qualified Types.Storage.Case as Case
 
 class BAPMetrics m where
   startSearchMetrics :: Text -> m ()

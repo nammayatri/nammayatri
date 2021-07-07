@@ -83,6 +83,7 @@ dependencies:
   - random-strings
   - record-hasfield
   - record-dot-preprocessor
+  - postgresql-simple
 
 ghc-options:
   - -fwrite-ide-info

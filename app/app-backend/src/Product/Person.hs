@@ -2,10 +2,10 @@ module Product.Person where
 
 import App.Types
 import qualified Beckn.Types.APISuccess as APISuccess
-import qualified Beckn.Types.Storage.Person as Person
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as QPerson
 import qualified Types.API.Person as Person
+import qualified Types.Storage.Person as Person
 import Utils.Common (withFlowHandlerAPI)
 
 getPersonDetails :: Person.Person -> FlowHandler Person.GetPersonDetailsRes

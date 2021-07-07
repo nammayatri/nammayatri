@@ -8,10 +8,6 @@ import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import Beckn.Types.Storage.Case as C
-import Beckn.Types.Storage.Person as SP
-import Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Storage.Queries.Case as Case
@@ -22,6 +18,10 @@ import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.CustomerSupport as T
 import Types.Error
 import Types.ProductInfo as ProductInfo
+import Types.Storage.Case as C
+import Types.Storage.Person as SP
+import Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common
 
 login :: T.LoginReq -> FlowHandler T.LoginRes

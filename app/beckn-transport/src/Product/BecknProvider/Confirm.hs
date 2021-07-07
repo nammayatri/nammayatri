@@ -5,10 +5,6 @@ import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import Data.Time (UTCTime)
@@ -25,7 +21,11 @@ import qualified Storage.Queries.ProductInstance as QProductInstance
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Test.RandomStrings as RS
 import Types.Error
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RideRequest as RideRequest
+import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
 confirm ::

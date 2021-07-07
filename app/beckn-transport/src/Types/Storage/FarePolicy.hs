@@ -4,13 +4,13 @@
 module Types.Storage.FarePolicy where
 
 import Beckn.Types.Id (Id)
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Beckn.Utils.JSON
 import Data.Time (TimeOfDay, UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Domain.FarePolicy as D
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Vehicle as Vehicle
 
 data FarePolicyT f = FarePolicy
   { id :: B.C f (Id D.FarePolicy),

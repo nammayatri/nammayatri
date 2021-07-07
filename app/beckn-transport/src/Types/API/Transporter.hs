@@ -3,13 +3,13 @@ module Types.API.Transporter where
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Predicate
-import qualified Beckn.Types.Storage.Location as SL
-import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Location as QL
 import Types.API.Registration
+import qualified Types.Storage.Location as SL
+import qualified Types.Storage.Organization as SO
 
 data TransporterReq = TransporterReq
   { name :: Text,

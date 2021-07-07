@@ -1,6 +1,6 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Beckn.Types.Storage.Geometry where
+module Types.Storage.Geometry where
 
 import Data.Aeson
 import qualified Database.Beam as B

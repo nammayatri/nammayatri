@@ -11,9 +11,6 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import qualified Beckn.Types.Storage.Organization as Org
-import qualified Beckn.Types.Storage.Person as Storage
-import qualified Beckn.Types.Storage.Vehicle as Vehicle
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
@@ -22,6 +19,9 @@ import EulerHS.Prelude hiding (id)
 import Types.API.Location (LatLong (..))
 import Types.App
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.Person as Storage
+import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
 

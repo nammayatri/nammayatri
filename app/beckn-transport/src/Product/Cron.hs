@@ -4,9 +4,6 @@ import App.Types
 import Beckn.Types.App as BC
 import Beckn.Types.Common
 import Beckn.Types.Error
-import qualified Beckn.Types.Storage.Case as C
-import qualified Beckn.Types.Storage.Person as PS
-import qualified Beckn.Types.Storage.ProductInstance as PI
 import Beckn.Utils.Common
 import Beckn.Utils.Cron (authenticate)
 import Data.Time (addUTCTime)
@@ -17,6 +14,9 @@ import qualified Storage.Queries.ProductInstance as CPQ
 import qualified Storage.Queries.ProductInstance as MPI
 import Types.API.Cron
 import Types.Metrics
+import qualified Types.Storage.Case as C
+import qualified Types.Storage.Person as PS
+import qualified Types.Storage.ProductInstance as PI
 import qualified Utils.Notifications as Notify
 
 expireCases :: Maybe CronAuthKey -> ExpireCaseReq -> FlowHandler ExpireRes

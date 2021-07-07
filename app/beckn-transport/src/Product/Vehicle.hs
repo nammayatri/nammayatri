@@ -2,16 +2,16 @@ module Product.Vehicle where
 
 import App.Types
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Organization as Org
-import qualified Beckn.Types.Storage.Person as SP
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Validation (runRequestValidation)
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle as API
 import Types.Error
+import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.Person as SP
+import qualified Types.Storage.RegistrationToken as SR
+import qualified Types.Storage.Vehicle as SV
 import Utils.Common
 import qualified Utils.Defaults as Default
 

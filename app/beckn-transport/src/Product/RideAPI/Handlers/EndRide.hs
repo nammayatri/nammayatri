@@ -3,12 +3,12 @@ module Product.RideAPI.Handlers.EndRide where
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as PI
 import EulerHS.Prelude
 import Types.App (Driver)
 import Types.Error
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as PI
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle

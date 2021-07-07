@@ -17,9 +17,14 @@ import Data.Aeson
 import Data.Aeson.Casing
 import Data.Aeson.TH
 import Data.Default.Class
-import EulerHS.Prelude hiding ((.=))
+import EulerHS.Prelude hiding (id, (.=))
 
 type FCMFlow m r = (HasFlowEnv m r ["fcmUrl" ::: BaseUrl, "fcmJsonPath" ::: Maybe Text])
+
+data FCMNotificationRecipient = FCMNotificationRecipient
+  { id :: Text,
+    token :: Maybe FCMRecipientToken
+  }
 
 -- | Device token
 newtype FCMRecipientToken = FCMRecipientToken

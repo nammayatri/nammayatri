@@ -2,9 +2,6 @@ module Flow.RideAPI.StartRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.StartRide as StartRide
@@ -13,6 +10,9 @@ import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Error
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as ProductInstance
 import Utils.SilentLogger ()
 
 handle :: StartRide.ServiceHandle IO

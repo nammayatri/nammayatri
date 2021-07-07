@@ -7,14 +7,14 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Trip
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as MPI
 import Types.Error
 import qualified Types.ProductInfo as ProdInfo
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
 
 onUpdate ::

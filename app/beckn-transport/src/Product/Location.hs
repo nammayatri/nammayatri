@@ -5,17 +5,17 @@ import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.Error.API
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Location
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as QPI
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import Types.API.Location as Location
 import Types.Metrics
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Location as Location
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as QPI
+import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common
 
 updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes

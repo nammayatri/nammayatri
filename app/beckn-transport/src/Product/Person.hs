@@ -21,13 +21,6 @@ import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import Beckn.Types.Storage.Location (Location)
-import Beckn.Types.Storage.Organization (Organization)
-import qualified Beckn.Types.Storage.Person as SP
-import Beckn.Types.Storage.ProductInstance (ProductInstance)
-import qualified Beckn.Types.Storage.Rating as Rating
-import qualified Beckn.Types.Storage.RegistrationToken as SR
-import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Validation (runRequestValidation)
 import Data.Maybe
 import qualified Data.Text as T
@@ -48,7 +41,14 @@ import Types.API.Registration (makeUserInfoRes)
 import Types.App (Driver)
 import Types.Error
 import Types.Metrics (CoreMetrics)
+import Types.Storage.Location (Location)
+import Types.Storage.Organization (Organization)
+import qualified Types.Storage.Person as SP
+import Types.Storage.ProductInstance (ProductInstance)
+import qualified Types.Storage.Rating as Rating
+import qualified Types.Storage.RegistrationToken as SR
 import Types.Storage.TransporterConfig (ConfigKey (ConfigKey))
+import qualified Types.Storage.Vehicle as SV
 import Utils.Common
 
 updatePerson :: SR.RegistrationToken -> Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes

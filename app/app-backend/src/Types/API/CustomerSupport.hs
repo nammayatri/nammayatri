@@ -1,14 +1,14 @@
 module Types.API.CustomerSupport where
 
 import Beckn.Types.Amount
-import Beckn.Types.Storage.Case as C
-import Beckn.Types.Storage.Location as L
-import qualified Beckn.Types.Storage.Person as P
-import Beckn.Types.Storage.ProductInstance as SP
 import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude hiding (id)
 import Types.Common
+import Types.Storage.Case as C
+import Types.Storage.Location as L
+import qualified Types.Storage.Person as P
+import Types.Storage.ProductInstance as SP
 
 newtype OrderResp = OrderResp {_order :: OrderDetails}
   deriving (Show, Generic)

@@ -6,10 +6,10 @@ where
 
 import Beckn.Types.Common
 import Beckn.Types.Error
-import Beckn.Types.Storage.Organization (Organization)
 import Beckn.Utils.Common as CoreCommon
 import EulerHS.Prelude
 import Types.Error
+import Types.Storage.Organization (Organization)
 
 getClientConfig :: (MonadThrow m, Log m, FromJSON a) => Organization -> m a
 getClientConfig org =

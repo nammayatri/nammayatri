@@ -2,12 +2,12 @@ module Mobility.NearestDrivers (spec) where
 
 import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Id
-import Beckn.Types.Storage.Vehicle
 import Beckn.Utils.Dhall (readDhallConfig)
 import EulerHS.Prelude
 import qualified "beckn-transport" Storage.Queries.Person as Q (getNearestDrivers)
 import Test.Hspec
 import "beckn-transport" Types.API.Location (LatLong (..))
+import Types.Storage.Vehicle
 import Utils
 
 spec :: Spec

@@ -8,7 +8,6 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id (Id (..), cast)
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.Organization as Organization
@@ -17,6 +16,7 @@ import qualified Storage.Queries.RideRequest as RideRequest
 import Types.API.Ride
 import Types.Storage.AllocationEvent
 import qualified Types.Storage.AllocationEvent as AllocationEvent
+import qualified Types.Storage.RegistrationToken as SR
 import Types.Storage.RideRequest
 import Utils.Common
 

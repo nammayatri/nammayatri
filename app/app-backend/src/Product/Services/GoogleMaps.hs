@@ -3,8 +3,8 @@ module Product.Services.GoogleMaps where
 import App.Types (AppEnv (..), FlowHandler)
 import qualified Beckn.External.GoogleMaps.Client as ClientGoogleMaps
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import qualified Beckn.Types.Storage.Person as Person
 import EulerHS.Prelude
+import qualified Types.Storage.Person as Person
 import Utils.Common (withFlowHandlerAPI)
 
 autoComplete :: Person.Person -> Text -> Text -> Integer -> Text -> FlowHandler GoogleMaps.SearchLocationResp

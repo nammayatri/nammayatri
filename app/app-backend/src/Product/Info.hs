@@ -2,9 +2,6 @@ module Product.Info where
 
 import App.Types
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as SC
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as SPI
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Case as Case
@@ -13,6 +10,9 @@ import Types.API.Location
 import Types.API.Product
 import Types.Error
 import Types.ProductInfo as ProductInfo
+import qualified Types.Storage.Case as SC
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
 
 getProductInfo :: Person.Person -> Id SPI.ProductInstance -> FlowHandler GetProductInfoRes

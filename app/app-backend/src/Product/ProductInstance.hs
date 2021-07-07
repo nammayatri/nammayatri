@@ -1,17 +1,17 @@
 module Product.ProductInstance where
 
 import App.Types
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Location as Loc
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as SPI
-import qualified Beckn.Types.Storage.Products as Products
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
 import Storage.Queries.Location as Loc
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.API.ProductInstance
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Location as Loc
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as SPI
+import qualified Types.Storage.Products as Products
 import Utils.Common (withFlowHandlerAPI)
 
 list :: Person.Person -> [SPI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList

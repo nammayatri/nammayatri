@@ -4,11 +4,11 @@ module Product.ProviderRegistry
 where
 
 import Beckn.Types.Common
-import qualified Beckn.Types.Storage.Organization as Org
 import EulerHS.Prelude
 import qualified Storage.Queries.Provider as Provider
 import qualified Types.Beckn.Context as B
 import qualified Types.Beckn.Domain as B
+import qualified Types.Storage.Organization as Org
 
 lookup :: DBFlow m r => B.Context -> m [Org.Organization]
 lookup context = do

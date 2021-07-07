@@ -3,11 +3,11 @@ module Product.RideAPI.Handlers.StartRide where
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import EulerHS.Prelude
 import Types.Error
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as ProductInstance
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle

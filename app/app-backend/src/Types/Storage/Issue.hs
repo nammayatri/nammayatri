@@ -1,14 +1,14 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Beckn.Types.Storage.Issue where
+module Types.Storage.Issue where
 
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as ProdInst
 import Data.Aeson
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as ProdInst
 
 data IssueT f = Issue
   { id :: B.C f (Id Issue),

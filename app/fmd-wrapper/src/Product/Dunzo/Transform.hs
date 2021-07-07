@@ -5,7 +5,6 @@ module Product.Dunzo.Transform where
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Storage.Organization (Organization)
 import Control.Lens (element, (?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.HashMap.Strict as HMS
@@ -41,6 +40,7 @@ import Types.Beckn.Quotation (Quotation (..))
 import Types.Beckn.Time (Time (..))
 import Types.Beckn.Tracking (Tracking (..))
 import Types.Error
+import Types.Storage.Organization (Organization)
 import Types.Wrapper
 import Utils.Common
 

@@ -1,9 +1,9 @@
 module Fixtures.Case (defaultCase) where
 
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.Case as Case
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
+import qualified Types.Storage.Case as Case
 
 defaultCase :: Case.Case
 defaultCase =

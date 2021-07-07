@@ -4,11 +4,11 @@ import App.Types
 import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
-import qualified Beckn.Types.Storage.RegistrationToken as SR
 import EulerHS.Prelude
 import ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.ProductInstance as PI
 import Types.Error
+import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common
 
 initiateCall :: SR.RegistrationToken -> CallReq -> FlowHandler CallRes

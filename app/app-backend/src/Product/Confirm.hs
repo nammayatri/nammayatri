@@ -9,10 +9,6 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Order (OrderItem (..))
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Order as BO
-import qualified Beckn.Types.Storage.Case as Case
-import qualified Beckn.Types.Storage.Organization as Organization
-import qualified Beckn.Types.Storage.Person as Person
-import qualified Beckn.Types.Storage.ProductInstance as SPI
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import qualified EulerHS.Language as L
@@ -27,6 +23,10 @@ import qualified Types.API.Confirm as API
 import Types.Error
 import qualified Types.Metrics as Metrics
 import qualified Types.ProductInfo as Products
+import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
 
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
