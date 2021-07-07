@@ -92,6 +92,7 @@ cancelRide rideId reason = do
     ProductInstance.findByIdType (ProductInstance.id <$> piList) Case.LOCATIONTRACKER
       >>= fromMaybeM PINotFound
   cancelRideTransaction piList searchPiId (trackerPi.id) (orderPi.id) reason
+  logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show reason)
   fork "cancelRide - Notify BAP" $ do
     let transporterId = ProductInstance.organizationId orderPi
     transporter <-

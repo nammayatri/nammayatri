@@ -64,6 +64,7 @@ searchCancel person req = do
   traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI.id <$> filter isProductInstanceCancellable piList)
   Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
   MC.updateStatusFlow (case_.id) Case.CLOSED
+  logTagInfo ("txnId-" <> caseId) "Search Cancel"
   return Success
 
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
@@ -108,11 +109,11 @@ onCancel _org req = withFlowHandlerBecknAPI $
         let caseId = productInstance.caseId
         -- notify customer
         cs <- MC.findById caseId >>= fromMaybeM CaseNotFound
+        reason <- msg.order.cancellation_reason_id & fromMaybeM (InvalidRequest "No cancellation reason.")
+        logTagInfo ("txnId-" <> getId caseId) ("Cancellation reason " <> show reason)
         whenJust (cs.requestor) $ \personId -> do
           mbPerson <- Person.findById $ Id personId
-          whenJust mbPerson $ \person -> do
-            reason <- msg.order.cancellation_reason_id & fromMaybeM (InvalidRequest "No cancellation reason.")
-            Notify.notifyOnCancel cs person reason
+          whenJust mbPerson $ \person -> Notify.notifyOnCancel cs person reason
         --
         arrPICase <- MPI.findAllByCaseId caseId
         let arrTerminalPI =
