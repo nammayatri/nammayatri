@@ -7,6 +7,7 @@ import EulerHS.Prelude
 data Domain
   = MOBILITY
   | FINAL_MILE_DELIVERY
+  | LOCAL_RETAIL
   deriving (Eq, Generic, Show)
 
 instance ToJSON Domain where
