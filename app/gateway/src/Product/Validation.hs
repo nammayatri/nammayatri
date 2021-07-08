@@ -9,7 +9,9 @@ import Utils.Common
 
 validateContext ::
   ( HasFlowEnv m r ["mobilityCoreVersion" ::: Text, "mobilityDomainVersion" ::: Text],
-    HasFlowEnv m r '["fmdCoreVersion" ::: Text]
+    HasFlowEnv m r '["fmdCoreVersion" ::: Text],
+    HasFlowEnv m r '["localRetailCoreVersion" ::: Text],
+    HasFlowEnv m r '["foodAndBeverageCoreVersion" ::: Text]
   ) =>
   Text ->
   Context ->
@@ -22,7 +24,9 @@ validateContext expectedAction context = do
 
 validateVersion ::
   ( HasFlowEnv m r ["mobilityCoreVersion" ::: Text, "mobilityDomainVersion" ::: Text],
-    HasFlowEnv m r '["fmdCoreVersion" ::: Text]
+    HasFlowEnv m r '["fmdCoreVersion" ::: Text],
+    HasFlowEnv m r '["localRetailCoreVersion" ::: Text],
+    HasFlowEnv m r '["foodAndBeverageCoreVersion" ::: Text]
   ) =>
   Context ->
   m ()
@@ -38,8 +42,12 @@ validateVersion context = do
         fmdCoreVersion <- asks (.fmdCoreVersion)
         return (Just fmdCoreVersion, Nothing)
       -- TODO: validate for these domains when enabled
-      LOCAL_RETAIL -> return (Nothing, Nothing)
-      FOOD_AND_BEVERAGE -> return (Nothing, Nothing)
+      LOCAL_RETAIL -> do
+        localRetailCoreVersion <- asks (.localRetailCoreVersion)
+        return (Just localRetailCoreVersion, Nothing)
+      FOOD_AND_BEVERAGE -> do
+        foodAndBeverageCoreVersion <- asks (.foodAndBeverageCoreVersion)
+        return (Just foodAndBeverageCoreVersion, Nothing)
       HEALTHCARE -> return (Nothing, Nothing)
   unless (context.core_version == desiredCoreVersion) $
     throwError UnsupportedCoreVer

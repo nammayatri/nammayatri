@@ -29,6 +29,8 @@ data AppCfg = AppCfg
     mobilityCoreVersion :: Text,
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
+    localRetailCoreVersion :: Text,
+    foodAndBeverageCoreVersion :: Text,
     signatureExpiry :: NominalDiffTime,
     graceTerminationPeriod :: Int
   }
@@ -44,6 +46,8 @@ data AppEnv = AppEnv
     mobilityCoreVersion :: Text,
     mobilityDomainVersion :: Text,
     fmdCoreVersion :: Text,
+    localRetailCoreVersion :: Text,
+    foodAndBeverageCoreVersion :: Text,
     signatureExpiry :: NominalDiffTime,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer
