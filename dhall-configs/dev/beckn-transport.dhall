@@ -51,7 +51,7 @@ in
 , redisCfg = rcfg
 , smsCfg = smsConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
-, inviteSmsTemplate = "Welcome to the Beckn Mobility network! Your agency ({#org#}) has added you as a driver. Start your rides by installing the app: https://jspy.in/rr/F4n7dy"
+, inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9997
