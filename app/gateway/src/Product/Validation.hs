@@ -38,6 +38,7 @@ validateVersion context = do
         fmdCoreVersion <- asks (.fmdCoreVersion)
         return (Just fmdCoreVersion, Nothing)
       -- TODO: validate for these domains when enabled
+      LOCAL_RETAIL -> return (Nothing, Nothing)
       FOOD_AND_BEVERAGE -> return (Nothing, Nothing)
       HEALTHCARE -> return (Nothing, Nothing)
   unless (context.core_version == desiredCoreVersion) $

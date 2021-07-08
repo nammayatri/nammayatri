@@ -63,6 +63,7 @@ instance FromHttpApiData OrganizationType where
 data OrganizationDomain
   = MOBILITY
   | FINAL_MILE_DELIVERY
+  | LOCAL_RETAIL
   | FOOD_AND_BEVERAGE
   | HEALTHCARE
   deriving (Show, Eq, Read, Generic, ToSchema)

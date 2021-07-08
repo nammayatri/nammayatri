@@ -8,6 +8,7 @@ import EulerHS.Prelude
 data Domain
   = MOBILITY
   | FINAL_MILE_DELIVERY
+  | LOCAL_RETAIL
   | FOOD_AND_BEVERAGE
   | HEALTHCARE
   deriving (Eq, Generic, Show)

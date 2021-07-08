@@ -20,5 +20,6 @@ lookup context = do
     domainToOrgType domain = case domain of
       B.MOBILITY -> Org.MOBILITY
       B.FINAL_MILE_DELIVERY -> Org.FINAL_MILE_DELIVERY
+      B.LOCAL_RETAIL -> Org.LOCAL_RETAIL
       B.FOOD_AND_BEVERAGE -> Org.FOOD_AND_BEVERAGE
       B.HEALTHCARE -> Org.HEALTHCARE
