@@ -84,8 +84,8 @@ data FulfillmentDetails = FulfillmentDetails
   { location :: Maybe Location,
     time :: Maybe Time,
     instructions :: Maybe Descriptor,
-    contact :: Contact,
-    person :: Person
+    contact :: Maybe Contact,
+    person :: Maybe Person
   }
   deriving (Generic, Show)
 

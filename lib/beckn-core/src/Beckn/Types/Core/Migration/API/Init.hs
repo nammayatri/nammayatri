@@ -5,21 +5,22 @@ import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.Migration.API.Types (BecknCallbackReq, BecknReq)
 import Beckn.Types.Core.Migration.Billing (Billing)
 import Beckn.Types.Core.Migration.Fulfillment (Fulfillment)
+import Beckn.Types.Core.Migration.ItemQuantity (Quantity)
 import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Quotation (Quotation)
-import Beckn.Utils.JSON (objectWithSingleFieldParsing)
-import Data.Aeson (withObject, (.:))
-import Data.Aeson.Types (parseFail)
 import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 
 type InitAPI =
   "init"
-    :> ReqBody '[JSON] (BecknReq InitOrder)
+    :> ReqBody '[JSON] (BecknReq InitOrderObj)
     :> Post '[JSON] AckResponse
 
 initAPI :: Proxy InitAPI
 initAPI = Proxy
+
+newtype InitOrderObj = InitOrderObj {order :: InitOrder}
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data InitOrder = InitOrder
   { provider :: InitOrderProvider,
@@ -29,37 +30,19 @@ data InitOrder = InitOrder
     billing :: Billing,
     fulfillment :: Fulfillment
   }
-  deriving (Generic, Show)
-
-instance FromJSON InitOrder where
-  parseJSON = genericParseJSON $ objectWithSingleFieldParsing initOrderConstructorMapping
-
-instance ToJSON InitOrder where
-  toJSON = genericToJSON $ objectWithSingleFieldParsing initOrderConstructorMapping
-
-initOrderConstructorMapping :: String -> String
-initOrderConstructorMapping = \case
-  "InitOrder" -> "order"
-  err -> error "Unexpected constructor name \"" <> err <> "\" in function initOrderConstructorMapping"
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data InitOrderProvider = InitOrderProvider
-  { id :: IdObject,
+  { id :: Text,
     locations :: [IdObject]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data InitOrderItem = InitOrderItem
   { id :: Text,
-    quantity :: Int
+    quantity :: Quantity
   }
-  deriving (Generic, Show, ToJSON)
-
-instance FromJSON InitOrderItem where
-  parseJSON = withObject "InitOrderItem" $ \obj -> do
-    quantity <- obj .: "quantity"
-    unless (quantity >= 0) $ parseFail "Expected quantity to be >= 0."
-    itemId <- obj .: "id"
-    pure $ InitOrderItem itemId quantity
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 type OnInitAPI =
   "on_init"

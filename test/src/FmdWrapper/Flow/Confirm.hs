@@ -89,8 +89,8 @@ confirmOrder =
                             },
                       time = Nothing,
                       instructions = Nothing,
-                      contact = Contact (Just "+919999999999") Nothing Nothing,
-                      person = Person Nothing Nothing Nothing Nothing Nothing Nothing
+                      contact = Just $ Contact (Just "+919999999999") Nothing Nothing,
+                      person = Just $ Person Nothing Nothing Nothing Nothing Nothing Nothing
                     },
               end =
                 Just
@@ -125,8 +125,8 @@ confirmOrder =
                             },
                       time = Nothing,
                       instructions = Nothing,
-                      contact = Contact (Just "+919999999999") Nothing Nothing,
-                      person = Person Nothing Nothing Nothing Nothing Nothing Nothing
+                      contact = Just $ Contact (Just "+919999999999") Nothing Nothing,
+                      person = Just $ Person Nothing Nothing Nothing Nothing Nothing Nothing
                     },
               purpose = Nothing,
               tags = Nothing

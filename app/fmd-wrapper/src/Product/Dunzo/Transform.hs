@@ -30,7 +30,7 @@ import Types.Beckn.Duration (Duration (..))
 import Types.Beckn.Fulfillment (Fulfillment (..), FulfillmentDetails (..))
 import Types.Beckn.Gps (Gps (..))
 import Types.Beckn.Item (Item (..))
-import Types.Beckn.ItemQuantity (emptyItemQuantity)
+import Types.Beckn.ItemQuantity (Quantity (..), emptyItemQuantity)
 import Types.Beckn.Location (Location)
 import Types.Beckn.Order (IdAndLocations (..), Order (..), OrderItem (..))
 import Types.Beckn.Payment (Params (..), Payment (..), PaymentType (..))
@@ -202,7 +202,7 @@ mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
     InitAPI.Initialized
       { provider = Nothing,
         provider_location = Nothing,
-        items = Just [InitAPI.InitOrderItem orderItem.id 1],
+        items = Just [InitAPI.InitOrderItem orderItem.id (Quantity (Just 1) Nothing)],
         add_ons = Nothing,
         offers = Nothing,
         billing = Just order.billing,
@@ -317,10 +317,10 @@ mkCreateTaskReq orderId order = do
       _ -> throwError $ InvalidRequest "Exactly one order item expected."
   pickupDet <- mkLocationDetails pickUpLoc
   dropDet <- mkLocationDetails deliveryLoc
-  pickUpPerson <- order ^? #fulfillment . #start . _Just . #person & fromMaybeM (InvalidRequest "Sending person not specified.")
-  pickUpContact <- order ^? #fulfillment . #start . _Just . #contact & fromMaybeM (InvalidRequest "Sending person contact not specified.")
-  recievingPerson <- order ^? #fulfillment . #end . _Just . #person & fromMaybeM (InvalidRequest "Recieving person not specified.")
-  recievingContact <- order ^? #fulfillment . #end . _Just . #contact & fromMaybeM (InvalidRequest "Recieving person contact not specified.")
+  pickUpPerson <- order ^? #fulfillment . #start . _Just . #person . _Just & fromMaybeM (InvalidRequest "Sending person not specified.")
+  pickUpContact <- order ^? #fulfillment . #start . _Just . #contact . _Just & fromMaybeM (InvalidRequest "Sending person contact not specified.")
+  recievingPerson <- order ^? #fulfillment . #end . _Just . #person . _Just & fromMaybeM (InvalidRequest "Recieving person not specified.")
+  recievingContact <- order ^? #fulfillment . #end . _Just . #contact . _Just & fromMaybeM (InvalidRequest "Recieving person contact not specified.")
   senderDet <- mkPersonDetails pickUpPerson pickUpContact
   receiverDet <- mkPersonDetails recievingPerson recievingContact
   let pickupIntructions = formatInstructions "pickup" =<< order ^? #fulfillment . #start . _Just . #instructions

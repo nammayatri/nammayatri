@@ -64,14 +64,14 @@ init ::
     CoreMetrics m
   ) =>
   Org.Organization ->
-  API.BecknReq InitAPI.InitOrder ->
+  API.BecknReq InitAPI.InitOrderObj ->
   m AckResponse
 init org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   dzBACreds <- getDzBAPCreds org
-  let order = req.message
+  let order = req.message.order
   validateOrder order
 
   let caseId = Id req.context.transaction_id

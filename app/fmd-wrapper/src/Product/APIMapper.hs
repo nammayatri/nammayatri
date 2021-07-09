@@ -7,7 +7,7 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
 import Types.Beckn.API.Cancel (CancellationInfo)
-import Types.Beckn.API.Init (InitOrder)
+import Types.Beckn.API.Init (InitOrderObj)
 import Types.Beckn.API.Search (SearchIntent)
 import Types.Beckn.API.Select (SelectedObject)
 import Types.Beckn.API.Status (OrderId)
@@ -33,7 +33,7 @@ select (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
     validateBapUrl bapOrg $ req.context
     DZ.select bapOrg req
 
-init :: SignatureAuthResult Organization -> API.BecknReq InitOrder -> FlowHandler AckResponse
+init :: SignatureAuthResult Organization -> API.BecknReq InitOrderObj -> FlowHandler AckResponse
 init (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTagMig req $ do
     validateContext INIT $ req.context
