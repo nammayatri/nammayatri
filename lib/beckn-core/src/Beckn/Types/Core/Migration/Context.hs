@@ -16,7 +16,7 @@ data Context = Context
     core_version :: Text,
     bap_id :: BaseUrl,
     bap_uri :: BaseUrl,
-    bpp_id :: Maybe BaseUrl,
+    bpp_id :: Maybe Text,
     bpp_uri :: Maybe BaseUrl,
     transaction_id :: Text,
     message_id :: Text,

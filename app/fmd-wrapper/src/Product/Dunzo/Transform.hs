@@ -14,6 +14,7 @@ import Data.Time (UTCTime, addUTCTime)
 import Data.Time.Format.ISO8601 (iso8601Show)
 import EulerHS.Prelude hiding (State, drop)
 import ExternalAPI.Dunzo.Types
+import Servant.Client (BaseUrl (..))
 import Types.Beckn.API.Init
 import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
@@ -147,7 +148,12 @@ mkOnSearchCatalog res@QuoteRes {..} =
         }
 
 updateBppUri :: Context -> BaseUrl -> Context
-updateBppUri Context {..} bpNwAddress = Context {bpp_uri = Just bpNwAddress, ..}
+updateBppUri Context {..} bpNwAddress =
+  Context
+    { bpp_uri = Just bpNwAddress,
+      bpp_id = Just . T.pack $ baseUrlHost bpNwAddress,
+      ..
+    }
 
 mkSearchItem :: Integer -> PackageContent -> QuoteRes -> Item
 mkSearchItem index packageContent QuoteRes {..} =
