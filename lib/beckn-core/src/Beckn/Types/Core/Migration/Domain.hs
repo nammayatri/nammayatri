@@ -13,7 +13,11 @@ data Domain
   deriving (Eq, Generic, Show)
 
 instance ToJSON Domain where
-  toJSON = genericToJSON constructorsWithHyphens
+  toJSON LOCAL_RETAIL = String "nic2004:52110"
+  toJSON FINAL_MILE_DELIVERY = String "nic2004:55204"
+  toJSON val = genericToJSON constructorsWithHyphens val -- TODO: update remaining domains with codes
 
 instance FromJSON Domain where
-  parseJSON = genericParseJSON constructorsWithHyphens
+  parseJSON (String "nic2004:52110") = pure LOCAL_RETAIL
+  parseJSON (String "nic2004:55204") = pure FINAL_MILE_DELIVERY
+  parseJSON val = genericParseJSON constructorsWithHyphens val
