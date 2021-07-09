@@ -27,11 +27,8 @@ data AppCfg = AppCfg
     autoMigrate :: Bool,
     loggerConfig :: LoggerConfig,
     searchTimeout :: Maybe Int,
-    mobilityCoreVersion :: Text,
+    coreVersions :: CoreVersions,
     mobilityDomainVersion :: Text,
-    fmdCoreVersion :: Text,
-    localRetailCoreVersion :: Text,
-    foodAndBeverageCoreVersion :: Text,
     signatureExpiry :: NominalDiffTime,
     graceTerminationPeriod :: Int,
     httpClientOptions :: HttpClientOptions
@@ -45,17 +42,22 @@ data AppEnv = AppEnv
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     cache :: C.Cache Text Text,
-    mobilityCoreVersion :: Text,
+    coreVersions :: CoreVersions,
     mobilityDomainVersion :: Text,
-    fmdCoreVersion :: Text,
-    localRetailCoreVersion :: Text,
-    foodAndBeverageCoreVersion :: Text,
     signatureExpiry :: NominalDiffTime,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions
   }
   deriving (Generic)
+
+data CoreVersions = CoreVersions
+  { mobility :: Text,
+    finalMileDelivery :: Text,
+    localRetail :: Text,
+    foodAndBeverage :: Text
+  }
+  deriving (Generic, FromDhall)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do

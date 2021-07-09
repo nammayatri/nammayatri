@@ -1,5 +1,6 @@
 module Product.Validation where
 
+import App.Types (CoreVersions)
 import EulerHS.Prelude
 import Temporary.Validation (validateAction, validateCity, validateCountry)
 import Types.Beckn.Context
@@ -8,10 +9,7 @@ import Types.Error
 import Utils.Common
 
 validateContext ::
-  ( HasFlowEnv m r ["mobilityCoreVersion" ::: Text, "mobilityDomainVersion" ::: Text],
-    HasFlowEnv m r '["fmdCoreVersion" ::: Text],
-    HasFlowEnv m r '["localRetailCoreVersion" ::: Text],
-    HasFlowEnv m r '["foodAndBeverageCoreVersion" ::: Text]
+  ( HasFlowEnv m r ["coreVersions" ::: CoreVersions, "mobilityDomainVersion" ::: Text]
   ) =>
   Text ->
   Context ->
@@ -23,33 +21,22 @@ validateContext expectedAction context = do
   validateVersion context
 
 validateVersion ::
-  ( HasFlowEnv m r ["mobilityCoreVersion" ::: Text, "mobilityDomainVersion" ::: Text],
-    HasFlowEnv m r '["fmdCoreVersion" ::: Text],
-    HasFlowEnv m r '["localRetailCoreVersion" ::: Text],
-    HasFlowEnv m r '["foodAndBeverageCoreVersion" ::: Text]
+  ( HasFlowEnv m r ["coreVersions" ::: CoreVersions, "mobilityDomainVersion" ::: Text]
   ) =>
   Context ->
   m ()
 validateVersion context = do
   let domain = context.domain
-  (desiredCoreVersion, desiredDomainVersion) <-
+  desiredCoreVersion <-
     case domain of
       MOBILITY -> do
-        mobilityCoreVersion <- asks (.mobilityCoreVersion)
         mobilityDomainVersion <- asks (.mobilityDomainVersion)
-        return (Just mobilityCoreVersion, Just mobilityDomainVersion)
-      FINAL_MILE_DELIVERY -> do
-        fmdCoreVersion <- asks (.fmdCoreVersion)
-        return (Just fmdCoreVersion, Nothing)
-      -- TODO: validate for these domains when enabled
-      LOCAL_RETAIL -> do
-        localRetailCoreVersion <- asks (.localRetailCoreVersion)
-        return (Just localRetailCoreVersion, Nothing)
-      FOOD_AND_BEVERAGE -> do
-        foodAndBeverageCoreVersion <- asks (.foodAndBeverageCoreVersion)
-        return (Just foodAndBeverageCoreVersion, Nothing)
-      HEALTHCARE -> return (Nothing, Nothing)
-  unless (context.core_version == desiredCoreVersion) $
+        unless (context.domain_version == Just mobilityDomainVersion) $
+          throwError UnsupportedDomainVer
+        asks (.coreVersions.mobility)
+      FINAL_MILE_DELIVERY -> asks (.coreVersions.finalMileDelivery)
+      LOCAL_RETAIL -> asks (.coreVersions.localRetail)
+      FOOD_AND_BEVERAGE -> asks (.coreVersions.foodAndBeverage)
+      HEALTHCARE -> throwError InvalidDomain -- Disabled
+  unless (context.core_version == Just desiredCoreVersion) $
     throwError UnsupportedCoreVer
-  unless (context.domain_version == desiredDomainVersion) $
-    throwError UnsupportedDomainVer

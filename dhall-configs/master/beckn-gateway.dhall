@@ -31,6 +31,13 @@ let httpClientOptions =
   , maxRetries = +3
   }
 
+let coreVersions =
+  { mobility = "0.8.2"
+  , finalMileDelivery = "0.9.1"
+  , localRetail = "0.9.1"
+  , foodAndBeverage = "0.9.1"
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -45,11 +52,8 @@ in
 , autoMigrate = common.autoMigrate
 , searchTimeout = Some +3600
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-gateway.log"}
-, mobilityCoreVersion = "0.8.2"
+, coreVersions = coreVersions
 , mobilityDomainVersion = "0.8.2"
-, fmdCoreVersion = "0.9.1"
-, localRetailCoreVersion = "0.9.1"
-, foodAndBeverageCoreVersion = "0.9.1"
 , signatureExpiry = common.signatureExpiry
 , graceTerminationPeriod = +90
 , httpClientOptions = httpClientOptions
