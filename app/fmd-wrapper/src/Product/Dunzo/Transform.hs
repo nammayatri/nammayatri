@@ -433,10 +433,11 @@ mkPayment estimated_price =
         Just
           Params
             { transaction_id = Nothing,
+              transaction_status = Nothing,
               amount = Just . DecimalValue $ show estimated_price,
+              currency = "INR",
               additional = HMS.empty
             },
-      payee = Nothing,
       _type = Just POST_FULFILLMENT,
       status = Nothing,
       time = Nothing

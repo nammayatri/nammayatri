@@ -145,10 +145,11 @@ confirmOrder =
                 Just $
                   Params
                     { transaction_id = Just "transaction id",
+                      transaction_status = Nothing,
                       amount = Nothing,
+                      currency = "INR",
                       additional = HMS.empty
                     },
-              payee = Nothing,
               _type = Nothing,
               status = Nothing,
               time = Nothing

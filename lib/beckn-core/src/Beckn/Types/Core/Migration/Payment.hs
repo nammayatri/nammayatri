@@ -7,7 +7,6 @@ module Beckn.Types.Core.Migration.Payment
 where
 
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
-import Beckn.Types.Core.Migration.Person (Person)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
@@ -21,7 +20,6 @@ data Payment = Payment
   { uri :: Maybe BaseUrl,
     tl_method :: Maybe TLMethod,
     params :: Maybe Params,
-    payee :: Maybe Payee,
     _type :: Maybe PaymentType,
     status :: Maybe Status,
     time :: Maybe Time
@@ -42,7 +40,9 @@ instance ToJSON TLMethod where
 
 data Params = Params
   { transaction_id :: Maybe Text,
+    transaction_status :: Maybe Text,
     amount :: Maybe DecimalValue,
+    currency :: Text,
     additional :: HashMap Text Text
   }
   deriving (Generic, Eq, Show)
@@ -51,36 +51,28 @@ instance FromJSON Params where
   parseJSON = withObject "Params" $ \o ->
     Params
       <$> o .: "transaction_id"
+      <*> o .: "transaction_status"
       <*> o .: "amount"
+      <*> o .: "currency"
       <*> mapM f (additional o)
     where
       f (String val) = pure val
       f e = typeMismatch "additional property of Params" e
-      additional = delete "transaction_id" . delete "amount"
+      additional =
+        delete "transaction_id"
+          . delete "transaction_status"
+          . delete "amount"
+          . delete "currency"
 
 instance ToJSON Params where
   toJSON Params {..} = uniteObjects [object knownParams, Object (String <$> additional)]
     where
       knownParams =
         [ "transaction_id" .= transaction_id,
-          "amount" .= amount
+          "transaction_status" .= transaction_status,
+          "amount" .= amount,
+          "currency" .= currency
         ]
-
-data Payee = PersonPayee Person | VPA Text | BankAccPayment BankAccount
-  deriving (Generic, Eq, Show)
-
-instance FromJSON Payee where
-  parseJSON = genericParseJSON $ objectWithSingleFieldParsing payeeConstructorMapping
-
-instance ToJSON Payee where
-  toJSON = genericToJSON $ objectWithSingleFieldParsing payeeConstructorMapping
-
-payeeConstructorMapping :: String -> String
-payeeConstructorMapping = \case
-  "PersonPayee" -> "person"
-  "VPA" -> "vpa"
-  "BankAccPayment" -> "bank_account"
-  err -> error "Unexpected constructor name \"" <> err <> "\" in function payeeConstructorMapping"
 
 data BankAccount = BankAccount
   { ifsc_code :: Maybe Text,
@@ -117,7 +109,6 @@ instance Example Payment where
       { uri = Nothing,
         tl_method = Nothing,
         params = Nothing,
-        payee = Nothing,
         _type = Nothing,
         status = Nothing,
         time = Nothing
