@@ -16,7 +16,7 @@ import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import Data.Aeson (withObject, (.!=), (.:), (.:?))
+import Data.Aeson (withObject, (.!=), (.:?))
 import EulerHS.Prelude hiding (State, id, state)
 
 data Fulfillment = Fulfillment
@@ -47,7 +47,7 @@ instance FromJSON Fulfillment where
       <*> o .:? "start"
       <*> o .:? "end"
       <*> o .:? "purpose"
-      <*> o .: "tags"
+      <*> o .:? "tags"
 
 instance ToJSON Fulfillment where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
