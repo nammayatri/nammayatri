@@ -103,8 +103,7 @@ listOrder personId mCaseId mMobile mlimit moffset = withFlowHandlerAPI $ do
 
 makeCaseToOrder :: (DBFlow m r, EncFlow m r) => SP.Person -> C.Case -> m T.OrderResp
 makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
-  (confiremedOrder :: Maybe C.Case) <-
-    Case.findOneByParentIdAndCaseType id C.RIDEORDER
+  (confiremedOrder :: Maybe C.Case) <- Case.findById id
   let (status_ :: Maybe CaseStatus) = ((\x -> Just $ x.status) =<< confiremedOrder) <|> Just status
   fromLocation <- Location.findLocationById fromLocationId
   toLocation <- Location.findLocationById toLocationId

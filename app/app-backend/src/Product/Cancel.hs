@@ -113,7 +113,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
         when
           (length arrTerminalPI == length arrSearchPI)
           ( do
-              Metrics.incrementCaseCount Case.CLOSED Case.RIDEORDER
+              Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
               case_ <- MC.findById searchCaseId >>= fromMaybeM CaseDoesNotExist
               Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
               MC.updateStatusFlow searchCaseId Case.CLOSED

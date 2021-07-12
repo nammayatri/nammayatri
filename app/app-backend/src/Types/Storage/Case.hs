@@ -18,7 +18,7 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import qualified Types.Storage.SearchReqLocation as Loc
 
-data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
+data CaseType = RIDESEARCH
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance ToHttpApiData CaseType where

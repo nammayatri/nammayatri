@@ -36,7 +36,7 @@ data ProductInstanceStatus
   | EXPIRED
   | TRIP_ASSIGNED
   | TRIP_REASSIGNMENT
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductInstanceStatus where
   sqlValueSyntax = autoSqlValueSyntax

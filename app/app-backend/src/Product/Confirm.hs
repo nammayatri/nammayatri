@@ -34,15 +34,13 @@ confirm personId rideSearchId rideBookingId = withFlowHandlerAPI . withPersonIdL
   case_ <- QCase.findByPersonId personId rideSearchId >>= fromMaybeM CaseDoesNotExist
   when ((case_.validTill) < lt) $
     throwError CaseExpired
-  orderCase_ <- mkOrderCase case_
   productInstance <- MPI.findById rideBookingId >>= fromMaybeM PIDoesNotExist
   organization <-
     OQ.findOrganizationById (productInstance.organizationId)
       >>= fromMaybeM OrgNotFound
-  Metrics.incrementCaseCount Case.INPROGRESS Case.RIDEORDER
-  orderProductInstance <- mkOrderProductInstance (orderCase_.id) productInstance
+  Metrics.incrementCaseCount Case.INPROGRESS Case.RIDESEARCH
+  orderProductInstance <- mkOrderProductInstance (case_.id) productInstance
   DB.runSqlDBTransaction $ do
-    QCase.create orderCase_
     QPI.create orderProductInstance
   context <- buildContext "confirm" (getId rideSearchId) Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
@@ -91,7 +89,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
                   SPI.udf4 = (.id) <$> trip,
                   SPI.status = SPI.CONFIRMED
                 }
-        Metrics.incrementCaseCount Case.COMPLETED Case.RIDEORDER
+        Metrics.incrementCaseCount Case.COMPLETED Case.RIDESEARCH
         let newCaseStatus = Case.COMPLETED
         case_ <- QCase.findById (prdInst.caseId) >>= fromMaybeM CaseNotFound
         Case.validateStatusTransition (case_.status) newCaseStatus & fromEitherM CaseInvalidStatus
@@ -101,30 +99,6 @@ onConfirm _org req = withFlowHandlerBecknAPI $
           QPI.updateMultiple pid uPrd
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack
-
-mkOrderCase :: MonadFlow m => Case.Case -> m Case.Case
-mkOrderCase Case.Case {..} = do
-  now <- getCurrentTime
-  caseId <- generateGUID
-  shortId_ <- generateShortId
-  return
-    Case.Case
-      { id = caseId,
-        name = Nothing,
-        description = Just "Case to order a Ride",
-        shortId = shortId_,
-        status = Case.INPROGRESS,
-        industry = Case.MOBILITY,
-        _type = Case.RIDEORDER,
-        parentCaseId = Just id,
-        fromLocationId = fromLocationId,
-        toLocationId = toLocationId,
-        startTime = startTime,
-        requestor = requestor,
-        createdAt = now,
-        updatedAt = now,
-        ..
-      }
 
 mkOrderProductInstance :: MonadFlow m => Id Case.Case -> SPI.ProductInstance -> m SPI.ProductInstance
 mkOrderProductInstance caseId' prodInst@SPI.ProductInstance {..} = do

@@ -83,20 +83,6 @@ findAllByIds caseIds = do
   where
     predicate Storage.Case {..} = id `B.in_` (B.val_ <$> caseIds)
 
-findAllByParentIdsAndCaseType :: DBFlow m r => [Id Storage.Case] -> Storage.CaseType -> m [Storage.Case]
-findAllByParentIdsAndCaseType caseIds caseType = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate Storage.Case {..} = parentCaseId `B.in_` (B.val_ . Just <$> caseIds) &&. (_type ==. B.val_ caseType)
-
-findOneByParentIdAndCaseType :: DBFlow m r => Id Storage.Case -> Storage.CaseType -> m (Maybe Storage.Case)
-findOneByParentIdAndCaseType caseId caseType = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Case {..} = parentCaseId ==. B.val_ (Just caseId) &&. _type ==. B.val_ caseType
-
 findAllByPerson :: DBFlow m r => Text -> m [Storage.Case]
 findAllByPerson perId = do
   dbTable <- getDbTable
