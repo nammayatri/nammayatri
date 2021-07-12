@@ -10,7 +10,6 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as QPI
 import Types.Error
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common
@@ -31,7 +30,7 @@ onStatus _org req = withFlowHandlerBecknAPI $
     return Ack
   where
     updateProductInstanceStatus prodInstId piStatus = do
-      orderPi <- QPI.findByParentIdType prodInstId Case.RIDEORDER >>= fromMaybeM PIDoesNotExist
+      orderPi <- QPI.findByParentIdType prodInstId PI.RIDEORDER >>= fromMaybeM PIDoesNotExist
       PI.validateStatusTransition (PI.status orderPi) piStatus & fromEitherM PIInvalidStatus
       QPI.updateStatus (orderPi.id) piStatus
       Notify.notifyOnStatusUpdate orderPi piStatus

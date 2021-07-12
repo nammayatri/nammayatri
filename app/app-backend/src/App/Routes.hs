@@ -270,7 +270,7 @@ type SupportAPI =
            :> TokenAuth
            :> ReqBody '[JSON] Support.SendIssueReq
            :> Post '[JSON] Support.SendIssueRes
-       )
+    )
 
 supportFlow :: FlowServer SupportAPI
 supportFlow = Support.sendIssue

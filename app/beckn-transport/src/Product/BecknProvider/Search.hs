@@ -215,7 +215,7 @@ mkProductInstance productCase price status transporterId nearestDriverDist = do
         entityType = ProductInstance.VEHICLE,
         entityId = Nothing,
         quantity = 1,
-        _type = Case.RIDESEARCH,
+        _type = ProductInstance.RIDESEARCH,
         price = price,
         actualPrice = Nothing,
         status = status,
@@ -244,7 +244,7 @@ mkOnSearchPayload ::
   Org.Organization ->
   m API.OnSearchServices
 mkOnSearchPayload productCase productInstances transporterOrg = do
-  ProductInstance.getCountByStatus (transporterOrg.id) Case.RIDEORDER
+  ProductInstance.getCountByStatus (transporterOrg.id) ProductInstance.RIDEORDER
     <&> mkProviderInfo transporterOrg . mkProviderStats
     >>= ExternalAPITransform.mkCatalog productCase productInstances
     <&> API.OnSearchServices

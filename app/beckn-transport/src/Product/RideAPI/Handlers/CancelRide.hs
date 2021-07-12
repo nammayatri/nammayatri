@@ -8,17 +8,16 @@ import EulerHS.Prelude
 import Types.API.Ride (CancelRideReq (..))
 import Types.App (Ride)
 import Types.Error
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Person as SP
-import Types.Storage.ProductInstance (ProductInstance, ProductInstanceStatus (..))
 import qualified Types.Storage.RideCancellationReason as SRCR
+import qualified Types.Storage.ProductInstance as PI
 import Utils.Common
 
 type MonadHandler m = (MonadThrow m, Log m)
 
 data ServiceHandle m = ServiceHandle
-  { findPIById :: Id ProductInstance -> m (Maybe ProductInstance),
+  { findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
     findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     cancelRide :: Id Ride -> SRCR.RideCancellationReason -> m ()
   }
@@ -39,8 +38,8 @@ cancelRideHandler ServiceHandle {..} personId rideId req = do
   pure APISuccess.Success
   where
     isValidPI prodInst =
-      prodInst._type == Case.RIDEORDER
-        && (prodInst.status) `elem` [CONFIRMED, TRIP_ASSIGNED, TRIP_REASSIGNMENT]
+      prodInst._type == PI.RIDEORDER
+        && (prodInst.status) `elem` [PI.CONFIRMED, PI.TRIP_ASSIGNED, PI.TRIP_REASSIGNMENT]
     rideCancelationReason source = do
       let CancelRideReq {..} = req
       SRCR.RideCancellationReason

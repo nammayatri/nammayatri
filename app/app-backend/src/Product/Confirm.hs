@@ -31,7 +31,7 @@ import qualified Utils.Metrics as Metrics
 confirm :: Id Person.Person -> Id Case.Case -> Id SPI.ProductInstance -> FlowHandler API.ConfirmRes
 confirm personId rideSearchId rideBookingId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   lt <- getCurrentTime
-  case_ <- QCase.findIdByPersonId personId rideSearchId >>= fromMaybeM CaseDoesNotExist
+  case_ <- QCase.findByPersonId personId rideSearchId >>= fromMaybeM CaseDoesNotExist
   when ((case_.validTill) < lt) $
     throwError CaseExpired
   orderCase_ <- mkOrderCase case_
@@ -139,7 +139,7 @@ mkOrderProductInstance caseId' prodInst@SPI.ProductInstance {..} = do
         entityId = Nothing,
         shortId = ShortId shortId',
         quantity = 1,
-        _type = Case.RIDEORDER,
+        _type = SPI.RIDEORDER,
         parentId = Just (prodInst.id),
         status = SPI.INSTOCK,
         createdAt = now,

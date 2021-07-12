@@ -19,7 +19,6 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Location as Location
 import Types.Metrics
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common hiding (id)
@@ -57,7 +56,7 @@ updateLocation personId req = withFlowHandlerAPI $ do
 getLocation :: Id PI.ProductInstance -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandlerAPI $ do
   ride <-
-    QPI.findByParentIdType piId Case.RIDEORDER
+    QPI.findByParentIdType piId PI.RIDEORDER
       >>= fromMaybeM PIDoesNotExist
   status <-
     case ride.status of

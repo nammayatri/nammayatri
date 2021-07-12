@@ -57,7 +57,26 @@ instance ToHttpApiData ProductInstanceStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-type ProductInstanceType = Case.CaseType
+data ProductInstanceType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance ToHttpApiData ProductInstanceType where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductInstanceType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance B.HasSqlEqualityCheck Postgres ProductInstanceType
+
+instance FromBackendRow Postgres ProductInstanceType where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance FromHttpApiData ProductInstanceType where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data EntityType = VEHICLE | PASS | TICKET
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)

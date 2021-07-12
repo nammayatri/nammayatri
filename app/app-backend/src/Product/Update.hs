@@ -13,7 +13,6 @@ import EulerHS.Prelude
 import qualified Storage.Queries.ProductInstance as MPI
 import Types.Error
 import qualified Types.ProductInfo as ProdInfo
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
@@ -31,7 +30,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
       Right msg -> do
         let trip = msg.order.trip
             pid = Id $ msg.order.id
-        orderPi <- MPI.findByParentIdType pid Case.RIDEORDER >>= fromMaybeM PIDoesNotExist
+        orderPi <- MPI.findByParentIdType pid SPI.RIDEORDER >>= fromMaybeM PIDoesNotExist
         let mprdInfo = decodeFromText =<< (orderPi.info)
             uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo.tracking =<< ProdInfo.tracker =<< mprdInfo)
             uPrd =

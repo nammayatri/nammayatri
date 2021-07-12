@@ -73,7 +73,7 @@ getDriverPhone Driver.Driver {..} =
 getProductAndCustomerPhones :: (EncFlow m r, DBFlow m r) => Id ProductInstance -> m (Text, Text)
 getProductAndCustomerPhones rideSearchPid = do
   rideSearchPI <-
-    ProductInstance.findByParentIdType rideSearchPid Case.RIDEORDER
+    ProductInstance.findByParentIdType rideSearchPid ProductInstance.RIDEORDER
       >>= fromMaybeM PIDoesNotExist
   person <- getPerson rideSearchPI
   driver <- getDriver rideSearchPI

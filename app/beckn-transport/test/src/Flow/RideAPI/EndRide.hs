@@ -86,7 +86,7 @@ searchProductInstance =
   Fixtures.defaultProductInstance
     { PI.id = "search",
       PI.caseId = "search",
-      PI._type = Case.RIDESEARCH,
+      PI._type = PI.RIDESEARCH,
       PI.status = PI.INPROGRESS
     }
 
@@ -95,7 +95,7 @@ trackerProductInstance =
   Fixtures.defaultProductInstance
     { PI.id = "tracker",
       PI.caseId = "tracker",
-      PI._type = Case.LOCATIONTRACKER,
+      PI._type = PI.LOCATIONTRACKER,
       PI.status = PI.INPROGRESS
     }
 

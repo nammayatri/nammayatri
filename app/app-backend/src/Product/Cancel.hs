@@ -33,7 +33,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   orderPI <- MPI.findOrderPIById orderPIId >>= fromMaybeM PIDoesNotExist
   searchPIId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
   searchPI <- MPI.findById searchPIId >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
-  searchCase <- MC.findIdByPersonId personId (searchPI.caseId) >>= fromMaybeM CaseNotFound
+  searchCase <- MC.findByPersonId personId (searchPI.caseId) >>= fromMaybeM CaseNotFound
   unless (isProductInstanceCancellable orderPI) $
     throwError $ PIInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ searchCase.id
@@ -73,7 +73,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
         let searchPIid = Id $ msg.order.id
         -- TODO: Handle usecase where multiple productinstances exists for one product
 
-        mbOrderPI <- MPI.findByParentIdType searchPIid Case.RIDEORDER
+        mbOrderPI <- MPI.findByParentIdType searchPIid PI.RIDEORDER
 
         whenJust mbOrderPI $ \orderPI -> do
           -- TODO what if we update several PI but then get an error?

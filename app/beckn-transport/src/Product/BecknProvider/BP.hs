@@ -76,7 +76,7 @@ cancel transporterId _ req = withFlowHandlerBecknAPI $
     prodInst <- ProductInstance.findById (Id prodInstId) >>= fromMaybeM PIDoesNotExist
     piList <- ProductInstance.findAllByParentId (prodInst.id)
     orderPi <-
-      ProductInstance.findByIdType (ProductInstance.id <$> piList) Case.RIDEORDER
+      ProductInstance.findByIdType (ProductInstance.id <$> piList) ProductInstance.RIDEORDER
         >>= fromMaybeM PINotFound
     RideRequest.createFlow =<< mkRideReq (orderPi.id) (transporterOrg.shortId) SRideRequest.CANCELLATION
     return Ack
@@ -97,7 +97,7 @@ cancelRide rideId rideCReason = do
   searchPi <- ProductInstance.findById searchPiId >>= fromMaybeM PINotFound
   piList <- ProductInstance.findAllByParentId searchPiId
   trackerPi <-
-    ProductInstance.findByIdType (ProductInstance.id <$> piList) Case.LOCATIONTRACKER
+    ProductInstance.findByIdType (ProductInstance.id <$> piList) ProductInstance.LOCATIONTRACKER
       >>= fromMaybeM PINotFound
   cancelRideTransaction piList searchPiId (trackerPi.id) (orderPi.id) rideCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation source " <> show rideCReason.source)
@@ -371,6 +371,6 @@ notifyStatusUpdateReq transporterOrg searchPi status = do
         else pure []
     notifyStatusToGateway = do
       trackerPi <-
-        ProductInstance.findByParentIdType (searchPi.id) Case.LOCATIONTRACKER
+        ProductInstance.findByParentIdType (searchPi.id) ProductInstance.LOCATIONTRACKER
           >>= fromMaybeM PINotFound
       notifyServiceStatusToGateway transporterOrg searchPi trackerPi

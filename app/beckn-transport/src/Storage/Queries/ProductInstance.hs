@@ -100,7 +100,7 @@ findAllOrdersByOrg orgId mbLimit mbOffset mbOnlyActive = do
   where
     predicate isOnlyActive Storage.ProductInstance {..} =
       organizationId ==. B.val_ orgId
-        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. _type ==. B.val_ Storage.RIDEORDER
         &&. if isOnlyActive
           then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
           else B.val_ True
@@ -115,7 +115,7 @@ findAllOrdersByDriver driverId mbLimit mbOffset mbOnlyActive = do
   where
     predicate isOnlyActive Storage.ProductInstance {..} =
       personId ==. B.val_ (Just driverId)
-        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. _type ==. B.val_ Storage.RIDEORDER
         &&. if isOnlyActive
           then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
           else B.val_ True
@@ -365,7 +365,7 @@ findAllRidesWithLocationsByDriverId limit offset personId_ = do
       return (ride, fromLoc, toLoc)
     predicate Storage.ProductInstance {..} =
       personId ==. B.val_ (Just personId_)
-        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. _type ==. B.val_ Storage.RIDEORDER
     orderByDesc (Storage.ProductInstance {..}, _, _) = B.desc_ createdAt
 
 findAllByParentId :: DBFlow m r => Id Storage.ProductInstance -> m [Storage.ProductInstance]
@@ -382,25 +382,25 @@ findOrderPIByParentId pid = do
   where
     predicate piid Storage.ProductInstance {..} =
       parentId ==. B.val_ (Just piid)
-        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. _type ==. B.val_ Storage.RIDEORDER
 
-findByIdType :: DBFlow m r => [Id Storage.ProductInstance] -> Case.CaseType -> m (Maybe Storage.ProductInstance)
-findByIdType ids csType = do
+findByIdType :: DBFlow m r => [Id Storage.ProductInstance] -> Storage.ProductInstanceType -> m (Maybe Storage.ProductInstance)
+findByIdType ids piType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
       id `B.in_` (B.val_ <$> ids)
-        &&. _type ==. B.val_ csType
+        &&. _type ==. B.val_ piType
 
-findByParentIdType :: DBFlow m r => Id Storage.ProductInstance -> Case.CaseType -> m (Maybe Storage.ProductInstance)
-findByParentIdType mparentId csType = do
+findByParentIdType :: DBFlow m r => Id Storage.ProductInstance -> Storage.ProductInstanceType -> m (Maybe Storage.ProductInstance)
+findByParentIdType mparentId piType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
       parentId ==. B.val_ (Just mparentId)
-        &&. _type ==. B.val_ csType
+        &&. _type ==. B.val_ piType
 
 findAllExpiredByStatus :: DBFlow m r => [Storage.ProductInstanceStatus] -> UTCTime -> m [Storage.ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
@@ -447,7 +447,7 @@ getDriverCompletedRides driverId fromTime toTime = do
   DB.findAll dbTable identity predicate
   where
     predicate Storage.ProductInstance {..} =
-      _type ==. B.val_ Case.RIDEORDER
+      _type ==. B.val_ Storage.RIDEORDER
         &&. personId ==. B.val_ (Just driverId)
         &&. status ==. B.val_ Storage.COMPLETED
         &&. startTime B.>=. B.val_ fromTime

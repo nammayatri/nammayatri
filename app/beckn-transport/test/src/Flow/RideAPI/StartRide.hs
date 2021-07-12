@@ -46,7 +46,7 @@ searchProductInstance =
   Fixtures.defaultProductInstance
     { ProductInstance.id = "2",
       ProductInstance.caseId = "2",
-      ProductInstance._type = Case.RIDESEARCH,
+      ProductInstance._type = ProductInstance.RIDESEARCH,
       ProductInstance.status = ProductInstance.CONFIRMED
     }
 
@@ -55,7 +55,7 @@ trackerProductInstance =
   Fixtures.defaultProductInstance
     { ProductInstance.id = "3",
       ProductInstance.caseId = "3",
-      ProductInstance._type = Case.LOCATIONTRACKER,
+      ProductInstance._type = ProductInstance.LOCATIONTRACKER,
       ProductInstance.status = ProductInstance.CONFIRMED
     }
 

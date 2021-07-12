@@ -42,7 +42,7 @@ findOrderPIById pid = do
   where
     predicate piid Storage.ProductInstance {..} =
       id ==. B.val_ piid
-        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. _type ==. B.val_ Storage.RIDEORDER
 
 findAllByCaseId :: DBFlow m r => Id Case.Case -> m [Storage.ProductInstance]
 findAllByCaseId caseId_ = do
@@ -78,7 +78,7 @@ findAllOrdersByPerson perId mbLimit mbOffset mbOnlyActive = do
   where
     predicate isOnlyActive Storage.ProductInstance {..} =
       personId ==. B.val_ (Just perId)
-        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. _type ==. B.val_ Storage.RIDEORDER
         &&. if isOnlyActive
           then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
           else B.val_ True
@@ -149,24 +149,24 @@ listAllProductInstanceWithOffset ::
   Integer ->
   Storage.ListById ->
   [Storage.ProductInstanceStatus] ->
-  [Case.CaseType] ->
+  [Storage.ProductInstanceType] ->
   m [Storage.ProductInstance]
-listAllProductInstanceWithOffset limit offset lbid stats csTypes = do
+listAllProductInstanceWithOffset limit offset lbid stats piTypes = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) (predicate lbid stats)
   where
     predicate (Storage.ByApplicationId i) s Storage.ProductInstance {..} =
       caseId ==. B.val_ i
         &&. (status `B.in_` (B.val_ <$> s) ||. complementVal s)
-        &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
+        &&. (_type `B.in_` (B.val_ <$> piTypes) ||. complementVal piTypes)
     predicate (Storage.ByCustomerId i) s Storage.ProductInstance {..} =
       personId ==. B.val_ (Just i)
         &&. (status `B.in_` (B.val_ <$> s) ||. complementVal s)
-        &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
+        &&. (_type `B.in_` (B.val_ <$> piTypes) ||. complementVal piTypes)
     predicate (Storage.ById i) s Storage.ProductInstance {..} =
       productId ==. B.val_ i
         &&. (status `B.in_` (B.val_ <$> s) ||. complementVal s)
-        &&. (_type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes)
+        &&. (_type `B.in_` (B.val_ <$> piTypes) ||. complementVal piTypes)
     orderBy Storage.ProductInstance {..} = B.desc_ updatedAt
 
 listAllProductInstance ::
@@ -215,15 +215,15 @@ updateMultiple piId prdInst = do
 findByParentIdType ::
   DBFlow m r =>
   Id Storage.ProductInstance ->
-  Case.CaseType ->
+  Storage.ProductInstanceType ->
   m (Maybe Storage.ProductInstance)
-findByParentIdType mparentId csType = do
+findByParentIdType mparentId piType = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.ProductInstance {..} =
       parentId ==. B.val_ (Just mparentId)
-        &&. _type ==. B.val_ csType
+        &&. _type ==. B.val_ piType
 
 findAllByParentId ::
   DBFlow m r =>

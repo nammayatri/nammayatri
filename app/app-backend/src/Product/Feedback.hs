@@ -28,7 +28,7 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let orderPIId = request.productInstanceId
   orderPI <- ProductInstance.findOrderPIById (Id orderPIId) >>= fromMaybeM PIDoesNotExist
-  orderCase <- Case.findIdByPersonId personId (orderPI.caseId) >>= fromMaybeM CaseNotFound
+  orderCase <- Case.findByPersonId personId (orderPI.caseId) >>= fromMaybeM CaseNotFound
   txnId <- getId <$> orderCase.parentCaseId & fromMaybeM (CaseFieldNotPresent "parentCaseId")
   searchPIId <- getId <$> orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
   context <- buildContext "feedback" txnId Nothing Nothing
