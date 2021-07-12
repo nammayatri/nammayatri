@@ -14,7 +14,6 @@ import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.SlidingWindowLimiter
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import qualified Product.Person as Person
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
@@ -178,8 +177,7 @@ checkRegistrationTokenExists tokenId =
 createPerson :: (DBFlow m r, EncFlow m r) => InitiateLoginReq -> m SP.Person
 createPerson req = do
   person <- makePerson req
-  QP.create person
-  when (person.role == SP.DRIVER) $ Person.createDriverDetails (person.id)
+  QP.createFlow person
   pure person
 
 checkPersonExists :: DBFlow m r => Text -> m SP.Person

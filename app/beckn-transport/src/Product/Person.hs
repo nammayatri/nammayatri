@@ -45,6 +45,7 @@ import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.Vehicle as QV
+import qualified Storage.Queries.Vehicle as QVehicle
 import Types.API.Location (LatLong (..))
 import Types.API.Person
 import Types.API.Registration (makeUserInfoRes)
@@ -74,15 +75,20 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ 
 
 createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
 createPerson orgId req = withFlowHandlerAPI $ do
-  validateDriver req
-  person <- addOrgId (Id orgId) <$> createTransform req
-  QP.create person
-  when (person.role == SP.DRIVER) $ createDriverDetails (person.id)
+  let personEntity = req.person
+  validateDriver personEntity
+  person <- addOrgId (Id orgId) <$> createTransform req.person
+  vehicle <- createTransform req.vehicle
+  DB.runSqlDBTransaction $ do
+    QP.create person
+    when (person.role == SP.DRIVER) $ do
+      createDriverDetails (person.id)
+      QVehicle.create vehicle
   org <-
     OQ.findOrganizationById (Id orgId)
-      >>= fromMaybeM OrgDoesNotExist
+      >>= fromMaybeM OrgNotFound
   decPerson <- decrypt person
-  case (req.role, req.mobileNumber, req.mobileCountryCode) of
+  case (personEntity.role, personEntity.mobileNumber, personEntity.mobileCountryCode) of
     (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
       smsCfg <- smsCfg <$> ask
       inviteSmsTemplate <- inviteSmsTemplate <$> ask
@@ -90,16 +96,16 @@ createPerson orgId req = withFlowHandlerAPI $ do
       return . UpdatePersonRes $ makeUserInfoRes decPerson
     _ -> return . UpdatePersonRes $ makeUserInfoRes decPerson
   where
-    validateDriver :: DBFlow m r => CreatePersonReq -> m ()
+    validateDriver :: DBFlow m r => PersonReqEntity -> m ()
     validateDriver preq =
       when (preq.role == Just SP.DRIVER) $
-        case (preq.mobileNumber, req.mobileCountryCode) of
+        case (preq.mobileNumber, preq.mobileCountryCode) of
           (Just mobileNumber, Just countryCode) ->
             whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
               throwError $ InvalidRequest "Person with this mobile number already exists."
           _ -> throwError $ InvalidRequest "You should pass mobile number and country code."
 
-createDriverDetails :: DBFlow m r => Id SP.Person -> m ()
+createDriverDetails :: Id SP.Person -> DB.SqlDB ()
 createDriverDetails personId = do
   now <- getCurrentTime
   let driverInfo =

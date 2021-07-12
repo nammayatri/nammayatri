@@ -19,7 +19,7 @@ createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle orgId req = withFlowHandlerAPI $ do
   validateVehicle
   vehicle <- createTransform req <&> addOrgId (Id orgId)
-  QV.create vehicle
+  QV.createFlow vehicle
   return $ CreateVehicleRes vehicle
   where
     validateVehicle = do

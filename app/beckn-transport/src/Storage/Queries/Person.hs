@@ -25,16 +25,17 @@ import qualified Types.Storage.DB as DB
 import Utils.Common
 import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
 
-getDbTable ::
-  (Functor m, HasSchemaName m) =>
-  m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
+getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
 getDbTable =
   DB.person . DB.transporterDb <$> getSchemaName
 
-create :: DBFlow m r => Storage.Person -> m ()
+createFlow :: DBFlow m r => Storage.Person -> m ()
+createFlow = DB.runSqlDB . create
+
+create :: Storage.Person -> DB.SqlDB ()
 create person = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression person)
+  DB.createOne' dbTable (Storage.insertExpression person)
 
 findPersonById ::
   DBFlow m r =>

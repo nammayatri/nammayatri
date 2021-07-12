@@ -19,10 +19,10 @@ import qualified Types.Storage.DriverInformation as DriverInformation
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
 getDbTable = DB.driverInformation . DB.transporterDb <$> getSchemaName
 
-create :: DBFlow m r => DriverInformation.DriverInformation -> m ()
+create :: DriverInformation.DriverInformation -> DB.SqlDB ()
 create DriverInformation.DriverInformation {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression DriverInformation.DriverInformation {..})
+  DB.createOne' dbTable (Storage.insertExpression DriverInformation.DriverInformation {..})
 
 findById :: DBFlow m r => Id Driver -> m (Maybe DriverInformation.DriverInformation)
 findById driverId_ = do

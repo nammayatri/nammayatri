@@ -25,7 +25,7 @@ data CreateVehicleReq = CreateVehicleReq
     registrationNo :: Text,
     registrationCategory :: Maybe RegistrationCategory
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, ToJSON, ToSchema)
 
 instance FromJSON CreateVehicleReq where
   parseJSON = genericParseJsonWithValidation "CreateVehicleReq" validateCreateVehicleReq

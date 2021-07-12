@@ -12,14 +12,18 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import Utils.Common
 
-getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.VehicleT))
+getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.VehicleT))
 getDbTable =
   DB.vehicle . DB.transporterDb <$> getSchemaName
 
-create :: DBFlow m r => Storage.Vehicle -> m ()
+createFlow :: DBFlow m r => Storage.Vehicle -> m ()
+createFlow =
+  DB.runSqlDB . create
+
+create :: Storage.Vehicle -> DB.SqlDB ()
 create Storage.Vehicle {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Vehicle {..})
+  DB.createOne' dbTable (Storage.insertExpression Storage.Vehicle {..})
 
 findVehicleById ::
   DBFlow m r =>

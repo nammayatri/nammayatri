@@ -23,6 +23,7 @@ import EulerHS.Prelude hiding (id, state)
 import Servant.API
 import qualified Storage.Queries.Location as QL
 import Types.API.Registration
+import qualified Types.API.Vehicle as VehAPI
 import Types.Error
 import Utils.Common
 
@@ -141,8 +142,7 @@ newtype UpdatePersonRes = UpdatePersonRes
   {user :: UserInfoRes}
   deriving (Generic, ToJSON, FromJSON)
 
--- Create Person request and response
-data CreatePersonReq = CreatePersonReq
+data PersonReqEntity = PersonReqEntity
   { firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
@@ -171,20 +171,33 @@ data CreatePersonReq = CreatePersonReq
     address :: Maybe Text,
     bound :: Maybe Text
   }
+  deriving (Generic, FromJSON, ToJSON)
+
+-- Create Person request and response
+data CreatePersonReq = CreatePersonReq
+  { person :: PersonReqEntity,
+    vehicle :: VehAPI.CreateVehicleReq
+  }
   deriving (Generic, ToJSON)
 
 validateCreatePersonReq :: Validate CreatePersonReq
 validateCreatePersonReq CreatePersonReq {..} =
   sequenceA_
-    [ validateMaybe "firstName" firstName $ NotEmpty `And` P.name,
-      validateMaybe "mobileNumber" mobileNumber P.mobileNumber,
-      validateMaybe "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    [ validateMaybe "firstName" person.firstName $ NotEmpty `And` P.name,
+      validateMaybe "mobileNumber" person.mobileNumber P.mobileNumber,
+      validateMaybe "mobileCountryCode" person.mobileCountryCode P.mobileCountryCode,
+      validate "registrationNo" vehicle.registrationNo $
+        LengthInRange 1 10 `And` star (P.latinUC \/ P.digit),
+      validateMaybe "model" vehicle.model $
+        NotEmpty `And` star P.latinOrSpace,
+      validateMaybe "make" vehicle.make $ NotEmpty `And` P.name,
+      validateMaybe "color" vehicle.color $ NotEmpty `And` P.name
     ]
 
 instance FromJSON CreatePersonReq where
   parseJSON = genericParseJsonWithValidation "CreatePersonReq" validateCreatePersonReq
 
-instance (DBFlow m r, EncFlow m r) => CreateTransform CreatePersonReq SP.Person m where
+instance (DBFlow m r, EncFlow m r) => CreateTransform PersonReqEntity SP.Person m where
   createTransform req = do
     pid <- generateGUID
     now <- getCurrentTime
@@ -219,7 +232,7 @@ instance (DBFlow m r, EncFlow m r) => CreateTransform CreatePersonReq SP.Person 
           SP.updatedAt = now
         }
 
-createLocationT :: DBFlow m r => CreatePersonReq -> m SL.Location
+createLocationT :: DBFlow m r => PersonReqEntity -> m SL.Location
 createLocationT req = do
   location <- createLocationRec req
   QL.createFlow location
@@ -229,8 +242,8 @@ createLocationT req = do
 --   as possible, still we need fake organizationId here ...
 -- Better solution in he long run is to factor out common data reducing this
 --   enormous amount of duplication ...
-createLocationRec :: DBFlow m r => CreatePersonReq -> m SL.Location
-createLocationRec CreatePersonReq {..} = createLocation UpdatePersonReq {..}
+createLocationRec :: DBFlow m r => PersonReqEntity -> m SL.Location
+createLocationRec PersonReqEntity {..} = createLocation UpdatePersonReq {..}
 
 newtype ListPersonRes = ListPersonRes
   {users :: [PersonEntityRes]}

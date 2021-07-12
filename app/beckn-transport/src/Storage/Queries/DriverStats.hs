@@ -17,7 +17,7 @@ import Utils.Common
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.DriverStatsT))
 getDbTable = DB.driverStats . DB.transporterDb <$> getSchemaName
 
-createInitialDriverStats :: DBFlow m r => Id Driver -> m ()
+createInitialDriverStats :: Id Driver -> DB.SqlDB ()
 createInitialDriverStats driverId_ = do
   dbTable <- getDbTable
   now <- getCurrentTime
@@ -26,7 +26,7 @@ createInitialDriverStats driverId_ = do
           { driverId = driverId_,
             idleSince = now
           }
-  DB.createOne dbTable (Storage.Common.insertExpression driverStats)
+  DB.createOne' dbTable (Storage.Common.insertExpression driverStats)
 
 getFirstDriverInTheQueue :: DBFlow m r => [Id Driver] -> m (Id Driver)
 getFirstDriverInTheQueue ids = do
