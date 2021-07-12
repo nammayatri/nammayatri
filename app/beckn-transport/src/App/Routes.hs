@@ -104,11 +104,8 @@ registrationFlow =
 -- Following is person flow
 type PersonAPI =
   "person"
-    :> ( AdminTokenAuth
-           :> ReqBody '[JSON] CreatePersonReq
-           :> Post '[JSON] UpdatePersonRes
-           :<|> TokenAuth
-             :> Get '[JSON] GetPersonDetailsRes
+    :> ( TokenAuth
+           :> Get '[JSON] GetPersonDetailsRes
            :<|> "list"
              :> AdminTokenAuth
              :> QueryParams "roles" SP.Role
@@ -127,8 +124,7 @@ type PersonAPI =
 
 personFlow :: FlowServer PersonAPI
 personFlow =
-  Person.createPerson
-    :<|> Person.getPersonDetails
+  Person.getPersonDetails
     :<|> Person.listPerson
     :<|> Person.updatePerson
     :<|> Person.deletePerson
@@ -354,8 +350,11 @@ routeApiFlow = Location.getRoute
 
 type DriverInformationAPI =
   "driver"
-    :> ( TokenAuth
-           :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
+    :> ( AdminTokenAuth
+           :> ReqBody '[JSON] DriverInformationAPI.CreateDriverReq
+           :> Post '[JSON] DriverInformationAPI.CreateDriverRes
+           :<|> TokenAuth
+             :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
            :<|> "setActivity"
              :> TokenAuth
              :> MandatoryQueryParam "active" Bool
@@ -378,7 +377,8 @@ type DriverInformationAPI =
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
-  DriverInformation.getInformation
+  DriverInformation.createDriver
+    :<|> DriverInformation.getInformation
     :<|> DriverInformation.setActivity
     :<|> DriverInformation.getRideInfo
     :<|> DriverInformation.listDriver

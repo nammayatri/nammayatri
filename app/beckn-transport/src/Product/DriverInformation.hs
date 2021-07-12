@@ -3,17 +3,22 @@ module Product.DriverInformation where
 import App.Types
 import qualified App.Types as App
 import Beckn.External.Encryption (decrypt)
+import qualified Beckn.Storage.Queries as DB
+import Beckn.TypeClass.Transform
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount (amountToString)
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import EulerHS.Prelude hiding (id)
 import qualified Product.Location as Location
+import Product.Person (sendInviteSms)
 import qualified Product.Person as Person
 import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QLocation
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Organization as QOrganization
@@ -21,9 +26,58 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QueryPI
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Types.API.DriverInformation as DriverInformationAPI
+import Types.API.Registration (makeUserInfoRes)
 import Types.App
 import Types.Error
+import qualified Types.Storage.DriverInformation as DriverInfo
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
+
+createDriver :: Text -> DriverInformationAPI.CreateDriverReq -> FlowHandler DriverInformationAPI.CreateDriverRes
+createDriver orgId req = withFlowHandlerAPI $ do
+  let personEntity = req.person
+  validateDriver personEntity
+  person <- addOrgId (Id orgId) <$> createTransform req.person
+  vehicle <- createTransform req.vehicle
+  DB.runSqlDBTransaction $ do
+    QPerson.create person
+    createDriverDetails (person.id)
+    QVehicle.create vehicle
+  org <-
+    QOrganization.findOrganizationById (Id orgId)
+      >>= fromMaybeM OrgNotFound
+  decPerson <- decrypt person
+  case (personEntity.role, personEntity.mobileNumber, personEntity.mobileCountryCode) of
+    (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
+      smsCfg <- smsCfg <$> ask
+      inviteSmsTemplate <- inviteSmsTemplate <$> ask
+      sendInviteSms smsCfg inviteSmsTemplate (countryCode <> mobileNumber) (org.name)
+      return . DriverInformationAPI.CreateDriverRes $ makeUserInfoRes decPerson
+    _ -> return . DriverInformationAPI.CreateDriverRes $ makeUserInfoRes decPerson
+  where
+    addOrgId orgId_ person = person {SP.organizationId = Just orgId_}
+    validateDriver preq =
+      when (preq.role == Just SP.DRIVER) $
+        case (preq.mobileNumber, preq.mobileCountryCode) of
+          (Just mobileNumber, Just countryCode) ->
+            whenM (isJust <$> QPerson.findByMobileNumber countryCode mobileNumber) $
+              throwError $ InvalidRequest "Person with this mobile number already exists."
+          _ -> throwError $ InvalidRequest "You should pass mobile number and country code."
+
+createDriverDetails :: Id SP.Person -> DB.SqlDB ()
+createDriverDetails personId = do
+  now <- getCurrentTime
+  let driverInfo =
+        DriverInfo.DriverInformation
+          { driverId = personId,
+            active = False,
+            onRide = False,
+            createdAt = now,
+            updatedAt = now
+          }
+  QDriverStats.createInitialDriverStats driverId
+  QDriverInformation.create driverInfo
+  where
+    driverId = cast personId
 
 getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
 getInformation RegistrationToken {..} = withFlowHandlerAPI $ do

@@ -143,7 +143,7 @@ rideRespond :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy
 getDriverInfo :: Text -> ClientM DriverInformationAPI.DriverInformationResponse
 setDriverOnline :: Text -> Bool -> ClientM APISuccess
 getNotificationInfo :: Text -> Maybe (Id Ride) -> ClientM DriverInformationAPI.GetRideInfoRes
-getDriverInfo :<|> setDriverOnline :<|> getNotificationInfo :<|> _ = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
+_ :<|> getDriverInfo :<|> setDriverOnline :<|> getNotificationInfo :<|> _ = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 
 buildAppCancelReq :: Text -> CancelAPI.Entity -> CancelAPI.CancelReq
 buildAppCancelReq entityId entityType =
@@ -228,12 +228,10 @@ listPIs = client (Proxy :: Proxy AbeRoutes.ProductInstanceAPI)
 buildListPIs :: PI.ProductInstanceStatus -> ClientM AppPI.ProductInstanceList
 buildListPIs status = listPIs appRegistrationToken [status] [Case.RIDEORDER] (Just 50) Nothing
 
-createPerson :: Text -> TbePerson.CreatePersonReq -> ClientM TbePerson.UpdatePersonRes
 listPerson :: Text -> [Person.Role] -> Maybe Integer -> Maybe Integer -> ClientM TbePerson.ListPersonRes
 updatePerson :: Text -> Id Person.Person -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
 deletePerson :: Text -> Id Person.Person -> ClientM TbePerson.DeletePersonRes
-createPerson
-  :<|> _
+_
   :<|> listPerson
   :<|> updatePerson
   :<|> deletePerson = client (Proxy :: Proxy TbeRoutes.PersonAPI)

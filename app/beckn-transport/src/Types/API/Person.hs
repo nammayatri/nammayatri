@@ -23,7 +23,6 @@ import EulerHS.Prelude hiding (id, state)
 import Servant.API
 import qualified Storage.Queries.Location as QL
 import Types.API.Registration
-import qualified Types.API.Vehicle as VehAPI
 import Types.Error
 import Utils.Common
 
@@ -172,30 +171,6 @@ data PersonReqEntity = PersonReqEntity
     bound :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON)
-
--- Create Person request and response
-data CreatePersonReq = CreatePersonReq
-  { person :: PersonReqEntity,
-    vehicle :: VehAPI.CreateVehicleReq
-  }
-  deriving (Generic, ToJSON)
-
-validateCreatePersonReq :: Validate CreatePersonReq
-validateCreatePersonReq CreatePersonReq {..} =
-  sequenceA_
-    [ validateMaybe "firstName" person.firstName $ NotEmpty `And` P.name,
-      validateMaybe "mobileNumber" person.mobileNumber P.mobileNumber,
-      validateMaybe "mobileCountryCode" person.mobileCountryCode P.mobileCountryCode,
-      validate "registrationNo" vehicle.registrationNo $
-        LengthInRange 1 10 `And` star (P.latinUC \/ P.digit),
-      validateMaybe "model" vehicle.model $
-        NotEmpty `And` star P.latinOrSpace,
-      validateMaybe "make" vehicle.make $ NotEmpty `And` P.name,
-      validateMaybe "color" vehicle.color $ NotEmpty `And` P.name
-    ]
-
-instance FromJSON CreatePersonReq where
-  parseJSON = genericParseJsonWithValidation "CreatePersonReq" validateCreatePersonReq
 
 instance (DBFlow m r, EncFlow m r) => CreateTransform PersonReqEntity SP.Person m where
   createTransform req = do

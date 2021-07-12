@@ -1,7 +1,5 @@
 module Product.Person
-  ( createPerson,
-    createDriverDetails,
-    listPerson,
+  ( listPerson,
     updatePerson,
     deletePerson,
     calculateAverageRating,
@@ -10,6 +8,7 @@ module Product.Person
     setDriverPool,
     calculateDriverPool,
     getPersonDetails,
+    sendInviteSms,
   )
 where
 
@@ -38,21 +37,18 @@ import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QL
-import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.Vehicle as QV
-import qualified Storage.Queries.Vehicle as QVehicle
 import Types.API.Location (LatLong (..))
 import Types.API.Person
 import Types.API.Registration (makeUserInfoRes)
 import Types.App (Driver)
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import qualified Types.Storage.DriverInformation as DriverInformation
 import Types.Storage.TransporterConfig (ConfigKey (ConfigKey))
 import Utils.Common
 
@@ -72,54 +68,6 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ 
     isValidUpdate person =
       when (isJust (req.role) && person.role /= SP.ADMIN) $
         throwError Unauthorized
-
-createPerson :: Text -> CreatePersonReq -> FlowHandler UpdatePersonRes
-createPerson orgId req = withFlowHandlerAPI $ do
-  let personEntity = req.person
-  validateDriver personEntity
-  person <- addOrgId (Id orgId) <$> createTransform req.person
-  vehicle <- createTransform req.vehicle
-  DB.runSqlDBTransaction $ do
-    QP.create person
-    when (person.role == SP.DRIVER) $ do
-      createDriverDetails (person.id)
-      QVehicle.create vehicle
-  org <-
-    OQ.findOrganizationById (Id orgId)
-      >>= fromMaybeM OrgNotFound
-  decPerson <- decrypt person
-  case (personEntity.role, personEntity.mobileNumber, personEntity.mobileCountryCode) of
-    (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
-      smsCfg <- smsCfg <$> ask
-      inviteSmsTemplate <- inviteSmsTemplate <$> ask
-      sendInviteSms smsCfg inviteSmsTemplate (countryCode <> mobileNumber) (org.name)
-      return . UpdatePersonRes $ makeUserInfoRes decPerson
-    _ -> return . UpdatePersonRes $ makeUserInfoRes decPerson
-  where
-    validateDriver :: DBFlow m r => PersonReqEntity -> m ()
-    validateDriver preq =
-      when (preq.role == Just SP.DRIVER) $
-        case (preq.mobileNumber, preq.mobileCountryCode) of
-          (Just mobileNumber, Just countryCode) ->
-            whenM (isJust <$> QP.findByMobileNumber countryCode mobileNumber) $
-              throwError $ InvalidRequest "Person with this mobile number already exists."
-          _ -> throwError $ InvalidRequest "You should pass mobile number and country code."
-
-createDriverDetails :: Id SP.Person -> DB.SqlDB ()
-createDriverDetails personId = do
-  now <- getCurrentTime
-  let driverInfo =
-        DriverInformation.DriverInformation
-          { driverId = personId,
-            active = False,
-            onRide = False,
-            createdAt = now,
-            updatedAt = now
-          }
-  QDriverStats.createInitialDriverStats driverId
-  QDriverInformation.create driverInfo
-  where
-    driverId = cast personId
 
 getPersonDetails :: SR.RegistrationToken -> FlowHandler GetPersonDetailsRes
 getPersonDetails regToken = withFlowHandlerAPI $ do
@@ -149,9 +97,6 @@ deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
   return $ DeletePersonRes personId
 
 -- Utility Functions
-
-addOrgId :: Id Organization -> SP.Person -> SP.Person
-addOrgId orgId person = person {SP.organizationId = Just orgId}
 
 mkPersonRes :: (DBFlow m r, EncFlow m r) => SP.Person -> m PersonEntityRes
 mkPersonRes person = do
