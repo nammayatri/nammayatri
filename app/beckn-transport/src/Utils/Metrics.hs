@@ -12,20 +12,17 @@ import GHC.Records.Extra
 import Prometheus as P
 import qualified Types.Metrics as Metric
 
-incrementTaskCounterFlow :: HasField "btmMetrics" r Metric.BTMMetricsContainer => FlowR r ()
+type HasBTMMetrics r = HasField "btmMetrics" r Metric.BTMMetricsContainer
+
+incrementTaskCounterFlow :: HasBTMMetrics r => FlowR r ()
 incrementTaskCounterFlow = do
   bmContainer <- asks (.btmMetrics)
   incrementTaskCounter bmContainer
 
-incrementFailedTaskCounterFlow :: HasField "btmMetrics" r Metric.BTMMetricsContainer => FlowR r ()
+incrementFailedTaskCounterFlow :: HasBTMMetrics r => FlowR r ()
 incrementFailedTaskCounterFlow = do
   bmContainer <- asks (.btmMetrics)
   incrementFailedTaskCounter bmContainer
-
-putTaskDurationFlow :: HasField "btmMetrics" r Metric.BTMMetricsContainer => Double -> FlowR r ()
-putTaskDurationFlow duration = do
-  bmContainer <- asks (.btmMetrics)
-  putTaskDuration bmContainer duration
 
 incrementTaskCounter :: L.MonadFlow m => Metric.BTMMetricsContainer -> m ()
 incrementTaskCounter bmContainer = do
@@ -37,7 +34,15 @@ incrementFailedTaskCounter bmContainer = do
   let failedTaskCounter = bmContainer.failedTaskCounter
   L.runIO $ P.incCounter failedTaskCounter
 
-putTaskDuration :: L.MonadFlow m => Metric.BTMMetricsContainer -> Double -> m ()
-putTaskDuration bmContainer duration = do
+addTaskDurationFlow ::
+  ( HasBTMMetrics r,
+    MonadReader r m,
+    L.MonadFlow m
+  ) =>
+  Double ->
+  () ->
+  m ()
+addTaskDurationFlow duration _ = do
+  bmContainer <- asks (.btmMetrics)
   let taskDuration = bmContainer.taskDuration
   L.runIO $ P.observe taskDuration duration

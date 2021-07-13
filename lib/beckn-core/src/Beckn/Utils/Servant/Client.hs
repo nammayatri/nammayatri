@@ -8,6 +8,7 @@ import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.Throwing
 import Beckn.Utils.Logging
+import Beckn.Utils.Time
 import qualified Data.Aeson as A
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -51,23 +52,14 @@ callAPI' ::
   CallAPI' m res (Either ClientError res)
 callAPI' mbManagerSelector baseUrl eulerClient desc =
   withLogTag "callAPI" $ do
-    endTracking <- Metrics.startRequestLatencyTracking (T.pack $ showBaseUrl baseUrl) desc
     let managerSelector = fromMaybe defaultHttpManager mbManagerSelector
-    res <- L.callAPI' (Just managerSelector) baseUrl eulerClient
+    res <-
+      measuringDurationInS (Metrics.addRequestLatency (T.pack $ showBaseUrl baseUrl) desc) $
+        L.callAPI' (Just managerSelector) baseUrl eulerClient
     case res of
       Right r -> logDebug $ "Ok response: " <> decodeUtf8 (A.encode r)
       Left err -> logDebug $ "Error occured during client call: " <> show err
-    _ <- endTracking $ getResponseCode res
     return res
-  where
-    getResponseCode res =
-      case res of
-        Right _ -> "200"
-        Left (FailureResponse _ (Response code _ _ _)) -> T.pack $ show code
-        Left (DecodeFailure _ (Response code _ _ _)) -> T.pack $ show code
-        Left (InvalidContentTypeHeader (Response code _ _ _)) -> T.pack $ show code
-        Left (UnsupportedContentType _ (Response code _ _ _)) -> T.pack $ show code
-        Left (ConnectionError _) -> "Connection error"
 
 parseBaseUrl :: MonadThrow m => Text -> m S.BaseUrl
 parseBaseUrl = S.parseBaseUrl . T.unpack

@@ -1,9 +1,15 @@
-module Beckn.Utils.Time where
+module Beckn.Utils.Time
+  ( module Beckn.Utils.Time,
+    module Beckn.Types.Time,
+  )
+where
 
 import Beckn.Types.Time
+import Beckn.Utils.Logging
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import EulerHS.Prelude
+import System.Clock (toNanoSecs)
 
 isExpired :: MonadTime m => NominalDiffTime -> UTCTime -> m Bool
 isExpired nominal time = do
@@ -20,3 +26,34 @@ showTimeIst time =
   T.pack $
     formatTime defaultTimeLocale "%d %b, %I:%M %p" $
       addUTCTime (60 * 330) time
+
+getClockTimeInMs :: MonadClock m => m Ms
+getClockTimeInMs = fromInteger . (`div` 1000000) . toNanoSecs <$> getClockTime
+
+measureDuration :: MonadClock m => m a -> m (a, Ms)
+measureDuration f = do
+  start <- getClockTimeInMs
+  res <- f
+  end <- getClockTimeInMs
+  return (res, end - start)
+
+measuringDuration :: (Ms -> a -> m ()) -> MeasuringDuration m a
+measuringDuration doWithDuration f = do
+  (res, dur) <- measureDuration f
+  doWithDuration dur res
+  return res
+
+measuringDurationInS :: (Double -> a -> m ()) -> MeasuringDuration m a
+measuringDurationInS doWithDuration =
+  measuringDuration $
+    doWithDuration . (/ 1000) . fromIntegral
+
+measuringDurationToLog :: Log m => LogLevel -> Text -> MeasuringDuration m a
+measuringDurationToLog logLevel fname = tabs . measuringDuration $ \duration _ ->
+  withLogTag "duration"
+    . logOutput logLevel
+    $ fname <> " took " <> show duration <> " ms"
+  where
+    -- debugging feature, use only in dev
+    -- tabs = (withLogTag "  " .)
+    tabs = id

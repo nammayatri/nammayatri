@@ -39,7 +39,7 @@ data DriverAllocationConfig = DriverAllocationConfig
     rideAllocationExpiry :: NominalDiffTime,
     defaultSortMode :: SortMode,
     requestsNumPerIteration :: Integer,
-    processDelay :: NominalDiffTime,
+    processDelay :: Ms,
     shards :: Shards
   }
   deriving (Generic, FromDhall)
@@ -89,4 +89,4 @@ instance AuthenticatingEntity BTMEnv where
 instance BTMMetrics (FlowR BTMEnv) where
   incrementTaskCounter = Metrics.incrementTaskCounterFlow
   incrementFailedTaskCounter = Metrics.incrementFailedTaskCounterFlow
-  putTaskDuration = Metrics.putTaskDurationFlow
+  addTaskDuration = Metrics.addTaskDurationFlow

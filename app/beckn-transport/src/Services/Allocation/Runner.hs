@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Services.Allocation.Runner where
 
 import App.BackgroundTaskManager.Types (DriverAllocationConfig)
@@ -10,7 +12,6 @@ import qualified Beckn.Utils.Logging as Log
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import Control.Monad.Catch (Handler (..), catches)
 import qualified Data.Map as Map
-import Data.Time (diffUTCTime, nominalDiffTimeToSeconds)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
@@ -86,24 +87,21 @@ run ::
   ) =>
   m ()
 run = do
-  runnerHandler $ do
+  runnerHandler . withLogTag "Allocation service" $ do
     shortOrgId <- getOrganizationLock
     now <- getCurrentTime
     Redis.setKeyRedis "beckn:allocation:service" now
-    processStartTime <- getCurrentTime
-    requestsNum <- asks (.driverAllocationConfig.requestsNumPerIteration)
-    eres <- try $ Allocation.process handle shortOrgId requestsNum
-    whenLeft eres $ \(exc :: SomeException) -> Log.logTagError "Allocation service" $ show exc
-    Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
-    processEndTime <- getCurrentTime
-    let processTime = diffUTCTime processEndTime processStartTime
+    ((), processTime) <- measureDuration $ do
+      requestsNum <- asks (.driverAllocationConfig.requestsNumPerIteration)
+      eres <- try $ Allocation.process handle shortOrgId requestsNum
+      whenLeft eres $ Log.logError . show @_ @SomeException
+      Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
     -- If process handling took less than processDelay we delay for remain to processDelay time
     processDelay <- asks (.driverAllocationConfig.processDelay)
-    L.runIO $ threadDelay $ fromNominalToMicroseconds $ max 0 (processDelay - processTime)
+    L.runIO . threadDelay $ max 0 (processDelay - processTime)
   isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)
   when isRunning run
   where
-    fromNominalToMicroseconds = floor . (1000000 *) . nominalDiffTimeToSeconds
     runnerHandler =
       flip
         catches

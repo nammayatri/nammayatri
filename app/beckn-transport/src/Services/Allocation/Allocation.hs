@@ -58,7 +58,13 @@ data RideInfo = RideInfo
   }
   deriving (Generic)
 
-type MonadHandler m = (Metrics.BTMMetrics m, MonadCatch m, MonadTime m, Log m)
+type MonadHandler m =
+  ( Metrics.BTMMetrics m,
+    MonadCatch m,
+    MonadClock m,
+    MonadTime m,
+    Log m
+  )
 
 data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,
@@ -88,77 +94,63 @@ data ServiceHandle m = ServiceHandle
 
 process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer -> m Int
 process handle@ServiceHandle {..} shortOrgId requestsNum = do
-  getRequestsStartTime <- getCurrentTime
   cleanedNotificationsCount <- cleanupOldNotifications
   when (cleanedNotificationsCount > 0) $ logInfo $ "Cleaned notifications count: " <> show cleanedNotificationsCount
-  rides <- getRequests shortOrgId requestsNum
-  let ridesNum = length rides
-  unless (ridesNum == 0) $
-    withLogTag "Allocation service" $ do
-      getRequestsEndTime <- getCurrentTime
-      let getRequestsTime = diffUTCTime getRequestsEndTime getRequestsStartTime
-      logInfo $ show getRequestsTime <> " time spent for getRequests"
-
-      reqsHandlingStartTime <- getCurrentTime
-      traverse_ (processRequest handle shortOrgId) rides
-      reqsHandlingEndTime <- getCurrentTime
-      let reqsHandlingTime = diffUTCTime reqsHandlingEndTime reqsHandlingStartTime
-      logInfo $
-        "Handled " <> show ridesNum <> " ride requests for " <> show reqsHandlingTime
-  pure ridesNum
+  rideRequests <- getRequests shortOrgId requestsNum
+  let rideRequestsNum = length rideRequests
+  unless (rideRequestsNum == 0)
+    . measuringDurationToLog INFO ("processing " <> show rideRequestsNum <> " ride requests")
+    $ traverse_ (processRequest handle shortOrgId) rideRequests
+  pure rideRequestsNum
 
 processRequest :: MonadHandler m => ServiceHandle m -> ShortId Organization -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
   Metrics.incrementTaskCounter
-  processStartTime <- getCurrentTime
-  let requestId = rideRequest.requestId
-  let rideId = rideRequest.rideId
-  rideInfo <- getRideInfo rideId
-  let rideStatus = rideInfo.rideStatus
-  eres <- try $
-    withLogTag ("RideRequest_" <> rideId.getId) $ do
-      logInfo "Start processing request"
-      case rideRequest.requestData of
-        Allocation ->
-          case rideStatus of
-            Confirmed -> processAllocation handle shortOrgId rideInfo
-            Cancelled -> logInfo "Ride is cancelled, allocation request skipped"
-            _ ->
-              logWarning $ "Ride status is " <> show rideStatus <> ", allocation request skipped"
-        DriverResponse response ->
-          case rideStatus of
-            Confirmed ->
-              case response.status of
-                Ride.ACCEPT -> do
-                  logInfo $ "Assigning driver" <> show response.driverId
-                  assignDriver rideId response.driverId
-                  cleanupNotifications rideId
-                  logEvent MarkedAsAccepted rideId $ Just response.driverId
-                Ride.REJECT ->
-                  processRejection handle False rideId response.driverId shortOrgId
-            Assigned ->
-              logInfo "Ride is assigned, response request skipped"
-            Cancelled ->
-              logInfo "Ride is cancelled, response request skipped"
-            _ -> logWarning $ "Ride status is " <> show rideStatus <> ", response request skipped"
-        Cancellation ->
-          case rideStatus of
-            status | status == Confirmed || status == Assigned -> do
-              cancel handle rideId ByUser
-              logEvent ConsumerCancelled rideId Nothing
-            _ ->
-              logWarning $ "Ride status is " <> show rideStatus <> ", cancellation request skipped"
-
-      logInfo "End processing request"
-  whenLeft eres $
-    \(err :: SomeException) -> do
-      let message = "Error processing request " <> show requestId <> ": " <> show err
-      logError message
-      Metrics.incrementFailedTaskCounter
-
-  removeRequest requestId
-  processEndTime <- getCurrentTime
-  Metrics.putTaskDuration . realToFrac $ diffUTCTime processEndTime processStartTime
+  measuringDurationInS Metrics.addTaskDuration $ do
+    let requestId = rideRequest.requestId
+    let rideId = rideRequest.rideId
+    rideInfo <- getRideInfo rideId
+    let rideStatus = rideInfo.rideStatus
+    eres <- try $
+      withLogTag ("RideRequest_" <> rideId.getId) $ do
+        logInfo "Start processing request"
+        case rideRequest.requestData of
+          Allocation ->
+            case rideStatus of
+              Confirmed -> processAllocation handle shortOrgId rideInfo
+              Cancelled -> logInfo "Ride is cancelled, allocation request skipped"
+              _ ->
+                logWarning $ "Ride status is " <> show rideStatus <> ", allocation request skipped"
+          DriverResponse response ->
+            case rideStatus of
+              Confirmed ->
+                case response.status of
+                  Ride.ACCEPT -> do
+                    logInfo $ "Assigning driver" <> show response.driverId
+                    assignDriver rideId response.driverId
+                    cleanupNotifications rideId
+                    logEvent MarkedAsAccepted rideId $ Just response.driverId
+                  Ride.REJECT ->
+                    processRejection handle False rideId response.driverId shortOrgId
+              Assigned ->
+                logInfo "Ride is assigned, response request skipped"
+              Cancelled ->
+                logInfo "Ride is cancelled, response request skipped"
+              _ -> logWarning $ "Ride status is " <> show rideStatus <> ", response request skipped"
+          Cancellation ->
+            case rideStatus of
+              status | status == Confirmed || status == Assigned -> do
+                cancel handle rideId ByUser
+                logEvent ConsumerCancelled rideId Nothing
+              _ ->
+                logWarning $ "Ride status is " <> show rideStatus <> ", cancellation request skipped"
+        logInfo "End processing request"
+    whenLeft eres $
+      \(err :: SomeException) -> do
+        let message = "Error processing request " <> show requestId <> ": " <> show err
+        logError message
+        Metrics.incrementFailedTaskCounter
+    removeRequest requestId
 
 processAllocation ::
   MonadHandler m =>

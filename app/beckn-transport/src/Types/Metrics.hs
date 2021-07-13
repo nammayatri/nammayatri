@@ -13,7 +13,7 @@ import Prometheus as P
 class BTMMetrics m where
   incrementTaskCounter :: m ()
   incrementFailedTaskCounter :: m ()
-  putTaskDuration :: Double -> m ()
+  addTaskDuration :: Double -> () -> m ()
 
 type TaskCounterMetric = P.Counter
 

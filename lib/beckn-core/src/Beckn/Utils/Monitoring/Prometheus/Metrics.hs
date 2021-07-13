@@ -5,9 +5,8 @@
 module Beckn.Utils.Monitoring.Prometheus.Metrics where
 
 import Beckn.Types.Error.APIError (IsAPIError (toErrorCode, toHttpCode), IsAPIException)
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer)
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, HasCoreMetrics)
 import Beckn.Utils.Monitoring.Prometheus.Servant
-import Data.Ratio ((%))
 import Data.Text as DT
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as E
@@ -18,7 +17,7 @@ import Network.Wai.Middleware.Prometheus
 import Prometheus as P
 import Prometheus.Metric.GHC (ghcMetrics)
 import Prometheus.Metric.Proc
-import System.Clock (Clock (..), diffTimeSpec, getTime, toNanoSecs)
+import Servant.Client (ClientError (..), ResponseF (..))
 
 serve :: Int -> IO ()
 serve port = do
@@ -29,7 +28,6 @@ serve port = do
   return ()
 
 addServantInfo ::
-  forall k (a :: k).
   SanitizedUrl a =>
   Proxy a ->
   Application ->
@@ -39,17 +37,8 @@ addServantInfo proxy app request respond =
       fullpath = DT.intercalate "/" (pathInfo request)
    in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
 
-startRequestLatencyTrackingFlow ::
-  (HasField "coreMetrics" r CoreMetricsContainer, L.MonadFlow m, MonadReader r m) =>
-  Text ->
-  Text ->
-  m (Text -> m ())
-startRequestLatencyTrackingFlow host serviceName = do
-  cmContainer <- asks (.coreMetrics)
-  startRequestLatencyTracking cmContainer host serviceName
-
 incrementErrorCounterFlow ::
-  ( HasField "coreMetrics" r CoreMetricsContainer,
+  ( HasCoreMetrics r,
     L.MonadFlow m,
     MonadReader r m,
     IsAPIException e
@@ -60,20 +49,33 @@ incrementErrorCounterFlow err = do
   cmContainer <- asks (.coreMetrics)
   incrementErrorCounter cmContainer err
 
-startRequestLatencyTracking :: (L.MonadFlow m) => CoreMetricsContainer -> Text -> Text -> m (Text -> m ())
-startRequestLatencyTracking cmContainers host serviceName = do
-  let requestLatencyMetric = cmContainers.requestLatency
-  start <- L.runIO $ getTime Monotonic
-  return $ logRequestLatency requestLatencyMetric start
+addRequestLatencyFlow ::
+  ( HasCoreMetrics r,
+    L.MonadFlow m,
+    MonadReader r m
+  ) =>
+  Text ->
+  Text ->
+  Double ->
+  Either ClientError a ->
+  m ()
+addRequestLatencyFlow host serviceName dur status = do
+  cmContainer :: CoreMetricsContainer <- asks (.coreMetrics)
+  let requestLatencyMetric = cmContainer.requestLatency
+  L.runIO $
+    P.withLabel
+      requestLatencyMetric
+      (host, serviceName, status')
+      (`P.observe` dur)
   where
-    logRequestLatency requestLatencyMetric start status = do
-      end <- L.runIO $ getTime Monotonic
-      let latency = fromRational $ toNanoSecs (end `diffTimeSpec` start) % 1000000000
-      L.runIO $
-        P.withLabel
-          requestLatencyMetric
-          (host, serviceName, status)
-          (`P.observe` latency)
+    status' =
+      case status of
+        Right _ -> "200"
+        Left (FailureResponse _ (Response code _ _ _)) -> show code
+        Left (DecodeFailure _ (Response code _ _ _)) -> show code
+        Left (InvalidContentTypeHeader (Response code _ _ _)) -> show code
+        Left (UnsupportedContentType _ (Response code _ _ _)) -> show code
+        Left (ConnectionError _) -> "Connection error"
 
 incrementErrorCounter :: (L.MonadFlow m, IsAPIException e) => CoreMetricsContainer -> e -> m ()
 incrementErrorCounter cmContainers err = do

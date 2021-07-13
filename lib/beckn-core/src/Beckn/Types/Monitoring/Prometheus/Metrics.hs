@@ -10,6 +10,7 @@ import Beckn.Types.Error.APIError
 import EulerHS.Prelude as E
 import GHC.Records.Extra
 import Prometheus as P
+import Servant.Client (ClientError)
 
 type RequestLatencyMetric = P.Vector P.Label3 P.Histogram
 
@@ -20,7 +21,12 @@ type HasCoreMetrics r =
   )
 
 class CoreMetrics m where
-  startRequestLatencyTracking :: Text -> Text -> m (Text -> m ())
+  addRequestLatency ::
+    Text ->
+    Text ->
+    Double ->
+    Either ClientError a ->
+    m ()
   incrementErrorCounter :: IsAPIException e => e -> m ()
 
 data CoreMetricsContainer = CoreMetricsContainer

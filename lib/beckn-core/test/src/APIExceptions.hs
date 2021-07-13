@@ -38,7 +38,7 @@ instance IsBecknAPIError SomeBecknAPIError where
 instanceExceptionWithParent 'BecknAPIException ''SomeBecknAPIError
 
 instance Metrics.CoreMetrics IO where
-  startRequestLatencyTracking _ _ = return (\_ -> return ())
+  addRequestLatency _ _ _ _ = return ()
   incrementErrorCounter _ = return ()
 
 apiExceptionTests :: TestTree

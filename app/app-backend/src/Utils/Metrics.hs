@@ -16,17 +16,19 @@ import GHC.Records.Extra
 import Prometheus as P
 import Types.Metrics (BAPMetricsContainer)
 
-startSearchMetricsFlow :: HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer] => Text -> m ()
+type HasBAPMetrics m r = HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer]
+
+startSearchMetricsFlow :: HasBAPMetrics m r => Text -> m ()
 startSearchMetricsFlow txnId = do
   bmContainer <- asks (.bapMetrics)
   startSearchMetrics bmContainer txnId
 
-finishSearchMetricsFlow :: HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer] => Text -> m ()
+finishSearchMetricsFlow :: HasBAPMetrics m r => Text -> m ()
 finishSearchMetricsFlow txnId = do
   bmContainer <- asks (.bapMetrics)
   finishSearchMetrics bmContainer txnId
 
-incrementCaseCountFlow :: HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer] => Case.CaseStatus -> Case.CaseType -> m ()
+incrementCaseCountFlow :: HasBAPMetrics m r => Case.CaseStatus -> Case.CaseType -> m ()
 incrementCaseCountFlow caseStatus caseType = do
   bmContainer <- asks (.bapMetrics)
   incrementCaseCount bmContainer caseStatus caseType

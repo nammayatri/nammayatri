@@ -4,6 +4,7 @@ module Beckn.Types.Flow (FlowR, runFlowR) where
 
 import Beckn.Types.Logging
 import Beckn.Types.Monitoring.Prometheus.Metrics
+import Beckn.Types.Time
 import Beckn.Utils.Logging
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified EulerHS.Interpreters as I
@@ -20,6 +21,12 @@ instance Log (FlowR r) where
   logOutput = logOutputImplementation
   withLogTag = withLogTagImplementation
 
+instance MonadTime (FlowR r) where
+  getCurrentTime = L.runIO getCurrentTime
+
+instance MonadClock (FlowR r) where
+  getClockTime = L.runIO getClockTime
+
 instance HasCoreMetrics r => CoreMetrics (FlowR r) where
-  startRequestLatencyTracking = Metrics.startRequestLatencyTrackingFlow
+  addRequestLatency = Metrics.addRequestLatencyFlow
   incrementErrorCounter = Metrics.incrementErrorCounterFlow

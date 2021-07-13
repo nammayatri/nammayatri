@@ -36,6 +36,7 @@ type MonadFlow m =
     Log m,
     MonadGuid m,
     MonadTime m,
+    MonadClock m,
     MonadThrow m
   )
 

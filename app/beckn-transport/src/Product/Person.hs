@@ -31,7 +31,6 @@ import qualified Beckn.Types.Storage.Vehicle as SV
 import Beckn.Utils.Validation (runRequestValidation)
 import Data.Maybe
 import qualified Data.Text as T
-import Data.Time.Clock (diffUTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.DriverInformation as QDriverInformation
@@ -217,17 +216,12 @@ calculateDriverPool locId orgId variant = do
   lat <- location.lat & fromMaybeM (LocationFieldNotPresent "lat")
   long <- location.long & fromMaybeM (LocationFieldNotPresent "lon")
   radius <- getRadius
-  getNearestDriversStartTime <- getCurrentTime
-  driverPool <-
+  measuringDurationToLog INFO "calculateDriverPool" $
     QP.getNearestDrivers
       (LatLong lat long)
       radius
       orgId
       variant
-  getNearestDriversEndTime <- getCurrentTime
-  let getNearestDriversTime = diffUTCTime getNearestDriversEndTime getNearestDriversStartTime
-  logTagInfo "calculateDriverPool" $ show getNearestDriversTime <> " time spent for getNearestDrivers"
-  pure driverPool
   where
     getRadius =
       QTC.findValueByOrgIdAndKey orgId (ConfigKey "radius")

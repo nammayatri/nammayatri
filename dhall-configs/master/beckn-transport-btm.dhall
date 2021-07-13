@@ -24,7 +24,7 @@ let driverAllocationConfig =
   , driverNotificationExpiry = +25 -- seconds
   , rideAllocationExpiry = +180 -- seconds
   , requestsNumPerIteration = +50
-  , processDelay = +1 -- seconds
+  , processDelay = +1000 -- ms
   , shards = shards
   }
 
