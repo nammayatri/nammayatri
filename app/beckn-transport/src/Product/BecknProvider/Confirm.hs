@@ -14,7 +14,6 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QProductInstance
@@ -61,16 +60,13 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
         (orderProductInstance.id)
         (transporterOrg.shortId)
         RideRequest.ALLOCATION
-    let newSearchCaseStatus = Case.COMPLETED
     let newProductInstanceStatus = ProductInstance.CONFIRMED
-    Case.validateStatusTransition (searchCase.status) newSearchCaseStatus & fromEitherM CaseInvalidStatus
     ProductInstance.validateStatusTransition (ProductInstance.status productInstance) newProductInstanceStatus
       & fromEitherM PIInvalidStatus
 
     DB.runSqlDBTransaction $ do
       QProductInstance.create orderProductInstance
       RideRequest.create rideRequest
-      QCase.updateStatus (searchCase.id) newSearchCaseStatus
       QProductInstance.updateStatus (productInstance.id) newProductInstanceStatus
 
     bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")

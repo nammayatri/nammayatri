@@ -54,7 +54,7 @@ handle =
           then pure $ Just searchCase
           else throwError CaseNotFound,
       notifyUpdateToBAP = \_ _ _ -> pure (),
-      endRideTransaction = \_ _ _ _ -> pure (),
+      endRideTransaction = \_ _ _ -> pure (),
       calculateFare = \_ _ _ _ -> pure 100,
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure ()

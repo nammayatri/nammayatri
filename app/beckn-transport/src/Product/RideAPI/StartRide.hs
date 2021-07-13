@@ -9,11 +9,9 @@ import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP
 import qualified Product.RideAPI.Handlers.StartRide as Handler
-import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QProductInstance
 import Types.API.Ride (StartRideReq (..))
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.ProductInstance as ProductInstance
 import Utils.Common (withFlowHandlerAPI)
@@ -31,7 +29,6 @@ startRide personId rideId req = withFlowHandlerAPI $ do
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId')
         }
 
-startRideTransaction :: DBFlow m r => Id ProductInstance.ProductInstance -> Id Case.Case -> m ()
-startRideTransaction piId searchCaseId = DB.runSqlDBTransaction $ do
+startRideTransaction :: DBFlow m r => Id ProductInstance.ProductInstance -> m ()
+startRideTransaction piId = DB.runSqlDBTransaction $ do
   QProductInstance.updateStatus piId ProductInstance.INPROGRESS
-  QCase.updateStatus searchCaseId Case.INPROGRESS

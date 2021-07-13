@@ -56,7 +56,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
           reasonCode = Just reasonCode,
           additionalInfo = additionalInfo
         }
-
+        
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
 isProductInstanceCancellable prodInst =
   isRight $ PI.validateStatusTransition (prodInst.status) PI.CANCELLED
@@ -80,12 +80,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
           -- wrap everything in a transaction
           PI.validateStatusTransition (PI.status orderPI) PI.CANCELLED & fromEitherM PIInvalidStatus
           MPI.updateStatus (PI.id orderPI) PI.CANCELLED
-          orderCase <- MC.findById (PI.caseId orderPI) >>= fromMaybeM CaseDoesNotExist
-          Case.validateStatusTransition (orderCase.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-          MC.updateStatusFlow (PI.caseId orderPI) Case.CLOSED
         searchPI <- MPI.findById searchPIid >>= fromMaybeM PIDoesNotExist
-        PI.validateStatusTransition (PI.status searchPI) PI.CANCELLED & fromEitherM PIInvalidStatus
-        MPI.updateStatus searchPIid PI.CANCELLED
         let searchCaseId = searchPI.caseId
         -- notify customer
         searchCase <- MC.findById searchCaseId >>= fromMaybeM CaseNotFound
@@ -99,7 +94,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
               DB.runSqlDBTransaction $
                 QRCR.create $ SRCR.RideCancellationReason orderPI.id cancellationSource Nothing Nothing
         --
-        arrSearchPI <- MPI.findAllByCaseId searchCaseId
+        arrOrderPI <- MPI.findAllByCaseIdAndType searchCaseId PI.RIDEORDER
         let arrTerminalPI =
               filter
                 ( \prodInst -> do
@@ -109,14 +104,8 @@ onCancel _org req = withFlowHandlerBecknAPI $
                       || status == PI.CANCELLED
                       || status == PI.INVALID
                 )
-                arrSearchPI
-        when
-          (length arrTerminalPI == length arrSearchPI)
-          ( do
-              Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
-              case_ <- MC.findById searchCaseId >>= fromMaybeM CaseDoesNotExist
-              Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-              MC.updateStatusFlow searchCaseId Case.CLOSED
-          )
+                arrOrderPI
+        when (length arrTerminalPI == length arrOrderPI) $
+          Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
       Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err
     return Ack

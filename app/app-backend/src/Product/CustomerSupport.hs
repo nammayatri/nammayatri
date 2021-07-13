@@ -131,10 +131,9 @@ makeTripDetails :: DBFlow m r => Maybe C.Case -> m (Maybe T.TripDetails)
 makeTripDetails caseM = case caseM of
   Nothing -> pure Nothing
   Just _case -> do
-    -- Note: In case of Confirmed Order only one Product Instance will be Present
     ProductInstance.ProductInstance {id, status, info, price} <-
       head
-        <$> PI.findAllByCaseId (_case.id)
+        <$> PI.findAllByCaseIdAndType (_case.id) RIDEORDER
     let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< info
         provider = (.provider) =<< mproductInfo
         mtracker = (.tracker) =<< mproductInfo

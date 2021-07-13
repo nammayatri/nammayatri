@@ -19,8 +19,7 @@ import Utils.Common
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
-    findAllPIByParentId :: Id PI.ProductInstance -> m [PI.ProductInstance],
-    endRideTransaction :: Id PI.ProductInstance -> Id Case.Case -> Id Driver -> Amount -> m (),
+    endRideTransaction :: Id PI.ProductInstance -> Id Driver -> Amount -> m (),
     findCaseById :: Id Case.Case -> m (Maybe Case.Case),
     notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> m (),
     calculateFare ::
@@ -59,7 +58,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       (recalculateFare _case orderPi)
       (orderPi.price & fromMaybeM (PIFieldNotPresent "price"))
 
-  endRideTransaction orderPi.id (searchPi.caseId) (cast driverId) actualPrice
+  endRideTransaction orderPi.id (cast driverId) actualPrice
 
   notifyUpdateToBAP (updateActualPrice actualPrice searchPi) (updateActualPrice actualPrice orderPi){status = PI.COMPLETED} PI.COMPLETED
 

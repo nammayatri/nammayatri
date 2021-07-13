@@ -90,12 +90,8 @@ onConfirm _org req = withFlowHandlerBecknAPI $
                   SPI.status = SPI.CONFIRMED
                 }
         Metrics.incrementCaseCount Case.COMPLETED Case.RIDESEARCH
-        let newCaseStatus = Case.COMPLETED
-        case_ <- QCase.findById (prdInst.caseId) >>= fromMaybeM CaseNotFound
-        Case.validateStatusTransition (case_.status) newCaseStatus & fromEitherM CaseInvalidStatus
         SPI.validateStatusTransition (SPI.status prdInst) SPI.CONFIRMED & fromEitherM PIInvalidStatus
         DB.runSqlDBTransaction $ do
-          QCase.updateStatus (prdInst.caseId) newCaseStatus
           QPI.updateMultiple pid uPrd
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack

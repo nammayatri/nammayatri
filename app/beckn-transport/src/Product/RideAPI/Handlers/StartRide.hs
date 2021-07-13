@@ -5,7 +5,6 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import EulerHS.Prelude
 import Types.Error
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as ProductInstance
 import Utils.Common
@@ -13,7 +12,7 @@ import Utils.Common
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id ProductInstance.ProductInstance -> m (Maybe ProductInstance.ProductInstance),
-    startRide :: Id ProductInstance.ProductInstance -> Id Case.Case -> m (),
+    startRide :: Id ProductInstance.ProductInstance -> m (),
     notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m (),
     rateLimitStartRide :: Id Person.Person -> Id ProductInstance.ProductInstance -> m ()
   }
@@ -34,7 +33,7 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   inAppOtp <- orderPi.udf4 & fromMaybeM (PIFieldNotPresent "udf4")
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
-  startRide orderPi.id (orderPi.caseId)
+  startRide orderPi.id
   notifyBAPRideStarted searchPi orderPi{status = ProductInstance.INPROGRESS}
   pure APISuccess.Success
   where

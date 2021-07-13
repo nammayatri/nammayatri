@@ -23,7 +23,7 @@ getQuotes caseId _ = withFlowHandlerAPI $ do
   case_ <- QCase.findByIdAndType caseId Case.RIDESEARCH >>= fromMaybeM CaseDoesNotExist
   fromLocation <- Location.findLocationById case_.fromLocationId >>= fromMaybeM LocationNotFound
   toLocation <- Location.findLocationById case_.toLocationId >>= fromMaybeM LocationNotFound
-  piList <- QPI.findAllByCaseId case_.id
+  piList <- QPI.findAllByCaseIdAndType case_.id PI.RIDESEARCH
   quotes <- traverse buildQuote $ sortByNearestDriverDistance piList
   return $
     API.GetQuotesRes

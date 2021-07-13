@@ -23,7 +23,7 @@ handle =
         if piId == Id "1"
           then pure $ Just rideProductInstance
           else pure $ Just searchProductInstance,
-      startRide = \_piIds _searchCaseId -> pure (),
+      startRide = \_piIds -> pure (),
       notifyBAPRideStarted = \_searchPi _orderPi -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure ()
     }

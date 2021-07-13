@@ -126,25 +126,6 @@ updateValidTill cid validTill_ = do
         ]
     predicate cid_ Storage.Case {..} = id ==. B.val_ cid_
 
-updateStatusFlow :: DBFlow m r => Id Storage.Case -> Storage.CaseStatus -> m ()
-updateStatusFlow id status = DB.runSqlDB (updateStatus id status)
-
-updateStatus :: Id Storage.Case -> Storage.CaseStatus -> DB.SqlDB ()
-updateStatus cid status_ = do
-  dbTable <- getDbTable
-  currTime <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause status_ currTime)
-    (predicate cid)
-  where
-    setClause pStatus currTime Storage.Case {..} =
-      mconcat
-        [ status <-. B.val_ pStatus,
-          updatedAt <-. B.val_ currTime
-        ]
-    predicate cid_ Storage.Case {..} = id ==. B.val_ cid_
-
 findAllWithLimitOffsetWhere ::
   DBFlow m r =>
   [Id Loc.SearchReqLocation] ->

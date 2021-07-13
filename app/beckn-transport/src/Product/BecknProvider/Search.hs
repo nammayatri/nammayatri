@@ -175,11 +175,8 @@ onSearchCallback productCase transporter fromLocation toLocation searchMetricsMV
         let nearestDist = Just $ snd fstDriverValue
         return (fare, nearestDist)
   prodInst <- mkProductInstance productCase price piStatus transporterId nearestDriverDist
-  let caseStatus ProductInstance.INSTOCK = Case.CONFIRMED
-      caseStatus _ = Case.CLOSED
   DB.runSqlDBTransaction $ do
     ProductInstance.create prodInst
-    QCase.updateStatus (productCase.id) (caseStatus $ prodInst.status)
   let productInstances =
         case prodInst.status of
           ProductInstance.OUTOFSTOCK -> []

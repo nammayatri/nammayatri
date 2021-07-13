@@ -43,14 +43,15 @@ findOrderPIById pid = do
     predicate piid Storage.ProductInstance {..} =
       id ==. B.val_ piid
         &&. _type ==. B.val_ Storage.RIDEORDER
-
-findAllByCaseId :: DBFlow m r => Id Case.Case -> m [Storage.ProductInstance]
-findAllByCaseId caseId_ = do
+        
+findAllByCaseIdAndType :: DBFlow m r => Id Case.Case -> Storage.ProductInstanceType -> m [Storage.ProductInstance]
+findAllByCaseIdAndType caseId_ piType = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate Storage.ProductInstance {..} =
       caseId ==. B.val_ caseId_
+        &&. _type ==. B.val_ piType
 
 findOneByCaseId :: DBFlow m r => Id Case.Case -> m (Maybe Storage.ProductInstance)
 findOneByCaseId caseId_ = do

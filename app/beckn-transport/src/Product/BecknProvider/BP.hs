@@ -38,7 +38,6 @@ import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
@@ -95,7 +94,7 @@ cancelRide rideId rideCReason = do
   orderPi <- ProductInstance.findById (cast rideId) >>= fromMaybeM PIDoesNotExist
   searchPiId <- ProductInstance.parentId orderPi & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- ProductInstance.findById searchPiId >>= fromMaybeM PINotFound
-  cancelRideTransaction searchPi orderPi rideCReason
+  cancelRideTransaction orderPi rideCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show rideCReason.source)
   fork "cancelRide - Notify BAP" $ do
     let transporterId = ProductInstance.organizationId orderPi
@@ -104,23 +103,18 @@ cancelRide rideId rideCReason = do
         >>= fromMaybeM OrgNotFound
     notifyCancelToGateway searchPi transporter rideCReason.source
     case_ <- Case.findById (orderPi.caseId) >>= fromMaybeM CaseNotFound
-    case orderPi.personId of
-      Nothing -> pure ()
-      Just driverId -> do
-        driver <- Person.findPersonById driverId >>= fromMaybeM PersonNotFound
-        Notify.notifyOnCancel case_ driver.id driver.deviceToken rideCReason.source
+    whenJust orderPi.personId $ \driverId -> do
+      driver <- Person.findPersonById driverId >>= fromMaybeM PersonNotFound
+      Notify.notifyOnCancel case_ driver.id driver.deviceToken rideCReason.source
 
 cancelRideTransaction ::
   DBFlow m r =>
   ProductInstance.ProductInstance ->
-  ProductInstance.ProductInstance ->
   SRCR.RideCancellationReason ->
   m ()
-cancelRideTransaction searchPi orderPi rideCReason = DB.runSqlDBTransaction $ do
-  QCase.updateStatus searchPi.caseId Case.CLOSED
+cancelRideTransaction orderPi rideCReason = DB.runSqlDBTransaction $ do
   let mbPersonId = orderPi.personId
   whenJust mbPersonId updateDriverInfo
-  ProductInstance.updateStatus searchPi.id ProductInstance.CANCELLED
   ProductInstance.updateStatus orderPi.id ProductInstance.CANCELLED
   QRCR.create rideCReason
   where

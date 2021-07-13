@@ -122,7 +122,7 @@ searchCbService req catalog = do
           traverse_ QProducts.create products
           traverse_ QPI.create productInstances
           when (case_.validTill < newValidTill) $ QCase.updateValidTill (case_.id) newValidTill
-    piList <- MPI.findAllByCaseId (case_.id)
+    piList <- MPI.findAllByCaseIdAndType (case_.id) PI.RIDESEARCH
     let piStatusCount = Map.fromListWith (+) $ zip (PI.status <$> piList) $ repeat (1 :: Integer)
         accepted = Map.lookup PI.INSTOCK piStatusCount
         declined = Map.lookup PI.OUTOFSTOCK piStatusCount

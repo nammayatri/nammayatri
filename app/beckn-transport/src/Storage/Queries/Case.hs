@@ -7,7 +7,7 @@ import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
-import Database.Beam ((&&.), (<-.), (==.))
+import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Case as Storage
@@ -47,52 +47,6 @@ findBySid sid = do
   DB.findOne dbTable predicate
   where
     predicate Storage.Case {..} = shortId ==. B.val_ (ShortId sid)
-
-updateStatusFlow ::
-  DBFlow m r =>
-  Id Storage.Case ->
-  Storage.CaseStatus ->
-  m ()
-updateStatusFlow id newStatus = DB.runSqlDB (updateStatus id newStatus)
-
-updateStatus ::
-  Id Storage.Case ->
-  Storage.CaseStatus ->
-  DB.SqlDB ()
-updateStatus caseId newStatus = do
-  dbTable <- getDbTable
-  currTime <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause newStatus currTime)
-    (predicate caseId)
-  where
-    predicate cid Storage.Case {..} = id ==. B.val_ cid
-    setClause status_ currTime Storage.Case {..} =
-      mconcat
-        [ updatedAt <-. B.val_ currTime,
-          status <-. B.val_ status_
-        ]
-
-updateStatusByIdsFlow ::
-  DBFlow m r =>
-  [Id Storage.Case] ->
-  Storage.CaseStatus ->
-  m ()
-updateStatusByIdsFlow ids newStatus = do
-  dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrentTime
-  DB.update
-    dbTable
-    (setClause newStatus currTime)
-    (predicate ids)
-  where
-    predicate cids Storage.Case {..} = B.in_ id (B.val_ <$> cids)
-    setClause status_ currTime Storage.Case {..} =
-      mconcat
-        [ updatedAt <-. B.val_ currTime,
-          status <-. B.val_ status_
-        ]
 
 findAllByStatuses ::
   DBFlow m r =>
