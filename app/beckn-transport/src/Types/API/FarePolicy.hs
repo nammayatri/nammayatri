@@ -55,6 +55,6 @@ validateUpdateFarePolicyRequest UpdateFarePolicyRequest {..} =
     [ validateMaybe "baseFare" baseFare $ InRange @Double 0 1000,
       validateMaybe "baseDistance" baseDistance $ InRange @Double 0 10000,
       validateMaybe "nightShiftRate" nightShiftRate $ InRange @Double 1 2,
-      validateMaybe "nightShiftStart" nightShiftStart $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 0 0),
-      validateMaybe "nightShiftEnd" nightShiftEnd $ InRange (TimeOfDay 7 0 0) (TimeOfDay 12 30 0)
+      validateMaybe "nightShiftStart" nightShiftStart $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 30 0),
+      validateMaybe "nightShiftEnd" nightShiftEnd $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]
