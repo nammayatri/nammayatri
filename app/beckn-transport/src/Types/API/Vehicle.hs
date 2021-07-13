@@ -31,7 +31,7 @@ validateCreateVehicleReq :: Validate CreateVehicleReq
 validateCreateVehicleReq CreateVehicleReq {..} =
   sequenceA_
     [ validateField "registrationNo" registrationNo $
-        LengthInRange 1 10 `And` star (P.latinUC \/ P.digit),
+        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit),
       validateField "model" model . InMaybe $
         NotEmpty `And` star P.latinOrSpace,
       validateField "make" make . InMaybe $ NotEmpty `And` P.name,
