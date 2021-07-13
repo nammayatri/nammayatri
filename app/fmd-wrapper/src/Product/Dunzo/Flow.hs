@@ -12,6 +12,7 @@ import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
 import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
+import qualified EulerHS.Types as ET
 import qualified ExternalAPI.Dunzo.Flow as API
 import ExternalAPI.Dunzo.Types
 import Product.Dunzo.Transform
@@ -39,6 +40,7 @@ import Utils.Common
 search ::
   ( DBFlow m r,
     HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
+    HasHttpClientOptions r,
     CoreMetrics m
   ) =>
   Org.Organization ->
@@ -51,7 +53,7 @@ search org req = do
   bap <- Org.findByBapUrl context.bap_uri >>= fromMaybeM OrgDoesNotExist
   dzBACreds <- getDzBAPCreds bap
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  withCallback SEARCH SearchAPI.onSearchAPI context cbUrl $
+  withBecknCallbackMig withRetry authKey SEARCH SearchAPI.onSearchAPI context cbUrl $
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog
 
@@ -375,4 +377,7 @@ fetchToken DzBAConfig {..} DunzoConfig {..} = do
     Just token -> return token
 
 withCallback :: WithBecknCallbackMig api callback_success m
-withCallback = withBecknCallbackMig (Just HttpSig.signatureAuthManagerKey)
+withCallback = withBecknCallbackMig identity authKey
+
+authKey :: Maybe ET.ManagerSelector
+authKey = Just HttpSig.signatureAuthManagerKey

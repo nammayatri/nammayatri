@@ -19,7 +19,6 @@ import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (exitSuccess)
 import EulerHS.Runtime as E
 import qualified EulerHS.Runtime as R
@@ -59,9 +58,7 @@ runGateway configModifier = do
         authManager <-
           handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: " $
             prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId
-        managers <-
-          L.runIO . createManagers appCfg.httpClientTimoutMs $
-            Map.singleton signatureAuthManagerKey authManager
+        managers <- createManagers $ Map.singleton signatureAuthManagerKey authManager
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "

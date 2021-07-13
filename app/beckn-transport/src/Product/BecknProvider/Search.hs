@@ -69,7 +69,7 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
       Loc.create toLocation
       QCase.create productCase
     callbackUrl <- ExternalAPI.getGatewayUrl
-    ExternalAPI.withCallback transporter "search" API.onSearch context callbackUrl $
+    ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
       onSearchCallback productCase transporter fromLocation toLocation
 
 mkFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.Location

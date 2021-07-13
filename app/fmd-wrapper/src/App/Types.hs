@@ -13,6 +13,7 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Time
 import EulerHS.Prelude
@@ -37,7 +38,7 @@ data AppCfg = AppCfg
     signingKeys :: [SigningKey],
     signatureExpiry :: NominalDiffTime,
     graceTerminationPeriod :: Int,
-    httpClientTimoutMs :: Int
+    httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
 
@@ -52,7 +53,8 @@ data AppEnv = AppEnv
     signingKeys :: [SigningKey],
     signatureExpiry :: NominalDiffTime,
     isShuttingDown :: TMVar (),
-    coreMetrics :: CoreMetricsContainer
+    coreMetrics :: CoreMetricsContainer,
+    httpClientOptions :: HttpClientOptions
   }
   deriving (Generic)
 

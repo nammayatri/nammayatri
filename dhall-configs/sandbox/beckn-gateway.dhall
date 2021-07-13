@@ -26,6 +26,11 @@ let rcfg =
   , connectTimeout = Some +100
   }
 
+let httpClientOptions =
+  { timeoutMs = +2000
+  , maxRetries = +3
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -47,5 +52,5 @@ in
 , foodAndBeverageCoreVersion = "0.9.1"
 , signatureExpiry = common.signatureExpiry
 , graceTerminationPeriod = +90
-, httpClientTimoutMs = +2000
+, httpClientOptions = httpClientOptions
 }

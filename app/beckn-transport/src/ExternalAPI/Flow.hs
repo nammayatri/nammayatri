@@ -39,12 +39,19 @@ withCallback ::
   HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
   Org.Organization ->
   WithBecknCallback api callback_success m
-withCallback transporter action api context cbUrl f = do
+withCallback = withCallback' identity
+
+withCallback' ::
+  (m () -> m ()) ->
+  HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
+  Org.Organization ->
+  WithBecknCallback api callback_success m
+withCallback' doWithCallback transporter action api context cbUrl f = do
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
   bppUri <- makeBppUrl (transporter.id)
   let context' = context & #bpp_uri ?~ bppUri
-  withBecknCallback (Just authKey) action api context' cbUrl f
+  withBecknCallback doWithCallback (Just authKey) action api context' cbUrl f
 
 callBAP ::
   ( DBFlow m r,

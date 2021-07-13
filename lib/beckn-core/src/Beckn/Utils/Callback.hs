@@ -52,9 +52,10 @@ type WithBecknCallback api callback_success m =
   m AckResponse
 
 withBecknCallback ::
+  (m () -> m ()) ->
   Maybe ET.ManagerSelector ->
   WithBecknCallback api callback_success m
-withBecknCallback auth action api context cbUrl f = do
+withBecknCallback doWithCallback auth action api context cbUrl f = do
   now <- getCurrentTime
   let cbAction = "on_" <> action
   let context' =
@@ -65,7 +66,7 @@ withBecknCallback auth action api context cbUrl f = do
     (someExceptionToCallbackReq context')
     (toCallbackReq context')
     action
-    (callBecknAPI auth Nothing cbAction api cbUrl)
+    (doWithCallback . callBecknAPI auth Nothing cbAction api cbUrl)
     f
   return Ack
 
@@ -84,9 +85,10 @@ type WithBecknCallbackMig api callback_success m =
   m AckResponse
 
 withBecknCallbackMig ::
+  (m () -> m ()) ->
   Maybe ET.ManagerSelector ->
   WithBecknCallbackMig api callback_success m
-withBecknCallbackMig auth action api context cbUrl f = do
+withBecknCallbackMig doWithCallback auth action api context cbUrl f = do
   now <- getCurrentTime
   cbAction <-
     M.Context.mapToCbAction action
@@ -99,6 +101,6 @@ withBecknCallbackMig auth action api context cbUrl f = do
     (someExceptionToCallbackReqMig cbContext)
     (API.BecknCallbackReq cbContext . Right)
     (show action)
-    (callBecknAPI auth Nothing (show cbAction) api cbUrl)
+    (doWithCallback . callBecknAPI auth Nothing (show cbAction) api cbUrl)
     f
   return Ack

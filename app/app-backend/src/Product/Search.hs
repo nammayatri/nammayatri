@@ -67,7 +67,8 @@ search person req = withFlowHandlerAPI $ do
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
   let intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_.udf5)]
-  ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
+  fork "search" . withRetry $
+    ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
   return $ API.SearchRes txnId
   where
     validateDateTime sreq = do

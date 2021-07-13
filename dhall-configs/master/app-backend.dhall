@@ -68,6 +68,11 @@ let registrationHitsOptions =
   , limitResetTime = +600
   }
 
+let httpClientOptions =
+  { timeoutMs = +2000
+  , maxRetries = +3
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -106,5 +111,5 @@ in
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
 , registrationHitsOpt = registrationHitsOptions
-, httpClientTimoutMs = +2000
+, httpClientOptions = httpClientOptions
 }

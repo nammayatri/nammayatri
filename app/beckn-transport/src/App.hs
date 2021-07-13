@@ -15,7 +15,6 @@ import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
@@ -56,7 +55,7 @@ runTransporterBackendApp' appCfg = do
         managersSettings <-
           prepareAuthManagers flowRt appEnv allShortIds
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
-        managers <- L.runIO $ createManagers appCfg.httpClientTimoutMs managersSettings
+        managers <- createManagers managersSettings
         logInfo $ "Loaded http managers - " <> show (keys managers)
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections $ appCfg.redisCfg)

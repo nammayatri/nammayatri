@@ -5,6 +5,7 @@ import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import Data.Time (NominalDiffTime)
@@ -33,7 +34,7 @@ data AppCfg = AppCfg
     foodAndBeverageCoreVersion :: Text,
     signatureExpiry :: NominalDiffTime,
     graceTerminationPeriod :: Int,
-    httpClientTimoutMs :: Int
+    httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
 
@@ -51,7 +52,8 @@ data AppEnv = AppEnv
     foodAndBeverageCoreVersion :: Text,
     signatureExpiry :: NominalDiffTime,
     isShuttingDown :: TMVar (),
-    coreMetrics :: CoreMetricsContainer
+    coreMetrics :: CoreMetricsContainer,
+    httpClientOptions :: HttpClientOptions
   }
   deriving (Generic)
 

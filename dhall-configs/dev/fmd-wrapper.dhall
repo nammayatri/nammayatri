@@ -39,6 +39,11 @@ let dunzoConfig =
 
 let gwUri = "http://localhost:8015/v1"
 
+let httpClientOptions =
+  { timeoutMs = +2000
+  , maxRetries = +3
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -56,5 +61,5 @@ in
 , signatureExpiry = common.signatureExpiry
 , selfId = "JUSPAY.FMD.UAT.1"
 , graceTerminationPeriod = +90
-, httpClientTimoutMs = +2000
+, httpClientOptions = httpClientOptions
 }

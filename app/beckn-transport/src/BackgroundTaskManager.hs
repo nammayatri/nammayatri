@@ -16,7 +16,6 @@ import qualified Beckn.Utils.Servant.Server as Server
 import Beckn.Utils.Servant.SignatureAuth
 import Control.Concurrent
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (exitSuccess)
 import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
@@ -53,7 +52,7 @@ runBackgroundTaskManager configModifier = do
         managersSettings <-
           prepareAuthManagers flowRt btmEnv allShortIds
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
-        managers <- L.runIO $ createManagers appCfg.httpClientTimoutMs managersSettings
+        managers <- createManagers managersSettings
         logInfo ("Loaded http managers - " <> show (keys managers))
         logInfo $ "Starting Background Task Manager on port " <> show port
         return $ flowRt {R._httpClientManagers = managers}

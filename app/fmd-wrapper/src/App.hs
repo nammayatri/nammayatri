@@ -16,7 +16,6 @@ import Beckn.Utils.Migration
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
@@ -47,9 +46,7 @@ runFMDWrapper configModifier = do
         authManager <-
           prepareAuthManager flowRt appEnv "Authorization" shortOrgId
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
-        managers <-
-          L.runIO . createManagers appCfg.httpClientTimoutMs $
-            Map.singleton signatureAuthManagerKey authManager
+        managers <- createManagers $ Map.singleton signatureAuthManagerKey authManager
         try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
         migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)

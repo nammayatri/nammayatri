@@ -17,6 +17,7 @@ import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
@@ -63,7 +64,7 @@ data AppCfg = AppCfg
     metricsSearchDurationTimeout :: Int,
     graceTerminationPeriod :: Int,
     registrationHitsOpt :: RegistrationHitsOptions,
-    httpClientTimoutMs :: Int
+    httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
 
@@ -97,7 +98,8 @@ data AppEnv = AppEnv
     registrationHitsOpt :: RegistrationHitsOptions,
     isShuttingDown :: TMVar (),
     bapMetrics :: BAPMetricsContainer,
-    coreMetrics :: CoreMetricsContainer
+    coreMetrics :: CoreMetricsContainer,
+    httpClientOptions :: HttpClientOptions
   }
   deriving (Generic)
 
