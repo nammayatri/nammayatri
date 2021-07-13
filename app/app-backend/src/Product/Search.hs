@@ -96,7 +96,7 @@ searchCb _ _ req = withFlowHandlerBecknAPI $
 searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], DBFlow m r) => Search.OnSearchReq -> BM.Catalog -> m ()
 searchCbService req catalog = do
   let caseId = Id $ req.context.transaction_id --CaseId $ service.id
-  case_ <- QCase.findByIdAndType caseId Case.RIDESEARCH >>= fromMaybeM CaseDoesNotExist
+  case_ <- QCase.findById caseId >>= fromMaybeM CaseDoesNotExist
   when (case_.status /= Case.CLOSED) $ do
     bpp <-
       Org.findOrganizationByCallbackUri (req.context.bpp_uri) Org.PROVIDER
@@ -173,7 +173,6 @@ mkCase req userId from to now = do
         providerType = Nothing,
         requestor = Just userId,
         requestorType = Just Case.CONSUMER,
-        parentCaseId = Nothing,
         fromLocationId = from.id,
         toLocationId = to.id,
         udf1 = Just . show $ req.vehicle,

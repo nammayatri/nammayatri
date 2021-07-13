@@ -47,21 +47,14 @@ handle =
       findPIById = \piId -> pure $ case piId of
         Id "search" -> Just searchProductInstance
         Id "ride" -> Just rideProductInstance
-        Id "tracker" -> Just trackerProductInstance
         Id "completed_ride" -> Just rideProductInstance {PI.status = PI.COMPLETED}
         _ -> Nothing,
-      findAllPIByParentId = \case
-        Id "search" -> pure [rideProductInstance, trackerProductInstance]
-        _ -> pure [],
-      findCaseByIdAndType = \caseIds caseType ->
-        if caseIds `isSubsequenceOf` ["search", "ride", "tracker"]
-          then case caseType of
-            Case.LOCATIONTRACKER -> pure $ Just trackerCase
-            Case.RIDEORDER -> pure $ Just rideCase
-            _ -> throwError CaseNotFound
+      findCaseById = \caseId ->
+        if caseId == "search"
+          then pure $ Just searchCase
           else throwError CaseNotFound,
       notifyUpdateToBAP = \_ _ _ -> pure (),
-      endRideTransaction = \_ _ _ _ _ -> pure (),
+      endRideTransaction = \_ _ _ _ -> pure (),
       calculateFare = \_ _ _ _ -> pure 100,
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure ()
@@ -76,9 +69,10 @@ endRide = Handle.endRideHandler handle
 rideProductInstance :: PI.ProductInstance
 rideProductInstance =
   Fixtures.defaultProductInstance
-    { PI.status = PI.INPROGRESS,
+    { PI.id = "ride",
+      PI.status = PI.INPROGRESS,
       PI.caseId = "ride",
-      PI.parentId = Just "ride"
+      PI.parentId = Just "search"
     }
 
 searchProductInstance :: PI.ProductInstance
@@ -90,28 +84,11 @@ searchProductInstance =
       PI.status = PI.INPROGRESS
     }
 
-trackerProductInstance :: PI.ProductInstance
-trackerProductInstance =
-  Fixtures.defaultProductInstance
-    { PI.id = "tracker",
-      PI.caseId = "tracker",
-      PI._type = PI.LOCATIONTRACKER,
-      PI.status = PI.INPROGRESS
-    }
-
-trackerCase :: Case.Case
-trackerCase =
-  Fixtures.defaultCase
-    { Case.id = "tracker",
-      Case._type = Case.LOCATIONTRACKER,
-      Case.status = Case.INPROGRESS
-    }
-
-rideCase :: Case.Case
-rideCase =
+searchCase :: Case.Case
+searchCase =
   Fixtures.defaultCase
     { Case.id = "ride",
-      Case._type = Case.RIDEORDER,
+      Case._type = Case.RIDESEARCH,
       Case.status = Case.INPROGRESS,
       Case.provider = Just "someOrg",
       Case.udf1 = Just "SEDAN"

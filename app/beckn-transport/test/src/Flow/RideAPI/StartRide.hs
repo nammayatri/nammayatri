@@ -23,12 +23,7 @@ handle =
         if piId == Id "1"
           then pure $ Just rideProductInstance
           else pure $ Just searchProductInstance,
-      findPIsByParentId = \parentId -> pure [rideProductInstance, trackerProductInstance],
-      findCaseByIdsAndType = \_caseIds caseType ->
-        if caseType == Case.LOCATIONTRACKER
-          then pure $ Just trackerCase
-          else pure $ Just rideCase,
-      startRide = \_piIds _trackerCaseId _orderCaseId -> pure (),
+      startRide = \_piIds _searchCaseId -> pure (),
       notifyBAPRideStarted = \_searchPi _orderPi -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure ()
     }
@@ -45,32 +40,15 @@ searchProductInstance :: ProductInstance.ProductInstance
 searchProductInstance =
   Fixtures.defaultProductInstance
     { ProductInstance.id = "2",
-      ProductInstance.caseId = "2",
       ProductInstance._type = ProductInstance.RIDESEARCH,
       ProductInstance.status = ProductInstance.CONFIRMED
     }
 
-trackerProductInstance :: ProductInstance.ProductInstance
-trackerProductInstance =
-  Fixtures.defaultProductInstance
-    { ProductInstance.id = "3",
-      ProductInstance.caseId = "3",
-      ProductInstance._type = ProductInstance.LOCATIONTRACKER,
-      ProductInstance.status = ProductInstance.CONFIRMED
-    }
-
-trackerCase :: Case.Case
-trackerCase =
+searchCase :: Case.Case
+searchCase =
   Fixtures.defaultCase
-    { Case._type = Case.LOCATIONTRACKER,
-      Case.status = Case.CONFIRMED
-    }
-
-rideCase :: Case.Case
-rideCase =
-  Fixtures.defaultCase
-    { Case.id = "2",
-      Case._type = Case.RIDEORDER,
+    { Case.id = "1",
+      Case._type = Case.RIDESEARCH,
       Case.status = Case.CONFIRMED
     }
 

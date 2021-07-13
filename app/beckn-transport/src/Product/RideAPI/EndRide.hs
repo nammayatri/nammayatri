@@ -31,7 +31,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
         { findPersonById = Person.findPersonById,
           findPIById = PI.findById',
           findAllPIByParentId = PI.findAllByParentId,
-          findCaseByIdAndType = Case.findByIdType,
+          findCaseById= Case.findById,
           notifyUpdateToBAP = notifyUpdateToBAP,
           endRideTransaction,
           calculateFare = \orgId vehicleVariant distance -> Fare.calculateFare orgId vehicleVariant (Right distance),
@@ -39,11 +39,10 @@ endRide personId rideId = withFlowHandlerAPI $ do
           putDiffMetric = putFareAndDistanceDeviations
         }
 
-endRideTransaction :: DBFlow m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> m ()
-endRideTransaction piIds trackerCaseId orderCaseId driverId actualPrice = DB.runSqlDBTransaction $ do
-  forM_ piIds $ PI.updateActualPrice actualPrice
-  PI.updateStatusByIds piIds PI.COMPLETED
-  Case.updateStatus trackerCaseId Case.COMPLETED
-  Case.updateStatus orderCaseId Case.COMPLETED
+endRideTransaction :: DBFlow m r => Id PI.ProductInstance -> Id Case.Case -> Id Driver -> Amount -> m ()
+endRideTransaction orderPiId searchCaseId driverId actualPrice = DB.runSqlDBTransaction $ do
+  PI.updateActualPrice actualPrice orderPiId
+  PI.updateStatus orderPiId PI.COMPLETED
+  Case.updateStatus searchCaseId Case.COMPLETED
   DriverInformation.updateOnRide driverId False
   DriverStats.updateIdleTime driverId

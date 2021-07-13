@@ -13,9 +13,7 @@ import Utils.Common
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id ProductInstance.ProductInstance -> m (Maybe ProductInstance.ProductInstance),
-    findPIsByParentId :: Id ProductInstance.ProductInstance -> m [ProductInstance.ProductInstance],
-    findCaseByIdsAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
-    startRide :: [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m (),
+    startRide :: Id ProductInstance.ProductInstance -> Id Case.Case -> m (),
     notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m (),
     rateLimitStartRide :: Id Person.Person -> Id ProductInstance.ProductInstance -> m ()
   }
@@ -35,12 +33,9 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   searchPi <- findPIById searchPiId >>= fromMaybeM PINotFound
   inAppOtp <- orderPi.udf4 & fromMaybeM (PIFieldNotPresent "udf4")
   when (otp /= inAppOtp) $ throwError IncorrectOTP
-  piList <- findPIsByParentId searchPiId
-  trackerCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.LOCATIONTRACKER >>= fromMaybeM CaseNotFound
-  orderCase <- findCaseByIdsAndType (ProductInstance.caseId <$> piList) Case.RIDEORDER >>= fromMaybeM CaseNotFound
   logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
-  startRide (ProductInstance.id <$> piList) (Case.id trackerCase) (Case.id orderCase)
-  notifyBAPRideStarted searchPi orderPi
+  startRide orderPi.id (orderPi.caseId)
+  notifyBAPRideStarted searchPi orderPi{status = ProductInstance.INPROGRESS}
   pure APISuccess.Success
   where
     isValidPiStatus status = status `elem` [ProductInstance.CONFIRMED, ProductInstance.TRIP_ASSIGNED, ProductInstance.INSTOCK]

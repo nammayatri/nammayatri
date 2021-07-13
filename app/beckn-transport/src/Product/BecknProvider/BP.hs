@@ -95,46 +95,33 @@ cancelRide rideId rideCReason = do
   orderPi <- ProductInstance.findById (cast rideId) >>= fromMaybeM PIDoesNotExist
   searchPiId <- ProductInstance.parentId orderPi & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- ProductInstance.findById searchPiId >>= fromMaybeM PINotFound
-  piList <- ProductInstance.findAllByParentId searchPiId
-  trackerPi <-
-    ProductInstance.findByIdType (ProductInstance.id <$> piList) ProductInstance.LOCATIONTRACKER
-      >>= fromMaybeM PINotFound
-  cancelRideTransaction piList searchPiId (trackerPi.id) (orderPi.id) rideCReason
-  logTagInfo ("rideId-" <> getId rideId) ("Cancellation source " <> show rideCReason.source)
+  cancelRideTransaction searchPi orderPi rideCReason
+  logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show rideCReason.source)
   fork "cancelRide - Notify BAP" $ do
     let transporterId = ProductInstance.organizationId orderPi
     transporter <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
     notifyCancelToGateway searchPi transporter rideCReason.source
-    case piList of
-      [] -> pure ()
-      prdInst : _ -> do
-        c <- Case.findById (prdInst.caseId) >>= fromMaybeM CaseNotFound
-        case prdInst.personId of
-          Nothing -> pure ()
-          Just driverId -> do
-            driver <- Person.findPersonById driverId >>= fromMaybeM PersonNotFound
-            Notify.notifyOnCancel c driver.id driver.deviceToken rideCReason.source
+    case_ <- Case.findById (orderPi.caseId) >>= fromMaybeM CaseNotFound
+    case orderPi.personId of
+      Nothing -> pure ()
+      Just driverId -> do
+        driver <- Person.findPersonById driverId >>= fromMaybeM PersonNotFound
+        Notify.notifyOnCancel case_ driver.id driver.deviceToken rideCReason.source
 
 cancelRideTransaction ::
   DBFlow m r =>
-  [ProductInstance.ProductInstance] ->
-  Id ProductInstance.ProductInstance ->
-  Id ProductInstance.ProductInstance ->
-  Id ProductInstance.ProductInstance ->
+  ProductInstance.ProductInstance ->
+  ProductInstance.ProductInstance ->
   SRCR.RideCancellationReason ->
   m ()
-cancelRideTransaction piList searchPiId trackerPiId orderPiId rideCReason = DB.runSqlDBTransaction $ do
-  case piList of
-    [] -> pure ()
-    (prdInst : _) -> do
-      QCase.updateStatusByIds (ProductInstance.caseId <$> piList) Case.CLOSED
-      let mbPersonId = prdInst.personId
-      whenJust mbPersonId updateDriverInfo
-  ProductInstance.updateStatus searchPiId ProductInstance.CANCELLED
-  ProductInstance.updateStatus trackerPiId ProductInstance.COMPLETED
-  ProductInstance.updateStatus orderPiId ProductInstance.CANCELLED
+cancelRideTransaction searchPi orderPi rideCReason = DB.runSqlDBTransaction $ do
+  QCase.updateStatus searchPi.caseId Case.CLOSED
+  let mbPersonId = orderPi.personId
+  whenJust mbPersonId updateDriverInfo
+  ProductInstance.updateStatus searchPi.id ProductInstance.CANCELLED
+  ProductInstance.updateStatus orderPi.id ProductInstance.CANCELLED
   QRCR.create rideCReason
   where
     updateDriverInfo personId = do
@@ -151,20 +138,20 @@ notifyServiceStatusToGateway ::
   ProductInstance.ProductInstance ->
   ProductInstance.ProductInstance ->
   m ()
-notifyServiceStatusToGateway transporter searchPi trackerPi = do
-  mkOnServiceStatusPayload searchPi.id trackerPi
+notifyServiceStatusToGateway transporter searchPi orderPI = do
+  mkOnServiceStatusPayload (searchPi.id) orderPI
     >>= ExternalAPI.callBAP "on_status" API.onStatus transporter (searchPi.caseId) . Right
 
 mkOnServiceStatusPayload :: MonadTime m => Id ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m API.OnStatusReqMessage
-mkOnServiceStatusPayload piId trackerPi = do
-  mkOrderRes piId (getId $ trackerPi.productId) (show $ trackerPi.status)
+mkOnServiceStatusPayload searchPiId orderPi = do
+  mkOrderRes searchPiId (getId $ orderPi.productId) (show $ orderPi.status)
     <&> API.OnStatusReqMessage
   where
-    mkOrderRes prodInstId productId status = do
+    mkOrderRes searchPiId' productId status = do
       now <- getCurrentTime
       return $
         Order
-          { id = getId prodInstId,
+          { id = getId searchPiId',
             state = T.pack status,
             items = [OrderItem productId Nothing],
             created_at = now,
@@ -184,11 +171,10 @@ notifyTripInfoToGateway ::
   ProductInstance.ProductInstance ->
   Id Case.Case ->
   Organization.Organization ->
-  Id Case.Case ->
   m ()
-notifyTripInfoToGateway orderPI trackerCaseId transporter parentCaseId = do
-  mkOnUpdatePayload orderPI trackerCaseId
-    >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter parentCaseId . Right
+notifyTripInfoToGateway orderPI caseId transporter = do
+  mkOnUpdatePayload orderPI
+    >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter caseId . Right
 
 notifyCancelToGateway ::
   ( DBFlow m r,
@@ -205,13 +191,10 @@ notifyCancelToGateway searchPi transporter cancellationSource = do
   order <- ExternalAPITransform.mkOrder searchPi.id (Just trip) $ Just cancellationSource
   ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.caseId) . Right $ API.OnCancelReqMessage order
 
-mkTrip :: (DBFlow m r, EncFlow m r) => Id Case.Case -> ProductInstance.ProductInstance -> m Trip
-mkTrip cId orderPi = do
-  prodInst <-
-    ProductInstance.findByCaseId cId
-      >>= fromMaybeM PINotFound
-  driver <- mapM mkDriverInfo $ prodInst.personId
-  vehicle <- join <$> mapM mkVehicleInfo (prodInst.entityId)
+mkTrip :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> m Trip
+mkTrip orderPi = do
+  driver <- mapM mkDriverInfo $ orderPi.personId
+  vehicle <- join <$> mapM mkVehicleInfo (orderPi.entityId)
   tripCode <- orderPi.udf4 & fromMaybeM (PIFieldNotPresent "udf4")
   logTagInfo "vehicle" $ show vehicle
   return $
@@ -240,10 +223,9 @@ mkTrip cId orderPi = do
 mkOnUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
   ProductInstance.ProductInstance ->
-  Id Case.Case ->
   m API.OnUpdateOrder
-mkOnUpdatePayload orderPI caseId = do
-  trip <- mkTrip caseId orderPI
+mkOnUpdatePayload orderPI = do
+  trip <- mkTrip orderPI
   searchPiId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
   order <- ExternalAPITransform.mkOrder searchPiId (Just trip) Nothing
   return $ API.OnUpdateOrder order
@@ -338,9 +320,7 @@ notifyTripDetailsToGateway ::
   ProductInstance.ProductInstance ->
   m ()
 notifyTripDetailsToGateway transporter searchPi orderPi = do
-  trackerCaseMb <- QCase.findByParentCaseIdAndType (searchPi.caseId) Case.LOCATIONTRACKER
-  whenJust trackerCaseMb $ \trackerCase ->
-    notifyTripInfoToGateway orderPi (trackerCase.id) transporter (searchPi.caseId)
+  notifyTripInfoToGateway orderPi searchPi.caseId transporter
 
 notifyStatusUpdateReq ::
   ( DBFlow m r,
@@ -370,7 +350,7 @@ notifyStatusUpdateReq transporterOrg searchPi status = do
         then Person.findAllByOrgId [Person.ADMIN] searchPi.organizationId
         else pure []
     notifyStatusToGateway = do
-      trackerPi <-
-        ProductInstance.findByParentIdType (searchPi.id) ProductInstance.LOCATIONTRACKER
+      orderPI <-
+        ProductInstance.findByParentIdType (searchPi.id) ProductInstance.RIDEORDER
           >>= fromMaybeM PINotFound
-      notifyServiceStatusToGateway transporterOrg searchPi trackerPi
+      notifyServiceStatusToGateway transporterOrg searchPi orderPI

@@ -16,7 +16,7 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
 
-data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
+data CaseType = RIDESEARCH | RIDEORDER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance ToHttpApiData CaseType where

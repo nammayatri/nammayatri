@@ -56,7 +56,7 @@ instance ToHttpApiData ProductInstanceStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-data ProductInstanceType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
+data ProductInstanceType = RIDESEARCH | RIDEORDER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance ToHttpApiData ProductInstanceType where

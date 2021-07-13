@@ -20,8 +20,8 @@ data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
     findAllPIByParentId :: Id PI.ProductInstance -> m [PI.ProductInstance],
-    endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> m (),
-    findCaseByIdAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
+    endRideTransaction :: Id PI.ProductInstance -> Id Case.Case -> Id Driver -> Amount -> m (),
+    findCaseById :: Id Case.Case -> m (Maybe Case.Case),
     notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> m (),
     calculateFare ::
       Id Organization ->
@@ -50,35 +50,30 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   searchPiId <- orderPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- findPIById searchPiId >>= fromMaybeM PINotFound
-  piList <- findAllPIByParentId searchPiId
-  trackerCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.LOCATIONTRACKER >>= fromMaybeM CaseNotFound
-  orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER >>= fromMaybeM CaseNotFound
+  _case <- findCaseById searchPi.caseId >>= fromMaybeM CaseNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   actualPrice <-
     ifM
       recalculateFareEnabled
-      (recalculateFare orderCase orderPi)
+      (recalculateFare _case orderPi)
       (orderPi.price & fromMaybeM (PIFieldNotPresent "price"))
 
-  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) actualPrice
+  endRideTransaction orderPi.id (searchPi.caseId) (cast driverId) actualPrice
 
-  notifyUpdateToBAP
-    (updateActualPrice actualPrice searchPi)
-    (updateActualPrice actualPrice orderPi)
-    PI.COMPLETED
+  notifyUpdateToBAP (updateActualPrice actualPrice searchPi) (updateActualPrice actualPrice orderPi){status = PI.COMPLETED} PI.COMPLETED
 
   return APISuccess.Success
   where
-    recalculateFare orderCase orderPi = do
-      transporterId <- Id <$> orderCase.provider & fromMaybeM (CaseFieldNotPresent "provider")
+    recalculateFare _case orderPi = do
+      transporterId <- Id <$> _case.provider & fromMaybeM (CaseFieldNotPresent "provider")
       vehicleVariant <-
-        (orderCase.udf1 >>= readMaybe . T.unpack)
+        (_case.udf1 >>= readMaybe . T.unpack)
           & fromMaybeM (CaseFieldNotPresent "udf1")
       oldDistance <-
-        (orderCase.udf5 >>= readMaybe . T.unpack)
+        (_case.udf5 >>= readMaybe . T.unpack)
           & fromMaybeM (CaseFieldNotPresent "udf5")
-      fare <- calculateFare transporterId vehicleVariant orderPi.distance orderCase.startTime
+      fare <- calculateFare transporterId vehicleVariant orderPi.distance _case.startTime
       let distanceDiff = orderPi.distance - oldDistance
       price <- orderPi.price & fromMaybeM (PIFieldNotPresent "price")
       let fareDiff = fare - price

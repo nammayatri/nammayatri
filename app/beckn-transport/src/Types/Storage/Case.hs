@@ -16,7 +16,7 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import qualified Types.Storage.SearchReqLocation as Loc
 
-data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
+data CaseType = RIDESEARCH
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance ToHttpApiData CaseType where
@@ -110,7 +110,6 @@ data CaseT f = Case
     providerType :: B.C f (Maybe ProviderType),
     requestor :: B.C f (Maybe Text),
     requestorType :: B.C f (Maybe RequestorType),
-    parentCaseId :: B.C f (Maybe (Id Case)),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     udf1 :: B.C f (Maybe Text),
@@ -166,7 +165,6 @@ fieldEMod =
           validTill = "valid_till",
           providerType = "provider_type",
           requestorType = "requestor_type",
-          parentCaseId = "parent_case_id",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",
           createdAt = "created_at",

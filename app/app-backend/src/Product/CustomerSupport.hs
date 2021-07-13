@@ -93,7 +93,7 @@ listOrder personId mCaseId mMobile mlimit moffset = withFlowHandlerAPI $ do
       return $ T.OrderInfo person searchcases
     getByCaseId caseId = do
       (_case :: C.Case) <-
-        Case.findByIdAndType (Id caseId) C.RIDESEARCH
+        Case.findById (Id caseId)
           >>= fromMaybeM CaseDoesNotExist
       let requestorId = fromMaybe "_ID" (_case.requestor)
       person <-

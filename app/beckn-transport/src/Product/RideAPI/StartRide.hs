@@ -26,15 +26,12 @@ startRide personId rideId req = withFlowHandlerAPI $ do
       Handler.ServiceHandle
         { findPersonById = QPerson.findPersonById,
           findPIById = QProductInstance.findById,
-          findPIsByParentId = QProductInstance.findAllByParentId,
-          findCaseByIdsAndType = QCase.findByIdType,
           startRide = startRideTransaction,
           notifyBAPRideStarted = \searchPi orderPi -> notifyUpdateToBAP searchPi orderPi ProductInstance.INPROGRESS,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId')
         }
 
-startRideTransaction :: DBFlow m r => [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m ()
-startRideTransaction piIds trackerCaseId orderCaseId = DB.runSqlDBTransaction $ do
-  QProductInstance.updateStatusByIds piIds ProductInstance.INPROGRESS
-  QCase.updateStatus trackerCaseId Case.INPROGRESS
-  QCase.updateStatus orderCaseId Case.INPROGRESS
+startRideTransaction :: DBFlow m r => Id ProductInstance.ProductInstance -> Id Case.Case -> m ()
+startRideTransaction piId searchCaseId = DB.runSqlDBTransaction $ do
+  QProductInstance.updateStatus piId ProductInstance.INPROGRESS
+  QCase.updateStatus searchCaseId Case.INPROGRESS

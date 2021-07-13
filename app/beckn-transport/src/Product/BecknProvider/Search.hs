@@ -129,7 +129,6 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
       providerType = Nothing,
       requestor = Nothing,
       requestorType = Just Case.CONSUMER,
-      parentCaseId = Nothing,
       fromLocationId = fromLocation.id,
       toLocationId = toLocation.id,
       udf1 = Just $ intent.vehicle.variant,
