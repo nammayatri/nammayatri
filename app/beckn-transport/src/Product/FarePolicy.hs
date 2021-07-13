@@ -4,15 +4,11 @@ import App.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.RegistrationToken as RegToken
+import Beckn.Utils.Validation (runRequestValidation)
 import EulerHS.Prelude
 import qualified Storage.Queries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as SPerson
 import Types.API.FarePolicy
-  ( FarePolicyResponse (..),
-    ListFarePolicyResponse (ListFarePolicyResponse),
-    UpdateFarePolicyRequest,
-    UpdateFarePolicyResponse,
-  )
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import Types.Error
 import qualified Types.Storage.FarePolicy as SFarePolicy
@@ -41,6 +37,7 @@ listFarePolicies RegToken.RegistrationToken {entityId} = withFlowHandlerAPI $ do
 
 updateFarePolicy :: RegToken.RegistrationToken -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler UpdateFarePolicyResponse
 updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
+  runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM NoFarePolicy
   let updatedFarePolicy =
         farePolicy

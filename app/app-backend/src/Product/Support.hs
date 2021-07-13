@@ -13,6 +13,7 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Issue as SIssue
 import Beckn.Types.Storage.Person as Person
+import Beckn.Utils.Validation (runRequestValidation)
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length)
@@ -23,6 +24,7 @@ import qualified Utils.SES as SES
 
 sendIssue :: Person.Person -> Support.SendIssueReq -> App.FlowHandler Support.SendIssueRes
 sendIssue person request@SendIssueReq {..} = withFlowHandlerAPI $ do
+  runRequestValidation validateSendIssueReq request
   let personId = getId $ person.id
   issuesConfig <- asks $ SesConfig.issuesConfig . App.sesCfg
   issueId <- L.generateGUID

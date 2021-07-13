@@ -62,6 +62,14 @@ instance (Predicate x p) => Predicate x (Not p) where
 instance (ShowablePredicate p) => ShowablePredicate (Not p) where
   pShow (Not p) = liftPredShow "not" p
 
+newtype InMaybe p = InMaybe p
+
+instance (Predicate x p) => Predicate (Maybe x) (InMaybe p) where
+  pFun (InMaybe p) = maybe True (pFun p)
+
+instance (ShowablePredicate p) => ShowablePredicate (InMaybe p) where
+  pShow (InMaybe p) = liftPredShow "ifNotNull" p
+
 newtype ExactLength = ExactLength Int
 
 instance ShowablePredicate ExactLength where

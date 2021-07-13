@@ -30,19 +30,17 @@ data TransporterReq = TransporterReq
     pincode :: Maybe Text,
     address :: Maybe Text
   }
-  deriving (Generic)
-
-instance FromJSON TransporterReq where
-  parseJSON = genericParseJsonWithValidation "TransporterReq" validateTransporterReq
+  deriving (Generic, FromJSON)
 
 validateTransporterReq :: Validate TransporterReq
 validateTransporterReq TransporterReq {..} =
   sequenceA_
-    [ validate "name" name $ MinLength 3 `And` P.name,
-      validateMaybe "description" description $ MinLength 3 `And` P.name,
-      validateMaybe "address" address $
-        NotEmpty `And` star (P.alphanum \/ anyOf " ,./"),
-      validate "mobileNumber" mobileNumber P.mobileNumber
+    [ validateField "name" name $ MinLength 3 `And` P.name,
+      validateField "description" description $ InMaybe $ MinLength 3 `And` P.name,
+      validateField "address" address $
+        InMaybe $
+          NotEmpty `And` star (P.alphanum \/ anyOf " ,./"),
+      validateField "mobileNumber" mobileNumber P.mobileNumber
     ]
 
 instance DBFlow m r => CreateTransform TransporterReq SO.Organization m where

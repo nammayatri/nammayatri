@@ -60,14 +60,11 @@ data UpdatePersonReq = UpdatePersonReq
     address :: Maybe Text,
     bound :: Maybe Text
   }
-  deriving (Generic, ToJSON)
-
-instance FromJSON UpdatePersonReq where
-  parseJSON = genericParseJsonWithValidation "UpdatePersonReq" validateUpdatePersonReq
+  deriving (Generic, ToJSON, FromJSON)
 
 validateUpdatePersonReq :: Validate UpdatePersonReq
 validateUpdatePersonReq UpdatePersonReq {..} =
-  validateMaybe "firstName" firstName $ MinLength 3 `And` P.name
+  validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.name
 
 instance DBFlow m r => ModifyTransform UpdatePersonReq SP.Person m where
   modifyTransform req person = do
@@ -171,6 +168,14 @@ data PersonReqEntity = PersonReqEntity
     bound :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON)
+
+validatePersonReqEntity :: Validate PersonReqEntity
+validatePersonReqEntity PersonReqEntity {..} =
+  sequenceA_
+    [ validateField "firstName" firstName . InMaybe $ NotEmpty `And` P.name,
+      validateField "mobileNumber" mobileNumber $ InMaybe P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode $ InMaybe P.mobileCountryCode
+    ]
 
 instance (DBFlow m r, EncFlow m r) => CreateTransform PersonReqEntity SP.Person m where
   createTransform req = do

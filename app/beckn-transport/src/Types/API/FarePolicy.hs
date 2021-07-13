@@ -5,6 +5,7 @@ module Types.API.FarePolicy
     UpdateFarePolicyRequest (..),
     FarePolicyResponse (..),
     UpdateFarePolicyResponse,
+    validateUpdateFarePolicyRequest,
   )
 where
 
@@ -42,19 +43,16 @@ data UpdateFarePolicyRequest = UpdateFarePolicyRequest
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON)
 
 type UpdateFarePolicyResponse = APISuccess
-
-instance FromJSON UpdateFarePolicyRequest where
-  parseJSON = genericParseJsonWithValidation "UpdateFarePolicyRequest" validateUpdateFarePolicyRequest
 
 validateUpdateFarePolicyRequest :: Validate UpdateFarePolicyRequest
 validateUpdateFarePolicyRequest UpdateFarePolicyRequest {..} =
   sequenceA_
-    [ validateMaybe "baseFare" baseFare $ InRange @Double 0 1000,
-      validateMaybe "baseDistance" baseDistance $ InRange @Double 0 10000,
-      validateMaybe "nightShiftRate" nightShiftRate $ InRange @Double 1 2,
-      validateMaybe "nightShiftStart" nightShiftStart $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 30 0),
-      validateMaybe "nightShiftEnd" nightShiftEnd $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
+    [ validateField "baseFare" baseFare . InMaybe $ InRange @Double 0 1000,
+      validateField "baseDistance" baseDistance . InMaybe $ InRange @Double 0 10000,
+      validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Double 1 2,
+      validateField "nightShiftStart" nightShiftStart . InMaybe $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 30 0),
+      validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
     ]

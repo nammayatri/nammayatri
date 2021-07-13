@@ -7,6 +7,7 @@ import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
+import Beckn.Utils.Validation (runRequestValidation)
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
@@ -17,6 +18,7 @@ import qualified Utils.Defaults as Default
 
 createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle orgId req = withFlowHandlerAPI $ do
+  runRequestValidation validateCreateVehicleReq req
   validateVehicle
   vehicle <- createTransform req <&> addOrgId (Id orgId)
   QV.createFlow vehicle

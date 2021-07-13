@@ -29,6 +29,7 @@ import Beckn.Types.Storage.ProductInstance (ProductInstance)
 import qualified Beckn.Types.Storage.Rating as Rating
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SV
+import Beckn.Utils.Validation (runRequestValidation)
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time.Clock (diffUTCTime)
@@ -54,6 +55,7 @@ import Utils.Common
 
 updatePerson :: SR.RegistrationToken -> Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes
 updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ do
+  runRequestValidation validateUpdatePersonReq req
   verifyPerson entityId
   person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
   isValidUpdate person

@@ -13,6 +13,7 @@ import Beckn.Types.SlidingWindowLimiter
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import Beckn.Utils.SlidingWindowLimiter
+import Beckn.Utils.Validation (runRequestValidation)
 import qualified Crypto.Number.Generate as Cryptonite
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -26,7 +27,8 @@ import qualified Utils.Notifications as Notify
 
 initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
 initiateLogin req =
-  withFlowHandlerAPI $
+  withFlowHandlerAPI $ do
+    runRequestValidation validateInitiateLoginReq req
     case (req.medium, req.__type) of
       (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
       _ -> throwError $ InvalidRequest "medium and type must be sms and otp respectively"
@@ -144,6 +146,7 @@ loginHitsCountKey person = "Registration:login:" <> getId person.id <> ":hitsCou
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandlerAPI $ do
+    runRequestValidation validateLoginReq req
     regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
     when verified $ throwError $ AuthBlocked "Already verified."
     checkForExpiry authExpiry updatedAt
@@ -193,6 +196,7 @@ checkPersonExists entityId =
 reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
 reInitiateLogin tokenId req =
   withFlowHandlerAPI $ do
+    runRequestValidation validateReInitiateLoginReq req
     SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
     void $ checkPersonExists entityId
     if attempts > 0

@@ -25,20 +25,17 @@ data CreateVehicleReq = CreateVehicleReq
     registrationNo :: Text,
     registrationCategory :: Maybe RegistrationCategory
   }
-  deriving (Generic, ToJSON, ToSchema)
-
-instance FromJSON CreateVehicleReq where
-  parseJSON = genericParseJsonWithValidation "CreateVehicleReq" validateCreateVehicleReq
+  deriving (Generic, ToSchema, FromJSON, ToJSON)
 
 validateCreateVehicleReq :: Validate CreateVehicleReq
 validateCreateVehicleReq CreateVehicleReq {..} =
   sequenceA_
-    [ validate "registrationNo" registrationNo $
+    [ validateField "registrationNo" registrationNo $
         LengthInRange 1 10 `And` star (P.latinUC \/ P.digit),
-      validateMaybe "model" model $
+      validateField "model" model . InMaybe $
         NotEmpty `And` star P.latinOrSpace,
-      validateMaybe "make" make $ NotEmpty `And` P.name,
-      validateMaybe "color" color $ NotEmpty `And` P.name
+      validateField "make" make . InMaybe $ NotEmpty `And` P.name,
+      validateField "color" color . InMaybe $ NotEmpty `And` P.name
     ]
 
 instance DBFlow m r => CreateTransform CreateVehicleReq SV.Vehicle m where

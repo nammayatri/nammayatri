@@ -9,6 +9,7 @@ import qualified Beckn.Types.Storage.Organization as SO
 import qualified Beckn.Types.Storage.Person as SP
 import qualified Beckn.Types.Storage.RegistrationToken as SR
 import qualified Beckn.Types.Storage.Vehicle as SVehicle
+import Beckn.Utils.Validation (runRequestValidation)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.FarePolicy as QFarePolicy
@@ -23,6 +24,7 @@ import Utils.Common
 
 createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
 createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
+  runRequestValidation validateTransporterReq req
   person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
   validate person
   organization <- createTransform req

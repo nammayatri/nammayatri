@@ -22,15 +22,13 @@ data InitiateLoginReq = InitiateLoginReq
   deriving (Generic)
 
 instance FromJSON InitiateLoginReq where
-  parseJSON =
-    genericParseJSON stripPrefixUnderscoreIfAny
-      >=> runValidationFromJson "InitiateLoginReq" validateInitiateLoginReq
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 validateInitiateLoginReq :: Validate InitiateLoginReq
 validateInitiateLoginReq InitiateLoginReq {..} =
   sequenceA_
-    [ validate "mobileNumber" mobileNumber P.mobileNumber,
-      validate "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    [ validateField "mobileNumber" mobileNumber P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
 
 instance ToJSON InitiateLoginReq where
@@ -46,15 +44,13 @@ data ReInitiateLoginReq = ReInitiateLoginReq
   deriving (Generic)
 
 instance FromJSON ReInitiateLoginReq where
-  parseJSON =
-    genericParseJSON stripPrefixUnderscoreIfAny
-      >=> runValidationFromJson "ReInitiateLoginReq" validateReInitiateLoginReq
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 validateReInitiateLoginReq :: Validate ReInitiateLoginReq
 validateReInitiateLoginReq ReInitiateLoginReq {..} =
   sequenceA_
-    [ validate "mobileNumber" mobileNumber P.mobileNumber,
-      validate "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    [ validateField "mobileNumber" mobileNumber P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
 
 instance ToJSON ReInitiateLoginReq where
@@ -78,16 +74,14 @@ data LoginReq = LoginReq
   deriving (Generic)
 
 instance FromJSON LoginReq where
-  parseJSON =
-    genericParseJSON stripPrefixUnderscoreIfAny
-      >=> runValidationFromJson "LoginReq" validateLoginReq
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 validateLoginReq :: Validate LoginReq
 validateLoginReq LoginReq {..} =
   sequenceA_
-    [ validate "mobileNumber" mobileNumber P.mobileNumber,
-      validate "mobileCountryCode" mobileCountryCode P.mobileCountryCode,
-      validate "hash" hash $ ExactLength 4 `And` star P.digit
+    [ validateField "mobileNumber" mobileNumber P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode,
+      validateField "hash" hash $ ExactLength 4 `And` star P.digit
     ]
 
 instance ToJSON LoginReq where

@@ -12,6 +12,7 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import qualified Beckn.Types.Storage.Person as SP
 import Beckn.Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
+import Beckn.Utils.Validation
 import EulerHS.Prelude hiding (id)
 import qualified Product.Location as Location
 import Product.Person (sendInviteSms)
@@ -34,6 +35,7 @@ import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 
 createDriver :: Text -> DriverInformationAPI.CreateDriverReq -> FlowHandler DriverInformationAPI.CreateDriverRes
 createDriver orgId req = withFlowHandlerAPI $ do
+  runRequestValidation DriverInformationAPI.validateCreateDriverReq req
   let personEntity = req.person
   validateDriver personEntity
   person <- addOrgId (Id orgId) <$> createTransform req.person

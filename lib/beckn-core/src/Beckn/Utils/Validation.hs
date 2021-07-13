@@ -1,70 +1,64 @@
-module Beckn.Utils.Validation where
+{-# LANGUAGE TemplateHaskell #-}
 
-import Beckn.Types.Error.API
-import Beckn.Types.Flow
+module Beckn.Utils.Validation
+  ( module Beckn.Utils.Validation,
+    module Beckn.Types.Validation,
+  )
+where
+
+import Beckn.Types.Error.APIError
+import Beckn.Types.Logging
 import Beckn.Types.Predicate
+import Beckn.Types.Validation
 import Beckn.Utils.Error.Throwing
-import qualified Data.Aeson.Types as A
-import Data.Either.Validation
-import qualified Data.Text as T
+import qualified Data.Either.Validation as V
 import EulerHS.Prelude hiding (pred)
-import qualified GHC.Generics
 
-type Validate a = a -> Validation [Text] ()
+runRequestValidation ::
+  (MonadThrow m, Log m) =>
+  Validate obj ->
+  obj ->
+  m ()
+runRequestValidation validator obj =
+  V.validationToEither (validator obj)
+    & fromEitherM RequestValidationFailure
 
-validate ::
+newtype RequestValidationFailure = RequestValidationFailure [ValidationDescription]
+  deriving (Show)
+
+instance IsAPIError RequestValidationFailure where
+  toErrorCode (RequestValidationFailure _failures) = "REQUEST_VALIDATION_FAILURE"
+  toHttpCode (RequestValidationFailure _failures) = E400
+  toPayload (RequestValidationFailure failures) = toJSON failures
+
+instanceExceptionWithParent 'APIException ''RequestValidationFailure
+
+validateField ::
   (Predicate a p, ShowablePredicate p) =>
   Text ->
   a ->
   p ->
-  Validation [Text] ()
-validate name a pred =
-  unless (pFun pred a) . Failure $ [pShow pred name]
+  Validation
+validateField fieldName fieldValue pred =
+  unless (pFun pred fieldValue) . V.Failure $ [validationDescription]
+  where
+    validationDescription =
+      ValidationDescription
+        { fieldName = [fieldName],
+          expectation = pShow pred fieldName
+        }
 
-validateMaybe ::
-  (Predicate a p, ShowablePredicate p) =>
-  Text ->
-  Maybe a ->
-  p ->
-  Validation [Text] ()
-validateMaybe name mbField pred =
-  whenJust mbField (\field -> validate name field pred)
-
-validate' ::
+validateObject ::
   Text ->
   a ->
-  (a -> Bool) ->
-  (Text -> Text) ->
-  Validation [Text] ()
-validate' name a predFun predShow =
-  unless (predFun a) . Failure $ [predShow name]
+  Validate a ->
+  Validation
+validateObject fieldName object validator = first addPrefixes $ validator object
+  where
+    addPrefixes = map (addPrefixToFieldName fieldName)
 
-runValidationFromJson :: Text -> Validate a -> a -> A.Parser a
-runValidationFromJson name validation a =
-  case validation a of
-    Success _ -> pure a
-    Failure errs -> fail $ show $ validationErrorsToText name errs
-
-runRequestValidation :: Text -> Validate a -> a -> FlowR r a
-runRequestValidation name validation a =
-  case validation a of
-    Success _ -> pure a
-    Failure errs -> throwError $ InvalidRequest $ validationErrorsToText name errs
-
-validationErrorsToText :: Text -> [Text] -> Text
-validationErrorsToText name errs =
-  name
-    <> " validation failure, the following expectations are not met: "
-    <> T.intercalate ", " errs
-
-genericParseJsonWithValidation ::
-  ( Generic c,
-    A.GFromJSON A.Zero (GHC.Generics.Rep c)
-  ) =>
+addPrefixToFieldName ::
   Text ->
-  Validate c ->
-  A.Value ->
-  A.Parser c
-genericParseJsonWithValidation name val =
-  genericParseJSON A.defaultOptions
-    >=> runValidationFromJson name val
+  ValidationDescription ->
+  ValidationDescription
+addPrefixToFieldName prefix = #fieldName %~ (prefix :)
