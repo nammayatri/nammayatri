@@ -233,13 +233,16 @@ deleteById personId = do
   where
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
-updateVehicle :: DBFlow m r => Id Storage.Person -> Maybe (Id Vehicle.Vehicle) -> m ()
+updateVehicleFlow :: DBFlow m r => Id Storage.Person -> Maybe (Id Vehicle.Vehicle) -> m ()
+updateVehicleFlow personId = DB.runSqlDB . updateVehicle personId
+
+updateVehicle :: Id Storage.Person -> Maybe (Id Vehicle.Vehicle) -> DB.SqlDB ()
 updateVehicle personId mbVehicleId = do
   dbTable <- getDbTable
   let (mEntityId, mEntityType) = case mbVehicleId of
         Just vehicleId -> (Just (getId vehicleId), Just "VEHICLE")
         Nothing -> (Nothing, Nothing)
-  DB.update
+  DB.update'
     dbTable
     (setClause mEntityId mEntityType)
     (predicate personId)

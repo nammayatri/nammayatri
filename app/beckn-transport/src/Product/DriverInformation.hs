@@ -44,26 +44,25 @@ createDriver orgId req = withFlowHandlerAPI $ do
     QPerson.create person
     createDriverDetails (person.id)
     QVehicle.create vehicle
+    QPerson.updateVehicle person.id $ Just vehicle.id
   org <-
     QOrganization.findOrganizationById (Id orgId)
       >>= fromMaybeM OrgNotFound
   decPerson <- decrypt person
-  case (personEntity.role, personEntity.mobileNumber, personEntity.mobileCountryCode) of
-    (Just SP.DRIVER, Just mobileNumber, Just countryCode) -> do
-      smsCfg <- smsCfg <$> ask
-      inviteSmsTemplate <- inviteSmsTemplate <$> ask
-      sendInviteSms smsCfg inviteSmsTemplate (countryCode <> mobileNumber) (org.name)
-      return . DriverInformationAPI.CreateDriverRes $ makeUserInfoRes decPerson
-    _ -> return . DriverInformationAPI.CreateDriverRes $ makeUserInfoRes decPerson
+  let Just mobNum = personEntity.mobileNumber -- already checked
+      Just mobCounCode = personEntity.mobileCountryCode
+  smsCfg <- smsCfg <$> ask
+  inviteSmsTemplate <- inviteSmsTemplate <$> ask
+  sendInviteSms smsCfg inviteSmsTemplate (mobCounCode <> mobNum) (org.name)
+  return . DriverInformationAPI.CreateDriverRes $ makeUserInfoRes decPerson
   where
     addOrgId orgId_ person = person {SP.organizationId = Just orgId_}
     validateDriver preq =
-      when (preq.role == Just SP.DRIVER) $
-        case (preq.mobileNumber, preq.mobileCountryCode) of
-          (Just mobileNumber, Just countryCode) ->
-            whenM (isJust <$> QPerson.findByMobileNumber countryCode mobileNumber) $
-              throwError $ InvalidRequest "Person with this mobile number already exists."
-          _ -> throwError $ InvalidRequest "You should pass mobile number and country code."
+      case (preq.mobileNumber, preq.mobileCountryCode) of
+        (Just mobileNumber, Just countryCode) ->
+          whenM (isJust <$> QPerson.findByMobileNumber countryCode mobileNumber) $
+            throwError $ InvalidRequest "Driver with this mobile number already exists."
+        _ -> throwError $ InvalidRequest "You should pass mobile number and country code."
 
 createDriverDetails :: Id SP.Person -> DB.SqlDB ()
 createDriverDetails personId = do
@@ -175,5 +174,5 @@ linkVehicle orgId personId req = withFlowHandlerAPI $ do
     (throwError Unauthorized)
   prevPerson <- QPerson.findByVehicleId $ req.vehicleId
   whenJust prevPerson $ \_ -> throwError VehicleAlreadyLinked
-  QPerson.updateVehicle personId $ Just (req.vehicleId)
+  QPerson.updateVehicleFlow personId $ Just (req.vehicleId)
   return APISuccess.Success
