@@ -1,11 +1,15 @@
 module Beckn.Types.Core.Migration.Gps (Gps (..)) where
 
+import Beckn.Utils.Error.Throwing (fromEitherM')
 import Beckn.Utils.Example
+import Control.Arrow ((>>>))
 import Data.Aeson
 import Data.Aeson.Types (parseFail)
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (many, try, (<|>))
 import Text.Parsec
+import Text.Parsec.Language (emptyDef)
+import qualified Text.Parsec.Token as P
 
 -- Regular expression: ^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$
 
@@ -23,82 +27,31 @@ instance Example Gps where
       }
 
 instance FromJSON Gps where
-  parseJSON = withText "Gps" \gps -> do
-    let res = parse parseGps "" $ T.unpack gps
-    (lat, lon) <- either (\err -> parseFail $ "Error occurred while parsing Gps: " <> show err) pure res
-    latDouble <- maybe (parseFail "Couldn't parse latitude from Gps.") pure (readMaybe lat)
-    lonDouble <- maybe (parseFail "Couldn't parse longitude from Gps.") pure (readMaybe lon)
-    pure $ Gps latDouble lonDouble
+  parseJSON =
+    withText "Gps" $
+      T.unpack
+        >>> parse parseGps ""
+        >>> fromEitherM' (parseFail . show)
 
 instance ToJSON Gps where
   toJSON (Gps lat lon) = String $ show lat <> ", " <> show lon
 
-parseGps :: Parsec String st (String, String)
+parseGps :: Parser Gps
 parseGps =
-  (,)
-    <$> parseLatitude
+  Gps
+    <$> (double >>= validate ((<= 90.0) . abs))
     <* char ','
-    <* many (space <|> endOfLine <|> tab)
-    <*> parseLongitude
+    <* spaces
+    <*> (double >>= validate ((<= 180.0) . abs))
     <* eof
 
-parseLatitude :: Parsec String st String
-parseLatitude = do
-  mbSign <- optionMaybe parseSign
-  latitude <- try parseLessThanBound <|> parseBound
-  pure $ ifJust mbSign (: latitude) latitude
-  where
-    parseLessThanBound = do
-      firstDigit <- oneOf "12345678"
-      secondDigit <- digit
-      let integerPart = [firstDigit, secondDigit]
-      mbRealPart <- optionMaybe parseRealPart
-      pure $ ifJust mbRealPart (integerPart ++) integerPart
-    parseBound = do
-      integerPart <- string "90"
-      mbRealPart <- optionMaybe parseDummyRealPart
-      pure $ ifJust mbRealPart (integerPart ++) integerPart
+type Parser = Parsec String ()
 
-parseLongitude :: Parsec String st String
-parseLongitude = do
-  mbSign <- optionMaybe parseSign
-  longitude <- parseIntegerPart
-  pure $ ifJust mbSign (: longitude) longitude
-  where
-    parseIntegerPart = try parseBound <|> try parseHundredAndMore <|> parseLessThanHundred
-    parseBound = do
-      integerPart <- string "180"
-      mbRealPart <- optionMaybe parseDummyRealPart
-      pure $ ifJust mbRealPart (integerPart ++) integerPart
-    parseHundredAndMore = do
-      firstDigit <- char '1'
-      secondDigit <- oneOf "01234567"
-      thirdDigit <- digit
-      let integerPart = [firstDigit, secondDigit, thirdDigit]
-      mbRealPart <- optionMaybe parseRealPart
-      pure $ ifJust mbRealPart (integerPart ++) integerPart
-    parseLessThanHundred = do
-      mbTensDigit <- optionMaybe $ oneOf "123456789"
-      unitsDigit <- digit
-      let integerPart = ifJust mbTensDigit (: [unitsDigit]) [unitsDigit]
-      mbRealPart <- optionMaybe parseRealPart
-      pure $ ifJust mbRealPart (integerPart ++) integerPart
+lexer :: P.GenTokenParser String u Identity
+lexer = P.makeTokenParser emptyDef
 
-parseRealPart :: Parsec String st String
-parseRealPart = do
-  point <- char '.'
-  realPart <- many1 digit
-  pure $ point : realPart
+double :: Parser Double
+double = P.float lexer
 
-parseDummyRealPart :: Parsec String st String
-parseDummyRealPart = do
-  point <- char '.'
-  realPart <- many1 $ char '0'
-  pure $ point : realPart
-
-parseSign :: Parsec String st Char
-parseSign = oneOf "+-"
-
-ifJust :: Maybe a -> (a -> b) -> b -> b
-ifJust Nothing _ val = val
-ifJust (Just val) f _ = f val
+validate :: Show a => (a -> Bool) -> a -> Parser a
+validate p a = if p a then pure a else unexpected (show a)
