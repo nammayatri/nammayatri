@@ -7,23 +7,29 @@ where
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error.APIError
 import Beckn.Utils.Logging
+import qualified Data.Text as T
 import EulerHS.Prelude
 
-throwError :: (MonadThrow m, Log m, IsAPIException e) => e -> m b
+throwError :: (HasCallStack, MonadThrow m, Log m, IsAPIException e) => e -> m b
 throwError err = do
   logWarning $ toLogMessageAPIError err
+  logCallStack
   throwM err
+  where
+    logCallStack =
+      withLogTag "CallStack" $
+        logDebug . T.pack $ prettyCallStack callStack
 
 fromMaybeM ::
-  (MonadThrow m, Log m, IsAPIException e) => e -> Maybe b -> m b
+  (HasCallStack, MonadThrow m, Log m, IsAPIException e) => e -> Maybe b -> m b
 fromMaybeM err = maybe (throwError err) pure
 
 fromEitherM ::
-  (MonadThrow m, Log m, IsAPIException e) => (left -> e) -> Either left b -> m b
+  (HasCallStack, MonadThrow m, Log m, IsAPIException e) => (left -> e) -> Either left b -> m b
 fromEitherM toerr = fromEitherM' (throwError . toerr)
 
 liftEither ::
-  (MonadThrow m, Log m, IsAPIException e) => Either e b -> m b
+  (HasCallStack, MonadThrow m, Log m, IsAPIException e) => Either e b -> m b
 liftEither = fromEitherM id
 
 fromEitherM' ::
