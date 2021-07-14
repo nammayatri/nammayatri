@@ -38,8 +38,8 @@ createDriver orgId req = withFlowHandlerAPI $ do
   runRequestValidation DriverInformationAPI.validateCreateDriverReq req
   let personEntity = req.person
   validateDriver personEntity
-  person <- addOrgId (Id orgId) <$> createTransform req.person
-  vehicle <- createTransform req.vehicle
+  person <- addOrgIdToPerson (Id orgId) <$> createTransform req.person
+  vehicle <- addOrgIdToVehicle (Id orgId) <$> createTransform req.vehicle
   DB.runSqlDBTransaction $ do
     QPerson.create person
     createDriverDetails (person.id)
@@ -56,7 +56,8 @@ createDriver orgId req = withFlowHandlerAPI $ do
   sendInviteSms smsCfg inviteSmsTemplate (mobCounCode <> mobNum) (org.name)
   return . DriverInformationAPI.CreateDriverRes $ makeUserInfoRes decPerson
   where
-    addOrgId orgId_ person = person {SP.organizationId = Just orgId_}
+    addOrgIdToPerson orgId_ person = person{organizationId = Just orgId_}
+    addOrgIdToVehicle orgId_ vehicle = vehicle{organizationId = orgId_}
     validateDriver preq =
       case (preq.mobileNumber, preq.mobileCountryCode) of
         (Just mobileNumber, Just countryCode) ->
