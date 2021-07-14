@@ -38,6 +38,7 @@ createDriver orgId req = withFlowHandlerAPI $ do
   runRequestValidation DriverInformationAPI.validateCreateDriverReq req
   let personEntity = req.person
   validateDriver personEntity
+  validateVehicle req.vehicle
   person <- addOrgIdToPerson (Id orgId) <$> createTransform req.person
   vehicle <- addOrgIdToVehicle (Id orgId) <$> createTransform req.vehicle
   DB.runSqlDBTransaction $ do
@@ -64,6 +65,9 @@ createDriver orgId req = withFlowHandlerAPI $ do
           whenM (isJust <$> QPerson.findByMobileNumber countryCode mobileNumber) $
             throwError $ InvalidRequest "Driver with this mobile number already exists."
         _ -> throwError $ InvalidRequest "You should pass mobile number and country code."
+    validateVehicle preq =
+      whenM (isJust <$> QVehicle.findByRegistrationNo preq.registrationNo) $
+        throwError $ InvalidRequest "Vehicle with this registration number already exists."
 
 createDriverDetails :: Id SP.Person -> DB.SqlDB ()
 createDriverDetails personId = do
