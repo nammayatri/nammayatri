@@ -140,14 +140,15 @@ generateOTPCode :: MonadFlow m => m Text
 generateOTPCode =
   L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
 
-loginHitsCountKey :: SP.Person -> Text
-loginHitsCountKey person = "Registration:login:" <> getId person.id <> ":hitsCount"
+loginHitsCountKey :: Id SP.Person -> Text
+loginHitsCountKey id = "Registration:login:" <> getId id <> ":hitsCount"
 
 login :: Text -> LoginReq -> FlowHandler LoginRes
 login tokenId req =
   withFlowHandlerAPI $ do
     runRequestValidation validateLoginReq req
     regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
+    checkSlidingWindowLimit (loginHitsCountKey $ Id entityId)
     when verified $ throwError $ AuthBlocked "Already verified."
     checkForExpiry authExpiry updatedAt
     let isValid =
@@ -157,7 +158,6 @@ login tokenId req =
     if isValid
       then do
         person <- checkPersonExists entityId
-        checkSlidingWindowLimit (loginHitsCountKey person)
         clearOldRegToken person $ Id tokenId
         let personId = person.id
             updatedPerson =
