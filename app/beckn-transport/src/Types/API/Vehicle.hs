@@ -85,6 +85,15 @@ data UpdateVehicleReq = UpdateVehicleReq
 instance FromJSON UpdateVehicleReq where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
+validateUpdateVehicleReq :: Validate UpdateVehicleReq
+validateUpdateVehicleReq UpdateVehicleReq {..} =
+  sequenceA_
+    [ validateField "model" model . InMaybe $
+        NotEmpty `And` star P.latinOrSpace,
+      validateField "make" make . InMaybe $ NotEmpty `And` P.name,
+      validateField "color" color . InMaybe $ NotEmpty `And` P.name
+    ]
+
 instance DBFlow m r => ModifyTransform UpdateVehicleReq SV.Vehicle m where
   modifyTransform req vehicle = do
     now <- getCurrentTime

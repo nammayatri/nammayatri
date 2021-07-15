@@ -50,7 +50,7 @@ type UpdateFarePolicyResponse = APISuccess
 validateUpdateFarePolicyRequest :: Validate UpdateFarePolicyRequest
 validateUpdateFarePolicyRequest UpdateFarePolicyRequest {..} =
   sequenceA_
-    [ validateField "baseFare" baseFare . InMaybe $ InRange @Double 0 1000,
+    [ validateField "baseFare" baseFare . InMaybe $ InRange @Double 0 500,
       validateField "baseDistance" baseDistance . InMaybe $ InRange @Double 0 10000,
       validateField "perExtraKmRate" perExtraKmRate $ InRange @Double 1 99,
       validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Double 1 2,

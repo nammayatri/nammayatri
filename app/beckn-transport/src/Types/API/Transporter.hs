@@ -118,6 +118,13 @@ data UpdateTransporterReq = UpdateTransporterReq
   }
   deriving (Generic, Show, FromJSON)
 
+validateUpdateTransporterReq :: Validate UpdateTransporterReq
+validateUpdateTransporterReq UpdateTransporterReq {..} =
+  sequenceA_
+    [ validateField "name" name $ InMaybe $ MinLength 3 `And` P.name,
+      validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
+    ]
+
 instance DBFlow m r => ModifyTransform UpdateTransporterReq SO.Organization m where
   modifyTransform req org = do
     now <- getCurrentTime

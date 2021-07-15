@@ -64,7 +64,14 @@ data UpdatePersonReq = UpdatePersonReq
 
 validateUpdatePersonReq :: Validate UpdatePersonReq
 validateUpdatePersonReq UpdatePersonReq {..} =
-  validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.name
+  sequenceA_
+    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.name,
+      validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "fullName" fullName $ InMaybe $ MinLength 3 `And` P.name,
+      validateField "district" district $ InMaybe $ NotEmpty `And` P.name,
+      validateField "state" state $ InMaybe $ NotEmpty `And` P.name
+    ]
 
 instance DBFlow m r => ModifyTransform UpdatePersonReq SP.Person m where
   modifyTransform req person = do

@@ -41,6 +41,7 @@ listVehicles orgId variantM categoryM energyTypeM limitM offsetM = withFlowHandl
 
 updateVehicle :: Text -> Id SV.Vehicle -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
 updateVehicle orgId vehicleId req = withFlowHandlerAPI $ do
+  runRequestValidation validateUpdateVehicleReq req
   vehicle <- QV.findByIdAndOrgId vehicleId (Id orgId) >>= fromMaybeM VehicleDoesNotExist
   updatedVehicle <- modifyTransform req vehicle
   QV.updateVehicleRec updatedVehicle

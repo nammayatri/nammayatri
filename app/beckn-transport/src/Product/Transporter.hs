@@ -72,6 +72,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
 
 updateTransporter :: SR.RegistrationToken -> Id SO.Organization -> UpdateTransporterReq -> FlowHandler TransporterRec
 updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
+  runRequestValidation validateUpdateTransporterReq req
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId (Id entityId) SP.ADMIN orgId
   now <- getCurrentTime
   case maybePerson of
