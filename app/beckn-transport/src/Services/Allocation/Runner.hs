@@ -15,10 +15,11 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
-import Types.Metrics (BTMMetrics, CoreMetrics)
+import Types.Metrics (CoreMetrics, HasBTMMetrics)
 import Types.ShardMappingError
 import Types.Storage.Organization
 import Utils.Common
+import qualified Utils.Metrics as Metrics
 
 handle ::
   ( Allocation.MonadHandler m,
@@ -27,6 +28,7 @@ handle ::
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Integer, "nwAddress" ::: BaseUrl],
     FCMFlow m r,
+    HasBTMMetrics m r,
     CoreMetrics m
   ) =>
   Allocation.ServiceHandle m
@@ -54,7 +56,13 @@ handle =
       getRideInfo = I.getRideInfo,
       cleanupNotifications = I.cleanupNotifications,
       removeRequest = I.removeRequest,
-      logEvent = I.logEvent
+      logEvent = I.logEvent,
+      metrics =
+        Allocation.BTMMetricsHandle
+          { incrementTaskCounter = Metrics.incrementTaskCounter,
+            incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter,
+            putTaskDuration = Metrics.putTaskDuration
+          }
     }
 
 getOrganizationLock ::
@@ -76,7 +84,7 @@ getOrganizationLock = do
         ShardMappingError $ "Shard " <> show shardId <> " does not have an associated organization."
 
 run ::
-  ( BTMMetrics m,
+  ( HasBTMMetrics m r,
     DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],

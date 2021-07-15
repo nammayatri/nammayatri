@@ -1,5 +1,5 @@
 module Types.Metrics
-  ( BAPMetrics (..),
+  ( HasBAPMetrics,
     BAPMetricsContainer (..),
     module CoreMetrics,
     registerBAPMetricsContainer,
@@ -9,12 +9,9 @@ where
 import Beckn.Types.Monitoring.Prometheus.Metrics as CoreMetrics
 import EulerHS.Prelude
 import Prometheus as P
-import qualified Types.Storage.Case as Case
+import Utils.Common
 
-class BAPMetrics m where
-  startSearchMetrics :: Text -> m ()
-  finishSearchMetrics :: Text -> m ()
-  incrementCaseCount :: Case.CaseStatus -> Case.CaseType -> m ()
+type HasBAPMetrics m r = (HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer])
 
 data BAPMetricsContainer = BAPMetricsContainer
   { caseCounter :: CaseCounterMetric,

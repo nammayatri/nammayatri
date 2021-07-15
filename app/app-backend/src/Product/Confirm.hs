@@ -21,13 +21,13 @@ import qualified Storage.Queries.ProductInstance as QPI
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import Types.Error
-import qualified Types.Metrics as Metrics
 import qualified Types.ProductInfo as Products
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
+import qualified Utils.Metrics as Metrics
 
 confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
 confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do

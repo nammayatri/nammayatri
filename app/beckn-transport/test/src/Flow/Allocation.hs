@@ -157,13 +157,14 @@ handle repository@Repository {..} =
         case Map.lookup rideId rides of
           Just rideInfo -> pure rideInfo
           Nothing -> assertFailure $ "Ride " <> show rideId <> " not found in the map.",
-      logEvent = \_ _ _ -> pure ()
+      logEvent = \_ _ _ -> pure (),
+      metrics =
+        BTMMetricsHandle
+          { incrementTaskCounter = return (),
+            incrementFailedTaskCounter = return (),
+            putTaskDuration = \_ -> return ()
+          }
     }
-
-instance BTMMetrics IO where
-  incrementTaskCounter = return ()
-  incrementFailedTaskCounter = return ()
-  addTaskDuration _ _ = return ()
 
 driverPool1 :: [Id Driver]
 driverPool1 = [Id "driver01", Id "driver02", Id "driver03"]

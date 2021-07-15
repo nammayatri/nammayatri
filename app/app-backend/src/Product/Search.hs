@@ -38,7 +38,6 @@ import Types.API.Serviceability
 import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import qualified Types.Metrics as Metrics
 import Types.ProductInfo
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Location as Location
@@ -47,6 +46,7 @@ import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Products as Products
 import Utils.Common
+import qualified Utils.Metrics as Metrics
 
 search :: Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search person req = withFlowHandlerAPI $ do

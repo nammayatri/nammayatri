@@ -11,9 +11,9 @@ import EulerHS.Prelude hiding (pi)
 import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.ProductInstance as MPI
 import qualified Types.API.Cron as API
-import qualified Types.Metrics as Metrics
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.ProductInstance as PI
+import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 updateCases :: Maybe CronAuthKey -> API.ExpireCaseReq -> FlowHandler API.ExpireRes

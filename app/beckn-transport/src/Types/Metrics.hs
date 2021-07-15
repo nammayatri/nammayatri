@@ -1,5 +1,5 @@
 module Types.Metrics
-  ( BTMMetrics (..),
+  ( HasBTMMetrics,
     BTMMetricsContainer (..),
     module CoreMetrics,
     registerBTMMetricsContainer,
@@ -9,11 +9,9 @@ where
 import Beckn.Types.Monitoring.Prometheus.Metrics as CoreMetrics
 import EulerHS.Prelude
 import Prometheus as P
+import Utils.Common
 
-class BTMMetrics m where
-  incrementTaskCounter :: m ()
-  incrementFailedTaskCounter :: m ()
-  addTaskDuration :: Double -> () -> m ()
+type HasBTMMetrics m r = (HasFlowEnv m r '["btmMetrics" ::: BTMMetricsContainer])
 
 type TaskCounterMetric = P.Counter
 

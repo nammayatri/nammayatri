@@ -14,13 +14,13 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as MPI
 import Types.API.Cancel as Cancel
 import Types.Error
-import Types.Metrics
 import qualified Types.Metrics as Metrics
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common
+import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 cancel :: Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
@@ -32,7 +32,7 @@ cancel person req = withFlowHandlerAPI $ do
 
 cancelProductInstance ::
   ( DBFlow m r,
-    CoreMetrics m
+    Metrics.CoreMetrics m
   ) =>
   Person.Person ->
   CancelReq ->
@@ -54,7 +54,7 @@ cancelProductInstance person req = do
   ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
   return Success
 
-searchCancel :: (BAPMetrics m, DBFlow m r) => Person.Person -> CancelReq -> m CancelRes
+searchCancel :: (Metrics.HasBAPMetrics m r, DBFlow m r) => Person.Person -> CancelReq -> m CancelRes
 searchCancel person req = do
   let caseId = req.entityId
   searchCase <- MC.findIdByPerson person (Id caseId) >>= fromMaybeM CaseDoesNotExist

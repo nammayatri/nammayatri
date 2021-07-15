@@ -6,35 +6,32 @@ where
 
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
 import Data.Time (UTCTime, diffUTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records.Extra
 import Prometheus as P
-import Types.Metrics (BAPMetricsContainer)
+import Types.Metrics (BAPMetricsContainer, HasBAPMetrics)
 import qualified Types.Storage.Case as Case
 
-type HasBAPMetrics m r = HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer]
-
-startSearchMetricsFlow :: HasBAPMetrics m r => Text -> m ()
-startSearchMetricsFlow txnId = do
+startSearchMetrics :: HasBAPMetrics m r => Text -> m ()
+startSearchMetrics txnId = do
   bmContainer <- asks (.bapMetrics)
-  startSearchMetrics bmContainer txnId
+  startSearchMetrics' bmContainer txnId
 
-finishSearchMetricsFlow :: HasBAPMetrics m r => Text -> m ()
-finishSearchMetricsFlow txnId = do
+finishSearchMetrics :: HasBAPMetrics m r => Text -> m ()
+finishSearchMetrics txnId = do
   bmContainer <- asks (.bapMetrics)
-  finishSearchMetrics bmContainer txnId
+  finishSearchMetrics' bmContainer txnId
 
-incrementCaseCountFlow :: HasBAPMetrics m r => Case.CaseStatus -> Case.CaseType -> m ()
-incrementCaseCountFlow caseStatus caseType = do
+incrementCaseCount :: HasBAPMetrics m r => Case.CaseStatus -> Case.CaseType -> m ()
+incrementCaseCount caseStatus caseType = do
   bmContainer <- asks (.bapMetrics)
-  incrementCaseCount bmContainer caseStatus caseType
+  incrementCaseCount' bmContainer caseStatus caseType
 
-incrementCaseCount :: L.MonadFlow m => BAPMetricsContainer -> Case.CaseStatus -> Case.CaseType -> m ()
-incrementCaseCount bmContainer caseStatus caseType = do
+incrementCaseCount' :: L.MonadFlow m => BAPMetricsContainer -> Case.CaseStatus -> Case.CaseType -> m ()
+incrementCaseCount' bmContainer caseStatus caseType = do
   let caseCounter = bmContainer.caseCounter
   L.runIO $ P.withLabel caseCounter (show caseStatus, show caseType) P.incCounter
 
@@ -47,8 +44,8 @@ searchDurationKey txnId = "beckn:" <> txnId <> ":on_search:received"
 searchDurationLockKey :: Text -> Text
 searchDurationLockKey txnId = txnId <> ":on_search"
 
-startSearchMetrics :: MonadFlow m => BAPMetricsContainer -> Text -> m ()
-startSearchMetrics bmContainer txnId = do
+startSearchMetrics' :: MonadFlow m => BAPMetricsContainer -> Text -> m ()
+startSearchMetrics' bmContainer txnId = do
   let (_, failureCounter) = bmContainer.searchDuration
       searchRedisExTime = bmContainer.searchDurationTimeout
   startTime <- getCurrentTime
@@ -64,8 +61,8 @@ startSearchMetrics bmContainer txnId = do
         Nothing -> return ()
       Redis.unlockRedis $ searchDurationLockKey txnId
 
-finishSearchMetrics :: MonadFlow m => BAPMetricsContainer -> Text -> m ()
-finishSearchMetrics bmContainer txnId = do
+finishSearchMetrics' :: MonadFlow m => BAPMetricsContainer -> Text -> m ()
+finishSearchMetrics' bmContainer txnId = do
   let (searchDurationHistogram, _) = bmContainer.searchDuration
       searchRedisExTime = bmContainer.searchDurationTimeout
   endTime <- getCurrentTime

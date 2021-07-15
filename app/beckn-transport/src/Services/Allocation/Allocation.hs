@@ -9,7 +9,6 @@ import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude
 import qualified Types.API.Ride as Ride (DriverResponse (..), NotificationStatus (..))
 import Types.App
-import qualified Types.Metrics as Metrics
 import Types.Storage.AllocationEvent (AllocationEventType (..))
 import Types.Storage.Organization
 import qualified Types.Storage.RideRequest as SRR
@@ -59,12 +58,17 @@ data RideInfo = RideInfo
   deriving (Generic)
 
 type MonadHandler m =
-  ( Metrics.BTMMetrics m,
-    MonadCatch m,
-    MonadClock m,
+  ( MonadCatch m,
     MonadTime m,
+    MonadClock m,
     Log m
   )
+
+data BTMMetricsHandle m = BTMMetricsHandle
+  { incrementTaskCounter :: m (),
+    incrementFailedTaskCounter :: m (),
+    putTaskDuration :: Double -> m ()
+  }
 
 data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,
@@ -89,7 +93,8 @@ data ServiceHandle m = ServiceHandle
     addAllocationRequest :: ShortId Organization -> Id Ride -> m (),
     getRideInfo :: Id Ride -> m RideInfo,
     removeRequest :: Id SRR.RideRequest -> m (),
-    logEvent :: AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m ()
+    logEvent :: AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m (),
+    metrics :: BTMMetricsHandle m
   }
 
 process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer -> m Int
@@ -105,8 +110,8 @@ process handle@ServiceHandle {..} shortOrgId requestsNum = do
 
 processRequest :: MonadHandler m => ServiceHandle m -> ShortId Organization -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
-  Metrics.incrementTaskCounter
-  measuringDurationInS Metrics.addTaskDuration $ do
+  metrics.incrementTaskCounter
+  measuringDurationInS (\dur _ -> metrics.putTaskDuration dur) $ do
     let requestId = rideRequest.requestId
     let rideId = rideRequest.rideId
     rideInfo <- getRideInfo rideId
@@ -149,7 +154,7 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
       \(err :: SomeException) -> do
         let message = "Error processing request " <> show requestId <> ": " <> show err
         logError message
-        Metrics.incrementFailedTaskCounter
+        metrics.incrementFailedTaskCounter
     removeRequest requestId
 
 processAllocation ::

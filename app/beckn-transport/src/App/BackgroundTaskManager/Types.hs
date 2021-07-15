@@ -25,7 +25,6 @@ import EulerHS.Prelude
 import Types.App (SortMode)
 import Types.Metrics
 import Types.Shard
-import qualified Utils.Metrics as Metrics
 
 data BTMCfg = BTMCfg
   { appCfg :: App.AppCfg,
@@ -85,8 +84,3 @@ instance AuthenticatingEntity BTMEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
-
-instance BTMMetrics (FlowR BTMEnv) where
-  incrementTaskCounter = Metrics.incrementTaskCounterFlow
-  incrementFailedTaskCounter = Metrics.incrementFailedTaskCounterFlow
-  addTaskDuration = Metrics.addTaskDurationFlow

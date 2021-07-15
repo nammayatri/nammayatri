@@ -25,7 +25,6 @@ import qualified EulerHS.Types as T
 import Types.Geofencing
 import Types.Metrics
 import Utils.Auth
-import qualified Utils.Metrics as Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -128,8 +127,3 @@ instance AuthenticatingEntity AppEnv where
 
 instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
   runLookup = lookup
-
-instance BAPMetrics (FlowR AppEnv) where
-  startSearchMetrics = Metrics.startSearchMetricsFlow
-  finishSearchMetrics = Metrics.finishSearchMetricsFlow
-  incrementCaseCount = Metrics.incrementCaseCountFlow
