@@ -1,7 +1,6 @@
 module Product.Vehicle where
 
 import App.Types
-import Beckn.TypeClass.Transform
 import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Organization as Org
 import qualified Beckn.Types.Storage.Person as SP
@@ -11,7 +10,7 @@ import Beckn.Utils.Validation (runRequestValidation)
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
-import Types.API.Vehicle
+import Types.API.Vehicle as API
 import Types.Error
 import Utils.Common
 import qualified Utils.Defaults as Default
@@ -20,7 +19,7 @@ createVehicle :: Text -> CreateVehicleReq -> FlowHandler CreateVehicleRes
 createVehicle orgId req = withFlowHandlerAPI $ do
   runRequestValidation validateCreateVehicleReq req
   validateVehicle
-  vehicle <- createTransform req <&> addOrgId (Id orgId)
+  vehicle <- API.createVehicle req (Id orgId)
   QV.createFlow vehicle
   return $ CreateVehicleRes vehicle
   where
@@ -43,7 +42,7 @@ updateVehicle :: Text -> Id SV.Vehicle -> UpdateVehicleReq -> FlowHandler Update
 updateVehicle orgId vehicleId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdateVehicleReq req
   vehicle <- QV.findByIdAndOrgId vehicleId (Id orgId) >>= fromMaybeM VehicleDoesNotExist
-  updatedVehicle <- modifyTransform req vehicle
+  updatedVehicle <- modifyVehicle req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 

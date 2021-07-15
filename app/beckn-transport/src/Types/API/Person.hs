@@ -4,7 +4,6 @@ module Types.API.Person where
 
 import Beckn.External.Encryption (encrypt)
 import Beckn.External.FCM.Types as FCM
-import Beckn.TypeClass.Transform
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
@@ -79,27 +78,27 @@ validateUpdatePersonReq UpdatePersonReq {..} =
       validateField "bound" bound . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
     ]
 
-instance DBFlow m r => ModifyTransform UpdatePersonReq SP.Person m where
-  modifyTransform req person = do
-    location <- updateOrCreateLocation req $ person.locationId
-    return
-      -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-      person{firstName = ifJust (req.firstName) (person.firstName),
-             middleName = ifJust (req.middleName) (person.middleName),
-             lastName = ifJust (req.lastName) (person.lastName),
-             fullName = ifJust (req.fullName) (person.fullName),
-             role = ifJustExtract (req.role) (person.role),
-             gender = ifJustExtract (req.gender) (person.gender),
-             email = ifJust (req.email) (person.email),
-             identifier = ifJust (req.identifier) (person.identifier),
-             rating = ifJust (req.rating) (person.rating),
-             deviceToken = ifJust (req.deviceToken) (person.deviceToken),
-             udf1 = person.udf1,
-             udf2 = person.udf2,
-             organizationId = person.organizationId,
-             description = ifJust (req.description) (person.description),
-             locationId = Just (SL.id location)
-            }
+modifyPerson :: DBFlow m r => UpdatePersonReq -> SP.Person -> m SP.Person
+modifyPerson req person = do
+  location <- updateOrCreateLocation req $ person.locationId
+  return
+    -- only these below will be updated in the person table. if you want to add something extra please add in queries also
+    person{firstName = ifJust (req.firstName) (person.firstName),
+           middleName = ifJust (req.middleName) (person.middleName),
+           lastName = ifJust (req.lastName) (person.lastName),
+           fullName = ifJust (req.fullName) (person.fullName),
+           role = ifJustExtract (req.role) (person.role),
+           gender = ifJustExtract (req.gender) (person.gender),
+           email = ifJust (req.email) (person.email),
+           identifier = ifJust (req.identifier) (person.identifier),
+           rating = ifJust (req.rating) (person.rating),
+           deviceToken = ifJust (req.deviceToken) (person.deviceToken),
+           udf1 = person.udf1,
+           udf2 = person.udf2,
+           organizationId = person.organizationId,
+           description = ifJust (req.description) (person.description),
+           locationId = Just (SL.id location)
+          }
 
 updateOrCreateLocation :: DBFlow m r => UpdatePersonReq -> Maybe (Id SL.Location) -> m SL.Location
 updateOrCreateLocation req Nothing = do
@@ -201,40 +200,40 @@ validatePersonReqEntity PersonReqEntity {..} =
       validateField "bound" bound . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
     ]
 
-instance (DBFlow m r, EncFlow m r) => CreateTransform PersonReqEntity SP.Person m where
-  createTransform req = do
-    pid <- generateGUID
-    now <- getCurrentTime
-    location <- createLocationT req
-    mobileNumber <- encrypt req.mobileNumber
-    return
-      SP.Person
-        { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-          SP.id = pid,
-          SP.firstName = req.firstName,
-          SP.middleName = req.middleName,
-          SP.lastName = req.lastName,
-          SP.fullName = req.fullName,
-          SP.role = ifJustExtract (req.role) SP.USER,
-          SP.gender = ifJustExtract (req.gender) SP.UNKNOWN,
-          SP.email = req.email,
-          SP.passwordHash = Nothing,
-          SP.identifier = req.identifier,
-          SP.identifierType = fromMaybe SP.MOBILENUMBER $ req.identifierType,
-          SP.mobileNumber = mobileNumber,
-          SP.mobileCountryCode = req.mobileCountryCode,
-          SP.verified = False,
-          SP.rating = req.rating,
-          SP.status = SP.INACTIVE,
-          SP.deviceToken = req.deviceToken,
-          SP.udf1 = Nothing,
-          SP.udf2 = Nothing,
-          SP.organizationId = Nothing,
-          SP.description = req.description,
-          SP.locationId = Just location.id,
-          SP.createdAt = now,
-          SP.updatedAt = now
-        }
+createPerson :: (DBFlow m r, EncFlow m r) => PersonReqEntity -> Id Org.Organization -> m SP.Person
+createPerson req orgId = do
+  pid <- generateGUID
+  now <- getCurrentTime
+  location <- createLocationT req
+  mobileNumber <- encrypt req.mobileNumber
+  return
+    SP.Person
+      { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
+        SP.id = pid,
+        SP.firstName = req.firstName,
+        SP.middleName = req.middleName,
+        SP.lastName = req.lastName,
+        SP.fullName = req.fullName,
+        SP.role = ifJustExtract (req.role) SP.USER,
+        SP.gender = ifJustExtract (req.gender) SP.UNKNOWN,
+        SP.email = req.email,
+        SP.passwordHash = Nothing,
+        SP.identifier = req.identifier,
+        SP.identifierType = fromMaybe SP.MOBILENUMBER $ req.identifierType,
+        SP.mobileNumber = mobileNumber,
+        SP.mobileCountryCode = req.mobileCountryCode,
+        SP.verified = False,
+        SP.rating = req.rating,
+        SP.status = SP.INACTIVE,
+        SP.deviceToken = req.deviceToken,
+        SP.udf1 = Nothing,
+        SP.udf2 = Nothing,
+        SP.organizationId = Just orgId,
+        SP.description = req.description,
+        SP.locationId = Just location.id,
+        SP.createdAt = now,
+        SP.updatedAt = now
+      }
 
 createLocationT :: DBFlow m r => PersonReqEntity -> m SL.Location
 createLocationT req = do

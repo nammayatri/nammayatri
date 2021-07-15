@@ -2,7 +2,6 @@ module Product.Transporter where
 
 import App.Types
 import Beckn.External.Encryption
-import Beckn.TypeClass.Transform
 import Beckn.Types.Common
 import Beckn.Types.Id (Id (..))
 import qualified Beckn.Types.Storage.Organization as SO
@@ -27,7 +26,7 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   runRequestValidation validateTransporterReq req
   person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
   validate person
-  organization <- createTransform req
+  organization <- createOrganization req
   validateReq
   sedanFarePolicy <- mkFarePolicy (organization.id) SVehicle.SEDAN (organization.createdAt)
   suvFarePolicy <- mkFarePolicy (organization.id) SVehicle.SUV (organization.createdAt)
@@ -83,8 +82,8 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
           >>= fromMaybeM OrgDoesNotExist
       organization <-
         if req.enabled /= Just False
-          then modifyTransform req org >>= addTime (Just now)
-          else modifyTransform req org
+          then modifyOrganization req org >>= addTime (Just now)
+          else modifyOrganization req org
       QO.updateOrganizationRec organization
       return $ TransporterRec organization
     Nothing -> throwError PersonDoesNotExist

@@ -4,7 +4,6 @@ import App.Types
 import qualified App.Types as App
 import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Storage.Queries as DB
-import Beckn.TypeClass.Transform
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Common
@@ -27,7 +26,9 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QueryPI
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Types.API.DriverInformation as DriverInformationAPI
+import Types.API.Person (createPerson)
 import Types.API.Registration (makeUserInfoRes)
+import Types.API.Vehicle (createVehicle)
 import Types.App
 import Types.Error
 import qualified Types.Storage.DriverInformation as DriverInfo
@@ -39,8 +40,8 @@ createDriver orgId req = withFlowHandlerAPI $ do
   let personEntity = req.person
   validateDriver personEntity
   validateVehicle req.vehicle
-  person <- addOrgIdToPerson (Id orgId) <$> createTransform req.person
-  vehicle <- addOrgIdToVehicle (Id orgId) <$> createTransform req.vehicle
+  person <- createPerson req.person (Id orgId)
+  vehicle <- createVehicle req.vehicle (Id orgId)
   DB.runSqlDBTransaction $ do
     QPerson.create person
     createDriverDetails (person.id)
@@ -57,8 +58,6 @@ createDriver orgId req = withFlowHandlerAPI $ do
   sendInviteSms smsCfg inviteSmsTemplate (mobCounCode <> mobNum) (org.name)
   return . DriverInformationAPI.CreateDriverRes $ makeUserInfoRes decPerson
   where
-    addOrgIdToPerson orgId_ person = person{organizationId = Just orgId_}
-    addOrgIdToVehicle orgId_ vehicle = vehicle{organizationId = orgId_}
     validateDriver preq =
       case (preq.mobileNumber, preq.mobileCountryCode) of
         (Just mobileNumber, Just countryCode) ->

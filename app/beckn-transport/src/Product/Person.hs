@@ -19,7 +19,6 @@ import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
-import Beckn.TypeClass.Transform
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Storage.Location (Location)
@@ -59,7 +58,7 @@ updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ 
   verifyPerson entityId
   person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
   isValidUpdate person
-  updatedPerson <- modifyTransform req person
+  updatedPerson <- modifyPerson req person
   DB.runSqlDB (QP.updatePersonRec (Id entityId) updatedPerson)
   decPerson <- decrypt updatedPerson
   return . UpdatePersonRes $ makeUserInfoRes decPerson

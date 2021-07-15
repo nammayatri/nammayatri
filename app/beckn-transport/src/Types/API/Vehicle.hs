@@ -1,6 +1,5 @@
 module Types.API.Vehicle where
 
-import Beckn.TypeClass.Transform
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.Predicate
@@ -38,28 +37,28 @@ validateCreateVehicleReq CreateVehicleReq {..} =
       validateField "color" color . InMaybe $ NotEmpty `And` P.name
     ]
 
-instance DBFlow m r => CreateTransform CreateVehicleReq SV.Vehicle m where
-  createTransform req = do
-    vid <- BC.generateGUID
-    now <- getCurrentTime
-    return $
-      SV.Vehicle
-        { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
-          SV.id = vid,
-          SV.capacity = req.capacity,
-          SV.category = req.category,
-          SV.make = req.make,
-          SV.model = req.model,
-          SV.size = req.size,
-          SV.organizationId = "WILL_BE_UPDATED_BEFORE_DB",
-          SV.variant = req.variant,
-          SV.color = req.color,
-          SV.energyType = req.energyType,
-          SV.registrationNo = req.registrationNo,
-          SV.registrationCategory = req.registrationCategory,
-          SV.createdAt = now,
-          SV.updatedAt = now
-        }
+createVehicle :: DBFlow m r => CreateVehicleReq -> Id Org.Organization -> m SV.Vehicle
+createVehicle req orgId = do
+  vid <- BC.generateGUID
+  now <- getCurrentTime
+  return $
+    SV.Vehicle
+      { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
+        SV.id = vid,
+        SV.capacity = req.capacity,
+        SV.category = req.category,
+        SV.make = req.make,
+        SV.model = req.model,
+        SV.size = req.size,
+        SV.organizationId = orgId,
+        SV.variant = req.variant,
+        SV.color = req.color,
+        SV.energyType = req.energyType,
+        SV.registrationNo = req.registrationNo,
+        SV.registrationCategory = req.registrationCategory,
+        SV.createdAt = now,
+        SV.updatedAt = now
+      }
 
 newtype CreateVehicleRes = CreateVehicleRes
   {vehicle :: SV.Vehicle}
@@ -94,23 +93,23 @@ validateUpdateVehicleReq UpdateVehicleReq {..} =
       validateField "color" color . InMaybe $ NotEmpty `And` P.name
     ]
 
-instance DBFlow m r => ModifyTransform UpdateVehicleReq SV.Vehicle m where
-  modifyTransform req vehicle = do
-    now <- getCurrentTime
-    return $
-      vehicle
-        { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
-          SV.capacity = (req.capacity) <|> (vehicle.capacity),
-          SV.category = (req.category) <|> (vehicle.category),
-          SV.make = (req.make) <|> (vehicle.make),
-          SV.model = (req.model) <|> (vehicle.model),
-          SV.size = (req.size) <|> (vehicle.size),
-          SV.variant = (req.variant) <|> (vehicle.variant),
-          SV.color = (req.color) <|> (vehicle.color),
-          SV.energyType = (req.energyType) <|> (vehicle.energyType),
-          SV.registrationCategory = (req.registrationCategory) <|> (vehicle.registrationCategory),
-          SV.updatedAt = now
-        }
+modifyVehicle :: DBFlow m r => UpdateVehicleReq -> SV.Vehicle -> m SV.Vehicle
+modifyVehicle req vehicle = do
+  now <- getCurrentTime
+  return $
+    vehicle
+      { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
+        SV.capacity = (req.capacity) <|> (vehicle.capacity),
+        SV.category = (req.category) <|> (vehicle.category),
+        SV.make = (req.make) <|> (vehicle.make),
+        SV.model = (req.model) <|> (vehicle.model),
+        SV.size = (req.size) <|> (vehicle.size),
+        SV.variant = (req.variant) <|> (vehicle.variant),
+        SV.color = (req.color) <|> (vehicle.color),
+        SV.energyType = (req.energyType) <|> (vehicle.energyType),
+        SV.registrationCategory = (req.registrationCategory) <|> (vehicle.registrationCategory),
+        SV.updatedAt = now
+      }
 
 type UpdateVehicleRes = CreateVehicleRes
 

@@ -1,6 +1,5 @@
 module Types.API.Transporter where
 
-import Beckn.TypeClass.Transform
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Predicate
@@ -43,38 +42,38 @@ validateTransporterReq TransporterReq {..} =
       validateField "mobileNumber" mobileNumber P.mobileNumber
     ]
 
-instance DBFlow m r => CreateTransform TransporterReq SO.Organization m where
-  createTransform req = do
-    oid <- generateGUID
-    let shortId = ShortId $ getId oid
-    now <- getCurrentTime
-    location <- transformToLocation req
-    QL.createFlow location
-    return $
-      SO.Organization
-        { SO.id = oid,
-          SO.name = req.name,
-          SO.shortId = shortId,
-          SO.description = req.description,
-          SO.mobileNumber = Just req.mobileNumber,
-          SO.mobileCountryCode = Just req.mobileCountryCode,
-          SO.gstin = req.gstin,
-          SO.locationId = Just location.id,
-          SO._type = SO.PROVIDER,
-          SO.domain = Just SO.MOBILITY,
-          SO.fromTime = Nothing,
-          SO.toTime = Nothing,
-          SO.headCount = req.headCount,
-          SO.apiKey = Nothing,
-          SO.callbackUrl = Nothing,
-          SO.status = SO.PENDING_VERIFICATION,
-          SO.verified = False,
-          SO.enabled = True,
-          SO.createdAt = now,
-          SO.updatedAt = now,
-          SO.callbackApiKey = Nothing,
-          SO.info = Nothing
-        }
+createOrganization :: DBFlow m r => TransporterReq -> m SO.Organization
+createOrganization req = do
+  oid <- generateGUID
+  let shortId = ShortId $ getId oid
+  now <- getCurrentTime
+  location <- transformToLocation req
+  QL.createFlow location
+  return $
+    SO.Organization
+      { SO.id = oid,
+        SO.name = req.name,
+        SO.shortId = shortId,
+        SO.description = req.description,
+        SO.mobileNumber = Just req.mobileNumber,
+        SO.mobileCountryCode = Just req.mobileCountryCode,
+        SO.gstin = req.gstin,
+        SO.locationId = Just location.id,
+        SO._type = SO.PROVIDER,
+        SO.domain = Just SO.MOBILITY,
+        SO.fromTime = Nothing,
+        SO.toTime = Nothing,
+        SO.headCount = req.headCount,
+        SO.apiKey = Nothing,
+        SO.callbackUrl = Nothing,
+        SO.status = SO.PENDING_VERIFICATION,
+        SO.verified = False,
+        SO.enabled = True,
+        SO.createdAt = now,
+        SO.updatedAt = now,
+        SO.callbackApiKey = Nothing,
+        SO.info = Nothing
+      }
 
 transformToLocation :: DBFlow m r => TransporterReq -> m SL.Location
 transformToLocation req = do
@@ -125,13 +124,13 @@ validateUpdateTransporterReq UpdateTransporterReq {..} =
       validateField "description" description $ InMaybe $ MinLength 3 `And` P.name
     ]
 
-instance DBFlow m r => ModifyTransform UpdateTransporterReq SO.Organization m where
-  modifyTransform req org = do
-    now <- getCurrentTime
-    return $
-      org{SO.name = fromMaybe (org.name) (req.name),
-          SO.description = (req.description) <|> (org.description),
-          SO.headCount = (req.headCount) <|> (org.headCount),
-          SO.enabled = fromMaybe (org.enabled) (req.enabled),
-          SO.updatedAt = now
-         }
+modifyOrganization :: DBFlow m r => UpdateTransporterReq -> SO.Organization -> m SO.Organization
+modifyOrganization req org = do
+  now <- getCurrentTime
+  return $
+    org{SO.name = fromMaybe (org.name) (req.name),
+        SO.description = (req.description) <|> (org.description),
+        SO.headCount = (req.headCount) <|> (org.headCount),
+        SO.enabled = fromMaybe (org.enabled) (req.enabled),
+        SO.updatedAt = now
+       }
