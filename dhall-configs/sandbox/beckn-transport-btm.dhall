@@ -4,21 +4,15 @@ let becknTransport = ./beckn-transport.dhall
 let SortMode = < ETA | IdleTime >
 
 let shards =
-  [ globalCommon.mkShard +0 "JUSPAY.MOBILITY.PROVIDER.1.DEV"
-  , globalCommon.mkShard +1 "JUSPAY.MOBILITY.PROVIDER.2.DEV"
-  , globalCommon.mkShard +2 "JUSPAY.MOBILITY.PROVIDER.3.DEV"
-  , globalCommon.mkShard +3 "JUSPAY.MOBILITY.PROVIDER.4.DEV"
-  , globalCommon.mkShard +4 "JUSPAY.MOBILITY.PROVIDER.5.DEV"
-  , globalCommon.mkShard +5 "JUSPAY.MOBILITY.PROVIDER.6.DEV"
-  , globalCommon.mkShard +6 "JUSPAY.MOBILITY.PROVIDER.7.DEV"
-  , globalCommon.mkShard +7 "JUSPAY.MOBILITY.PROVIDER.8.DEV"
-  , globalCommon.mkShard +8 "JUSPAY.MOBILITY.PROVIDER.9.DEV"
-  , globalCommon.mkShard +9 "JUSPAY.MOBILITY.PROVIDER.10.DEV"
-  , globalCommon.mkShard +10 "JUSPAY.MOBILITY.PROVIDER.11.DEV"
-  , globalCommon.mkShard +11 "JUSPAY.MOBILITY.PROVIDER.12.DEV"
-  , globalCommon.mkShard +12 "JUSPAY.MOBILITY.PROVIDER.13.DEV"
-  , globalCommon.mkShard +13 "JUSPAY.MOBILITY.PROVIDER.14.DEV"
-  , globalCommon.mkShard +14 "JUSPAY.MOBILITY.PROVIDER.15.DEV"
+  [ globalCommon.mkShard +0 "JUSPAY.MOBILITY.PROVIDER.1.SANDBOX"
+  , globalCommon.mkShard +1 "JUSPAY.MOBILITY.PROVIDER.2.SANDBOX"
+  , globalCommon.mkShard +2 "JUSPAY.MOBILITY.PROVIDER.3.SANDBOX"
+  , globalCommon.mkShard +3 "JUSPAY.MOBILITY.PROVIDER.4.SANDBOX"
+  , globalCommon.mkShard +4 "JUSPAY.MOBILITY.PROVIDER.5.SANDBOX"
+  , globalCommon.mkShard +5 "JUSPAY.MOBILITY.PROVIDER.6.SANDBOX"
+  , globalCommon.mkShard +6 "JUSPAY.MOBILITY.PROVIDER.7.SANDBOX"
+  , globalCommon.mkShard +7 "JUSPAY.MOBILITY.PROVIDER.12.SANDBOX"
+  , globalCommon.mkShard +8 "JUSPAY.MOBILITY.PROVIDER.13.SANDBOX"
   ]
 
 let appCfg = becknTransport //
