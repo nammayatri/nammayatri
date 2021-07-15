@@ -14,21 +14,21 @@ import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.SearchReqLocation as Loc
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import qualified Types.Storage.ProductInstance as Storage
 import qualified Types.Storage.Products as Product
 import qualified Types.Storage.SearchReqLocation as Loc
+import qualified Types.Storage.SearchRequest as SearchRequest
 import Types.Storage.Vehicle (Vehicle)
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB.productInstance . DB.transporterDb <$> getSchemaName
 
-getCsTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Case.CaseT))
+getCsTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity SearchRequest.SearchRequestT))
 getCsTable =
-  DB._case . DB.transporterDb <$> getSchemaName
+  DB.searchRequest . DB.transporterDb <$> getSchemaName
 
 getProdTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Product.ProductsT))
 getProdTable =
@@ -52,19 +52,19 @@ findAllByIds limit offset ids = do
     predicate Storage.ProductInstance {..} =
       B.in_ productId (B.val_ <$> ids)
 
-findAllByCaseId :: DBFlow m r => Id Case.Case -> m [Storage.ProductInstance]
-findAllByCaseId piId = do
+findAllByRequestId :: DBFlow m r => Id SearchRequest.SearchRequest -> m [Storage.ProductInstance]
+findAllByRequestId piId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate Storage.ProductInstance {..} = caseId ==. B.val_ piId
+    predicate Storage.ProductInstance {..} = requestId ==. B.val_ piId
 
-findByCaseId :: DBFlow m r => Id Case.Case -> m (Maybe Storage.ProductInstance)
-findByCaseId piId = do
+findByRequestId :: DBFlow m r => Id SearchRequest.SearchRequest -> m (Maybe Storage.ProductInstance)
+findByRequestId piId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.ProductInstance {..} = caseId ==. B.val_ piId
+    predicate Storage.ProductInstance {..} = requestId ==. B.val_ piId
 
 findById' :: DBFlow m r => Id Storage.ProductInstance -> m (Maybe Storage.ProductInstance)
 findById' productInstanceId = do
@@ -74,13 +74,13 @@ findById' productInstanceId = do
     predicate Storage.ProductInstance {..} =
       id ==. B.val_ productInstanceId
 
-findAllByCaseId' :: DBFlow m r => Id Case.Case -> m [Storage.ProductInstance]
-findAllByCaseId' caseId_ = do
+findAllByRequestId' :: DBFlow m r => Id SearchRequest.SearchRequest -> m [Storage.ProductInstance]
+findAllByRequestId' searchRequestId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate Storage.ProductInstance {..} =
-      caseId ==. B.val_ caseId_
+      requestId ==. B.val_ searchRequestId
 
 findAllByIds' :: DBFlow m r => [Id Storage.ProductInstance] -> m [Storage.ProductInstance]
 findAllByIds' ids = do
@@ -163,13 +163,13 @@ updateStatus prodInstId status_ = do
           status <-. B.val_ scStatus
         ]
 
-findAllByCaseIds :: DBFlow m r => [Id Case.Case] -> m [Storage.ProductInstance]
-findAllByCaseIds ids = do
+findAllByRequestIds :: DBFlow m r => [Id SearchRequest.SearchRequest] -> m [Storage.ProductInstance]
+findAllByRequestIds ids = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate Storage.ProductInstance {..} =
-      B.in_ caseId (B.val_ <$> ids)
+      B.in_ requestId (B.val_ <$> ids)
 
 updateStatusByIdsFlow ::
   DBFlow m r =>
@@ -198,24 +198,24 @@ updateStatusByIds ids status_ = do
           status <-. B.val_ scStatus
         ]
 
-updateCaseId ::
+updateRequestId ::
   DBFlow m r =>
   Id Storage.ProductInstance ->
-  Id Case.Case ->
+  Id SearchRequest.SearchRequest ->
   m ()
-updateCaseId prodInstId caseId_ = do
+updateRequestId prodInstId searchRequestId = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
-    (setClause caseId_ currTime)
+    (setClause searchRequestId currTime)
     (predicate prodInstId)
   where
     predicate piId Storage.ProductInstance {..} = id ==. B.val_ piId
-    setClause scCaseId currTime Storage.ProductInstance {..} =
+    setClause scRequestId currTime Storage.ProductInstance {..} =
       mconcat
         [ updatedAt <-. B.val_ currTime,
-          caseId <-. B.val_ scCaseId
+          requestId <-. B.val_ scRequestId
         ]
 
 updateDistance ::

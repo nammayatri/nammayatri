@@ -1,13 +1,11 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Case where
+module Types.Storage.SearchRequest where
 
 import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -18,40 +16,40 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import qualified Types.Storage.SearchReqLocation as Loc
 
-data CaseType = RIDESEARCH
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SearchRequestType = RIDESEARCH
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
-instance ToHttpApiData CaseType where
+instance ToHttpApiData SearchRequestType where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseType where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck Postgres CaseType
+instance B.HasSqlEqualityCheck Postgres SearchRequestType
 
-instance FromBackendRow Postgres CaseType where
+instance FromBackendRow Postgres SearchRequestType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data CaseStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
-instance ToHttpApiData CaseStatus where
+instance ToHttpApiData SearchRequestStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseStatus where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck Postgres CaseStatus
+instance B.HasSqlEqualityCheck Postgres SearchRequestStatus
 
-instance FromBackendRow Postgres CaseStatus where
+instance FromBackendRow Postgres SearchRequestStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data Industry = MOBILITY | GOVT | GROCERY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Industry where
   sqlValueSyntax = autoSqlValueSyntax
@@ -60,7 +58,7 @@ instance FromBackendRow Postgres Industry where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ExchangeType = ORDER | FULFILLMENT
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExchangeType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -69,7 +67,7 @@ instance FromBackendRow Postgres ExchangeType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data RequestorType = CONSUMER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RequestorType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -78,7 +76,7 @@ instance FromBackendRow Postgres RequestorType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProviderType = TRANSPORTER | DRIVER | GOVTADMIN | DELIVERYPERSON
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -86,25 +84,25 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
 instance FromBackendRow Postgres ProviderType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance FromHttpApiData CaseStatus where
+instance FromHttpApiData SearchRequestStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-instance FromHttpApiData CaseType where
+instance FromHttpApiData SearchRequestType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-data CaseT f = Case
-  { id :: B.C f (Id Case),
+data SearchRequestT f = SearchRequest
+  { id :: B.C f (Id SearchRequest),
     name :: B.C f (Maybe Text),
     description :: B.C f (Maybe Text),
-    shortId :: B.C f (ShortId Case),
+    shortId :: B.C f (ShortId SearchRequest),
     industry :: B.C f Industry,
-    _type :: B.C f CaseType,
+    _type :: B.C f SearchRequestType,
     exchangeType :: B.C f ExchangeType,
-    status :: B.C f CaseStatus,
+    status :: B.C f SearchRequestStatus,
     startTime :: B.C f UTCTime,
     endTime :: B.C f (Maybe UTCTime),
     validTill :: B.C f UTCTime,
@@ -133,31 +131,31 @@ data CaseT f = Case
 -- udf3 => start Location
 -- udf4 => end Location
 
-type Case = CaseT Identity
+type SearchRequest = SearchRequestT Identity
 
-type CasePrimaryKey = B.PrimaryKey CaseT Identity
+type SearchRequestPrimaryKey = B.PrimaryKey SearchRequestT Identity
 
 {-# ANN module ("HLint: ignore Redundant id" :: String) #-}
 
-instance B.Table CaseT where
-  data PrimaryKey CaseT f = CasePrimaryKey (B.C f (Id Case))
+instance B.Table SearchRequestT where
+  data PrimaryKey SearchRequestT f = SearchRequestPrimaryKey (B.C f (Id SearchRequest))
     deriving (Generic, B.Beamable)
-  primaryKey = CasePrimaryKey . id
+  primaryKey = SearchRequestPrimaryKey . id
 
-deriving instance Show Case
+deriving instance Show SearchRequest
 
-deriving instance Eq Case
+deriving instance Eq SearchRequest
 
-instance ToJSON Case where
+instance ToJSON SearchRequest where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
-instance FromJSON Case where
+instance FromJSON SearchRequest where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 fieldEMod ::
-  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CaseT)
+  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity SearchRequestT)
 fieldEMod =
-  B.setEntityName "case"
+  B.setEntityName "search_request"
     <> B.modifyTableFields
       B.tableModification
         { shortId = "short_id",

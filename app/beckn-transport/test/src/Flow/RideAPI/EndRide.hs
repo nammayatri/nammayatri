@@ -12,9 +12,9 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App
 import Types.Error
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common (throwError)
 import Utils.SilentLogger ()
 
@@ -49,10 +49,10 @@ handle =
         Id "ride" -> Just rideProductInstance
         Id "completed_ride" -> Just rideProductInstance {PI.status = PI.COMPLETED}
         _ -> Nothing,
-      findCaseById = \caseId ->
-        if caseId == "search"
-          then pure $ Just searchCase
-          else throwError CaseNotFound,
+      findSearchRequestById = \searchRequestId ->
+        if searchRequestId == "search"
+          then pure $ Just searchRequest
+          else throwError SearchRequestNotFound,
       notifyUpdateToBAP = \_ _ _ -> pure (),
       endRideTransaction = \_ _ _ -> pure (),
       calculateFare = \_ _ _ _ -> pure 100,
@@ -71,7 +71,7 @@ rideProductInstance =
   Fixtures.defaultProductInstance
     { PI.id = "ride",
       PI.status = PI.INPROGRESS,
-      PI.caseId = "ride",
+      PI.requestId = "ride",
       PI.parentId = Just "search"
     }
 
@@ -79,19 +79,19 @@ searchProductInstance :: PI.ProductInstance
 searchProductInstance =
   Fixtures.defaultProductInstance
     { PI.id = "search",
-      PI.caseId = "search",
+      PI.requestId = "search",
       PI._type = PI.RIDESEARCH,
       PI.status = PI.INPROGRESS
     }
 
-searchCase :: Case.Case
-searchCase =
-  Fixtures.defaultCase
-    { Case.id = "ride",
-      Case._type = Case.RIDESEARCH,
-      Case.status = Case.INPROGRESS,
-      Case.provider = Just "someOrg",
-      Case.udf1 = Just "SEDAN"
+searchRequest :: SearchRequest.SearchRequest
+searchRequest =
+  Fixtures.defaultSearchRequest
+    { SearchRequest.id = "search",
+      SearchRequest._type = SearchRequest.RIDESEARCH,
+      SearchRequest.status = SearchRequest.INPROGRESS,
+      SearchRequest.provider = Just "someOrg",
+      SearchRequest.udf1 = Just "SEDAN"
     }
 
 successfulEndByDriver :: TestTree

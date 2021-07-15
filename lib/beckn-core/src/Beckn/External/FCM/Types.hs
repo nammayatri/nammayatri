@@ -83,7 +83,7 @@ data FCMNotificationType
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Entity types types
-data FCMEntityType = Case | Product | Organization | Person
+data FCMEntityType = SearchRequest | Product | Organization | Person
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Priority of a message to send to Android devices

@@ -5,25 +5,25 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Case as QCase
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Types.API.Quote as API
 import Types.Error
 import qualified Types.ProductInfo as Info
-import qualified Types.Storage.Case as Case
+import qualified Types.Storage.SearchRequest as SSR
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.SearchReqLocation as Location
 import Utils.Common
 
-getQuotes :: Id Case.Case -> Id Person.Person -> FlowHandler API.GetQuotesRes
-getQuotes caseId _ = withFlowHandlerAPI $ do
-  case_ <- QCase.findByIdAndType caseId Case.RIDESEARCH >>= fromMaybeM CaseDoesNotExist
-  fromLocation <- Location.findLocationById case_.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- Location.findLocationById case_.toLocationId >>= fromMaybeM LocationNotFound
-  piList <- QPI.findAllByCaseIdAndType case_.id PI.RIDESEARCH
+getQuotes :: Id SSR.SearchRequest -> Id Person.Person -> FlowHandler API.GetQuotesRes
+getQuotes searchRequestId _ = withFlowHandlerAPI $ do
+  searchRequest <- QSR.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
+  fromLocation <- Location.findLocationById searchRequest.fromLocationId >>= fromMaybeM LocationNotFound
+  toLocation <- Location.findLocationById searchRequest.toLocationId >>= fromMaybeM LocationNotFound
+  piList <- QPI.findAllByRequestIdAndType searchRequest.id PI.RIDESEARCH
   quotes <- traverse buildQuote $ sortByNearestDriverDistance piList
   return $
     API.GetQuotesRes

@@ -12,9 +12,9 @@ import qualified EulerHS.Types as ET
 import qualified ExternalAPI.Dunzo.Flow as API
 import ExternalAPI.Dunzo.Types
 import Product.Dunzo.Transform
-import qualified Storage.Queries.Case as Storage
 import qualified Storage.Queries.Dunzo as Dz
 import qualified Storage.Queries.Organization as Org
+import qualified Storage.Queries.SearchRequest as Storage
 import qualified Types.Beckn.API.Cancel as CancelAPI
 import qualified Types.Beckn.API.Confirm as ConfirmAPI
 import qualified Types.Beckn.API.Init as InitAPI
@@ -30,8 +30,8 @@ import Types.Beckn.Order (Order)
 import Types.Common
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Org
+import Types.Storage.SearchRequest as SearchRequest
 import Types.Wrapper
 import Utils.Common
 
@@ -86,14 +86,14 @@ confirm org req = do
     taskStatus <- createTaskAPI dzBACreds dconf taskReq
     let uOrder = updateOrder (Just orderId) currTime reqOrder taskStatus
     checkAndLogPriceDiff reqOrder uOrder
-    createCase orderId uOrder taskStatus currTime
+    createSearchRequest orderId uOrder taskStatus currTime
     return $ API.OrderObject uOrder
   where
-    createCase orderId order taskStatus now = do
-      let caseId = Id req.context.transaction_id
-      let case_ =
-            Case
-              { id = caseId,
+    createSearchRequest orderId order taskStatus now = do
+      let searchRequestId = Id req.context.transaction_id
+      let searchRequest =
+            SearchRequest
+              { id = searchRequestId,
                 name = Nothing,
                 description = Nothing,
                 shortId = ShortId orderId,
@@ -108,7 +108,6 @@ confirm org req = do
                 providerType = Nothing,
                 requestor = Just org.id.getId,
                 requestorType = Nothing,
-                parentCaseId = Nothing,
                 udf1 = Just $ encodeToText order,
                 udf2 = Just $ encodeToText taskStatus,
                 udf3 = Nothing,
@@ -118,7 +117,7 @@ confirm org req = do
                 createdAt = now,
                 updatedAt = now
               }
-      Storage.create case_
+      Storage.create searchRequest
 
     createTaskAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} req' = do
       token <- fetchToken dzBACreds conf
@@ -147,8 +146,8 @@ track org req = do
   let orderId = req.context.transaction_id
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  taskInfo :: TaskStatus <- case_.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
+  searchRequest <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  taskInfo :: TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
   let taskId = taskInfo.task_id.getTaskId
   dzBACreds <- getDzBAPCreds org
   withCallback TRACK TrackAPI.onTrackAPI context cbUrl $
@@ -167,23 +166,23 @@ status org req = do
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let orderId = context.transaction_id
-  case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  taskInfo :: TaskStatus <- case_.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
+  searchRequest <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  taskInfo :: TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
   let taskId = taskInfo.task_id.getTaskId
   order <-
-    case_.udf1 >>= decodeFromText
+    searchRequest.udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
   dzBACreds <- getDzBAPCreds org
   withCallback STATUS StatusAPI.onStatusAPI context cbUrl $ do
     taskStatus <- getStatus dzBACreds conf (TaskId taskId)
     onStatusMessage <- mkOnStatusMessage order taskStatus
     let updatedOrder = onStatusMessage.order
-    updateCase (case_.id) updatedOrder taskStatus case_
+    updateSearchRequest (searchRequest.id) updatedOrder taskStatus searchRequest
     return onStatusMessage
   where
-    updateCase caseId order taskStatus case_ = do
-      let updatedCase = case_ {udf1 = Just $ encodeToText order, udf2 = Just $ encodeToText taskStatus}
-      Storage.update caseId updatedCase
+    updateSearchRequest searchRequestId order taskStatus searchRequest = do
+      let updatedSearchRequest = searchRequest {udf1 = Just $ encodeToText order, udf2 = Just $ encodeToText taskStatus}
+      Storage.update searchRequestId updatedSearchRequest
 
 cancel ::
   ( DBFlow m r,
@@ -197,15 +196,15 @@ cancel org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  case_ <- Storage.findById (Id context.transaction_id) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  taskInfo :: TaskStatus <- case_.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
+  searchRequest <- Storage.findById (Id context.transaction_id) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  taskInfo :: TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
   let taskId = taskInfo.task_id.getTaskId
-  order <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  order <- searchRequest.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
   withCallback CANCEL CancelAPI.onCancelAPI context cbUrl $ do
     callCancelAPI dzBACreds conf (TaskId taskId)
     let updatedOrder = cancelOrder order
-    updateCase case_.id updatedOrder case_
+    updateSearchRequest searchRequest.id updatedOrder searchRequest
     return $ API.OrderObject updatedOrder
   where
     callCancelAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
@@ -213,10 +212,10 @@ cancel org req = do
       -- TODO get cancellation reason
       API.cancelTask dzClientId token dzUrl dzTestMode taskId ""
 
-    updateCase :: DBFlow m r => Id Case -> Order -> Case -> m ()
-    updateCase caseId order case_ = do
-      let updatedCase = case_ {udf1 = Just $ encodeToText order}
-      Storage.update caseId updatedCase
+    updateSearchRequest :: DBFlow m r => Id SearchRequest -> Order -> SearchRequest -> m ()
+    updateSearchRequest searchRequestId order searchRequest = do
+      let updatedSearchRequest = searchRequest {udf1 = Just $ encodeToText order}
+      Storage.update searchRequestId updatedSearchRequest
 
 update :: MonadFlow m => Org.Organization -> API.BecknReq UpdateAPI.UpdateInfo -> m AckResponse
 update _org _req = throwError $ ActionNotSupported "update"

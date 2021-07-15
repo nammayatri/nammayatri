@@ -52,10 +52,10 @@ import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
 import Types.Geofencing
-import qualified Types.Storage.Case as Case hiding (status)
 import Types.Storage.ProductInstance
 import qualified Types.Storage.RegistrationToken as SRT
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
+import qualified Types.Storage.SearchRequest as SSR
 
 type AppAPI =
   "v2"
@@ -169,7 +169,7 @@ searchFlow =
 
 type QuoteAPI =
   "rideSearch"
-    :> Capture "searchId" (Id Case.Case)
+    :> Capture "searchId" (Id SSR.SearchRequest)
     :> TokenAuth
     :> "quotes"
     :> Get '[JSON] QuoteAPI.GetQuotesRes
@@ -182,7 +182,7 @@ quoteFlow =
 type ConfirmAPI =
   "rideSearch"
     :> TokenAuth
-    :> Capture "searchId" (Id Case.Case)
+    :> Capture "searchId" (Id SSR.SearchRequest)
     :> "quotes"
     :> Capture "quoteId" (Id ProductInstance)
     :> "confirm"

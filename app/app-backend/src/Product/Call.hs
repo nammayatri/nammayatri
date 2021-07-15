@@ -15,14 +15,14 @@ import Beckn.Utils.Logging
 import Data.Maybe
 import Data.Semigroup
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Case as Case
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
+import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import Types.ProductInfo as ProductInfo
-import Types.Storage.Case as Case
 import Types.Storage.Person as Person
 import Types.Storage.ProductInstance as ProductInstance
+import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 
 -- | Try to initiate a call customer -> provider
@@ -53,8 +53,8 @@ getDriver rideSearchPI = do
 
 getPerson :: (DBFlow m r, EncFlow m r) => ProductInstance -> m Person
 getPerson rideSearchPI = do
-  c <- Case.findById rideSearchPI.caseId >>= fromMaybeM CaseNotFound
-  personId <- Case.requestor c & fromMaybeM (CaseFieldNotPresent "requestor")
+  searchRequest <- SearchRequest.findById rideSearchPI.requestId >>= fromMaybeM SearchRequestNotFound
+  personId <- SearchRequest.requestor searchRequest & fromMaybeM (SearchRequestFieldNotPresent "requestor")
   Person.findById (Id personId) >>= fromMaybeM PersonNotFound
 
 -- | Get person's mobile phone

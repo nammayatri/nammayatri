@@ -16,7 +16,7 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import qualified Types.Storage.Case as Case
+import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import Types.Storage.Products (Products)
@@ -88,7 +88,7 @@ instance FromBackendRow Postgres EntityType where
 
 data ProductInstanceT f = ProductInstance
   { id :: B.C f (Id ProductInstance),
-    caseId :: B.C f (Id Case.Case),
+    requestId :: B.C f (Id SearchRequest.SearchRequest),
     productId :: B.C f (Id Products),
     personId :: B.C f (Maybe (Id Person)),
     personUpdatedAt :: B.C f (Maybe UTCTime),
@@ -148,7 +148,7 @@ fieldEMod =
   B.setEntityName "product_instance"
     <> B.modifyTableFields
       B.tableModification
-        { caseId = "case_id",
+        { requestId = "request_id",
           productId = "product_id",
           personId = "person_id",
           personUpdatedAt = "person_updated_at",
@@ -245,6 +245,6 @@ instance ToBeckn Text ProductInstanceStatus where
 
 -- | ByOrganizationId OrganizationId
 data ListById
-  = ByApplicationId (Id Case.Case)
+  = ByApplicationId (Id SearchRequest.SearchRequest)
   | ById (Id Products)
   | ByCustomerId (Id Person)

@@ -249,39 +249,40 @@ instance IsHTTPError OrganizationError where
   toHttpCode _ = E500
 
 instance IsAPIError OrganizationError
-
-data CaseError
-  = CaseNotFound
-  | CaseDoesNotExist
-  | CaseExpired
-  | CaseInvalidStatus Text
-  | CaseFieldNotPresent Text
+  
+data SearchRequestError
+  = SearchRequestNotFound
+  | SearchRequestDoesNotExist
+  | SearchRequestExpired
+  | SearchRequestInvalidStatus Text
+  | SearchRequestFieldNotPresent Text
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''CaseError
+  
+instanceExceptionWithParent 'HTTPException ''SearchRequestError
 
-instance IsBaseError CaseError where
+instance IsBaseError SearchRequestError where
   toMessage = \case
-    CaseDoesNotExist -> Just "No case matches passed data."
-    CaseFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this case."
-    CaseInvalidStatus msg -> Just $ "Attempted to do some action in wrong case status. " <> msg
+    SearchRequestDoesNotExist -> Just "No case matches passed data."
+    SearchRequestFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this case."
+    SearchRequestInvalidStatus msg -> Just $ "Attempted to do some action in wrong case status. " <> msg
     _ -> Nothing
 
-instance IsHTTPError CaseError where
+instance IsHTTPError SearchRequestError where
   toErrorCode = \case
-    CaseNotFound -> "CASE_NOT_FOUND"
-    CaseDoesNotExist -> "CASE_DOES_NOT_EXISTS"
-    CaseExpired -> "CASE_EXPIRED"
-    CaseFieldNotPresent _ -> "CASE_FIELD_NOT_PRESENT"
-    CaseInvalidStatus _ -> "CASE_INVALID_STATUS"
+    SearchRequestNotFound -> "SEARCH_REQUEST_NOT_FOUND"
+    SearchRequestDoesNotExist -> "SEARCH_REQUEST_DOES_NOT_EXISTS"
+    SearchRequestExpired -> "SEARCH_REQUEST_EXPIRED"
+    SearchRequestFieldNotPresent _ -> "SEARCH_REQUEST_FIELD_NOT_PRESENT"
+    SearchRequestInvalidStatus _ -> "SEARCH_REQUEST_INVALID_STATUS"
   toHttpCode = \case
-    CaseNotFound -> E500
-    CaseDoesNotExist -> E400
-    CaseExpired -> E400
-    CaseFieldNotPresent _ -> E500
-    CaseInvalidStatus _ -> E400
+    SearchRequestNotFound -> E500
+    SearchRequestDoesNotExist -> E400
+    SearchRequestExpired -> E400
+    SearchRequestFieldNotPresent _ -> E500
+    SearchRequestInvalidStatus _ -> E400
 
-instance IsAPIError CaseError
+instance IsAPIError SearchRequestError
 
 data ProductInstanceError
   = PINotFound

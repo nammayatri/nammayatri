@@ -13,7 +13,7 @@ import EulerHS.Prelude
 import GHC.Records.Extra
 import Prometheus as P
 import Types.Metrics (BAPMetricsContainer, HasBAPMetrics)
-import qualified Types.Storage.Case as Case
+import qualified Types.Storage.SearchRequest as SearchRequest
 
 startSearchMetrics :: HasBAPMetrics m r => Text -> m ()
 startSearchMetrics txnId = do
@@ -25,15 +25,15 @@ finishSearchMetrics txnId = do
   bmContainer <- asks (.bapMetrics)
   finishSearchMetrics' bmContainer txnId
 
-incrementCaseCount :: HasBAPMetrics m r => Case.CaseStatus -> Case.CaseType -> m ()
-incrementCaseCount caseStatus caseType = do
+incrementSearchRequestCount:: HasBAPMetrics m r => SearchRequest.SearchRequestStatus -> SearchRequest.SearchRequestType -> m ()
+incrementSearchRequestCount searchRequestStatus searchRequestType = do
   bmContainer <- asks (.bapMetrics)
-  incrementCaseCount' bmContainer caseStatus caseType
+  incrementCaseCount' bmContainer searchRequestStatus searchRequestType
 
-incrementCaseCount' :: L.MonadFlow m => BAPMetricsContainer -> Case.CaseStatus -> Case.CaseType -> m ()
-incrementCaseCount' bmContainer caseStatus caseType = do
-  let caseCounter = bmContainer.caseCounter
-  L.runIO $ P.withLabel caseCounter (show caseStatus, show caseType) P.incCounter
+incrementCaseCount' :: L.MonadFlow m => BAPMetricsContainer -> SearchRequest.SearchRequestStatus -> SearchRequest.SearchRequestType -> m ()
+incrementCaseCount' bmContainer searchRequestStatus searchRequestType = do
+  let searchRequestCounter = bmContainer.searchRequestCounter
+  L.runIO $ P.withLabel searchRequestCounter (show searchRequestStatus, show searchRequestType) P.incCounter
 
 putSearchDuration :: L.MonadFlow m => P.Histogram -> Double -> m ()
 putSearchDuration searchDurationHistogram duration = L.runIO $ P.observe searchDurationHistogram duration

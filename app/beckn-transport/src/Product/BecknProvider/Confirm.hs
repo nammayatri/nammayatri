@@ -13,7 +13,6 @@ import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QProductInstance
@@ -21,14 +20,15 @@ import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.SearchReqLocation as QSReqLoc
 import qualified Storage.Queries.TransporterConfig as QTConf
 import Types.App (Driver)
+import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.SearchReqLocation as SSReqLoc
 import qualified Types.Storage.TransporterConfig as STConf
 import qualified Types.Storage.Vehicle as SV
+import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
@@ -51,10 +51,10 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
         >>= fromMaybeM OrgNotFound
     unless (transporterId' == transporterId) $ throwError AccessDenied
     let caseShortId = getId transporterId <> "_" <> req.context.transaction_id
-    searchCase <- Case.findBySid caseShortId >>= fromMaybeM CaseNotFound
-    bapOrgId <- searchCase.udf4 & fromMaybeM (CaseFieldNotPresent "udf4")
+    searchRequest <- SearchRequest.findBySid caseShortId >>= fromMaybeM SearchRequestNotFound
+    bapOrgId <- searchRequest.udf4 & fromMaybeM (SearchRequestFieldNotPresent "udf4")
     unless (bapOrg.id == Id bapOrgId) $ throwError AccessDenied
-    orderProductInstance <- mkOrderProductInstance (searchCase.id) productInstance
+    orderProductInstance <- mkOrderProductInstance (searchRequest.id) productInstance
     rideRequest <-
       BP.mkRideReq
         (orderProductInstance.id)
@@ -74,7 +74,7 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
       onConfirmCallback
         orderProductInstance
         productInstance
-        searchCase
+        searchRequest
         transporterOrg
 
 onConfirmCallback ::
@@ -84,16 +84,16 @@ onConfirmCallback ::
   ) =>
   ProductInstance.ProductInstance ->
   ProductInstance.ProductInstance ->
-  Case.Case ->
+  SearchRequest.SearchRequest ->
   Organization.Organization ->
   m API.ConfirmOrder
-onConfirmCallback orderProductInstance productInstance searchCase transporterOrg = do
+onConfirmCallback orderProductInstance productInstance searchRequest transporterOrg = do
   let transporterId = transporterOrg.id
   let prodInstId = productInstance.id
   pickupPoint <- (productInstance.fromLocation) & fromMaybeM (PIFieldNotPresent "location_id")
   vehicleVariant :: Vehicle.Variant <-
-    (searchCase.udf1 >>= readMaybe . T.unpack)
-      & fromMaybeM (CaseFieldNotPresent "udf1")
+    (searchRequest.udf1 >>= readMaybe . T.unpack)
+      & fromMaybeM (SearchRequestFieldNotPresent "udf1")
   driverPool <- map fst <$> calculateDriverPool pickupPoint transporterId vehicleVariant
   setDriverPool prodInstId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
@@ -114,10 +114,10 @@ getDriverPool piId =
   where
     calcDriverPool = do
       prodInst <- QProductInstance.findById piId >>= fromMaybeM PIDoesNotExist
-      case_ <- Case.findById (prodInst.caseId) >>= fromMaybeM CaseNotFound
+      searchRequest <- SearchRequest.findById (prodInst.requestId) >>= fromMaybeM SearchRequestNotFound
       vehicleVariant :: SV.Variant <-
-        (case_.udf1 >>= readMaybe . T.unpack)
-          & fromMaybeM (CaseFieldNotPresent "udf1")
+        (searchRequest.udf1 >>= readMaybe . T.unpack)
+          & fromMaybeM (SearchRequestFieldNotPresent "udf1")
       pickupPoint <-
         prodInst.fromLocation
           & fromMaybeM (PIFieldNotPresent "location_id")
@@ -159,14 +159,14 @@ calculateDriverPool locId orgId variant = do
         . toString
         $ conf.value
 
-mkOrderProductInstance :: MonadFlow m => Id Case.Case -> ProductInstance.ProductInstance -> m ProductInstance.ProductInstance
-mkOrderProductInstance caseId prodInst = do
+mkOrderProductInstance :: MonadFlow m => Id SearchRequest.SearchRequest -> ProductInstance.ProductInstance -> m ProductInstance.ProductInstance
+mkOrderProductInstance searchRequestId prodInst = do
   (now, pid, shortId) <- BP.getIdShortIdAndTime
   inAppOtpCode <- generateOTPCode
   return $
     ProductInstance.ProductInstance
       { id = Id pid,
-        caseId = caseId,
+        requestId = searchRequestId,
         productId = prodInst.productId,
         personId = Nothing,
         personUpdatedAt = Nothing,

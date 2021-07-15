@@ -13,13 +13,13 @@ import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import Storage.Queries.Case as Case
 import Storage.Queries.Organization as Org
+import Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import Types.Storage.Case as Case
 import Types.Storage.Organization as Org
 import Types.Storage.ProductInstance (ProductInstance)
+import Types.Storage.SearchRequest as SearchRequest
 import Utils.Auth
 import Utils.Common
 
@@ -64,20 +64,20 @@ callBAP ::
   Text ->
   Proxy api ->
   Org.Organization ->
-  Id Case ->
+  Id SearchRequest ->
   Either Error req ->
   m ()
-callBAP action api transporter caseId contents = do
-  case_ <- Case.findById caseId >>= fromMaybeM CaseNotFound
+callBAP action api transporter searchRequestId contents = do
+  searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestNotFound
   bapCallbackUrl <-
-    (case_.udf4) & fromMaybeM (CaseFieldNotPresent "udf4")
+    (searchRequest.udf4) & fromMaybeM (SearchRequestFieldNotPresent "udf4")
       >>= (Id >>> Org.findOrganizationById)
       >>= fromMaybeM OrgNotFound
       >>= ((.callbackUrl) >>> fromMaybeM (OrgFieldNotPresent "callback_url"))
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
   txnId <-
-    (getShortId case_.shortId)
+    (getShortId searchRequest.shortId)
       & T.split (== '_')
       & reverse
       & listToMaybe

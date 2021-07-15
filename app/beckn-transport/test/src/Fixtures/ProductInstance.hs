@@ -5,14 +5,14 @@ import Beckn.Types.Id
 import Data.Ratio ((%))
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.SearchRequest as SearchRequest
 
 defaultProductInstance :: ProductInstance.ProductInstance
 defaultProductInstance =
   ProductInstance.ProductInstance
     { id = Id "1",
-      caseId = Id "1",
+      requestId = Id "1",
       productId = Id "1",
       personId = Just $ Id "1",
       personUpdatedAt = Nothing,

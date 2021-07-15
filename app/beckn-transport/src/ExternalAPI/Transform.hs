@@ -22,17 +22,17 @@ import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import EulerHS.Prelude
 import Types.Common
-import Types.Storage.Case
 import Types.Storage.Organization as Organization
 import Types.Storage.Person as Person
 import Types.Storage.ProductInstance as ProductInstance
+import Types.Storage.SearchRequest
 import qualified Types.Storage.Vehicle as Vehicle
 
-mkCatalog :: DBFlow m r => Case -> [ProductInstance] -> ProviderInfo -> m Mobility.Catalog
-mkCatalog c prodInsts provider =
+mkCatalog :: DBFlow m r => SearchRequest -> [ProductInstance] -> ProviderInfo -> m Mobility.Catalog
+mkCatalog searchRequest prodInsts provider =
   return
     Mobility.Catalog
-      { id = getId $ c.id,
+      { id = getId $ searchRequest.id,
         categories = [mkCategory provider],
         brands = [mkBrand provider],
         models = [],

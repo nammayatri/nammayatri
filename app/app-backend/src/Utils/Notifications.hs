@@ -10,15 +10,15 @@ import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import EulerHS.Prelude
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
-import Types.Storage.Case as Case
 import Types.Storage.Person as Person
 import Types.Storage.ProductInstance as ProductInstance
 import Types.Storage.RegistrationToken as RegToken
+import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 
 -- Note:
@@ -47,8 +47,8 @@ notifyOnStatusUpdate ::
   m ()
 notifyOnStatusUpdate prodInst piStatus =
   when (prodInst.status /= piStatus) $ do
-    c <- Case.findById (prodInst.caseId) >>= fromMaybeM CaseNotFound
-    let mpersonId = Case.requestor c
+    searchRequest <- SearchRequest.findById (prodInst.requestId) >>= fromMaybeM SearchRequestNotFound
+    let mpersonId = SearchRequest.requestor searchRequest
         productInstanceId = prodInst.id
         minfo :: (Maybe ProductInfo) = decodeFromText =<< prodInst.info
     case (mpersonId, minfo) of
@@ -72,7 +72,7 @@ notifyOnStatusUpdate prodInst piStatus =
                       unwords
                         [ providerName,
                           "had to cancel your ride for",
-                          showTimeIst (Case.startTime c) <> ".",
+                          showTimeIst (SearchRequest.startTime searchRequest) <> ".",
                           "Check the app for more details."
                         ]
               FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
@@ -154,11 +154,11 @@ notifyOnExpiration ::
     DBFlow m r,
     CoreMetrics m
   ) =>
-  Case ->
+  SearchRequest ->
   m ()
 notifyOnExpiration caseObj = do
-  let caseId = Case.id caseObj
-  let personId = Case.requestor caseObj
+  let searchRequestId = SearchRequest.id caseObj
+  let personId = SearchRequest.requestor caseObj
   if isJust personId
     then do
       person <- Person.findById $ Id (fromJust personId)
@@ -168,8 +168,8 @@ notifyOnExpiration caseObj = do
                 FCM.FCMAndroidData
                   { fcmNotificationType = FCM.EXPIRED_CASE,
                     fcmShowNotification = FCM.SHOW,
-                    fcmEntityType = FCM.Case,
-                    fcmEntityIds = show $ getId caseId,
+                    fcmEntityType = FCM.SearchRequest,
+                    fcmEntityIds = show $ getId searchRequestId,
                     fcmNotificationJSON = FCM.createAndroidNotification title body FCM.EXPIRED_CASE
                   }
               title = FCMNotificationTitle $ T.pack "Ride expired!"
@@ -217,12 +217,12 @@ notifyOnTrackCb ::
   ) =>
   Maybe Text ->
   Tracker ->
-  Case ->
+  SearchRequest ->
   m ()
-notifyOnTrackCb personId tracker c =
+notifyOnTrackCb personId tracker searchRequest =
   if isJust personId
     then do
-      let caseId = Case.id c
+      let searchRequestId = SearchRequest.id searchRequest
       mperson <- Person.findById $ Id (fromJust personId)
       case mperson of
         Just p -> do
@@ -242,15 +242,15 @@ notifyOnTrackCb personId tracker c =
                       model,
                       "(" <> regNumber <> "),",
                       "to pick you up on",
-                      showTimeIst (Case.startTime c) <> ".",
+                      showTimeIst (SearchRequest.startTime searchRequest) <> ".",
                       "You would be notified 15 mins before the scheduled pick up time."
                     ]
               notificationData =
                 FCM.FCMAndroidData
                   { fcmNotificationType = FCM.TRACKING_CALLBACK,
                     fcmShowNotification = FCM.SHOW,
-                    fcmEntityType = FCM.Case,
-                    fcmEntityIds = show caseId,
+                    fcmEntityType = FCM.SearchRequest,
+                    fcmEntityIds = show searchRequestId,
                     fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRACKING_CALLBACK
                   }
           FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
@@ -267,7 +267,7 @@ notifyOnCancel rideSearchPI personId mbDeviceToken cancellationSource = do
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = show $ getId rideSearchPI.caseId,
+          fcmEntityIds = show $ getId rideSearchPI.requestId,
           fcmNotificationJSON = FCM.createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"

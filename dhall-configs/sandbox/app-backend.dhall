@@ -90,7 +90,7 @@ in
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , searchConfirmExpiry = Some +600
-, searchCaseExpiry = Some +600
+, searchRequestExpiry = Some +600
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
 , exotelCfg = Some common.exotelCfg

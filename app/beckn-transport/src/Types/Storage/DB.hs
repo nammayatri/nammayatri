@@ -7,7 +7,6 @@ import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.AllocationEvent as AllocationEvent
 import qualified Types.Storage.CancellationReason as CancellationReason
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverLocation as DriverLocation
 import qualified Types.Storage.DriverStats as DriverStats
@@ -22,6 +21,7 @@ import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.SearchReqLocation as Location
+import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.TransporterConfig as TransporterConfig
 import qualified Types.Storage.Vehicle as Vehicle
 
@@ -31,7 +31,7 @@ data TransporterDb f = TransporterDb
     driverLocation :: f (B.TableEntity DriverLocation.DriverLocationT),
     vehicle :: f (B.TableEntity Vehicle.VehicleT),
     person :: f (B.TableEntity Person.PersonT),
-    _case :: f (B.TableEntity Case.CaseT),
+    searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT),
     products :: f (B.TableEntity Product.ProductsT),
     productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
@@ -57,7 +57,7 @@ transporterDb dbSchemaName =
         driverLocation = setSchema dbSchemaName <> DriverLocation.fieldEMod,
         vehicle = setSchema dbSchemaName <> Vehicle.fieldEMod,
         person = setSchema dbSchemaName <> Person.fieldEMod,
-        _case = setSchema dbSchemaName <> Case.fieldEMod,
+        searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod,
         products = setSchema dbSchemaName <> Product.fieldEMod,
         productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,

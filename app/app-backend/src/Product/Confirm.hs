@@ -13,36 +13,36 @@ import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.ProductInstance as QPI
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import Types.Error
 import qualified Types.ProductInfo as Products
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as SPI
+import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
-confirm :: Id Person.Person -> Id Case.Case -> Id SPI.ProductInstance -> FlowHandler API.ConfirmRes
-confirm personId rideSearchId rideBookingId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+confirm :: Id Person.Person -> Id SearchRequest.SearchRequest -> Id SPI.ProductInstance -> FlowHandler API.ConfirmRes
+confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   lt <- getCurrentTime
-  case_ <- QCase.findByPersonId personId rideSearchId >>= fromMaybeM CaseDoesNotExist
-  when ((case_.validTill) < lt) $
-    throwError CaseExpired
+  searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
+  when ((searchRequest.validTill) < lt) $
+    throwError SearchRequestExpired
   productInstance <- MPI.findById rideBookingId >>= fromMaybeM PIDoesNotExist
   organization <-
     OQ.findOrganizationById (productInstance.organizationId)
       >>= fromMaybeM OrgNotFound
-  Metrics.incrementCaseCount Case.INPROGRESS Case.RIDESEARCH
-  orderProductInstance <- mkOrderProductInstance (case_.id) productInstance
+  Metrics.incrementSearchRequestCount SearchRequest.INPROGRESS SearchRequest.RIDESEARCH
+  orderProductInstance <- mkOrderProductInstance (searchRequest.id) productInstance
   DB.runSqlDBTransaction $ do
     QPI.create orderProductInstance
-  context <- buildContext "confirm" (getId rideSearchId) Nothing Nothing
+  context <- buildContext "confirm" (getId searchRequestId) Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
   ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)
@@ -89,22 +89,22 @@ onConfirm _org req = withFlowHandlerBecknAPI $
                   SPI.udf4 = (.id) <$> trip,
                   SPI.status = SPI.CONFIRMED
                 }
-        Metrics.incrementCaseCount Case.COMPLETED Case.RIDESEARCH
+        Metrics.incrementSearchRequestCount SearchRequest.COMPLETED SearchRequest.RIDESEARCH
         SPI.validateStatusTransition (SPI.status prdInst) SPI.CONFIRMED & fromEitherM PIInvalidStatus
         DB.runSqlDBTransaction $ do
           QPI.updateMultiple pid uPrd
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack
 
-mkOrderProductInstance :: MonadFlow m => Id Case.Case -> SPI.ProductInstance -> m SPI.ProductInstance
-mkOrderProductInstance caseId' prodInst@SPI.ProductInstance {..} = do
+mkOrderProductInstance :: MonadFlow m => Id SearchRequest.SearchRequest -> SPI.ProductInstance -> m SPI.ProductInstance
+mkOrderProductInstance searchRequestId prodInst@SPI.ProductInstance {..} = do
   now <- getCurrentTime
   piid <- generateGUID
   shortId' <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return
     SPI.ProductInstance
       { id = Id piid,
-        caseId = caseId',
+        requestId = searchRequestId,
         entityType = SPI.VEHICLE,
         entityId = Nothing,
         shortId = ShortId shortId',

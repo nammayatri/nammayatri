@@ -9,32 +9,32 @@ import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
-import Types.Storage.Case as Case
 import Types.Storage.Person as Person
 import Types.Storage.ProductInstance as ProductInstance
 import Types.Storage.RegistrationToken as RegToken
+import Types.Storage.SearchRequest as SearchRequest
 
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  Case ->
+  SearchRequest ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   CancellationSource ->
   m ()
-notifyOnCancel c personId mbDeviceToken cancellationSource = do
+notifyOnCancel searchRequest personId mbDeviceToken cancellationSource = do
   cancellationText <- getCancellationText
   FCM.notifyPerson (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
-    caseId = Case.id c
+    searchRequestId = SearchRequest.id searchRequest
     notificationData cancellationText =
       FCM.FCMAndroidData
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = show $ getId caseId,
+          fcmEntityIds = show $ getId searchRequestId,
           fcmNotificationJSON = FCM.createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -45,21 +45,21 @@ notifyOnCancel c personId mbDeviceToken cancellationSource = do
         return $
           unwords
             [ "Customer had to cancel your ride for",
-              showTimeIst (c.startTime) <> ".",
+              showTimeIst (searchRequest.startTime) <> ".",
               "Check the app for more details."
             ]
       ByOrganization ->
         return $
           unwords
             [ "Your agency had to cancel the ride for",
-              showTimeIst (c.startTime) <> ".",
+              showTimeIst (searchRequest.startTime) <> ".",
               "Check the app for more details."
             ]
       ByDriver ->
         return $
           unwords
             [ "You have cancelled the ride for",
-              showTimeIst (c.startTime) <> ".",
+              showTimeIst (searchRequest.startTime) <> ".",
               "Check the app for more details."
             ]
       _ -> throwError (InternalError "Unexpected cancellation reason.")
@@ -96,18 +96,18 @@ notifyTransporterOnExpiration ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  Case ->
+  SearchRequest ->
   [Person] ->
   m ()
-notifyTransporterOnExpiration c =
+notifyTransporterOnExpiration searchRequest =
   traverse_ (\person -> FCM.notifyPerson notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken)
   where
     notificationData =
       FCM.FCMAndroidData
         { fcmNotificationType = FCM.EXPIRED_CASE,
           fcmShowNotification = FCM.SHOW,
-          fcmEntityType = FCM.Case,
-          fcmEntityIds = show . getId $ c.id,
+          fcmEntityType = FCM.SearchRequest,
+          fcmEntityIds = show . getId $ searchRequest.id,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.EXPIRED_CASE
         }
     title = FCMNotificationTitle $ T.pack "Ride expired!"
@@ -115,7 +115,7 @@ notifyTransporterOnExpiration c =
       FCMNotificationBody $
         unwords
           [ "The ride request for",
-            showTimeIst (Case.startTime c),
+            showTimeIst (SearchRequest.startTime searchRequest),
             "has expired as the customer failed to confirm.",
             "You can view more details in the app."
           ]

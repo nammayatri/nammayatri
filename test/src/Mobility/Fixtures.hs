@@ -26,7 +26,7 @@ import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 import qualified "app-backend" Types.Common as AppCommon
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
-import qualified "app-backend" Types.Storage.Case as BCase
+import qualified "app-backend" Types.Storage.SearchRequest as BSearchRequest
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
 import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
@@ -159,10 +159,10 @@ buildAppCancelReq =
     { rideCancellationReason = Just $ CancelAPI.RideCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
     }
 
-getQuotes :: Id BCase.Case -> Text -> ClientM QuoteAPI.GetQuotesRes
+getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM QuoteAPI.GetQuotesRes
 getQuotes = client (Proxy :: Proxy AbeRoutes.QuoteAPI)
 
-appConfirmRide :: Text -> Id BCase.Case -> Id BPI.ProductInstance -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :: Text -> Id BSearchRequest.SearchRequest -> Id BPI.ProductInstance -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess

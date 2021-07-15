@@ -10,9 +10,9 @@ import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Error
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.SilentLogger ()
 
 handle :: StartRide.ServiceHandle IO
@@ -44,12 +44,12 @@ searchProductInstance =
       ProductInstance.status = ProductInstance.CONFIRMED
     }
 
-searchCase :: Case.Case
-searchCase =
-  Fixtures.defaultCase
-    { Case.id = "1",
-      Case._type = Case.RIDESEARCH,
-      Case.status = Case.CONFIRMED
+searchRequest :: SearchRequest.SearchRequest
+searchRequest =
+  Fixtures.defaultSearchRequest
+    { SearchRequest.id = "1",
+      SearchRequest._type = SearchRequest.RIDESEARCH,
+      SearchRequest.status = SearchRequest.CONFIRMED
     }
 
 startRide :: TestTree

@@ -26,24 +26,24 @@ import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
 import Product.Serviceability
-import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Products as QProducts
 import qualified Storage.Queries.SearchReqLocation as Location
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Types.API.Search as API
 import Types.API.Serviceability
 import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import Types.ProductInfo
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Products as Products
 import qualified Types.Storage.SearchReqLocation as Location
+import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
@@ -53,22 +53,22 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   fromLocation <- Location.buildSearchReqLoc req.origin
   toLocation <- Location.buildSearchReqLoc req.destination
   now <- getCurrentTime
-  case_ <- mkCase req (getId personId) fromLocation toLocation now
-  Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
-  let txnId = getId (case_.id)
+  searchRequest <- mkSearchRequest req (getId personId) fromLocation toLocation now
+  Metrics.incrementSearchRequestCount SearchRequest.NEW SearchRequest.RIDESEARCH
+  let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
   DB.runSqlDBTransaction $ do
     Location.create fromLocation
     Location.create toLocation
-    QCase.create case_
+    QSearchRequest.create searchRequest
   env <- ask
   let bapNwAddr = env.bapNwAddress
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
   let intent = mkIntent req now
-      tags = Just [Tag "distance" (fromMaybe "" $ case_.udf5)]
+      tags = Just [Tag "distance" (fromMaybe "" $ searchRequest.udf5)]
   fork "search" . withRetry $
     ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
-  return . API.SearchRes $ case_.id
+  return . API.SearchRes $ searchRequest.id
   where
     validateServiceability = do
       let originGps = req.origin.gps
@@ -95,47 +95,47 @@ searchCb _ _ req = withFlowHandlerBecknAPI $
 
 searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], DBFlow m r) => Search.OnSearchReq -> BM.Catalog -> m ()
 searchCbService req catalog = do
-  let caseId = Id $ req.context.transaction_id --CaseId $ service.id
-  case_ <- QCase.findById caseId >>= fromMaybeM CaseDoesNotExist
-  when (case_.status /= Case.CLOSED) $ do
+  let searchRequestId = Id $ req.context.transaction_id --searchRequestId $ service.id
+  searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
+  when (searchRequest.status /= SearchRequest.CLOSED) $ do
     bpp <-
       Org.findOrganizationByCallbackUri (req.context.bpp_uri) Org.PROVIDER
         >>= fromMaybeM OrgDoesNotExist
-    personId <- (Id <$> Case.requestor case_) & fromMaybeM (CaseFieldNotPresent "requestor")
+    personId <- (Id <$> SearchRequest.requestor searchRequest) & fromMaybeM (SearchRequestFieldNotPresent "requestor")
     transaction <- case (catalog.categories, catalog.items) of
       ([], _) -> throwError $ InvalidRequest "Missing provider"
       (category : _, []) -> do
         let provider = fromBeckn category
-        declinedPI <- mkDeclinedProductInstance case_ bpp provider personId
+        declinedPI <- mkDeclinedProductInstance searchRequest bpp provider personId
         return $ QPI.create declinedPI
       (category : _, items) -> do
         when
-          (case_.status == Case.CLOSED)
-          (throwError CaseExpired)
+          (searchRequest.status == SearchRequest.CLOSED)
+          (throwError SearchRequestExpired)
         let provider = fromBeckn category
-        products <- traverse (mkProduct case_) items
-        productInstances <- traverse (mkProductInstance case_ bpp provider personId) items
+        products <- traverse (mkProduct searchRequest) items
+        productInstances <- traverse (mkProductInstance searchRequest bpp provider personId) items
         currTime <- getCurrentTime
         confirmExpiry <- maybe 1800 fromIntegral <$> asks (.searchConfirmExpiry)
         let newValidTill = fromInteger confirmExpiry `addUTCTime` currTime
         return $ do
           traverse_ QProducts.create products
           traverse_ QPI.create productInstances
-          when (case_.validTill < newValidTill) $ QCase.updateValidTill (case_.id) newValidTill
-    piList <- MPI.findAllByCaseIdAndType (case_.id) PI.RIDESEARCH
+          when (searchRequest.validTill < newValidTill) $ QSearchRequest.updateValidTill (searchRequest.id) newValidTill
+    piList <- MPI.findAllByRequestIdAndType (searchRequest.id) PI.RIDESEARCH
     let piStatusCount = Map.fromListWith (+) $ zip (PI.status <$> piList) $ repeat (1 :: Integer)
         accepted = Map.lookup PI.INSTOCK piStatusCount
         declined = Map.lookup PI.OUTOFSTOCK piStatusCount
-        mCaseInfo :: (Maybe API.CaseInfo) = decodeFromText =<< (case_.info)
+        mSearchRequestInfo :: (Maybe API.SearchRequestInfo) = decodeFromText =<< (searchRequest.info)
 
     DB.runSqlDBTransaction $ do
       transaction
-      whenJust mCaseInfo $ \info -> do
+      whenJust mSearchRequestInfo $ \info -> do
         let uInfo = info & #accepted .~ accepted & #declined .~ declined
-        QCase.updateInfo (case_.id) (encodeToText uInfo)
+        QSearchRequest.updateInfo (searchRequest.id) (encodeToText uInfo)
 
-mkCase ::
-  ( (HasFlowEnv m r ["searchCaseExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),
+mkSearchRequest ::
+  ( (HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),
     DBFlow m r,
     CoreMetrics m
   ) =>
@@ -144,35 +144,35 @@ mkCase ::
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
   UTCTime ->
-  m Case.Case
-mkCase req userId from to now = do
-  cid <- generateGUID
+  m SearchRequest.SearchRequest
+mkSearchRequest req userId from to now = do
+  searchRequestId <- generateGUID
   distance <- Location.getDistance (req.origin.gps) (req.destination.gps)
   orgs <- Org.listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
-  let info = encodeToText $ API.CaseInfo (Just $ toInteger $ length orgs) (Just 0) (Just 0)
+  let info = encodeToText $ API.SearchRequestInfo (Just $ toInteger $ length orgs) (Just 0) (Just 0)
   -- TODO: consider collision probability for shortId
   -- Currently it's a random 10 char alphanumeric string
   -- If the insert fails, maybe retry automatically as there
   -- is a unique constraint on `shortId`
   shortId_ <- generateShortId
-  validTill <- getCaseExpiry now
+  validTill <- getSearchRequestExpiry now
   return
-    Case.Case
-      { id = cid,
+    SearchRequest.SearchRequest
+      { id = searchRequestId,
         name = Nothing,
-        description = Just "Case to search for a Ride",
+        description = Just "SearchRequest to search for a Ride",
         shortId = shortId_,
-        industry = Case.MOBILITY,
-        _type = Case.RIDESEARCH,
-        exchangeType = Case.FULFILLMENT,
-        status = Case.NEW,
+        industry = SearchRequest.MOBILITY,
+        _type = SearchRequest.RIDESEARCH,
+        exchangeType = SearchRequest.FULFILLMENT,
+        status = SearchRequest.NEW,
         startTime = now,
         endTime = Nothing,
         validTill = validTill,
         provider = Nothing,
         providerType = Nothing,
         requestor = Just userId,
-        requestorType = Just Case.CONSUMER,
+        requestorType = Just SearchRequest.CONSUMER,
         fromLocationId = from.id,
         toLocationId = to.id,
         udf1 = Just . show $ req.vehicle,
@@ -185,16 +185,16 @@ mkCase req userId from to now = do
         updatedAt = now
       }
   where
-    getCaseExpiry :: (HasFlowEnv m r '["searchCaseExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
-    getCaseExpiry startTime = do
-      caseExpiry <- maybe 7200 fromIntegral <$> asks (.searchCaseExpiry)
+    getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
+    getSearchRequestExpiry startTime = do
+      searchRequestExpiry <- maybe 7200 fromIntegral <$> asks (.searchRequestExpiry)
       let minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffUTCTime` now
-          validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
+          validTill = addUTCTime (minimum [fromInteger searchRequestExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-mkProduct :: MonadFlow m => Case.Case -> Core.Item -> m Products.Products
-mkProduct case_ item = do
+mkProduct :: MonadFlow m => SearchRequest.SearchRequest -> Core.Item -> m Products.Products
+mkProduct searchRequest item = do
   now <- getCurrentTime
   price <-
     case convertDecimalValueToAmount =<< item.price.listed_value of
@@ -202,14 +202,14 @@ mkProduct case_ item = do
       Just p -> return p
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
-  -- TODO: fit public transport, where case.startTime != product.startTime, etc
+  -- TODO: fit public transport, where searchRequest.startTime != product.startTime, etc
   return
     Products.Products
       { id = Id $ item.id,
         shortId = "",
         name = fromMaybe "" $ item.descriptor.name,
         description = item.descriptor.short_desc,
-        industry = case_.industry,
+        industry = searchRequest.industry,
         _type = Products.RIDE,
         status = Products.INSTOCK,
         price = price,
@@ -227,33 +227,33 @@ mkProduct case_ item = do
 
 mkProductInstance ::
   MonadFlow m =>
-  Case.Case ->
+  SearchRequest.SearchRequest ->
   Org.Organization ->
   Common.Provider ->
   Id Person.Person ->
   Core.Item ->
   m PI.ProductInstance
-mkProductInstance case_ bppOrg provider personId item = do
+mkProductInstance searchRequest bppOrg provider personId item = do
   now <- getCurrentTime
   let info = ProductInfo (Just provider) Nothing
       price = convertDecimalValueToAmount =<< item.price.listed_value
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
-  -- TODO: fit public transport, where case.startTime != product.startTime, etc
+  -- TODO: fit public transport, where searchRequest.startTime != product.startTime, etc
   return
     PI.ProductInstance
       { id = Id $ item.id,
         shortId = "",
-        caseId = case_.id,
+        requestId = searchRequest.id,
         productId = Id $ item.id, -- TODO needs to be fixed
         personId = Just personId,
         personUpdatedAt = Nothing,
         quantity = 1,
         entityType = PI.VEHICLE,
         status = PI.INSTOCK,
-        startTime = case_.startTime,
-        endTime = case_.endTime,
-        validTill = case_.validTill,
+        startTime = searchRequest.startTime,
+        endTime = searchRequest.endTime,
+        validTill = searchRequest.validTill,
         parentId = Nothing,
         actualDistance = Nothing,
         entityId = Nothing,
@@ -264,9 +264,9 @@ mkProductInstance case_ bppOrg provider personId item = do
         udf2 = Nothing,
         udf3 = Nothing,
         udf4 = Nothing,
-        udf5 = case_.udf5,
-        fromLocation = Just $ case_.fromLocationId,
-        toLocation = Just $ case_.toLocationId,
+        udf5 = searchRequest.udf5,
+        fromLocation = Just $ searchRequest.fromLocationId,
+        toLocation = Just $ searchRequest.toLocationId,
         info = Just $ encodeToText info,
         organizationId = bppOrg.id,
         createdAt = now,
@@ -275,8 +275,8 @@ mkProductInstance case_ bppOrg provider personId item = do
   where
     getNearestDriverDist = (.value) <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
 
-mkDeclinedProductInstance :: MonadFlow m => Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> m PI.ProductInstance
-mkDeclinedProductInstance case_ bppOrg provider personId = do
+mkDeclinedProductInstance :: MonadFlow m => SearchRequest.SearchRequest -> Org.Organization -> Common.Provider -> Id Person.Person -> m PI.ProductInstance
+mkDeclinedProductInstance searchRequest bppOrg provider personId = do
   now <- getCurrentTime
   piId <- generateGUID
   let info = ProductInfo (Just provider) Nothing
@@ -284,16 +284,16 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
     PI.ProductInstance
       { id = Id piId,
         shortId = "",
-        caseId = case_.id,
+        requestId = searchRequest.id,
         productId = Id piId,
         personId = Just personId,
         personUpdatedAt = Nothing,
         quantity = 1,
         entityType = PI.VEHICLE,
         status = PI.OUTOFSTOCK,
-        startTime = case_.startTime,
-        endTime = case_.endTime,
-        validTill = case_.validTill,
+        startTime = searchRequest.startTime,
+        endTime = searchRequest.endTime,
+        validTill = searchRequest.validTill,
         parentId = Nothing,
         actualDistance = Nothing,
         entityId = Nothing,
@@ -305,8 +305,8 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         udf3 = Nothing,
         udf4 = Nothing,
         udf5 = Nothing,
-        fromLocation = Just $ case_.fromLocationId,
-        toLocation = Just $ case_.toLocationId,
+        fromLocation = Just $ searchRequest.fromLocationId,
+        toLocation = Just $ searchRequest.toLocationId,
         info = Just $ encodeToText info,
         organizationId = bppOrg.id,
         createdAt = now,

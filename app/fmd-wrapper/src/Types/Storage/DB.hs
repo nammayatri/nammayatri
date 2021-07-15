@@ -5,12 +5,12 @@ module Types.Storage.DB where
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.SearchRequest as SearchRequest
 
 data AppDb f = AppDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
-    _case :: f (B.TableEntity Case.CaseT)
+    searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT)
   }
   deriving (Generic, B.Database be)
 
@@ -19,7 +19,7 @@ appDb dbSchemaName =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
       { organization = setSchema dbSchemaName <> Organization.fieldEMod,
-        _case = setSchema dbSchemaName <> Case.fieldEMod
+        searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

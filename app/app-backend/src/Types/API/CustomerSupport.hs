@@ -5,7 +5,7 @@ import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (id)
 import Types.Common
-import Types.Storage.Case as C
+import Types.Storage.SearchRequest as C
 import qualified Types.Storage.Person as P
 import Types.Storage.ProductInstance as SP
 import Types.Storage.SearchReqLocation as L
@@ -15,7 +15,7 @@ newtype OrderResp = OrderResp {order :: OrderDetails}
 
 data OrderDetails = OrderDetails
   { id :: Text,
-    status :: Maybe CaseStatus,
+    status :: Maybe SearchRequestStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     startTime :: UTCTime,
@@ -41,7 +41,7 @@ data TripDetails = TripDetails
 
 data OrderInfo = OrderInfo
   { person :: P.Person,
-    searchcases :: [C.Case]
+    searchRequests :: [C.SearchRequest]
   }
   deriving (Generic)
 

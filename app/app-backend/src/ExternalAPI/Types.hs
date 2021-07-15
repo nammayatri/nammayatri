@@ -10,7 +10,7 @@ import Types.API.Location
 
 type LocationAPI =
   "location"
-    :> Capture "caseId" Text
+    :> Capture "searchRequestId" Text
     :> Get '[JSON] GetLocationRes
 
 locationAPI :: Proxy LocationAPI

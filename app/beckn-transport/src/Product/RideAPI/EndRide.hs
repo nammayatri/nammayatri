@@ -14,12 +14,12 @@ import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as PI
-import qualified Storage.Queries.Case as QCase
 import Types.App (Driver)
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common (withFlowHandlerAPI)
 import Utils.Metrics (putFareAndDistanceDeviations)
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 
 endRide :: Id SP.Person -> Id PI.ProductInstance -> FlowHandler APISuccess.APISuccess
 endRide personId rideId = withFlowHandlerAPI $ do
@@ -29,7 +29,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
       Handler.ServiceHandle
         { findPersonById = Person.findPersonById,
           findPIById = PI.findById',
-          findCaseById= QCase.findById,
+          findSearchRequestById= QSearchRequest.findById,
           notifyUpdateToBAP = notifyUpdateToBAP,
           endRideTransaction,
           calculateFare = \orgId vehicleVariant distance -> Fare.calculateFare orgId vehicleVariant (Right distance),

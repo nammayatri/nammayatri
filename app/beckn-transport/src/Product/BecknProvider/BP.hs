@@ -37,7 +37,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified ExternalAPI.Transform as ExternalAPITransform
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
@@ -45,17 +44,18 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.RideCancellationReason as QRCR
 import qualified Storage.Queries.RideRequest as RideRequest
+import qualified Storage.Queries.SearchRequest as SearchRequest
 import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
 import Types.App (Ride)
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.RideRequest as SRideRequest
+import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -102,10 +102,10 @@ cancelRide rideId rideCReason = do
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
     notifyCancelToGateway searchPi transporter rideCReason.source
-    case_ <- Case.findById (orderPi.caseId) >>= fromMaybeM CaseNotFound
+    searchRequest <- SearchRequest.findById (orderPi.requestId) >>= fromMaybeM SearchRequestNotFound
     whenJust orderPi.personId $ \driverId -> do
       driver <- Person.findPersonById driverId >>= fromMaybeM PersonNotFound
-      Notify.notifyOnCancel case_ driver.id driver.deviceToken rideCReason.source
+      Notify.notifyOnCancel searchRequest driver.id driver.deviceToken rideCReason.source
 
 cancelRideTransaction ::
   DBFlow m r =>
@@ -134,7 +134,7 @@ notifyServiceStatusToGateway ::
   m ()
 notifyServiceStatusToGateway transporter searchPi orderPI = do
   mkOnServiceStatusPayload (searchPi.id) orderPI
-    >>= ExternalAPI.callBAP "on_status" API.onStatus transporter (searchPi.caseId) . Right
+    >>= ExternalAPI.callBAP "on_status" API.onStatus transporter (searchPi.requestId) . Right
 
 mkOnServiceStatusPayload :: MonadTime m => Id ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m API.OnStatusReqMessage
 mkOnServiceStatusPayload searchPiId orderPi = do
@@ -163,12 +163,12 @@ notifyTripInfoToGateway ::
     CoreMetrics m
   ) =>
   ProductInstance.ProductInstance ->
-  Id Case.Case ->
+  Id SearchRequest.SearchRequest ->
   Organization.Organization ->
   m ()
-notifyTripInfoToGateway orderPI caseId transporter = do
+notifyTripInfoToGateway orderPI searchRequestId transporter = do
   mkOnUpdatePayload orderPI
-    >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter caseId . Right
+    >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter searchRequestId . Right
 
 notifyCancelToGateway ::
   ( DBFlow m r,
@@ -183,7 +183,7 @@ notifyCancelToGateway ::
 notifyCancelToGateway searchPi transporter cancellationSource = do
   trip <- mkCancelTripObj searchPi
   order <- ExternalAPITransform.mkOrder searchPi.id (Just trip) $ Just cancellationSource
-  ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.caseId) . Right $ API.OnCancelReqMessage order
+  ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.requestId) . Right $ API.OnCancelReqMessage order
 
 mkTrip :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> m Trip
 mkTrip orderPi = do
@@ -314,7 +314,7 @@ notifyTripDetailsToGateway ::
   ProductInstance.ProductInstance ->
   m ()
 notifyTripDetailsToGateway transporter searchPi orderPi = do
-  notifyTripInfoToGateway orderPi searchPi.caseId transporter
+  notifyTripInfoToGateway orderPi searchPi.requestId transporter
 
 notifyStatusUpdateReq ::
   ( DBFlow m r,

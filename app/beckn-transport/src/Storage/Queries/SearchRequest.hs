@@ -1,4 +1,4 @@
-module Storage.Queries.Case where
+module Storage.Queries.SearchRequest where
 
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
@@ -10,58 +10,58 @@ import Data.Time (UTCTime)
 import Database.Beam ((&&.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.Case as Storage
 import qualified Types.Storage.DB as DB
 import Types.Storage.Organization
+import qualified Types.Storage.SearchRequest as Storage
 
-getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.CaseT))
+getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.SearchRequestT))
 getDbTable =
-  DB._case . DB.transporterDb <$> getSchemaName
+  DB.searchRequest . DB.transporterDb <$> getSchemaName
 
-createFlow :: DBFlow m r => Storage.Case -> m ()
+createFlow :: DBFlow m r => Storage.SearchRequest -> m ()
 createFlow = DB.runSqlDB . create
 
-create :: Storage.Case -> DB.SqlDB ()
-create case_ = do
+create :: Storage.SearchRequest -> DB.SqlDB ()
+create searchRequest = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue case_)
+  DB.createOne' dbTable (Storage.insertValue searchRequest)
 
-findAllByIds :: DBFlow m r => [Id Storage.Case] -> m [Storage.Case]
+findAllByIds :: DBFlow m r => [Id Storage.SearchRequest] -> m [Storage.SearchRequest]
 findAllByIds ids = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate Storage.Case {..} =
+    predicate Storage.SearchRequest {..} =
       B.in_ id (B.val_ <$> ids)
 
-findById :: DBFlow m r => Id Storage.Case -> m (Maybe Storage.Case)
-findById caseId = do
+findById :: DBFlow m r => Id Storage.SearchRequest -> m (Maybe Storage.SearchRequest)
+findById searchRequestId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Case {..} = id ==. B.val_ caseId
+    predicate Storage.SearchRequest {..} = id ==. B.val_ searchRequestId
 
-findBySid :: DBFlow m r => Text -> m (Maybe Storage.Case)
+findBySid :: DBFlow m r => Text -> m (Maybe Storage.SearchRequest)
 findBySid sid = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Case {..} = shortId ==. B.val_ (ShortId sid)
+    predicate Storage.SearchRequest {..} = shortId ==. B.val_ (ShortId sid)
 
 findAllByStatuses ::
   DBFlow m r =>
   Integer ->
   Integer ->
-  [Storage.CaseStatus] ->
+  [Storage.SearchRequestStatus] ->
   Id Organization ->
   UTCTime ->
-  m [Storage.Case]
+  m [Storage.SearchRequest]
 findAllByStatuses limit offset statuses orgId now = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
-    orderByDesc Storage.Case {..} = B.desc_ createdAt
-    predicate Storage.Case {..} =
+    orderByDesc Storage.SearchRequest {..} = B.desc_ createdAt
+    predicate Storage.SearchRequest {..} =
       provider ==. B.val_ (Just $ getId orgId)
         &&. B.in_ status (B.val_ <$> statuses)
         &&. validTill B.>. B.val_ now
@@ -70,29 +70,29 @@ findAllByStatusTime ::
   DBFlow m r =>
   Integer ->
   Integer ->
-  [Storage.CaseStatus] ->
+  [Storage.SearchRequestStatus] ->
   Id Organization ->
   UTCTime ->
   UTCTime ->
-  m [Storage.Case]
+  m [Storage.SearchRequest]
 findAllByStatusTime limit offset statuses orgId now fromTime = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
-    orderByDesc Storage.Case {..} = B.desc_ createdAt
-    predicate Storage.Case {..} =
+    orderByDesc Storage.SearchRequest {..} = B.desc_ createdAt
+    predicate Storage.SearchRequest {..} =
       provider ==. B.val_ (Just $ getId orgId)
         &&. B.in_ status (B.val_ <$> statuses)
         &&. validTill B.>. B.val_ now
         &&. createdAt B.<. B.val_ fromTime
 
-findAllExpiredByStatus :: DBFlow m r => [Storage.CaseStatus] -> UTCTime -> UTCTime -> m [Storage.Case]
+findAllExpiredByStatus :: DBFlow m r => [Storage.SearchRequestStatus] -> UTCTime -> UTCTime -> m [Storage.SearchRequest]
 findAllExpiredByStatus statuses from to = do
   dbTable <- getDbTable
   (now :: UTCTime) <- getCurrentTime
   DB.findAll dbTable identity (predicate now)
   where
-    predicate now Storage.Case {..} =
+    predicate now Storage.SearchRequest {..} =
       B.in_ status (B.val_ <$> statuses)
         &&. validTill B.<=. B.val_ now
         &&. createdAt B.>=. B.val_ from

@@ -6,7 +6,6 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.CancellationReason as CancellationReason
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Geometry as Geometry
 import qualified Types.Storage.Issue as Issue
 import qualified Types.Storage.Organization as Organization
@@ -16,13 +15,14 @@ import qualified Types.Storage.Products as Products
 import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.SearchReqLocation as Location
+import qualified Types.Storage.SearchRequest as SearchRequest
 
 data AppDb f = AppDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
     issues :: f (B.TableEntity Issue.IssueT),
     searchReqLocation :: f (B.TableEntity Location.SearchReqLocationT),
     person :: f (B.TableEntity Person.PersonT),
-    _case :: f (B.TableEntity Case.CaseT),
+    searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT),
     productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
     products :: f (B.TableEntity Products.ProductsT),
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
@@ -40,7 +40,7 @@ appDb dbSchemaName =
         issues = setSchema dbSchemaName <> Issue.fieldEMod,
         searchReqLocation = setSchema dbSchemaName <> Location.fieldEMod,
         person = setSchema dbSchemaName <> Person.fieldEMod,
-        _case = setSchema dbSchemaName <> Case.fieldEMod,
+        searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod,
         productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
         products = setSchema dbSchemaName <> Products.fieldEMod,
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,

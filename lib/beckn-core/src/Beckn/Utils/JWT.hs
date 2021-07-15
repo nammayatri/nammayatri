@@ -83,7 +83,7 @@ createJWT sa additionalClaims = do
       let key = RSAPrivateKey pkey
       iat <- numericDate <$> getPOSIXTime
       exp <- numericDate . (+ 3600) <$> getPOSIXTime
-      let cs =
+      let searchRequest =
             mempty
               { exp = exp, -- Expired at
                 iat = iat, -- Issued at
@@ -91,7 +91,7 @@ createJWT sa additionalClaims = do
                 aud = aud, -- Audience (endpoints where JWT will be used)
                 unregisteredClaims = unregisteredClaims -- additional claims
               }
-      pure $ Right (cs, encodeSigned key jwtHeader cs)
+      pure $ Right (searchRequest, encodeSigned key jwtHeader searchRequest)
 
 -- | Prepare a request to the token URL
 jwtRequest :: T.Text -> BL.ByteString -> IO Request

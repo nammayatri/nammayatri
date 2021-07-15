@@ -11,11 +11,11 @@ import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as Storage
 import Types.Storage.Products
+import qualified Types.Storage.SearchRequest as SearchRequest
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB.productInstance . DB.appDb <$> getSchemaName
@@ -44,22 +44,14 @@ findOrderPIById pid = do
       id ==. B.val_ piid
         &&. _type ==. B.val_ Storage.RIDEORDER
         
-findAllByCaseIdAndType :: DBFlow m r => Id Case.Case -> Storage.ProductInstanceType -> m [Storage.ProductInstance]
-findAllByCaseIdAndType caseId_ piType = do
+findAllByRequestIdAndType :: DBFlow m r => Id SearchRequest.SearchRequest -> Storage.ProductInstanceType -> m [Storage.ProductInstance]
+findAllByRequestIdAndType searchRequestId piType = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate Storage.ProductInstance {..} =
-      caseId ==. B.val_ caseId_
+      requestId ==. B.val_ searchRequestId
         &&. _type ==. B.val_ piType
-
-findOneByCaseId :: DBFlow m r => Id Case.Case -> m (Maybe Storage.ProductInstance)
-findOneByCaseId caseId_ = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.ProductInstance {..} =
-      caseId ==. B.val_ caseId_
 
 findByProductId :: DBFlow m r => Id Products -> m (Maybe Storage.ProductInstance)
 findByProductId pId = do
@@ -84,24 +76,24 @@ findAllOrdersByPerson perId mbLimit mbOffset mbOnlyActive = do
           then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
           else B.val_ True
 
-updateCaseId ::
+updateRequestId ::
   DBFlow m r =>
   Id Storage.ProductInstance ->
-  Id Case.Case ->
+  Id SearchRequest.SearchRequest ->
   m ()
-updateCaseId piId caseId_ = do
+updateRequestId piId searchRequestId = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
-    (setClause caseId_ currTime)
+    (setClause searchRequestId currTime)
     (predicate piId)
   where
     predicate piid Storage.ProductInstance {..} = id ==. B.val_ piid
-    setClause cid currTime Storage.ProductInstance {..} =
+    setClause searchRequestId_ currTime Storage.ProductInstance {..} =
       mconcat
         [ updatedAt <-. B.val_ currTime,
-          caseId <-. B.val_ cid
+          requestId <-. B.val_ searchRequestId_
         ]
 
 updateStatus ::
@@ -124,20 +116,20 @@ updateStatus piId status_ = do
           status <-. B.val_ scStatus
         ]
 
-updateAllProductInstancesByCaseId ::
+updateAllProductInstancesByRequestId ::
   DBFlow m r =>
-  Id Case.Case ->
+  Id SearchRequest.SearchRequest ->
   Storage.ProductInstanceStatus ->
   m ()
-updateAllProductInstancesByCaseId caseId_ status_ = do
+updateAllProductInstancesByRequestId searchRequestId status_ = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
     (setClause status_ currTime)
-    (predicate caseId_)
+    (predicate searchRequestId)
   where
-    predicate cid Storage.ProductInstance {..} = caseId ==. B.val_ cid
+    predicate searchRequestId_ Storage.ProductInstance {..} = requestId ==. B.val_ searchRequestId_
     setClause scStatus currTime Storage.ProductInstance {..} =
       mconcat
         [ updatedAt <-. B.val_ currTime,
@@ -157,7 +149,7 @@ listAllProductInstanceWithOffset limit offset lbid stats piTypes = do
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) (predicate lbid stats)
   where
     predicate (Storage.ByApplicationId i) s Storage.ProductInstance {..} =
-      caseId ==. B.val_ i
+      requestId ==. B.val_ i
         &&. (status `B.in_` (B.val_ <$> s) ||. complementVal s)
         &&. (_type `B.in_` (B.val_ <$> piTypes) ||. complementVal piTypes)
     predicate (Storage.ByCustomerId i) s Storage.ProductInstance {..} =
@@ -179,8 +171,8 @@ listAllProductInstance piId status_ = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate piId status_)
   where
-    predicate (Storage.ByApplicationId i) [] Storage.ProductInstance {..} = caseId ==. B.val_ i
-    predicate (Storage.ByApplicationId i) s Storage.ProductInstance {..} = caseId ==. B.val_ i &&. B.in_ status (B.val_ <$> s)
+    predicate (Storage.ByApplicationId i) [] Storage.ProductInstance {..} = requestId ==. B.val_ i
+    predicate (Storage.ByApplicationId i) s Storage.ProductInstance {..} = requestId ==. B.val_ i &&. B.in_ status (B.val_ <$> s)
     predicate (Storage.ByCustomerId i) [] Storage.ProductInstance {..} = personId ==. B.val_ (Just i)
     predicate (Storage.ByCustomerId i) s Storage.ProductInstance {..} = personId ==. B.val_ (Just i) &&. B.in_ status (B.val_ <$> s)
     predicate (Storage.ById i) [] Storage.ProductInstance {..} = productId ==. B.val_ i

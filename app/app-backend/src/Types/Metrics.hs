@@ -14,23 +14,23 @@ import Utils.Common
 type HasBAPMetrics m r = (HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer])
 
 data BAPMetricsContainer = BAPMetricsContainer
-  { caseCounter :: CaseCounterMetric,
+  { searchRequestCounter :: SearchRequestCounterMetric,
     searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric
   }
 
-type CaseCounterMetric = P.Vector P.Label2 P.Counter
+type SearchRequestCounterMetric = P.Vector P.Label2 P.Counter
 
 type SearchDurationMetric = (P.Histogram, P.Counter)
 
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
-  caseCounter <- registerCaseCounterMetric
+  searchRequestCounter <- registerSearchRequestCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   return $ BAPMetricsContainer {..}
 
-registerCaseCounterMetric :: IO CaseCounterMetric
-registerCaseCounterMetric = P.register $ P.vector ("status", "type") $ P.counter $ P.Info "case_count" ""
+registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
+registerSearchRequestCounterMetric = P.register $ P.vector ("status", "type") $ P.counter $ P.Info "search_request_count" ""
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do

@@ -1,21 +1,21 @@
-module Fixtures.Case (defaultCase) where
+module Fixtures.SearchRequest (defaultSearchRequest) where
 
 import Beckn.Types.Id
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
-import qualified Types.Storage.Case as Case
+import qualified Types.Storage.SearchRequest as SearchRequest
 
-defaultCase :: Case.Case
-defaultCase =
-  Case.Case
+defaultSearchRequest :: SearchRequest.SearchRequest
+defaultSearchRequest =
+  SearchRequest.SearchRequest
     { id = Id "1",
       name = Nothing,
       description = Nothing,
       shortId = "",
-      industry = Case.MOBILITY,
-      _type = Case.RIDESEARCH,
-      exchangeType = Case.FULFILLMENT,
-      status = Case.COMPLETED,
+      industry = SearchRequest.MOBILITY,
+      _type = SearchRequest.RIDESEARCH,
+      exchangeType = SearchRequest.FULFILLMENT,
+      status = SearchRequest.COMPLETED,
       startTime = Fixtures.defaultTime,
       endTime = Nothing,
       validTill = Fixtures.defaultTime,

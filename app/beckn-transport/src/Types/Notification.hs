@@ -4,7 +4,7 @@ module Types.Notification where
 
 import Beckn.Utils.JSON
 import EulerHS.Prelude
-import Types.Storage.Case
+import Types.Storage.SearchRequest
 
 data NotificationType
   = LEAD
@@ -23,4 +23,4 @@ instance FromJSON a => FromJSON (Notification a) where
 instance ToJSON a => ToJSON (Notification a) where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
-type CaseNotification = Notification Case
+type SearchRequestNotification = Notification SearchRequest

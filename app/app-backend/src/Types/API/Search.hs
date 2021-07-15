@@ -3,7 +3,7 @@ module Types.API.Search where
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
-import Types.Storage.Case (Case)
+import Types.Storage.SearchRequest (SearchRequest)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 
 data VehicleVariant = SEDAN | SUV | HATCHBACK
@@ -17,11 +17,11 @@ data SearchReq = SearchReq
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 newtype SearchRes = SearchRes
-  { searchId :: Id Case
+  { searchId :: Id SearchRequest
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-data CaseInfo = CaseInfo
+data SearchRequestInfo = SearchRequestInfo
   { total :: Maybe Integer,
     accepted :: Maybe Integer,
     declined :: Maybe Integer

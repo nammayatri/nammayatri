@@ -1,6 +1,7 @@
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Case where
+module Types.Storage.SearchRequest where
 
 import Beckn.Types.Id
 import Beckn.Utils.JSON
@@ -14,38 +15,37 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
-import qualified Types.Storage.SearchReqLocation as Loc
 
-data CaseType = RIDESEARCH
+data SearchRequestType = RIDESEARCH | RIDEORDER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
-instance ToHttpApiData CaseType where
+instance ToHttpApiData SearchRequestType where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseType where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck Postgres CaseType
+instance B.HasSqlEqualityCheck Postgres SearchRequestType
 
-instance FromBackendRow Postgres CaseType where
+instance FromBackendRow Postgres SearchRequestType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data CaseStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
+data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
-instance ToHttpApiData CaseStatus where
+instance ToHttpApiData SearchRequestStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CaseStatus where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck Postgres CaseStatus
+instance B.HasSqlEqualityCheck Postgres SearchRequestStatus
 
-instance FromBackendRow Postgres CaseStatus where
+instance FromBackendRow Postgres SearchRequestStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data Industry = MOBILITY | GOVT | GROCERY
@@ -84,25 +84,25 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
 instance FromBackendRow Postgres ProviderType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance FromHttpApiData CaseStatus where
+instance FromHttpApiData SearchRequestStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-instance FromHttpApiData CaseType where
+instance FromHttpApiData SearchRequestType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-data CaseT f = Case
-  { id :: B.C f (Id Case),
+data SearchRequestT f = SearchRequest
+  { id :: B.C f (Id SearchRequest),
     name :: B.C f (Maybe Text),
     description :: B.C f (Maybe Text),
-    shortId :: B.C f (ShortId Case),
+    shortId :: B.C f (ShortId SearchRequest),
     industry :: B.C f Industry,
-    _type :: B.C f CaseType,
+    _type :: B.C f SearchRequestType,
     exchangeType :: B.C f ExchangeType,
-    status :: B.C f CaseStatus,
+    status :: B.C f SearchRequestStatus,
     startTime :: B.C f UTCTime,
     endTime :: B.C f (Maybe UTCTime),
     validTill :: B.C f UTCTime,
@@ -110,8 +110,6 @@ data CaseT f = Case
     providerType :: B.C f (Maybe ProviderType),
     requestor :: B.C f (Maybe Text),
     requestorType :: B.C f (Maybe RequestorType),
-    fromLocationId :: B.C f (Id Loc.SearchReqLocation),
-    toLocationId :: B.C f (Id Loc.SearchReqLocation),
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     udf3 :: B.C f (Maybe Text),
@@ -131,31 +129,31 @@ data CaseT f = Case
 -- udf3 => start Location
 -- udf4 => end Location
 
-type Case = CaseT Identity
+type SearchRequest = SearchRequestT Identity
 
-type CasePrimaryKey = B.PrimaryKey CaseT Identity
+type SearchRequestPrimaryKey = B.PrimaryKey SearchRequestT Identity
 
 {-# ANN module ("HLint: ignore Redundant id" :: String) #-}
 
-instance B.Table CaseT where
-  data PrimaryKey CaseT f = CasePrimaryKey (B.C f (Id Case))
+instance B.Table SearchRequestT where
+  data PrimaryKey SearchRequestT f = SearchRequestPrimaryKey (B.C f (Id SearchRequest))
     deriving (Generic, B.Beamable)
-  primaryKey = CasePrimaryKey . id
+  primaryKey = SearchRequestPrimaryKey . id
 
-deriving instance Show Case
+deriving instance Show SearchRequest
 
-deriving instance Eq Case
+deriving instance Eq SearchRequest
 
-instance ToJSON Case where
+instance ToJSON SearchRequest where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
-instance FromJSON Case where
+instance FromJSON SearchRequest where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 fieldEMod ::
-  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CaseT)
+  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity SearchRequestT)
 fieldEMod =
-  B.setEntityName "case"
+  B.setEntityName "search_request"
     <> B.modifyTableFields
       B.tableModification
         { shortId = "short_id",
@@ -165,8 +163,36 @@ fieldEMod =
           validTill = "valid_till",
           providerType = "provider_type",
           requestorType = "requestor_type",
-          fromLocationId = "from_location_id",
-          toLocationId = "to_location_id",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
+
+validateStatusTransition :: SearchRequestStatus -> SearchRequestStatus -> Either Text ()
+validateStatusTransition oldState newState =
+  if oldState == newState
+    then allowed
+    else t oldState newState
+  where
+    forbidden =
+      Left $
+        T.pack $
+          "It is not allowed to change SearchRequest status from "
+            <> show oldState
+            <> " to "
+            <> show newState
+    allowed = Right ()
+    t NEW CONFIRMED = allowed
+    t NEW CLOSED = allowed
+    t NEW INPROGRESS = allowed
+    t NEW COMPLETED = allowed
+    t NEW _ = forbidden
+    t CONFIRMED INPROGRESS = allowed
+    t CONFIRMED CLOSED = allowed
+    t CONFIRMED COMPLETED = allowed
+    t CONFIRMED _ = forbidden
+    t INPROGRESS COMPLETED = allowed
+    t INPROGRESS CLOSED = allowed
+    t INPROGRESS _ = forbidden
+    t COMPLETED CLOSED = allowed
+    t COMPLETED _ = forbidden
+    t CLOSED _ = forbidden

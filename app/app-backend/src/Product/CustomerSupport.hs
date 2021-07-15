@@ -10,7 +10,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Storage.Queries.Case as Case
+import Storage.Queries.SearchRequest as SearchRequest
 import Storage.Queries.Person as Person
 import Storage.Queries.ProductInstance as PI
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
@@ -18,11 +18,11 @@ import qualified Storage.Queries.SearchReqLocation as Location
 import Types.API.CustomerSupport as T
 import Types.Error
 import Types.ProductInfo as ProductInfo
-import Types.Storage.Case as C
 import Types.Storage.Person as SP
 import Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RegistrationToken as SR
 import qualified Types.Storage.SearchReqLocation as SSearchLoc
+import Types.Storage.SearchRequest as C
 import Utils.Common
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
@@ -73,38 +73,38 @@ createSupportRegToken entityId = do
       }
 
 listOrder :: Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
-listOrder personId mCaseId mMobile mlimit moffset = withFlowHandlerAPI $ do
+listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
   supportP <- Person.findById personId >>= fromMaybeM PersonNotFound
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
     throwError AccessDenied
-  T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
-    (Just caseId, _) -> getByCaseId caseId
+  T.OrderInfo {person, searchRequests} <- case (mRequestId, mMobile) of
+    (Just searchRequestId, _) -> getByRequestId searchRequestId
     (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-    (_, _) -> throwError $ InvalidRequest "You should pass CaseId or mobile number."
-  traverse (makeCaseToOrder person) searchcases
+    (_, _) -> throwError $ InvalidRequest "You should pass SearchRequestId or mobile number."
+  traverse (makeSearchRequestToOrder person) searchRequests
   where
     getByMobileNumber number = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
       person <-
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
           >>= fromMaybeM PersonDoesNotExist
-      searchcases <-
-        Case.findAllByTypeAndStatuses (person.id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
-      return $ T.OrderInfo person searchcases
-    getByCaseId caseId = do
-      (_case :: C.Case) <-
-        Case.findById (Id caseId)
-          >>= fromMaybeM CaseDoesNotExist
-      let requestorId = fromMaybe "_ID" (_case.requestor)
+      searchRequests <-
+        SearchRequest.findAllByTypeAndStatuses (person.id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
+      return $ T.OrderInfo person searchRequests
+    getByRequestId searchRequestId = do
+      (searchRequest :: C.SearchRequest) <-
+        SearchRequest.findById (Id searchRequestId)
+          >>= fromMaybeM SearchRequestDoesNotExist
+      let requestorId = fromMaybe "_ID" (searchRequest.requestor)
       person <-
         Person.findById (Id requestorId)
           >>= fromMaybeM PersonDoesNotExist
-      return $ T.OrderInfo person [_case]
+      return $ T.OrderInfo person [searchRequest]
 
-makeCaseToOrder :: (DBFlow m r, EncFlow m r) => SP.Person -> C.Case -> m T.OrderResp
-makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
-  (confiremedOrder :: Maybe C.Case) <- Case.findById id
-  let (status_ :: Maybe CaseStatus) = ((\x -> Just $ x.status) =<< confiremedOrder) <|> Just status
+makeSearchRequestToOrder :: (DBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
+makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..} = do
+  (confiremedOrder :: Maybe C.SearchRequest) <- SearchRequest.findById id
+  let (status_ :: Maybe SearchRequestStatus) = ((\x -> Just $ x.status) =<< confiremedOrder) <|> Just status
   fromLocation <- Location.findLocationById fromLocationId
   toLocation <- Location.findLocationById toLocationId
   trip <- makeTripDetails confiremedOrder
@@ -127,13 +127,13 @@ makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
           }
   pure $ T.OrderResp {order = details}
 
-makeTripDetails :: DBFlow m r => Maybe C.Case -> m (Maybe T.TripDetails)
-makeTripDetails caseM = case caseM of
+makeTripDetails :: DBFlow m r => Maybe C.SearchRequest -> m (Maybe T.TripDetails)
+makeTripDetails mbSearchRequest = case mbSearchRequest of
   Nothing -> pure Nothing
-  Just _case -> do
+  Just searchRequest -> do
     ProductInstance.ProductInstance {id, status, info, price} <-
       head
-        <$> PI.findAllByCaseIdAndType (_case.id) RIDEORDER
+        <$> PI.findAllByRequestIdAndType (searchRequest.id) RIDEORDER
     let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< info
         provider = (.provider) =<< mproductInfo
         mtracker = (.tracker) =<< mproductInfo

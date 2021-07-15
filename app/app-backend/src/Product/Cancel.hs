@@ -10,18 +10,18 @@ import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.RideCancellationReason as QRCR
+import qualified Storage.Queries.SearchRequest as MC
 import Types.API.Cancel as Cancel
 import Types.Error
-import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.RideCancellationReason as SRCR
+import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
@@ -33,10 +33,10 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   orderPI <- MPI.findOrderPIById orderPIId >>= fromMaybeM PIDoesNotExist
   searchPIId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
   searchPI <- MPI.findById searchPIId >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
-  searchCase <- MC.findByPersonId personId (searchPI.caseId) >>= fromMaybeM CaseNotFound
+  searchRequest <- MC.findByPersonId personId (searchPI.requestId) >>= fromMaybeM SearchRequestNotFound
   unless (isProductInstanceCancellable orderPI) $
     throwError $ PIInvalidStatus "Cannot cancel this ride"
-  let txnId = getId $ searchCase.id
+  let txnId = getId $ searchRequest.id
   let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder (getId searchPIId) Nothing)
   context <- buildContext "cancel" txnId Nothing Nothing
   organization <-
@@ -81,12 +81,12 @@ onCancel _org req = withFlowHandlerBecknAPI $
           PI.validateStatusTransition (PI.status orderPI) PI.CANCELLED & fromEitherM PIInvalidStatus
           MPI.updateStatus (PI.id orderPI) PI.CANCELLED
         searchPI <- MPI.findById searchPIid >>= fromMaybeM PIDoesNotExist
-        let searchCaseId = searchPI.caseId
+        let searchRequestId = searchPI.requestId
         -- notify customer
-        searchCase <- MC.findById searchCaseId >>= fromMaybeM CaseNotFound
+        searchRequest <- MC.findById searchRequestId >>= fromMaybeM SearchRequestNotFound
         cancellationSource <- msg.order.cancellation_reason_id & fromMaybeM (InvalidRequest "No cancellation source.")
-        logTagInfo ("txnId-" <> getId searchCaseId) ("Cancellation reason " <> show cancellationSource)
-        whenJust (searchCase.requestor) $ \personId -> do
+        logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
+        whenJust (searchRequest.requestor) $ \personId -> do
           mbPerson <- Person.findById $ Id personId
           whenJust mbPerson $ \person -> Notify.notifyOnCancel searchPI person.id person.deviceToken cancellationSource
           unless (cancellationSource == ByUser) $
@@ -94,7 +94,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
               DB.runSqlDBTransaction $
                 QRCR.create $ SRCR.RideCancellationReason orderPI.id cancellationSource Nothing Nothing
         --
-        arrOrderPI <- MPI.findAllByCaseIdAndType searchCaseId PI.RIDEORDER
+        arrOrderPI <- MPI.findAllByRequestIdAndType searchRequestId PI.RIDEORDER
         let arrTerminalPI =
               filter
                 ( \prodInst -> do
@@ -106,6 +106,6 @@ onCancel _org req = withFlowHandlerBecknAPI $
                 )
                 arrOrderPI
         when (length arrTerminalPI == length arrOrderPI) $
-          Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
+          Metrics.incrementSearchRequestCount SearchRequest.CLOSED SearchRequest.RIDESEARCH
       Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err
     return Ack

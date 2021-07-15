@@ -9,7 +9,7 @@ import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (pi)
 import Types.App (Driver)
 import Types.Error
-import qualified Types.Storage.Case as Case
+import qualified Types.Storage.SearchRequest as SSearchRequest
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
@@ -20,7 +20,7 @@ data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
     endRideTransaction :: Id PI.ProductInstance -> Id Driver -> Amount -> m (),
-    findCaseById :: Id Case.Case -> m (Maybe Case.Case),
+    findSearchRequestById :: Id SSearchRequest.SearchRequest -> m (Maybe SSearchRequest.SearchRequest),
     notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> m (),
     calculateFare ::
       Id Organization ->
@@ -49,13 +49,13 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   searchPiId <- orderPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- findPIById searchPiId >>= fromMaybeM PINotFound
-  _case <- findCaseById searchPi.caseId >>= fromMaybeM CaseNotFound
+  searchRequest <- findSearchRequestById searchPi.requestId >>= fromMaybeM SearchRequestNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   actualPrice <-
     ifM
       recalculateFareEnabled
-      (recalculateFare _case orderPi)
+      (recalculateFare searchRequest orderPi)
       (orderPi.price & fromMaybeM (PIFieldNotPresent "price"))
 
   endRideTransaction orderPi.id (cast driverId) actualPrice
@@ -64,15 +64,15 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   return APISuccess.Success
   where
-    recalculateFare _case orderPi = do
-      transporterId <- Id <$> _case.provider & fromMaybeM (CaseFieldNotPresent "provider")
+    recalculateFare searchRequest orderPi = do
+      transporterId <- Id <$> searchRequest.provider & fromMaybeM (SearchRequestFieldNotPresent "provider")
       vehicleVariant <-
-        (_case.udf1 >>= readMaybe . T.unpack)
-          & fromMaybeM (CaseFieldNotPresent "udf1")
+        (searchRequest.udf1 >>= readMaybe . T.unpack)
+          & fromMaybeM (SearchRequestFieldNotPresent "udf1")
       oldDistance <-
-        (_case.udf5 >>= readMaybe . T.unpack)
-          & fromMaybeM (CaseFieldNotPresent "udf5")
-      fare <- calculateFare transporterId vehicleVariant orderPi.distance _case.startTime
+        (searchRequest.udf5 >>= readMaybe . T.unpack)
+          & fromMaybeM (SearchRequestFieldNotPresent "udf5")
+      fare <- calculateFare transporterId vehicleVariant orderPi.distance searchRequest.startTime
       let distanceDiff = orderPi.distance - oldDistance
       price <- orderPi.price & fromMaybeM (PIFieldNotPresent "price")
       let fareDiff = fare - price

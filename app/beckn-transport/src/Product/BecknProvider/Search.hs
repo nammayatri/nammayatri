@@ -22,7 +22,7 @@ import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
 import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
-import qualified Storage.Queries.Case as QCase
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as SProduct
@@ -31,7 +31,7 @@ import qualified Test.RandomStrings as RS
 import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics, HasBPPMetrics)
-import qualified Types.Storage.Case as Case
+import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.SearchReqLocation as Location
@@ -68,13 +68,13 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
         toLocation <- buildFromStop now dropOff
         let bapOrgId = bapOrg.id
         uuid <- L.generateGUID
-        let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId
+        let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId
         DB.runSqlDBTransaction $ do
           Loc.create fromLocation
           Loc.create toLocation
-          QCase.create productCase
+          QSearchRequest.create searchRequest
         ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
-          onSearchCallback productCase transporter fromLocation toLocation searchMetricsMVar
+          onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
 
 buildFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.SearchReqLocation
 buildFromStop now stop = do
@@ -107,28 +107,28 @@ getValidTime now startTime = do
       validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
-mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.SearchReqLocation -> Location.SearchReqLocation -> Id Org.Organization -> Id Org.Organization -> Case.Case
-mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId = do
+mkSearchRequest :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.SearchReqLocation -> Location.SearchReqLocation -> Id Org.Organization -> Id Org.Organization -> SearchRequest.SearchRequest
+mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId = do
   let intent = req.message.intent
   let distance = Tag.value <$> find (\x -> x.key == "distance") (fromMaybe [] $ intent.tags)
   let tId = getId transporterId
   let bapId = getId bapOrgId
-  Case.Case
+  SearchRequest.SearchRequest
     { id = Id uuid,
       name = Nothing,
-      description = Just "Case to search for a Ride",
+      description = Just "SearchRequest to search for a Ride",
       shortId = ShortId $ tId <> "_" <> req.context.transaction_id,
-      industry = Case.MOBILITY,
-      _type = Case.RIDESEARCH,
-      exchangeType = Case.FULFILLMENT,
-      status = Case.NEW,
+      industry = SearchRequest.MOBILITY,
+      _type = SearchRequest.RIDESEARCH,
+      exchangeType = SearchRequest.FULFILLMENT,
+      status = SearchRequest.NEW,
       startTime = startTime,
       endTime = Nothing,
       validTill = validity,
       provider = Just tId,
       providerType = Nothing,
       requestor = Nothing,
-      requestorType = Just Case.CONSUMER,
+      requestorType = Just SearchRequest.CONSUMER,
       fromLocationId = fromLocation.id,
       toLocationId = toLocation.id,
       udf1 = Just $ intent.vehicle.variant,
@@ -148,17 +148,17 @@ onSearchCallback ::
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>
-  Case.Case ->
+  SearchRequest.SearchRequest ->
   Org.Organization ->
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
   Metrics.SearchMetricsMVar ->
   m API.OnSearchServices
-onSearchCallback productCase transporter fromLocation toLocation searchMetricsMVar = do
+onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar = do
   let transporterId = transporter.id
   vehicleVariant <-
-    (productCase.udf1 >>= readMaybe . T.unpack)
-      & fromMaybeM (CaseFieldNotPresent "udf1")
+    (searchRequest.udf1 >>= readMaybe . T.unpack)
+      & fromMaybeM (SearchRequestFieldNotPresent "udf1")
   pool <- Confirm.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId . fst <$> pool) |+ ""
@@ -170,40 +170,40 @@ onSearchCallback productCase transporter fromLocation toLocation searchMetricsMV
     case pool of
       [] -> return (Nothing, Nothing)
       (fstDriverValue : _) -> do
-        let dstSrc = maybe (Left (fromLocation, toLocation)) Right (productCase.udf5 >>= readMaybe . T.unpack)
-        fare <- Just <$> calculateFare transporterId vehicleVariant dstSrc (productCase.startTime)
+        let dstSrc = maybe (Left (fromLocation, toLocation)) Right (searchRequest.udf5 >>= readMaybe . T.unpack)
+        fare <- Just <$> calculateFare transporterId vehicleVariant dstSrc (searchRequest.startTime)
         let nearestDist = Just $ snd fstDriverValue
         return (fare, nearestDist)
-  prodInst <- mkProductInstance productCase price piStatus transporterId nearestDriverDist
+  prodInst <- mkProductInstance searchRequest price piStatus transporterId nearestDriverDist
   DB.runSqlDBTransaction $ do
     ProductInstance.create prodInst
   let productInstances =
         case prodInst.status of
           ProductInstance.OUTOFSTOCK -> []
           _ -> [prodInst]
-  res <- mkOnSearchPayload productCase productInstances transporter
+  res <- mkOnSearchPayload searchRequest productInstances transporter
   Metrics.finishSearchMetrics transporterId searchMetricsMVar
   return res
 
 mkProductInstance ::
   DBFlow m r =>
-  Case.Case ->
+  SearchRequest.SearchRequest ->
   Maybe Amount ->
   ProductInstance.ProductInstanceStatus ->
   Id Org.Organization ->
   Maybe Double ->
   m ProductInstance.ProductInstance
-mkProductInstance productCase price status transporterId nearestDriverDist = do
+mkProductInstance productSearchRequest price status transporterId nearestDriverDist = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   products <-
-    SProduct.findByName (fromMaybe "DONT MATCH" (productCase.udf1))
+    SProduct.findByName (fromMaybe "DONT MATCH" (productSearchRequest.udf1))
       >>= fromMaybeM ProductsNotFound
   return
     ProductInstance.ProductInstance
       { id = productInstanceId,
-        caseId = productCase.id,
+        requestId = productSearchRequest.id,
         productId = products.id,
         personId = Nothing,
         personUpdatedAt = Nothing,
@@ -215,11 +215,11 @@ mkProductInstance productCase price status transporterId nearestDriverDist = do
         price = price,
         actualPrice = Nothing,
         status = status,
-        startTime = productCase.startTime,
-        endTime = productCase.endTime,
-        validTill = productCase.validTill,
-        fromLocation = Just $ productCase.fromLocationId,
-        toLocation = Just $ productCase.toLocationId,
+        startTime = productSearchRequest.startTime,
+        endTime = productSearchRequest.endTime,
+        validTill = productSearchRequest.validTill,
+        fromLocation = Just $ productSearchRequest.fromLocationId,
+        toLocation = Just $ productSearchRequest.toLocationId,
         organizationId = transporterId,
         parentId = Nothing,
         distance = 0,
@@ -228,21 +228,21 @@ mkProductInstance productCase price status transporterId nearestDriverDist = do
         udf3 = Nothing,
         udf4 = Nothing,
         udf5 = Nothing,
-        info = productCase.info,
+        info = productSearchRequest.info,
         createdAt = now,
         updatedAt = now
       }
 
 mkOnSearchPayload ::
   DBFlow m r =>
-  Case.Case ->
+  SearchRequest.SearchRequest ->
   [ProductInstance.ProductInstance] ->
   Org.Organization ->
   m API.OnSearchServices
-mkOnSearchPayload productCase productInstances transporterOrg = do
+mkOnSearchPayload productSearchRequest productInstances transporterOrg = do
   ProductInstance.getCountByStatus (transporterOrg.id) ProductInstance.RIDEORDER
     <&> mkProviderInfo transporterOrg . mkProviderStats
-    >>= ExternalAPITransform.mkCatalog productCase productInstances
+    >>= ExternalAPITransform.mkCatalog productSearchRequest productInstances
     <&> API.OnSearchServices
 
 mkProviderInfo :: Org.Organization -> Common.ProviderStats -> Common.ProviderInfo
