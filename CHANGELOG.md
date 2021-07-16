@@ -6,6 +6,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.0] - 16-07-2021
+
+### Added
+
+- #894: add additional input validations
+
+- #884: [BKN-786] Add registration number check in createDriver
+
+- #881: [BKN-784] Link vehicle in createDriver
+
+- #858: [BKN-764] Add retries to search flow
+
+- #854: [BKN-764] Add configurable http calls timout
+
+- #847: [BKN-762] Order the quotes based on nearest available driver first
+
+### Changed
+
+- #892: update: input validations and baseFare range to be 0 - 500
+
+- #826: Simplify Migration.Gps parser
+
+- #844: [BKN-745] Refactor validation framework to hlists
+
+- #782: [BKN-724] Create vehicle inside createDriver API
+
+- #781: [BKN-725] Restrict vehicle unlinking
+
+- #722: [BKN-677] Replace linkEntity EP by linkVehicle
+
+- #871: Payment schema latest spec changes implementation
+
+- #864: [BKN-734] Allocator optimization
+
+- #870: new json domain values implementation
+
+- #867: filling bpp_id in FMD 
+
+### Fixed
+
+- #896: fix: wrong org name in cancellation by organization notification
+
+- #889: fix: btm shards config for sandbox and production
+
+- #887: [BKN-789] Fix login EP call limit
+
+- #882: Fix hardcoded vehicle org id
+
+- #876: [BKN-783] fix nightShiftEnd validation
+
+- #873: fixing tags field parsing in fulfillment from json instance
+
+- #872: init API parsing fix
+
 ## [2.0.0] - 10-07-2021
 
 ### Added
@@ -90,6 +144,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Go-live production release 
 
-[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v2.0.0
+[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v3.0.0
+[3.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v3.0.0
 [2.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v2.0.0
 [1.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v1.0.0
