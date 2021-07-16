@@ -38,14 +38,14 @@ cancelProductInstance ::
   CancelReq ->
   m CancelRes
 cancelProductInstance person req = do
-  let prodInstId = req.entityId
-  searchPI <- MPI.findById (Id prodInstId) >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
-  cs <- MC.findIdByPerson person (searchPI.caseId) >>= fromMaybeM CaseNotFound
+  let searchPIid = req.entityId
+  searchPI <- MPI.findById (Id searchPIid) >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
+  searchCase <- MC.findIdByPerson person (searchPI.caseId) >>= fromMaybeM CaseNotFound
   orderPI <- MPI.findByParentIdType (searchPI.id) Case.RIDEORDER >>= fromMaybeM PINotFound
   unless (isProductInstanceCancellable orderPI) $
     throwError $ PIInvalidStatus "Cannot cancel this ride"
-  let txnId = getId $ cs.id
-  let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder prodInstId Nothing)
+  let txnId = getId $ searchCase.id
+  let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder searchPIid Nothing)
   context <- buildContext "cancel" txnId Nothing Nothing
   organization <-
     OQ.findOrganizationById (searchPI.organizationId)
@@ -57,13 +57,13 @@ cancelProductInstance person req = do
 searchCancel :: (BAPMetrics m, DBFlow m r) => Person.Person -> CancelReq -> m CancelRes
 searchCancel person req = do
   let caseId = req.entityId
-  case_ <- MC.findIdByPerson person (Id caseId) >>= fromMaybeM CaseDoesNotExist
-  unless (isCaseCancellable case_) $ throwError (CaseInvalidStatus "Cannot cancel with this case")
+  searchCase <- MC.findIdByPerson person (Id caseId) >>= fromMaybeM CaseDoesNotExist
+  unless (isCaseCancellable searchCase) $ throwError (CaseInvalidStatus "Cannot cancel with this case")
   Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
-  piList <- MPI.findAllByCaseId (case_.id)
-  traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI.id <$> filter isProductInstanceCancellable piList)
-  Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-  MC.updateStatusFlow (case_.id) Case.CLOSED
+  searchPIList <- MPI.findAllByCaseId (searchCase.id)
+  traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI.id <$> filter isProductInstanceCancellable searchPIList)
+  Case.validateStatusTransition (searchCase.status) Case.CLOSED & fromEitherM CaseInvalidStatus
+  MC.updateStatusFlow (searchCase.id) Case.CLOSED
   logTagInfo ("txnId-" <> caseId) "Search Cancel"
   return Success
 
@@ -87,35 +87,35 @@ onCancel _org req = withFlowHandlerBecknAPI $
     validateContext "on_cancel" $ req.context
     case req.contents of
       Right msg -> do
-        let prodInstId = Id $ msg.order.id
+        let searchPIid = Id $ msg.order.id
         -- TODO: Handle usecase where multiple productinstances exists for one product
 
-        piList <- MPI.findAllByParentId prodInstId
-        case piList of
+        orderPIList <- MPI.findAllByParentId searchPIid
+        case orderPIList of
           [] -> return ()
           s : _ -> do
-            let orderPi = s
+            let orderPI = s
             -- TODO what if we update several PI but then get an error?
             -- wrap everything in a transaction
-            PI.validateStatusTransition (PI.status orderPi) PI.CANCELLED & fromEitherM PIInvalidStatus
-            MPI.updateStatus (PI.id orderPi) PI.CANCELLED
-            case_ <- MC.findById (PI.caseId orderPi) >>= fromMaybeM CaseDoesNotExist
-            Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-            MC.updateStatusFlow (PI.caseId orderPi) Case.CLOSED
+            PI.validateStatusTransition (PI.status orderPI) PI.CANCELLED & fromEitherM PIInvalidStatus
+            MPI.updateStatus (PI.id orderPI) PI.CANCELLED
+            orderCase <- MC.findById (PI.caseId orderPI) >>= fromMaybeM CaseDoesNotExist
+            Case.validateStatusTransition (orderCase.status) Case.CLOSED & fromEitherM CaseInvalidStatus
+            MC.updateStatusFlow (PI.caseId orderPI) Case.CLOSED
             return ()
-        productInstance <- MPI.findById prodInstId >>= fromMaybeM PIDoesNotExist
-        PI.validateStatusTransition (PI.status productInstance) PI.CANCELLED & fromEitherM PIInvalidStatus
-        MPI.updateStatus prodInstId PI.CANCELLED
-        let caseId = productInstance.caseId
+        searchPI <- MPI.findById searchPIid >>= fromMaybeM PIDoesNotExist
+        PI.validateStatusTransition (PI.status searchPI) PI.CANCELLED & fromEitherM PIInvalidStatus
+        MPI.updateStatus searchPIid PI.CANCELLED
+        let searchCaseId = searchPI.caseId
         -- notify customer
-        cs <- MC.findById caseId >>= fromMaybeM CaseNotFound
+        searchCase <- MC.findById searchCaseId >>= fromMaybeM CaseNotFound
         reason <- msg.order.cancellation_reason_id & fromMaybeM (InvalidRequest "No cancellation reason.")
-        logTagInfo ("txnId-" <> getId caseId) ("Cancellation reason " <> show reason)
-        whenJust (cs.requestor) $ \personId -> do
+        logTagInfo ("txnId-" <> getId searchCaseId) ("Cancellation reason " <> show reason)
+        whenJust (searchCase.requestor) $ \personId -> do
           mbPerson <- Person.findById $ Id personId
-          whenJust mbPerson $ \person -> Notify.notifyOnCancel cs person reason
+          whenJust mbPerson $ \person -> Notify.notifyOnCancel searchPI person reason
         --
-        arrPICase <- MPI.findAllByCaseId caseId
+        arrSearchPI <- MPI.findAllByCaseId searchCaseId
         let arrTerminalPI =
               filter
                 ( \prodInst -> do
@@ -125,14 +125,14 @@ onCancel _org req = withFlowHandlerBecknAPI $
                       || status == PI.CANCELLED
                       || status == PI.INVALID
                 )
-                arrPICase
+                arrSearchPI
         when
-          (length arrTerminalPI == length arrPICase)
+          (length arrTerminalPI == length arrSearchPI)
           ( do
               Metrics.incrementCaseCount Case.CLOSED Case.RIDEORDER
-              case_ <- MC.findById caseId >>= fromMaybeM CaseDoesNotExist
+              case_ <- MC.findById searchCaseId >>= fromMaybeM CaseDoesNotExist
               Case.validateStatusTransition (case_.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-              MC.updateStatusFlow caseId Case.CLOSED
+              MC.updateStatusFlow searchCaseId Case.CLOSED
           )
       Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err
     return Ack

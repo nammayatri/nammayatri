@@ -17,7 +17,6 @@ import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as PI
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
 import Utils.Common
@@ -257,11 +256,9 @@ notifyOnTrackCb personId tracker c =
         _ -> pure ()
     else pure ()
 
-notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => Case -> Person -> CancellationReason -> m ()
-notifyOnCancel c person reason = do
-  piList <- PI.findAllByCaseId c.id
-  prodInst <- if null piList then throwError PINotFound else return $ head piList
-  org <- QOrg.findOrganizationById (prodInst.organizationId) >>= fromMaybeM OrgNotFound
+notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => ProductInstance -> Person -> CancellationReason -> m ()
+notifyOnCancel rideSearchPI person reason = do
+  org <- QOrg.findOrganizationById (rideSearchPI.organizationId) >>= fromMaybeM OrgNotFound
   notifyPerson (notificationData $ org.name) person
   where
     notificationData orgName =
@@ -269,7 +266,7 @@ notifyOnCancel c person reason = do
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = show $ getId c.id,
+          fcmEntityIds = show $ getId rideSearchPI.caseId,
           fcmNotificationJSON = createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -280,32 +277,32 @@ notifyOnCancel c person reason = do
       ByUser ->
         unwords
           [ "You have cancelled your ride for",
-            showTimeIst (c.startTime) <> ".",
+            showTimeIst (rideSearchPI.startTime) <> ".",
             "Check the app for details."
           ]
       ByOrganization ->
         unwords
           [ "\"" <> orgName <> "\" agency had to cancel the ride for",
-            showTimeIst (c.startTime) <> ".",
+            showTimeIst (rideSearchPI.startTime) <> ".",
             "Please book again to get another ride."
           ]
       ByDriver ->
         unwords
           [ "The driver had to cancel the ride for",
-            showTimeIst (c.startTime) <> ".",
+            showTimeIst (rideSearchPI.startTime) <> ".",
             "Please book again to get another ride."
           ]
       AllocationTimeExpired ->
         unwords
           [ "Ride for",
-            showTimeIst (c.startTime),
+            showTimeIst (rideSearchPI.startTime),
             "has expired as we could not find a driver.",
             "Please book again to get a ride."
           ]
       NoDriversInRange ->
         unwords
           [ "Ride for",
-            showTimeIst (c.startTime),
+            showTimeIst (rideSearchPI.startTime),
             "has been cancelled as there are no drivers nearby.",
             "Please try again in sometime."
           ]
