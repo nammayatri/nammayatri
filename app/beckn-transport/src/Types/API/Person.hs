@@ -45,8 +45,6 @@ data UpdatePersonReq = UpdatePersonReq
     identifier :: Maybe Text,
     rating :: Maybe Text,
     deviceToken :: Maybe FCM.FCMRecipientToken,
-    udf1 :: Maybe Text,
-    udf2 :: Maybe Text,
     description :: Maybe Text,
     locationType :: Maybe SL.LocationType,
     lat :: Maybe Double,
@@ -69,8 +67,16 @@ validateUpdatePersonReq UpdatePersonReq {..} =
       validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
       validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
       validateField "fullName" fullName $ InMaybe $ MinLength 3 `And` P.name,
-      validateField "district" district $ InMaybe $ NotEmpty `And` P.name,
-      validateField "state" state $ InMaybe $ NotEmpty `And` P.name
+      validateField "rating" rating . InMaybe $ NotEmpty `And` P.digit,
+      validateField "description" description . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "ward" ward . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "district" district . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "city" city . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "state" state . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "country" country . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "pincode" pincode . InMaybe $ NotEmpty `And` star P.digit `And` ExactLength 6,
+      validateField "address" address . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "bound" bound . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
     ]
 
 instance DBFlow m r => ModifyTransform UpdatePersonReq SP.Person m where
@@ -88,8 +94,8 @@ instance DBFlow m r => ModifyTransform UpdatePersonReq SP.Person m where
              identifier = ifJust (req.identifier) (person.identifier),
              rating = ifJust (req.rating) (person.rating),
              deviceToken = ifJust (req.deviceToken) (person.deviceToken),
-             udf1 = ifJust (req.udf1) (person.udf1),
-             udf2 = ifJust (req.udf2) (person.udf2),
+             udf1 = person.udf1,
+             udf2 = person.udf2,
              organizationId = person.organizationId,
              description = ifJust (req.description) (person.description),
              locationId = Just (SL.id location)
@@ -159,8 +165,6 @@ data PersonReqEntity = PersonReqEntity
     deviceToken :: Maybe FCM.FCMRecipientToken,
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
-    udf1 :: Maybe Text,
-    udf2 :: Maybe Text,
     description :: Maybe Text,
     locationType :: Maybe SL.LocationType,
     lat :: Maybe Double,
@@ -179,9 +183,22 @@ data PersonReqEntity = PersonReqEntity
 validatePersonReqEntity :: Validate PersonReqEntity
 validatePersonReqEntity PersonReqEntity {..} =
   sequenceA_
-    [ validateField "firstName" firstName . InMaybe $ NotEmpty `And` P.name,
+    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.name,
+      validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "fullName" fullName $ InMaybe $ MinLength 3 `And` P.name,
+      validateField "rating" rating . InMaybe $ NotEmpty `And` P.digit,
       validateField "mobileNumber" mobileNumber $ InMaybe P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode $ InMaybe P.mobileCountryCode
+      validateField "mobileCountryCode" mobileCountryCode $ InMaybe P.mobileCountryCode,
+      validateField "description" description . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "ward" ward . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "district" district . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "city" city . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "state" state . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "country" country . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "pincode" pincode . InMaybe $ NotEmpty `And` star P.digit `And` ExactLength 6,
+      validateField "address" address . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
+      validateField "bound" bound . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
     ]
 
 instance (DBFlow m r, EncFlow m r) => CreateTransform PersonReqEntity SP.Person m where
@@ -210,8 +227,8 @@ instance (DBFlow m r, EncFlow m r) => CreateTransform PersonReqEntity SP.Person 
           SP.rating = req.rating,
           SP.status = SP.INACTIVE,
           SP.deviceToken = req.deviceToken,
-          SP.udf1 = req.udf1,
-          SP.udf2 = req.udf2,
+          SP.udf1 = Nothing,
+          SP.udf2 = Nothing,
           SP.organizationId = Nothing,
           SP.description = req.description,
           SP.locationId = Just location.id,
