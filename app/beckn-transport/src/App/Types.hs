@@ -58,7 +58,7 @@ data AppCfg = AppCfg
     graphhopperUrl :: BaseUrl,
     graceTerminationPeriod :: Int,
     defaultRadiusOfSearch :: Integer,
-    registrationHitsOpt :: RegistrationHitsOptions,
+    apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
@@ -89,7 +89,7 @@ data AppEnv = AppEnv
     graphhopperUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
-    registrationHitsOpt :: RegistrationHitsOptions,
+    apiRateLimitOptions :: APIRateLimitOptions,
     defaultRadiusOfSearch :: Integer,
     httpClientOptions :: HttpClientOptions
   }

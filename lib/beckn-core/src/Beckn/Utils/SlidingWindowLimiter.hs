@@ -10,10 +10,10 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import EulerHS.Prelude hiding (id)
 import GHC.Records.Extra
 
-checkSlidingWindowLimit :: HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions] => Text -> m ()
+checkSlidingWindowLimit :: HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions] => Text -> m ()
 checkSlidingWindowLimit key = do
-  hitsLimit <- asks (.registrationHitsOpt.limit)
-  hitsLimitResetTime <- asks (.registrationHitsOpt.limitResetTime)
+  hitsLimit <- asks (.apiRateLimitOptions.limit)
+  hitsLimitResetTime <- asks (.apiRateLimitOptions.limitResetTimeInSec)
   unlessM (slidingWindowLimiter key hitsLimit hitsLimitResetTime) $
     throwError $ HitsLimitError hitsLimitResetTime
 

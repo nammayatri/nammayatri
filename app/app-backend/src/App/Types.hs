@@ -63,7 +63,7 @@ data AppCfg = AppCfg
     graphhopperUrl :: BaseUrl,
     metricsSearchDurationTimeout :: Int,
     graceTerminationPeriod :: Int,
-    registrationHitsOpt :: RegistrationHitsOptions,
+    apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
@@ -95,7 +95,7 @@ data AppEnv = AppEnv
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    registrationHitsOpt :: RegistrationHitsOptions,
+    apiRateLimitOptions :: APIRateLimitOptions,
     isShuttingDown :: TMVar (),
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,

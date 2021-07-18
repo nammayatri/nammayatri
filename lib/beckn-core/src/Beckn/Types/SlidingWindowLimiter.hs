@@ -3,8 +3,8 @@ module Beckn.Types.SlidingWindowLimiter where
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
 
-data RegistrationHitsOptions = RegistrationHitsOptions
+data APIRateLimitOptions = APIRateLimitOptions
   { limit :: Int,
-    limitResetTime :: Int
+    limitResetTimeInSec :: Int
   }
   deriving (Generic, FromDhall)

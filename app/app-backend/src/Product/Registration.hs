@@ -40,7 +40,7 @@ initiateFlow ::
   ( EncFlow m r,
     DBFlow m r,
     FCMFlow m r,
-    HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions, "otpSmsTemplate" ::: Text],
+    HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions, "otpSmsTemplate" ::: Text],
     CoreMetrics m
   ) =>
   InitiateLoginReq ->

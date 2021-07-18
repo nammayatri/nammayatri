@@ -37,7 +37,7 @@ initiateFlowHitsCountKey person = "Registration:initiateFlow" <> getId person.id
 initiateFlow ::
   ( DBFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["registrationHitsOpt" ::: RegistrationHitsOptions],
+    HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions],
     HasFlowEnv m r '["otpSmsTemplate" ::: Text],
     FCMFlow m r,
     CoreMetrics m

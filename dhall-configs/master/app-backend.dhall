@@ -63,9 +63,9 @@ let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v1"
 
 let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 
-let registrationHitsOptions =
+let apiRateLimitOptions =
   { limit = +4
-  , limitResetTime = +600
+  , limitResetTimeInSec = +600
   }
 
 let httpClientOptions =
@@ -110,6 +110,6 @@ in
 , graphhopperUrl = common.graphhopperUrl
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
-, registrationHitsOpt = registrationHitsOptions
+, apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
 }

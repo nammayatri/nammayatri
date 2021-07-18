@@ -60,9 +60,9 @@ let gwUri = "http://localhost:8015/v1"
 
 let providerUri = "http://localhost:8014/v1"
 
-let registrationHitsOptions =
+let apiRateLimitOptions =
   { limit = +4
-  , limitResetTime = +600
+  , limitResetTimeInSec = +600
   }
 
 let httpClientOptions =
@@ -107,6 +107,6 @@ in
 , graphhopperUrl = common.graphhopperUrl
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
-, registrationHitsOpt = registrationHitsOptions
+, apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
 }

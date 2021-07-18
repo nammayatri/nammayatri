@@ -40,9 +40,9 @@ let smsConfig =
 
 let appUri = "http://localhost:8013/v1"
 
-let registrationHitsOptions =
+let apiRateLimitOptions =
   { limit = +4
-  , limitResetTime = +600
+  , limitResetTimeInSec = +600
   }
 
 let httpClientOptions =
@@ -84,6 +84,6 @@ in
 , graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
-, registrationHitsOpt = registrationHitsOptions
+, apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
 }
