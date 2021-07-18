@@ -8,6 +8,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Storage.Case as Case
 import qualified Beckn.Types.Storage.ProductInstance as ProductInstance
 import qualified Beckn.Types.Storage.RegistrationToken as SR
+import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import EulerHS.Prelude hiding (id)
 import Product.ProductInstance (notifyUpdateToBAP)
 import qualified Product.RideAPI.Handlers.StartRide as Handler
@@ -28,7 +29,8 @@ startRide SR.RegistrationToken {..} rideId req = withFlowHandlerAPI $ do
           findPIsByParentId = QProductInstance.findAllByParentId,
           findCaseByIdsAndType = QCase.findByIdType,
           startRide = startRideTransaction,
-          notifyBAPRideStarted = \searchPi orderPi -> notifyUpdateToBAP searchPi orderPi ProductInstance.INPROGRESS
+          notifyBAPRideStarted = \searchPi orderPi -> notifyUpdateToBAP searchPi orderPi ProductInstance.INPROGRESS,
+          rateLimitStartRide = \personId rideId' -> checkSlidingWindowLimit (getId personId <> "_" <> getId rideId')
         }
 
 startRideTransaction :: DBFlow m r => [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m ()

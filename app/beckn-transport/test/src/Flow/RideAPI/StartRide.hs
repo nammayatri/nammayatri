@@ -29,7 +29,8 @@ handle =
           then pure $ Just trackerCase
           else pure $ Just rideCase,
       startRide = \_piIds _trackerCaseId _orderCaseId -> pure (),
-      notifyBAPRideStarted = \_searchPi _orderPi -> pure ()
+      notifyBAPRideStarted = \_searchPi _orderPi -> pure (),
+      rateLimitStartRide = \_driverId _rideId -> pure ()
     }
 
 rideProductInstance :: ProductInstance.ProductInstance

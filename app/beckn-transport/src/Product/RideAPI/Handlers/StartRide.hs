@@ -16,11 +16,13 @@ data ServiceHandle m = ServiceHandle
     findPIsByParentId :: Id ProductInstance.ProductInstance -> m [ProductInstance.ProductInstance],
     findCaseByIdsAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
     startRide :: [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m (),
-    notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m ()
+    notifyBAPRideStarted :: ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m (),
+    rateLimitStartRide :: Id Person.Person -> Id ProductInstance.ProductInstance -> m ()
   }
 
 startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Id Person.Person -> Id ProductInstance.ProductInstance -> Text -> m APISuccess.APISuccess
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
+  rateLimitStartRide requestorId rideId
   requestor <- findPersonById requestorId >>= fromMaybeM PersonNotFound
   orderPi <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
   case requestor.role of
