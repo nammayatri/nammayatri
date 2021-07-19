@@ -10,7 +10,6 @@ import Beckn.Utils.Logging
 import EulerHS.Prelude hiding (product)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Organization as Organization
-import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.SearchRequest as SearchRequest
 import qualified Types.API.Feedback as API
 import Types.Error
@@ -21,19 +20,20 @@ import Utils.Common
     throwError,
     withFlowHandlerAPI,
   )
+import qualified Storage.Queries.Ride as QRide
 
 feedback :: Id Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
 feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
-  let orderPIId = request.productInstanceId
-  orderPI <- ProductInstance.findOrderPIById (Id orderPIId) >>= fromMaybeM PIDoesNotExist
-  searchRequest <- SearchRequest.findByPersonId personId (orderPI.requestId) >>= fromMaybeM SearchRequestNotFound
+  let rideId = Id request.productInstanceId
+  ride <- QRide.findById rideId >>= fromMaybeM PIDoesNotExist
+  searchRequest <- SearchRequest.findByPersonId personId (ride.requestId) >>= fromMaybeM SearchRequestNotFound
   let txnId = getId searchRequest.id
-  searchPIId <- getId <$> orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
+  let searchPIId = getId ride.productInstanceId
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
-    Organization.findOrganizationById (orderPI.organizationId)
+    Organization.findOrganizationById (ride.organizationId)
       >>= fromMaybeM OrgNotFound
   let feedbackMsg =
         Beckn.FeedbackReqMessage

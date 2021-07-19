@@ -13,29 +13,29 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as MPI
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideCancellationReason as QRCR
 import qualified Storage.Queries.SearchRequest as MC
 import Types.API.Cancel as Cancel
 import Types.Error
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
-cancel :: Id PI.ProductInstance -> Id Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
+cancel :: Id Ride.Ride -> Id Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
 cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let orderPIId = bookingId
   rideCancellationReasonAPI <- req.rideCancellationReason & fromMaybeM (InvalidRequest "Cancellation reason is not present.")
-  orderPI <- MPI.findOrderPIById orderPIId >>= fromMaybeM PIDoesNotExist
-  searchPIId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
+  ride <- QRide.findById bookingId >>= fromMaybeM RideDoesNotExist
+  let searchPIId = ride.productInstanceId
   searchPI <- MPI.findById searchPIId >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
   searchRequest <- MC.findByPersonId personId (searchPI.requestId) >>= fromMaybeM SearchRequestNotFound
-  unless (isProductInstanceCancellable orderPI) $
-    throwError $ PIInvalidStatus "Cannot cancel this ride"
+  unless (isRideCancellable ride) $
+    throwError $ RideInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ searchRequest.id
   let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder (getId searchPIId) Nothing)
   context <- buildContext "cancel" txnId Nothing Nothing
@@ -45,21 +45,21 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
   DB.runSqlDBTransaction $
-    QRCR.create $ makeRideCancelationReason orderPI.id rideCancellationReasonAPI
+    QRCR.create $ makeRideCancelationReason ride.id rideCancellationReasonAPI
   return Success
   where
-    makeRideCancelationReason orderPIId rideCancellationReasonAPI = do
+    makeRideCancelationReason rideId rideCancellationReasonAPI = do
       let RideCancellationReasonAPIEntity {..} = rideCancellationReasonAPI
       SRCR.RideCancellationReason
-        { rideId = cast orderPIId,
+        { rideId = rideId,
           source = ByUser,
           reasonCode = Just reasonCode,
           additionalInfo = additionalInfo
         }
-        
-isProductInstanceCancellable :: PI.ProductInstance -> Bool
-isProductInstanceCancellable prodInst =
-  isRight $ PI.validateStatusTransition (prodInst.status) PI.CANCELLED
+
+isRideCancellable :: Ride.Ride -> Bool
+isRideCancellable ride =
+  ride.status `elem` [Ride.NEW, Ride.INSTOCK, Ride.CONFIRMED, Ride.TRIP_ASSIGNED]
 
 onCancel ::
   SignatureAuthResult Organization.Organization ->
@@ -73,13 +73,15 @@ onCancel _org req = withFlowHandlerBecknAPI $
         let searchPIid = Id $ msg.order.id
         -- TODO: Handle usecase where multiple productinstances exists for one product
 
-        mbOrderPI <- MPI.findByParentIdType searchPIid PI.RIDEORDER
+        mbRide <- QRide.findByProductInstanceId searchPIid
 
-        whenJust mbOrderPI $ \orderPI -> do
+        whenJust mbRide $ \ride -> do
           -- TODO what if we update several PI but then get an error?
           -- wrap everything in a transaction
-          PI.validateStatusTransition (PI.status orderPI) PI.CANCELLED & fromEitherM PIInvalidStatus
-          MPI.updateStatus (PI.id orderPI) PI.CANCELLED
+          unless (ride.status `elem` [Ride.NEW, Ride.INSTOCK, Ride.CONFIRMED, Ride.TRIP_ASSIGNED]) $
+            throwError (RideInvalidStatus (show ride.status))
+          DB.runSqlDBTransaction $
+            QRide.updateStatus ride.id Ride.CANCELLED
         searchPI <- MPI.findById searchPIid >>= fromMaybeM PIDoesNotExist
         let searchRequestId = searchPI.requestId
         -- notify customer
@@ -90,22 +92,12 @@ onCancel _org req = withFlowHandlerBecknAPI $
           mbPerson <- Person.findById $ Id personId
           whenJust mbPerson $ \person -> Notify.notifyOnCancel searchPI person.id person.deviceToken cancellationSource
           unless (cancellationSource == ByUser) $
-            whenJust mbOrderPI $ \orderPI ->
+            whenJust mbRide $ \ride ->
               DB.runSqlDBTransaction $
-                QRCR.create $ SRCR.RideCancellationReason orderPI.id cancellationSource Nothing Nothing
+                QRCR.create $ SRCR.RideCancellationReason ride.id cancellationSource Nothing Nothing
         --
-        arrOrderPI <- MPI.findAllByRequestIdAndType searchRequestId PI.RIDEORDER
-        let arrTerminalPI =
-              filter
-                ( \prodInst -> do
-                    let status = prodInst.status
-                    status == PI.COMPLETED
-                      || status == PI.OUTOFSTOCK
-                      || status == PI.CANCELLED
-                      || status == PI.INVALID
-                )
-                arrOrderPI
-        when (length arrTerminalPI == length arrOrderPI) $
-          Metrics.incrementSearchRequestCount SearchRequest.CLOSED SearchRequest.RIDESEARCH
+        let isTerminalState = maybe True (\ride -> ride.status `elem` [Ride.COMPLETED, Ride.OUTOFSTOCK, Ride.CANCELLED, Ride.INVALID]) mbRide
+        when isTerminalState $
+          Metrics.incrementSearchRequestCount SearchRequest.CLOSED
       Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err
     return Ack

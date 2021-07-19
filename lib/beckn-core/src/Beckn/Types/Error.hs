@@ -314,6 +314,37 @@ instance IsHTTPError ProductInstanceError where
 
 instance IsAPIError ProductInstanceError
 
+data RideError
+  = RideNotFound
+  | RideDoesNotExist
+  | RideFieldNotPresent Text
+  | RideInvalidStatus Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RideError
+
+instance IsBaseError RideError where
+  toMessage = \case
+    RideDoesNotExist -> Just "No ride matches passed data."
+    RideFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this ride."
+    RideInvalidStatus msg -> Just $ "Attempted to do some action in wrong ride status. " <> msg
+    _ -> Nothing
+
+instance IsHTTPError RideError where
+  toErrorCode = \case
+    RideNotFound -> "RIDE_NOT_FOUND"
+    RideDoesNotExist -> "RIDE_DOES_NOT_EXISTS"
+    RideFieldNotPresent _ -> "RIDE_FIELD_NOT_PRESENT"
+    RideInvalidStatus _ -> "RIDE_INVALID_STATUS"
+  
+  toHttpCode = \case
+    RideNotFound -> E500
+    RideDoesNotExist -> E400
+    RideFieldNotPresent _ -> E500
+    RideInvalidStatus _ -> E400
+
+instance IsAPIError RideError
+
 data GatewayError
   = GatewaySelectorNotSet
   | NSDLBaseUrlNotSet

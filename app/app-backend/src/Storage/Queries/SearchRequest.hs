@@ -31,12 +31,11 @@ create searchRequest = do
 findAllByTypeAndStatuses ::
   DBFlow m r =>
   Id Person.Person ->
-  Storage.SearchRequestType ->
   [Storage.SearchRequestStatus] ->
   Maybe Integer ->
   Maybe Integer ->
   m [Storage.SearchRequest]
-findAllByTypeAndStatuses personId searchRequestType searchRequestStatuses mlimit moffset = do
+findAllByTypeAndStatuses personId searchRequestStatuses mlimit moffset = do
   dbTable <- getDbTable
   let limit = fromMaybe 100 mlimit
       offset = fromMaybe 0 moffset
@@ -47,8 +46,7 @@ findAllByTypeAndStatuses personId searchRequestType searchRequestStatuses mlimit
       foldl
         (&&.)
         (B.val_ True)
-        [ _type ==. B.val_ searchRequestType,
-          B.in_ status (B.val_ <$> searchRequestStatuses) ||. complementVal searchRequestStatuses,
+        [ B.in_ status (B.val_ <$> searchRequestStatuses) ||. complementVal searchRequestStatuses,
           requestor ==. B.val_ (Just $ getId personId)
         ]
 
@@ -121,13 +119,12 @@ findAllWithLimitOffsetWhere ::
   DBFlow m r =>
   [Id Loc.SearchReqLocation] ->
   [Id Loc.SearchReqLocation] ->
-  [Storage.SearchRequestType] ->
   [Storage.SearchRequestStatus] ->
   [Text] ->
   Maybe Int ->
   Maybe Int ->
   m [Storage.SearchRequest]
-findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s mlimit moffset = do
+findAllWithLimitOffsetWhere fromLocationIds toLocationIds statuses udf1s mlimit moffset = do
   dbTable <- getDbTable
   DB.findAll
     dbTable
@@ -144,7 +141,6 @@ findAllWithLimitOffsetWhere fromLocationIds toLocationIds types statuses udf1s m
         [ fromLocationId `B.in_` (B.val_ <$> fromLocationIds) ||. complementVal fromLocationIds,
           toLocationId `B.in_` (B.val_ <$> toLocationIds) ||. complementVal toLocationIds,
           status `B.in_` (B.val_ <$> statuses) ||. complementVal statuses,
-          _type `B.in_` (B.val_ <$> types) ||. complementVal types,
           udf1 `B.in_` (B.val_ . Just <$> udf1s) ||. complementVal udf1s
         ]
 

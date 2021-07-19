@@ -22,19 +22,21 @@ import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
 import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
-import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as SProduct
 import qualified Storage.Queries.SearchReqLocation as Loc
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Test.RandomStrings as RS
 import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics, HasBPPMetrics)
-import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.SearchReqLocation as Location
+import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
@@ -119,7 +121,6 @@ mkSearchRequest req uuid now validity startTime fromLocation toLocation transpor
       description = Just "SearchRequest to search for a Ride",
       shortId = ShortId $ tId <> "_" <> req.context.transaction_id,
       industry = SearchRequest.MOBILITY,
-      _type = SearchRequest.RIDESEARCH,
       exchangeType = SearchRequest.FULFILLMENT,
       status = SearchRequest.NEW,
       startTime = startTime,
@@ -211,7 +212,6 @@ mkProductInstance productSearchRequest price status transporterId nearestDriverD
         entityType = ProductInstance.VEHICLE,
         entityId = Nothing,
         quantity = 1,
-        _type = ProductInstance.RIDESEARCH,
         price = price,
         actualPrice = Nothing,
         status = status,
@@ -221,7 +221,6 @@ mkProductInstance productSearchRequest price status transporterId nearestDriverD
         fromLocation = Just $ productSearchRequest.fromLocationId,
         toLocation = Just $ productSearchRequest.toLocationId,
         organizationId = transporterId,
-        parentId = Nothing,
         distance = 0,
         udf1 = show <$> nearestDriverDist,
         udf2 = Nothing,
@@ -240,7 +239,7 @@ mkOnSearchPayload ::
   Org.Organization ->
   m API.OnSearchServices
 mkOnSearchPayload productSearchRequest productInstances transporterOrg = do
-  ProductInstance.getCountByStatus (transporterOrg.id) ProductInstance.RIDEORDER
+  QRide.getCountByStatus (transporterOrg.id)
     <&> mkProviderInfo transporterOrg . mkProviderStats
     >>= ExternalAPITransform.mkCatalog productSearchRequest productInstances
     <&> API.OnSearchServices
@@ -254,10 +253,10 @@ mkProviderInfo org stats =
       contacts = fromMaybe "" (org.mobileNumber)
     }
 
-mkProviderStats :: [(ProductInstance.ProductInstanceStatus, Int)] -> Common.ProviderStats
+mkProviderStats :: [(Ride.RideStatus, Int)] -> Common.ProviderStats
 mkProviderStats piCount =
   Common.ProviderStats
-    { completed = List.lookup ProductInstance.COMPLETED piCount,
-      inprogress = List.lookup ProductInstance.INPROGRESS piCount,
-      confirmed = List.lookup ProductInstance.CONFIRMED piCount
+    { completed = List.lookup Ride.COMPLETED piCount,
+      inprogress = List.lookup Ride.INPROGRESS piCount,
+      confirmed = List.lookup Ride.CONFIRMED piCount
     }

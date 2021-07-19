@@ -25,15 +25,15 @@ finishSearchMetrics txnId = do
   bmContainer <- asks (.bapMetrics)
   finishSearchMetrics' bmContainer txnId
 
-incrementSearchRequestCount:: HasBAPMetrics m r => SearchRequest.SearchRequestStatus -> SearchRequest.SearchRequestType -> m ()
-incrementSearchRequestCount searchRequestStatus searchRequestType = do
+incrementSearchRequestCount:: HasBAPMetrics m r => SearchRequest.SearchRequestStatus -> m ()
+incrementSearchRequestCount searchRequestStatus = do
   bmContainer <- asks (.bapMetrics)
-  incrementCaseCount' bmContainer searchRequestStatus searchRequestType
+  incrementCaseCount' bmContainer searchRequestStatus
 
-incrementCaseCount' :: L.MonadFlow m => BAPMetricsContainer -> SearchRequest.SearchRequestStatus -> SearchRequest.SearchRequestType -> m ()
-incrementCaseCount' bmContainer searchRequestStatus searchRequestType = do
+incrementCaseCount' :: L.MonadFlow m => BAPMetricsContainer -> SearchRequest.SearchRequestStatus -> m ()
+incrementCaseCount' bmContainer searchRequestStatus = do
   let searchRequestCounter = bmContainer.searchRequestCounter
-  L.runIO $ P.withLabel searchRequestCounter (show searchRequestStatus, show searchRequestType) P.incCounter
+  L.runIO $ P.withLabel searchRequestCounter (show searchRequestStatus) P.incCounter
 
 putSearchDuration :: L.MonadFlow m => P.Histogram -> Double -> m ()
 putSearchDuration searchDurationHistogram duration = L.runIO $ P.observe searchDurationHistogram duration

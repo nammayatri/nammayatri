@@ -5,13 +5,12 @@ import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
-import Types.Storage.ProductInstance (ProductInstance)
-import Types.Storage.Ride (RideAPIEntity)
+import Types.Storage.Ride (RideAPIEntity, Ride)
 import Types.Storage.RideBooking (RideBookingStatus)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 
 data RideBookingStatusRes = RideBookingStatusRes
-  { id :: Id ProductInstance,
+  { id :: Id Ride,
     status :: RideBookingStatus,
     agencyName :: Text,
     agencyNumber :: Maybe Text,

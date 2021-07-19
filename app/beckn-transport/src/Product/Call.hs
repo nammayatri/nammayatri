@@ -6,15 +6,14 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import EulerHS.Prelude
 import ExternalAPI.Flow as ExternalAPI
-import qualified Storage.Queries.ProductInstance as PI
+import qualified Storage.Queries.Ride as QRide
 import Types.Error
 import qualified Types.Storage.Person as SP
-import Types.Storage.ProductInstance (ProductInstance)
 import Utils.Common
+import qualified Types.Storage.Ride as SRide
 
-initiateCall :: Id ProductInstance -> Id SP.Person -> FlowHandler CallRes
+initiateCall :: Id SRide.Ride -> Id SP.Person -> FlowHandler CallRes
 initiateCall rideId _ = withFlowHandlerAPI $ do
-  prdInstance <- PI.findById rideId >>= fromMaybeM PIDoesNotExist -- RIDEORDER PI
-  rideSearchProductInstanceId <- prdInstance.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
-  ExternalAPI.initiateCall rideSearchProductInstanceId -- RIDESEARCH PI
+  ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
+  ExternalAPI.initiateCall ride.productInstanceId
   return Ack

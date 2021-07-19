@@ -10,8 +10,8 @@ import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
-import Types.App
 import Types.Storage.Organization
+import qualified Types.Storage.Ride as Ride
 
 data RideRequestType = ALLOCATION | CANCELLATION | DRIVER_RESPONSE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -26,7 +26,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be RideRequestType
 
 data RideRequestT f = RideRequest
   { id :: B.C f (Id RideRequest),
-    rideId :: B.C f (Id Ride),
+    rideId :: B.C f (Id Ride.Ride),
     shortOrgId :: B.C f (ShortId Organization),
     createdAt :: B.C f UTCTime,
     _type :: B.C f RideRequestType,
@@ -39,7 +39,7 @@ type RideRequest = RideRequestT Identity
 type RideRequestPrimaryKey = B.PrimaryKey RideRequestT Identity
 
 instance B.Table RideRequestT where
-  data PrimaryKey RideRequestT f = RideRequestPrimaryKey (B.C f (Id Ride))
+  data PrimaryKey RideRequestT f = RideRequestPrimaryKey (B.C f (Id Ride.Ride))
     deriving (Generic, B.Beamable)
   primaryKey = RideRequestPrimaryKey . rideId
 

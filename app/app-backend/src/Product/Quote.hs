@@ -23,7 +23,7 @@ getQuotes searchRequestId _ = withFlowHandlerAPI $ do
   searchRequest <- QSR.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
   fromLocation <- Location.findLocationById searchRequest.fromLocationId >>= fromMaybeM LocationNotFound
   toLocation <- Location.findLocationById searchRequest.toLocationId >>= fromMaybeM LocationNotFound
-  piList <- QPI.findAllByRequestIdAndType searchRequest.id PI.RIDESEARCH
+  piList <- QPI.findAllByRequestId searchRequest.id
   quotes <- traverse buildQuote $ sortByNearestDriverDistance piList
   return $
     API.GetQuotesRes

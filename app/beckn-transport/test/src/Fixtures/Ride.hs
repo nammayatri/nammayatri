@@ -1,35 +1,34 @@
-module Fixtures.ProductInstance where
+module Fixtures.Ride where
 
 import qualified Beckn.Types.Amount as Amount
 import Beckn.Types.Id
 import Data.Ratio ((%))
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
-import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 
-defaultProductInstance :: ProductInstance.ProductInstance
-defaultProductInstance =
-  ProductInstance.ProductInstance
+defaultRide :: Ride.Ride
+defaultRide =
+  Ride.Ride
     { id = Id "1",
       requestId = Id "1",
       productId = Id "1",
       personId = Just $ Id "1",
       personUpdatedAt = Nothing,
       shortId = "",
-      entityType = ProductInstance.VEHICLE,
+      entityType = Ride.VEHICLE,
       entityId = Nothing,
       quantity = 0,
       price = Just . Amount.Amount $ 100 % 1,
-      actualPrice = Nothing,
-      status = ProductInstance.COMPLETED,
+      status = Ride.COMPLETED,
       startTime = Fixtures.defaultTime,
       endTime = Nothing,
       validTill = Fixtures.defaultTime,
       fromLocation = Nothing,
       toLocation = Nothing,
       organizationId = "",
-      distance = 0,
+      productInstanceId = "",
       udf1 = Nothing,
       udf2 = Nothing,
       udf3 = Nothing,

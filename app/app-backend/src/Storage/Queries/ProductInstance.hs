@@ -12,7 +12,6 @@ import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as Storage
 import Types.Storage.Products
 import qualified Types.Storage.SearchRequest as SearchRequest
@@ -34,24 +33,14 @@ findById pid = do
   DB.findOne dbTable (predicate pid)
   where
     predicate piid Storage.ProductInstance {..} = id ==. B.val_ piid
-
-findOrderPIById :: DBFlow m r => Id Storage.ProductInstance -> m (Maybe Storage.ProductInstance)
-findOrderPIById pid = do
-  dbTable <- getDbTable
-  DB.findOne dbTable (predicate pid)
-  where
-    predicate piid Storage.ProductInstance {..} =
-      id ==. B.val_ piid
-        &&. _type ==. B.val_ Storage.RIDEORDER
         
-findAllByRequestIdAndType :: DBFlow m r => Id SearchRequest.SearchRequest -> Storage.ProductInstanceType -> m [Storage.ProductInstance]
-findAllByRequestIdAndType searchRequestId piType = do
+findAllByRequestId :: DBFlow m r => Id SearchRequest.SearchRequest -> m [Storage.ProductInstance]
+findAllByRequestId searchRequestId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate Storage.ProductInstance {..} =
       requestId ==. B.val_ searchRequestId
-        &&. _type ==. B.val_ piType
 
 findByProductId :: DBFlow m r => Id Products -> m (Maybe Storage.ProductInstance)
 findByProductId pId = do
@@ -60,21 +49,6 @@ findByProductId pId = do
   where
     predicate Storage.ProductInstance {..} =
       productId ==. B.val_ pId
-
-findAllOrdersByPerson :: DBFlow m r => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.ProductInstance]
-findAllOrdersByPerson perId mbLimit mbOffset mbOnlyActive = do
-  dbTable <- getDbTable
-  let limit = fromMaybe 100 mbLimit
-      offset = fromMaybe 0 mbOffset
-      isOnlyActive = Just True == mbOnlyActive
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset) $ predicate isOnlyActive
-  where
-    predicate isOnlyActive Storage.ProductInstance {..} =
-      personId ==. B.val_ (Just perId)
-        &&. _type ==. B.val_ Storage.RIDEORDER
-        &&. if isOnlyActive
-          then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
-          else B.val_ True
 
 updateRequestId ::
   DBFlow m r =>
@@ -142,24 +116,20 @@ listAllProductInstanceWithOffset ::
   Integer ->
   Storage.ListById ->
   [Storage.ProductInstanceStatus] ->
-  [Storage.ProductInstanceType] ->
   m [Storage.ProductInstance]
-listAllProductInstanceWithOffset limit offset lbid stats piTypes = do
+listAllProductInstanceWithOffset limit offset lbid stats = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) (predicate lbid stats)
   where
     predicate (Storage.ByApplicationId i) s Storage.ProductInstance {..} =
       requestId ==. B.val_ i
         &&. (status `B.in_` (B.val_ <$> s) ||. complementVal s)
-        &&. (_type `B.in_` (B.val_ <$> piTypes) ||. complementVal piTypes)
     predicate (Storage.ByCustomerId i) s Storage.ProductInstance {..} =
       personId ==. B.val_ (Just i)
         &&. (status `B.in_` (B.val_ <$> s) ||. complementVal s)
-        &&. (_type `B.in_` (B.val_ <$> piTypes) ||. complementVal piTypes)
     predicate (Storage.ById i) s Storage.ProductInstance {..} =
       productId ==. B.val_ i
         &&. (status `B.in_` (B.val_ <$> s) ||. complementVal s)
-        &&. (_type `B.in_` (B.val_ <$> piTypes) ||. complementVal piTypes)
     orderBy Storage.ProductInstance {..} = B.desc_ updatedAt
 
 listAllProductInstance ::
@@ -204,29 +174,6 @@ updateMultiple piId prdInst = do
           actualPrice <-. B.val_ (Storage.actualPrice prodInst),
           actualDistance <-. B.val_ (Storage.actualDistance prodInst)
         ]
-
-findByParentIdType ::
-  DBFlow m r =>
-  Id Storage.ProductInstance ->
-  Storage.ProductInstanceType ->
-  m (Maybe Storage.ProductInstance)
-findByParentIdType mparentId piType = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.ProductInstance {..} =
-      parentId ==. B.val_ (Just mparentId)
-        &&. _type ==. B.val_ piType
-
-findAllByParentId ::
-  DBFlow m r =>
-  Id Storage.ProductInstance ->
-  m [Storage.ProductInstance]
-findAllByParentId piId = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity (predicate piId)
-  where
-    predicate piid Storage.ProductInstance {..} = parentId ==. B.val_ (Just piid)
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l

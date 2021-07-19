@@ -14,7 +14,6 @@ import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Storage.Queries.Vehicle as QVeh
@@ -23,28 +22,27 @@ import Types.Error
 import Types.Storage.AllocationEvent
 import qualified Types.Storage.AllocationEvent as AllocationEvent
 import qualified Types.Storage.Person as SP
-import Types.Storage.ProductInstance (ProductInstance)
-import qualified Types.Storage.ProductInstance as SPI
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRideBooking
 import Types.Storage.RideRequest
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Types.Storage.SearchReqLocation as SLoc
 import Utils.Common
+import qualified Storage.Queries.Ride as QRide
 
-rideBookingStatus :: Id SPI.ProductInstance -> Id SP.Person -> FlowHandler API.RideBookingStatusRes
+rideBookingStatus :: Id SRide.Ride -> Id SP.Person -> FlowHandler API.RideBookingStatusRes
 rideBookingStatus rideBookingId _ = withFlowHandlerAPI $ do
-  orderPI <- QPI.findById rideBookingId >>= fromMaybeM PIDoesNotExist
-  buildRideBookingStatusRes orderPI
+  ride <- QRide.findById rideBookingId >>= fromMaybeM PIDoesNotExist
+  buildRideBookingStatusRes ride
 
 rideBookingList :: SP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> FlowHandler API.RideBookingListRes
 rideBookingList person mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
   let Just orgId = person.organizationId
-  orderPIList <- QPI.findAllOrdersByOrg orgId mbLimit mbOffset mbOnlyActive
-  API.RideBookingListRes <$> traverse buildRideBookingStatusRes orderPIList
+  rideList <- QRide.findAllByOrg orgId mbLimit mbOffset mbOnlyActive
+  API.RideBookingListRes <$> traverse buildRideBookingStatusRes rideList
 
 rideBookingCancel ::
-  Id SPI.ProductInstance ->
+  Id SRide.Ride ->
   SP.Person ->
   FlowHandler APISuccess
 rideBookingCancel rideBookingId admin = withFlowHandlerAPI $ do
@@ -55,27 +53,27 @@ rideBookingCancel rideBookingId admin = withFlowHandlerAPI $ do
   RideRequest.createFlow =<< mkRideReq rideBookingId (org.shortId) SRideRequest.CANCELLATION
   return Success
 
-getRideInfo :: Id SPI.ProductInstance -> Id SP.Person -> FlowHandler API.GetRideInfoRes
+getRideInfo :: Id SRide.Ride -> Id SP.Person -> FlowHandler API.GetRideInfoRes
 getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
   mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId (cast rideBookingId)
   case mbNotification of
     Nothing -> return $ API.GetRideInfoRes Nothing
     Just notification -> do
-      let orderPIId = cast $ notification.rideId
+      let rideId = cast $ notification.rideId
       let notificationExpiryTime = notification.expiresAt
-      orderPI <- QPI.findById orderPIId >>= fromMaybeM PINotFound
+      ride <- QRide.findById rideId >>= fromMaybeM PINotFound
       driver <- QP.findPersonById personId >>= fromMaybeM PersonNotFound
       driverLocation <-
         QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
       let driverLatLong = Location.locationToLatLong driverLocation
       fromLocation <-
-        orderPI.fromLocation & fromMaybeM (PIFieldNotPresent "from_location_id")
+        ride.fromLocation & fromMaybeM (PIFieldNotPresent "from_location_id")
           >>= QLoc.findLocationById
           >>= fromMaybeM LocationNotFound
       let fromLatLong = Location.locationToLatLong fromLocation
       toLocation <-
-        orderPI.toLocation & fromMaybeM (PIFieldNotPresent "to_location_id")
+        ride.toLocation & fromMaybeM (PIFieldNotPresent "to_location_id")
           >>= QLoc.findLocationById
           >>= fromMaybeM LocationNotFound
       mbRoute <- Location.getRoute' [driverLatLong, fromLatLong]
@@ -83,13 +81,13 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
         API.GetRideInfoRes $
           Just $
             API.RideInfo
-              { bookingId = orderPIId,
+              { bookingId = rideId,
                 pickupLoc = fromLatLong,
                 dropLoc = Location.locationToLatLong toLocation,
                 etaForPickupLoc = (`div` 60) . (.durationInS) <$> mbRoute,
                 distanceToPickupLoc = (.distanceInM) <$> mbRoute,
                 notificationExpiryTime = notificationExpiryTime,
-                estimatedPrice = amountToString <$> orderPI.price
+                estimatedPrice = amountToString <$> ride.price
               }
   where
     driverId = cast personId
@@ -98,13 +96,13 @@ responseToEventType :: API.NotificationStatus -> AllocationEventType
 responseToEventType API.ACCEPT = AllocationEvent.AcceptedByDriver
 responseToEventType API.REJECT = AllocationEvent.RejectedByDriver
 
-setDriverAcceptance :: Id ProductInstance -> Id SP.Person -> API.SetDriverAcceptanceReq -> FlowHandler API.SetDriverAcceptanceRes
+setDriverAcceptance :: Id SRide.Ride -> Id SP.Person -> API.SetDriverAcceptanceReq -> FlowHandler API.SetDriverAcceptanceRes
 setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
   currentTime <- getCurrentTime
   logTagInfo "setDriverAcceptance" logMessage
   productInstance <-
-    QPI.findById productInstanceId
-      >>= fromMaybeM PIDoesNotExist
+    QRide.findById rideBookingId
+      >>= fromMaybeM RideDoesNotExist
   transporterOrg <-
     QOrg.findOrganizationById productInstance.organizationId
       >>= fromMaybeM OrgDoesNotExist
@@ -114,7 +112,7 @@ setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
   let rideRequest =
         RideRequest
           { id = Id guid,
-            rideId = cast productInstanceId,
+            rideId = rideBookingId,
             shortOrgId = transporterOrg.shortId,
             createdAt = currentTime,
             _type = DRIVER_RESPONSE,
@@ -123,15 +121,14 @@ setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
   RideRequest.createFlow rideRequest
   AllocationEvent.logAllocationEvent
     (responseToEventType response)
-    (cast productInstanceId)
+    rideBookingId
     (Just driverId)
   pure Success
   where
     response = req.response
-    productInstanceId = rideBookingId
     driverId = cast personId
     logMessage =
-      "beckn:" <> productInstanceId.getId <> ":"
+      "beckn:" <> rideBookingId.getId <> ":"
         <> getId driverId
         <> ":response"
         <> " "
@@ -144,55 +141,55 @@ listDriverRides ::
   Maybe Bool ->
   FlowHandler API.RideBookingListRes
 listDriverRides driverId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
-  orderPIList <- QPI.findAllOrdersByDriver driverId mbLimit mbOffset mbOnlyActive
-  API.RideBookingListRes <$> traverse buildRideBookingStatusRes orderPIList
+  rideList <- QRide.findAllByDriver driverId mbLimit mbOffset mbOnlyActive
+  API.RideBookingListRes <$> traverse buildRideBookingStatusRes rideList
 
-buildRideBookingStatusRes :: (DBFlow m r, EncFlow m r) => SPI.ProductInstance -> m API.RideBookingStatusRes
-buildRideBookingStatusRes orderPI = do
-  fromLocId <- orderPI.fromLocation & fromMaybeM (PIFieldNotPresent "fromLocation")
-  toLocId <- orderPI.toLocation & fromMaybeM (PIFieldNotPresent "toLocation")
+buildRideBookingStatusRes :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m API.RideBookingStatusRes
+buildRideBookingStatusRes ride = do
+  fromLocId <- ride.fromLocation & fromMaybeM (PIFieldNotPresent "fromLocation")
+  toLocId <- ride.toLocation & fromMaybeM (PIFieldNotPresent "toLocation")
   fromLocation <- QLoc.findLocationById fromLocId >>= fromMaybeM LocationNotFound
   toLocation <- QLoc.findLocationById toLocId >>= fromMaybeM LocationNotFound
-  let rbStatus = case orderPI.status of
-        SPI.INSTOCK -> SRideBooking.NEW
-        SPI.CONFIRMED -> SRideBooking.CONFIRMED
-        SPI.TRIP_ASSIGNED -> SRideBooking.TRIP_ASSIGNED
-        SPI.COMPLETED -> SRideBooking.COMPLETED
-        SPI.CANCELLED -> SRideBooking.CANCELLED
+  let rbStatus = case ride.status of
+        SRide.INSTOCK -> SRideBooking.NEW
+        SRide.CONFIRMED -> SRideBooking.CONFIRMED
+        SRide.TRIP_ASSIGNED -> SRideBooking.TRIP_ASSIGNED
+        SRide.COMPLETED -> SRideBooking.COMPLETED
+        SRide.CANCELLED -> SRideBooking.CANCELLED
         _ -> SRideBooking.TRIP_ASSIGNED
   mbRide <-
     -- COMPLETED and TRIP_ASSIGNED means that there IS ride. But CANCELLED does not, it could be cancelled
     -- before TRIP_ASSIGNED. So technically there is a bug until we change our storage model.
     if rbStatus `elem` [SRideBooking.COMPLETED, SRideBooking.TRIP_ASSIGNED, SRideBooking.CANCELLED]
-      then Just <$> buildRideAPIEntity orderPI
+      then Just <$> buildRideAPIEntity ride
       else return Nothing
 
   return $
     API.RideBookingStatusRes
-      { id = orderPI.id,
+      { id = ride.id,
         status = rbStatus,
-        estimatedPrice = orderPI.price,
+        estimatedPrice = ride.price,
         toLocation = SLoc.makeSearchReqLocationAPIEntity toLocation,
         fromLocation = SLoc.makeSearchReqLocationAPIEntity fromLocation,
         ride = mbRide,
-        createdAt = orderPI.createdAt,
-        updatedAt = orderPI.updatedAt
+        createdAt = ride.createdAt,
+        updatedAt = ride.updatedAt
       }
 
-buildRideAPIEntity :: (DBFlow m r, EncFlow m r) => SPI.ProductInstance -> m SRide.RideAPIEntity
-buildRideAPIEntity orderPI = do
-  let rideStatus = case orderPI.status of
-        SPI.INPROGRESS -> SRide.INPROGRESS
-        SPI.COMPLETED -> SRide.COMPLETED
-        SPI.CANCELLED -> SRide.CANCELLED
+buildRideAPIEntity :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m SRide.RideAPIEntity
+buildRideAPIEntity ride = do
+  let rideStatus = case ride.status of
+        SRide.INPROGRESS -> SRide.INPROGRESS
+        SRide.COMPLETED -> SRide.COMPLETED
+        SRide.CANCELLED -> SRide.CANCELLED
         _ -> SRide.NEW
-  mbDriver <- join <$> traverse QP.findPersonById orderPI.personId
+  mbDriver <- join <$> traverse QP.findPersonById ride.personId
   mbDecMobNumber <- join <$> traverse decrypt (mbDriver <&> (.mobileNumber))
-  mbVehicle <- join <$> traverse QVeh.findVehicleById (Id <$> orderPI.entityId)
+  mbVehicle <- join <$> traverse QVeh.findVehicleById (Id <$> ride.entityId)
   return $
     SRide.RideAPIEntity
-      { id = orderPI.id,
-        shortRideId = orderPI.shortId,
+      { id = ride.id,
+        shortRideId = ride.shortId,
         status = rideStatus,
         driverName = mbDriver >>= (.firstName),
         driverNumber = (mbDriver >>= (.mobileCountryCode)) <> mbDecMobNumber,
@@ -200,8 +197,8 @@ buildRideAPIEntity orderPI = do
         vehicleColor = mbVehicle >>= (.color),
         vehicleVariant = mbVehicle >>= (.variant),
         vehicleModel = mbVehicle >>= (.model),
-        computedPrice = orderPI.price,
+        computedPrice = ride.price,
         actualRideDistance = Nothing,
-        createdAt = orderPI.createdAt,
-        updatedAt = orderPI.updatedAt
+        createdAt = ride.createdAt,
+        updatedAt = ride.updatedAt
       }

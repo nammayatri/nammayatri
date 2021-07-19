@@ -9,14 +9,15 @@ import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
-import Types.App (Driver, Ride)
+import Types.App (Driver)
+import qualified Types.Storage.Ride as Ride
 
 data AllocationEventT f = AllocationEvent
   { id :: B.C f (Id AllocationEvent),
     driverId :: B.C f (Maybe (Id Driver)),
     eventType :: B.C f AllocationEventType,
     timestamp :: B.C f UTCTime,
-    rideId :: B.C f (Id Ride)
+    rideId :: B.C f (Id Ride.Ride)
   }
   deriving (Generic, B.Beamable)
 

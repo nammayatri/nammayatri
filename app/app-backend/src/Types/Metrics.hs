@@ -19,7 +19,7 @@ data BAPMetricsContainer = BAPMetricsContainer
     searchDuration :: SearchDurationMetric
   }
 
-type SearchRequestCounterMetric = P.Vector P.Label2 P.Counter
+type SearchRequestCounterMetric = P.Vector P.Label1 P.Counter
 
 type SearchDurationMetric = (P.Histogram, P.Counter)
 
@@ -30,7 +30,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   return $ BAPMetricsContainer {..}
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
-registerSearchRequestCounterMetric = P.register $ P.vector ("status", "type") $ P.counter $ P.Info "search_request_count" ""
+registerSearchRequestCounterMetric = P.register $ P.vector "status" $ P.counter $ P.Info "search_request_count" ""
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do

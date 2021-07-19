@@ -12,18 +12,18 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Storage.Queries.SearchRequest as SearchRequest
 import Storage.Queries.Person as Person
-import Storage.Queries.ProductInstance as PI
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import qualified Storage.Queries.SearchReqLocation as Location
 import Types.API.CustomerSupport as T
 import Types.Error
 import Types.ProductInfo as ProductInfo
 import Types.Storage.Person as SP
-import Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RegistrationToken as SR
 import qualified Types.Storage.SearchReqLocation as SSearchLoc
 import Types.Storage.SearchRequest as C
 import Utils.Common
+import qualified Storage.Queries.Ride as QRide
+import qualified Types.Storage.Ride as Ride
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandlerAPI $ do
@@ -89,7 +89,7 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
           >>= fromMaybeM PersonDoesNotExist
       searchRequests <-
-        SearchRequest.findAllByTypeAndStatuses (person.id) C.RIDESEARCH [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
+        SearchRequest.findAllByTypeAndStatuses (person.id) [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
       return $ T.OrderInfo person searchRequests
     getByRequestId searchRequestId = do
       (searchRequest :: C.SearchRequest) <-
@@ -131,9 +131,8 @@ makeTripDetails :: DBFlow m r => Maybe C.SearchRequest -> m (Maybe T.TripDetails
 makeTripDetails mbSearchRequest = case mbSearchRequest of
   Nothing -> pure Nothing
   Just searchRequest -> do
-    ProductInstance.ProductInstance {id, status, info, price} <-
-      head
-        <$> PI.findAllByRequestIdAndType (searchRequest.id) RIDEORDER
+    Ride.Ride {id, status, info, price} <-
+      QRide.findByRequestId (searchRequest.id) >>= fromMaybeM RideNotFound
     let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< info
         provider = (.provider) =<< mproductInfo
         mtracker = (.tracker) =<< mproductInfo

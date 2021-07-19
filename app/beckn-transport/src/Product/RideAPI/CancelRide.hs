@@ -7,19 +7,19 @@ import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BecknProvider
 import qualified Product.RideAPI.Handlers.CancelRide as Handler
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.ProductInstance as QProductInstance
 import Types.API.Ride (CancelRideReq)
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.ProductInstance as SPI
+import qualified Storage.Queries.Ride as QRide
+import qualified Types.Storage.Ride as Ride
 import Utils.Common (withFlowHandlerAPI)
+import qualified Types.Storage.Person as SP
 
-cancelRide :: Id SP.Person -> Id SPI.ProductInstance -> CancelRideReq -> FlowHandler APISuccess.APISuccess
+cancelRide :: Id SP.Person -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess
 cancelRide personId rideId req = withFlowHandlerAPI $ do
-  Handler.cancelRideHandler handle personId (cast rideId) req
+  Handler.cancelRideHandler handle personId rideId req
   where
     handle =
       Handler.ServiceHandle
-        { findPIById = QProductInstance.findById,
+        { findRideById = QRide.findById,
           findPersonById = QPerson.findPersonById,
           cancelRide = BecknProvider.cancelRide
         }

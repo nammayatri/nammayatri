@@ -10,11 +10,10 @@ import Beckn.Types.Id
 import Beckn.Types.Mobility.Trip
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
-import qualified Storage.Queries.ProductInstance as MPI
+import qualified Storage.Queries.Ride as QRide
 import Types.Error
 import qualified Types.ProductInfo as ProdInfo
 import qualified Types.Storage.Organization as Organization
-import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
 
 onUpdate ::
@@ -30,18 +29,17 @@ onUpdate _org req = withFlowHandlerBecknAPI $
       Right msg -> do
         let trip = msg.order.trip
             pid = Id $ msg.order.id
-        orderPi <- MPI.findByParentIdType pid SPI.RIDEORDER >>= fromMaybeM PIDoesNotExist
-        let mprdInfo = decodeFromText =<< (orderPi.info)
+        ride <- QRide.findByProductInstanceId pid >>= fromMaybeM PIDoesNotExist
+        let mprdInfo = decodeFromText =<< (ride.info)
             uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo.tracking =<< ProdInfo.tracker =<< mprdInfo)
-            uPrd =
-              orderPi
-                { SPI.info = encodeToText <$> uInfo,
-                  SPI.actualPrice =
-                    trip >>= fare >>= (.computed_value) >>= convertDecimalValueToAmount,
-                  SPI.actualDistance =
-                    trip >>= (.route) >>= (.edge.distance.computed_value)
-                }
-        MPI.updateMultipleFlow (orderPi.id) uPrd
+            uRide =
+              ride{info = encodeToText <$> uInfo,
+                   actualPrice =
+                     trip >>= fare >>= (.computed_value) >>= convertDecimalValueToAmount,
+                   actualDistance =
+                     trip >>= (.route) >>= (.edge.distance.computed_value)
+                  }
+        QRide.updateMultipleFlow (ride.id) uRide
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err
     return Ack
   where

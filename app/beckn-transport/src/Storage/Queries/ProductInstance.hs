@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.ProductInstance where
 
 import qualified Beckn.Storage.Common as Storage
@@ -10,29 +8,33 @@ import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
 import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
-import Database.Beam ((&&.), (<-.), (==.), (||.))
+import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.SearchReqLocation as Loc
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import qualified Types.Storage.ProductInstance as Storage
 import qualified Types.Storage.Products as Product
 import qualified Types.Storage.SearchReqLocation as Loc
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Types.Storage.Vehicle (Vehicle)
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))
 getDbTable = DB.productInstance . DB.transporterDb <$> getSchemaName
 
-getCsTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity SearchRequest.SearchRequestT))
-getCsTable =
+getSRTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity SearchRequest.SearchRequestT))
+getSRTable =
   DB.searchRequest . DB.transporterDb <$> getSchemaName
 
 getProdTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Product.ProductsT))
 getProdTable =
   DB.products . DB.transporterDb <$> getSchemaName
+
+getRideTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Ride.RideT))
+getRideTable =
+  DB.ride . DB.transporterDb <$> getSchemaName
 
 createFlow :: DBFlow m r => Storage.ProductInstance -> m ()
 createFlow =
@@ -89,36 +91,6 @@ findAllByIds' ids = do
   where
     predicate Storage.ProductInstance {..} =
       B.in_ id (B.val_ <$> ids)
-
-findAllOrdersByOrg :: DBFlow m r => Id Org.Organization -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.ProductInstance]
-findAllOrdersByOrg orgId mbLimit mbOffset mbOnlyActive = do
-  dbTable <- getDbTable
-  let limit = fromMaybe 0 mbLimit
-      offset = fromMaybe 0 mbOffset
-      isOnlyActive = Just True == mbOnlyActive
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset) $ predicate isOnlyActive
-  where
-    predicate isOnlyActive Storage.ProductInstance {..} =
-      organizationId ==. B.val_ orgId
-        &&. _type ==. B.val_ Storage.RIDEORDER
-        &&. if isOnlyActive
-          then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
-          else B.val_ True
-
-findAllOrdersByDriver :: DBFlow m r => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.ProductInstance]
-findAllOrdersByDriver driverId mbLimit mbOffset mbOnlyActive = do
-  dbTable <- getDbTable
-  let limit = fromMaybe 0 mbLimit
-      offset = fromMaybe 0 mbOffset
-      isOnlyActive = Just True == mbOnlyActive
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset) $ predicate isOnlyActive
-  where
-    predicate isOnlyActive Storage.ProductInstance {..} =
-      personId ==. B.val_ (Just driverId)
-        &&. _type ==. B.val_ Storage.RIDEORDER
-        &&. if isOnlyActive
-          then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
-          else B.val_ True
 
 updateStatusForProducts :: DBFlow m r => Id Product.Products -> Storage.ProductInstanceStatus -> m ()
 updateStatusForProducts productId_ status_ = do
@@ -241,15 +213,6 @@ findAllByProdId piId = do
   where
     predicate Storage.ProductInstance {..} = productId ==. B.val_ piId
 
-findAllByStatusParentId :: DBFlow m r => [Storage.ProductInstanceStatus] -> Id Storage.ProductInstance -> m [Storage.ProductInstance]
-findAllByStatusParentId status_ piId = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate Storage.ProductInstance {..} =
-      status `B.in_` (B.val_ <$> status_)
-        &&. parentId ==. B.val_ (Just piId)
-
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
@@ -365,42 +328,7 @@ findAllRidesWithLocationsByDriverId limit offset personId_ = do
       return (ride, fromLoc, toLoc)
     predicate Storage.ProductInstance {..} =
       personId ==. B.val_ (Just personId_)
-        &&. _type ==. B.val_ Storage.RIDEORDER
     orderByDesc (Storage.ProductInstance {..}, _, _) = B.desc_ createdAt
-
-findAllByParentId :: DBFlow m r => Id Storage.ProductInstance -> m [Storage.ProductInstance]
-findAllByParentId piId = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate Storage.ProductInstance {..} = parentId ==. B.val_ (Just piId)
-
-findOrderPIByParentId :: DBFlow m r => Id Storage.ProductInstance -> m (Maybe Storage.ProductInstance)
-findOrderPIByParentId pid = do
-  dbTable <- getDbTable
-  DB.findOne dbTable (predicate pid)
-  where
-    predicate piid Storage.ProductInstance {..} =
-      parentId ==. B.val_ (Just piid)
-        &&. _type ==. B.val_ Storage.RIDEORDER
-
-findByIdType :: DBFlow m r => [Id Storage.ProductInstance] -> Storage.ProductInstanceType -> m (Maybe Storage.ProductInstance)
-findByIdType ids piType = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.ProductInstance {..} =
-      id `B.in_` (B.val_ <$> ids)
-        &&. _type ==. B.val_ piType
-
-findByParentIdType :: DBFlow m r => Id Storage.ProductInstance -> Storage.ProductInstanceType -> m (Maybe Storage.ProductInstance)
-findByParentIdType mparentId piType = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.ProductInstance {..} =
-      parentId ==. B.val_ (Just mparentId)
-        &&. _type ==. B.val_ piType
 
 findAllExpiredByStatus :: DBFlow m r => [Storage.ProductInstanceStatus] -> UTCTime -> m [Storage.ProductInstance]
 findAllExpiredByStatus statuses expiryTime = do
@@ -411,24 +339,13 @@ findAllExpiredByStatus statuses expiryTime = do
       B.in_ status (B.val_ <$> statuses)
         &&. startTime B.<=. B.val_ expiryTime
 
-getCountByStatus :: DBFlow m r => Id Org.Organization -> Storage.ProductInstanceType -> m [(Storage.ProductInstanceStatus, Int)]
-getCountByStatus orgId piType = do
-  dbTable <- getDbTable
-  DB.findAll dbTable (B.aggregate_ aggregator) predicate
-  where
-    aggregator Storage.ProductInstance {..} = (B.group_ status, B.as_ @Int B.countAll_)
-    predicate Storage.ProductInstance {..} =
-      organizationId ==. B.val_ orgId
-        &&. _type ==. B.val_ piType
-
 findByStartTimeBuffer ::
   DBFlow m r =>
-  Storage.ProductInstanceType ->
   UTCTime ->
   NominalDiffTime ->
   [Storage.ProductInstanceStatus] ->
   m [Storage.ProductInstance]
-findByStartTimeBuffer piType startTime_ buffer statuses = do
+findByStartTimeBuffer startTime_ buffer statuses = do
   dbTable <- getDbTable
   let fromTime = addUTCTime (- buffer * 60 * 60) startTime_
   let toTime = addUTCTime (buffer * 60 * 60) startTime_
@@ -436,19 +353,6 @@ findByStartTimeBuffer piType startTime_ buffer statuses = do
   where
     predicate fromTime toTime Storage.ProductInstance {..} =
       let inStatus = fmap B.val_ statuses
-       in _type ==. B.val_ piType
-            &&. startTime B.<=. B.val_ toTime
+       in startTime B.<=. B.val_ toTime
             &&. startTime B.>=. B.val_ fromTime
             &&. status `B.in_` inStatus
-
-getDriverCompletedRides :: DBFlow m r => Id Person -> UTCTime -> UTCTime -> m [Storage.ProductInstance]
-getDriverCompletedRides driverId fromTime toTime = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate Storage.ProductInstance {..} =
-      _type ==. B.val_ Storage.RIDEORDER
-        &&. personId ==. B.val_ (Just driverId)
-        &&. status ==. B.val_ Storage.COMPLETED
-        &&. startTime B.>=. B.val_ fromTime
-        &&. startTime B.<=. B.val_ toTime

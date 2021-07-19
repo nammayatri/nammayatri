@@ -16,13 +16,14 @@ import GHC.Records.Extra
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.DriverLocation as DriverLocation
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as QPI
+import qualified Storage.Queries.Ride as QRide
 import Types.API.Location as Location
 import Types.Metrics
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common hiding (id)
 import Prelude (atan2)
+import qualified Types.Storage.Ride as SRide
 
 updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
 updateLocation personId req = withFlowHandlerAPI $ do
@@ -45,7 +46,7 @@ updateLocation personId req = withFlowHandlerAPI $ do
     Nothing -> pure . Just $ getRouteLinearLength waypointList
   let lastUpdate = fromMaybe now (req.lastUpdate)
   DB.runSqlDBTransaction $ do
-    whenJust distanceMb $ QPI.updateDistance driver.id
+    whenJust distanceMb $ QRide.updateDistance driver.id
     DrLoc.upsertGpsCoord driverId currPoint lastUpdate
   logTagInfo "driverLocationUpdate" (getId personId <> " " <> show req.waypoints)
   return Success
@@ -53,15 +54,15 @@ updateLocation personId req = withFlowHandlerAPI $ do
     currPoint = NE.last (req.waypoints)
     waypointList = NE.toList (req.waypoints)
 
-getLocation :: Id PI.ProductInstance -> FlowHandler GetLocationRes
-getLocation piId = withFlowHandlerAPI $ do
+getLocation :: Id SPI.ProductInstance -> FlowHandler GetLocationRes
+getLocation prodInstId = withFlowHandlerAPI $ do
   ride <-
-    QPI.findByParentIdType piId PI.RIDEORDER
-      >>= fromMaybeM PIDoesNotExist
+    QRide.findByProductInstanceId prodInstId
+      >>= fromMaybeM RideDoesNotExist
   status <-
     case ride.status of
-      PI.TRIP_ASSIGNED -> pure PreRide
-      PI.INPROGRESS -> pure ActualRide
+      SRide.TRIP_ASSIGNED -> pure PreRide
+      SRide.INPROGRESS -> pure ActualRide
       _ -> throwError $ PIInvalidStatus "Cannot track this ride"
   driver <-
     (ride.personId & fromMaybeM (PIFieldNotPresent "person_id"))

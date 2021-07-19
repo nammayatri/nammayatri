@@ -12,6 +12,7 @@ import EulerHS.Prelude
 import Types.Storage.Person as Person
 import Types.Storage.ProductInstance as ProductInstance
 import Types.Storage.RegistrationToken as RegToken
+import Types.Storage.Ride (Ride)
 import Types.Storage.SearchRequest as SearchRequest
 
 -- | Send FCM "cancel" notification to driver
@@ -203,11 +204,11 @@ notifyDriverNewAllocation ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  ProductInstance ->
+  Ride ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverNewAllocation productInstance personId =
+notifyDriverNewAllocation ride personId =
   FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "New allocation request."
@@ -222,7 +223,7 @@ notifyDriverNewAllocation productInstance personId =
         { fcmNotificationType = FCM.ALLOCATION_REQUEST,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId $ productInstance.id,
+          fcmEntityIds = getId $ ride.id,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST
         }
 
@@ -230,11 +231,11 @@ notifyDriverUnassigned ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  ProductInstance ->
+  Ride ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverUnassigned productInstance personId = FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
+notifyDriverUnassigned ride personId = FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "Ride not assigned."
     body =
@@ -248,6 +249,6 @@ notifyDriverUnassigned productInstance personId = FCM.notifyPerson notificationD
         { fcmNotificationType = FCM.ALLOCATION_REQUEST_UNASSIGNED,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId $ productInstance.id,
+          fcmEntityIds = getId $ ride.id,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST_UNASSIGNED
         }

@@ -14,14 +14,15 @@ import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as PI
+import qualified Storage.Queries.Ride as QRide
 import Types.App (Driver)
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.Ride as Ride
 import Utils.Common (withFlowHandlerAPI)
 import Utils.Metrics (putFareAndDistanceDeviations)
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 
-endRide :: Id SP.Person -> Id PI.ProductInstance -> FlowHandler APISuccess.APISuccess
+endRide :: Id SP.Person -> Id Ride.Ride -> FlowHandler APISuccess.APISuccess
 endRide personId rideId = withFlowHandlerAPI $ do
   Handler.endRideHandler handle personId rideId
   where
@@ -29,6 +30,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
       Handler.ServiceHandle
         { findPersonById = Person.findPersonById,
           findPIById = PI.findById',
+          findRideById = QRide.findById,
           findSearchRequestById= QSearchRequest.findById,
           notifyUpdateToBAP = notifyUpdateToBAP,
           endRideTransaction,
@@ -37,9 +39,9 @@ endRide personId rideId = withFlowHandlerAPI $ do
           putDiffMetric = putFareAndDistanceDeviations
         }
 
-endRideTransaction :: DBFlow m r => Id PI.ProductInstance -> Id Driver -> Amount -> m ()
-endRideTransaction orderPiId driverId actualPrice = DB.runSqlDBTransaction $ do
-  PI.updateActualPrice actualPrice orderPiId
-  PI.updateStatus orderPiId PI.COMPLETED
+endRideTransaction :: DBFlow m r => Id Ride.Ride -> Id Driver -> Amount -> m ()
+endRideTransaction rideId driverId actualPrice = DB.runSqlDBTransaction $ do
+  QRide.updateActualPrice actualPrice rideId
+  QRide.updateStatus rideId Ride.COMPLETED
   DriverInformation.updateOnRide driverId False
   DriverStats.updateIdleTime driverId

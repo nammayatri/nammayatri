@@ -48,6 +48,7 @@ import Types.Storage.ProductInstance
 import qualified Types.Storage.RegistrationToken as SRT
 import Types.Storage.Vehicle
 import Utils.Auth (AdminTokenAuth, LookupRegistryOrg, TokenAuth)
+import qualified Types.Storage.Ride as SRide
 
 type TransportAPI =
   "v2"
@@ -243,7 +244,7 @@ organizationFlow =
 
 type RideBookingAPI =
   "org" :> "rideBooking"
-    :> ( Capture "bookingId" (Id ProductInstance)
+    :> ( Capture "bookingId" (Id SRide.Ride)
            :> TokenAuth
            :> Post '[JSON] RideBookingAPI.RideBookingStatusRes
            :<|> "list"
@@ -252,7 +253,7 @@ type RideBookingAPI =
              :> QueryParam "offset" Integer
              :> QueryParam "onlyActive" Bool
              :> Get '[JSON] RideBookingAPI.RideBookingListRes
-           :<|> Capture "bookingId" (Id ProductInstance)
+           :<|> Capture "bookingId" (Id SRide.Ride)
              :> "cancel"
              :> AdminTokenAuth
              :> Get '[JSON] APISuccess
@@ -265,7 +266,7 @@ type RideBookingAPI =
              :> QueryParam "offset" Integer
              :> QueryParam "onlyActive" Bool
              :> Get '[JSON] RideBookingAPI.RideBookingListRes
-             :<|> Capture "bookingId" (Id ProductInstance)
+             :<|> Capture "bookingId" (Id SRide.Ride)
                :> "notification"
                :> ( "respond"
                       :> TokenAuth
@@ -331,7 +332,7 @@ orgBecknApiFlow =
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =
   "driver" :> "ride"
-    :> Capture "rideId" (Id ProductInstance)
+    :> Capture "rideId" (Id SRide.Ride)
     :> "call"
     :> "rider"
     :> TokenAuth
@@ -353,16 +354,16 @@ routeApiFlow = Location.getRoutes
 type RideAPI =
   "driver" :> "ride"
     :> ( TokenAuth
-           :> Capture "rideId" (Id ProductInstance)
+           :> Capture "rideId" (Id SRide.Ride)
            :> "start"
            :> ReqBody '[JSON] RideAPI.StartRideReq
            :> Post '[JSON] APISuccess
            :<|> TokenAuth
-             :> Capture "rideId" (Id ProductInstance)
+             :> Capture "rideId" (Id SRide.Ride)
              :> "end"
              :> Post '[JSON] APISuccess
            :<|> TokenAuth
-             :> Capture "rideId" (Id ProductInstance)
+             :> Capture "rideId" (Id SRide.Ride)
              :> "cancel"
              :> ReqBody '[JSON] RideAPI.CancelRideReq
              :> Post '[JSON] APISuccess

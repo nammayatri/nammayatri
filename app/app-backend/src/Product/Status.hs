@@ -1,6 +1,7 @@
 module Product.Status (onStatus) where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Status as API
 import Beckn.Types.Core.Ack
@@ -8,10 +9,9 @@ import Beckn.Types.Id
 import Beckn.Utils.Error
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
-import qualified Storage.Queries.ProductInstance as QPI
+import qualified Storage.Queries.Ride as QRide
 import Types.Error
 import qualified Types.Storage.Organization as Organization
-import qualified Types.Storage.ProductInstance as PI
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -30,7 +30,8 @@ onStatus _org req = withFlowHandlerBecknAPI $
     return Ack
   where
     updateProductInstanceStatus prodInstId piStatus = do
-      orderPi <- QPI.findByParentIdType prodInstId PI.RIDEORDER >>= fromMaybeM PIDoesNotExist
-      PI.validateStatusTransition (PI.status orderPi) piStatus & fromEitherM PIInvalidStatus
-      QPI.updateStatus (orderPi.id) piStatus
-      Notify.notifyOnStatusUpdate orderPi piStatus
+      ride <- QRide.findByProductInstanceId prodInstId >>= fromMaybeM RideDoesNotExist
+      -- TODO: ADD STATUS CHANGE VALIDATION
+      DB.runSqlDBTransaction $
+        QRide.updateStatus ride.id piStatus
+      Notify.notifyOnStatusUpdate ride piStatus

@@ -18,6 +18,7 @@ import Types.App
 import Types.Metrics
 import Types.Storage.Organization
 import Types.Storage.Person
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.SilentLogger ()
@@ -28,10 +29,10 @@ org1 = ShortId "Org1"
 numRequestsToProcess :: Integer
 numRequestsToProcess = 10
 
-ride01Id :: Id Ride
+ride01Id :: Id Ride.Ride
 ride01Id = Id "ride01"
 
-ride02Id :: Id Ride
+ride02Id :: Id Ride.Ride
 ride02Id = Id "ride02"
 
 allocationTime :: Seconds
@@ -45,14 +46,14 @@ isNotified currentTime (Notified, expiryTime) = expiryTime > currentTime
 isNotified _ _ = False
 
 attemptedNotification ::
-  Id Ride ->
-  (Id Ride, Id Driver) ->
+  Id Ride.Ride ->
+  (Id Ride.Ride, Id Driver) ->
   (NotificationStatus, UTCTime) ->
   Bool
 attemptedNotification rideId (id, _) (status, _) =
   id == rideId && (status == Rejected || status == Ignored)
 
-addRide :: Repository -> Id Ride -> IO ()
+addRide :: Repository -> Id Ride.Ride -> IO ()
 addRide Repository {..} rideId = do
   currTime <- Time.getCurrentTime
   let rideInfo =
@@ -63,7 +64,7 @@ addRide Repository {..} rideId = do
           }
   modifyIORef ridesVar $ Map.insert rideId rideInfo
 
-addRequest :: RequestData -> Repository -> Id Ride -> IO ()
+addRequest :: RequestData -> Repository -> Id Ride.Ride -> IO ()
 addRequest requestData Repository {..} rideId = do
   currentId <- readIORef currentIdVar
   let requestId = Id $ show currentId
@@ -77,13 +78,13 @@ addRequest requestData Repository {..} rideId = do
   modifyIORef currentIdVar (+ 1)
   modifyIORef rideRequestsVar $ Map.insert requestId request
 
-addResponse :: Repository -> Id Ride -> Id Driver -> RideBooking.NotificationStatus -> IO ()
+addResponse :: Repository -> Id Ride.Ride -> Id Driver -> RideBooking.NotificationStatus -> IO ()
 addResponse repository@Repository {..} rideId driverId status = do
   currentTime <- Time.getCurrentTime
   let driverResponse = RideBooking.DriverResponse driverId status
   addRequest (DriverResponse driverResponse) repository rideId
 
-checkRideStatus :: Repository -> Id Ride -> RideStatus -> IO ()
+checkRideStatus :: Repository -> Id Ride.Ride -> RideStatus -> IO ()
 checkRideStatus Repository {..} rideId expectedStatus = do
   rides <- readIORef ridesVar
   case Map.lookup ride01Id rides of
@@ -173,16 +174,16 @@ driverPool1 = [Id "driver01", Id "driver02", Id "driver03"]
 driverPool2 :: [Id Driver]
 driverPool2 = [Id "driver05", Id "driver07", Id "driver08"]
 
-driverPoolPerRide :: Map (Id Ride) [Id Driver]
+driverPoolPerRide :: Map (Id Ride.Ride) [Id Driver]
 driverPoolPerRide = Map.fromList [(ride01Id, driverPool1), (ride02Id, driverPool2)]
 
 data Repository = Repository
   { currentIdVar :: IORef Int,
-    driverPoolVar :: IORef (Map (Id Ride) [Id Driver]),
-    ridesVar :: IORef (Map (Id Ride) RideInfo),
+    driverPoolVar :: IORef (Map (Id Ride.Ride) [Id Driver]),
+    ridesVar :: IORef (Map (Id Ride.Ride) RideInfo),
     rideRequestsVar :: IORef (Map (Id SRR.RideRequest) RideRequest),
-    notificationStatusVar :: IORef (Map (Id Ride, Id Driver) (NotificationStatus, UTCTime)),
-    assignmentsVar :: IORef [(Id Ride, Id Driver)]
+    notificationStatusVar :: IORef (Map (Id Ride.Ride, Id Driver) (NotificationStatus, UTCTime)),
+    assignmentsVar :: IORef [(Id Ride.Ride, Id Driver)]
   }
 
 initRepository :: IO Repository

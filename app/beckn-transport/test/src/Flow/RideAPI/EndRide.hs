@@ -14,6 +14,7 @@ import Types.App
 import Types.Error
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common (throwError)
 import Utils.SilentLogger ()
@@ -46,8 +47,10 @@ handle =
         _ -> throwError PersonDoesNotExist,
       findPIById = \piId -> pure $ case piId of
         Id "search" -> Just searchProductInstance
-        Id "ride" -> Just rideProductInstance
-        Id "completed_ride" -> Just rideProductInstance {PI.status = PI.COMPLETED}
+        _ -> Nothing,
+      findRideById = \rideId -> pure $ case rideId of
+        Id "ride" -> Just ride
+        Id "completed_ride" -> Just ride{status = Ride.COMPLETED}
         _ -> Nothing,
       findSearchRequestById = \searchRequestId ->
         if searchRequestId == "search"
@@ -62,17 +65,17 @@ handle =
 
 endRide ::
   Id Person.Person ->
-  Id PI.ProductInstance ->
+  Id Ride.Ride ->
   IO APISuccess.APISuccess
 endRide = Handle.endRideHandler handle
 
-rideProductInstance :: PI.ProductInstance
-rideProductInstance =
-  Fixtures.defaultProductInstance
-    { PI.id = "ride",
-      PI.status = PI.INPROGRESS,
-      PI.requestId = "ride",
-      PI.parentId = Just "search"
+ride :: Ride.Ride
+ride =
+  Fixtures.defaultRide
+    { Ride.id = "ride",
+      Ride.status = Ride.INPROGRESS,
+      Ride.requestId = "ride",
+      Ride.productInstanceId = "search"
     }
 
 searchProductInstance :: PI.ProductInstance
@@ -80,7 +83,6 @@ searchProductInstance =
   Fixtures.defaultProductInstance
     { PI.id = "search",
       PI.requestId = "search",
-      PI._type = PI.RIDESEARCH,
       PI.status = PI.INPROGRESS
     }
 
@@ -88,7 +90,6 @@ searchRequest :: SearchRequest.SearchRequest
 searchRequest =
   Fixtures.defaultSearchRequest
     { SearchRequest.id = "search",
-      SearchRequest._type = SearchRequest.RIDESEARCH,
       SearchRequest.status = SearchRequest.INPROGRESS,
       SearchRequest.provider = Just "someOrg",
       SearchRequest.udf1 = Just "SEDAN"
@@ -112,12 +113,12 @@ failedEndRequestedNotByDriver =
 failedEndWhenRideStatusIsWrong :: TestTree
 failedEndWhenRideStatusIsWrong =
   testCase "A ride has wrong status" $
-    endRide "1" "completed_ride" `shouldThrow` (\(PIInvalidStatus _) -> True)
+    endRide "1" "completed_ride" `shouldThrow` (\(RideInvalidStatus _) -> True)
 
 failedEndNonexistentRide :: TestTree
 failedEndNonexistentRide =
   testCase "A ride does not even exist" $
-    endRide "1" "nonexistent_ride" `shouldThrow` (== PIDoesNotExist)
+    endRide "1" "nonexistent_ride" `shouldThrow` (== RideDoesNotExist)
 
 failedEndNonexistentDriver :: TestTree
 failedEndNonexistentDriver =

@@ -16,6 +16,7 @@ import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.SearchRequest as SearchRequest
+import qualified Types.Storage.Ride as Ride
 
 data AppDb f = AppDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
@@ -24,6 +25,7 @@ data AppDb f = AppDb
     person :: f (B.TableEntity Person.PersonT),
     searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT),
     productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
+    ride :: f (B.TableEntity Ride.RideT),
     products :: f (B.TableEntity Products.ProductsT),
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
     geometry :: f (B.TableEntity Geometry.GeometryT),
@@ -42,6 +44,7 @@ appDb dbSchemaName =
         person = setSchema dbSchemaName <> Person.fieldEMod,
         searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod,
         productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
+        ride = setSchema dbSchemaName <> Ride.fieldEMod,
         products = setSchema dbSchemaName <> Products.fieldEMod,
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
         geometry = setSchema dbSchemaName <> Geometry.fieldEMod,

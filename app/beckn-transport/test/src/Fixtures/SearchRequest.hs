@@ -13,7 +13,6 @@ defaultSearchRequest =
       description = Nothing,
       shortId = "",
       industry = SearchRequest.MOBILITY,
-      _type = SearchRequest.RIDESEARCH,
       exchangeType = SearchRequest.FULFILLMENT,
       status = SearchRequest.COMPLETED,
       startTime = Fixtures.defaultTime,

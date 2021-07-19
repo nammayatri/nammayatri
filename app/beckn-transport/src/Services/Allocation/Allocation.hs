@@ -13,6 +13,7 @@ import Types.Storage.AllocationEvent (AllocationEventType (..))
 import qualified Types.Storage.CancellationReason as SCR
 import Types.Storage.Organization
 import qualified Types.Storage.RideCancellationReason as SRCR
+import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 
@@ -29,7 +30,7 @@ data RequestData
 
 data RideRequest = RideRequest
   { requestId :: Id SRR.RideRequest,
-    rideId :: Id Ride,
+    rideId :: Id SRide.Ride,
     requestData :: RequestData
   }
   deriving (Generic, Show)
@@ -53,7 +54,7 @@ data RideStatus
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON)
 
 data RideInfo = RideInfo
-  { rideId :: Id Ride,
+  { rideId :: Id SRide.Ride,
     rideStatus :: RideStatus,
     orderTime :: OrderTime
   }
@@ -84,25 +85,25 @@ data ServiceHandle m = ServiceHandle
     getConfiguredNotificationTime :: m Seconds,
     getConfiguredAllocationTime :: m Seconds,
     getRequests :: ShortId Organization -> Integer -> m [RideRequest],
-    getDriverPool :: Id Ride -> m [Id Driver],
-    getCurrentNotification :: Id Ride -> m (Maybe CurrentNotification),
+    getDriverPool :: Id SRide.Ride -> m [Id Driver],
+    getCurrentNotification :: Id SRide.Ride -> m (Maybe CurrentNotification),
     cleanupOldNotifications :: m Int,
-    sendNewRideNotification :: Id Ride -> Id Driver -> m (),
-    sendRideNotAssignedNotification :: Id Ride -> Id Driver -> m (),
-    addNotificationStatus :: Id Ride -> Id Driver -> UTCTime -> m (),
-    updateNotificationStatus :: Id Ride -> Id Driver -> NotificationStatus -> m (),
+    sendNewRideNotification :: Id SRide.Ride -> Id Driver -> m (),
+    sendRideNotAssignedNotification :: Id SRide.Ride -> Id Driver -> m (),
+    addNotificationStatus :: Id SRide.Ride -> Id Driver -> UTCTime -> m (),
+    updateNotificationStatus :: Id SRide.Ride -> Id Driver -> NotificationStatus -> m (),
     resetLastRejectionTime :: Id Driver -> m (),
-    getAttemptedDrivers :: Id Ride -> m [Id Driver],
+    getAttemptedDrivers :: Id SRide.Ride -> m [Id Driver],
     getDriversWithNotification :: m [Id Driver],
     getFirstDriverInTheQueue :: NonEmpty (Id Driver) -> m (Id Driver),
     checkAvailability :: NonEmpty (Id Driver) -> m [Id Driver],
-    assignDriver :: Id Ride -> Id Driver -> m (),
-    cancelRide :: Id Ride -> SRCR.RideCancellationReason -> m (),
-    cleanupNotifications :: Id Ride -> m (),
-    addAllocationRequest :: ShortId Organization -> Id Ride -> m (),
-    getRideInfo :: Id Ride -> m RideInfo,
+    assignDriver :: Id SRide.Ride -> Id Driver -> m (),
+    cancelRide :: Id SRide.Ride -> SRCR.RideCancellationReason -> m (),
+    cleanupNotifications :: Id SRide.Ride -> m (),
+    addAllocationRequest :: ShortId Organization -> Id SRide.Ride -> m (),
+    getRideInfo :: Id SRide.Ride -> m RideInfo,
     removeRequest :: Id SRR.RideRequest -> m (),
-    logEvent :: AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m (),
+    logEvent :: AllocationEventType -> Id SRide.Ride -> Maybe (Id Driver) -> m (),
     metrics :: BTMMetricsHandle m
   }
 
@@ -206,7 +207,7 @@ processExpiredNotification ::
   MonadHandler m =>
   ServiceHandle m ->
   ShortId Organization ->
-  Id Ride ->
+  Id SRide.Ride ->
   Id Driver ->
   m ()
 processExpiredNotification handle@ServiceHandle {..} shortOrgId rideId driverId = do
@@ -218,7 +219,7 @@ processRejection ::
   MonadHandler m =>
   ServiceHandle m ->
   Bool ->
-  Id Ride ->
+  Id SRide.Ride ->
   Id Driver ->
   ShortId Organization ->
   m ()
@@ -234,7 +235,7 @@ processRejection handle@ServiceHandle {..} ignored rideId driverId shortOrgId = 
 proceedToNextDriver ::
   MonadHandler m =>
   ServiceHandle m ->
-  Id Ride ->
+  Id SRide.Ride ->
   ShortId Organization ->
   m ()
 proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
@@ -258,7 +259,7 @@ proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
 processFilteredPool ::
   MonadHandler m =>
   ServiceHandle m ->
-  Id Ride ->
+  Id SRide.Ride ->
   [Id Driver] ->
   ShortId Organization ->
   m ()
@@ -281,12 +282,12 @@ processFilteredPool handle@ServiceHandle {..} rideId filteredPool shortOrgId = d
       logInfo "All new drivers are unavailable or already have notifications. Waiting."
   checkRideLater handle shortOrgId rideId
 
-checkRideLater :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Id Ride -> m ()
+checkRideLater :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Id SRide.Ride -> m ()
 checkRideLater ServiceHandle {..} shortOrgId rideId = do
   addAllocationRequest shortOrgId rideId
   logInfo "Check ride later"
 
-cancel :: MonadHandler m => ServiceHandle m -> Id Ride -> CancellationSource -> Maybe AllocatorCancellationReason -> m ()
+cancel :: MonadHandler m => ServiceHandle m -> Id SRide.Ride -> CancellationSource -> Maybe AllocatorCancellationReason -> m ()
 cancel ServiceHandle {..} rideId cancellationSource mbReasonCode = do
   logInfo "Cancelling ride"
   cancelRide rideId rideCancellationReason
@@ -294,7 +295,7 @@ cancel ServiceHandle {..} rideId cancellationSource mbReasonCode = do
   where
     rideCancellationReason =
       SRCR.RideCancellationReason
-        { rideId = cast rideId,
+        { rideId = rideId,
           source = cancellationSource,
           reasonCode = SCR.CancellationReasonCode . encodeToText <$> mbReasonCode,
           additionalInfo = Nothing
@@ -306,7 +307,7 @@ isAllocationTimeFinished ServiceHandle {..} currentTime orderTime = do
   let elapsedSearchTime = diffUTCTime currentTime (orderTime.utcTime)
   pure $ elapsedSearchTime > configuredAllocationTime
 
-logDriverNoLongerNotified :: Log m => Id Ride -> Id Driver -> m ()
+logDriverNoLongerNotified :: Log m => Id SRide.Ride -> Id Driver -> m ()
 logDriverNoLongerNotified rideId driverId =
   logInfo $
     "Driver "

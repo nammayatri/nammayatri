@@ -54,7 +54,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   toLocation <- Location.buildSearchReqLoc req.destination
   now <- getCurrentTime
   searchRequest <- mkSearchRequest req (getId personId) fromLocation toLocation now
-  Metrics.incrementSearchRequestCount SearchRequest.NEW SearchRequest.RIDESEARCH
+  Metrics.incrementSearchRequestCount SearchRequest.NEW
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
   DB.runSqlDBTransaction $ do
@@ -122,7 +122,7 @@ searchCbService req catalog = do
           traverse_ QProducts.create products
           traverse_ QPI.create productInstances
           when (searchRequest.validTill < newValidTill) $ QSearchRequest.updateValidTill (searchRequest.id) newValidTill
-    piList <- MPI.findAllByRequestIdAndType (searchRequest.id) PI.RIDESEARCH
+    piList <- MPI.findAllByRequestId (searchRequest.id)
     let piStatusCount = Map.fromListWith (+) $ zip (PI.status <$> piList) $ repeat (1 :: Integer)
         accepted = Map.lookup PI.INSTOCK piStatusCount
         declined = Map.lookup PI.OUTOFSTOCK piStatusCount
@@ -163,7 +163,6 @@ mkSearchRequest req userId from to now = do
         description = Just "SearchRequest to search for a Ride",
         shortId = shortId_,
         industry = SearchRequest.MOBILITY,
-        _type = SearchRequest.RIDESEARCH,
         exchangeType = SearchRequest.FULFILLMENT,
         status = SearchRequest.NEW,
         startTime = now,
@@ -254,12 +253,10 @@ mkProductInstance searchRequest bppOrg provider personId item = do
         startTime = searchRequest.startTime,
         endTime = searchRequest.endTime,
         validTill = searchRequest.validTill,
-        parentId = Nothing,
         actualDistance = Nothing,
         entityId = Nothing,
         price = price,
         actualPrice = Nothing,
-        _type = PI.RIDESEARCH,
         udf1 = getNearestDriverDist,
         udf2 = Nothing,
         udf3 = Nothing,
@@ -294,12 +291,10 @@ mkDeclinedProductInstance searchRequest bppOrg provider personId = do
         startTime = searchRequest.startTime,
         endTime = searchRequest.endTime,
         validTill = searchRequest.validTill,
-        parentId = Nothing,
         actualDistance = Nothing,
         entityId = Nothing,
         price = Nothing,
         actualPrice = Nothing,
-        _type = PI.RIDESEARCH,
         udf1 = Nothing,
         udf2 = Nothing,
         udf3 = Nothing,

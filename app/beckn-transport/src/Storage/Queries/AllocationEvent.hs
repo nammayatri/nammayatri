@@ -11,6 +11,7 @@ import EulerHS.Prelude hiding (id)
 import Types.App
 import qualified Types.Storage.AllocationEvent as Storage
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Ride as Ride
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.AllocationEventT))
 getDbTable =
@@ -31,7 +32,7 @@ findAllocationEventById aeId = do
   where
     predicate Storage.AllocationEvent {..} = id ==. B.val_ aeId
 
-logAllocationEvent :: DBFlow m r => Storage.AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m ()
+logAllocationEvent :: DBFlow m r => Storage.AllocationEventType -> Id Ride.Ride -> Maybe (Id Driver) -> m ()
 logAllocationEvent eventType rideId driverId = do
   uuid <- generateGUID
   now <- getCurrentTime

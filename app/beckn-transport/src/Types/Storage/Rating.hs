@@ -7,11 +7,11 @@ import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Storage.Person (Person)
-import Types.Storage.ProductInstance (ProductInstance)
+import Types.Storage.Ride (Ride)
 
 data RatingT f = Rating
   { id :: B.C f (Id Rating),
-    productInstanceId :: B.C f (Id ProductInstance),
+    rideId :: B.C f (Id Ride),
     driverId :: B.C f (Id Person),
     ratingValue :: B.C f Int,
     createdAt :: B.C f UTCTime,
@@ -44,7 +44,7 @@ fieldEMod =
   B.setEntityName "rating"
     <> B.modifyTableFields
       B.tableModification
-        { productInstanceId = "product_instance_id",
+        { rideId = "ride_id",
           ratingValue = "rating_value",
           driverId = "driver_id",
           createdAt = "created_at",

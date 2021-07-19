@@ -6,8 +6,6 @@ import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
 import Servant
 
-data Ride -- = ProductInstance
-
 data Driver -- = Person
 
 type Limit = Int

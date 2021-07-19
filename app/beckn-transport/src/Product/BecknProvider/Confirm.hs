@@ -16,6 +16,7 @@ import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QProductInstance
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.SearchReqLocation as QSReqLoc
 import qualified Storage.Queries.TransporterConfig as QTConf
@@ -24,6 +25,7 @@ import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.SearchReqLocation as SSReqLoc
 import qualified Types.Storage.TransporterConfig as STConf
@@ -54,10 +56,10 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
     searchRequest <- SearchRequest.findBySid caseShortId >>= fromMaybeM SearchRequestNotFound
     bapOrgId <- searchRequest.udf4 & fromMaybeM (SearchRequestFieldNotPresent "udf4")
     unless (bapOrg.id == Id bapOrgId) $ throwError AccessDenied
-    orderProductInstance <- mkOrderProductInstance (searchRequest.id) productInstance
+    ride <- mkRide productInstance
     rideRequest <-
       BP.mkRideReq
-        (orderProductInstance.id)
+        (ride.id)
         (transporterOrg.shortId)
         RideRequest.ALLOCATION
     let newProductInstanceStatus = ProductInstance.CONFIRMED
@@ -65,14 +67,14 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
       & fromEitherM PIInvalidStatus
 
     DB.runSqlDBTransaction $ do
-      QProductInstance.create orderProductInstance
+      QRide.create ride
       RideRequest.create rideRequest
       QProductInstance.updateStatus (productInstance.id) newProductInstanceStatus
 
     bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) bapCallbackUrl $
       onConfirmCallback
-        orderProductInstance
+        ride
         productInstance
         searchRequest
         transporterOrg
@@ -82,14 +84,14 @@ onConfirmCallback ::
     EncFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
   ) =>
-  ProductInstance.ProductInstance ->
+  Ride.Ride ->
   ProductInstance.ProductInstance ->
   SearchRequest.SearchRequest ->
   Organization.Organization ->
   m API.ConfirmOrder
-onConfirmCallback orderProductInstance productInstance searchRequest transporterOrg = do
+onConfirmCallback ride productInstance searchRequest transporterOrg = do
   let transporterId = transporterOrg.id
-  let prodInstId = productInstance.id
+  let prodInstId = ride.id
   pickupPoint <- (productInstance.fromLocation) & fromMaybeM (PIFieldNotPresent "location_id")
   vehicleVariant :: Vehicle.Variant <-
     (searchRequest.udf1 >>= readMaybe . T.unpack)
@@ -97,36 +99,36 @@ onConfirmCallback orderProductInstance productInstance searchRequest transporter
   driverPool <- map fst <$> calculateDriverPool pickupPoint transporterId vehicleVariant
   setDriverPool prodInstId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  mkOnConfirmPayload orderProductInstance
+  mkOnConfirmPayload ride
 
-driverPoolKey :: Id ProductInstance.ProductInstance -> Text
+driverPoolKey :: Id Ride.Ride -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
 getDriverPool ::
   ( DBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
   ) =>
-  Id ProductInstance.ProductInstance ->
+  Id Ride.Ride ->
   m [Id Driver]
-getDriverPool piId =
-  Redis.getKeyRedis (driverPoolKey piId)
+getDriverPool rideId =
+  Redis.getKeyRedis (driverPoolKey rideId)
     >>= maybe calcDriverPool (pure . map Id)
   where
     calcDriverPool = do
-      prodInst <- QProductInstance.findById piId >>= fromMaybeM PIDoesNotExist
-      searchRequest <- SearchRequest.findById (prodInst.requestId) >>= fromMaybeM SearchRequestNotFound
+      ride <- QRide.findById rideId >>= fromMaybeM PIDoesNotExist
+      searchRequest <- SearchRequest.findById (ride.requestId) >>= fromMaybeM SearchRequestNotFound
       vehicleVariant :: SV.Variant <-
         (searchRequest.udf1 >>= readMaybe . T.unpack)
           & fromMaybeM (SearchRequestFieldNotPresent "udf1")
       pickupPoint <-
-        prodInst.fromLocation
+        ride.fromLocation
           & fromMaybeM (PIFieldNotPresent "location_id")
-      let orgId = prodInst.organizationId
+      let orgId = ride.organizationId
       map fst <$> calculateDriverPool pickupPoint orgId vehicleVariant
 
-setDriverPool :: DBFlow m r => Id ProductInstance.ProductInstance -> [Id Driver] -> m ()
-setDriverPool piId ids =
-  Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
+setDriverPool :: DBFlow m r => Id Ride.Ride -> [Id Driver] -> m ()
+setDriverPool rideId ids =
+  Redis.setExRedis (driverPoolKey rideId) (map getId ids) (60 * 10)
 
 calculateDriverPool ::
   ( DBFlow m r,
@@ -159,33 +161,32 @@ calculateDriverPool locId orgId variant = do
         . toString
         $ conf.value
 
-mkOrderProductInstance :: MonadFlow m => Id SearchRequest.SearchRequest -> ProductInstance.ProductInstance -> m ProductInstance.ProductInstance
-mkOrderProductInstance searchRequestId prodInst = do
+mkRide :: MonadFlow m => ProductInstance.ProductInstance -> m Ride.Ride
+mkRide prodInst = do
   (now, pid, shortId) <- BP.getIdShortIdAndTime
   inAppOtpCode <- generateOTPCode
   return $
-    ProductInstance.ProductInstance
+    Ride.Ride
       { id = Id pid,
-        requestId = searchRequestId,
+        requestId = prodInst.requestId,
         productId = prodInst.productId,
         personId = Nothing,
         personUpdatedAt = Nothing,
-        entityType = ProductInstance.VEHICLE,
+        entityType = Ride.VEHICLE,
         entityId = Nothing,
         shortId = shortId,
         quantity = 1,
         price = prodInst.price,
         actualPrice = Nothing,
-        _type = ProductInstance.RIDEORDER,
         organizationId = prodInst.organizationId,
         fromLocation = prodInst.fromLocation,
         toLocation = prodInst.toLocation,
         startTime = prodInst.startTime,
         endTime = prodInst.endTime,
         validTill = prodInst.validTill,
-        parentId = Just (prodInst.id),
+        productInstanceId = prodInst.id,
         distance = 0,
-        status = ProductInstance.CONFIRMED,
+        status = Ride.CONFIRMED,
         info = Nothing,
         createdAt = now,
         updatedAt = now,
@@ -196,9 +197,9 @@ mkOrderProductInstance searchRequestId prodInst = do
         udf5 = prodInst.udf5
       }
 
-mkOnConfirmPayload :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> m API.ConfirmOrder
-mkOnConfirmPayload orderPI = do
-  trip <- BP.mkTrip orderPI
-  searchPiId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
+mkOnConfirmPayload :: (DBFlow m r, EncFlow m r) => Ride.Ride -> m API.ConfirmOrder
+mkOnConfirmPayload ride = do
+  trip <- BP.mkTrip ride
+  let searchPiId = ride.productInstanceId
   order <- ExternalAPITransform.mkOrder searchPiId (Just trip) Nothing
   return $ API.ConfirmOrder order

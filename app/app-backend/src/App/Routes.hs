@@ -56,6 +56,7 @@ import Types.Storage.ProductInstance
 import qualified Types.Storage.RegistrationToken as SRT
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
 import qualified Types.Storage.SearchRequest as SSR
+import qualified Types.Storage.Ride as SRide
 
 type AppAPI =
   "v2"
@@ -199,7 +200,7 @@ confirmFlow =
 
 type RideBookingAPI =
   "rideBooking"
-    :> ( Capture "bookingId" (Id ProductInstance)
+    :> ( Capture "bookingId" (Id SRide.Ride)
            :> TokenAuth
            :> Post '[JSON] RideBookingAPI.RideBookingStatusRes
            :<|> "list"
@@ -219,7 +220,7 @@ rideBookingFlow =
 
 type CancelAPI =
   "rideBooking"
-    :> Capture "bookingId" (Id ProductInstance)
+    :> Capture "bookingId" (Id SRide.Ride)
     :> "cancel"
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
@@ -236,7 +237,7 @@ cancelFlow =
 
 type RideAPI =
   "ride"
-    :> Capture "rideId" (Id ProductInstance)
+    :> Capture "rideId" (Id SRide.Ride)
     :> "driver"
     :> "location"
     :> TokenAuth

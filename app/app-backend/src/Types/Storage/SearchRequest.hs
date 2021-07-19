@@ -18,22 +18,6 @@ import EulerHS.Prelude hiding (id)
 import Servant
 import qualified Types.Storage.SearchReqLocation as Loc
 
-data SearchRequestType = RIDESEARCH
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
-
-instance ToHttpApiData SearchRequestType where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance B.HasSqlEqualityCheck Postgres SearchRequestType
-
-instance FromBackendRow Postgres SearchRequestType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -91,18 +75,12 @@ instance FromHttpApiData SearchRequestStatus where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-instance FromHttpApiData SearchRequestType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
-
 data SearchRequestT f = SearchRequest
   { id :: B.C f (Id SearchRequest),
     name :: B.C f (Maybe Text),
     description :: B.C f (Maybe Text),
     shortId :: B.C f (ShortId SearchRequest),
     industry :: B.C f Industry,
-    _type :: B.C f SearchRequestType,
     exchangeType :: B.C f ExchangeType,
     status :: B.C f SearchRequestStatus,
     startTime :: B.C f UTCTime,

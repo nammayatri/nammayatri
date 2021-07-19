@@ -57,27 +57,6 @@ instance ToHttpApiData ProductInstanceStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-data ProductInstanceType = RIDESEARCH | RIDEORDER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-instance ToHttpApiData ProductInstanceType where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductInstanceType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance B.HasSqlEqualityCheck Postgres ProductInstanceType
-
-instance FromBackendRow Postgres ProductInstanceType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance FromHttpApiData ProductInstanceType where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
-
 data EntityType = VEHICLE | PASS | TICKET
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -99,7 +78,6 @@ data ProductInstanceT f = ProductInstance
     quantity :: B.C f Int,
     price :: B.C f (Maybe Amount),
     actualPrice :: B.C f (Maybe Amount),
-    _type :: B.C f ProductInstanceType,
     status :: B.C f ProductInstanceStatus,
     startTime :: B.C f UTCTime,
     endTime :: B.C f (Maybe UTCTime),
@@ -107,7 +85,6 @@ data ProductInstanceT f = ProductInstance
     fromLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     toLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     organizationId :: B.C f (Id Org.Organization),
-    parentId :: B.C f (Maybe (Id ProductInstance)),
     actualDistance :: B.C f (Maybe Double),
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
@@ -162,7 +139,6 @@ fieldEMod =
           validTill = "valid_till",
           fromLocation = "from_location_id",
           toLocation = "to_location_id",
-          parentId = "parent_id",
           actualDistance = "actual_distance",
           organizationId = "organization_id",
           createdAt = "created_at",

@@ -16,7 +16,6 @@ import Data.Maybe
 import Data.Semigroup
 import EulerHS.Prelude hiding (id)
 import Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import Types.ProductInfo as ProductInfo
@@ -24,26 +23,28 @@ import Types.Storage.Person as Person
 import Types.Storage.ProductInstance as ProductInstance
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
+import qualified Storage.Queries.Ride as QRide
+import qualified Types.Storage.Ride as SRide
 
 -- | Try to initiate a call customer -> provider
 initiateCallToDriver :: Id ProductInstance -> Id Person.Person -> FlowHandler CallRes
-initiateCallToDriver rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones rideId
+initiateCallToDriver quoteId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones quoteId
   initiateCall customerPhone providerPhone
-  logTagInfo ("ProdInstId:" <> getId rideId) "Call initiated from customer to provider."
+  logTagInfo ("QuoteId:" <> getId quoteId) "Call initiated from customer to provider."
   return Ack
 
 -- | Try to initiate a call provider -> customer
 initiateCallToCustomer :: Id ProductInstance -> FlowHandler CallRes
-initiateCallToCustomer rideId = withFlowHandlerAPI $ do
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones rideId
+initiateCallToCustomer quoteId = withFlowHandlerAPI $ do
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones quoteId
   initiateCall providerPhone customerPhone
-  logTagInfo ("ProdInstId:" <> getId rideId) "Call initiated from provider to customer."
+  logTagInfo ("QuoteId:" <> getId quoteId) "Call initiated from provider to customer."
   return Ack
 
-getDriver :: (MonadFlow m) => ProductInstance -> m Driver.Driver
-getDriver rideSearchPI = do
-  info <- ProductInstance.info rideSearchPI & fromMaybeM (PIFieldNotPresent "info")
+getDriver :: (MonadFlow m) => SRide.Ride -> m Driver.Driver
+getDriver ride = do
+  info <- ride.info & fromMaybeM (PIFieldNotPresent "info")
   productInfo <- decodeFromText info & fromMaybeM (InternalError "Parse error.")
   tracker_ <- tracker productInfo & fromMaybeM (PIFieldNotPresent "tracker")
   let trip_ = trip tracker_
@@ -51,9 +52,9 @@ getDriver rideSearchPI = do
   driver <- driver_ & fromMaybeM (PIFieldNotPresent "driver")
   return $ toBeckn driver
 
-getPerson :: (DBFlow m r, EncFlow m r) => ProductInstance -> m Person
-getPerson rideSearchPI = do
-  searchRequest <- SearchRequest.findById rideSearchPI.requestId >>= fromMaybeM SearchRequestNotFound
+getPerson :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Person
+getPerson ride = do
+  searchRequest <- SearchRequest.findById ride.requestId >>= fromMaybeM SearchRequestNotFound
   personId <- SearchRequest.requestor searchRequest & fromMaybeM (SearchRequestFieldNotPresent "requestor")
   Person.findById (Id personId) >>= fromMaybeM PersonNotFound
 
@@ -71,12 +72,12 @@ getDriverPhone Driver.Driver {..} =
 
 -- | Returns phones pair or throws an error
 getProductAndCustomerPhones :: (EncFlow m r, DBFlow m r) => Id ProductInstance -> m (Text, Text)
-getProductAndCustomerPhones rideSearchPid = do
-  rideSearchPI <-
-    ProductInstance.findByParentIdType rideSearchPid ProductInstance.RIDEORDER
+getProductAndCustomerPhones quoteId = do
+  ride <-
+    QRide.findByProductInstanceId quoteId 
       >>= fromMaybeM PIDoesNotExist
-  person <- getPerson rideSearchPI
-  driver <- getDriver rideSearchPI
+  person <- getPerson ride
+  driver <- getDriver ride
   customerPhone <- getPersonPhone person
   driverPhone <- getDriverPhone driver
   return (customerPhone, driverPhone)

@@ -7,8 +7,8 @@ import EulerHS.Prelude hiding (id)
 import Types.Common
 import Types.Storage.SearchRequest as C
 import qualified Types.Storage.Person as P
-import Types.Storage.ProductInstance as SP
 import Types.Storage.SearchReqLocation as L
+import qualified Types.Storage.Ride as SRide
 
 newtype OrderResp = OrderResp {order :: OrderDetails}
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -31,7 +31,7 @@ data OrderDetails = OrderDetails
 
 data TripDetails = TripDetails
   { id :: Text, -- Product Instance Id
-    status :: SP.ProductInstanceStatus,
+    status :: SRide.RideStatus,
     driver :: Maybe Driver, -- info -> driver
     vehicle :: Maybe Vehicle,
     provider :: Maybe Provider,

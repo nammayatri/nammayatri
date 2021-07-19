@@ -12,8 +12,8 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import Types.Storage.Person (Person)
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Rating as Storage
+import qualified Types.Storage.Ride as Ride
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RatingT))
 getDbTable =
@@ -41,12 +41,12 @@ updateRatingValue ratingId driverId' newRatingValue = do
           &&. driverId ==. B.val_ driverId'
     )
 
-findByProductInstanceId :: DBFlow m r => Id PI.ProductInstance -> m (Maybe Storage.Rating)
-findByProductInstanceId productInsId = do
+findByRideId :: DBFlow m r => Id Ride.Ride -> m (Maybe Storage.Rating)
+findByRideId rideId' = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Rating {..} = productInstanceId ==. B.val_ productInsId
+    predicate Storage.Rating {..} = rideId ==. B.val_ rideId'
 
 findAllRatingsForPerson :: DBFlow m r => Id Person -> m [Storage.Rating]
 findAllRatingsForPerson driverId_ = do

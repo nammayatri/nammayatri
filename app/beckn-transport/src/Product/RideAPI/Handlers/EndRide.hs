@@ -14,14 +14,16 @@ import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Vehicle as Vehicle
+import qualified Types.Storage.Ride as Ride
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
-    endRideTransaction :: Id PI.ProductInstance -> Id Driver -> Amount -> m (),
+    findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
+    endRideTransaction :: Id Ride.Ride -> Id Driver -> Amount -> m (),
     findSearchRequestById :: Id SSearchRequest.SearchRequest -> m (Maybe SSearchRequest.SearchRequest),
-    notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> m (),
+    notifyUpdateToBAP :: PI.ProductInstance -> Ride.Ride -> Ride.RideStatus -> m (),
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
@@ -36,31 +38,31 @@ endRideHandler ::
   (MonadThrow m, Log m) =>
   ServiceHandle m ->
   Id Person.Person ->
-  Id PI.ProductInstance ->
+  Id Ride.Ride ->
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} requestorId rideId = do
   requestor <- findPersonById requestorId >>= fromMaybeM PersonNotFound
-  orderPi <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
-  driverId <- orderPi.personId & fromMaybeM (PIFieldNotPresent "person")
+  ride <- findRideById (cast rideId) >>= fromMaybeM RideDoesNotExist
+  driverId <- ride.personId & fromMaybeM (RideFieldNotPresent "person")
   case requestor.role of
     Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
-  unless (orderPi.status == PI.INPROGRESS) $ throwError $ PIInvalidStatus "This ride cannot be ended"
+  unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  searchPiId <- orderPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
-  searchPi <- findPIById searchPiId >>= fromMaybeM PINotFound
-  searchRequest <- findSearchRequestById searchPi.requestId >>= fromMaybeM SearchRequestNotFound
+  let prodInstId = ride.productInstanceId
+  prodInst <- findPIById prodInstId >>= fromMaybeM PINotFound
+  searchRequest <- findSearchRequestById prodInst.requestId >>= fromMaybeM SearchRequestNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   actualPrice <-
     ifM
       recalculateFareEnabled
-      (recalculateFare searchRequest orderPi)
-      (orderPi.price & fromMaybeM (PIFieldNotPresent "price"))
+      (recalculateFare searchRequest ride)
+      (ride.price & fromMaybeM (RideFieldNotPresent "price"))
 
-  endRideTransaction orderPi.id (cast driverId) actualPrice
+  endRideTransaction ride.id (cast driverId) actualPrice
 
-  notifyUpdateToBAP (updateActualPrice actualPrice searchPi) (updateActualPrice actualPrice orderPi){status = PI.COMPLETED} PI.COMPLETED
+  notifyUpdateToBAP prodInst (updateActualPrice actualPrice ride){status = Ride.COMPLETED} Ride.COMPLETED
 
   return APISuccess.Success
   where
@@ -83,5 +85,5 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           <> show distanceDiff
       putDiffMetric fareDiff distanceDiff
       pure fare
-    updateActualPrice :: Amount -> PI.ProductInstance -> PI.ProductInstance
-    updateActualPrice = \p pi -> pi {PI.actualPrice = Just p}
+    updateActualPrice :: Amount -> Ride.Ride -> Ride.Ride
+    updateActualPrice = \p ride -> ride{actualPrice = Just p}

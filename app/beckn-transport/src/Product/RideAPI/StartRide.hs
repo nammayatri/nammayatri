@@ -11,12 +11,13 @@ import Product.BecknProvider.BP
 import qualified Product.RideAPI.Handlers.StartRide as Handler
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QProductInstance
+import qualified Storage.Queries.Ride as QRide
 import Types.API.Ride (StartRideReq (..))
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Ride as Ride
 import Utils.Common (withFlowHandlerAPI)
 
-startRide :: Id SP.Person -> Id ProductInstance.ProductInstance -> StartRideReq -> FlowHandler APISuccess.APISuccess
+startRide :: Id SP.Person -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide personId rideId req = withFlowHandlerAPI $ do
   Handler.startRideHandler handle personId (cast rideId) (req.rideOtp)
   where
@@ -24,11 +25,12 @@ startRide personId rideId req = withFlowHandlerAPI $ do
       Handler.ServiceHandle
         { findPersonById = QPerson.findPersonById,
           findPIById = QProductInstance.findById,
+          findRideById = QRide.findById,
           startRide = startRideTransaction,
-          notifyBAPRideStarted = \searchPi orderPi -> notifyUpdateToBAP searchPi orderPi ProductInstance.INPROGRESS,
+          notifyBAPRideStarted = \searchPi rideId' -> notifyUpdateToBAP searchPi rideId' Ride.INPROGRESS,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId')
         }
 
-startRideTransaction :: DBFlow m r => Id ProductInstance.ProductInstance -> m ()
-startRideTransaction piId = DB.runSqlDBTransaction $ do
-  QProductInstance.updateStatus piId ProductInstance.INPROGRESS
+startRideTransaction :: DBFlow m r => Id Ride.Ride -> m ()
+startRideTransaction rideId = DB.runSqlDBTransaction $ do
+  QRide.updateStatus rideId Ride.INPROGRESS

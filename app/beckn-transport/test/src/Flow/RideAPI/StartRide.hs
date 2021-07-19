@@ -12,6 +12,7 @@ import Test.Tasty.HUnit
 import Types.Error
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.SilentLogger ()
 
@@ -20,27 +21,32 @@ handle =
   StartRide.ServiceHandle
     { findPersonById = \_personid -> pure $ Just Fixtures.defaultDriver,
       findPIById = \piId ->
-        if piId == Id "1"
-          then pure $ Just rideProductInstance
-          else pure $ Just searchProductInstance,
+        pure $
+          if piId == Id "2"
+            then Just searchProductInstance
+            else Nothing,
+      findRideById = \rideId ->
+        pure $
+          if rideId == Id "1"
+            then Just ride
+            else Nothing,
       startRide = \_piIds -> pure (),
-      notifyBAPRideStarted = \_searchPi _orderPi -> pure (),
+      notifyBAPRideStarted = \_searchPi _ride -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure ()
     }
 
-rideProductInstance :: ProductInstance.ProductInstance
-rideProductInstance =
-  Fixtures.defaultProductInstance
-    { ProductInstance.status = ProductInstance.CONFIRMED,
-      ProductInstance.parentId = Just "2",
-      ProductInstance.udf4 = Just "otp"
+ride :: Ride.Ride
+ride =
+  Fixtures.defaultRide
+    { Ride.status = Ride.CONFIRMED,
+      Ride.productInstanceId = "2",
+      Ride.udf4 = Just "otp"
     }
 
 searchProductInstance :: ProductInstance.ProductInstance
 searchProductInstance =
   Fixtures.defaultProductInstance
     { ProductInstance.id = "2",
-      ProductInstance._type = ProductInstance.RIDESEARCH,
       ProductInstance.status = ProductInstance.CONFIRMED
     }
 
@@ -48,7 +54,6 @@ searchRequest :: SearchRequest.SearchRequest
 searchRequest =
   Fixtures.defaultSearchRequest
     { SearchRequest.id = "1",
-      SearchRequest._type = SearchRequest.RIDESEARCH,
       SearchRequest.status = SearchRequest.CONFIRMED
     }
 
@@ -60,12 +65,11 @@ startRide =
       failedStartRequestedByDriverNotAnOrderExecutor,
       failedStartRequestedNotByDriver,
       failedStartWhenProductInstanceStatusIsWrong,
-      failedStartWhenRideDoesNotHaveParentProductInstance,
       failedStartWhenRideMissingOTP,
       failedStartWithWrongOTP
     ]
 
-runHandler :: StartRide.ServiceHandle IO -> Id Person.Person -> Id ProductInstance.ProductInstance -> Text -> IO APISuccess.APISuccess
+runHandler :: StartRide.ServiceHandle IO -> Id Person.Person -> Id Ride.Ride -> Text -> IO APISuccess.APISuccess
 runHandler = StartRide.startRideHandler
 
 successfulStartByDriver :: TestTree
@@ -108,31 +112,14 @@ failedStartWhenProductInstanceStatusIsWrong :: TestTree
 failedStartWhenProductInstanceStatusIsWrong = do
   testCase "Fail ride starting if ride has wrong status" $ do
     runHandler handleCase "1" "1" "otp"
-      `shouldThrow` (\(PIInvalidStatus _) -> True)
+      `shouldThrow` (\(RideInvalidStatus _) -> True)
   where
     handleCase =
       handle
-        { StartRide.findPIById = \piId ->
+        { StartRide.findRideById = \rideId ->
             pure $
               Just
-                rideProductInstance
-                  { ProductInstance.status = ProductInstance.COMPLETED
-                  }
-        }
-
-failedStartWhenRideDoesNotHaveParentProductInstance :: TestTree
-failedStartWhenRideDoesNotHaveParentProductInstance = do
-  testCase "Fail ride starting if ride does not have parent ProductInstance" $ do
-    runHandler handleCase "1" "1" "otp"
-      `shouldThrow` (== PIFieldNotPresent "parent_id")
-  where
-    handleCase =
-      handle
-        { StartRide.findPIById = \piId ->
-            pure $
-              Just
-                rideProductInstance
-                  { ProductInstance.parentId = Nothing
+                ride{status = Ride.COMPLETED
                   }
         }
 
@@ -144,11 +131,11 @@ failedStartWhenRideMissingOTP = do
   where
     handleCase =
       handle
-        { StartRide.findPIById = \piId ->
+        { StartRide.findRideById = \rideId ->
             pure $
               Just
-                rideProductInstance
-                  { ProductInstance.udf4 = Nothing
+                ride
+                  { Ride.udf4 = Nothing
                   }
         }
 

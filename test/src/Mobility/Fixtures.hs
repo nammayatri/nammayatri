@@ -26,11 +26,12 @@ import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 import qualified "app-backend" Types.Common as AppCommon
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
-import qualified "app-backend" Types.Storage.SearchRequest as BSearchRequest
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
-import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
 import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
+import qualified "app-backend" Types.Storage.Ride as BRide
+import qualified "beckn-transport" Types.Storage.Ride as TRide
 import qualified "app-backend" Types.Storage.SearchReqLocation as AppBESearchReqLoc
+import qualified "app-backend" Types.Storage.SearchRequest as BSearchRequest
 
 address :: AppCommon.Address
 address =
@@ -119,12 +120,12 @@ searchServices ::
   ClientM AppBESearch.SearchRes
 searchServices :<|> _ = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
-cancelRide :: Id BPI.ProductInstance -> Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
+cancelRide :: Id BRide.Ride -> Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
-rideStart :: Text -> Id TPI.ProductInstance -> RideAPI.StartRideReq -> ClientM APISuccess
-rideEnd :: Text -> Id TPI.ProductInstance -> ClientM APISuccess
-rideCancel :: Text -> Id TPI.ProductInstance -> RideAPI.CancelRideReq -> ClientM APISuccess
+rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
+rideEnd :: Text -> Id TRide.Ride -> ClientM APISuccess
+rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
 rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
@@ -141,13 +142,13 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
                   )
          ) = client (Proxy :: Proxy TbeRoutes.DriverAPI)
 
-rideRespond :: Id TPI.ProductInstance -> Text -> TRideBookingAPI.SetDriverAcceptanceReq -> ClientM TRideBookingAPI.SetDriverAcceptanceRes
+rideRespond :: Id TRide.Ride -> Text -> TRideBookingAPI.SetDriverAcceptanceReq -> ClientM TRideBookingAPI.SetDriverAcceptanceRes
 rideRespond rideBookingId = rideResp
   where
     _ :<|> (_ :<|> driver_rb_path) = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
     rideResp :<|> _ = driver_rb_path rideBookingId
 
-getNotificationInfo :: Id TPI.ProductInstance -> Text -> ClientM TRideBookingAPI.GetRideInfoRes
+getNotificationInfo :: Id TRide.Ride -> Text -> ClientM TRideBookingAPI.GetRideInfoRes
 getNotificationInfo rideBookingId = getNotif
   where
     _ :<|> (_ :<|> driver_rb_path) = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
@@ -168,20 +169,20 @@ appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
 
-callAppFeedback :: Int -> Id BPI.ProductInstance -> ClientM APISuccess
-callAppFeedback ratingValue productInstanceId =
+callAppFeedback :: Int -> Id BRide.Ride -> ClientM APISuccess
+callAppFeedback ratingValue rideId =
   let request =
         AppFeedback.FeedbackReq
-          { productInstanceId = getId productInstanceId,
+          { productInstanceId = getId rideId,
             rating = ratingValue
           }
    in appFeedback appRegistrationToken request
 
-tRideBookingStatus :: Id TPI.ProductInstance -> Text -> ClientM TRideBookingAPI.RideBookingStatusRes
+tRideBookingStatus :: Id TRide.Ride -> Text -> ClientM TRideBookingAPI.RideBookingStatusRes
 tRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM TRideBookingAPI.RideBookingListRes
 (tRideBookingStatus :<|> tRideBookingList :<|> _) :<|> _ = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
 
-appRideBookingStatus :: Id BPI.ProductInstance -> Text -> ClientM AppRideBooking.RideBookingStatusRes
+appRideBookingStatus :: Id BRide.Ride -> Text -> ClientM AppRideBooking.RideBookingStatusRes
 appRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppRideBooking.RideBookingListRes
 appRideBookingStatus :<|> appRideBookingList = client (Proxy :: Proxy AbeRoutes.RideBookingAPI)
 

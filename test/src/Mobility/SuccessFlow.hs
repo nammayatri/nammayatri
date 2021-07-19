@@ -4,15 +4,17 @@ import Beckn.Types.Id
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
-import qualified "beckn-transport" Storage.Queries.ProductInstance as TQPI
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
 import qualified "app-backend" Types.Storage.Ride as AppRide
 import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
+import qualified "beckn-transport" Storage.Queries.Ride as TQRide
+import qualified "beckn-transport" Types.Storage.Ride as TRide
+import qualified "app-backend" Types.Storage.Ride as BRide
 
-doAnAppSearch :: HasCallStack => ClientsM (Id BPI.ProductInstance, Id BPI.ProductInstance, TPI.ProductInstance)
+doAnAppSearch :: HasCallStack => ClientsM (Id BPI.ProductInstance, Id BRide.Ride, TRide.Ride)
 doAnAppSearch = do
   -- Driver sets online
   void . callBPP $ setDriverOnline driverToken True
@@ -42,16 +44,16 @@ doAnAppSearch = do
       appConfirmRide appRegistrationToken appSearchId bQuoteId
   let bRideBookingId = confirmResult.bookingId
 
-  transporterOrderPi <- getBPPOrderPi (cast bQuoteId)
-  transporterOrderPi.udf4 `shouldSatisfy` isJust
+  ride <- getBPPOrderPi (cast bQuoteId)
+  ride.udf4 `shouldSatisfy` isJust
 
-  return (bQuoteId, bRideBookingId, transporterOrderPi)
+  return (bQuoteId, bRideBookingId, ride)
 
 getBPPOrderPi ::
   Id TPI.ProductInstance ->
-  ClientsM TPI.ProductInstance
+  ClientsM TRide.Ride
 getBPPOrderPi searchPiId = do
-  mbTOrderPI <- liftIO $ runTransporterFlow "" $ TQPI.findOrderPIByParentId (cast searchPiId)
+  mbTOrderPI <- liftIO $ runTransporterFlow "" $ TQRide.findByProductInstanceId (cast searchPiId)
   mbTOrderPI `shouldSatisfy` isJust
   return $ fromJust mbTOrderPI
 
@@ -77,7 +79,7 @@ spec = do
       void . poll $
         getBPPOrderPi (cast productInstanceId)
           <&> (.status)
-          >>= (`shouldBe` TPI.TRIP_ASSIGNED)
+          >>= (`shouldBe` TRide.TRIP_ASSIGNED)
           <&> Just
 
       void . callBPP $

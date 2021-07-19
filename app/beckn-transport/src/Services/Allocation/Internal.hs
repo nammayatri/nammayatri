@@ -17,7 +17,7 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.ProductInstance as QPI
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideRequest as QRR
 import qualified Storage.Queries.Vehicle as QVeh
 import Types.App
@@ -27,12 +27,14 @@ import Types.Storage.AllocationEvent (AllocationEventType)
 import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
 import Types.Storage.Organization
-import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.RideCancellationReason as SRCR
+import Types.Storage.Ride (Ride)
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.Notifications
 import qualified Utils.Notifications as Notify
+import qualified Storage.Queries.ProductInstance as QPI
 
 getDriverSortMode :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m SortMode
 getDriverSortMode = asks (.driverAllocationConfig.defaultSortMode)
@@ -44,7 +46,7 @@ getConfiguredAllocationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: Dri
 getConfiguredAllocationTime = asks (.driverAllocationConfig.rideAllocationExpiry)
 
 getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]) => Id Ride -> m [Id Driver]
-getDriverPool rideId = Confirm.getDriverPool (cast rideId)
+getDriverPool = Confirm.getDriverPool
 
 getRequests :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest]
 getRequests shortOrgId numRequests = do
@@ -65,15 +67,9 @@ assignDriver ::
   Id Driver ->
   m ()
 assignDriver rideId driverId = do
-  ordPi <- QPI.findById orderPIId >>= fromMaybeM PIDoesNotExist
-  searchPIId <- ordPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
-  searchPi <- QPI.findById searchPIId >>= fromMaybeM PINotFound
-  piList <-
-    ordPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
-      >>= QPI.findAllByParentId
-  headPi <- case piList of
-    p : _ -> pure p
-    [] -> throwError PIDoesNotExist
+  ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
+  let searchPIId = ride.productInstanceId
+  searchPi <- QPI.findById searchPIId >>= fromMaybeM RideNotFound
   driver <-
     QP.findPersonById (cast driverId)
       >>= fromMaybeM PersonDoesNotExist
@@ -84,21 +80,19 @@ assignDriver rideId driverId = do
   vehicle <-
     QVeh.findVehicleById vehicleId
       >>= fromMaybeM VehicleNotFound
-  let piIdList = PI.id <$> piList
   decDriver <- decrypt driver
-  DB.runSqlDBTransaction (QA.assignDriver piIdList vehicle decDriver)
+  DB.runSqlDBTransaction (QA.assignDriver ride.id vehicle decDriver)
 
   fork "assignDriver - Notify BAP" $ do
-    BP.notifyUpdateToBAP searchPi ordPi PI.TRIP_ASSIGNED
-    Notify.notifyDriver notificationType notificationTitle (message headPi) driver.id driver.deviceToken
+    BP.notifyUpdateToBAP searchPi ride Ride.TRIP_ASSIGNED
+    Notify.notifyDriver notificationType notificationTitle (message ride) driver.id driver.deviceToken
   where
-    orderPIId = cast rideId
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
-    message p' =
+    message ride =
       unwords
         [ "You have been assigned a ride for",
-          showTimeIst (PI.startTime p') <> ".",
+          showTimeIst ride.startTime <> ".",
           "Check the app for more details."
         ]
 
@@ -147,7 +141,7 @@ sendNewRideNotification ::
   Id Driver ->
   m ()
 sendNewRideNotification rideId driverId = do
-  prodInst <- QPI.findById (cast rideId) >>= fromMaybeM PINotFound
+  prodInst <- QRide.findById rideId >>= fromMaybeM RideNotFound
   person <-
     QP.findPersonById (cast driverId)
       >>= fromMaybeM PersonNotFound
@@ -161,12 +155,12 @@ sendRideNotAssignedNotification ::
   Id Ride ->
   Id Driver ->
   m ()
-sendRideNotAssignedNotification (Id rideId) (Id driverId) = do
-  prodInst <- QPI.findById (Id rideId) >>= fromMaybeM PINotFound
+sendRideNotAssignedNotification rideId driverId = do
+  ride <- QRide.findById rideId >>= fromMaybeM RideNotFound
   person <-
-    QP.findPersonById (Id driverId)
+    QP.findPersonById (cast driverId)
       >>= fromMaybeM PersonNotFound
-  notifyDriverUnassigned prodInst person.id person.deviceToken
+  notifyDriverUnassigned ride person.id person.deviceToken
 
 updateNotificationStatus :: DBFlow m r => Id Ride -> Id Driver -> NotificationStatus -> m ()
 updateNotificationStatus rideId driverId =
@@ -259,19 +253,19 @@ logEvent = logAllocationEvent
 
 getRideInfo :: DBFlow m r => Id Ride -> m RideInfo
 getRideInfo rideId = do
-  productInstance <- QPI.findById (cast rideId) >>= fromMaybeM PINotFound
-  rideStatus <- castToRideStatus $ productInstance.status
+  ride <- QRide.findById rideId >>= fromMaybeM RideNotFound
+  rideStatus <- castToRideStatus $ ride.status
   pure
     RideInfo
       { rideId = rideId,
         rideStatus = rideStatus,
-        orderTime = OrderTime $ productInstance.createdAt
+        orderTime = OrderTime $ ride.createdAt
       }
   where
     castToRideStatus = \case
-      PI.CONFIRMED -> pure Confirmed
-      PI.TRIP_ASSIGNED -> pure Assigned
-      PI.INPROGRESS -> pure InProgress
-      PI.COMPLETED -> pure Completed
-      PI.CANCELLED -> pure Cancelled
+      Ride.CONFIRMED -> pure Confirmed
+      Ride.TRIP_ASSIGNED -> pure Assigned
+      Ride.INPROGRESS -> pure InProgress
+      Ride.COMPLETED -> pure Completed
+      Ride.CANCELLED -> pure Cancelled
       _ -> throwError $ InternalError "Unknown status to cast."

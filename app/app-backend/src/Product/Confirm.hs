@@ -14,8 +14,8 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Organization as OQ
-import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.ProductInstance as QPI
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
@@ -24,6 +24,7 @@ import qualified Types.ProductInfo as Products
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as SPI
+import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
@@ -34,19 +35,19 @@ confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPerson
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
   when ((searchRequest.validTill) < lt) $
     throwError SearchRequestExpired
-  productInstance <- MPI.findById rideBookingId >>= fromMaybeM PIDoesNotExist
+  productInstance <- QPI.findById rideBookingId >>= fromMaybeM PIDoesNotExist
   organization <-
     OQ.findOrganizationById (productInstance.organizationId)
       >>= fromMaybeM OrgNotFound
-  Metrics.incrementSearchRequestCount SearchRequest.INPROGRESS SearchRequest.RIDESEARCH
-  orderProductInstance <- mkOrderProductInstance (searchRequest.id) productInstance
+  Metrics.incrementSearchRequestCount SearchRequest.INPROGRESS
+  ride <- mkRide (searchRequest.id) productInstance
   DB.runSqlDBTransaction $ do
-    QPI.create orderProductInstance
+    QRide.create ride
   context <- buildContext "confirm" (getId searchRequestId) Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
   ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)
-  return $ API.ConfirmRes orderProductInstance.id
+  return $ API.ConfirmRes ride.id
   where
     mkOrder productInstance = do
       now <- getCurrentTime
@@ -79,7 +80,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
         let trip = fromBeckn <$> msg.order.trip
             pid = Id $ msg.order.id
             tracker = flip Products.Tracker Nothing <$> trip
-        prdInst <- MPI.findById pid >>= fromMaybeM PIDoesNotExist
+        prdInst <- QPI.findById pid >>= fromMaybeM PIDoesNotExist
         -- TODO: update tracking prodInfo in.info
         let mprdInfo = decodeFromText =<< (prdInst.info)
         let uInfo = (\info -> info {Products.tracker = tracker}) <$> mprdInfo
@@ -89,29 +90,28 @@ onConfirm _org req = withFlowHandlerBecknAPI $
                   SPI.udf4 = (.id) <$> trip,
                   SPI.status = SPI.CONFIRMED
                 }
-        Metrics.incrementSearchRequestCount SearchRequest.COMPLETED SearchRequest.RIDESEARCH
+        Metrics.incrementSearchRequestCount SearchRequest.COMPLETED
         SPI.validateStatusTransition (SPI.status prdInst) SPI.CONFIRMED & fromEitherM PIInvalidStatus
         DB.runSqlDBTransaction $ do
           QPI.updateMultiple pid uPrd
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack
 
-mkOrderProductInstance :: MonadFlow m => Id SearchRequest.SearchRequest -> SPI.ProductInstance -> m SPI.ProductInstance
-mkOrderProductInstance searchRequestId prodInst@SPI.ProductInstance {..} = do
+mkRide :: MonadFlow m => Id SearchRequest.SearchRequest -> SPI.ProductInstance -> m SRide.Ride
+mkRide searchRequestId prodInst@SPI.ProductInstance {..} = do
   now <- getCurrentTime
   piid <- generateGUID
   shortId' <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return
-    SPI.ProductInstance
+    SRide.Ride
       { id = Id piid,
         requestId = searchRequestId,
-        entityType = SPI.VEHICLE,
+        entityType = SRide.VEHICLE,
         entityId = Nothing,
         shortId = ShortId shortId',
         quantity = 1,
-        _type = SPI.RIDEORDER,
-        parentId = Just (prodInst.id),
-        status = SPI.INSTOCK,
+        productInstanceId = prodInst.id,
+        status = SRide.INSTOCK,
         createdAt = now,
         updatedAt = now,
         ..

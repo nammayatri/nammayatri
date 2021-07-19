@@ -8,10 +8,10 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Storage.CancellationReason (CancellationReasonCode)
 import Types.Storage.Organization
-import Types.Storage.ProductInstance (ProductInstance)
+import Types.Storage.Ride (Ride)
 
 data RideCancellationReasonT f = RideCancellationReason
-  { rideId :: B.C f (Id ProductInstance),
+  { rideId :: B.C f (Id Ride),
     source :: B.C f CancellationSource,
     reasonCode :: B.C f (Maybe CancellationReasonCode),
     additionalInfo :: B.C f (Maybe Text)
@@ -23,7 +23,7 @@ type RideCancellationReason = RideCancellationReasonT Identity
 type RideCancellationReasonPrimaryKey = B.PrimaryKey RideCancellationReasonT Identity
 
 instance B.Table RideCancellationReasonT where
-  data PrimaryKey RideCancellationReasonT f = RideCancellationReasonPrimaryKey (B.C f (Id ProductInstance))
+  data PrimaryKey RideCancellationReasonT f = RideCancellationReasonPrimaryKey (B.C f (Id Ride))
     deriving (Generic, B.Beamable)
   primaryKey = RideCancellationReasonPrimaryKey . rideId
 

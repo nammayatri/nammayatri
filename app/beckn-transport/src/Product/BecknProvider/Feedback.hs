@@ -10,16 +10,16 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Rating as Rating
+import qualified Storage.Queries.Ride as QRide
 import Types.Error
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.ProductInstance as ProductInstance
 import Types.Storage.Rating as Rating
   ( Rating,
     RatingT (..),
   )
+import qualified Types.Storage.Ride as Ride
 import Utils.Common
 
 feedback ::
@@ -32,25 +32,26 @@ feedback _ _ req = withFlowHandlerBecknAPI $
     logTagInfo "FeedbackAPI" "Received feedback API call."
     let context = req.context
     BP.validateContext "feedback" context
-    let searchPIId = Id $ req.message.order_id
-    orderPI <- ProductInstance.findOrderPIByParentId searchPIId >>= fromMaybeM PIDoesNotExist
-    driverId <- orderPI.personId & fromMaybeM (PIFieldNotPresent "person")
-    unless (orderPI.status == ProductInstance.COMPLETED) $
+    let productInstanceId = Id $ req.message.order_id
+    ride <-
+      QRide.findByProductInstanceId productInstanceId
+        >>= fromMaybeM RideNotFound
+    driverId <- ride.personId & fromMaybeM (RideFieldNotPresent "person")
+    unless (ride.status == Ride.COMPLETED) $
       throwError $ PIInvalidStatus "Order is not ready for rating."
     ratingValue :: Int <-
       decodeFromText (req.message.rating.value)
         & fromMaybeM (InvalidRequest "Invalid rating type.")
-    let orderId = orderPI.id
-    mbRating <- Rating.findByProductInstanceId orderId
+    mbRating <- Rating.findByRideId ride.id
     case mbRating of
       Nothing -> do
         logTagInfo "FeedbackAPI" $
-          "Creating a new record for " +|| orderId ||+ " with rating " +|| ratingValue ||+ "."
-        newRating <- mkRating orderId driverId ratingValue
+          "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
+        newRating <- mkRating ride.id driverId ratingValue
         Rating.create newRating
       Just rating -> do
         logTagInfo "FeedbackAPI" $
-          "Updating existing rating for " +|| orderPI.id ||+ " with new rating " +|| ratingValue ||+ "."
+          "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
         Rating.updateRatingValue rating.id driverId ratingValue
     calculateAverageRating driverId
     return Ack
@@ -72,8 +73,8 @@ calculateAverageRating personId = do
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     QP.updateAverageRating personId newAverage
 
-mkRating :: MonadFlow m => Id ProductInstance.ProductInstance -> Id SP.Person -> Int -> m Rating.Rating
-mkRating productInstanceId driverId ratingValue = do
+mkRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> m Rating.Rating
+mkRating rideId driverId ratingValue = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now
