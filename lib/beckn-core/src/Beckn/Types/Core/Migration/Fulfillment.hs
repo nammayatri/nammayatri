@@ -22,6 +22,7 @@ import EulerHS.Prelude hiding (State, id, state)
 data Fulfillment = Fulfillment
   { id :: Maybe Text,
     _type :: Maybe Text,
+    provider_id :: Maybe Text,
     state :: Maybe State,
     tracking :: Bool,
     customer :: Maybe FulfillmentParticipant,
@@ -29,7 +30,6 @@ data Fulfillment = Fulfillment
     vehicle :: Maybe Vehicle,
     start :: Maybe FulfillmentDetails,
     end :: Maybe FulfillmentDetails,
-    purpose :: Maybe Text,
     tags :: Maybe Tags
   }
   deriving (Generic, Show)
@@ -39,6 +39,7 @@ instance FromJSON Fulfillment where
     Fulfillment
       <$> o .:? "id"
       <*> o .:? "type"
+      <*> o .:? "provider_id"
       <*> o .:? "state"
       <*> o .:? "tracking" .!= False
       <*> o .:? "customer"
@@ -46,7 +47,6 @@ instance FromJSON Fulfillment where
       <*> o .:? "vehicle"
       <*> o .:? "start"
       <*> o .:? "end"
-      <*> o .:? "purpose"
       <*> o .:? "tags"
 
 instance ToJSON Fulfillment where
@@ -57,6 +57,7 @@ instance Example Fulfillment where
     Fulfillment
       { id = Nothing,
         _type = Nothing,
+        provider_id = Nothing,
         state = Nothing,
         tracking = False,
         customer = Nothing,
@@ -64,7 +65,6 @@ instance Example Fulfillment where
         vehicle = Nothing,
         start = Nothing,
         end = Nothing,
-        purpose = Nothing,
         tags = Nothing
       }
 

@@ -14,14 +14,12 @@ import Beckn.Utils.JSON
 import EulerHS.Prelude hiding (id)
 
 data Intent = Intent
-  { query_string :: Maybe Text,
-    provider :: Maybe ProviderInfo,
+  { provider :: Maybe ProviderInfo,
     fulfillment :: Maybe FulFillmentInfo,
     payment :: Maybe Payment,
     category :: Maybe Category,
     offer :: Maybe Offer,
     item :: Maybe Item,
-    purpose :: Maybe Text,
     tags :: Maybe Tags
   }
   deriving (Generic, Show)
@@ -29,20 +27,19 @@ data Intent = Intent
 instance Example Intent where
   example =
     Intent
-      { query_string = Nothing,
-        provider = Nothing,
+      { provider = Nothing,
         fulfillment = example,
         payment = Nothing,
         category = Nothing,
         offer = Nothing,
         item = Nothing,
-        purpose = Nothing,
         tags = Nothing
       }
 
 data ProviderInfo = ProviderInfo
   { id :: Maybe Text,
     descriptor :: Maybe DescriptorName,
+    category_id :: Maybe Text,
     locations :: Maybe [IdObject]
   }
   deriving (Generic, Show)

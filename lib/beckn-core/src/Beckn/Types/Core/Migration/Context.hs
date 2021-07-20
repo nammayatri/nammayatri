@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Migration.Context where
 
 import Beckn.Types.Core.Migration.Domain (Domain)
-import Beckn.Types.Core.Migration.Duration (Duration)
+import Beckn.Types.Time (Iso8601Time)
 import Beckn.Utils.JSON
 import Data.Aeson
 import Data.Time (UTCTime)
@@ -22,7 +22,7 @@ data Context = Context
     message_id :: Text,
     timestamp :: UTCTime,
     key :: Maybe Text,
-    ttl :: Maybe Duration
+    ttl :: Maybe Iso8601Time
   }
   deriving (Generic, Show)
 
@@ -41,7 +41,7 @@ data Action
   | STATUS
   | TRACK
   | CANCEL
-  | FEEDBACK
+  | RATING
   | SUPPORT
   | ON_SEARCH
   | ON_SELECT
@@ -51,7 +51,7 @@ data Action
   | ON_STATUS
   | ON_TRACK
   | ON_CANCEL
-  | ON_FEEDBACK
+  | ON_RATING
   | ON_SUPPORT
   deriving (Generic, Show, Eq)
 
@@ -71,6 +71,6 @@ mapToCbAction = \case
   STATUS -> Just ON_STATUS
   TRACK -> Just ON_TRACK
   CANCEL -> Just ON_CANCEL
-  FEEDBACK -> Just ON_FEEDBACK
+  RATING -> Just ON_RATING
   SUPPORT -> Just ON_SUPPORT
   _ -> Nothing

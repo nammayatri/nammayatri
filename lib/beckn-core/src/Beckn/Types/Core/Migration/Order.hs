@@ -14,7 +14,6 @@ import EulerHS.Prelude hiding (State, id, state)
 data Order = Order
   { id :: Maybe Text,
     state :: Maybe Text,
-    provider :: IdAndLocations,
     items :: [OrderItem],
     add_ons :: [IdObject],
     offers :: [IdObject],
@@ -24,12 +23,6 @@ data Order = Order
     payment :: Payment,
     created_at :: Maybe UTCTime,
     updated_at :: Maybe UTCTime
-  }
-  deriving (Generic, Show)
-
-data IdAndLocations = IdAndLocations
-  { id :: Text,
-    locations :: [IdObject]
   }
   deriving (Generic, Show)
 
@@ -50,7 +43,6 @@ instance Example Order where
     Order
       { id = Nothing,
         state = Nothing,
-        provider = example,
         items = [],
         add_ons = [],
         offers = [],
@@ -67,16 +59,3 @@ instance FromJSON OrderItem where
 
 instance ToJSON OrderItem where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance FromJSON IdAndLocations where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON IdAndLocations where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance Example IdAndLocations where
-  example =
-    IdAndLocations
-      { id = "1",
-        locations = []
-      }

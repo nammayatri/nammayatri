@@ -26,7 +26,7 @@ import "fmd-wrapper" Types.Beckn.Fulfillment (Fulfillment (..), FulfillmentDetai
 import "fmd-wrapper" Types.Beckn.Gps (Gps (..))
 import "fmd-wrapper" Types.Beckn.ItemQuantity (emptyItemQuantity)
 import "fmd-wrapper" Types.Beckn.Location (Location (..))
-import "fmd-wrapper" Types.Beckn.Order (IdAndLocations (..), Order (..), OrderItem (..))
+import "fmd-wrapper" Types.Beckn.Order (Order (..), OrderItem (..))
 import "fmd-wrapper" Types.Beckn.Payment (Params (..), Payment (..))
 import "fmd-wrapper" Types.Beckn.Person (Person (..))
 import "fmd-wrapper" Types.Beckn.Quotation (Quotation (..))
@@ -38,11 +38,6 @@ confirmOrder =
     Order
       { id = Nothing,
         state = Nothing,
-        provider =
-          IdAndLocations
-            { id = "",
-              locations = []
-            },
         items = [OrderItem "2" emptyItemQuantity],
         add_ons = [],
         offers = [],
@@ -51,6 +46,7 @@ confirmOrder =
           Fulfillment
             { id = Nothing,
               _type = Nothing,
+              provider_id = Nothing,
               state = Nothing,
               tracking = False,
               customer = Nothing,
@@ -128,7 +124,6 @@ confirmOrder =
                       contact = Just $ Contact (Just "+919999999999") Nothing Nothing,
                       person = Just $ Person Nothing Nothing Nothing Nothing Nothing Nothing
                     },
-              purpose = Nothing,
               tags = Nothing
             },
         quote =

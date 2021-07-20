@@ -87,6 +87,7 @@ mkOnSearchCatalog res@QuoteRes {..} =
                       Just $
                         emptyDescriptor
                           & #name ?~ "Dunzo Digital Private Limited",
+                    category_id = Nothing,
                     time = Nothing,
                     categories =
                       Just
@@ -181,8 +182,7 @@ mkOnTrackMessage mbTrackingUrl = TrackAPI.OnTrackInfo tracking
   where
     tracking =
       Tracking
-        { tl_method = Nothing,
-          url = mbTrackingUrl,
+        { url = mbTrackingUrl,
           status = Nothing
         }
 

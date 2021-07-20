@@ -16,6 +16,7 @@ import EulerHS.Prelude hiding (exp, id)
 data Provider = Provider
   { id :: Maybe Text,
     descriptor :: Maybe Descriptor,
+    category_id :: Maybe Text,
     time :: Maybe Time,
     categories :: Maybe [Category],
     fulfillments :: Maybe [Fulfillment],
@@ -39,6 +40,7 @@ instance Example Provider where
     Provider
       { id = Nothing,
         descriptor = Nothing,
+        category_id = Nothing,
         time = Nothing,
         categories = Nothing,
         fulfillments = Nothing,

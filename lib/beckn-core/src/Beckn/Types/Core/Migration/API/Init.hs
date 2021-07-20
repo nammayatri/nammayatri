@@ -23,20 +23,13 @@ newtype InitOrderObj = InitOrderObj {order :: InitOrder}
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data InitOrder = InitOrder
-  { provider :: InitOrderProvider,
-    items :: [InitOrderItem],
+  { items :: [InitOrderItem],
     add_ons :: [IdObject],
     offers :: [IdObject],
     billing :: Billing,
     fulfillment :: Fulfillment
   }
   deriving (Generic, Show, FromJSON, ToJSON)
-
-data InitOrderProvider = InitOrderProvider
-  { id :: Text,
-    locations :: [IdObject]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
 
 data InitOrderItem = InitOrderItem
   { id :: Text,
@@ -53,14 +46,12 @@ onInitAPI :: Proxy OnInitAPI
 onInitAPI = Proxy
 
 newtype InitializedObject = InitializedObject
-  { initialized :: Initialized
+  { order :: InitializedOrder
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-data Initialized = Initialized
-  { provider :: Maybe IdObject,
-    provider_location :: Maybe IdObject,
-    items :: Maybe [InitOrderItem],
+data InitializedOrder = InitializedOrder
+  { items :: Maybe [InitOrderItem],
     add_ons :: Maybe [IdObject],
     offers :: Maybe [IdObject],
     billing :: Maybe Billing,

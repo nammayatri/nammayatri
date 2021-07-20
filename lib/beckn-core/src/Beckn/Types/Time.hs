@@ -1,7 +1,11 @@
 module Beckn.Types.Time where
 
+import Data.Aeson (Value (..))
+import Data.Aeson.Types (typeMismatch)
+import qualified Data.Text as Text
 import Data.Time (UTCTime)
 import qualified Data.Time as Time
+import Data.Time.Format.ISO8601 (iso8601ParseM, iso8601Show)
 import EulerHS.Prelude
 import qualified System.Clock as Clock
 
@@ -20,3 +24,13 @@ instance MonadTime IO where
 
 instance MonadClock IO where
   getClockTime = Clock.getTime Clock.Monotonic
+
+newtype Iso8601Time = Iso8601Time {getUtcTime :: UTCTime}
+  deriving (Show, Eq)
+
+instance FromJSON Iso8601Time where
+  parseJSON (String s) = Iso8601Time <$> iso8601ParseM (Text.unpack s)
+  parseJSON e = typeMismatch "Iso8601Time String" e
+
+instance ToJSON Iso8601Time where
+  toJSON (Iso8601Time t) = String . Text.pack $ iso8601Show t

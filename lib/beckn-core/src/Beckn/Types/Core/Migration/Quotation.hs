@@ -14,18 +14,9 @@ data Quotation = Quotation
   deriving (Generic, Show)
 
 data BreakupItem = BreakupItem
-  { _type :: Maybe BreakupItemType,
-    ref_id :: Maybe Text,
-    title :: Maybe Text,
+  { title :: Maybe Text,
     price :: Maybe Price
   }
-  deriving (Generic, Show)
-
-data BreakupItemType
-  = ITEM
-  | OFFER
-  | ADD_ON
-  | FULFILLMENT
   deriving (Generic, Show)
 
 instance FromJSON Quotation where
@@ -47,9 +38,3 @@ instance FromJSON BreakupItem where
 
 instance ToJSON BreakupItem where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance FromJSON BreakupItemType where
-  parseJSON = genericParseJSON constructorsWithHyphensToLowerOptions
-
-instance ToJSON BreakupItemType where
-  toJSON = genericToJSON constructorsWithHyphensToLowerOptions
