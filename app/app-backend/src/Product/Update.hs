@@ -28,8 +28,8 @@ onUpdate _org req = withFlowHandlerBecknAPI $
     case req.contents of
       Right msg -> do
         let trip = msg.order.trip
-            pid = Id $ msg.order.id
-        ride <- QRide.findByProductInstanceId pid >>= fromMaybeM PIDoesNotExist
+            quoteId = Id $ msg.order.id
+        ride <- QRide.findByQuoteId quoteId >>= fromMaybeM RideDoesNotExist
         let mprdInfo = decodeFromText =<< (ride.info)
             uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo.tracking =<< ProdInfo.tracker =<< mprdInfo)
             uRide =

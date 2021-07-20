@@ -284,35 +284,35 @@ instance IsHTTPError SearchRequestError where
 
 instance IsAPIError SearchRequestError
 
-data ProductInstanceError
-  = PINotFound
-  | PIDoesNotExist
-  | PIFieldNotPresent Text
-  | PIInvalidStatus Text
+data QuoteError
+  = QuoteNotFound
+  | QuoteDoesNotExist
+  | QuoteFieldNotPresent Text
+  | QuoteInvalidStatus Text
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''ProductInstanceError
+instanceExceptionWithParent 'HTTPException ''QuoteError
 
-instance IsBaseError ProductInstanceError where
+instance IsBaseError QuoteError where
   toMessage = \case
-    PIDoesNotExist -> Just "No product instance matches passed data."
-    PIFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this product instance."
-    PIInvalidStatus msg -> Just $ "Attempted to do some action in wrong PI status. " <> msg
+    QuoteDoesNotExist -> Just "No quote matches passed data."
+    QuoteFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this quote."
+    QuoteInvalidStatus msg -> Just $ "Attempted to do some action in wrong quote status. " <> msg
     _ -> Nothing
 
-instance IsHTTPError ProductInstanceError where
+instance IsHTTPError QuoteError where
   toErrorCode = \case
-    PINotFound -> "PI_NOT_FOUND"
-    PIDoesNotExist -> "PI_DOES_NOT_EXISTS"
-    PIFieldNotPresent _ -> "PI_FIELD_NOT_PRESENT"
-    PIInvalidStatus _ -> "PI_INVALID_STATUS"
+    QuoteNotFound -> "QUOTE_NOT_FOUND"
+    QuoteDoesNotExist -> "QUOTE_DOES_NOT_EXISTS"
+    QuoteFieldNotPresent _ -> "QUOTE_FIELD_NOT_PRESENT"
+    QuoteInvalidStatus _ -> "QUOTE_INVALID_STATUS"
   toHttpCode = \case
-    PINotFound -> E500
-    PIDoesNotExist -> E400
-    PIFieldNotPresent _ -> E500
-    PIInvalidStatus _ -> E400
+    QuoteNotFound -> E500
+    QuoteDoesNotExist -> E400
+    QuoteFieldNotPresent _ -> E500
+    QuoteInvalidStatus _ -> E400
 
-instance IsAPIError ProductInstanceError
+instance IsAPIError QuoteError
 
 data RideError
   = RideNotFound

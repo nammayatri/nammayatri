@@ -14,8 +14,8 @@ import qualified Types.Storage.FarePolicy as FarePolicy
 import qualified Types.Storage.NotificationStatus as NotificationStatus
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.Products as Product
+import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Rating as Rating
 import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
@@ -34,7 +34,7 @@ data TransporterDb f = TransporterDb
     person :: f (B.TableEntity Person.PersonT),
     searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT),
     products :: f (B.TableEntity Product.ProductsT),
-    productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
+    quote :: f (B.TableEntity Quote.QuoteT),
     ride :: f (B.TableEntity Ride.RideT),
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
     rating :: f (B.TableEntity Rating.RatingT),
@@ -61,7 +61,7 @@ transporterDb dbSchemaName =
         person = setSchema dbSchemaName <> Person.fieldEMod,
         searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod,
         products = setSchema dbSchemaName <> Product.fieldEMod,
-        productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
+        quote = setSchema dbSchemaName <> Quote.fieldEMod,
         ride = setSchema dbSchemaName <> Ride.fieldEMod,
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
         rating = setSchema dbSchemaName <> Rating.fieldEMod,

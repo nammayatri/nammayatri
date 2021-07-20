@@ -8,12 +8,12 @@ import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as ProdInst
+import qualified Types.Storage.Quote as Quote
 
 data IssueT f = Issue
   { id :: B.C f (Id Issue),
     customerId :: B.C f (Id Person.Person),
-    productInstanceId :: B.C f (Maybe (Id ProdInst.ProductInstance)),
+    rideBookingId :: B.C f (Maybe (Id Quote.Quote)),
     contactEmail :: B.C f (Maybe Text),
     reason :: B.C f Text,
     description :: B.C f Text,
@@ -48,7 +48,7 @@ fieldEMod =
     <> B.modifyTableFields
       B.tableModification
         { customerId = "customer_id",
-          productInstanceId = "product_instance_id",
+          rideBookingId = "ride_booking_id",
           contactEmail = "contact_email",
           createdAt = "created_at",
           updatedAt = "updated_at"

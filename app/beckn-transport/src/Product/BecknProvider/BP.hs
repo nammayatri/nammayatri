@@ -41,8 +41,8 @@ import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.RideCancellationReason as QRCR
+import qualified Storage.Queries.Quote as Quote
 import qualified Storage.Queries.Ride as Ride
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.SearchRequest as SearchRequest
@@ -52,13 +52,13 @@ import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
+import qualified Types.Storage.Quote as SQuote
 
 cancel ::
   Id Organization.Organization ->
@@ -69,12 +69,12 @@ cancel transporterId _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req.context
     validateContext "cancel" context
-    let prodInstId = req.message.order.id -- transporter search productInstId
+    let quoteId = req.message.order.id -- transporter search productInstId
     transporterOrg <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    prodInst <- ProductInstance.findById (Id prodInstId) >>= fromMaybeM PIDoesNotExist
-    ride <- Ride.findByProductInstanceId (prodInst.id) >>= fromMaybeM RideNotFound
+    quote <- Quote.findById (Id quoteId) >>= fromMaybeM QuoteDoesNotExist
+    ride <- Ride.findByQuoteId (quote.id) >>= fromMaybeM RideNotFound
     RideRequest.createFlow =<< mkRideReq (ride.id) (transporterOrg.shortId) SRideRequest.CANCELLATION
     return Ack
 
@@ -90,8 +90,8 @@ cancelRide ::
   m ()
 cancelRide rideId rideCReason = do
   ride <- Ride.findById rideId >>= fromMaybeM RideDoesNotExist
-  let searchPiId = ride.productInstanceId
-  searchPi <- ProductInstance.findById searchPiId >>= fromMaybeM PINotFound
+  let quoteId = ride.quoteId
+  quote <- Quote.findById quoteId >>= fromMaybeM QuoteNotFound
   cancelRideTransaction ride rideCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show rideCReason.source)
   fork "cancelRide - Notify BAP" $ do
@@ -99,7 +99,7 @@ cancelRide rideId rideCReason = do
     transporter <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    notifyCancelToGateway searchPi transporter rideCReason.source
+    notifyCancelToGateway quote transporter rideCReason.source
     searchRequest <- SearchRequest.findById (ride.requestId) >>= fromMaybeM SearchRequestNotFound
     whenJust ride.personId $ \driverId -> do
       driver <- Person.findPersonById driverId >>= fromMaybeM PersonNotFound
@@ -127,23 +127,23 @@ notifyServiceStatusToGateway ::
     CoreMetrics m
   ) =>
   Organization.Organization ->
-  ProductInstance.ProductInstance ->
+  SQuote.Quote ->
   Ride.Ride ->
   m ()
-notifyServiceStatusToGateway transporter searchPi ride = do
-  mkOnServiceStatusPayload (searchPi.id) ride
-    >>= ExternalAPI.callBAP "on_status" API.onStatus transporter (searchPi.requestId) . Right
+notifyServiceStatusToGateway transporter quote ride = do
+  mkOnServiceStatusPayload (quote.id) ride
+    >>= ExternalAPI.callBAP "on_status" API.onStatus transporter (quote.requestId) . Right
 
-mkOnServiceStatusPayload :: MonadTime m => Id ProductInstance.ProductInstance -> Ride.Ride -> m API.OnStatusReqMessage
-mkOnServiceStatusPayload searchPiId ride = do
-  mkOrderRes searchPiId (getId $ ride.productId) (show $ ride.status)
+mkOnServiceStatusPayload :: MonadTime m => Id SQuote.Quote -> Ride.Ride -> m API.OnStatusReqMessage
+mkOnServiceStatusPayload quoteId ride = do
+  mkOrderRes quoteId (getId $ ride.productId) (show $ ride.status)
     <&> API.OnStatusReqMessage
   where
-    mkOrderRes searchPiId' productId status = do
+    mkOrderRes quoteId' productId status = do
       now <- getCurrentTime
       return $
         Order
-          { id = getId searchPiId',
+          { id = getId quoteId',
             state = T.pack status,
             items = [OrderItem productId Nothing],
             created_at = now,
@@ -174,20 +174,20 @@ notifyCancelToGateway ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  ProductInstance.ProductInstance ->
+  SQuote.Quote ->
   Organization.Organization ->
   Mobility.CancellationSource ->
   m ()
-notifyCancelToGateway searchPi transporter cancellationSource = do
-  trip <- mkCancelTripObj searchPi
-  order <- ExternalAPITransform.mkOrder searchPi.id (Just trip) $ Just cancellationSource
-  ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.requestId) . Right $ API.OnCancelReqMessage order
+notifyCancelToGateway quote transporter cancellationSource = do
+  trip <- mkCancelTripObj quote
+  order <- ExternalAPITransform.mkOrder quote.id (Just trip) $ Just cancellationSource
+  ExternalAPI.callBAP "on_cancel" API.onCancel transporter (quote.requestId) . Right $ API.OnCancelReqMessage order
 
 mkTrip :: (DBFlow m r, EncFlow m r) => Ride.Ride -> m Trip
 mkTrip ride = do
   driver <- mapM mkDriverInfo $ ride.personId
   vehicle <- join <$> mapM mkVehicleInfo (ride.entityId)
-  tripCode <- ride.udf4 & fromMaybeM (PIFieldNotPresent "udf4")
+  tripCode <- ride.udf4 & fromMaybeM (QuoteFieldNotPresent "udf4")
   logTagInfo "vehicle" $ show vehicle
   return $
     Trip
@@ -218,8 +218,8 @@ mkOnUpdatePayload ::
   m API.OnUpdateOrder
 mkOnUpdatePayload ride = do
   trip <- mkTrip ride
-  let searchPiId = ride.productInstanceId
-  order <- ExternalAPITransform.mkOrder searchPiId (Just trip) Nothing
+  let quoteId = ride.quoteId
+  order <- ExternalAPITransform.mkOrder quoteId (Just trip) Nothing
   return $ API.OnUpdateOrder order
 
 mkDriverInfo :: (DBFlow m r, EncFlow m r) => Id Person.Person -> m Driver
@@ -234,20 +234,20 @@ mkVehicleInfo vehicleId = do
   vehicle <- Vehicle.findVehicleById (Id vehicleId)
   return $ ExternalAPITransform.mkVehicleObj <$> vehicle
 
-mkCancelTripObj :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> m Trip
-mkCancelTripObj searchPI = do
-  driver <- mapM mkDriverInfo $ searchPI.personId
-  vehicle <- join <$> mapM mkVehicleInfo (searchPI.entityId)
+mkCancelTripObj :: (DBFlow m r, EncFlow m r) => SQuote.Quote -> m Trip
+mkCancelTripObj quote = do
+  driver <- mapM mkDriverInfo $ quote.personId
+  vehicle <- join <$> mapM mkVehicleInfo (quote.entityId)
   return $
     Trip
-      { id = getId $ searchPI.id,
+      { id = getId $ quote.id,
         pickup = Nothing,
         drop = Nothing,
         state = Nothing,
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = Just $ ExternalAPITransform.mkPrice searchPI,
+        fare = Just $ ExternalAPITransform.mkPrice quote,
         route = Nothing
       }
 
@@ -289,17 +289,17 @@ notifyUpdateToBAP ::
     FCMFlow m r,
     CoreMetrics m
   ) =>
-  ProductInstance.ProductInstance ->
+  SQuote.Quote ->
   Ride.Ride ->
   Ride.RideStatus ->
   m ()
-notifyUpdateToBAP searchPi ride updatedStatus = do
+notifyUpdateToBAP quote ride updatedStatus = do
   -- Send callbacks to BAP
   transporter <-
-    Organization.findOrganizationById searchPi.organizationId
+    Organization.findOrganizationById quote.organizationId
       >>= fromMaybeM OrgNotFound
-  notifyTripDetailsToGateway transporter searchPi ride
-  notifyStatusUpdateReq transporter searchPi updatedStatus
+  notifyTripDetailsToGateway transporter quote ride
+  notifyStatusUpdateReq transporter quote updatedStatus
 
 notifyTripDetailsToGateway ::
   ( DBFlow m r,
@@ -308,11 +308,11 @@ notifyTripDetailsToGateway ::
     CoreMetrics m
   ) =>
   Organization.Organization ->
-  ProductInstance.ProductInstance ->
+  SQuote.Quote ->
   Ride.Ride ->
   m ()
-notifyTripDetailsToGateway transporter searchPi ride = do
-  notifyTripInfoToGateway ride searchPi.requestId transporter
+notifyTripDetailsToGateway transporter quote ride = do
+  notifyTripInfoToGateway ride quote.requestId transporter
 
 notifyStatusUpdateReq ::
   ( DBFlow m r,
@@ -322,27 +322,27 @@ notifyStatusUpdateReq ::
     CoreMetrics m
   ) =>
   Organization.Organization ->
-  ProductInstance.ProductInstance ->
+  SQuote.Quote ->
   Ride.RideStatus ->
   m ()
-notifyStatusUpdateReq transporterOrg searchPi status = do
+notifyStatusUpdateReq transporterOrg quote status = do
   case status of
     Ride.CANCELLED -> do
       admins <- getAdmins
-      notifyCancelToGateway searchPi transporterOrg Mobility.ByOrganization
-      Notify.notifyCancelReqByBP searchPi admins
+      notifyCancelToGateway quote transporterOrg Mobility.ByOrganization
+      Notify.notifyCancelReqByBP quote admins
     Ride.TRIP_REASSIGNMENT -> do
       admins <- getAdmins
-      Notify.notifyDriverCancelledRideRequest searchPi admins
+      Notify.notifyDriverCancelledRideRequest quote admins
       notifyStatusToGateway
     _ -> notifyStatusToGateway
   where
     getAdmins = do
       if transporterOrg.enabled
-        then Person.findAllByOrgId [Person.ADMIN] searchPi.organizationId
+        then Person.findAllByOrgId [Person.ADMIN] quote.organizationId
         else pure []
     notifyStatusToGateway = do
       ride <-
-        Ride.findByProductInstanceId (searchPi.id)
+        Ride.findByQuoteId (quote.id)
           >>= fromMaybeM RideNotFound
-      notifyServiceStatusToGateway transporterOrg searchPi ride
+      notifyServiceStatusToGateway transporterOrg quote ride

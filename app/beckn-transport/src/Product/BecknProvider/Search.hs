@@ -23,9 +23,9 @@ import qualified Product.BecknProvider.BP as BP
 import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
 import qualified Storage.Queries.Organization as Org
-import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as SProduct
 import qualified Storage.Queries.SearchReqLocation as Loc
+import qualified Storage.Queries.Quote as Quote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Test.RandomStrings as RS
@@ -33,8 +33,8 @@ import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics, HasBPPMetrics)
 import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.SearchReqLocation as Location
+import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
@@ -163,10 +163,10 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
   pool <- Confirm.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId . fst <$> pool) |+ ""
-  let piStatus =
+  let quoteStatus =
         if null pool
-          then ProductInstance.OUTOFSTOCK
-          else ProductInstance.INSTOCK
+          then Quote.OUTOFSTOCK
+          else Quote.INSTOCK
   (price, nearestDriverDist) <-
     case pool of
       [] -> return (Nothing, Nothing)
@@ -175,41 +175,41 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
         fare <- Just <$> calculateFare transporterId vehicleVariant dstSrc (searchRequest.startTime)
         let nearestDist = Just $ snd fstDriverValue
         return (fare, nearestDist)
-  prodInst <- mkProductInstance searchRequest price piStatus transporterId nearestDriverDist
+  quote <- mkQuote searchRequest price quoteStatus transporterId nearestDriverDist
   DB.runSqlDBTransaction $ do
-    ProductInstance.create prodInst
-  let productInstances =
-        case prodInst.status of
-          ProductInstance.OUTOFSTOCK -> []
-          _ -> [prodInst]
-  res <- mkOnSearchPayload searchRequest productInstances transporter
+    Quote.create quote
+  let quotes =
+        case quote.status of
+          Quote.OUTOFSTOCK -> []
+          _ -> [quote]
+  res <- mkOnSearchPayload searchRequest quotes transporter
   Metrics.finishSearchMetrics transporterId searchMetricsMVar
   return res
 
-mkProductInstance ::
+mkQuote ::
   DBFlow m r =>
   SearchRequest.SearchRequest ->
   Maybe Amount ->
-  ProductInstance.ProductInstanceStatus ->
+  Quote.QuoteStatus ->
   Id Org.Organization ->
   Maybe Double ->
-  m ProductInstance.ProductInstance
-mkProductInstance productSearchRequest price status transporterId nearestDriverDist = do
-  productInstanceId <- Id <$> L.generateGUID
+  m Quote.Quote
+mkQuote productSearchRequest price status transporterId nearestDriverDist = do
+  quoteId <- Id <$> L.generateGUID
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   products <-
     SProduct.findByName (fromMaybe "DONT MATCH" (productSearchRequest.udf1))
       >>= fromMaybeM ProductsNotFound
   return
-    ProductInstance.ProductInstance
-      { id = productInstanceId,
+    Quote.Quote
+      { id = quoteId,
         requestId = productSearchRequest.id,
         productId = products.id,
         personId = Nothing,
         personUpdatedAt = Nothing,
         shortId = ShortId shortId,
-        entityType = ProductInstance.VEHICLE,
+        entityType = Quote.VEHICLE,
         entityId = Nothing,
         quantity = 1,
         price = price,
@@ -235,13 +235,13 @@ mkProductInstance productSearchRequest price status transporterId nearestDriverD
 mkOnSearchPayload ::
   DBFlow m r =>
   SearchRequest.SearchRequest ->
-  [ProductInstance.ProductInstance] ->
+  [Quote.Quote] ->
   Org.Organization ->
   m API.OnSearchServices
-mkOnSearchPayload productSearchRequest productInstances transporterOrg = do
+mkOnSearchPayload productSearchRequest quotes transporterOrg = do
   QRide.getCountByStatus (transporterOrg.id)
     <&> mkProviderInfo transporterOrg . mkProviderStats
-    >>= ExternalAPITransform.mkCatalog productSearchRequest productInstances
+    >>= ExternalAPITransform.mkCatalog productSearchRequest quotes
     <&> API.OnSearchServices
 
 mkProviderInfo :: Org.Organization -> Common.ProviderStats -> Common.ProviderInfo

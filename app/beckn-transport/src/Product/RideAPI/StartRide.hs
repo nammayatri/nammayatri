@@ -10,7 +10,7 @@ import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP
 import qualified Product.RideAPI.Handlers.StartRide as Handler
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.ProductInstance as QProductInstance
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import Types.API.Ride (StartRideReq (..))
 import qualified Types.Storage.Person as SP
@@ -24,10 +24,10 @@ startRide personId rideId req = withFlowHandlerAPI $ do
     handle =
       Handler.ServiceHandle
         { findPersonById = QPerson.findPersonById,
-          findPIById = QProductInstance.findById,
+          findPIById = QQuote.findById,
           findRideById = QRide.findById,
           startRide = startRideTransaction,
-          notifyBAPRideStarted = \searchPi rideId' -> notifyUpdateToBAP searchPi rideId' Ride.INPROGRESS,
+          notifyBAPRideStarted = \quote rideId' -> notifyUpdateToBAP quote rideId' Ride.INPROGRESS,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId')
         }
 

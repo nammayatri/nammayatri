@@ -10,7 +10,7 @@ import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Types.Storage.Person as Person
-import Types.Storage.ProductInstance as ProductInstance
+import Types.Storage.Quote as Quote
 import Types.Storage.RegistrationToken as RegToken
 import Types.Storage.Ride (Ride)
 import Types.Storage.SearchRequest as SearchRequest
@@ -125,7 +125,7 @@ notifyCancelReqByBP ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  ProductInstance ->
+  Quote ->
   [Person] ->
   m ()
 notifyCancelReqByBP p =
@@ -144,7 +144,7 @@ notifyCancelReqByBP p =
       FCMNotificationBody $
         unwords
           [ "The ride scheduled for",
-            showTimeIst (ProductInstance.startTime p) <> ",",
+            showTimeIst (Quote.startTime p) <> ",",
             "has been cancelled. Check the app for more details."
           ]
 
@@ -152,7 +152,7 @@ notifyDriverCancelledRideRequest ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  ProductInstance ->
+  Quote ->
   [Person] ->
   m ()
 notifyDriverCancelledRideRequest p =
@@ -171,7 +171,7 @@ notifyDriverCancelledRideRequest p =
       FCMNotificationBody $
         unwords
           [ "The ride scheduled for",
-            showTimeIst (ProductInstance.startTime p) <> ",",
+            showTimeIst (Quote.startTime p) <> ",",
             "has been refused by driver. Check the app for more details."
           ]
 

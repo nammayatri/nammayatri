@@ -10,12 +10,12 @@ import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 import Types.Issue
-import Types.Storage.ProductInstance (ProductInstance)
+import Types.Storage.Quote (Quote)
 
 data SendIssueReq = SendIssueReq
   { contactEmail :: Maybe Text,
     issue :: Issue,
-    rideBookingId :: Maybe (Id ProductInstance)
+    rideBookingId :: Maybe (Id Quote)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

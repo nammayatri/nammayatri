@@ -15,7 +15,7 @@ import Types.App
 import Types.Error
 import Types.Storage.CancellationReason
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Ride as Ride
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
@@ -43,7 +43,7 @@ cancelRide =
       successfulCancellationWithoutDriverByAdmin,
       failedCancellationByAnotherDriver,
       failedCancellationWithoutDriverByDriver,
-      failedCancellationWhenProductInstanceStatusIsWrong
+      failedCancellationWhenQuoteStatusIsWrong
     ]
 
 runHandler :: CancelRide.ServiceHandle IO -> Id Person.Person -> Id Ride.Ride -> RideAPI.CancelRideReq -> IO APISuccess.APISuccess
@@ -106,11 +106,11 @@ failedCancellationWithoutDriverByDriver =
     handleCase = handle {CancelRide.findRideById = \rideId -> pure $ Just piWithoutDriver}
     piWithoutDriver = ride {Ride.personId = Nothing}
 
-failedCancellationWhenProductInstanceStatusIsWrong :: TestTree
-failedCancellationWhenProductInstanceStatusIsWrong =
+failedCancellationWhenQuoteStatusIsWrong :: TestTree
+failedCancellationWhenQuoteStatusIsWrong =
   testCase "Fail cancellation if product instance has inappropriate ride status" $ do
     runHandler handleCase (Id "1") "1" someCancelRideReq
-      `shouldThrow` (\(PIInvalidStatus _) -> True)
+      `shouldThrow` (\(QuoteInvalidStatus _) -> True)
   where
     handleCase = handle {CancelRide.findRideById = \rideId -> pure $ Just completedPI}
     completedPI = ride{status = Ride.COMPLETED}

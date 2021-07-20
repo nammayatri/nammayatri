@@ -13,7 +13,7 @@ import Test.Tasty.HUnit
 import Types.App
 import Types.Error
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.Quote as PI
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common (throwError)
@@ -45,8 +45,8 @@ handle =
         Id "2" -> pure . Just $ Fixtures.defaultDriver{id = "2"}
         Id "admin" -> pure $ Just Fixtures.defaultAdmin
         _ -> throwError PersonDoesNotExist,
-      findPIById = \piId -> pure $ case piId of
-        Id "search" -> Just searchProductInstance
+      findPIById = \quoteId -> pure $ case quoteId of
+        Id "search" -> Just searchQuote
         _ -> Nothing,
       findRideById = \rideId -> pure $ case rideId of
         Id "ride" -> Just ride
@@ -75,12 +75,12 @@ ride =
     { Ride.id = "ride",
       Ride.status = Ride.INPROGRESS,
       Ride.requestId = "ride",
-      Ride.productInstanceId = "search"
+      Ride.quoteId = "search"
     }
 
-searchProductInstance :: PI.ProductInstance
-searchProductInstance =
-  Fixtures.defaultProductInstance
+searchQuote :: PI.Quote
+searchQuote =
+  Fixtures.defaultQuote
     { PI.id = "search",
       PI.requestId = "search",
       PI.status = PI.INPROGRESS

@@ -32,7 +32,7 @@ import qualified Storage.Queries.Ride as QRide
 
 rideBookingStatus :: Id SRide.Ride -> Id SP.Person -> FlowHandler API.RideBookingStatusRes
 rideBookingStatus rideBookingId _ = withFlowHandlerAPI $ do
-  ride <- QRide.findById rideBookingId >>= fromMaybeM PIDoesNotExist
+  ride <- QRide.findById rideBookingId >>= fromMaybeM RideDoesNotExist
   buildRideBookingStatusRes ride
 
 rideBookingList :: SP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> FlowHandler API.RideBookingListRes
@@ -61,19 +61,19 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
     Just notification -> do
       let rideId = cast $ notification.rideId
       let notificationExpiryTime = notification.expiresAt
-      ride <- QRide.findById rideId >>= fromMaybeM PINotFound
+      ride <- QRide.findById rideId >>= fromMaybeM RideNotFound
       driver <- QP.findPersonById personId >>= fromMaybeM PersonNotFound
       driverLocation <-
         QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
       let driverLatLong = Location.locationToLatLong driverLocation
       fromLocation <-
-        ride.fromLocation & fromMaybeM (PIFieldNotPresent "from_location_id")
+        ride.fromLocation & fromMaybeM (RideFieldNotPresent "from_location_id")
           >>= QLoc.findLocationById
           >>= fromMaybeM LocationNotFound
       let fromLatLong = Location.locationToLatLong fromLocation
       toLocation <-
-        ride.toLocation & fromMaybeM (PIFieldNotPresent "to_location_id")
+        ride.toLocation & fromMaybeM (RideFieldNotPresent "to_location_id")
           >>= QLoc.findLocationById
           >>= fromMaybeM LocationNotFound
       mbRoute <- Location.getRoute' [driverLatLong, fromLatLong]
@@ -146,8 +146,8 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 
 buildRideBookingStatusRes :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m API.RideBookingStatusRes
 buildRideBookingStatusRes ride = do
-  fromLocId <- ride.fromLocation & fromMaybeM (PIFieldNotPresent "fromLocation")
-  toLocId <- ride.toLocation & fromMaybeM (PIFieldNotPresent "toLocation")
+  fromLocId <- ride.fromLocation & fromMaybeM (RideFieldNotPresent "fromLocation")
+  toLocId <- ride.toLocation & fromMaybeM (RideFieldNotPresent "toLocation")
   fromLocation <- QLoc.findLocationById fromLocId >>= fromMaybeM LocationNotFound
   toLocation <- QLoc.findLocationById toLocId >>= fromMaybeM LocationNotFound
   let rbStatus = case ride.status of

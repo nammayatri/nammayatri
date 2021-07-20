@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.ProductInstance where
+module Types.Storage.Quote where
 
 import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
@@ -9,7 +9,6 @@ import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -23,9 +22,10 @@ import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import Types.Storage.Products (Products)
 import qualified Types.Storage.SearchReqLocation as Loc
+import Data.OpenApi (ToSchema)
 
 -- TODO: INVALID status seems to be unused
-data ProductInstanceStatus
+data QuoteStatus
   = VALID
   | INVALID
   | INPROGRESS
@@ -37,28 +37,28 @@ data ProductInstanceStatus
   | EXPIRED
   | TRIP_ASSIGNED
   | TRIP_REASSIGNMENT
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductInstanceStatus where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be QuoteStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance B.HasSqlEqualityCheck Postgres ProductInstanceStatus
+instance B.HasSqlEqualityCheck Postgres QuoteStatus
 
-instance FromBackendRow Postgres ProductInstanceStatus where
+instance FromBackendRow Postgres QuoteStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance FromHttpApiData ProductInstanceStatus where
+instance FromHttpApiData QuoteStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-instance ToHttpApiData ProductInstanceStatus where
+instance ToHttpApiData QuoteStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
 data EntityType = VEHICLE | PASS | TICKET
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be EntityType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -66,26 +66,26 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be EntityType where
 instance FromBackendRow Postgres EntityType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data ProductInstanceT f = ProductInstance
-  { id :: B.C f (Id ProductInstance),
+data QuoteT f = Quote
+  { id :: B.C f (Id Quote),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     productId :: B.C f (Id Products),
     personId :: B.C f (Maybe (Id Person)),
     personUpdatedAt :: B.C f (Maybe UTCTime),
-    shortId :: B.C f (ShortId ProductInstance),
+    shortId :: B.C f (ShortId Quote),
     entityType :: B.C f EntityType,
     entityId :: B.C f (Maybe Text),
     quantity :: B.C f Int,
     price :: B.C f (Maybe Amount),
     actualPrice :: B.C f (Maybe Amount),
-    status :: B.C f ProductInstanceStatus,
+    status :: B.C f QuoteStatus,
     startTime :: B.C f UTCTime,
     endTime :: B.C f (Maybe UTCTime),
     validTill :: B.C f UTCTime,
     fromLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     toLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     organizationId :: B.C f (Id Org.Organization),
-    actualDistance :: B.C f (Maybe Double),
+    distance :: B.C f Double,
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     udf3 :: B.C f (Maybe Text),
@@ -99,31 +99,31 @@ data ProductInstanceT f = ProductInstance
 
 --TODO: organizationId - -- need to point to primarykey
 
-type ProductInstance = ProductInstanceT Identity
+type Quote = QuoteT Identity
 
-type ProductInstancePrimaryKey = B.PrimaryKey ProductInstanceT Identity
+type QuotePrimaryKey = B.PrimaryKey QuoteT Identity
 
 {-# ANN module ("HLint: ignore Redundant id" :: String) #-}
 
-instance B.Table ProductInstanceT where
-  data PrimaryKey ProductInstanceT f = ProductInstancePrimaryKey (B.C f (Id ProductInstance))
+instance B.Table QuoteT where
+  data PrimaryKey QuoteT f = QuotePrimaryKey (B.C f (Id Quote))
     deriving (Generic, B.Beamable)
-  primaryKey = ProductInstancePrimaryKey . id
+  primaryKey = QuotePrimaryKey . id
 
-deriving instance Show ProductInstance
+deriving instance Show Quote
 
-deriving instance Eq ProductInstance
+deriving instance Eq Quote
 
-instance ToJSON ProductInstance where
+instance ToJSON Quote where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
-instance FromJSON ProductInstance where
+instance FromJSON Quote where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 fieldEMod ::
-  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ProductInstanceT)
+  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity QuoteT)
 fieldEMod =
-  B.setEntityName "product_instance"
+  B.setEntityName "quote"
     <> B.modifyTableFields
       B.tableModification
         { requestId = "request_id",
@@ -139,13 +139,13 @@ fieldEMod =
           validTill = "valid_till",
           fromLocation = "from_location_id",
           toLocation = "to_location_id",
-          actualDistance = "actual_distance",
+          distance = "distance",
           organizationId = "organization_id",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
 
-validateStatusTransition :: ProductInstanceStatus -> ProductInstanceStatus -> Either Text ()
+validateStatusTransition :: QuoteStatus -> QuoteStatus -> Either Text ()
 validateStatusTransition oldState newState =
   if oldState == newState
     then allowed
@@ -188,7 +188,7 @@ validateStatusTransition oldState newState =
     t TRIP_ASSIGNED _ = forbidden
     t TRIP_REASSIGNMENT _ = forbidden
 
-instance FromBeckn Text ProductInstanceStatus where
+instance FromBeckn Text QuoteStatus where
   fromBeckn piStatus =
     case piStatus of
       "VALID" -> VALID
@@ -203,7 +203,7 @@ instance FromBeckn Text ProductInstanceStatus where
       "TRIP_REASSIGNMENT" -> TRIP_REASSIGNMENT
       _ -> INVALID
 
-instance ToBeckn Text ProductInstanceStatus where
+instance ToBeckn Text QuoteStatus where
   toBeckn piStatus =
     case piStatus of
       VALID -> "VALID"

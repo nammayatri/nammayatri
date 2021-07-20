@@ -13,12 +13,11 @@ spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for ride cancelled by Driver" $ withBecknClients clients do
-      (_, bRideBookingId, transporterOrderPi) <- doAnAppSearch
-      let transporterOrderPiId = transporterOrderPi.id
+      (_, bRideBookingId, tRide) <- doAnAppSearch
 
       -- Driver Rejects a ride
       void . callBPP $
-        rideRespond transporterOrderPiId driverToken $
+        rideRespond tRide.id driverToken $
           RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.REJECT
 
       void . poll $

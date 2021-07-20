@@ -20,7 +20,6 @@ import qualified Storage.Queries.Ride as QRide
 import Types.API.Location as Location
 import Types.Metrics
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common hiding (id)
 import Prelude (atan2)
 import qualified Types.Storage.Ride as SRide
@@ -54,18 +53,18 @@ updateLocation personId req = withFlowHandlerAPI $ do
     currPoint = NE.last (req.waypoints)
     waypointList = NE.toList (req.waypoints)
 
-getLocation :: Id SPI.ProductInstance -> FlowHandler GetLocationRes
-getLocation prodInstId = withFlowHandlerAPI $ do
+getLocation :: Id SRide.Ride -> FlowHandler GetLocationRes
+getLocation rideId = withFlowHandlerAPI $ do
   ride <-
-    QRide.findByProductInstanceId prodInstId
+    QRide.findById rideId
       >>= fromMaybeM RideDoesNotExist
   status <-
     case ride.status of
       SRide.TRIP_ASSIGNED -> pure PreRide
       SRide.INPROGRESS -> pure ActualRide
-      _ -> throwError $ PIInvalidStatus "Cannot track this ride"
+      _ -> throwError $ RideInvalidStatus "Cannot track this ride"
   driver <-
-    (ride.personId & fromMaybeM (PIFieldNotPresent "person_id"))
+    (ride.personId & fromMaybeM (RideFieldNotPresent "person_id"))
       >>= Person.findPersonById
       >>= fromMaybeM PersonNotFound
   currLocation <-

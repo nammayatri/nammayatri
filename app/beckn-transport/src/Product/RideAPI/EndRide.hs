@@ -13,7 +13,7 @@ import qualified Product.RideAPI.Handlers.EndRide as Handler
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as PI
+import qualified Storage.Queries.Quote as PI
 import qualified Storage.Queries.Ride as QRide
 import Types.App (Driver)
 import qualified Types.Storage.Person as SP

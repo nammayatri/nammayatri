@@ -12,18 +12,18 @@ import Types.Error
 import qualified Types.Storage.SearchRequest as SSearchRequest
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Vehicle as Vehicle
+import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.Ride as Ride
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
-    findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
+    findPIById :: Id SQuote.Quote -> m (Maybe SQuote.Quote),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     endRideTransaction :: Id Ride.Ride -> Id Driver -> Amount -> m (),
     findSearchRequestById :: Id SSearchRequest.SearchRequest -> m (Maybe SSearchRequest.SearchRequest),
-    notifyUpdateToBAP :: PI.ProductInstance -> Ride.Ride -> Ride.RideStatus -> m (),
+    notifyUpdateToBAP :: SQuote.Quote -> Ride.Ride -> Ride.RideStatus -> m (),
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
@@ -49,9 +49,9 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
     _ -> throwError AccessDenied
   unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  let prodInstId = ride.productInstanceId
-  prodInst <- findPIById prodInstId >>= fromMaybeM PINotFound
-  searchRequest <- findSearchRequestById prodInst.requestId >>= fromMaybeM SearchRequestNotFound
+  let quoteId = ride.quoteId
+  quote <- findPIById quoteId >>= fromMaybeM QuoteNotFound
+  searchRequest <- findSearchRequestById quote.requestId >>= fromMaybeM SearchRequestNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   actualPrice <-
@@ -62,11 +62,11 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   endRideTransaction ride.id (cast driverId) actualPrice
 
-  notifyUpdateToBAP prodInst (updateActualPrice actualPrice ride){status = Ride.COMPLETED} Ride.COMPLETED
+  notifyUpdateToBAP quote (updateActualPrice actualPrice ride){status = Ride.COMPLETED} Ride.COMPLETED
 
   return APISuccess.Success
   where
-    recalculateFare searchRequest orderPi = do
+    recalculateFare searchRequest ride = do
       transporterId <- Id <$> searchRequest.provider & fromMaybeM (SearchRequestFieldNotPresent "provider")
       vehicleVariant <-
         (searchRequest.udf1 >>= readMaybe . T.unpack)
@@ -74,9 +74,9 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       oldDistance <-
         (searchRequest.udf5 >>= readMaybe . T.unpack)
           & fromMaybeM (SearchRequestFieldNotPresent "udf5")
-      fare <- calculateFare transporterId vehicleVariant orderPi.distance searchRequest.startTime
-      let distanceDiff = orderPi.distance - oldDistance
-      price <- orderPi.price & fromMaybeM (PIFieldNotPresent "price")
+      fare <- calculateFare transporterId vehicleVariant ride.distance searchRequest.startTime
+      let distanceDiff = ride.distance - oldDistance
+      price <- ride.price & fromMaybeM (RideFieldNotPresent "price")
       let fareDiff = fare - price
       logTagInfo "Fare recalculation" $
         "Fare difference: "

@@ -52,7 +52,7 @@ import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
 import Types.Geofencing
-import Types.Storage.ProductInstance
+import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RegistrationToken as SRT
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
 import qualified Types.Storage.SearchRequest as SSR
@@ -185,7 +185,7 @@ type ConfirmAPI =
     :> TokenAuth
     :> Capture "searchId" (Id SSR.SearchRequest)
     :> "quotes"
-    :> Capture "quoteId" (Id ProductInstance)
+    :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
     :> Post '[JSON] ConfirmAPI.ConfirmRes
     :<|> SignatureAuth "Authorization" LookupRegistryOrg
@@ -250,7 +250,7 @@ rideFlow =
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =
   "ride"
-    :> Capture "rideId" (Id ProductInstance)
+    :> Capture "rideId" (Id SRide.Ride)
     :> "call"
     :> ( "driver"
            :> TokenAuth

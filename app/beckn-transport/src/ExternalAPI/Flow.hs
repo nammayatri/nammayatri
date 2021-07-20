@@ -18,10 +18,10 @@ import Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import Types.Storage.Organization as Org
-import Types.Storage.ProductInstance (ProductInstance)
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Auth
 import Utils.Common
+import Types.Storage.Quote (Quote)
 
 getGatewayUrl ::
   ( DBFlow m r,
@@ -101,8 +101,8 @@ initiateCall ::
   ( HasFlowEnv m r '["xAppUri" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Id ProductInstance ->
+  Id Quote ->
   m ()
-initiateCall searchPIId = do
+initiateCall quote = do
   url <- asks (.xAppUri)
-  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId searchPIId)) "/v2/ride/{rideId}/call/rider"
+  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId quote)) "/v2/ride/{rideId}/call/rider"

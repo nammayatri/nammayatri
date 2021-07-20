@@ -20,36 +20,35 @@ import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import Types.ProductInfo as ProductInfo
 import Types.Storage.Person as Person
-import Types.Storage.ProductInstance as ProductInstance
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Storage.Queries.Ride as QRide
 import qualified Types.Storage.Ride as SRide
 
 -- | Try to initiate a call customer -> provider
-initiateCallToDriver :: Id ProductInstance -> Id Person.Person -> FlowHandler CallRes
-initiateCallToDriver quoteId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones quoteId
+initiateCallToDriver :: Id SRide.Ride -> Id Person.Person -> FlowHandler CallRes
+initiateCallToDriver rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones rideId
   initiateCall customerPhone providerPhone
-  logTagInfo ("QuoteId:" <> getId quoteId) "Call initiated from customer to provider."
+  logTagInfo ("RideId:" <> getId rideId) "Call initiated from customer to provider."
   return Ack
 
 -- | Try to initiate a call provider -> customer
-initiateCallToCustomer :: Id ProductInstance -> FlowHandler CallRes
-initiateCallToCustomer quoteId = withFlowHandlerAPI $ do
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones quoteId
+initiateCallToCustomer :: Id SRide.Ride -> FlowHandler CallRes
+initiateCallToCustomer rideId = withFlowHandlerAPI $ do
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones rideId
   initiateCall providerPhone customerPhone
-  logTagInfo ("QuoteId:" <> getId quoteId) "Call initiated from provider to customer."
+  logTagInfo ("RideId:" <> getId rideId) "Call initiated from provider to customer."
   return Ack
 
 getDriver :: (MonadFlow m) => SRide.Ride -> m Driver.Driver
 getDriver ride = do
-  info <- ride.info & fromMaybeM (PIFieldNotPresent "info")
+  info <- ride.info & fromMaybeM (RideFieldNotPresent "info")
   productInfo <- decodeFromText info & fromMaybeM (InternalError "Parse error.")
-  tracker_ <- tracker productInfo & fromMaybeM (PIFieldNotPresent "tracker")
+  tracker_ <- tracker productInfo & fromMaybeM (QuoteFieldNotPresent "tracker")
   let trip_ = trip tracker_
       driver_ = trip_.driver
-  driver <- driver_ & fromMaybeM (PIFieldNotPresent "driver")
+  driver <- driver_ & fromMaybeM (QuoteFieldNotPresent "driver")
   return $ toBeckn driver
 
 getPerson :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Person
@@ -71,11 +70,11 @@ getDriverPhone Driver.Driver {..} =
   phones & listToMaybe & fromMaybeM (InternalError "Driver has no contacts")
 
 -- | Returns phones pair or throws an error
-getProductAndCustomerPhones :: (EncFlow m r, DBFlow m r) => Id ProductInstance -> m (Text, Text)
-getProductAndCustomerPhones quoteId = do
+getProductAndCustomerPhones :: (EncFlow m r, DBFlow m r) => Id SRide.Ride -> m (Text, Text)
+getProductAndCustomerPhones rideId = do
   ride <-
-    QRide.findByProductInstanceId quoteId 
-      >>= fromMaybeM PIDoesNotExist
+    QRide.findById rideId 
+      >>= fromMaybeM RideDoesNotExist
   person <- getPerson ride
   driver <- getDriver ride
   customerPhone <- getPersonPhone person

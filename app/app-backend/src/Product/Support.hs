@@ -41,7 +41,7 @@ mkDBIssue issueId customerId SendIssueReq {..} time =
   SIssue.Issue
     { id = Id issueId,
       customerId = Id customerId,
-      productInstanceId = rideBookingId,
+      rideBookingId = rideBookingId,
       contactEmail = contactEmail,
       reason = issue.reason,
       description = issue.description,

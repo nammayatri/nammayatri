@@ -30,8 +30,8 @@ rideBookingList personId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 buildRideBookingStatusRes :: DBFlow m r => SRide.Ride -> m API.RideBookingStatusRes
 buildRideBookingStatusRes ride = do
   org <- QOrg.findOrganizationById ride.organizationId >>= fromMaybeM OrgNotFound
-  fromLocId <- ride.fromLocation & fromMaybeM (PIFieldNotPresent "fromLocation")
-  toLocId <- ride.toLocation & fromMaybeM (PIFieldNotPresent "toLocation")
+  fromLocId <- ride.fromLocation & fromMaybeM (RideFieldNotPresent "fromLocation")
+  toLocId <- ride.toLocation & fromMaybeM (RideFieldNotPresent "toLocation")
   fromLocation <- QLoc.findLocationById fromLocId >>= fromMaybeM LocationNotFound
   toLocation <- QLoc.findLocationById toLocId >>= fromMaybeM LocationNotFound
   let rbStatus = case ride.status of

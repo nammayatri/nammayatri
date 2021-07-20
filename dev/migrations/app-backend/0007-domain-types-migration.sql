@@ -103,3 +103,9 @@ ALTER TABLE atlas_app.search_request DROP COLUMN type;
 ALTER TABLE atlas_app.product_instance DROP COLUMN type;
 
 ALTER TABLE atlas_app.product_instance DROP COLUMN parent_id;
+
+ALTER TABLE atlas_app.product_instance RENAME TO quote;
+
+ALTER TABLE atlas_app.ride RENAME COLUMN product_instance_id TO quote_id;
+
+ALTER TABLE atlas_app.issues RENAME COLUMN product_instance_id TO ride_booking_id;

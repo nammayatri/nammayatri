@@ -117,3 +117,7 @@ ALTER TABLE atlas_transporter.search_request DROP COLUMN type;
 ALTER TABLE atlas_transporter.product_instance DROP COLUMN type;
 
 ALTER TABLE atlas_transporter.product_instance DROP COLUMN parent_id;
+
+ALTER TABLE atlas_transporter.product_instance RENAME TO quote;
+
+ALTER TABLE atlas_transporter.ride RENAME COLUMN product_instance_id TO quote_id;

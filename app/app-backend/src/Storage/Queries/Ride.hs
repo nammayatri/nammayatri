@@ -16,24 +16,13 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
-import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Products as Product
 import qualified Types.Storage.Ride as Storage
 import qualified Types.Storage.SearchRequest as SearchRequest
+import qualified Types.Storage.Quote as SQuote
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.RideT))
 getDbTable = DB.ride . DB.appDb <$> getSchemaName
-
-getPITable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity PI.ProductInstanceT))
-getPITable = DB.productInstance . DB.appDb <$> getSchemaName
-
-getSRTable :: DBFlow m r => m (B.DatabaseEntity be DB.AppDb (B.TableEntity SearchRequest.SearchRequestT))
-getSRTable =
-  DB.searchRequest . DB.appDb <$> getSchemaName
-
-getProdTable :: DBFlow m r => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Product.ProductsT))
-getProdTable =
-  DB.products . DB.appDb <$> getSchemaName
 
 createFlow :: DBFlow m r => Storage.Ride -> m ()
 createFlow =
@@ -244,13 +233,13 @@ findAllByPersonId piId = do
   where
     predicate Storage.Ride {..} = personId ==. B.val_ (Just piId)
 
-findByProductInstanceId :: DBFlow m r => Id PI.ProductInstance -> m (Maybe Storage.Ride)
-findByProductInstanceId prodInstId = do
+findByQuoteId :: DBFlow m r => Id SQuote.Quote -> m (Maybe Storage.Ride)
+findByQuoteId quote = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.Ride {..} =
-      productInstanceId ==. B.val_ prodInstId
+      quoteId ==. B.val_ quote
 
 findAllExpiredByStatus :: DBFlow m r => [Storage.RideStatus] -> UTCTime -> m [Storage.Ride]
 findAllExpiredByStatus statuses expiryTime = do
@@ -298,40 +287,6 @@ getDriverCompletedRides driverId fromTime toTime = do
         &&. status ==. B.val_ Storage.COMPLETED
         &&. startTime B.>=. B.val_ fromTime
         &&. startTime B.<=. B.val_ toTime
-
-getFullRideInfo ::
-  DBFlow m r =>
-  Int ->
-  Int ->
-  Id Org.Organization ->
-  [Storage.RideStatus] ->
-  m [(SearchRequest.SearchRequest, Product.Products, PI.ProductInstance, Storage.Ride)]
-getFullRideInfo limit_ offset_ orgId status_ = do
-  prodInstTable <- getPITable
-  prodTable <- getProdTable
-  srTable <- getSRTable
-  rideTable <- getDbTable
-  DB.findAllByJoin
-    (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc)
-    (rideJoinQuery srTable prodTable prodInstTable rideTable)
-  where
-    limit = toInteger limit_
-    offset = toInteger offset_
-    orderByDesc (_, _, _, Storage.Ride {..}) = B.desc_ createdAt
-    ridePred Storage.Ride {..} =
-      organizationId ==. B.val_ orgId
-        &&. (status `B.in_` (B.val_ <$> status_) ||. complementVal status_)
-    rideJoinQuery searchRequestTable productsTable prodInstTable rideTable = do
-      searchRequest <- B.all_ searchRequestTable
-      products <- B.all_ productsTable
-      prodInst <- B.all_ prodInstTable
-      ride <- B.filter_ ridePred $
-        B.join_ rideTable $
-          \line ->
-            SearchRequest.SearchRequestPrimaryKey (Storage.requestId line) B.==. B.primaryKey searchRequest
-              B.&&. Product.ProductsPrimaryKey (Storage.productId line) B.==. B.primaryKey products
-              B.&&. PI.ProductInstancePrimaryKey (Storage.productInstanceId line) B.==. B.primaryKey prodInst
-      pure (searchRequest, products, prodInst, ride)
 
 updateActualPrice :: Amount -> Id Storage.Ride -> DB.SqlDB ()
 updateActualPrice price' rideId = do

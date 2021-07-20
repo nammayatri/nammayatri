@@ -9,7 +9,7 @@ import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 data FeedbackReq = FeedbackReq
-  { productInstanceId :: Text,
+  { rideId :: Text,
     rating :: Int
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

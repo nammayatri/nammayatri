@@ -26,18 +26,18 @@ feedback :: Id Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackR
 feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
-  let rideId = Id request.productInstanceId
-  ride <- QRide.findById rideId >>= fromMaybeM PIDoesNotExist
+  let rideId = Id request.rideId
+  ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
   searchRequest <- SearchRequest.findByPersonId personId (ride.requestId) >>= fromMaybeM SearchRequestNotFound
   let txnId = getId searchRequest.id
-  let searchPIId = getId ride.productInstanceId
+  let quoteId = getId ride.quoteId
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-
     Organization.findOrganizationById (ride.organizationId)
       >>= fromMaybeM OrgNotFound
   let feedbackMsg =
         Beckn.FeedbackReqMessage
-          { order_id = searchPIId,
+          { order_id = quoteId,
             rating =
               Beckn.Rating
                 { value = show ratingValue,

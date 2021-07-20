@@ -24,12 +24,12 @@ import EulerHS.Prelude
 import Types.Common
 import Types.Storage.Organization as Organization
 import Types.Storage.Person as Person
-import Types.Storage.ProductInstance as ProductInstance
+import Types.Storage.Quote as Quote
 import Types.Storage.SearchRequest
 import qualified Types.Storage.Vehicle as Vehicle
 
-mkCatalog :: DBFlow m r => SearchRequest -> [ProductInstance] -> ProviderInfo -> m Mobility.Catalog
-mkCatalog searchRequest prodInsts provider =
+mkCatalog :: DBFlow m r => SearchRequest -> [Quote] -> ProviderInfo -> m Mobility.Catalog
+mkCatalog searchRequest quotes provider =
   return
     Mobility.Catalog
       { id = getId $ searchRequest.id,
@@ -37,13 +37,13 @@ mkCatalog searchRequest prodInsts provider =
         brands = [mkBrand provider],
         models = [],
         ttl = Nothing,
-        items = mkItem <$> prodInsts,
+        items = mkItem <$> quotes,
         offers = [],
         fare_products = []
       }
 
-mkItemDescriptor :: ProductInstance -> Descriptor
-mkItemDescriptor _prodInst =
+mkItemDescriptor :: Quote -> Descriptor
+mkItemDescriptor _quote =
   Descriptor
     { name = Nothing,
       code = Nothing,
@@ -95,25 +95,25 @@ mkCategory provider =
         ]
     }
 
-mkItem :: ProductInstance -> Item
-mkItem prodInst =
+mkItem :: Quote -> Item
+mkItem quote =
   Item
-    { id = getId $ prodInst.id,
+    { id = getId $ quote.id,
       parent_item_id = Nothing,
-      descriptor = mkItemDescriptor prodInst,
-      price = mkPrice prodInst,
+      descriptor = mkItemDescriptor quote,
+      price = mkPrice quote,
       promotional = False,
       category_id = Nothing,
       package_category_id = Nothing,
       model_id = Nothing,
       brand_id = Nothing,
-      tags = maybe [] (\dist -> [Tag "nearestDriverDist" dist]) prodInst.udf1,
+      tags = maybe [] (\dist -> [Tag "nearestDriverDist" dist]) quote.udf1,
       ttl = Nothing
     }
 
-mkPrice :: ProductInstance -> Price
-mkPrice prodInst =
-  let amt = convertAmountToDecimalValue <$> prodInst.price
+mkPrice :: Quote -> Price
+mkPrice quote =
+  let amt = convertAmountToDecimalValue <$> quote.price
    in Price
         { currency = "INR", -- TODO : Fetch this from product
           value = amt,
@@ -125,13 +125,13 @@ mkPrice prodInst =
           maximum_value = amt
         }
 
-mkOrder :: MonadFlow m => Id ProductInstance -> Maybe Trip -> Maybe CancellationSource -> m Mobility.Order
-mkOrder searchPiId trip mbCancellationSource = do
+mkOrder :: MonadFlow m => Id Quote -> Maybe Trip -> Maybe CancellationSource -> m Mobility.Order
+mkOrder quoteId trip mbCancellationSource = do
   now <- getCurrentTime
   return
     Mobility.Order
-      { id = getId searchPiId,
-        items = [OrderItem (getId searchPiId) Nothing],
+      { id = getId quoteId,
+        items = [OrderItem (getId quoteId) Nothing],
         created_at = now,
         updated_at = now,
         state = Nothing,

@@ -34,7 +34,7 @@ import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.Notifications
 import qualified Utils.Notifications as Notify
-import qualified Storage.Queries.ProductInstance as QPI
+import qualified Storage.Queries.Quote as QQuote
 
 getDriverSortMode :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m SortMode
 getDriverSortMode = asks (.driverAllocationConfig.defaultSortMode)
@@ -68,8 +68,8 @@ assignDriver ::
   m ()
 assignDriver rideId driverId = do
   ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
-  let searchPIId = ride.productInstanceId
-  searchPi <- QPI.findById searchPIId >>= fromMaybeM RideNotFound
+  let quoteId = ride.quoteId
+  quote <- QQuote.findById quoteId >>= fromMaybeM QuoteNotFound
   driver <-
     QP.findPersonById (cast driverId)
       >>= fromMaybeM PersonDoesNotExist
@@ -84,7 +84,7 @@ assignDriver rideId driverId = do
   DB.runSqlDBTransaction (QA.assignDriver ride.id vehicle decDriver)
 
   fork "assignDriver - Notify BAP" $ do
-    BP.notifyUpdateToBAP searchPi ride Ride.TRIP_ASSIGNED
+    BP.notifyUpdateToBAP quote ride Ride.TRIP_ASSIGNED
     Notify.notifyDriver notificationType notificationTitle (message ride) driver.id driver.deviceToken
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
@@ -141,11 +141,11 @@ sendNewRideNotification ::
   Id Driver ->
   m ()
 sendNewRideNotification rideId driverId = do
-  prodInst <- QRide.findById rideId >>= fromMaybeM RideNotFound
+  quote <- QRide.findById rideId >>= fromMaybeM RideNotFound
   person <-
     QP.findPersonById (cast driverId)
       >>= fromMaybeM PersonNotFound
-  notifyDriverNewAllocation prodInst person.id person.deviceToken
+  notifyDriverNewAllocation quote person.id person.deviceToken
 
 sendRideNotAssignedNotification ::
   ( DBFlow m r,

@@ -26,7 +26,7 @@ import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 import qualified "app-backend" Types.Common as AppCommon
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
-import qualified "app-backend" Types.Storage.ProductInstance as BPI
+import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
 import qualified "app-backend" Types.Storage.Ride as BRide
 import qualified "beckn-transport" Types.Storage.Ride as TRide
@@ -163,7 +163,7 @@ buildAppCancelReq =
 getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM QuoteAPI.GetQuotesRes
 getQuotes = client (Proxy :: Proxy AbeRoutes.QuoteAPI)
 
-appConfirmRide :: Text -> Id BSearchRequest.SearchRequest -> Id BPI.ProductInstance -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :: Text -> Id BSearchRequest.SearchRequest -> Id BQuote.Quote -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
@@ -173,7 +173,7 @@ callAppFeedback :: Int -> Id BRide.Ride -> ClientM APISuccess
 callAppFeedback ratingValue rideId =
   let request =
         AppFeedback.FeedbackReq
-          { productInstanceId = getId rideId,
+          { rideId = getId rideId,
             rating = ratingValue
           }
    in appFeedback appRegistrationToken request
@@ -202,7 +202,7 @@ destinationServiceability regToken = destination
   where
     _ :<|> destination = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
--- buildOrgRideReq :: TPI.ProductInstanceStatus -> TCase.CaseType -> ClientM TbePI.ProductInstanceList
+-- buildOrgRideReq :: TQuote.ProductInstanceStatus -> TCase.CaseType -> ClientM TbePI.ProductInstanceList
 -- buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csType] (Just 50) Nothing
 
 appRegistrationToken :: Text

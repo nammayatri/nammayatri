@@ -11,7 +11,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Error
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.SilentLogger ()
@@ -20,18 +20,18 @@ handle :: StartRide.ServiceHandle IO
 handle =
   StartRide.ServiceHandle
     { findPersonById = \_personid -> pure $ Just Fixtures.defaultDriver,
-      findPIById = \piId ->
+      findPIById = \quoteId ->
         pure $
-          if piId == Id "2"
-            then Just searchProductInstance
+          if quoteId == Id "2"
+            then Just searchQuote
             else Nothing,
       findRideById = \rideId ->
         pure $
           if rideId == Id "1"
             then Just ride
             else Nothing,
-      startRide = \_piIds -> pure (),
-      notifyBAPRideStarted = \_searchPi _ride -> pure (),
+      startRide = \_quoteIds -> pure (),
+      notifyBAPRideStarted = \_quote _ride -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure ()
     }
 
@@ -39,15 +39,15 @@ ride :: Ride.Ride
 ride =
   Fixtures.defaultRide
     { Ride.status = Ride.CONFIRMED,
-      Ride.productInstanceId = "2",
+      Ride.quoteId = "2",
       Ride.udf4 = Just "otp"
     }
 
-searchProductInstance :: ProductInstance.ProductInstance
-searchProductInstance =
-  Fixtures.defaultProductInstance
-    { ProductInstance.id = "2",
-      ProductInstance.status = ProductInstance.CONFIRMED
+searchQuote :: Quote.Quote
+searchQuote =
+  Fixtures.defaultQuote
+    { Quote.id = "2",
+      Quote.status = Quote.CONFIRMED
     }
 
 searchRequest :: SearchRequest.SearchRequest
@@ -64,7 +64,7 @@ startRide =
     [ successfulStartByDriver,
       failedStartRequestedByDriverNotAnOrderExecutor,
       failedStartRequestedNotByDriver,
-      failedStartWhenProductInstanceStatusIsWrong,
+      failedStartWhenQuoteStatusIsWrong,
       failedStartWhenRideMissingOTP,
       failedStartWithWrongOTP
     ]
@@ -108,8 +108,8 @@ failedStartRequestedNotByDriver = do
                                       }
         }
 
-failedStartWhenProductInstanceStatusIsWrong :: TestTree
-failedStartWhenProductInstanceStatusIsWrong = do
+failedStartWhenQuoteStatusIsWrong :: TestTree
+failedStartWhenQuoteStatusIsWrong = do
   testCase "Fail ride starting if ride has wrong status" $ do
     runHandler handleCase "1" "1" "otp"
       `shouldThrow` (\(RideInvalidStatus _) -> True)
@@ -127,7 +127,7 @@ failedStartWhenRideMissingOTP :: TestTree
 failedStartWhenRideMissingOTP = do
   testCase "Fail ride starting if ride does not have OTP" $ do
     runHandler handleCase "1" "1" "otp"
-      `shouldThrow` (== PIFieldNotPresent "udf4")
+      `shouldThrow` (== QuoteFieldNotPresent "udf4")
   where
     handleCase =
       handle

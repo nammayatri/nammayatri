@@ -15,5 +15,5 @@ import qualified Types.Storage.Ride as SRide
 initiateCall :: Id SRide.Ride -> Id SP.Person -> FlowHandler CallRes
 initiateCall rideId _ = withFlowHandlerAPI $ do
   ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
-  ExternalAPI.initiateCall ride.productInstanceId
+  ExternalAPI.initiateCall ride.quoteId
   return Ack

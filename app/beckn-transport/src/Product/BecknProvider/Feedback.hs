@@ -32,13 +32,13 @@ feedback _ _ req = withFlowHandlerBecknAPI $
     logTagInfo "FeedbackAPI" "Received feedback API call."
     let context = req.context
     BP.validateContext "feedback" context
-    let productInstanceId = Id $ req.message.order_id
+    let quoteId = Id $ req.message.order_id
     ride <-
-      QRide.findByProductInstanceId productInstanceId
+      QRide.findByQuoteId quoteId
         >>= fromMaybeM RideNotFound
     driverId <- ride.personId & fromMaybeM (RideFieldNotPresent "person")
     unless (ride.status == Ride.COMPLETED) $
-      throwError $ PIInvalidStatus "Order is not ready for rating."
+      throwError $ QuoteInvalidStatus "Order is not ready for rating."
     ratingValue :: Int <-
       decodeFromText (req.message.rating.value)
         & fromMaybeM (InvalidRequest "Invalid rating type.")

@@ -14,7 +14,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Organization as OQ
-import qualified Storage.Queries.ProductInstance as QPI
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Test.RandomStrings as RS
@@ -23,41 +23,41 @@ import Types.Error
 import qualified Types.ProductInfo as Products
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as SPI
+import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
-confirm :: Id Person.Person -> Id SearchRequest.SearchRequest -> Id SPI.ProductInstance -> FlowHandler API.ConfirmRes
+confirm :: Id Person.Person -> Id SearchRequest.SearchRequest -> Id SQuote.Quote -> FlowHandler API.ConfirmRes
 confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   lt <- getCurrentTime
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
   when ((searchRequest.validTill) < lt) $
     throwError SearchRequestExpired
-  productInstance <- QPI.findById rideBookingId >>= fromMaybeM PIDoesNotExist
+  quote <- QQuote.findById rideBookingId >>= fromMaybeM QuoteDoesNotExist
   organization <-
-    OQ.findOrganizationById (productInstance.organizationId)
+    OQ.findOrganizationById (quote.organizationId)
       >>= fromMaybeM OrgNotFound
   Metrics.incrementSearchRequestCount SearchRequest.INPROGRESS
-  ride <- mkRide (searchRequest.id) productInstance
+  ride <- mkRide (searchRequest.id) quote
   DB.runSqlDBTransaction $ do
     QRide.create ride
   context <- buildContext "confirm" (getId searchRequestId) Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  order <- mkOrder productInstance
+  order <- mkOrder quote
   ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)
   return $ API.ConfirmRes ride.id
   where
-    mkOrder productInstance = do
+    mkOrder quote = do
       now <- getCurrentTime
       return $
         BO.Order
-          { id = getId $ productInstance.id,
+          { id = getId $ quote.id,
             state = Nothing,
             created_at = now,
             updated_at = now,
-            items = [OrderItem (getId $ productInstance.productId) Nothing],
+            items = [OrderItem (getId $ quote.productId) Nothing],
             billing = Nothing,
             payment = Nothing,
             trip = Nothing,
@@ -78,39 +78,38 @@ onConfirm _org req = withFlowHandlerBecknAPI $
     case req.contents of
       Right msg -> do
         let trip = fromBeckn <$> msg.order.trip
-            pid = Id $ msg.order.id
+            quoteId = Id $ msg.order.id
             tracker = flip Products.Tracker Nothing <$> trip
-        prdInst <- QPI.findById pid >>= fromMaybeM PIDoesNotExist
+        quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
         -- TODO: update tracking prodInfo in.info
-        let mprdInfo = decodeFromText =<< (prdInst.info)
+        let mprdInfo = decodeFromText =<< (quote.info)
         let uInfo = (\info -> info {Products.tracker = tracker}) <$> mprdInfo
-        let uPrd =
-              prdInst
-                { SPI.info = encodeToText <$> uInfo,
-                  SPI.udf4 = (.id) <$> trip,
-                  SPI.status = SPI.CONFIRMED
-                }
+        let uQuote =
+              quote{info = encodeToText <$> uInfo,
+                    udf4 = (.id) <$> trip,
+                    status = SQuote.CONFIRMED
+                   }
         Metrics.incrementSearchRequestCount SearchRequest.COMPLETED
-        SPI.validateStatusTransition (SPI.status prdInst) SPI.CONFIRMED & fromEitherM PIInvalidStatus
+        SQuote.validateStatusTransition quote.status SQuote.CONFIRMED & fromEitherM QuoteInvalidStatus
         DB.runSqlDBTransaction $ do
-          QPI.updateMultiple pid uPrd
+          QQuote.updateMultiple quoteId uQuote
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack
 
-mkRide :: MonadFlow m => Id SearchRequest.SearchRequest -> SPI.ProductInstance -> m SRide.Ride
-mkRide searchRequestId prodInst@SPI.ProductInstance {..} = do
+mkRide :: MonadFlow m => Id SearchRequest.SearchRequest -> SQuote.Quote -> m SRide.Ride
+mkRide searchRequestId quote@SQuote.Quote {..} = do
   now <- getCurrentTime
-  piid <- generateGUID
+  quoteId <- generateGUID
   shortId' <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return
     SRide.Ride
-      { id = Id piid,
+      { id = Id quoteId,
         requestId = searchRequestId,
         entityType = SRide.VEHICLE,
         entityId = Nothing,
         shortId = ShortId shortId',
         quantity = 1,
-        productInstanceId = prodInst.id,
+        quoteId = quote.id,
         status = SRide.INSTOCK,
         createdAt = now,
         updatedAt = now,

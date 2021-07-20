@@ -23,7 +23,7 @@ data ServiceHandle m = ServiceHandle
 cancelRideHandler :: MonadHandler m => ServiceHandle m -> Id SP.Person -> Id Ride.Ride -> CancelRideReq -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} personId rideId req = do
   ride <- findRideById rideId >>= fromMaybeM RideDoesNotExist
-  unless (isValidRide ride) $ throwError $ PIInvalidStatus "This ride cannot be canceled"
+  unless (isValidRide ride) $ throwError $ QuoteInvalidStatus "This ride cannot be canceled"
   authPerson <-
     findPersonById personId
       >>= fromMaybeM PersonNotFound

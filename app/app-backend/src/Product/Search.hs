@@ -27,10 +27,9 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
 import Product.Serviceability
 import qualified Storage.Queries.Organization as Org
-import qualified Storage.Queries.ProductInstance as MPI
-import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Products as QProducts
 import qualified Storage.Queries.SearchReqLocation as Location
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Types.API.Search as API
 import Types.API.Serviceability
@@ -40,9 +39,9 @@ import Types.Metrics (CoreMetrics)
 import Types.ProductInfo
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Products as Products
 import qualified Types.Storage.SearchReqLocation as Location
+import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
@@ -106,26 +105,26 @@ searchCbService req catalog = do
       ([], _) -> throwError $ InvalidRequest "Missing provider"
       (category : _, []) -> do
         let provider = fromBeckn category
-        declinedPI <- mkDeclinedProductInstance searchRequest bpp provider personId
-        return $ QPI.create declinedPI
+        declinedPI <- mkDeclinedQuote searchRequest bpp provider personId
+        return $ QQuote.create declinedPI
       (category : _, items) -> do
         when
           (searchRequest.status == SearchRequest.CLOSED)
           (throwError SearchRequestExpired)
         let provider = fromBeckn category
         products <- traverse (mkProduct searchRequest) items
-        productInstances <- traverse (mkProductInstance searchRequest bpp provider personId) items
+        quotes <- traverse (mkQuote searchRequest bpp provider personId) items
         currTime <- getCurrentTime
         confirmExpiry <- maybe 1800 fromIntegral <$> asks (.searchConfirmExpiry)
         let newValidTill = fromInteger confirmExpiry `addUTCTime` currTime
         return $ do
           traverse_ QProducts.create products
-          traverse_ QPI.create productInstances
+          traverse_ QQuote.create quotes
           when (searchRequest.validTill < newValidTill) $ QSearchRequest.updateValidTill (searchRequest.id) newValidTill
-    piList <- MPI.findAllByRequestId (searchRequest.id)
-    let piStatusCount = Map.fromListWith (+) $ zip (PI.status <$> piList) $ repeat (1 :: Integer)
-        accepted = Map.lookup PI.INSTOCK piStatusCount
-        declined = Map.lookup PI.OUTOFSTOCK piStatusCount
+    quoteList <- QQuote.findAllByRequestId (searchRequest.id)
+    let piStatusCount = Map.fromListWith (+) $ zip (SQuote.status <$> quoteList) $ repeat (1 :: Integer)
+        accepted = Map.lookup SQuote.INSTOCK piStatusCount
+        declined = Map.lookup SQuote.OUTOFSTOCK piStatusCount
         mSearchRequestInfo :: (Maybe API.SearchRequestInfo) = decodeFromText =<< (searchRequest.info)
 
     DB.runSqlDBTransaction $ do
@@ -224,15 +223,15 @@ mkProduct searchRequest item = do
         updatedAt = now
       }
 
-mkProductInstance ::
+mkQuote ::
   MonadFlow m =>
   SearchRequest.SearchRequest ->
   Org.Organization ->
   Common.Provider ->
   Id Person.Person ->
   Core.Item ->
-  m PI.ProductInstance
-mkProductInstance searchRequest bppOrg provider personId item = do
+  m SQuote.Quote
+mkQuote searchRequest bppOrg provider personId item = do
   now <- getCurrentTime
   let info = ProductInfo (Just provider) Nothing
       price = convertDecimalValueToAmount =<< item.price.listed_value
@@ -240,7 +239,7 @@ mkProductInstance searchRequest bppOrg provider personId item = do
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where searchRequest.startTime != product.startTime, etc
   return
-    PI.ProductInstance
+    SQuote.Quote
       { id = Id $ item.id,
         shortId = "",
         requestId = searchRequest.id,
@@ -248,8 +247,8 @@ mkProductInstance searchRequest bppOrg provider personId item = do
         personId = Just personId,
         personUpdatedAt = Nothing,
         quantity = 1,
-        entityType = PI.VEHICLE,
-        status = PI.INSTOCK,
+        entityType = SQuote.VEHICLE,
+        status = SQuote.INSTOCK,
         startTime = searchRequest.startTime,
         endTime = searchRequest.endTime,
         validTill = searchRequest.validTill,
@@ -272,22 +271,22 @@ mkProductInstance searchRequest bppOrg provider personId item = do
   where
     getNearestDriverDist = (.value) <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
 
-mkDeclinedProductInstance :: MonadFlow m => SearchRequest.SearchRequest -> Org.Organization -> Common.Provider -> Id Person.Person -> m PI.ProductInstance
-mkDeclinedProductInstance searchRequest bppOrg provider personId = do
+mkDeclinedQuote :: MonadFlow m => SearchRequest.SearchRequest -> Org.Organization -> Common.Provider -> Id Person.Person -> m SQuote.Quote
+mkDeclinedQuote searchRequest bppOrg provider personId = do
   now <- getCurrentTime
-  piId <- generateGUID
+  quoteId <- generateGUID
   let info = ProductInfo (Just provider) Nothing
   return
-    PI.ProductInstance
-      { id = Id piId,
+    SQuote.Quote
+      { id = Id quoteId,
         shortId = "",
         requestId = searchRequest.id,
-        productId = Id piId,
+        productId = Id quoteId,
         personId = Just personId,
         personUpdatedAt = Nothing,
         quantity = 1,
-        entityType = PI.VEHICLE,
-        status = PI.OUTOFSTOCK,
+        entityType = SQuote.VEHICLE,
+        status = SQuote.OUTOFSTOCK,
         startTime = searchRequest.startTime,
         endTime = searchRequest.endTime,
         validTill = searchRequest.validTill,

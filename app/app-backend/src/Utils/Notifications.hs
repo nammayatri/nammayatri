@@ -16,7 +16,7 @@ import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
 import Types.Storage.Person as Person
-import Types.Storage.ProductInstance as ProductInstance
+import Types.Storage.Quote as Quote
 import Types.Storage.RegistrationToken as RegToken
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
@@ -258,9 +258,9 @@ notifyOnTrackCb personId tracker searchRequest =
         _ -> pure ()
     else pure ()
 
-notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => ProductInstance -> Id Person -> Maybe FCM.FCMRecipientToken -> CancellationSource -> m ()
-notifyOnCancel rideSearchPI personId mbDeviceToken cancellationSource = do
-  org <- QOrg.findOrganizationById (rideSearchPI.organizationId) >>= fromMaybeM OrgNotFound
+notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => Quote -> Id Person -> Maybe FCM.FCMRecipientToken -> CancellationSource -> m ()
+notifyOnCancel quote personId mbDeviceToken cancellationSource = do
+  org <- QOrg.findOrganizationById (quote.organizationId) >>= fromMaybeM OrgNotFound
   FCM.notifyPerson (notificationData $ org.name) $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notificationData orgName =
@@ -268,7 +268,7 @@ notifyOnCancel rideSearchPI personId mbDeviceToken cancellationSource = do
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = show $ getId rideSearchPI.requestId,
+          fcmEntityIds = show $ getId quote.requestId,
           fcmNotificationJSON = FCM.createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -279,25 +279,25 @@ notifyOnCancel rideSearchPI personId mbDeviceToken cancellationSource = do
       ByUser ->
         unwords
           [ "You have cancelled your ride for",
-            showTimeIst (rideSearchPI.startTime) <> ".",
+            showTimeIst (quote.startTime) <> ".",
             "Check the app for details."
           ]
       ByOrganization ->
         unwords
           [ "\"" <> orgName <> "\" agency had to cancel the ride for",
-            showTimeIst (rideSearchPI.startTime) <> ".",
+            showTimeIst (quote.startTime) <> ".",
             "Please book again to get another ride."
           ]
       ByDriver ->
         unwords
           [ "The driver had to cancel the ride for",
-            showTimeIst (rideSearchPI.startTime) <> ".",
+            showTimeIst (quote.startTime) <> ".",
             "Please book again to get another ride."
           ]
       ByAllocator ->
         unwords
           [ "The ride for",
-            showTimeIst (rideSearchPI.startTime),
+            showTimeIst (quote.startTime),
             "was cancelled as we could not find a driver.",
             "Please book again to get another ride."
           ]

@@ -18,10 +18,10 @@ import EulerHS.Prelude hiding (id)
 import Servant.API
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
-import qualified Types.Storage.ProductInstance as PI
 import Types.Storage.Products (Products)
 import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.SearchRequest as SearchRequest
+import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.Vehicle as SVeh
 import Utils.Common
 
@@ -86,8 +86,8 @@ data RideT f = Ride
     fromLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     toLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     organizationId :: B.C f (Id Org.Organization),
-    productInstanceId :: B.C f (Id PI.ProductInstance),
     distance :: B.C f Double,
+    quoteId :: B.C f (Id SQuote.Quote),
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     udf3 :: B.C f (Maybe Text),
@@ -141,7 +141,7 @@ fieldEMod =
           validTill = "valid_till",
           fromLocation = "from_location_id",
           toLocation = "to_location_id",
-          productInstanceId = "product_instance_id",
+          quoteId = "quote_id",
           organizationId = "organization_id",
           createdAt = "created_at",
           updatedAt = "updated_at"

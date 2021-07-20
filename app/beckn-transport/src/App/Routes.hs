@@ -44,7 +44,6 @@ import Types.API.Transporter
 import Types.API.Vehicle
 import Types.Storage.Organization (Organization)
 import Types.Storage.Person as SP
-import Types.Storage.ProductInstance
 import qualified Types.Storage.RegistrationToken as SRT
 import Types.Storage.Vehicle
 import Utils.Auth (AdminTokenAuth, LookupRegistryOrg, TokenAuth)
@@ -293,7 +292,7 @@ rideBookingFlow =
 -- Location update and get for tracking is as follows
 type LocationAPI =
   "driver" :> "location"
-    :> ( Capture "productInstanceId" (Id ProductInstance) -- TODO: add auth
+    :> ( Capture "rideId" (Id SRide.Ride) -- TODO: add auth
            :> Get '[JSON] GetLocationRes
            :<|> TokenAuth
            :> ReqBody '[JSON] UpdateLocationReq
