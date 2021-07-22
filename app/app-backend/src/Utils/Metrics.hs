@@ -50,7 +50,8 @@ startSearchMetrics bmContainer txnId = do
   let (_, failureCounter) = bmContainer.searchDuration
       searchRedisExTime = bmContainer.searchDurationTimeout
   startTime <- getCurrentTime
-  Redis.setExRedis (searchDurationKey txnId) startTime searchRedisExTime
+  Redis.setExRedis (searchDurationKey txnId) startTime (searchRedisExTime + 1) -- a bit more time to
+  -- allow forked thread to handle failure
   fork "Gateway Search Metrics" $ do
     L.runIO $ threadDelay $ searchRedisExTime * 1000000
     whenM (Redis.tryLockRedis (searchDurationLockKey txnId) searchRedisExTime) $ do
