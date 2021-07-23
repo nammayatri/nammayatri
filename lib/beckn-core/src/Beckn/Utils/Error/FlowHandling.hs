@@ -1,5 +1,6 @@
 module Beckn.Utils.Error.FlowHandling
-  ( withFlowHandlerAPI,
+  ( withFlowHandler,
+    withFlowHandlerAPI,
     withFlowHandlerBecknAPI,
     apiHandler,
     becknApiHandler,

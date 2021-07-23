@@ -6,6 +6,7 @@ import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
 import qualified "fmd-wrapper" App as FmdWrapper
+import qualified "mock-sms" App as MockSms
 import qualified "beckn-transport" BackgroundTaskManager as TransporterBGTM
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
@@ -78,7 +79,10 @@ specs = do
             & #loggerConfig . #logRawSql .~ False,
         FmdWrapper.runFMDWrapper $ \cfg ->
           cfg & #loggerConfig . #logToConsole .~ False
-            & #loggerConfig . #logRawSql .~ False
+            & #loggerConfig . #logRawSql .~ False,
+        MockSms.runMockSms $
+          (#loggerConfig . #logToConsole .~ False)
+            . (#loggerConfig . #logRawSql .~ False)
       ]
 
     startServers servers = do

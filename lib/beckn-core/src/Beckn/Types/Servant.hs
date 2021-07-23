@@ -1,9 +1,9 @@
 module Beckn.Types.Servant where
 
-import Data.ByteString.Lazy (toStrict)
+import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.Text
 import Data.Text.Encoding
-import EulerHS.Prelude hiding (toStrict)
+import EulerHS.Prelude hiding (encodeUtf8, fromStrict, toStrict)
 import qualified Network.HTTP.Media as M
 import Servant
 
@@ -14,3 +14,6 @@ instance Accept PlainText_ISO_8859_1 where
 
 instance MimeUnrender PlainText_ISO_8859_1 Text where
   mimeUnrender _ = Right . decodeLatin1 . toStrict
+
+instance MimeRender PlainText_ISO_8859_1 Text where
+  mimeRender _ = fromStrict . encodeUtf8
