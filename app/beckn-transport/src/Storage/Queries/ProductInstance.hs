@@ -187,6 +187,22 @@ updateCaseId prodInstId caseId_ = do
           caseId <-. B.val_ scCaseId
         ]
 
+updateDistance ::
+  Id Person ->
+  Double ->
+  DB.SqlDB ()
+updateDistance driverId distance' = do
+  dbTable <- getDbTable
+  DB.update'
+    dbTable
+    (setClause distance')
+    (predicate driverId)
+  where
+    predicate driverId' Storage.ProductInstance {..} =
+      personId ==. B.val_ (Just driverId')
+        &&. status ==. B.val_ Storage.INPROGRESS
+    setClause distance'' Storage.ProductInstance {..} = distance <-. B.current_ distance + B.val_ distance''
+
 findAllByProdId :: DBFlow m r => Id Product.Products -> m [Storage.ProductInstance]
 findAllByProdId piId = do
   dbTable <- getDbTable

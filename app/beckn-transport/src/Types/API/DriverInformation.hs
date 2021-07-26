@@ -46,7 +46,7 @@ data RideInfo = RideInfo
     pickupLoc :: Loc.Location,
     dropLoc :: Loc.Location,
     etaForPickupLoc :: Maybe Integer,
-    distanceToPickupLoc :: Maybe Float,
+    distanceToPickupLoc :: Maybe Double,
     notificationExpiryTime :: UTCTime,
     estimatedPrice :: Maybe Text
   }

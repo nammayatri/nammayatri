@@ -119,12 +119,25 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
       let notificationExpiryTime = notification.expiresAt
       productInstance <- QueryPI.findById productInstanceId >>= fromMaybeM PINotFound
       driver <- QPerson.findPersonById (cast driverId) >>= fromMaybeM PersonNotFound
-      driverLocation <- findLocationById (driver.locationId) >>= fromMaybeM (PersonFieldNotPresent "location_id")
-      fromLocation <- findLocationById (productInstance.fromLocation) >>= fromMaybeM (PIFieldNotPresent "location_id")
-      toLocation <- findLocationById (productInstance.toLocation) >>= fromMaybeM (PIFieldNotPresent "to_location_id")
-      (fromLat, fromLong) <- extractLatLong fromLocation & fromMaybeM (LocationFieldNotPresent "from")
-      (driverLat, driverLong) <- extractLatLong driverLocation & fromMaybeM (LocationFieldNotPresent "driver")
-      mbRoute <- Location.getRoute' driverLat driverLong fromLat fromLong
+      driverLocation <-
+        driver.locationId & fromMaybeM (PersonFieldNotPresent "location_id")
+          >>= QLocation.findLocationById
+          >>= fromMaybeM LocationNotFound
+      driverLatLong <-
+        Location.locationToLatLong driverLocation
+          & fromMaybeM (LocationFieldNotPresent "lat or long in `driver`")
+      fromLocation <-
+        productInstance.fromLocation & fromMaybeM (PIFieldNotPresent "from_location_id")
+          >>= QLocation.findLocationById
+          >>= fromMaybeM LocationNotFound
+      fromLatLong <-
+        Location.locationToLatLong fromLocation
+          & fromMaybeM (LocationFieldNotPresent "lat or long in `from`")
+      toLocation <-
+        productInstance.toLocation & fromMaybeM (PIFieldNotPresent "to_location_id")
+          >>= QLocation.findLocationById
+          >>= fromMaybeM LocationNotFound
+      mbRoute <- Location.getRoute' [driverLatLong, fromLatLong]
       return $
         DriverInformationAPI.GetRideInfoRes $
           Just $
@@ -139,8 +152,6 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
               }
   where
     driverId = Id entityId
-    findLocationById mbId = maybe (return Nothing) QLocation.findLocationById mbId
-    extractLatLong = \loc -> (,) <$> loc.lat <*> loc.long
 
 listDriver :: Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do

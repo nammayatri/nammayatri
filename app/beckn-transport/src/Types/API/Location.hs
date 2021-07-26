@@ -1,41 +1,29 @@
 module Types.API.Location where
 
-import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.MapSearch as MapSearch
+import Data.Time (UTCTime)
 import EulerHS.Prelude
 
 data UpdateLocationReq = UpdateLocationReq
-  { lat :: Double,
-    long :: Double
+  { lastUpdate :: Maybe UTCTime,
+    waypoints :: NonEmpty LatLong
   }
   deriving (Generic, ToJSON, Show, FromJSON)
 
-newtype UpdateLocationRes = UpdateLocationRes
-  { status :: Text
-  }
-  deriving (Generic, ToJSON)
+type UpdateLocationRes = APISuccess
 
-data LocationInfo = LocationInfo
-  { lat :: Double,
-    long :: Double
-  }
+data Status = PreRide | ActualRide
   deriving (Generic, ToJSON, Show, FromJSON)
 
-newtype GetLocationRes = GetLocationRes
-  { location :: LocationInfo
-  }
-  deriving (Generic, ToJSON, FromJSON)
-
-data LatLong = LatLong
-  { lat :: Double,
-    lon :: Double
-  }
-  deriving (Show, Generic, FromJSON, ToJSON)
-
-data Request = Request
-  { waypoints :: [LatLong],
-    mode :: Maybe MapSearch.TravelMode,
-    calcPoints :: Maybe Bool
+data GetLocationRes = GetLocationRes
+  { currPoint :: LatLong,
+    totalDistance :: Double,
+    status :: Status,
+    lastUpdate :: UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+type Request = MapSearch.Request
 
 type Response = MapSearch.Response

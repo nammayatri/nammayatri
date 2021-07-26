@@ -3,7 +3,6 @@
 module Product.Search where
 
 import App.Types
-import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.API.Search as Search
@@ -12,7 +11,6 @@ import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
 import Beckn.Types.Core.Tag
 import Beckn.Types.Id
-import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Mobility.Catalog as BM
 import Beckn.Types.Mobility.Stop as BS
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -24,6 +22,7 @@ import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
+import qualified Product.Location as Location (getDistance)
 import Product.Serviceability
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Case as QCase
@@ -157,7 +156,7 @@ mkCase ::
 mkCase req userId from to = do
   now <- getCurrentTime
   cid <- generateGUID
-  distance <- getDistance req
+  distance <- Location.getDistance (req ^. #origin . #location) (req ^. #destination . #location)
   orgs <- Org.listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
   let info = encodeToText $ API.CaseInfo (Just $ toInteger $ length orgs) (Just 0) (Just 0)
   -- TODO: consider collision probability for shortId
@@ -345,39 +344,3 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         createdAt = now,
         updatedAt = now
       }
-
-getDistance ::
-  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
-    CoreMetrics m
-  ) =>
-  API.SearchReq ->
-  m (Maybe Float)
-getDistance req =
-  mkRouteRequest (req.origin.location) (req.destination.location)
-    >>= MapSearch.getRouteMb
-    <&> fmap MapSearch.distanceInM
-
-mkRouteRequest :: MonadFlow m => Common.Location -> Common.Location -> m MapSearch.Request
-mkRouteRequest pickupLoc dropLoc = do
-  (Common.GPS pickupLat pickupLon) <- Common.gps pickupLoc & fromMaybeM (InvalidRequest "No long / lat.")
-  (Common.GPS dropLat dropLon) <- Common.gps dropLoc & fromMaybeM (InvalidRequest "No long / lat.")
-  pickupMapPoint <- mkMapPoint pickupLat pickupLon
-  dropMapPoint <- mkMapPoint dropLat dropLon
-  return $
-    MapSearch.Request
-      { waypoints = [pickupMapPoint, dropMapPoint],
-        mode = Just MapSearch.CAR,
-        departureTime = Nothing,
-        arrivalTime = Nothing,
-        calcPoints = Just False
-      }
-
-mkMapPoint :: MonadFlow m => Text -> Text -> m MapSearch.MapPoint
-mkMapPoint lat' lon' = do
-  lat <- readLatLng lat'
-  lon <- readLatLng lon'
-  return $ MapSearch.LatLong $ MapSearch.PointXY lat lon
-
-readLatLng :: MonadFlow m => Text -> m Double
-readLatLng text = do
-  readMaybe (T.unpack text) & fromMaybeM (InternalError "Location read error")

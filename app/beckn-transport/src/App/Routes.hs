@@ -248,8 +248,8 @@ type LocationAPI =
     :> ( Capture "productInstanceId" (Id ProductInstance) -- TODO: add auth
            :> Get '[JSON] GetLocationRes
            :<|> TokenAuth
-             :> ReqBody '[JSON] UpdateLocationReq
-             :> Post '[JSON] UpdateLocationRes
+           :> ReqBody '[JSON] UpdateLocationReq
+           :> Post '[JSON] UpdateLocationRes
        )
 
 locationFlow :: FlowServer LocationAPI
@@ -346,7 +346,7 @@ type RouteAPI =
     :> Post '[JSON] Location.Response
 
 routeApiFlow :: FlowServer RouteAPI
-routeApiFlow = Location.getRoute
+routeApiFlow = Location.getRoutes
 
 type DriverInformationAPI =
   "driver"

@@ -7,8 +7,10 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Types.Schema
 import Beckn.Utils.Common
+import Data.Time (UTCTime)
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
@@ -70,18 +72,17 @@ findAllByLocIds fromIds toIds = do
       B.in_ id (B.val_ <$> pFromIds)
         ||. B.in_ id (B.val_ <$> pToIds)
 
-updateGpsCoord :: DBFlow m r => Id Storage.Location -> Double -> Double -> m ()
-updateGpsCoord locationId lat_ long_ = do
+updateGpsCoord :: Id Storage.Location -> UTCTime -> LatLong -> DB.SqlDB ()
+updateGpsCoord locationId now (LatLong lat' long') = do
   locTable <- getDbTable
-  now <- getCurrentTime
-  DB.update locTable (setClause lat_ long_ now) (predicate locationId)
+  DB.update' locTable (setClause lat' long' now) (predicate locationId)
   where
-    setClause mLat mLong now Storage.Location {..} =
-      let point_ = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"
+    setClause mLat mLong now' Storage.Location {..} =
+      let point' = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"
        in mconcat
             [ lat <-. B.val_ (Just mLat),
               long <-. B.val_ (Just mLong),
-              updatedAt <-. B.val_ now,
-              point <-. point_
+              updatedAt <-. B.val_ now',
+              point <-. point'
             ]
     predicate locId Storage.Location {..} = id B.==. B.val_ locId

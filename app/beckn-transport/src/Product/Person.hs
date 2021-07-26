@@ -21,6 +21,7 @@ import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.Validation (runRequestValidation)
 import Data.Maybe
 import qualified Data.Text as T
@@ -35,7 +36,6 @@ import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.TransporterConfig as QTC
 import qualified Storage.Queries.Vehicle as QV
-import Types.API.Location (LatLong (..))
 import Types.API.Person
 import Types.API.Registration (makeUserInfoRes)
 import Types.App (Driver)

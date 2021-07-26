@@ -1,60 +1,87 @@
-module Beckn.Product.MapSearch where
+module Beckn.Product.MapSearch
+  ( getRoutes,
+    getRouteMb,
+    getDistanceMb,
+  )
+where
 
-import qualified Beckn.External.Graphhopper.Flow as Grphr
-import qualified Beckn.External.Graphhopper.Types as Grphr
-import Beckn.Types.Common
+import Beckn.External.Graphhopper.Flow as Grphr
+import Beckn.External.Graphhopper.Types as Grphr
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
-import Beckn.Utils.Common
+import Beckn.Utils.Common hiding (id)
+import Data.Either.Combinators (mapBoth)
 import Data.Geospatial hiding (bbox)
 import EulerHS.Prelude
-import Prelude (atan2)
 
-getRouteMb ::
+getRoutes' ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+  ) =>
+  MapSearch.Request ->
+  m (Either ExternalAPICallError [MapSearch.Route])
+getRoutes' MapSearch.Request {..} = do
+  -- Currently integrated only with graphhopper
+  let mode' = fromMaybe MapSearch.CAR mode
+      vehicle = mapToVehicle mode'
+  graphhopperUrl <- asks (.graphhopperUrl)
+  let toError = ExternalAPICallError (Just "UNABLE_TO_GET_ROUTE") graphhopperUrl
+  Grphr.search graphhopperUrl (grphrReq waypoints vehicle)
+    <&> toError `mapBoth` (map mapToRoute . Grphr.paths)
+  where
+    grphrReq points vehicle =
+      Grphr.Request
+        { points = latLongToGeoPoint <$> points,
+          vehicle = vehicle,
+          weighting = Nothing,
+          elevation = Nothing,
+          calc_points = Just calcPoints,
+          points_encoded = False
+        }
+
+getRoutes ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+  ) =>
+  MapSearch.Request ->
+  m [MapSearch.Route]
+getRoutes = getRoutes' >=> fromEitherM id
+
+getRouteMb' ::
   ( CoreMetrics m,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
   MapSearch.Request ->
   m (Maybe MapSearch.Route)
-getRouteMb request =
-  (listToMaybe . (.routes) <$> getRoute request)
-    `catch` \(_ :: RouteError) -> pure Nothing
+getRouteMb' req =
+  getRoutes' req
+    >>= either (\e -> logError (makeLogSomeException $ toException e) $> Nothing) (pure . Just)
+    <&> (>>= listToMaybe)
 
-getRoute ::
+getRouteMb ::
   ( CoreMetrics m,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
-  MapSearch.Request ->
-  m MapSearch.Response
-getRoute MapSearch.Request {..} = do
-  -- Currently integrated only with graphhopper
-  unless (all isLatLong waypoints) $ throwError RouteNotLatLong
-  let points = map (\(MapSearch.LatLong point) -> point) waypoints
-      mode' = fromMaybe MapSearch.CAR mode
-      vehicle = mapToVehicle mode'
-  graphhopperUrl <- asks (.graphhopperUrl)
-  Grphr.Response {..} <-
-    Grphr.search graphhopperUrl (grphrReq points vehicle)
-      >>= fromEitherM (RouteRequestError graphhopperUrl)
-  return $
-    MapSearch.Response
-      { status = "OK",
-        routes = mapToRoute mode' <$> paths
-      }
-  where
-    isLatLong :: MapSearch.MapPoint -> Bool
-    isLatLong (MapSearch.LatLong _) = True
-    isLatLong _ = False
-    grphrReq :: [PointXY] -> Grphr.Vehicle -> Grphr.Request
-    grphrReq points vehicle =
-      Grphr.Request
-        { points' = points,
-          vehicle = vehicle,
-          weighting = Nothing,
-          elevation = Nothing,
-          calcPoints = calcPoints
-        }
+  Maybe MapSearch.TravelMode ->
+  [MapSearch.LatLong] ->
+  m (Maybe MapSearch.Route)
+getRouteMb mode waypoints = getRouteMb' MapSearch.Request {calcPoints = True, ..}
+
+getDistanceMb ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+  ) =>
+  Maybe MapSearch.TravelMode ->
+  [MapSearch.LatLong] ->
+  m (Maybe Double)
+getDistanceMb mode waypoints =
+  fmap (.distanceInM)
+    <$> getRouteMb' MapSearch.Request {calcPoints = False, ..}
+
+latLongToGeoPoint :: MapSearch.LatLong -> GeoPositionWithoutCRS
+latLongToGeoPoint (MapSearch.LatLong lat lon) = GeoPointXY (PointXY lon lat)
 
 mapToVehicle :: MapSearch.TravelMode -> Grphr.Vehicle
 mapToVehicle MapSearch.CAR = Grphr.CAR
@@ -62,36 +89,12 @@ mapToVehicle MapSearch.MOTORCYCLE = Grphr.SCOOTER
 mapToVehicle MapSearch.BICYCLE = Grphr.BIKE
 mapToVehicle MapSearch.FOOT = Grphr.FOOT
 
-mapToRoute :: MapSearch.TravelMode -> Grphr.Path -> MapSearch.Route
-mapToRoute mode Grphr.Path {..} =
+mapToRoute :: Grphr.Path -> MapSearch.Route
+mapToRoute Grphr.Path {..} =
   MapSearch.Route
     { distanceInM = distance,
       durationInS = div time 1000,
       boundingBox = bbox,
-      snapped_waypoints = Just snapped_waypoints,
-      mode = mode,
+      snappedWaypoints = snapped_waypoints,
       points = points
     }
-
-deg2Rad :: Double -> Double
-deg2Rad degree = degree * pi / 180
-
-distanceBetweenInMeters :: PointXY -> PointXY -> Float
-distanceBetweenInMeters (PointXY lat1 lon1) (PointXY lat2 lon2) =
-  -- Calculating using haversine formula
-  let r = 6371000 -- Radius of earth in meters
-      dlat = deg2Rad $ lat2 - lat1
-      dlon = deg2Rad $ lon2 - lon1
-      rlat1 = deg2Rad lat1
-      rlat2 = deg2Rad lat2
-      -- Calculated distance is real (not imaginary) when 0 <= h <= 1
-      -- Ideally in our use case h wouldn't go out of bounds
-      h = (sin (dlat / 2) ^ (2 :: Integer)) + cos rlat1 * cos rlat2 * (sin (dlon / 2) ^ (2 :: Integer))
-   in -- Float precision for distance is sufficient as we are working with `meter` units
-      realToFrac $ 2 * r * atan2 (sqrt h) (sqrt (1 - h))
-
-speedInMPS :: Float -> Integer -> Float
-speedInMPS distance duration =
-  if duration <= 0
-    then 0 -- Realistically this is not possible, so just returning zero
-    else distance / fromIntegral duration

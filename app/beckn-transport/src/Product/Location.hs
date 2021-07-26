@@ -2,42 +2,64 @@ module Product.Location where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
+import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.APISuccess (APISuccess (..))
+import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
+import qualified Data.List.NonEmpty as NE
+import Data.Time (diffUTCTime, secondsToNominalDiffTime)
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.ProductInstance as ProductInstance
+import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Location as Location
 import Types.Metrics
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Location as Location
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.ProductInstance as QPI
+import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.RegistrationToken as SR
-import Utils.Common
+import Utils.Common hiding (id)
 
-updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler UpdateLocationRes
+updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler APISuccess
 updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
-  person <-
+  driver <-
     Person.findPersonById (Id entityId)
       >>= fromMaybeM PersonNotFound
-  driver <- if person.role == Person.DRIVER then return person else throwError AccessDenied
-  locationId <-
-    driver.locationId
-      & fromMaybeM (PersonFieldNotPresent "location_id")
-  logTagInfo "driverLocationUpdate" (entityId <> " " <> show req.lat <> "," <> show req.long)
-  Location.updateGpsCoord locationId (req.lat) (req.long)
-  return $ UpdateLocationRes "ACK"
+  unless (driver.role == Person.DRIVER) $ throwError AccessDenied
+  locationId <- driver.locationId & fromMaybeM (PersonFieldNotPresent "location_id")
+  loc <-
+    Location.findLocationById locationId
+      >>= fromMaybeM LocationNotFound
+  now <- getCurrentTime
+  when (now `diffUTCTime` loc.updatedAt > refreshPeriod) $ do
+    let lastWaypoint = locationToLatLong loc
+    let traversedWaypoints = maybe waypointList (: waypointList) lastWaypoint
+    distanceMb <- MapSearch.getDistanceMb (Just MapSearch.CAR) traversedWaypoints
+    let lastUpdate = fromMaybe now (req.lastUpdate)
+    DB.runSqlDBTransaction $ do
+      whenJust distanceMb $ QPI.updateDistance driver.id
+      Location.updateGpsCoord locationId lastUpdate currPoint
+  return Success
+  where
+    refreshPeriod = secondsToNominalDiffTime 10
+    currPoint = NE.last (req.waypoints)
+    waypointList = NE.toList (req.waypoints)
 
-getLocation :: Id QPI.ProductInstance -> FlowHandler GetLocationRes
+getLocation :: Id PI.ProductInstance -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandlerAPI $ do
-  orderProductInstance <-
-    ProductInstance.findByParentIdType piId Case.RIDEORDER
+  ride <-
+    QPI.findByParentIdType piId Case.RIDEORDER
       >>= fromMaybeM PIDoesNotExist
+  status <-
+    case ride.status of
+      PI.TRIP_ASSIGNED -> pure PreRide
+      PI.INPROGRESS -> pure ActualRide
+      _ -> throwError $ PIInvalidStatus "Cannot track this ride"
   driver <-
-    orderProductInstance.personId & fromMaybeM (PIFieldNotPresent "person")
+    (ride.personId & fromMaybeM (PIFieldNotPresent "person_id"))
       >>= Person.findPersonById
       >>= fromMaybeM PersonNotFound
   currLocation <-
@@ -45,70 +67,36 @@ getLocation piId = withFlowHandlerAPI $ do
       & fromMaybeM (PersonFieldNotPresent "location_id")
       >>= Location.findLocationById
       >>= fromMaybeM LocationNotFound
-  lat <- currLocation.lat & fromMaybeM (LocationFieldNotPresent "lat")
-  long <- currLocation.long & fromMaybeM (LocationFieldNotPresent "long")
-  return $ GetLocationRes {location = Location.LocationInfo lat long}
+  let lastUpdate = currLocation.updatedAt
+  let totalDistance = ride.distance
+  currPoint <- locationToLatLong currLocation & fromMaybeM (LocationFieldNotPresent "lat or long")
+  return $ GetLocationRes {..}
+
+locationToLatLong :: Location.Location -> Maybe MapSearch.LatLong
+locationToLatLong loc =
+  MapSearch.LatLong
+    <$> loc.lat
+    <*> loc.long
 
 getRoute' ::
-  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
-    CoreMetrics m
+  ( CoreMetrics m,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
-  Double ->
-  Double ->
-  Double ->
-  Double ->
+  [MapSearch.LatLong] ->
   m (Maybe MapSearch.Route)
-getRoute' fromLat fromLon toLat toLon = MapSearch.getRouteMb getRouteRequest
-  where
-    getRouteRequest = do
-      let from = MapSearch.LatLong $ MapSearch.PointXY fromLat fromLon
-      let to = MapSearch.LatLong $ MapSearch.PointXY toLat toLon
-      MapSearch.Request
-        { waypoints = [from, to],
-          mode = Just MapSearch.CAR,
-          departureTime = Nothing,
-          arrivalTime = Nothing,
-          calcPoints = Just True
-        }
+getRoute' = MapSearch.getRouteMb (Just MapSearch.CAR)
 
-getRoute :: SR.RegistrationToken -> Location.Request -> FlowHandler Location.Response
-getRoute _ Location.Request {..} =
-  withFlowHandlerAPI $ MapSearch.getRoute getRouteRequest
-  where
-    mapToMapPoint (Location.LatLong lat long) = MapSearch.LatLong $ MapSearch.PointXY lat long
-    getRouteRequest =
-      MapSearch.Request
-        { waypoints = mapToMapPoint <$> waypoints,
-          mode = mode <|> Just MapSearch.CAR,
-          departureTime = Nothing,
-          arrivalTime = Nothing,
-          calcPoints
-        }
+getRoutes :: SR.RegistrationToken -> Location.Request -> FlowHandler Location.Response
+getRoutes _ = withFlowHandlerAPI . MapSearch.getRoutes
 
 calculateDistance ::
-  ( HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
-    CoreMetrics m
+  ( CoreMetrics m,
+    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
   Location.Location ->
   Location.Location ->
-  m (Maybe Float)
-calculateDistance source destination = do
-  routeRequest <- mkRouteRequest
-  fmap MapSearch.distanceInM <$> MapSearch.getRouteMb routeRequest
-  where
-    mkRouteRequest = do
-      sourceLat <- source.lat & fromMaybeM (LocationFieldNotPresent "source.lat")
-      sourceLng <- source.long & fromMaybeM (LocationFieldNotPresent "source.long")
-      destinationLat <- destination.lat & fromMaybeM (LocationFieldNotPresent "dest.lat")
-      destinationLng <- destination.long & fromMaybeM (LocationFieldNotPresent "dest.long")
-      let sourceMapPoint = mkMapPoint sourceLat sourceLng
-      let destinationMapPoint = mkMapPoint destinationLat destinationLng
-      pure $
-        MapSearch.Request
-          { waypoints = [sourceMapPoint, destinationMapPoint],
-            mode = Just MapSearch.CAR,
-            departureTime = Nothing,
-            arrivalTime = Nothing,
-            calcPoints = Just False
-          }
-    mkMapPoint lat lng = MapSearch.LatLong $ MapSearch.PointXY lat lng
+  m (Maybe Double)
+calculateDistance sourceLoc destinationLoc = do
+  source <- locationToLatLong sourceLoc & fromMaybeM (LocationFieldNotPresent "lat or long source")
+  dest <- locationToLatLong destinationLoc & fromMaybeM (LocationFieldNotPresent "lat or long destination")
+  MapSearch.getDistanceMb (Just MapSearch.CAR) [source, dest]

@@ -9,39 +9,31 @@ where
 
 import Data.Geospatial
 import Data.LineString
-import Data.Time
 import EulerHS.Prelude
 
-data MapPoint
-  = Place Text
-  | LatLong PointXY
-  | PlaceId Text
-  deriving (Show)
+data LatLong = LatLong
+  { lat :: Double,
+    lon :: Double
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 data TravelMode = CAR | MOTORCYCLE | BICYCLE | FOOT
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data Route = Route
-  { distanceInM :: Float, -- meters
-    durationInS :: Integer, -- seconds
+  { durationInS :: Integer,
+    distanceInM :: Double,
     boundingBox :: Maybe BoundingBoxWithoutCRS,
-    snapped_waypoints :: Maybe GeospatialGeometry,
-    mode :: TravelMode,
+    snappedWaypoints :: GeospatialGeometry,
     points :: Maybe GeospatialGeometry
   }
   deriving (Generic, ToJSON, FromJSON, Show)
 
 data Request = Request
-  { waypoints :: [MapPoint],
+  { waypoints :: [LatLong],
     mode :: Maybe TravelMode, -- Defaults to CAR
-    departureTime :: Maybe UTCTime, -- optionally required for Transit mode which is not supported currently
-    arrivalTime :: Maybe UTCTime, -- optionally required for Transit mode which is not supported currently
-    calcPoints :: Maybe Bool -- True (default) if points needs to be calculated
-  }
-  deriving (Show)
-
-data Response = Response
-  { status :: Text,
-    routes :: [Route]
+    calcPoints :: Bool -- True (default) if points needs to be calculated
   }
   deriving (Generic, ToJSON, FromJSON, Show)
+
+type Response = [Route]

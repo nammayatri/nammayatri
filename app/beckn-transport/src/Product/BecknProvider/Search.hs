@@ -105,7 +105,7 @@ getValidTime now startTime = do
       validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
-mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.Location -> Location.Location -> Id Org.Organization -> Id Org.Organization -> Maybe Float -> Case.Case
+mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.Location -> Location.Location -> Id Org.Organization -> Id Org.Organization -> Maybe Double -> Case.Case
 mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance = do
   let intent = req.message.intent
   let distance = Tag.value <$> find (\x -> x.key == "distance") (fromMaybe [] $ intent.tags)
@@ -147,7 +147,7 @@ calculateDeadDistance ::
   ) =>
   Org.Organization ->
   Location.Location ->
-  m (Maybe Float)
+  m (Maybe Double)
 calculateDeadDistance organization fromLocation = do
   eres <- try $ do
     orgLocId <- organization.locationId & fromMaybeM (OrgFieldNotPresent "location_id")
@@ -239,6 +239,7 @@ mkProductInstance productCase price status transporterId nearestDriverDist = do
         toLocation = Just $ productCase.toLocationId,
         organizationId = transporterId,
         parentId = Nothing,
+        distance = 0,
         udf1 = show <$> nearestDriverDist,
         udf2 = Nothing,
         udf3 = Nothing,

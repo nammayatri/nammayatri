@@ -30,6 +30,7 @@ defaultProductInstance =
       toLocation = Nothing,
       organizationId = "",
       parentId = Nothing,
+      distance = 0,
       udf1 = Nothing,
       udf2 = Nothing,
       udf3 = Nothing,

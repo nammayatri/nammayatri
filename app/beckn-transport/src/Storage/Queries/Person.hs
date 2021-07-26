@@ -10,13 +10,13 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Types.Schema
 import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import EulerHS.Prelude hiding (id)
-import Types.API.Location (LatLong (..))
 import Types.App
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Organization as Org

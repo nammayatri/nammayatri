@@ -7,22 +7,26 @@ import EulerHS.Prelude hiding (Show)
 import Prelude (Show (..))
 
 data Weighting = FASTEST | SHORTEST | SHORT_FASTEST
-  deriving (Show)
+  deriving (Show, Generic, ToJSON)
 
 data Vehicle = CAR | BIKE | FOOT | HIKE | MTB | RACINGBIKE | SCOOTER | TRUCK | SMALL_TRUCK
-  deriving (Show)
+  deriving (Show, Generic, ToJSON)
 
 data Request = Request
-  { points' :: [PointXY],
+  { points :: [GeoPositionWithoutCRS],
     vehicle :: Vehicle,
     weighting :: Maybe Weighting,
     elevation :: Maybe Bool,
-    calcPoints :: Maybe Bool
+    calc_points :: Maybe Bool,
+    points_encoded :: Bool
   }
-  deriving (Show)
+  deriving (Show, Generic)
+
+instance ToJSON Request where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
 
 data Path = Path
-  { distance :: Float, -- meters
+  { distance :: Double, -- meters
     time :: Integer, -- miliseconds
     bbox :: Maybe BoundingBoxWithoutCRS, -- bbox and points fields are empty incase calcPoints
     points :: Maybe GeospatialGeometry, -- is set to False. Default - True
@@ -39,8 +43,8 @@ instance ToJSON Path where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 data Instruction = Instruction
-  { distance :: Float,
-    heading :: Maybe Float,
+  { distance :: Double,
+    heading :: Maybe Double,
     sign :: Integer,
     interval :: [Integer],
     text :: String,

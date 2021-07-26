@@ -29,7 +29,7 @@ newtype DropLocation = DropLocation {getDropLocation :: Location.Location}
 
 type TripStartTime = UTCTime
 
-type DistanceInM = Float
+type DistanceInM = Double
 
 data JourneyTrip = OneWayTrip | HalfReturnTrip | FullReturnTrip
   deriving stock (Show, Eq)
@@ -38,7 +38,7 @@ type MonadHandler m = (MonadThrow m, Log m)
 
 data ServiceHandle m = ServiceHandle
   { getFarePolicy :: Id Organization.Organization -> Vehicle.Variant -> m (Maybe FarePolicy),
-    getDistance :: PickupLocation -> DropLocation -> m (Maybe Float)
+    getDistance :: PickupLocation -> DropLocation -> m (Maybe Double)
   }
 
 data FareParameters = FareParameters
