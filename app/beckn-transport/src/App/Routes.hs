@@ -122,6 +122,14 @@ type PersonAPI =
            :<|> AdminTokenAuth
              :> Capture "personId" (Id Person)
              :> Delete '[JSON] DeletePersonRes
+           :<|> "activate"
+             :> AdminTokenAuth
+             :> Capture "personId" (Id Person)
+             :> Post '[JSON] APISuccess
+           :<|> "deactivate"
+             :> AdminTokenAuth
+             :> Capture "personId" (Id Person)
+             :> Post '[JSON] APISuccess
        )
 
 personFlow :: FlowServer PersonAPI
@@ -130,6 +138,8 @@ personFlow =
     :<|> Person.listPerson
     :<|> Person.updatePerson
     :<|> Person.deletePerson
+    :<|> Person.activatePerson
+    :<|> Person.deactivatePerson
 
 -- Following is vehicle flow
 type VehicleAPI =

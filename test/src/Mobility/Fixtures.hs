@@ -238,7 +238,9 @@ deletePerson :: Text -> Id TPerson.Person -> ClientM TbePerson.DeletePersonRes
 _
   :<|> listPerson
   :<|> updatePerson
-  :<|> deletePerson = client (Proxy :: Proxy TbeRoutes.PersonAPI)
+  :<|> deletePerson
+  :<|> _
+  :<|> _ = client (Proxy :: Proxy TbeRoutes.PersonAPI)
 
 buildUpdateCaseReq :: TbeCase.UpdateCaseReq
 buildUpdateCaseReq =

@@ -169,19 +169,6 @@ update personId statusM nameM emailM roleM identTypeM identM = do
         )
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
-updateDeviceToken :: Id Storage.Person -> Maybe FCMRecipientToken -> DB.SqlDB ()
-updateDeviceToken personId mbDeviceToken = do
-  dbTable <- getDbTable
-  now <- getCurrentTime
-  DB.update' dbTable (setClause now mbDeviceToken) (predicate personId)
-  where
-    setClause currTime mbDeviceToken_ Storage.Person {..} =
-      mconcat
-        [ updatedAt <-. B.val_ currTime,
-          deviceToken <-. B.val_ mbDeviceToken_
-        ]
-    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
-
 setVerified :: Id Storage.Person -> DB.SqlDB ()
 setVerified personId = do
   dbTable <- getDbTable

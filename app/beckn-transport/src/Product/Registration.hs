@@ -52,7 +52,7 @@ initiateFlow req smsCfg = do
       countryCode = req.mobileCountryCode
   person <- QP.findByMobileNumber countryCode mobileNumber >>= fromMaybeM PersonDoesNotExist
   checkSlidingWindowLimit (initiateFlowHitsCountKey person)
-  when (person.verified && person.status == SP.INACTIVE) $
+  when (person.status == SP.INACTIVE) $
     throwError AccountSuspended
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
@@ -128,13 +128,12 @@ login tokenId req =
           QR.setVerified $ Id tokenId
           unless person.verified $ do
             QP.setVerified person.id
-            QP.updateStatus person.id SP.ACTIVE
             QP.updateDeviceToken person.id deviceToken
         updatedPerson <-
           if person.verified
             then return person
             else do
-              let updPers = person{deviceToken, verified = True, status = SP.ACTIVE}
+              let updPers = person{deviceToken, verified = True}
               Notify.notifyOnRegistration regToken updPers
               return updPers
         decPerson <- decrypt updatedPerson
