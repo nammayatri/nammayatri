@@ -35,16 +35,16 @@ findRegistrationToken tokenId = do
   where
     predicate Storage.RegistrationToken {..} = id ==. B.val_ tokenId
 
-updateVerified :: DBFlow m r => Text -> Bool -> m ()
-updateVerified rtId verified_ = do
+setVerified :: Id Storage.RegistrationToken -> DB.SqlDB ()
+setVerified rtId = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update dbTable (setClause verified_ now) (predicate rtId)
+  DB.update' dbTable (setClause now) (predicate $ getId rtId)
   where
-    setClause scVerified currTime Storage.RegistrationToken {..} =
+    setClause currTime Storage.RegistrationToken {..} =
       mconcat
         [ updatedAt <-. B.val_ currTime,
-          verified <-. B.val_ scVerified
+          verified <-. B.val_ True
         ]
     predicate rtid Storage.RegistrationToken {..} = id ==. B.val_ rtid
 

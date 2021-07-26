@@ -12,7 +12,6 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Types.Schema
-import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import Database.PostgreSQL.Simple.SqlQQ (sql)
@@ -182,49 +181,44 @@ updatePersonRec personId person' = do
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
-updatePerson :: (DBFlow m r, EncFlow m r) => Id Storage.Person -> Bool -> Text -> Storage.IdentifierType -> Maybe Text -> m ()
-updatePerson personId verified_ identifier_ identifierType_ mobileNumber_ = do
+updateDeviceToken :: Id Storage.Person -> Maybe FCMRecipientToken -> DB.SqlDB ()
+updateDeviceToken personId mbDeviceToken = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  mobileNumber' <- encrypt mobileNumber_
-  DB.update
-    dbTable
-    (setClause identifier_ identifierType_ mobileNumber' verified_ now)
-    (predicate personId)
+  DB.update' dbTable (setClause now mbDeviceToken) (predicate personId)
   where
-    setClause i it mn v n Storage.Person {..} =
+    setClause currTime mbDeviceToken_ Storage.Person {..} =
       mconcat
-        [ identifier <-. B.val_ (Just i),
-          identifierType <-. B.val_ it,
-          mobileNumber <-. B.val_ mn,
-          verified <-. B.val_ v,
-          updatedAt <-. B.val_ n
+        [ updatedAt <-. B.val_ currTime,
+          deviceToken <-. B.val_ mbDeviceToken_
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
-update ::
-  DBFlow m r =>
-  Id Storage.Person ->
-  Storage.Status ->
-  Bool ->
-  Maybe FCM.FCMRecipientToken ->
-  m ()
-update personId status_ verified_ deviceTokenM = do
+setVerified :: Id Storage.Person -> DB.SqlDB ()
+setVerified personId = do
   dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrentTime
-  DB.update
-    dbTable
-    (setClause status_ verified_ currTime deviceTokenM)
-    (predicate personId)
+  now <- getCurrentTime
+  DB.update' dbTable (setClause now) (predicate personId)
   where
-    setClause sStatus sVerified currTime deviceToken_ Storage.Person {..} =
+    setClause currTime Storage.Person {..} =
       mconcat
-        [ status <-. B.val_ sStatus,
-          updatedAt <-. B.val_ currTime,
-          verified <-. B.val_ sVerified,
-          deviceToken <-. B.val_ deviceToken_
+        [ updatedAt <-. B.val_ currTime,
+          verified <-. B.val_ True
         ]
-    predicate pid Storage.Person {..} = id ==. B.val_ pid
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
+
+updateStatus :: Id Storage.Person -> Storage.Status -> DB.SqlDB ()
+updateStatus personId newStatus = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update' dbTable (setClause now newStatus) (predicate personId)
+  where
+    setClause currTime newStatus_ Storage.Person {..} =
+      mconcat
+        [ updatedAt <-. B.val_ currTime,
+          status <-. B.val_ newStatus_
+        ]
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
 deleteById :: Id Storage.Person -> DB.SqlDB ()
 deleteById personId = do

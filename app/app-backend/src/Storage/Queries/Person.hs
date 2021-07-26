@@ -169,6 +169,45 @@ update personId statusM nameM emailM roleM identTypeM identM = do
         )
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
+updateDeviceToken :: Id Storage.Person -> Maybe FCMRecipientToken -> DB.SqlDB ()
+updateDeviceToken personId mbDeviceToken = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update' dbTable (setClause now mbDeviceToken) (predicate personId)
+  where
+    setClause currTime mbDeviceToken_ Storage.Person {..} =
+      mconcat
+        [ updatedAt <-. B.val_ currTime,
+          deviceToken <-. B.val_ mbDeviceToken_
+        ]
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
+
+setVerified :: Id Storage.Person -> DB.SqlDB ()
+setVerified personId = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update' dbTable (setClause now) (predicate personId)
+  where
+    setClause currTime Storage.Person {..} =
+      mconcat
+        [ updatedAt <-. B.val_ currTime,
+          verified <-. B.val_ True
+        ]
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
+
+updateStatus :: Id Storage.Person -> Storage.Status -> DB.SqlDB ()
+updateStatus personId newStatus = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update' dbTable (setClause now newStatus) (predicate personId)
+  where
+    setClause currTime newStatus_ Storage.Person {..} =
+      mconcat
+        [ updatedAt <-. B.val_ currTime,
+          status <-. B.val_ newStatus_
+        ]
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
+
 updatePersonalInfo ::
   DBFlow m r =>
   Id Storage.Person ->

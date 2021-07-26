@@ -161,20 +161,22 @@ login tokenId req =
       then do
         person <- checkPersonExists entityId
         clearOldRegToken person $ Id tokenId
-        let personId = person.id
-            updatedPerson =
-              person{status = SP.ACTIVE,
-                     deviceToken =
-                       (req.deviceToken) <|> (person.deviceToken)
-                    }
-        when (person.status == SP.INACTIVE) $
-          Notify.notifyOnRegistration regToken updatedPerson
-        DB.runSqlDB (Person.updateMultiple personId updatedPerson)
-        LoginRes token . makeUserInfoRes . SP.maskPerson
-          <$> ( Person.findById personId
-                  >>= fromMaybeM PersonNotFound
-                  >>= decrypt
-              )
+        let deviceToken = (req.deviceToken) <|> (person.deviceToken)
+        DB.runSqlDBTransaction $ do
+          RegistrationToken.setVerified $ Id tokenId
+          unless person.verified $ do
+            Person.setVerified person.id
+            Person.updateStatus person.id SP.ACTIVE
+            Person.updateDeviceToken person.id deviceToken
+        updatedPerson <-
+          if person.verified
+            then return person
+            else do
+              let updPers = person{deviceToken, verified = True, status = SP.ACTIVE}
+              Notify.notifyOnRegistration regToken updPers
+              return updPers
+        decPerson <- decrypt updatedPerson
+        return $ LoginRes token (makeUserInfoRes $ SP.maskPerson decPerson)
       else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =

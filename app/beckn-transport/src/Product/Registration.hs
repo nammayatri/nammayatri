@@ -52,6 +52,8 @@ initiateFlow req smsCfg = do
       countryCode = req.mobileCountryCode
   person <- QP.findByMobileNumber countryCode mobileNumber >>= fromMaybeM PersonDoesNotExist
   checkSlidingWindowLimit (initiateFlowHitsCountKey person)
+  when (person.verified && person.status == SP.INACTIVE) $
+    throwError AccountSuspended
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
@@ -121,16 +123,22 @@ login tokenId req =
       then do
         person <- checkPersonExists entityId
         clearOldRegToken person $ Id tokenId
-        QR.updateVerified tokenId True
         let deviceToken = (req.deviceToken) <|> (person.deviceToken)
-        QP.update person.id SP.ACTIVE True deviceToken
+        DB.runSqlDBTransaction $ do
+          QR.setVerified $ Id tokenId
+          unless person.verified $ do
+            QP.setVerified person.id
+            QP.updateStatus person.id SP.ACTIVE
+            QP.updateDeviceToken person.id deviceToken
         updatedPerson <-
-          QP.findPersonById person.id
-            >>= fromMaybeM PersonNotFound
-        when (person.status == SP.INACTIVE) $
-          Notify.notifyOnRegistration regToken updatedPerson
+          if person.verified
+            then return person
+            else do
+              let updPers = person{deviceToken, verified = True, status = SP.ACTIVE}
+              Notify.notifyOnRegistration regToken updPers
+              return updPers
         decPerson <- decrypt updatedPerson
-        return $ LoginRes token (Just . makeUserInfoRes $ SP.maskPerson decPerson)
+        return $ LoginRes token (makeUserInfoRes $ SP.maskPerson decPerson)
       else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =
