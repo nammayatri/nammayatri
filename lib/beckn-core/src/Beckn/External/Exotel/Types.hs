@@ -11,29 +11,20 @@
 module Beckn.External.Exotel.Types where
 
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.JSON
 import Beckn.Utils.TH
 import Control.Lens.TH
-import Data.Aeson
 import Data.Aeson.Casing
 import Data.Aeson.TH
 import EulerHS.Prelude
 import Web.FormUrlEncoded (ToForm, toForm)
 import Web.Internal.HttpApiData
 
--- | Exotel Service config
-data ExotelCfg = ExotelCfg
-  { apiKey :: Text,
-    apiToken :: Text,
-    sid :: Text,
-    callerId :: Text
-  }
-  deriving (Generic, FromDhall)
-
 -- | Exotel API token
 newtype ExotelApiToken = ExotelApiToken
   { getExotelApiToken :: Text
   }
-  deriving (Show)
+  deriving newtype (Show, FromDhall)
 
 deriveIdentifierInstances ''ExotelApiToken
 
@@ -41,7 +32,7 @@ deriveIdentifierInstances ''ExotelApiToken
 newtype ExotelApiKey = ExotelApiKey
   { getExotelApiKey :: Text
   }
-  deriving (Show)
+  deriving newtype (Show, FromDhall)
 
 deriveIdentifierInstances ''ExotelApiKey
 
@@ -49,9 +40,26 @@ deriveIdentifierInstances ''ExotelApiKey
 newtype ExotelAccountSID = ExotelAccountSID
   { getExotelAccountSID :: Text
   }
-  deriving (Show)
+  deriving newtype (Show, FromDhall)
 
 deriveIdentifierInstances ''ExotelAccountSID
+
+-- | Exotel caller id
+newtype ExotelCallerId = ExotelCallerId
+  { getExotelCallerId :: Text
+  }
+  deriving newtype (Show, FromDhall)
+
+deriveIdentifierInstances ''ExotelCallerId
+
+-- | Exotel Service config
+data ExotelCfg = ExotelCfg
+  { apiKey :: ExotelApiKey,
+    apiToken :: ExotelApiToken,
+    sid :: ExotelAccountSID,
+    callerId :: ExotelCallerId
+  }
+  deriving (Generic, FromDhall)
 
 -- | Exotel call sid
 -- an alpha-numeric unique identifier of the call
@@ -99,7 +107,9 @@ data ExotelCallStatus
     BUSY
   | -- The call ended without being answered
     NO_ANSWER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic)
+
+$(deriveJSON constructorsWithHyphensToLowerOptions ''ExotelCallStatus)
 
 -- | Call direction
 data ExotelDirection
@@ -109,7 +119,9 @@ data ExotelDirection
     OUTBOUND_DIAL
   | -- All other Outbound calls (API, campaign etc.)
     OUTBOUND_API
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic)
+
+$(deriveJSON constructorsWithHyphensToLowerOptions ''ExotelDirection)
 
 -- | Exotel response body
 data ExotelResponseBody = ExotelResponseBody
@@ -129,7 +141,7 @@ data ExotelResponseBody = ExotelResponseBody
     -- The phone number that will be called first
     exoFrom :: Text,
     -- This is your ExoPhone/Exotel Virtual Number
-    exoPhoneNumberSid :: Text,
+    exoPhoneNumberSid :: ExotelCallerId,
     -- Overall call status
     exoStatus :: ExotelCallStatus,
     -- Time in format YYYY-MM-DD HH:mm:ss

@@ -46,17 +46,14 @@ initiateCall from to = do
   fork forkDesc $
     case mbExotelCfg of
       Just ExotelCfg {..} -> do
-        let apiKey_ = ExotelApiKey apiKey
-            apiToken_ = ExotelApiToken apiToken
-            sid_ = ExotelAccountSID sid
-            exoRequest = ExotelRequest from to callerId
+        let exoRequest = ExotelRequest from to $ getExotelCallerId callerId
             authData =
               BasicAuthData
-                (DT.encodeUtf8 $ getExotelApiKey apiKey_)
-                (DT.encodeUtf8 $ getExotelApiToken apiToken_)
+                (DT.encodeUtf8 $ getExotelApiKey apiKey)
+                (DT.encodeUtf8 $ getExotelApiToken apiToken)
         res <-
           callAPI
-            (defaultBaseUrl sid_)
+            (defaultBaseUrl sid)
             ( callExotel authData exoRequest
             )
             "initiateCall"
