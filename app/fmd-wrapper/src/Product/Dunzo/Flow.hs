@@ -187,11 +187,12 @@ track ::
   m AckResponse
 track org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
-  let orderId = req.message.order_id
+  let orderId = req.context.transaction_id
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  let taskId = getShortId case_.shortId
+  taskInfo :: TaskStatus <- case_.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
+  let taskId = taskInfo.task_id.getTaskId
   dzBACreds <- getDzBAPCreds org
   withCallback TRACK TrackAPI.onTrackAPI context cbUrl $
     getStatus dzBACreds conf (TaskId taskId) <&> mkOnTrackMessage . (.tracking_url)
@@ -210,7 +211,8 @@ status org req = do
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let orderId = context.transaction_id
   case_ <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  let taskId = getShortId case_.shortId
+  taskInfo :: TaskStatus <- case_.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
+  let taskId = taskInfo.task_id.getTaskId
   order <-
     case_.udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
@@ -239,7 +241,8 @@ cancel org req = do
   let context = updateBppUri (req.context) dzBPNwAddress
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   case_ <- Storage.findById (Id context.transaction_id) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  let taskId = getShortId $ case_.shortId
+  taskInfo :: TaskStatus <- case_.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
+  let taskId = taskInfo.task_id.getTaskId
   order <- case_.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
   withCallback CANCEL CancelAPI.onCancelAPI context cbUrl $ do

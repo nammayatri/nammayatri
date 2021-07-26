@@ -13,6 +13,7 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import Fmd (buildContext, fmdWrapperBaseUrl)
 import FmdWrapper.Common (assertAck, withNewUUID)
+import qualified FmdWrapper.Fixtures as Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant (Header, (:>))
@@ -23,7 +24,6 @@ import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.Contact (Contact (..))
 import "fmd-wrapper" Types.Beckn.Context (Action (..))
 import "fmd-wrapper" Types.Beckn.Fulfillment (Fulfillment (..), FulfillmentDetails (..))
-import "fmd-wrapper" Types.Beckn.Gps (Gps (..))
 import "fmd-wrapper" Types.Beckn.ItemQuantity (emptyItemQuantity)
 import "fmd-wrapper" Types.Beckn.Location (Location (..))
 import "fmd-wrapper" Types.Beckn.Order (Order (..), OrderItem (..))
@@ -60,7 +60,7 @@ confirmOrder =
                           Location
                             { id = Nothing,
                               descriptor = Nothing,
-                              gps = Just $ Gps 12.9729391 77.6294794,
+                              gps = Just Fixtures.validDunzoGps1,
                               address =
                                 Just $
                                   Address
@@ -96,7 +96,7 @@ confirmOrder =
                           Location
                             { id = Nothing,
                               descriptor = Nothing,
-                              gps = Just $ Gps 12.9354504 77.6146828,
+                              gps = Just Fixtures.validDunzoGps2,
                               address =
                                 Just $
                                   Address

@@ -1,16 +1,15 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module FmdWrapper.Flow.Search where
 
 import Beckn.Types.Core.Ack
 import Beckn.Utils.Example
 import Common
-import Control.Lens (Setter', (?~), _Just)
+import Control.Lens ((?~))
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import ExternalAPI.Dunzo.Types
 import Fmd
 import FmdWrapper.Common
+import qualified FmdWrapper.Fixtures as Fixtures
 import FmdWrapper.Server
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -26,21 +25,6 @@ import qualified "fmd-wrapper" Types.Beckn.Domain as Domain
 import qualified "fmd-wrapper" Types.Beckn.Error as Error
 import "fmd-wrapper" Types.Beckn.Gps (Gps (..))
 import Utils
-
-setPickupGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) (Maybe Gps)
-setPickupGps = #message . #intent . #fulfillment . _Just . #start . _Just . #location . _Just . #gps
-
-setDropGps :: Setter' (API.BecknReq SearchAPI.SearchIntent) (Maybe Gps)
-setDropGps = #message . #intent . #fulfillment . _Just . #end . _Just . #location . _Just . #gps
-
-gps1 :: Gps
-gps1 = Gps 12.9729391 77.6294794
-
-gps2 :: Gps
-gps2 = Gps 12.9354504 77.6146828
-
-gps3 :: Gps
-gps3 = Gps 13.0827 80.2707
 
 numberOfDunzoCategores :: Int
 numberOfDunzoCategores = 6
@@ -101,7 +85,7 @@ verifyDunzoCatalog onSearchCatalog = do
 
 processResults :: Text -> CallbackData -> IO [API.BecknCallbackReq SearchAPI.OnSearchCatalog]
 processResults transactionId callbackData = do
-  callbackResults <- readTVarIO (onSearchTVar callbackData)
+  callbackResults <- readMVar (onSearchCb callbackData)
   let apiKeys = map apiKey callbackResults
   let searchResults = map result callbackResults
 
@@ -127,8 +111,8 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
 
     let searchReq =
           buildFMDSearchReq ctx
-            & setPickupGps ?~ pickupGps
-            & setDropGps ?~ dropGps
+            & setIntentPickupGps ?~ pickupGps
+            & setIntentDropGps ?~ dropGps
 
     gatewayResp <- runSearch clientEnv "fmd-test-app" searchReq
     assertAck gatewayResp
@@ -148,8 +132,8 @@ successfulSearch clientEnv callbackData =
 
     let searchReq =
           buildFMDSearchReq ctx
-            & setPickupGps ?~ gps1
-            & setDropGps ?~ gps2
+            & setIntentPickupGps ?~ Fixtures.validDunzoGps1
+            & setIntentDropGps ?~ Fixtures.validDunzoGps2
 
     gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
     assertAck gatewayResponse
@@ -170,7 +154,7 @@ successfulSearch clientEnv callbackData =
 dunzoUnserviceableLocation :: ClientEnv -> CallbackData -> IO ()
 dunzoUnserviceableLocation =
   dunzoLocationError
-    gps1
+    Fixtures.validDunzoGps1
     example
     ( const (return ())
     )
@@ -178,16 +162,16 @@ dunzoUnserviceableLocation =
 dunzoNearByLocation :: ClientEnv -> CallbackData -> IO ()
 dunzoNearByLocation =
   dunzoLocationError
-    gps1
-    gps1
+    Fixtures.validDunzoGps1
+    Fixtures.validDunzoGps1
     ( const (return ())
     )
 
 dunzoDifferentCity :: ClientEnv -> CallbackData -> IO ()
 dunzoDifferentCity =
   dunzoLocationError
-    gps1
-    gps3
+    Fixtures.validDunzoGps1
+    Fixtures.differentCity
     ( \Error.Error {..} -> do
         code `shouldBe` "FMD001"
         _type `shouldBe` Error.DOMAIN_ERROR
