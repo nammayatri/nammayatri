@@ -97,8 +97,9 @@ instance MonadClock (FlowR r) where
   getClockTime = liftIO getClockTime
 
 instance HasCoreMetrics r => CoreMetrics (FlowR r) where
-  addRequestLatency = Metrics.addRequestLatencyFlow
-  incrementErrorCounter = Metrics.incrementErrorCounterFlow
+  addRequestLatency = Metrics.addRequestLatency
+  incrementErrorCounter = Metrics.incrementErrorCounter
+  addUrlCallRetries = Metrics.addUrlCallRetries
 
 instance MonadMonitor (FlowR r) where
   doIO = liftIO

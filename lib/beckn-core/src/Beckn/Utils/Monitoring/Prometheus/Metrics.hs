@@ -18,7 +18,7 @@ import Network.Wai.Middleware.Prometheus
 import Prometheus as P
 import Prometheus.Metric.GHC (ghcMetrics)
 import Prometheus.Metric.Proc
-import Servant.Client (ClientError (..), ResponseF (..))
+import Servant.Client (BaseUrl, ClientError (..), ResponseF (..), showBaseUrl)
 
 serve :: Int -> IO ()
 serve port = do
@@ -38,7 +38,7 @@ addServantInfo proxy app request respond =
       fullpath = DT.intercalate "/" (pathInfo request)
    in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
 
-incrementErrorCounterFlow ::
+incrementErrorCounter ::
   ( HasCoreMetrics r,
     L.MonadFlow m,
     MonadReader r m,
@@ -46,11 +46,24 @@ incrementErrorCounterFlow ::
   ) =>
   e ->
   m ()
-incrementErrorCounterFlow err = do
+incrementErrorCounter err = do
   cmContainer <- asks (.coreMetrics)
-  incrementErrorCounter cmContainer err
+  incrementErrorCounter' cmContainer err
 
-addRequestLatencyFlow ::
+addUrlCallRetries ::
+  ( HasCoreMetrics r,
+    L.MonadFlow m,
+    MonadReader r m
+  ) =>
+  BaseUrl ->
+  Int ->
+  Int ->
+  m ()
+addUrlCallRetries url retryCount maxRetry = do
+  cmContainer <- asks (.coreMetrics)
+  addUrlCallRetries' cmContainer url retryCount maxRetry
+
+addRequestLatency ::
   ( HasCoreMetrics r,
     L.MonadFlow m,
     MonadReader r m
@@ -60,8 +73,19 @@ addRequestLatencyFlow ::
   Milliseconds ->
   Either ClientError a ->
   m ()
-addRequestLatencyFlow host serviceName dur status = do
-  cmContainer :: CoreMetricsContainer <- asks (.coreMetrics)
+addRequestLatency host serviceName dur status = do
+  cmContainer <- asks (.coreMetrics)
+  addRequestLatency' cmContainer host serviceName dur status
+
+addRequestLatency' ::
+  L.MonadFlow m =>
+  CoreMetricsContainer ->
+  Text ->
+  Text ->
+  Milliseconds ->
+  Either ClientError a ->
+  m ()
+addRequestLatency' cmContainer host serviceName dur status = do
   let requestLatencyMetric = cmContainer.requestLatency
   L.runIO $
     P.withLabel
@@ -78,11 +102,20 @@ addRequestLatencyFlow host serviceName dur status = do
         Left (UnsupportedContentType _ (Response code _ _ _)) -> show code
         Left (ConnectionError _) -> "Connection error"
 
-incrementErrorCounter :: (L.MonadFlow m, IsHTTPException e) => CoreMetricsContainer -> e -> m ()
-incrementErrorCounter cmContainers err = do
+incrementErrorCounter' :: (L.MonadFlow m, IsHTTPException e) => CoreMetricsContainer -> e -> m ()
+incrementErrorCounter' cmContainers err = do
   let errorCounterMetric = cmContainers.errorCounter
   L.runIO $
     P.withLabel
       errorCounterMetric
       (show $ toHttpCode err, toErrorCode err)
       P.incCounter
+
+addUrlCallRetries' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> Int -> Int -> m ()
+addUrlCallRetries' cmContainers url retryCount maxRetry = do
+  let urlCallRetriesCounterMetric = cmContainers.urlCallRetriesCounter
+  L.runIO $
+    P.withLabel
+      urlCallRetriesCounterMetric
+      (toText $ showBaseUrl url, show maxRetry)
+      (`P.observe` fromIntegral retryCount)

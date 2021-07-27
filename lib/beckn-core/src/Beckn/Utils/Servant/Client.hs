@@ -114,19 +114,26 @@ withRetry ::
   ( MonadCatch m,
     MonadReader r m,
     HasHttpClientOptions r,
+    Metrics.CoreMetrics m,
     Log m
   ) =>
   m a ->
   m a
 withRetry f = do
-  asks (.httpClientOptions.maxRetries) >>= withRetry' 1
+  asks (.httpClientOptions.maxRetries) >>= withRetry' Nothing 0
   where
-    withRetry' n maxRetries
-      | n < maxRetries =
-        f `catch` \(ExternalAPICallError _ baseUrl _) -> do
-          logError $ "Retrying attempt " <> show n <> " calling " <> toText (showBaseUrl baseUrl)
-          withRetry' (succ n) maxRetries
+    withRetry' mbMetricsInfo n maxRetries
+      | n < maxRetries = do
+        funcWithMetrics mbMetricsInfo maxRetries `catch` \(ExternalAPICallError _ baseUrl _) -> do
+          when (n > 0) $
+            logError $ "Retrying attempt " <> show n <> " calling " <> toText (showBaseUrl baseUrl)
+          withRetry' (Just (baseUrl, succ n)) (succ n) maxRetries
       | otherwise =
-        f `catch` \err@(ExternalAPICallError _ baseUrl _) -> do
+        funcWithMetrics mbMetricsInfo maxRetries `catch` \err@(ExternalAPICallError _ baseUrl _) -> do
           logError $ "Maximum of retrying attempts is reached calling " <> toText (showBaseUrl baseUrl)
           throwError err
+    funcWithMetrics mbMetricsInfo maxRetries = do
+      rez <- f
+      whenJust mbMetricsInfo $ \(baseUrl, n) ->
+        Metrics.addUrlCallRetries baseUrl n maxRetries
+      return rez

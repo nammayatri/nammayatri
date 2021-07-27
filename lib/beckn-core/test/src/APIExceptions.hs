@@ -49,6 +49,7 @@ instanceExceptionWithParent 'HTTPException ''SomeBecknAPIError
 instance Metrics.CoreMetrics IO where
   addRequestLatency _ _ _ _ = return ()
   incrementErrorCounter _ = return ()
+  addUrlCallRetries _ _ _ = return ()
 
 httpExceptionTests :: TestTree
 httpExceptionTests =
