@@ -47,3 +47,7 @@ ALTER TABLE ONLY atlas_transporter.driver_location
 
 INSERT INTO atlas_transporter.driver_location (SELECT id, lat, long, point, created_at, updated_at FROM atlas_transporter.location WHERE id IN (SELECT location_id FROM atlas_transporter.person));
 DELETE FROM atlas_transporter.location WHERE id IN (SELECT location_id FROM atlas_transporter.person);
+
+------------------------------------------------------------------------------------------------------
+
+ALTER TABLE atlas_transporter.location RENAME TO search_request_location;

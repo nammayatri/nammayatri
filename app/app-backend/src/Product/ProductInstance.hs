@@ -10,10 +10,10 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
 import Types.API.ProductInstance
 import qualified Types.Storage.Case as Case
-import qualified Types.Storage.Location as Loc
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as SPI
 import qualified Types.Storage.Products as Products
+import qualified Types.Storage.SearchReqLocation as Loc
 import Utils.Common (withFlowHandlerAPI)
 
 list :: Id Person.Person -> [SPI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
@@ -27,7 +27,7 @@ list personId status csTypes mlimit moffset = withFlowHandlerAPI . withPersonIdL
   where
     limit = toInteger $ fromMaybe 50 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    joinIds :: [Products.Products] -> [Case.Case] -> [Loc.Location] -> SPI.ProductInstance -> Maybe ProductInstanceRes
+    joinIds :: [Products.Products] -> [Case.Case] -> [Loc.SearchReqLocation] -> SPI.ProductInstance -> Maybe ProductInstanceRes
     joinIds prodList caseList locList prodInst =
       find (\x -> SPI.caseId prodInst == Case.id x) caseList
         >>= buildResponse

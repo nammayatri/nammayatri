@@ -12,7 +12,6 @@ import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverLocation as DriverLocation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
-import qualified Types.Storage.Location as Location
 import qualified Types.Storage.NotificationStatus as NotificationStatus
 import qualified Types.Storage.OrgLocation as OrgLocation
 import qualified Types.Storage.Organization as Organization
@@ -23,12 +22,13 @@ import qualified Types.Storage.Rating as Rating
 import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.RideRequest as RideRequest
+import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.TransporterConfig as TransporterConfig
 import qualified Types.Storage.Vehicle as Vehicle
 
 data TransporterDb f = TransporterDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
-    location :: f (B.TableEntity Location.LocationT),
+    searchReqLocation :: f (B.TableEntity Location.SearchReqLocationT),
     orgLocation :: f (B.TableEntity OrgLocation.OrgLocationT),
     driverLocation :: f (B.TableEntity DriverLocation.DriverLocationT),
     vehicle :: f (B.TableEntity Vehicle.VehicleT),
@@ -55,7 +55,7 @@ transporterDb dbSchemaName =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
       { organization = setSchema dbSchemaName <> Organization.fieldEMod,
-        location = setSchema dbSchemaName <> Location.fieldEMod,
+        searchReqLocation = setSchema dbSchemaName <> Location.fieldEMod,
         orgLocation = setSchema dbSchemaName <> OrgLocation.fieldEMod,
         driverLocation = setSchema dbSchemaName <> DriverLocation.fieldEMod,
         vehicle = setSchema dbSchemaName <> Vehicle.fieldEMod,

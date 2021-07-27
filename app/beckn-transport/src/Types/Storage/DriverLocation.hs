@@ -4,7 +4,6 @@
 module Types.Storage.DriverLocation where
 
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Data.Aeson
 import Data.Swagger
 import Data.Time
@@ -41,11 +40,9 @@ deriving instance Show DriverLocation
 
 deriving instance Eq DriverLocation
 
-instance ToJSON DriverLocation where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+instance ToJSON DriverLocation
 
-instance FromJSON DriverLocation where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+instance FromJSON DriverLocation
 
 instance ToSchema DriverLocation
 

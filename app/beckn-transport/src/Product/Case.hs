@@ -11,9 +11,9 @@ import qualified Storage.Queries.Person as QP
 import Types.API.Case
 import Types.Error
 import Types.Storage.Case as Case
-import Types.Storage.Location as Location
 import Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as SP
+import Types.Storage.SearchReqLocation as Location
 import Utils.Common
 import qualified Utils.Defaults as Default
 

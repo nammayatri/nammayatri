@@ -25,3 +25,5 @@ ALTER TABLE ONLY atlas_app.organization_location
 CREATE INDEX idx_16435_city ON atlas_app.organization_location USING btree (city);
 
 CREATE INDEX idx_16435_state ON atlas_app.organization_location USING btree (state);
+
+ALTER TABLE atlas_app.location RENAME TO search_request_location;

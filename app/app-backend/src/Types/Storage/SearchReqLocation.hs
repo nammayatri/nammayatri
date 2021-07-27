@@ -1,7 +1,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Types.Storage.Location where
+module Types.Storage.SearchReqLocation where
 
 import Beckn.Types.Id
 import Data.Aeson
@@ -19,27 +19,27 @@ import qualified Database.PostgreSQL.Simple.FromField as Pg
 import EulerHS.Prelude hiding (id, state)
 import Servant.API
 
-data LocationType = POINT | POLYGON | PINCODE | ADDRESS
+data SearchReqLocationType = POINT | POLYGON | PINCODE | ADDRESS
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be LocationType where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchReqLocationType where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow Postgres LocationType where
+instance FromBackendRow Postgres SearchReqLocationType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-deriving instance B.HasSqlEqualityCheck Postgres LocationType
+deriving instance B.HasSqlEqualityCheck Postgres SearchReqLocationType
 
-instance ToParamSchema LocationType
+instance ToParamSchema SearchReqLocationType
 
-instance FromHttpApiData LocationType where
+instance FromHttpApiData SearchReqLocationType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-data LocationT f = Location
-  { id :: B.C f (Id Location),
-    locationType :: B.C f LocationType,
+data SearchReqLocationT f = SearchReqLocation
+  { id :: B.C f (Id SearchReqLocation),
+    locationType :: B.C f SearchReqLocationType,
     lat :: B.C f (Maybe Double),
     long :: B.C f (Maybe Double),
     point :: B.C f Point,
@@ -56,31 +56,31 @@ data LocationT f = Location
   }
   deriving (Generic, B.Beamable)
 
-type Location = LocationT Identity
+type SearchReqLocation = SearchReqLocationT Identity
 
-type LocationPrimaryKey = B.PrimaryKey LocationT Identity
+type SearchReqLocationPrimaryKey = B.PrimaryKey SearchReqLocationT Identity
 
 {-# ANN module ("HLint: ignore Redundant id" :: String) #-}
 
-instance B.Table LocationT where
-  data PrimaryKey LocationT f = LocationPrimaryKey (B.C f (Id Location))
+instance B.Table SearchReqLocationT where
+  data PrimaryKey SearchReqLocationT f = SearchReqLocationPrimaryKey (B.C f (Id SearchReqLocation))
     deriving (Generic, B.Beamable)
-  primaryKey = LocationPrimaryKey . id
+  primaryKey = SearchReqLocationPrimaryKey . id
 
-deriving instance Show Location
+deriving instance Show SearchReqLocation
 
-deriving instance Eq Location
+deriving instance Eq SearchReqLocation
 
-deriving instance FromJSON Location
+deriving instance FromJSON SearchReqLocation
 
-deriving instance ToJSON Location
+deriving instance ToJSON SearchReqLocation
 
-instance ToSchema Location
+instance ToSchema SearchReqLocation
 
 fieldEMod ::
-  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity LocationT)
+  B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity SearchReqLocationT)
 fieldEMod =
-  B.setEntityName "location"
+  B.setEntityName "search_request_location"
     <> B.modifyTableFields
       B.tableModification
         { createdAt = "created_at",

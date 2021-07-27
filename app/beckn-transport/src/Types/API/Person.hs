@@ -20,9 +20,9 @@ import qualified Storage.Queries.DriverLocation as QDL
 import Types.API.Registration
 import Types.Error
 import qualified Types.Storage.DriverLocation as SDL
-import qualified Types.Storage.Location as SL
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as SP
+import qualified Types.Storage.SearchReqLocation as SL
 import Utils.Common
 
 data EntityType = VEHICLE | PASS | TICKET
@@ -135,7 +135,7 @@ data PersonReqEntity = PersonReqEntity
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
     description :: Maybe Text,
-    locationType :: Maybe SL.LocationType,
+    locationType :: Maybe SL.SearchReqLocation,
     lat :: Maybe Double,
     long :: Maybe Double,
     ward :: Maybe Text,

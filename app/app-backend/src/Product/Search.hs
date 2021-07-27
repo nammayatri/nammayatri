@@ -40,11 +40,11 @@ import Types.Error
 import Types.Metrics (CoreMetrics)
 import Types.ProductInfo
 import qualified Types.Storage.Case as Case
-import qualified Types.Storage.Location as Location
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Products as Products
+import qualified Types.Storage.SearchReqLocation as Location
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
@@ -151,8 +151,8 @@ mkCase ::
   ) =>
   API.SearchReq ->
   Text ->
-  Location.Location ->
-  Location.Location ->
+  Location.SearchReqLocation ->
+  Location.SearchReqLocation ->
   m Case.Case
 mkCase req userId from to = do
   now <- getCurrentTime
@@ -205,14 +205,14 @@ mkCase req userId from to = do
           validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-mkLocation :: MonadFlow m => BS.Stop -> m Location.Location
+mkLocation :: MonadFlow m => BS.Stop -> m Location.SearchReqLocation
 mkLocation BS.Stop {..} = do
   let loc = location
   now <- getCurrentTime
   locId <- generateGUID
   let mgps = loc.gps
   return
-    Location.Location
+    Location.SearchReqLocation
       { id = locId,
         locationType = Location.POINT,
         lat = read . T.unpack . (.lat) <$> mgps,

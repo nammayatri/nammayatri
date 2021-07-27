@@ -17,7 +17,7 @@ import qualified Storage.Queries.Location as Loc
 import Types.API.ProductInstance
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Location as Loc
+import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import qualified Types.Storage.ProductInstance as Storage
@@ -407,7 +407,7 @@ findAllRidesWithLocationsByDriverId ::
   Integer ->
   Integer ->
   Id Person ->
-  m [(Storage.ProductInstance, Loc.Location, Loc.Location)]
+  m [(Storage.ProductInstance, Loc.SearchReqLocation, Loc.SearchReqLocation)]
 findAllRidesWithLocationsByDriverId limit offset personId_ = do
   piTable <- getDbTable
   locTable <- Loc.getDbTable

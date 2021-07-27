@@ -7,17 +7,17 @@ import Data.Swagger hiding (info)
 import Data.Time
 import EulerHS.Prelude hiding (id, product)
 import Types.Storage.Case
-import Types.Storage.Location
 import Types.Storage.Organization (Organization)
 import Types.Storage.Person
 import Types.Storage.ProductInstance
 import Types.Storage.Products
+import Types.Storage.SearchReqLocation
 
 data GetStatusRes = GetStatusRes
   { _case :: Case,
     productInstance :: [ProdInstRes],
-    fromLocation :: Location,
-    toLocation :: Location
+    fromLocation :: SearchReqLocation,
+    toLocation :: SearchReqLocation
   }
   deriving (Show, Generic, ToSchema)
 
@@ -36,8 +36,8 @@ data UpdateCaseReq = UpdateCaseReq
 data CaseRes = CaseRes
   { _case :: Case,
     productInstance :: [ProdInstRes],
-    fromLocation :: Maybe Location,
-    toLocation :: Maybe Location
+    fromLocation :: Maybe SearchReqLocation,
+    toLocation :: Maybe SearchReqLocation
   }
   deriving (Show, Generic, ToSchema)
 
@@ -63,8 +63,8 @@ data ProdInstRes = ProdInstRes
     startTime :: UTCTime,
     endTime :: Maybe UTCTime,
     validTill :: UTCTime,
-    fromLocation :: Maybe (Id Location),
-    toLocation :: Maybe (Id Location),
+    fromLocation :: Maybe (Id SearchReqLocation),
+    toLocation :: Maybe (Id SearchReqLocation),
     organizationId :: Id Organization,
     parentId :: Maybe (Id ProductInstance),
     udf1 :: Maybe Text,

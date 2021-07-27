@@ -34,9 +34,9 @@ import qualified Types.API.Case as APICase
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Case as Case
-import qualified Types.Storage.Location as Location
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.SearchReqLocation as Location
 import Utils.Common
 
 search ::
@@ -77,14 +77,14 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
         ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
           onSearchCallback productCase transporter fromLocation toLocation
 
-mkFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.Location
+mkFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.SearchReqLocation
 mkFromStop now stop = do
   let loc = stop.location
   let mgps = loc.gps
   let maddress = loc.address
   uuid <- Id <$> L.generateGUID
   pure $
-    Location.Location
+    Location.SearchReqLocation
       { id = uuid,
         locationType = Location.POINT,
         lat = read . T.unpack . (^. #lat) <$> mgps,
@@ -110,7 +110,7 @@ getValidTime now startTime = do
       validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
-mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.Location -> Location.Location -> Id Org.Organization -> Id Org.Organization -> Maybe Double -> Case.Case
+mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.SearchReqLocation -> Location.SearchReqLocation -> Id Org.Organization -> Id Org.Organization -> Maybe Double -> Case.Case
 mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance = do
   let intent = req.message.intent
   let distance = Tag.value <$> find (\x -> x.key == "distance") (fromMaybe [] $ intent.tags)
@@ -151,7 +151,7 @@ calculateDeadDistance ::
     CoreMetrics m
   ) =>
   Org.Organization ->
-  Location.Location ->
+  Location.SearchReqLocation ->
   m (Maybe Double)
 calculateDeadDistance organization fromLocation = do
   eres <- try $ do
@@ -174,8 +174,8 @@ onSearchCallback ::
   ) =>
   Case.Case ->
   Org.Organization ->
-  Location.Location ->
-  Location.Location ->
+  Location.SearchReqLocation ->
+  Location.SearchReqLocation ->
   m API.OnSearchServices
 onSearchCallback productCase transporter fromLocation toLocation = do
   let transporterId = transporter.id

@@ -16,7 +16,7 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
-import qualified Types.Storage.Location as Loc
+import qualified Types.Storage.SearchReqLocation as Loc
 
 data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -113,8 +113,8 @@ data CaseT f = Case
     requestor :: B.C f (Maybe Text),
     requestorType :: B.C f (Maybe RequestorType),
     parentCaseId :: B.C f (Maybe (Id Case)),
-    fromLocationId :: B.C f (Id Loc.Location),
-    toLocationId :: B.C f (Id Loc.Location),
+    fromLocationId :: B.C f (Id Loc.SearchReqLocation),
+    toLocationId :: B.C f (Id Loc.SearchReqLocation),
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     udf3 :: B.C f (Maybe Text),

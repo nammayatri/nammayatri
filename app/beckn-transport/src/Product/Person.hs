@@ -39,10 +39,10 @@ import Types.API.Registration (makeUserInfoRes)
 import Types.App (Driver)
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import Types.Storage.Location (Location)
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as SP
 import Types.Storage.ProductInstance (ProductInstance)
+import Types.Storage.SearchReqLocation (SearchReqLocation)
 import Types.Storage.TransporterConfig (ConfigKey (ConfigKey))
 import qualified Types.Storage.Vehicle as SV
 import Utils.Common
@@ -163,7 +163,7 @@ setDriverPool piId ids =
 
 calculateDriverPool ::
   (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters]) =>
-  Id Location ->
+  Id SearchReqLocation ->
   Id Organization ->
   SV.Variant ->
   m [(Id Driver, Double)]

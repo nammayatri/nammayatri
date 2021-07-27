@@ -5,12 +5,12 @@ import Beckn.Utils.JSON
 import Data.Swagger hiding (name)
 import EulerHS.Prelude hiding (id)
 import Types.Storage.Case
-import Types.Storage.Location
+import Types.Storage.SearchReqLocation
 
 data CaseRes = CaseRes
   { _case :: Case,
-    fromLocation :: Location,
-    toLocation :: Location
+    fromLocation :: SearchReqLocation,
+    toLocation :: SearchReqLocation
   }
   deriving (Show, Generic, ToSchema)
 

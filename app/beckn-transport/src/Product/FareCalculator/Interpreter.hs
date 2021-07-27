@@ -18,8 +18,8 @@ import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Domain.FarePolicy
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.FarePolicy as FarePolicyS
-import qualified Types.Storage.Location as Location
 import Types.Storage.Organization (Organization)
+import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
@@ -31,8 +31,8 @@ calculateFare ::
   Id Organization ->
   Vehicle.Variant ->
   Either
-    ( Location.Location,
-      Location.Location
+    ( Location.SearchReqLocation,
+      Location.SearchReqLocation
     )
     Double ->
   UTCTime ->

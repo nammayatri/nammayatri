@@ -4,7 +4,6 @@
 module Types.Storage.OrgLocation where
 
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -72,11 +71,9 @@ deriving instance Show OrgLocation
 
 deriving instance Eq OrgLocation
 
-instance ToJSON OrgLocation where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+instance ToJSON OrgLocation
 
-instance FromJSON OrgLocation where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+instance FromJSON OrgLocation
 
 instance ToSchema OrgLocation
 

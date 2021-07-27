@@ -16,15 +16,15 @@ import Data.Time
 import EulerHS.Prelude
 import Types.Domain.FarePolicy (FarePolicy)
 import Types.Error
-import qualified Types.Storage.Location as Location
 import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
-newtype PickupLocation = PickupLocation {getPickupLocation :: Location.Location}
+newtype PickupLocation = PickupLocation {getPickupLocation :: Location.SearchReqLocation}
   deriving newtype (Show, Eq)
 
-newtype DropLocation = DropLocation {getDropLocation :: Location.Location}
+newtype DropLocation = DropLocation {getDropLocation :: Location.SearchReqLocation}
   deriving newtype (Show, Eq)
 
 type TripStartTime = UTCTime

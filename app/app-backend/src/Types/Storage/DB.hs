@@ -9,7 +9,6 @@ import qualified Types.Storage.CancellationReason as CancellationReason
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Geometry as Geometry
 import qualified Types.Storage.Issue as Issue
-import qualified Types.Storage.Location as Location
 import qualified Types.Storage.OrgLocation as OrgLocation
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
@@ -17,11 +16,12 @@ import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.Products as Products
 import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
+import qualified Types.Storage.SearchReqLocation as Location
 
 data AppDb f = AppDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
     issues :: f (B.TableEntity Issue.IssueT),
-    location :: f (B.TableEntity Location.LocationT),
+    searchReqLocation :: f (B.TableEntity Location.SearchReqLocationT),
     orgLocation :: f (B.TableEntity OrgLocation.OrgLocationT),
     person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
@@ -40,7 +40,7 @@ appDb dbSchemaName =
     `B.withDbModification` B.dbModification
       { organization = setSchema dbSchemaName <> Organization.fieldEMod,
         issues = setSchema dbSchemaName <> Issue.fieldEMod,
-        location = setSchema dbSchemaName <> Location.fieldEMod,
+        searchReqLocation = setSchema dbSchemaName <> Location.fieldEMod,
         orgLocation = setSchema dbSchemaName <> OrgLocation.fieldEMod,
         person = setSchema dbSchemaName <> Person.fieldEMod,
         _case = setSchema dbSchemaName <> Case.fieldEMod,

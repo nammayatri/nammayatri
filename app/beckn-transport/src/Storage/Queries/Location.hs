@@ -15,38 +15,38 @@ import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Location as Storage
+import qualified Types.Storage.SearchReqLocation as Storage
 
-getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.LocationT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.SearchReqLocationT))
 getDbTable =
-  DB.location . DB.transporterDb <$> getSchemaName
+  DB.searchReqLocation . DB.transporterDb <$> getSchemaName
 
-createFlow :: DBFlow m r => Storage.Location -> m ()
+createFlow :: DBFlow m r => Storage.SearchReqLocation -> m ()
 createFlow =
   DB.runSqlDB . create
 
-create :: Storage.Location -> DB.SqlDB ()
+create :: Storage.SearchReqLocation -> DB.SqlDB ()
 create location = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertExpression location)
 
 findLocationById ::
   DBFlow m r =>
-  Id Storage.Location ->
-  m (Maybe Storage.Location)
+  Id Storage.SearchReqLocation ->
+  m (Maybe Storage.SearchReqLocation)
 findLocationById locId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Location {..} = id ==. B.val_ locId
+    predicate Storage.SearchReqLocation {..} = id ==. B.val_ locId
 
-updateLocationRec :: DBFlow m r => Id Storage.Location -> Storage.Location -> m ()
+updateLocationRec :: DBFlow m r => Id Storage.SearchReqLocation -> Storage.SearchReqLocation -> m ()
 updateLocationRec locationId location = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause location now) (predicate locationId)
   where
-    setClause loc n Storage.Location {..} =
+    setClause loc n Storage.SearchReqLocation {..} =
       mconcat
         [ locationType <-. B.val_ (Storage.locationType loc),
           lat <-. B.val_ (Storage.lat loc),
@@ -61,23 +61,23 @@ updateLocationRec locationId location = do
           bound <-. B.val_ (Storage.bound loc),
           updatedAt <-. B.val_ n
         ]
-    predicate locId Storage.Location {..} = id ==. B.val_ locId
+    predicate locId Storage.SearchReqLocation {..} = id ==. B.val_ locId
 
-findAllByLocIds :: DBFlow m r => [Id Storage.Location] -> [Id Storage.Location] -> m [Storage.Location]
+findAllByLocIds :: DBFlow m r => [Id Storage.SearchReqLocation] -> [Id Storage.SearchReqLocation] -> m [Storage.SearchReqLocation]
 findAllByLocIds fromIds toIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate fromIds toIds)
   where
-    predicate pFromIds pToIds Storage.Location {..} =
+    predicate pFromIds pToIds Storage.SearchReqLocation {..} =
       B.in_ id (B.val_ <$> pFromIds)
         ||. B.in_ id (B.val_ <$> pToIds)
 
-updateGpsCoord :: Id Storage.Location -> UTCTime -> LatLong -> DB.SqlDB ()
+updateGpsCoord :: Id Storage.SearchReqLocation -> UTCTime -> LatLong -> DB.SqlDB ()
 updateGpsCoord locationId now (LatLong lat' long') = do
   locTable <- getDbTable
   DB.update' locTable (setClause lat' long' now) (predicate locationId)
   where
-    setClause mLat mLong now' Storage.Location {..} =
+    setClause mLat mLong now' Storage.SearchReqLocation {..} =
       let point' = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"
        in mconcat
             [ lat <-. B.val_ (Just mLat),
@@ -85,4 +85,4 @@ updateGpsCoord locationId now (LatLong lat' long') = do
               updatedAt <-. B.val_ now',
               point <-. point'
             ]
-    predicate locId Storage.Location {..} = id B.==. B.val_ locId
+    predicate locId Storage.SearchReqLocation {..} = id B.==. B.val_ locId

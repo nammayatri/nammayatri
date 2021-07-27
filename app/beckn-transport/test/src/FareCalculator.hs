@@ -12,8 +12,8 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Domain.FarePolicy
 import Types.Error
-import qualified Types.Storage.Location as Location
 import qualified Types.Storage.Organization as Organization
+import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
@@ -36,7 +36,7 @@ defaultFarePolicy =
 defaultPickupLocation :: PickupLocation
 defaultPickupLocation =
   PickupLocation $
-    Location.Location
+    Location.SearchReqLocation
       { id = Id "",
         locationType = Location.POINT,
         lat = Just 0.0,
@@ -57,7 +57,7 @@ defaultPickupLocation =
 defaultDropLocation :: DropLocation
 defaultDropLocation =
   DropLocation $
-    Location.Location
+    Location.SearchReqLocation
       { id = Id "",
         locationType = Location.POINT,
         lat = Just 0.0,

@@ -21,10 +21,10 @@ import Types.App
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Case as Case
-import qualified Types.Storage.Location as Loc
 import qualified Types.Storage.Organization as SO
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Vehicle as V
 import Utils.Common
 import qualified Utils.Defaults as Default
@@ -45,7 +45,7 @@ list personId status csTypes limitM offsetM = withFlowHandlerAPI $ do
   where
     limit = fromMaybe Default.limit limitM
     offset = fromMaybe Default.offset offsetM
-    buildResponse :: [Loc.Location] -> ProductInstanceRes -> ProductInstanceRes
+    buildResponse :: [Loc.SearchReqLocation] -> ProductInstanceRes -> ProductInstanceRes
     buildResponse locList res =
       ProductInstanceRes
         { _case = res._case,

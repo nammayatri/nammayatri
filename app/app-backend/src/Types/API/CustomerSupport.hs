@@ -6,9 +6,9 @@ import Data.Time
 import EulerHS.Prelude hiding (id)
 import Types.Common
 import Types.Storage.Case as C
-import Types.Storage.Location as L
 import qualified Types.Storage.Person as P
 import Types.Storage.ProductInstance as SP
+import Types.Storage.SearchReqLocation as L
 
 newtype OrderResp = OrderResp {_order :: OrderDetails}
   deriving (Show, Generic)
@@ -26,8 +26,8 @@ data OrderDetails = OrderDetails
     updatedAt :: UTCTime,
     startTime :: UTCTime,
     endTime :: Maybe UTCTime,
-    fromLocation :: Maybe L.Location,
-    toLocation :: Maybe L.Location,
+    fromLocation :: Maybe L.SearchReqLocation,
+    toLocation :: Maybe L.SearchReqLocation,
     vehicleVariant :: Maybe Text,
     travellerName :: Maybe Text,
     travellerPhone :: Maybe Text,

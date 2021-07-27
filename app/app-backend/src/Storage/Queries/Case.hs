@@ -13,8 +13,8 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Case as Storage
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Location as Loc
 import qualified Types.Storage.Person as Person
+import qualified Types.Storage.SearchReqLocation as Loc
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.CaseT))
 getDbTable =
@@ -161,8 +161,8 @@ updateStatus cid status_ = do
 
 findAllWithLimitOffsetWhere ::
   DBFlow m r =>
-  [Id Loc.Location] ->
-  [Id Loc.Location] ->
+  [Id Loc.SearchReqLocation] ->
+  [Id Loc.SearchReqLocation] ->
   [Storage.CaseType] ->
   [Storage.CaseStatus] ->
   [Text] ->

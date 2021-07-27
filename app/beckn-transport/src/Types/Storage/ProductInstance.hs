@@ -18,10 +18,10 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
 import qualified Types.Storage.Case as Case
-import qualified Types.Storage.Location as Loc
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import Types.Storage.Products (Products)
+import qualified Types.Storage.SearchReqLocation as Loc
 
 -- TODO: INVALID status seems to be unused
 data ProductInstanceStatus
@@ -84,8 +84,8 @@ data ProductInstanceT f = ProductInstance
     startTime :: B.C f UTCTime,
     endTime :: B.C f (Maybe UTCTime),
     validTill :: B.C f UTCTime,
-    fromLocation :: B.C f (Maybe (Id Loc.Location)),
-    toLocation :: B.C f (Maybe (Id Loc.Location)),
+    fromLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
+    toLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     organizationId :: B.C f (Id Org.Organization),
     parentId :: B.C f (Maybe (Id ProductInstance)),
     distance :: B.C f Double,

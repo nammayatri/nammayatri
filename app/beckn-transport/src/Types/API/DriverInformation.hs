@@ -22,10 +22,10 @@ import Types.API.Person (validatePersonReqEntity)
 import qualified Types.API.Person as PersonAPI
 import Types.API.Registration
 import qualified Types.API.Vehicle as VehAPI
-import qualified Types.Storage.Location as Loc
 import qualified Types.Storage.Organization as Organization
 import Types.Storage.Person (Person)
 import Types.Storage.ProductInstance (ProductInstance)
+import qualified Types.Storage.SearchReqLocation as Loc
 import Types.Storage.Vehicle (Vehicle)
 
 data DriverInformationResponse = DriverInformationResponse
@@ -41,8 +41,8 @@ newtype GetRideInfoRes = GetRideInfoRes
 
 data RideInfo = RideInfo
   { productInstanceId :: Id ProductInstance,
-    pickupLoc :: Loc.Location,
-    dropLoc :: Loc.Location,
+    pickupLoc :: Loc.SearchReqLocation,
+    dropLoc :: Loc.SearchReqLocation,
     etaForPickupLoc :: Maybe Integer,
     distanceToPickupLoc :: Maybe Double,
     notificationExpiryTime :: UTCTime,

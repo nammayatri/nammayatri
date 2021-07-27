@@ -10,30 +10,30 @@ import Database.Beam ((&&.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Location as Storage
+import qualified Types.Storage.SearchReqLocation as Storage
 
-getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.LocationT))
+getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.SearchReqLocationT))
 getDbTable =
-  DB.location . DB.appDb <$> getSchemaName
+  DB.searchReqLocation . DB.appDb <$> getSchemaName
 
-createFlow :: DBFlow m r => Storage.Location -> m ()
+createFlow :: DBFlow m r => Storage.SearchReqLocation -> m ()
 createFlow = do
   DB.runSqlDB . create
 
-create :: Storage.Location -> DB.SqlDB ()
-create Storage.Location {..} = do
+create :: Storage.SearchReqLocation -> DB.SqlDB ()
+create Storage.SearchReqLocation {..} = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression Storage.Location {..})
+  DB.createOne' dbTable (Storage.insertExpression Storage.SearchReqLocation {..})
 
 findLocationById ::
   DBFlow m r =>
-  Id Storage.Location ->
-  m (Maybe Storage.Location)
+  Id Storage.SearchReqLocation ->
+  m (Maybe Storage.SearchReqLocation)
 findLocationById locId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Location {..} = id ==. B.val_ locId
+    predicate Storage.SearchReqLocation {..} = id ==. B.val_ locId
 
 findAllWithLimitOffsetWhere ::
   DBFlow m r =>
@@ -44,7 +44,7 @@ findAllWithLimitOffsetWhere ::
   [Text] ->
   Maybe Int ->
   Maybe Int ->
-  m [Storage.Location]
+  m [Storage.SearchReqLocation]
 findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = do
   dbTable <- getDbTable
   DB.findAll
@@ -54,8 +54,8 @@ findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = 
   where
     limit = toInteger $ fromMaybe 100 mlimit
     offset = toInteger $ fromMaybe 0 moffset
-    orderByDesc Storage.Location {..} = B.desc_ createdAt
-    predicate Storage.Location {..} =
+    orderByDesc Storage.SearchReqLocation {..} = B.desc_ createdAt
+    predicate Storage.SearchReqLocation {..} =
       foldl
         (&&.)
         (B.val_ True)
@@ -71,10 +71,10 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-findAllByIds :: DBFlow m r => [Id Storage.Location] -> m [Storage.Location]
+findAllByIds :: DBFlow m r => [Id Storage.SearchReqLocation] -> m [Storage.SearchReqLocation]
 findAllByIds locIds = do
   dbTable <- getDbTable
   DB.findAll dbTable identity (predicate locIds)
   where
-    predicate locationIds Storage.Location {..} =
+    predicate locationIds Storage.SearchReqLocation {..} =
       B.in_ id (B.val_ <$> locationIds)
