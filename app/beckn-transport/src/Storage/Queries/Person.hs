@@ -234,55 +234,6 @@ updateAverageRating personId newAverageRating = do
         ]
     predicate pId Storage.Person {..} = id ==. B.val_ pId
 
-{-
--- This is an attempt to implement custom postgis query using beam.
--- Eventually it was implemented with postgis-simple (see below)
--- and this version was left for proper beam implementation in the future:
-getNearestDrivers
-  :: LatLong
-  -> Double
-  -> Maybe OrganizationId
-  -> Flow [(Storage.Person, Double)]
-getNearestDrivers point' radius' orgId' = do
-  personTable <- getDbTable
-  locationTable <- Location.getDbTable
-  let orgId = getId <$> orgId'
-  DB.findAllByJoinWithoutLimits orderBy
-    (query personTable locationTable point' radius' orgId)
-    >>= checkDBError
-    >>= decryptPerson
-  where
-    decryptPerson
-      :: [(Storage.PersonT Identity, Double)]
-      -> Flow [(Storage.Person, Double)]
-    decryptPerson = traverse $ \(encper, dist) -> (, dist) <$> decrypt encper
-    query personTable locationTable point radius orgId = do
-      driver <- B.all_ personTable
-      location <- B.join_ locationTable $
-        \location ->
-          B.maybe_
-            (pure False)
-            ( (B.primaryKey location ==.)
-                . Storage.LocationPrimaryKey
-                . fmap Id
-            )
-            (driver.locationId)
-      dist <- distToPoint point location
-      driver' <- B.filter_ (predicate orgId radius dist) (pure driver)
-      return (driver', dist)
-    orderBy (_, dist) = B.asc_ dist
-    predicate orgId radius dist Storage.Person {..} =
-      role ==. B.val_ Storage.DRIVER
-        &&. organizationId ==. B.val_ orgId
-        &&. dist <. B.val_ radius
-
-    distToPoint' :: (Monoid a, IsString a) => a -> a -> a -> a
-    distToPoint' lat lon point =
-      point <> " <-> ST_Point(" <> lat <> ", " <> lon <> ")::geometry"
-    distToPoint LatLong {..} location =
-      B.customExpr_ distToPoint' lat lon (location.point)
--}
-
 getNearestDrivers ::
   DBFlow m r =>
   LatLong ->
@@ -297,10 +248,10 @@ getNearestDrivers LatLong {..} radius orgId variant =
         WITH a AS (
           SELECT
             person."id" as id,
-            location."point" <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) as dist
+            driver_location."point" <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) as dist
           FROM atlas_transporter."person"
-          JOIN atlas_transporter."location"
-            ON person."location_id" = location."id"
+          JOIN atlas_transporter."driver_location"
+            ON person."location_id" = driver_location."id"
           JOIN atlas_transporter."driver_information"
             ON person."id" = driver_information."driver_id"
           JOIN atlas_transporter."vehicle"

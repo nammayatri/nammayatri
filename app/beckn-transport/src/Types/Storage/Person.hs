@@ -18,7 +18,7 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import qualified Types.Storage.Location as Loc
+import qualified Types.Storage.DriverLocation as DrLoc
 import qualified Types.Storage.Organization as Org
 
 data Role
@@ -106,7 +106,7 @@ data PersonTE e f = Person
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     organizationId :: B.C f (Maybe (Id Org.Organization)),
-    locationId :: B.C f (Maybe (Id Loc.Location)),
+    locationId :: B.C f (Maybe (Id DrLoc.DriverLocation)),
     deviceToken :: B.C f (Maybe FCM.FCMRecipientToken),
     description :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,

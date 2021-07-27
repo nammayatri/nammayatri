@@ -16,9 +16,10 @@ import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id, state)
 import Servant.API
-import qualified Storage.Queries.Location as QL
+import qualified Storage.Queries.DriverLocation as QDL
 import Types.API.Registration
 import Types.Error
+import qualified Types.Storage.DriverLocation as SDL
 import qualified Types.Storage.Location as SL
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as SP
@@ -43,17 +44,8 @@ data UpdatePersonReq = UpdatePersonReq
     identifier :: Maybe Text,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
-    locationType :: Maybe SL.LocationType,
     lat :: Maybe Double,
-    long :: Maybe Double,
-    ward :: Maybe Text,
-    district :: Maybe Text,
-    city :: Maybe Text,
-    state :: Maybe Text,
-    country :: Maybe Text,
-    pincode :: Maybe Text,
-    address :: Maybe Text,
-    bound :: Maybe Text
+    long :: Maybe Double
   }
   deriving (Generic, ToJSON, FromJSON)
 
@@ -64,15 +56,7 @@ validateUpdatePersonReq UpdatePersonReq {..} =
       validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
       validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
       validateField "fullName" fullName $ InMaybe $ MinLength 3 `And` P.name,
-      validateField "description" description . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "ward" ward . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "district" district . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "city" city . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "state" state . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "country" country . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "pincode" pincode . InMaybe $ NotEmpty `And` star P.digit `And` ExactLength 6,
-      validateField "address" address . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "bound" bound . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
+      validateField "description" description . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
     ]
 
 modifyPerson :: DBFlow m r => UpdatePersonReq -> SP.Person -> m SP.Person
@@ -93,46 +77,36 @@ modifyPerson req person = do
            udf2 = person.udf2,
            organizationId = person.organizationId,
            description = ifJust (req.description) (person.description),
-           locationId = Just (SL.id location)
+           locationId = Just (SDL.id location)
           }
 
-updateOrCreateLocation :: DBFlow m r => UpdatePersonReq -> Maybe (Id SL.Location) -> m SL.Location
+updateOrCreateLocation :: DBFlow m r => UpdatePersonReq -> Maybe (Id SDL.DriverLocation) -> m SDL.DriverLocation
 updateOrCreateLocation req Nothing = do
-  location <- createLocation req
-  QL.createFlow location
-  return location
-updateOrCreateLocation req (Just locId) = do
-  location <-
-    QL.findLocationById locId
+  drLocation <- makeDriverLocation req
+  QDL.createFlow drLocation
+  return drLocation
+updateOrCreateLocation req (Just drLocId) = do
+  drLocation <-
+    QDL.findById drLocId
       >>= fromMaybeM LocationDoesNotExist
-  QL.updateLocationRec locId $ transformToLocation req location
-  return location
+  QDL.updateLocationRec drLocId $ transformToDriverLocation req drLocation
+  return drLocation
 
-transformToLocation :: UpdatePersonReq -> SL.Location -> SL.Location
-transformToLocation req location =
+transformToDriverLocation :: UpdatePersonReq -> SDL.DriverLocation -> SDL.DriverLocation
+transformToDriverLocation req location =
   location
-    { SL.locationType = fromMaybe SL.PINCODE $ req.locationType,
-      SL.lat = req.lat,
-      SL.long = req.long,
-      SL.ward = req.ward,
-      SL.district = req.district,
-      SL.city = req.city,
-      SL.state = req.state,
-      SL.country = req.country,
-      SL.pincode = req.pincode,
-      SL.address = req.address,
-      SL.bound = req.bound
+    { SDL.lat = req.lat,
+      SDL.long = req.long
     }
 
-createLocation :: DBFlow m r => UpdatePersonReq -> m SL.Location
-createLocation UpdatePersonReq {..} = do
+makeDriverLocation :: DBFlow m r => UpdatePersonReq -> m SDL.DriverLocation
+makeDriverLocation UpdatePersonReq {..} = do
   id <- generateGUID
   createdAt <- getCurrentTime
   pure
-    SL.Location
-      { locationType = fromMaybe SL.PINCODE locationType,
-        updatedAt = createdAt,
-        point = SL.Point,
+    SDL.DriverLocation
+      { updatedAt = createdAt,
+        point = SDL.Point,
         ..
       }
 
@@ -200,7 +174,7 @@ buildDriver :: (DBFlow m r, EncFlow m r) => PersonReqEntity -> Id Org.Organizati
 buildDriver req orgId = do
   pid <- generateGUID
   now <- getCurrentTime
-  location <- createLocationT req
+  location <- createDriverLocation req
   mobileNumber <- encrypt req.mobileNumber
   return
     SP.Person
@@ -230,18 +204,18 @@ buildDriver req orgId = do
         SP.updatedAt = now
       }
 
-createLocationT :: DBFlow m r => PersonReqEntity -> m SL.Location
-createLocationT req = do
+createDriverLocation :: DBFlow m r => PersonReqEntity -> m SDL.DriverLocation
+createDriverLocation req = do
   location <- createLocationRec req
-  QL.createFlow location
+  QDL.createFlow location
   return location
 
 -- FIXME? This is to silence hlint reusing as much code from `createLocation`
 --   as possible, still we need fake organizationId here ...
 -- Better solution in he long run is to factor out common data reducing this
 --   enormous amount of duplication ...
-createLocationRec :: DBFlow m r => PersonReqEntity -> m SL.Location
-createLocationRec PersonReqEntity {..} = createLocation UpdatePersonReq {..}
+createLocationRec :: DBFlow m r => PersonReqEntity -> m SDL.DriverLocation
+createLocationRec PersonReqEntity {..} = makeDriverLocation UpdatePersonReq {..}
 
 newtype PersonRes = PersonRes
   {user :: UserInfoRes}
@@ -274,7 +248,7 @@ data PersonEntityRes = PersonEntityRes
     udf1 :: Maybe Text,
     udf2 :: Maybe Text,
     organizationId :: Maybe (Id Org.Organization),
-    locationId :: Maybe (Id SL.Location),
+    locationId :: Maybe (Id SDL.DriverLocation),
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     createdAt :: UTCTime,

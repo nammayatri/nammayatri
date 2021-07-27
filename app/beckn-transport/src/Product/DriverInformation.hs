@@ -23,10 +23,12 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Utils.Validation
 import EulerHS.Prelude hiding (id, state)
+import GHC.Records.Extra
 import qualified Product.Location as Location
 import Product.Person (sendInviteSms)
 import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Location as QLocation
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
@@ -137,7 +139,7 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
       driver <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
       driverLocation <-
         driver.locationId & fromMaybeM (PersonFieldNotPresent "location_id")
-          >>= QLocation.findLocationById
+          >>= QDrLoc.findById
           >>= fromMaybeM LocationNotFound
       driverLatLong <-
         Location.locationToLatLong driverLocation
@@ -168,7 +170,7 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
               }
   where
     driverId = cast personId
-
+    
 listDriver :: Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
   personList <- QDriverInformation.findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset $ Id orgId

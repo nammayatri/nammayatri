@@ -9,10 +9,12 @@ import qualified Types.Storage.AllocationEvent as AllocationEvent
 import qualified Types.Storage.CancellationReason as CancellationReason
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DriverInformation as DriverInformation
+import qualified Types.Storage.DriverLocation as DriverLocation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
 import qualified Types.Storage.Location as Location
 import qualified Types.Storage.NotificationStatus as NotificationStatus
+import qualified Types.Storage.OrgLocation as OrgLocation
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as ProductInstance
@@ -27,6 +29,8 @@ import qualified Types.Storage.Vehicle as Vehicle
 data TransporterDb f = TransporterDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
     location :: f (B.TableEntity Location.LocationT),
+    orgLocation :: f (B.TableEntity OrgLocation.OrgLocationT),
+    driverLocation :: f (B.TableEntity DriverLocation.DriverLocationT),
     vehicle :: f (B.TableEntity Vehicle.VehicleT),
     person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
@@ -52,6 +56,8 @@ transporterDb dbSchemaName =
     `B.withDbModification` B.dbModification
       { organization = setSchema dbSchemaName <> Organization.fieldEMod,
         location = setSchema dbSchemaName <> Location.fieldEMod,
+        orgLocation = setSchema dbSchemaName <> OrgLocation.fieldEMod,
+        driverLocation = setSchema dbSchemaName <> DriverLocation.fieldEMod,
         vehicle = setSchema dbSchemaName <> Vehicle.fieldEMod,
         person = setSchema dbSchemaName <> Person.fieldEMod,
         _case = setSchema dbSchemaName <> Case.fieldEMod,

@@ -25,6 +25,7 @@ import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Location as Loc
+import qualified Storage.Queries.OrgLocation as OrgLoc
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as SProduct
@@ -155,7 +156,7 @@ calculateDeadDistance ::
 calculateDeadDistance organization fromLocation = do
   eres <- try $ do
     orgLocId <- organization.locationId & fromMaybeM (OrgFieldNotPresent "location_id")
-    mbOrgLocation <- Loc.findLocationById orgLocId
+    mbOrgLocation <- OrgLoc.findById orgLocId
     case mbOrgLocation of
       Nothing -> throwError LocationNotFound
       Just orgLocation -> Location.calculateDistance orgLocation fromLocation

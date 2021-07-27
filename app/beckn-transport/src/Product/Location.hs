@@ -11,16 +11,17 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.List.NonEmpty as NE
 import Data.Time (diffUTCTime)
 import EulerHS.Prelude hiding (id, state)
-import qualified Storage.Queries.Location as Location
+import GHC.Records.Extra
+import qualified Storage.Queries.DriverLocation as DriverLocation
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Location as Location
 import Types.Metrics
 import qualified Types.Storage.Case as Case
-import qualified Types.Storage.Location as Location
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common hiding (id)
+import qualified Storage.Queries.DriverLocation as DrLoc
 
 updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
 updateLocation personId req = withFlowHandlerAPI $ do
@@ -30,7 +31,7 @@ updateLocation personId req = withFlowHandlerAPI $ do
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
   locationId <- driver.locationId & fromMaybeM (PersonFieldNotPresent "location_id")
   loc <-
-    Location.findLocationById locationId
+    DrLoc.findById locationId
       >>= fromMaybeM LocationNotFound
   now <- getCurrentTime
   refreshPeriod <- asks (.updateLocationRefreshPeriod) <&> fromIntegral
@@ -43,7 +44,7 @@ updateLocation personId req = withFlowHandlerAPI $ do
       let lastUpdate = fromMaybe now (req.lastUpdate)
       DB.runSqlDBTransaction $ do
         whenJust distanceMb $ QPI.updateDistance driver.id
-        Location.updateGpsCoord locationId lastUpdate currPoint
+        DrLoc.updateGpsCoord locationId lastUpdate currPoint
       logTagInfo "driverLocationUpdate" (getId personId <> " " <> show req.waypoints)
     else logWarning "UpdateLocation called before refresh period passed, ignoring"
   return Success
@@ -68,14 +69,19 @@ getLocation piId = withFlowHandlerAPI $ do
   currLocation <-
     driver.locationId
       & fromMaybeM (PersonFieldNotPresent "location_id")
-      >>= Location.findLocationById
+      >>= DriverLocation.findById
       >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = ride.distance
   currPoint <- locationToLatLong currLocation & fromMaybeM (LocationFieldNotPresent "lat or long")
   return $ GetLocationRes {..}
 
-locationToLatLong :: Location.Location -> Maybe MapSearch.LatLong
+type HasLongLat l =
+  ( HasField "lat" l (Maybe Double),
+    HasField "long" l (Maybe Double)
+  )
+
+locationToLatLong :: HasLongLat l => l -> Maybe MapSearch.LatLong
 locationToLatLong loc =
   MapSearch.LatLong
     <$> loc.lat
@@ -93,11 +99,13 @@ getRoutes :: Id Person.Person -> Location.Request -> FlowHandler Location.Respon
 getRoutes _ = withFlowHandlerAPI . MapSearch.getRoutes
 
 calculateDistance ::
-  ( CoreMetrics m,
+  ( HasLongLat l,
+    HasLongLat l1,
+    CoreMetrics m,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
-  Location.Location ->
-  Location.Location ->
+  l ->
+  l1 ->
   m (Maybe Double)
 calculateDistance sourceLoc destinationLoc = do
   source <- locationToLatLong sourceLoc & fromMaybeM (LocationFieldNotPresent "lat or long source")
