@@ -63,7 +63,8 @@ data AppCfg = AppCfg
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
-    updateLocationRefreshPeriod :: Seconds
+    updateLocationRefreshPeriod :: Seconds,
+    metricsSearchDurationTimeout :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -91,6 +92,7 @@ data AppEnv = AppEnv
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
+    bppMetrics :: BPPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
     transporterMetrics :: TransporterMetricsContainer,
     apiRateLimitOptions :: APIRateLimitOptions,
@@ -106,6 +108,7 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
+  bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   transporterMetrics <- registerTransporterMetricsContainer
   isShuttingDown <- newEmptyTMVarIO

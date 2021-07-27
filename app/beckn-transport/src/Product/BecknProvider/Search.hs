@@ -30,12 +30,13 @@ import qualified Storage.Queries.SearchReqLocation as Loc
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
 import Types.Error
-import Types.Metrics (CoreMetrics)
+import Types.Metrics (CoreMetrics, HasBPPMetrics)
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.SearchReqLocation as Location
 import Utils.Common
+import qualified Utils.Metrics as Metrics
 
 search ::
   Id Org.Organization ->
@@ -45,6 +46,8 @@ search ::
   FlowHandler AckResponse
 search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+    let transactionId = req.context.transaction_id
+    Metrics.startSearchMetrics transactionId
     let context = req.context
     BP.validateContext "search" context
     transporter <-
@@ -72,7 +75,7 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
           Loc.create toLocation
           QCase.create productCase
         ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
-          onSearchCallback productCase transporter fromLocation toLocation
+          onSearchCallback transactionId productCase transporter fromLocation toLocation
 
 buildFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.SearchReqLocation
 buildFromStop now stop = do
@@ -144,14 +147,16 @@ onSearchCallback ::
   ( DBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    HasBPPMetrics m r,
     CoreMetrics m
   ) =>
+  Text ->
   Case.Case ->
   Org.Organization ->
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
   m API.OnSearchServices
-onSearchCallback productCase transporter fromLocation toLocation = do
+onSearchCallback transactionId productCase transporter fromLocation toLocation = do
   let transporterId = transporter.id
   vehicleVariant <-
     (productCase.udf1 >>= readMaybe . T.unpack)
@@ -181,7 +186,9 @@ onSearchCallback productCase transporter fromLocation toLocation = do
         case prodInst.status of
           ProductInstance.OUTOFSTOCK -> []
           _ -> [prodInst]
-  mkOnSearchPayload productCase productInstances transporter
+  rez <- mkOnSearchPayload productCase productInstances transporter
+  Metrics.finishSearchMetrics transactionId
+  return rez
 
 mkProductInstance ::
   DBFlow m r =>

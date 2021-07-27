@@ -90,4 +90,5 @@ in
 , minimumDriverRatesCount = +5
 , recalculateFareEnabled = True
 , updateLocationRefreshPeriod = +5
+, metricsSearchDurationTimeout = +45
 }

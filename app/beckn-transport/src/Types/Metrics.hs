@@ -1,11 +1,14 @@
 module Types.Metrics
   ( HasBTMMetrics,
+    HasBPPMetrics,
     BTMMetricsContainer (..),
+    BPPMetricsContainer (..),
     module CoreMetrics,
     registerBTMMetricsContainer,
     registerTransporterMetricsContainer,
     TransporterMetricsContainer (..),
     HasTransporterMetrics,
+    registerBPPMetricsContainer,
   )
 where
 
@@ -15,6 +18,8 @@ import Prometheus as P
 import Utils.Common
 
 type HasBTMMetrics m r = (HasFlowEnv m r '["btmMetrics" ::: BTMMetricsContainer])
+
+type HasBPPMetrics m r = (HasFlowEnv m r '["bppMetrics" ::: BPPMetricsContainer])
 
 type TaskCounterMetric = P.Counter
 
@@ -26,6 +31,13 @@ data BTMMetricsContainer = BTMMetricsContainer
   { taskCounter :: TaskCounterMetric,
     taskDuration :: TaskDurationMetric,
     failedTaskCounter :: FailedTaskCounterMetric
+  }
+
+type SearchDurationMetric = (P.Histogram, P.Counter)
+
+data BPPMetricsContainer = BPPMetricsContainer
+  { searchDurationTimeout :: Seconds,
+    searchDuration :: SearchDurationMetric
   }
 
 registerBTMMetricsContainer :: IO BTMMetricsContainer
@@ -68,3 +80,15 @@ registerTransporterMetricsContainer =
       P.Info
         "BPP_distance_deviation"
         "Difference between estimated distance and real distance of a ride"
+
+registerBPPMetricsContainer :: Seconds -> IO BPPMetricsContainer
+registerBPPMetricsContainer searchDurationTimeout = do
+  searchDuration <- registerSearchDurationMetric searchDurationTimeout
+  return $ BPPMetricsContainer {..}
+
+registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
+registerSearchDurationMetric searchDurationTimeout = do
+  let bucketsCount = (getSeconds searchDurationTimeout + 1) * 2
+  searchDurationHistogram <- P.register . P.histogram (P.Info "BPP_search_time" "") $ P.linearBuckets 0 0.5 bucketsCount
+  failureCounter <- P.register $ P.counter $ P.Info "BPP_search_failure_counter" ""
+  return (searchDurationHistogram, failureCounter)
