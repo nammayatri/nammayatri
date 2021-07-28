@@ -9,13 +9,10 @@ import Control.Lens (element, (?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
-import Data.Time (UTCTime, addUTCTime)
-import Data.Time.Format.ISO8601 (iso8601Show)
+import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (State, drop)
 import ExternalAPI.Dunzo.Types
 import Servant.Client (BaseUrl (..))
-import Types.Beckn.API.Init
-import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
 import qualified Types.Beckn.API.Track as TrackAPI
 import qualified Types.Beckn.API.Types as API
@@ -25,19 +22,14 @@ import Types.Beckn.Contact (Contact)
 import Types.Beckn.Context (Context (..))
 import Types.Beckn.DecimalValue (DecimalValue (..), convertAmountToDecimalValue)
 import Types.Beckn.Descriptor (emptyDescriptor)
-import Types.Beckn.Duration (Duration (..))
-import Types.Beckn.Fulfillment (Fulfillment (..), FulfillmentDetails (..))
 import Types.Beckn.Gps (Gps (..))
 import Types.Beckn.Item (Item (..))
-import Types.Beckn.ItemQuantity (Quantity (..), emptyItemQuantity)
 import Types.Beckn.Location (Location)
-import Types.Beckn.Order (IdAndLocations (..), Order (..), OrderItem (..))
+import Types.Beckn.Order (Order (..))
 import Types.Beckn.Payment (Params (..), Payment (..), PaymentType (..))
 import Types.Beckn.Person (Person)
 import Types.Beckn.Price (Price (..))
 import Types.Beckn.Provider (Provider (..))
-import Types.Beckn.Quotation (Quotation (..))
-import Types.Beckn.Time (Time (..))
 import Types.Beckn.Tracking (Tracking (..))
 import Types.Error
 import Types.Storage.Organization (Organization)
@@ -55,26 +47,6 @@ mkQuoteReqFromSearch API.BecknReq {..} = do
   let intent = message.intent
   let mbPickupGps = intent ^? #fulfillment . _Just . #start . _Just . #location . _Just . #gps . _Just
   let mbDropGps = intent ^? #fulfillment . _Just . #end . _Just . #location . _Just . #gps . _Just
-  case (mbPickupGps, mbDropGps) of
-    (Just pickupGps, Just dropGps) -> do
-      return $
-        QuoteReq
-          { pickup_lat = pickupGps.lat,
-            pickup_lng = pickupGps.lon,
-            drop_lat = dropGps.lat,
-            drop_lng = dropGps.lon,
-            category_id = "pickup_drop"
-          }
-    (Just _, Nothing) -> dropLocationNotFound
-    _ -> pickupLocationNotFound
-  where
-    pickupLocationNotFound = throwError $ InvalidRequest "Pickup location not found."
-    dropLocationNotFound = throwError $ InvalidRequest "Drop location not found."
-
-mkQuoteReqFromInitOrder :: MonadFlow m => InitAPI.InitOrder -> m QuoteReq
-mkQuoteReqFromInitOrder order = do
-  let mbPickupGps = order ^? #fulfillment . #start . _Just . #location . _Just . #gps . _Just
-  let mbDropGps = order ^? #fulfillment . #end . _Just . #location . _Just . #gps . _Just
   case (mbPickupGps, mbDropGps) of
     (Just pickupGps, Just dropGps) -> do
       return $
@@ -187,95 +159,6 @@ mkSearchItem index packageContent QuoteRes {..} =
           maximum_value = Nothing
         }
     value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
-
-mkOnInitMessage :: MonadFlow m => Integer -> InitAPI.InitOrder -> QuoteRes -> m InitAPI.Initialized
-mkOnInitMessage quotationTTLinMin order QuoteRes {..} = do
-  orderItem <- getItem order.items -- probably quantity field must be validated
-  now <- getCurrentTime
-
-  reqStartInfo <- order.fulfillment.start & fromMaybeM (InvalidRequest "Pickup location not found.")
-  reqEndInfo <- order.fulfillment.end & fromMaybeM (InvalidRequest "Drop location not found.")
-  (startInfo, endInfo) <- updateOrderEta reqStartInfo reqEndInfo now eta
-
-  let validTill = addUTCTime (fromInteger (quotationTTLinMin * 60)) now
-  return $
-    InitAPI.Initialized
-      { provider = Nothing,
-        provider_location = Nothing,
-        items = Just [InitAPI.InitOrderItem orderItem.id (Quantity (Just 1) Nothing)],
-        add_ons = Nothing,
-        offers = Nothing,
-        billing = Just order.billing,
-        fulfillment =
-          Just $
-            Fulfillment
-              { id = Nothing,
-                _type = Nothing,
-                state = Nothing,
-                tracking = False,
-                customer = Nothing,
-                agent = Nothing,
-                vehicle = Nothing,
-                start = Just startInfo,
-                end = Just endInfo,
-                purpose = Nothing,
-                tags = Nothing
-              },
-        quote =
-          Just $
-            Quotation
-              { price = Just price,
-                breakup = Nothing,
-                ttl = Just . Duration . T.pack $ iso8601Show validTill
-              },
-        payment = Just $ mkPayment estimated_price
-      }
-  where
-    getItem [item] = pure item
-    getItem _ = throwError $ InvalidRequest "Exactly 1 order item expected."
-    price = mkPrice estimated_price
-    mkPrice estimatedPrice =
-      Price
-        { currency = Just "INR",
-          value = Nothing,
-          estimated_value = Just $ convertAmountToDecimalValue $ Amount $ toRational estimatedPrice,
-          computed_value = Nothing,
-          listed_value = Nothing,
-          offered_value = Nothing,
-          minimum_value = Nothing,
-          maximum_value = Nothing
-        }
-
-mkOrderFromInititialized :: MonadFlow m => InitAPI.Initialized -> UTCTime -> m Order
-mkOrderFromInititialized initialized now = do
-  orderItems <- initialized.items & fromMaybeM (InternalError "OrderItems Initialized convertation error.")
-  orderItem <- getItem orderItems
-  billing <- initialized.billing & fromMaybeM (InternalError "Billing Initialized convertation error.")
-  fulfillment <- initialized.fulfillment & fromMaybeM (InternalError "Fulfilmment Initialized convertation error.")
-  quote <- initialized.quote & fromMaybeM (InternalError "Quotation Initialized convertation error.")
-  payment <- initialized.payment & fromMaybeM (InternalError "Payment Initialized convertation error.")
-  pure
-    Order
-      { id = Nothing,
-        state = Nothing,
-        provider =
-          IdAndLocations
-            { id = "Dunzo",
-              locations = []
-            },
-        items = [OrderItem orderItem.id emptyItemQuantity],
-        add_ons = [],
-        offers = [],
-        billing = billing,
-        fulfillment = fulfillment,
-        quote = quote,
-        payment = payment,
-        created_at = Just now,
-        updated_at = Just now
-      }
-  where
-    getItem [item] = pure item
-    getItem _ = throwError $ InternalError "OrderItem Initialized convertation error."
 
 mkOnStatusMessage :: MonadFlow m => Order -> TaskStatus -> m API.OrderObject
 mkOnStatusMessage order status = do
@@ -407,23 +290,6 @@ mapTaskStateToOrderState s =
     CANCELLED -> "CANCELLED"
     RUNNER_CANCELLED -> "CANCELLED"
 
-updateOrderEta :: MonadFlow m => FulfillmentDetails -> FulfillmentDetails -> UTCTime -> Eta -> m (FulfillmentDetails, FulfillmentDetails)
-updateOrderEta startInfo endInfo now eta = do
-  let pickupEta = calcEta now <$> eta.pickup <|> (startInfo.time >>= (.timestamp))
-  let dropEta = calcEta now eta.dropoff
-  let pickupEtaTime = mkTimeObject <$> pickupEta
-  let dropEtaTime = mkTimeObject dropEta
-  return (startInfo & #time .~ pickupEtaTime, endInfo & #time ?~ dropEtaTime)
-  where
-    mkTimeObject time =
-      Time
-        { label = Nothing,
-          timestamp = Just time,
-          duration = Nothing,
-          range = Nothing,
-          days = Nothing
-        }
-
 mkPayment :: Float -> Payment
 mkPayment estimated_price =
   Payment
@@ -442,6 +308,3 @@ mkPayment estimated_price =
       status = Nothing,
       time = Nothing
     }
-
-calcEta :: UTCTime -> Float -> UTCTime
-calcEta now diffInMinutes = addUTCTime (fromRational $ toRational (diffInMinutes * 60.0)) now

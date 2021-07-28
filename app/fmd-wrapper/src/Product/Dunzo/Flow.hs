@@ -60,78 +60,8 @@ search org req = do
 select :: MonadFlow m => Org.Organization -> API.BecknReq SelectAPI.SelectedObject -> m AckResponse
 select _org _req = throwError $ ActionNotSupported "select"
 
-init ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
-    CoreMetrics m
-  ) =>
-  Org.Organization ->
-  API.BecknReq InitAPI.InitOrderObj ->
-  m AckResponse
-init org req = do
-  conf@DunzoConfig {..} <- asks (.dzConfig)
-  let context = updateBppUri (req.context) dzBPNwAddress
-  cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  dzBACreds <- getDzBAPCreds org
-  let order = req.message.order
-  validateOrder order
-
-  let caseId = Id req.context.transaction_id
-  mbCase <- Storage.findById caseId
-  mbCaseValidated <- case mbCase of
-    Nothing -> pure Nothing
-    Just currCase ->
-      if currCase.status == NEW
-        then pure $ Just currCase
-        else throwError (InvalidRequest "Invalid order status.")
-
-  quoteReq <- mkQuoteReqFromInitOrder order
-  withCallback INIT InitAPI.onInitAPI context cbUrl $ do
-    onInitMessage <-
-      getQuote dzBACreds conf quoteReq
-        >>= mkOnInitMessage dzQuotationTTLinMin order
-    createOrUpdateCase (getId $ org.id) onInitMessage caseId mbCaseValidated
-
-    return $ InitAPI.InitializedObject onInitMessage
-  where
-    createOrUpdateCase orgId onInitMessage caseId mbCaseValidated = do
-      now <- getCurrentTime
-      order <- mkOrderFromInititialized onInitMessage now
-      let newCase =
-            Case
-              { id = caseId,
-                name = Nothing,
-                description = Nothing,
-                shortId = "",
-                industry = GROCERY,
-                _type = RIDEORDER,
-                exchangeType = ORDER,
-                status = NEW,
-                startTime = now,
-                endTime = Nothing,
-                validTill = now,
-                provider = Just "Dunzo",
-                providerType = Nothing,
-                requestor = Just orgId,
-                requestorType = Nothing,
-                parentCaseId = Nothing,
-                udf1 = Just $ encodeToText order,
-                udf2 = Nothing,
-                udf3 = Nothing,
-                udf4 = Nothing,
-                udf5 = Nothing,
-                info = Nothing,
-                createdAt = now,
-                updatedAt = now
-              }
-      maybe (Storage.create newCase) (const $ Storage.update caseId newCase) mbCaseValidated
-
-    validateOrder order = do
-      void $ order.fulfillment.start & fromMaybeM (InvalidRequest "Pickup location not found.")
-      void $ order.fulfillment.end & fromMaybeM (InvalidRequest "Drop location not found.")
-      void $ getItem order.items
-    getItem [item] = pure item
-    getItem _ = throwError $ InvalidRequest "Exactly 1 order item expected."
+init :: MonadFlow m => Org.Organization -> API.BecknReq InitAPI.InitOrderObj -> m AckResponse
+init _org _req = throwError $ ActionNotSupported "init"
 
 confirm ::
   ( DBFlow m r,
