@@ -1,16 +1,14 @@
 {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 
-module Storage.Queries.Location where
+module Storage.Queries.SearchReqLocation where
 
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Types.Schema
 import Beckn.Utils.Common
-import Data.Time (UTCTime)
 import Database.Beam ((<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
@@ -48,17 +46,14 @@ updateLocationRec locationId location = do
   where
     setClause loc n Storage.SearchReqLocation {..} =
       mconcat
-        [ locationType <-. B.val_ (Storage.locationType loc),
-          lat <-. B.val_ (Storage.lat loc),
+        [ lat <-. B.val_ (Storage.lat loc),
           long <-. B.val_ (Storage.long loc),
-          ward <-. B.val_ (Storage.ward loc),
           district <-. B.val_ (Storage.district loc),
           city <-. B.val_ (Storage.city loc),
           state <-. B.val_ (Storage.state loc),
           country <-. B.val_ (Storage.country loc),
           pincode <-. B.val_ (Storage.pincode loc),
           address <-. B.val_ (Storage.address loc),
-          bound <-. B.val_ (Storage.bound loc),
           updatedAt <-. B.val_ n
         ]
     predicate locId Storage.SearchReqLocation {..} = id ==. B.val_ locId
@@ -71,18 +66,3 @@ findAllByLocIds fromIds toIds = do
     predicate pFromIds pToIds Storage.SearchReqLocation {..} =
       B.in_ id (B.val_ <$> pFromIds)
         ||. B.in_ id (B.val_ <$> pToIds)
-
-updateGpsCoord :: Id Storage.SearchReqLocation -> UTCTime -> LatLong -> DB.SqlDB ()
-updateGpsCoord locationId now (LatLong lat' long') = do
-  locTable <- getDbTable
-  DB.update' locTable (setClause lat' long' now) (predicate locationId)
-  where
-    setClause mLat mLong now' Storage.SearchReqLocation {..} =
-      let point' = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"
-       in mconcat
-            [ lat <-. B.val_ (Just mLat),
-              long <-. B.val_ (Just mLong),
-              updatedAt <-. B.val_ now',
-              point <-. point'
-            ]
-    predicate locId Storage.SearchReqLocation {..} = id B.==. B.val_ locId

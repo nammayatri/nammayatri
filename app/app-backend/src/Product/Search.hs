@@ -27,11 +27,11 @@ import qualified Product.Location as Location (getDistance)
 import Product.Serviceability
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Case as QCase
-import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Products as QProducts
+import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Types.API.Case as API
 import qualified Types.API.Search as API
 import Types.API.Serviceability
@@ -214,18 +214,14 @@ mkLocation BS.Stop {..} = do
   return
     Location.SearchReqLocation
       { id = locId,
-        locationType = Location.POINT,
         lat = read . T.unpack . (.lat) <$> mgps,
         long = read . T.unpack . (.lon) <$> mgps,
-        ward = Nothing,
         district = Nothing,
         city = (.name) <$> loc.city,
         state = (.state) <$> loc.address,
         country = (.name) <$> loc.country,
         pincode = Nothing,
         address = T.decodeUtf8 . BSL.toStrict . encode <$> loc.address,
-        bound = Nothing,
-        point = Location.Point,
         createdAt = now,
         updatedAt = now
       }

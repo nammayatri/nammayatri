@@ -24,11 +24,11 @@ import Product.FareCalculator
 import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Storage.Queries.Case as QCase
-import qualified Storage.Queries.Location as Loc
 import qualified Storage.Queries.OrgLocation as OrgLoc
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as SProduct
+import qualified Storage.Queries.SearchReqLocation as Loc
 import qualified Test.RandomStrings as RS
 import qualified Types.API.Case as APICase
 import Types.Error
@@ -86,18 +86,14 @@ mkFromStop now stop = do
   pure $
     Location.SearchReqLocation
       { id = uuid,
-        locationType = Location.POINT,
         lat = read . T.unpack . (^. #lat) <$> mgps,
         long = read . T.unpack . (^. #lon) <$> mgps,
-        ward = (^. #ward) =<< maddress,
         district = Nothing,
         city = (^. #city) <$> maddress,
         state = (^. #state) <$> maddress,
         country = (^. #country) <$> maddress,
         pincode = (^. #area_code) <$> maddress,
         address = encodeToText <$> maddress,
-        bound = Nothing,
-        point = Location.Point,
         createdAt = now,
         updatedAt = now
       }

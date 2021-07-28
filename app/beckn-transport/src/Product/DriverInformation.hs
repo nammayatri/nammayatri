@@ -30,11 +30,11 @@ import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Location as QLocation
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QueryPI
+import qualified Storage.Queries.SearchReqLocation as QLocation
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.API.Person (buildDriver)

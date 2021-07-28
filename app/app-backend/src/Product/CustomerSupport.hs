@@ -11,10 +11,10 @@ import Beckn.Types.Id
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Storage.Queries.Case as Case
-import qualified Storage.Queries.Location as Location
 import Storage.Queries.Person as Person
 import Storage.Queries.ProductInstance as PI
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
+import qualified Storage.Queries.SearchReqLocation as Location
 import Types.API.CustomerSupport as T
 import Types.Error
 import Types.ProductInfo as ProductInfo

@@ -10,10 +10,10 @@ import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Allocation as AQ
 import qualified Storage.Queries.Case as CQ
-import Storage.Queries.Location as LQ
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as PersQ
 import qualified Storage.Queries.ProductInstance as PIQ
+import Storage.Queries.SearchReqLocation as LQ
 import qualified Storage.Queries.Vehicle as VQ
 import qualified Types.API.Case as APICase
 import Types.API.ProductInstance

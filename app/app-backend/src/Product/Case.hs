@@ -7,9 +7,9 @@ import Beckn.Types.Id
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Case as Case
-import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.Products as Products
+import qualified Storage.Queries.SearchReqLocation as Location
 import Types.API.Case as API
 import Types.Error
 import qualified Types.Storage.Case as Case

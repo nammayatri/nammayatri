@@ -22,7 +22,6 @@ import Types.Error
 import qualified Types.Storage.DriverLocation as SDL
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.SearchReqLocation as SL
 import Utils.Common
 
 data EntityType = VEHICLE | PASS | TICKET
@@ -135,17 +134,14 @@ data PersonReqEntity = PersonReqEntity
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
     description :: Maybe Text,
-    locationType :: Maybe SL.SearchReqLocation,
     lat :: Maybe Double,
     long :: Maybe Double,
-    ward :: Maybe Text,
     district :: Maybe Text,
     city :: Maybe Text,
     state :: Maybe Text,
     country :: Maybe Text,
     pincode :: Maybe Text,
-    address :: Maybe Text,
-    bound :: Maybe Text
+    address :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON)
 
@@ -160,14 +156,12 @@ validatePersonReqEntity PersonReqEntity {..} =
       validateField "mobileNumber" mobileNumber $ InMaybe P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode $ InMaybe P.mobileCountryCode,
       validateField "description" description . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "ward" ward . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
       validateField "district" district . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
       validateField "city" city . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
       validateField "state" state . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
       validateField "country" country . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
       validateField "pincode" pincode . InMaybe $ NotEmpty `And` star P.digit `And` ExactLength 6,
-      validateField "address" address . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "bound" bound . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
+      validateField "address" address . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
     ]
 
 buildDriver :: (DBFlow m r, EncFlow m r) => PersonReqEntity -> Id Org.Organization -> m SP.Person

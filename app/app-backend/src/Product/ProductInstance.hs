@@ -5,9 +5,9 @@ import Beckn.Types.Id
 import Beckn.Utils.Logging
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
-import Storage.Queries.Location as Loc
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as Products
+import Storage.Queries.SearchReqLocation as Loc
 import Types.API.ProductInstance
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as Person

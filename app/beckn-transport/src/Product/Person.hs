@@ -28,11 +28,11 @@ import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Storage.Queries.SearchReqLocation as QL
 import qualified Storage.Queries.TransporterConfig as QTC
 import Types.API.Person
 import Types.API.Registration (makeUserInfoRes)

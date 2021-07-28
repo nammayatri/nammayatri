@@ -5,9 +5,9 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Case as Case
-import Storage.Queries.Location as LQ
 import Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QP
+import Storage.Queries.SearchReqLocation as LQ
 import Types.API.Case
 import Types.Error
 import Types.Storage.Case as Case

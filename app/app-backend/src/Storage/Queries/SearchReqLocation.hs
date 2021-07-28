@@ -1,4 +1,4 @@
-module Storage.Queries.Location where
+module Storage.Queries.SearchReqLocation where
 
 import qualified Beckn.Storage.Common as Storage
 import Beckn.Storage.DB.Config
@@ -41,11 +41,10 @@ findAllWithLimitOffsetWhere ::
   [Text] ->
   [Text] ->
   [Text] ->
-  [Text] ->
   Maybe Int ->
   Maybe Int ->
   m [Storage.SearchReqLocation]
-findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = do
+findAllWithLimitOffsetWhere pins cities states districts mlimit moffset = do
   dbTable <- getDbTable
   DB.findAll
     dbTable
@@ -62,8 +61,7 @@ findAllWithLimitOffsetWhere pins cities states districts wards mlimit moffset = 
         [ pincode `B.in_` (B.val_ . Just <$> pins) ||. complementVal pins,
           city `B.in_` (B.val_ . Just <$> cities) ||. complementVal cities,
           state `B.in_` (B.val_ . Just <$> states) ||. complementVal states,
-          district `B.in_` (B.val_ . Just <$> districts) ||. complementVal districts,
-          ward `B.in_` (B.val_ . Just <$> wards) ||. complementVal wards
+          district `B.in_` (B.val_ . Just <$> districts) ||. complementVal districts
         ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p

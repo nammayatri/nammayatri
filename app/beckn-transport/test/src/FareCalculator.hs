@@ -38,18 +38,14 @@ defaultPickupLocation =
   PickupLocation $
     Location.SearchReqLocation
       { id = Id "",
-        locationType = Location.POINT,
         lat = Just 0.0,
         long = Just 0.0,
-        ward = Nothing,
         district = Nothing,
         city = Nothing,
         state = Nothing,
         country = Nothing,
         pincode = Nothing,
         address = Nothing,
-        bound = Nothing,
-        point = Location.Point,
         createdAt = mockTime,
         updatedAt = mockTime
       }
@@ -59,18 +55,14 @@ defaultDropLocation =
   DropLocation $
     Location.SearchReqLocation
       { id = Id "",
-        locationType = Location.POINT,
         lat = Just 0.0,
         long = Just 0.0,
-        ward = Nothing,
         district = Nothing,
         city = Nothing,
         state = Nothing,
         country = Nothing,
         pincode = Nothing,
         address = Nothing,
-        bound = Nothing,
-        point = Location.Point,
         createdAt = mockTime,
         updatedAt = mockTime
       }
