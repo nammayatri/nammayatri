@@ -28,7 +28,6 @@ defaultDriver =
       udf1 = Nothing,
       udf2 = Nothing,
       organizationId = Nothing,
-      locationId = Nothing,
       deviceToken = Nothing,
       description = Nothing,
       createdAt = Fixtures.defaultTime,

@@ -101,7 +101,6 @@ makePerson req = do
         udf1 = Nothing,
         udf2 = Nothing,
         organizationId = Nothing,
-        locationId = Nothing,
         description = Nothing,
         createdAt = now,
         updatedAt = now

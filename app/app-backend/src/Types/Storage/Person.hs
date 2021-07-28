@@ -20,7 +20,6 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
 import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.SearchReqLocation as Loc
 
 data Role
   = USER
@@ -107,7 +106,6 @@ data PersonTE e f = Person
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     organizationId :: B.C f (Maybe (Id Org.Organization)),
-    locationId :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     deviceToken :: B.C f (Maybe FCM.FCMRecipientToken),
     description :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
@@ -167,7 +165,6 @@ fieldEMod =
               hash = "mobile_number_hash"
             },
         organizationId = "organization_id",
-        locationId = "location_id",
         mobileCountryCode = "mobile_country_code",
         identifierType = "identifier_type",
         deviceToken = "device_token"

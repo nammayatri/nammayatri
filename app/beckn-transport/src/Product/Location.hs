@@ -12,6 +12,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Time (diffUTCTime)
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
+import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.DriverLocation as DriverLocation
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as QPI
@@ -21,7 +22,6 @@ import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common hiding (id)
-import qualified Storage.Queries.DriverLocation as DrLoc
 
 updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
 updateLocation personId req = withFlowHandlerAPI $ do
@@ -29,7 +29,7 @@ updateLocation personId req = withFlowHandlerAPI $ do
     Person.findPersonById personId
       >>= fromMaybeM PersonNotFound
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
-  locationId <- driver.locationId & fromMaybeM (PersonFieldNotPresent "location_id")
+  let locationId = driver.id
   loc <-
     DrLoc.findById locationId
       >>= fromMaybeM LocationNotFound
@@ -67,9 +67,7 @@ getLocation piId = withFlowHandlerAPI $ do
       >>= Person.findPersonById
       >>= fromMaybeM PersonNotFound
   currLocation <-
-    driver.locationId
-      & fromMaybeM (PersonFieldNotPresent "location_id")
-      >>= DriverLocation.findById
+    DriverLocation.findById driver.id
       >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = ride.distance

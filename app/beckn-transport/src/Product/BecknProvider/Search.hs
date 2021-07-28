@@ -151,11 +151,8 @@ calculateDeadDistance ::
   m (Maybe Double)
 calculateDeadDistance organization fromLocation = do
   eres <- try $ do
-    orgLocId <- organization.locationId & fromMaybeM (OrgFieldNotPresent "location_id")
-    mbOrgLocation <- OrgLoc.findById orgLocId
-    case mbOrgLocation of
-      Nothing -> throwError LocationNotFound
-      Just orgLocation -> Location.calculateDistance orgLocation fromLocation
+    orgLocation <- OrgLoc.findById organization.id >>= fromMaybeM LocationNotFound
+    Location.calculateDistance orgLocation fromLocation
   case eres of
     Left (err :: SomeException) -> do
       logTagWarning "calculateDeadDistance" $ "Failed to calculate distance. Reason: " +|| err ||+ ""

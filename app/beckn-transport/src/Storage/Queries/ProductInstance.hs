@@ -13,16 +13,16 @@ import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Location as Loc
+import qualified Storage.Queries.SearchReqLocation as Loc
 import Types.API.ProductInstance
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import qualified Types.Storage.ProductInstance as Storage
 import Types.Storage.Products
 import qualified Types.Storage.Products as Product
+import qualified Types.Storage.SearchReqLocation as Loc
 import Types.Storage.Vehicle (Vehicle)
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductInstanceT))

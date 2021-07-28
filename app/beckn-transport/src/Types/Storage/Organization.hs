@@ -16,7 +16,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import qualified Types.Storage.OrgLocation as OrgLoc
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -98,7 +97,6 @@ data OrganizationT f = Organization
     gstin :: B.C f (Maybe Text),
     _type :: B.C f OrganizationType,
     domain :: B.C f (Maybe OrganizationDomain),
-    locationId :: B.C f (Maybe (Id OrgLoc.OrgLocation)),
     fromTime :: B.C f (Maybe UTCTime),
     toTime :: B.C f (Maybe UTCTime),
     headCount :: B.C f (Maybe Int),
@@ -145,7 +143,6 @@ fieldEMod =
       { shortId = "short_id",
         createdAt = "created_at",
         updatedAt = "updated_at",
-        locationId = "location_id",
         mobileNumber = "mobile_number",
         mobileCountryCode = "mobile_country_code",
         headCount = "head_count",

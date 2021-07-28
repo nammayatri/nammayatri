@@ -1,5 +1,5 @@
 CREATE TABLE atlas_transporter.organization_location (
-    id character(36) NOT NULL,
+    org_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.organization (id) ON DELETE CASCADE,
     lat double precision,
     long double precision,
     district character varying(255),
@@ -14,21 +14,21 @@ CREATE TABLE atlas_transporter.organization_location (
 
 ALTER TABLE atlas_transporter.organization_location OWNER TO atlas;
 
-ALTER TABLE ONLY atlas_transporter.organization_location
-    ADD CONSTRAINT idx_16442_primary PRIMARY KEY (id);
-
 CREATE INDEX idx_16442_city ON atlas_transporter.organization_location USING btree (city);
 
 CREATE INDEX idx_16442_state ON atlas_transporter.organization_location USING btree (state);
 
-INSERT INTO atlas_transporter.organization_location (SELECT id, lat, long, district, city, state, country, pincode, address, created_at, updated_at
-    FROM atlas_transporter.location WHERE id IN (SELECT location_id FROM atlas_transporter.organization));
+INSERT INTO atlas_transporter.organization_location (
+    SELECT T2.id, T1.lat, T1.long, T1.district, T1.city, T1.state, T1.country, T1.pincode, T1.address, T1.created_at, T1.updated_at 
+    FROM atlas_transporter.location AS T1
+    INNER JOIN atlas_transporter.organization AS T2
+    ON T1.id = T2.location_id);
 DELETE FROM atlas_transporter.location WHERE id IN (SELECT location_id FROM atlas_transporter.organization); 
 
 ----------------------------------------------------------------------------------------------------
 
 CREATE TABLE atlas_transporter.driver_location (
-    id character(36) NOT NULL,
+    driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id) ON DELETE CASCADE,
     lat double precision,
     long double precision,
     point public.geography(POINT,4326),
@@ -38,17 +38,34 @@ CREATE TABLE atlas_transporter.driver_location (
 
 ALTER TABLE atlas_transporter.driver_location OWNER TO atlas;
 
-ALTER TABLE ONLY atlas_transporter.driver_location
-    ADD CONSTRAINT idx_16543_primary PRIMARY KEY (id);
-
-INSERT INTO atlas_transporter.driver_location (SELECT id, lat, long, point, created_at, updated_at FROM atlas_transporter.location WHERE id IN (SELECT location_id FROM atlas_transporter.person));
+INSERT INTO atlas_transporter.driver_location (
+    SELECT T2.id, T1.lat, T1.long, T1.point, T1.created_at, T1.updated_at FROM atlas_transporter.location AS T1
+    INNER JOIN atlas_transporter.person AS T2
+    ON T1.id = T2.location_id);
 DELETE FROM atlas_transporter.location WHERE id IN (SELECT location_id FROM atlas_transporter.person);
 
 ------------------------------------------------------------------------------------------------------
 
+ALTER TABLE atlas_transporter.person DROP COLUMN location_id;
 ALTER TABLE atlas_transporter.location DROP COLUMN ward;
 ALTER TABLE atlas_transporter.location DROP COLUMN point;
 ALTER TABLE atlas_transporter.location DROP COLUMN location_type;
 ALTER TABLE atlas_transporter.location DROP COLUMN bound;
 
 ALTER TABLE atlas_transporter.location RENAME TO search_request_location;
+
+--------------------------------------------------------------------------------------------
+-- Creating locations if there was none for some reason
+--------------------------------------------------------------------------------------------
+
+INSERT INTO atlas_transporter.organization_location (
+    SELECT T1.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, now (), now ()
+    FROM atlas_transporter.organization AS T1
+    WHERE NOT EXISTS (SELECT 1 FROM atlas_transporter.organization_location AS T2 WHERE T1.id = T2.org_id)
+);
+
+INSERT INTO atlas_transporter.driver_location (
+    SELECT T1.id, NULL, NULL, NULL, now (), now ()
+    FROM atlas_transporter.person AS T1
+    WHERE NOT EXISTS (SELECT 1 FROM atlas_transporter.driver_location AS T2 WHERE T1.id = T2.driver_id)
+);

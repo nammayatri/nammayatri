@@ -154,7 +154,6 @@ updatePersonRec personId person' = do
           udf2 <-. B.val_ (person.udf2),
           organizationId <-. B.val_ (person.organizationId),
           description <-. B.val_ (person.description),
-          locationId <-. B.val_ (person.locationId),
           updatedAt <-. B.val_ n
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
@@ -251,7 +250,7 @@ getNearestDrivers LatLong {..} radius orgId variant =
             driver_location."point" <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) as dist
           FROM atlas_transporter."person"
           JOIN atlas_transporter."driver_location"
-            ON person."location_id" = driver_location."id"
+            ON person."id" = driver_location."driver_id"
           JOIN atlas_transporter."driver_information"
             ON person."id" = driver_information."driver_id"
           JOIN atlas_transporter."vehicle"

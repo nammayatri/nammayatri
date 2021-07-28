@@ -138,8 +138,7 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
       productInstance <- QueryPI.findById productInstanceId >>= fromMaybeM PINotFound
       driver <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
       driverLocation <-
-        driver.locationId & fromMaybeM (PersonFieldNotPresent "location_id")
-          >>= QDrLoc.findById
+        QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
       driverLatLong <-
         Location.locationToLatLong driverLocation
@@ -170,7 +169,7 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
               }
   where
     driverId = cast personId
-    
+
 listDriver :: Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
   personList <- QDriverInformation.findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset $ Id orgId

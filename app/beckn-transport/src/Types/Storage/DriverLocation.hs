@@ -14,9 +14,10 @@ import Database.Beam.Postgres
 import qualified Database.Beam.Postgres.Syntax as B
 import qualified Database.PostgreSQL.Simple.FromField as Pg
 import EulerHS.Prelude hiding (id, state)
+import Types.Storage.Person (Person)
 
 data DriverLocationT f = DriverLocation
-  { id :: B.C f (Id DriverLocation),
+  { driverId :: B.C f (Id Person),
     lat :: B.C f (Maybe Double),
     long :: B.C f (Maybe Double),
     point :: B.C f Point,
@@ -32,9 +33,9 @@ type DriverLocationPrimaryKey = B.PrimaryKey DriverLocationT Identity
 {-# ANN module ("HLint: ignore Redundant id" :: String) #-}
 
 instance B.Table DriverLocationT where
-  data PrimaryKey DriverLocationT f = DriverLocationPrimaryKey (B.C f (Id DriverLocation))
+  data PrimaryKey DriverLocationT f = DriverLocationPrimaryKey (B.C f (Id Person))
     deriving (Generic, B.Beamable)
-  primaryKey = DriverLocationPrimaryKey . id
+  primaryKey = DriverLocationPrimaryKey . driverId
 
 deriving instance Show DriverLocation
 
@@ -52,7 +53,8 @@ fieldEMod =
   B.setEntityName "driver_location"
     <> B.modifyTableFields
       B.tableModification
-        { createdAt = "created_at",
+        { driverId = "driver_id",
+          createdAt = "created_at",
           updatedAt = "updated_at"
         }
 

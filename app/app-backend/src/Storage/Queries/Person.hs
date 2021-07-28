@@ -113,7 +113,6 @@ updateMultiple personId person = do
           gender <-. B.val_ (sPerson.gender),
           email <-. B.val_ (sPerson.email),
           organizationId <-. B.val_ (sPerson.organizationId),
-          locationId <-. B.val_ (sPerson.locationId),
           description <-. B.val_ (sPerson.description),
           role <-. B.val_ (sPerson.role),
           identifier <-. B.val_ (sPerson.identifier),

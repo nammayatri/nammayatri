@@ -1,5 +1,5 @@
 CREATE TABLE atlas_app.organization_location (
-    id character(36) NOT NULL,
+    org_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_app.organization (id) ON DELETE CASCADE,
     lat double precision,
     long double precision,
     district character varying(255),
@@ -14,19 +14,20 @@ CREATE TABLE atlas_app.organization_location (
 
 ALTER TABLE atlas_app.organization_location OWNER TO atlas;
 
-ALTER TABLE ONLY atlas_app.organization_location
-    ADD CONSTRAINT idx_16435_primary PRIMARY KEY (id);
-
 CREATE INDEX idx_16435_city ON atlas_app.organization_location USING btree (city);
 
 CREATE INDEX idx_16435_state ON atlas_app.organization_location USING btree (state);
 
-INSERT INTO atlas_app.organization_location (SELECT id, lat, long, district, city, state, country, pincode, address, created_at, updated_at
-    FROM atlas_app.location WHERE id IN (SELECT location_id FROM atlas_app.organization));
+INSERT INTO atlas_app.organization_location (
+    SELECT T2.id, T1.lat, T1.long, T1.district, T1.city, T1.state, T1.country, T1.pincode, T1.address, T1.created_at, T1.updated_at 
+    FROM atlas_app.location AS T1
+    INNER JOIN atlas_app.organization AS T2
+    ON T1.id = T2.location_id);
 DELETE FROM atlas_app.location WHERE id IN (SELECT location_id FROM atlas_app.organization); 
 
 --------------------------------------------------------------------------------------------
 
+ALTER TABLE atlas_app.person DROP COLUMN location_id;
 ALTER TABLE atlas_app.location DROP COLUMN info;
 ALTER TABLE atlas_app.location DROP COLUMN ward;
 ALTER TABLE atlas_app.location DROP COLUMN point;
@@ -34,3 +35,13 @@ ALTER TABLE atlas_app.location DROP COLUMN location_type;
 ALTER TABLE atlas_app.location DROP COLUMN bound;
 
 ALTER TABLE atlas_app.location RENAME TO search_request_location;
+
+--------------------------------------------------------------------------------------------
+-- Creating locations if there was none for some reason
+--------------------------------------------------------------------------------------------
+
+INSERT INTO atlas_app.organization_location (
+    SELECT T1.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, now (), now ()
+    FROM atlas_app.organization AS T1
+    WHERE NOT EXISTS (SELECT 1 FROM atlas_app.organization_location AS T2 WHERE T1.id = T2.org_id)
+);

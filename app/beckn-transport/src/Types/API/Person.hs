@@ -60,7 +60,7 @@ validateUpdatePersonReq UpdatePersonReq {..} =
 
 modifyPerson :: DBFlow m r => UpdatePersonReq -> SP.Person -> m SP.Person
 modifyPerson req person = do
-  location <- updateOrCreateLocation req $ person.locationId
+  updateLocation req person.id
   return
     -- only these below will be updated in the person table. if you want to add something extra please add in queries also
     person{firstName = ifJust (req.firstName) (person.firstName),
@@ -75,21 +75,15 @@ modifyPerson req person = do
            udf1 = person.udf1,
            udf2 = person.udf2,
            organizationId = person.organizationId,
-           description = ifJust (req.description) (person.description),
-           locationId = Just (SDL.id location)
+           description = ifJust (req.description) (person.description)
           }
 
-updateOrCreateLocation :: DBFlow m r => UpdatePersonReq -> Maybe (Id SDL.DriverLocation) -> m SDL.DriverLocation
-updateOrCreateLocation req Nothing = do
-  drLocation <- makeDriverLocation req
-  QDL.createFlow drLocation
-  return drLocation
-updateOrCreateLocation req (Just drLocId) = do
+updateLocation :: DBFlow m r => UpdatePersonReq -> Id SP.Person -> m ()
+updateLocation req drLocId = do
   drLocation <-
     QDL.findById drLocId
       >>= fromMaybeM LocationDoesNotExist
   QDL.updateLocationRec drLocId $ transformToDriverLocation req drLocation
-  return drLocation
 
 transformToDriverLocation :: UpdatePersonReq -> SDL.DriverLocation -> SDL.DriverLocation
 transformToDriverLocation req location =
@@ -97,17 +91,6 @@ transformToDriverLocation req location =
     { SDL.lat = req.lat,
       SDL.long = req.long
     }
-
-makeDriverLocation :: DBFlow m r => UpdatePersonReq -> m SDL.DriverLocation
-makeDriverLocation UpdatePersonReq {..} = do
-  id <- generateGUID
-  createdAt <- getCurrentTime
-  pure
-    SDL.DriverLocation
-      { updatedAt = createdAt,
-        point = SDL.Point,
-        ..
-      }
 
 ifJust :: Maybe a -> Maybe a -> Maybe a
 ifJust a b = if isJust a then a else b
@@ -168,7 +151,7 @@ buildDriver :: (DBFlow m r, EncFlow m r) => PersonReqEntity -> Id Org.Organizati
 buildDriver req orgId = do
   pid <- generateGUID
   now <- getCurrentTime
-  location <- createDriverLocation req
+  createDriverLocation pid now
   mobileNumber <- encrypt req.mobileNumber
   return
     SP.Person
@@ -193,23 +176,21 @@ buildDriver req orgId = do
         SP.udf2 = Nothing,
         SP.organizationId = Just orgId,
         SP.description = req.description,
-        SP.locationId = Just location.id,
         SP.createdAt = now,
         SP.updatedAt = now
       }
-
-createDriverLocation :: DBFlow m r => PersonReqEntity -> m SDL.DriverLocation
-createDriverLocation req = do
-  location <- createLocationRec req
-  QDL.createFlow location
-  return location
-
--- FIXME? This is to silence hlint reusing as much code from `createLocation`
---   as possible, still we need fake organizationId here ...
--- Better solution in he long run is to factor out common data reducing this
---   enormous amount of duplication ...
-createLocationRec :: DBFlow m r => PersonReqEntity -> m SDL.DriverLocation
-createLocationRec PersonReqEntity {..} = makeDriverLocation UpdatePersonReq {..}
+  where
+    createDriverLocation pid now = do
+      let PersonReqEntity {..} = req
+      let location =
+            SDL.DriverLocation
+              { updatedAt = now,
+                createdAt = now,
+                point = SDL.Point,
+                driverId = pid,
+                ..
+              }
+      QDL.createFlow location
 
 newtype PersonRes = PersonRes
   {user :: UserInfoRes}
@@ -242,7 +223,6 @@ data PersonEntityRes = PersonEntityRes
     udf1 :: Maybe Text,
     udf2 :: Maybe Text,
     organizationId :: Maybe (Id Org.Organization),
-    locationId :: Maybe (Id SDL.DriverLocation),
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     createdAt :: UTCTime,
