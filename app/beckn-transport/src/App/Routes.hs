@@ -364,6 +364,7 @@ type DriverInformationAPI =
              :> Get '[JSON] DriverInformationAPI.GetRideInfoRes
            :<|> "list"
              :> AdminTokenAuth
+             :> QueryParam "searchString" Text
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> Get '[JSON] DriverInformationAPI.ListDriverRes

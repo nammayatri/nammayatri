@@ -1,5 +1,6 @@
 module Storage.Queries.DriverInformation where
 
+import Beckn.External.Encryption (evalDbHash)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
@@ -97,11 +98,12 @@ deleteById driverId_ = do
 
 findAllWithLimitOffsetByOrgIds ::
   DBFlow m r =>
+  Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
   [Id Org.Organization] ->
   m [(Person.Person, DriverInformation.DriverInformation)]
-findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
+findAllWithLimitOffsetByOrgIds mbSearchString mbLimit mbOffset orgIds = do
   personDbTable <- QPerson.getDbTable
   driverInfoDbTable <- getDbTable
 
@@ -117,10 +119,17 @@ findAllWithLimitOffsetByOrgIds mbLimit mbOffset orgIds = do
       B.guard_ $ predicate person
       return (person, driverInfo)
 
-    predicate Person.Person {..} =
+    predicate p@Person.Person {..} =
       foldl
         (&&.)
         (B.val_ True)
-        [ role B.==. B.val_ Person.DRIVER
-            B.&&. organizationId `B.in_` (B.val_ . Just <$> orgIds) B.||. complementVal orgIds
+        [ role B.==. B.val_ Person.DRIVER,
+          organizationId `B.in_` (B.val_ . Just <$> orgIds) B.||. complementVal orgIds,
+          maybe (B.val_ True) (filterBySearchString p) mbSearchString
         ]
+
+    filterBySearchString Person.Person {..} searchStr = do
+      let likeSearchStr = B.concat_ [B.val_ "%", B.val_ searchStr, B.val_ "%"]
+      B.concat_ [unMaybe firstName, B.val_ " ", unMaybe middleName, B.val_ " ", unMaybe lastName] `B.like_` likeSearchStr
+        B.||. mobileNumber.hash B.==. B.val_ (Just $ evalDbHash searchStr)
+    unMaybe = B.maybe_ (B.val_ "") identity
