@@ -46,33 +46,28 @@ import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as SP
 import Types.Storage.ProductInstance (ProductInstance)
 import qualified Types.Storage.Rating as Rating
-import qualified Types.Storage.RegistrationToken as SR
 import Types.Storage.TransporterConfig (ConfigKey (ConfigKey))
 import qualified Types.Storage.Vehicle as SV
 import Utils.Common
 
-updatePerson :: SR.RegistrationToken -> Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes
-updatePerson SR.RegistrationToken {..} (Id personId) req = withFlowHandlerAPI $ do
+updatePerson :: Id SP.Person -> UpdatePersonReq -> FlowHandler UpdatePersonRes
+updatePerson personId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdatePersonReq req
-  verifyPerson entityId
-  person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
+  person <- QP.findPersonById personId >>= fromMaybeM PersonNotFound
   isValidUpdate person
   updatedPerson <- modifyPerson req person
-  DB.runSqlDB (QP.updatePersonRec (Id entityId) updatedPerson)
+  DB.runSqlDB (QP.updatePersonRec personId updatedPerson)
   decPerson <- decrypt updatedPerson
   return . UpdatePersonRes $ makeUserInfoRes decPerson
   where
-    verifyPerson entityId_ =
-      when (personId /= entityId_) $
-        throwError AccessDenied
     isValidUpdate person =
       when (isJust (req.role) && person.role /= SP.ADMIN) $
         throwError Unauthorized
 
-getPersonDetails :: SR.RegistrationToken -> FlowHandler GetPersonDetailsRes
-getPersonDetails regToken = withFlowHandlerAPI $ do
+getPersonDetails :: Id SP.Person -> FlowHandler GetPersonDetailsRes
+getPersonDetails personId = withFlowHandlerAPI $ do
   SP.Person {..} <-
-    QP.findPersonById (Id $ regToken.entityId)
+    QP.findPersonById personId
       >>= fromMaybeM PersonNotFound
   pure $
     GetPersonDetailsRes {..}

@@ -14,13 +14,13 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QProductInstance
 import Types.API.Ride (StartRideReq (..))
 import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Person as SP
 import qualified Types.Storage.ProductInstance as ProductInstance
-import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common (withFlowHandlerAPI)
 
-startRide :: SR.RegistrationToken -> Id ProductInstance.ProductInstance -> StartRideReq -> FlowHandler APISuccess.APISuccess
-startRide SR.RegistrationToken {..} rideId req = withFlowHandlerAPI $ do
-  Handler.startRideHandler handle (Id entityId) (cast rideId) (req.otp)
+startRide :: Id SP.Person -> Id ProductInstance.ProductInstance -> StartRideReq -> FlowHandler APISuccess.APISuccess
+startRide personId rideId req = withFlowHandlerAPI $ do
+  Handler.startRideHandler handle personId (cast rideId) (req.otp)
   where
     handle =
       Handler.ServiceHandle
@@ -30,7 +30,7 @@ startRide SR.RegistrationToken {..} rideId req = withFlowHandlerAPI $ do
           findCaseByIdsAndType = QCase.findByIdType,
           startRide = startRideTransaction,
           notifyBAPRideStarted = \searchPi orderPi -> notifyUpdateToBAP searchPi orderPi ProductInstance.INPROGRESS,
-          rateLimitStartRide = \personId rideId' -> checkSlidingWindowLimit (getId personId <> "_" <> getId rideId')
+          rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId')
         }
 
 startRideTransaction :: DBFlow m r => [Id ProductInstance.ProductInstance] -> Id Case.Case -> Id Case.Case -> m ()

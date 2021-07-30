@@ -44,19 +44,19 @@ cancelRide =
       failedCancellationWhenProductInstanceStatusIsWrong
     ]
 
-runHandler :: CancelRide.ServiceHandle IO -> Text -> Id Ride -> IO APISuccess.APISuccess
+runHandler :: CancelRide.ServiceHandle IO -> Id Person.Person -> Id Ride -> IO APISuccess.APISuccess
 runHandler = CancelRide.cancelRideHandler
 
 successfulCancellationByDriver :: TestTree
 successfulCancellationByDriver =
   testCase "Cancel successfully if requested by driver executor" $ do
-    runHandler handle "1" "1"
+    runHandler handle (Id "1") "1"
       `shouldReturn` APISuccess.Success
 
 successfulCancellationByAdmin :: TestTree
 successfulCancellationByAdmin =
   testCase "Cancel successfully if requested by admin" $ do
-    runHandler handleCase "1" "1"
+    runHandler handleCase (Id "1") "1"
       `shouldReturn` APISuccess.Success
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just admin}
@@ -68,7 +68,7 @@ successfulCancellationByAdmin =
 successfulCancellationWithoutDriverByAdmin :: TestTree
 successfulCancellationWithoutDriverByAdmin =
   testCase "Cancel successfully if ride has no driver but requested by admin" $ do
-    runHandler handleCase "1" "1"
+    runHandler handleCase (Id "1") "1"
       `shouldReturn` APISuccess.Success
   where
     handleCase =
@@ -85,7 +85,7 @@ successfulCancellationWithoutDriverByAdmin =
 failedCancellationByAnotherDriver :: TestTree
 failedCancellationByAnotherDriver =
   testCase "Fail cancellation if requested by driver not executor" $ do
-    runHandler handleCase "driverNotExecutorId" "1"
+    runHandler handleCase (Id "driverNotExecutorId") "1"
       `shouldThrow` (== NotAnExecutor)
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just driverNotExecutor}
@@ -94,7 +94,7 @@ failedCancellationByAnotherDriver =
 failedCancellationByNotDriverAndNotAdmin :: TestTree
 failedCancellationByNotDriverAndNotAdmin =
   testCase "Fail cancellation if requested by neither driver nor admin" $ do
-    runHandler handleCase "managerId" "1"
+    runHandler handleCase (Id "managerId") "1"
       `shouldThrow` (== AccessDenied)
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just manager}
@@ -106,7 +106,7 @@ failedCancellationByNotDriverAndNotAdmin =
 failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =
   testCase "Fail cancellation if ride has no driver and requested by driver" $ do
-    runHandler handleCase "1" "1"
+    runHandler handleCase (Id "1") "1"
       `shouldThrow` (== PIFieldNotPresent "person")
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure $ Just piWithoutDriver}
@@ -115,7 +115,7 @@ failedCancellationWithoutDriverByDriver =
 failedCancellationWhenProductInstanceStatusIsWrong :: TestTree
 failedCancellationWhenProductInstanceStatusIsWrong =
   testCase "Fail cancellation if product instance has inappropriate ride status" $ do
-    runHandler handleCase "1" "1"
+    runHandler handleCase (Id "1") "1"
       `shouldThrow` (\(PIInvalidStatus _) -> True)
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure $ Just completedPI}

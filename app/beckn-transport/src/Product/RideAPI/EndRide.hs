@@ -15,13 +15,13 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as PI
 import Types.App (Driver)
 import qualified Types.Storage.Case as Case
+import qualified Types.Storage.Person as SP
 import qualified Types.Storage.ProductInstance as PI
-import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common (withFlowHandlerAPI)
 
-endRide :: SR.RegistrationToken -> Id PI.ProductInstance -> FlowHandler APISuccess.APISuccess
-endRide SR.RegistrationToken {..} rideId = withFlowHandlerAPI $ do
-  Handler.endRideHandler handle (Id entityId) rideId
+endRide :: Id SP.Person -> Id PI.ProductInstance -> FlowHandler APISuccess.APISuccess
+endRide personId rideId = withFlowHandlerAPI $ do
+  Handler.endRideHandler handle personId rideId
   where
     handle =
       Handler.ServiceHandle

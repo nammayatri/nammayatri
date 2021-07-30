@@ -113,7 +113,6 @@ type PersonAPI =
              :> QueryParam "offset" Integer
              :> Get '[JSON] ListPersonRes
            :<|> TokenAuth
-             :> Capture "personId" (Id Person)
              :> "update"
              :> ReqBody '[JSON] UpdatePersonReq
              :> Post '[JSON] UpdatePersonRes

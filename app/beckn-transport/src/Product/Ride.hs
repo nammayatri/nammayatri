@@ -16,7 +16,7 @@ import qualified Storage.Queries.RideRequest as RideRequest
 import Types.API.Ride
 import Types.Storage.AllocationEvent
 import qualified Types.Storage.AllocationEvent as AllocationEvent
-import qualified Types.Storage.RegistrationToken as SR
+import qualified Types.Storage.Person as SP
 import Types.Storage.RideRequest
 import Utils.Common
 
@@ -24,8 +24,8 @@ responseToEventType :: NotificationStatus -> AllocationEventType
 responseToEventType ACCEPT = AllocationEvent.AcceptedByDriver
 responseToEventType REJECT = AllocationEvent.RejectedByDriver
 
-setDriverAcceptance :: SR.RegistrationToken -> SetDriverAcceptanceReq -> FlowHandler SetDriverAcceptanceRes
-setDriverAcceptance token req = withFlowHandlerAPI $ do
+setDriverAcceptance :: Id SP.Person -> SetDriverAcceptanceReq -> FlowHandler SetDriverAcceptanceRes
+setDriverAcceptance personId req = withFlowHandlerAPI $ do
   currentTime <- getCurrentTime
   logTagInfo "setDriverAcceptance" logMessage
   productInstance <-
@@ -36,7 +36,7 @@ setDriverAcceptance token req = withFlowHandlerAPI $ do
       >>= fromMaybeM OrgDoesNotExist
   guid <- generateGUID
   let driverResponse =
-        DriverResponse {driverId = Id driverId, status = req.response, respondedAt = currentTime}
+        DriverResponse {driverId = driverId, status = req.response, respondedAt = currentTime}
   let rideRequest =
         RideRequest
           { id = Id guid,
@@ -50,15 +50,15 @@ setDriverAcceptance token req = withFlowHandlerAPI $ do
   AllocationEvent.logAllocationEvent
     (responseToEventType response)
     (cast productInstanceId)
-    (Just $ Id driverId)
+    (Just driverId)
   pure Success
   where
     response = req.response
     productInstanceId = req.productInstanceId
-    driverId = token.entityId
+    driverId = cast personId
     logMessage =
       "beckn:" <> productInstanceId.getId <> ":"
-        <> driverId
+        <> getId driverId
         <> ":response"
         <> " "
         <> show response

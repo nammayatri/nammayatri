@@ -9,6 +9,7 @@ import Types.App (Ride)
 import Types.Error
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as Person
+import qualified Types.Storage.Person as SP
 import Types.Storage.ProductInstance (ProductInstance, ProductInstanceStatus (..))
 import Utils.Common
 
@@ -20,12 +21,12 @@ data ServiceHandle m = ServiceHandle
     cancelRide :: Id Ride -> CancellationReason -> m ()
   }
 
-cancelRideHandler :: MonadHandler m => ServiceHandle m -> Text -> Id Ride -> m APISuccess.APISuccess
-cancelRideHandler ServiceHandle {..} authorizedEntityId rideId = do
+cancelRideHandler :: MonadHandler m => ServiceHandle m -> Id SP.Person -> Id Ride -> m APISuccess.APISuccess
+cancelRideHandler ServiceHandle {..} personId rideId = do
   prodInst <- findPIById (cast rideId) >>= fromMaybeM PIDoesNotExist
   unless (isValidPI prodInst) $ throwError $ PIInvalidStatus "This ride cannot be canceled"
   authPerson <-
-    findPersonById (Id authorizedEntityId)
+    findPersonById personId
       >>= fromMaybeM PersonNotFound
   case authPerson.role of
     Person.ADMIN -> cancelRide rideId ByOrganization

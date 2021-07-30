@@ -20,13 +20,12 @@ import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Location as Location
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
-import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common hiding (id)
 
-updateLocation :: SR.RegistrationToken -> UpdateLocationReq -> FlowHandler APISuccess
-updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
+updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
+updateLocation personId req = withFlowHandlerAPI $ do
   driver <-
-    Person.findPersonById (Id entityId)
+    Person.findPersonById personId
       >>= fromMaybeM PersonNotFound
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
   locationId <- driver.locationId & fromMaybeM (PersonFieldNotPresent "location_id")
@@ -42,7 +41,7 @@ updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
     DB.runSqlDBTransaction $ do
       whenJust distanceMb $ QPI.updateDistance driver.id
       Location.updateGpsCoord locationId lastUpdate currPoint
-    logTagInfo "driverLocationUpdate" (entityId <> " " <> show req.waypoints)
+    logTagInfo "driverLocationUpdate" (getId personId <> " " <> show req.waypoints)
   return Success
   where
     refreshPeriod = secondsToNominalDiffTime 10
@@ -87,7 +86,7 @@ getRoute' ::
   m (Maybe MapSearch.Route)
 getRoute' = MapSearch.getRouteMb (Just MapSearch.CAR)
 
-getRoutes :: SR.RegistrationToken -> Location.Request -> FlowHandler Location.Response
+getRoutes :: Id Person.Person -> Location.Request -> FlowHandler Location.Response
 getRoutes _ = withFlowHandlerAPI . MapSearch.getRoutes
 
 calculateDistance ::

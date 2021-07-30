@@ -47,11 +47,6 @@ updateVerified rtId verified_ = do
         ]
     predicate rtid Storage.RegistrationToken {..} = id ==. B.val_ rtid
 
-verifyToken :: DBFlow m r => RegToken -> m Storage.RegistrationToken
-verifyToken regToken = do
-  logInfo "Verifying Token"
-  findRegistrationTokenByToken regToken >>= fromMaybeM (InvalidToken regToken)
-
 findRegistrationTokenByToken :: DBFlow m r => RegToken -> m (Maybe Storage.RegistrationToken)
 findRegistrationTokenByToken regToken = do
   dbTable <- getDbTable

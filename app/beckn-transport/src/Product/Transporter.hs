@@ -17,14 +17,13 @@ import Types.Error
 import qualified Types.Storage.FarePolicy as SFarePolicy
 import qualified Types.Storage.Organization as SO
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.RegistrationToken as SR
 import qualified Types.Storage.Vehicle as SVehicle
 import Utils.Common
 
-createTransporter :: SR.RegistrationToken -> TransporterReq -> FlowHandler TransporterRes
-createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
+createTransporter :: Id SP.Person -> TransporterReq -> FlowHandler TransporterRes
+createTransporter personId req = withFlowHandlerAPI $ do
   runRequestValidation validateTransporterReq req
-  person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
+  person <- QP.findPersonById personId >>= fromMaybeM PersonNotFound
   validate person
   organization <- createOrganization req
   validateReq
@@ -33,9 +32,9 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
   hatchbackFarePolicy <- mkFarePolicy (organization.id) SVehicle.HATCHBACK (organization.createdAt)
   QO.create organization
   traverse_ QFarePolicy.create [sedanFarePolicy, suvFarePolicy, hatchbackFarePolicy]
-  QP.updateOrganizationIdAndMakeAdmin (Id entityId) (SO.id organization)
+  QP.updateOrganizationIdAndMakeAdmin personId (SO.id organization)
   updatedPerson <-
-    QP.findPersonById (Id entityId)
+    QP.findPersonById personId
       >>= fromMaybeM PersonNotFound
       >>= decrypt
   return $ TransporterRes (makeUserInfoRes updatedPerson) organization
@@ -69,10 +68,10 @@ createTransporter SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
             updatedAt = now
           }
 
-updateTransporter :: SR.RegistrationToken -> Id SO.Organization -> UpdateTransporterReq -> FlowHandler TransporterRec
-updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
+updateTransporter :: Id SP.Person -> Id SO.Organization -> UpdateTransporterReq -> FlowHandler TransporterRec
+updateTransporter personId orgId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdateTransporterReq req
-  maybePerson <- QP.findPersonByIdAndRoleAndOrgId (Id entityId) SP.ADMIN orgId
+  maybePerson <- QP.findPersonByIdAndRoleAndOrgId personId SP.ADMIN orgId
   now <- getCurrentTime
   case maybePerson of
     Just person -> do
@@ -93,10 +92,10 @@ updateTransporter SR.RegistrationToken {..} orgId req = withFlowHandlerAPI $ do
     addTime fromTime org =
       return $ org {SO.fromTime = fromTime}
 
-getTransporter :: SR.RegistrationToken -> FlowHandler TransporterRec
-getTransporter SR.RegistrationToken {..} = withFlowHandlerAPI $ do
+getTransporter :: Id SP.Person -> FlowHandler TransporterRec
+getTransporter personId = withFlowHandlerAPI $ do
   person <-
-    QP.findPersonById (Id entityId)
+    QP.findPersonById personId
       >>= fromMaybeM PersonNotFound
   validate person
   case person.organizationId of

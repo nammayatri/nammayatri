@@ -208,12 +208,12 @@ reInitiateLogin tokenId req =
 clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()
 clearOldRegToken person = QR.deleteByEntitiyIdExceptNew (getId $ person.id)
 
-logout :: SR.RegistrationToken -> FlowHandler APISuccess
-logout SR.RegistrationToken {..} = withFlowHandlerAPI $ do
+logout :: Id SP.Person -> FlowHandler APISuccess
+logout personId = withFlowHandlerAPI $ do
   uperson <-
-    QP.findPersonById (Id entityId)
+    QP.findPersonById personId
       >>= fromMaybeM PersonNotFound
   DB.runSqlDBTransaction $ do
     QP.updatePersonRec (uperson.id) uperson {SP.deviceToken = Nothing}
-    QR.deleteByEntitiyId entityId
+    QR.deleteByEntitiyId $ getId personId
   pure Success

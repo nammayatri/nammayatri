@@ -8,10 +8,10 @@ import EulerHS.Prelude
 import ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.ProductInstance as PI
 import Types.Error
-import qualified Types.Storage.RegistrationToken as SR
+import qualified Types.Storage.Person as SP
 import Utils.Common
 
-initiateCall :: SR.RegistrationToken -> CallReq -> FlowHandler CallRes
+initiateCall :: Id SP.Person -> CallReq -> FlowHandler CallRes
 initiateCall _ req = withFlowHandlerAPI $ do
   prdInstance <- PI.findById (Id req.productInstanceId) >>= fromMaybeM PIDoesNotExist -- RIDEORDER PI
   Id rideSearchProductInstanceId <- prdInstance.parentId & fromMaybeM (PIFieldNotPresent "parent_id")

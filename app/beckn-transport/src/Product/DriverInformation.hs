@@ -31,7 +31,6 @@ import Types.App
 import Types.Error
 import qualified Types.Storage.DriverInformation as DriverInfo
 import qualified Types.Storage.Person as SP
-import Types.Storage.RegistrationToken (RegistrationToken, RegistrationTokenT (..))
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 
 createDriver :: Text -> DriverInformationAPI.CreateDriverReq -> FlowHandler DriverInformationAPI.CreateDriverRes
@@ -84,11 +83,11 @@ createDriverDetails personId = do
   where
     driverId = cast personId
 
-getInformation :: RegistrationToken -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
-getInformation RegistrationToken {..} = withFlowHandlerAPI $ do
-  _ <- Registration.checkPersonExists entityId
-  let driverId = Id entityId
-  person <- QPerson.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
+getInformation :: Id SP.Person -> App.FlowHandler DriverInformationAPI.DriverInformationResponse
+getInformation personId = withFlowHandlerAPI $ do
+  _ <- Registration.checkPersonExists $ getId personId
+  let driverId = cast personId
+  person <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
   personEntity <- Person.mkPersonRes person
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   organization <-
@@ -102,15 +101,15 @@ getInformation RegistrationToken {..} = withFlowHandlerAPI $ do
         driverInformation = driverInfo
       }
 
-setActivity :: RegistrationToken -> Bool -> App.FlowHandler APISuccess.APISuccess
-setActivity RegistrationToken {..} isActive = withFlowHandlerAPI $ do
-  _ <- Registration.checkPersonExists entityId
-  let driverId = Id entityId
+setActivity :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
+setActivity personId isActive = withFlowHandlerAPI $ do
+  _ <- Registration.checkPersonExists $ getId personId
+  let driverId = cast personId
   QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
 
-getRideInfo :: RegistrationToken -> Maybe (Id Ride) -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
-getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
+getRideInfo :: Id SP.Person -> Maybe (Id Ride) -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
+getRideInfo personId rideId = withFlowHandlerAPI $ do
   mbNotification <- QNotificationStatus.findActiveNotificationByDriverId driverId rideId
   case mbNotification of
     Nothing -> return $ DriverInformationAPI.GetRideInfoRes Nothing
@@ -118,7 +117,7 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
       let productInstanceId = cast $ notification.rideId
       let notificationExpiryTime = notification.expiresAt
       productInstance <- QueryPI.findById productInstanceId >>= fromMaybeM PINotFound
-      driver <- QPerson.findPersonById (cast driverId) >>= fromMaybeM PersonNotFound
+      driver <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
       driverLocation <-
         driver.locationId & fromMaybeM (PersonFieldNotPresent "location_id")
           >>= QLocation.findLocationById
@@ -151,7 +150,7 @@ getRideInfo RegistrationToken {..} rideId = withFlowHandlerAPI $ do
                 estimatedPrice = amountToString <$> productInstance.price
               }
   where
-    driverId = Id entityId
+    driverId = cast personId
 
 listDriver :: Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbLimit mbOffset = withFlowHandlerAPI $ do

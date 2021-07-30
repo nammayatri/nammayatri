@@ -25,16 +25,15 @@ import qualified Types.Storage.Location as Loc
 import qualified Types.Storage.Organization as SO
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.ProductInstance as PI
-import qualified Types.Storage.RegistrationToken as SR
 import qualified Types.Storage.Vehicle as V
 import Utils.Common
 import qualified Utils.Defaults as Default
 import qualified Utils.Notifications as Notify
 
-list :: SR.RegistrationToken -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
-list SR.RegistrationToken {..} status csTypes limitM offsetM = withFlowHandlerAPI $ do
+list :: Id SP.Person -> [PI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
+list personId status csTypes limitM offsetM = withFlowHandlerAPI $ do
   person <-
-    PersQ.findPersonById (Id entityId)
+    PersQ.findPersonById personId
       >>= fromMaybeM PersonNotFound
   case person.organizationId of
     Just orgId -> do
@@ -75,10 +74,10 @@ notifyUpdateToBAP searchPi orderPi updatedStatus = do
   notifyTripDetailsToGateway transporter searchPi orderPi
   notifyStatusUpdateReq transporter searchPi updatedStatus
 
-listDriverRides :: SR.RegistrationToken -> Id SP.Person -> FlowHandler RideListRes
-listDriverRides SR.RegistrationToken {..} personId = withFlowHandlerAPI $ do
-  user <- PersQ.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
-  person <- PersQ.findPersonById personId >>= fromMaybeM PersonDoesNotExist
+listDriverRides :: Id SP.Person -> Id SP.Person -> FlowHandler RideListRes
+listDriverRides personId driverId = withFlowHandlerAPI $ do
+  user <- PersQ.findPersonById personId >>= fromMaybeM PersonNotFound
+  person <- PersQ.findPersonById driverId >>= fromMaybeM PersonDoesNotExist
   hasAccess user person
   rideList <- PIQ.findAllByPersonId person.id
   locList <- LQ.findAllByLocIds (catMaybes (PI.fromLocation <$> rideList)) (catMaybes (PI.toLocation <$> rideList))
@@ -102,9 +101,9 @@ listDriverRides SR.RegistrationToken {..} personId = withFlowHandlerAPI $ do
               toLocation = to
             }
 
-listVehicleRides :: SR.RegistrationToken -> Id V.Vehicle -> FlowHandler RideListRes
-listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandlerAPI $ do
-  user <- PersQ.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
+listVehicleRides :: Id SP.Person -> Id V.Vehicle -> FlowHandler RideListRes
+listVehicleRides personId vehicleId = withFlowHandlerAPI $ do
+  user <- PersQ.findPersonById personId >>= fromMaybeM PersonNotFound
   vehicle <- VQ.findVehicleById vehicleId
   hasAccess user vehicle
   rideList <- PIQ.findAllByVehicleId (Just vehicleId)
@@ -129,8 +128,8 @@ listVehicleRides SR.RegistrationToken {..} vehicleId = withFlowHandlerAPI $ do
               toLocation = to
             }
 
-listCasesByProductInstance :: SR.RegistrationToken -> Id PI.ProductInstance -> Maybe Case.CaseType -> FlowHandler APICase.CaseListRes
-listCasesByProductInstance SR.RegistrationToken {..} piId csType = withFlowHandlerAPI $ do
+listCasesByProductInstance :: Id SP.Person -> Id PI.ProductInstance -> Maybe Case.CaseType -> FlowHandler APICase.CaseListRes
+listCasesByProductInstance _ piId csType = withFlowHandlerAPI $ do
   prodInst <- PIQ.findById piId >>= fromMaybeM PIDoesNotExist
   piList <-
     prodInst.parentId & fromMaybeM (PIFieldNotPresent "parent_id")

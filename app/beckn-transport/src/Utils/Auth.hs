@@ -3,6 +3,7 @@ module Utils.Auth where
 import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Utils.Common as CoreCommon
+import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
@@ -14,6 +15,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.Error
 import Types.Storage.Organization (Organization)
+import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SR
 
@@ -61,13 +63,13 @@ type TokenAuth = HeaderAuth "token" VerifyToken
 data VerifyToken = VerifyToken
 
 instance VerificationMethod VerifyToken where
-  type VerificationResult VerifyToken = SR.RegistrationToken
+  type VerificationResult VerifyToken = Id Person.Person
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
 verifyTokenAction :: DBFlow m r => VerificationAction VerifyToken m
-verifyTokenAction = VerificationAction QR.verifyToken
+verifyTokenAction = VerificationAction verifyPerson
 
 -- | Verifies admin's token.
 type AdminTokenAuth = HeaderAuth "token" AdminVerifyToken
@@ -107,9 +109,15 @@ verifyDriver user = do
     Just orgId -> return $ getId orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
+verifyToken :: DBFlow m r => RegToken -> m SR.RegistrationToken
+verifyToken regToken = do
+  QR.findRegistrationTokenByToken regToken
+    >>= Utils.fromMaybeM (InvalidToken regToken)
+    >>= validateToken
+
 validateAdmin :: (DBFlow m r, EncFlow m r) => RegToken -> m Text
 validateAdmin regToken = do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+  SR.RegistrationToken {..} <- verifyToken regToken
   user <-
     QP.findPersonById (Id entityId)
       >>= fromMaybeM PersonNotFound
@@ -117,14 +125,26 @@ validateAdmin regToken = do
 
 validateDriver :: (DBFlow m r, EncFlow m r) => RegToken -> m Text
 validateDriver regToken = do
-  SR.RegistrationToken {..} <- QR.verifyToken regToken
+  SR.RegistrationToken {..} <- verifyToken regToken
   user <-
     QP.findPersonById (Id entityId)
       >>= fromMaybeM PersonNotFound
   verifyDriver user
+
+verifyPerson :: DBFlow m r => RegToken -> m (Id Person.Person)
+verifyPerson token = do
+  sr <- verifyToken token
+  return $ Id sr.entityId
 
 validateAdminAction :: (DBFlow m r, EncFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin
 
 validateDriverAction :: (DBFlow m r, EncFlow m r) => VerificationAction DriverVerifyToken m
 validateDriverAction = VerificationAction validateAdmin
+
+validateToken :: DBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
+validateToken sr@SR.RegistrationToken {..} = do
+  let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
+  expired <- Utils.isExpired nominal updatedAt
+  when expired $ Utils.throwError TokenExpired
+  return sr

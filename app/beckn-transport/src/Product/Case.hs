@@ -13,13 +13,13 @@ import Types.Error
 import Types.Storage.Case as Case
 import Types.Storage.Location as Location
 import Types.Storage.Organization as Organization
-import qualified Types.Storage.RegistrationToken as SR
+import qualified Types.Storage.Person as SP
 import Utils.Common
 import qualified Utils.Defaults as Default
 
-list :: SR.RegistrationToken -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
-list SR.RegistrationToken {..} status csType limitM offsetM = withFlowHandlerAPI $ do
-  person <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
+list :: Id SP.Person -> [CaseStatus] -> CaseType -> Maybe Int -> Maybe Int -> FlowHandler CaseListRes
+list personId status csType limitM offsetM = withFlowHandlerAPI $ do
+  person <- QP.findPersonById personId >>= fromMaybeM PersonNotFound
   now <- getCurrentTime
   case person.organizationId of
     Just orgId -> do

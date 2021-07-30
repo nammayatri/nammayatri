@@ -10,7 +10,6 @@ import Types.API.Vehicle as API
 import Types.Error
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.RegistrationToken as SR
 import qualified Types.Storage.Vehicle as SV
 import Utils.Common
 import qualified Utils.Defaults as Default
@@ -57,10 +56,10 @@ deleteVehicle orgId vehicleId = withFlowHandlerAPI $ do
       return . DeleteVehicleRes $ getId vehicleId
     else throwError Unauthorized
 
-getVehicle :: SR.RegistrationToken -> Maybe Text -> Maybe (Id SV.Vehicle) -> FlowHandler CreateVehicleRes
-getVehicle SR.RegistrationToken {..} registrationNoM vehicleIdM = withFlowHandlerAPI $ do
+getVehicle :: Id SP.Person -> Maybe Text -> Maybe (Id SV.Vehicle) -> FlowHandler CreateVehicleRes
+getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
   user <-
-    QP.findPersonById (Id entityId)
+    QP.findPersonById personId
       >>= fromMaybeM PersonNotFound
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."

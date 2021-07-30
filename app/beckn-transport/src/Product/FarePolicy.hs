@@ -11,13 +11,13 @@ import Types.API.FarePolicy
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import Types.Error
 import qualified Types.Storage.FarePolicy as SFarePolicy
-import qualified Types.Storage.RegistrationToken as RegToken
+import qualified Types.Storage.Person as SP
 import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
-listFarePolicies :: RegToken.RegistrationToken -> FlowHandler ListFarePolicyResponse
-listFarePolicies RegToken.RegistrationToken {entityId} = withFlowHandlerAPI $ do
+listFarePolicies :: Id SP.Person -> FlowHandler ListFarePolicyResponse
+listFarePolicies personId = withFlowHandlerAPI $ do
   person <-
-    SPerson.findPersonById (Id entityId)
+    SPerson.findPersonById personId
       >>= fromMaybeM PersonNotFound
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   farePolicies <- SFarePolicy.findFarePoliciesByOrgId orgId
@@ -35,7 +35,7 @@ listFarePolicies RegToken.RegistrationToken {entityId} = withFlowHandlerAPI $ do
           nightShiftRate = fp.nightShiftRate
         }
 
-updateFarePolicy :: RegToken.RegistrationToken -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler UpdateFarePolicyResponse
+updateFarePolicy :: Id SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler UpdateFarePolicyResponse
 updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM NoFarePolicy
