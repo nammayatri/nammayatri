@@ -35,6 +35,7 @@ packages:
   - app/beckn-transport
   - app/app-backend
   - app/fmd-wrapper
+  - app/mock-registry
   - app/mock-sms
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.

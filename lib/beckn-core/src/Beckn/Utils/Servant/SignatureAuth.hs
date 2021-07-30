@@ -4,7 +4,6 @@
 
 module Beckn.Utils.Servant.SignatureAuth where
 
-import Beckn.Storage.DB.Config
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
@@ -70,7 +69,6 @@ class LookupMethod lookup where
   lookupDescription :: Text
 
 class AuthenticatingEntity r where
-  getSelfId :: r -> Text
   getSelfUrl :: r -> BaseUrl
   getRegistry :: r -> [Credential]
   getSigningKeys :: r -> [SigningKey]
@@ -137,8 +135,7 @@ instance
     HasEnvEntry r ctx,
     KnownSymbol header,
     HasCoreMetrics r,
-    HasLookupAction lookup (FlowR r),
-    HasDbCfg r
+    HasLookupAction lookup (FlowR r)
   ) =>
   HasServer (SignatureAuth header lookup :> api) ctx
   where
@@ -240,7 +237,7 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
 
 verifySignature ::
   forall lookup r m.
-  (MonadReader r m, DBFlow m r, HasLookupAction lookup m) =>
+  (MonadReader r m, MonadThrow m, Log m, HasLookupAction lookup m) =>
   Text ->
   HttpSig.SignaturePayload ->
   HttpSig.Hash ->

@@ -114,7 +114,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getSelfId = selfId
   getSelfUrl = nwAddress
   getRegistry = credRegistry
   getSigningKeys = signingKeys

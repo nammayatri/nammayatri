@@ -120,7 +120,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getSelfId = bapSelfId
   getSelfUrl = bapNwAddress
   getRegistry = credRegistry
   getSigningKeys = signingKeys

@@ -3,6 +3,7 @@ module Beckn.Utils.Registry
     lookupKey,
     lookupOrg,
     lookupSigningKey,
+    lookupCredByShortId,
     prepareSigningKeyPair,
   )
 where
@@ -21,6 +22,9 @@ lookupOrg shortOrgId = find (\credential -> credential.shortOrgId == shortOrgId)
 
 lookupSigningKey :: Text -> [SigningKey] -> Maybe SigningKey
 lookupSigningKey uniqueKeyId = find (\signingKey -> signingKey.uniqueKeyId == uniqueKeyId)
+
+lookupCredByShortId :: Text -> [Credential] -> Maybe Credential
+lookupCredByShortId shortId = find (\credential -> credential.shortOrgId == shortId)
 
 decodeKey :: Text -> Maybe ByteString
 decodeKey = rightToMaybe . Base64.decode . encodeUtf8
