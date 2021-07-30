@@ -49,6 +49,7 @@ in
 { dbCfg = pgcfg
 , redisCfg = rcfg
 , port = +8018
+, metricsPort = +9995
 , xGatewayUri = gwUri
 , xGatewayApiKey = Some "fmd-wrapper-key"
 , migrationPath = Some (env:FMD_WRAPPER_MIGRATION_PATH as Text ? "dev/migrations/fmd-wrapper")

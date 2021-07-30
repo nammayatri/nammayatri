@@ -13,6 +13,7 @@ import qualified Beckn.Types.App as App
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration
+import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
@@ -31,6 +32,7 @@ import Utils.Common
 runFMDWrapper :: (AppCfg -> AppCfg) -> IO ()
 runFMDWrapper configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "fmd-wrapper"
+  Metrics.serve (appCfg.metricsPort)
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <- buildAppEnv appCfg

@@ -26,6 +26,7 @@ data AppCfg = AppCfg
   { dbCfg :: DBConfig,
     redisCfg :: T.RedisConfig,
     port :: Int,
+    metricsPort :: Int,
     selfId :: Text,
     xGatewayUri :: BaseUrl,
     xGatewayApiKey :: Maybe Text,

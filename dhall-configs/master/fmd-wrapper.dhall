@@ -48,6 +48,7 @@ in
 { dbCfg = pgcfg
 , redisCfg = rcfg
 , port = +8018
+, metricsPort = +9999
 , xGatewayUri = gwUri
 , xGatewayApiKey = Some "fmd-wrapper-key"
 , migrationPath = None Text
