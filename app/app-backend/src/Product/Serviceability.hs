@@ -1,6 +1,7 @@
 module Product.Serviceability where
 
 import App.Types
+import Beckn.Types.Id
 import EulerHS.Prelude hiding (length)
 import Storage.Queries.Geometry (someGeometriesContain)
 import Types.API.Serviceability
@@ -21,14 +22,14 @@ rideServiceable RideServiceabilityReq {..} = do
       Region region -> someGeometriesContain destination region
   pure $ originServiceable && destinationServiceable
 
-checkRideServiceability :: Person.Person -> RideServiceabilityReq -> FlowHandler RideServiceabilityRes
+checkRideServiceability :: Id Person.Person -> RideServiceabilityReq -> FlowHandler RideServiceabilityRes
 checkRideServiceability _ req =
   withFlowHandlerAPI $
     RideServiceabilityRes <$> rideServiceable req
 
 checkServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
-  Person.Person ->
+  Id Person.Person ->
   ServiceabilityReq ->
   FlowHandler ServiceabilityRes
 checkServiceability settingAccessor _ ServiceabilityReq {..} = withFlowHandlerAPI $ do

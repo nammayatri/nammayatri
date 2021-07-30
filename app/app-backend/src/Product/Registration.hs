@@ -214,9 +214,9 @@ reInitiateLogin tokenId req =
 clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()
 clearOldRegToken person = RegistrationToken.deleteByPersonIdExceptNew (getId $ person.id)
 
-logout :: SP.Person -> FlowHandler APISuccess
-logout person = withFlowHandlerAPI $ do
+logout :: Id SP.Person -> FlowHandler APISuccess
+logout personId = withFlowHandlerAPI $ do
   DB.runSqlDBTransaction $ do
-    Person.updateMultiple (person.id) person {SP.deviceToken = Nothing}
-    RegistrationToken.deleteByPersonId $ getId $ person.id
+    Person.updateDeviceToken personId Nothing
+    RegistrationToken.deleteByPersonId personId
   pure Success

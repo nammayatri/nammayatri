@@ -29,7 +29,7 @@ import Utils.Common
   )
 
 -- | Try to initiate a call customer -> provider
-initiateCallToProvider :: Person.Person -> CallReq -> FlowHandler CallRes
+initiateCallToProvider :: Id Person.Person -> CallReq -> FlowHandler CallRes
 initiateCallToProvider _ req = withFlowHandlerAPI $ do
   let piId = req.productInstanceId
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId

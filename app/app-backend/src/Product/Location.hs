@@ -2,6 +2,7 @@ module Product.Location where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
+import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -12,8 +13,8 @@ import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Person as Person
 import Utils.Common
 
-getRoute :: Person.Person -> Location.Request -> FlowHandler Location.Response
-getRoute _person = withFlowHandlerAPI . MapSearch.getRoutes
+getRoute :: Id Person.Person -> Location.Request -> FlowHandler Location.Response
+getRoute _ = withFlowHandlerAPI . MapSearch.getRoutes
 
 getDistance ::
   ( CoreMetrics m,

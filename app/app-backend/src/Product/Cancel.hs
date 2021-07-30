@@ -23,24 +23,24 @@ import Utils.Common
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
-cancel :: Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
-cancel person req = withFlowHandlerAPI $ do
+cancel :: Id Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
+cancel personId req = withFlowHandlerAPI $ do
   let entityType = req.entityType
   case entityType of
-    Cancel.CASE -> searchCancel person req
-    Cancel.PRODUCT_INSTANCE -> cancelProductInstance person req
+    Cancel.CASE -> searchCancel personId req
+    Cancel.PRODUCT_INSTANCE -> cancelProductInstance personId req
 
 cancelProductInstance ::
   ( DBFlow m r,
     Metrics.CoreMetrics m
   ) =>
-  Person.Person ->
+  Id Person.Person ->
   CancelReq ->
   m CancelRes
-cancelProductInstance person req = do
+cancelProductInstance personId req = do
   let searchPIid = req.entityId
   searchPI <- MPI.findById (Id searchPIid) >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
-  searchCase <- MC.findIdByPerson person (searchPI.caseId) >>= fromMaybeM CaseNotFound
+  searchCase <- MC.findIdByPersonId personId (searchPI.caseId) >>= fromMaybeM CaseNotFound
   orderPI <- MPI.findByParentIdType (searchPI.id) Case.RIDEORDER >>= fromMaybeM PINotFound
   unless (isProductInstanceCancellable orderPI) $
     throwError $ PIInvalidStatus "Cannot cancel this ride"
@@ -54,10 +54,10 @@ cancelProductInstance person req = do
   ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
   return Success
 
-searchCancel :: (Metrics.HasBAPMetrics m r, DBFlow m r) => Person.Person -> CancelReq -> m CancelRes
-searchCancel person req = do
+searchCancel :: (Metrics.HasBAPMetrics m r, DBFlow m r) => Id Person.Person -> CancelReq -> m CancelRes
+searchCancel personId req = do
   let caseId = req.entityId
-  searchCase <- MC.findIdByPerson person (Id caseId) >>= fromMaybeM CaseDoesNotExist
+  searchCase <- MC.findIdByPersonId personId (Id caseId) >>= fromMaybeM CaseDoesNotExist
   unless (isCaseCancellable searchCase) $ throwError (CaseInvalidStatus "Cannot cancel with this case")
   Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
   searchPIList <- MPI.findAllByCaseId (searchCase.id)

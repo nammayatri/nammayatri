@@ -55,7 +55,6 @@ import qualified Types.API.Support as Support
 import qualified Types.API.Track as TrackTrip
 import Types.Geofencing
 import qualified Types.Storage.Case as Case hiding (status)
-import qualified Types.Storage.Person as Person
 import Types.Storage.ProductInstance
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
@@ -239,13 +238,7 @@ type ProductInstanceAPI =
            :> Get '[JSON] ProductInstance.ProductInstanceList
        )
 
-productInstanceFlow ::
-  Person.Person ->
-  [ProductInstanceStatus] ->
-  [Case.CaseType] ->
-  Maybe Int ->
-  Maybe Int ->
-  FlowHandler ProductInstance.ProductInstanceList
+productInstanceFlow :: FlowServer ProductInstanceAPI
 productInstanceFlow =
   ProductInstance.list
 

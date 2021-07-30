@@ -19,11 +19,11 @@ import qualified Types.Storage.Products as Products
 import Utils.Common
 
 getStatus ::
-  Person.Person ->
+  Id Person.Person ->
   Id Case.Case ->
   FlowHandler GetStatusRes
-getStatus person caseId = withFlowHandlerAPI $ do
-  case_ <- Case.findIdByPerson person caseId >>= fromMaybeM CaseDoesNotExist
+getStatus personId caseId = withFlowHandlerAPI $ do
+  case_ <- Case.findIdByPersonId personId caseId >>= fromMaybeM CaseDoesNotExist
   prodInstRes <- getProdInstances case_
   fromLocation <-
     fromMaybeM LocationNotFound
@@ -34,15 +34,15 @@ getStatus person caseId = withFlowHandlerAPI $ do
   return $ GetStatusRes case_ prodInstRes fromLocation toLocation
 
 list ::
-  Person.Person ->
+  Id Person.Person ->
   Case.CaseType ->
   [Case.CaseStatus] ->
   Maybe Integer ->
   Maybe Integer ->
   FlowHandler CaseListRes
-list person caseType statuses mlimit moffset =
+list personId caseType statuses mlimit moffset =
   withFlowHandlerAPI $
-    Case.findAllByTypeAndStatuses (person.id) caseType statuses mlimit moffset
+    Case.findAllByTypeAndStatuses personId caseType statuses mlimit moffset
       >>= traverse mapProductInstance
   where
     mapProductInstance case_@Case.Case {..} = do

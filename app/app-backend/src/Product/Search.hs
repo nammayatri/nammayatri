@@ -47,13 +47,13 @@ import qualified Types.Storage.Products as Products
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
-search :: Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
-search person req = withFlowHandlerAPI $ do
+search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
+search personId req = withFlowHandlerAPI $ do
   validateDateTime req
   validateServiceability req
   fromLocation <- mkLocation $ toBeckn $ req.origin
   toLocation <- mkLocation $ toBeckn $ req.destination
-  case_ <- mkCase req (getId $ person.id) fromLocation toLocation
+  case_ <- mkCase req (getId personId) fromLocation toLocation
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   let txnId = getId (case_.id)
   Metrics.startSearchMetrics txnId

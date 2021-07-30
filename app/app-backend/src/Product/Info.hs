@@ -15,7 +15,7 @@ import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
 
-getProductInfo :: Person.Person -> Id SPI.ProductInstance -> FlowHandler GetProductInfoRes
+getProductInfo :: Id Person.Person -> Id SPI.ProductInstance -> FlowHandler GetProductInfoRes
 getProductInfo _ prodInstId = withFlowHandlerAPI $ do
   productInstance <- MPI.findById prodInstId >>= fromMaybeM PIDoesNotExist
   case decodeFromText =<< SPI.info productInstance of
@@ -38,9 +38,9 @@ getProductInfo _ prodInstId = withFlowHandlerAPI $ do
         >> throwError (PIFieldNotPresent "info")
 
 -- TODO: fetch tracking URL from tracker info
-getLocation :: Person.Person -> Id SC.Case -> FlowHandler GetLocationRes
-getLocation person caseId = withFlowHandlerAPI $ do
-  _ <- Case.findIdByPerson person caseId >>= fromMaybeM CaseDoesNotExist
+getLocation :: Id Person.Person -> Id SC.Case -> FlowHandler GetLocationRes
+getLocation personId caseId = withFlowHandlerAPI $ do
+  _ <- Case.findIdByPersonId personId caseId >>= fromMaybeM CaseDoesNotExist
   baseUrl <- xProviderUri <$> ask
   productInstances <- MPI.listAllProductInstance (SPI.ByApplicationId caseId) [SPI.CONFIRMED]
   when (null productInstances) $ throwError PIDoesNotExist

@@ -22,16 +22,16 @@ import Types.Storage.Person as Person
 import Utils.Common
 import qualified Utils.SES as SES
 
-sendIssue :: Person.Person -> Support.SendIssueReq -> App.FlowHandler Support.SendIssueRes
-sendIssue person request@SendIssueReq {..} = withFlowHandlerAPI $ do
+sendIssue :: Id Person.Person -> Support.SendIssueReq -> App.FlowHandler Support.SendIssueRes
+sendIssue personId request@SendIssueReq {..} = withFlowHandlerAPI $ do
   runRequestValidation validateSendIssueReq request
-  let personId = getId $ person.id
+  let personIdTxt = getId $ personId
   issuesConfig <- asks $ SesConfig.issuesConfig . App.sesCfg
   issueId <- L.generateGUID
   utcNow <- getCurrentTime
-  Queries.insertIssue (mkDBIssue issueId personId request utcNow)
+  Queries.insertIssue (mkDBIssue issueId personIdTxt request utcNow)
   let mailSubject = mkMailSubject issueId (issue.reason)
-  let mailBody = mkMailBody issueId personId request utcNow
+  let mailBody = mkMailBody issueId personIdTxt request utcNow
   responseError <- L.runIO $ SES.sendEmail issuesConfig mailSubject mailBody
   whenJust responseError $ throwError . EmailSendingError
   return Success

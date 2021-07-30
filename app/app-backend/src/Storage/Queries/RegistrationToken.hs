@@ -11,6 +11,7 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Error
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as Storage
 import Utils.Common
 
@@ -50,10 +51,10 @@ updateAttempts attemps rtId = do
     setClause a n Storage.RegistrationToken {..} =
       mconcat [attempts <-. B.val_ a, updatedAt <-. B.val_ n]
 
-deleteByPersonId :: Text -> DB.SqlDB ()
-deleteByPersonId rtId = do
+deleteByPersonId :: Id SP.Person -> DB.SqlDB ()
+deleteByPersonId (Id personId) = do
   dbTable <- getDbTable
-  DB.delete' dbTable (predicate rtId)
+  DB.delete' dbTable (predicate personId)
   where
     predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid
 

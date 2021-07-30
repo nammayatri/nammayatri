@@ -125,6 +125,19 @@ updateMultiple personId person = do
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
+updateDeviceToken :: Id Storage.Person -> Maybe FCMRecipientToken -> DB.SqlDB ()
+updateDeviceToken personId mbDeviceToken = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update' dbTable (setClause now mbDeviceToken) (predicate personId)
+  where
+    setClause now mbDeviceToken_ Storage.Person {..} =
+      mconcat
+        [ updatedAt <-. B.val_ now,
+          deviceToken <-. B.val_ mbDeviceToken_
+        ]
+    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
+
 update ::
   DBFlow m r =>
   Id Storage.Person ->

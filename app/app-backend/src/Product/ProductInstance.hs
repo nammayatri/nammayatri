@@ -1,6 +1,7 @@
 module Product.ProductInstance where
 
 import App.Types
+import Beckn.Types.Id
 import EulerHS.Prelude
 import qualified Storage.Queries.Case as Case
 import Storage.Queries.Location as Loc
@@ -14,10 +15,10 @@ import qualified Types.Storage.ProductInstance as SPI
 import qualified Types.Storage.Products as Products
 import Utils.Common (withFlowHandlerAPI)
 
-list :: Person.Person -> [SPI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
-list person status csTypes mlimit moffset = withFlowHandlerAPI $ do
+list :: Id Person.Person -> [SPI.ProductInstanceStatus] -> [Case.CaseType] -> Maybe Int -> Maybe Int -> FlowHandler ProductInstanceList
+list personId status csTypes mlimit moffset = withFlowHandlerAPI $ do
   piList <-
-    ProductInstance.listAllProductInstanceWithOffset limit offset (SPI.ByCustomerId $ person.id) status csTypes
+    ProductInstance.listAllProductInstanceWithOffset limit offset (SPI.ByCustomerId personId) status csTypes
   caseList <- Case.findAllByIds (SPI.caseId <$> piList)
   prodList <- Products.findAllByIds (SPI.productId <$> piList)
   locList <- Loc.findAllByIds ((Case.fromLocationId <$> caseList) <> (Case.toLocationId <$> caseList))

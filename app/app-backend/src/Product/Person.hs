@@ -2,30 +2,33 @@ module Product.Person where
 
 import App.Types
 import qualified Beckn.Types.APISuccess as APISuccess
+import Beckn.Types.Id
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as QPerson
 import qualified Types.API.Person as Person
+import Types.Error
 import qualified Types.Storage.Person as Person
-import Utils.Common (withFlowHandlerAPI)
+import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
-getPersonDetails :: Person.Person -> FlowHandler Person.GetPersonDetailsRes
-getPersonDetails auth =
+getPersonDetails :: Id Person.Person -> FlowHandler Person.GetPersonDetailsRes
+getPersonDetails personId = withFlowHandlerAPI $ do
+  person <- QPerson.findById personId >>= fromMaybeM PersonNotFound
   pure $
     Person.GetPersonDetailsRes
-      { id = auth.id,
-        firstName = auth.firstName,
-        middleName = auth.middleName,
-        lastName = auth.lastName,
-        fullName = auth.fullName,
-        role = auth.role,
-        gender = auth.gender,
-        email = auth.email
+      { id = person.id,
+        firstName = person.firstName,
+        middleName = person.middleName,
+        lastName = person.lastName,
+        fullName = person.fullName,
+        role = person.role,
+        gender = person.gender,
+        email = person.email
       }
 
-updatePerson :: Person.Person -> Person.UpdateReq -> FlowHandler APISuccess.APISuccess
-updatePerson auth req = withFlowHandlerAPI $ do
+updatePerson :: Id Person.Person -> Person.UpdateReq -> FlowHandler APISuccess.APISuccess
+updatePerson personId req = withFlowHandlerAPI $ do
   QPerson.updatePersonalInfo
-    (auth.id)
+    personId
     (req.firstName)
     (req.middleName)
     (req.lastName)

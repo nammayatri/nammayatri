@@ -23,11 +23,11 @@ import qualified Types.Storage.ProductInstance as ProductInstance
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
-track :: Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
-track person req = withFlowHandlerAPI $ do
+track :: Id Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
+track personId req = withFlowHandlerAPI $ do
   let prodInstId = req.rideId
   prodInst <- MPI.findById prodInstId >>= fromMaybeM PIDoesNotExist
-  case_ <- MC.findIdByPerson person (prodInst.caseId) >>= fromMaybeM CaseNotFound
+  case_ <- MC.findIdByPersonId personId (prodInst.caseId) >>= fromMaybeM CaseNotFound
   let txnId = getId $ case_.id
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-

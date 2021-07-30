@@ -11,7 +11,6 @@ import EulerHS.Prelude hiding (id)
 import Servant hiding (Context)
 import Storage.Queries.Organization (findOrgByShortId)
 import qualified Storage.Queries.Organization as QOrganization
-import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.Error
 import qualified Types.Storage.Organization as SOrganization
@@ -48,16 +47,15 @@ instance
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
 instance VerificationMethod VerifyToken where
-  type VerificationResult VerifyToken = Person.Person
+  type VerificationResult VerifyToken = Id Person.Person
   verificationDescription =
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyPerson :: DBFlow m r => RegToken -> m Person.Person
+verifyPerson :: DBFlow m r => RegToken -> m (Id Person.Person)
 verifyPerson token = do
   sr <- verifyToken token
-  Person.findById (Id $ SR.entityId sr)
-    >>= Utils.fromMaybeM PersonNotFound
+  return $ Id sr.entityId
 
 verifyPersonAction :: DBFlow m r => VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction verifyPerson

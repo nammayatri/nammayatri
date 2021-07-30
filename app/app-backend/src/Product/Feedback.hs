@@ -21,13 +21,13 @@ import Utils.Common
     withFlowHandlerAPI,
   )
 
-feedback :: Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
-feedback person request = withFlowHandlerAPI $ do
+feedback :: Id Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
+feedback personId request = withFlowHandlerAPI $ do
   let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let prodInstId = request.productInstanceId
   product <- ProductInstance.findById (Id prodInstId) >>= fromMaybeM PIDoesNotExist
-  order <- Case.findIdByPerson person (product.caseId) >>= fromMaybeM CaseNotFound
+  order <- Case.findIdByPersonId personId (product.caseId) >>= fromMaybeM CaseNotFound
   let txnId = getId $ order.id
   context <- buildContext "feedback" txnId Nothing Nothing
   organization <-

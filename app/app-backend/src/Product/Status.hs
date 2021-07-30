@@ -22,10 +22,10 @@ import qualified Types.Storage.ProductInstance as PI
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
-status :: Person.Person -> StatusReq -> FlowHandler StatusRes
-status person StatusReq {..} = withFlowHandlerAPI $ do
+status :: Id Person.Person -> StatusReq -> FlowHandler StatusRes
+status personId StatusReq {..} = withFlowHandlerAPI $ do
   prodInst <- QPI.findById (Id productInstanceId) >>= fromMaybeM PINotFound
-  case_ <- Case.findIdByPerson person (prodInst.caseId) >>= fromMaybeM CaseNotFound
+  case_ <- Case.findIdByPersonId personId (prodInst.caseId) >>= fromMaybeM CaseNotFound
   let caseId = getId $ case_.id
   context <- buildContext "status" caseId Nothing Nothing
   organization <-

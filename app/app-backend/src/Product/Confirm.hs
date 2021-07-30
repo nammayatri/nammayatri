@@ -29,10 +29,10 @@ import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
-confirm :: Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
-confirm person API.ConfirmReq {..} = withFlowHandlerAPI $ do
+confirm :: Id Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
+confirm personId API.ConfirmReq {..} = withFlowHandlerAPI $ do
   lt <- getCurrentTime
-  case_ <- QCase.findIdByPerson person (Id caseId) >>= fromMaybeM CaseDoesNotExist
+  case_ <- QCase.findIdByPersonId personId (Id caseId) >>= fromMaybeM CaseDoesNotExist
   when ((case_.validTill) < lt) $
     throwError CaseExpired
   orderCase_ <- mkOrderCase case_

@@ -38,22 +38,22 @@ login T.LoginReq {..} = withFlowHandlerAPI $ do
 
 generateToken :: DBFlow m r => SP.Person -> m Text
 generateToken SP.Person {..} = do
-  let personId = getId id
-  regToken <- createSupportRegToken personId
+  let personId = id
+  regToken <- createSupportRegToken $ getId personId
   -- Clean Old Login Session
   DB.runSqlDBTransaction $ do
     RegistrationToken.deleteByPersonId personId
     RegistrationToken.create regToken
   pure $ regToken.token
 
-logout :: SP.Person -> FlowHandler T.LogoutRes
-logout person =
-  withFlowHandlerAPI $
-    if person.role /= SP.CUSTOMER_SUPPORT
-      then throwError Unauthorized -- Do we need this Check?
-      else do
-        DB.runSqlDB (RegistrationToken.deleteByPersonId (getId $ person.id))
-        pure $ T.LogoutRes "Logged out successfully"
+logout :: Id SP.Person -> FlowHandler T.LogoutRes
+logout personId = withFlowHandlerAPI $ do
+  person <- Person.findById personId >>= fromMaybeM PersonNotFound
+  if person.role /= SP.CUSTOMER_SUPPORT
+    then throwError Unauthorized -- Do we need this Check?
+    else do
+      DB.runSqlDB (RegistrationToken.deleteByPersonId person.id)
+      pure $ T.LogoutRes "Logged out successfully"
 
 createSupportRegToken :: DBFlow m r => Text -> m SR.RegistrationToken
 createSupportRegToken entityId = do
@@ -78,17 +78,17 @@ createSupportRegToken entityId = do
         info = Nothing
       }
 
-listOrder :: SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
-listOrder supportP mCaseId mMobile mlimit moffset =
-  withFlowHandlerAPI $
-    if supportP.role /= SP.ADMIN && supportP.role /= SP.CUSTOMER_SUPPORT
-      then throwError AccessDenied
-      else do
-        T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
-          (Just caseId, _) -> getByCaseId caseId
-          (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-          (_, _) -> throwError $ InvalidRequest "You should pass CaseId or mobile number."
-        traverse (makeCaseToOrder person) searchcases
+listOrder :: Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
+listOrder personId mCaseId mMobile mlimit moffset = withFlowHandlerAPI $ do
+  supportP <- Person.findById personId >>= fromMaybeM PersonNotFound
+  if supportP.role /= SP.ADMIN && supportP.role /= SP.CUSTOMER_SUPPORT
+    then throwError AccessDenied
+    else do
+      T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
+        (Just caseId, _) -> getByCaseId caseId
+        (_, Just mobileNumber) -> getByMobileNumber mobileNumber
+        (_, _) -> throwError $ InvalidRequest "You should pass CaseId or mobile number."
+      traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
@@ -102,9 +102,9 @@ listOrder supportP mCaseId mMobile mlimit moffset =
       (_case :: C.Case) <-
         Case.findByIdAndType (Id caseId) C.RIDESEARCH
           >>= fromMaybeM CaseDoesNotExist
-      let personId = fromMaybe "_ID" (_case.requestor)
+      let requestorId = fromMaybe "_ID" (_case.requestor)
       person <-
-        Person.findById (Id personId)
+        Person.findById (Id requestorId)
           >>= fromMaybeM PersonDoesNotExist
       return $ T.OrderInfo person [_case]
 

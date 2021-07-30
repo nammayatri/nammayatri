@@ -68,14 +68,13 @@ findByIdAndType caseId caseType = do
       (id ==. B.val_ caseId)
         &&. (_type ==. B.val_ caseType)
 
-findIdByPerson :: DBFlow m r => Person.Person -> Id Storage.Case -> m (Maybe Storage.Case)
-findIdByPerson person caseId = do
+findIdByPersonId :: DBFlow m r => Id Person.Person -> Id Storage.Case -> m (Maybe Storage.Case)
+findIdByPersonId (Id personId) caseId = do
   dbTable <- getDbTable
-  let personId = getId $ person.id
   DB.findOne dbTable (predicate personId)
   where
-    predicate personId Storage.Case {..} =
-      id ==. B.val_ caseId &&. requestor ==. B.val_ (Just personId)
+    predicate personId_ Storage.Case {..} =
+      id ==. B.val_ caseId &&. requestor ==. B.val_ (Just personId_)
 
 findAllByIds :: DBFlow m r => [Id Storage.Case] -> m [Storage.Case]
 findAllByIds caseIds = do
