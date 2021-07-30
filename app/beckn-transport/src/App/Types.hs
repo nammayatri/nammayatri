@@ -59,7 +59,8 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Int,
     defaultRadiusOfSearch :: Integer,
     apiRateLimitOptions :: APIRateLimitOptions,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    authTokenCacheExpiry :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -91,7 +92,8 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     apiRateLimitOptions :: APIRateLimitOptions,
     defaultRadiusOfSearch :: Integer,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    authTokenCacheExpiry :: Int
   }
   deriving (Generic)
 

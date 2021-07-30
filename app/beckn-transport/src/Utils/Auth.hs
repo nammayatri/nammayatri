@@ -1,5 +1,6 @@
 module Utils.Auth where
 
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Utils.Common as CoreCommon
@@ -9,6 +10,7 @@ import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Text as T
 import EulerHS.Prelude hiding (id)
+import GHC.Records.Extra (HasField)
 import Servant hiding (throwError)
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Person as QP
@@ -68,7 +70,7 @@ instance VerificationMethod VerifyToken where
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyTokenAction :: DBFlow m r => VerificationAction VerifyToken m
+verifyTokenAction :: (DBFlow m r, HasField "authTokenCacheExpiry" r Int) => VerificationAction VerifyToken m
 verifyTokenAction = VerificationAction verifyPerson
 
 -- | Verifies admin's token.
@@ -131,10 +133,23 @@ validateDriver regToken = do
       >>= fromMaybeM PersonNotFound
   verifyDriver user
 
-verifyPerson :: DBFlow m r => RegToken -> m (Id Person.Person)
+verifyPerson :: (DBFlow m r, HasField "authTokenCacheExpiry" r Int) => RegToken -> m (Id Person.Person)
 verifyPerson token = do
-  sr <- verifyToken token
-  return $ Id sr.entityId
+  let key = authTokenCacheKey token
+  authTokenCacheExpiry <- asks (.authTokenCacheExpiry)
+  mbPersonId <- Redis.getKeyRedis key
+  case mbPersonId of
+    Just personId -> return personId
+    Nothing -> do
+      sr <- verifyToken token
+      let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
+      let personId = Id sr.entityId
+      Redis.setExRedis key personId expiryTime
+      return personId
+
+authTokenCacheKey :: RegToken -> Text
+authTokenCacheKey regToken =
+  "BPP:authTokenCacheKey:" <> regToken
 
 validateAdminAction :: (DBFlow m r, EncFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin

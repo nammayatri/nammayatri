@@ -63,7 +63,8 @@ data AppCfg = AppCfg
     metricsSearchDurationTimeout :: Int,
     graceTerminationPeriod :: Int,
     apiRateLimitOptions :: APIRateLimitOptions,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    authTokenCacheExpiry :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -98,7 +99,8 @@ data AppEnv = AppEnv
     isShuttingDown :: TMVar (),
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    authTokenCacheExpiry :: Int
   }
   deriving (Generic)
 

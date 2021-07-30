@@ -86,4 +86,5 @@ in
 , defaultRadiusOfSearch = +5000 -- meters
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
+, authTokenCacheExpiry = +600
 }

@@ -1,5 +1,6 @@
 module Utils.Auth where
 
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -8,6 +9,7 @@ import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude hiding (id)
+import GHC.Records.Extra (HasField)
 import Servant hiding (Context)
 import Storage.Queries.Organization (findOrgByShortId)
 import qualified Storage.Queries.Organization as QOrganization
@@ -52,12 +54,25 @@ instance VerificationMethod VerifyToken where
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyPerson :: DBFlow m r => RegToken -> m (Id Person.Person)
+verifyPerson :: (DBFlow m r, HasField "authTokenCacheExpiry" r Int) => RegToken -> m (Id Person.Person)
 verifyPerson token = do
-  sr <- verifyToken token
-  return $ Id sr.entityId
+  let key = authTokenCacheKey token
+  authTokenCacheExpiry <- asks (.authTokenCacheExpiry)
+  mbPersonId <- Redis.getKeyRedis key
+  case mbPersonId of
+    Just personId -> return personId
+    Nothing -> do
+      sr <- verifyToken token
+      let expiryTime = min sr.tokenExpiry authTokenCacheExpiry
+      let personId = Id sr.entityId
+      Redis.setExRedis key personId expiryTime
+      return personId
 
-verifyPersonAction :: DBFlow m r => VerificationAction VerifyToken m
+authTokenCacheKey :: RegToken -> Text
+authTokenCacheKey regToken =
+  "BAP:authTokenCacheKey:" <> regToken
+
+verifyPersonAction :: (DBFlow m r, HasField "authTokenCacheExpiry" r Int) => VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction verifyPerson
 
 verifyToken :: DBFlow m r => RegToken -> m SR.RegistrationToken

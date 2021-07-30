@@ -109,4 +109,5 @@ in
 , graceTerminationPeriod = +90
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
+, authTokenCacheExpiry = +600
 }
