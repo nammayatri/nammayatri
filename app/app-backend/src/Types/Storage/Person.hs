@@ -41,15 +41,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be Status
 
 data Role
   = USER
-  | DRIVER
-  | ADMIN
-  | VALIDATOR
-  | MANAGER
-  | VIEWER
-  | WARDLEVEL
-  | DISTRICTLEVEL
-  | CITYLEVEL
-  | STATELEVEL
   | CUSTOMER_SUPPORT
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
 

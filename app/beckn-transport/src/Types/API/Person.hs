@@ -199,8 +199,8 @@ validatePersonReqEntity PersonReqEntity {..} =
       validateField "bound" bound . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
     ]
 
-createPerson :: (DBFlow m r, EncFlow m r) => PersonReqEntity -> Id Org.Organization -> m SP.Person
-createPerson req orgId = do
+buildDriver :: (DBFlow m r, EncFlow m r) => PersonReqEntity -> Id Org.Organization -> m SP.Person
+buildDriver req orgId = do
   pid <- generateGUID
   now <- getCurrentTime
   location <- createLocationT req
@@ -213,7 +213,7 @@ createPerson req orgId = do
         SP.middleName = req.middleName,
         SP.lastName = req.lastName,
         SP.fullName = req.fullName,
-        SP.role = ifJustExtract (req.role) SP.USER,
+        SP.role = ifJustExtract (req.role) SP.DRIVER,
         SP.gender = ifJustExtract (req.gender) SP.UNKNOWN,
         SP.email = req.email,
         SP.passwordHash = Nothing,

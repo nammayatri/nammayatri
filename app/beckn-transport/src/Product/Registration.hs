@@ -50,12 +50,7 @@ initiateFlow ::
 initiateFlow req smsCfg = do
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
-  mbPerson <- QP.findByMobileNumber countryCode mobileNumber
-  person <- case mbPerson of
-    Nothing -> do
-      when (req.role == SP.DRIVER) $ throwError $ InvalidRequest "Driver must be registered by Transport Admin"
-      createPerson req
-    Just p -> pure p
+  person <- QP.findByMobileNumber countryCode mobileNumber >>= fromMaybeM PersonDoesNotExist
   checkSlidingWindowLimit (initiateFlowHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
@@ -75,39 +70,6 @@ initiateFlow req smsCfg = do
   let attempts = SR.attempts regToken
       tokenId = SR.id regToken
   return $ InitiateLoginRes {attempts, tokenId}
-
-makePerson :: EncFlow m r => InitiateLoginReq -> m SP.Person
-makePerson req = do
-  pid <- BC.generateGUID
-  now <- getCurrentTime
-  encMobNum <- encrypt $ Just req.mobileNumber
-  return $
-    SP.Person
-      { id = pid,
-        firstName = Nothing,
-        middleName = Nothing,
-        lastName = Nothing,
-        fullName = Nothing,
-        role = req.role,
-        gender = SP.UNKNOWN,
-        identifierType = SP.MOBILENUMBER,
-        email = Nothing,
-        passwordHash = Nothing,
-        mobileNumber = encMobNum,
-        mobileCountryCode = Just $ req.mobileCountryCode,
-        identifier = Nothing,
-        rating = Nothing,
-        verified = False,
-        status = SP.INACTIVE,
-        udf1 = Nothing,
-        udf2 = Nothing,
-        deviceToken = req.deviceToken,
-        organizationId = Nothing,
-        locationId = Nothing,
-        description = Nothing,
-        createdAt = now,
-        updatedAt = now
-      }
 
 makeSession ::
   MonadFlow m =>
@@ -178,12 +140,6 @@ login tokenId req =
 checkRegistrationTokenExists :: DBFlow m r => Text -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
   QR.findRegistrationToken tokenId >>= fromMaybeM (TokenNotFound tokenId)
-
-createPerson :: (DBFlow m r, EncFlow m r) => InitiateLoginReq -> m SP.Person
-createPerson req = do
-  person <- makePerson req
-  QP.createFlow person
-  pure person
 
 checkPersonExists :: DBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =

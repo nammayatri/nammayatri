@@ -26,7 +26,7 @@ import Utils.Common
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandlerAPI $ do
-  personM <- Person.findByUsernameAndPassword email password
+  personM <- Person.findByEmailAndPassword email password
   case personM of
     Nothing -> throwError Unauthorized
     Just person ->
@@ -81,14 +81,13 @@ createSupportRegToken entityId = do
 listOrder :: Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
 listOrder personId mCaseId mMobile mlimit moffset = withFlowHandlerAPI $ do
   supportP <- Person.findById personId >>= fromMaybeM PersonNotFound
-  if supportP.role /= SP.ADMIN && supportP.role /= SP.CUSTOMER_SUPPORT
-    then throwError AccessDenied
-    else do
-      T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
-        (Just caseId, _) -> getByCaseId caseId
-        (_, Just mobileNumber) -> getByMobileNumber mobileNumber
-        (_, _) -> throwError $ InvalidRequest "You should pass CaseId or mobile number."
-      traverse (makeCaseToOrder person) searchcases
+  unless (supportP.role == SP.CUSTOMER_SUPPORT) $
+    throwError AccessDenied
+  T.OrderInfo {person, searchcases} <- case (mCaseId, mMobile) of
+    (Just caseId, _) -> getByCaseId caseId
+    (_, Just mobileNumber) -> getByMobileNumber mobileNumber
+    (_, _) -> throwError $ InvalidRequest "You should pass CaseId or mobile number."
+  traverse (makeCaseToOrder person) searchcases
   where
     getByMobileNumber number = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit

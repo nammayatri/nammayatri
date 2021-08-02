@@ -60,12 +60,12 @@ complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
 
-findByUsernameAndPassword ::
+findByEmailAndPassword ::
   DBFlow m r =>
   Text ->
   Text ->
   m (Maybe Storage.Person)
-findByUsernameAndPassword email_ password = do
+findByEmailAndPassword email_ password = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where

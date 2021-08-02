@@ -24,7 +24,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ProductInstance as QueryPI
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Types.API.DriverInformation as DriverInformationAPI
-import Types.API.Person (createPerson)
+import Types.API.Person (buildDriver)
 import Types.API.Registration (makeUserInfoRes)
 import Types.API.Vehicle (createVehicle)
 import Types.App
@@ -39,7 +39,7 @@ createDriver orgId req = withFlowHandlerAPI $ do
   let personEntity = req.person
   validateDriver personEntity
   validateVehicle req.vehicle
-  person <- createPerson req.person (Id orgId)
+  person <- buildDriver req.person (Id orgId)
   vehicle <- createVehicle req.vehicle (Id orgId)
   DB.runSqlDBTransaction $ do
     QPerson.create person

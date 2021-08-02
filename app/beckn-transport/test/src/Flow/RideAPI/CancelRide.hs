@@ -39,7 +39,6 @@ cancelRide =
       successfulCancellationByAdmin,
       successfulCancellationWithoutDriverByAdmin,
       failedCancellationByAnotherDriver,
-      failedCancellationByNotDriverAndNotAdmin,
       failedCancellationWithoutDriverByDriver,
       failedCancellationWhenProductInstanceStatusIsWrong
     ]
@@ -90,18 +89,6 @@ failedCancellationByAnotherDriver =
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just driverNotExecutor}
     driverNotExecutor = Fixtures.defaultDriver{id = Id "driverNotExecutorId"}
-
-failedCancellationByNotDriverAndNotAdmin :: TestTree
-failedCancellationByNotDriverAndNotAdmin =
-  testCase "Fail cancellation if requested by neither driver nor admin" $ do
-    runHandler handleCase (Id "managerId") "1"
-      `shouldThrow` (== AccessDenied)
-  where
-    handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just manager}
-    manager =
-      Fixtures.defaultDriver{id = Id "managerId",
-                             role = Person.MANAGER
-                            }
 
 failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =

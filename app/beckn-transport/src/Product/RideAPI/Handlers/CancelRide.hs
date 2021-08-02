@@ -34,7 +34,6 @@ cancelRideHandler ServiceHandle {..} personId rideId = do
       driverId <- prodInst.personId & fromMaybeM (PIFieldNotPresent "person")
       unless (authPerson.id == driverId) $ throwError NotAnExecutor
       cancelRide rideId ByDriver
-    _ -> throwError AccessDenied
   pure APISuccess.Success
   where
     isValidPI prodInst =
