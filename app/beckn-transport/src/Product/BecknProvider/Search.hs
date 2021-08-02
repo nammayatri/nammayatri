@@ -37,8 +37,10 @@ import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
+import qualified Types.Storage.Vehicle as Veh
 import Utils.Common
 import qualified Utils.Metrics as Metrics
+import Servant.Client (showBaseUrl)
 
 search ::
   Id Org.Organization ->
@@ -70,13 +72,16 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
         toLocation <- buildFromStop now dropOff
         let bapOrgId = bapOrg.id
         uuid <- L.generateGUID
-        let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId
+        vehVariant <- readMaybe (T.unpack req.message.intent.vehicle.variant) & fromMaybeM (InvalidRequest "Unable to parse vehicle variant.")
+        bapUri <- req.context.bap_uri & fromMaybeM (InvalidRequest "Context must have bap_uri")
+        let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId vehVariant bapUri
+        let distance = Tag.value <$> find (\x -> x.key == "distance") (fromMaybe [] $ intent.tags)
         DB.runSqlDBTransaction $ do
           Loc.create fromLocation
           Loc.create toLocation
           QSearchRequest.create searchRequest
         ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
-          onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
+          onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar distance
 
 buildFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.SearchReqLocation
 buildFromStop now stop = do
@@ -109,37 +114,34 @@ getValidTime now startTime = do
       validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
-mkSearchRequest :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.SearchReqLocation -> Location.SearchReqLocation -> Id Org.Organization -> Id Org.Organization -> SearchRequest.SearchRequest
-mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId = do
-  let intent = req.message.intent
-  let distance = Tag.value <$> find (\x -> x.key == "distance") (fromMaybe [] $ intent.tags)
-  let tId = getId transporterId
+mkSearchRequest ::
+  API.SearchReq ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  UTCTime ->
+  Location.SearchReqLocation ->
+  Location.SearchReqLocation ->
+  Id Org.Organization ->
+  Id Org.Organization ->
+  Veh.Variant ->
+  BaseUrl ->
+  SearchRequest.SearchRequest
+mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId vehVariant bapUri = do
   let bapId = getId bapOrgId
   SearchRequest.SearchRequest
     { id = Id uuid,
-      name = Nothing,
-      description = Just "SearchRequest to search for a Ride",
-      shortId = ShortId $ tId <> "_" <> req.context.transaction_id,
-      industry = SearchRequest.MOBILITY,
-      exchangeType = SearchRequest.FULFILLMENT,
-      status = SearchRequest.NEW,
+      transactionId = req.context.transaction_id,
       startTime = startTime,
-      endTime = Nothing,
       validTill = validity,
-      provider = Just tId,
-      providerType = Nothing,
-      requestor = Nothing,
-      requestorType = Just SearchRequest.CONSUMER,
+      providerId = transporterId,
+      requestorId = Id "", -- TODO: Fill this field with BAPPerson id.
       fromLocationId = fromLocation.id,
       toLocationId = toLocation.id,
-      udf1 = Just $ intent.vehicle.variant,
-      udf2 = Just $ show $ length $ intent.payload.travellers,
-      udf3 = Nothing,
-      udf4 = Just bapId,
-      udf5 = distance,
-      info = Nothing, --Just $ show $ req.message
-      createdAt = now,
-      updatedAt = now
+      vehicleVariant = vehVariant,
+      bapId = bapId,
+      bapUri = T.pack $ showBaseUrl bapUri,
+      createdAt = now
     }
 
 onSearchCallback ::
@@ -154,12 +156,11 @@ onSearchCallback ::
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
   Metrics.SearchMetricsMVar ->
+  Maybe Text ->
   m API.OnSearchServices
-onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar = do
+onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar distance = do
   let transporterId = transporter.id
-  vehicleVariant <-
-    (searchRequest.udf1 >>= readMaybe . T.unpack)
-      & fromMaybeM (SearchRequestFieldNotPresent "udf1")
+      vehicleVariant = searchRequest.vehicleVariant
   pool <- Confirm.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId . fst <$> pool) |+ ""
@@ -171,7 +172,7 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
     case pool of
       [] -> return (Nothing, Nothing)
       (fstDriverValue : _) -> do
-        let dstSrc = maybe (Left (fromLocation, toLocation)) Right (searchRequest.udf5 >>= readMaybe . T.unpack)
+        let dstSrc = maybe (Left (fromLocation, toLocation)) Right (distance >>= readMaybe . T.unpack)
         fare <- Just <$> calculateFare transporterId vehicleVariant dstSrc (searchRequest.startTime)
         let nearestDist = Just $ snd fstDriverValue
         return (fare, nearestDist)
@@ -199,7 +200,7 @@ mkQuote productSearchRequest price status transporterId nearestDriverDist = do
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   products <-
-    SProduct.findByName (fromMaybe "DONT MATCH" (productSearchRequest.udf1))
+    SProduct.findByName (show productSearchRequest.vehicleVariant)
       >>= fromMaybeM ProductsNotFound
   return
     Quote.Quote
@@ -216,7 +217,7 @@ mkQuote productSearchRequest price status transporterId nearestDriverDist = do
         actualPrice = Nothing,
         status = status,
         startTime = productSearchRequest.startTime,
-        endTime = productSearchRequest.endTime,
+        endTime = Nothing,
         validTill = productSearchRequest.validTill,
         fromLocation = Just $ productSearchRequest.fromLocationId,
         toLocation = Just $ productSearchRequest.toLocationId,
@@ -227,7 +228,7 @@ mkQuote productSearchRequest price status transporterId nearestDriverDist = do
         udf3 = Nothing,
         udf4 = Nothing,
         udf5 = Nothing,
-        info = productSearchRequest.info,
+        info = Nothing,
         createdAt = now,
         updatedAt = now
       }

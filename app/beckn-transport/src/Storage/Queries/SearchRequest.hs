@@ -41,59 +41,56 @@ findById searchRequestId = do
   where
     predicate Storage.SearchRequest {..} = id ==. B.val_ searchRequestId
 
-findBySid :: DBFlow m r => Text -> m (Maybe Storage.SearchRequest)
-findBySid sid = do
+findByTxnIdAndProviderId :: DBFlow m r => Text -> Id Organization -> m (Maybe Storage.SearchRequest)
+findByTxnIdAndProviderId txnId orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.SearchRequest {..} = shortId ==. B.val_ (ShortId sid)
+    predicate Storage.SearchRequest {..} =
+      transactionId ==. B.val_ txnId
+        &&. providerId ==. B.val_ orgId
 
-findAllByStatuses ::
+findAllNotExpiredByOrgId ::
   DBFlow m r =>
   Integer ->
   Integer ->
-  [Storage.SearchRequestStatus] ->
   Id Organization ->
   UTCTime ->
   m [Storage.SearchRequest]
-findAllByStatuses limit offset statuses orgId now = do
+findAllNotExpiredByOrgId limit offset orgId now = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     orderByDesc Storage.SearchRequest {..} = B.desc_ createdAt
     predicate Storage.SearchRequest {..} =
-      provider ==. B.val_ (Just $ getId orgId)
-        &&. B.in_ status (B.val_ <$> statuses)
+      providerId ==. B.val_ orgId
         &&. validTill B.>. B.val_ now
 
-findAllByStatusTime ::
+findAllByTime ::
   DBFlow m r =>
   Integer ->
   Integer ->
-  [Storage.SearchRequestStatus] ->
   Id Organization ->
   UTCTime ->
   UTCTime ->
   m [Storage.SearchRequest]
-findAllByStatusTime limit offset statuses orgId now fromTime = do
+findAllByTime limit offset orgId now fromTime = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
     orderByDesc Storage.SearchRequest {..} = B.desc_ createdAt
     predicate Storage.SearchRequest {..} =
-      provider ==. B.val_ (Just $ getId orgId)
-        &&. B.in_ status (B.val_ <$> statuses)
+      providerId ==. B.val_ orgId
         &&. validTill B.>. B.val_ now
         &&. createdAt B.<. B.val_ fromTime
 
-findAllExpiredByStatus :: DBFlow m r => [Storage.SearchRequestStatus] -> UTCTime -> UTCTime -> m [Storage.SearchRequest]
-findAllExpiredByStatus statuses from to = do
+findAllExpired :: DBFlow m r => UTCTime -> UTCTime -> m [Storage.SearchRequest]
+findAllExpired from to = do
   dbTable <- getDbTable
   (now :: UTCTime) <- getCurrentTime
   DB.findAll dbTable identity (predicate now)
   where
     predicate now Storage.SearchRequest {..} =
-      B.in_ status (B.val_ <$> statuses)
-        &&. validTill B.<=. B.val_ now
+      validTill B.<=. B.val_ now
         &&. createdAt B.>=. B.val_ from
         &&. createdAt B.<=. B.val_ to

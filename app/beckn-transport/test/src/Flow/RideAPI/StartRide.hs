@@ -53,8 +53,7 @@ searchQuote =
 searchRequest :: SearchRequest.SearchRequest
 searchRequest =
   Fixtures.defaultSearchRequest
-    { SearchRequest.id = "1",
-      SearchRequest.status = SearchRequest.CONFIRMED
+    { SearchRequest.id = "1"
     }
 
 startRide :: TestTree

@@ -19,19 +19,18 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.SearchReqLocation as QSReqLoc
+import qualified Storage.Queries.SearchRequest as SearchRequest
 import qualified Storage.Queries.TransporterConfig as QTConf
 import Types.App (Driver)
-import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.SearchReqLocation as SSReqLoc
+import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.TransporterConfig as STConf
 import qualified Types.Storage.Vehicle as SV
-import qualified Types.Storage.SearchRequest as SearchRequest
-import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
 confirm ::
@@ -52,9 +51,8 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
       Organization.findOrganizationById transporterId'
         >>= fromMaybeM OrgNotFound
     unless (transporterId' == transporterId) $ throwError AccessDenied
-    let caseShortId = getId transporterId <> "_" <> req.context.transaction_id
-    searchRequest <- SearchRequest.findBySid caseShortId >>= fromMaybeM SearchRequestNotFound
-    bapOrgId <- searchRequest.udf4 & fromMaybeM (SearchRequestFieldNotPresent "udf4")
+    searchRequest <- SearchRequest.findByTxnIdAndProviderId req.context.transaction_id transporterId >>= fromMaybeM SearchRequestNotFound
+    let bapOrgId = searchRequest.bapId
     unless (bapOrg.id == Id bapOrgId) $ throwError AccessDenied
     ride <- mkRide quote
     rideRequest <-
@@ -93,9 +91,7 @@ onConfirmCallback ride quote searchRequest transporterOrg = do
   let transporterId = transporterOrg.id
   let quoteId = ride.id
   pickupPoint <- (quote.fromLocation) & fromMaybeM (QuoteFieldNotPresent "location_id")
-  vehicleVariant :: Vehicle.Variant <-
-    (searchRequest.udf1 >>= readMaybe . T.unpack)
-      & fromMaybeM (SearchRequestFieldNotPresent "udf1")
+  let vehicleVariant = searchRequest.vehicleVariant
   driverPool <- map fst <$> calculateDriverPool pickupPoint transporterId vehicleVariant
   setDriverPool quoteId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId quoteId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
@@ -117,9 +113,7 @@ getDriverPool rideId =
     calcDriverPool = do
       ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
       searchRequest <- SearchRequest.findById (ride.requestId) >>= fromMaybeM SearchRequestNotFound
-      vehicleVariant :: SV.Variant <-
-        (searchRequest.udf1 >>= readMaybe . T.unpack)
-          & fromMaybeM (SearchRequestFieldNotPresent "udf1")
+      let vehicleVariant = searchRequest.vehicleVariant
       pickupPoint <-
         ride.fromLocation
           & fromMaybeM (RideFieldNotPresent "location_id")

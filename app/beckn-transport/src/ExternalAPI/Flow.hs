@@ -70,18 +70,13 @@ callBAP ::
 callBAP action api transporter searchRequestId contents = do
   searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestNotFound
   bapCallbackUrl <-
-    (searchRequest.udf4) & fromMaybeM (SearchRequestFieldNotPresent "udf4")
-      >>= (Id >>> Org.findOrganizationById)
+    (searchRequest.bapId)
+      & (Id >>> Org.findOrganizationById)
       >>= fromMaybeM OrgNotFound
       >>= ((.callbackUrl) >>> fromMaybeM (OrgFieldNotPresent "callback_url"))
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
-  txnId <-
-    (getShortId searchRequest.shortId)
-      & T.split (== '_')
-      & reverse
-      & listToMaybe
-      & fromMaybeM (InternalError "Cannot exctract transaction id from case.short_id")
+      txnId = searchRequest.transactionId
   bppUri <- makeBppUrl (transporter.id)
   context <- buildContext action txnId (Just bapCallbackUrl) (Just bppUri)
   Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $

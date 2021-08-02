@@ -15,6 +15,8 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
 import qualified Types.Storage.SearchReqLocation as Loc
+import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.Vehicle as Veh
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -32,72 +34,26 @@ instance B.HasSqlEqualityCheck Postgres SearchRequestStatus
 instance FromBackendRow Postgres SearchRequestStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data Industry = MOBILITY | GOVT | GROCERY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Industry where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres Industry where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-data ExchangeType = ORDER | FULFILLMENT
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExchangeType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres ExchangeType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-data RequestorType = CONSUMER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be RequestorType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres RequestorType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-data ProviderType = TRANSPORTER | DRIVER | GOVTADMIN | DELIVERYPERSON
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres ProviderType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
 instance FromHttpApiData SearchRequestStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
+data BAPPerson
+
 data SearchRequestT f = SearchRequest
   { id :: B.C f (Id SearchRequest),
-    name :: B.C f (Maybe Text),
-    description :: B.C f (Maybe Text),
-    shortId :: B.C f (ShortId SearchRequest),
-    industry :: B.C f Industry,
-    exchangeType :: B.C f ExchangeType,
-    status :: B.C f SearchRequestStatus,
+    transactionId :: B.C f Text,
     startTime :: B.C f UTCTime,
-    endTime :: B.C f (Maybe UTCTime),
     validTill :: B.C f UTCTime,
-    provider :: B.C f (Maybe Text),
-    providerType :: B.C f (Maybe ProviderType),
-    requestor :: B.C f (Maybe Text),
-    requestorType :: B.C f (Maybe RequestorType),
+    providerId :: B.C f (Id Org.Organization),
+    requestorId :: B.C f (Id BAPPerson),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
-    udf1 :: B.C f (Maybe Text),
-    udf2 :: B.C f (Maybe Text),
-    udf3 :: B.C f (Maybe Text),
-    udf4 :: B.C f (Maybe Text),
-    udf5 :: B.C f (Maybe Text),
-    info :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    vehicleVariant :: B.C f Veh.Variant,
+    bapId :: B.C f Text,
+    bapUri :: B.C f Text,
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -136,15 +92,15 @@ fieldEMod =
   B.setEntityName "search_request"
     <> B.modifyTableFields
       B.tableModification
-        { shortId = "short_id",
-          exchangeType = "exchange_type",
+        { transactionId = "transaction_id",
           startTime = "start_time",
-          endTime = "end_time",
           validTill = "valid_till",
-          providerType = "provider_type",
-          requestorType = "requestor_type",
+          providerId = "provider_id",
+          requestorId = "requestor_id",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",
-          createdAt = "created_at",
-          updatedAt = "updated_at"
+          vehicleVariant = "vehicle_variant",
+          bapId = "bap_id",
+          bapUri = "bap_uri",
+          createdAt = "created_at"
         }

@@ -15,7 +15,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import qualified Types.Storage.SearchRequest as SearchRequest
 
 data ProductsType = RIDE | PASS
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -25,8 +24,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsType where
 
 instance FromBackendRow Postgres ProductsType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-type ProductsIndustry = SearchRequest.Industry
 
 -- data ProductsIndustry = MOBILITY | GOVT | GROCERY
 --   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -57,7 +54,6 @@ data ProductsT f = Products
   { id :: B.C f (Id Products),
     name :: B.C f Text,
     description :: B.C f (Maybe Text),
-    industry :: B.C f ProductsIndustry,
     _type :: B.C f ProductsType,
     shortId :: B.C f (ShortId Products),
     status :: B.C f ProductsStatus,

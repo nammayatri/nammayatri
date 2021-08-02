@@ -4,7 +4,6 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (pi)
 import Types.App (Driver)
@@ -57,7 +56,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   actualPrice <-
     ifM
       recalculateFareEnabled
-      (recalculateFare searchRequest ride)
+      (recalculateFare searchRequest quote ride)
       (ride.price & fromMaybeM (RideFieldNotPresent "price"))
 
   endRideTransaction ride.id (cast driverId) actualPrice
@@ -66,14 +65,10 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   return APISuccess.Success
   where
-    recalculateFare searchRequest ride = do
-      transporterId <- Id <$> searchRequest.provider & fromMaybeM (SearchRequestFieldNotPresent "provider")
-      vehicleVariant <-
-        (searchRequest.udf1 >>= readMaybe . T.unpack)
-          & fromMaybeM (SearchRequestFieldNotPresent "udf1")
-      oldDistance <-
-        (searchRequest.udf5 >>= readMaybe . T.unpack)
-          & fromMaybeM (SearchRequestFieldNotPresent "udf5")
+    recalculateFare searchRequest quote ride = do
+      let transporterId = searchRequest.providerId
+          vehicleVariant = searchRequest.vehicleVariant
+          oldDistance = quote.distance 
       fare <- calculateFare transporterId vehicleVariant ride.distance searchRequest.startTime
       let distanceDiff = ride.distance - oldDistance
       price <- ride.price & fromMaybeM (RideFieldNotPresent "price")

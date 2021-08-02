@@ -4,32 +4,21 @@ import Beckn.Types.Id
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
 import qualified Types.Storage.SearchRequest as SearchRequest
+import qualified Types.Storage.Vehicle as Veh
 
 defaultSearchRequest :: SearchRequest.SearchRequest
 defaultSearchRequest =
   SearchRequest.SearchRequest
     { id = Id "1",
-      name = Nothing,
-      description = Nothing,
-      shortId = "",
-      industry = SearchRequest.MOBILITY,
-      exchangeType = SearchRequest.FULFILLMENT,
-      status = SearchRequest.COMPLETED,
+      transactionId = "",
       startTime = Fixtures.defaultTime,
-      endTime = Nothing,
       validTill = Fixtures.defaultTime,
-      provider = Nothing,
-      providerType = Nothing,
-      requestor = Nothing,
-      requestorType = Nothing,
+      providerId = Id "",
+      requestorId = Id "",
       fromLocationId = "",
       toLocationId = "",
-      udf1 = Nothing,
-      udf2 = Nothing,
-      udf3 = Nothing,
-      udf4 = Nothing,
-      udf5 = Nothing,
-      info = Nothing,
-      createdAt = Fixtures.defaultTime,
-      updatedAt = Fixtures.defaultTime
+      vehicleVariant = Veh.SUV,
+      bapId = "",
+      bapUri = "",
+      createdAt = Fixtures.defaultTime
     }

@@ -121,3 +121,44 @@ ALTER TABLE atlas_transporter.product_instance DROP COLUMN parent_id;
 ALTER TABLE atlas_transporter.product_instance RENAME TO quote;
 
 ALTER TABLE atlas_transporter.ride RENAME COLUMN product_instance_id TO quote_id;
+
+ALTER TABLE atlas_transporter.search_request DROP COLUMN name;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN description;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN status;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN industry;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN end_time;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN exchange_type;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN provider_type;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN requestor_type;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN udf2;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN udf3;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN udf4;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN info;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN updated_at;
+
+ALTER TABLE atlas_transporter.search_request RENAME COLUMN udf1 TO vehicle_variant;
+ALTER TABLE atlas_transporter.search_request RENAME COLUMN udf5 TO bap_id;
+ALTER TABLE atlas_transporter.search_request RENAME COLUMN requestor TO requestor_id;
+ALTER TABLE atlas_transporter.search_request RENAME COLUMN provider TO provider_id;
+
+ALTER TABLE atlas_transporter.search_request ADD COLUMN transaction_id character(36);
+WITH txnIdsTable AS (SELECT id, regexp_split_to_array(T3.short_id, E'_') AS txn_id FROM atlas_transporter.search_request AS T3)
+UPDATE atlas_transporter.search_request AS T1 
+	SET transaction_id = (SELECT txn_id[2] FROM txnIdsTable AS T2 WHERE T2.id = T1.id);
+ALTER TABLE atlas_transporter.search_request DROP COLUMN short_id;
+ALTER TABLE atlas_transporter.search_request ADD COLUMN bap_uri character varying(255);
+
+UPDATE atlas_transporter.search_request AS T1 
+	SET requestor_id = 'UNKNOWN' WHERE requestor_id IS NULL;
+UPDATE atlas_transporter.search_request AS T1 
+	SET provider_id = 'UNKNOWN' WHERE provider_id IS NULL;
+UPDATE atlas_transporter.search_request AS T1 
+	SET bap_id = 'UNKNOWN' WHERE bap_id IS NULL;
+UPDATE atlas_transporter.search_request AS T1 
+	SET bap_uri = 'UNKNOWN' WHERE bap_uri IS NULL;
+
+ALTER TABLE atlas_transporter.search_request ALTER COLUMN transaction_id SET NOT NULL;
+ALTER TABLE atlas_transporter.search_request ALTER COLUMN requestor_id SET NOT NULL;
+ALTER TABLE atlas_transporter.search_request ALTER COLUMN provider_id SET NOT NULL;
+ALTER TABLE atlas_transporter.search_request ALTER COLUMN bap_id SET NOT NULL;
+ALTER TABLE atlas_transporter.search_request ALTER COLUMN bap_uri SET NOT NULL;

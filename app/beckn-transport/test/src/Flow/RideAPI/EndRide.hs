@@ -16,6 +16,7 @@ import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as PI
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
+import qualified Types.Storage.Vehicle as Veh
 import Utils.Common (throwError)
 import Utils.SilentLogger ()
 
@@ -90,9 +91,8 @@ searchRequest :: SearchRequest.SearchRequest
 searchRequest =
   Fixtures.defaultSearchRequest
     { SearchRequest.id = "search",
-      SearchRequest.status = SearchRequest.INPROGRESS,
-      SearchRequest.provider = Just "someOrg",
-      SearchRequest.udf1 = Just "SEDAN"
+      SearchRequest.providerId = "someOrg",
+      SearchRequest.vehicleVariant = Veh.SEDAN
     }
 
 successfulEndByDriver :: TestTree
