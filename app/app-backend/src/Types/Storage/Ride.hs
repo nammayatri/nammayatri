@@ -20,7 +20,6 @@ import Servant.API
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import qualified Types.Storage.Quote as SQuote
-import Types.Storage.Products (Products)
 import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
@@ -70,7 +69,6 @@ instance FromBackendRow Postgres EntityType where
 data RideT f = Ride
   { id :: B.C f (Id Ride),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
-    productId :: B.C f (Id Products),
     personId :: B.C f (Maybe (Id Person)),
     personUpdatedAt :: B.C f (Maybe UTCTime),
     shortId :: B.C f (ShortId Ride),
@@ -129,7 +127,6 @@ fieldEMod =
     <> B.modifyTableFields
       B.tableModification
         { requestId = "request_id",
-          productId = "product_id",
           personId = "person_id",
           personUpdatedAt = "person_updated_at",
           entityType = "entity_type",

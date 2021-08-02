@@ -13,7 +13,6 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Person as Person
-import Types.Storage.Products
 import qualified Types.Storage.Quote as Storage
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Organization as Org
@@ -43,14 +42,6 @@ findAllByRequestId searchRequestId = do
   where
     predicate Storage.Quote {..} =
       requestId ==. B.val_ searchRequestId
-
-findByProductId :: DBFlow m r => Id Products -> m (Maybe Storage.Quote)
-findByProductId pId = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Quote {..} =
-      productId ==. B.val_ pId
 
 findAllByPerson :: DBFlow m r => Id Person.Person -> m [Storage.Quote]
 findAllByPerson perId = do
@@ -136,9 +127,6 @@ listAllQuoteWithOffset limit offset lbid stats = do
     predicate (Storage.ByCustomerId i) s Storage.Quote {..} =
       personId ==. B.val_ (Just i)
         &&. (status `B.in_` (B.val_ <$> s) ||. complementVal s)
-    predicate (Storage.ById i) s Storage.Quote {..} =
-      productId ==. B.val_ i
-        &&. (status `B.in_` (B.val_ <$> s) ||. complementVal s)
     orderBy Storage.Quote {..} = B.desc_ updatedAt
 
 listAllQuote ::
@@ -154,8 +142,6 @@ listAllQuote quoteId status_ = do
     predicate (Storage.ByApplicationId i) s Storage.Quote {..} = requestId ==. B.val_ i &&. B.in_ status (B.val_ <$> s)
     predicate (Storage.ByCustomerId i) [] Storage.Quote {..} = personId ==. B.val_ (Just i)
     predicate (Storage.ByCustomerId i) s Storage.Quote {..} = personId ==. B.val_ (Just i) &&. B.in_ status (B.val_ <$> s)
-    predicate (Storage.ById i) [] Storage.Quote {..} = productId ==. B.val_ i
-    predicate (Storage.ById i) s Storage.Quote {..} = productId ==. B.val_ i &&. B.in_ status (B.val_ <$> s)
 
 updateMultipleFlow ::
   DBFlow m r =>

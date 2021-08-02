@@ -16,7 +16,6 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
-import qualified Types.Storage.Products as Product
 import qualified Types.Storage.Ride as Storage
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Quote as SQuote
@@ -32,15 +31,6 @@ create :: Storage.Ride -> DB.SqlDB ()
 create ride = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertValue ride)
-
-findAllByIds :: DBFlow m r => Integer -> Integer -> [Id Product.Products] -> m [Storage.Ride]
-findAllByIds limit offset ids = do
-  dbTable <- getDbTable
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
-  where
-    orderByDesc Storage.Ride {..} = B.desc_ createdAt
-    predicate Storage.Ride {..} =
-      B.in_ productId (B.val_ <$> ids)
 
 findAllByRequestId :: DBFlow m r => Id SearchRequest.SearchRequest -> m [Storage.Ride]
 findAllByRequestId reqId = do
@@ -71,22 +61,6 @@ findAllByIds' ids = do
   where
     predicate Storage.Ride {..} =
       B.in_ id (B.val_ <$> ids)
-
-updateStatusForProducts :: DBFlow m r => Id Product.Products -> Storage.RideStatus -> m ()
-updateStatusForProducts productId_ status_ = do
-  dbTable <- getDbTable
-  (currTime :: UTCTime) <- getCurrentTime
-  DB.update
-    dbTable
-    (setClause status_ currTime)
-    (predicate productId_)
-  where
-    predicate pId Storage.Ride {..} = productId ==. B.val_ pId
-    setClause scStatus currTime Storage.Ride {..} =
-      mconcat
-        [ updatedAt <-. B.val_ currTime,
-          status <-. B.val_ scStatus
-        ]
 
 updateStatusFlow ::
   DBFlow m r =>
@@ -169,13 +143,6 @@ updateRequestId prodInstId searchRequestId = do
         [ updatedAt <-. B.val_ currTime,
           requestId <-. B.val_ scRequestId
         ]
-
-findAllByProdId :: DBFlow m r => Id Product.Products -> m [Storage.Ride]
-findAllByProdId piId = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate Storage.Ride {..} = productId ==. B.val_ piId
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l

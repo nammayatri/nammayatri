@@ -109,3 +109,9 @@ ALTER TABLE atlas_app.product_instance RENAME TO quote;
 ALTER TABLE atlas_app.ride RENAME COLUMN product_instance_id TO quote_id;
 
 ALTER TABLE atlas_app.issues RENAME COLUMN product_instance_id TO ride_booking_id;
+
+ALTER TABLE atlas_app.quote DROP COLUMN product_id;
+
+ALTER TABLE atlas_app.ride DROP COLUMN product_id;
+
+DROP TABLE atlas_app.product;

@@ -10,7 +10,6 @@ import qualified Types.Storage.Geometry as Geometry
 import qualified Types.Storage.Issue as Issue
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Products as Products
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
@@ -26,7 +25,6 @@ data AppDb f = AppDb
     searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT),
     quote :: f (B.TableEntity Quote.QuoteT),
     ride :: f (B.TableEntity Ride.RideT),
-    products :: f (B.TableEntity Products.ProductsT),
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
     geometry :: f (B.TableEntity Geometry.GeometryT),
     cancellationReason :: f (B.TableEntity CancellationReason.CancellationReasonT),
@@ -45,7 +43,6 @@ appDb dbSchemaName =
         searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod,
         quote = setSchema dbSchemaName <> Quote.fieldEMod,
         ride = setSchema dbSchemaName <> Ride.fieldEMod,
-        products = setSchema dbSchemaName <> Products.fieldEMod,
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
         geometry = setSchema dbSchemaName <> Geometry.fieldEMod,
         cancellationReason = setSchema dbSchemaName <> CancellationReason.fieldEMod,

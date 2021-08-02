@@ -27,7 +27,6 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
 import Product.Serviceability
 import qualified Storage.Queries.Organization as Org
-import qualified Storage.Queries.Products as QProducts
 import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -39,7 +38,6 @@ import Types.Metrics (CoreMetrics)
 import Types.ProductInfo
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Products as Products
 import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.SearchRequest as SearchRequest
@@ -112,13 +110,11 @@ searchCbService req catalog = do
           (searchRequest.status == SearchRequest.CLOSED)
           (throwError SearchRequestExpired)
         let provider = fromBeckn category
-        products <- traverse (mkProduct searchRequest) items
         quotes <- traverse (mkQuote searchRequest bpp provider personId) items
         currTime <- getCurrentTime
         confirmExpiry <- maybe 1800 fromIntegral <$> asks (.searchConfirmExpiry)
         let newValidTill = fromInteger confirmExpiry `addUTCTime` currTime
         return $ do
-          traverse_ QProducts.create products
           traverse_ QQuote.create quotes
           when (searchRequest.validTill < newValidTill) $ QSearchRequest.updateValidTill (searchRequest.id) newValidTill
     quoteList <- QQuote.findAllByRequestId (searchRequest.id)
@@ -191,38 +187,6 @@ mkSearchRequest req userId from to now = do
           validTill = addUTCTime (minimum [fromInteger searchRequestExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-mkProduct :: MonadFlow m => SearchRequest.SearchRequest -> Core.Item -> m Products.Products
-mkProduct searchRequest item = do
-  now <- getCurrentTime
-  price <-
-    case convertDecimalValueToAmount =<< item.price.listed_value of
-      Nothing -> throwError $ InvalidRequest "convertDecimalValueToAmount returns Nothing."
-      Just p -> return p
-  -- There is loss of data in coversion Product -> Item -> Product
-  -- In api exchange between transporter and app-backend
-  -- TODO: fit public transport, where searchRequest.startTime != product.startTime, etc
-  return
-    Products.Products
-      { id = Id $ item.id,
-        shortId = "",
-        name = fromMaybe "" $ item.descriptor.name,
-        description = item.descriptor.short_desc,
-        industry = searchRequest.industry,
-        _type = Products.RIDE,
-        status = Products.INSTOCK,
-        price = price,
-        rating = Nothing,
-        review = Nothing,
-        udf1 = Nothing,
-        udf2 = Nothing,
-        udf3 = Nothing,
-        udf4 = Nothing,
-        udf5 = Nothing,
-        info = Nothing,
-        createdAt = now,
-        updatedAt = now
-      }
-
 mkQuote ::
   MonadFlow m =>
   SearchRequest.SearchRequest ->
@@ -243,7 +207,6 @@ mkQuote searchRequest bppOrg provider personId item = do
       { id = Id $ item.id,
         shortId = "",
         requestId = searchRequest.id,
-        productId = Id $ item.id, -- TODO needs to be fixed
         personId = Just personId,
         personUpdatedAt = Nothing,
         quantity = 1,
@@ -281,7 +244,6 @@ mkDeclinedQuote searchRequest bppOrg provider personId = do
       { id = Id quoteId,
         shortId = "",
         requestId = searchRequest.id,
-        productId = Id quoteId,
         personId = Just personId,
         personUpdatedAt = Nothing,
         quantity = 1,

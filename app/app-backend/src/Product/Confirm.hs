@@ -5,7 +5,6 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.API.Confirm as BecknAPI
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Order (OrderItem (..))
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Order as BO
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -57,7 +56,7 @@ confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPerson
             state = Nothing,
             created_at = now,
             updated_at = now,
-            items = [OrderItem (getId $ quote.productId) Nothing],
+            items = [],
             billing = Nothing,
             payment = Nothing,
             trip = Nothing,
