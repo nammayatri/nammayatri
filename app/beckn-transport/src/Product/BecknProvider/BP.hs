@@ -296,7 +296,7 @@ notifyUpdateToBAP ::
 notifyUpdateToBAP quote ride updatedStatus = do
   -- Send callbacks to BAP
   transporter <-
-    Organization.findOrganizationById quote.organizationId
+    Organization.findOrganizationById quote.providerId
       >>= fromMaybeM OrgNotFound
   notifyTripDetailsToGateway transporter quote ride
   notifyStatusUpdateReq transporter quote updatedStatus
@@ -339,7 +339,7 @@ notifyStatusUpdateReq transporterOrg quote status = do
   where
     getAdmins = do
       if transporterOrg.enabled
-        then Person.findAllByOrgId [Person.ADMIN] quote.organizationId
+        then Person.findAllByOrgId [Person.ADMIN] quote.providerId
         else pure []
     notifyStatusToGateway = do
       ride <-

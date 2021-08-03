@@ -164,25 +164,17 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
   pool <- Confirm.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId . fst <$> pool) |+ ""
-  let quoteStatus =
-        if null pool
-          then Quote.OUTOFSTOCK
-          else Quote.INSTOCK
-  (price, nearestDriverDist) <-
+  quotes <-
     case pool of
-      [] -> return (Nothing, Nothing)
+      [] -> return []
       (fstDriverValue : _) -> do
         let dstSrc = maybe (Left (fromLocation, toLocation)) Right (distance >>= readMaybe . T.unpack)
-        fare <- Just <$> calculateFare transporterId vehicleVariant dstSrc (searchRequest.startTime)
-        let nearestDist = Just $ snd fstDriverValue
-        return (fare, nearestDist)
-  quote <- mkQuote searchRequest price quoteStatus transporterId nearestDriverDist
-  DB.runSqlDBTransaction $ do
-    Quote.create quote
-  let quotes =
-        case quote.status of
-          Quote.OUTOFSTOCK -> []
-          _ -> [quote]
+        fare <- calculateFare transporterId vehicleVariant dstSrc (searchRequest.startTime)
+        let nearestDist = snd fstDriverValue
+        quote <- mkQuote searchRequest fare Quote.INSTOCK transporterId nearestDist
+        DB.runSqlDBTransaction $ do
+          Quote.create quote
+        return [quote]
   res <- mkOnSearchPayload searchRequest quotes transporter
   Metrics.finishSearchMetrics transporterId searchMetricsMVar
   return res
@@ -190,10 +182,10 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
 mkQuote ::
   DBFlow m r =>
   SearchRequest.SearchRequest ->
-  Maybe Amount ->
+  Amount ->
   Quote.QuoteStatus ->
   Id Org.Organization ->
-  Maybe Double ->
+  Double ->
   m Quote.Quote
 mkQuote productSearchRequest price status transporterId nearestDriverDist = do
   quoteId <- Id <$> L.generateGUID
@@ -221,9 +213,9 @@ mkQuote productSearchRequest price status transporterId nearestDriverDist = do
         validTill = productSearchRequest.validTill,
         fromLocation = Just $ productSearchRequest.fromLocationId,
         toLocation = Just $ productSearchRequest.toLocationId,
-        organizationId = transporterId,
+        providerId = transporterId, 
         distance = 0,
-        udf1 = show <$> nearestDriverDist,
+        distanceToNearestDriver = nearestDriverDist,
         udf2 = Nothing,
         udf3 = Nothing,
         udf4 = Nothing,

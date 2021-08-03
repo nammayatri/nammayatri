@@ -107,13 +107,13 @@ mkItem quote =
       package_category_id = Nothing,
       model_id = Nothing,
       brand_id = Nothing,
-      tags = maybe [] (\dist -> [Tag "nearestDriverDist" dist]) quote.udf1,
+      tags = [Tag "nearestDriverDist" $ show quote.distanceToNearestDriver],
       ttl = Nothing
     }
 
 mkPrice :: Quote -> Price
 mkPrice quote =
-  let amt = convertAmountToDecimalValue <$> quote.price
+  let amt = Just $ convertAmountToDecimalValue quote.price
    in Price
         { currency = "INR", -- TODO : Fetch this from product
           value = amt,

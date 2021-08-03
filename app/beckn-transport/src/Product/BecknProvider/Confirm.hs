@@ -44,7 +44,7 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
     BP.validateContext "confirm" $ req.context
     let quoteId = Id $ req.message.order.id
     quote <- QQuote.findById' quoteId >>= fromMaybeM QuoteDoesNotExist
-    let transporterId' = quote.organizationId
+    let transporterId' = quote.providerId
     unless (quote.status == Quote.INSTOCK) $
       throwError $ QuoteInvalidStatus "This ride cannot be confirmed"
     transporterOrg <-
@@ -170,9 +170,9 @@ mkRide quote = do
         entityId = Nothing,
         shortId = shortId,
         quantity = 1,
-        price = quote.price,
+        price = Just quote.price,
         actualPrice = Nothing,
-        organizationId = quote.organizationId,
+        organizationId = quote.providerId,
         fromLocation = quote.fromLocation,
         toLocation = quote.toLocation,
         startTime = quote.startTime,
@@ -184,7 +184,7 @@ mkRide quote = do
         info = Nothing,
         createdAt = now,
         updatedAt = now,
-        udf1 = quote.udf1,
+        udf1 = Just . show $ quote.distanceToNearestDriver,
         udf2 = quote.udf2,
         udf3 = quote.udf3,
         udf4 = Just inAppOtpCode,

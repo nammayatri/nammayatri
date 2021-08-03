@@ -3,6 +3,7 @@
 
 module Types.Storage.RideBooking where
 
+import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.JSON
@@ -62,8 +63,8 @@ data RideBookingT f = RideBooking
     requestorId :: B.C f (Id Person.Person),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
-    price :: B.C f Text,
-    distance :: B.C f Float,
+    price :: B.C f Amount,
+    distance :: B.C f Double,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

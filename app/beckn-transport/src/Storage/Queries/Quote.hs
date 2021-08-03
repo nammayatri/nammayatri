@@ -190,22 +190,6 @@ updateRequestId quoteId searchRequestId = do
           requestId <-. B.val_ scRequestId
         ]
 
-updateDistance ::
-  Id Person ->
-  Double ->
-  DB.SqlDB ()
-updateDistance driverId distance' = do
-  dbTable <- getDbTable
-  DB.update'
-    dbTable
-    (setClause distance')
-    (predicate driverId)
-  where
-    predicate driverId' Storage.Quote {..} =
-      personId ==. B.val_ (Just driverId')
-        &&. status ==. B.val_ Storage.INPROGRESS
-    setClause distance'' Storage.Quote {..} = distance <-. B.current_ distance + B.val_ distance''
-
 findAllByProdId :: DBFlow m r => Id Product.Products -> m [Storage.Quote]
 findAllByProdId quoteId = do
   dbTable <- getDbTable

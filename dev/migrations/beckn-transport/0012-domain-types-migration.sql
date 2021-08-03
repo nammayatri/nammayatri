@@ -198,3 +198,15 @@ CREATE TABLE atlas_transporter.ride (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE atlas_transporter.quote ALTER COLUMN price SET NOT NULL;
+ALTER TABLE atlas_transporter.quote RENAME COLUMN organization_id TO provider_id;
+ALTER TABLE atlas_transporter.quote ADD COLUMN distance_to_nearest_driver float;
+
+UPDATE atlas_transporter.quote AS T1 
+	SET distance_to_nearest_driver = CAST (udf1 AS float);
+UPDATE atlas_transporter.quote AS T1 
+	SET distance_to_nearest_driver = 0 WHERE distance_to_nearest_driver IS NULL;
+
+ALTER TABLE atlas_transporter.quote ALTER COLUMN distance_to_nearest_driver SET NOT NULL;
+ALTER TABLE atlas_transporter.quote ALTER COLUMN price SET NOT NULL;

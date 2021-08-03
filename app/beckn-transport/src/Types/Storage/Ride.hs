@@ -57,8 +57,8 @@ data RideT f = Ride
     vehicleId :: B.C f (Id SVeh.Vehicle),
     otp :: B.C f Text,
     trackingUrl :: B.C f Text,
-    finalPrice :: B.C f Text,
-    finalDistance :: B.C f Float,
+    finalPrice :: B.C f Amount,
+    finalDistance :: B.C f Double,
     finalLocationId :: B.C f (Id Loc.SearchReqLocation),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
