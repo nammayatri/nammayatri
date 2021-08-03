@@ -89,22 +89,21 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
           >>= fromMaybeM PersonDoesNotExist
       searchRequests <-
-        SearchRequest.findAllByTypeAndStatuses (person.id) [C.NEW, C.INPROGRESS, C.CONFIRMED, C.COMPLETED, C.CLOSED] (Just limit) moffset
+        SearchRequest.findAllByPersonIdLimitOffset (person.id) (Just limit) moffset
       return $ T.OrderInfo person searchRequests
     getByRequestId searchRequestId = do
       (searchRequest :: C.SearchRequest) <-
         SearchRequest.findById (Id searchRequestId)
           >>= fromMaybeM SearchRequestDoesNotExist
-      let requestorId = fromMaybe "_ID" (searchRequest.requestor)
+      let requestorId = searchRequest.requestorId
       person <-
-        Person.findById (Id requestorId)
+        Person.findById requestorId
           >>= fromMaybeM PersonDoesNotExist
       return $ T.OrderInfo person [searchRequest]
 
 makeSearchRequestToOrder :: (DBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
 makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..} = do
   (confiremedOrder :: Maybe C.SearchRequest) <- SearchRequest.findById id
-  let (status_ :: Maybe SearchRequestStatus) = ((\x -> Just $ x.status) =<< confiremedOrder) <|> Just status
   fromLocation <- Location.findLocationById fromLocationId
   toLocation <- Location.findLocationById toLocationId
   trip <- makeTripDetails confiremedOrder
@@ -113,16 +112,15 @@ makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..}
   let details =
         T.OrderDetails
           { id = getId id,
-            status = status_,
             createdAt = createdAt,
-            updatedAt = updatedAt,
+            updatedAt = createdAt,
             startTime = startTime,
-            endTime = endTime,
+            endTime = Nothing,
             fromLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> fromLocation,
             toLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> toLocation,
             travellerName = fullName,
             travellerPhone = decMobNum,
-            vehicleVariant = udf1, -- Note: UDF1 Contain vehicleVariant info
+            vehicleVariant = Just $ show vehicleVariant, -- Note: UDF1 Contain vehicleVariant info
             trip = trip
           }
   pure $ T.OrderResp {order = details}

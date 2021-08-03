@@ -22,9 +22,7 @@ import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideCancellationReason as SRCR
-import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 cancel :: Id Ride.Ride -> Id Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
@@ -88,16 +86,11 @@ onCancel _org req = withFlowHandlerBecknAPI $
         searchRequest <- MC.findById searchRequestId >>= fromMaybeM SearchRequestNotFound
         cancellationSource <- msg.order.cancellation_reason_id & fromMaybeM (InvalidRequest "No cancellation source.")
         logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
-        whenJust (searchRequest.requestor) $ \personId -> do
-          mbPerson <- Person.findById $ Id personId
-          whenJust mbPerson $ \person -> Notify.notifyOnCancel quote person.id person.deviceToken cancellationSource
-          unless (cancellationSource == ByUser) $
-            whenJust mbRide $ \ride ->
-              DB.runSqlDBTransaction $
-                QRCR.create $ SRCR.RideCancellationReason ride.id cancellationSource Nothing Nothing
-        --
-        let isTerminalState = maybe True (\ride -> ride.status `elem` [Ride.COMPLETED, Ride.OUTOFSTOCK, Ride.CANCELLED, Ride.INVALID]) mbRide
-        when isTerminalState $
-          Metrics.incrementSearchRequestCount SearchRequest.CLOSED
+        mbPerson <- Person.findById searchRequest.requestorId
+        whenJust mbPerson $ \person -> Notify.notifyOnCancel quote person.id person.deviceToken cancellationSource
+        unless (cancellationSource == ByUser) $
+          whenJust mbRide $ \ride ->
+            DB.runSqlDBTransaction $
+              QRCR.create $ SRCR.RideCancellationReason ride.id cancellationSource Nothing Nothing
       Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err
     return Ack

@@ -15,7 +15,6 @@ newtype OrderResp = OrderResp {order :: OrderDetails}
 
 data OrderDetails = OrderDetails
   { id :: Text,
-    status :: Maybe SearchRequestStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     startTime :: UTCTime,

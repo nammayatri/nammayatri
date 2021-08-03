@@ -115,3 +115,28 @@ ALTER TABLE atlas_app.quote DROP COLUMN product_id;
 ALTER TABLE atlas_app.ride DROP COLUMN product_id;
 
 DROP TABLE atlas_app.product;
+
+ALTER TABLE atlas_app.search_request DROP COLUMN name;
+ALTER TABLE atlas_app.search_request DROP COLUMN description;
+ALTER TABLE atlas_app.search_request DROP COLUMN short_id;
+ALTER TABLE atlas_app.search_request DROP COLUMN status;
+ALTER TABLE atlas_app.search_request DROP COLUMN industry;
+ALTER TABLE atlas_app.search_request DROP COLUMN end_time;
+ALTER TABLE atlas_app.search_request DROP COLUMN exchange_type;
+ALTER TABLE atlas_app.search_request DROP COLUMN provider;
+ALTER TABLE atlas_app.search_request DROP COLUMN provider_type;
+ALTER TABLE atlas_app.search_request DROP COLUMN requestor_type;
+ALTER TABLE atlas_app.search_request DROP COLUMN udf2;
+ALTER TABLE atlas_app.search_request DROP COLUMN udf3;
+ALTER TABLE atlas_app.search_request DROP COLUMN udf4;
+ALTER TABLE atlas_app.search_request DROP COLUMN udf5;
+ALTER TABLE atlas_app.search_request DROP COLUMN info;
+ALTER TABLE atlas_app.search_request DROP COLUMN updated_at;
+
+ALTER TABLE atlas_app.search_request RENAME COLUMN udf1 TO vehicle_variant;
+ALTER TABLE atlas_app.search_request RENAME COLUMN requestor TO requestor_id;
+
+UPDATE atlas_app.search_request AS T1 
+	SET requestor_id = 'UNKNOWN' WHERE requestor_id IS NULL;
+
+ALTER TABLE atlas_app.search_request ALTER COLUMN requestor_id SET NOT NULL;

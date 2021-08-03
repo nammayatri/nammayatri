@@ -3,11 +3,8 @@ module Types.API.Search where
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
-import Types.Storage.SearchRequest (SearchRequest)
+import Types.Storage.SearchRequest (SearchRequest, VehicleVariant)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
-
-data VehicleVariant = SEDAN | SUV | HATCHBACK
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SearchReq = SearchReq
   { origin :: SearchReqLocationAPIEntity,

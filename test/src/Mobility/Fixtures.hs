@@ -103,7 +103,7 @@ searchReq =
   AppBESearch.SearchReq
     { origin = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ AppCommon.GPS "10.0739" "76.2733",
       destination = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ AppCommon.GPS "10.5449" "76.4356",
-      vehicle = AppBESearch.SUV
+      vehicle = BSearchRequest.SUV
     }
 
 bapTransporterName :: Text

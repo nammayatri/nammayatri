@@ -8,7 +8,7 @@ import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
 import Data.Time (UTCTime)
-import Database.Beam ((&&.), (<-.), (==.), (||.))
+import Database.Beam ((&&.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
@@ -28,14 +28,13 @@ create searchRequest = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertValue searchRequest)
 
-findAllByTypeAndStatuses ::
+findAllByPersonIdLimitOffset ::
   DBFlow m r =>
   Id Person.Person ->
-  [Storage.SearchRequestStatus] ->
   Maybe Integer ->
   Maybe Integer ->
   m [Storage.SearchRequest]
-findAllByTypeAndStatuses personId searchRequestStatuses mlimit moffset = do
+findAllByPersonIdLimitOffset personId mlimit moffset = do
   dbTable <- getDbTable
   let limit = fromMaybe 100 mlimit
       offset = fromMaybe 0 moffset
@@ -46,8 +45,7 @@ findAllByTypeAndStatuses personId searchRequestStatuses mlimit moffset = do
       foldl
         (&&.)
         (B.val_ True)
-        [ B.in_ status (B.val_ <$> searchRequestStatuses) ||. complementVal searchRequestStatuses,
-          requestor ==. B.val_ (Just $ getId personId)
+        [ requestorId ==. B.val_ personId
         ]
 
 findById :: DBFlow m r => Id Storage.SearchRequest -> m (Maybe Storage.SearchRequest)
@@ -58,12 +56,12 @@ findById searchRequestId = do
     predicate Storage.SearchRequest {..} = id ==. B.val_ searchRequestId
 
 findByPersonId :: DBFlow m r => Id Person.Person -> Id Storage.SearchRequest -> m (Maybe Storage.SearchRequest)
-findByPersonId (Id personId) searchRequestId = do
+findByPersonId personId searchRequestId = do
   dbTable <- getDbTable
   DB.findOne dbTable (predicate personId)
   where
     predicate personId_ Storage.SearchRequest {..} =
-      id ==. B.val_ searchRequestId &&. requestor ==. B.val_ (Just personId_)
+      id ==. B.val_ searchRequestId &&. requestorId ==. B.val_ personId_
 
 findAllByIds :: DBFlow m r => [Id Storage.SearchRequest] -> m [Storage.SearchRequest]
 findAllByIds searchRequestIds = do
@@ -72,15 +70,15 @@ findAllByIds searchRequestIds = do
   where
     predicate Storage.SearchRequest {..} = id `B.in_` (B.val_ <$> searchRequestIds)
 
-findAllByPerson :: DBFlow m r => Text -> m [Storage.SearchRequest]
+findAllByPerson :: DBFlow m r => Id Person.Person -> m [Storage.SearchRequest]
 findAllByPerson perId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate Storage.SearchRequest {..} = requestor ==. B.val_ (Just perId)
+    predicate Storage.SearchRequest {..} = requestorId ==. B.val_ perId
 
-findAllExpiredByStatus :: DBFlow m r => [Storage.SearchRequestStatus] -> Maybe UTCTime -> Maybe UTCTime -> m [Storage.SearchRequest]
-findAllExpiredByStatus statuses maybeFrom maybeTo = do
+findAllExpired :: DBFlow m r => Maybe UTCTime -> Maybe UTCTime -> m [Storage.SearchRequest]
+findAllExpired maybeFrom maybeTo = do
   dbTable <- getDbTable
   (now :: UTCTime) <- getCurrentTime
   DB.findAll dbTable identity (predicate now)
@@ -89,42 +87,21 @@ findAllExpiredByStatus statuses maybeFrom maybeTo = do
       foldl
         (&&.)
         (B.val_ True)
-        ( [ status `B.in_` (B.val_ <$> statuses),
-            validTill B.<=. B.val_ now
+        ( [ validTill B.<=. B.val_ now
           ]
             <> maybe [] (\from -> [createdAt B.>=. B.val_ from]) maybeFrom
             <> maybe [] (\to -> [createdAt B.<=. B.val_ to]) maybeTo
         )
 
-updateValidTillFlow :: DBFlow m r => Id Storage.SearchRequest -> UTCTime -> m ()
-updateValidTillFlow id validTill = DB.runSqlDB (updateValidTill id validTill)
-
-updateValidTill :: Id Storage.SearchRequest -> UTCTime -> DB.SqlDB ()
-updateValidTill searchRequestId srValidTill = do
-  dbTable <- getDbTable
-  (currTime :: UTCTime) <- asks DB.currentTime
-  DB.update'
-    dbTable
-    (setClause srValidTill currTime)
-    (predicate searchRequestId)
-  where
-    setClause validTill_ currTime Storage.SearchRequest {..} =
-      mconcat
-        [ validTill <-. B.val_ validTill_,
-          updatedAt <-. B.val_ currTime
-        ]
-    predicate searchRequestId_ Storage.SearchRequest {..} = id ==. B.val_ searchRequestId_
-
 findAllWithLimitOffsetWhere ::
   DBFlow m r =>
   [Id Loc.SearchReqLocation] ->
   [Id Loc.SearchReqLocation] ->
-  [Storage.SearchRequestStatus] ->
-  [Text] ->
+  [Storage.VehicleVariant] ->
   Maybe Int ->
   Maybe Int ->
   m [Storage.SearchRequest]
-findAllWithLimitOffsetWhere fromLocationIds toLocationIds statuses udf1s mlimit moffset = do
+findAllWithLimitOffsetWhere fromLocationIds toLocationIds variants mlimit moffset = do
   dbTable <- getDbTable
   DB.findAll
     dbTable
@@ -140,28 +117,10 @@ findAllWithLimitOffsetWhere fromLocationIds toLocationIds statuses udf1s mlimit 
         (B.val_ True)
         [ fromLocationId `B.in_` (B.val_ <$> fromLocationIds) ||. complementVal fromLocationIds,
           toLocationId `B.in_` (B.val_ <$> toLocationIds) ||. complementVal toLocationIds,
-          status `B.in_` (B.val_ <$> statuses) ||. complementVal statuses,
-          udf1 `B.in_` (B.val_ . Just <$> udf1s) ||. complementVal udf1s
+          vehicleVariant `B.in_` (B.val_ <$> variants) ||. complementVal variants
         ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
-
-updateInfoFlow :: DBFlow m r => Id Storage.SearchRequest -> Text -> m ()
-updateInfoFlow searchRequestId csInfo = do
-  DB.runSqlDB (updateInfo searchRequestId csInfo)
-
-updateInfo :: Id Storage.SearchRequest -> Text -> DB.SqlDB ()
-updateInfo searchRequestId searchRequestInfo = do
-  dbTable <- getDbTable
-  currTime <- asks DB.currentTime
-  DB.update' dbTable (setClause searchRequestInfo currTime) (predicate searchRequestId)
-  where
-    setClause cInfo currTime' Storage.SearchRequest {..} =
-      mconcat
-        [ info <-. B.val_ (Just cInfo),
-          updatedAt <-. B.val_ currTime'
-        ]
-    predicate pSearchRequestId Storage.SearchRequest {..} = id ==. B.val_ pSearchRequestId

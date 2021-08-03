@@ -20,7 +20,6 @@ import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
-import qualified Data.Map as Map
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -51,7 +50,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   toLocation <- Location.buildSearchReqLoc req.destination
   now <- getCurrentTime
   searchRequest <- mkSearchRequest req (getId personId) fromLocation toLocation now
-  Metrics.incrementSearchRequestCount SearchRequest.NEW
+  Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
   DB.runSqlDBTransaction $ do
@@ -61,8 +60,9 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   env <- ask
   let bapNwAddr = env.bapNwAddress
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
+  distance <- Location.getDistance (req.origin.gps) (req.destination.gps)
   let intent = mkIntent req now
-      tags = Just [Tag "distance" (fromMaybe "" $ searchRequest.udf5)]
+      tags = Just [Tag "distance" (maybe  "" show distance)]
   fork "search" . withRetry $
     ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
   return . API.SearchRes $ searchRequest.id
@@ -94,40 +94,21 @@ searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], D
 searchCbService req catalog = do
   let searchRequestId = Id $ req.context.transaction_id --searchRequestId $ service.id
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
-  when (searchRequest.status /= SearchRequest.CLOSED) $ do
-    bpp <-
-      Org.findOrganizationByCallbackUri (req.context.bpp_uri) Org.PROVIDER
-        >>= fromMaybeM OrgDoesNotExist
-    personId <- (Id <$> SearchRequest.requestor searchRequest) & fromMaybeM (SearchRequestFieldNotPresent "requestor")
-    transaction <- case (catalog.categories, catalog.items) of
-      ([], _) -> throwError $ InvalidRequest "Missing provider"
-      (category : _, []) -> do
-        let provider = fromBeckn category
-        declinedPI <- mkDeclinedQuote searchRequest bpp provider personId
-        return $ QQuote.create declinedPI
-      (category : _, items) -> do
-        when
-          (searchRequest.status == SearchRequest.CLOSED)
-          (throwError SearchRequestExpired)
-        let provider = fromBeckn category
-        quotes <- traverse (mkQuote searchRequest bpp provider personId) items
-        currTime <- getCurrentTime
-        confirmExpiry <- maybe 1800 fromIntegral <$> asks (.searchConfirmExpiry)
-        let newValidTill = fromInteger confirmExpiry `addUTCTime` currTime
-        return $ do
-          traverse_ QQuote.create quotes
-          when (searchRequest.validTill < newValidTill) $ QSearchRequest.updateValidTill (searchRequest.id) newValidTill
-    quoteList <- QQuote.findAllByRequestId (searchRequest.id)
-    let piStatusCount = Map.fromListWith (+) $ zip (SQuote.status <$> quoteList) $ repeat (1 :: Integer)
-        accepted = Map.lookup SQuote.INSTOCK piStatusCount
-        declined = Map.lookup SQuote.OUTOFSTOCK piStatusCount
-        mSearchRequestInfo :: (Maybe API.SearchRequestInfo) = decodeFromText =<< (searchRequest.info)
-
-    DB.runSqlDBTransaction $ do
-      transaction
-      whenJust mSearchRequestInfo $ \info -> do
-        let uInfo = info & #accepted .~ accepted & #declined .~ declined
-        QSearchRequest.updateInfo (searchRequest.id) (encodeToText uInfo)
+  bpp <-
+    Org.findOrganizationByCallbackUri (req.context.bpp_uri) Org.PROVIDER
+      >>= fromMaybeM OrgDoesNotExist
+  let personId = searchRequest.requestorId
+  DB.runSqlDBTransaction =<< case (catalog.categories, catalog.items) of
+    ([], _) -> throwError $ InvalidRequest "Missing provider"
+    (category : _, []) -> do
+      let provider = fromBeckn category
+      declinedPI <- mkDeclinedQuote searchRequest bpp provider personId
+      return $ QQuote.create declinedPI
+    (category : _, items) -> do
+      let provider = fromBeckn category
+      quotes <- traverse (mkQuote searchRequest bpp provider personId) items
+      return $ do
+        traverse_ QQuote.create quotes
 
 mkSearchRequest ::
   ( (HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),
@@ -142,41 +123,18 @@ mkSearchRequest ::
   m SearchRequest.SearchRequest
 mkSearchRequest req userId from to now = do
   searchRequestId <- generateGUID
-  distance <- Location.getDistance (req.origin.gps) (req.destination.gps)
-  orgs <- Org.listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
-  let info = encodeToText $ API.SearchRequestInfo (Just $ toInteger $ length orgs) (Just 0) (Just 0)
-  -- TODO: consider collision probability for shortId
-  -- Currently it's a random 10 char alphanumeric string
-  -- If the insert fails, maybe retry automatically as there
-  -- is a unique constraint on `shortId`
-  shortId_ <- generateShortId
   validTill <- getSearchRequestExpiry now
+  let vehVar = req.vehicle
   return
     SearchRequest.SearchRequest
       { id = searchRequestId,
-        name = Nothing,
-        description = Just "SearchRequest to search for a Ride",
-        shortId = shortId_,
-        industry = SearchRequest.MOBILITY,
-        exchangeType = SearchRequest.FULFILLMENT,
-        status = SearchRequest.NEW,
         startTime = now,
-        endTime = Nothing,
         validTill = validTill,
-        provider = Nothing,
-        providerType = Nothing,
-        requestor = Just userId,
-        requestorType = Just SearchRequest.CONSUMER,
+        requestorId = Id userId,
         fromLocationId = from.id,
         toLocationId = to.id,
-        udf1 = Just . show $ req.vehicle,
-        udf2 = Nothing,
-        udf3 = Nothing,
-        udf4 = Nothing,
-        udf5 = show <$> distance,
-        info = Just info,
-        createdAt = now,
-        updatedAt = now
+        vehicleVariant = vehVar,
+        createdAt = now
       }
   where
     getSearchRequestExpiry :: (HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
@@ -213,7 +171,7 @@ mkQuote searchRequest bppOrg provider personId item = do
         entityType = SQuote.VEHICLE,
         status = SQuote.INSTOCK,
         startTime = searchRequest.startTime,
-        endTime = searchRequest.endTime,
+        endTime = Nothing,
         validTill = searchRequest.validTill,
         actualDistance = Nothing,
         entityId = Nothing,
@@ -223,7 +181,7 @@ mkQuote searchRequest bppOrg provider personId item = do
         udf2 = Nothing,
         udf3 = Nothing,
         udf4 = Nothing,
-        udf5 = searchRequest.udf5,
+        udf5 = Nothing,
         fromLocation = Just $ searchRequest.fromLocationId,
         toLocation = Just $ searchRequest.toLocationId,
         info = Just $ encodeToText info,
@@ -250,7 +208,7 @@ mkDeclinedQuote searchRequest bppOrg provider personId = do
         entityType = SQuote.VEHICLE,
         status = SQuote.OUTOFSTOCK,
         startTime = searchRequest.startTime,
-        endTime = searchRequest.endTime,
+        endTime = Nothing,
         validTill = searchRequest.validTill,
         actualDistance = Nothing,
         entityId = Nothing,

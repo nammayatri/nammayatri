@@ -26,7 +26,6 @@ import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 
 confirm :: Id Person.Person -> Id SearchRequest.SearchRequest -> Id SQuote.Quote -> FlowHandler API.ConfirmRes
 confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
@@ -38,7 +37,6 @@ confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPerson
   organization <-
     OQ.findOrganizationById (quote.organizationId)
       >>= fromMaybeM OrgNotFound
-  Metrics.incrementSearchRequestCount SearchRequest.INPROGRESS
   ride <- mkRide (searchRequest.id) quote
   DB.runSqlDBTransaction $ do
     QRide.create ride
@@ -88,7 +86,6 @@ onConfirm _org req = withFlowHandlerBecknAPI $
                     udf4 = (.id) <$> trip,
                     status = SQuote.CONFIRMED
                    }
-        Metrics.incrementSearchRequestCount SearchRequest.COMPLETED
         SQuote.validateStatusTransition quote.status SQuote.CONFIRMED & fromEitherM QuoteInvalidStatus
         DB.runSqlDBTransaction $ do
           QQuote.updateMultiple quoteId uQuote

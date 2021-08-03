@@ -20,7 +20,6 @@ import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import Types.ProductInfo as ProductInfo
 import Types.Storage.Person as Person
-import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Storage.Queries.Ride as QRide
 import qualified Types.Storage.Ride as SRide
@@ -54,8 +53,8 @@ getDriver ride = do
 getPerson :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Person
 getPerson ride = do
   searchRequest <- SearchRequest.findById ride.requestId >>= fromMaybeM SearchRequestNotFound
-  personId <- SearchRequest.requestor searchRequest & fromMaybeM (SearchRequestFieldNotPresent "requestor")
-  Person.findById (Id personId) >>= fromMaybeM PersonNotFound
+  let personId = searchRequest.requestorId
+  Person.findById personId >>= fromMaybeM PersonNotFound
 
 -- | Get person's mobile phone
 getPersonPhone :: EncFlow m r => Person -> m Text

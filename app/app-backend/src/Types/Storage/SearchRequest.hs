@@ -17,89 +17,38 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
 import qualified Types.Storage.SearchReqLocation as Loc
+import qualified Types.Storage.Person as SP
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-instance ToHttpApiData SearchRequestStatus where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance B.HasSqlEqualityCheck Postgres SearchRequestStatus
-
-instance FromBackendRow Postgres SearchRequestStatus where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-data Industry = MOBILITY | GOVT | GROCERY
+data VehicleVariant = SEDAN | SUV | HATCHBACK
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Industry where
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be VehicleVariant where
   sqlValueSyntax = autoSqlValueSyntax
 
-instance FromBackendRow Postgres Industry where
+instance B.HasSqlEqualityCheck Postgres VehicleVariant
+
+instance FromBackendRow Postgres VehicleVariant where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-data ExchangeType = ORDER | FULFILLMENT
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+instance ToParamSchema VehicleVariant
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExchangeType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres ExchangeType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-data RequestorType = CONSUMER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be RequestorType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres RequestorType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-data ProviderType = TRANSPORTER | DRIVER | GOVTADMIN | DELIVERYPERSON
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres ProviderType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance FromHttpApiData SearchRequestStatus where
+instance FromHttpApiData VehicleVariant where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data SearchRequestT f = SearchRequest
   { id :: B.C f (Id SearchRequest),
-    name :: B.C f (Maybe Text),
-    description :: B.C f (Maybe Text),
-    shortId :: B.C f (ShortId SearchRequest),
-    industry :: B.C f Industry,
-    exchangeType :: B.C f ExchangeType,
-    status :: B.C f SearchRequestStatus,
     startTime :: B.C f UTCTime,
-    endTime :: B.C f (Maybe UTCTime),
     validTill :: B.C f UTCTime,
-    provider :: B.C f (Maybe Text),
-    providerType :: B.C f (Maybe ProviderType),
-    requestor :: B.C f (Maybe Text),
-    requestorType :: B.C f (Maybe RequestorType),
+    requestorId :: B.C f (Id SP.Person),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
-    udf1 :: B.C f (Maybe Text),
-    udf2 :: B.C f (Maybe Text),
-    udf3 :: B.C f (Maybe Text),
-    udf4 :: B.C f (Maybe Text),
-    udf5 :: B.C f (Maybe Text),
-    info :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    vehicleVariant :: B.C f VehicleVariant,
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -138,15 +87,11 @@ fieldEMod =
   B.setEntityName "search_request"
     <> B.modifyTableFields
       B.tableModification
-        { shortId = "short_id",
-          exchangeType = "exchange_type",
-          startTime = "start_time",
-          endTime = "end_time",
+        { startTime = "start_time",
           validTill = "valid_till",
-          providerType = "provider_type",
-          requestorType = "requestor_type",
+          requestorId = "requestor_id",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",
-          createdAt = "created_at",
-          updatedAt = "updated_at"
+          vehicleVariant = "vehicle_variant",
+          createdAt = "created_at"
         }
