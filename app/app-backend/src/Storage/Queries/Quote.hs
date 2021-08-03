@@ -196,5 +196,5 @@ countCompletedRides orgId = do
   where
     aggregator Storage.Quote {..} = B.countAll_
     predicate Storage.Quote {..} =
-      organizationId ==. B.val_ orgId
+      providerId ==. B.val_ orgId
         &&. status ==. B.val_ Storage.COMPLETED

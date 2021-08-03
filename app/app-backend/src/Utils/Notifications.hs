@@ -254,7 +254,7 @@ notifyOnTrackCb personId tracker searchRequest = do
 
 notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => Quote -> Id Person -> Maybe FCM.FCMRecipientToken -> CancellationSource -> m ()
 notifyOnCancel quote personId mbDeviceToken cancellationSource = do
-  org <- QOrg.findOrganizationById (quote.organizationId) >>= fromMaybeM OrgNotFound
+  org <- QOrg.findOrganizationById (quote.providerId) >>= fromMaybeM OrgNotFound
   FCM.notifyPerson (notificationData $ org.name) $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notificationData orgName =

@@ -3,7 +3,6 @@ module Product.Quote where
 import App.Types
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Quote as QQuote
@@ -32,19 +31,19 @@ getQuotes searchRequestId _ = withFlowHandlerAPI $ do
       }
   where
     sortByNearestDriverDistance quoteList = do
-      let sortFunc = \(_, aDist) (_, bDist) -> do
-            compare aDist bDist
-      fmap fst $ sortBy sortFunc $ fmap (\quote -> (quote, fromMaybe (0 :: Double) $ readMaybe . T.unpack =<< quote.udf1)) quoteList
+      let sortFunc = \a b -> do
+            compare a.distanceToNearestDriver b.distanceToNearestDriver
+      sortBy sortFunc quoteList
     buildQuote :: DBFlow m r => SQuote.Quote -> m SQuote.QuoteAPIEntity
     buildQuote quote = do
       info :: Info.ProductInfo <- quote.info >>= decodeFromText & fromMaybeM (InternalError "Unable to read product info.")
       return $
         SQuote.QuoteAPIEntity
           { id = quote.id,
-            estimatedPrice = fromMaybe 0 quote.price,
+            estimatedPrice = quote.price,
             agencyName = fromMaybe "" $ info.provider >>= (.name),
             agencyNumber = fromMaybe "" $ info.provider >>= (listToMaybe . (.phones)),
             agencyCompletedRidesCount = fromMaybe 0 $ info.provider >>= (.info) >>= (.completed),
-            nearestDriverDistance = fromMaybe 0 $ readMaybe . T.unpack =<< quote.udf1,
+            nearestDriverDistance = quote.distanceToNearestDriver,
             createdAt = quote.createdAt
           }

@@ -38,7 +38,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder (getId quoteId) Nothing)
   context <- buildContext "cancel" txnId Nothing Nothing
   organization <-
-    OQ.findOrganizationById (quote.organizationId)
+    OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)

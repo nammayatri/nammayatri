@@ -42,6 +42,7 @@ import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
+import qualified Data.Text as T
 
 search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
@@ -156,7 +157,8 @@ mkQuote ::
 mkQuote searchRequest bppOrg provider personId item = do
   now <- getCurrentTime
   let info = ProductInfo (Just provider) Nothing
-      price = convertDecimalValueToAmount =<< item.price.listed_value
+  price <- item.price.listed_value >>= convertDecimalValueToAmount & fromMaybeM (InternalError "Unable to parse price")
+  nearestDriverDist <- getNearestDriverDist
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where searchRequest.startTime != product.startTime, etc
@@ -177,7 +179,8 @@ mkQuote searchRequest bppOrg provider personId item = do
         entityId = Nothing,
         price = price,
         actualPrice = Nothing,
-        udf1 = getNearestDriverDist,
+        distanceToNearestDriver = nearestDriverDist,
+        providerMobileNumber = "UNKNOWN",
         udf2 = Nothing,
         udf3 = Nothing,
         udf4 = Nothing,
@@ -185,12 +188,14 @@ mkQuote searchRequest bppOrg provider personId item = do
         fromLocation = Just $ searchRequest.fromLocationId,
         toLocation = Just $ searchRequest.toLocationId,
         info = Just $ encodeToText info,
-        organizationId = bppOrg.id,
+        providerId = bppOrg.id,
         createdAt = now,
         updatedAt = now
       }
   where
-    getNearestDriverDist = (.value) <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
+    getNearestDriverDist = do
+      let dist = (.value) <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
+      (readMaybe . T.unpack =<< dist) & fromMaybeM (InternalError "Unable to parse nearestDriverDist")
 
 mkDeclinedQuote :: MonadFlow m => SearchRequest.SearchRequest -> Org.Organization -> Common.Provider -> Id Person.Person -> m SQuote.Quote
 mkDeclinedQuote searchRequest bppOrg provider personId = do
@@ -212,9 +217,10 @@ mkDeclinedQuote searchRequest bppOrg provider personId = do
         validTill = searchRequest.validTill,
         actualDistance = Nothing,
         entityId = Nothing,
-        price = Nothing,
+        price = 0,
         actualPrice = Nothing,
-        udf1 = Nothing,
+        distanceToNearestDriver = 0,
+        providerMobileNumber = "UNKNOWN",
         udf2 = Nothing,
         udf3 = Nothing,
         udf4 = Nothing,
@@ -222,7 +228,7 @@ mkDeclinedQuote searchRequest bppOrg provider personId = do
         fromLocation = Just $ searchRequest.fromLocationId,
         toLocation = Just $ searchRequest.toLocationId,
         info = Just $ encodeToText info,
-        organizationId = bppOrg.id,
+        providerId = bppOrg.id,
         createdAt = now,
         updatedAt = now
       }

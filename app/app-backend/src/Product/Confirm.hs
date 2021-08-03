@@ -35,7 +35,7 @@ confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPerson
     throwError SearchRequestExpired
   quote <- QQuote.findById rideBookingId >>= fromMaybeM QuoteDoesNotExist
   organization <-
-    OQ.findOrganizationById (quote.organizationId)
+    OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
   ride <- mkRide (searchRequest.id) quote
   DB.runSqlDBTransaction $ do
@@ -107,7 +107,10 @@ mkRide searchRequestId quote@SQuote.Quote {..} = do
         quantity = 1,
         quoteId = quote.id,
         status = SRide.INSTOCK,
+        organizationId = providerId,
+        price = Just price,
         createdAt = now,
         updatedAt = now,
+        udf1 = Just $ show distanceToNearestDriver,
         ..
       }

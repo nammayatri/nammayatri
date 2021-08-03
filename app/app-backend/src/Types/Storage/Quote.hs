@@ -74,7 +74,7 @@ data QuoteT f = Quote
     entityType :: B.C f EntityType,
     entityId :: B.C f (Maybe Text),
     quantity :: B.C f Int,
-    price :: B.C f (Maybe Amount),
+    price :: B.C f Amount,
     actualPrice :: B.C f (Maybe Amount),
     status :: B.C f QuoteStatus,
     startTime :: B.C f UTCTime,
@@ -82,9 +82,10 @@ data QuoteT f = Quote
     validTill :: B.C f UTCTime,
     fromLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     toLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
-    organizationId :: B.C f (Id Org.Organization),
     actualDistance :: B.C f (Maybe Double),
-    udf1 :: B.C f (Maybe Text),
+    providerId :: B.C f (Id Org.Organization),
+    providerMobileNumber :: B.C f Text,
+    distanceToNearestDriver :: B.C f Double,
     udf2 :: B.C f (Maybe Text),
     udf3 :: B.C f (Maybe Text),
     udf4 :: B.C f (Maybe Text),
@@ -94,6 +95,18 @@ data QuoteT f = Quote
     updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
+
+-- data QuoteT f = Quote
+--   { id :: B.C f (Id Quote),
+--     requestId :: B.C f (Id SearchRequest.SearchRequest),
+--     price :: B.C f Amount,
+--     providerId :: B.C f (Id Org.Organization),
+--     providerMobileNumber :: B.C f Text,
+--     distanceToNearestDriver :: B.C f Float,
+--     createdAt :: B.C f UTCTime,
+--     updatedAt :: B.C f UTCTime
+--   }
+--   deriving (Generic, B.Beamable)
 
 --TODO: organizationId - -- need to point to primarykey
 
@@ -139,7 +152,9 @@ fieldEMod =
           fromLocation = "from_location_id",
           toLocation = "to_location_id",
           actualDistance = "actual_distance",
-          organizationId = "organization_id",
+          providerMobileNumber = "provider_mobile_number",
+          distanceToNearestDriver = "distance_to_nearest_driver",
+          providerId = "provider_id",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }

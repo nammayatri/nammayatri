@@ -178,3 +178,22 @@ CREATE TABLE atlas_app.ride (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE atlas_app.quote ALTER COLUMN price SET NOT NULL;
+ALTER TABLE atlas_app.quote RENAME COLUMN organization_id TO provider_id;
+ALTER TABLE atlas_app.quote ADD COLUMN provider_mobile_number character varying(255);
+ALTER TABLE atlas_app.quote ADD COLUMN distance_to_nearest_driver float;
+
+UPDATE atlas_app.quote AS T1 
+	SET distance_to_nearest_driver = CAST (udf1 AS float);
+UPDATE atlas_app.quote AS T1 
+	SET distance_to_nearest_driver = 0 WHERE distance_to_nearest_driver IS NULL;
+
+UPDATE atlas_app.quote AS T1 
+	SET provider_mobile_number = (SELECT T2.mobile_number FROM atlas_app.organization AS T2 WHERE T2.id = T1.provider_id);
+UPDATE atlas_app.quote AS T1 
+	SET provider_mobile_number = 'UNKNOWN' WHERE provider_mobile_number IS NULL;
+
+ALTER TABLE atlas_app.quote ALTER COLUMN provider_mobile_number SET NOT NULL;
+ALTER TABLE atlas_app.quote ALTER COLUMN distance_to_nearest_driver SET NOT NULL;
+ALTER TABLE atlas_app.quote ALTER COLUMN price SET NOT NULL;
