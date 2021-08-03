@@ -8,7 +8,7 @@ import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Types.App (Driver)
-import Types.Storage.Ride (RideAPIEntity, Ride)
+import Types.Storage.OldRide (RideAPIEntity, Ride)
 import Types.Storage.RideBooking (RideBookingStatus)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 

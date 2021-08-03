@@ -162,3 +162,39 @@ ALTER TABLE atlas_transporter.search_request ALTER COLUMN requestor_id SET NOT N
 ALTER TABLE atlas_transporter.search_request ALTER COLUMN provider_id SET NOT NULL;
 ALTER TABLE atlas_transporter.search_request ALTER COLUMN bap_id SET NOT NULL;
 ALTER TABLE atlas_transporter.search_request ALTER COLUMN bap_uri SET NOT NULL;
+
+ALTER TABLE atlas_transporter.ride RENAME TO old_ride;
+
+CREATE TABLE atlas_transporter.ride_booking (
+    id character(36) PRIMARY KEY NOT NULL,
+    transaction_id character(36) NOT NULL,
+    request_id character(36) NOT NULL REFERENCES atlas_transporter.search_request (id) on delete cascade,
+    quote_id character(36) NOT NULL REFERENCES atlas_transporter.quote (id) on delete cascade,
+    status character varying(255) NOT NULL,
+    provider_id character(36) NOT NULL REFERENCES atlas_transporter.organization (id) on delete cascade,
+    bap_id character varying(255) NOT NULL,
+    start_time timestamp with time zone NOT NULL,
+    requestor_id character(36) NOT NULL,
+    from_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
+    to_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
+    price character varying(255) NOT NULL,
+    distance float NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE atlas_transporter.ride (
+    id character(36) PRIMARY KEY NOT NULL,
+    booking_id character(36) NOT NULL REFERENCES atlas_transporter.ride_booking (id) on delete cascade,
+    short_id character varying(36) NOT NULL,
+    status character varying(255) NOT NULL,
+    driver_id character(36) NOT NULL REFERENCES atlas_transporter.person (id) on delete cascade,
+    vehicle_id character(36) NOT NULL REFERENCES atlas_transporter.vehicle (id) on delete cascade,
+    otp character(4) NOT NULL,
+    tracking_url character varying(255) NOT NULL,
+    final_price character varying(255) NOT NULL,
+    final_distance float NOT NULL,
+    final_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);

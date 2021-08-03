@@ -23,7 +23,7 @@ import qualified Types.ProductInfo as Products
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as SQuote
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 

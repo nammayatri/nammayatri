@@ -13,7 +13,7 @@ import Types.Storage.AllocationEvent (AllocationEventType (..))
 import qualified Types.Storage.CancellationReason as SCR
 import Types.Storage.Organization
 import qualified Types.Storage.RideCancellationReason as SRCR
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 

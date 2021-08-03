@@ -8,7 +8,7 @@ import Types.Common
 import Types.Storage.SearchRequest as C
 import qualified Types.Storage.Person as P
 import Types.Storage.SearchReqLocation as L
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 
 newtype OrderResp = OrderResp {order :: OrderDetails}
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

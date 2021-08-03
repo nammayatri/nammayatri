@@ -15,7 +15,7 @@ import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.SearchRequest as SearchRequest
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
 
 data AppDb f = AppDb
   { organization :: f (B.TableEntity Organization.OrganizationT),

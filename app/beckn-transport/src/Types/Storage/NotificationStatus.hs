@@ -10,7 +10,7 @@ import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyn
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
 import Types.App
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
 
 data AnswerStatus = NOTIFIED | REJECTED | IGNORED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

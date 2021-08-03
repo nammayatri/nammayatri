@@ -56,7 +56,7 @@ import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RegistrationToken as SRT
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
 import qualified Types.Storage.SearchRequest as SSR
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 
 type AppAPI =
   "v2"

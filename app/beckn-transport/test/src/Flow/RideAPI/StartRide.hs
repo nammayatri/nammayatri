@@ -10,9 +10,9 @@ import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Error
+import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
-import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.SilentLogger ()
 

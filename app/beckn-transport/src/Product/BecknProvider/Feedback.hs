@@ -13,13 +13,13 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.Ride as QRide
 import Types.Error
+import qualified Types.Storage.OldRide as Ride
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as SP
 import Types.Storage.Rating as Rating
   ( Rating,
     RatingT (..),
   )
-import qualified Types.Storage.Ride as Ride
 import Utils.Common
 
 feedback ::

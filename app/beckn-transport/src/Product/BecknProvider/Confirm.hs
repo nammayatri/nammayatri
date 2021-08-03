@@ -23,9 +23,9 @@ import qualified Storage.Queries.SearchRequest as SearchRequest
 import qualified Storage.Queries.TransporterConfig as QTConf
 import Types.App (Driver)
 import Types.Error
+import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Quote as Quote
-import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.SearchReqLocation as SSReqLoc
 import qualified Types.Storage.SearchRequest as SearchRequest

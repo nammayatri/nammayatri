@@ -11,7 +11,7 @@ import EulerHS.Prelude hiding (id)
 import Types.App
 import qualified Types.Storage.AllocationEvent as Storage
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.AllocationEventT))
 getDbTable =

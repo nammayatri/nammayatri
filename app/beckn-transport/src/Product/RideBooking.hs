@@ -22,7 +22,7 @@ import Types.Error
 import Types.Storage.AllocationEvent
 import qualified Types.Storage.AllocationEvent as AllocationEvent
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 import qualified Types.Storage.RideBooking as SRideBooking
 import Types.Storage.RideRequest
 import qualified Types.Storage.RideRequest as SRideRequest
@@ -151,7 +151,6 @@ buildRideBookingStatusRes ride = do
   fromLocation <- QLoc.findLocationById fromLocId >>= fromMaybeM LocationNotFound
   toLocation <- QLoc.findLocationById toLocId >>= fromMaybeM LocationNotFound
   let rbStatus = case ride.status of
-        SRide.INSTOCK -> SRideBooking.NEW
         SRide.CONFIRMED -> SRideBooking.CONFIRMED
         SRide.TRIP_ASSIGNED -> SRideBooking.TRIP_ASSIGNED
         SRide.COMPLETED -> SRideBooking.COMPLETED

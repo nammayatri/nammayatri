@@ -10,7 +10,7 @@ import qualified Types.API.RideBooking as API
 import Types.Error
 import qualified Types.ProductInfo as Info
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 import qualified Types.Storage.RideBooking as SRideBooking
 import qualified Types.Storage.SearchReqLocation as SLoc
 import Utils.Common

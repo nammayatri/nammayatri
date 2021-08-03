@@ -20,7 +20,7 @@ import Types.API.Cancel as Cancel
 import Types.Error
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.RideCancellationReason as SRCR
 import Utils.Common
 import qualified Utils.Notifications as Notify

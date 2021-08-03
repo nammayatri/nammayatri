@@ -9,10 +9,10 @@ import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
+import Types.Storage.OldRide (Ride)
 import Types.Storage.Person as Person
 import Types.Storage.Quote as Quote
 import Types.Storage.RegistrationToken as RegToken
-import Types.Storage.Ride (Ride)
 import Types.Storage.SearchRequest as SearchRequest
 
 -- | Send FCM "cancel" notification to driver

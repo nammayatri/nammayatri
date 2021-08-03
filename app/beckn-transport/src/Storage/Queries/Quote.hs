@@ -13,11 +13,11 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.SearchReqLocation as Loc
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.OldRide as Ride
 import Types.Storage.Person (Person)
 import qualified Types.Storage.Products as Product
 import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Quote as Storage
-import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Types.Storage.Vehicle (Vehicle)
 

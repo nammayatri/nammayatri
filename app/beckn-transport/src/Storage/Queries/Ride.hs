@@ -13,11 +13,11 @@ import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.OldRide as Storage
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import qualified Types.Storage.Products as Product
 import qualified Types.Storage.Quote as PI
-import qualified Types.Storage.Ride as Storage
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Types.Storage.Vehicle (Vehicle)
 import Beckn.Types.Amount

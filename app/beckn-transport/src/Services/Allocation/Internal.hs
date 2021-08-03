@@ -26,10 +26,10 @@ import Types.Metrics (CoreMetrics)
 import Types.Storage.AllocationEvent (AllocationEventType)
 import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
+import Types.Storage.OldRide (Ride)
+import qualified Types.Storage.OldRide as Ride
 import Types.Storage.Organization
 import qualified Types.Storage.RideCancellationReason as SRCR
-import Types.Storage.Ride (Ride)
-import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.Notifications

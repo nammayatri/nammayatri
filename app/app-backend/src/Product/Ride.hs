@@ -8,7 +8,7 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Types.API.Ride as API
 import Types.Error
 import qualified Types.Storage.Person as SPerson
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 import Utils.Common
 import qualified Storage.Queries.Ride as QRide
 

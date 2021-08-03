@@ -47,7 +47,7 @@ import Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SRT
 import Types.Storage.Vehicle
 import Utils.Auth (AdminTokenAuth, LookupRegistryOrg, TokenAuth)
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 
 type TransportAPI =
   "v2"

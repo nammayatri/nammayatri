@@ -14,7 +14,7 @@ import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import Types.API.Ride (StartRideReq (..))
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
 import Utils.Common (withFlowHandlerAPI)
 
 startRide :: Id SP.Person -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess.APISuccess

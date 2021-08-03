@@ -20,7 +20,7 @@ import Types.Storage.Quote as Quote
 import Types.Storage.RegistrationToken as RegToken
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 
 -- Note:
 -- When customer searches case is created in the BA, and search request is

@@ -10,10 +10,10 @@ import Types.App (Driver)
 import Types.Error
 import qualified Types.Storage.SearchRequest as SSearchRequest
 import Types.Storage.Organization (Organization)
-import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Vehicle as Vehicle
 import qualified Types.Storage.Quote as SQuote
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
+import qualified Types.Storage.Person as Person
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle

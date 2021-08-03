@@ -17,10 +17,10 @@ import qualified Storage.Queries.Quote as PI
 import qualified Storage.Queries.Ride as QRide
 import Types.App (Driver)
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Ride as Ride
-import Utils.Common (withFlowHandlerAPI)
+import qualified Types.Storage.OldRide as Ride
 import Utils.Metrics (putFareAndDistanceDeviations)
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Beckn.Utils.Common
 
 endRide :: Id SP.Person -> Id Ride.Ride -> FlowHandler APISuccess.APISuccess
 endRide personId rideId = withFlowHandlerAPI $ do

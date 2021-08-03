@@ -8,7 +8,7 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Storage.CancellationReason (CancellationReasonCode)
 import Types.Storage.Organization
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 
 data RideCancellationReasonT f = RideCancellationReason
   { rideId :: B.C f (Id SRide.Ride),

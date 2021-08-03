@@ -5,7 +5,7 @@ import Beckn.Types.Id
 import Data.Ratio ((%))
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 
 defaultRide :: Ride.Ride

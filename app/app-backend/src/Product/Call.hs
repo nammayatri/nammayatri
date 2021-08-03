@@ -22,7 +22,7 @@ import Types.ProductInfo as ProductInfo
 import Types.Storage.Person as Person
 import Utils.Common
 import qualified Storage.Queries.Ride as QRide
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 
 -- | Try to initiate a call customer -> provider
 initiateCallToDriver :: Id SRide.Ride -> Id Person.Person -> FlowHandler CallRes

@@ -28,8 +28,8 @@ import qualified "app-backend" Types.Common as AppCommon
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
 import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
-import qualified "app-backend" Types.Storage.Ride as BRide
-import qualified "beckn-transport" Types.Storage.Ride as TRide
+import qualified "app-backend" Types.Storage.OldRide as BRide
+import qualified "beckn-transport" Types.Storage.OldRide as TRide
 import qualified "app-backend" Types.Storage.SearchReqLocation as AppBESearchReqLoc
 import qualified "app-backend" Types.Storage.SearchRequest as BSearchRequest
 

@@ -7,12 +7,11 @@ import Mobility.Fixtures
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "beckn-transport" Types.Storage.Quote as TQuote
-import qualified "app-backend" Types.Storage.Ride as AppRide
 import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
-import qualified "beckn-transport" Types.Storage.Ride as TRide
-import qualified "app-backend" Types.Storage.Ride as BRide
+import qualified "beckn-transport" Types.Storage.OldRide as TRide
+import qualified "app-backend" Types.Storage.OldRide as BRide
 
 doAnAppSearch :: HasCallStack => ClientsM (Id BQuote.Quote, Id BRide.Ride, TRide.Ride)
 doAnAppSearch = do
@@ -91,7 +90,7 @@ spec = do
         inprogressRBStatusResult.ride `shouldSatisfy` isJust
         inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
         let Just inprogressRide = inprogressRBStatusResult.ride
-        inprogressRide.status `shouldBe` AppRide.INPROGRESS
+        inprogressRide.status `shouldBe` BRide.INPROGRESS
         return $ Just ()
 
       void . callBPP $ rideEnd driverToken tRide.id
@@ -101,7 +100,7 @@ spec = do
         completedRBStatusResult.ride `shouldSatisfy` isJust
         completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
         let Just completedRide = completedRBStatusResult.ride
-        completedRide.status `shouldBe` AppRide.COMPLETED
+        completedRide.status `shouldBe` BRide.COMPLETED
         return $ Just completedRide.id
 
       -- Leave feedback

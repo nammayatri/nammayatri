@@ -9,7 +9,7 @@ import Types.API.Ride (CancelRideReq (..))
 import Types.Error
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RideCancellationReason as SRCR
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
 import Utils.Common
 
 type MonadHandler m = (MonadThrow m, Log m)

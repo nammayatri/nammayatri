@@ -14,9 +14,9 @@ import qualified Types.API.Ride as RideAPI
 import Types.App
 import Types.Error
 import Types.Storage.CancellationReason
+import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
-import qualified Types.Storage.Ride as Ride
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 

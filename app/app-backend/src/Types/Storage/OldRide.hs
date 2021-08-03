@@ -1,7 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Types.Storage.Ride where
+module Types.Storage.OldRide where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
@@ -17,15 +17,26 @@ import Database.Beam.Backend (FromBackendRow (fromBackendRow), HasSqlValueSyntax
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
+import qualified Types.Storage.Organization as Org
+import Types.Storage.Person (Person)
+import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.SearchReqLocation as Loc
-import qualified Types.Storage.RideBooking as RideB
+import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 
 data RideStatus
   = NEW
+  | VALID
+  | INVALID
   | INPROGRESS
+  | CONFIRMED
   | COMPLETED
+  | INSTOCK
+  | OUTOFSTOCK
   | CANCELLED
+  | EXPIRED
+  | TRIP_ASSIGNED
+  | TRIP_REASSIGNMENT
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RideStatus where
@@ -46,25 +57,47 @@ instance ToHttpApiData RideStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
+data EntityType = VEHICLE | PASS | TICKET
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be EntityType where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow Postgres EntityType where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
 data RideT f = Ride
   { id :: B.C f (Id Ride),
-    bookingId :: B.C f (Id RideB.RideBooking),
+    requestId :: B.C f (Id SearchRequest.SearchRequest),
+    personId :: B.C f (Maybe (Id Person)),
+    personUpdatedAt :: B.C f (Maybe UTCTime),
     shortId :: B.C f (ShortId Ride),
+    entityType :: B.C f EntityType,
+    entityId :: B.C f (Maybe Text),
+    quantity :: B.C f Int,
+    price :: B.C f (Maybe Amount),
+    actualPrice :: B.C f (Maybe Amount),
     status :: B.C f RideStatus,
-    driverName :: B.C f Text,
-    driverMobileNumber :: B.C f Text,
-    vehicleNumber :: B.C f Text,
-    vehicleModel :: B.C f Text,
-    vehicleColor :: B.C f Text,
-    otp :: B.C f Text,
-    trackingUrl :: B.C f Text,
-    finalPrice :: B.C f Text,
-    finalDistance :: B.C f Float,
-    finalLocationId :: B.C f (Id Loc.SearchReqLocation),
+    startTime :: B.C f UTCTime,
+    endTime :: B.C f (Maybe UTCTime),
+    validTill :: B.C f UTCTime,
+    fromLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
+    toLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
+    organizationId :: B.C f (Id Org.Organization),
+    quoteId :: B.C f (Id SQuote.Quote),
+    actualDistance :: B.C f (Maybe Double),
+    udf1 :: B.C f (Maybe Text),
+    udf2 :: B.C f (Maybe Text),
+    udf3 :: B.C f (Maybe Text),
+    udf4 :: B.C f (Maybe Text),
+    udf5 :: B.C f (Maybe Text),
+    info :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
+
+--TODO: organizationId - -- need to point to primarykey
 
 type Ride = RideT Identity
 
@@ -90,20 +123,24 @@ instance FromJSON Ride where
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideT)
 fieldEMod =
-  B.setEntityName "ride"
+  B.setEntityName "old_ride"
     <> B.modifyTableFields
       B.tableModification
-        { bookingId = "booking_id",
+        { requestId = "request_id",
+          personId = "person_id",
+          personUpdatedAt = "person_updated_at",
+          entityType = "entity_type",
+          entityId = "entity_id",
+          actualPrice = "actual_price",
+          startTime = "start_time",
+          endTime = "end_time",
           shortId = "short_id",
-          driverName = "driver_name",
-          driverMobileNumber = "driver_mobile_number",
-          vehicleNumber = "vehicle_number",
-          vehicleModel = "vehicle_model",
-          vehicleColor = "vehicle_color",
-          trackingUrl = "tracking_url",
-          finalPrice = "final_price",
-          finalDistance = "final_distance",
-          finalLocationId = "final_location_id",
+          validTill = "valid_till",
+          fromLocation = "from_location_id",
+          toLocation = "to_location_id",
+          actualDistance = "actual_distance",
+          quoteId = "quote_id",
+          organizationId = "organization_id",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
@@ -112,18 +149,33 @@ instance FromBeckn Text RideStatus where
   fromBeckn piStatus =
     case piStatus of
       "NEW" -> NEW
+      "VALID" -> VALID
       "INPROGRESS" -> INPROGRESS
+      "CONFIRMED" -> CONFIRMED
       "COMPLETED" -> COMPLETED
+      "INSTOCK" -> INSTOCK
+      "OUTOFSTOCK" -> OUTOFSTOCK
       "CANCELLED" -> CANCELLED
-      _ -> CANCELLED
+      "EXPIRED" -> EXPIRED
+      "TRIP_ASSIGNED" -> TRIP_ASSIGNED
+      "TRIP_REASSIGNMENT" -> TRIP_REASSIGNMENT
+      _ -> INVALID
 
 instance ToBeckn Text RideStatus where
   toBeckn piStatus =
     case piStatus of
       NEW -> "NEW"
+      VALID -> "VALID"
+      INVALID -> "INVALID"
       INPROGRESS -> "INPROGRESS"
+      CONFIRMED -> "CONFIRMED"
       COMPLETED -> "COMPLETED"
+      INSTOCK -> "INSTOCK"
+      OUTOFSTOCK -> "OUTOFSTOCK"
       CANCELLED -> "CANCELLED"
+      EXPIRED -> "EXPIRED"
+      TRIP_ASSIGNED -> "TRIP_ASSIGNED"
+      TRIP_REASSIGNMENT -> "TRIP_REASSIGNMENT"
 
 data RideAPIEntity = RideAPIEntity
   { id :: Id Ride,

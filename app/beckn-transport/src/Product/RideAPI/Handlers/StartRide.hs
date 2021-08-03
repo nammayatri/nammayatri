@@ -5,9 +5,9 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import EulerHS.Prelude
 import Types.Error
+import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
-import qualified Types.Storage.Ride as Ride
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle

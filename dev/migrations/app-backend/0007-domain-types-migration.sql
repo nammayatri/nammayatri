@@ -140,3 +140,41 @@ UPDATE atlas_app.search_request AS T1
 	SET requestor_id = 'UNKNOWN' WHERE requestor_id IS NULL;
 
 ALTER TABLE atlas_app.search_request ALTER COLUMN requestor_id SET NOT NULL;
+
+ALTER TABLE atlas_app.ride RENAME TO old_ride;
+
+CREATE TABLE atlas_app.ride_booking (
+    id character(36) PRIMARY KEY NOT NULL,
+    request_id character(36) NOT NULL REFERENCES atlas_app.search_request (id) on delete cascade,
+    quote_id character(36) NOT NULL REFERENCES atlas_app.quote (id) on delete cascade,
+    status character varying(255) NOT NULL,
+    provider_id character(36) NOT NULL REFERENCES atlas_app.organization (id) on delete cascade,
+    provider_mobile_number character varying(255) NOT NULL,
+    start_time timestamp with time zone NOT NULL,
+    requestor_id character(36) NOT NULL,
+    from_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
+    to_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
+    price character varying(255) NOT NULL,
+    distance float NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE atlas_app.ride (
+    id character(36) PRIMARY KEY NOT NULL,
+    booking_id character(36) NOT NULL REFERENCES atlas_app.ride_booking (id) on delete cascade,
+    short_id character varying(36) NOT NULL,
+    status character varying(255) NOT NULL,
+    driver_name character varying(255) NOT NULL,
+    driver_mobile_number character varying(255) NOT NULL,
+    vehicle_number character varying(255) NOT NULL,
+    vehicle_model character varying(255) NOT NULL,
+    vehicle_color character varying(255) NOT NULL,
+    otp character(4) NOT NULL,
+    tracking_url character varying(255) NOT NULL,
+    final_price character varying(255) NOT NULL,
+    final_distance float NOT NULL,
+    final_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);

@@ -16,7 +16,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
-import qualified Types.Storage.Ride as Storage
+import qualified Types.Storage.OldRide as Storage
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Quote as SQuote
 

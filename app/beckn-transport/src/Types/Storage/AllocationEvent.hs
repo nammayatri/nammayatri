@@ -10,7 +10,7 @@ import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyn
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
 import Types.App (Driver)
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
 
 data AllocationEventT f = AllocationEvent
   { id :: B.C f (Id AllocationEvent),

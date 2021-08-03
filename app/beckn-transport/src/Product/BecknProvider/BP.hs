@@ -50,10 +50,10 @@ import qualified Storage.Queries.Vehicle as Vehicle
 import qualified Test.RandomStrings as RS
 import Types.Error
 import Types.Metrics (CoreMetrics)
+import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.RideCancellationReason as SRCR
-import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common

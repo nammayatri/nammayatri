@@ -10,8 +10,8 @@ import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.OldRide as Ride
 import Types.Storage.Organization
-import qualified Types.Storage.Ride as Ride
 
 data RideRequestType = ALLOCATION | CANCELLATION | DRIVER_RESPONSE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)

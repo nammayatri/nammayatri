@@ -23,7 +23,7 @@ import qualified Types.Storage.SearchReqLocation as SSearchLoc
 import Types.Storage.SearchRequest as C
 import Utils.Common
 import qualified Storage.Queries.Ride as QRide
-import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.OldRide as Ride
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandlerAPI $ do

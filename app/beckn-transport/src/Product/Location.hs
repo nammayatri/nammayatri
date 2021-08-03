@@ -22,7 +22,7 @@ import Types.Metrics
 import qualified Types.Storage.Person as Person
 import Utils.Common hiding (id)
 import Prelude (atan2)
-import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.OldRide as SRide
 
 updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
 updateLocation personId req = withFlowHandlerAPI $ do

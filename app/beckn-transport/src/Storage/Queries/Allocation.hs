@@ -5,8 +5,8 @@ import Beckn.Types.Id
 import EulerHS.Prelude
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Ride as QRide
+import qualified Types.Storage.OldRide as SRide
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.Vehicle as SV
 
 assignDriver ::
