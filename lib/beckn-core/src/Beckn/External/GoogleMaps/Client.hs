@@ -25,7 +25,7 @@ autoComplete ::
   FlowR r GoogleMaps.SearchLocationResp
 autoComplete url apiKey input location radius components lang = do
   callAPI url (API.autoComplete apiKey input location radius components lang) "autoComplete"
-    >>= fromEitherM (googleMapsError url)
+    >>= checkGoogleMapsError url
 
 placeDetails ::
   ( HasField "dbCfg" r DBConfig,
@@ -38,7 +38,7 @@ placeDetails ::
   FlowR r GoogleMaps.PlaceDetailsResp
 placeDetails url apiKey placeId fields = do
   callAPI url (API.placeDetails apiKey placeId fields) "placeDetails"
-    >>= fromEitherM (googleMapsError url)
+    >>= checkGoogleMapsError url
 
 getPlaceName ::
   ( HasField "dbCfg" r DBConfig,
@@ -50,7 +50,19 @@ getPlaceName ::
   FlowR r GoogleMaps.GetPlaceNameResp
 getPlaceName url latLng apiKey = do
   callAPI url (API.getPlaceName latLng apiKey) "getPlaceName"
-    >>= fromEitherM (googleMapsError url)
+    >>= checkGoogleMapsError url
+
+checkGoogleMapsError :: (HasField "status" a Text) => BaseUrl -> Either ClientError a -> FlowR r a
+checkGoogleMapsError url res =
+  fromEitherM (googleMapsError url) res >>= validateResponseStatus
 
 googleMapsError :: BaseUrl -> ClientError -> ExternalAPICallError
 googleMapsError = ExternalAPICallError (Just "GOOGLE_MAPS_API_ERROR")
+
+validateResponseStatus :: (HasField "status" a Text) => a -> FlowR r a
+validateResponseStatus response =
+  case response.status of
+    "OK" -> pure response
+    "ZERO_RESULTS" -> pure response
+    "INVALID_REQUEST" -> throwError GoogleMapsInvalidRequest
+    _ -> throwError $ GoogleMapsCallError response.status

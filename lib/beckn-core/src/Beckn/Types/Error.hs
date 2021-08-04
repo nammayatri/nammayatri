@@ -516,3 +516,23 @@ instance IsHTTPError SMSError where
     SMSError _ -> "SMS_NOT_SENT"
 
 instance IsAPIError SMSError
+
+data GoogleMapsCallError = GoogleMapsInvalidRequest | GoogleMapsCallError Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''GoogleMapsCallError
+
+instance IsBaseError GoogleMapsCallError where
+  toMessage = \case
+    GoogleMapsInvalidRequest -> Just "Invalid request to Google Maps."
+    GoogleMapsCallError googleErrorCode -> Just googleErrorCode
+
+instance IsHTTPError GoogleMapsCallError where
+  toErrorCode = \case
+    GoogleMapsInvalidRequest -> "GOOGLE_MAPS_INVALID_REQUEST"
+    GoogleMapsCallError _ -> "GOOGLE_MAPS_CALL_ERROR"
+  toHttpCode = \case
+    GoogleMapsInvalidRequest -> E400
+    GoogleMapsCallError _ -> E500
+
+instance IsAPIError GoogleMapsCallError

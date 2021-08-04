@@ -36,8 +36,9 @@ data LocationS = LocationS
   }
   deriving (Generic, ToJSON, FromJSON)
 
-newtype GetPlaceNameResp = GetPlaceNameResp
-  { results :: [ResultsResp]
+data GetPlaceNameResp = GetPlaceNameResp
+  { status :: Text,
+    results :: [ResultsResp]
   }
   deriving (Generic, ToJSON, FromJSON)
 
