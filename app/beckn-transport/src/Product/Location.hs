@@ -42,6 +42,7 @@ updateLocation SR.RegistrationToken {..} req = withFlowHandlerAPI $ do
     DB.runSqlDBTransaction $ do
       whenJust distanceMb $ QPI.updateDistance driver.id
       Location.updateGpsCoord locationId lastUpdate currPoint
+    logTagInfo "driverLocationUpdate" (entityId <> " " <> show req.waypoints)
   return Success
   where
     refreshPeriod = secondsToNominalDiffTime 10
