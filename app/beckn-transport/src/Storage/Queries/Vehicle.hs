@@ -122,11 +122,12 @@ findAllByVariantCatOrgId ::
   Maybe Storage.Variant ->
   Maybe Storage.Category ->
   Maybe Storage.EnergyType ->
+  Maybe Text ->
   Integer ->
   Integer ->
   Id Org.Organization ->
   m [Storage.Vehicle]
-findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
+findAllByVariantCatOrgId variantM categoryM energyTypeM mbRegNum limit offset orgId = do
   dbTable <- getDbTable
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
   where
@@ -136,6 +137,7 @@ findAllByVariantCatOrgId variantM categoryM energyTypeM limit offset orgId = do
         &&. (B.val_ (isNothing variantM) ||. variant ==. B.val_ variantM)
         &&. (B.val_ (isNothing categoryM) ||. category ==. B.val_ categoryM)
         &&. (B.val_ (isNothing energyTypeM) ||. energyType ==. B.val_ energyTypeM)
+        &&. maybe (B.val_ True) (\regNum -> registrationNo `B.like_` B.val_ ("%" <> regNum <> "%")) mbRegNum
 
 findByIds :: DBFlow m r => [Id Storage.Vehicle] -> m [Storage.Vehicle]
 findByIds ids = do

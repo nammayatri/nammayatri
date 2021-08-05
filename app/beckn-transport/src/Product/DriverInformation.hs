@@ -154,7 +154,7 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
 
 listDriver :: Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
-  personList <- QDriverInformation.findAllWithLimitOffsetByOrgIds mbSearchString mbLimit mbOffset [Id orgId]
+  personList <- QDriverInformation.findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset $ Id orgId
   respPersonList <- traverse convertToRes personList
   return $ DriverInformationAPI.ListDriverRes respPersonList
   where

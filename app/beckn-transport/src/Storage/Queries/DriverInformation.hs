@@ -96,14 +96,14 @@ deleteById driverId_ = do
     personId_ = cast driverId_
     predicate pid DriverInformation.DriverInformation {..} = driverId ==. B.val_ pid
 
-findAllWithLimitOffsetByOrgIds ::
+findAllWithLimitOffsetByOrgId ::
   DBFlow m r =>
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
-  [Id Org.Organization] ->
+  Id Org.Organization ->
   m [(Person.Person, DriverInformation.DriverInformation)]
-findAllWithLimitOffsetByOrgIds mbSearchString mbLimit mbOffset orgIds = do
+findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
   personDbTable <- QPerson.getDbTable
   driverInfoDbTable <- getDbTable
 
@@ -124,7 +124,7 @@ findAllWithLimitOffsetByOrgIds mbSearchString mbLimit mbOffset orgIds = do
         (&&.)
         (B.val_ True)
         [ role B.==. B.val_ Person.DRIVER,
-          organizationId `B.in_` (B.val_ . Just <$> orgIds) B.||. complementVal orgIds,
+          organizationId B.==. B.val_ (Just orgId),
           maybe (B.val_ True) (filterBySearchString p) mbSearchString
         ]
 
