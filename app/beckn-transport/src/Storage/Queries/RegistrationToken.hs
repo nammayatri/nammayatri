@@ -13,6 +13,7 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Error
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as Storage
 import Utils.Common
 
@@ -80,3 +81,11 @@ deleteByEntitiyIdExceptNew id_ (Id newRT) = do
     predicate rtid newRTId Storage.RegistrationToken {..} =
       entityId ==. B.val_ rtid
         B.&&. B.not_ (id B.==. B.val_ newRTId)
+
+findAllByPersonId :: DBFlow m r => Id SP.Person -> m [Storage.RegistrationToken]
+findAllByPersonId personId = do
+  dbTable <- getDbTable
+  DB.findAll dbTable identity (predicate $ getId personId)
+  where
+    predicate persId Storage.RegistrationToken {..} =
+      entityId ==. B.val_ persId

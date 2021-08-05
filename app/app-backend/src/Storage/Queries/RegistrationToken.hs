@@ -66,3 +66,11 @@ deleteByPersonIdExceptNew id_ (Id newRT) = do
     predicate rtid newRTId Storage.RegistrationToken {..} =
       entityId ==. B.val_ rtid
         B.&&. B.not_ (id B.==. B.val_ newRTId)
+
+findAllByPersonId :: DBFlow m r => Id SP.Person -> m [Storage.RegistrationToken]
+findAllByPersonId personId = do
+  dbTable <- getDbTable
+  DB.findAll dbTable identity (predicate $ getId personId)
+  where
+    predicate persId Storage.RegistrationToken {..} =
+      entityId ==. B.val_ persId

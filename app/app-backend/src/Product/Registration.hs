@@ -5,6 +5,7 @@ import Beckn.External.Encryption (decrypt, encrypt)
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
 import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Common as BC
@@ -22,6 +23,7 @@ import Types.Error
 import Types.Metrics
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SR
+import Utils.Auth (authTokenCacheKey)
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -216,6 +218,11 @@ clearOldRegToken person = RegistrationToken.deleteByPersonIdExceptNew (getId $ p
 
 logout :: Id SP.Person -> FlowHandler APISuccess
 logout personId = withFlowHandlerAPI $ do
+  regTokens <- RegistrationToken.findAllByPersonId personId
+  -- We should have only one RegToken at this point, but just in case we use findAll
+  for_ regTokens $ \regToken -> do
+    let key = authTokenCacheKey regToken.token
+    void $ Redis.deleteKeyRedis key
   DB.runSqlDBTransaction $ do
     Person.updateDeviceToken personId Nothing
     RegistrationToken.deleteByPersonId personId
