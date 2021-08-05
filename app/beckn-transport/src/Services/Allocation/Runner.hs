@@ -105,7 +105,7 @@ run = do
       Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
     -- If process handling took less than processDelay we delay for remain to processDelay time
     processDelay <- asks (.driverAllocationConfig.processDelay)
-    L.runIO . threadDelay $ max 0 (processDelay - processTime)
+    L.runIO . threadDelay . max 0 . getMicrosecond $ millisecondToMicrosecond (processDelay - processTime)
   isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)
   when isRunning run
   where

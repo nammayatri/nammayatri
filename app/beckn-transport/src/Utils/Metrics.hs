@@ -4,6 +4,7 @@ module Utils.Metrics
   )
 where
 
+import Beckn.Types.Time (Second, getSecond)
 import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -21,7 +22,7 @@ incrementFailedTaskCounter = do
   bmContainer <- asks (.btmMetrics)
   incrementFailedTaskCounter' bmContainer
 
-putTaskDuration :: Metric.HasBTMMetrics m r => Double -> m ()
+putTaskDuration :: Metric.HasBTMMetrics m r => Second -> m ()
 putTaskDuration duration = do
   bmContainer <- asks (.btmMetrics)
   putTaskDuration' bmContainer duration
@@ -36,7 +37,7 @@ incrementFailedTaskCounter' bmContainer = do
   let failedTaskCounter = bmContainer.failedTaskCounter
   L.runIO $ P.incCounter failedTaskCounter
 
-putTaskDuration' :: L.MonadFlow m => Metric.BTMMetricsContainer -> Double -> m ()
+putTaskDuration' :: L.MonadFlow m => Metric.BTMMetricsContainer -> Second -> m ()
 putTaskDuration' bmContainer duration = do
   let taskDuration = bmContainer.taskDuration
-  L.runIO $ P.observe taskDuration duration
+  L.runIO $ P.observe taskDuration $ getSecond duration

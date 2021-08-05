@@ -6,6 +6,7 @@ module Beckn.Utils.Monitoring.Prometheus.Metrics where
 
 import Beckn.Types.Error.BaseError.HTTPError (IsHTTPError (toErrorCode, toHttpCode), IsHTTPException)
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, HasCoreMetrics)
+import Beckn.Types.Time (Second, getSecond)
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Data.Text as DT
 import qualified EulerHS.Language as L
@@ -56,7 +57,7 @@ addRequestLatencyFlow ::
   ) =>
   Text ->
   Text ->
-  Double ->
+  Second ->
   Either ClientError a ->
   m ()
 addRequestLatencyFlow host serviceName dur status = do
@@ -66,7 +67,7 @@ addRequestLatencyFlow host serviceName dur status = do
     P.withLabel
       requestLatencyMetric
       (host, serviceName, status')
-      (`P.observe` dur)
+      (`P.observe` getSecond dur)
   where
     status' =
       case status of

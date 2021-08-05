@@ -67,7 +67,7 @@ type MonadHandler m =
 data BTMMetricsHandle m = BTMMetricsHandle
   { incrementTaskCounter :: m (),
     incrementFailedTaskCounter :: m (),
-    putTaskDuration :: Double -> m ()
+    putTaskDuration :: Second -> m ()
   }
 
 data ServiceHandle m = ServiceHandle

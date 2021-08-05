@@ -1,5 +1,9 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module Beckn.Types.Time where
 
+import Beckn.Utils.Dhall (FromDhall)
 import Data.Aeson (Value (..))
 import Data.Aeson.Types (typeMismatch)
 import qualified Data.Text as Text
@@ -9,7 +13,23 @@ import Data.Time.Format.ISO8601 (iso8601ParseM, iso8601Show)
 import EulerHS.Prelude
 import qualified System.Clock as Clock
 
-type Ms = Int
+newtype Microsecond = Microsecond
+  { getMicrosecond :: Int
+  }
+  deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum)
+  deriving stock (Generic)
+
+newtype Millisecond = Millisecond
+  { getMillisecond :: Int
+  }
+  deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum)
+  deriving stock (Generic)
+
+newtype Second = Second
+  { getSecond :: Double
+  }
+  deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Fractional, Real, Ord, Eq, Enum)
+  deriving stock (Generic)
 
 type MeasuringDuration m a = MonadClock m => m a -> m a
 

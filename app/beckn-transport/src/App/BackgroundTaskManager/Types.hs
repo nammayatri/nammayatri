@@ -38,7 +38,7 @@ data DriverAllocationConfig = DriverAllocationConfig
     rideAllocationExpiry :: NominalDiffTime,
     defaultSortMode :: SortMode,
     requestsNumPerIteration :: Integer,
-    processDelay :: Ms,
+    processDelay :: Millisecond,
     shards :: Shards
   }
   deriving (Generic, FromDhall)
