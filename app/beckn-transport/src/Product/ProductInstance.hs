@@ -239,7 +239,7 @@ notifyStatusUpdateReq transporterOrg searchPi status = do
   where
     getAdmins = do
       if transporterOrg.enabled
-        then PersQ.findAllByOrgIds [SP.ADMIN] [PI.organizationId searchPi]
+        then PersQ.findAllByOrgId [SP.ADMIN] $ PI.organizationId searchPi
         else pure []
     notifyStatusToGateway = do
       trackerPi <-

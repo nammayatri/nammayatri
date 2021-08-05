@@ -61,12 +61,12 @@ findPersonByIdAndRoleAndOrgId pid role_ orgId = do
         &&. role ==. B.val_ role_
         &&. organizationId ==. B.val_ (Just orgId)
 
-findAllByOrgIds ::
+findAllByOrgId ::
   DBFlow m r =>
   [Storage.Role] ->
-  [Id Org.Organization] ->
+  Id Org.Organization ->
   m [Storage.Person]
-findAllByOrgIds roles orgIds = do
+findAllByOrgId roles orgId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
@@ -75,7 +75,7 @@ findAllByOrgIds roles orgIds = do
         (&&.)
         (B.val_ True)
         [ role `B.in_` (B.val_ <$> roles) ||. complementVal roles,
-          organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal orgIds
+          organizationId B.==. B.val_ (Just orgId)
         ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p

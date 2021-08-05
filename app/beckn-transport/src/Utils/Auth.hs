@@ -16,6 +16,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.Error
 import Types.Storage.Organization (Organization)
+import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SR
@@ -48,12 +49,6 @@ instance
 
 instance
   SanitizedUrl (sub :: Type) =>
-  SanitizedUrl (DriverTokenAuth :> sub)
-  where
-  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
-
-instance
-  SanitizedUrl (sub :: Type) =>
   SanitizedUrl (AdminTokenAuth :> sub)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
@@ -78,36 +73,16 @@ type AdminTokenAuth = HeaderAuth "token" AdminVerifyToken
 data AdminVerifyToken
 
 instance VerificationMethod AdminVerifyToken where
-  type VerificationResult AdminVerifyToken = Text
+  type VerificationResult AdminVerifyToken = Id Org.Organization
   verificationDescription =
     "Checks whether token is registered and belongs to a person with admin role."
 
--- | Verifies admin or driver's token.
-type DriverTokenAuth = HeaderAuth "token" DriverVerifyToken
-
-data DriverVerifyToken
-
-instance VerificationMethod DriverVerifyToken where
-  type VerificationResult DriverVerifyToken = Text
-
-  -- verifyToken = validateDriver
-  verificationDescription =
-    "Checks whether token is registered and belongs to a person with admin or driver role."
-
-verifyAdmin :: MonadFlow m => SP.Person -> m Text
+verifyAdmin :: MonadFlow m => SP.Person -> m (Id Org.Organization)
 verifyAdmin user = do
   when (user.role /= SP.ADMIN) $
     throwError AccessDenied
   case user.organizationId of
-    Just orgId -> return $ getId orgId
-    Nothing -> throwError (PersonFieldNotPresent "organization_id")
-
-verifyDriver :: MonadFlow m => SP.Person -> m Text
-verifyDriver user = do
-  unless ((user.role) `elem` [SP.ADMIN, SP.DRIVER]) $
-    throwError AccessDenied
-  case user.organizationId of
-    Just orgId -> return $ getId orgId
+    Just orgId -> return orgId
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
 verifyToken :: DBFlow m r => RegToken -> m SR.RegistrationToken
@@ -116,21 +91,13 @@ verifyToken regToken = do
     >>= Utils.fromMaybeM (InvalidToken regToken)
     >>= validateToken
 
-validateAdmin :: (DBFlow m r, EncFlow m r) => RegToken -> m Text
+validateAdmin :: (DBFlow m r, EncFlow m r) => RegToken -> m (Id Org.Organization)
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- verifyToken regToken
   user <-
     QP.findPersonById (Id entityId)
       >>= fromMaybeM PersonNotFound
   verifyAdmin user
-
-validateDriver :: (DBFlow m r, EncFlow m r) => RegToken -> m Text
-validateDriver regToken = do
-  SR.RegistrationToken {..} <- verifyToken regToken
-  user <-
-    QP.findPersonById (Id entityId)
-      >>= fromMaybeM PersonNotFound
-  verifyDriver user
 
 verifyPerson :: (DBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person)
 verifyPerson token = do
@@ -152,9 +119,6 @@ authTokenCacheKey regToken =
 
 validateAdminAction :: (DBFlow m r, EncFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin
-
-validateDriverAction :: (DBFlow m r, EncFlow m r) => VerificationAction DriverVerifyToken m
-validateDriverAction = VerificationAction validateAdmin
 
 validateToken :: DBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do

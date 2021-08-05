@@ -53,7 +53,7 @@ import Types.Storage.Organization (Organization)
 import Types.Storage.Person as SP
 import Types.Storage.ProductInstance
 import Types.Storage.Vehicle
-import Utils.Auth (AdminTokenAuth, DriverTokenAuth, LookupRegistryOrg, TokenAuth)
+import Utils.Auth (AdminTokenAuth, LookupRegistryOrg, TokenAuth)
 
 type TransportAPI =
   "v1"
@@ -124,11 +124,11 @@ personFlow =
 -- Following is vehicle flow
 type VehicleAPI =
   "vehicle"
-    :> ( DriverTokenAuth
+    :> ( AdminTokenAuth
            :> ReqBody '[JSON] CreateVehicleReq
            :> Post '[JSON] CreateVehicleRes
            :<|> "list"
-             :> DriverTokenAuth
+             :> AdminTokenAuth
              :> QueryParam "variant" Variant
              :> QueryParam "category" Category
              :> QueryParam "energyType" EnergyType
@@ -136,11 +136,11 @@ type VehicleAPI =
              :> QueryParam "limit" Int
              :> QueryParam "offset" Int
              :> Get '[JSON] ListVehicleRes
-           :<|> DriverTokenAuth
+           :<|> AdminTokenAuth
              :> Capture "vehicleId" (Id Vehicle)
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
-           :<|> DriverTokenAuth
+           :<|> AdminTokenAuth
              :> Capture "vehicleId" (Id Vehicle)
              :> Delete '[JSON] DeleteVehicleRes
            :<|> TokenAuth

@@ -23,5 +23,4 @@ run = withModifiedEnv $ \modifiedEnv ->
       verifyApiKey @(FlowR AppEnv)
         :. verifyTokenAction @(FlowR AppEnv)
         :. validateAdminAction @(FlowR AppEnv)
-        :. validateDriverAction @(FlowR AppEnv)
         :. EmptyContext

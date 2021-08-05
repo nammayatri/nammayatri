@@ -69,12 +69,12 @@ getPersonDetails personId = withFlowHandlerAPI $ do
   pure $
     GetPersonDetailsRes {..}
 
-deletePerson :: Text -> Id SP.Person -> FlowHandler DeletePersonRes
+deletePerson :: Id Organization -> Id SP.Person -> FlowHandler DeletePersonRes
 deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
   person <-
     QP.findPersonById (Id personId)
       >>= fromMaybeM PersonDoesNotExist
-  unless (person.organizationId == Just (Id orgId)) $ throwError Unauthorized
+  unless (person.organizationId == Just orgId) $ throwError Unauthorized
   DB.runSqlDBTransaction $ do
     QP.deleteById (Id personId)
     QDriverStats.deleteById $ Id personId

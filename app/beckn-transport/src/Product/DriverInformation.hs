@@ -44,25 +44,26 @@ import Types.App
 import Types.Error
 import Types.Storage.DriverInformation (DriverInformation, DriverInformationT (createdAt))
 import qualified Types.Storage.DriverInformation as DriverInfo
+import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as SP
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 import qualified Utils.Notifications as Notify
 
-createDriver :: Text -> DriverInformationAPI.CreateDriverReq -> FlowHandler DriverInformationAPI.CreateDriverRes
+createDriver :: Id Org.Organization -> DriverInformationAPI.CreateDriverReq -> FlowHandler DriverInformationAPI.CreateDriverRes
 createDriver orgId req = withFlowHandlerAPI $ do
   runRequestValidation DriverInformationAPI.validateCreateDriverReq req
   let personEntity = req.person
   validateDriver personEntity
   validateVehicle req.vehicle
-  person <- buildDriver req.person (Id orgId)
-  vehicle <- createVehicle req.vehicle (Id orgId)
+  person <- buildDriver req.person orgId
+  vehicle <- createVehicle req.vehicle orgId
   DB.runSqlDBTransaction $ do
     QPerson.create person
     createDriverDetails (person.id)
     QVehicle.create vehicle
     QPerson.updateVehicle person.id $ Just vehicle.id
   org <-
-    QOrganization.findOrganizationById (Id orgId)
+    QOrganization.findOrganizationById orgId
       >>= fromMaybeM OrgNotFound
   decPerson <- decrypt person
   let Just mobNum = personEntity.mobileNumber -- already checked
@@ -166,9 +167,9 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
   where
     driverId = cast personId
 
-listDriver :: Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
+listDriver :: Id Org.Organization -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverInformationAPI.ListDriverRes
 listDriver orgId mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
-  personList <- QDriverInformation.findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset $ Id orgId
+  personList <- QDriverInformation.findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId
   respPersonList <- traverse buildDriverEntityRes personList
   return $ DriverInformationAPI.ListDriverRes respPersonList
 
@@ -191,7 +192,7 @@ buildDriverEntityRes (person, driverInfo) = do
         registeredAt = person.createdAt
       }
 
-linkVehicle :: Text -> Id SP.Person -> DriverInformationAPI.LinkVehicleReq -> FlowHandler DriverInformationAPI.LinkVehicleRes
+linkVehicle :: Id Org.Organization -> Id SP.Person -> DriverInformationAPI.LinkVehicleReq -> FlowHandler DriverInformationAPI.LinkVehicleRes
 linkVehicle orgId personId req = withFlowHandlerAPI $ do
   person <-
     QPerson.findPersonById personId
@@ -200,8 +201,8 @@ linkVehicle orgId personId req = withFlowHandlerAPI $ do
     QVehicle.findVehicleById (req.vehicleId)
       >>= fromMaybeM VehicleDoesNotExist
   unless
-    ( person.organizationId == Just (Id orgId)
-        && vehicle.organizationId == Id orgId
+    ( person.organizationId == Just orgId
+        && vehicle.organizationId == orgId
     )
     (throwError Unauthorized)
   prevPerson <- QPerson.findByVehicleId $ req.vehicleId
@@ -209,18 +210,18 @@ linkVehicle orgId personId req = withFlowHandlerAPI $ do
   QPerson.updateVehicleFlow personId $ Just (req.vehicleId)
   return APISuccess.Success
 
-enableDriver :: Text -> Id SP.Person -> FlowHandler APISuccess
+enableDriver :: Id Org.Organization -> Id SP.Person -> FlowHandler APISuccess
 enableDriver = changeDriverEnableState True
 
-disableDriver :: Text -> Id SP.Person -> FlowHandler APISuccess
+disableDriver :: Id Org.Organization -> Id SP.Person -> FlowHandler APISuccess
 disableDriver = changeDriverEnableState False
 
-changeDriverEnableState :: Bool -> Text -> Id SP.Person -> FlowHandler APISuccess
+changeDriverEnableState :: Bool -> Id Org.Organization -> Id SP.Person -> FlowHandler APISuccess
 changeDriverEnableState isEnabled orgId personId = withFlowHandlerAPI $ do
   person <-
     QPerson.findPersonById personId
       >>= fromMaybeM PersonDoesNotExist
-  unless (person.organizationId == Just (Id orgId)) $ throwError Unauthorized
+  unless (person.organizationId == Just orgId) $ throwError Unauthorized
   DB.runSqlDBTransaction $ do
     QDriverInformation.updateEnabledState driverId isEnabled
     unless isEnabled $ QDriverInformation.updateActivity driverId False
