@@ -11,6 +11,7 @@ import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Driver as Driver
+import Beckn.Utils.Logging
 import Data.Maybe
 import Data.Semigroup
 import EulerHS.Prelude hiding (id)
@@ -30,7 +31,7 @@ import Utils.Common
 
 -- | Try to initiate a call customer -> provider
 initiateCallToProvider :: Id Person.Person -> CallReq -> FlowHandler CallRes
-initiateCallToProvider _ req = withFlowHandlerAPI $ do
+initiateCallToProvider personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let piId = req.productInstanceId
   (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
   initiateCall customerPhone providerPhone

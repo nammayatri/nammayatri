@@ -22,7 +22,7 @@ getStatus ::
   Id Person.Person ->
   Id Case.Case ->
   FlowHandler GetStatusRes
-getStatus personId caseId = withFlowHandlerAPI $ do
+getStatus personId caseId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   case_ <- Case.findIdByPersonId personId caseId >>= fromMaybeM CaseDoesNotExist
   prodInstRes <- getProdInstances case_
   fromLocation <-
@@ -41,7 +41,7 @@ list ::
   Maybe Integer ->
   FlowHandler CaseListRes
 list personId caseType statuses mlimit moffset =
-  withFlowHandlerAPI $
+  withFlowHandlerAPI . withPersonIdLogTag personId $
     Case.findAllByTypeAndStatuses personId caseType statuses mlimit moffset
       >>= traverse mapProductInstance
   where

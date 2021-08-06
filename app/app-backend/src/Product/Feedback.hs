@@ -6,6 +6,7 @@ import qualified Beckn.Types.Core.API.Feedback as Beckn
 import qualified Beckn.Types.Core.Description as Beckn
 import qualified Beckn.Types.Core.Rating as Beckn
 import Beckn.Types.Id
+import Beckn.Utils.Logging
 import EulerHS.Prelude hiding (product)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Case as Case
@@ -22,7 +23,7 @@ import Utils.Common
   )
 
 feedback :: Id Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
-feedback personId request = withFlowHandlerAPI $ do
+feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let orderPIId = request.productInstanceId

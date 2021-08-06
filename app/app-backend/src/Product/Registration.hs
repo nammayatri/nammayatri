@@ -218,7 +218,7 @@ clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()
 clearOldRegToken person = RegistrationToken.deleteByPersonIdExceptNew (getId $ person.id)
 
 logout :: Id SP.Person -> FlowHandler APISuccess
-logout personId = withFlowHandlerAPI $ do
+logout personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   regTokens <- RegistrationToken.findAllByPersonId personId
   -- We should have only one RegToken at this point, but just in case we use findAll
   for_ regTokens $ \regToken -> do

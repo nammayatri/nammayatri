@@ -16,7 +16,7 @@ import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
 
 getProductInfo :: Id Person.Person -> Id SPI.ProductInstance -> FlowHandler GetProductInfoRes
-getProductInfo _ prodInstId = withFlowHandlerAPI $ do
+getProductInfo personId prodInstId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   productInstance <- MPI.findById prodInstId >>= fromMaybeM PIDoesNotExist
   case decodeFromText =<< SPI.info productInstance of
     Just info ->
@@ -39,7 +39,7 @@ getProductInfo _ prodInstId = withFlowHandlerAPI $ do
 
 -- TODO: fetch tracking URL from tracker info
 getLocation :: Id Person.Person -> Id SC.Case -> FlowHandler GetLocationRes
-getLocation personId caseId = withFlowHandlerAPI $ do
+getLocation personId caseId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   _ <- Case.findIdByPersonId personId caseId >>= fromMaybeM CaseDoesNotExist
   baseUrl <- xProviderUri <$> ask
   productInstances <- MPI.listAllProductInstance (SPI.ByApplicationId caseId) [SPI.CONFIRMED]

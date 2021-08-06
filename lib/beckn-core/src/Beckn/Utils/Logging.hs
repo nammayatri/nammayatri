@@ -15,6 +15,7 @@ module Beckn.Utils.Logging
     withTransactionIdLogTag,
     logOutputImplementation,
     withLogTagImplementation,
+    withPersonIdLogTag,
     withTransactionIdLogTagMig,
     makeLogSomeException,
   )
@@ -23,6 +24,7 @@ where
 import Beckn.Types.Core.Context (Context (transaction_id))
 import qualified Beckn.Types.Core.Migration.Context as M.Context
 import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Types.Id
 import Beckn.Types.Logging
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
@@ -151,6 +153,10 @@ appendLogContext val lc =
 
 logContextKey :: Text
 logContextKey = "log_context"
+
+withPersonIdLogTag :: Log m => Id b -> m a -> m a
+withPersonIdLogTag personId = do
+  withLogTag ("actor-" <> getId personId)
 
 withTransactionIdLogTag :: (HasField "context" b Context, Log m) => b -> m a -> m a
 withTransactionIdLogTag req = do

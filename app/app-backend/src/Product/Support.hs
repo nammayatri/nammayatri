@@ -23,7 +23,7 @@ import Utils.Common
 import qualified Utils.SES as SES
 
 sendIssue :: Id Person.Person -> Support.SendIssueReq -> App.FlowHandler Support.SendIssueRes
-sendIssue personId request@SendIssueReq {..} = withFlowHandlerAPI $ do
+sendIssue personId request@SendIssueReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   runRequestValidation validateSendIssueReq request
   let personIdTxt = getId personId
   issuesConfig <- asks $ SesConfig.issuesConfig . App.sesCfg

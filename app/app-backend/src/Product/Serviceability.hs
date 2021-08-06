@@ -32,7 +32,7 @@ checkServiceability ::
   Id Person.Person ->
   ServiceabilityReq ->
   FlowHandler ServiceabilityRes
-checkServiceability settingAccessor _ ServiceabilityReq {..} = withFlowHandlerAPI $ do
+checkServiceability settingAccessor personId ServiceabilityReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   geoRestriction <- asks $ settingAccessor . geofencingConfig
   locationServiceable <-
     case geoRestriction of

@@ -14,7 +14,7 @@ import qualified Types.Storage.Person as Person
 import Utils.Common
 
 getRoute :: Id Person.Person -> Location.Request -> FlowHandler Location.Response
-getRoute _ = withFlowHandlerAPI . MapSearch.getRoutes
+getRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . MapSearch.getRoutes
 
 getDistance ::
   ( CoreMetrics m,

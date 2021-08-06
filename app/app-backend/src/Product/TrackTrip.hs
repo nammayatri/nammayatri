@@ -24,7 +24,7 @@ import Utils.Common
 import qualified Utils.Notifications as Notify
 
 track :: Id Person.Person -> TrackTripReq -> FlowHandler TrackTripRes
-track personId req = withFlowHandlerAPI $ do
+track personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let prodInstId = req.rideId
   prodInst <- MPI.findById prodInstId >>= fromMaybeM PIDoesNotExist
   case_ <- MC.findIdByPersonId personId (prodInst.caseId) >>= fromMaybeM CaseNotFound

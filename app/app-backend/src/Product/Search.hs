@@ -13,6 +13,7 @@ import Beckn.Types.Core.Tag
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Catalog as BM
 import Beckn.Types.Mobility.Stop as BS
+import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
@@ -48,7 +49,7 @@ import Utils.Common
 import qualified Utils.Metrics as Metrics
 
 search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
-search personId req = withFlowHandlerAPI $ do
+search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   validateDateTime req
   validateServiceability req
   fromLocation <- mkLocation $ toBeckn $ req.origin

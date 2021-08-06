@@ -3,6 +3,7 @@ module Product.Person where
 import App.Types
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
+import Beckn.Utils.Logging
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as QPerson
 import qualified Types.API.Person as Person
@@ -26,7 +27,7 @@ getPersonDetails personId = withFlowHandlerAPI $ do
       }
 
 updatePerson :: Id Person.Person -> Person.UpdateReq -> FlowHandler APISuccess.APISuccess
-updatePerson personId req = withFlowHandlerAPI $ do
+updatePerson personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   QPerson.updatePersonalInfo
     personId
     (req.firstName)

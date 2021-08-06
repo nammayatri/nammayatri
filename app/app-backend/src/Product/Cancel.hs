@@ -28,7 +28,7 @@ import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
 cancel :: Id Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
-cancel personId req = withFlowHandlerAPI $ do
+cancel personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let entityType = req.entityType
   case entityType of
     Cancel.CASE -> searchCancel personId req

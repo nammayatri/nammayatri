@@ -3,6 +3,7 @@
 module Beckn.Types.Flow (FlowR, runFlowR) where
 
 import Beckn.Types.Logging
+import Beckn.Types.MonadGuid
 import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Types.Time
 import Beckn.Utils.Logging
@@ -34,3 +35,6 @@ instance HasCoreMetrics r => CoreMetrics (FlowR r) where
 
 instance MonadMonitor L.Flow where
   doIO = L.runIO
+
+instance MonadGuid (FlowR r) where
+  generateGUIDText = L.generateGUID

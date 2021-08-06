@@ -23,7 +23,7 @@ import Utils.Common
 import qualified Utils.Notifications as Notify
 
 status :: Id Person.Person -> StatusReq -> FlowHandler StatusRes
-status personId StatusReq {..} = withFlowHandlerAPI $ do
+status personId StatusReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   prodInst <- QPI.findById (Id productInstanceId) >>= fromMaybeM PINotFound
   case_ <- Case.findIdByPersonId personId (prodInst.caseId) >>= fromMaybeM CaseNotFound
   let caseId = getId $ case_.id

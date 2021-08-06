@@ -30,7 +30,7 @@ import Utils.Common
 import qualified Utils.Metrics as Metrics
 
 confirm :: Id Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
-confirm personId API.ConfirmReq {..} = withFlowHandlerAPI $ do
+confirm personId API.ConfirmReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   lt <- getCurrentTime
   case_ <- QCase.findIdByPersonId personId (Id caseId) >>= fromMaybeM CaseDoesNotExist
   when ((case_.validTill) < lt) $
