@@ -69,8 +69,9 @@ getPersonDetails personId = withFlowHandlerAPI $ do
   pure $
     GetPersonDetailsRes {..}
 
-deletePerson :: Id Organization -> Id SP.Person -> FlowHandler DeletePersonRes
-deletePerson orgId (Id personId) = withFlowHandlerAPI $ do
+deletePerson :: SP.Person -> Id SP.Person -> FlowHandler DeletePersonRes
+deletePerson admin (Id personId) = withFlowHandlerAPI $ do
+  let Just orgId = admin.organizationId
   person <-
     QP.findPersonById (Id personId)
       >>= fromMaybeM PersonDoesNotExist

@@ -16,7 +16,6 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.Error
 import Types.Storage.Organization (Organization)
-import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SR
@@ -73,16 +72,16 @@ type AdminTokenAuth = HeaderAuth "token" AdminVerifyToken
 data AdminVerifyToken
 
 instance VerificationMethod AdminVerifyToken where
-  type VerificationResult AdminVerifyToken = Id Org.Organization
+  type VerificationResult AdminVerifyToken = Person.Person
   verificationDescription =
     "Checks whether token is registered and belongs to a person with admin role."
 
-verifyAdmin :: MonadFlow m => SP.Person -> m (Id Org.Organization)
+verifyAdmin :: MonadFlow m => SP.Person -> m Person.Person
 verifyAdmin user = do
   when (user.role /= SP.ADMIN) $
     throwError AccessDenied
   case user.organizationId of
-    Just orgId -> return orgId
+    Just _ -> return user
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
 verifyToken :: DBFlow m r => RegToken -> m SR.RegistrationToken
@@ -91,7 +90,7 @@ verifyToken regToken = do
     >>= Utils.fromMaybeM (InvalidToken regToken)
     >>= validateToken
 
-validateAdmin :: (DBFlow m r, EncFlow m r) => RegToken -> m (Id Org.Organization)
+validateAdmin :: (DBFlow m r, EncFlow m r) => RegToken -> m Person.Person
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- verifyToken regToken
   user <-

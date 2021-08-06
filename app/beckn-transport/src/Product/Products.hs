@@ -10,12 +10,12 @@ import qualified Storage.Queries.Products as PQ
 import qualified Test.RandomStrings as RS
 import Types.API.Products
 import qualified Types.Storage.Case as Case
-import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.Person as SP
 import qualified Types.Storage.Products as Product
 import Utils.Common (withFlowHandlerAPI)
 
-createProduct :: Id Org.Organization -> CreateProdReq -> FlowHandler ProdRes
-createProduct _orgId req = withFlowHandlerAPI $ do
+createProduct :: SP.Person -> CreateProdReq -> FlowHandler ProdRes
+createProduct _ req = withFlowHandlerAPI $ do
   prod <- mkProduct req
   PQ.create prod
   return prod

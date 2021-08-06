@@ -14,8 +14,9 @@ import qualified Types.Storage.Vehicle as SV
 import Utils.Common
 import qualified Utils.Defaults as Default
 
-createVehicle :: Id Org.Organization -> CreateVehicleReq -> FlowHandler CreateVehicleRes
-createVehicle orgId req = withFlowHandlerAPI $ do
+createVehicle :: SP.Person -> CreateVehicleReq -> FlowHandler CreateVehicleRes
+createVehicle admin req = withFlowHandlerAPI $ do
+  let Just orgId = admin.organizationId
   runRequestValidation validateCreateVehicleReq req
   validateVehicle
   vehicle <- API.createVehicle req orgId
@@ -27,8 +28,9 @@ createVehicle orgId req = withFlowHandlerAPI $ do
       when (isJust mVehicle) $
         throwError $ InvalidRequest "Registration number already exists."
 
-listVehicles :: Id Org.Organization -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Text -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
-listVehicles orgId variantM categoryM energyTypeM mbRegNum limitM offsetM = withFlowHandlerAPI $ do
+listVehicles :: SP.Person -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Text -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
+listVehicles admin variantM categoryM energyTypeM mbRegNum limitM offsetM = withFlowHandlerAPI $ do
+  let Just orgId = admin.organizationId
   personList <- QP.findAllByOrgId [SP.DRIVER] orgId
   vehicleList <- QV.findAllByVariantCatOrgId variantM categoryM energyTypeM mbRegNum limit offset orgId
   let respList = mkVehicleRes personList <$> vehicleList
@@ -37,16 +39,18 @@ listVehicles orgId variantM categoryM energyTypeM mbRegNum limitM offsetM = with
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM
 
-updateVehicle :: Id Org.Organization -> Id SV.Vehicle -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
-updateVehicle orgId vehicleId req = withFlowHandlerAPI $ do
+updateVehicle :: SP.Person -> Id SV.Vehicle -> UpdateVehicleReq -> FlowHandler UpdateVehicleRes
+updateVehicle admin vehicleId req = withFlowHandlerAPI $ do
+  let Just orgId = admin.organizationId
   runRequestValidation validateUpdateVehicleReq req
   vehicle <- QV.findByIdAndOrgId vehicleId orgId >>= fromMaybeM VehicleDoesNotExist
   updatedVehicle <- modifyVehicle req vehicle
   QV.updateVehicleRec updatedVehicle
   return $ CreateVehicleRes {vehicle = updatedVehicle}
 
-deleteVehicle :: Id Org.Organization -> Id SV.Vehicle -> FlowHandler DeleteVehicleRes
-deleteVehicle orgId vehicleId = withFlowHandlerAPI $ do
+deleteVehicle :: SP.Person -> Id SV.Vehicle -> FlowHandler DeleteVehicleRes
+deleteVehicle admin vehicleId = withFlowHandlerAPI $ do
+  let Just orgId = admin.organizationId
   vehicle <-
     QV.findVehicleById vehicleId
       >>= fromMaybeM VehicleDoesNotExist
