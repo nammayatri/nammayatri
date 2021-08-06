@@ -47,7 +47,7 @@ searchDurationLockKey txnId = txnId <> ":on_search"
 startSearchMetrics' :: MonadFlow m => BAPMetricsContainer -> Text -> m ()
 startSearchMetrics' bmContainer txnId = do
   let (_, failureCounter) = bmContainer.searchDuration
-      searchRedisExTime = bmContainer.searchDurationTimeout
+      searchRedisExTime = getSecond bmContainer.searchDurationTimeout
   startTime <- getCurrentTime
   Redis.setExRedis (searchDurationKey txnId) startTime (searchRedisExTime + 1) -- a bit more time to
   -- allow forked thread to handle failure
@@ -64,7 +64,7 @@ startSearchMetrics' bmContainer txnId = do
 finishSearchMetrics' :: MonadFlow m => BAPMetricsContainer -> Text -> m ()
 finishSearchMetrics' bmContainer txnId = do
   let (searchDurationHistogram, _) = bmContainer.searchDuration
-      searchRedisExTime = bmContainer.searchDurationTimeout
+      searchRedisExTime = getSecond bmContainer.searchDurationTimeout
   endTime <- getCurrentTime
   whenM (Redis.tryLockRedis (searchDurationLockKey txnId) searchRedisExTime) $ do
     Redis.getKeyRedis (searchDurationKey txnId) >>= \case

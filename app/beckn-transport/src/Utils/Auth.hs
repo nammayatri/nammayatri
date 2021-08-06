@@ -70,7 +70,7 @@ instance VerificationMethod VerifyToken where
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyTokenAction :: (DBFlow m r, HasField "authTokenCacheExpiry" r Int) => VerificationAction VerifyToken m
+verifyTokenAction :: (DBFlow m r, HasField "authTokenCacheExpiry" r Second) => VerificationAction VerifyToken m
 verifyTokenAction = VerificationAction verifyPerson
 
 -- | Verifies admin's token.
@@ -133,10 +133,10 @@ validateDriver regToken = do
       >>= fromMaybeM PersonNotFound
   verifyDriver user
 
-verifyPerson :: (DBFlow m r, HasField "authTokenCacheExpiry" r Int) => RegToken -> m (Id Person.Person)
+verifyPerson :: (DBFlow m r, HasField "authTokenCacheExpiry" r Second) => RegToken -> m (Id Person.Person)
 verifyPerson token = do
   let key = authTokenCacheKey token
-  authTokenCacheExpiry <- asks (.authTokenCacheExpiry)
+  authTokenCacheExpiry <- getSecond <$> asks (.authTokenCacheExpiry)
   mbPersonId <- Redis.getKeyRedis key
   case mbPersonId of
     Just personId -> return personId

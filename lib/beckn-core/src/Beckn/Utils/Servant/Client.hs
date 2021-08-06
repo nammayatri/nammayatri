@@ -55,7 +55,7 @@ callAPI' mbManagerSelector baseUrl eulerClient desc =
   withLogTag "callAPI" $ do
     let managerSelector = fromMaybe defaultHttpManager mbManagerSelector
     res <-
-      measuringDurationInS (Metrics.addRequestLatency (T.pack $ showBaseUrl baseUrl) desc) $
+      measuringDuration (Metrics.addRequestLatency (T.pack $ showBaseUrl baseUrl) desc) $
         L.callAPI' (Just managerSelector) baseUrl eulerClient
     case res of
       Right r -> logDebug $ "Ok response: " <> decodeUtf8 (A.encode r)

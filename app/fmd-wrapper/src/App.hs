@@ -38,7 +38,7 @@ runFMDWrapper configModifier = do
   appEnv <- buildAppEnv appCfg
   let settings =
         defaultSettings
-          & setGracefulShutdownTimeout (Just $ appCfg.graceTerminationPeriod)
+          & setGracefulShutdownTimeout (Just $ getSecond appCfg.graceTerminationPeriod)
           & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
           & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do

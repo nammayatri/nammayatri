@@ -19,7 +19,6 @@ import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
-import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Geofencing
@@ -43,8 +42,8 @@ data AppCfg = AppCfg
     bapNwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    searchConfirmExpiry :: Maybe Integer,
-    searchCaseExpiry :: Maybe Integer,
+    searchConfirmExpiry :: Maybe Second,
+    searchCaseExpiry :: Maybe Second,
     cronAuthKey :: Maybe CronAuthKey,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
@@ -55,16 +54,16 @@ data AppCfg = AppCfg
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
     geofencingConfig :: GeofencingConfig,
-    signatureExpiry :: NominalDiffTime,
+    signatureExpiry :: Second,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    metricsSearchDurationTimeout :: Int,
-    graceTerminationPeriod :: Int,
+    metricsSearchDurationTimeout :: Second,
+    graceTerminationPeriod :: Second,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Int
+    authTokenCacheExpiry :: Second
   }
   deriving (Generic, FromDhall)
 
@@ -81,8 +80,8 @@ data AppEnv = AppEnv
     bapNwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    searchConfirmExpiry :: Maybe Integer,
-    searchCaseExpiry :: Maybe Integer,
+    searchConfirmExpiry :: Maybe Second,
+    searchCaseExpiry :: Maybe Second,
     cronAuthKey :: Maybe CronAuthKey,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
@@ -90,7 +89,7 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     geofencingConfig :: GeofencingConfig,
-    signatureExpiry :: NominalDiffTime,
+    signatureExpiry :: Second,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -100,7 +99,7 @@ data AppEnv = AppEnv
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Int
+    authTokenCacheExpiry :: Second
   }
   deriving (Generic)
 

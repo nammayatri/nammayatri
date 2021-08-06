@@ -8,7 +8,6 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
-import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Storage.Queries.Organization (findOrgByShortId)
@@ -27,11 +26,11 @@ data AppCfg = AppCfg
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     loggerConfig :: LoggerConfig,
-    searchTimeout :: Maybe Int,
+    searchTimeout :: Maybe Second,
     coreVersions :: CoreVersions,
     mobilityDomainVersion :: Text,
-    signatureExpiry :: NominalDiffTime,
-    graceTerminationPeriod :: Int,
+    signatureExpiry :: Second,
+    graceTerminationPeriod :: Second,
     httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
@@ -45,7 +44,7 @@ data AppEnv = AppEnv
     cache :: C.Cache Text Text,
     coreVersions :: CoreVersions,
     mobilityDomainVersion :: Text,
-    signatureExpiry :: NominalDiffTime,
+    signatureExpiry :: Second,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions

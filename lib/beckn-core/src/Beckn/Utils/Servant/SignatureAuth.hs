@@ -25,7 +25,6 @@ import Data.List (lookup)
 import qualified Data.Map.Strict as Map
 import qualified Data.Swagger as DS
 import qualified Data.Text as T
-import Data.Time.Clock (NominalDiffTime)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Typeable (typeRep)
 import qualified EulerHS.Language as L
@@ -75,7 +74,7 @@ class AuthenticatingEntity r where
   getSelfUrl :: r -> BaseUrl
   getRegistry :: r -> [Credential]
   getSigningKeys :: r -> [SigningKey]
-  getSignatureExpiry :: r -> NominalDiffTime
+  getSignatureExpiry :: r -> Second
 
 class LookupMethod lookup => HasLookupAction lookup m where
   runLookup :: LookupAction lookup m
@@ -202,7 +201,7 @@ signatureAuthManager ::
   R.FlowRuntime ->
   r ->
   Text ->
-  NominalDiffTime ->
+  Second ->
   Text ->
   HttpSig.PrivateKey ->
   Text ->

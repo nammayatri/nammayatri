@@ -44,7 +44,7 @@ runGateway configModifier = do
   let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
       settings =
         defaultSettings
-          & setGracefulShutdownTimeout (Just $ appCfg.graceTerminationPeriod)
+          & setGracefulShutdownTimeout (Just $ getSecond appCfg.graceTerminationPeriod)
           & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
           & setPort port
   let redisCfg = appCfg.redisCfg

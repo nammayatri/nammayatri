@@ -90,7 +90,7 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
 onConfirmCallback ::
   ( DBFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meter]
   ) =>
   ProductInstance.ProductInstance ->
   ProductInstance.ProductInstance ->

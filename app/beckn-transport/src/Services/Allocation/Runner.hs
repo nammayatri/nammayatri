@@ -25,7 +25,7 @@ handle ::
     DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Integer, "nwAddress" ::: BaseUrl],
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meter, "nwAddress" ::: BaseUrl],
     FCMFlow m r,
     HasBTMMetrics m r,
     CoreMetrics m
@@ -87,7 +87,7 @@ run ::
     DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Integer, "nwAddress" ::: BaseUrl],
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meter, "nwAddress" ::: BaseUrl],
     FCMFlow m r,
     HasFlowEnv m r '["isShuttingDown" ::: TMVar ()],
     CoreMetrics m

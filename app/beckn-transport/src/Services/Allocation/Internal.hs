@@ -4,7 +4,7 @@ import App.BackgroundTaskManager.Types (DriverAllocationConfig)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Order (CancellationReason (..))
-import Data.Time (NominalDiffTime, UTCTime)
+import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import qualified Product.Person as Person
@@ -32,13 +32,13 @@ import Utils.Notifications
 getDriverSortMode :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m SortMode
 getDriverSortMode = asks (.driverAllocationConfig.defaultSortMode)
 
-getConfiguredNotificationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m NominalDiffTime
+getConfiguredNotificationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Second
 getConfiguredNotificationTime = asks (.driverAllocationConfig.driverNotificationExpiry)
 
-getConfiguredAllocationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m NominalDiffTime
+getConfiguredAllocationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Second
 getConfiguredAllocationTime = asks (.driverAllocationConfig.rideAllocationExpiry)
 
-getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]) => Id Ride -> m [Id Driver]
+getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meter]) => Id Ride -> m [Id Driver]
 getDriverPool rideId = Person.getDriverPool (cast rideId)
 
 getRequests :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest]

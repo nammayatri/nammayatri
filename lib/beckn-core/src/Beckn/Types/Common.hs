@@ -1,4 +1,6 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Beckn.Types.Common
@@ -17,6 +19,7 @@ import Beckn.Types.GuidLike as Common
 import Beckn.Types.Logging as Common
 import Beckn.Types.MonadGuid as Common
 import Beckn.Types.Time as Common
+import Beckn.Utils.Dhall (FromDhall)
 import Data.Aeson
 import Data.Generics.Labels ()
 import EulerHS.Prelude hiding (id)
@@ -24,7 +27,8 @@ import EulerHS.Prelude hiding (id)
 newtype IdObject = IdObject
   { id :: Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON)
 
 class FromBeckn a b where
   fromBeckn :: a -> b
@@ -37,3 +41,15 @@ class ToBeckn a b where
 -- have a corresponding type defined by us allowing conversion (which may be
 -- lossy) between the two, when defined as an instance of this typeclass.
 class (FromBeckn a b, ToBeckn a b) => BecknSpecIso a b
+
+newtype Meter = Meter
+  { getMeter :: Int
+  }
+  deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum)
+  deriving stock (Generic)
+
+newtype Kilometer = Kilometer
+  { getKilometer :: Double
+  }
+  deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Fractional, Real, Ord, Eq, Enum)
+  deriving stock (Generic)

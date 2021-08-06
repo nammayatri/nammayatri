@@ -177,7 +177,7 @@ driverPoolKey :: Id ProductInstance -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
 getDriverPool ::
-  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]) =>
+  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meter]) =>
   Id ProductInstance ->
   m [Id Driver]
 getDriverPool piId =
@@ -201,7 +201,7 @@ setDriverPool piId ids =
   Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
 
 calculateDriverPool ::
-  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Integer]) =>
+  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meter]) =>
   Id Location ->
   Id Organization ->
   SV.Variant ->
@@ -221,7 +221,7 @@ calculateDriverPool locId orgId variant = do
     getRadius =
       QTC.findValueByOrgIdAndKey orgId (ConfigKey "radius")
         >>= maybe
-          (asks (.defaultRadiusOfSearch))
+          (fromIntegral <$> asks (.defaultRadiusOfSearch))
           radiusFromTransporterConfig
     radiusFromTransporterConfig conf =
       fromMaybeM (InternalError "The radius is not a number.")

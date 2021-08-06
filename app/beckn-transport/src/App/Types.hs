@@ -19,7 +19,6 @@ import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
-import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Types.Metrics
@@ -41,7 +40,7 @@ data AppCfg = AppCfg
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    caseExpiry :: Maybe Integer,
+    caseExpiry :: Maybe Second,
     cronAuthKey :: Maybe CronAuthKey,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
@@ -51,16 +50,16 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
-    signatureExpiry :: NominalDiffTime,
+    signatureExpiry :: Second,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    graceTerminationPeriod :: Int,
-    defaultRadiusOfSearch :: Integer,
+    graceTerminationPeriod :: Second,
+    defaultRadiusOfSearch :: Meter,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Int
+    authTokenCacheExpiry :: Second
   }
   deriving (Generic, FromDhall)
 
@@ -76,14 +75,14 @@ data AppEnv = AppEnv
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    caseExpiry :: Maybe Integer,
+    caseExpiry :: Maybe Second,
     cronAuthKey :: Maybe CronAuthKey,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     domainVersion :: Text,
-    signatureExpiry :: NominalDiffTime,
+    signatureExpiry :: Second,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -91,9 +90,9 @@ data AppEnv = AppEnv
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     apiRateLimitOptions :: APIRateLimitOptions,
-    defaultRadiusOfSearch :: Integer,
+    defaultRadiusOfSearch :: Meter,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Int
+    authTokenCacheExpiry :: Second
   }
   deriving (Generic)
 

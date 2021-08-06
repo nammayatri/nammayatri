@@ -102,7 +102,7 @@ searchCb _ _ req = withFlowHandlerBecknAPI $
       Left err -> logTagError "on_search req" $ "on_search error: " <> show err
     return Ack
 
-searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Integer], DBFlow m r) => Search.OnSearchReq -> BM.Catalog -> m ()
+searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Second], DBFlow m r) => Search.OnSearchReq -> BM.Catalog -> m ()
 searchCbService req catalog = do
   let caseId = Id $ req.context.transaction_id --CaseId $ service.id
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH >>= fromMaybeM CaseDoesNotExist
@@ -125,7 +125,7 @@ searchCbService req catalog = do
         products <- traverse (mkProduct case_) items
         productInstances <- traverse (mkProductInstance case_ bpp provider personId) items
         currTime <- getCurrentTime
-        confirmExpiry <- fromMaybe 1800 <$> asks (.searchConfirmExpiry)
+        confirmExpiry <- maybe 1800 fromIntegral <$> asks (.searchConfirmExpiry)
         let newValidTill = fromInteger confirmExpiry `addUTCTime` currTime
         return $ do
           traverse_ QProducts.create products
@@ -144,7 +144,7 @@ searchCbService req catalog = do
         QCase.updateInfo (case_.id) (encodeToText uInfo)
 
 mkCase ::
-  ( (HasFlowEnv m r ["searchCaseExpiry" ::: Maybe Integer, "graphhopperUrl" ::: BaseUrl]),
+  ( (HasFlowEnv m r ["searchCaseExpiry" ::: Maybe Second, "graphhopperUrl" ::: BaseUrl]),
     DBFlow m r,
     CoreMetrics m
   ) =>
@@ -156,7 +156,7 @@ mkCase ::
 mkCase req userId from to = do
   now <- getCurrentTime
   cid <- generateGUID
-  distance <- Location.getDistance (req ^. #origin . #location) (req ^. #destination . #location)
+  distance <- Location.getDistance (req.origin.location) (req.destination.location)
   orgs <- Org.listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
   let info = encodeToText $ API.CaseInfo (Just $ toInteger $ length orgs) (Just 0) (Just 0)
   -- TODO: consider collision probability for shortId
@@ -195,10 +195,10 @@ mkCase req userId from to = do
         updatedAt = now
       }
   where
-    getCaseExpiry :: (HasFlowEnv m r '["searchCaseExpiry" ::: Maybe Integer]) => UTCTime -> m UTCTime
+    getCaseExpiry :: (HasFlowEnv m r '["searchCaseExpiry" ::: Maybe Second]) => UTCTime -> m UTCTime
     getCaseExpiry startTime = do
       now <- getCurrentTime
-      caseExpiry <- fromMaybe 7200 <$> asks (.searchCaseExpiry)
+      caseExpiry <- maybe 7200 fromIntegral <$> asks (.searchCaseExpiry)
       let minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffUTCTime` now
           validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now

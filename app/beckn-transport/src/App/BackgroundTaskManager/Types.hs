@@ -20,7 +20,6 @@ import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
-import Data.Time (NominalDiffTime)
 import EulerHS.Prelude
 import Types.App (SortMode)
 import Types.Metrics
@@ -34,8 +33,8 @@ data BTMCfg = BTMCfg
   deriving (Generic, FromDhall)
 
 data DriverAllocationConfig = DriverAllocationConfig
-  { driverNotificationExpiry :: NominalDiffTime,
-    rideAllocationExpiry :: NominalDiffTime,
+  { driverNotificationExpiry :: Second,
+    rideAllocationExpiry :: Second,
     defaultSortMode :: SortMode,
     requestsNumPerIteration :: Integer,
     processDelay :: Millisecond,
@@ -52,11 +51,11 @@ data BTMEnv = BTMEnv
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
-    signatureExpiry :: NominalDiffTime,
+    signatureExpiry :: Second,
     fcmUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
-    defaultRadiusOfSearch :: Integer,
+    defaultRadiusOfSearch :: Meter,
     driverAllocationConfig :: DriverAllocationConfig,
     btmMetrics :: BTMMetricsContainer,
     httpClientOptions :: HttpClientOptions

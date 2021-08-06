@@ -33,10 +33,10 @@ ride01Id = Id "ride01"
 ride02Id :: Id Ride
 ride02Id = Id "ride02"
 
-allocationTime :: NominalDiffTime
+allocationTime :: Second
 allocationTime = 120
 
-notificationTime :: NominalDiffTime
+notificationTime :: Second
 notificationTime = 15
 
 isNotified :: UTCTime -> (NotificationStatus, UTCTime) -> Bool

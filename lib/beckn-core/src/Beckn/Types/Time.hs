@@ -26,9 +26,9 @@ newtype Millisecond = Millisecond
   deriving stock (Generic)
 
 newtype Second = Second
-  { getSecond :: Double
+  { getSecond :: Int
   }
-  deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Fractional, Real, Ord, Eq, Enum)
+  deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum)
   deriving stock (Generic)
 
 type MeasuringDuration m a = MonadClock m => m a -> m a

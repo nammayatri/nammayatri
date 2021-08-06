@@ -5,7 +5,7 @@ import Beckn.Types.Id
 import Beckn.Types.Mobility.Order (CancellationReason (..))
 import Data.Generics.Labels ()
 import qualified Data.Text as T
-import Data.Time.Clock (NominalDiffTime, UTCTime, addUTCTime, diffUTCTime)
+import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude
 import qualified Types.API.Ride as Ride (DriverResponse (..), NotificationStatus (..))
 import Types.App
@@ -72,8 +72,8 @@ data BTMMetricsHandle m = BTMMetricsHandle
 
 data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,
-    getConfiguredNotificationTime :: m NominalDiffTime,
-    getConfiguredAllocationTime :: m NominalDiffTime,
+    getConfiguredNotificationTime :: m Second,
+    getConfiguredAllocationTime :: m Second,
     getRequests :: ShortId Organization -> Integer -> m [RideRequest],
     getDriverPool :: Id Ride -> m [Id Driver],
     getCurrentNotification :: Id Ride -> m (Maybe CurrentNotification),
@@ -255,7 +255,7 @@ processFilteredPool handle@ServiceHandle {..} rideId filteredPool shortOrgId = d
           ETA -> pure driverId
           IdleTime -> getFirstDriverInTheQueue $ driverId :| driverIds
       currentTime <- getCurrentTime
-      notificationTime <- getConfiguredNotificationTime
+      notificationTime <- fromIntegral <$> getConfiguredNotificationTime
       let expiryTime = addUTCTime notificationTime currentTime
       sendNewRideNotification rideId firstDriver
       addNotificationStatus rideId firstDriver expiryTime
@@ -278,6 +278,6 @@ cancel ServiceHandle {..} rideId reason = do
 
 isAllocationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> OrderTime -> m Bool
 isAllocationTimeFinished ServiceHandle {..} currentTime orderTime = do
-  configuredAllocationTime <- getConfiguredAllocationTime
+  configuredAllocationTime <- fromIntegral <$> getConfiguredAllocationTime
   let elapsedSearchTime = diffUTCTime currentTime (orderTime.utcTime)
   pure $ elapsedSearchTime > configuredAllocationTime
