@@ -2,7 +2,6 @@
 
 module Beckn.Types.Core.Migration.Vehicle where
 
-import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Vehicle = Vehicle
@@ -16,10 +15,4 @@ data Vehicle = Vehicle
     energy_type :: Maybe Text,
     registration :: Maybe Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON Vehicle where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Vehicle where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)

@@ -2,7 +2,6 @@ module Beckn.Types.Core.Operator where
 
 import Beckn.Types.Core.Person
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
@@ -17,13 +16,7 @@ data Operator = Operator
     phones :: [Text], -- Phone numer in E.164 format (ITUT recommendation
     experience :: Maybe Experience
   }
-  deriving (Generic, Show)
-
-instance FromJSON Operator where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Operator where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Operator where
   example =
@@ -43,13 +36,7 @@ data Experience = Experience
     value :: Text,
     unit :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON Experience where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Experience where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Experience where
   example =

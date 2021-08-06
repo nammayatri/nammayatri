@@ -4,7 +4,6 @@ import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Price (Price)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
-import Beckn.Utils.JSON
 import EulerHS.Prelude hiding (id)
 
 data Item = Item
@@ -20,10 +19,4 @@ data Item = Item
     recommended :: Maybe Bool,
     tags :: Maybe Tags
   }
-  deriving (Generic, Show)
-
-instance FromJSON Item where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Item where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)

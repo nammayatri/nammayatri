@@ -1,7 +1,6 @@
 module Types.Storage.DriverInformation where
 
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude
@@ -25,11 +24,9 @@ instance B.Table DriverInformationT where
     deriving (Generic, B.Beamable)
   primaryKey = DriverInformationPrimaryKey . driverId
 
-instance ToJSON DriverInformation where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+deriving instance FromJSON DriverInformation
 
-instance FromJSON DriverInformation where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+deriving instance ToJSON DriverInformation
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity DriverInformationT)

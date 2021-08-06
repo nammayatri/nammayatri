@@ -2,7 +2,6 @@ module Beckn.Types.Core.Brand where
 
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude hiding (id)
 
@@ -11,13 +10,7 @@ data Brand = Brand
     parent_brand_id :: Maybe Text,
     descriptor :: Descriptor
   }
-  deriving (Generic, Show)
-
-instance FromJSON Brand where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Brand where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Brand where
   example =

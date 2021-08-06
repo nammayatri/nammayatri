@@ -20,16 +20,10 @@ data Range = Range
   { min :: Int,
     max :: Int
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance FromJSON Scalar where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
 instance ToJSON Scalar where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance FromJSON Range where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Range where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny

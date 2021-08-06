@@ -1,7 +1,6 @@
 module Beckn.Types.Core.Api where
 
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import Data.Time
 import EulerHS.Prelude hiding (exp)
@@ -10,13 +9,7 @@ data Api = Api
   { url :: Text,
     exp :: UTCTime
   }
-  deriving (Generic, Show)
-
-instance FromJSON Api where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Api where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Api where
   example =

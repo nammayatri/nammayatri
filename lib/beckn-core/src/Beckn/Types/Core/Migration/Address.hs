@@ -1,6 +1,5 @@
 module Beckn.Types.Core.Migration.Address (Address (..)) where
 
-import Beckn.Utils.JSON
 import EulerHS.Prelude hiding (state)
 
 data Address = Address
@@ -15,10 +14,4 @@ data Address = Address
     country :: Maybe Text,
     area_code :: Maybe Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON Address where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Address where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)

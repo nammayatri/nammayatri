@@ -3,7 +3,6 @@ module Types.API.Vehicle where
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.Predicate
-import Beckn.Utils.JSON
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.Swagger
@@ -79,10 +78,7 @@ data UpdateVehicleReq = UpdateVehicleReq
     energyType :: Maybe EnergyType,
     registrationCategory :: Maybe RegistrationCategory
   }
-  deriving (Generic, ToSchema)
-
-instance FromJSON UpdateVehicleReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToSchema)
 
 validateUpdateVehicleReq :: Validate UpdateVehicleReq
 validateUpdateVehicleReq UpdateVehicleReq {..} =
@@ -121,13 +117,7 @@ data VehicleRes = VehicleRes
   { vehicle :: SV.Vehicle,
     driver :: Maybe Driver
   }
-  deriving (Generic, ToSchema)
-
-instance FromJSON VehicleRes where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON VehicleRes where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data Driver = Driver
   { id :: Text,
@@ -139,10 +129,4 @@ data Driver = Driver
     verified :: Bool,
     organizationId :: Maybe (Id Org.Organization)
   }
-  deriving (Generic, ToSchema)
-
-instance FromJSON Driver where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Driver where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, ToSchema)

@@ -26,26 +26,14 @@ data UpdateCaseReq = UpdateCaseReq
   { quote :: Maybe Amount,
     transporterChoice :: Text
   }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON UpdateCaseReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON UpdateCaseReq where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data ProviderStats = ProviderStats
   { completed :: Maybe Int,
     inprogress :: Maybe Int,
     confirmed :: Maybe Int
   }
-  deriving (Generic, Show)
-
-instance FromJSON ProviderStats where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON ProviderStats where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data ProviderInfo = ProviderInfo
   { id :: Text,
@@ -53,10 +41,4 @@ data ProviderInfo = ProviderInfo
     stats :: Text,
     contacts :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON ProviderInfo where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON ProviderInfo where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)

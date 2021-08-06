@@ -33,13 +33,7 @@ data BankAccount = BankAccount
     account_holder_name :: Text,
     ifsc_code :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON BankAccount where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON BankAccount where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example BankAccount where
   example =

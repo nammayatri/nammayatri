@@ -3,7 +3,6 @@ module Beckn.Types.Core.Migration.Quotation where
 import Beckn.Types.Core.Migration.Duration
 import Beckn.Types.Core.Migration.Price
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Quotation = Quotation
@@ -11,19 +10,13 @@ data Quotation = Quotation
     breakup :: Maybe [BreakupItem],
     ttl :: Maybe Duration
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data BreakupItem = BreakupItem
   { title :: Maybe Text,
     price :: Maybe Price
   }
-  deriving (Generic, Show)
-
-instance FromJSON Quotation where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Quotation where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Quotation where
   example =
@@ -32,9 +25,3 @@ instance Example Quotation where
         breakup = Nothing,
         ttl = Nothing
       }
-
-instance FromJSON BreakupItem where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON BreakupItem where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny

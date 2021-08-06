@@ -47,6 +47,7 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - StandaloneDeriving
 
 dependencies:
   - aeson

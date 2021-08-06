@@ -10,7 +10,6 @@ import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import EulerHS.Prelude hiding (id)
 
 data Intent = Intent
@@ -22,7 +21,7 @@ data Intent = Intent
     item :: Maybe Item,
     tags :: Maybe Tags
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Intent where
   example =
@@ -42,10 +41,10 @@ data ProviderInfo = ProviderInfo
     category_id :: Maybe Text,
     locations :: Maybe [IdObject]
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 newtype DescriptorName = DescriptorName {name :: Text}
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data FulFillmentInfo = FulFillmentInfo
   { id :: Maybe Text,
@@ -54,7 +53,7 @@ data FulFillmentInfo = FulFillmentInfo
     tags :: Maybe Tags,
     vehicle :: Maybe Vehicle
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example FulFillmentInfo where
   example =
@@ -70,7 +69,7 @@ data LocationAndTime = LocationAndTime
   { location :: Maybe Location,
     time :: Maybe Time
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example LocationAndTime where
   example =
@@ -78,33 +77,3 @@ instance Example LocationAndTime where
       { location = example,
         time = Nothing
       }
-
-instance FromJSON Intent where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Intent where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance FromJSON ProviderInfo where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON ProviderInfo where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance FromJSON FulFillmentInfo where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON FulFillmentInfo where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance FromJSON LocationAndTime where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON LocationAndTime where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance FromJSON DescriptorName where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON DescriptorName where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny

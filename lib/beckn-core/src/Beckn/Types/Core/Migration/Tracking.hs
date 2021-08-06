@@ -8,7 +8,7 @@ data Tracking = Tracking
   { url :: Maybe BaseUrl,
     status :: Maybe TrackingStatus
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data TrackingStatus = ACTIVE | INACTIVE
   deriving (Generic, Show)
@@ -18,9 +18,3 @@ instance FromJSON TrackingStatus where
 
 instance ToJSON TrackingStatus where
   toJSON = genericToJSON constructorsToLowerOptions
-
-instance FromJSON Tracking where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Tracking where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny

@@ -2,20 +2,13 @@ module Beckn.Types.Core.ItemQuantity where
 
 import Beckn.Types.Core.Scalar
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import EulerHS.Prelude hiding (maximum, minimum)
 
 data Quantity = Quantity
   { count :: Integer,
     quantity :: Scalar
   }
-  deriving (Generic, Show)
-
-instance FromJSON Quantity where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Quantity where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Quantity where
   example =
@@ -31,13 +24,7 @@ data ItemQuantity = ItemQuantity
     minimum :: Maybe Quantity,
     selected :: Maybe Quantity
   }
-  deriving (Generic, Show)
-
-instance FromJSON ItemQuantity where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON ItemQuantity where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example ItemQuantity where
   example =

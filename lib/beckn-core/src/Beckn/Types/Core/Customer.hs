@@ -22,10 +22,4 @@ data GroupCustomer = GroupCustomer
   { primary :: Person,
     count :: Integer
   }
-  deriving (Generic, Show)
-
-instance FromJSON GroupCustomer where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON GroupCustomer where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)

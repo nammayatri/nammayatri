@@ -7,7 +7,6 @@ import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
-import Beckn.Utils.JSON
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.Aeson
@@ -264,13 +263,7 @@ data LinkedEntity = LinkedEntity
   { entityType :: EntityType,
     entityValue :: Maybe Text
   }
-  deriving (Show, Generic)
-
-instance FromJSON LinkedEntity where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON LinkedEntity where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 data PersonEntityRes = PersonEntityRes
   { id :: Id SP.Person,
@@ -298,13 +291,7 @@ data PersonEntityRes = PersonEntityRes
     updatedAt :: UTCTime,
     linkedEntity :: Maybe LinkedEntity
   }
-  deriving (Show, Generic)
-
-instance FromJSON PersonEntityRes where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON PersonEntityRes where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 data GetPersonDetailsRes = GetPersonDetailsRes
   { id :: Id SP.Person,

@@ -61,13 +61,7 @@ data Name = Name
     honorific_prefix :: Maybe Text, -- An honorific prefix preceding a Person's name such as Dr/Mrs/Mr.
     honorific_suffix :: Maybe Text -- An honorific suffix preceding a Person's name such as M.D. /PhD/MSCSW.
   }
-  deriving (Generic, Show)
-
-instance FromJSON Name where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Name where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Name where
   example =

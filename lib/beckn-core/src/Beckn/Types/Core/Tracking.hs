@@ -3,7 +3,6 @@
 module Beckn.Types.Core.Tracking where
 
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Tracking = Tracking
@@ -11,13 +10,7 @@ data Tracking = Tracking
     required_params :: Maybe Text,
     metadata :: Maybe Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON Tracking where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Tracking where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Tracking where
   example =

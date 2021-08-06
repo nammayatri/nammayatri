@@ -5,7 +5,6 @@ import Beckn.Types.Core.Scalar
 import Beckn.Types.Mobility.TravelGroup
 import Beckn.Types.Mobility.Traveller
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Luggage = Luggage
@@ -13,13 +12,7 @@ data Luggage = Luggage
     weight :: Scalar,
     dimensions :: Dimensions
   }
-  deriving (Generic, Show)
-
-instance FromJSON Luggage where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Luggage where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data Payload = Payload
   { luggage :: Maybe Luggage,
@@ -27,13 +20,7 @@ data Payload = Payload
     travellers :: [Traveller],
     travel_group :: Maybe TravelGroup
   }
-  deriving (Generic, Show)
-
-instance FromJSON Payload where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Payload where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Payload where
   example =

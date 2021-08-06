@@ -2,7 +2,6 @@ module Types.API.Ride where
 
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude
 import Types.App
@@ -12,13 +11,7 @@ data SetDriverAcceptanceReq = SetDriverAcceptanceReq
   { productInstanceId :: Id ProductInstance,
     response :: NotificationStatus
   }
-  deriving (Show, Generic)
-
-instance FromJSON SetDriverAcceptanceReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON SetDriverAcceptanceReq where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 type SetDriverAcceptanceRes = APISuccess
 
@@ -32,13 +25,7 @@ data DriverResponse = DriverResponse
     status :: NotificationStatus,
     respondedAt :: UTCTime
   }
-  deriving (Show, Generic)
-
-instance FromJSON DriverResponse where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON DriverResponse where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 newtype StartRideReq = StartRideReq
   { otp :: Text

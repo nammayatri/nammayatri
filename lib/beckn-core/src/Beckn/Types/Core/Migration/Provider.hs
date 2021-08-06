@@ -10,7 +10,6 @@ import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import EulerHS.Prelude hiding (exp, id)
 
 data Provider = Provider
@@ -27,13 +26,7 @@ data Provider = Provider
     exp :: Maybe Text,
     tags :: Maybe Tags
   }
-  deriving (Generic, Show)
-
-instance FromJSON Provider where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Provider where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Provider where
   example =

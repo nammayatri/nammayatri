@@ -5,7 +5,6 @@ import Beckn.Types.Core.ItemQuantity
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.Quotation
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude hiding (id, state)
 
@@ -20,13 +19,7 @@ data Order = Order
     update_action :: Maybe Text,
     quotation :: Maybe Quotation
   }
-  deriving (Generic, Show)
-
-instance FromJSON Order where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Order where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Order where
   example =
@@ -46,13 +39,7 @@ data OrderItem = OrderItem
   { id :: Text,
     quantity :: Maybe ItemQuantity
   }
-  deriving (Generic, Show)
-
-instance FromJSON OrderItem where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON OrderItem where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example OrderItem where
   example =

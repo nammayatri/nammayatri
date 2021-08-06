@@ -6,7 +6,6 @@ import Beckn.Types.Core.Policy
 import Beckn.Types.Core.Provider
 import Beckn.Types.Mobility.Catalog
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude hiding (id)
 
@@ -16,13 +15,7 @@ data Service = Service
     provider :: Maybe Provider,
     policies :: [Policy]
   }
-  deriving (Generic, Show)
-
-instance FromJSON Service where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Service where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Service where
   example =

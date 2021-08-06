@@ -39,13 +39,7 @@ data BreakupItem = BreakupItem
     quantity :: Integer,
     amount :: MonetaryValue
   }
-  deriving (Generic, Show)
-
-instance FromJSON BreakupItem where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON BreakupItem where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Invoice where
   example =

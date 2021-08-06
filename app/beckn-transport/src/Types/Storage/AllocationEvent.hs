@@ -3,7 +3,6 @@
 module Types.Storage.AllocationEvent where
 
 import Beckn.Types.Id (Id)
-import Beckn.Utils.JSON
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -52,11 +51,9 @@ instance B.Table AllocationEventT where
     deriving (Generic, B.Beamable)
   primaryKey = AllocationEventPrimaryKey . id
 
-instance ToJSON AllocationEvent where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+deriving instance FromJSON AllocationEvent
 
-instance FromJSON AllocationEvent where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+deriving instance ToJSON AllocationEvent
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity AllocationEventT)

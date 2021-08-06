@@ -9,7 +9,6 @@ import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
@@ -27,25 +26,13 @@ data Intent = Intent
     transfer :: Maybe TransferAttrs,
     fare :: Price
   }
-  deriving (Generic, Show)
-
-instance FromJSON Intent where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Intent where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data TransferAttrs = TransferAttrs
   { max_count :: Int,
     distance :: Scalar
   }
-  deriving (Generic, Show)
-
-instance FromJSON TransferAttrs where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON TransferAttrs where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Intent where
   example =

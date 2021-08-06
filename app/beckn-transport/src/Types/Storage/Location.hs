@@ -1,10 +1,8 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Types.Storage.Location where
 
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -72,11 +70,9 @@ deriving instance Show Location
 
 deriving instance Eq Location
 
-instance ToJSON Location where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+deriving instance FromJSON Location
 
-instance FromJSON Location where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+deriving instance ToJSON Location
 
 instance ToSchema Location
 

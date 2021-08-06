@@ -1,7 +1,6 @@
 module Types.API.Products where
 
 import Beckn.Types.Amount
-import Beckn.Utils.JSON
 import Data.Swagger hiding (description, info, name)
 import EulerHS.Prelude
 import qualified Types.Storage.Products as Product
@@ -19,12 +18,6 @@ data CreateProdReq = CreateProdReq
     udf5 :: Maybe Text,
     price :: Maybe Amount
   }
-  deriving (Generic, ToSchema)
-
-instance FromJSON CreateProdReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON CreateProdReq where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 type ProdRes = Product.Products

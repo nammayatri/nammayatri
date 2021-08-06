@@ -3,7 +3,6 @@
 module Types.Storage.NotificationStatus where
 
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -43,11 +42,9 @@ instance B.Table NotificationStatusT where
     deriving (Generic, B.Beamable)
   primaryKey = NotificationStatusPrimaryKey . id
 
-instance ToJSON NotificationStatus where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+deriving instance FromJSON NotificationStatus
 
-instance FromJSON NotificationStatus where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+deriving instance ToJSON NotificationStatus
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity NotificationStatusT)

@@ -4,7 +4,6 @@ import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Location
 import Beckn.Types.Mobility.Transfer
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude hiding (id)
 
@@ -16,25 +15,13 @@ data Stop = Stop
     departure_time :: StopTime,
     transfers :: [Transfer]
   }
-  deriving (Generic, Show)
-
-instance FromJSON Stop where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Stop where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data StopTime = StopTime
   { est :: UTCTime,
     act :: Maybe UTCTime
   }
-  deriving (Generic, Show)
-
-instance FromJSON StopTime where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON StopTime where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example StopTime where
   example =

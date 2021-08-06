@@ -1,6 +1,5 @@
 module Types.Beckn.Context where
 
-import Beckn.Utils.JSON
 import Data.Aeson
 import Data.Text
 import Data.Time
@@ -27,10 +26,7 @@ data Context = Context
     key :: Maybe Text, -- present only in 0.9
     ttl :: Maybe Text -- becomes newtype in 0.9. for now using Text like in 0.8
   }
-  deriving (Generic, Show)
-
-instance FromJSON Context where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, Show)
 
 instance ToJSON Context where
-  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+  toJSON = genericToJSON $ defaultOptions {omitNothingFields = True}

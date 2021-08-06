@@ -2,7 +2,6 @@ module Beckn.Types.Core.State where
 
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Aeson (Value)
 import Data.Time
 import EulerHS.Prelude hiding (State)
@@ -13,13 +12,7 @@ data State = State
     updated_by :: Maybe Text,
     update_metadata :: Maybe Value
   }
-  deriving (Generic, Show)
-
-instance FromJSON State where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON State where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example State where
   example =

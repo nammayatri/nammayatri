@@ -24,13 +24,10 @@ data Context = Context
     key :: Maybe Text,
     ttl :: Maybe Iso8601Time
   }
-  deriving (Generic, Show)
-
-instance FromJSON Context where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, Show)
 
 instance ToJSON Context where
-  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+  toJSON = genericToJSON $ defaultOptions {omitNothingFields = True}
 
 data Action
   = SEARCH

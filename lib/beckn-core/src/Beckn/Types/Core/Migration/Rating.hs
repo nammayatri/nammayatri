@@ -1,6 +1,5 @@
 module Beckn.Types.Core.Migration.Rating where
 
-import Beckn.Utils.JSON
 import Data.Aeson (withObject, (.!=), (.:?))
 import Data.Text (singleton)
 import EulerHS.Prelude
@@ -11,10 +10,7 @@ data Rating = Rating
     max_value :: Integer,
     direction :: RatingDirection
   }
-  deriving (Generic, Show, Eq)
-
-instance ToJSON Rating where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, ToJSON, Show, Eq)
 
 instance FromJSON Rating where
   parseJSON = withObject "Rating" $ \o ->

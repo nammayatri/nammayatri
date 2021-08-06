@@ -14,13 +14,7 @@ data ProdInstReq = ProdInstReq
     limit :: Integer,
     offset :: Integer
   }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON ProdInstReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON ProdInstReq where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data ProductInstanceRes = ProductInstanceRes
   { _case :: Case.Case,

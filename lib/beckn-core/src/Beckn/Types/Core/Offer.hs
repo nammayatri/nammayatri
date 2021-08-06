@@ -14,13 +14,7 @@ data Offer = Offer
     start_date :: UTCTime,
     end_date :: UTCTime
   }
-  deriving (Generic, Show)
-
-instance FromJSON Offer where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Offer where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Offer where
   example =

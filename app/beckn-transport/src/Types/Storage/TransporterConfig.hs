@@ -1,12 +1,10 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Types.Storage.TransporterConfig where
 
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Beckn.Utils.TH
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -34,11 +32,9 @@ instance B.Table TransporterConfigT where
     deriving (Generic, B.Beamable)
   primaryKey = TransporterConfigPrimaryKey . id
 
-instance ToJSON TransporterConfig where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+deriving instance FromJSON TransporterConfig
 
-instance FromJSON TransporterConfig where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+deriving instance ToJSON TransporterConfig
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity TransporterConfigT)

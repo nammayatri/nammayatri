@@ -2,7 +2,6 @@ module Beckn.Types.Core.Quotation where
 
 import Beckn.Types.Core.Price
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import Data.Time
 import EulerHS.Prelude hiding (id)
@@ -13,13 +12,7 @@ data BreakupItem = BreakupItem
     title :: Text,
     price :: Price
   }
-  deriving (Generic, Show)
-
-instance FromJSON BreakupItem where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON BreakupItem where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data Quotation = Quotation
   { id :: Text,
@@ -27,13 +20,7 @@ data Quotation = Quotation
     ttl :: Maybe UTCTime,
     breakup :: Maybe [BreakupItem]
   }
-  deriving (Generic, Show)
-
-instance FromJSON Quotation where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Quotation where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Quotation where
   example =

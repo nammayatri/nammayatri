@@ -7,7 +7,6 @@ import Beckn.Types.Core.Migration.Address (Address)
 import Beckn.Types.Core.Migration.Organization (Organization)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -22,13 +21,7 @@ data Billing = Billing
     created_at :: Maybe UTCTime,
     updated_at :: Maybe UTCTime
   }
-  deriving (Generic, Show)
-
-instance FromJSON Billing where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Billing where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Billing where
   example =

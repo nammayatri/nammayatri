@@ -7,7 +7,6 @@ import Beckn.Types.Core.Migration.ItemQuantity
 import Beckn.Types.Core.Migration.Payment
 import Beckn.Types.Core.Migration.Quotation
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Time
 import EulerHS.Prelude hiding (State, id, state)
 
@@ -24,19 +23,13 @@ data Order = Order
     created_at :: Maybe UTCTime,
     updated_at :: Maybe UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data OrderItem = OrderItem
   { id :: Text,
     quantity :: ItemQuantity
   }
-  deriving (Generic, Show)
-
-instance FromJSON Order where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Order where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Order where
   example =
@@ -53,9 +46,3 @@ instance Example Order where
         created_at = Nothing,
         updated_at = Nothing
       }
-
-instance FromJSON OrderItem where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON OrderItem where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny

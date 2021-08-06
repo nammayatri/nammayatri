@@ -4,7 +4,6 @@ module Beckn.Types.Core.Context where
 
 import Beckn.Types.Core.Domain
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Aeson
 import Data.Text
 import Data.Time
@@ -25,7 +24,7 @@ data Context = Context
     timestamp :: UTCTime, -- ["format": "date-time"]
     ttl :: Maybe Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, Show)
 
 instance Example Context where
   example =
@@ -44,8 +43,5 @@ instance Example Context where
         ttl = Just "600"
       }
 
-instance FromJSON Context where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
 instance ToJSON Context where
-  toJSON = genericToJSON $ stripPrefixUnderscoreIfAny {omitNothingFields = True}
+  toJSON = genericToJSON $ defaultOptions {omitNothingFields = True}

@@ -72,13 +72,7 @@ data FulfillmentParticipant = FulfillmentParticipant
   { person :: Maybe Person,
     contact :: Maybe Contact
   }
-  deriving (Generic, Show)
-
-instance FromJSON FulfillmentParticipant where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON FulfillmentParticipant where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data FulfillmentDetails = FulfillmentDetails
   { location :: Maybe Location,
@@ -87,10 +81,4 @@ data FulfillmentDetails = FulfillmentDetails
     contact :: Maybe Contact,
     person :: Maybe Person
   }
-  deriving (Generic, Show)
-
-instance FromJSON FulfillmentDetails where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON FulfillmentDetails where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)

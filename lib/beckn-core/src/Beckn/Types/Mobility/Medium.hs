@@ -38,13 +38,7 @@ data Toll = Toll
   { has_toll :: Bool,
     price :: Price --not available in mobility in github, so taking from core.
   }
-  deriving (Generic, Show)
-
-instance FromJSON Toll where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Toll where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 newtype Waterway = Waterway
   { _type :: Text --"SEA", "RIVER", "LAKE"

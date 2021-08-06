@@ -2,7 +2,6 @@ module Beckn.Types.Core.DecimalValue where
 
 import Beckn.Types.Amount
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text hiding (head, length)
 import EulerHS.Prelude
 
@@ -10,13 +9,7 @@ data DecimalValue = DecimalValue
   { integral :: Text,
     fractional :: Maybe Text
   }
-  deriving (Eq, Generic, Show)
-
-instance FromJSON DecimalValue where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON DecimalValue where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Eq, Generic, FromJSON, ToJSON, Show)
 
 instance Example DecimalValue where
   example =

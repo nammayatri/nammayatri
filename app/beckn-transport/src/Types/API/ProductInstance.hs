@@ -30,12 +30,6 @@ data RideRes = RideRes
     fromLocation :: Loc.Location,
     toLocation :: Loc.Location
   }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON RideRes where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON RideRes where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 type RideListRes = [RideRes]

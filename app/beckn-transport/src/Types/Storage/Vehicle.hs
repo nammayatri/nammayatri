@@ -1,10 +1,8 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Types.Storage.Vehicle where
 
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
@@ -124,11 +122,9 @@ deriving instance Show Vehicle
 
 deriving instance Eq Vehicle
 
-instance ToJSON Vehicle where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+deriving instance FromJSON Vehicle
 
-instance FromJSON Vehicle where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+deriving instance ToJSON Vehicle
 
 instance ToSchema Vehicle
 

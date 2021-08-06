@@ -3,7 +3,6 @@ module Beckn.Types.Core.Provider where
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Person
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude hiding (id)
 
@@ -12,13 +11,7 @@ data Provider = Provider
     descriptor :: Descriptor,
     poc :: Maybe Person
   }
-  deriving (Generic, Show)
-
-instance FromJSON Provider where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Provider where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Provider where
   example =

@@ -33,13 +33,7 @@ data OrderDetails = OrderDetails
     travellerPhone :: Maybe Text,
     trip :: Maybe TripDetails
   }
-  deriving (Show, Generic)
-
-instance FromJSON OrderDetails where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON OrderDetails where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 data TripDetails = TripDetails
   { id :: Text, -- Product Instance Id
@@ -49,13 +43,7 @@ data TripDetails = TripDetails
     provider :: Maybe Provider,
     price :: Maybe Amount
   }
-  deriving (Show, Generic)
-
-instance FromJSON TripDetails where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON TripDetails where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 data OrderInfo = OrderInfo
   { person :: P.Person,
@@ -67,31 +55,13 @@ data LoginReq = LoginReq
   { email :: Text,
     password :: Text
   }
-  deriving (Show, Generic)
-
-instance FromJSON LoginReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON LoginReq where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 data LoginRes = LoginRes
   { auth_token :: Text,
     message :: Text
   }
-  deriving (Show, Generic)
-
-instance FromJSON LoginRes where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON LoginRes where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 newtype LogoutRes = LogoutRes {message :: Text}
-  deriving (Show, Generic)
-
-instance FromJSON LogoutRes where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON LogoutRes where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON)

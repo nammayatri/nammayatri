@@ -1,6 +1,5 @@
 module Beckn.External.Graphhopper.Types where
 
-import Beckn.Utils.JSON
 import Data.Aeson
 import Data.Geospatial hiding (bbox)
 import EulerHS.Prelude hiding (Show)
@@ -34,13 +33,7 @@ data Path = Path
     transfers :: Integer,
     instructions :: Maybe [Instruction]
   }
-  deriving (Generic, Show)
-
-instance FromJSON Path where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Path where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data Instruction = Instruction
   { distance :: Double,
@@ -51,21 +44,9 @@ data Instruction = Instruction
     time :: Int,
     street_name :: String
   }
-  deriving (Generic, Show)
-
-instance FromJSON Instruction where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Instruction where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 newtype Response = Response
   { paths :: [Path]
   }
-  deriving (Generic, Show)
-
-instance FromJSON Response where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Response where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)

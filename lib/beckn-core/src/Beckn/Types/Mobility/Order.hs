@@ -7,7 +7,6 @@ import Beckn.Types.Core.Order (OrderItem)
 import Beckn.Types.Core.Payment
 import Beckn.Types.Mobility.Trip
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Aeson.Types
 import Data.Time
 import EulerHS.Prelude hiding (id, state)
@@ -26,13 +25,7 @@ data Order = Order
     cancellation_reasons :: [Option],
     cancellation_policy :: Maybe CancelPolicy
   }
-  deriving (Generic, Show)
-
-instance FromJSON Order where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Order where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data CancelPolicy = CancelPolicy
   { cancellation_fee :: MonetaryValue,
@@ -40,13 +33,7 @@ data CancelPolicy = CancelPolicy
     cancel_by :: UTCTime,
     terms :: [Text]
   }
-  deriving (Generic, Show)
-
-instance FromJSON CancelPolicy where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON CancelPolicy where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example CancelPolicy where
   example =

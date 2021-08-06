@@ -2,7 +2,6 @@ module Beckn.Types.Core.Policy where
 
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude hiding (id)
 
@@ -12,13 +11,7 @@ data Policy = Policy
     parent_policy_id :: Maybe Text,
     terms :: [PolicyTerm]
   }
-  deriving (Generic, Show)
-
-instance FromJSON Policy where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Policy where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Policy where
   example =
@@ -34,13 +27,7 @@ data PolicyTerm = PolicyTerm
     parent_term_id :: Maybe Text,
     descriptor :: Descriptor
   }
-  deriving (Generic, Show)
-
-instance FromJSON PolicyTerm where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON PolicyTerm where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example PolicyTerm where
   example =

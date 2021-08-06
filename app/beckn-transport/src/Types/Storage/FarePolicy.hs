@@ -1,10 +1,8 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Types.Storage.FarePolicy where
 
 import Beckn.Types.Id (Id)
-import Beckn.Utils.JSON
 import Data.Time (TimeOfDay, UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -42,11 +40,9 @@ deriving instance Show FarePolicy
 
 deriving instance Eq FarePolicy
 
-instance ToJSON FarePolicy where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+deriving instance FromJSON FarePolicy
 
-instance FromJSON FarePolicy where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+deriving instance ToJSON FarePolicy
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity FarePolicyT)

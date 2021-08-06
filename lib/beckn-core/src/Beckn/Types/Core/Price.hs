@@ -2,7 +2,6 @@ module Beckn.Types.Core.Price where
 
 import Beckn.Types.Core.DecimalValue
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude
 
@@ -16,13 +15,7 @@ data Price = Price
     minimum_value :: Maybe DecimalValue,
     maximum_value :: Maybe DecimalValue
   }
-  deriving (Generic, Show)
-
-instance FromJSON Price where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Price where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Price where
   example =

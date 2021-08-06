@@ -31,13 +31,7 @@ data UpdateCaseReq = UpdateCaseReq
   { quote :: Maybe Amount,
     transporterChoice :: Text
   }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON UpdateCaseReq where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON UpdateCaseReq where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data CaseRes = CaseRes
   { _case :: Case,
@@ -83,23 +77,11 @@ data ProdInstRes = ProdInstRes
     updatedAt :: UTCTime,
     product :: Maybe Products
   }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON ProdInstRes where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON ProdInstRes where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data CaseInfo = CaseInfo
   { total :: Maybe Integer,
     accepted :: Maybe Integer,
     declined :: Maybe Integer
   }
-  deriving (Show, Generic, ToSchema)
-
-instance FromJSON CaseInfo where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON CaseInfo where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)

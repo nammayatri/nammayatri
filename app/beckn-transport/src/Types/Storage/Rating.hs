@@ -1,10 +1,8 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Types.Storage.Rating where
 
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Data.Swagger (ToSchema)
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
@@ -35,11 +33,9 @@ deriving instance Show Rating
 
 deriving instance Eq Rating
 
-instance ToJSON Rating where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+deriving instance FromJSON Rating
 
-instance FromJSON Rating where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+deriving instance ToJSON Rating
 
 instance ToSchema Rating
 

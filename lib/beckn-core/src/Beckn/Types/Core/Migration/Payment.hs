@@ -79,13 +79,7 @@ data BankAccount = BankAccount
     account_number :: Maybe Text,
     account_holder_name :: Maybe Text
   }
-  deriving (Generic, Eq, Show)
-
-instance FromJSON BankAccount where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON BankAccount where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
 data PaymentType
   = ON_ORDER

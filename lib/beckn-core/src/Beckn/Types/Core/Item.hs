@@ -5,7 +5,6 @@ import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Tag
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.Text
 import EulerHS.Prelude hiding (id)
 
@@ -22,13 +21,7 @@ data Item = Item
     ttl :: Maybe Duration,
     tags :: [Tag]
   }
-  deriving (Generic, Show)
-
-instance FromJSON Item where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Item where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Item where
   example =

@@ -4,7 +4,6 @@ import Beckn.Types.Core.Address
 import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Person
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import EulerHS.Prelude
 
 data Billing = Billing
@@ -13,13 +12,7 @@ data Billing = Billing
     period :: Duration,
     tax_number :: Maybe Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON Billing where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Billing where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance Example Billing where
   example =
