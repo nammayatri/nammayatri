@@ -536,3 +536,17 @@ instance IsHTTPError GoogleMapsCallError where
     GoogleMapsCallError _ -> E500
 
 instance IsAPIError GoogleMapsCallError
+
+data AgencyDisabled
+  = AgencyDisabled
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''AgencyDisabled
+
+instance IsBaseError AgencyDisabled
+
+instance IsHTTPError AgencyDisabled where
+  toErrorCode AgencyDisabled = "AGENCY_DISABLED"
+  toHttpCode AgencyDisabled = E503
+
+instance IsAPIError AgencyDisabled

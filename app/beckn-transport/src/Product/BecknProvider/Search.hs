@@ -51,26 +51,30 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
     transporter <-
       Org.findOrganizationById transporterId
         >>= fromMaybeM OrgDoesNotExist
-    unless (transporter.enabled) $ throwError ServiceUnavailable
-    let intent = req.message.intent
-    now <- getCurrentTime
-    let pickup = head $ intent.pickups
-    let dropOff = head $ intent.drops
-    let startTime = pickup.departure_time.est
-    validity <- getValidTime now startTime
-    fromLocation <- mkFromStop now pickup
-    toLocation <- mkFromStop now dropOff
-    let bapOrgId = bapOrg.id
-    deadDistance <- calculateDeadDistance transporter fromLocation
-    uuid <- L.generateGUID
-    let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
-    DB.runSqlDBTransaction $ do
-      Loc.create fromLocation
-      Loc.create toLocation
-      QCase.create productCase
     callbackUrl <- ExternalAPI.getGatewayUrl
-    ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
-      onSearchCallback productCase transporter fromLocation toLocation
+    if not transporter.enabled
+      then
+        ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
+          throwError AgencyDisabled
+      else do
+        let intent = req.message.intent
+        now <- getCurrentTime
+        let pickup = head $ intent.pickups
+        let dropOff = head $ intent.drops
+        let startTime = pickup.departure_time.est
+        validity <- getValidTime now startTime
+        fromLocation <- mkFromStop now pickup
+        toLocation <- mkFromStop now dropOff
+        let bapOrgId = bapOrg.id
+        deadDistance <- calculateDeadDistance transporter fromLocation
+        uuid <- L.generateGUID
+        let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
+        DB.runSqlDBTransaction $ do
+          Loc.create fromLocation
+          Loc.create toLocation
+          QCase.create productCase
+        ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
+          onSearchCallback productCase transporter fromLocation toLocation
 
 mkFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.Location
 mkFromStop now stop = do
