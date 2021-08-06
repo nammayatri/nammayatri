@@ -46,8 +46,7 @@ search ::
   FlowHandler AckResponse
 search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    let transactionId = req.context.transaction_id
-    Metrics.startSearchMetrics transactionId
+    searchMetricsMVar <- Metrics.startSearchMetrics
     let context = req.context
     BP.validateContext "search" context
     transporter <-
@@ -75,7 +74,7 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
           Loc.create toLocation
           QCase.create productCase
         ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
-          onSearchCallback transactionId productCase transporter fromLocation toLocation
+          onSearchCallback productCase transporter fromLocation toLocation searchMetricsMVar
 
 buildFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.SearchReqLocation
 buildFromStop now stop = do
@@ -150,13 +149,13 @@ onSearchCallback ::
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>
-  Text ->
   Case.Case ->
   Org.Organization ->
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
+  Metrics.SearchMetricsMVar ->
   m API.OnSearchServices
-onSearchCallback transactionId productCase transporter fromLocation toLocation = do
+onSearchCallback productCase transporter fromLocation toLocation searchMetricsMVar = do
   let transporterId = transporter.id
   vehicleVariant <-
     (productCase.udf1 >>= readMaybe . T.unpack)
@@ -186,9 +185,9 @@ onSearchCallback transactionId productCase transporter fromLocation toLocation =
         case prodInst.status of
           ProductInstance.OUTOFSTOCK -> []
           _ -> [prodInst]
-  rez <- mkOnSearchPayload productCase productInstances transporter
-  Metrics.finishSearchMetrics transactionId
-  return rez
+  res <- mkOnSearchPayload productCase productInstances transporter
+  Metrics.finishSearchMetrics searchMetricsMVar
+  return res
 
 mkProductInstance ::
   DBFlow m r =>
