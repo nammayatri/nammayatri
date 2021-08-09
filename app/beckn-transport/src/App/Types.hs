@@ -59,7 +59,8 @@ data AppCfg = AppCfg
     defaultRadiusOfSearch :: Meters,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Seconds
+    authTokenCacheExpiry :: Seconds,
+    minimumDriverRatesCount :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -92,7 +93,8 @@ data AppEnv = AppEnv
     apiRateLimitOptions :: APIRateLimitOptions,
     defaultRadiusOfSearch :: Meters,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Seconds
+    authTokenCacheExpiry :: Seconds,
+    minimumDriverRatesCount :: Int
   }
   deriving (Generic)
 

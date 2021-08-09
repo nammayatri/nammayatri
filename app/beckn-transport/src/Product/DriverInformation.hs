@@ -169,8 +169,10 @@ listDriver orgId mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
             lastName = person.lastName,
             mobileNumber = decMobNum,
             linkedVehicle = vehicle,
+            rating = person.rating,
             active = driverInfo.active,
-            onRide = driverInfo.onRide
+            onRide = driverInfo.onRide,
+            registeredAt = person.createdAt
           }
 
 linkVehicle :: Text -> Id SP.Person -> DriverInformationAPI.LinkVehicleReq -> FlowHandler DriverInformationAPI.LinkVehicleRes

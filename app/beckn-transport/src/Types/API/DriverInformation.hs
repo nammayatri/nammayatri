@@ -63,8 +63,10 @@ data DriverEntityRes = DriverEntityRes
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
     linkedVehicle :: Maybe Vehicle,
+    rating :: Maybe Text,
     active :: Bool,
-    onRide :: Bool
+    onRide :: Bool,
+    registeredAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 

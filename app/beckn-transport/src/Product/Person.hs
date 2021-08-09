@@ -45,7 +45,6 @@ import Types.Storage.Location (Location)
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as SP
 import Types.Storage.ProductInstance (ProductInstance)
-import qualified Types.Storage.Rating as Rating
 import Types.Storage.TransporterConfig (ConfigKey (ConfigKey))
 import qualified Types.Storage.Vehicle as SV
 import Utils.Common
@@ -158,18 +157,19 @@ mapEntityType entityType = case entityType of
   _ -> Nothing
 
 calculateAverageRating ::
-  (DBFlow m r, EncFlow m r) =>
+  (DBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
   Id SP.Person ->
   m ()
 calculateAverageRating personId = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   allRatings <- Rating.findAllRatingsForPerson personId
-  let ratings = sum $ Rating.ratingValue <$> allRatings
+  let ratingsSum :: Double = fromIntegral $ sum (allRatings <&> (.ratingValue))
   let ratingCount = length allRatings
   when (ratingCount == 0) $
     logTagInfo "PersonAPI" "No rating found to calculate"
-  when (ratingCount > 0) $ do
-    let newAverage = ratings `div` ratingCount
+  minimumDriverRatesCount <- asks (.minimumDriverRatesCount)
+  when (ratingCount >= minimumDriverRatesCount) $ do
+    let newAverage :: Int = round (ratingsSum / fromIntegral ratingCount)
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     QP.updateAverageRating personId $ encodeToText newAverage
 

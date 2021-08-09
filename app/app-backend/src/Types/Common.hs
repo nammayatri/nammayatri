@@ -10,6 +10,7 @@ import qualified Beckn.Types.Core.Descriptor as Descriptor
 import qualified Beckn.Types.Core.Location as Location
 import qualified Beckn.Types.Core.Person as Person
 import qualified Beckn.Types.Core.Price as Price
+import Beckn.Types.Core.Rating (Rating)
 import qualified Beckn.Types.Core.Tag as Tag
 import qualified Beckn.Types.Core.Tracking as Tracking
 import qualified Beckn.Types.Mobility.Driver as Driver
@@ -99,7 +100,9 @@ newtype Tracking = Tracking
 data Driver = Driver
   { name :: Text,
     gender :: Text,
-    phones :: [Text]
+    phones :: [Text],
+    rating :: Maybe Rating,
+    registeredAt :: UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -297,7 +300,9 @@ instance FromBeckn Driver.Driver Driver where
     Driver
       { name = driver.name.given_name,
         gender = driver.gender,
-        phones = driver.phones
+        phones = driver.phones,
+        rating = driver.rating,
+        registeredAt = driver.registeredAt
       }
 
 instance ToBeckn Driver.Driver Driver where
@@ -311,7 +316,8 @@ instance ToBeckn Driver.Driver Driver where
         email = Nothing,
         phones = driver.phones,
         experience = Nothing,
-        rating = Nothing
+        rating = driver.rating,
+        registeredAt = driver.registeredAt
       }
 
 instance FromBeckn Traveller.Traveller Traveller where

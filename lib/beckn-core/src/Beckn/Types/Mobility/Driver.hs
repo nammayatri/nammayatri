@@ -7,6 +7,7 @@ import Beckn.Types.Core.Person
 import Beckn.Types.Core.Rating
 import Beckn.Utils.Example
 import Data.Text
+import Data.Time (Day (ModifiedJulianDay), UTCTime (UTCTime))
 import EulerHS.Prelude
 
 data Driver = Driver
@@ -19,7 +20,8 @@ data Driver = Driver
     email :: Maybe Text,
     phones :: [Text], -- Phone numer in E.164 format (ITUT recommendation
     experience :: Maybe Duration,
-    rating :: Maybe Rating
+    rating :: Maybe Rating,
+    registeredAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -34,5 +36,6 @@ instance Example Driver where
         email = Just "john.smith@email.com",
         phones = ["+919999999999"],
         experience = Nothing,
-        rating = Nothing
+        rating = Nothing,
+        registeredAt = UTCTime (ModifiedJulianDay 0) 0
       }

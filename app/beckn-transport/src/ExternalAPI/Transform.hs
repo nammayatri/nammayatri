@@ -11,6 +11,7 @@ import Beckn.Types.Core.Order (OrderItem (..))
 import Beckn.Types.Core.Person as BPerson
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Provider
+import qualified Beckn.Types.Core.Rating as CRating
 import Beckn.Types.Core.Tag
 import qualified Beckn.Types.Core.Tracking as CoreTracking
 import Beckn.Types.Id
@@ -19,7 +20,6 @@ import Beckn.Types.Mobility.Driver as Mobility
 import Beckn.Types.Mobility.Order as Mobility
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
-import Data.Text as T
 import EulerHS.Prelude
 import Types.API.Case
 import Types.Storage.Case
@@ -167,8 +167,20 @@ mkDriverObj person = do
         email = bPerson.email,
         phones = bPerson.phones,
         experience = Nothing,
-        rating = Nothing
+        rating = mkRating,
+        registeredAt = person.createdAt
       }
+  where
+    mkRating = do
+      person.rating
+        <&> ( \rating ->
+                CRating.Rating
+                  { value = show rating,
+                    unit = "U+2B50",
+                    max_value = Just "5",
+                    direction = Just "UP"
+                  }
+            )
 
 mkPerson :: EncFlow m r => Person.Person -> m BPerson.Person
 mkPerson person = do

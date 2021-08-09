@@ -89,4 +89,5 @@ in
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
 , authTokenCacheExpiry = +600
+, minimumDriverRatesCount = +5
 }
