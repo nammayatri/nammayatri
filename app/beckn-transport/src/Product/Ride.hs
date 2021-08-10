@@ -36,7 +36,7 @@ setDriverAcceptance personId req = withFlowHandlerAPI $ do
       >>= fromMaybeM OrgDoesNotExist
   guid <- generateGUID
   let driverResponse =
-        DriverResponse {driverId = driverId, status = req.response, respondedAt = currentTime}
+        DriverResponse {driverId = driverId, status = req.response}
   let rideRequest =
         RideRequest
           { id = Id guid,

@@ -128,15 +128,23 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
                 logWarning $ "Ride status is " <> show rideStatus <> ", allocation request skipped"
           DriverResponse response ->
             case rideStatus of
-              Confirmed ->
-                case response.status of
-                  Ride.ACCEPT -> do
-                    logInfo $ "Assigning driver" <> show response.driverId
-                    assignDriver rideId response.driverId
-                    cleanupNotifications rideId
-                    logEvent MarkedAsAccepted rideId $ Just response.driverId
-                  Ride.REJECT ->
-                    processRejection handle False rideId response.driverId shortOrgId
+              Confirmed -> do
+                mCurrentNotification <- getCurrentNotification rideId
+                logInfo $ "getCurrentNotification " <> show mCurrentNotification
+                case mCurrentNotification of
+                  Just (CurrentNotification driverId _) -> do
+                    if driverId == response.driverId
+                      then case response.status of
+                        Ride.ACCEPT -> do
+                          logInfo $ "Assigning driver" <> show response.driverId
+                          assignDriver rideId response.driverId
+                          cleanupNotifications rideId
+                          logEvent MarkedAsAccepted rideId $ Just response.driverId
+                        Ride.REJECT ->
+                          processRejection handle False rideId response.driverId shortOrgId
+                      else logDriverNoLongerNotified rideId response.driverId
+                  Nothing ->
+                    logDriverNoLongerNotified rideId response.driverId
               Assigned ->
                 logInfo "Ride is assigned, response request skipped"
               Cancelled ->
@@ -231,7 +239,6 @@ proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
     driverId : driverIds -> do
       availableDrivers <- checkAvailability $ driverId :| driverIds
       driversWithNotification <- getDriversWithNotification
-
       let filteredPool = filter (`notElem` driversWithNotification) availableDrivers
       logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getId <$> filteredPool)
       processFilteredPool handle rideId filteredPool shortOrgId
@@ -281,3 +288,12 @@ isAllocationTimeFinished ServiceHandle {..} currentTime orderTime = do
   configuredAllocationTime <- fromIntegral <$> getConfiguredAllocationTime
   let elapsedSearchTime = diffUTCTime currentTime (orderTime.utcTime)
   pure $ elapsedSearchTime > configuredAllocationTime
+
+logDriverNoLongerNotified :: Log m => Id Ride -> Id Driver -> m ()
+logDriverNoLongerNotified rideId driverId =
+  logInfo $
+    "Driver "
+      <> show driverId
+      <> " is no longer notified about ride "
+      <> show rideId
+      <> ", response request skipped"

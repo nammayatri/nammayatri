@@ -2,7 +2,6 @@ module Types.API.Ride where
 
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
-import Data.Time
 import EulerHS.Prelude
 import Types.App
 import Types.Storage.ProductInstance (ProductInstance)
@@ -22,8 +21,7 @@ data NotificationStatus
 
 data DriverResponse = DriverResponse
   { driverId :: Id Driver,
-    status :: NotificationStatus,
-    respondedAt :: UTCTime
+    status :: NotificationStatus
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 

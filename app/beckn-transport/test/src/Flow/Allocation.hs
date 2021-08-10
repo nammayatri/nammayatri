@@ -79,7 +79,7 @@ addRequest requestData Repository {..} rideId = do
 addResponse :: Repository -> Id Ride -> Id Driver -> Ride.NotificationStatus -> IO ()
 addResponse repository@Repository {..} rideId driverId status = do
   currentTime <- Time.getCurrentTime
-  let driverResponse = Ride.DriverResponse driverId status currentTime
+  let driverResponse = Ride.DriverResponse driverId status
   addRequest (DriverResponse driverResponse) repository rideId
 
 checkRideStatus :: Repository -> Id Ride -> RideStatus -> IO ()
