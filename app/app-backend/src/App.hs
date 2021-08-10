@@ -40,7 +40,7 @@ runAppBackend' appCfg = do
   appEnv <- buildAppEnv appCfg
   let settings =
         defaultSettings
-          & setGracefulShutdownTimeout (Just $ getSecond appCfg.graceTerminationPeriod)
+          & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)
           & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
           & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do

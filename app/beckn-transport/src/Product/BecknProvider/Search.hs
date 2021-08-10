@@ -97,7 +97,7 @@ mkFromStop now stop = do
         updatedAt = now
       }
 
-getValidTime :: HasFlowEnv m r '["caseExpiry" ::: Maybe Second] => UTCTime -> UTCTime -> m UTCTime
+getValidTime :: HasFlowEnv m r '["caseExpiry" ::: Maybe Seconds] => UTCTime -> UTCTime -> m UTCTime
 getValidTime now startTime = do
   caseExpiry_ <- maybe 7200 fromIntegral <$> asks (.caseExpiry)
   let minExpiry = 300 -- 5 minutes
@@ -163,7 +163,7 @@ calculateDeadDistance organization fromLocation = do
 
 onSearchCallback ::
   ( DBFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meter],
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters],
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
     CoreMetrics m
   ) =>

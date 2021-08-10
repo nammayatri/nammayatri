@@ -25,7 +25,7 @@ handle ::
     DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meter, "nwAddress" ::: BaseUrl],
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "nwAddress" ::: BaseUrl],
     FCMFlow m r,
     HasBTMMetrics m r,
     CoreMetrics m
@@ -87,7 +87,7 @@ run ::
     DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig],
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meter, "nwAddress" ::: BaseUrl],
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "nwAddress" ::: BaseUrl],
     FCMFlow m r,
     HasFlowEnv m r '["isShuttingDown" ::: TMVar ()],
     CoreMetrics m
@@ -105,7 +105,7 @@ run = do
       Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
     -- If process handling took less than processDelay we delay for remain to processDelay time
     processDelay <- asks (.driverAllocationConfig.processDelay)
-    L.runIO . threadDelay . max 0 . getMicrosecond $ millisecondToMicrosecond (processDelay - processTime)
+    L.runIO . threadDelay . max 0 . getMicroseconds $ millisecondsToMicroseconds (processDelay - processTime)
   isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)
   when isRunning run
   where

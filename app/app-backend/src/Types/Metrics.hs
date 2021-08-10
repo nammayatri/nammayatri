@@ -15,7 +15,7 @@ type HasBAPMetrics m r = (HasFlowEnv m r '["bapMetrics" ::: BAPMetricsContainer]
 
 data BAPMetricsContainer = BAPMetricsContainer
   { caseCounter :: CaseCounterMetric,
-    searchDurationTimeout :: Second,
+    searchDurationTimeout :: Seconds,
     searchDuration :: SearchDurationMetric
   }
 
@@ -23,7 +23,7 @@ type CaseCounterMetric = P.Vector P.Label2 P.Counter
 
 type SearchDurationMetric = (P.Histogram, P.Counter)
 
-registerBAPMetricsContainer :: Second -> IO BAPMetricsContainer
+registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   caseCounter <- registerCaseCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
@@ -32,9 +32,9 @@ registerBAPMetricsContainer searchDurationTimeout = do
 registerCaseCounterMetric :: IO CaseCounterMetric
 registerCaseCounterMetric = P.register $ P.vector ("status", "type") $ P.counter $ P.Info "case_count" ""
 
-registerSearchDurationMetric :: Second -> IO SearchDurationMetric
+registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do
-  let bucketsCount = (getSecond searchDurationTimeout + 1) * 2
+  let bucketsCount = (getSeconds searchDurationTimeout + 1) * 2
   searchDurationHistogram <- P.register . P.histogram (P.Info "beckn_search_round_trip" "") $ P.linearBuckets 0 0.5 bucketsCount
   failureCounter <- P.register $ P.counter $ P.Info "beckn_search_round_trip_failure_counter" ""
   return (searchDurationHistogram, failureCounter)

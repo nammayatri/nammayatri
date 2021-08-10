@@ -23,7 +23,7 @@ module Beckn.Utils.SignatureAuth
   )
 where
 
-import Beckn.Types.Time (Second, getSecond)
+import Beckn.Types.Time (Seconds, getSeconds)
 import qualified Crypto.Error as Crypto
 import qualified Crypto.Hash as Hash
 import qualified Crypto.PubKey.Ed25519 as Ed25519
@@ -114,7 +114,7 @@ data SignatureParams = SignatureParams
   }
   deriving (Eq, Show, Generic)
 
-mkSignatureParams :: Text -> Text -> POSIXTime -> Second -> SignatureAlgorithm -> SignatureParams
+mkSignatureParams :: Text -> Text -> POSIXTime -> Seconds -> SignatureAlgorithm -> SignatureParams
 mkSignatureParams shortOrgId uniqueKeyId now validity alg =
   SignatureParams
     { keyId =
@@ -126,7 +126,7 @@ mkSignatureParams shortOrgId uniqueKeyId now validity alg =
       algorithm = alg,
       headers = defaultHeaderFields,
       created = Just now,
-      expires = Just $ now + (fromInteger . fromIntegral $ getSecond validity)
+      expires = Just $ now + (fromInteger . fromIntegral $ getSeconds validity)
     }
 
 -- | Signature payload representation that carries signature and it's params

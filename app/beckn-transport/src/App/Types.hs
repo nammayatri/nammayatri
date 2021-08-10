@@ -40,7 +40,7 @@ data AppCfg = AppCfg
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    caseExpiry :: Maybe Second,
+    caseExpiry :: Maybe Seconds,
     cronAuthKey :: Maybe CronAuthKey,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
@@ -50,16 +50,16 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
-    signatureExpiry :: Second,
+    signatureExpiry :: Seconds,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    graceTerminationPeriod :: Second,
-    defaultRadiusOfSearch :: Meter,
+    graceTerminationPeriod :: Seconds,
+    defaultRadiusOfSearch :: Meters,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Second
+    authTokenCacheExpiry :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -75,14 +75,14 @@ data AppEnv = AppEnv
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    caseExpiry :: Maybe Second,
+    caseExpiry :: Maybe Seconds,
     cronAuthKey :: Maybe CronAuthKey,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     domainVersion :: Text,
-    signatureExpiry :: Second,
+    signatureExpiry :: Seconds,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -90,9 +90,9 @@ data AppEnv = AppEnv
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     apiRateLimitOptions :: APIRateLimitOptions,
-    defaultRadiusOfSearch :: Meter,
+    defaultRadiusOfSearch :: Meters,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Second
+    authTokenCacheExpiry :: Seconds
   }
   deriving (Generic)
 

@@ -177,7 +177,7 @@ driverPoolKey :: Id ProductInstance -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
 getDriverPool ::
-  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meter]) =>
+  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters]) =>
   Id ProductInstance ->
   m [Id Driver]
 getDriverPool piId =
@@ -201,7 +201,7 @@ setDriverPool piId ids =
   Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
 
 calculateDriverPool ::
-  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meter]) =>
+  (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters]) =>
   Id Location ->
   Id Organization ->
   SV.Variant ->

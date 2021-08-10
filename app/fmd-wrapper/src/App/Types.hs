@@ -36,8 +36,8 @@ data AppCfg = AppCfg
     dzConfig :: DunzoConfig,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    signatureExpiry :: Second,
-    graceTerminationPeriod :: Second,
+    signatureExpiry :: Seconds,
+    graceTerminationPeriod :: Seconds,
     httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
@@ -51,7 +51,7 @@ data AppEnv = AppEnv
     dzConfig :: DunzoConfig,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    signatureExpiry :: Second,
+    signatureExpiry :: Seconds,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions

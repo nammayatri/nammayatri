@@ -67,13 +67,13 @@ type MonadHandler m =
 data BTMMetricsHandle m = BTMMetricsHandle
   { incrementTaskCounter :: m (),
     incrementFailedTaskCounter :: m (),
-    putTaskDuration :: Second -> m ()
+    putTaskDuration :: Seconds -> m ()
   }
 
 data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,
-    getConfiguredNotificationTime :: m Second,
-    getConfiguredAllocationTime :: m Second,
+    getConfiguredNotificationTime :: m Seconds,
+    getConfiguredAllocationTime :: m Seconds,
     getRequests :: ShortId Organization -> Integer -> m [RideRequest],
     getDriverPool :: Id Ride -> m [Id Driver],
     getCurrentNotification :: Id Ride -> m (Maybe CurrentNotification),

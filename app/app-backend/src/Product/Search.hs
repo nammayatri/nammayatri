@@ -102,7 +102,7 @@ searchCb _ _ req = withFlowHandlerBecknAPI $
       Left err -> logTagError "on_search req" $ "on_search error: " <> show err
     return Ack
 
-searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Second], DBFlow m r) => Search.OnSearchReq -> BM.Catalog -> m ()
+searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], DBFlow m r) => Search.OnSearchReq -> BM.Catalog -> m ()
 searchCbService req catalog = do
   let caseId = Id $ req.context.transaction_id --CaseId $ service.id
   case_ <- Case.findByIdAndType caseId Case.RIDESEARCH >>= fromMaybeM CaseDoesNotExist
@@ -144,7 +144,7 @@ searchCbService req catalog = do
         QCase.updateInfo (case_.id) (encodeToText uInfo)
 
 mkCase ::
-  ( (HasFlowEnv m r ["searchCaseExpiry" ::: Maybe Second, "graphhopperUrl" ::: BaseUrl]),
+  ( (HasFlowEnv m r ["searchCaseExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),
     DBFlow m r,
     CoreMetrics m
   ) =>
@@ -195,7 +195,7 @@ mkCase req userId from to = do
         updatedAt = now
       }
   where
-    getCaseExpiry :: (HasFlowEnv m r '["searchCaseExpiry" ::: Maybe Second]) => UTCTime -> m UTCTime
+    getCaseExpiry :: (HasFlowEnv m r '["searchCaseExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
     getCaseExpiry startTime = do
       now <- getCurrentTime
       caseExpiry <- maybe 7200 fromIntegral <$> asks (.searchCaseExpiry)

@@ -32,13 +32,13 @@ import Utils.Notifications
 getDriverSortMode :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m SortMode
 getDriverSortMode = asks (.driverAllocationConfig.defaultSortMode)
 
-getConfiguredNotificationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Second
+getConfiguredNotificationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Seconds
 getConfiguredNotificationTime = asks (.driverAllocationConfig.driverNotificationExpiry)
 
-getConfiguredAllocationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Second
+getConfiguredAllocationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Seconds
 getConfiguredAllocationTime = asks (.driverAllocationConfig.rideAllocationExpiry)
 
-getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meter]) => Id Ride -> m [Id Driver]
+getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters]) => Id Ride -> m [Id Driver]
 getDriverPool rideId = Person.getDriverPool (cast rideId)
 
 getRequests :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest]

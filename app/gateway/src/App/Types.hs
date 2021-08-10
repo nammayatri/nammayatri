@@ -26,11 +26,11 @@ data AppCfg = AppCfg
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     loggerConfig :: LoggerConfig,
-    searchTimeout :: Maybe Second,
+    searchTimeout :: Maybe Seconds,
     coreVersions :: CoreVersions,
     mobilityDomainVersion :: Text,
-    signatureExpiry :: Second,
-    graceTerminationPeriod :: Second,
+    signatureExpiry :: Seconds,
+    graceTerminationPeriod :: Seconds,
     httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
@@ -44,7 +44,7 @@ data AppEnv = AppEnv
     cache :: C.Cache Text Text,
     coreVersions :: CoreVersions,
     mobilityDomainVersion :: Text,
-    signatureExpiry :: Second,
+    signatureExpiry :: Seconds,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions

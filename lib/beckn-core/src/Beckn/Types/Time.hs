@@ -13,20 +13,20 @@ import Data.Time.Format.ISO8601 (iso8601ParseM, iso8601Show)
 import EulerHS.Prelude
 import qualified System.Clock as Clock
 
-newtype Microsecond = Microsecond
-  { getMicrosecond :: Int
+newtype Microseconds = Microseconds
+  { getMicroseconds :: Int
   }
   deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum)
   deriving stock (Generic)
 
-newtype Millisecond = Millisecond
-  { getMillisecond :: Int
+newtype Milliseconds = Milliseconds
+  { getMilliseconds :: Int
   }
   deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum)
   deriving stock (Generic)
 
-newtype Second = Second
-  { getSecond :: Int
+newtype Seconds = Seconds
+  { getSeconds :: Int
   }
   deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum)
   deriving stock (Generic)

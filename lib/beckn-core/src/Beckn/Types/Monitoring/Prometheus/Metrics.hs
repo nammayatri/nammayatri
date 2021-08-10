@@ -7,7 +7,7 @@ module Beckn.Types.Monitoring.Prometheus.Metrics
 where
 
 import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Time (Millisecond)
+import Beckn.Types.Time (Milliseconds)
 import EulerHS.Prelude as E
 import GHC.Records.Extra
 import Prometheus as P
@@ -25,7 +25,7 @@ class CoreMetrics m where
   addRequestLatency ::
     Text ->
     Text ->
-    Millisecond ->
+    Milliseconds ->
     Either ClientError a ->
     m ()
   incrementErrorCounter :: IsHTTPException e => e -> m ()

@@ -74,7 +74,7 @@ class AuthenticatingEntity r where
   getSelfUrl :: r -> BaseUrl
   getRegistry :: r -> [Credential]
   getSigningKeys :: r -> [SigningKey]
-  getSignatureExpiry :: r -> Second
+  getSignatureExpiry :: r -> Seconds
 
 class LookupMethod lookup => HasLookupAction lookup m where
   runLookup :: LookupAction lookup m
@@ -201,7 +201,7 @@ signatureAuthManager ::
   R.FlowRuntime ->
   r ->
   Text ->
-  Second ->
+  Seconds ->
   Text ->
   HttpSig.PrivateKey ->
   Text ->

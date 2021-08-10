@@ -42,8 +42,8 @@ data AppCfg = AppCfg
     bapNwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    searchConfirmExpiry :: Maybe Second,
-    searchCaseExpiry :: Maybe Second,
+    searchConfirmExpiry :: Maybe Seconds,
+    searchCaseExpiry :: Maybe Seconds,
     cronAuthKey :: Maybe CronAuthKey,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
@@ -54,16 +54,16 @@ data AppCfg = AppCfg
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
     geofencingConfig :: GeofencingConfig,
-    signatureExpiry :: Second,
+    signatureExpiry :: Seconds,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
-    metricsSearchDurationTimeout :: Second,
-    graceTerminationPeriod :: Second,
+    metricsSearchDurationTimeout :: Seconds,
+    graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Second
+    authTokenCacheExpiry :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -80,8 +80,8 @@ data AppEnv = AppEnv
     bapNwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
-    searchConfirmExpiry :: Maybe Second,
-    searchCaseExpiry :: Maybe Second,
+    searchConfirmExpiry :: Maybe Seconds,
+    searchCaseExpiry :: Maybe Seconds,
     cronAuthKey :: Maybe CronAuthKey,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
@@ -89,7 +89,7 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     geofencingConfig :: GeofencingConfig,
-    signatureExpiry :: Second,
+    signatureExpiry :: Seconds,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -99,7 +99,7 @@ data AppEnv = AppEnv
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Second
+    authTokenCacheExpiry :: Seconds
   }
   deriving (Generic)
 

@@ -42,14 +42,14 @@ class ToBeckn a b where
 -- lossy) between the two, when defined as an instance of this typeclass.
 class (FromBeckn a b, ToBeckn a b) => BecknSpecIso a b
 
-newtype Meter = Meter
-  { getMeter :: Int
+newtype Meters = Meters
+  { getMeters :: Int
   }
   deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Integral, Real, Ord, Eq, Enum)
   deriving stock (Generic)
 
-newtype Kilometer = Kilometer
-  { getKilometer :: Double
+newtype Kilometers = Kilometers
+  { getKilometers :: Double
   }
   deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Fractional, Real, Ord, Eq, Enum)
   deriving stock (Generic)

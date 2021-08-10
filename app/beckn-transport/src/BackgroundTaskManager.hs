@@ -58,7 +58,7 @@ runBackgroundTaskManager configModifier = do
         return $ flowRt {R._httpClientManagers = managers}
     let settings =
           defaultSettings
-            & setGracefulShutdownTimeout (Just $ getSecond appCfg.graceTerminationPeriod)
+            & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)
             & setInstallShutdownHandler (handleShutdown $ btmEnv.isShuttingDown)
             & setPort port
     void . forkIO . runSettings settings $ Server.run healthCheckAPI healthCheckServer EmptyContext (App.EnvR flowRt' btmEnv)

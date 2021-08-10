@@ -33,11 +33,11 @@ data BTMCfg = BTMCfg
   deriving (Generic, FromDhall)
 
 data DriverAllocationConfig = DriverAllocationConfig
-  { driverNotificationExpiry :: Second,
-    rideAllocationExpiry :: Second,
+  { driverNotificationExpiry :: Seconds,
+    rideAllocationExpiry :: Seconds,
     defaultSortMode :: SortMode,
     requestsNumPerIteration :: Integer,
-    processDelay :: Millisecond,
+    processDelay :: Milliseconds,
     shards :: Shards
   }
   deriving (Generic, FromDhall)
@@ -51,11 +51,11 @@ data BTMEnv = BTMEnv
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
-    signatureExpiry :: Second,
+    signatureExpiry :: Seconds,
     fcmUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
-    defaultRadiusOfSearch :: Meter,
+    defaultRadiusOfSearch :: Meters,
     driverAllocationConfig :: DriverAllocationConfig,
     btmMetrics :: BTMMetricsContainer,
     httpClientOptions :: HttpClientOptions
