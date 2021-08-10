@@ -43,11 +43,6 @@ measuringDuration doWithDuration f = do
   doWithDuration dur res
   return res
 
-measuringDurationInS :: (Seconds -> a -> m ()) -> MeasuringDuration m a
-measuringDurationInS doWithDuration =
-  measuringDuration $
-    doWithDuration . (`div` 1000) . fromIntegral
-
 measuringDurationToLog :: Log m => LogLevel -> Text -> MeasuringDuration m a
 measuringDurationToLog logLevel fname = tabs . measuringDuration $ \duration _ ->
   withLogTag "duration"

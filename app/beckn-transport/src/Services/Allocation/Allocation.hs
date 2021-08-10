@@ -67,7 +67,7 @@ type MonadHandler m =
 data BTMMetricsHandle m = BTMMetricsHandle
   { incrementTaskCounter :: m (),
     incrementFailedTaskCounter :: m (),
-    putTaskDuration :: Seconds -> m ()
+    putTaskDuration :: Milliseconds -> m ()
   }
 
 data ServiceHandle m = ServiceHandle
@@ -111,7 +111,7 @@ process handle@ServiceHandle {..} shortOrgId requestsNum = do
 processRequest :: MonadHandler m => ServiceHandle m -> ShortId Organization -> RideRequest -> m ()
 processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
   metrics.incrementTaskCounter
-  measuringDurationInS (\dur _ -> metrics.putTaskDuration dur) $ do
+  measuringDuration (\dur _ -> metrics.putTaskDuration dur) $ do
     let requestId = rideRequest.requestId
     let rideId = rideRequest.rideId
     rideInfo <- getRideInfo rideId
