@@ -18,7 +18,7 @@ getDbTable =
 create :: DBFlow m r => Storage.Products -> m ()
 create Storage.Products {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Products {..})
+  DB.createOne dbTable (Storage.insertValue Storage.Products {..})
 
 findAllById :: DBFlow m r => [Id Storage.Products] -> m [Storage.Products]
 findAllById ids = do

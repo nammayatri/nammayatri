@@ -26,7 +26,7 @@ getDbTable =
 create :: DBFlow m r => Storage.Person -> m ()
 create person = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression person)
+  DB.createOne dbTable (Storage.insertValue person)
 
 findById ::
   DBFlow m r =>

@@ -23,7 +23,7 @@ createFlow =
 create :: RideRequest.RideRequest -> DB.SqlDB ()
 create rideRequest = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression rideRequest)
+  DB.createOne' dbTable (Storage.insertValue rideRequest)
 
 fetchOldest :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest.RideRequest]
 fetchOldest shortId limit = do

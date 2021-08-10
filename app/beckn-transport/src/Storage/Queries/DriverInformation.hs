@@ -23,7 +23,7 @@ getDbTable = DB.driverInformation . DB.transporterDb <$> getSchemaName
 create :: DriverInformation.DriverInformation -> DB.SqlDB ()
 create DriverInformation.DriverInformation {..} = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression DriverInformation.DriverInformation {..})
+  DB.createOne' dbTable (Storage.insertValue DriverInformation.DriverInformation {..})
 
 findById :: DBFlow m r => Id Driver -> m (Maybe DriverInformation.DriverInformation)
 findById driverId_ = do

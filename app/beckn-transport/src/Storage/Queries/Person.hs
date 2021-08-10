@@ -23,6 +23,7 @@ import qualified Types.Storage.Person as Storage
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
+import Data.Time (addUTCTime)
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
 getDbTable =
@@ -34,7 +35,7 @@ createFlow = DB.runSqlDB . create
 create :: Storage.Person -> DB.SqlDB ()
 create person = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression person)
+  DB.createOne' dbTable (Storage.insertValue person)
 
 findPersonById ::
   DBFlow m r =>
@@ -234,13 +235,16 @@ updateAverageRating personId newAverageRating = do
     predicate pId Storage.Person {..} = id ==. B.val_ pId
 
 getNearestDrivers ::
-  DBFlow m r =>
+  (DBFlow m r, HasFlowEnv m r '["driverPositionInfoExpiry" ::: Seconds]) =>
   LatLong ->
   Integer ->
   Id Org.Organization ->
   Vehicle.Variant ->
   m [(Id Driver, Double)]
-getNearestDrivers LatLong {..} radius orgId variant =
+getNearestDrivers LatLong {..} radius orgId variant = do
+  driverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
+  now <- getCurrentTime
+  let expiredDriverLocationInfoBorder = addUTCTime (negate $ fromIntegral driverPositionInfoExpiry) now
   map (first Id)
     <$> postgreSQLSimpleQuery
       [sql|
@@ -260,10 +264,11 @@ getNearestDrivers LatLong {..} radius orgId variant =
             AND driver_information."active"
             AND NOT driver_information."on_ride"
             AND vehicle."variant" = ?
+            AND driver_location.updated_at >= ?
         )
         SELECT id, dist
         FROM a
         WHERE dist < ?
         ORDER BY dist ASC
       |]
-      (lon, lat, getId orgId, show variant :: Text, radius)
+      (lon, lat, getId orgId, show variant :: Text, expiredDriverLocationInfoBorder, radius)

@@ -16,13 +16,9 @@ import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id, state)
 import Servant.API
-import qualified Storage.Queries.DriverLocation as QDL
 import Types.API.Registration
-import Types.Error
-import qualified Types.Storage.DriverLocation as SDL
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as SP
-import Utils.Common
 
 data EntityType = VEHICLE | PASS | TICKET
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -42,9 +38,7 @@ data UpdatePersonReq = UpdatePersonReq
     email :: Maybe Text,
     identifier :: Maybe Text,
     deviceToken :: Maybe FCM.FCMRecipientToken,
-    description :: Maybe Text,
-    lat :: Maybe Double,
-    long :: Maybe Double
+    description :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON)
 
@@ -60,7 +54,6 @@ validateUpdatePersonReq UpdatePersonReq {..} =
 
 modifyPerson :: DBFlow m r => UpdatePersonReq -> SP.Person -> m SP.Person
 modifyPerson req person = do
-  updateLocation req person.id
   return
     -- only these below will be updated in the person table. if you want to add something extra please add in queries also
     person{firstName = ifJust (req.firstName) (person.firstName),
@@ -77,20 +70,6 @@ modifyPerson req person = do
            organizationId = person.organizationId,
            description = ifJust (req.description) (person.description)
           }
-
-updateLocation :: DBFlow m r => UpdatePersonReq -> Id SP.Person -> m ()
-updateLocation req drLocId = do
-  drLocation <-
-    QDL.findById drLocId
-      >>= fromMaybeM LocationDoesNotExist
-  QDL.updateLocationRec drLocId $ transformToDriverLocation req drLocation
-
-transformToDriverLocation :: UpdatePersonReq -> SDL.DriverLocation -> SDL.DriverLocation
-transformToDriverLocation req location =
-  location
-    { SDL.lat = req.lat,
-      SDL.long = req.long
-    }
 
 ifJust :: Maybe a -> Maybe a -> Maybe a
 ifJust a b = if isJust a then a else b
@@ -117,8 +96,6 @@ data PersonReqEntity = PersonReqEntity
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
     description :: Maybe Text,
-    lat :: Maybe Double,
-    long :: Maybe Double,
     district :: Maybe Text,
     city :: Maybe Text,
     state :: Maybe Text,
@@ -151,7 +128,6 @@ buildDriver :: (DBFlow m r, EncFlow m r) => PersonReqEntity -> Id Org.Organizati
 buildDriver req orgId = do
   pid <- generateGUID
   now <- getCurrentTime
-  createDriverLocation pid now
   mobileNumber <- encrypt req.mobileNumber
   return
     SP.Person
@@ -179,18 +155,6 @@ buildDriver req orgId = do
         SP.createdAt = now,
         SP.updatedAt = now
       }
-  where
-    createDriverLocation pid now = do
-      let PersonReqEntity {..} = req
-      let location =
-            SDL.DriverLocation
-              { updatedAt = now,
-                createdAt = now,
-                point = SDL.Point,
-                driverId = pid,
-                ..
-              }
-      QDL.createFlow location
 
 newtype PersonRes = PersonRes
   {user :: UserInfoRes}

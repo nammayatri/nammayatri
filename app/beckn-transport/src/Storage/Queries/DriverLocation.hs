@@ -12,6 +12,7 @@ import Beckn.Types.Schema
 import Data.Time (UTCTime)
 import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
+import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverLocation as Storage
@@ -21,50 +22,66 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.driverLocation . DB.transporterDb <$> getSchemaName
 
-createFlow :: DBFlow m r => Storage.DriverLocation -> m ()
-createFlow =
-  DB.runSqlDB . create
-
-create :: Storage.DriverLocation -> DB.SqlDB ()
-create location = do
+create :: Id SP.Person -> LatLong -> UTCTime -> DB.SqlDB ()
+create drLocId (LatLong lat long) updateTime = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression location)
+  DB.createOne' dbTable (Storage.insertExpression insertClause)
+  where
+    insertClause :: Storage.DriverLocationT (B.QExpr Postgres s)
+    insertClause = do
+      Storage.DriverLocation
+        { driverId = B.val_ drLocId,
+          lat = B.val_ lat,
+          long = B.val_ long,
+          point = mkPointExpr long lat,
+          createdAt = B.val_ updateTime,
+          updatedAt = B.val_ updateTime
+        }
 
 findById ::
   DBFlow m r =>
   Id SP.Person ->
   m (Maybe Storage.DriverLocation)
-findById drLocId = do
+findById drLocId = DB.runSqlDB $ findById' drLocId
+
+findById' ::
+  Id SP.Person ->
+  DB.SqlDB (Maybe Storage.DriverLocation)
+findById' drLocId = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate
+  DB.findOne' dbTable predicate
   where
     predicate Storage.DriverLocation {..} = driverId ==. B.val_ drLocId
 
-updateGpsCoord :: Id SP.Person -> UTCTime -> LatLong -> DB.SqlDB ()
-updateGpsCoord drLocationId now (LatLong lat' long') = do
+upsertGpsCoord :: Id SP.Person -> LatLong -> UTCTime -> DB.SqlDB ()
+upsertGpsCoord drLocationId latLong updateTime = do
+  loc <- findById' drLocationId
+  case loc of
+    Nothing -> create drLocationId latLong updateTime
+    Just _ -> updateGpsCoord drLocationId latLong updateTime
+
+updateGpsCoord :: Id SP.Person -> LatLong -> UTCTime -> DB.SqlDB ()
+updateGpsCoord drLocationId (LatLong lat' long') updateTime = do
   locTable <- getDbTable
-  DB.update' locTable (setClause lat' long' now) (predicate drLocationId)
+  DB.update' locTable (setClause lat' long' updateTime) (predicate drLocationId)
   where
-    setClause mLat mLong now' Storage.DriverLocation {..} =
-      let point' = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"
-       in mconcat
-            [ lat <-. B.val_ (Just mLat),
-              long <-. B.val_ (Just mLong),
-              updatedAt <-. B.val_ now',
-              point <-. point'
-            ]
+    setClause mLat mLong updTime Storage.DriverLocation {..} =
+      mconcat
+        [ lat <-. B.val_ mLat,
+          long <-. B.val_ mLong,
+          updatedAt <-. B.val_ updTime,
+          point <-. mkPointExpr mLong mLat
+        ]
     predicate drLocId Storage.DriverLocation {..} = driverId B.==. B.val_ drLocId
 
-updateLocationRec :: DBFlow m r => Id SP.Person -> Storage.DriverLocation -> m ()
-updateLocationRec drLocationId drLocation = do
-  dbTable <- getDbTable
-  now <- getCurrentTime
-  DB.update dbTable (setClause drLocation now) (predicate drLocationId)
-  where
-    setClause drLoc n Storage.DriverLocation {..} =
-      mconcat
-        [ lat <-. B.val_ (Storage.lat drLoc),
-          long <-. B.val_ (Storage.long drLoc),
-          updatedAt <-. B.val_ n
-        ]
-    predicate drLocId Storage.DriverLocation {..} = driverId ==. B.val_ drLocId
+mkPointExpr ::
+  ( B.IsCustomExprFn fn res,
+    Semigroup fn,
+    IsString fn,
+    Show a1,
+    Show a2
+  ) =>
+  a1 ->
+  a2 ->
+  res
+mkPointExpr mLong mLat = B.customExpr_ $ "public.ST_SetSRID(ST_Point(" <> show mLong <> ", " <> show mLat <> ")::geography, 4326)"

@@ -26,7 +26,7 @@ createFlow = DB.runSqlDB . create
 create :: Storage.Case -> DB.SqlDB ()
 create case_ = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression case_)
+  DB.createOne' dbTable (Storage.insertValue case_)
 
 findAllByTypeAndStatuses ::
   DBFlow m r =>

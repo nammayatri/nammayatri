@@ -26,7 +26,7 @@ createInitialDriverStats driverId_ = do
           { driverId = driverId_,
             idleSince = now
           }
-  DB.createOne' dbTable (Storage.Common.insertExpression driverStats)
+  DB.createOne' dbTable (Storage.Common.insertValue driverStats)
 
 getFirstDriverInTheQueue :: DBFlow m r => [Id Driver] -> m (Id Driver)
 getFirstDriverInTheQueue ids = do

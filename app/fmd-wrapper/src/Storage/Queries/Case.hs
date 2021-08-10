@@ -18,7 +18,7 @@ getDbTable =
 create :: DBFlow m r => Storage.Case -> m ()
 create Storage.Case {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Case {..})
+  DB.createOne dbTable (Storage.insertValue Storage.Case {..})
 
 findById :: DBFlow m r => Id Storage.Case -> m (Maybe Storage.Case)
 findById caseId = do

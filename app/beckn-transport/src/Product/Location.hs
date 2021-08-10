@@ -7,6 +7,7 @@ import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong)
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.List.NonEmpty as NE
 import Data.Time (diffUTCTime)
@@ -19,6 +20,7 @@ import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Location as Location
 import Types.Metrics
 import qualified Types.Storage.Case as Case
+import Types.Storage.DriverLocation (DriverLocation)
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common hiding (id)
@@ -29,24 +31,28 @@ updateLocation personId req = withFlowHandlerAPI $ do
     Person.findPersonById personId
       >>= fromMaybeM PersonNotFound
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
-  let locationId = driver.id
-  loc <-
-    DrLoc.findById locationId
-      >>= fromMaybeM LocationNotFound
+  let driverId = driver.id
+  mbLoc <- DrLoc.findById driverId
   now <- getCurrentTime
   refreshPeriod <- asks (.updateLocationRefreshPeriod) <&> fromIntegral
-  if now `diffUTCTime` loc.updatedAt > refreshPeriod
-    then do
-      let lastWaypoint = locationToLatLong loc
-      let traversedWaypoints = maybe waypointList (: waypointList) lastWaypoint
-      distanceMb <- MapSearch.getDistanceMb (Just MapSearch.CAR) traversedWaypoints
-      whenNothing_ distanceMb $ logWarning "Can't calculate distance when updating location"
-      let lastUpdate = fromMaybe now (req.lastUpdate)
-      DB.runSqlDBTransaction $ do
-        whenJust distanceMb $ QPI.updateDistance driver.id
-        DrLoc.updateGpsCoord locationId lastUpdate currPoint
-      logTagInfo "driverLocationUpdate" (getId personId <> " " <> show req.waypoints)
-    else logWarning "UpdateLocation called before refresh period passed, ignoring"
+  distanceMb <- case mbLoc of
+    Just loc ->
+      if now `diffUTCTime` loc.updatedAt > refreshPeriod
+        then do
+          let lastWaypoint = driverLocToLatLong loc
+          let traversedWaypoints = lastWaypoint : waypointList
+          res <- MapSearch.getDistanceMb (Just MapSearch.CAR) traversedWaypoints
+          whenNothing_ res $ logWarning "Can't calculate distance when updating location"
+          return res
+        else do
+          logWarning "UpdateLocation called before refresh period passed, ignoring"
+          return Nothing
+    Nothing -> return Nothing
+  let lastUpdate = fromMaybe now (req.lastUpdate)
+  DB.runSqlDBTransaction $ do
+    whenJust distanceMb $ QPI.updateDistance driver.id
+    DrLoc.upsertGpsCoord driverId currPoint lastUpdate
+  logTagInfo "driverLocationUpdate" (getId personId <> " " <> show req.waypoints)
   return Success
   where
     currPoint = NE.last (req.waypoints)
@@ -71,19 +77,12 @@ getLocation piId = withFlowHandlerAPI $ do
       >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = ride.distance
-  currPoint <- locationToLatLong currLocation & fromMaybeM (LocationFieldNotPresent "lat or long")
+      currPoint = driverLocToLatLong currLocation
   return $ GetLocationRes {..}
 
-type HasLongLat l =
-  ( HasField "lat" l (Maybe Double),
-    HasField "long" l (Maybe Double)
-  )
-
-locationToLatLong :: HasLongLat l => l -> Maybe MapSearch.LatLong
-locationToLatLong loc =
-  MapSearch.LatLong
-    <$> loc.lat
-    <*> loc.long
+driverLocToLatLong :: DriverLocation -> MapSearch.LatLong
+driverLocToLatLong loc =
+  MapSearch.LatLong loc.lat loc.long
 
 getRoute' ::
   ( CoreMetrics m,
@@ -97,15 +96,11 @@ getRoutes :: Id Person.Person -> Location.Request -> FlowHandler Location.Respon
 getRoutes _ = withFlowHandlerAPI . MapSearch.getRoutes
 
 calculateDistance ::
-  ( HasLongLat l,
-    HasLongLat l1,
-    CoreMetrics m,
+  ( CoreMetrics m,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
-  l ->
-  l1 ->
+  LatLong ->
+  LatLong ->
   m (Maybe Double)
 calculateDistance sourceLoc destinationLoc = do
-  source <- locationToLatLong sourceLoc & fromMaybeM (LocationFieldNotPresent "lat or long source")
-  dest <- locationToLatLong destinationLoc & fromMaybeM (LocationFieldNotPresent "lat or long destination")
-  MapSearch.getDistanceMb (Just MapSearch.CAR) [source, dest]
+  MapSearch.getDistanceMb (Just MapSearch.CAR) [sourceLoc, destinationLoc]

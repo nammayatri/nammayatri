@@ -9,7 +9,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
-import Database.Beam ((<-.), (==.), (||.))
+import Database.Beam ((==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.DB as DB
@@ -26,7 +26,7 @@ createFlow =
 create :: Storage.SearchReqLocation -> DB.SqlDB ()
 create location = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression location)
+  DB.createOne' dbTable (Storage.insertValue location)
 
 findLocationById ::
   DBFlow m r =>
@@ -37,26 +37,6 @@ findLocationById locId = do
   DB.findOne dbTable predicate
   where
     predicate Storage.SearchReqLocation {..} = id ==. B.val_ locId
-
-updateLocationRec :: DBFlow m r => Id Storage.SearchReqLocation -> Storage.SearchReqLocation -> m ()
-updateLocationRec locationId location = do
-  dbTable <- getDbTable
-  now <- getCurrentTime
-  DB.update dbTable (setClause location now) (predicate locationId)
-  where
-    setClause loc n Storage.SearchReqLocation {..} =
-      mconcat
-        [ lat <-. B.val_ (Storage.lat loc),
-          long <-. B.val_ (Storage.long loc),
-          district <-. B.val_ (Storage.district loc),
-          city <-. B.val_ (Storage.city loc),
-          state <-. B.val_ (Storage.state loc),
-          country <-. B.val_ (Storage.country loc),
-          pincode <-. B.val_ (Storage.pincode loc),
-          address <-. B.val_ (Storage.address loc),
-          updatedAt <-. B.val_ n
-        ]
-    predicate locId Storage.SearchReqLocation {..} = id ==. B.val_ locId
 
 findAllByLocIds :: DBFlow m r => [Id Storage.SearchReqLocation] -> [Id Storage.SearchReqLocation] -> m [Storage.SearchReqLocation]
 findAllByLocIds fromIds toIds = do

@@ -23,7 +23,7 @@ createFlow = do
 create :: Storage.SearchReqLocation -> DB.SqlDB ()
 create Storage.SearchReqLocation {..} = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression Storage.SearchReqLocation {..})
+  DB.createOne' dbTable (Storage.insertValue Storage.SearchReqLocation {..})
 
 findLocationById ::
   DBFlow m r =>

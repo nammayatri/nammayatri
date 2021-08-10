@@ -38,7 +38,7 @@ getConfiguredNotificationTime = asks (.driverAllocationConfig.driverNotification
 getConfiguredAllocationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Seconds
 getConfiguredAllocationTime = asks (.driverAllocationConfig.rideAllocationExpiry)
 
-getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters]) => Id Ride -> m [Id Driver]
+getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Seconds]) => Id Ride -> m [Id Driver]
 getDriverPool rideId = Person.getDriverPool (cast rideId)
 
 getRequests :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest]

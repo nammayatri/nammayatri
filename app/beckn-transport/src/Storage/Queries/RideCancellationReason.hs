@@ -15,4 +15,4 @@ getDbTable =
 create :: SRCR.RideCancellationReason -> DB.SqlDB ()
 create rideRequest = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression rideRequest)
+  DB.createOne' dbTable (Storage.insertValue rideRequest)

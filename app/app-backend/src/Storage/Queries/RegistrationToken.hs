@@ -24,7 +24,7 @@ getDbTable =
 create :: Storage.RegistrationToken -> DB.SqlDB ()
 create Storage.RegistrationToken {..} = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression Storage.RegistrationToken {..})
+  DB.createOne' dbTable (Storage.insertValue Storage.RegistrationToken {..})
 
 findById :: DBFlow m r => Text -> m (Maybe Storage.RegistrationToken)
 findById rtId = do

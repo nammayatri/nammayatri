@@ -22,7 +22,7 @@ createFlow =
 create :: Storage.Products -> DB.SqlDB ()
 create Storage.Products {..} = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression Storage.Products {..})
+  DB.createOne' dbTable (Storage.insertValue Storage.Products {..})
 
 findById :: DBFlow m r => Id Storage.Products -> m (Maybe Storage.Products)
 findById pid = do

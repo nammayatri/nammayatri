@@ -2,6 +2,7 @@ module Product.FareCalculator.Interpreter (calculateFare) where
 
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong (LatLong))
 import Control.Arrow (left, (***))
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
@@ -16,6 +17,7 @@ import Product.FareCalculator.Flow
 import qualified Product.Location as Location
 import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Domain.FarePolicy
+import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.FarePolicy as FarePolicyS
 import Types.Storage.Organization (Organization)
@@ -65,8 +67,10 @@ serviceHandle =
         sFarePolicy <- FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
         let farePolicy = fromTable <$> sFarePolicy
         pure farePolicy,
-      getDistance = \(PickupLocation pickupLoc) (DropLocation dropLoc) ->
-        Location.calculateDistance pickupLoc dropLoc
+      getDistance = \(PickupLocation pickupLoc) (DropLocation dropLoc) -> do
+        pickupLocLatLong <- LatLong <$> pickupLoc.lat <*> pickupLoc.long & fromMaybeM (LocationFieldNotPresent "lat or long in PickupLocation")
+        dropLocLatLong <- LatLong <$> dropLoc.lat <*> dropLoc.long & fromMaybeM (LocationFieldNotPresent "lat or long in DropLocation")
+        Location.calculateDistance pickupLocLatLong dropLocLatLong
     }
 
 fromTable :: FarePolicyS.FarePolicy -> FarePolicy

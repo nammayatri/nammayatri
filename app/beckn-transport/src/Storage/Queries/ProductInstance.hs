@@ -43,7 +43,7 @@ createFlow =
 create :: Storage.ProductInstance -> DB.SqlDB ()
 create productInstance = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression productInstance)
+  DB.createOne' dbTable (Storage.insertValue productInstance)
 
 findAllByIds :: DBFlow m r => Integer -> Integer -> [Id Product.Products] -> m [Storage.ProductInstance]
 findAllByIds limit offset ids = do

@@ -140,16 +140,12 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
       driverLocation <-
         QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
-      driverLatLong <-
-        Location.locationToLatLong driverLocation
-          & fromMaybeM (LocationFieldNotPresent "lat or long in `driver`")
+      let driverLatLong = Location.driverLocToLatLong driverLocation
       fromLocation <-
         productInstance.fromLocation & fromMaybeM (PIFieldNotPresent "from_location_id")
           >>= QLocation.findLocationById
           >>= fromMaybeM LocationNotFound
-      fromLatLong <-
-        Location.locationToLatLong fromLocation
-          & fromMaybeM (LocationFieldNotPresent "lat or long in `from`")
+      fromLatLong <- LatLong <$> fromLocation.lat <*> fromLocation.long & fromMaybeM (LocationFieldNotPresent "lat or long in FromLocation")
       toLocation <-
         productInstance.toLocation & fromMaybeM (PIFieldNotPresent "to_location_id")
           >>= QLocation.findLocationById

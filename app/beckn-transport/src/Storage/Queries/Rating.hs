@@ -22,7 +22,7 @@ getDbTable =
 create :: DBFlow m r => Storage.Rating -> m ()
 create rating = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression rating)
+  DB.createOne dbTable (Storage.insertValue rating)
 
 updateRatingValue :: DBFlow m r => Id Storage.Rating -> Id SP.Person -> Int -> m ()
 updateRatingValue ratingId driverId' newRatingValue = do

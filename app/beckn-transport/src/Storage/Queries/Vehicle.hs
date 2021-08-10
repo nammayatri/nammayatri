@@ -23,7 +23,7 @@ createFlow =
 create :: Storage.Vehicle -> DB.SqlDB ()
 create Storage.Vehicle {..} = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression Storage.Vehicle {..})
+  DB.createOne' dbTable (Storage.insertValue Storage.Vehicle {..})
 
 findVehicleById ::
   DBFlow m r =>

@@ -16,4 +16,4 @@ getDbTable =
 insertIssue :: DBFlow m r => Issue.Issue -> m ()
 insertIssue Issue.Issue {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Issue.Issue {..})
+  DB.createOne dbTable (Storage.insertValue Issue.Issue {..})

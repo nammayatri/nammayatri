@@ -21,7 +21,7 @@ getDbTable =
 create :: DBFlow m r => Storage.FarePolicy -> m ()
 create Storage.FarePolicy {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.FarePolicy {..})
+  DB.createOne dbTable (Storage.insertValue Storage.FarePolicy {..})
 
 findFarePolicyByOrgAndVehicleVariant ::
   DBFlow m r =>

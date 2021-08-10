@@ -20,7 +20,7 @@ getDbTable =
 create :: DBFlow m r => NotificationStatus.NotificationStatus -> m ()
 create NotificationStatus.NotificationStatus {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression NotificationStatus.NotificationStatus {..})
+  DB.createOne dbTable (Storage.insertValue NotificationStatus.NotificationStatus {..})
 
 updateStatus :: DBFlow m r => Id Ride -> Id Driver -> NotificationStatus.AnswerStatus -> m ()
 updateStatus rideId_ driverId_ status_ = do

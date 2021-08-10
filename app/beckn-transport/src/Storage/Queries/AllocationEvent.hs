@@ -19,7 +19,7 @@ getDbTable =
 create :: DBFlow m r => Storage.AllocationEvent -> m ()
 create allocationEvent = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression allocationEvent)
+  DB.createOne dbTable (Storage.insertValue allocationEvent)
 
 findAllocationEventById ::
   DBFlow m r =>

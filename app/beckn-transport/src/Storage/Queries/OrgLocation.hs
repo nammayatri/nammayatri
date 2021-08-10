@@ -26,7 +26,7 @@ createFlow =
 create :: Storage.OrgLocation -> DB.SqlDB ()
 create location = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertExpression location)
+  DB.createOne' dbTable (Storage.insertValue location)
 
 findById ::
   DBFlow m r =>

@@ -23,7 +23,7 @@ getDbTable =
 create :: DBFlow m r => Storage.Organization -> m ()
 create Storage.Organization {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
+  DB.createOne dbTable (Storage.insertValue Storage.Organization {..})
 
 verifyApiKey :: DBFlow m r => RegToken -> m Storage.Organization
 verifyApiKey regToken = do
