@@ -118,7 +118,7 @@ data PersonTE e f = Person
     mobileCountryCode :: B.C f (Maybe Text),
     passwordHash :: B.C f (Maybe DbHash),
     identifier :: B.C f (Maybe Text),
-    rating :: B.C f (Maybe Text),
+    rating :: B.C f (Maybe Double),
     verified :: B.C f Bool,
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),

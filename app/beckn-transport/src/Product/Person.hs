@@ -115,7 +115,7 @@ mkPersonRes person = do
         mobileNumber = decMobNum,
         mobileCountryCode = person.mobileCountryCode,
         verified = person.verified,
-        rating = person.rating,
+        rating = round <$> person.rating,
         status = person.status,
         deviceToken = person.deviceToken,
         udf1 = person.udf1,
@@ -169,9 +169,9 @@ calculateAverageRating personId = do
     logTagInfo "PersonAPI" "No rating found to calculate"
   minimumDriverRatesCount <- asks (.minimumDriverRatesCount)
   when (ratingCount >= minimumDriverRatesCount) $ do
-    let newAverage :: Int = round (ratingsSum / fromIntegral ratingCount)
+    let newAverage = ratingsSum / fromIntegral ratingCount
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
-    QP.updateAverageRating personId $ encodeToText newAverage
+    QP.updateAverageRating personId newAverage
 
 driverPoolKey :: Id ProductInstance -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId

@@ -125,7 +125,7 @@ data Driver = Driver
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     fullName :: Maybe Text,
-    rating :: Maybe Text,
+    rating :: Maybe Int,
     verified :: Bool,
     organizationId :: Maybe (Id Org.Organization)
   }

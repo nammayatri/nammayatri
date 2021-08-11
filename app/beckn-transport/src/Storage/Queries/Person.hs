@@ -262,7 +262,7 @@ findByVehicleId (Id vehicleId) = do
     predicate Storage.Person {..} =
       udf1 ==. B.val_ (Just vehicleId)
 
-updateAverageRating :: DBFlow m r => Id Storage.Person -> Text -> m ()
+updateAverageRating :: DBFlow m r => Id Storage.Person -> Double -> m ()
 updateAverageRating personId newAverageRating = do
   dbTable <- getDbTable
   now <- getCurrentTime

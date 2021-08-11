@@ -97,7 +97,7 @@ mkDriverObj person =
       middleName = person.middleName,
       lastName = person.lastName,
       fullName = person.fullName,
-      rating = person.rating,
+      rating = round <$> person.rating,
       verified = person.verified,
       organizationId = person.organizationId
     }

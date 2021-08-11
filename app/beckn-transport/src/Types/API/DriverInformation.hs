@@ -63,7 +63,7 @@ data DriverEntityRes = DriverEntityRes
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
     linkedVehicle :: Maybe Vehicle,
-    rating :: Maybe Text,
+    rating :: Maybe Int,
     active :: Bool,
     onRide :: Bool,
     registeredAt :: UTCTime
