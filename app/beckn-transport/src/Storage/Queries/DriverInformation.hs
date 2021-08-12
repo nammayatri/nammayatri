@@ -130,6 +130,6 @@ findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
 
     filterBySearchString Person.Person {..} searchStr = do
       let likeSearchStr = B.concat_ [B.val_ "%", B.val_ searchStr, B.val_ "%"]
-      B.concat_ [unMaybe firstName, B.val_ " ", unMaybe middleName, B.val_ " ", unMaybe lastName] `B.like_` likeSearchStr
+      B.lower_ (B.concat_ [unMaybe firstName, B.val_ " ", unMaybe middleName, B.val_ " ", unMaybe lastName]) `B.like_` B.lower_ likeSearchStr
         B.||. mobileNumber.hash B.==. B.val_ (Just $ evalDbHash searchStr)
     unMaybe = B.maybe_ (B.val_ "") identity
