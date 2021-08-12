@@ -10,6 +10,7 @@ import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context
 import Beckn.Types.Mobility.Order
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 
@@ -33,7 +34,7 @@ data CancelReq = CancelReq
   { context :: Context,
     message :: CancelReqMessage
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 type CancelRes = AckResponse
 
@@ -44,15 +45,15 @@ type OnCancelRes = AckResponse
 newtype CancelReqMessage = CancelReqMessage
   { order :: CancellationOrder
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data CancellationOrder = CancellationOrder
   { id :: Text,
     cancellation_reason_id :: Maybe Text -- "CASE", "PRODUCT_INSTANCE"
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 newtype OnCancelReqMessage = OnCancelReqMessage
   { order :: Order
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

@@ -22,6 +22,7 @@ import Beckn.Types.Time as Common
 import Beckn.Utils.Dhall (FromDhall)
 import Data.Aeson
 import Data.Generics.Labels ()
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import GHC.Records.Extra (HasField)
 
@@ -29,7 +30,7 @@ newtype IdObject = IdObject
   { id :: Text
   }
   deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 class FromBeckn a b where
   fromBeckn :: a -> b

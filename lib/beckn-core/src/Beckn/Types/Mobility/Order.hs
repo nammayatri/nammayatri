@@ -9,6 +9,7 @@ import Beckn.Types.Mobility.Trip
 import Beckn.Utils.Example
 import Data.Aeson.Types
 import qualified Data.Text as T
+import Data.OpenApi (ToSchema)
 import Data.Time
 import Database.Beam (FromBackendRow)
 import Database.Beam.Backend (FromBackendRow (fromBackendRow), HasSqlValueSyntax (sqlValueSyntax), autoSqlValueSyntax)
@@ -29,7 +30,7 @@ data Order = Order
     cancellation_reasons :: [Option],
     cancellation_policy :: Maybe CancelPolicy
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data CancelPolicy = CancelPolicy
   { cancellation_fee :: MonetaryValue,
@@ -37,7 +38,7 @@ data CancelPolicy = CancelPolicy
     cancel_by :: UTCTime,
     terms :: [Text]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example CancelPolicy where
   example =
@@ -53,7 +54,7 @@ data CancellationSource
   | ByDriver
   | ByOrganization
   | ByAllocator
-  deriving (Show, Eq, Ord, Read, Generic)
+  deriving (Show, Eq, Ord, Read, Generic, ToSchema)
 
 instance ToJSON CancellationSource where
   toJSON = \case

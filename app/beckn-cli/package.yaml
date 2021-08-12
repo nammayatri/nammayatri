@@ -77,7 +77,6 @@ dependencies:
   - servant-client
   - servant-client-core
   - servant-server
-  - swagger2
   - text
   - wai
   - wai-extra

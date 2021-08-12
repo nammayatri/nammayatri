@@ -13,6 +13,7 @@ import Beckn.Types.Mobility.Catalog
 import Beckn.Types.Mobility.Intent
 import Beckn.Utils.Example
 import Data.Generics.Labels ()
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 
@@ -36,7 +37,7 @@ data SearchReq = SearchReq
   { context :: Context,
     message :: SearchIntent
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 type SearchRes = AckResponse
 
@@ -45,14 +46,14 @@ type OnSearchReq = CallbackReq OnSearchServices
 newtype OnSearchServices = OnSearchServices
   { catalog :: Catalog
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 type OnSearchRes = AckResponse
 
 newtype SearchIntent = SearchIntent
   { intent :: Intent
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 instance Example SearchIntent where
   example = SearchIntent example

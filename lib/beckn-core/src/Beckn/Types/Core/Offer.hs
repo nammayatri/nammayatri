@@ -3,6 +3,7 @@ module Beckn.Types.Core.Offer where
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
+import Data.OpenApi (ToSchema)
 import Data.Text
 import Data.Time
 import EulerHS.Prelude hiding (id)
@@ -14,7 +15,7 @@ data Offer = Offer
     start_date :: UTCTime,
     end_date :: UTCTime
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Offer where
   example =
@@ -30,7 +31,7 @@ data OfferRef = OfferRef
   { _type :: Text, --"category", "service", "item"
     ids :: [Text]
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 instance FromJSON OfferRef where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

@@ -7,7 +7,7 @@ module Types.Storage.RegistrationToken where
 
 import Beckn.Types.Id
 import Data.Aeson
-import Data.Swagger hiding (info)
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time
 import qualified Database.Beam as B
@@ -18,7 +18,7 @@ import EulerHS.Prelude hiding (id)
 data Medium
   = SMS
   | EMAIL
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Eq, Show, Read)
+  deriving (Generic, FromJSON, ToJSON, Eq, Show, Read, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Medium where
   sqlValueSyntax = autoSqlValueSyntax
@@ -29,7 +29,7 @@ instance FromBackendRow Postgres Medium where
 data RTEntityType
   = CUSTOMER
   | USER
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Eq, Show, Read)
+  deriving (Generic, FromJSON, ToJSON, Eq, Show, Read)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RTEntityType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -40,7 +40,7 @@ instance FromBackendRow Postgres RTEntityType where
 data LoginType
   = OTP
   | PASSWORD
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Eq, Show, Read)
+  deriving (Generic, FromJSON, ToJSON, Eq, Show, Read, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be LoginType where
   sqlValueSyntax = autoSqlValueSyntax

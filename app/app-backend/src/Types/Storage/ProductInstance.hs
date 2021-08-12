@@ -9,7 +9,7 @@ import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger hiding (info)
+import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -37,7 +37,7 @@ data ProductInstanceStatus
   | EXPIRED
   | TRIP_ASSIGNED
   | TRIP_REASSIGNMENT
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductInstanceStatus where
   sqlValueSyntax = autoSqlValueSyntax
@@ -123,8 +123,6 @@ instance ToJSON ProductInstance where
 
 instance FromJSON ProductInstance where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToSchema ProductInstance
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ProductInstanceT)

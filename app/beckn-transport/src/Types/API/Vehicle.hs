@@ -2,11 +2,11 @@ module Types.API.Vehicle where
 
 import Beckn.Types.APISuccess
 import Beckn.Types.Common as BC
+import Data.OpenApi (ToSchema)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
-import Data.Swagger
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Vehicle as SV
@@ -24,7 +24,7 @@ data CreateVehicleReq = CreateVehicleReq
     registrationNo :: Text,
     registrationCategory :: Maybe RegistrationCategory
   }
-  deriving (Generic, ToSchema, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 validateCreateVehicleReq :: Validate CreateVehicleReq
 validateCreateVehicleReq CreateVehicleReq {..} =
@@ -66,7 +66,7 @@ newtype CreateVehicleRes = CreateVehicleRes
 
 newtype ListVehicleRes = ListVehicleRes
   {vehicles :: [VehicleRes]}
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 data UpdateVehicleReq = UpdateVehicleReq
   { model :: Maybe Text,
@@ -92,7 +92,7 @@ data VehicleRes = VehicleRes
   { vehicle :: SV.VehicleAPIEntity,
     driver :: Maybe Driver
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 data Driver = Driver
   { id :: Text,

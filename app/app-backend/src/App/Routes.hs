@@ -15,6 +15,7 @@ import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Update as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
+import Data.OpenApi (Info (..), OpenApi (..))
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
@@ -35,6 +36,7 @@ import qualified Product.Status as Status
 import qualified Product.Support as Support
 import qualified Product.Update as Update
 import Servant hiding (throwError)
+import Servant.OpenApi
 import qualified Types.API.Cancel as Cancel
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Confirm as ConfirmAPI
@@ -57,32 +59,36 @@ import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
 type AppAPI =
   "v2"
-    :> ( Get '[JSON] Text
-           :<|> RegistrationAPI
-           :<|> ProfileAPI
-           :<|> SearchAPI
-           :<|> QuoteAPI
-           :<|> ConfirmAPI
-           :<|> RideBookingAPI
-           :<|> CancelAPI
-           :<|> RideAPI
-           :<|> CallAPIs
-           :<|> SupportAPI
-           :<|> UpdateAPI
-           :<|> RouteAPI
-           :<|> StatusAPI
-           :<|> ServiceabilityAPI
-           :<|> FeedbackAPI
-           :<|> CustomerSupportAPI
-           :<|> GoogleMapsProxyAPI
-           :<|> CancellationReasonAPI
+    :> ( MainAPI
+           :<|> SwaggerAPI
        )
+
+type MainAPI =
+  Get '[JSON] Text
+      :<|> RegistrationAPI
+      :<|> ProfileAPI
+      :<|> SearchAPI
+      :<|> QuoteAPI
+      :<|> ConfirmAPI
+      :<|> RideBookingAPI
+      :<|> CancelAPI
+      :<|> RideAPI
+      :<|> CallAPIs
+      :<|> SupportAPI
+      :<|> UpdateAPI
+      :<|> RouteAPI
+      :<|> StatusAPI
+      :<|> ServiceabilityAPI
+      :<|> FeedbackAPI
+      :<|> CustomerSupportAPI
+      :<|> GoogleMapsProxyAPI
+      :<|> CancellationReasonAPI
 
 appAPI :: Proxy AppAPI
 appAPI = Proxy
 
-appServer :: FlowServer AppAPI
-appServer =
+mainServer :: FlowServer MainAPI
+mainServer =
   pure "App is UP"
     :<|> registrationFlow
     :<|> profileFlow
@@ -102,6 +108,11 @@ appServer =
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
+
+appServer :: FlowServer AppAPI
+appServer =
+  mainServer
+    :<|> writeSwaggerJSONFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -384,3 +395,19 @@ type CancellationReasonAPI =
 
 cancellationReasonFlow :: FlowServer CancellationReasonAPI
 cancellationReasonFlow = CancellationReason.list
+
+type SwaggerAPI = "swagger" :> Get '[JSON] OpenApi
+
+swagger :: OpenApi
+swagger = do
+  let openApi = toOpenApi (Proxy :: Proxy MainAPI)
+  openApi
+    { _openApiInfo =
+        (_openApiInfo openApi)
+          { _infoTitle = "Yatri",
+            _infoVersion = "1.0"
+          }
+    }
+
+writeSwaggerJSONFlow :: FlowServer SwaggerAPI
+writeSwaggerJSONFlow = return swagger

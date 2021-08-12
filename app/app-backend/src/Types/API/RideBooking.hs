@@ -8,6 +8,7 @@ import Types.Storage.ProductInstance (ProductInstance)
 import Types.Storage.Ride (RideAPIEntity)
 import Types.Storage.RideBooking (RideBookingStatus)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
+import Data.OpenApi (ToSchema)
 
 data RideBookingStatusRes = RideBookingStatusRes
   { id :: Id ProductInstance,
@@ -21,9 +22,9 @@ data RideBookingStatusRes = RideBookingStatusRes
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 newtype RideBookingListRes = RideBookingListRes
   { list :: [RideBookingStatusRes]
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

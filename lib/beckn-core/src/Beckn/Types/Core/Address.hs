@@ -1,6 +1,7 @@
 module Beckn.Types.Core.Address where
 
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude hiding (state)
 
@@ -16,7 +17,7 @@ data Address = Address
     country :: Text,
     area_code :: Text -- Area code. This can be Pincode, ZIP code or any equivalent
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Address where
   example =

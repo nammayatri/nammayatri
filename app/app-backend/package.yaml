@@ -74,7 +74,6 @@ dependencies:
   - servant-client
   - servant-client-core
   - servant-server
-  - swagger2
   - text
   - wai
   - wai-extra
@@ -84,6 +83,8 @@ dependencies:
   - record-hasfield
   - record-dot-preprocessor
   - postgresql-simple
+  - servant-openapi3
+  - openapi3
 
 ghc-options:
   - -fwrite-ide-info

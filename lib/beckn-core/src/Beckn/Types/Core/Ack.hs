@@ -2,10 +2,11 @@ module Beckn.Types.Core.Ack where
 
 import Data.Aeson
 import Data.Aeson.Types (unexpected)
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding ((.=))
 
 data AckResponse = Ack
-  deriving (Show)
+  deriving (Generic, Show, ToSchema)
 
 instance FromJSON AckResponse where
   parseJSON = withObject "Ack" $ \v -> do

@@ -1,12 +1,13 @@
 module Types.Common where
 
 import EulerHS.Prelude hiding (drop, id, state)
+import Data.OpenApi (ToSchema)
 
 data GPS = GPS
   { lat :: Text,
     lon :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data Address = Address
   { door :: Text,
@@ -18,7 +19,7 @@ data Address = Address
     areaCode :: Text,
     state :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data ProviderInfo = ProviderInfo
   { id :: Text,

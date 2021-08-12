@@ -4,6 +4,7 @@ module Beckn.Types.Core.Person where
 
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -16,7 +17,7 @@ data Person = Person
     email :: Maybe Text,
     phones :: [Text] -- Phone numer in E.164 format (ITUT recommendation
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 instance Example Person where
   example =
@@ -36,7 +37,7 @@ data Image = Image
     url :: Maybe Text,
     _data :: Maybe Text
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 instance FromJSON Image where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
@@ -61,7 +62,7 @@ data Name = Name
     honorific_prefix :: Maybe Text, -- An honorific prefix preceding a Person's name such as Dr/Mrs/Mr.
     honorific_suffix :: Maybe Text -- An honorific suffix preceding a Person's name such as M.D. /PhD/MSCSW.
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Name where
   example =

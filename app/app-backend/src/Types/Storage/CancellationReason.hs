@@ -6,9 +6,10 @@ import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
+import Data.OpenApi (ToSchema)
 
 newtype CancellationReasonCode = CancellationReasonCode Text
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be Text => HasSqlValueSyntax be CancellationReasonCode where
   sqlValueSyntax (CancellationReasonCode code) = sqlValueSyntax code
@@ -50,7 +51,7 @@ data CancellationReasonAPIEntity = CancellationReasonAPIEntity
   { reasonCode :: CancellationReasonCode,
     description :: Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 makeCancellationReasonAPIEntity :: CancellationReason -> CancellationReasonAPIEntity
 makeCancellationReasonAPIEntity CancellationReason {..} =

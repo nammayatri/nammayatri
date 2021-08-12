@@ -3,6 +3,7 @@ module Beckn.Types.Core.Scalar where
 import Beckn.Types.Core.ScalarRange
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -14,7 +15,7 @@ data Scalar = Scalar
     range :: Maybe ScalarRange,
     unit :: Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 instance FromJSON Scalar where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

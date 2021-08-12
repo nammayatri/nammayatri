@@ -7,7 +7,6 @@ import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger hiding (description, info, name)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -19,7 +18,7 @@ import Servant.API
 import qualified Types.Storage.Case as Case
 
 data ProductsType = RIDE | PASS
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -30,7 +29,7 @@ instance FromBackendRow Postgres ProductsType where
 type ProductsIndustry = Case.Industry
 
 -- data ProductsIndustry = MOBILITY | GOVT | GROCERY
---   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+--   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsIndustry where
 --   sqlValueSyntax = autoSqlValueSyntax
@@ -39,7 +38,7 @@ type ProductsIndustry = Case.Industry
 --   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProductsStatus = INSTOCK | OUTOFSTOCK
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsStatus where
   sqlValueSyntax = autoSqlValueSyntax
@@ -96,8 +95,6 @@ instance ToJSON Products where
 
 instance FromJSON Products where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToSchema Products
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity ProductsT)

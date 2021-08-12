@@ -6,6 +6,7 @@ import Beckn.Types.Core.PaymentEndpoint
 import Beckn.Types.Core.State
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
+import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (State, state)
 
@@ -20,7 +21,7 @@ data Payment = Payment
     due_date :: Maybe UTCTime,
     duration :: Maybe Duration
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 instance FromJSON Payment where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

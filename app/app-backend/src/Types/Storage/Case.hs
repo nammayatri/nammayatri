@@ -7,7 +7,7 @@ import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger hiding (description, info, name)
+import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -19,7 +19,7 @@ import Servant
 import qualified Types.Storage.SearchReqLocation as Loc
 
 data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance ToHttpApiData CaseType where
   toUrlPiece = DT.decodeUtf8 . toHeader
@@ -35,7 +35,7 @@ instance FromBackendRow Postgres CaseType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data CaseStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance ToHttpApiData CaseStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
@@ -154,8 +154,6 @@ instance ToJSON Case where
 
 instance FromJSON Case where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToSchema Case
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CaseT)

@@ -3,6 +3,7 @@
 module Beckn.Types.Mobility.Vehicle where
 
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -17,7 +18,7 @@ data Vehicle = Vehicle
     energy_type :: Maybe Text, -- "PETROL", "DIESEL", "LPG", "CNG", "EV", "OTHER"
     registration :: Maybe Registration
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 instance Example Vehicle where
   example =
@@ -37,7 +38,7 @@ data Registration = Registration
   { category :: Text, -- "PERSONAL", "COMMERCIAL", "OTHER"
     number :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 instance Example Registration where
   example =

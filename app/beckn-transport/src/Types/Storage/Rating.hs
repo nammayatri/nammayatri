@@ -3,7 +3,6 @@
 module Types.Storage.Rating where
 
 import Beckn.Types.Id
-import Data.Swagger (ToSchema)
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -38,8 +37,6 @@ deriving instance Eq Rating
 deriving instance FromJSON Rating
 
 deriving instance ToJSON Rating
-
-instance ToSchema Rating
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RatingT)

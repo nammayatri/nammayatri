@@ -10,7 +10,6 @@ import Beckn.Types.Id
 import Beckn.Utils.Common (maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger hiding (description, email)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -24,7 +23,7 @@ import qualified Types.Storage.Organization as Org
 data Role
   = DRIVER
   | ADMIN
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
@@ -33,8 +32,6 @@ instance FromBackendRow Postgres Role where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Role
-
-instance ToParamSchema Role
 
 instance FromHttpApiData Role where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -58,8 +55,6 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
 instance FromBackendRow Postgres IdentifierType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance ToSchema IdentifierType
-
 instance FromHttpApiData IdentifierType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -72,15 +67,13 @@ instance ToHttpApiData IdentifierType where
 
 --------------------------------------------------------------------------------------------------
 data Gender = MALE | FEMALE | OTHER | UNKNOWN
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Gender where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres Gender where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToParamSchema Gender
 
 instance FromHttpApiData Gender where
   parseUrlPiece = parseHeader . DT.encodeUtf8

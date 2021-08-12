@@ -2,6 +2,7 @@ module Beckn.Types.Core.Image where
 
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -11,7 +12,7 @@ data Image = Image
     url :: Maybe Text,
     _data :: Maybe Text
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 instance FromJSON Image where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

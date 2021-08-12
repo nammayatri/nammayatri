@@ -2,13 +2,14 @@ module Beckn.Types.Core.ItemQuantity where
 
 import Beckn.Types.Core.Scalar
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (maximum, minimum)
 
 data Quantity = Quantity
   { count :: Integer,
     quantity :: Scalar
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Quantity where
   example =
@@ -24,7 +25,7 @@ data ItemQuantity = ItemQuantity
     minimum :: Maybe Quantity,
     selected :: Maybe Quantity
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example ItemQuantity where
   example =

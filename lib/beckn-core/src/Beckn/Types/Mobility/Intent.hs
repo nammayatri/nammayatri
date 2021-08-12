@@ -9,6 +9,7 @@ import Beckn.Types.Mobility.Payload
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -26,13 +27,13 @@ data Intent = Intent
     transfer :: Maybe TransferAttrs,
     fare :: Price
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data TransferAttrs = TransferAttrs
   { max_count :: Int,
     distance :: Scalar
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Intent where
   example =

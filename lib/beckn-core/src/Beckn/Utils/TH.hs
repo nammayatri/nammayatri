@@ -6,7 +6,7 @@
 
 module Beckn.Utils.TH where
 
-import Data.Swagger (ToParamSchema, ToSchema)
+import Data.OpenApi (ToSchema)
 import Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
 import Database.Beam.Postgres as Posgres
 import Database.Beam.Postgres.Syntax (PgValueSyntax)
@@ -39,6 +39,4 @@ deriveIdentifierInstances name = do
     deriving newtype instance FromHttpApiData $tyQ
 
     deriving newtype instance ToSchema $tyQ
-
-    deriving newtype instance ToParamSchema $tyQ
     |]

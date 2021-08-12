@@ -1,6 +1,7 @@
 module Beckn.Types.Core.Rating where
 
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -10,7 +11,7 @@ data Rating = Rating
     max_value :: Maybe Text,
     direction :: Maybe Text -- Default "UP" - "UP", "DOWN"
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Rating where
   example =

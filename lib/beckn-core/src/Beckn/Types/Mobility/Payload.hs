@@ -5,6 +5,7 @@ import Beckn.Types.Core.Scalar
 import Beckn.Types.Mobility.TravelGroup
 import Beckn.Types.Mobility.Traveller
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 data Luggage = Luggage
@@ -12,7 +13,7 @@ data Luggage = Luggage
     weight :: Scalar,
     dimensions :: Dimensions
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data Payload = Payload
   { luggage :: Maybe Luggage,
@@ -20,7 +21,7 @@ data Payload = Payload
     travellers :: [Traveller],
     travel_group :: Maybe TravelGroup
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Payload where
   example =

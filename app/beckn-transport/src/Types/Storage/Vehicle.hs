@@ -5,7 +5,6 @@ module Types.Storage.Vehicle where
 import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -17,6 +16,7 @@ import Servant.API
 import Types.Error (VehicleError (VehicleFieldNotPresent))
 import qualified Types.Storage.Organization as Org
 import Utils.Common
+import Data.OpenApi (ToSchema)
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -28,8 +28,6 @@ instance B.HasSqlEqualityCheck Postgres Category
 
 instance FromBackendRow Postgres Category where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToParamSchema Category
 
 instance FromHttpApiData Category where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -48,8 +46,6 @@ instance B.HasSqlEqualityCheck Postgres Variant
 instance FromBackendRow Postgres Variant where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance ToParamSchema Variant
-
 instance FromHttpApiData Variant where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -67,8 +63,6 @@ instance B.HasSqlEqualityCheck Postgres EnergyType
 instance FromBackendRow Postgres EnergyType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
-instance ToParamSchema EnergyType
-
 instance FromHttpApiData EnergyType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
@@ -83,8 +77,6 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be RegistrationCategor
 
 instance FromBackendRow Postgres RegistrationCategory where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToParamSchema RegistrationCategory
 
 instance FromHttpApiData RegistrationCategory where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -128,8 +120,6 @@ deriving instance FromJSON Vehicle
 
 deriving instance ToJSON Vehicle
 
-instance ToSchema Vehicle
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity VehicleT)
 fieldEMod =
@@ -154,7 +144,7 @@ data VehicleAPIEntity = VehicleAPIEntity
     capacity :: Int,
     createdAt :: UTCTime
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 buildVehicleAPIEntity :: MonadFlow m => Vehicle -> m VehicleAPIEntity
 buildVehicleAPIEntity veh = do

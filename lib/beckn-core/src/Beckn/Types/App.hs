@@ -5,6 +5,7 @@
 module Beckn.Types.App
   ( module Beckn.Types.App,
     Servant.BaseUrl,
+    Aeson.Value
   )
 where
 
@@ -13,8 +14,9 @@ import Beckn.Types.Forkable
 import Beckn.Types.Logging
 import Beckn.Types.MonadGuid
 import Beckn.Types.Time
-import Control.Lens ((?~))
-import qualified Data.Swagger as S
+import Control.Lens.Operators
+import Data.Aeson as Aeson (Value)
+import Data.OpenApi
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.Beam.Query
@@ -64,14 +66,6 @@ type APIKey = Text
 -- FIXME: remove this
 type AuthHeader = Header' '[Required, Strict] "token" RegToken
 
-instance S.ToSchema Servant.BaseUrl where
-  declareNamedSchema _ = do
-    aSchema <- S.declareSchema (Proxy :: Proxy Text)
-    return $
-      S.NamedSchema (Just "url") $
-        aSchema
-          & S.description ?~ "A valid URL"
-
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Servant.BaseUrl where
   sqlValueSyntax = sqlValueSyntax . Servant.showBaseUrl
 
@@ -80,3 +74,18 @@ instance FromBackendRow Postgres Servant.BaseUrl where
     either (fail . show) pure . Servant.parseBaseUrl =<< fromBackendRow
 
 instance HasSqlEqualityCheck Postgres Servant.BaseUrl
+
+instance ToSchema Servant.BaseUrl where
+  declareNamedSchema _ = do
+    aSchema <- declareSchema (Proxy :: Proxy Text)
+    return $
+      NamedSchema (Just "BaseUrl") aSchema
+
+instance ToSchema Value where
+  declareNamedSchema _ = do
+    aSchema <- declareSchema (Proxy :: Proxy Text)
+    return $
+      NamedSchema (Just "Value") $
+        aSchema
+          & description
+            ?~ "Some JSON."

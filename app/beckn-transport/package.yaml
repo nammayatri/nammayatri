@@ -70,7 +70,6 @@ dependencies:
   - servant-client
   - servant-client-core
   - servant-server
-  - swagger2
   - text
   - wai
   - wai-extra
@@ -86,6 +85,8 @@ dependencies:
   - prometheus-client
   - record-hasfield
   - record-dot-preprocessor
+  - servant-openapi3
+  - openapi3
 
 ghc-options:
   - -fwrite-ide-info

@@ -5,12 +5,13 @@ module Types.API.Feedback
 where
 
 import Beckn.Types.APISuccess (APISuccess)
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 data FeedbackReq = FeedbackReq
   { productInstanceId :: Text,
     rating :: Int
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 type FeedbackRes = APISuccess

@@ -1,6 +1,7 @@
 module Types.API.CustomerSupport where
 
 import Beckn.Types.Amount
+import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (id)
 import Types.Common
@@ -10,7 +11,7 @@ import Types.Storage.ProductInstance as SP
 import Types.Storage.SearchReqLocation as L
 
 newtype OrderResp = OrderResp {order :: OrderDetails}
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data OrderDetails = OrderDetails
   { id :: Text,
@@ -26,7 +27,7 @@ data OrderDetails = OrderDetails
     travellerPhone :: Maybe Text,
     trip :: Maybe TripDetails
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data TripDetails = TripDetails
   { id :: Text, -- Product Instance Id
@@ -36,7 +37,7 @@ data TripDetails = TripDetails
     provider :: Maybe Provider,
     price :: Maybe Amount
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data OrderInfo = OrderInfo
   { person :: P.Person,
@@ -48,13 +49,13 @@ data LoginReq = LoginReq
   { email :: Text,
     password :: Text
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data LoginRes = LoginRes
   { auth_token :: Text,
     message :: Text
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 newtype LogoutRes = LogoutRes {message :: Text}
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)

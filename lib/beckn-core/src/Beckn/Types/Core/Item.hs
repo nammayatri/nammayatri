@@ -5,6 +5,7 @@ import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Tag
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude hiding (id)
 
@@ -21,7 +22,7 @@ data Item = Item
     ttl :: Maybe Duration,
     tags :: [Tag]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Item where
   example =

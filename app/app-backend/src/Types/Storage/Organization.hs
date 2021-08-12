@@ -8,7 +8,7 @@ import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger hiding (description, info, name)
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -28,8 +28,6 @@ instance B.HasSqlEqualityCheck Postgres Status
 
 instance FromBackendRow Postgres Status where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToParamSchema Status
 
 instance FromHttpApiData Status where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -51,8 +49,6 @@ instance B.HasSqlEqualityCheck Postgres OrganizationType
 
 instance FromBackendRow Postgres OrganizationType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToParamSchema OrganizationType
 
 instance FromHttpApiData OrganizationType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -80,8 +76,6 @@ instance B.HasSqlEqualityCheck Postgres OrganizationDomain
 
 instance FromBackendRow Postgres OrganizationDomain where
   fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToParamSchema OrganizationDomain
 
 instance FromHttpApiData OrganizationDomain where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -133,8 +127,6 @@ instance ToJSON Organization where
 
 instance FromJSON Organization where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToSchema Organization
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity OrganizationT)

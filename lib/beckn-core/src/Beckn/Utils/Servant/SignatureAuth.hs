@@ -23,7 +23,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.CaseInsensitive as CI
 import Data.List (lookup)
 import qualified Data.Map.Strict as Map
-import qualified Data.Swagger as DS
+import qualified Data.OpenApi as DS
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Typeable (typeRep)
@@ -42,10 +42,10 @@ import Servant
     type (:>),
   )
 import Servant.Client (BaseUrl (baseUrlHost), HasClient (..))
+import qualified Servant.OpenApi as S
+import qualified Servant.OpenApi.Internal as S
 import Servant.Server.Internal.Delayed (addAuthCheck)
 import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
-import qualified Servant.Swagger as S
-import qualified Servant.Swagger.Internal as S
 
 -- | Adds authentication via a signature in the API
 --
@@ -317,15 +317,15 @@ prepareAuthManagers flowRt appEnv allShortIds = do
     <&> makeManagerMap managerKeys
 
 instance
-  ( S.HasSwagger api,
+  ( S.HasOpenApi api,
     LookupMethod lookup,
     Typeable lookup,
     KnownSymbol header
   ) =>
-  S.HasSwagger (SignatureAuth header :> api)
+  S.HasOpenApi (SignatureAuth header lookup :> api)
   where
-  toSwagger _ =
-    S.toSwagger (Proxy @api)
+  toOpenApi _ =
+    S.toOpenApi (Proxy @api)
       & addSecurityRequirement (lookupDescription @lookup)
       & S.addDefaultResponse400 headerName
       & addResponse401
@@ -333,9 +333,9 @@ instance
       headerName = toText $ symbolVal (Proxy @header)
       methodName = show $ typeRep (Proxy @lookup)
 
-      addSecurityRequirement :: Text -> DS.Swagger -> DS.Swagger
+      addSecurityRequirement :: Text -> DS.OpenApi -> DS.OpenApi
       addSecurityRequirement description = execState $ do
-        DS.securityDefinitions . at methodName ?= securityScheme
+        DS.components . DS.securitySchemes . at methodName ?= securityScheme
         DS.allOperations . DS.security .= one securityRequirement
         where
           securityScheme =
@@ -352,9 +352,9 @@ instance
             let scopes = []
              in DS.SecurityRequirement $ fromList [(methodName, scopes)]
 
-      addResponse401 :: DS.Swagger -> DS.Swagger
+      addResponse401 :: DS.OpenApi -> DS.OpenApi
       addResponse401 = execState $ do
-        DS.responses . at response401Name ?= response401
+        DS.components . DS.responses . at response401Name ?= response401
         DS.allOperations . DS.responses . DS.responses . at 401
           ?= DS.Ref (DS.Reference response401Name)
         where

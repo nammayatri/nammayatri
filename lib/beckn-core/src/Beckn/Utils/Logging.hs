@@ -11,13 +11,10 @@ module Beckn.Utils.Logging
     logError,
     withTransactionIdLogTag,
     withPersonIdLogTag,
-    withTransactionIdLogTagMig,
     makeLogSomeException,
   )
 where
 
-import Beckn.Types.Core.Context (Context (transaction_id))
-import qualified Beckn.Types.Core.Migration.Context as M.Context
 import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Id
 import Beckn.Types.Logging
@@ -52,16 +49,10 @@ withPersonIdLogTag :: Log m => Id b -> m a -> m a
 withPersonIdLogTag personId = do
   withLogTag ("actor-" <> getId personId)
 
-withTransactionIdLogTag :: (HasField "context" b Context, Log m) => b -> m a -> m a
+withTransactionIdLogTag :: (HasField "context" b c, HasField "transaction_id" c Text, Log m) => b -> m a -> m a
 withTransactionIdLogTag req = do
   let context = req.context
-      transaction_id_ = transaction_id context
-  withLogTag ("txnId-" <> transaction_id_)
-
-withTransactionIdLogTagMig :: (HasField "context" b M.Context.Context, Log m) => b -> m a -> m a
-withTransactionIdLogTagMig req = do
-  let context = req.context
-      transaction_id_ = M.Context.transaction_id context
+      transaction_id_ = context.transaction_id
   withLogTag ("txnId-" <> transaction_id_)
 
 makeLogSomeException :: SomeException -> Text

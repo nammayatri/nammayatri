@@ -7,6 +7,7 @@ import Beckn.Types.Core.Model
 import Beckn.Types.Core.Offer
 import Beckn.Types.Mobility.FareProduct
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Text
 import Data.Time
 import EulerHS.Prelude hiding (id)
@@ -22,7 +23,7 @@ data Catalog = Catalog
     -- Mobility specific
     fare_products :: [FareProduct]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Catalog where
   example =

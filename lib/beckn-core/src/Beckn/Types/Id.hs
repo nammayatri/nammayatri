@@ -6,7 +6,7 @@ module Beckn.Types.Id where
 import Beckn.Types.GuidLike
 import Beckn.Types.MonadGuid
 import Beckn.Utils.Example (Example (..), idExample)
-import Data.Swagger (ToSchema)
+import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as Text
 import Database.Beam.Backend.SQL
   ( BeamSqlBackend,
@@ -22,7 +22,7 @@ import Servant (FromHttpApiData (parseUrlPiece), ToHttpApiData)
 newtype Id domain = Id
   {getId :: Text}
   deriving stock (Generic, Show, Eq, Ord)
-  deriving newtype (ToJSON, FromJSON, ToSchema, ToHttpApiData)
+  deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema, ToParamSchema)
 
 cast :: Id a -> Id b
 cast = Id . getId
@@ -51,7 +51,7 @@ newtype ShortId domain = ShortId
   { getShortId :: Text
   }
   deriving stock (Generic, Show, Eq)
-  deriving newtype (ToJSON, FromJSON, ToSchema, ToHttpApiData)
+  deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema)
 
 instance FromDhall (ShortId a) where
   autoWith _ = ShortId <$> strictText

@@ -4,6 +4,7 @@ import Beckn.Types.Core.Address
 import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Person
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 data Billing = Billing
@@ -12,7 +13,7 @@ data Billing = Billing
     period :: Duration,
     tax_number :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Billing where
   example =

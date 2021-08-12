@@ -1,8 +1,9 @@
 module Beckn.Types.Core.State where
 
+import Beckn.Types.App (Value)
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Example
-import Data.Aeson (Value)
+import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (State)
 
@@ -12,7 +13,7 @@ data State = State
     updated_by :: Maybe Text,
     update_metadata :: Maybe Value
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example State where
   example =

@@ -3,6 +3,7 @@ module Beckn.Types.Core.PaymentEndpoint where
 import Beckn.Types.Core.Person
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 data PaymentEndpoint = PaymentEndpoint
@@ -11,7 +12,7 @@ data PaymentEndpoint = PaymentEndpoint
     vpa :: Maybe Text, -- Virtual Payment Address like a UPI address
     person :: Maybe Person
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 instance FromJSON PaymentEndpoint where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
@@ -33,7 +34,7 @@ data BankAccount = BankAccount
     account_holder_name :: Text,
     ifsc_code :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example BankAccount where
   example =

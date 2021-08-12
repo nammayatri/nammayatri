@@ -17,9 +17,9 @@ where
 import Beckn.Utils.Example
 import Control.Lens.Operators
 import Data.Char
+import Data.OpenApi hiding (Example, value)
 import Data.Proxy
 import qualified Data.Ratio as R
-import Data.Swagger hiding (Example)
 import qualified Data.Text as T
 import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
@@ -140,7 +140,7 @@ instance ToSchema Amount where
                \Integer and fractional parts are separated with a dot."
               <> message
               <> " String format is used to prevent loss of precision."
-          & paramSchema . format ?~ "[-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?"
+          & format ?~ "[-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?"
 
 instance HasSqlValueSyntax be Text => HasSqlValueSyntax be Amount where
   sqlValueSyntax = sqlValueSyntax . amountToString

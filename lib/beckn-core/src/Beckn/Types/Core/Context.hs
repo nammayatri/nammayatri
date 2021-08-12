@@ -2,13 +2,15 @@
 
 module Beckn.Types.Core.Context where
 
+import Beckn.Types.App (BaseUrl)
 import Beckn.Types.Core.Domain
 import Beckn.Utils.Example
 import Data.Aeson
+import Data.OpenApi (ToSchema)
 import Data.Text
 import Data.Time
 import EulerHS.Prelude
-import Servant.Client (BaseUrl, parseBaseUrl)
+import Servant.Client (parseBaseUrl)
 
 data Context = Context
   { domain :: Domain,
@@ -24,7 +26,7 @@ data Context = Context
     timestamp :: UTCTime, -- ["format": "date-time"]
     ttl :: Maybe Text
   }
-  deriving (Generic, FromJSON, Show)
+  deriving (Generic, FromJSON, Show, ToSchema)
 
 instance Example Context where
   example =

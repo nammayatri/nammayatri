@@ -22,55 +22,55 @@ import Utils.Common
 -- TODO: add switching logic to figure out the client instance
 search :: SignatureAuthResult Organization -> API.BecknReq SearchIntent -> FlowHandler AckResponse
 search (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTagMig req $ do
+  withTransactionIdLogTag req $ do
     validateContext SEARCH $ req.context
     DZ.search bapOrg req
 
 select :: SignatureAuthResult Organization -> API.BecknReq SelectedObject -> FlowHandler AckResponse
 select (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTagMig req $ do
+  withTransactionIdLogTag req $ do
     validateContext SELECT $ req.context
     validateBapUrl bapOrg $ req.context
     DZ.select bapOrg req
 
 init :: SignatureAuthResult Organization -> API.BecknReq InitOrderObj -> FlowHandler AckResponse
 init (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTagMig req $ do
+  withTransactionIdLogTag req $ do
     validateContext INIT $ req.context
     validateBapUrl bapOrg $ req.context
     DZ.init bapOrg req
 
 confirm :: SignatureAuthResult Organization -> API.BecknReq API.OrderObject -> FlowHandler AckResponse
 confirm (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTagMig req $ do
+  withTransactionIdLogTag req $ do
     validateContext CONFIRM $ req.context
     validateBapUrl bapOrg $ req.context
     DZ.confirm bapOrg req
 
 track :: SignatureAuthResult Organization -> API.BecknReq TrackInfo -> FlowHandler AckResponse
 track (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTagMig req $ do
+  withTransactionIdLogTag req $ do
     validateContext TRACK $ req.context
     validateBapUrl bapOrg $ req.context
     DZ.track bapOrg req
 
 status :: SignatureAuthResult Organization -> API.BecknReq OrderId -> FlowHandler AckResponse
 status (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTagMig req $ do
+  withTransactionIdLogTag req $ do
     validateContext STATUS $ req.context
     validateBapUrl bapOrg $ req.context
     DZ.status bapOrg req
 
 cancel :: SignatureAuthResult Organization -> API.BecknReq CancellationInfo -> FlowHandler AckResponse
 cancel (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTagMig req $ do
+  withTransactionIdLogTag req $ do
     validateContext CANCEL $ req.context
     validateBapUrl bapOrg $ req.context
     DZ.cancel bapOrg req
 
 update :: SignatureAuthResult Organization -> API.BecknReq UpdateInfo -> FlowHandler AckResponse
 update (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTagMig req $ do
+  withTransactionIdLogTag req $ do
     validateContext UPDATE $ req.context
     validateBapUrl bapOrg $ req.context
     DZ.update bapOrg req

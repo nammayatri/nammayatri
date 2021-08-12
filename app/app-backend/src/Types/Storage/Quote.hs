@@ -5,6 +5,7 @@ import Beckn.Types.Id
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Types.Storage.ProductInstance (ProductInstance)
+import Data.OpenApi (ToSchema)
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id ProductInstance,
@@ -15,4 +16,4 @@ data QuoteAPIEntity = QuoteAPIEntity
     nearestDriverDistance :: Double,
     createdAt :: UTCTime
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

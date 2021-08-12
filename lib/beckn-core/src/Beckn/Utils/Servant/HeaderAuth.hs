@@ -14,7 +14,7 @@ import Beckn.Utils.Servant.Server
 import Control.Arrow
 import Control.Lens ((?=))
 import Data.List (lookup)
-import qualified Data.Swagger as DS
+import qualified Data.OpenApi as DS
 import Data.Typeable (typeRep)
 import EulerHS.Prelude
 import GHC.Exts (fromList)
@@ -22,10 +22,10 @@ import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Network.Wai (Request (..))
 import Servant hiding (ResponseHeader (..))
 import Servant.Client
+import qualified Servant.OpenApi as S
+import qualified Servant.OpenApi.Internal as S
 import Servant.Server.Internal.Delayed (addAuthCheck)
 import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
-import qualified Servant.Swagger as S
-import qualified Servant.Swagger.Internal as S
 
 -- | Adds authentication via a header to API
 --
@@ -107,15 +107,15 @@ instance
   hoistClientMonad mp _ hst cli = hoistClientMonad mp (Proxy @api) hst . cli
 
 instance
-  ( S.HasSwagger api,
+  ( S.HasOpenApi api,
     VerificationMethod verify,
     Typeable verify,
     KnownSymbol header
   ) =>
-  S.HasSwagger (HeaderAuth header verify :> api)
+  S.HasOpenApi (HeaderAuth header verify :> api)
   where
-  toSwagger _ =
-    S.toSwagger (Proxy @api)
+  toOpenApi _ =
+    S.toOpenApi (Proxy @api)
       & addSecurityRequirement methodName (verificationDescription @verify) headerName
       & S.addDefaultResponse400 headerName
       & addResponse401
@@ -123,9 +123,9 @@ instance
       headerName = toText $ symbolVal (Proxy @header)
       methodName = show $ typeRep (Proxy @verify)
 
-addSecurityRequirement :: Text -> Text -> Text -> DS.Swagger -> DS.Swagger
+addSecurityRequirement :: Text -> Text -> Text -> DS.OpenApi -> DS.OpenApi
 addSecurityRequirement methodName description headerName = execState $ do
-  DS.securityDefinitions . at methodName ?= securityScheme
+  DS.components . DS.securitySchemes . at methodName ?= securityScheme
   DS.allOperations . DS.security .= one securityRequirement
   where
     securityScheme =
@@ -142,9 +142,9 @@ addSecurityRequirement methodName description headerName = execState $ do
       let scopes = []
        in DS.SecurityRequirement $ fromList [(methodName, scopes)]
 
-addResponse401 :: DS.Swagger -> DS.Swagger
+addResponse401 :: DS.OpenApi -> DS.OpenApi
 addResponse401 = execState $ do
-  DS.responses . at response401Name ?= response401
+  DS.components . DS.responses . at response401Name ?= response401
   DS.allOperations . DS.responses . DS.responses . at 401
     ?= DS.Ref (DS.Reference response401Name)
   where

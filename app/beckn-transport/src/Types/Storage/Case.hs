@@ -6,7 +6,6 @@ import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
-import Data.Swagger hiding (description, info, name)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -18,7 +17,7 @@ import Servant
 import qualified Types.Storage.SearchReqLocation as Loc
 
 data CaseType = RIDESEARCH | PASSAPPLICATION | ORGREGISTRATION | LOCATIONTRACKER | RIDEORDER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance ToHttpApiData CaseType where
   toUrlPiece = DT.decodeUtf8 . toHeader
@@ -34,7 +33,7 @@ instance FromBackendRow Postgres CaseType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data CaseStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance ToHttpApiData CaseStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
@@ -50,7 +49,7 @@ instance FromBackendRow Postgres CaseStatus where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data Industry = MOBILITY | GOVT | GROCERY
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Industry where
   sqlValueSyntax = autoSqlValueSyntax
@@ -59,7 +58,7 @@ instance FromBackendRow Postgres Industry where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ExchangeType = ORDER | FULFILLMENT
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExchangeType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -68,7 +67,7 @@ instance FromBackendRow Postgres ExchangeType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data RequestorType = CONSUMER
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be RequestorType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -77,7 +76,7 @@ instance FromBackendRow Postgres RequestorType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data ProviderType = TRANSPORTER | DRIVER | GOVTADMIN | DELIVERYPERSON
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
   sqlValueSyntax = autoSqlValueSyntax
@@ -153,8 +152,6 @@ instance ToJSON Case where
 
 instance FromJSON Case where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToSchema Case
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity CaseT)

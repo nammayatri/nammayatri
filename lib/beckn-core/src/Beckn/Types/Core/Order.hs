@@ -5,6 +5,7 @@ import Beckn.Types.Core.ItemQuantity
 import Beckn.Types.Core.Payment
 import Beckn.Types.Core.Quotation
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (id, state)
 
@@ -19,7 +20,7 @@ data Order = Order
     update_action :: Maybe Text,
     quotation :: Maybe Quotation
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Order where
   example =
@@ -39,7 +40,7 @@ data OrderItem = OrderItem
   { id :: Text,
     quantity :: Maybe ItemQuantity
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example OrderItem where
   example =

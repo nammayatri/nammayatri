@@ -5,9 +5,10 @@ import Beckn.Types.Id
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Types.Storage.ProductInstance (ProductInstance)
+import Data.OpenApi (ToSchema)
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 data RideAPIEntity = RideAPIEntity
   { id :: Id ProductInstance,
@@ -27,4 +28,4 @@ data RideAPIEntity = RideAPIEntity
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Show, FromJSON, ToJSON, Generic)
+  deriving (Show, FromJSON, ToJSON, Generic, ToSchema)

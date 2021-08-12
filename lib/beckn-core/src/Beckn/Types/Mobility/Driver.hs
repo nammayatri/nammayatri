@@ -6,6 +6,7 @@ import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Person
 import Beckn.Types.Core.Rating
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Text
 import Data.Time (Day (ModifiedJulianDay), UTCTime (UTCTime))
 import EulerHS.Prelude
@@ -23,7 +24,7 @@ data Driver = Driver
     rating :: Maybe Rating,
     registeredAt :: UTCTime
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 instance Example Driver where
   example =

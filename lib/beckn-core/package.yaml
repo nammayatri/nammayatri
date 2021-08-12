@@ -93,8 +93,7 @@ dependencies:
   - servant-client-core
   - servant-multipart
   - servant-server
-  - servant-swagger
-  - swagger2
+  - servant-openapi3
   - text
   - wai
   - wai-extra
@@ -118,6 +117,7 @@ dependencies:
   - unix
   - record-hasfield
   - record-dot-preprocessor
+  - openapi3
 
 ghc-options:
   - -fwrite-ide-info

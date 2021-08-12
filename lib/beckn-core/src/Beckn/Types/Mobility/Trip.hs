@@ -10,6 +10,7 @@ import Beckn.Types.Mobility.Route
 import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Text hiding (drop)
 import EulerHS.Prelude hiding (drop, id, state)
 
@@ -24,7 +25,7 @@ data Trip = Trip
     fare :: Maybe Price,
     route :: Maybe Route
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 instance Example Trip where
   example =

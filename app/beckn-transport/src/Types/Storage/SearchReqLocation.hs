@@ -4,11 +4,11 @@ module Types.Storage.SearchReqLocation where
 
 import Beckn.Types.Id
 import Data.Aeson
-import Data.Swagger
 import Data.Time
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Common as Common
+import Data.OpenApi (ToSchema)
 
 data SearchReqLocationT f = SearchReqLocation
   { id :: B.C f (Id SearchReqLocation),
@@ -44,8 +44,6 @@ deriving instance FromJSON SearchReqLocation
 
 deriving instance ToJSON SearchReqLocation
 
-instance ToSchema SearchReqLocation
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity SearchReqLocationT)
 fieldEMod =
@@ -60,7 +58,7 @@ data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
   { address :: Common.Address,
     gps :: Common.GPS
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 makeSearchReqLocationAPIEntity :: SearchReqLocation -> SearchReqLocationAPIEntity
 makeSearchReqLocationAPIEntity loc = do

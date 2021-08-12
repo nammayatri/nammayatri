@@ -21,6 +21,7 @@ import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Mobility.Vehicle as Vehicle
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (drop, id, state)
 
@@ -28,7 +29,7 @@ data GPS = GPS
   { lat :: Text,
     lon :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data Address = Address
   { door :: Text,
@@ -40,33 +41,33 @@ data Address = Address
     areaCode :: Text,
     state :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 newtype City = City Text
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data Location = Location
   { gps :: Maybe GPS,
     address :: Maybe Address,
     city :: Maybe City
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data StopTime = StopTime
   { estimated :: UTCTime,
     actual :: Maybe UTCTime
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data Stop = Stop
   { location :: Location,
     arrivalTime :: StopTime,
     departureTime :: StopTime
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data VehicleCategory = CAR | MOTORCYCLE | BICYCLE | TRUCK | AUTO_RICKSHAW | OTHER
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data Vehicle = Vehicle
   { category :: Maybe VehicleCategory,
@@ -78,20 +79,20 @@ data Vehicle = Vehicle
     color :: Maybe Text,
     registrationNumber :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data DecimalValue = DecimalValue
   { integral :: Text,
     fractional :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data Traveller = Traveller
   { name :: Text,
     gender :: Text,
     phones :: [Text]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 newtype Tracking = Tracking
   { url :: Maybe Text
@@ -105,7 +106,7 @@ data Driver = Driver
     rating :: Maybe Rating,
     registeredAt :: UTCTime
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data Trip = Trip
   { id :: Text,
@@ -124,14 +125,14 @@ data Provider = Provider
     phones :: [Text],
     info :: Maybe ProviderStats
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data ProviderStats = ProviderStats
   { completed :: Maybe Int,
     inprogress :: Maybe Int,
     confirmed :: Maybe Int
   }
-  deriving (Generic, Read, FromJSON, ToJSON, Show)
+  deriving (Generic, Read, FromJSON, ToJSON, Show, ToSchema)
 
 instance FromBeckn Location.City City where
   fromBeckn city = City $ city.name

@@ -2,6 +2,7 @@ module Beckn.Types.Mobility.Traveller where
 
 import Beckn.Types.Core.Person
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -17,7 +18,7 @@ data Traveller = Traveller
     origin_stop_id :: Text,
     destination_stop_id :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Traveller where
   example =

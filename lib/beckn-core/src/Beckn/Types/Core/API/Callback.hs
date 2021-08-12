@@ -3,13 +3,14 @@ module Beckn.Types.Core.API.Callback where
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.Error
 import Data.Aeson
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding ((.=))
 
 data CallbackReq a = CallbackReq
   { context :: Context,
     contents :: Either Error a
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 instance ToJSON a => ToJSON (CallbackReq a) where
   toJSON (CallbackReq context contents) = object allFields

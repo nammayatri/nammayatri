@@ -2,12 +2,13 @@ module Beckn.Types.Mobility.Route where
 
 import Beckn.Types.Core.Scalar
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 newtype Route = Route
   { edge :: RouteEdge
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Route where
   example =
@@ -20,7 +21,7 @@ data RouteEdge = RouteEdge
     duration :: Scalar,
     distance :: Scalar
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example RouteEdge where
   example =

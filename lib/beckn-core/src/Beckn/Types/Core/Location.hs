@@ -7,6 +7,7 @@ import Beckn.Types.Core.Scalar
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Default.Class (Default (..))
+import Data.OpenApi (ToSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -20,7 +21,7 @@ data Location = Location
     polygon :: Maybe Text,
     _3dspace :: Maybe Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 instance FromJSON Location where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
@@ -68,7 +69,7 @@ data GPS = GPS
   { lat :: Text,
     lon :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 instance Example GPS where
   example =
@@ -82,17 +83,17 @@ data City = City
   { name :: Text,
     code :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data Country = Country
   { name :: Text,
     code :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data Circle = Circle
   { lat :: Text,
     long :: Text,
     radius :: Scalar
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
