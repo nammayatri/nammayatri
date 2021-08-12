@@ -192,7 +192,8 @@ onSearchCallback productCase transporter fromLocation toLocation = do
     case pool of
       [] -> return (Nothing, Nothing)
       (fstDriverValue : _) -> do
-        fare <- Just <$> calculateFare transporterId vehicleVariant fromLocation toLocation (productCase.startTime) (productCase.udf5)
+        let dstSrc = maybe (Left (fromLocation, toLocation)) Right (productCase.udf5 >>= readMaybe . T.unpack)
+        fare <- Just <$> calculateFare transporterId vehicleVariant dstSrc (productCase.startTime)
         let nearestDist = Just $ snd fstDriverValue
         return (fare, nearestDist)
   prodInst <- mkProductInstance productCase price piStatus transporterId nearestDriverDist

@@ -3,9 +3,11 @@ module Product.RideAPI.EndRide where
 import App.Types (FlowHandler)
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.APISuccess as APISuccess
+import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
+import qualified Product.FareCalculator.Interpreter as Fare
 import Product.ProductInstance as PI
 import qualified Product.RideAPI.Handlers.EndRide as Handler
 import qualified Storage.Queries.Case as Case
@@ -18,6 +20,7 @@ import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common (withFlowHandlerAPI)
+import Utils.Metrics (putFareAndDistanceDeviations)
 
 endRide :: Id SP.Person -> Id PI.ProductInstance -> FlowHandler APISuccess.APISuccess
 endRide personId rideId = withFlowHandlerAPI $ do
@@ -30,11 +33,15 @@ endRide personId rideId = withFlowHandlerAPI $ do
           findAllPIByParentId = PI.findAllByParentId,
           findCaseByIdAndType = Case.findByIdType,
           notifyUpdateToBAP = PI.notifyUpdateToBAP,
-          endRideTransaction
+          endRideTransaction,
+          calculateFare = \orgId vehicleVariant distance -> Fare.calculateFare orgId vehicleVariant (Right distance),
+          recalculateFareEnabled = asks (.recalculateFareEnabled),
+          putDiffMetric = putFareAndDistanceDeviations
         }
 
-endRideTransaction :: DBFlow m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> m ()
-endRideTransaction piIds trackerCaseId orderCaseId driverId = DB.runSqlDBTransaction $ do
+endRideTransaction :: DBFlow m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Maybe Amount -> m ()
+endRideTransaction piIds trackerCaseId orderCaseId driverId mbFare = DB.runSqlDBTransaction $ do
+  whenJust mbFare $ forM_ piIds . PI.updatePrice
   PI.updateStatusByIds piIds PI.COMPLETED
   Case.updateStatus trackerCaseId Case.COMPLETED
   Case.updateStatus orderCaseId Case.COMPLETED

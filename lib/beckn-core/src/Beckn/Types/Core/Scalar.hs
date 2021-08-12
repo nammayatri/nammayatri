@@ -32,3 +32,26 @@ instance Example Scalar where
         range = example,
         unit = "meters"
       }
+
+emptyScalar :: Text -> Scalar
+emptyScalar unit =
+  Scalar
+    { _type = Nothing,
+      value = Nothing,
+      estimated_value = Nothing,
+      computed_value = Nothing,
+      range = Nothing,
+      unit
+    }
+
+mkDistance :: Double -> Scalar
+mkDistance dst = (emptyScalar "meters") {value = Just dst}
+
+mkDuration :: Double -> Scalar
+mkDuration t = (emptyScalar "seconds") {value = Just t}
+
+scalarToDouble :: Scalar -> Maybe Double
+scalarToDouble Scalar {..} =
+  value
+    <|> estimated_value
+    <|> computed_value

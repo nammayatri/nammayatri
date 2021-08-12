@@ -60,7 +60,8 @@ data AppCfg = AppCfg
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
-    minimumDriverRatesCount :: Int
+    minimumDriverRatesCount :: Int,
+    recalculateFareEnabled :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -90,22 +91,22 @@ data AppEnv = AppEnv
     graphhopperUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
+    transporterMetrics :: TransporterMetricsContainer,
     apiRateLimitOptions :: APIRateLimitOptions,
     defaultRadiusOfSearch :: Meters,
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
-    minimumDriverRatesCount :: Int
+    minimumDriverRatesCount :: Int,
+    recalculateFareEnabled :: Bool
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
+  transporterMetrics <- registerTransporterMetricsContainer
   isShuttingDown <- newEmptyTMVarIO
-  return $
-    AppEnv
-      { ..
-      }
+  return AppEnv {..}
 
 type Env = EnvR AppEnv
 

@@ -97,16 +97,14 @@ hatchback20km = testCase "Calculate fare for 20km with FullReturnTrip for Hatchb
       handle
       orgID
       Vehicle.HATCHBACK
-      defaultPickupLocation
-      defaultDropLocation
+      (Right distance)
       FullReturnTrip
       startTime
-      distance
   let totalFare = fareSum fareParams
   totalFare @?= Amount 540.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
-    distance = Just 20000.0
+    distance = 20000.0
 
 sedan20km :: TestTree
 sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ do
@@ -115,16 +113,14 @@ sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ d
       handle'
       orgID
       Vehicle.SEDAN
-      defaultPickupLocation
-      defaultDropLocation
+      (Right distance)
       FullReturnTrip
       startTime
-      distance
   let totalFare = fareSum fareParams
   totalFare @?= Amount 675.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
-    distance = Just 20000.0
+    distance = 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId vehicleVariant ->
@@ -144,16 +140,14 @@ suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
       handle'
       orgID
       Vehicle.SUV
-      defaultPickupLocation
-      defaultDropLocation
+      (Right distance)
       FullReturnTrip
       startTime
-      distance
   let totalFare = fareSum fareParams
   totalFare @?= Amount 800.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
-    distance = Just 20000.0
+    distance = 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId vehicleVariant ->
@@ -176,16 +170,14 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTr
       handle'
       orgID
       Vehicle.HATCHBACK
-      defaultPickupLocation
-      defaultDropLocation
+      (Right distance)
       OneWayTrip
       startTime
-      distance
   let totalFare = fareSum fareParams
   totalFare @?= Amount 347.6
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
-    distance = Just 20000.0
+    distance = 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId vehicleVariant ->
@@ -209,16 +201,14 @@ nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip f
       handle'
       orgID
       Vehicle.SEDAN
-      defaultPickupLocation
-      defaultDropLocation
+      (Right distance)
       OneWayTrip
       startTime
-      distance
   let totalFare = fareSum fareParams
   totalFare @?= Amount 390.5
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
-    distance = Just 20000.0
+    distance = 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId vehicleVariant ->
@@ -242,16 +232,14 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
       handle'
       orgID
       Vehicle.SUV
-      defaultPickupLocation
-      defaultDropLocation
+      (Right distance)
       OneWayTrip
       startTime
-      distance
   let totalFare = fareSum fareParams
   totalFare @?= Amount 539.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
-    distance = Just 20000.0
+    distance = 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId vehicleVariant ->
@@ -276,15 +264,13 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     handle'
     orgID
     Vehicle.SEDAN
-    defaultPickupLocation
-    defaultDropLocation
+    (Right distance)
     OneWayTrip
     startTime
-    distance
     `shouldThrow` (== NoFarePolicy)
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
-    distance = Just 0.0
+    distance = 0.0
     handle' =
       handle
         { getFarePolicy = \_orgId vehicleVariant -> pure Nothing

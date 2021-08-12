@@ -6,6 +6,7 @@ import Beckn.Product.Validation.Context
     validateDomain,
   )
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Amount
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Status as API
@@ -18,10 +19,14 @@ import Beckn.Types.Core.Order
   ( Order (..),
     OrderItem (OrderItem),
   )
+import Beckn.Types.Core.Price
+import Beckn.Types.Core.Quotation
+import Beckn.Types.Core.Scalar
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Driver (Driver)
 import Beckn.Types.Mobility.Order (CancellationReason (..))
 import Beckn.Types.Mobility.Payload (Payload (..))
+import Beckn.Types.Mobility.Route
 import Beckn.Types.Mobility.Trip (Trip (..))
 import qualified Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -150,7 +155,7 @@ serviceStatus transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandler
       >>= fromMaybeM OrgNotFound
   let context = req.context
   ExternalAPI.withCallback transporter "status" API.onStatus context callbackUrl $
-    mkOnServiceStatusPayload piId trackerPi
+    mkOnServiceStatusPayload piId Nothing trackerPi
 
 notifyServiceStatusToGateway ::
   ( DBFlow m r,
@@ -162,11 +167,16 @@ notifyServiceStatusToGateway ::
   ProductInstance.ProductInstance ->
   m ()
 notifyServiceStatusToGateway transporter searchPi trackerPi = do
-  mkOnServiceStatusPayload (searchPi.id) trackerPi
+  mkOnServiceStatusPayload searchPi.id searchPi.price trackerPi
     >>= ExternalAPI.callBAP "on_status" API.onStatus transporter (searchPi.caseId) . Right
 
-mkOnServiceStatusPayload :: MonadTime m => Id ProductInstance.ProductInstance -> ProductInstance.ProductInstance -> m API.OnStatusReqMessage
-mkOnServiceStatusPayload piId trackerPi = do
+mkOnServiceStatusPayload ::
+  MonadTime m =>
+  Id ProductInstance.ProductInstance ->
+  Maybe Amount ->
+  ProductInstance.ProductInstance ->
+  m API.OnStatusReqMessage
+mkOnServiceStatusPayload piId mbFare trackerPi = do
   mkOrderRes piId (getId $ trackerPi.productId) (show $ trackerPi.status)
     <&> API.OnStatusReqMessage
   where
@@ -182,8 +192,15 @@ mkOnServiceStatusPayload piId trackerPi = do
             billing = Nothing,
             payment = Nothing,
             update_action = Nothing,
-            quotation = Nothing
+            quotation = quotation' <$> mbFare
           }
+    quotation' realPrice =
+      Quotation
+        { id = "TODO",
+          price = Just $ amountToPrice realPrice,
+          ttl = Nothing,
+          breakup = Nothing
+        }
 
 trackTrip ::
   Id Organization.Organization ->
@@ -254,8 +271,15 @@ mkTrip cId orderPi = do
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = Nothing,
-        route = Nothing
+        fare = amountToPrice <$> orderPi.price,
+        route =
+          Just $
+            Route
+              RouteEdge
+                { path = "",
+                  duration = mkDuration 0, -- TODO: calculate duration and put it here
+                  distance = mkDistance orderPi.distance
+                }
       }
 
 mkOnUpdatePayload ::

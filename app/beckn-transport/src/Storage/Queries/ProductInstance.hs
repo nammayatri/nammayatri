@@ -4,6 +4,7 @@ module Storage.Queries.ProductInstance where
 
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -375,6 +376,22 @@ updateInfo prodInstId info_ = do
     setClause pInfo Storage.ProductInstance {..} =
       mconcat
         [info <-. B.val_ (Just pInfo)]
+
+updatePrice :: Amount -> Id Storage.ProductInstance -> DB.SqlDB ()
+updatePrice price' prodInstId = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update'
+    dbTable
+    (setClause price' now)
+    (predicate prodInstId)
+  where
+    predicate piId Storage.ProductInstance {..} = id ==. B.val_ piId
+    setClause price'' currTime Storage.ProductInstance {..} =
+      mconcat
+        [ price <-. B.val_ (Just price''),
+          updatedAt <-. B.val_ currTime
+        ]
 
 findAllByVehicleId :: DBFlow m r => Maybe (Id Vehicle) -> m [Storage.ProductInstance]
 findAllByVehicleId piId = do

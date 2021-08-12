@@ -2,7 +2,7 @@ module Product.FareCalculator.Interpreter (calculateFare) where
 
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
-import qualified Data.Text as T
+import Control.Arrow (left, (***))
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Flow
@@ -30,23 +30,23 @@ calculateFare ::
   ) =>
   Id Organization ->
   Vehicle.Variant ->
-  Location.Location ->
-  Location.Location ->
+  Either
+    ( Location.Location,
+      Location.Location
+    )
+    Double ->
   UTCTime ->
-  Maybe Text ->
   m Amount
-calculateFare orgId vehicleVariant pickLoc dropLoc startTime mbDistance = do
+calculateFare orgId vehicleVariant distanceSrc startTime = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   fareParams <-
     doCalculateFare
       serviceHandle
       orgId
       vehicleVariant
-      (PickupLocation pickLoc)
-      (DropLocation dropLoc)
+      (distanceSrc & left (PickupLocation *** DropLocation))
       OneWayTrip -- TODO :: determine the type of trip
       startTime
-      (mbDistance >>= readMaybe . T.unpack)
   let totalFare = fareSum fareParams
   logTagInfo
     "FareCalculator"

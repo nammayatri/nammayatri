@@ -10,6 +10,7 @@ module Beckn.Types.Amount
     validate,
     amountToString,
     amountFromString,
+    amountToDouble,
   )
 where
 
@@ -39,6 +40,9 @@ newtype Amount = Amount Rational
 
 instance Example Amount where
   example = Amount 10
+
+amountToDouble :: Amount -> Double
+amountToDouble (Amount rat) = fromRational rat
 
 maxPrecisionWord8 :: Word8
 maxPrecisionWord8 = 30

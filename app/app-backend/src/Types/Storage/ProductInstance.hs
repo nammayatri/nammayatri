@@ -88,6 +88,7 @@ data ProductInstanceT f = ProductInstance
     toLocation :: B.C f (Maybe (Id Loc.Location)),
     organizationId :: B.C f (Id Org.Organization),
     parentId :: B.C f (Maybe (Id ProductInstance)),
+    distance :: B.C f Double,
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     udf3 :: B.C f (Maybe Text),

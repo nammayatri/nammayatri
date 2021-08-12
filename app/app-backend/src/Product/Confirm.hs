@@ -152,6 +152,7 @@ mkOrderProductInstance caseId prodInst = do
         endTime = prodInst.endTime,
         validTill = prodInst.validTill,
         parentId = Just (prodInst.id),
+        distance = prodInst.distance,
         status = SPI.INSTOCK,
         info = prodInst.info,
         createdAt = now,

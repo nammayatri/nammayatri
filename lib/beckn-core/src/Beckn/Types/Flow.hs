@@ -11,6 +11,7 @@ import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import Prometheus (MonadMonitor (..))
 
 type FlowR r = ReaderT r L.Flow
 
@@ -30,3 +31,6 @@ instance MonadClock (FlowR r) where
 instance HasCoreMetrics r => CoreMetrics (FlowR r) where
   addRequestLatency = Metrics.addRequestLatencyFlow
   incrementErrorCounter = Metrics.incrementErrorCounterFlow
+
+instance MonadMonitor L.Flow where
+  doIO = L.runIO

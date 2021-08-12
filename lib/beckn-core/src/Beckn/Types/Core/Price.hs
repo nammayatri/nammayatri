@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Price where
 
+import Beckn.Types.Amount
 import Beckn.Types.Core.DecimalValue
 import Beckn.Utils.Example
 import Data.Text
@@ -29,3 +30,33 @@ instance Example Price where
         minimum_value = example,
         maximum_value = example
       }
+
+emptyPrice :: Price
+emptyPrice =
+  Price
+    { currency = "INR",
+      value = Nothing,
+      estimated_value = Nothing,
+      computed_value = Nothing,
+      listed_value = Nothing,
+      offered_value = Nothing,
+      minimum_value = Nothing,
+      maximum_value = Nothing
+    }
+
+amountToPrice :: Amount -> Price
+amountToPrice price =
+  emptyPrice
+    { value = Just $ convertAmountToDecimalValue price
+    }
+
+priceToAmount :: Price -> Maybe Amount
+priceToAmount Price {..} =
+  convertDecimalValueToAmount
+    =<< value
+    <|> computed_value
+    <|> listed_value
+    <|> offered_value
+    <|> estimated_value
+    <|> minimum_value
+    <|> maximum_value

@@ -4,6 +4,7 @@ module Utils.Metrics
   )
 where
 
+import Beckn.Types.Amount
 import Beckn.Types.Common (Milliseconds)
 import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
 import qualified EulerHS.Language as L
@@ -41,3 +42,9 @@ putTaskDuration' :: L.MonadFlow m => Metric.BTMMetricsContainer -> Milliseconds 
 putTaskDuration' bmContainer duration = do
   let taskDuration = bmContainer.taskDuration
   L.runIO $ P.observe taskDuration . (/ 1000) . fromIntegral $ duration
+
+putFareAndDistanceDeviations :: (MonadMonitor m, Metric.HasTransporterMetrics m r) => Amount -> Double -> m ()
+putFareAndDistanceDeviations fareDiff distanceDiff = do
+  Metric.TransporterMetricsContainer {..} <- asks (.transporterMetrics)
+  P.observe realFareDeviation $ amountToDouble fareDiff
+  P.observe realDistanceDeviation distanceDiff

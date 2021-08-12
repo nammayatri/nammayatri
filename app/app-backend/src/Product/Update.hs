@@ -4,6 +4,8 @@ import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Price (priceToAmount)
+import Beckn.Types.Core.Scalar (scalarToDouble)
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Trip
@@ -35,7 +37,11 @@ onUpdate _org req = withFlowHandlerBecknAPI $
             uInfo = getUpdatedProdInfo trip mprdInfo $ toBeckn <$> (ProdInfo.tracking =<< ProdInfo.tracker =<< mprdInfo)
             uPrd =
               orderPi
-                { SPI.info = encodeToText <$> uInfo
+                { SPI.info = encodeToText <$> uInfo,
+                  SPI.price = (trip >>= (.fare) >>= priceToAmount) <|> orderPi.price,
+                  SPI.distance =
+                    fromMaybe orderPi.distance $
+                      trip >>= (.route) >>= scalarToDouble . (.edge.distance)
                 }
         MPI.updateMultipleFlow (orderPi.id) uPrd
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err

@@ -61,7 +61,10 @@ handle =
             _ -> throwError CaseNotFound
           else throwError CaseNotFound,
       notifyUpdateToBAP = \_ _ _ -> pure (),
-      endRideTransaction = \_ _ _ _ -> pure ()
+      endRideTransaction = \_ _ _ _ _ -> pure (),
+      calculateFare = \_ _ _ _ -> pure 100,
+      recalculateFareEnabled = pure False,
+      putDiffMetric = \_ _ -> pure ()
     }
 
 endRide ::
@@ -109,7 +112,9 @@ rideCase =
   Fixtures.defaultCase
     { Case.id = "ride",
       Case._type = Case.RIDEORDER,
-      Case.status = Case.INPROGRESS
+      Case.status = Case.INPROGRESS,
+      Case.provider = Just "someOrg",
+      Case.udf1 = Just "SEDAN"
     }
 
 successfulEndByDriver :: TestTree

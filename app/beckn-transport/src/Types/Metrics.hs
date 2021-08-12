@@ -3,6 +3,9 @@ module Types.Metrics
     BTMMetricsContainer (..),
     module CoreMetrics,
     registerBTMMetricsContainer,
+    registerTransporterMetricsContainer,
+    TransporterMetricsContainer (..),
+    HasTransporterMetrics,
   )
 where
 
@@ -40,3 +43,28 @@ registerFailedTaskCounter = P.register . P.counter $ P.Info "BTM_failed_task_cou
 
 registerTaskDurationMetric :: IO TaskDurationMetric
 registerTaskDurationMetric = P.register . P.histogram (P.Info "BTM_task_duration" "") $ P.linearBuckets 0 0.1 20
+
+type HasTransporterMetrics m r = HasFlowEnv m r '["transporterMetrics" ::: TransporterMetricsContainer]
+
+data TransporterMetricsContainer = TransporterMetricsContainer
+  { realFareDeviation :: P.Histogram,
+    realDistanceDeviation :: P.Histogram
+  }
+
+registerTransporterMetricsContainer :: IO TransporterMetricsContainer
+registerTransporterMetricsContainer =
+  TransporterMetricsContainer
+    <$> (P.register . P.histogram fareDeviation $ aroundZero 10 5)
+    <*> (P.register . P.histogram distanceDeviation $ aroundZero 10 6)
+  where
+    aroundZero factor b =
+      let l = P.exponentialBuckets 1 factor b
+       in reverse (map negate l) ++ l
+    fareDeviation =
+      P.Info
+        "BPP_fare_deviation"
+        "Difference between initially offered and recalculated fare of a ride"
+    distanceDeviation =
+      P.Info
+        "BPP_distance_deviation"
+        "Difference between estimated distance and real distance of a ride"
