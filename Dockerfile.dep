@@ -2,6 +2,10 @@ FROM fpco/stack-build:lts-15.15
 RUN mkdir /opt/build
 WORKDIR /opt/build
 
+# Updating confluence public key:
+RUN sudo apt-key del 41468433 \
+  && wget -qO - https://packages.confluent.io/deb/5.5/archive.key | sudo apt-key add -
+
 # GHC dynamically links its compilation targets to lib gmp
 RUN apt-get update \
   && apt-get download libgmp10 \
