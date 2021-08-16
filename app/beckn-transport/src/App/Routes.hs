@@ -22,7 +22,6 @@ import Product.BecknProvider.Search as BP
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Case as Case
-import qualified Product.Cron as Cron
 import qualified Product.DriverInformation as DriverInformation
 import qualified Product.Location as Location
 import qualified Product.Person as Person
@@ -39,7 +38,6 @@ import qualified Product.Vehicle as Vehicle
 import Servant
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import Types.API.Case
-import Types.API.Cron
 import qualified Types.API.DriverInformation as DriverInformationAPI
 import Types.API.Location as Location
 import Types.API.Person
@@ -65,7 +63,6 @@ type TransportAPI =
            :<|> OrganizationAPI --Transporter
            :<|> OrgBecknAPI
            :<|> CaseAPI
-           :<|> CronAPI
            :<|> ProductInstanceAPI
            :<|> VehicleAPI
            :<|> LocationAPI
@@ -271,7 +268,6 @@ transporterServer =
     :<|> organizationFlow
     :<|> orgBecknApiFlow
     :<|> caseFlow
-    :<|> cronFlow
     :<|> productInstanceFlow
     :<|> vehicleFlow
     :<|> locationFlow
@@ -313,21 +309,6 @@ orgBecknApiFlow =
     :<|> BP.serviceStatus
     :<|> BP.trackTrip
     :<|> BP.feedback
-
-type CronAPI =
-  "cron"
-    :> "expire_cases"
-    :> Header "Authorization" CronAuthKey
-    :> ReqBody '[JSON] ExpireCaseReq
-    :> Post '[JSON] ExpireRes
-    :<|> "expire_product_instances"
-    :> Header "Authorization" CronAuthKey
-    :> Post '[JSON] ExpireRes
-
-cronFlow :: FlowServer CronAPI
-cronFlow =
-  Cron.expireCases
-    :<|> Cron.expireProductInstances
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =

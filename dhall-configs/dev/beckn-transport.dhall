@@ -68,7 +68,6 @@ in
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , caseExpiry = Some +7200
-, cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
 , exotelCfg = None common.ExotelCfg

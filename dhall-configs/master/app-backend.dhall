@@ -93,7 +93,6 @@ in
 , signingKeys = common.signingKeys
 , searchConfirmExpiry = Some +600
 , searchCaseExpiry = Some +600
-, cronAuthKey = Some sec.cronAutKey
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
 , exotelCfg = Some common.exotelCfg

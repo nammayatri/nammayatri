@@ -22,7 +22,6 @@ import qualified Product.Cancel as Cancel
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
-import qualified Product.Cron as Cron
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Info as Info
@@ -42,7 +41,6 @@ import qualified Types.API.Cancel as Cancel
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
-import qualified Types.API.Cron as Cron
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
@@ -72,7 +70,6 @@ type AppAPI =
            :<|> UpdateAPI
            :<|> ProductInstanceAPI
            :<|> CancelAPI
-           :<|> CronAPI
            :<|> CallAPIs
            :<|> RouteAPI
            :<|> StatusAPI
@@ -100,7 +97,6 @@ appServer =
     :<|> updateFlow
     :<|> productInstanceFlow
     :<|> cancelFlow
-    :<|> cronFlow
     :<|> callFlow
     :<|> routeApiFlow
     :<|> statusFlow
@@ -261,22 +257,6 @@ cancelFlow :: FlowServer CancelAPI
 cancelFlow =
   Cancel.cancel
     :<|> Cancel.onCancel
-
--------- Cron API --------
-type CronAPI =
-  "cron"
-    :> "expire_cases"
-    :> Header "Authorization" CronAuthKey
-    :> ReqBody '[JSON] Cron.ExpireCaseReq
-    :> Post '[JSON] Cron.ExpireRes
-    :<|> "expire_product_instances"
-    :> Header "Authorization" CronAuthKey
-    :> Post '[JSON] Cron.ExpireRes
-
-cronFlow :: FlowServer CronAPI
-cronFlow =
-  Cron.updateCases
-    :<|> Cron.expireProductInstances
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =
