@@ -37,6 +37,7 @@ updateLocation personId req = withFlowHandlerAPI $ do
     let lastWaypoint = locationToLatLong loc
     let traversedWaypoints = maybe waypointList (: waypointList) lastWaypoint
     distanceMb <- MapSearch.getDistanceMb (Just MapSearch.CAR) traversedWaypoints
+    whenNothing_ distanceMb $ logError "Can't calculate distance when updating location"
     let lastUpdate = fromMaybe now (req.lastUpdate)
     DB.runSqlDBTransaction $ do
       whenJust distanceMb $ QPI.updateDistance driver.id

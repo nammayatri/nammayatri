@@ -43,15 +43,3 @@ emptyScalar unit =
       range = Nothing,
       unit
     }
-
-mkDistance :: Double -> Scalar
-mkDistance dst = (emptyScalar "meters") {value = Just dst}
-
-mkDuration :: Double -> Scalar
-mkDuration t = (emptyScalar "seconds") {value = Just t}
-
-scalarToDouble :: Scalar -> Maybe Double
-scalarToDouble Scalar {..} =
-  value
-    <|> estimated_value
-    <|> computed_value

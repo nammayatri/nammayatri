@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Product.BecknProvider.BP where
 
 import App.Types (FlowHandler)
@@ -13,6 +15,7 @@ import qualified Beckn.Types.Core.API.Track as API
 import qualified Beckn.Types.Core.API.Update as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context (Context (..))
+import Beckn.Types.Core.DecimalValue (convertAmountToDecimalValue)
 import qualified Beckn.Types.Core.Domain as Domain
 import Beckn.Types.Core.Order
   ( Order (..),
@@ -28,6 +31,7 @@ import Beckn.Types.Mobility.Route
 import Beckn.Types.Mobility.Trip (Trip (..))
 import qualified Beckn.Types.Mobility.Vehicle as BVehicle
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Control.Lens ((?~))
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
@@ -257,16 +261,19 @@ mkTrip cId orderPi = do
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = amountToPrice <$> orderPi.price,
+        fare = mkPrice <$> orderPi.price,
         route =
           Just $
             Route
               RouteEdge
                 { path = "",
-                  duration = mkDuration 0, -- TODO: calculate duration and put it here
-                  distance = mkDistance orderPi.distance
+                  duration = emptyScalar "seconds", -- TODO: calculate duration and put it here
+                  distance = emptyScalar "meters" & #computed_value ?~ orderPi.distance
                 }
       }
+  where
+    mkPrice price =
+      emptyPrice & #computed_value ?~ convertAmountToDecimalValue price
 
 mkOnUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>

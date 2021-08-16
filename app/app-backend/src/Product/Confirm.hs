@@ -128,38 +128,22 @@ mkOrderCase Case.Case {..} = do
       }
 
 mkOrderProductInstance :: MonadFlow m => Id Case.Case -> SPI.ProductInstance -> m SPI.ProductInstance
-mkOrderProductInstance caseId prodInst = do
+mkOrderProductInstance caseId' prodInst@SPI.ProductInstance {..} = do
   now <- getCurrentTime
   piid <- generateGUID
-  shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
+  shortId' <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   return
     SPI.ProductInstance
       { id = Id piid,
-        caseId = caseId,
-        productId = prodInst.productId,
-        personId = prodInst.personId,
-        personUpdatedAt = prodInst.personUpdatedAt,
+        caseId = caseId',
         entityType = SPI.VEHICLE,
         entityId = Nothing,
-        shortId = ShortId shortId,
+        shortId = ShortId shortId',
         quantity = 1,
-        price = prodInst.price,
         _type = Case.RIDEORDER,
-        organizationId = prodInst.organizationId,
-        fromLocation = prodInst.fromLocation,
-        toLocation = prodInst.toLocation,
-        startTime = prodInst.startTime,
-        endTime = prodInst.endTime,
-        validTill = prodInst.validTill,
         parentId = Just (prodInst.id),
-        distance = prodInst.distance,
         status = SPI.INSTOCK,
-        info = prodInst.info,
         createdAt = now,
         updatedAt = now,
-        udf1 = prodInst.udf1,
-        udf2 = prodInst.udf2,
-        udf3 = prodInst.udf3,
-        udf4 = prodInst.udf4,
-        udf5 = prodInst.udf5
+        ..
       }
