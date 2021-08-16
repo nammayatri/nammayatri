@@ -377,8 +377,8 @@ updateInfo prodInstId info_ = do
       mconcat
         [info <-. B.val_ (Just pInfo)]
 
-updatePrice :: Amount -> Id Storage.ProductInstance -> DB.SqlDB ()
-updatePrice price' prodInstId = do
+updateActualPrice :: Amount -> Id Storage.ProductInstance -> DB.SqlDB ()
+updateActualPrice price' prodInstId = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update'
@@ -389,7 +389,7 @@ updatePrice price' prodInstId = do
     predicate piId Storage.ProductInstance {..} = id ==. B.val_ piId
     setClause price'' currTime Storage.ProductInstance {..} =
       mconcat
-        [ price <-. B.val_ (Just price''),
+        [ actualPrice <-. B.val_ (Just price''),
           updatedAt <-. B.val_ currTime
         ]
 

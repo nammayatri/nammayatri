@@ -261,7 +261,7 @@ mkTrip cId orderPi = do
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = mkPrice <$> orderPi.price,
+        fare = mkPrice <$> orderPi.actualPrice,
         route =
           Just $
             Route

@@ -236,6 +236,7 @@ mkProductInstance productCase price status transporterId nearestDriverDist = do
         quantity = 1,
         _type = Case.RIDESEARCH,
         price = price,
+        actualPrice = Nothing,
         status = status,
         startTime = productCase.startTime,
         endTime = productCase.endTime,

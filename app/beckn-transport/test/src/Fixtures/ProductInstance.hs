@@ -21,6 +21,7 @@ defaultProductInstance =
       entityId = Nothing,
       quantity = 0,
       price = Just . Amount.Amount $ 100 % 1,
+      actualPrice = Nothing,
       _type = Case.RIDEORDER,
       status = ProductInstance.COMPLETED,
       startTime = Fixtures.defaultTime,

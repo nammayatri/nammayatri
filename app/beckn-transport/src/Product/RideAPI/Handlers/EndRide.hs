@@ -64,8 +64,8 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) mbFare
 
   notifyUpdateToBAP
-    (updatePriceMb mbFare searchPi)
-    (updatePriceMb mbFare orderPi)
+    (updateActualPriceMb mbFare searchPi)
+    (updateActualPriceMb mbFare orderPi)
     PI.COMPLETED
 
   return APISuccess.Success
@@ -89,5 +89,5 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           <> show distanceDiff
       putDiffMetric fareDiff distanceDiff
       pure fare
-    updatePriceMb :: Maybe Amount -> PI.ProductInstance -> PI.ProductInstance
-    updatePriceMb = maybe identity $ \p pi -> pi {PI.price = Just p}
+    updateActualPriceMb :: Maybe Amount -> PI.ProductInstance -> PI.ProductInstance
+    updateActualPriceMb = maybe identity $ \p pi -> pi {PI.actualPrice = Just p}

@@ -41,7 +41,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
 
 endRideTransaction :: DBFlow m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Maybe Amount -> m ()
 endRideTransaction piIds trackerCaseId orderCaseId driverId mbFare = DB.runSqlDBTransaction $ do
-  whenJust mbFare $ forM_ piIds . PI.updatePrice
+  whenJust mbFare $ forM_ piIds . PI.updateActualPrice
   PI.updateStatusByIds piIds PI.COMPLETED
   Case.updateStatus trackerCaseId Case.COMPLETED
   Case.updateStatus orderCaseId Case.COMPLETED
