@@ -20,6 +20,7 @@ import Product.BecknProvider.Confirm as BP
 import Product.BecknProvider.Feedback as BP
 import Product.BecknProvider.Search as BP
 import qualified Product.Call as Call
+import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Case as Case
 import qualified Product.Cron as Cron
 import qualified Product.DriverInformation as DriverInformation
@@ -36,6 +37,7 @@ import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
+import qualified Types.API.CancellationReason as CancellationReason
 import Types.API.Case
 import Types.API.Cron
 import qualified Types.API.DriverInformation as DriverInformationAPI
@@ -73,6 +75,7 @@ type TransportAPI =
            :<|> DriverInformationAPI
            :<|> FarePolicyAPI
            :<|> RideAPI
+           :<|> CancellationReasonAPI
            :<|> GoogleMapsProxyAPI
        )
 
@@ -280,6 +283,7 @@ transporterServer =
     :<|> driverInformationFlow
     :<|> farePolicyFlow
     :<|> rideFlow
+    :<|> cancellationReasonFlow
     :<|> googleMapsProxyFlow
 
 type OrgBecknAPI =
@@ -403,6 +407,7 @@ type RideAPI =
            :<|> TokenAuth
              :> Capture "rideId" (Id ProductInstance)
              :> "cancel"
+             :> ReqBody '[JSON] RideAPI.CancelRideReq
              :> Post '[JSON] APISuccess
        )
 
@@ -412,6 +417,15 @@ rideFlow =
     :<|> RideAPI.StartRide.startRide
     :<|> RideAPI.EndRide.endRide
     :<|> RideAPI.CancelRide.cancelRide
+
+type CancellationReasonAPI =
+  "cancellationReason"
+    :> ( "list"
+           :> Post '[JSON] CancellationReason.ListRes
+       )
+
+cancellationReasonFlow :: FlowServer CancellationReasonAPI
+cancellationReasonFlow = CancellationReason.list
 
 type HealthCheckAPI = Get '[JSON] Text
 

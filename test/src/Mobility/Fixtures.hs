@@ -140,7 +140,7 @@ cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriverAcceptanceRes
 rideStart :: Text -> Id TPI.ProductInstance -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TPI.ProductInstance -> ClientM APISuccess
-rideCancel :: Text -> Id TPI.ProductInstance -> ClientM APISuccess
+rideCancel :: Text -> Id TPI.ProductInstance -> RideAPI.CancelRideReq -> ClientM APISuccess
 rideRespond :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 getDriverInfo :: Text -> ClientM DriverInformationAPI.DriverInformationResponse

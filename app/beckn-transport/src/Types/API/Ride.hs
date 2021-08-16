@@ -4,6 +4,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Id
 import EulerHS.Prelude
 import Types.App
+import Types.Storage.CancellationReason (CancellationReasonCode)
 import Types.Storage.ProductInstance (ProductInstance)
 
 data SetDriverAcceptanceReq = SetDriverAcceptanceReq
@@ -29,3 +30,9 @@ newtype StartRideReq = StartRideReq
   { otp :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+data CancelRideReq = CancelRideReq
+  { reasonCode :: CancellationReasonCode,
+    description :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)

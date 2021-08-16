@@ -159,7 +159,7 @@ cancelRide ::
   Id Ride ->
   CancellationReason ->
   m ()
-cancelRide = BP.cancelRide
+cancelRide rideId reason = BP.cancelRide rideId reason Nothing
 
 cleanupNotifications :: DBFlow m r => Id Ride -> m ()
 cleanupNotifications = QNS.cleanupNotifications

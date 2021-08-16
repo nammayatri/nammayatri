@@ -15,6 +15,7 @@ import qualified "app-backend" Types.API.Case as AppCase
 import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "beckn-transport" Types.API.Ride as RideAPI
+import qualified "beckn-transport" Types.Storage.CancellationReason as SCR
 import qualified "beckn-transport" Types.Storage.Case as TCase
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
@@ -92,10 +93,11 @@ spec = do
       tripAssignedPI.status `shouldBe` TPI.TRIP_ASSIGNED
 
       -- Driver updates RIDEORDER PI to TRIP_REASSIGNMENT
+      let cancelRideReq = RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
       cancelStatusResult <-
         runClient
           tbeClientEnv
-          (rideCancel appRegistrationToken transporterOrderPiId)
+          (rideCancel appRegistrationToken transporterOrderPiId cancelRideReq)
       cancelStatusResult `shouldSatisfy` isRight
 
       piCancelled :| [] <- poll $ do
