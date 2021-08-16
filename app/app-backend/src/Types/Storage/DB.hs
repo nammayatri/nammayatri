@@ -5,6 +5,7 @@ module Types.Storage.DB where
 import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Storage.CancellationReason as CancellationReason
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Geometry as Geometry
 import qualified Types.Storage.Issue as Issue
@@ -14,6 +15,7 @@ import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.Products as Products
 import qualified Types.Storage.RegistrationToken as RegistrationToken
+import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 
 data AppDb f = AppDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
@@ -24,7 +26,9 @@ data AppDb f = AppDb
     productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
     products :: f (B.TableEntity Products.ProductsT),
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
-    geometry :: f (B.TableEntity Geometry.GeometryT)
+    geometry :: f (B.TableEntity Geometry.GeometryT),
+    cancellationReason :: f (B.TableEntity CancellationReason.CancellationReasonT),
+    rideCancellationReason :: f (B.TableEntity RideCancellationReason.RideCancellationReasonT)
   }
   deriving (Generic, B.Database be)
 
@@ -40,7 +44,9 @@ appDb dbSchemaName =
         productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,
         products = setSchema dbSchemaName <> Products.fieldEMod,
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
-        geometry = setSchema dbSchemaName <> Geometry.fieldEMod
+        geometry = setSchema dbSchemaName <> Geometry.fieldEMod,
+        cancellationReason = setSchema dbSchemaName <> CancellationReason.fieldEMod,
+        rideCancellationReason = setSchema dbSchemaName <> RideCancellationReason.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)

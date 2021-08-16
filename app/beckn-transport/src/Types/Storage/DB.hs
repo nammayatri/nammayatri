@@ -6,6 +6,7 @@ import qualified Database.Beam as B
 import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.AllocationEvent as AllocationEvent
+import qualified Types.Storage.CancellationReason as CancellationReason
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverStats as DriverStats
@@ -18,6 +19,7 @@ import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.Products as Product
 import qualified Types.Storage.Rating as Rating
 import qualified Types.Storage.RegistrationToken as RegistrationToken
+import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.TransporterConfig as TransporterConfig
 import qualified Types.Storage.Vehicle as Vehicle
@@ -38,7 +40,9 @@ data TransporterDb f = TransporterDb
     farePolicy :: f (B.TableEntity FarePolicy.FarePolicyT),
     rideRequest :: f (B.TableEntity RideRequest.RideRequestT),
     notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT),
-    allocationEvent :: f (B.TableEntity AllocationEvent.AllocationEventT)
+    allocationEvent :: f (B.TableEntity AllocationEvent.AllocationEventT),
+    cancellationReason :: f (B.TableEntity CancellationReason.CancellationReasonT),
+    rideCancellationReason :: f (B.TableEntity RideCancellationReason.RideCancellationReasonT)
   }
   deriving (Generic, B.Database be)
 
@@ -61,7 +65,9 @@ transporterDb dbSchemaName =
         farePolicy = setSchema dbSchemaName <> FarePolicy.fieldEMod,
         rideRequest = setSchema dbSchemaName <> RideRequest.fieldEMod,
         notificationStatus = setSchema dbSchemaName <> NotificationStatus.fieldEMod,
-        allocationEvent = setSchema dbSchemaName <> AllocationEvent.fieldEMod
+        allocationEvent = setSchema dbSchemaName <> AllocationEvent.fieldEMod,
+        cancellationReason = setSchema dbSchemaName <> CancellationReason.fieldEMod,
+        rideCancellationReason = setSchema dbSchemaName <> RideCancellationReason.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)
