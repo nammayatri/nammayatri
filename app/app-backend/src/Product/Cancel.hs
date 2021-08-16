@@ -1,6 +1,7 @@
 module Product.Cancel (cancel, onCancel) where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.Ack
@@ -12,6 +13,7 @@ import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as MPI
+import qualified Storage.Queries.RideCancellationReason as QRCR
 import Types.API.Cancel as Cancel
 import Types.Error
 import qualified Types.Metrics as Metrics
@@ -19,6 +21,7 @@ import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.RideCancellationReason as SRCR
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
@@ -39,6 +42,7 @@ cancelProductInstance ::
   m CancelRes
 cancelProductInstance personId req = do
   let searchPIid = req.entityId
+  cancellationReason <- req.cancellationReason & fromMaybeM (InvalidRequest "Cancellation reason is not present.")
   searchPI <- MPI.findById (Id searchPIid) >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
   searchCase <- MC.findIdByPersonId personId (searchPI.caseId) >>= fromMaybeM CaseNotFound
   orderPI <- MPI.findByParentIdType (searchPI.id) Case.RIDEORDER >>= fromMaybeM PINotFound
@@ -52,7 +56,13 @@ cancelProductInstance personId req = do
       >>= fromMaybeM OrgNotFound
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
+  DB.runSqlDBTransaction $
+    QRCR.create $ rideCancelationReason orderPI.id cancellationReason
   return Success
+  where
+    rideCancelationReason orderPIId cancellationReason = do
+      let RideCancellationReasonEntity {..} = cancellationReason
+      SRCR.RideCancellationReason {rideId = cast orderPIId, ..}
 
 searchCancel :: (Metrics.HasBAPMetrics m r, DBFlow m r) => Id Person.Person -> CancelReq -> m CancelRes
 searchCancel personId req = do

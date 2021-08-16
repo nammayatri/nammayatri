@@ -28,6 +28,7 @@ import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 import "beckn-transport" Types.App
 import qualified "app-backend" Types.Common as AppCommon
+import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
 import qualified "app-backend" Types.Storage.Case as BCase
 import qualified "beckn-transport" Types.Storage.Case as TCase
 import qualified "app-backend" Types.Storage.Person as BPerson
@@ -152,7 +153,8 @@ buildAppCancelReq :: Text -> CancelAPI.Entity -> CancelAPI.CancelReq
 buildAppCancelReq entityId entityType =
   CancelAPI.CancelReq
     { entityId = entityId,
-      entityType = entityType
+      entityType = entityType,
+      cancellationReason = Just $ CancelAPI.RideCancellationReasonEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
     }
 
 -- For the idea behind generating a client, when nested routes are involved,

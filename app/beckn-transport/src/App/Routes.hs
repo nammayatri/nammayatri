@@ -37,7 +37,7 @@ import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
-import qualified Types.API.CancellationReason as CancellationReason
+import qualified Types.API.CancellationReason as CancellationReasonAPI
 import Types.API.Case
 import Types.API.Cron
 import qualified Types.API.DriverInformation as DriverInformationAPI
@@ -421,7 +421,7 @@ rideFlow =
 type CancellationReasonAPI =
   "cancellationReason"
     :> ( "list"
-           :> Post '[JSON] CancellationReason.ListRes
+           :> Post '[JSON] CancellationReasonAPI.ListRes
        )
 
 cancellationReasonFlow :: FlowServer CancellationReasonAPI

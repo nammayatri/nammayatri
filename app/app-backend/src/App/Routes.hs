@@ -19,6 +19,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
+import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
 import qualified Product.Cron as Cron
@@ -38,6 +39,7 @@ import qualified Product.TrackTrip as TrackTrip
 import qualified Product.Update as Update
 import Servant hiding (throwError)
 import qualified Types.API.Cancel as Cancel
+import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified Types.API.Cron as Cron
@@ -80,6 +82,7 @@ type AppAPI =
            :<|> CustomerSupportAPI
            :<|> GoogleMapsProxyAPI
            :<|> PersonAPI
+           :<|> CancellationReasonAPI
        )
 
 appAPI :: Proxy AppAPI
@@ -107,6 +110,7 @@ appServer =
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
     :<|> personFlow
+    :<|> cancellationReasonFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -425,3 +429,12 @@ personFlow :: FlowServer PersonAPI
 personFlow =
   Person.getPersonDetails
     :<|> Person.updatePerson
+
+type CancellationReasonAPI =
+  "cancellationReason"
+    :> ( "list"
+           :> Post '[JSON] CancellationReasonAPI.ListRes
+       )
+
+cancellationReasonFlow :: FlowServer CancellationReasonAPI
+cancellationReasonFlow = CancellationReason.list
