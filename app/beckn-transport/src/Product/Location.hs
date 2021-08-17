@@ -9,7 +9,7 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.List.NonEmpty as NE
-import Data.Time (diffUTCTime, secondsToNominalDiffTime)
+import Data.Time (diffUTCTime)
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Location as Location
 import qualified Storage.Queries.Person as Person
@@ -33,6 +33,7 @@ updateLocation personId req = withFlowHandlerAPI $ do
     Location.findLocationById locationId
       >>= fromMaybeM LocationNotFound
   now <- getCurrentTime
+  refreshPeriod <- asks (.updateLocationRefreshPeriod) <&> fromIntegral
   if now `diffUTCTime` loc.updatedAt > refreshPeriod
     then do
       let lastWaypoint = locationToLatLong loc
@@ -47,7 +48,6 @@ updateLocation personId req = withFlowHandlerAPI $ do
     else logWarning "UpdateLocation called before refresh period passed, ignoring"
   return Success
   where
-    refreshPeriod = secondsToNominalDiffTime 10
     currPoint = NE.last (req.waypoints)
     waypointList = NE.toList (req.waypoints)
 

@@ -91,4 +91,5 @@ in
 , authTokenCacheExpiry = +600
 , minimumDriverRatesCount = +5
 , recalculateFareEnabled = True
+, updateLocationRefreshPeriod = +5
 }

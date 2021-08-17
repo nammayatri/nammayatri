@@ -61,7 +61,8 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
-    recalculateFareEnabled :: Bool
+    recalculateFareEnabled :: Bool,
+    updateLocationRefreshPeriod :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -97,7 +98,8 @@ data AppEnv = AppEnv
     httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
-    recalculateFareEnabled :: Bool
+    recalculateFareEnabled :: Bool,
+    updateLocationRefreshPeriod :: Seconds
   }
   deriving (Generic)
 
