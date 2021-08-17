@@ -11,8 +11,8 @@ import EulerHS.Prelude hiding (id, state)
 
 data SearchReqLocationT f = SearchReqLocation
   { id :: B.C f (Id SearchReqLocation),
-    lat :: B.C f (Maybe Double),
-    long :: B.C f (Maybe Double),
+    lat :: B.C f Double,
+    long :: B.C f Double,
     district :: B.C f (Maybe Text),
     city :: B.C f (Maybe Text),
     state :: B.C f (Maybe Text),

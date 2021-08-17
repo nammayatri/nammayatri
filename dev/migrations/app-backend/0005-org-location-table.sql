@@ -36,12 +36,7 @@ ALTER TABLE atlas_app.location DROP COLUMN bound;
 
 ALTER TABLE atlas_app.location RENAME TO search_request_location;
 
---------------------------------------------------------------------------------------------
--- Creating locations if there was none for some reason
---------------------------------------------------------------------------------------------
+DELETE FROM atlas_app.search_request_location WHERE lat IS NULL OR long IS NULL;
 
-INSERT INTO atlas_app.organization_location (
-    SELECT T1.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, now (), now ()
-    FROM atlas_app.organization AS T1
-    WHERE NOT EXISTS (SELECT 1 FROM atlas_app.organization_location AS T2 WHERE T1.id = T2.org_id)
-);
+ALTER TABLE atlas_app.search_request_location ALTER COLUMN lat SET NOT NULL;
+ALTER TABLE atlas_app.search_request_location ALTER COLUMN long SET NOT NULL;

@@ -65,8 +65,8 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
         let dropOff = head $ intent.drops
         let startTime = pickup.departure_time.est
         validity <- getValidTime now startTime
-        fromLocation <- mkFromStop now pickup
-        toLocation <- mkFromStop now dropOff
+        fromLocation <- buildFromStop now pickup
+        toLocation <- buildFromStop now dropOff
         let bapOrgId = bapOrg.id
         deadDistance <- calculateDeadDistance transporter fromLocation
         uuid <- L.generateGUID
@@ -78,17 +78,19 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
         ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
           onSearchCallback productCase transporter fromLocation toLocation
 
-mkFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.SearchReqLocation
-mkFromStop now stop = do
+buildFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.SearchReqLocation
+buildFromStop now stop = do
   let loc = stop.location
   let mgps = loc.gps
   let maddress = loc.address
   uuid <- Id <$> L.generateGUID
+  lat <- mgps >>= readMaybe . T.unpack . (.lat) & fromMaybeM (InvalidRequest "Lat field is not present.")
+  lon <- mgps >>= readMaybe . T.unpack . (.lon) & fromMaybeM (InvalidRequest "Lon field is not present.")
   pure $
     Location.SearchReqLocation
       { id = uuid,
-        lat = read . T.unpack . (^. #lat) <$> mgps,
-        long = read . T.unpack . (^. #lon) <$> mgps,
+        lat = lat,
+        long = lon,
         district = Nothing,
         city = (^. #city) <$> maddress,
         state = (^. #state) <$> maddress,
@@ -154,7 +156,7 @@ calculateDeadDistance organization fromLocation = do
   eres <- try $ do
     orgLocation <- OrgLoc.findById organization.id >>= fromMaybeM LocationNotFound
     orgLocLatLong <- LatLong <$> orgLocation.lat <*> orgLocation.long & fromMaybeM (LocationFieldNotPresent "lat or long in OrgLocation")
-    fromLocationLatLong <- LatLong <$> fromLocation.lat <*> fromLocation.long & fromMaybeM (LocationFieldNotPresent "lat or long in StartLocation")
+    let fromLocationLatLong = Location.locationToLatLong fromLocation
     Location.calculateDistance orgLocLatLong fromLocationLatLong
   case eres of
     Left (err :: SomeException) -> do

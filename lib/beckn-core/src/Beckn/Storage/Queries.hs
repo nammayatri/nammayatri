@@ -60,19 +60,15 @@ findOne ::
 findOne dbTable predicate = runSqlDB $ findOne' dbTable predicate
 
 findOne' ::
-  ( MonadTrans t,
-    T.BeamRunner beM,
-    T.BeamRuntime be beM,
-    B.FromBackendRow be (table Identity),
-    B.HasQBuilder be,
+  ( B.FromBackendRow Postgres (table Identity),
     B.Beamable table,
-    B.Database be db
+    B.Database Postgres db
   ) =>
-  B.DatabaseEntity be db (B.TableEntity table) ->
-  ( table (BI.QExpr be B.QBaseScope) ->
-    BI.QExpr be B.QBaseScope Bool
+  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  ( table (BI.QExpr Postgres B.QBaseScope) ->
+    BI.QExpr Postgres B.QBaseScope Bool
   ) ->
-  t (F (L.SqlDBMethodF beM)) (Maybe (table Identity))
+  SqlDB (Maybe (table Identity))
 findOne' dbTable predicate = lift . L.findRow $ B.select $ B.filter_ predicate $ B.all_ dbTable
 
 findAll ::

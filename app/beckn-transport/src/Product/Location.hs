@@ -20,7 +20,6 @@ import qualified Storage.Queries.ProductInstance as QPI
 import Types.API.Location as Location
 import Types.Metrics
 import qualified Types.Storage.Case as Case
-import Types.Storage.DriverLocation (DriverLocation)
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common hiding (id)
@@ -39,7 +38,7 @@ updateLocation personId req = withFlowHandlerAPI $ do
     Just loc ->
       if now `diffUTCTime` loc.updatedAt > refreshPeriod
         then do
-          let lastWaypoint = driverLocToLatLong loc
+          let lastWaypoint = locationToLatLong loc
           let traversedWaypoints = lastWaypoint : waypointList
           res <- MapSearch.getDistanceMb (Just MapSearch.CAR) traversedWaypoints
           whenNothing_ res $ logWarning "Can't calculate distance when updating location"
@@ -77,11 +76,11 @@ getLocation piId = withFlowHandlerAPI $ do
       >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = ride.distance
-      currPoint = driverLocToLatLong currLocation
+      currPoint = locationToLatLong currLocation
   return $ GetLocationRes {..}
 
-driverLocToLatLong :: DriverLocation -> MapSearch.LatLong
-driverLocToLatLong loc =
+locationToLatLong :: (HasField "lat" a Double, HasField "long" a Double) => a -> MapSearch.LatLong
+locationToLatLong loc =
   MapSearch.LatLong loc.lat loc.long
 
 getRoute' ::

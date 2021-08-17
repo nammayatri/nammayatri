@@ -52,8 +52,8 @@ search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   validateDateTime req
   validateServiceability req
-  fromLocation <- mkLocation $ toBeckn $ req.origin
-  toLocation <- mkLocation $ toBeckn $ req.destination
+  fromLocation <- buildSearchReqLoc $ toBeckn $ req.origin
+  toLocation <- buildSearchReqLoc $ toBeckn $ req.destination
   case_ <- mkCase req (getId personId) fromLocation toLocation
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   let txnId = getId (case_.id)
@@ -205,17 +205,19 @@ mkCase req userId from to = do
           validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-mkLocation :: MonadFlow m => BS.Stop -> m Location.SearchReqLocation
-mkLocation BS.Stop {..} = do
+buildSearchReqLoc :: MonadFlow m => BS.Stop -> m Location.SearchReqLocation
+buildSearchReqLoc BS.Stop {..} = do
   let loc = location
   now <- getCurrentTime
   locId <- generateGUID
   let mgps = loc.gps
+  lat <- mgps >>= readMaybe . T.unpack . (.lat) & fromMaybeM (InvalidRequest "Lat field is not present.")
+  lon <- mgps >>= readMaybe . T.unpack . (.lon) & fromMaybeM (InvalidRequest "Lon field is not present.")
   return
     Location.SearchReqLocation
       { id = locId,
-        lat = read . T.unpack . (.lat) <$> mgps,
-        long = read . T.unpack . (.lon) <$> mgps,
+        lat = lat,
+        long = lon,
         district = Nothing,
         city = (.name) <$> loc.city,
         state = (.state) <$> loc.address,

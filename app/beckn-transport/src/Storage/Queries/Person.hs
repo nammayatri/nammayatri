@@ -12,6 +12,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Types.Schema
+import Data.Time (addUTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import Database.PostgreSQL.Simple.SqlQQ (sql)
@@ -23,7 +24,6 @@ import qualified Types.Storage.Person as Storage
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 import Utils.PostgreSQLSimple (postgreSQLSimpleQuery)
-import Data.Time (addUTCTime)
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.PersonT))
 getDbTable =

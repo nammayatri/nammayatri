@@ -173,8 +173,8 @@ calculateDriverPool ::
   m [(Id Driver, Double)]
 calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM LocationNotFound
-  lat <- location.lat & fromMaybeM (LocationFieldNotPresent "lat")
-  long <- location.long & fromMaybeM (LocationFieldNotPresent "lon")
+  let lat = location.lat
+      long = location.long
   radius <- getRadius
   measuringDurationToLog INFO "calculateDriverPool" $
     QP.getNearestDrivers

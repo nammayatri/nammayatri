@@ -43,11 +43,7 @@ INSERT INTO atlas_transporter.driver_location (
     INNER JOIN atlas_transporter.person AS T2
     ON T1.id = T2.location_id);
 DELETE FROM atlas_transporter.location WHERE id IN (SELECT location_id FROM atlas_transporter.person);
-DELETE FROM atlas_transporter.driver_location WHERE lat IS NULL OR long IS NULL;
-
-UPDATE atlas_transporter.driver_location AS T1 
-	SET point = public.ST_SetSRID(public.ST_Point(T1.long, T1.lat), 4326)
-    WHERE point IS NULL;
+DELETE FROM atlas_transporter.driver_location WHERE lat IS NULL OR long IS NULL OR point IS NULL;
 
 ALTER TABLE atlas_transporter.driver_location ALTER COLUMN lat SET NOT NULL;
 ALTER TABLE atlas_transporter.driver_location ALTER COLUMN long SET NOT NULL;
@@ -63,12 +59,7 @@ ALTER TABLE atlas_transporter.location DROP COLUMN bound;
 
 ALTER TABLE atlas_transporter.location RENAME TO search_request_location;
 
---------------------------------------------------------------------------------------------
--- Creating locations if there was none for some reason
---------------------------------------------------------------------------------------------
+DELETE FROM atlas_transporter.search_request_location WHERE lat IS NULL OR long IS NULL;
 
-INSERT INTO atlas_transporter.organization_location (
-    SELECT T1.id, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, now (), now ()
-    FROM atlas_transporter.organization AS T1
-    WHERE NOT EXISTS (SELECT 1 FROM atlas_transporter.organization_location AS T2 WHERE T1.id = T2.org_id)
-);
+ALTER TABLE atlas_transporter.search_request_location ALTER COLUMN lat SET NOT NULL;
+ALTER TABLE atlas_transporter.search_request_location ALTER COLUMN long SET NOT NULL;

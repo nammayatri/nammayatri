@@ -38,8 +38,8 @@ defaultPickupLocation =
   PickupLocation $
     Location.SearchReqLocation
       { id = Id "",
-        lat = Just 0.0,
-        long = Just 0.0,
+        lat = 0.0,
+        long = 0.0,
         district = Nothing,
         city = Nothing,
         state = Nothing,
@@ -55,8 +55,8 @@ defaultDropLocation =
   DropLocation $
     Location.SearchReqLocation
       { id = Id "",
-        lat = Just 0.0,
-        long = Just 0.0,
+        lat = 0.0,
+        long = 0.0,
         district = Nothing,
         city = Nothing,
         state = Nothing,
