@@ -20,7 +20,7 @@ data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
     findAllPIByParentId :: Id PI.ProductInstance -> m [PI.ProductInstance],
-    endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Maybe Amount -> m (),
+    endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> m (),
     findCaseByIdAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
     notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> m (),
     calculateFare ::
@@ -55,17 +55,17 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER >>= fromMaybeM CaseNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  mbFare <-
+  actualPrice <-
     ifM
       recalculateFareEnabled
-      (Just <$> recalculateFare orderCase orderPi)
-      (pure Nothing)
+      (recalculateFare orderCase orderPi)
+      (orderPi.price & fromMaybeM (PIFieldNotPresent "price"))
 
-  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) mbFare
+  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) actualPrice
 
   notifyUpdateToBAP
-    (updateActualPriceMb mbFare searchPi)
-    (updateActualPriceMb mbFare orderPi)
+    (updateActualPrice actualPrice searchPi)
+    (updateActualPrice actualPrice orderPi)
     PI.COMPLETED
 
   return APISuccess.Success
@@ -89,5 +89,5 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           <> show distanceDiff
       putDiffMetric fareDiff distanceDiff
       pure fare
-    updateActualPriceMb :: Maybe Amount -> PI.ProductInstance -> PI.ProductInstance
-    updateActualPriceMb = maybe identity $ \p pi -> pi {PI.actualPrice = Just p}
+    updateActualPrice :: Amount -> PI.ProductInstance -> PI.ProductInstance
+    updateActualPrice = \p pi -> pi {PI.actualPrice = Just p}
