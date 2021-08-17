@@ -7,7 +7,6 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue
 import Beckn.Types.Core.Tracking
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Route
 import Beckn.Types.Mobility.Trip
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
@@ -39,11 +38,9 @@ onUpdate _org req = withFlowHandlerBecknAPI $
               orderPi
                 { SPI.info = encodeToText <$> uInfo,
                   SPI.actualPrice =
-                    (trip >>= fare >>= (.computed_value) >>= convertDecimalValueToAmount)
-                      <|> orderPi.actualPrice,
+                    trip >>= fare >>= (.computed_value) >>= convertDecimalValueToAmount,
                   SPI.actualDistance =
-                    (trip >>= route <&> edge <&> distance >>= (.computed_value))
-                      <|> orderPi.actualDistance
+                    trip >>= (.route) >>= (.edge.distance.computed_value)
                 }
         MPI.updateMultipleFlow (orderPi.id) uPrd
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err

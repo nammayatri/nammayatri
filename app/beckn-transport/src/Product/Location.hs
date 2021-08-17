@@ -33,16 +33,18 @@ updateLocation personId req = withFlowHandlerAPI $ do
     Location.findLocationById locationId
       >>= fromMaybeM LocationNotFound
   now <- getCurrentTime
-  when (now `diffUTCTime` loc.updatedAt > refreshPeriod) $ do
-    let lastWaypoint = locationToLatLong loc
-    let traversedWaypoints = maybe waypointList (: waypointList) lastWaypoint
-    distanceMb <- MapSearch.getDistanceMb (Just MapSearch.CAR) traversedWaypoints
-    whenNothing_ distanceMb $ logError "Can't calculate distance when updating location"
-    let lastUpdate = fromMaybe now (req.lastUpdate)
-    DB.runSqlDBTransaction $ do
-      whenJust distanceMb $ QPI.updateDistance driver.id
-      Location.updateGpsCoord locationId lastUpdate currPoint
-    logTagInfo "driverLocationUpdate" (getId personId <> " " <> show req.waypoints)
+  if now `diffUTCTime` loc.updatedAt > refreshPeriod
+    then do
+      let lastWaypoint = locationToLatLong loc
+      let traversedWaypoints = maybe waypointList (: waypointList) lastWaypoint
+      distanceMb <- MapSearch.getDistanceMb (Just MapSearch.CAR) traversedWaypoints
+      whenNothing_ distanceMb $ logWarning "Can't calculate distance when updating location"
+      let lastUpdate = fromMaybe now (req.lastUpdate)
+      DB.runSqlDBTransaction $ do
+        whenJust distanceMb $ QPI.updateDistance driver.id
+        Location.updateGpsCoord locationId lastUpdate currPoint
+      logTagInfo "driverLocationUpdate" (getId personId <> " " <> show req.waypoints)
+    else logWarning "UpdateLocation called before refresh period passed, ignoring"
   return Success
   where
     refreshPeriod = secondsToNominalDiffTime 10
