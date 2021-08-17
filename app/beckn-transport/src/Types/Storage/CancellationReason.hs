@@ -4,7 +4,7 @@ module Types.Storage.CancellationReason where
 
 import qualified Data.Text as T
 import qualified Database.Beam as B
-import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
+import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
 import Types.Storage.Organization
@@ -12,11 +12,11 @@ import Types.Storage.Organization
 newtype CancellationReasonCode = CancellationReasonCode Text
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationReasonCode where
-  sqlValueSyntax = autoSqlValueSyntax
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be CancellationReasonCode where
+  sqlValueSyntax (CancellationReasonCode code) = sqlValueSyntax code
 
 instance FromBackendRow Postgres CancellationReasonCode where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = CancellationReasonCode . read . T.unpack <$> fromBackendRow
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationReasonCode
 

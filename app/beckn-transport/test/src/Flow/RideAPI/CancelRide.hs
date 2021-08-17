@@ -10,8 +10,10 @@ import Servant.Server as Serv (ServerError)
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
+import qualified Types.API.Ride as RideAPI
 import Types.App
 import Types.Error
+import Types.Storage.CancellationReason
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as ProductInstance
 import Utils.GuidGenerator ()
@@ -22,7 +24,7 @@ handle =
   CancelRide.ServiceHandle
     { findPIById = \_piId -> pure $ Just rideProductInstance,
       findPersonById = \_personid -> pure $ Just Fixtures.defaultDriver,
-      cancelRide = \_rideReq _requestedByAdmin -> pure ()
+      cancelRide = \_rideReq _requestedByAdmin _ -> pure ()
     }
 
 rideProductInstance :: ProductInstance.ProductInstance
@@ -43,19 +45,23 @@ cancelRide =
       failedCancellationWhenProductInstanceStatusIsWrong
     ]
 
-runHandler :: CancelRide.ServiceHandle IO -> Id Person.Person -> Id Ride -> IO APISuccess.APISuccess
+runHandler :: CancelRide.ServiceHandle IO -> Id Person.Person -> Id Ride -> RideAPI.CancelRideReq -> IO APISuccess.APISuccess
 runHandler = CancelRide.cancelRideHandler
+
+someCancelRideReq :: RideAPI.CancelRideReq
+someCancelRideReq =
+  RideAPI.CancelRideReq (CancellationReasonCode "OTHER") $ Just "Your car is not flying."
 
 successfulCancellationByDriver :: TestTree
 successfulCancellationByDriver =
   testCase "Cancel successfully if requested by driver executor" $ do
-    runHandler handle (Id "1") "1"
+    runHandler handle (Id "1") "1" someCancelRideReq
       `shouldReturn` APISuccess.Success
 
 successfulCancellationByAdmin :: TestTree
 successfulCancellationByAdmin =
   testCase "Cancel successfully if requested by admin" $ do
-    runHandler handleCase (Id "1") "1"
+    runHandler handleCase (Id "1") "1" someCancelRideReq
       `shouldReturn` APISuccess.Success
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just admin}
@@ -67,7 +73,7 @@ successfulCancellationByAdmin =
 successfulCancellationWithoutDriverByAdmin :: TestTree
 successfulCancellationWithoutDriverByAdmin =
   testCase "Cancel successfully if ride has no driver but requested by admin" $ do
-    runHandler handleCase (Id "1") "1"
+    runHandler handleCase (Id "1") "1" someCancelRideReq
       `shouldReturn` APISuccess.Success
   where
     handleCase =
@@ -84,7 +90,7 @@ successfulCancellationWithoutDriverByAdmin =
 failedCancellationByAnotherDriver :: TestTree
 failedCancellationByAnotherDriver =
   testCase "Fail cancellation if requested by driver not executor" $ do
-    runHandler handleCase (Id "driverNotExecutorId") "1"
+    runHandler handleCase (Id "driverNotExecutorId") "1" someCancelRideReq
       `shouldThrow` (== NotAnExecutor)
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just driverNotExecutor}
@@ -93,7 +99,7 @@ failedCancellationByAnotherDriver =
 failedCancellationWithoutDriverByDriver :: TestTree
 failedCancellationWithoutDriverByDriver =
   testCase "Fail cancellation if ride has no driver and requested by driver" $ do
-    runHandler handleCase (Id "1") "1"
+    runHandler handleCase (Id "1") "1" someCancelRideReq
       `shouldThrow` (== PIFieldNotPresent "person")
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure $ Just piWithoutDriver}
@@ -102,7 +108,7 @@ failedCancellationWithoutDriverByDriver =
 failedCancellationWhenProductInstanceStatusIsWrong :: TestTree
 failedCancellationWhenProductInstanceStatusIsWrong =
   testCase "Fail cancellation if product instance has inappropriate ride status" $ do
-    runHandler handleCase (Id "1") "1"
+    runHandler handleCase (Id "1") "1" someCancelRideReq
       `shouldThrow` (\(PIInvalidStatus _) -> True)
   where
     handleCase = handle {CancelRide.findPIById = \piId -> pure $ Just completedPI}

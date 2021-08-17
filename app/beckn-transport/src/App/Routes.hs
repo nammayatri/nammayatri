@@ -421,7 +421,7 @@ rideFlow =
 type CancellationReasonAPI =
   "cancellationReason"
     :> ( "list"
-           :> Post '[JSON] CancellationReasonAPI.ListRes
+           :> Get '[JSON] CancellationReasonAPI.ListRes
        )
 
 cancellationReasonFlow :: FlowServer CancellationReasonAPI
