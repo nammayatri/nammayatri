@@ -1,0 +1,13 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "atlas_dev",
+            "Group": "Servers",
+            "Port": 5432,
+            "Username": "atlas",
+            "Host": "atlas-dev",
+            "SSLMode": "prefer",
+            "MaintenanceDB": "postgres"
+        }
+    }
+}

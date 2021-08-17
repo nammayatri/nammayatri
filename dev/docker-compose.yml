@@ -1,4 +1,9 @@
 version: "3"
+
+volumes:
+  prometheus-volume:
+  pgadmin-data:
+
 services:
   db:
     image: "postgis/postgis:12-3.0"
@@ -99,5 +104,20 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-volumes:
-  prometheus-volume:
+
+  pg-admin:
+    image: dpage/pgadmin4
+    ports:
+      - "9201:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: root@localhost.localdomain
+      PGADMIN_DEFAULT_PASSWORD: secret
+      PGADMIN_DISABLE_POSTFIX: "true"
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+
+    profiles:
+      - pgadmin

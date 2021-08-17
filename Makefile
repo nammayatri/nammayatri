@@ -72,6 +72,10 @@ run-monitoring: ./dev/docker-compose.yml
 	# Run monitoring stack - Prometheus and grafana in docker containers
 	docker-compose -f ./dev/docker-compose.yml --profile monitoring up -d
 
+run-pgadmin: ./dev/docker-compose.yml
+	# Run pgadmin stack - Pgadmin in a docker container
+	docker-compose -f ./dev/docker-compose.yml --profile pgadmin up -d
+
 stop-all-containers: ./dev/docker-compose.yml
 	# Stop all docker containers
 	docker-compose -f ./dev/docker-compose.yml down --remove-orphans
