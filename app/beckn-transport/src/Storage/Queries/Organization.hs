@@ -1,6 +1,5 @@
 module Storage.Queries.Organization where
 
-import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.App
 import Beckn.Types.Common
@@ -18,11 +17,6 @@ import Utils.Common
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.OrganizationT))
 getDbTable =
   DB.organization . DB.transporterDb <$> getSchemaName
-
-create :: DBFlow m r => Storage.Organization -> m ()
-create Storage.Organization {..} = do
-  dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertExpression Storage.Organization {..})
 
 verifyToken :: DBFlow m r => RegToken -> m Storage.Organization
 verifyToken regToken = do

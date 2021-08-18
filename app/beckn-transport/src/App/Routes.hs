@@ -173,9 +173,6 @@ type OrganizationAPI =
     :> ( TokenAuth
            :> Get '[JSON] TransporterRec
            :<|> TokenAuth
-           :> ReqBody '[JSON] TransporterReq
-           :> Post '[JSON] TransporterRes
-           :<|> TokenAuth
            :> Capture "orgId" (Id Organization)
            :> ReqBody '[JSON] UpdateTransporterReq
            :> Post '[JSON] TransporterRec
@@ -184,7 +181,6 @@ type OrganizationAPI =
 organizationFlow :: FlowServer OrganizationAPI
 organizationFlow =
   Transporter.getTransporter
-    :<|> Transporter.createTransporter
     :<|> Transporter.updateTransporter
 
 -----------------------------
