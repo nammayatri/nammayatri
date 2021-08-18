@@ -12,7 +12,7 @@ import Types.Storage.ProductInstance (ProductInstance)
 data RideCancellationReasonT f = RideCancellationReason
   { rideId :: B.C f (Id ProductInstance),
     reasonCode :: B.C f CancellationReasonCode,
-    description :: B.C f (Maybe Text)
+    additionalInfo :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -35,5 +35,6 @@ fieldEMod =
   B.setEntityName "ride_cancellation_reason"
     <> B.modifyTableFields
       B.tableModification
-        { reasonCode = "reason_code"
+        { reasonCode = "reason_code",
+          additionalInfo = "additional_info"
         }

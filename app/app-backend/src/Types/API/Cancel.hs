@@ -10,7 +10,7 @@ data Entity = CASE | PRODUCT_INSTANCE
 data CancelReq = CancelReq
   { entityId :: Text,
     entityType :: Entity,
-    cancellationReason :: Maybe RideCancellationReasonEntity
+    rideCancellationReason :: Maybe RideCancellationReasonEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -18,6 +18,6 @@ type CancelRes = APISuccess
 
 data RideCancellationReasonEntity = RideCancellationReasonEntity
   { reasonCode :: CancellationReasonCode,
-    description :: Maybe Text
+    additionalInfo :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)

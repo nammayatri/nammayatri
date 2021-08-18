@@ -33,6 +33,6 @@ newtype StartRideReq = StartRideReq
 
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
-    description :: Maybe Text
+    additionalInfo :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)

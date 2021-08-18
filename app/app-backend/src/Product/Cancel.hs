@@ -42,7 +42,7 @@ cancelProductInstance ::
   m CancelRes
 cancelProductInstance personId req = do
   let searchPIid = req.entityId
-  cancellationReason <- req.cancellationReason & fromMaybeM (InvalidRequest "Cancellation reason is not present.")
+  rideCancellationReasonAPI <- req.rideCancellationReason & fromMaybeM (InvalidRequest "Cancellation reason is not present.")
   searchPI <- MPI.findById (Id searchPIid) >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
   searchCase <- MC.findIdByPersonId personId (searchPI.caseId) >>= fromMaybeM CaseNotFound
   orderPI <- MPI.findByParentIdType (searchPI.id) Case.RIDEORDER >>= fromMaybeM PINotFound
@@ -57,10 +57,10 @@ cancelProductInstance personId req = do
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
   DB.runSqlDBTransaction $
-    QRCR.create $ rideCancelationReason orderPI.id cancellationReason
+    QRCR.create $ makeRideCancelationReason orderPI.id rideCancellationReasonAPI
   return Success
   where
-    rideCancelationReason orderPIId cancellationReason = do
+    makeRideCancelationReason orderPIId cancellationReason = do
       let RideCancellationReasonEntity {..} = cancellationReason
       SRCR.RideCancellationReason {rideId = cast orderPIId, ..}
 
