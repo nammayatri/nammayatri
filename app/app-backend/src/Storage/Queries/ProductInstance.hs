@@ -182,7 +182,9 @@ updateMultiple piId prdInst = do
           fromLocation <-. B.val_ (Storage.fromLocation prodInst),
           toLocation <-. B.val_ (Storage.toLocation prodInst),
           info <-. B.val_ (Storage.info prodInst),
-          udf4 <-. B.val_ (Storage.udf4 prodInst)
+          udf4 <-. B.val_ (Storage.udf4 prodInst),
+          actualPrice <-. B.val_ (Storage.actualPrice prodInst),
+          actualDistance <-. B.val_ (Storage.actualDistance prodInst)
         ]
 
 findByParentIdType ::
