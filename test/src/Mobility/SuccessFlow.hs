@@ -31,7 +31,7 @@ spec = do
     it "Testing API flow for successful booking and completion of ride" do
       -- Driver sets online
       setDriverOnlineResponse <-
-        runClient tbeClientEnv $ setDriverOnline appRegistrationToken True
+        runClient tbeClientEnv $ setDriverOnline driverToken True
       setDriverOnlineResponse `shouldSatisfy` isRight
 
       -- Do an App Search

@@ -40,8 +40,6 @@ createTransporter personId req = withFlowHandlerAPI $ do
   return $ TransporterRes (makeUserInfoRes updatedPerson) organization
   where
     validate person = do
-      unless (person.verified) $
-        throwError AccessDenied
       when (person.role /= SP.ADMIN) $
         throwError Unauthorized
       when (isJust person.organizationId) $
@@ -74,8 +72,7 @@ updateTransporter personId orgId req = withFlowHandlerAPI $ do
   maybePerson <- QP.findPersonByIdAndRoleAndOrgId personId SP.ADMIN orgId
   now <- getCurrentTime
   case maybePerson of
-    Just person -> do
-      validate person
+    Just _ -> do
       org <-
         QO.findOrganizationById orgId
           >>= fromMaybeM OrgDoesNotExist
@@ -87,8 +84,6 @@ updateTransporter personId orgId req = withFlowHandlerAPI $ do
       return $ TransporterRec organization
     Nothing -> throwError PersonDoesNotExist
   where
-    validate person =
-      unless (person.verified) $ throwError AccessDenied
     addTime fromTime org =
       return $ org {SO.fromTime = fromTime}
 
@@ -97,10 +92,6 @@ getTransporter personId = withFlowHandlerAPI $ do
   person <-
     QP.findPersonById personId
       >>= fromMaybeM PersonNotFound
-  validate person
   case person.organizationId of
     Just orgId -> TransporterRec <$> (QO.findOrganizationById orgId >>= fromMaybeM OrgNotFound)
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
-  where
-    validate person =
-      unless (person.verified) $ throwError AccessDenied

@@ -78,6 +78,7 @@ data FCMNotificationType
   | TRIP_FINISHED
   | ALLOCATION_REQUEST
   | ALLOCATION_REQUEST_UNASSIGNED
+  | ACCOUNT_SUSPENDED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Entity types types

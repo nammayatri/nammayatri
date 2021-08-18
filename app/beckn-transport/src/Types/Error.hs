@@ -75,3 +75,20 @@ instance IsBaseError ShardMappingError where
   toMessage (ShardMappingError msg) = Just msg
 
 instanceExceptionWithParent 'BaseException ''ShardMappingError
+
+data DriverError
+  = DriverActivitySuspended
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DriverError
+
+instance IsBaseError DriverError where
+  toMessage DriverActivitySuspended = Just "Driver activity has been suspended. He can't be active and receive rides in this state."
+
+instance IsHTTPError DriverError where
+  toErrorCode = \case
+    DriverActivitySuspended -> "DRIVER_ACTIVITY_SUSPENDED"
+  toHttpCode = \case
+    DriverActivitySuspended -> E403
+
+instance IsAPIError DriverError

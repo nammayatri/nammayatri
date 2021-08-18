@@ -115,7 +115,6 @@ updateMultiple personId person = do
           organizationId <-. B.val_ (sPerson.organizationId),
           locationId <-. B.val_ (sPerson.locationId),
           description <-. B.val_ (sPerson.description),
-          status <-. B.val_ (sPerson.status),
           role <-. B.val_ (sPerson.role),
           identifier <-. B.val_ (sPerson.identifier),
           rating <-. B.val_ (sPerson.rating),
@@ -141,36 +140,34 @@ updateDeviceToken personId mbDeviceToken = do
 update ::
   DBFlow m r =>
   Id Storage.Person ->
-  Maybe Storage.Status ->
   Maybe Text ->
   Maybe Text ->
   Maybe Storage.Role ->
   Maybe Storage.IdentifierType ->
   Maybe Text ->
   m ()
-update personId statusM nameM emailM roleM identTypeM identM = do
+update personId nameM emailM roleM identTypeM identM = do
   dbTable <- getDbTable
   (currTime :: UTCTime) <- getCurrentTime
   DB.update
     dbTable
-    (setClause statusM nameM emailM roleM identM identTypeM currTime)
+    (setClause nameM emailM roleM identM identTypeM currTime)
     (predicate personId)
   where
-    setClause scStatusM scNameM scEmailM scRoleM scIdentM scIdentTypeM currTime Storage.Person {..} =
+    setClause scNameM scEmailM scRoleM scIdentM scIdentTypeM currTime Storage.Person {..} =
       mconcat
         ( [ updatedAt <-. B.val_ currTime
           ]
             <> (\name -> [fullName <-. B.val_ name]) scNameM
             <> (\email_ -> [email <-. B.val_ email_]) scEmailM
             <> maybe [] (\role_ -> [role <-. B.val_ role_]) scRoleM
-            <> maybe [] (\status_ -> [status <-. B.val_ status_]) scStatusM
             <> maybe [] (\iden -> [identifier <-. B.val_ (Just iden)]) scIdentM
             <> maybe [] (\idT -> [identifierType <-. B.val_ idT]) scIdentTypeM
         )
     predicate pid Storage.Person {..} = id ==. B.val_ pid
 
-setVerified :: Id Storage.Person -> DB.SqlDB ()
-setVerified personId = do
+setIsNewFalse :: Id Storage.Person -> DB.SqlDB ()
+setIsNewFalse personId = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update' dbTable (setClause now) (predicate personId)
@@ -178,20 +175,7 @@ setVerified personId = do
     setClause currTime Storage.Person {..} =
       mconcat
         [ updatedAt <-. B.val_ currTime,
-          verified <-. B.val_ True
-        ]
-    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
-
-updateStatus :: Id Storage.Person -> Storage.Status -> DB.SqlDB ()
-updateStatus personId newStatus = do
-  dbTable <- getDbTable
-  now <- getCurrentTime
-  DB.update' dbTable (setClause now newStatus) (predicate personId)
-  where
-    setClause currTime newStatus_ Storage.Person {..} =
-      mconcat
-        [ updatedAt <-. B.val_ currTime,
-          status <-. B.val_ newStatus_
+          isNew <-. B.val_ False
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 

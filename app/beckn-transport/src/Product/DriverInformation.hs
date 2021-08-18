@@ -3,14 +3,16 @@ module Product.DriverInformation where
 import App.Types
 import qualified App.Types as App
 import Beckn.External.Encryption (decrypt)
+import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Utils.Validation
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import qualified Product.Location as Location
 import Product.Person (sendInviteSms)
 import qualified Product.Person as Person
@@ -32,6 +34,7 @@ import Types.Error
 import qualified Types.Storage.DriverInformation as DriverInfo
 import qualified Types.Storage.Person as SP
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
+import qualified Utils.Notifications as Notify
 
 createDriver :: Text -> DriverInformationAPI.CreateDriverReq -> FlowHandler DriverInformationAPI.CreateDriverRes
 createDriver orgId req = withFlowHandlerAPI $ do
@@ -75,6 +78,7 @@ createDriverDetails personId = do
           { driverId = personId,
             active = False,
             onRide = False,
+            enabled = True,
             createdAt = now,
             updatedAt = now
           }
@@ -101,11 +105,15 @@ getInformation personId = withFlowHandlerAPI $ do
         driverInformation = driverInfo
       }
 
-setActivity :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
-setActivity personId isActive = withFlowHandlerAPI $ do
-  _ <- Registration.checkPersonExists $ getId personId
+setOnline :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
+setOnline personId isOnline = withFlowHandlerAPI $ do
+  _ <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
   let driverId = cast personId
-  QDriverInformation.updateActivity driverId isActive
+  when isOnline $ do
+    driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+    unless driverInfo.enabled $ throwError DriverActivitySuspended
+  DB.runSqlDBTransaction $
+    QDriverInformation.updateOnline driverId isOnline
   pure APISuccess.Success
 
 getRideInfo :: Id SP.Person -> Maybe (Id Ride) -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
@@ -192,3 +200,26 @@ linkVehicle orgId personId req = withFlowHandlerAPI $ do
   whenJust prevPerson $ \_ -> throwError VehicleAlreadyLinked
   QPerson.updateVehicleFlow personId $ Just (req.vehicleId)
   return APISuccess.Success
+
+activateDriver :: Text -> Id SP.Person -> FlowHandler APISuccess
+activateDriver = changeDriverActiveState True
+
+deactivateDriver :: Text -> Id SP.Person -> FlowHandler APISuccess
+deactivateDriver = changeDriverActiveState False
+
+changeDriverActiveState :: Bool -> Text -> Id SP.Person -> FlowHandler APISuccess
+changeDriverActiveState state orgId personId = withFlowHandlerAPI $ do
+  person <-
+    QPerson.findPersonById personId
+      >>= fromMaybeM PersonDoesNotExist
+  unless (person.organizationId == Just (Id orgId)) $ throwError Unauthorized
+  DB.runSqlDBTransaction $ do
+    QDriverInformation.updateAvailabilityState driverId state
+    unless state $ QDriverInformation.updateOnline driverId False
+  unless state $
+    Notify.notifyDriver FCM.ACCOUNT_SUSPENDED notificationTitle notificationMessage person
+  return Success
+  where
+    driverId = cast personId
+    notificationTitle = "Account is suspended."
+    notificationMessage = "Your account has been suspended! Contact support for more info."

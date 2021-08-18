@@ -22,23 +22,6 @@ import Servant.API
 import qualified Types.Storage.Location as Loc
 import qualified Types.Storage.Organization as Org
 
-data Status = ACTIVE | INACTIVE
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres Status where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
-
-instance ToSchema Status
-
-instance ToParamSchema Status
-
-instance BeamSqlBackend be => B.HasSqlEqualityCheck be Status
-
--------------------------------------------------------------------------------------------
-
 data Role
   = USER
   | CUSTOMER_SUPPORT
@@ -120,10 +103,9 @@ data PersonTE e f = Person
     passwordHash :: B.C f (Maybe DbHash),
     identifier :: B.C f (Maybe Text),
     rating :: B.C f (Maybe Text),
-    verified :: B.C f Bool,
+    isNew :: B.C f Bool,
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
-    status :: B.C f Status,
     organizationId :: B.C f (Maybe (Id Org.Organization)),
     locationId :: B.C f (Maybe (Id Loc.Location)),
     deviceToken :: B.C f (Maybe FCM.FCMRecipientToken),
@@ -178,6 +160,7 @@ fieldEMod =
         lastName = "last_name",
         fullName = "full_name",
         passwordHash = "password_hash",
+        isNew = "is_new",
         mobileNumber =
           EncryptedHashed
             { encrypted = "mobile_number_encrypted",

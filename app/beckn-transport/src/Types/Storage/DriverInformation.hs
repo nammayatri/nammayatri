@@ -10,6 +10,7 @@ data DriverInformationT f = DriverInformation
   { driverId :: B.C f (Id Person),
     active :: B.C f Bool,
     onRide :: B.C f Bool,
+    enabled :: B.C f Bool,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

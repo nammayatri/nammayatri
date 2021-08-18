@@ -30,7 +30,7 @@ login T.LoginReq {..} = withFlowHandlerAPI $ do
   case personM of
     Nothing -> throwError Unauthorized
     Just person ->
-      if person.status /= SP.ACTIVE && person.role /= SP.CUSTOMER_SUPPORT
+      if person.role /= SP.CUSTOMER_SUPPORT
         then throwError Unauthorized
         else do
           token <- generateToken person

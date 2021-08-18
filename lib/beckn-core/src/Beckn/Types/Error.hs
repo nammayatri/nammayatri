@@ -22,7 +22,6 @@ data AuthError
   | IncorrectOTP
   | AccessDenied
   | HitsLimitError Int
-  | AccountSuspended
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''AuthError
@@ -33,7 +32,6 @@ instance IsBaseError AuthError where
     InvalidToken token -> Just $ "Invalid token: " <> token
     AuthBlocked reason -> Just $ "Authentication process blocked: " <> reason
     AccessDenied -> Just "You have no access to this operation."
-    AccountSuspended -> Just "Your account has been suspended. Contact support for more info."
     HitsLimitError hitsLimitResetTime -> Just $ "Hits limit reached. Try again in " <> show hitsLimitResetTime <> " sec."
     _ -> Nothing
 
@@ -48,12 +46,10 @@ instance IsHTTPError AuthError where
     IncorrectOTP -> "INCORRECT_OTP"
     AccessDenied -> "ACCESS_DENIED"
     HitsLimitError _ -> "HITS_LIMIT_EXCEED"
-    AccountSuspended -> "ACCOUNT_SUSPENDED"
   toHttpCode = \case
     Unauthorized -> E401
     InvalidToken _ -> E401
     AccessDenied -> E403
-    AccountSuspended -> E403
     HitsLimitError _ -> E429
     _ -> E400
 

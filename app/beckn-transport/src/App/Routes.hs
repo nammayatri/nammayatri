@@ -122,14 +122,6 @@ type PersonAPI =
            :<|> AdminTokenAuth
              :> Capture "personId" (Id Person)
              :> Delete '[JSON] DeletePersonRes
-           :<|> "activate"
-             :> AdminTokenAuth
-             :> Capture "personId" (Id Person)
-             :> Post '[JSON] APISuccess
-           :<|> "deactivate"
-             :> AdminTokenAuth
-             :> Capture "personId" (Id Person)
-             :> Post '[JSON] APISuccess
        )
 
 personFlow :: FlowServer PersonAPI
@@ -138,8 +130,6 @@ personFlow =
     :<|> Person.listPerson
     :<|> Person.updatePerson
     :<|> Person.deletePerson
-    :<|> Person.activatePerson
-    :<|> Person.deactivatePerson
 
 -- Following is vehicle flow
 type VehicleAPI =
@@ -371,7 +361,7 @@ type DriverInformationAPI =
            :> Post '[JSON] DriverInformationAPI.CreateDriverRes
            :<|> TokenAuth
              :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
-           :<|> "setActivity"
+           :<|> "setOnline"
              :> TokenAuth
              :> MandatoryQueryParam "active" Bool
              :> Post '[JSON] APISuccess
@@ -390,16 +380,26 @@ type DriverInformationAPI =
              :> Capture "personId" (Id Person)
              :> ReqBody '[JSON] DriverInformationAPI.LinkVehicleReq
              :> Post '[JSON] DriverInformationAPI.LinkVehicleRes
+           :<|> "activate"
+             :> AdminTokenAuth
+             :> Capture "personId" (Id Person)
+             :> Post '[JSON] APISuccess
+           :<|> "deactivate"
+             :> AdminTokenAuth
+             :> Capture "personId" (Id Person)
+             :> Post '[JSON] APISuccess
        )
 
 driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
   DriverInformation.createDriver
     :<|> DriverInformation.getInformation
-    :<|> DriverInformation.setActivity
+    :<|> DriverInformation.setOnline
     :<|> DriverInformation.getRideInfo
     :<|> DriverInformation.listDriver
     :<|> DriverInformation.linkVehicle
+    :<|> DriverInformation.activateDriver
+    :<|> DriverInformation.deactivateDriver
 
 type RideAPI =
   "ride"

@@ -96,8 +96,7 @@ makePerson req = do
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
-        verified = False,
-        status = SP.INACTIVE,
+        isNew = True,
         deviceToken = req.deviceToken,
         udf1 = Nothing,
         udf2 = Nothing,
@@ -160,21 +159,16 @@ login tokenId req =
     if isValid
       then do
         person <- checkPersonExists entityId
+        let isNewPerson = person.isNew
         clearOldRegToken person $ Id tokenId
-        let deviceToken = (req.deviceToken) <|> (person.deviceToken)
+        let updatedPerson = person{deviceToken = (req.deviceToken) <|> (person.deviceToken), isNew = False}
         DB.runSqlDBTransaction $ do
           RegistrationToken.setVerified $ Id tokenId
-          unless person.verified $ do
-            Person.setVerified person.id
-            Person.updateStatus person.id SP.ACTIVE
-            Person.updateDeviceToken person.id deviceToken
-        updatedPerson <-
-          if person.verified
-            then return person
-            else do
-              let updPers = person{deviceToken, verified = True, status = SP.ACTIVE}
-              Notify.notifyOnRegistration regToken updPers
-              return updPers
+          Person.updateDeviceToken updatedPerson.id updatedPerson.deviceToken
+          when isNewPerson $
+            Person.setIsNewFalse updatedPerson.id
+        when isNewPerson $
+          Notify.notifyOnRegistration regToken updatedPerson
         decPerson <- decrypt updatedPerson
         return $ LoginRes token (makeUserInfoRes $ SP.maskPerson decPerson)
       else throwError InvalidAuthData

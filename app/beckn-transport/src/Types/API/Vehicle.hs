@@ -126,7 +126,6 @@ data Driver = Driver
     lastName :: Maybe Text,
     fullName :: Maybe Text,
     rating :: Maybe Int,
-    verified :: Bool,
     organizationId :: Maybe (Id Org.Organization)
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)

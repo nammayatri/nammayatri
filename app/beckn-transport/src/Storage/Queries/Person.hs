@@ -194,8 +194,8 @@ updateDeviceToken personId mbDeviceToken = do
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
-setVerified :: Id Storage.Person -> DB.SqlDB ()
-setVerified personId = do
+setIsNewFalse :: Id Storage.Person -> DB.SqlDB ()
+setIsNewFalse personId = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update' dbTable (setClause now) (predicate personId)
@@ -203,20 +203,7 @@ setVerified personId = do
     setClause currTime Storage.Person {..} =
       mconcat
         [ updatedAt <-. B.val_ currTime,
-          verified <-. B.val_ True
-        ]
-    predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
-
-updateStatus :: Id Storage.Person -> Storage.Status -> DB.SqlDB ()
-updateStatus personId newStatus = do
-  dbTable <- getDbTable
-  now <- getCurrentTime
-  DB.update' dbTable (setClause now newStatus) (predicate personId)
-  where
-    setClause currTime newStatus_ Storage.Person {..} =
-      mconcat
-        [ updatedAt <-. B.val_ currTime,
-          status <-. B.val_ newStatus_
+          isNew <-. B.val_ False
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
 
