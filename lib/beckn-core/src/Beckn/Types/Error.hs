@@ -16,6 +16,7 @@ data AuthError
   = Unauthorized
   | InvalidAuthData
   | TokenExpired
+  | TokenIsNotVerified
   | TokenNotFound Text
   | InvalidToken Text
   | AuthBlocked Text
@@ -40,6 +41,7 @@ instance IsHTTPError AuthError where
     Unauthorized -> "UNAUTHORIZED"
     InvalidAuthData -> "INVALID_AUTH_DATA"
     TokenExpired -> "TOKEN_EXPIRED"
+    TokenIsNotVerified -> "TOKEN_IS_NOT_VERIFIED"
     TokenNotFound _ -> "TOKEN_NOT_FOUND"
     InvalidToken _ -> "INVALID_TOKEN"
     AuthBlocked _ -> "AUTH_BLOCKED"
@@ -50,6 +52,7 @@ instance IsHTTPError AuthError where
     Unauthorized -> E401
     InvalidToken _ -> E401
     AccessDenied -> E403
+    TokenIsNotVerified -> E403
     HitsLimitError _ -> E429
     _ -> E400
 

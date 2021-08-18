@@ -1,0 +1,1 @@
+UPDATE atlas_transporter.registration_token SET verified = True;

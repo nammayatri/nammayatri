@@ -1,0 +1,1 @@
+UPDATE atlas_app.registration_token SET verified = True;

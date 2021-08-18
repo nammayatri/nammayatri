@@ -161,5 +161,6 @@ validateToken :: DBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal updatedAt
+  unless verified $ throwError TokenIsNotVerified
   when expired $ Utils.throwError TokenExpired
   return sr
