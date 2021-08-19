@@ -26,6 +26,7 @@ cabal.project.local
 cabal.project.local~
 .HTF/
 .ghc.environment.*
+*.log
 
 # load test files
 .dev/load-test/*.json

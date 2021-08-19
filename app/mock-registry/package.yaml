@@ -57,7 +57,7 @@ library:
     - beckn-core
 
 executables:
-  mock-registry:
+  mock-registry-exe:
     main: Main.hs
     source-dirs: server
     ghc-options:
