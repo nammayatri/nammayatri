@@ -402,13 +402,13 @@ findAllByVehicleId piId = do
   where
     predicate Storage.ProductInstance {..} = B.val_ (isJust piId) &&. entityId ==. B.val_ (getId <$> piId)
 
-findAllByPersonId ::
+findAllRidesWithLocationsByDriverId ::
   DBFlow m r =>
   Integer ->
   Integer ->
   Id Person ->
   m [(Storage.ProductInstance, Loc.Location, Loc.Location)]
-findAllByPersonId limit offset piId = do
+findAllRidesWithLocationsByDriverId limit offset personId_ = do
   piTable <- getDbTable
   locTable <- Loc.getDbTable
   DB.findAllByJoin
@@ -420,7 +420,9 @@ findAllByPersonId limit offset piId = do
       fromLoc <- B.join_ locTable $ \loc -> B.just_ loc.id ==. ride.fromLocation
       toLoc <- B.join_ locTable $ \loc -> B.just_ loc.id ==. ride.toLocation
       return (ride, fromLoc, toLoc)
-    predicate Storage.ProductInstance {..} = personId ==. B.val_ (Just piId)
+    predicate Storage.ProductInstance {..} =
+      personId ==. B.val_ (Just personId_)
+        &&. _type ==. B.val_ Case.RIDEORDER
     orderByDesc (Storage.ProductInstance {..}, _, _) = B.desc_ createdAt
 
 findAllByParentId :: DBFlow m r => Id Storage.ProductInstance -> m [Storage.ProductInstance]

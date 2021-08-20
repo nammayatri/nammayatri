@@ -84,7 +84,7 @@ listDriverRides personId driverId limit offset = withFlowHandlerAPI $ do
   user <- PersQ.findPersonById personId >>= fromMaybeM PersonNotFound
   person <- PersQ.findPersonById driverId >>= fromMaybeM PersonDoesNotExist
   hasAccess user person
-  map toRideRes <$> PIQ.findAllByPersonId (fromMaybe 100 limit) (fromMaybe 0 offset) person.id
+  map toRideRes <$> PIQ.findAllRidesWithLocationsByDriverId (fromMaybe 100 limit) (fromMaybe 0 offset) person.id
   where
     hasAccess user person =
       when
