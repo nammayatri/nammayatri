@@ -195,6 +195,9 @@ instance
 signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
+registryAuthManagerKey :: String
+registryAuthManagerKey = "registry-manager"
+
 signatureAuthManager ::
   R.FlowRuntime ->
   r ->

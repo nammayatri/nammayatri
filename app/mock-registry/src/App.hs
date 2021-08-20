@@ -19,7 +19,7 @@ import Network.Wai.Handler.Warp
 
 runRegistryService :: IO ()
 runRegistryService = do
-  appCfg <- readDhallConfigDefault "registry"
+  appCfg <- readDhallConfigDefault "mock-registry"
   appEnv <- buildAppEnv appCfg
   let settings =
         defaultSettings

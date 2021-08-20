@@ -58,6 +58,7 @@ dependencies:
   - beckn-gateway
   - fmd-wrapper
   - beckn-core
+  - mock-registry
   - aeson
   - base >= 4.7 && < 5
   - generic-lens

@@ -15,12 +15,20 @@ type LookupAPI registryLookup =
     :> ReqBody '[JSON] LookupRequest
     :> Post '[JSON] LookupResponse
 
+lookupAPI ::
+  Proxy
+    ( "lookup"
+        :> ReqBody '[JSON] LookupRequest
+        :> Post '[JSON] LookupResponse
+    )
+lookupAPI = Proxy
+
 data LookupRequest = LookupRequest
-  { subscriber_id :: Text,
-    _type :: ParticipantRole,
-    domain :: Domain,
-    country :: Country,
-    city :: City
+  { subscriber_id :: Maybe Text,
+    _type :: Maybe ParticipantRole,
+    domain :: Maybe Domain,
+    country :: Maybe Country,
+    city :: Maybe City
   }
   deriving (Show, Generic)
 

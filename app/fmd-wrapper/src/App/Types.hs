@@ -39,7 +39,9 @@ data AppCfg = AppCfg
     signingKeys :: [SigningKey],
     signatureExpiry :: Seconds,
     graceTerminationPeriod :: Seconds,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    nwAddress :: BaseUrl,
+    registryUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -55,7 +57,9 @@ data AppEnv = AppEnv
     signatureExpiry :: Seconds,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    nwAddress :: BaseUrl,
+    registryUrl :: BaseUrl
   }
   deriving (Generic)
 

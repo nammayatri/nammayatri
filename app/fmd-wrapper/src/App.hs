@@ -47,10 +47,11 @@ runFMDWrapper configModifier = do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         let shortOrgId = appCfg.selfId
-        authManager <-
-          prepareAuthManager flowRt appEnv "Authorization" shortOrgId
-            & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
-        managers <- createManagers $ Map.singleton signatureAuthManagerKey authManager
+        authManager <- prepareAuthManagerWithHeader flowRt appEnv "Authorization" shortOrgId
+        registryAuthManager <- prepareAuthManagerWithHeader flowRt appEnv "Signature" shortOrgId
+        managers <-
+          createManagers $
+            Map.fromList [(signatureAuthManagerKey, authManager), (registryAuthManagerKey, registryAuthManager)]
         try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
         migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
@@ -58,3 +59,7 @@ runFMDWrapper configModifier = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ run $ App.EnvR flowRt' appEnv
+  where
+    prepareAuthManagerWithHeader flowRt appEnv header shortOrgId =
+      prepareAuthManager flowRt appEnv header shortOrgId
+        & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "

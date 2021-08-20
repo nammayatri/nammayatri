@@ -15,7 +15,7 @@ lookup :: SignatureAuthResult () -> LookupRequest -> FlowHandler LookupResponse
 lookup _signatureAuth req = withFlowHandlerAPI $ do
   env <- ask
   let creds = env.credRegistry
-  let shortId = req.subscriber_id
+  shortId <- req.subscriber_id & fromMaybeM (InvalidRequest "subscriber_id is not specified.")
   cred <- lookupCredByShortId shortId creds & fromMaybeM (InvalidRequest "Couldn't find any data on recieved subscriber_id.")
   now <- getCurrentTime
   let subscriber =

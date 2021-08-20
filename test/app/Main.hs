@@ -7,6 +7,7 @@ import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
 import qualified "fmd-wrapper" App as FmdWrapper
 import qualified "mock-fcm" App as MockFcm
+import qualified "mock-registry" App as MockRegistry
 import qualified "mock-sms" App as MockSms
 import qualified "beckn-transport" BackgroundTaskManager as TransporterBGTM
 import qualified Data.Text as T (replace, toUpper, unpack)
@@ -28,7 +29,8 @@ main = do
       "beckn-transport",
       "beckn-transport-btm",
       "beckn-gateway",
-      "fmd-wrapper"
+      "fmd-wrapper",
+      "mock-registry"
     ]
   -- ... and run
   defaultMain =<< specs
@@ -86,7 +88,8 @@ specs = do
             . (#loggerConfig . #logRawSql .~ False),
         MockFcm.runMockFcm $
           (#loggerConfig . #logToConsole .~ False)
-            . (#loggerConfig . #logRawSql .~ False)
+            . (#loggerConfig . #logRawSql .~ False),
+        MockRegistry.runRegistryService
       ]
 
     startServers servers = do

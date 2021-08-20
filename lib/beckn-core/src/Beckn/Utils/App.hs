@@ -88,7 +88,7 @@ hashBodyForSignature f req respF = do
   where
     mkRequestBody mvar = tryTakeMVar mvar <&> fromMaybe B.empty
     headers = map fst $ Wai.requestHeaders req
-    anyAuthHeaders = any (`elem` headers) ["Authorization", "Proxy-Authorization"]
+    anyAuthHeaders = any (`elem` headers) ["Authorization", "Proxy-Authorization", "Signature"]
 
 logRequestAndResponse :: EnvR f -> Application -> Application
 logRequestAndResponse (EnvR flowRt appEnv) f req respF =

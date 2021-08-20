@@ -1,14 +1,17 @@
 module Utils.Auth where
 
 import Beckn.Storage.DB.Config
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
+import Beckn.Types.Registry.Domain (Domain (FINAL_MILE_DELIVERY))
+import Beckn.Utils.Common
 import Beckn.Utils.Servant.HeaderAuth
+import qualified Beckn.Utils.Servant.RegistryService as RegistryService
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Monad ()
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as Org
 import Types.Error
 import Types.Storage.Organization (Organization)
-import Utils.Common (fromMaybeM)
 
 -- | TODO: Perform some API key verification.
 data VerifyAPIKey = VerifyAPIKey
@@ -24,5 +27,10 @@ type LookupRegistryOrg = (HttpSig.LookupRegistry Organization)
 verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction (Org.findOrgByApiKey >=> fromMaybeM OrgNotFound)
 
-lookup :: (DBFlow m r, HttpSig.AuthenticatingEntity r) => HttpSig.LookupAction LookupRegistryOrg m
-lookup = HttpSig.lookupRegistryAction Org.findOrgByShortId
+lookup ::
+  ( DBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  HttpSig.LookupAction LookupRegistryOrg m
+lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId FINAL_MILE_DELIVERY
