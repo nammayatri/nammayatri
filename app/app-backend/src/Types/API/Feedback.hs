@@ -8,8 +8,7 @@ import Beckn.Types.APISuccess (APISuccess)
 import EulerHS.Prelude
 
 data FeedbackReq = FeedbackReq
-  { caseId :: Text,
-    productInstanceId :: Text,
+  { productInstanceId :: Text,
     rating :: Int
   }
   deriving (Show, Generic, ToJSON, FromJSON)

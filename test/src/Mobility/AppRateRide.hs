@@ -117,14 +117,11 @@ spec = do
       appPiListResult <- runClient appClient $ F.buildListPIs BPI.COMPLETED
       appPiListResult `shouldSatisfy` isRight
 
+      let Right orderPiList = appPiListResult
+      length orderPiList `shouldSatisfy` (>= 1)
+      let latestOrderPI = head orderPiList
+
       appFeedbackResult <-
         runClient appClient $
-          F.callAppFeedback 5 appProductInstanceId appCaseId
+          F.callAppFeedback 5 (cast latestOrderPI.productInstance.id)
       appFeedbackResult `shouldSatisfy` isRight
-
-      driverInfoResult <-
-        runClient transporterClient $ F.getDriverInfo F.driverToken
-      (driverInfoResult >> return ("" :: Text)) `shouldSatisfy` isRight
-      let Right driverInfoResponse = driverInfoResult
-      let driverRating = driverInfoResponse.person.rating
-      driverRating `shouldSatisfy` isJust

@@ -198,12 +198,11 @@ appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
 
-callAppFeedback :: Int -> Id TPI.ProductInstance -> Id TCase.Case -> ClientM APISuccess
-callAppFeedback ratingValue productInstanceId caseId =
+callAppFeedback :: Int -> Id TPI.ProductInstance -> ClientM APISuccess
+callAppFeedback ratingValue productInstanceId =
   let request =
         AppFeedback.FeedbackReq
-          { caseId = getId caseId,
-            productInstanceId = getId productInstanceId,
+          { productInstanceId = getId productInstanceId,
             rating = ratingValue
           }
    in appFeedback appRegistrationToken request

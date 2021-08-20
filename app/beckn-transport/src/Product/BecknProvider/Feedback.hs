@@ -13,7 +13,6 @@ import qualified Product.Person as Person
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Rating as Rating
 import Types.Error
-import qualified Types.Storage.Case as Case
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.ProductInstance as ProductInstance
 import Types.Storage.Rating as Rating
@@ -32,18 +31,15 @@ feedback _ _ req = withFlowHandlerBecknAPI $
     logTagInfo "FeedbackAPI" "Received feedback API call."
     let context = req.context
     BP.validateContext "feedback" context
-    let productInstanceId = Id $ req.message.order_id
-    productInstances <- ProductInstance.findAllByParentId productInstanceId
-    personId <- getPersonId productInstances & fromMaybeM (PIFieldNotPresent "person")
-    orderPi <-
-      ProductInstance.findByIdType (ProductInstance.id <$> productInstances) Case.RIDEORDER
-        >>= fromMaybeM PINotFound
-    unless (orderPi.status == ProductInstance.COMPLETED) $
+    let searchPIId = Id $ req.message.order_id
+    orderPI <- ProductInstance.findOrderPIByParentId searchPIId >>= fromMaybeM PIDoesNotExist
+    personId <- orderPI.personId & fromMaybeM (PIFieldNotPresent "person")
+    unless (orderPI.status == ProductInstance.COMPLETED) $
       throwError $ PIInvalidStatus "Order is not ready for rating."
     ratingValue :: Int <-
       decodeFromText (req.message.rating.value)
         & fromMaybeM (InvalidRequest "Invalid rating type.")
-    let orderId = orderPi.id
+    let orderId = orderPI.id
     mbRating <- Rating.findByProductInstanceId orderId
     case mbRating of
       Nothing -> do
@@ -53,13 +49,10 @@ feedback _ _ req = withFlowHandlerBecknAPI $
         Rating.create newRating
       Just rating -> do
         logTagInfo "FeedbackAPI" $
-          "Updating existing rating for " +|| orderPi.id ||+ " with new rating " +|| ratingValue ||+ "."
+          "Updating existing rating for " +|| orderPI.id ||+ " with new rating " +|| ratingValue ||+ "."
         Rating.updateRatingValue (rating.id) ratingValue
     Person.calculateAverageRating personId
     return Ack
-  where
-    getPersonId (productI : _) = productI.personId
-    getPersonId _ = Nothing
 
 mkRating :: MonadFlow m => Id ProductInstance.ProductInstance -> Int -> m Rating.Rating
 mkRating productInstanceId ratingValue = do

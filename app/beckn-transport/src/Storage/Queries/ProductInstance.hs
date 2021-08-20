@@ -414,6 +414,15 @@ findAllByParentId piId = do
   where
     predicate Storage.ProductInstance {..} = parentId ==. B.val_ (Just piId)
 
+findOrderPIByParentId :: DBFlow m r => Id Storage.ProductInstance -> m (Maybe Storage.ProductInstance)
+findOrderPIByParentId pid = do
+  dbTable <- getDbTable
+  DB.findOne dbTable (predicate pid)
+  where
+    predicate piid Storage.ProductInstance {..} =
+      parentId ==. B.val_ (Just piid)
+        &&. _type ==. B.val_ Case.RIDEORDER
+
 findByIdType :: DBFlow m r => [Id Storage.ProductInstance] -> Case.CaseType -> m (Maybe Storage.ProductInstance)
 findByIdType ids csType = do
   dbTable <- getDbTable
