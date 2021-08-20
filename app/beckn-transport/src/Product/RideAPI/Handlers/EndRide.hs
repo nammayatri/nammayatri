@@ -11,18 +11,20 @@ import Types.Error
 import qualified Types.Storage.SearchRequest as SSearchRequest
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Vehicle as Vehicle
-import qualified Types.Storage.Quote as SQuote
-import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Person as Person
+import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.RideBooking as SRB
 import Utils.Common
+import qualified Types.Storage.Quote as SQuote
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
-    findPIById :: Id SQuote.Quote -> m (Maybe SQuote.Quote),
+    findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    endRideTransaction :: Id Ride.Ride -> Id Driver -> Amount -> m (),
+    findQuoteById :: Id SQuote.Quote -> m (Maybe SQuote.Quote),
+    endRideTransaction :: Id SRB.RideBooking -> Id Ride.Ride -> Id Driver -> Amount -> m (),
     findSearchRequestById :: Id SSearchRequest.SearchRequest -> m (Maybe SSearchRequest.SearchRequest),
-    notifyUpdateToBAP :: SQuote.Quote -> Ride.Ride -> Ride.RideStatus -> m (),
+    notifyUpdateToBAP :: SQuote.Quote -> SRB.RideBooking -> Ride.Ride -> Ride.RideStatus -> m (),
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
@@ -42,36 +44,37 @@ endRideHandler ::
 endRideHandler ServiceHandle {..} requestorId rideId = do
   requestor <- findPersonById requestorId >>= fromMaybeM PersonNotFound
   ride <- findRideById (cast rideId) >>= fromMaybeM RideDoesNotExist
-  driverId <- ride.personId & fromMaybeM (RideFieldNotPresent "person")
+  let driverId = ride.driverId
   case requestor.role of
     Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
   unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  let quoteId = ride.quoteId
-  quote <- findPIById quoteId >>= fromMaybeM QuoteNotFound
-  searchRequest <- findSearchRequestById quote.requestId >>= fromMaybeM SearchRequestNotFound
+  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM RideBookingNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   actualPrice <-
     ifM
       recalculateFareEnabled
-      (recalculateFare searchRequest quote ride)
-      (ride.price & fromMaybeM (RideFieldNotPresent "price"))
+      (recalculateFare rideBooking ride)
+      (return rideBooking.price)
 
-  endRideTransaction ride.id (cast driverId) actualPrice
+  endRideTransaction rideBooking.id ride.id (cast driverId) actualPrice
 
-  notifyUpdateToBAP quote (updateActualPrice actualPrice ride){status = Ride.COMPLETED} Ride.COMPLETED
+  quote <- findQuoteById rideBooking.quoteId >>= fromMaybeM QuoteNotFound
+
+  notifyUpdateToBAP quote rideBooking (updateActualPrice actualPrice ride){status = Ride.COMPLETED} Ride.COMPLETED
 
   return APISuccess.Success
   where
-    recalculateFare searchRequest quote ride = do
-      let transporterId = searchRequest.providerId
-          vehicleVariant = searchRequest.vehicleVariant
-          oldDistance = quote.distance 
-      fare <- calculateFare transporterId vehicleVariant ride.distance searchRequest.startTime
-      let distanceDiff = ride.distance - oldDistance
-      price <- ride.price & fromMaybeM (RideFieldNotPresent "price")
+    recalculateFare rideBooking ride = do
+      let transporterId = rideBooking.providerId
+          vehicleVariant = rideBooking.vehicleVariant
+          oldDistance = rideBooking.distance 
+          actualDistance = ride.finalDistance
+      fare <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime
+      let distanceDiff = actualDistance - oldDistance
+      let price = rideBooking.price
       let fareDiff = fare - price
       logTagInfo "Fare recalculation" $
         "Fare difference: "
@@ -81,4 +84,4 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       putDiffMetric fareDiff distanceDiff
       pure fare
     updateActualPrice :: Amount -> Ride.Ride -> Ride.Ride
-    updateActualPrice = \p ride -> ride{actualPrice = Just p}
+    updateActualPrice = \p ride -> ride{finalPrice = Just p}

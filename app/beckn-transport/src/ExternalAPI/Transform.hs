@@ -1,6 +1,7 @@
 module ExternalAPI.Transform where
 
 import Beckn.External.Encryption
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common
 import Beckn.Types.Core.Brand
 import Beckn.Types.Core.Category
@@ -25,6 +26,7 @@ import Types.Common
 import Types.Storage.Organization as Organization
 import Types.Storage.Person as Person
 import Types.Storage.Quote as Quote
+import Types.Storage.RideBooking (RideBooking)
 import Types.Storage.SearchRequest
 import qualified Types.Storage.Vehicle as Vehicle
 
@@ -101,7 +103,7 @@ mkItem quote =
     { id = getId $ quote.id,
       parent_item_id = Nothing,
       descriptor = mkItemDescriptor quote,
-      price = mkPrice quote,
+      price = mkPrice quote.price,
       promotional = False,
       category_id = Nothing,
       package_category_id = Nothing,
@@ -111,9 +113,9 @@ mkItem quote =
       ttl = Nothing
     }
 
-mkPrice :: Quote -> Price
-mkPrice quote =
-  let amt = Just $ convertAmountToDecimalValue quote.price
+mkPrice :: Amount -> Price
+mkPrice amount =
+  let amt = Just $ convertAmountToDecimalValue amount
    in Price
         { currency = "INR", -- TODO : Fetch this from product
           value = amt,
@@ -125,13 +127,13 @@ mkPrice quote =
           maximum_value = amt
         }
 
-mkOrder :: MonadFlow m => Id Quote -> Maybe Trip -> Maybe CancellationSource -> m Mobility.Order
-mkOrder quoteId trip mbCancellationSource = do
+mkOrder :: MonadFlow m => Id RideBooking -> Maybe Trip -> Maybe CancellationSource -> m Mobility.Order
+mkOrder rideBookingId trip mbCancellationSource = do
   now <- getCurrentTime
   return
     Mobility.Order
-      { id = getId quoteId,
-        items = [OrderItem (getId quoteId) Nothing],
+      { id = getId rideBookingId,
+        items = [OrderItem (getId rideBookingId) Nothing],
         created_at = now,
         updated_at = now,
         state = Nothing,

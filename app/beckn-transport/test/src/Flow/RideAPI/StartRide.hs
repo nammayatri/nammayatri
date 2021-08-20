@@ -10,9 +10,9 @@ import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Error
-import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.SilentLogger ()
 
@@ -20,7 +20,7 @@ handle :: StartRide.ServiceHandle IO
 handle =
   StartRide.ServiceHandle
     { findPersonById = \_personid -> pure $ Just Fixtures.defaultDriver,
-      findPIById = \quoteId ->
+      findQuoteById = \quoteId ->
         pure $
           if quoteId == Id "2"
             then Just searchQuote
@@ -31,16 +31,16 @@ handle =
             then Just ride
             else Nothing,
       startRide = \_quoteIds -> pure (),
-      notifyBAPRideStarted = \_quote _ride -> pure (),
+      notifyBAPRideStarted = \_quote _rideBooking _ride -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure ()
     }
 
 ride :: Ride.Ride
 ride =
   Fixtures.defaultRide
-    { Ride.status = Ride.CONFIRMED,
-      Ride.quoteId = "2",
-      Ride.udf4 = Just "otp"
+    { Ride.status = Ride.NEW,
+      Ride.bookingId = "2",
+      Ride.otp = "otp"
     }
 
 searchQuote :: Quote.Quote
@@ -64,7 +64,6 @@ startRide =
       failedStartRequestedByDriverNotAnOrderExecutor,
       failedStartRequestedNotByDriver,
       failedStartWhenQuoteStatusIsWrong,
-      failedStartWhenRideMissingOTP,
       failedStartWithWrongOTP
     ]
 
@@ -119,23 +118,7 @@ failedStartWhenQuoteStatusIsWrong = do
             pure $
               Just
                 ride{status = Ride.COMPLETED
-                  }
-        }
-
-failedStartWhenRideMissingOTP :: TestTree
-failedStartWhenRideMissingOTP = do
-  testCase "Fail ride starting if ride does not have OTP" $ do
-    runHandler handleCase "1" "1" "otp"
-      `shouldThrow` (== QuoteFieldNotPresent "udf4")
-  where
-    handleCase =
-      handle
-        { StartRide.findRideById = \rideId ->
-            pure $
-              Just
-                ride
-                  { Ride.udf4 = Nothing
-                  }
+                    }
         }
 
 failedStartWithWrongOTP :: TestTree

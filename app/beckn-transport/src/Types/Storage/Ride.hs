@@ -4,10 +4,10 @@ module Types.Storage.Ride where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Data.OpenApi (ToSchema)
 import Beckn.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
@@ -17,11 +17,11 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
 import Types.Storage.Person (Person)
-import qualified Types.Storage.SearchReqLocation as Loc
+import qualified Types.Storage.Person as SPers
+import qualified Types.Storage.RideBooking as RideB
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as SVeh
 import Utils.Common
-import qualified Types.Storage.RideBooking as RideB
 
 data RideStatus
   = NEW
@@ -57,9 +57,8 @@ data RideT f = Ride
     vehicleId :: B.C f (Id SVeh.Vehicle),
     otp :: B.C f Text,
     trackingUrl :: B.C f Text,
-    finalPrice :: B.C f Amount,
+    finalPrice :: B.C f (Maybe Amount),
     finalDistance :: B.C f Double,
-    finalLocationId :: B.C f (Id Loc.SearchReqLocation),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -99,7 +98,6 @@ fieldEMod =
           trackingUrl = "tracking_url",
           finalPrice = "final_price",
           finalDistance = "final_distance",
-          finalLocationId = "final_location_id",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
@@ -134,7 +132,7 @@ data RideAPIEntity = RideAPIEntity
     status :: RideStatus,
     driverName :: Maybe Text,
     driverNumber :: Maybe Text,
-    vehicleNumber :: Maybe Text,
+    vehicleNumber :: Text,
     vehicleColor :: Maybe Text,
     vehicleVariant :: Maybe SVeh.Variant,
     vehicleModel :: Maybe Text,
@@ -144,3 +142,21 @@ data RideAPIEntity = RideAPIEntity
     updatedAt :: UTCTime
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
+
+makeRideAPIEntity :: Ride -> SPers.DecryptedPerson -> SVeh.Vehicle -> RideAPIEntity
+makeRideAPIEntity ride driver vehicle =
+  RideAPIEntity
+    { id = ride.id,
+      shortRideId = ride.shortId,
+      status = ride.status,
+      driverName = driver.firstName,
+      driverNumber = driver.mobileCountryCode <> driver.mobileNumber,
+      vehicleNumber = vehicle.registrationNo,
+      vehicleColor = vehicle.color,
+      vehicleVariant = vehicle.variant,
+      vehicleModel = vehicle.model,
+      computedPrice = ride.finalPrice,
+      actualRideDistance = Just ride.finalDistance,
+      createdAt = ride.createdAt,
+      updatedAt = ride.updatedAt
+    }

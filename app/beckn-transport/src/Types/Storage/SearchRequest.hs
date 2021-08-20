@@ -14,6 +14,7 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
+import Types.App
 import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Vehicle as Veh
@@ -39,8 +40,6 @@ instance FromHttpApiData SearchRequestStatus where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-data BAPPerson
-
 data SearchRequestT f = SearchRequest
   { id :: B.C f (Id SearchRequest),
     transactionId :: B.C f Text,
@@ -56,14 +55,6 @@ data SearchRequestT f = SearchRequest
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
-
---TODO: assignedTo, requestor - -- need to point to primarykey of Person
--- fromLcoationId and toLocationId to Id
--- fields => mobility  => pass
--- udf1 => vehicle variant  =>
--- udf2 => luggage_count =>
--- udf3 => start Location
--- udf4 => end Location
 
 type SearchRequest = SearchRequestT Identity
 

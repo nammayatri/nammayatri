@@ -18,10 +18,12 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
+import Types.App (BAPPerson)
 import qualified Types.Storage.SearchReqLocation as Loc
-import qualified Types.Storage.Person as Person
+import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.SearchRequest as SearchRequest
+import qualified Types.Storage.Vehicle as Veh
 
 -- TODO: INVALID status seems to be unused
 data RideBookingStatus
@@ -49,20 +51,19 @@ instance ToHttpApiData RideBookingStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-data BPPOrganization
-
 data RideBookingT f = RideBooking
   { id :: B.C f (Id RideBooking),
     transactionId :: B.C f Text,
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     quoteId :: B.C f (Id Quote.Quote),
     status :: B.C f RideBookingStatus,
-    providerId :: B.C f (Id BPPOrganization),
+    providerId :: B.C f (Id Org.Organization),
     bapId :: B.C f Text,
     startTime :: B.C f UTCTime,
-    requestorId :: B.C f (Id Person.Person),
+    requestorId :: B.C f (Id BAPPerson),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
+    vehicleVariant :: B.C f Veh.Variant,
     price :: B.C f Amount,
     distance :: B.C f Double,
     createdAt :: B.C f UTCTime,
@@ -91,8 +92,6 @@ instance ToJSON RideBooking where
 instance FromJSON RideBooking where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
-instance ToSchema RideBooking
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideBookingT)
 fieldEMod =
@@ -108,6 +107,7 @@ fieldEMod =
           startTime = "start_time",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",
+          vehicleVariant = "vehicle_variant",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }

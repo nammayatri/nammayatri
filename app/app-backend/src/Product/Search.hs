@@ -20,14 +20,15 @@ import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
 import Product.Serviceability
 import qualified Storage.Queries.Organization as Org
-import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Types.API.Search as API
 import Types.API.Serviceability
@@ -37,12 +38,11 @@ import Types.Metrics (CoreMetrics)
 import Types.ProductInfo
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.Quote as SQuote
+import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
-import qualified Data.Text as T
 
 search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
@@ -50,7 +50,8 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   fromLocation <- Location.buildSearchReqLoc req.origin
   toLocation <- Location.buildSearchReqLoc req.destination
   now <- getCurrentTime
-  searchRequest <- mkSearchRequest req (getId personId) fromLocation toLocation now
+  distance <- Location.getDistance (req.origin.gps) (req.destination.gps) >>= fromMaybeM (InternalError "Unable to count distance.")
+  searchRequest <- buildSearchRequest req (getId personId) fromLocation toLocation distance now
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
@@ -61,9 +62,8 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   env <- ask
   let bapNwAddr = env.bapNwAddress
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
-  distance <- Location.getDistance (req.origin.gps) (req.destination.gps)
   let intent = mkIntent req now
-      tags = Just [Tag "distance" (maybe  "" show distance)]
+      tags = Just [Tag "distance" $ show distance]
   fork "search" . withRetry $
     ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
   return . API.SearchRes $ searchRequest.id
@@ -99,19 +99,15 @@ searchCbService req catalog = do
     Org.findOrganizationByCallbackUri (req.context.bpp_uri) Org.PROVIDER
       >>= fromMaybeM OrgDoesNotExist
   let personId = searchRequest.requestorId
-  DB.runSqlDBTransaction =<< case (catalog.categories, catalog.items) of
+  case (catalog.categories, catalog.items) of
     ([], _) -> throwError $ InvalidRequest "Missing provider"
-    (category : _, []) -> do
-      let provider = fromBeckn category
-      declinedPI <- mkDeclinedQuote searchRequest bpp provider personId
-      return $ QQuote.create declinedPI
+    (_ : _, []) -> return ()
     (category : _, items) -> do
       let provider = fromBeckn category
       quotes <- traverse (mkQuote searchRequest bpp provider personId) items
-      return $ do
-        traverse_ QQuote.create quotes
+      DB.runSqlDBTransaction $ traverse_ QQuote.create quotes
 
-mkSearchRequest ::
+buildSearchRequest ::
   ( (HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),
     DBFlow m r,
     CoreMetrics m
@@ -120,9 +116,10 @@ mkSearchRequest ::
   Text ->
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
+  Double ->
   UTCTime ->
   m SearchRequest.SearchRequest
-mkSearchRequest req userId from to now = do
+buildSearchRequest req userId from to distance now = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   let vehVar = req.vehicle
@@ -135,6 +132,7 @@ mkSearchRequest req userId from to now = do
         fromLocationId = from.id,
         toLocationId = to.id,
         vehicleVariant = vehVar,
+        distance = distance,
         createdAt = now
       }
   where

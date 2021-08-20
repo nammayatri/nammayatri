@@ -10,27 +10,29 @@ import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP
 import qualified Product.RideAPI.Handlers.StartRide as Handler
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideBooking as QRB
 import Types.API.Ride (StartRideReq (..))
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.OldRide as Ride
+import qualified Types.Storage.Ride as SRide
 import Utils.Common (withFlowHandlerAPI)
+import qualified Storage.Queries.Quote as QQuote
 
-startRide :: Id SP.Person -> Id Ride.Ride -> StartRideReq -> FlowHandler APISuccess.APISuccess
+startRide :: Id SP.Person -> Id SRide.Ride -> StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide personId rideId req = withFlowHandlerAPI $ do
   Handler.startRideHandler handle personId (cast rideId) (req.rideOtp)
   where
     handle =
       Handler.ServiceHandle
         { findPersonById = QPerson.findPersonById,
-          findPIById = QQuote.findById,
+          findRideBookingById = QRB.findById,
           findRideById = QRide.findById,
+          findQuoteById = QQuote.findById,
           startRide = startRideTransaction,
-          notifyBAPRideStarted = \quote rideId' -> notifyUpdateToBAP quote rideId' Ride.INPROGRESS,
+          notifyBAPRideStarted = \quote rideBooking rideId' -> notifyUpdateToBAP quote rideBooking rideId' SRide.INPROGRESS,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId')
         }
 
-startRideTransaction :: DBFlow m r => Id Ride.Ride -> m ()
+startRideTransaction :: DBFlow m r => Id SRide.Ride -> m ()
 startRideTransaction rideId = DB.runSqlDBTransaction $ do
-  QRide.updateStatus rideId Ride.INPROGRESS
+  QRide.updateStatus rideId SRide.INPROGRESS

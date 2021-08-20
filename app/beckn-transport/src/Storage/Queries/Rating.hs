@@ -10,10 +10,10 @@ import Database.Beam (SqlEq ((==.)), (&&.), (<-.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.OldRide as Ride
 import Types.Storage.Person (Person)
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.Rating as Storage
+import qualified Types.Storage.Ride as Ride
 
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RatingT))
 getDbTable =

@@ -8,22 +8,19 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Order as BO
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
-import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideBooking as QRideB
 import qualified Storage.Queries.SearchRequest as QSearchRequest
-import qualified Test.RandomStrings as RS
 import qualified Types.API.Confirm as API
 import Types.Error
 import qualified Types.ProductInfo as Products
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as SQuote
-import qualified Types.Storage.OldRide as SRide
+import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 
@@ -37,30 +34,48 @@ confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPerson
   organization <-
     OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
-  ride <- mkRide (searchRequest.id) quote
-  DB.runSqlDBTransaction $ do
-    QRide.create ride
+  now <- getCurrentTime
+  rideBooking <- buildRideBooking searchRequest quote organization now
+  DB.runSqlDBTransaction $
+    QRideB.create rideBooking
   context <- buildContext "confirm" (getId searchRequestId) Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  order <- mkOrder quote
+  let order = mkOrder rideBooking now
   ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)
-  return $ API.ConfirmRes ride.id
+  return $ API.ConfirmRes rideBooking.id
   where
-    mkOrder quote = do
-      now <- getCurrentTime
+    mkOrder rideBooking now = do
+      BO.Order
+        { id = getId $ rideBooking.id,
+          state = Nothing,
+          created_at = now,
+          updated_at = now,
+          items = [],
+          billing = Nothing,
+          payment = Nothing,
+          trip = Nothing,
+          cancellation_reason_id = Nothing,
+          cancellation_reasons = [],
+          cancellation_policy = Nothing
+        }
+    buildRideBooking searchRequest quote provider now = do
+      id <- generateGUID
       return $
-        BO.Order
-          { id = getId $ quote.id,
-            state = Nothing,
-            created_at = now,
-            updated_at = now,
-            items = [],
-            billing = Nothing,
-            payment = Nothing,
-            trip = Nothing,
-            cancellation_reason_id = Nothing,
-            cancellation_reasons = [],
-            cancellation_policy = Nothing
+        SRB.RideBooking
+          { id = Id id,
+            requestId = searchRequest.id,
+            quoteId = quote.id,
+            status = SRB.CONFIRMED,
+            providerId = provider.id,
+            providerMobileNumber = fromMaybe "" provider.mobileNumber,
+            startTime = searchRequest.startTime,
+            requestorId = searchRequest.requestorId,
+            fromLocationId = searchRequest.fromLocationId,
+            toLocationId = searchRequest.toLocationId,
+            price = quote.price,
+            distance = searchRequest.distance,
+            createdAt = now,
+            updatedAt = now
           }
 
 onConfirm ::
@@ -91,26 +106,3 @@ onConfirm _org req = withFlowHandlerBecknAPI $
           QQuote.updateMultiple quoteId uQuote
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack
-
-mkRide :: MonadFlow m => Id SearchRequest.SearchRequest -> SQuote.Quote -> m SRide.Ride
-mkRide searchRequestId quote@SQuote.Quote {..} = do
-  now <- getCurrentTime
-  quoteId <- generateGUID
-  shortId' <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
-  return
-    SRide.Ride
-      { id = Id quoteId,
-        requestId = searchRequestId,
-        entityType = SRide.VEHICLE,
-        entityId = Nothing,
-        shortId = ShortId shortId',
-        quantity = 1,
-        quoteId = quote.id,
-        status = SRide.INSTOCK,
-        organizationId = providerId,
-        price = Just price,
-        createdAt = now,
-        updatedAt = now,
-        udf1 = Just $ show distanceToNearestDriver,
-        ..
-      }

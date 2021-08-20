@@ -48,17 +48,10 @@ data SearchRequestT f = SearchRequest
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     vehicleVariant :: B.C f VehicleVariant,
+    distance :: B.C f Double,
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
-
---TODO: assignedTo, requestor - -- need to point to primarykey of Person
--- fromLcoationId and toLocationId to Id
--- fields => mobility  => pass
--- udf1 => vehicle variant  =>
--- udf2 => luggage_count =>
--- udf3 => start Location
--- udf4 => end Location
 
 type SearchRequest = SearchRequestT Identity
 

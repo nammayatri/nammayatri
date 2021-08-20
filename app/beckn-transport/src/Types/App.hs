@@ -18,3 +18,5 @@ data SortMode
   = ETA
   | IdleTime
   deriving (Eq, Generic, FromDhall)
+
+data BAPPerson

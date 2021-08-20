@@ -8,12 +8,12 @@ import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Types.App (Driver)
-import Types.Storage.OldRide (RideAPIEntity, Ride)
-import Types.Storage.RideBooking (RideBookingStatus)
+import Types.Storage.Ride (RideAPIEntity)
+import Types.Storage.RideBooking (RideBookingStatus, RideBooking)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 
 data RideBookingStatusRes = RideBookingStatusRes
-  { id :: Id Ride,
+  { id :: Id RideBooking,
     status :: RideBookingStatus,
     estimatedPrice :: Maybe Amount,
     toLocation :: SearchReqLocationAPIEntity,
@@ -35,7 +35,7 @@ newtype GetRideInfoRes = GetRideInfoRes
   deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
 
 data RideInfo = RideInfo
-  { bookingId :: Id Ride,
+  { bookingId :: Id RideBooking,
     pickupLoc :: LatLong,
     dropLoc :: LatLong,
     etaForPickupLoc :: Maybe Integer,

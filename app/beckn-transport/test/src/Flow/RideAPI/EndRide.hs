@@ -12,9 +12,9 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App
 import Types.Error
-import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as PI
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
 import Utils.Common (throwError)

@@ -14,6 +14,7 @@ import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.SearchReqLocation as Location
+import qualified Types.Storage.RideBooking as RideB
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.OldRide as Ride
 
@@ -24,6 +25,7 @@ data AppDb f = AppDb
     person :: f (B.TableEntity Person.PersonT),
     searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT),
     quote :: f (B.TableEntity Quote.QuoteT),
+    rideBooking :: f (B.TableEntity RideB.RideBookingT),
     ride :: f (B.TableEntity Ride.RideT),
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
     geometry :: f (B.TableEntity Geometry.GeometryT),
@@ -42,6 +44,7 @@ appDb dbSchemaName =
         person = setSchema dbSchemaName <> Person.fieldEMod,
         searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod,
         quote = setSchema dbSchemaName <> Quote.fieldEMod,
+        rideBooking = setSchema dbSchemaName <> RideB.fieldEMod,
         ride = setSchema dbSchemaName <> Ride.fieldEMod,
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
         geometry = setSchema dbSchemaName <> Geometry.fieldEMod,

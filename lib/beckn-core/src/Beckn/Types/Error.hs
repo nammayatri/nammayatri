@@ -314,6 +314,36 @@ instance IsHTTPError QuoteError where
 
 instance IsAPIError QuoteError
 
+data RideBookingError
+  = RideBookingNotFound
+  | RideBookingDoesNotExist
+  | RideBookingFieldNotPresent Text
+  | RideBookingInvalidStatus Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RideBookingError
+
+instance IsBaseError RideBookingError where
+  toMessage = \case
+    RideBookingDoesNotExist -> Just "No ride booking matches passed data."
+    RideBookingFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this ride booking."
+    RideBookingInvalidStatus msg -> Just $ "Attempted to do some action in wrong ride booking status. " <> msg
+    _ -> Nothing
+
+instance IsHTTPError RideBookingError where
+  toErrorCode = \case
+    RideBookingNotFound -> "RIDE_BOOKING_NOT_FOUND"
+    RideBookingDoesNotExist -> "RIDE_BOOKING_DOES_NOT_EXISTS"
+    RideBookingFieldNotPresent _ -> "RIDE_BOOKING_FIELD_NOT_PRESENT"
+    RideBookingInvalidStatus _ -> "RIDE_BOOKING_INVALID_STATUS"
+  toHttpCode = \case
+    RideBookingNotFound -> E500
+    RideBookingDoesNotExist -> E400
+    RideBookingFieldNotPresent _ -> E500
+    RideBookingInvalidStatus _ -> E400
+
+instance IsAPIError RideBookingError
+
 data RideError
   = RideNotFound
   | RideDoesNotExist

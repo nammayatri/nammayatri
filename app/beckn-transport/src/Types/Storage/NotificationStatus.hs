@@ -10,7 +10,7 @@ import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyn
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
 import Types.App
-import qualified Types.Storage.OldRide as Ride
+import qualified Types.Storage.RideBooking as SRB
 
 data AnswerStatus = NOTIFIED | REJECTED | IGNORED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -25,7 +25,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerStatus
 
 data NotificationStatusT f = NotificationStatus
   { id :: B.C f (Id NotificationStatus),
-    rideId :: B.C f (Id Ride.Ride),
+    rideBookingId :: B.C f (Id SRB.RideBooking),
     driverId :: B.C f (Id Driver),
     status :: B.C f AnswerStatus,
     expiresAt :: B.C f UTCTime
@@ -53,7 +53,7 @@ fieldEMod =
   B.setEntityName "notification_status"
     <> B.modifyTableFields
       B.tableModification
-        { rideId = "ride_id",
+        { rideBookingId = "ride_id",
           driverId = "driver_id",
           expiresAt = "expires_at"
         }

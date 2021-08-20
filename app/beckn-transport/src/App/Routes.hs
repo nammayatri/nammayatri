@@ -47,7 +47,8 @@ import Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SRT
 import Types.Storage.Vehicle
 import Utils.Auth (AdminTokenAuth, LookupRegistryOrg, TokenAuth)
-import qualified Types.Storage.OldRide as SRide
+import qualified Types.Storage.Ride as SRide
+import qualified Types.Storage.RideBooking as SRB
 
 type TransportAPI =
   "v2"
@@ -243,7 +244,7 @@ organizationFlow =
 
 type RideBookingAPI =
   "org" :> "rideBooking"
-    :> ( Capture "bookingId" (Id SRide.Ride)
+    :> ( Capture "bookingId" (Id SRB.RideBooking)
            :> TokenAuth
            :> Post '[JSON] RideBookingAPI.RideBookingStatusRes
            :<|> "list"
@@ -252,7 +253,7 @@ type RideBookingAPI =
              :> QueryParam "offset" Integer
              :> QueryParam "onlyActive" Bool
              :> Get '[JSON] RideBookingAPI.RideBookingListRes
-           :<|> Capture "bookingId" (Id SRide.Ride)
+           :<|> Capture "bookingId" (Id SRB.RideBooking)
              :> "cancel"
              :> AdminTokenAuth
              :> Get '[JSON] APISuccess
@@ -265,7 +266,7 @@ type RideBookingAPI =
              :> QueryParam "offset" Integer
              :> QueryParam "onlyActive" Bool
              :> Get '[JSON] RideBookingAPI.RideBookingListRes
-             :<|> Capture "bookingId" (Id SRide.Ride)
+             :<|> Capture "bookingId" (Id SRB.RideBooking)
                :> "notification"
                :> ( "respond"
                       :> TokenAuth

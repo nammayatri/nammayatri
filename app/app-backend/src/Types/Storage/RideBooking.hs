@@ -19,14 +19,14 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
 import qualified Types.Storage.SearchReqLocation as Loc
+import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.SearchRequest as SearchRequest
 
 -- TODO: INVALID status seems to be unused
 data RideBookingStatus
-  = NEW
-  | CONFIRMED
+  = CONFIRMED
   | COMPLETED
   | CANCELLED
   | TRIP_ASSIGNED
@@ -50,14 +50,12 @@ instance ToHttpApiData RideBookingStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-data BPPOrganization
-
 data RideBookingT f = RideBooking
   { id :: B.C f (Id RideBooking),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     quoteId :: B.C f (Id Quote.Quote),
     status :: B.C f RideBookingStatus,
-    providerId :: B.C f (Id BPPOrganization),
+    providerId :: B.C f (Id Org.Organization),
     providerMobileNumber :: B.C f Text,
     startTime :: B.C f UTCTime,
     requestorId :: B.C f (Id Person.Person),
@@ -91,8 +89,6 @@ instance ToJSON RideBooking where
 instance FromJSON RideBooking where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 
-instance ToSchema RideBooking
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideBookingT)
 fieldEMod =
@@ -125,8 +121,6 @@ validateStatusTransition oldState newState =
             <> " to "
             <> show newState
     allowed = Right ()
-    t NEW CONFIRMED = allowed
-    t NEW _ = forbidden
     t CONFIRMED CANCELLED = allowed
     t CONFIRMED TRIP_ASSIGNED = allowed
     t CONFIRMED _ = forbidden
@@ -139,7 +133,6 @@ validateStatusTransition oldState newState =
 instance FromBeckn Text RideBookingStatus where
   fromBeckn piStatus =
     case piStatus of
-      "NEW" -> NEW
       "CONFIRMED" -> CONFIRMED
       "COMPLETED" -> COMPLETED
       "CANCELLED" -> CANCELLED
@@ -149,7 +142,6 @@ instance FromBeckn Text RideBookingStatus where
 instance ToBeckn Text RideBookingStatus where
   toBeckn piStatus =
     case piStatus of
-      NEW -> "NEW"
       CONFIRMED -> "CONFIRMED"
       COMPLETED -> "COMPLETED"
       CANCELLED -> "CANCELLED"

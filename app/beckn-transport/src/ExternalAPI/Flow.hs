@@ -21,7 +21,7 @@ import Types.Storage.Organization as Org
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Auth
 import Utils.Common
-import Types.Storage.Quote (Quote)
+import qualified Types.Storage.Ride as SRide
 
 getGatewayUrl ::
   ( DBFlow m r,
@@ -96,8 +96,8 @@ initiateCall ::
   ( HasFlowEnv m r '["xAppUri" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Id Quote ->
+  Id SRide.Ride ->
   m ()
-initiateCall quote = do
+initiateCall rideId = do
   url <- asks (.xAppUri)
-  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId quote)) "/v2/ride/{rideId}/call/rider"
+  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId rideId)) "/v2/ride/{rideId}/call/rider"

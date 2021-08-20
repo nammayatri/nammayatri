@@ -23,6 +23,7 @@ import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
+import qualified Types.Storage.RideBooking as SRB
 
 data RideStatus
   = NEW
@@ -69,6 +70,7 @@ instance FromBackendRow Postgres EntityType where
 data RideT f = Ride
   { id :: B.C f (Id Ride),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
+    bookingId :: B.C f (Id SRB.RideBooking),
     personId :: B.C f (Maybe (Id Person)),
     personUpdatedAt :: B.C f (Maybe UTCTime),
     shortId :: B.C f (ShortId Ride),
@@ -127,6 +129,7 @@ fieldEMod =
     <> B.modifyTableFields
       B.tableModification
         { requestId = "request_id",
+          bookingId = "booking_id",
           personId = "person_id",
           personUpdatedAt = "person_updated_at",
           entityType = "entity_type",

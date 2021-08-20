@@ -19,6 +19,7 @@ import Types.Storage.Person (Person)
 import qualified Types.Storage.OldRide as Storage
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Quote as SQuote
+import qualified Types.Storage.RideBooking as SRB
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.RideT))
 getDbTable = DB.ride . DB.appDb <$> getSchemaName
@@ -311,3 +312,13 @@ updateMultiple rideId ride = do
           actualPrice <-. B.val_ (ride_.actualPrice),
           actualDistance <-. B.val_ (ride_.actualDistance)
         ]
+
+
+findByRBId :: DBFlow m r => Id SRB.RideBooking -> m (Maybe Storage.Ride)
+findByRBId rbId = do
+  dbTable <- getDbTable
+  list <- DB.findAll dbTable (B.orderBy_ orderBy) predicate
+  return $ listToMaybe list
+  where
+    orderBy Storage.Ride {..} = B.desc_ createdAt
+    predicate Storage.Ride {..} = bookingId ==. B.val_ rbId

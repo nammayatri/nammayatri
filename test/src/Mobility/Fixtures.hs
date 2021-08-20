@@ -29,9 +29,11 @@ import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
 import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
 import qualified "app-backend" Types.Storage.OldRide as BRide
-import qualified "beckn-transport" Types.Storage.OldRide as TRide
+import qualified "beckn-transport" Types.Storage.Ride as TRide
 import qualified "app-backend" Types.Storage.SearchReqLocation as AppBESearchReqLoc
 import qualified "app-backend" Types.Storage.SearchRequest as BSearchRequest
+import qualified "beckn-transport" Types.Storage.RideBooking as TRB
+import qualified "app-backend" Types.Storage.RideBooking as BRB
 
 address :: AppCommon.Address
 address =
@@ -120,7 +122,7 @@ searchServices ::
   ClientM AppBESearch.SearchRes
 searchServices :<|> _ = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
-cancelRide :: Id BRide.Ride -> Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
+cancelRide :: Id BRB.RideBooking -> Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
@@ -142,13 +144,13 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
                   )
          ) = client (Proxy :: Proxy TbeRoutes.DriverAPI)
 
-rideRespond :: Id TRide.Ride -> Text -> TRideBookingAPI.SetDriverAcceptanceReq -> ClientM TRideBookingAPI.SetDriverAcceptanceRes
+rideRespond :: Id TRB.RideBooking -> Text -> TRideBookingAPI.SetDriverAcceptanceReq -> ClientM TRideBookingAPI.SetDriverAcceptanceRes
 rideRespond rideBookingId = rideResp
   where
     _ :<|> (_ :<|> driver_rb_path) = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
     rideResp :<|> _ = driver_rb_path rideBookingId
 
-getNotificationInfo :: Id TRide.Ride -> Text -> ClientM TRideBookingAPI.GetRideInfoRes
+getNotificationInfo :: Id TRB.RideBooking -> Text -> ClientM TRideBookingAPI.GetRideInfoRes
 getNotificationInfo rideBookingId = getNotif
   where
     _ :<|> (_ :<|> driver_rb_path) = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
@@ -178,7 +180,7 @@ callAppFeedback ratingValue rideId =
           }
    in appFeedback appRegistrationToken request
 
-tRideBookingStatus :: Id TRide.Ride -> Text -> ClientM TRideBookingAPI.RideBookingStatusRes
+tRideBookingStatus :: Id TRB.RideBooking -> Text -> ClientM TRideBookingAPI.RideBookingStatusRes
 tRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM TRideBookingAPI.RideBookingListRes
 (tRideBookingStatus :<|> tRideBookingList :<|> _) :<|> _ = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
 

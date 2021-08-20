@@ -7,20 +7,20 @@ import qualified Beckn.Types.Mobility.Order as Mobility
 import EulerHS.Prelude
 import Types.API.Ride (CancelRideReq (..))
 import Types.Error
-import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RideCancellationReason as SRCR
-import qualified Types.Storage.OldRide as Ride
+import qualified Types.Storage.Person as Person
+import qualified Types.Storage.Ride as SRide
 import Utils.Common
 
 type MonadHandler m = (MonadThrow m, Log m)
 
 data ServiceHandle m = ServiceHandle
-  { findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    findPersonById :: Id SP.Person -> m (Maybe SP.Person),
-    cancelRide :: Id Ride.Ride -> SRCR.RideCancellationReason -> m ()
+  { findRideById :: Id SRide.Ride -> m (Maybe SRide.Ride),
+    findPersonById :: Id Person.Person -> m (Maybe Person.Person),
+    cancelRide :: Id SRide.Ride -> SRCR.RideCancellationReason -> m ()
   }
 
-cancelRideHandler :: MonadHandler m => ServiceHandle m -> Id SP.Person -> Id Ride.Ride -> CancelRideReq -> m APISuccess.APISuccess
+cancelRideHandler :: MonadHandler m => ServiceHandle m -> Id Person.Person -> Id SRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} personId rideId req = do
   ride <- findRideById rideId >>= fromMaybeM RideDoesNotExist
   unless (isValidRide ride) $ throwError $ QuoteInvalidStatus "This ride cannot be canceled"
@@ -28,19 +28,19 @@ cancelRideHandler ServiceHandle {..} personId rideId req = do
     findPersonById personId
       >>= fromMaybeM PersonNotFound
   case authPerson.role of
-    SP.ADMIN -> cancelRide rideId $ rideCancelationReason Mobility.ByOrganization
-    SP.DRIVER -> do
-      driverId <- ride.personId & fromMaybeM (RideFieldNotPresent "person")
+    Person.ADMIN -> cancelRide rideId $ rideCancelationReason Mobility.ByOrganization ride.bookingId
+    Person.DRIVER -> do
+      let driverId = ride.driverId
       unless (authPerson.id == driverId) $ throwError NotAnExecutor
-      cancelRide rideId $ rideCancelationReason Mobility.ByDriver
+      cancelRide rideId $ rideCancelationReason Mobility.ByDriver ride.bookingId
   pure APISuccess.Success
   where
     isValidRide ride =
-      (ride.status) `elem` [Ride.CONFIRMED, Ride.TRIP_ASSIGNED, Ride.TRIP_REASSIGNMENT]
-    rideCancelationReason source = do
+      ride.status == SRide.NEW
+    rideCancelationReason source rideBookingId = do
       let CancelRideReq {..} = req
       SRCR.RideCancellationReason
-        { rideId = rideId,
+        { rideBookingId = rideBookingId,
           source = source,
           reasonCode = Just reasonCode,
           ..

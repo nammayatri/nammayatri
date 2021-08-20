@@ -9,11 +9,11 @@ import qualified Product.RideAPI.Handlers.CancelRide as Handler
 import qualified Storage.Queries.Person as QPerson
 import Types.API.Ride (CancelRideReq)
 import qualified Storage.Queries.Ride as QRide
-import qualified Types.Storage.OldRide as Ride
+import qualified Types.Storage.Ride as SRide
 import Utils.Common (withFlowHandlerAPI)
 import qualified Types.Storage.Person as SP
 
-cancelRide :: Id SP.Person -> Id Ride.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess
+cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess
 cancelRide personId rideId req = withFlowHandlerAPI $ do
   Handler.cancelRideHandler handle personId rideId req
   where

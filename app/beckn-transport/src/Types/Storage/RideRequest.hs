@@ -10,8 +10,8 @@ import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.OldRide as Ride
 import Types.Storage.Organization
+import qualified Types.Storage.RideBooking as SRB
 
 data RideRequestType = ALLOCATION | CANCELLATION | DRIVER_RESPONSE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -26,7 +26,7 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be RideRequestType
 
 data RideRequestT f = RideRequest
   { id :: B.C f (Id RideRequest),
-    rideId :: B.C f (Id Ride.Ride),
+    rideBookingId :: B.C f (Id SRB.RideBooking),
     shortOrgId :: B.C f (ShortId Organization),
     createdAt :: B.C f UTCTime,
     _type :: B.C f RideRequestType,
@@ -39,9 +39,9 @@ type RideRequest = RideRequestT Identity
 type RideRequestPrimaryKey = B.PrimaryKey RideRequestT Identity
 
 instance B.Table RideRequestT where
-  data PrimaryKey RideRequestT f = RideRequestPrimaryKey (B.C f (Id Ride.Ride))
+  data PrimaryKey RideRequestT f = RideRequestPrimaryKey (B.C f (Id SRB.RideBooking))
     deriving (Generic, B.Beamable)
-  primaryKey = RideRequestPrimaryKey . rideId
+  primaryKey = RideRequestPrimaryKey . rideBookingId
 
 instance ToJSON RideRequest where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
@@ -55,7 +55,7 @@ fieldEMod =
   B.setEntityName "ride_request"
     <> B.modifyTableFields
       B.tableModification
-        { rideId = "ride_id",
+        { rideBookingId = "ride_booking_id",
           shortOrgId = "short_org_id",
           createdAt = "created_at",
           _type = "type"

@@ -32,10 +32,10 @@ import qualified Test.RandomStrings as RS
 import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics, HasBPPMetrics)
-import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.Quote as Quote
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
 import Utils.Common
@@ -251,5 +251,5 @@ mkProviderStats piCount =
   Common.ProviderStats
     { completed = List.lookup Ride.COMPLETED piCount,
       inprogress = List.lookup Ride.INPROGRESS piCount,
-      confirmed = List.lookup Ride.CONFIRMED piCount
+      confirmed = List.lookup Ride.NEW piCount
     }

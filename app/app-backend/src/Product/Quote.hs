@@ -4,16 +4,16 @@ import App.Types
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchReqLocation as Location
+import qualified Storage.Queries.SearchRequest as QSR
 import qualified Types.API.Quote as API
 import Types.Error
 import qualified Types.ProductInfo as Info
-import qualified Types.Storage.SearchRequest as SSR
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.SearchReqLocation as Location
+import qualified Types.Storage.SearchRequest as SSR
 import Utils.Common
 
 getQuotes :: Id SSR.SearchRequest -> Id Person.Person -> FlowHandler API.GetQuotesRes

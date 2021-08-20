@@ -8,10 +8,10 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Storage.CancellationReason (CancellationReasonCode)
 import Types.Storage.Organization
-import Types.Storage.OldRide (Ride)
+import Types.Storage.RideBooking (RideBooking)
 
 data RideCancellationReasonT f = RideCancellationReason
-  { rideId :: B.C f (Id Ride),
+  { rideBookingId :: B.C f (Id RideBooking),
     source :: B.C f CancellationSource,
     reasonCode :: B.C f (Maybe CancellationReasonCode),
     additionalInfo :: B.C f (Maybe Text)
@@ -23,9 +23,9 @@ type RideCancellationReason = RideCancellationReasonT Identity
 type RideCancellationReasonPrimaryKey = B.PrimaryKey RideCancellationReasonT Identity
 
 instance B.Table RideCancellationReasonT where
-  data PrimaryKey RideCancellationReasonT f = RideCancellationReasonPrimaryKey (B.C f (Id Ride))
+  data PrimaryKey RideCancellationReasonT f = RideCancellationReasonPrimaryKey (B.C f (Id RideBooking))
     deriving (Generic, B.Beamable)
-  primaryKey = RideCancellationReasonPrimaryKey . rideId
+  primaryKey = RideCancellationReasonPrimaryKey . rideBookingId
 
 instance ToJSON RideCancellationReason
 
@@ -37,7 +37,7 @@ fieldEMod =
   B.setEntityName "ride_cancellation_reason"
     <> B.modifyTableFields
       B.tableModification
-        { rideId = "ride_id",
+        { rideBookingId = "ride_booking_id",
           reasonCode = "reason_code",
           additionalInfo = "additional_info"
         }

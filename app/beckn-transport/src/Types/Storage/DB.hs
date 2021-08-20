@@ -12,7 +12,6 @@ import qualified Types.Storage.DriverLocation as DriverLocation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
 import qualified Types.Storage.NotificationStatus as NotificationStatus
-import qualified Types.Storage.OldRide as Ride
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Products as Product
@@ -20,6 +19,8 @@ import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Rating as Rating
 import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
+import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.RideBooking as RideB
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.SearchRequest as SearchRequest
@@ -35,6 +36,7 @@ data TransporterDb f = TransporterDb
     searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT),
     products :: f (B.TableEntity Product.ProductsT),
     quote :: f (B.TableEntity Quote.QuoteT),
+    rideBooking :: f (B.TableEntity RideB.RideBookingT),
     ride :: f (B.TableEntity Ride.RideT),
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
     rating :: f (B.TableEntity Rating.RatingT),

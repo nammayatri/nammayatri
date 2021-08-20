@@ -13,13 +13,13 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.Ride as QRide
 import Types.Error
-import qualified Types.Storage.OldRide as Ride
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as SP
 import Types.Storage.Rating as Rating
   ( Rating,
     RatingT (..),
   )
+import qualified Types.Storage.Ride as Ride
 import Utils.Common
 
 feedback ::
@@ -32,11 +32,11 @@ feedback _ _ req = withFlowHandlerBecknAPI $
     logTagInfo "FeedbackAPI" "Received feedback API call."
     let context = req.context
     BP.validateContext "feedback" context
-    let quoteId = Id $ req.message.order_id
+    let rideId = Id $ req.message.order_id
     ride <-
-      QRide.findByQuoteId quoteId
+      QRide.findById rideId
         >>= fromMaybeM RideNotFound
-    driverId <- ride.personId & fromMaybeM (RideFieldNotPresent "person")
+    let driverId = ride.driverId
     unless (ride.status == Ride.COMPLETED) $
       throwError $ QuoteInvalidStatus "Order is not ready for rating."
     ratingValue :: Int <-

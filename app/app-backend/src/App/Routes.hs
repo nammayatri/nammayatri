@@ -57,6 +57,7 @@ import qualified Types.Storage.RegistrationToken as SRT
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
 import qualified Types.Storage.SearchRequest as SSR
 import qualified Types.Storage.OldRide as SRide
+import qualified Types.Storage.RideBooking as SRB
 
 type AppAPI =
   "v2"
@@ -220,7 +221,7 @@ rideBookingFlow =
 
 type CancelAPI =
   "rideBooking"
-    :> Capture "bookingId" (Id SRide.Ride)
+    :> Capture "bookingId" (Id SRB.RideBooking)
     :> "cancel"
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq

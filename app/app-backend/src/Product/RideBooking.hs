@@ -35,7 +35,6 @@ buildRideBookingStatusRes ride = do
   fromLocation <- QLoc.findLocationById fromLocId >>= fromMaybeM LocationNotFound
   toLocation <- QLoc.findLocationById toLocId >>= fromMaybeM LocationNotFound
   let rbStatus = case ride.status of
-        SRide.INSTOCK -> SRideBooking.NEW
         SRide.CONFIRMED -> SRideBooking.CONFIRMED
         SRide.TRIP_ASSIGNED -> SRideBooking.TRIP_ASSIGNED
         SRide.COMPLETED -> SRideBooking.COMPLETED

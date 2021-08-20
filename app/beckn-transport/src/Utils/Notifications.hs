@@ -9,10 +9,10 @@ import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude
-import Types.Storage.OldRide (Ride)
 import Types.Storage.Person as Person
-import Types.Storage.Quote as Quote
 import Types.Storage.RegistrationToken as RegToken
+import Types.Storage.RideBooking (RideBooking)
+import qualified Types.Storage.RideBooking as SRB
 import Types.Storage.SearchRequest as SearchRequest
 
 -- | Send FCM "cancel" notification to driver
@@ -125,17 +125,17 @@ notifyCancelReqByBP ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  Quote ->
+  SRB.RideBooking ->
   [Person] ->
   m ()
-notifyCancelReqByBP p =
+notifyCancelReqByBP rideBooking =
   traverse_ (\person -> FCM.notifyPerson notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken)
   where
     notificationData =
       FCM.FCMAndroidData
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
-          fcmEntityIds = show $ getId $ p.id,
+          fcmEntityIds = show $ getId $ rideBooking.id,
           fcmEntityType = FCM.Organization,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CANCELLED_PRODUCT
         }
@@ -144,7 +144,7 @@ notifyCancelReqByBP p =
       FCMNotificationBody $
         unwords
           [ "The ride scheduled for",
-            showTimeIst (Quote.startTime p) <> ",",
+            showTimeIst (rideBooking.startTime) <> ",",
             "has been cancelled. Check the app for more details."
           ]
 
@@ -152,17 +152,17 @@ notifyDriverCancelledRideRequest ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  Quote ->
+  SRB.RideBooking ->
   [Person] ->
   m ()
-notifyDriverCancelledRideRequest p =
+notifyDriverCancelledRideRequest rideBooking =
   traverse_ (\person -> FCM.notifyPerson notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken)
   where
     notificationData =
       FCM.FCMAndroidData
         { fcmNotificationType = FCM.DRIVER_UNASSIGNED,
           fcmShowNotification = FCM.SHOW,
-          fcmEntityIds = show $ getId $ p.id,
+          fcmEntityIds = show $ getId rideBooking.id,
           fcmEntityType = FCM.Organization,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_UNASSIGNED
         }
@@ -171,7 +171,7 @@ notifyDriverCancelledRideRequest p =
       FCMNotificationBody $
         unwords
           [ "The ride scheduled for",
-            showTimeIst (Quote.startTime p) <> ",",
+            showTimeIst (rideBooking.startTime) <> ",",
             "has been refused by driver. Check the app for more details."
           ]
 
@@ -204,11 +204,11 @@ notifyDriverNewAllocation ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  Ride ->
+  Id rideBookingId ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverNewAllocation ride personId =
+notifyDriverNewAllocation rideBookingId personId =
   FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "New allocation request."
@@ -223,7 +223,7 @@ notifyDriverNewAllocation ride personId =
         { fcmNotificationType = FCM.ALLOCATION_REQUEST,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId $ ride.id,
+          fcmEntityIds = getId rideBookingId,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST
         }
 
@@ -231,11 +231,11 @@ notifyDriverUnassigned ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  Ride ->
+  Id RideBooking ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverUnassigned ride personId = FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
+notifyDriverUnassigned rideBookingId personId = FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "Ride not assigned."
     body =
@@ -249,6 +249,6 @@ notifyDriverUnassigned ride personId = FCM.notifyPerson notificationData . FCMNo
         { fcmNotificationType = FCM.ALLOCATION_REQUEST_UNASSIGNED,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId $ ride.id,
+          fcmEntityIds = getId rideBookingId,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST_UNASSIGNED
         }

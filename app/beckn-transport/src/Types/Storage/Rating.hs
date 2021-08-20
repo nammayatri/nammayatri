@@ -7,7 +7,7 @@ import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Storage.Person (Person)
-import Types.Storage.OldRide (Ride)
+import Types.Storage.Ride (Ride)
 
 data RatingT f = Rating
   { id :: B.C f (Id Rating),

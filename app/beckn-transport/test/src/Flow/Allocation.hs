@@ -16,9 +16,9 @@ import qualified Types.API.Ride as Ride
 import qualified Types.API.RideBooking as RideBooking
 import Types.App
 import Types.Metrics
-import qualified Types.Storage.OldRide as Ride
 import Types.Storage.Organization
 import Types.Storage.Person
+import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.SilentLogger ()

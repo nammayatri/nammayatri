@@ -13,14 +13,16 @@ import qualified Product.RideAPI.Handlers.EndRide as Handler
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Quote as PI
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideBooking as QRB
 import Types.App (Driver)
 import qualified Types.Storage.Person as SP
-import qualified Types.Storage.OldRide as Ride
 import Utils.Metrics (putFareAndDistanceDeviations)
 import qualified Storage.Queries.SearchRequest as QSearchRequest
-import Beckn.Utils.Common
+import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.RideBooking as SRB
+import Utils.Common (withFlowHandlerAPI)
+import qualified Storage.Queries.Quote as QQuote
 
 endRide :: Id SP.Person -> Id Ride.Ride -> FlowHandler APISuccess.APISuccess
 endRide personId rideId = withFlowHandlerAPI $ do
@@ -29,9 +31,10 @@ endRide personId rideId = withFlowHandlerAPI $ do
     handle =
       Handler.ServiceHandle
         { findPersonById = Person.findPersonById,
-          findPIById = PI.findById',
+          findRideBookingById = QRB.findById,
           findRideById = QRide.findById,
           findSearchRequestById= QSearchRequest.findById,
+          findQuoteById= QQuote.findById,
           notifyUpdateToBAP = notifyUpdateToBAP,
           endRideTransaction,
           calculateFare = \orgId vehicleVariant distance -> Fare.calculateFare orgId vehicleVariant (Right distance),
@@ -39,9 +42,10 @@ endRide personId rideId = withFlowHandlerAPI $ do
           putDiffMetric = putFareAndDistanceDeviations
         }
 
-endRideTransaction :: DBFlow m r => Id Ride.Ride -> Id Driver -> Amount -> m ()
-endRideTransaction rideId driverId actualPrice = DB.runSqlDBTransaction $ do
+endRideTransaction :: DBFlow m r => Id SRB.RideBooking -> Id Ride.Ride -> Id Driver -> Amount -> m ()
+endRideTransaction rideBookingId rideId driverId actualPrice = DB.runSqlDBTransaction $ do
   QRide.updateActualPrice actualPrice rideId
   QRide.updateStatus rideId Ride.COMPLETED
+  QRB.updateStatus rideBookingId SRB.COMPLETED
   DriverInformation.updateOnRide driverId False
   DriverStats.updateIdleTime driverId

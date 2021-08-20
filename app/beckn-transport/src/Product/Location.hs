@@ -22,7 +22,7 @@ import Types.Metrics
 import qualified Types.Storage.Person as Person
 import Utils.Common hiding (id)
 import Prelude (atan2)
-import qualified Types.Storage.OldRide as SRide
+import qualified Types.Storage.Ride as SRide
 
 updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
 updateLocation personId req = withFlowHandlerAPI $ do
@@ -60,18 +60,18 @@ getLocation rideId = withFlowHandlerAPI $ do
       >>= fromMaybeM RideDoesNotExist
   status <-
     case ride.status of
-      SRide.TRIP_ASSIGNED -> pure PreRide
+      SRide.NEW -> pure PreRide
       SRide.INPROGRESS -> pure ActualRide
       _ -> throwError $ RideInvalidStatus "Cannot track this ride"
   driver <-
-    (ride.personId & fromMaybeM (RideFieldNotPresent "person_id"))
-      >>= Person.findPersonById
+    ride.driverId
+      & Person.findPersonById
       >>= fromMaybeM PersonNotFound
   currLocation <-
     DriverLocation.findById driver.id
       >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
-  let totalDistance = ride.distance
+  let totalDistance = ride.finalDistance
       currPoint = locationToLatLong currLocation
   return $ GetLocationRes {..}
 
