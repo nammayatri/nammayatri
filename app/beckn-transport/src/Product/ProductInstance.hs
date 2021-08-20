@@ -74,14 +74,17 @@ notifyUpdateToBAP searchPi orderPi updatedStatus = do
   notifyTripDetailsToGateway transporter searchPi orderPi
   notifyStatusUpdateReq transporter searchPi updatedStatus
 
-listDriverRides :: Id SP.Person -> Id SP.Person -> FlowHandler RideListRes
-listDriverRides personId driverId = withFlowHandlerAPI $ do
+listDriverRides ::
+  Id SP.Person ->
+  Id SP.Person ->
+  Maybe Integer ->
+  Maybe Integer ->
+  FlowHandler RideListRes
+listDriverRides personId driverId limit offset = withFlowHandlerAPI $ do
   user <- PersQ.findPersonById personId >>= fromMaybeM PersonNotFound
   person <- PersQ.findPersonById driverId >>= fromMaybeM PersonDoesNotExist
   hasAccess user person
-  rideList <- PIQ.findAllByPersonId person.id
-  locList <- LQ.findAllByLocIds (catMaybes (PI.fromLocation <$> rideList)) (catMaybes (PI.toLocation <$> rideList))
-  return $ catMaybes $ joinByIds locList <$> rideList
+  map toRideRes <$> PIQ.findAllByPersonId (fromMaybe 100 limit) (fromMaybe 0 offset) person.id
   where
     hasAccess user person =
       when
@@ -89,17 +92,12 @@ listDriverRides personId driverId = withFlowHandlerAPI $ do
             || (user.organizationId) /= (person.organizationId)
         )
         $ throwError Unauthorized
-    joinByIds locList ride =
-      find (\x -> PI.fromLocation ride == Just (Loc.id x)) locList
-        >>= buildResponse
-      where
-        buildResponse k = prepare ride k <$> find (\x -> PI.toLocation ride == Just (Loc.id x)) locList
-        prepare pRide from to =
-          RideRes
-            { product = pRide,
-              fromLocation = from,
-              toLocation = to
-            }
+    toRideRes (ride, from, to) =
+      RideRes
+        { product = ride,
+          fromLocation = from,
+          toLocation = to
+        }
 
 listVehicleRides :: Id SP.Person -> Id V.Vehicle -> FlowHandler RideListRes
 listVehicleRides personId vehicleId = withFlowHandlerAPI $ do

@@ -13,9 +13,11 @@ import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified Storage.Queries.Location as Loc
 import Types.API.ProductInstance
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Location as Loc
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import qualified Types.Storage.ProductInstance as Storage
@@ -400,12 +402,26 @@ findAllByVehicleId piId = do
   where
     predicate Storage.ProductInstance {..} = B.val_ (isJust piId) &&. entityId ==. B.val_ (getId <$> piId)
 
-findAllByPersonId :: DBFlow m r => Id Person -> m [Storage.ProductInstance]
-findAllByPersonId piId = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
+findAllByPersonId ::
+  DBFlow m r =>
+  Integer ->
+  Integer ->
+  Id Person ->
+  m [(Storage.ProductInstance, Loc.Location, Loc.Location)]
+findAllByPersonId limit offset piId = do
+  piTable <- getDbTable
+  locTable <- Loc.getDbTable
+  DB.findAllByJoin
+    (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc)
+    (joinQuery piTable locTable)
   where
+    joinQuery piTable locTable = do
+      ride <- B.filter_ predicate $ B.all_ piTable
+      fromLoc <- B.join_ locTable $ \loc -> B.just_ loc.id ==. ride.fromLocation
+      toLoc <- B.join_ locTable $ \loc -> B.just_ loc.id ==. ride.toLocation
+      return (ride, fromLoc, toLoc)
     predicate Storage.ProductInstance {..} = personId ==. B.val_ (Just piId)
+    orderByDesc (Storage.ProductInstance {..}, _, _) = B.desc_ createdAt
 
 findAllByParentId :: DBFlow m r => Id Storage.ProductInstance -> m [Storage.ProductInstance]
 findAllByParentId piId = do

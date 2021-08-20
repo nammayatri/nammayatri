@@ -221,7 +221,7 @@ buildListLeads :: ClientM [TbeCase.CaseRes]
 buildListLeads = listLeads appRegistrationToken [TCase.NEW] TCase.RIDESEARCH (Just 50) Nothing
 
 listOrgRides :: Text -> [TPI.ProductInstanceStatus] -> [TCase.CaseType] -> Maybe Int -> Maybe Int -> ClientM TbePI.ProductInstanceList
-listDriverRides :: Text -> Id TPerson.Person -> ClientM TbePI.RideListRes
+listDriverRides :: Text -> Id TPerson.Person -> Maybe Integer -> Maybe Integer -> ClientM TbePI.RideListRes
 listVehicleRides :: Text -> Id SV.Vehicle -> ClientM TbePI.RideListRes
 listCasesByProductInstance :: Text -> Id TPI.ProductInstance -> Maybe TCase.CaseType -> ClientM [TbeCase.CaseRes]
 listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)

@@ -214,6 +214,8 @@ type ProductInstanceAPI =
            :<|> "person"
            :> TokenAuth
            :> Capture "personId" (Id Person)
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
            :> Get '[JSON] RideListRes
            :<|> "vehicle"
            :> TokenAuth
