@@ -5,12 +5,13 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import Database.Beam (SqlEq ((==.)), (<-.))
+import Beckn.Utils.Common
+import Database.Beam (SqlEq ((==.)), (&&.), (<-.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.ProductInstance as PI
 import qualified Types.Storage.DB as DB
 import Types.Storage.Person (Person)
+import qualified Types.Storage.Person as SP
 import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.Rating as Storage
 
@@ -23,8 +24,8 @@ create rating = do
   dbTable <- getDbTable
   DB.createOne dbTable (Storage.insertExpression rating)
 
-updateRatingValue :: DBFlow m r => Id Storage.Rating -> Int -> m ()
-updateRatingValue ratingId newRatingValue = do
+updateRatingValue :: DBFlow m r => Id Storage.Rating -> Id SP.Person -> Int -> m ()
+updateRatingValue ratingId driverId' newRatingValue = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update
@@ -35,7 +36,10 @@ updateRatingValue ratingId newRatingValue = do
             updatedAt <-. B.val_ now
           ]
     )
-    (\Storage.Rating {..} -> id ==. B.val_ ratingId)
+    ( \Storage.Rating {..} ->
+        id ==. B.val_ ratingId
+          &&. driverId ==. B.val_ driverId'
+    )
 
 findByProductInstanceId :: DBFlow m r => Id PI.ProductInstance -> m (Maybe Storage.Rating)
 findByProductInstanceId productInsId = do
@@ -45,19 +49,8 @@ findByProductInstanceId productInsId = do
     predicate Storage.Rating {..} = productInstanceId ==. B.val_ productInsId
 
 findAllRatingsForPerson :: DBFlow m r => Id Person -> m [Storage.Rating]
-findAllRatingsForPerson personId_ = do
-  ratingTable <- getDbTable
-  productInstanceTable <- PI.getDbTable
-  DB.findAllByJoin
-    (B.orderBy_ orderBy)
-    (joinPredicate ratingTable productInstanceTable)
+findAllRatingsForPerson driverId_ = do
+  dbTable <- getDbTable
+  DB.findAll dbTable identity predicate
   where
-    orderBy Storage.Rating {..} = B.desc_ createdAt
-    joinPredicate ratingTable productInstanceTable = do
-      productInstance <-
-        B.filter_
-          (\PI.ProductInstance {..} -> personId ==. B.val_ (Just personId_))
-          $ B.all_ productInstanceTable
-      rating <- B.all_ ratingTable
-      B.guard_ $ PI.ProductInstancePrimaryKey (Storage.productInstanceId rating) `B.references_` productInstance
-      pure rating
+    predicate Storage.Rating {..} = driverId ==. B.val_ driverId_

@@ -7,11 +7,13 @@ import Data.Swagger (ToSchema)
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import Types.Storage.Person (Person)
 import Types.Storage.ProductInstance (ProductInstance)
 
 data RatingT f = Rating
   { id :: B.C f (Id Rating),
     productInstanceId :: B.C f (Id ProductInstance),
+    driverId :: B.C f (Id Person),
     ratingValue :: B.C f Int,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
@@ -47,6 +49,7 @@ fieldEMod =
       B.tableModification
         { productInstanceId = "product_instance_id",
           ratingValue = "rating_value",
+          driverId = "driver_id",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }

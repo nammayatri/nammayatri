@@ -14,6 +14,7 @@ import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Rating as Rating
 import Types.Error
 import Types.Storage.Organization (Organization)
+import qualified Types.Storage.Person as SP
 import qualified Types.Storage.ProductInstance as ProductInstance
 import Types.Storage.Rating as Rating
   ( Rating,
@@ -33,7 +34,7 @@ feedback _ _ req = withFlowHandlerBecknAPI $
     BP.validateContext "feedback" context
     let searchPIId = Id $ req.message.order_id
     orderPI <- ProductInstance.findOrderPIByParentId searchPIId >>= fromMaybeM PIDoesNotExist
-    personId <- orderPI.personId & fromMaybeM (PIFieldNotPresent "person")
+    driverId <- orderPI.personId & fromMaybeM (PIFieldNotPresent "person")
     unless (orderPI.status == ProductInstance.COMPLETED) $
       throwError $ PIInvalidStatus "Order is not ready for rating."
     ratingValue :: Int <-
@@ -45,17 +46,17 @@ feedback _ _ req = withFlowHandlerBecknAPI $
       Nothing -> do
         logTagInfo "FeedbackAPI" $
           "Creating a new record for " +|| orderId ||+ " with rating " +|| ratingValue ||+ "."
-        newRating <- mkRating orderId ratingValue
+        newRating <- mkRating orderId driverId ratingValue
         Rating.create newRating
       Just rating -> do
         logTagInfo "FeedbackAPI" $
           "Updating existing rating for " +|| orderPI.id ||+ " with new rating " +|| ratingValue ||+ "."
-        Rating.updateRatingValue (rating.id) ratingValue
-    Person.calculateAverageRating personId
+        Rating.updateRatingValue rating.id driverId ratingValue
+    Person.calculateAverageRating driverId
     return Ack
 
-mkRating :: MonadFlow m => Id ProductInstance.ProductInstance -> Int -> m Rating.Rating
-mkRating productInstanceId ratingValue = do
+mkRating :: MonadFlow m => Id ProductInstance.ProductInstance -> Id SP.Person -> Int -> m Rating.Rating
+mkRating productInstanceId driverId ratingValue = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now
