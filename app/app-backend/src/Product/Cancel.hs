@@ -6,6 +6,7 @@ import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
+import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -60,9 +61,14 @@ cancelProductInstance personId req = do
     QRCR.create $ makeRideCancelationReason orderPI.id rideCancellationReasonAPI
   return Success
   where
-    makeRideCancelationReason orderPIId cancellationReason = do
-      let RideCancellationReasonEntity {..} = cancellationReason
-      SRCR.RideCancellationReason {rideId = cast orderPIId, ..}
+    makeRideCancelationReason orderPIId rideCancellationReasonAPI = do
+      let RideCancellationReasonEntity {..} = rideCancellationReasonAPI
+      SRCR.RideCancellationReason
+        { rideId = cast orderPIId,
+          source = ByUser,
+          reasonCode = Just reasonCode,
+          additionalInfo = additionalInfo
+        }
 
 searchCancel :: (Metrics.HasBAPMetrics m r, DBFlow m r) => Id Person.Person -> CancelReq -> m CancelRes
 searchCancel personId req = do
@@ -100,30 +106,31 @@ onCancel _org req = withFlowHandlerBecknAPI $
         let searchPIid = Id $ msg.order.id
         -- TODO: Handle usecase where multiple productinstances exists for one product
 
-        orderPIList <- MPI.findAllByParentId searchPIid
-        case orderPIList of
-          [] -> return ()
-          s : _ -> do
-            let orderPI = s
-            -- TODO what if we update several PI but then get an error?
-            -- wrap everything in a transaction
-            PI.validateStatusTransition (PI.status orderPI) PI.CANCELLED & fromEitherM PIInvalidStatus
-            MPI.updateStatus (PI.id orderPI) PI.CANCELLED
-            orderCase <- MC.findById (PI.caseId orderPI) >>= fromMaybeM CaseDoesNotExist
-            Case.validateStatusTransition (orderCase.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-            MC.updateStatusFlow (PI.caseId orderPI) Case.CLOSED
-            return ()
+        mbOrderPI <- MPI.findByParentIdType searchPIid Case.RIDEORDER
+
+        whenJust mbOrderPI $ \orderPI -> do
+          -- TODO what if we update several PI but then get an error?
+          -- wrap everything in a transaction
+          PI.validateStatusTransition (PI.status orderPI) PI.CANCELLED & fromEitherM PIInvalidStatus
+          MPI.updateStatus (PI.id orderPI) PI.CANCELLED
+          orderCase <- MC.findById (PI.caseId orderPI) >>= fromMaybeM CaseDoesNotExist
+          Case.validateStatusTransition (orderCase.status) Case.CLOSED & fromEitherM CaseInvalidStatus
+          MC.updateStatusFlow (PI.caseId orderPI) Case.CLOSED
         searchPI <- MPI.findById searchPIid >>= fromMaybeM PIDoesNotExist
         PI.validateStatusTransition (PI.status searchPI) PI.CANCELLED & fromEitherM PIInvalidStatus
         MPI.updateStatus searchPIid PI.CANCELLED
         let searchCaseId = searchPI.caseId
         -- notify customer
         searchCase <- MC.findById searchCaseId >>= fromMaybeM CaseNotFound
-        reason <- msg.order.cancellation_reason_id & fromMaybeM (InvalidRequest "No cancellation reason.")
-        logTagInfo ("txnId-" <> getId searchCaseId) ("Cancellation reason " <> show reason)
+        cancellationSource <- msg.order.cancellation_reason_id & fromMaybeM (InvalidRequest "No cancellation source.")
+        logTagInfo ("txnId-" <> getId searchCaseId) ("Cancellation reason " <> show cancellationSource)
         whenJust (searchCase.requestor) $ \personId -> do
           mbPerson <- Person.findById $ Id personId
-          whenJust mbPerson $ \person -> Notify.notifyOnCancel searchPI person reason
+          whenJust mbPerson $ \person -> Notify.notifyOnCancel searchPI person cancellationSource
+          unless (cancellationSource == ByUser) $
+            whenJust mbOrderPI $ \orderPI ->
+              DB.runSqlDBTransaction $
+                QRCR.create $ SRCR.RideCancellationReason orderPI.id cancellationSource Nothing Nothing
         --
         arrSearchPI <- MPI.findAllByCaseId searchCaseId
         let arrTerminalPI =

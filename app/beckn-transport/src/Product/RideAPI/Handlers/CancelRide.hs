@@ -20,7 +20,7 @@ type MonadHandler m = (MonadThrow m, Log m)
 data ServiceHandle m = ServiceHandle
   { findPIById :: Id ProductInstance -> m (Maybe ProductInstance),
     findPersonById :: Id Person.Person -> m (Maybe Person.Person),
-    cancelRide :: Id Ride -> Mobility.CancellationReason -> Maybe SRCR.RideCancellationReason -> m ()
+    cancelRide :: Id Ride -> SRCR.RideCancellationReason -> m ()
   }
 
 cancelRideHandler :: MonadHandler m => ServiceHandle m -> Id SP.Person -> Id Ride -> CancelRideReq -> m APISuccess.APISuccess
@@ -31,16 +31,21 @@ cancelRideHandler ServiceHandle {..} personId rideId req = do
     findPersonById personId
       >>= fromMaybeM PersonNotFound
   case authPerson.role of
-    Person.ADMIN -> cancelRide rideId Mobility.ByOrganization $ Just rideCancelationReason
+    Person.ADMIN -> cancelRide rideId $ rideCancelationReason Mobility.ByOrganization
     Person.DRIVER -> do
       driverId <- prodInst.personId & fromMaybeM (PIFieldNotPresent "person")
       unless (authPerson.id == driverId) $ throwError NotAnExecutor
-      cancelRide rideId Mobility.ByDriver $ Just rideCancelationReason
+      cancelRide rideId $ rideCancelationReason Mobility.ByDriver
   pure APISuccess.Success
   where
     isValidPI prodInst =
       prodInst._type == Case.RIDEORDER
         && (prodInst.status) `elem` [CONFIRMED, TRIP_ASSIGNED, TRIP_REASSIGNMENT]
-    rideCancelationReason = do
+    rideCancelationReason source = do
       let CancelRideReq {..} = req
-      SRCR.RideCancellationReason {rideId = cast rideId, ..}
+      SRCR.RideCancellationReason
+        { rideId = cast rideId,
+          source = source,
+          reasonCode = Just reasonCode,
+          ..
+        }

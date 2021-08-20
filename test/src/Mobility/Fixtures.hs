@@ -154,7 +154,7 @@ buildAppCancelReq entityId entityType =
   CancelAPI.CancelReq
     { entityId = entityId,
       entityType = entityType,
-      cancellationReason = Just $ CancelAPI.RideCancellationReasonEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
+      rideCancellationReason = Just $ CancelAPI.RideCancellationReasonEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
     }
 
 -- For the idea behind generating a client, when nested routes are involved,

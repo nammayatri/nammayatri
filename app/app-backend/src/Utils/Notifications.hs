@@ -6,7 +6,7 @@ import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order (CancellationReason (..))
+import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -256,8 +256,8 @@ notifyOnTrackCb personId tracker c =
         _ -> pure ()
     else pure ()
 
-notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => ProductInstance -> Person -> CancellationReason -> m ()
-notifyOnCancel rideSearchPI person reason = do
+notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => ProductInstance -> Person -> CancellationSource -> m ()
+notifyOnCancel rideSearchPI person cancellationSource = do
   org <- QOrg.findOrganizationById (rideSearchPI.organizationId) >>= fromMaybeM OrgNotFound
   notifyPerson (notificationData $ org.name) person
   where
@@ -273,7 +273,7 @@ notifyOnCancel rideSearchPI person reason = do
     body orgName =
       FCMNotificationBody $ getCancellationText orgName
     -- reasonMsg = encodeToText reason
-    getCancellationText orgName = case reason of
+    getCancellationText orgName = case cancellationSource of
       ByUser ->
         unwords
           [ "You have cancelled your ride for",
@@ -292,19 +292,12 @@ notifyOnCancel rideSearchPI person reason = do
             showTimeIst (rideSearchPI.startTime) <> ".",
             "Please book again to get another ride."
           ]
-      AllocationTimeExpired ->
+      ByAllocator ->
         unwords
           [ "Ride for",
             showTimeIst (rideSearchPI.startTime),
             "has expired as we could not find a driver.",
             "Please book again to get a ride."
-          ]
-      NoDriversInRange ->
-        unwords
-          [ "Ride for",
-            showTimeIst (rideSearchPI.startTime),
-            "has been cancelled as there are no drivers nearby.",
-            "Please try again in sometime."
           ]
 
 notifyPerson ::

@@ -4,7 +4,7 @@ import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order (CancellationReason (..))
+import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import qualified Data.Text as T
@@ -21,9 +21,9 @@ notifyOnCancel ::
   ) =>
   Case ->
   Person ->
-  CancellationReason ->
+  CancellationSource ->
   m ()
-notifyOnCancel c person reason = do
+notifyOnCancel c person cancellationSource = do
   cancellationText <- getCancellationText
   notifyPerson (notificationData cancellationText) person
   where
@@ -39,7 +39,7 @@ notifyOnCancel c person reason = do
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     body text =
       FCMNotificationBody text
-    getCancellationText = case reason of
+    getCancellationText = case cancellationSource of
       ByUser ->
         return $
           unwords

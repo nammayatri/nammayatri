@@ -24,7 +24,7 @@ handle =
   CancelRide.ServiceHandle
     { findPIById = \_piId -> pure $ Just rideProductInstance,
       findPersonById = \_personid -> pure $ Just Fixtures.defaultDriver,
-      cancelRide = \_rideReq _requestedByAdmin _ -> pure ()
+      cancelRide = \_rideReq _requestedByAdmin -> pure ()
     }
 
 rideProductInstance :: ProductInstance.ProductInstance

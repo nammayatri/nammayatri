@@ -8,7 +8,11 @@ import Beckn.Types.Core.Payment
 import Beckn.Types.Mobility.Trip
 import Beckn.Utils.Example
 import Data.Aeson.Types
+import qualified Data.Text as T
 import Data.Time
+import Database.Beam (FromBackendRow)
+import Database.Beam.Backend (FromBackendRow (fromBackendRow), HasSqlValueSyntax (sqlValueSyntax), autoSqlValueSyntax)
+import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id, state)
 
 data Order = Order
@@ -21,7 +25,7 @@ data Order = Order
     payment :: Maybe Payment,
     -- Mobility specific
     trip :: Maybe Trip,
-    cancellation_reason_id :: Maybe CancellationReason,
+    cancellation_reason_id :: Maybe CancellationSource,
     cancellation_reasons :: [Option],
     cancellation_policy :: Maybe CancelPolicy
   }
@@ -44,23 +48,21 @@ instance Example CancelPolicy where
         terms = []
       }
 
-data CancellationReason
+data CancellationSource
   = ByUser
   | ByDriver
   | ByOrganization
-  | AllocationTimeExpired
-  | NoDriversInRange
+  | ByAllocator
   deriving (Show, Eq, Ord, Read, Generic)
 
-instance ToJSON CancellationReason where
+instance ToJSON CancellationSource where
   toJSON = \case
     ByUser -> "CANCELLED_BY_USER"
     ByDriver -> "CANCELLED_BY_DRIVER"
     ByOrganization -> "CANCELLED_BY_ORGANIZATION"
-    AllocationTimeExpired -> "ALLOCATION_TIME_EXPIRED"
-    NoDriversInRange -> "NO_DRIVERS_IN_RANGE"
+    ByAllocator -> "CANCELLED_BY_ALLOCATOR"
 
-instance FromJSON CancellationReason where
+instance FromJSON CancellationSource where
   parseJSON =
     withText
       "CancellationReason"
@@ -68,7 +70,12 @@ instance FromJSON CancellationReason where
           "CANCELLED_BY_USER" -> return ByUser
           "CANCELLED_BY_DRIVER" -> return ByDriver
           "CANCELLED_BY_ORGANIZATION" -> return ByOrganization
-          "ALLOCATION_TIME_EXPIRED" -> return AllocationTimeExpired
-          "NO_DRIVERS_IN_RANGE" -> return NoDriversInRange
+          "CANCELLED_BY_ALLOCATOR" -> return ByAllocator
           _ -> fail "CancellationReason parsing error"
       )
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationSource where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow Postgres CancellationSource where
+  fromBackendRow = read . T.unpack <$> fromBackendRow

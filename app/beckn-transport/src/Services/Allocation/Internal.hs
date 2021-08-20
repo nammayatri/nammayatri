@@ -3,7 +3,6 @@ module Services.Allocation.Internal where
 import App.BackgroundTaskManager.Types (DriverAllocationConfig)
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order (CancellationReason (..))
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
@@ -25,6 +24,7 @@ import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS
 import Types.Storage.Organization
 import qualified Types.Storage.ProductInstance as PI
+import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.Notifications
@@ -157,9 +157,9 @@ cancelRide ::
     CoreMetrics m
   ) =>
   Id Ride ->
-  CancellationReason ->
+  SRCR.RideCancellationReason ->
   m ()
-cancelRide rideId reason = BP.cancelRide rideId reason Nothing
+cancelRide = BP.cancelRide
 
 cleanupNotifications :: DBFlow m r => Id Ride -> m ()
 cleanupNotifications = QNS.cleanupNotifications

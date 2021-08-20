@@ -18,4 +18,4 @@ findAll = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate _ = B.val_ True
+    predicate SCR.CancellationReason {..} = enabled B.==. B.val_ True

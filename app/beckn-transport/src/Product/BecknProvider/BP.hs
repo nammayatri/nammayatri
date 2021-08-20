@@ -90,10 +90,9 @@ cancelRide ::
     CoreMetrics m
   ) =>
   Id Ride ->
-  Mobility.CancellationReason ->
-  Maybe SRCR.RideCancellationReason ->
+  SRCR.RideCancellationReason ->
   m ()
-cancelRide rideId reason mbRideCReason = do
+cancelRide rideId rideCReason = do
   orderPi <- ProductInstance.findById (cast rideId) >>= fromMaybeM PIDoesNotExist
   searchPiId <- ProductInstance.parentId orderPi & fromMaybeM (PIFieldNotPresent "parent_id")
   searchPi <- ProductInstance.findById searchPiId >>= fromMaybeM PINotFound
@@ -101,14 +100,14 @@ cancelRide rideId reason mbRideCReason = do
   trackerPi <-
     ProductInstance.findByIdType (ProductInstance.id <$> piList) Case.LOCATIONTRACKER
       >>= fromMaybeM PINotFound
-  cancelRideTransaction piList searchPiId (trackerPi.id) (orderPi.id) reason mbRideCReason
-  logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show reason)
+  cancelRideTransaction piList searchPiId (trackerPi.id) (orderPi.id) rideCReason
+  logTagInfo ("rideId-" <> getId rideId) ("Cancellation source " <> show rideCReason.source)
   fork "cancelRide - Notify BAP" $ do
     let transporterId = ProductInstance.organizationId orderPi
     transporter <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    notifyCancelToGateway searchPi transporter reason
+    notifyCancelToGateway searchPi transporter rideCReason.source
     case piList of
       [] -> pure ()
       prdInst : _ -> do
@@ -117,7 +116,7 @@ cancelRide rideId reason mbRideCReason = do
           Nothing -> pure ()
           Just driverId -> do
             driver <- Person.findPersonById driverId >>= fromMaybeM PersonNotFound
-            Notify.notifyOnCancel c driver reason
+            Notify.notifyOnCancel c driver rideCReason.source
 
 cancelRideTransaction ::
   DBFlow m r =>
@@ -125,10 +124,9 @@ cancelRideTransaction ::
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
   Id ProductInstance.ProductInstance ->
-  Mobility.CancellationReason ->
-  Maybe SRCR.RideCancellationReason ->
+  SRCR.RideCancellationReason ->
   m ()
-cancelRideTransaction piList searchPiId trackerPiId orderPiId reason mbRideCReason = DB.runSqlDBTransaction $ do
+cancelRideTransaction piList searchPiId trackerPiId orderPiId rideCReason = DB.runSqlDBTransaction $ do
   case piList of
     [] -> pure ()
     (prdInst : _) -> do
@@ -138,12 +136,12 @@ cancelRideTransaction piList searchPiId trackerPiId orderPiId reason mbRideCReas
   ProductInstance.updateStatus searchPiId ProductInstance.CANCELLED
   ProductInstance.updateStatus trackerPiId ProductInstance.COMPLETED
   ProductInstance.updateStatus orderPiId ProductInstance.CANCELLED
-  whenJust mbRideCReason $ \rideCReason -> QRCR.create rideCReason
+  QRCR.create rideCReason
   where
     updateDriverInfo personId = do
       let driverId = cast personId
       DriverInformation.updateOnRide driverId False
-      when (reason == Mobility.ByDriver) $ QDriverStats.updateIdleTime driverId
+      when (rideCReason.source == Mobility.ByDriver) $ QDriverStats.updateIdleTime driverId
 
 serviceStatus ::
   Id Organization.Organization ->
@@ -241,11 +239,11 @@ notifyCancelToGateway ::
   ) =>
   ProductInstance.ProductInstance ->
   Organization.Organization ->
-  Mobility.CancellationReason ->
+  Mobility.CancellationSource ->
   m ()
-notifyCancelToGateway searchPi transporter reason = do
+notifyCancelToGateway searchPi transporter cancellationSource = do
   trip <- mkCancelTripObj searchPi
-  order <- ExternalAPITransform.mkOrder searchPi.id (Just trip) $ Just reason
+  order <- ExternalAPITransform.mkOrder searchPi.id (Just trip) $ Just cancellationSource
   ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.caseId) . Right $ API.OnCancelReqMessage order
 
 mkTrip :: (DBFlow m r, EncFlow m r) => Id Case.Case -> ProductInstance.ProductInstance -> m Trip

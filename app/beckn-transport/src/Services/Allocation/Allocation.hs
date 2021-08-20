@@ -2,7 +2,7 @@ module Services.Allocation.Allocation where
 
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order (CancellationReason (..))
+import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime)
@@ -10,7 +10,9 @@ import EulerHS.Prelude
 import qualified Types.API.Ride as Ride (DriverResponse (..), NotificationStatus (..))
 import Types.App
 import Types.Storage.AllocationEvent (AllocationEventType (..))
+import qualified Types.Storage.CancellationReason as SCR
 import Types.Storage.Organization
+import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 
@@ -57,6 +59,13 @@ data RideInfo = RideInfo
   }
   deriving (Generic)
 
+data AllocatorCancellationReason = AllocationTimeExpired | NoDriversInRange
+
+instance ToJSON AllocatorCancellationReason where
+  toJSON = \case
+    AllocationTimeExpired -> "ALLOCATION_TIME_EXPIRED"
+    NoDriversInRange -> "NO_DRIVERS_IN_RANGE"
+
 type MonadHandler m =
   ( MonadCatch m,
     MonadTime m,
@@ -88,7 +97,7 @@ data ServiceHandle m = ServiceHandle
     getFirstDriverInTheQueue :: NonEmpty (Id Driver) -> m (Id Driver),
     checkAvailability :: NonEmpty (Id Driver) -> m [Id Driver],
     assignDriver :: Id Ride -> Id Driver -> m (),
-    cancelRide :: Id Ride -> CancellationReason -> m (),
+    cancelRide :: Id Ride -> SRCR.RideCancellationReason -> m (),
     cleanupNotifications :: Id Ride -> m (),
     addAllocationRequest :: ShortId Organization -> Id Ride -> m (),
     getRideInfo :: Id Ride -> m RideInfo,
@@ -153,7 +162,7 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
           Cancellation ->
             case rideStatus of
               status | status == Confirmed || status == Assigned -> do
-                cancel handle rideId ByUser
+                cancel handle rideId ByUser Nothing
                 logEvent ConsumerCancelled rideId Nothing
               _ ->
                 logWarning $ "Ride status is " <> show rideStatus <> ", cancellation request skipped"
@@ -179,7 +188,7 @@ processAllocation handle@ServiceHandle {..} shortOrgId rideInfo = do
   logInfo $ "isAllocationTimeFinished " <> show allocationTimeFinished
   if allocationTimeFinished
     then do
-      cancel handle rideId AllocationTimeExpired
+      cancel handle rideId ByAllocator $ Just AllocationTimeExpired
       logEvent AllocationTimeFinished rideId Nothing
     else do
       mCurrentNotification <- getCurrentNotification rideId
@@ -243,7 +252,7 @@ proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
       logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getId <$> filteredPool)
       processFilteredPool handle rideId filteredPool shortOrgId
     [] -> do
-      cancel handle rideId NoDriversInRange
+      cancel handle rideId ByAllocator $ Just NoDriversInRange
       logEvent EmptyDriverPool rideId Nothing
 
 processFilteredPool ::
@@ -277,11 +286,19 @@ checkRideLater ServiceHandle {..} shortOrgId rideId = do
   addAllocationRequest shortOrgId rideId
   logInfo "Check ride later"
 
-cancel :: MonadHandler m => ServiceHandle m -> Id Ride -> CancellationReason -> m ()
-cancel ServiceHandle {..} rideId reason = do
+cancel :: MonadHandler m => ServiceHandle m -> Id Ride -> CancellationSource -> Maybe AllocatorCancellationReason -> m ()
+cancel ServiceHandle {..} rideId cancellationSource mbReasonCode = do
   logInfo "Cancelling ride"
-  cancelRide rideId reason
+  cancelRide rideId rideCancellationReason
   cleanupNotifications rideId
+  where
+    rideCancellationReason =
+      SRCR.RideCancellationReason
+        { rideId = cast rideId,
+          source = cancellationSource,
+          reasonCode = SCR.CancellationReasonCode . encodeToText <$> mbReasonCode,
+          additionalInfo = Nothing
+        }
 
 isAllocationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> OrderTime -> m Bool
 isAllocationTimeFinished ServiceHandle {..} currentTime orderTime = do

@@ -125,8 +125,8 @@ mkPrice prodInst =
           maximum_value = amt
         }
 
-mkOrder :: MonadFlow m => Id ProductInstance -> Maybe Trip -> Maybe CancellationReason -> m Mobility.Order
-mkOrder searchPiId trip mbReason = do
+mkOrder :: MonadFlow m => Id ProductInstance -> Maybe Trip -> Maybe CancellationSource -> m Mobility.Order
+mkOrder searchPiId trip mbCancellationSource = do
   now <- getCurrentTime
   return
     Mobility.Order
@@ -138,7 +138,7 @@ mkOrder searchPiId trip mbReason = do
         billing = Nothing,
         payment = Nothing,
         trip = trip,
-        cancellation_reason_id = mbReason,
+        cancellation_reason_id = mbCancellationSource,
         cancellation_reasons = [],
         cancellation_policy = Nothing
       }

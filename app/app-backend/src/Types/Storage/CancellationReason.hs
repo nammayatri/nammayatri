@@ -22,7 +22,8 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationReasonCode
 
 data CancellationReasonT f = CancellationReason
   { reasonCode :: B.C f CancellationReasonCode,
-    description :: B.C f Text
+    description :: B.C f Text,
+    enabled :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 

@@ -5,7 +5,7 @@ import Beckn.External.Encryption
 import Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order (CancellationReason (..))
+import Beckn.Types.Mobility.Order (CancellationSource (..))
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Allocation as AQ

@@ -3,6 +3,7 @@
 module Types.Storage.RideCancellationReason where
 
 import Beckn.Types.Id
+import Beckn.Types.Mobility.Order (CancellationSource)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Storage.CancellationReason (CancellationReasonCode)
@@ -11,7 +12,8 @@ import Types.Storage.ProductInstance (ProductInstance)
 
 data RideCancellationReasonT f = RideCancellationReason
   { rideId :: B.C f (Id ProductInstance),
-    reasonCode :: B.C f CancellationReasonCode,
+    source :: B.C f CancellationSource,
+    reasonCode :: B.C f (Maybe CancellationReasonCode),
     additionalInfo :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
@@ -35,6 +37,7 @@ fieldEMod =
   B.setEntityName "ride_cancellation_reason"
     <> B.modifyTableFields
       B.tableModification
-        { reasonCode = "reason_code",
+        { rideId = "ride_id",
+          reasonCode = "reason_code",
           additionalInfo = "additional_info"
         }
