@@ -433,6 +433,7 @@ personFlow =
 type CancellationReasonAPI =
   "cancellationReason"
     :> ( "list"
+           :> TokenAuth
            :> Get '[JSON] CancellationReasonAPI.ListRes
        )
 
