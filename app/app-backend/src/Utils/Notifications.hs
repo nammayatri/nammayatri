@@ -294,10 +294,10 @@ notifyOnCancel rideSearchPI person cancellationSource = do
           ]
       ByAllocator ->
         unwords
-          [ "Ride for",
+          [ "The ride for",
             showTimeIst (rideSearchPI.startTime),
-            "has expired as we could not find a driver.",
-            "Please book again to get a ride."
+            "was cancelled as we could not find a driver.",
+            "Please book again to get another ride."
           ]
 
 notifyPerson ::
