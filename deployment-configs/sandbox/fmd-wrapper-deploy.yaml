@@ -19,6 +19,7 @@ spec:
     metadata:
       annotations:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
+        traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
         app: beckn-fmd-wrapper-$DEPLOY_VARIANT
         version: latest
