@@ -111,13 +111,11 @@ sendMessage fcmMsg toWhom = fork desc $ do
     Right token -> do
       fcmUrl <- asks (.fcmUrl)
       res <- callAPI fcmUrl (callFCM (Just $ FCMAuthToken token) fcmMsg) "sendMessage"
-      logTagInfo fcm $ case res of
-        Right _ -> "message sent successfully to a person with id = " <> toWhom
-        Left x -> "error: " <> show x
-      pure ()
+      case res of
+        Right _ -> logTagInfo fcm $ "message sent successfully to a person with id " <> toWhom
+        Left x -> logTagError fcm $ "error while sending message to person with id " <> toWhom <> " : " <> show x
     Left err -> do
-      logTagError fcm $ "error: " <> show err
-      pure ()
+      logTagError fcm $ "error while sending message to person with id " <> toWhom <> " : " <> show err
   where
     callFCM token msg = void $ ET.client fcmSendMessageAPI token msg
     desc = "FCM send message forked flow"
