@@ -20,12 +20,13 @@ notifyOnCancel ::
     CoreMetrics m
   ) =>
   Case ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   CancellationSource ->
   m ()
-notifyOnCancel c person cancellationSource = do
+notifyOnCancel c personId mbDeviceToken cancellationSource = do
   cancellationText <- getCancellationText
-  notifyPerson (notificationData cancellationText) person
+  FCM.notifyPerson (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     caseId = Case.id c
     notificationData cancellationText =
@@ -68,10 +69,11 @@ notifyOnRegistration ::
     CoreMetrics m
   ) =>
   RegistrationToken ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   m ()
-notifyOnRegistration regToken =
-  notifyPerson notificationData
+notifyOnRegistration regToken personId =
+  FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
   where
     tokenId = RegToken.id regToken
     notificationData =
@@ -98,7 +100,7 @@ notifyTransporterOnExpiration ::
   [Person] ->
   m ()
 notifyTransporterOnExpiration c =
-  traverse_ (notifyPerson notificationData)
+  traverse_ (\person -> FCM.notifyPerson notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken)
   where
     notificationData =
       FCM.FCMAndroidData
@@ -126,7 +128,7 @@ notifyCancelReqByBP ::
   [Person] ->
   m ()
 notifyCancelReqByBP p =
-  traverse_ (notifyPerson notificationData)
+  traverse_ (\person -> FCM.notifyPerson notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken)
   where
     notificationData =
       FCM.FCMAndroidData
@@ -152,7 +154,8 @@ notifyDriverCancelledRideRequest ::
   ProductInstance ->
   [Person] ->
   m ()
-notifyDriverCancelledRideRequest p = traverse_ (notifyPerson notificationData)
+notifyDriverCancelledRideRequest p =
+  traverse_ (\person -> FCM.notifyPerson notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken)
   where
     notificationData =
       FCM.FCMAndroidData
@@ -178,16 +181,17 @@ notifyDriver ::
   FCM.FCMNotificationType ->
   Text ->
   Text ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriver notificationType notificationTitle message driver =
-  notifyPerson notificationData driver
+notifyDriver notificationType notificationTitle message driverId =
+  FCM.notifyPerson notificationData . FCMNotificationRecipient driverId.getId
   where
     notificationData =
       FCM.FCMAndroidData
         { fcmNotificationType = notificationType,
           fcmShowNotification = FCM.SHOW,
-          fcmEntityIds = show . getId $ driver.id,
+          fcmEntityIds = show . getId $ driverId,
           fcmEntityType = FCM.Person,
           fcmNotificationJSON = FCM.createAndroidNotification title body notificationType
         }
@@ -200,9 +204,11 @@ notifyDriverNewAllocation ::
     CoreMetrics m
   ) =>
   ProductInstance ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverNewAllocation productInstance = notifyPerson notificationData
+notifyDriverNewAllocation productInstance personId =
+  FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "New allocation request."
     body =
@@ -225,9 +231,10 @@ notifyDriverUnassigned ::
     CoreMetrics m
   ) =>
   ProductInstance ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverUnassigned productInstance = notifyPerson notificationData
+notifyDriverUnassigned productInstance personId = FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "Ride not assigned."
     body =
@@ -244,13 +251,3 @@ notifyDriverUnassigned productInstance = notifyPerson notificationData
           fcmEntityIds = getId $ productInstance.id,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST_UNASSIGNED
         }
-
-notifyPerson ::
-  ( CoreMetrics m,
-    FCMFlow m r
-  ) =>
-  FCMAndroidData ->
-  Person ->
-  m ()
-notifyPerson d person = do
-  FCM.notifyPerson d $ FCMNotificationRecipient person.id.getId person.deviceToken

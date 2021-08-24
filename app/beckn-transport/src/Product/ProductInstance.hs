@@ -188,7 +188,7 @@ assignDriver productInstanceId driverId = do
 
   fork "assignDriver - Notify BAP" $ do
     notifyUpdateToBAP searchPi ordPi PI.TRIP_ASSIGNED
-    Notify.notifyDriver notificationType notificationTitle (message headPi) driver
+    Notify.notifyDriver notificationType notificationTitle (message headPi) driver.id driver.deviceToken
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"

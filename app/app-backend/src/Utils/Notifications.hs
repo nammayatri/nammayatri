@@ -75,7 +75,7 @@ notifyOnStatusUpdate prodInst piStatus =
                           showTimeIst (Case.startTime c) <> ".",
                           "Check the app for more details."
                         ]
-              notifyPerson notificationData p
+              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
             ProductInstance.INPROGRESS -> do
               let notificationData =
                     FCM.FCMAndroidData
@@ -93,7 +93,7 @@ notifyOnStatusUpdate prodInst piStatus =
                         [ driverName,
                           "has started your trip. Please enjoy the ride!"
                         ]
-              notifyPerson notificationData p
+              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
             ProductInstance.COMPLETED -> do
               let notificationData =
                     FCM.FCMAndroidData
@@ -111,7 +111,7 @@ notifyOnStatusUpdate prodInst piStatus =
                         [ "Hope you enjoyed your trip with",
                           driverName
                         ]
-              notifyPerson notificationData p
+              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
             ProductInstance.TRIP_REASSIGNMENT -> do
               let notificationData =
                     FCM.FCMAndroidData
@@ -126,7 +126,7 @@ notifyOnStatusUpdate prodInst piStatus =
                     FCMNotificationBody $
                       unwords
                         ["Current driver has cancelled the ride. Looking for other drivers..."]
-              notifyPerson notificationData p
+              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
             ProductInstance.TRIP_ASSIGNED -> do
               let notificationData =
                     FCM.FCMAndroidData
@@ -144,7 +144,7 @@ notifyOnStatusUpdate prodInst piStatus =
                         [ driverName,
                           "will be your driver for this trip."
                         ]
-              notifyPerson notificationData p
+              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
             _ -> pure ()
           _ -> pure ()
       _ -> pure ()
@@ -179,7 +179,7 @@ notifyOnExpiration caseObj = do
                     [ "Your ride has expired as you did not confirm any offer.",
                       "Please book again to continue."
                     ]
-          notifyPerson notificationData p
+          FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
         _ -> pure ()
     else pure ()
 
@@ -188,9 +188,10 @@ notifyOnRegistration ::
     CoreMetrics m
   ) =>
   RegistrationToken ->
-  Person ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
   m ()
-notifyOnRegistration regToken person =
+notifyOnRegistration regToken personId mbDeviceToken =
   let tokenId = RegToken.id regToken
       notificationData =
         FCM.FCMAndroidData
@@ -207,7 +208,7 @@ notifyOnRegistration regToken person =
             [ "Welcome to Yatri.",
               "Click here to book your first ride with us."
             ]
-   in notifyPerson notificationData person
+   in FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
 
 notifyOnTrackCb ::
   ( FCMFlow m r,
@@ -252,14 +253,14 @@ notifyOnTrackCb personId tracker c =
                     fcmEntityIds = show caseId,
                     fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRACKING_CALLBACK
                   }
-          notifyPerson notificationData p
+          FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
         _ -> pure ()
     else pure ()
 
-notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => ProductInstance -> Person -> CancellationSource -> m ()
-notifyOnCancel rideSearchPI person cancellationSource = do
+notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => ProductInstance -> Id Person -> Maybe FCM.FCMRecipientToken -> CancellationSource -> m ()
+notifyOnCancel rideSearchPI personId mbDeviceToken cancellationSource = do
   org <- QOrg.findOrganizationById (rideSearchPI.organizationId) >>= fromMaybeM OrgNotFound
-  notifyPerson (notificationData $ org.name) person
+  FCM.notifyPerson (notificationData $ org.name) $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notificationData orgName =
       FCM.FCMAndroidData
@@ -299,13 +300,3 @@ notifyOnCancel rideSearchPI person cancellationSource = do
             "was cancelled as we could not find a driver.",
             "Please book again to get another ride."
           ]
-
-notifyPerson ::
-  ( CoreMetrics m,
-    FCMFlow m r
-  ) =>
-  FCMAndroidData ->
-  Person ->
-  m ()
-notifyPerson d person =
-  FCM.notifyPerson d $ FCMNotificationRecipient person.id.getId person.deviceToken

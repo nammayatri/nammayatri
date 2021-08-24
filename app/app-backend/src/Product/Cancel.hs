@@ -126,7 +126,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
         logTagInfo ("txnId-" <> getId searchCaseId) ("Cancellation reason " <> show cancellationSource)
         whenJust (searchCase.requestor) $ \personId -> do
           mbPerson <- Person.findById $ Id personId
-          whenJust mbPerson $ \person -> Notify.notifyOnCancel searchPI person cancellationSource
+          whenJust mbPerson $ \person -> Notify.notifyOnCancel searchPI person.id person.deviceToken cancellationSource
           unless (cancellationSource == ByUser) $
             whenJust mbOrderPI $ \orderPI ->
               DB.runSqlDBTransaction $

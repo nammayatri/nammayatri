@@ -201,23 +201,23 @@ linkVehicle orgId personId req = withFlowHandlerAPI $ do
   QPerson.updateVehicleFlow personId $ Just (req.vehicleId)
   return APISuccess.Success
 
-activateDriver :: Text -> Id SP.Person -> FlowHandler APISuccess
-activateDriver = changeDriverActiveState True
+enableDriver :: Text -> Id SP.Person -> FlowHandler APISuccess
+enableDriver = changeDriverEnableState True
 
-deactivateDriver :: Text -> Id SP.Person -> FlowHandler APISuccess
-deactivateDriver = changeDriverActiveState False
+disableDriver :: Text -> Id SP.Person -> FlowHandler APISuccess
+disableDriver = changeDriverEnableState False
 
-changeDriverActiveState :: Bool -> Text -> Id SP.Person -> FlowHandler APISuccess
-changeDriverActiveState state orgId personId = withFlowHandlerAPI $ do
+changeDriverEnableState :: Bool -> Text -> Id SP.Person -> FlowHandler APISuccess
+changeDriverEnableState isEnabled orgId personId = withFlowHandlerAPI $ do
   person <-
     QPerson.findPersonById personId
       >>= fromMaybeM PersonDoesNotExist
   unless (person.organizationId == Just (Id orgId)) $ throwError Unauthorized
   DB.runSqlDBTransaction $ do
-    QDriverInformation.updateAvailabilityState driverId state
-    unless state $ QDriverInformation.updateOnline driverId False
-  unless state $
-    Notify.notifyDriver FCM.ACCOUNT_SUSPENDED notificationTitle notificationMessage person
+    QDriverInformation.updateAvailabilityState driverId isEnabled
+    unless isEnabled $ QDriverInformation.updateOnline driverId False
+  unless isEnabled $
+    Notify.notifyDriver FCM.ACCOUNT_SUSPENDED notificationTitle notificationMessage person.id person.deviceToken
   return Success
   where
     driverId = cast personId

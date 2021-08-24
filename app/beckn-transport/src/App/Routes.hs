@@ -361,7 +361,7 @@ type DriverInformationAPI =
            :> Post '[JSON] DriverInformationAPI.CreateDriverRes
            :<|> TokenAuth
              :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
-           :<|> "setOnline"
+           :<|> "setActivity"
              :> TokenAuth
              :> MandatoryQueryParam "active" Bool
              :> Post '[JSON] APISuccess
@@ -380,11 +380,11 @@ type DriverInformationAPI =
              :> Capture "personId" (Id Person)
              :> ReqBody '[JSON] DriverInformationAPI.LinkVehicleReq
              :> Post '[JSON] DriverInformationAPI.LinkVehicleRes
-           :<|> "activate"
+           :<|> "enable"
              :> AdminTokenAuth
              :> Capture "personId" (Id Person)
              :> Post '[JSON] APISuccess
-           :<|> "deactivate"
+           :<|> "disable"
              :> AdminTokenAuth
              :> Capture "personId" (Id Person)
              :> Post '[JSON] APISuccess
@@ -398,8 +398,8 @@ driverInformationFlow =
     :<|> DriverInformation.getRideInfo
     :<|> DriverInformation.listDriver
     :<|> DriverInformation.linkVehicle
-    :<|> DriverInformation.activateDriver
-    :<|> DriverInformation.deactivateDriver
+    :<|> DriverInformation.enableDriver
+    :<|> DriverInformation.disableDriver
 
 type RideAPI =
   "ride"

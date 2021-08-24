@@ -116,7 +116,7 @@ cancelRide rideId rideCReason = do
           Nothing -> pure ()
           Just driverId -> do
             driver <- Person.findPersonById driverId >>= fromMaybeM PersonNotFound
-            Notify.notifyOnCancel c driver rideCReason.source
+            Notify.notifyOnCancel c driver.id driver.deviceToken rideCReason.source
 
 cancelRideTransaction ::
   DBFlow m r =>

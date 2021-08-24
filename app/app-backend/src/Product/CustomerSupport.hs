@@ -26,15 +26,10 @@ import Utils.Common
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandlerAPI $ do
-  personM <- Person.findByEmailAndPassword email password
-  case personM of
-    Nothing -> throwError Unauthorized
-    Just person ->
-      if person.role /= SP.CUSTOMER_SUPPORT
-        then throwError Unauthorized
-        else do
-          token <- generateToken person
-          pure $ T.LoginRes token "Logged in successfully"
+  person <- Person.findByEmailAndPassword email password >>= fromMaybeM PersonNotFound
+  unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
+  token <- generateToken person
+  pure $ T.LoginRes token "Logged in successfully"
 
 generateToken :: DBFlow m r => SP.Person -> m Text
 generateToken SP.Person {..} = do
@@ -49,11 +44,9 @@ generateToken SP.Person {..} = do
 logout :: Id SP.Person -> FlowHandler T.LogoutRes
 logout personId = withFlowHandlerAPI $ do
   person <- Person.findById personId >>= fromMaybeM PersonNotFound
-  if person.role /= SP.CUSTOMER_SUPPORT
-    then throwError Unauthorized -- Do we need this Check?
-    else do
-      DB.runSqlDB (RegistrationToken.deleteByPersonId person.id)
-      pure $ T.LogoutRes "Logged out successfully"
+  unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
+  DB.runSqlDB (RegistrationToken.deleteByPersonId person.id)
+  pure $ T.LogoutRes "Logged out successfully"
 
 createSupportRegToken :: DBFlow m r => Text -> m SR.RegistrationToken
 createSupportRegToken entityId = do

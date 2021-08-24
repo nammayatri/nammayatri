@@ -110,7 +110,7 @@ sendNewRideNotification rideId driverId = do
   person <-
     QP.findPersonById (cast driverId)
       >>= fromMaybeM PersonNotFound
-  notifyDriverNewAllocation prodInst person
+  notifyDriverNewAllocation prodInst person.id person.deviceToken
 
 sendRideNotAssignedNotification ::
   ( DBFlow m r,
@@ -125,7 +125,7 @@ sendRideNotAssignedNotification (Id rideId) (Id driverId) = do
   person <-
     QP.findPersonById (Id driverId)
       >>= fromMaybeM PersonNotFound
-  notifyDriverUnassigned prodInst person
+  notifyDriverUnassigned prodInst person.id person.deviceToken
 
 updateNotificationStatus :: DBFlow m r => Id Ride -> Id Driver -> NotificationStatus -> m ()
 updateNotificationStatus rideId driverId =

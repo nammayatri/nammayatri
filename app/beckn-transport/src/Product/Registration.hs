@@ -122,21 +122,26 @@ login tokenId req =
         person <- checkPersonExists entityId
         let isNewPerson = person.isNew
         clearOldRegToken person $ Id tokenId
-        let updatedPerson = person{deviceToken = (req.deviceToken) <|> (person.deviceToken), isNew = False}
+        let deviceToken = (req.deviceToken) <|> (person.deviceToken)
         DB.runSqlDBTransaction $ do
           QR.setVerified $ Id tokenId
-          QP.updateDeviceToken updatedPerson.id updatedPerson.deviceToken
+          QP.updateDeviceToken person.id deviceToken
           when isNewPerson $
-            QP.setIsNewFalse updatedPerson.id
+            QP.setIsNewFalse person.id
         when isNewPerson $
-          Notify.notifyOnRegistration regToken updatedPerson
-        decPerson <- decrypt updatedPerson
-        return $ LoginRes token (makeUserInfoRes $ SP.maskPerson decPerson)
+          Notify.notifyOnRegistration regToken person.id deviceToken
+        decPerson <- decrypt person
+        return $ LoginRes token (toUserInfoRes (SP.maskPerson decPerson) deviceToken)
       else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
+    toUserInfoRes SP.Person {..} devToken =
+      UserInfoRes
+        { deviceToken = devToken,
+          ..
+        }
 
 checkRegistrationTokenExists :: DBFlow m r => Text -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
