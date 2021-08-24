@@ -53,30 +53,30 @@ fetchAllAvailableByIds driversIds = do
           onRide ==. B.val_ False
         ]
 
-updateOnline :: Id Driver -> Bool -> DB.SqlDB ()
-updateOnline driverId_ online_ = do
+updateActivity :: Id Driver -> Bool -> DB.SqlDB ()
+updateActivity driverId_ isActive = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update' dbTable (setClause online_ now) (predicate personId_)
+  DB.update' dbTable (setClause isActive now) (predicate personId_)
   where
     personId_ = cast driverId_
-    setClause onl now DriverInformation.DriverInformation {..} =
+    setClause activityValue now DriverInformation.DriverInformation {..} =
       mconcat
-        [ active <-. B.val_ onl,
+        [ active <-. B.val_ activityValue,
           updatedAt <-. B.val_ now
         ]
     predicate id DriverInformation.DriverInformation {..} = driverId ==. B.val_ id
 
-updateAvailabilityState :: Id Driver -> Bool -> DB.SqlDB ()
-updateAvailabilityState driverId_ active_ = do
+updateEnabledState :: Id Driver -> Bool -> DB.SqlDB ()
+updateEnabledState driverId_ isEnabled = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update' dbTable (setClause active_ now) (predicate personId_)
+  DB.update' dbTable (setClause isEnabled now) (predicate personId_)
   where
     personId_ = cast driverId_
-    setClause a now DriverInformation.DriverInformation {..} =
+    setClause enabledValue now DriverInformation.DriverInformation {..} =
       mconcat
-        [ enabled <-. B.val_ a,
+        [ enabled <-. B.val_ enabledValue,
           updatedAt <-. B.val_ now
         ]
     predicate id DriverInformation.DriverInformation {..} = driverId ==. B.val_ id

@@ -394,7 +394,7 @@ driverInformationFlow :: FlowServer DriverInformationAPI
 driverInformationFlow =
   DriverInformation.createDriver
     :<|> DriverInformation.getInformation
-    :<|> DriverInformation.setOnline
+    :<|> DriverInformation.setActivity
     :<|> DriverInformation.getRideInfo
     :<|> DriverInformation.listDriver
     :<|> DriverInformation.linkVehicle

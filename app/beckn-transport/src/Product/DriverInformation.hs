@@ -105,15 +105,15 @@ getInformation personId = withFlowHandlerAPI $ do
         driverInformation = driverInfo
       }
 
-setOnline :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
-setOnline personId isOnline = withFlowHandlerAPI $ do
+setActivity :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
+setActivity personId isActive = withFlowHandlerAPI $ do
   _ <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
   let driverId = cast personId
-  when isOnline $ do
+  when isActive $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
-    unless driverInfo.enabled $ throwError DriverActivitySuspended
+    unless driverInfo.enabled $ throwError DriverAccountDisabled
   DB.runSqlDBTransaction $
-    QDriverInformation.updateOnline driverId isOnline
+    QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
 
 getRideInfo :: Id SP.Person -> Maybe (Id Ride) -> App.FlowHandler DriverInformationAPI.GetRideInfoRes
@@ -214,12 +214,12 @@ changeDriverEnableState isEnabled orgId personId = withFlowHandlerAPI $ do
       >>= fromMaybeM PersonDoesNotExist
   unless (person.organizationId == Just (Id orgId)) $ throwError Unauthorized
   DB.runSqlDBTransaction $ do
-    QDriverInformation.updateAvailabilityState driverId isEnabled
-    unless isEnabled $ QDriverInformation.updateOnline driverId False
+    QDriverInformation.updateEnabledState driverId isEnabled
+    unless isEnabled $ QDriverInformation.updateActivity driverId False
   unless isEnabled $
-    Notify.notifyDriver FCM.ACCOUNT_SUSPENDED notificationTitle notificationMessage person.id person.deviceToken
+    Notify.notifyDriver FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
   return Success
   where
     driverId = cast personId
-    notificationTitle = "Account is suspended."
-    notificationMessage = "Your account has been suspended! Contact support for more info."
+    notificationTitle = "Account is disabled."
+    notificationMessage = "Your account has been disabled. Contact support for more info."

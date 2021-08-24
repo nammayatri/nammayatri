@@ -77,18 +77,18 @@ instance IsBaseError ShardMappingError where
 instanceExceptionWithParent 'BaseException ''ShardMappingError
 
 data DriverError
-  = DriverActivitySuspended
+  = DriverAccountDisabled
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
 
 instance IsBaseError DriverError where
-  toMessage DriverActivitySuspended = Just "Driver activity has been suspended. He can't be active and recieve ride offers in this state."
+  toMessage DriverAccountDisabled = Just "Driver account has been disabled. He can't go online and receive ride offers in this state."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
-    DriverActivitySuspended -> "DRIVER_ACTIVITY_SUSPENDED"
+    DriverAccountDisabled -> "DRIVER_ACCOUNT_DISABLED"
   toHttpCode = \case
-    DriverActivitySuspended -> E403
+    DriverAccountDisabled -> E403
 
 instance IsAPIError DriverError
