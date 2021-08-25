@@ -6,6 +6,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 25-08-2021
+
+### Added
+
+- #953: fcm: add personId in fcm error log
+
+- #938: [BKN-833] Cancellation reasons tables
+
+- #927: [BKN-821] Recompute fare after ride completion and send it to BAP with distance
+
+- #918: [BKN-681] registry service lookup implementation
+
+- #926: [BKN-829] Add rating and registeredAt to getDriversEPs
+
+- #925: [BKN-807] Add types for duration and distance
+
+- #915: [BKN-798] Cache successful auth
+
+- #913: [BKN-801, BKN-802] Add searchString to ListDrivers EP to search by name and mobileNum
+
+- #916: [BKN-805] Add metrix to fmd-wrapper
+
+- #501: [BKN-484] Add distance calculation and route update via graphhopper
+
+- #907: [BKN-811] Add mock sms service
+
+- #879: [BKN-702] Add CallStack
+
+### Changed
+
+- #954: INFRA-1174 Added annotation excludeOutboundPorts for redis ports
+
+- #955: Improved cancellation text
+
+- #950: transporter: update ratings table to have driverId to make avg ratings calculation simpler
+
+- #949: [BKN-842] Add pagination and ordering for list rides EP
+
+- #937: [BKN-835] Configurable updateLocation refresh period
+
+- #934: Case-insensitive driver list
+
+- #922: [BKN-795] changed error when bpp disabled
+
+- #931: Change Person.rating db type
+
+- #919: [BKN-826] response status validation in Google Maps responses
+
+- #923: [BKN-753] replacing redundant strip prefixes JSON instances with deriving
+
+- #917: [BKN-808] Restrict registration as Admin
+
+- #914: Refactor VerificationResult to PersonId
+
+- #903: BKN-793 latests spec changes implementation
+
+- #911: BKN-817 disabled init API in FMD
+
+- #842: Refactor error classes
+
+- #898: Combine RequestInfo and ResponseInfo into one log line
+
+- #857: [BKN-780] Move core db types
+
+- #834: Refactor measuring durations
+
+- #868: merging domain versions into single data type
+
+- #901: Feature/BKN-792 rate limit start ride
+
+### Fixed
+
+- #951: Fix/cancellation reason api
+
+- #948: [BKN-843] fix: use RIDEORDER PI ids to rate the ride
+
+- #944: [BKN-821] Fix BAP actualDistance and actualPrice update
+
+- #929: [BKN-830] Fixed driver response processing
+
+- #928: Fix metrics time
+
+- #909: BKN-794 FMD complete flow test and flow fixes
+
+- #906: [BKN-797] Fix exotel
+
+- #905: [BKN-796] Fix search failure counter
+
+### Removed
+
+- #890: [BKN-788] Remove metrics typeclasses
+
+- #891: [BKN-785] Remove Transform Typeclasses
+
 ## [3.0.0] - 16-07-2021
 
 ### Added
@@ -144,7 +238,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Go-live production release 
 
-[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v3.0.0
+[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v4.0.0
+[4.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v4.0.0
 [3.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v3.0.0
 [2.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v2.0.0
 [1.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v1.0.0
