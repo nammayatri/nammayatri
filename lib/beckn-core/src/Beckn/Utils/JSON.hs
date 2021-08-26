@@ -1,6 +1,6 @@
 module Beckn.Utils.JSON where
 
-import Data.Aeson (Options (..), SumEncoding (ObjectWithSingleField), Value (..), defaultOptions)
+import Data.Aeson (Options (..), SumEncoding (ObjectWithSingleField, UntaggedValue), Value (..), defaultOptions)
 import Data.HashMap.Strict (size, unions)
 import Data.Text (pack, replace, toLower, unpack)
 import EulerHS.Prelude hiding (pack, unpack)
@@ -15,6 +15,13 @@ constructorsWithHyphens :: Options
 constructorsWithHyphens =
   defaultOptions
     { constructorTagModifier = replaceUnderscoresString
+    }
+
+constructorsWithHyphensUntagged :: Options
+constructorsWithHyphensUntagged =
+  defaultOptions
+    { constructorTagModifier = replaceUnderscoresString,
+      sumEncoding = UntaggedValue
     }
 
 constructorsToLowerOptions :: Options

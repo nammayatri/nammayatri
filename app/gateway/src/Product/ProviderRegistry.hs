@@ -12,14 +12,13 @@ import qualified Types.Storage.Organization as Org
 
 lookup :: DBFlow m r => B.Context -> m [Org.Organization]
 lookup context = do
-  let orgDomain = domainToOrgType (context.domain)
-  filter (isJust . Org.callbackUrl)
-    <$> Provider.listProviders Org.PROVIDER orgDomain
+  providers <- case context.domain of
+    B.MOBILITY -> listDomainProviders Org.MOBILITY
+    B.FINAL_MILE_DELIVERY -> listDomainProviders Org.FINAL_MILE_DELIVERY
+    B.LOCAL_RETAIL -> listDomainProviders Org.LOCAL_RETAIL
+    B.FOOD_AND_BEVERAGE -> listDomainProviders Org.FOOD_AND_BEVERAGE
+    B.HEALTHCARE -> listDomainProviders Org.HEALTHCARE
+    B.UNKNOWN_DOMAIN _ -> pure []
+  pure $ filter (isJust . Org.callbackUrl) providers
   where
-    domainToOrgType :: B.Domain -> Org.OrganizationDomain
-    domainToOrgType domain = case domain of
-      B.MOBILITY -> Org.MOBILITY
-      B.FINAL_MILE_DELIVERY -> Org.FINAL_MILE_DELIVERY
-      B.LOCAL_RETAIL -> Org.LOCAL_RETAIL
-      B.FOOD_AND_BEVERAGE -> Org.FOOD_AND_BEVERAGE
-      B.HEALTHCARE -> Org.HEALTHCARE
+    listDomainProviders = Provider.listProviders Org.PROVIDER

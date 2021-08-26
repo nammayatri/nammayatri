@@ -38,5 +38,6 @@ validateVersion context = do
       LOCAL_RETAIL -> asks (.coreVersions.localRetail)
       FOOD_AND_BEVERAGE -> asks (.coreVersions.foodAndBeverage)
       HEALTHCARE -> throwError InvalidDomain -- Disabled
+      UNKNOWN_DOMAIN _ -> throwError InvalidDomain
   unless (context.core_version == Just desiredCoreVersion) $
     throwError UnsupportedCoreVer
