@@ -10,7 +10,6 @@ import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Text as T
 import EulerHS.Prelude hiding (id)
-import GHC.Records.Extra (HasField)
 import Servant hiding (throwError)
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Person as QP

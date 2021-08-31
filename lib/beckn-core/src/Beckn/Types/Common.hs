@@ -6,6 +6,7 @@
 module Beckn.Types.Common
   ( module Beckn.Types.Common,
     module Common,
+    HasField,
   )
 where
 
@@ -13,7 +14,6 @@ import Beckn.External.Encryption as Common (EncFlow)
 import Beckn.External.FCM.Types as Common (FCMFlow)
 import Beckn.Storage.DB.Config as Common (DBFlow)
 import Beckn.Types.App as Common
-import Beckn.Types.Flow as Common
 import Beckn.Types.Forkable as Common
 import Beckn.Types.GuidLike as Common
 import Beckn.Types.Logging as Common
@@ -23,6 +23,7 @@ import Beckn.Utils.Dhall (FromDhall)
 import Data.Aeson
 import Data.Generics.Labels ()
 import EulerHS.Prelude hiding (id)
+import GHC.Records.Extra (HasField)
 
 newtype IdObject = IdObject
   { id :: Text

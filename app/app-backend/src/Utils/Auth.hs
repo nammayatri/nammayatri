@@ -9,7 +9,6 @@ import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude hiding (id)
-import GHC.Records.Extra (HasField)
 import Servant hiding (Context)
 import Storage.Queries.Organization (findOrgByShortId)
 import qualified Storage.Queries.Organization as QOrganization
