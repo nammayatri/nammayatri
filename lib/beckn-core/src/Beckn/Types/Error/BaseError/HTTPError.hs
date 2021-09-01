@@ -16,7 +16,6 @@ import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import Beckn.Types.Error.BaseError.HTTPError.HttpCode
 import Beckn.Utils.Error.Hierarchy (instanceExceptionWithParent)
 import Control.Exception
-import Data.Aeson (Value (Null))
 import EulerHS.Prelude hiding (Show, pack, show)
 import Network.HTTP.Types (Header)
 import Prelude (Show (..))
@@ -28,9 +27,6 @@ class IsBaseError e => IsHTTPError e where
 
   toHttpCode :: e -> HttpCode
   toHttpCode _ = E500
-
-  toPayload :: e -> Value
-  toPayload _ = Null
 
   toCustomHeaders :: e -> [Header]
   toCustomHeaders _ = []

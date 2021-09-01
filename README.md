@@ -16,7 +16,7 @@
 [Beckn data mapping](https://docs.google.com/spreadsheets/d/1qaOaS01lBtSr2LTnCgehOWX64aQHXe2X5ztR5UmY2HE/edit?usp=sharing)
 
 ## Authentication
-[Endpoint authentication](./doc/authentication.md)
+[Endpoint authentication](./doc/auth.md)
 
 [Signature authentication](./doc/signatures.md)
 
@@ -25,3 +25,9 @@
 ## Developer guidelines
 
 [PR reviews](./doc/reviews.md)
+
+[Error handling](./doc/error-handling.md)
+
+[Architecture](./doc/architechture.md)
+
+[Data validation](./doc/validation.md)

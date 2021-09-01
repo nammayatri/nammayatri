@@ -24,11 +24,13 @@ runRequestValidation validator obj =
     & fromEitherM RequestValidationFailure
 
 newtype RequestValidationFailure = RequestValidationFailure [ValidationDescription]
-  deriving (Show, IsBaseError, IsBecknAPIError, IsAPIError)
+  deriving (Show, IsBaseError, IsBecknAPIError)
 
 instance IsHTTPError RequestValidationFailure where
   toErrorCode (RequestValidationFailure _failures) = "REQUEST_VALIDATION_FAILURE"
   toHttpCode (RequestValidationFailure _failures) = E400
+
+instance IsAPIError RequestValidationFailure where
   toPayload (RequestValidationFailure failures) = toJSON failures
 
 instanceExceptionWithParent 'HTTPException ''RequestValidationFailure
