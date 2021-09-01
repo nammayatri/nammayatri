@@ -10,7 +10,6 @@ import qualified Beckn.Types.Core.API.Search as API
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Tag as Tag
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.Mobility.Stop as Stop
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List as List
@@ -22,10 +21,8 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
 import Product.FareCalculator
-import qualified Product.Location as Location
 import qualified Product.Person as Person
 import qualified Storage.Queries.Case as QCase
-import qualified Storage.Queries.OrgLocation as OrgLoc
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as SProduct
@@ -68,9 +65,8 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
         fromLocation <- buildFromStop now pickup
         toLocation <- buildFromStop now dropOff
         let bapOrgId = bapOrg.id
-        deadDistance <- calculateDeadDistance transporter fromLocation
         uuid <- L.generateGUID
-        let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance
+        let productCase = mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId
         DB.runSqlDBTransaction $ do
           Loc.create fromLocation
           Loc.create toLocation
@@ -109,8 +105,8 @@ getValidTime now startTime = do
       validTill = addUTCTime (minimum [fromInteger caseExpiry_, maximum [minExpiry, timeToRide]]) now
   pure validTill
 
-mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.SearchReqLocation -> Location.SearchReqLocation -> Id Org.Organization -> Id Org.Organization -> Maybe Double -> Case.Case
-mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId deadDistance = do
+mkCase :: API.SearchReq -> Text -> UTCTime -> UTCTime -> UTCTime -> Location.SearchReqLocation -> Location.SearchReqLocation -> Id Org.Organization -> Id Org.Organization -> Case.Case
+mkCase req uuid now validity startTime fromLocation toLocation transporterId bapOrgId = do
   let intent = req.message.intent
   let distance = Tag.value <$> find (\x -> x.key == "distance") (fromMaybe [] $ intent.tags)
   let tId = getId transporterId
@@ -136,33 +132,13 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
       toLocationId = toLocation.id,
       udf1 = Just $ intent.vehicle.variant,
       udf2 = Just $ show $ length $ intent.payload.travellers,
-      udf3 = encodeToText <$> deadDistance,
+      udf3 = Nothing,
       udf4 = Just bapId,
       udf5 = distance,
       info = Nothing, --Just $ show $ req.message
       createdAt = now,
       updatedAt = now
     }
-
-calculateDeadDistance ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
-    CoreMetrics m
-  ) =>
-  Org.Organization ->
-  Location.SearchReqLocation ->
-  m (Maybe Double)
-calculateDeadDistance organization fromLocation = do
-  eres <- try $ do
-    orgLocation <- OrgLoc.findById organization.id >>= fromMaybeM LocationNotFound
-    orgLocLatLong <- LatLong <$> orgLocation.lat <*> orgLocation.long & fromMaybeM (LocationFieldNotPresent "lat or long in OrgLocation")
-    let fromLocationLatLong = Location.locationToLatLong fromLocation
-    Location.calculateDistance orgLocLatLong fromLocationLatLong
-  case eres of
-    Left (err :: SomeException) -> do
-      logTagWarning "calculateDeadDistance" $ "Failed to calculate distance. Reason: " +|| err ||+ ""
-      pure Nothing
-    Right mDistance -> return mDistance
 
 onSearchCallback ::
   ( DBFlow m r,

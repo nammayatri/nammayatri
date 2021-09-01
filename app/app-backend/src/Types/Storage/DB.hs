@@ -9,7 +9,6 @@ import qualified Types.Storage.CancellationReason as CancellationReason
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Geometry as Geometry
 import qualified Types.Storage.Issue as Issue
-import qualified Types.Storage.OrgLocation as OrgLocation
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as ProductInstance
@@ -22,7 +21,6 @@ data AppDb f = AppDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
     issues :: f (B.TableEntity Issue.IssueT),
     searchReqLocation :: f (B.TableEntity Location.SearchReqLocationT),
-    orgLocation :: f (B.TableEntity OrgLocation.OrgLocationT),
     person :: f (B.TableEntity Person.PersonT),
     _case :: f (B.TableEntity Case.CaseT),
     productInstance :: f (B.TableEntity ProductInstance.ProductInstanceT),
@@ -41,7 +39,6 @@ appDb dbSchemaName =
       { organization = setSchema dbSchemaName <> Organization.fieldEMod,
         issues = setSchema dbSchemaName <> Issue.fieldEMod,
         searchReqLocation = setSchema dbSchemaName <> Location.fieldEMod,
-        orgLocation = setSchema dbSchemaName <> OrgLocation.fieldEMod,
         person = setSchema dbSchemaName <> Person.fieldEMod,
         _case = setSchema dbSchemaName <> Case.fieldEMod,
         productInstance = setSchema dbSchemaName <> ProductInstance.fieldEMod,

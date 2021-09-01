@@ -1,31 +1,5 @@
-CREATE TABLE atlas_transporter.organization_location (
-    org_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.organization (id) ON DELETE CASCADE,
-    lat double precision,
-    long double precision,
-    district character varying(255),
-    city character varying(255),
-    state character varying(255),
-    country character varying(255),
-    pincode character varying(255),
-    address character varying(255),
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-ALTER TABLE atlas_transporter.organization_location OWNER TO atlas;
-
-CREATE INDEX idx_16442_city ON atlas_transporter.organization_location USING btree (city);
-
-CREATE INDEX idx_16442_state ON atlas_transporter.organization_location USING btree (state);
-
-INSERT INTO atlas_transporter.organization_location (
-    SELECT T2.id, T1.lat, T1.long, T1.district, T1.city, T1.state, T1.country, T1.pincode, T1.address, T1.created_at, T1.updated_at 
-    FROM atlas_transporter.location AS T1
-    INNER JOIN atlas_transporter.organization AS T2
-    ON T1.id = T2.location_id);
 DELETE FROM atlas_transporter.location WHERE id IN (SELECT location_id FROM atlas_transporter.organization); 
-
-----------------------------------------------------------------------------------------------------
+ALTER TABLE atlas_transporter.organization DROP COLUMN location_id;
 
 CREATE TABLE atlas_transporter.driver_location (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id) ON DELETE CASCADE,

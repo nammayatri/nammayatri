@@ -13,7 +13,6 @@ import qualified Types.Storage.DriverLocation as DriverLocation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
 import qualified Types.Storage.NotificationStatus as NotificationStatus
-import qualified Types.Storage.OrgLocation as OrgLocation
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as ProductInstance
@@ -29,7 +28,6 @@ import qualified Types.Storage.Vehicle as Vehicle
 data TransporterDb f = TransporterDb
   { organization :: f (B.TableEntity Organization.OrganizationT),
     searchReqLocation :: f (B.TableEntity Location.SearchReqLocationT),
-    orgLocation :: f (B.TableEntity OrgLocation.OrgLocationT),
     driverLocation :: f (B.TableEntity DriverLocation.DriverLocationT),
     vehicle :: f (B.TableEntity Vehicle.VehicleT),
     person :: f (B.TableEntity Person.PersonT),
@@ -56,7 +54,6 @@ transporterDb dbSchemaName =
     `B.withDbModification` B.dbModification
       { organization = setSchema dbSchemaName <> Organization.fieldEMod,
         searchReqLocation = setSchema dbSchemaName <> Location.fieldEMod,
-        orgLocation = setSchema dbSchemaName <> OrgLocation.fieldEMod,
         driverLocation = setSchema dbSchemaName <> DriverLocation.fieldEMod,
         vehicle = setSchema dbSchemaName <> Vehicle.fieldEMod,
         person = setSchema dbSchemaName <> Person.fieldEMod,
