@@ -13,6 +13,7 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as Storage
 import Types.Storage.Products
@@ -68,12 +69,20 @@ findByProductId pId = do
     predicate Storage.ProductInstance {..} =
       productId ==. B.val_ pId
 
-findAllByPerson :: DBFlow m r => Id Person.Person -> m [Storage.ProductInstance]
-findAllByPerson perId = do
+findAllOrdersByPerson :: DBFlow m r => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.ProductInstance]
+findAllOrdersByPerson perId mbLimit mbOffset mbIsOnlyActive = do
   dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
+  let limit = fromMaybe 0 mbLimit
+      offset = fromMaybe 0 mbOffset
+      isOnlyActive = Just True == mbIsOnlyActive
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset) $ predicate isOnlyActive
   where
-    predicate Storage.ProductInstance {..} = personId ==. B.val_ (Just perId)
+    predicate isOnlyActive Storage.ProductInstance {..} =
+      personId ==. B.val_ (Just perId)
+        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. if isOnlyActive
+          then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
+          else B.val_ True
 
 updateCaseId ::
   DBFlow m r =>
@@ -244,3 +253,17 @@ findAllExpiredByStatus statuses expiryTime = do
     predicate Storage.ProductInstance {..} =
       B.in_ status (B.val_ <$> statuses)
         &&. startTime B.<=. B.val_ expiryTime
+
+countCompletedRides :: DBFlow m r => Id Org.Organization -> m Int
+countCompletedRides orgId = do
+  dbTable <- getDbTable
+  count <- DB.findAll dbTable (B.aggregate_ aggregator) predicate
+  return $ case count of
+    [cnt] -> cnt
+    _ -> 0
+  where
+    aggregator Storage.ProductInstance {..} = B.countAll_
+    predicate Storage.ProductInstance {..} =
+      organizationId ==. B.val_ orgId
+        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. status ==. B.val_ Storage.COMPLETED

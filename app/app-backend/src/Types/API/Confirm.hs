@@ -1,13 +1,10 @@
 module Types.API.Confirm where
 
-import Beckn.Types.APISuccess (APISuccess)
-import Data.Swagger
+import Beckn.Types.Id
 import EulerHS.Prelude
+import Types.Storage.ProductInstance (ProductInstance)
 
-data ConfirmReq = ConfirmReq
-  { caseId :: Text,
-    productInstanceId :: Text
+newtype ConfirmRes = ConfirmRes
+  { bookingId :: Id ProductInstance
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-type ConfirmRes = APISuccess
+  deriving (Show, FromJSON, ToJSON, Generic)

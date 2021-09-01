@@ -5,10 +5,16 @@ module Types.Storage.SearchReqLocation where
 
 import Beckn.Types.Id
 import Data.Aeson
+import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger
-import Data.Time
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
+import qualified Types.Common as Common
+import Types.Error
+import Utils.Common hiding (id)
 
 data SearchReqLocationT f = SearchReqLocation
   { id :: B.C f (Id SearchReqLocation),
@@ -55,3 +61,52 @@ fieldEMod =
         { createdAt = "created_at",
           updatedAt = "updated_at"
         }
+
+data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
+  { address :: Common.Address,
+    gps :: Common.GPS
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+makeSearchReqLocationAPIEntity :: SearchReqLocation -> SearchReqLocationAPIEntity
+makeSearchReqLocationAPIEntity loc = do
+  let address =
+        Common.Address
+          { door = "",
+            building = "",
+            street = "",
+            area = "",
+            city = fromMaybe "" loc.city,
+            country = fromMaybe "" loc.country,
+            areaCode = "",
+            state = fromMaybe "" loc.state
+          }
+      gps =
+        Common.GPS
+          { lat = show loc.lat,
+            lon = show loc.long
+          }
+  SearchReqLocationAPIEntity
+    { ..
+    }
+
+buildSearchReqLoc :: MonadFlow m => SearchReqLocationAPIEntity -> m SearchReqLocation
+buildSearchReqLoc SearchReqLocationAPIEntity {..} = do
+  now <- getCurrentTime
+  locId <- generateGUID
+  lat <- readMaybe (T.unpack gps.lat) & fromMaybeM (InvalidRequest "Lat field is not present.")
+  lon <- readMaybe (T.unpack gps.lon) & fromMaybeM (InvalidRequest "Lon field is not present.")
+  return
+    SearchReqLocation
+      { id = locId,
+        lat = lat,
+        long = lon,
+        district = Nothing,
+        city = Just address.city,
+        state = Just address.state,
+        country = Just address.country,
+        pincode = Nothing,
+        address = Just . T.decodeUtf8 . BSL.toStrict $ encode address,
+        createdAt = now,
+        updatedAt = now
+      }

@@ -5,14 +5,16 @@ module Types.API.Support
 where
 
 import Beckn.Types.APISuccess
+import Beckn.Types.Id
 import Beckn.Utils.Validation
 import EulerHS.Prelude
 import Types.Issue
+import Types.Storage.ProductInstance (ProductInstance)
 
 data SendIssueReq = SendIssueReq
-  { contactEmail :: Text,
+  { contactEmail :: Maybe Text,
     issue :: Issue,
-    productInstanceId :: Maybe Text
+    rideBookingId :: Maybe (Id ProductInstance)
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 

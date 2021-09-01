@@ -2,7 +2,6 @@ module Product.Confirm (confirm, onConfirm) where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.API.Confirm as BecknAPI
 import Beckn.Types.Core.Ack
@@ -29,14 +28,14 @@ import qualified Types.Storage.ProductInstance as SPI
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
-confirm :: Id Person.Person -> API.ConfirmReq -> FlowHandler API.ConfirmRes
-confirm personId API.ConfirmReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+confirm :: Id Person.Person -> Id Case.Case -> Id SPI.ProductInstance -> FlowHandler API.ConfirmRes
+confirm personId rideSearchId rideBookingId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   lt <- getCurrentTime
-  case_ <- QCase.findIdByPersonId personId (Id caseId) >>= fromMaybeM CaseDoesNotExist
+  case_ <- QCase.findIdByPersonId personId rideSearchId >>= fromMaybeM CaseDoesNotExist
   when ((case_.validTill) < lt) $
     throwError CaseExpired
   orderCase_ <- mkOrderCase case_
-  productInstance <- MPI.findById (Id productInstanceId) >>= fromMaybeM PIDoesNotExist
+  productInstance <- MPI.findById rideBookingId >>= fromMaybeM PIDoesNotExist
   organization <-
     OQ.findOrganizationById (productInstance.organizationId)
       >>= fromMaybeM OrgNotFound
@@ -45,11 +44,11 @@ confirm personId API.ConfirmReq {..} = withFlowHandlerAPI . withPersonIdLogTag p
   DB.runSqlDBTransaction $ do
     QCase.create orderCase_
     QPI.create orderProductInstance
-  context <- buildContext "confirm" caseId Nothing Nothing
+  context <- buildContext "confirm" (getId rideSearchId) Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
   ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)
-  return Success
+  return $ API.ConfirmRes orderProductInstance.id
   where
     mkOrder productInstance = do
       now <- getCurrentTime

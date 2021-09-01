@@ -12,6 +12,7 @@ import Control.Arrow ((>>>))
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import EulerHS.Prelude
+import qualified EulerHS.Types as ET
 import Storage.Queries.Case as Case
 import Storage.Queries.Organization as Org
 import Types.Error
@@ -103,4 +104,4 @@ initiateCall ::
   m ()
 initiateCall req = do
   url <- asks (.xAppUri)
-  Beckn.callBecknAPI Nothing (Just "UNABLE_TO_CALL") "call/to_customer" API.callsAPI url req
+  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI req.productInstanceId) "/v2/ride/{rideId}/call/customer"

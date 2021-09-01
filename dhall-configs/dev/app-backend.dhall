@@ -85,7 +85,7 @@ in
 , xGatewayNsdlUrl = None Text
 , xProviderUri = providerUri
 , bapSelfId = "JUSPAY.MOBILITY.APP.UAT.1"
-, bapNwAddress = "http://localhost:8013/v1/"
+, bapNwAddress = "http://localhost:8013/v2/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , searchConfirmExpiry = Some +600

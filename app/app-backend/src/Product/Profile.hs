@@ -1,40 +1,29 @@
-module Product.Person where
+module Product.Profile where
 
 import App.Types
+import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as QPerson
-import qualified Types.API.Person as Person
+import qualified Types.API.Profile as Profile
 import Types.Error
 import qualified Types.Storage.Person as Person
 import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
-getPersonDetails :: Id Person.Person -> FlowHandler Person.GetPersonDetailsRes
+getPersonDetails :: Id Person.Person -> FlowHandler Profile.ProfileRes
 getPersonDetails personId = withFlowHandlerAPI $ do
   person <- QPerson.findById personId >>= fromMaybeM PersonNotFound
-  pure $
-    Person.GetPersonDetailsRes
-      { id = person.id,
-        firstName = person.firstName,
-        middleName = person.middleName,
-        lastName = person.lastName,
-        fullName = person.fullName,
-        role = person.role,
-        gender = person.gender,
-        email = person.email
-      }
+  decPerson <- decrypt person
+  pure $ Person.makePersonAPIEntity decPerson
 
-updatePerson :: Id Person.Person -> Person.UpdateReq -> FlowHandler APISuccess.APISuccess
+updatePerson :: Id Person.Person -> Profile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
 updatePerson personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   QPerson.updatePersonalInfo
     personId
     (req.firstName)
     (req.middleName)
     (req.lastName)
-    (req.fullName)
-    (req.gender)
-    (req.email)
     (req.deviceToken)
   pure APISuccess.Success

@@ -17,7 +17,6 @@ import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.RideCancellationReason as QRCR
 import Types.API.Cancel as Cancel
 import Types.Error
-import qualified Types.Metrics as Metrics
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
@@ -27,30 +26,18 @@ import Utils.Common
 import qualified Utils.Metrics as Metrics
 import qualified Utils.Notifications as Notify
 
-cancel :: Id Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
-cancel personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let entityType = req.entityType
-  case entityType of
-    Cancel.CASE -> searchCancel personId req
-    Cancel.PRODUCT_INSTANCE -> cancelProductInstance personId req
-
-cancelProductInstance ::
-  ( DBFlow m r,
-    Metrics.CoreMetrics m
-  ) =>
-  Id Person.Person ->
-  CancelReq ->
-  m CancelRes
-cancelProductInstance personId req = do
-  let searchPIid = req.entityId
+cancel :: Id PI.ProductInstance -> Id Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
+cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  let orderPIId = bookingId
   rideCancellationReasonAPI <- req.rideCancellationReason & fromMaybeM (InvalidRequest "Cancellation reason is not present.")
-  searchPI <- MPI.findById (Id searchPIid) >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
+  orderPI <- MPI.findById orderPIId >>= fromMaybeM PIDoesNotExist
+  searchPIId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
+  searchPI <- MPI.findById searchPIId >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
   searchCase <- MC.findIdByPersonId personId (searchPI.caseId) >>= fromMaybeM CaseNotFound
-  orderPI <- MPI.findByParentIdType (searchPI.id) Case.RIDEORDER >>= fromMaybeM PINotFound
   unless (isProductInstanceCancellable orderPI) $
     throwError $ PIInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ searchCase.id
-  let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder searchPIid Nothing)
+  let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder (getId searchPIId) Nothing)
   context <- buildContext "cancel" txnId Nothing Nothing
   organization <-
     OQ.findOrganizationById (searchPI.organizationId)
@@ -70,29 +57,9 @@ cancelProductInstance personId req = do
           additionalInfo = additionalInfo
         }
 
-searchCancel :: (Metrics.HasBAPMetrics m r, DBFlow m r) => Id Person.Person -> CancelReq -> m CancelRes
-searchCancel personId req = do
-  let caseId = req.entityId
-  searchCase <- MC.findIdByPersonId personId (Id caseId) >>= fromMaybeM CaseDoesNotExist
-  unless (isCaseCancellable searchCase) $ throwError (CaseInvalidStatus "Cannot cancel with this case")
-  Metrics.incrementCaseCount Case.CLOSED Case.RIDESEARCH
-  searchPIList <- MPI.findAllByCaseId (searchCase.id)
-  traverse_ (`MPI.updateStatus` PI.CANCELLED) (PI.id <$> filter isProductInstanceCancellable searchPIList)
-  Case.validateStatusTransition (searchCase.status) Case.CLOSED & fromEitherM CaseInvalidStatus
-  MC.updateStatusFlow (searchCase.id) Case.CLOSED
-  logTagInfo ("txnId-" <> caseId) "Search Cancel"
-  return Success
-
 isProductInstanceCancellable :: PI.ProductInstance -> Bool
 isProductInstanceCancellable prodInst =
   isRight $ PI.validateStatusTransition (prodInst.status) PI.CANCELLED
-
-isCaseCancellable :: Case.Case -> Bool
-isCaseCancellable case_ =
-  case case_.status of
-    Case.NEW -> True
-    Case.CONFIRMED -> True
-    _ -> False
 
 onCancel ::
   SignatureAuthResult Organization.Organization ->

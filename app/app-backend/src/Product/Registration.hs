@@ -1,4 +1,4 @@
-module Product.Registration (initiateLogin, login, reInitiateLogin, logout) where
+module Product.Registration (auth, verify, resend, logout) where
 
 import App.Types
 import Beckn.External.Encryption (decrypt, encrypt)
@@ -10,7 +10,6 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
-import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified Crypto.Number.Generate as Cryptonite
@@ -20,51 +19,35 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.Registration
 import Types.Error
-import Types.Metrics
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SR
 import Utils.Auth (authTokenCacheKey)
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
-initiateLogin :: InitiateLoginReq -> FlowHandler InitiateLoginRes
-initiateLogin req =
-  withFlowHandlerAPI $ do
-    runRequestValidation validateInitiateLoginReq req
-    case (req.medium, req.__type) of
-      (SR.SMS, SR.OTP) -> ask >>= initiateFlow req . smsCfg
-      _ -> throwError $ InvalidRequest "medium and type must be sms and otp respectively"
+authHitsCountKey :: SP.Person -> Text
+authHitsCountKey person = "BAP:Registration:auth" <> getId person.id <> ":hitsCount"
 
-initiateFlowHitsCountKey :: SP.Person -> Text
-initiateFlowHitsCountKey person = "Registration:initiateFlow" <> getId person.id <> ":hitsCount"
-
-initiateFlow ::
-  ( EncFlow m r,
-    DBFlow m r,
-    FCMFlow m r,
-    HasFlowEnv m r '["apiRateLimitOptions" ::: APIRateLimitOptions, "otpSmsTemplate" ::: Text],
-    CoreMetrics m
-  ) =>
-  InitiateLoginReq ->
-  SmsConfig ->
-  m InitiateLoginRes
-initiateFlow req smsCfg = do
+auth :: AuthReq -> FlowHandler AuthRes
+auth req = withFlowHandlerAPI $ do
+  runRequestValidation validateAuthReq req
+  smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
   person <-
     Person.findByRoleAndMobileNumber SP.USER countryCode mobileNumber
       >>= maybe (createPerson req) return
-  checkSlidingWindowLimit (initiateFlowHitsCountKey person)
+  checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   regToken <- case useFakeOtpM of
     Just _ -> do
-      token <- makeSession scfg req entityId (show <$> useFakeOtpM)
+      token <- makeSession scfg entityId (show <$> useFakeOtpM)
       DB.runSqlDB (RegistrationToken.create token)
       return token
     Nothing -> do
-      token <- makeSession scfg req entityId Nothing
+      token <- makeSession scfg entityId Nothing
       DB.runSqlDB (RegistrationToken.create token)
       otpSmsTemplate <- asks (.otpSmsTemplate)
       withLogTag ("personId_" <> getId person.id) $
@@ -72,10 +55,10 @@ initiateFlow req smsCfg = do
           >>= SF.checkRegistrationSmsResult
       return token
   let attempts = SR.attempts regToken
-      tokenId = SR.id regToken
-  return $ InitiateLoginRes {attempts, tokenId}
+      authId = SR.id regToken
+  return $ AuthRes {attempts, authId}
 
-makePerson :: EncFlow m r => InitiateLoginReq -> m SP.Person
+makePerson :: EncFlow m r => AuthReq -> m SP.Person
 makePerson req = do
   pid <- BC.generateGUID
   now <- getCurrentTime
@@ -97,7 +80,7 @@ makePerson req = do
         identifier = Nothing,
         rating = Nothing,
         isNew = True,
-        deviceToken = req.deviceToken,
+        deviceToken = Nothing,
         udf1 = Nothing,
         udf2 = Nothing,
         organizationId = Nothing,
@@ -109,11 +92,10 @@ makePerson req = do
 makeSession ::
   DBFlow m r =>
   SmsSessionConfig ->
-  InitiateLoginReq ->
   Text ->
   Maybe Text ->
   m SR.RegistrationToken
-makeSession SmsSessionConfig {..} req entityId fakeOtp = do
+makeSession SmsSessionConfig {..} entityId fakeOtp = do
   otp <- maybe generateOTPCode return fakeOtp
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -123,8 +105,8 @@ makeSession SmsSessionConfig {..} req entityId fakeOtp = do
       { id = rtid,
         token = token,
         attempts = attempts,
-        authMedium = req.medium,
-        authType = req.__type,
+        authMedium = SR.SMS,
+        authType = SR.OTP,
         authValueHash = otp,
         verified = False,
         authExpiry = authExpiry,
@@ -140,22 +122,18 @@ generateOTPCode :: MonadFlow m => m Text
 generateOTPCode =
   L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
 
-loginHitsCountKey :: Id SP.Person -> Text
-loginHitsCountKey id = "Registration:login:" <> getId id <> ":hitsCount"
+verifyHitsCountKey :: Id SP.Person -> Text
+verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-login :: Text -> LoginReq -> FlowHandler LoginRes
-login tokenId req =
+verify :: Text -> AuthVerifyReq -> FlowHandler AuthVerifyRes
+verify tokenId req =
   withFlowHandlerAPI $ do
-    runRequestValidation validateLoginReq req
+    runRequestValidation validateAuthVerifyReq req
     regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
-    checkSlidingWindowLimit (loginHitsCountKey $ Id entityId)
+    checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
     when verified $ throwError $ AuthBlocked "Already verified."
     checkForExpiry authExpiry updatedAt
-    let isValid =
-          authMedium == req.medium
-            && authType == req.__type
-            && authValueHash == req.hash
-    if isValid
+    if authValueHash == req.otp
       then do
         person <- checkPersonExists entityId
         let isNewPerson = person.isNew
@@ -169,23 +147,18 @@ login tokenId req =
         when isNewPerson $
           Notify.notifyOnRegistration regToken person.id deviceToken
         decPerson <- decrypt person
-        return $ LoginRes token (toUserInfoRes (SP.maskPerson decPerson) deviceToken)
+        return $ AuthVerifyRes token (SP.makePersonAPIEntity $ decPerson{deviceToken})
       else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
-    toUserInfoRes SP.Person {..} devToken =
-      UserInfoRes
-        { deviceToken = devToken,
-          ..
-        }
 
 getRegistrationTokenE :: DBFlow m r => Text -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound tokenId)
 
-createPerson :: (EncFlow m r, DBFlow m r) => InitiateLoginReq -> m SP.Person
+createPerson :: (EncFlow m r, DBFlow m r) => AuthReq -> m SP.Person
 createPerson req = do
   person <- makePerson req
   Person.create person
@@ -195,23 +168,22 @@ checkPersonExists :: DBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
 
-reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
-reInitiateLogin tokenId req =
+resend :: Text -> FlowHandler ResendAuthRes
+resend tokenId =
   withFlowHandlerAPI $ do
-    runRequestValidation validateReInitiateLoginReq req
     SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
-    void $ checkPersonExists entityId
+    person <- checkPersonExists entityId
     if attempts > 0
       then do
         smsCfg <- smsCfg <$> ask
         otpSmsTemplate <- otpSmsTemplate <$> ask
-        let mobileNumber = req.mobileNumber
-            countryCode = req.mobileCountryCode
+        mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+        countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
         withLogTag ("personId_" <> entityId) $
           SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
             >>= SF.checkRegistrationSmsResult
         _ <- RegistrationToken.updateAttempts (attempts - 1) id
-        return $ InitiateLoginRes tokenId (attempts - 1)
+        return $ AuthRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Attempts limit exceed."
 
 clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()

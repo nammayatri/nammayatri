@@ -38,7 +38,7 @@ let smsConfig =
   , sender = "JUSPAY"
   }
 
-let appUri = "http://localhost:8013/v1"
+let appUri = "http://localhost:8013/v2"
 
 let apiRateLimitOptions =
   { limit = +4

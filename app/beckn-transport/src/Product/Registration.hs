@@ -133,7 +133,7 @@ login tokenId req =
         when isNewPerson $
           Notify.notifyOnRegistration regToken person.id deviceToken
         decPerson <- decrypt person
-        return $ LoginRes token (toUserInfoRes (SP.maskPerson decPerson) deviceToken)
+        return $ LoginRes token (toUserInfoRes decPerson deviceToken)
       else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =

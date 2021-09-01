@@ -2,6 +2,7 @@ module Mobility.HealthCheck where
 
 import Data.Text.Encoding as DT
 import EulerHS.Prelude
+import Mobility.Fixtures
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant hiding (Context)
@@ -17,17 +18,11 @@ healthCheckBackendC = client (Proxy :: Proxy HealthCheckAPI)
 spec :: Spec
 spec = do
   appManager <- runIO $ Client.newManager tlsManagerSettings
-  let appBaseUrl =
-        BaseUrl
-          { baseUrlScheme = Http,
-            baseUrlHost = "localhost",
-            baseUrlPort = 8013,
-            baseUrlPath = "/v1"
-          }
-      transporterBaseUrl = appBaseUrl {baseUrlPort = 8014}
+  let appBaseUrl = getAppBaseUrl
+      transporterBaseUrl = getTransporterBaseUrl
       appClientEnv = mkClientEnv appManager appBaseUrl
       tbeClientEnv = mkClientEnv appManager transporterBaseUrl
-      gatewayClientEnv = mkClientEnv appManager $ appBaseUrl {baseUrlPort = 8015}
+      gatewayClientEnv = mkClientEnv appManager $ transporterBaseUrl {baseUrlPort = 8015}
   describe "Testing App Backend APIs" $
     it "Testing health check API" $
       hspec $

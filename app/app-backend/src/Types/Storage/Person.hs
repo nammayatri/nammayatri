@@ -8,6 +8,7 @@ module Types.Storage.Person where
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
+import Beckn.Utils.Common (maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger hiding (description, email)
@@ -136,16 +137,6 @@ instance B.Table PersonT where
 
 deriveTableEncryption ''PersonTE
 
--- TODO: move it to appropriate place
-maskPerson :: DecryptedPerson -> DecryptedPerson
-maskPerson person =
-  person {deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> (person.deviceToken)}
-  where
-    trimToken token =
-      if length token > 6
-        then T.take 3 token <> "..." <> T.takeEnd 3 token
-        else "..."
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)
 fieldEMod =
@@ -169,3 +160,21 @@ fieldEMod =
         identifierType = "identifier_type",
         deviceToken = "device_token"
       }
+
+data PersonAPIEntity = PersonAPIEntity
+  { id :: Id Person,
+    firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    maskedMobileNumber :: Maybe Text,
+    maskedDeviceToken :: Maybe FCM.FCMRecipientToken
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
+makePersonAPIEntity Person {..} =
+  PersonAPIEntity
+    { maskedMobileNumber = maskText <$> mobileNumber,
+      maskedDeviceToken = FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken) <$> deviceToken,
+      ..
+    }

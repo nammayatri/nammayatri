@@ -26,21 +26,19 @@ import Types.Storage.ProductInstance as ProductInstance
 import Utils.Common
 
 -- | Try to initiate a call customer -> provider
-initiateCallToProvider :: Id Person.Person -> CallReq -> FlowHandler CallRes
-initiateCallToProvider personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  let piId = req.productInstanceId
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
+initiateCallToDriver :: Id ProductInstance -> Id Person.Person -> FlowHandler CallRes
+initiateCallToDriver rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones rideId
   initiateCall customerPhone providerPhone
-  logTagInfo ("ProdInstId:" <> piId) "Call initiated from customer to provider."
+  logTagInfo ("ProdInstId:" <> getId rideId) "Call initiated from customer to provider."
   return Ack
 
 -- | Try to initiate a call provider -> customer
-initiateCallToCustomer :: CallReq -> FlowHandler CallRes
-initiateCallToCustomer req = withFlowHandlerAPI $ do
-  let piId = req.productInstanceId -- RIDESEARCH PI
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones $ Id piId
+initiateCallToCustomer :: Id ProductInstance -> FlowHandler CallRes
+initiateCallToCustomer rideId = withFlowHandlerAPI $ do
+  (customerPhone, providerPhone) <- getProductAndCustomerPhones rideId
   initiateCall providerPhone customerPhone
-  logTagInfo ("ProdInstId:" <> piId) "Call initiated from provider to customer."
+  logTagInfo ("ProdInstId:" <> getId rideId) "Call initiated from provider to customer."
   return Ack
 
 getDriver :: (MonadFlow m) => ProductInstance -> m Driver.Driver

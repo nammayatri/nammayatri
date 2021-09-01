@@ -1,13 +1,12 @@
 module Mobility.DriverCancelRide where
 
-import Beckn.Types.Id
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
 import Mobility.SuccessFlow
 import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "beckn-transport" Types.Storage.CancellationReason as SCR
-import qualified "app-backend" Types.Storage.ProductInstance as BPI
+import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
 
 spec :: Spec
@@ -15,7 +14,7 @@ spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for ride cancelled by Driver" $ withBecknClients clients do
-      (productInstanceId, transporterOrderPi) <- doAnAppSearch
+      (_, bRideBookingId, transporterOrderPi) <- doAnAppSearch
       let transporterOrderPiId = transporterOrderPi.id
 
       -- Driver Accepts a ride
@@ -27,11 +26,8 @@ spec = do
         rideCancel appRegistrationToken transporterOrderPiId $
           RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
 
-      piCancelled <-
-        expectSingletonNE <=< poll $ do
-          callBAP (buildListPIs BPI.CANCELLED)
-            <&> map (.productInstance)
-            <&> filter (\pI -> pI.parentId == Just (Id productInstanceId))
-            <&> nonEmpty
-
-      piCancelled.status `shouldBe` BPI.CANCELLED
+      void . poll $
+        callBAP (rideBookingStatus bRideBookingId appRegistrationToken)
+          <&> (.status)
+          >>= (`shouldBe` AppRB.CANCELLED)
+          <&> Just

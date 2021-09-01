@@ -184,25 +184,19 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Text ->
-  Maybe Storage.Gender ->
-  Maybe Text ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken = do
+updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbDeviceToken = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update dbTable (setClause now mbFirstName mbMiddleName mbLastName mbFullName mbGender mbEmail mbDeviceToken) (predicate personId)
+  DB.update dbTable (setClause now mbFirstName mbMiddleName mbLastName mbDeviceToken) (predicate personId)
   where
-    setClause now mbFirstN mbMiddleN mbLastN mbFullN mbG mbE mbDToken Storage.Person {..} =
+    setClause now mbFirstN mbMiddleN mbLastN mbDToken Storage.Person {..} =
       mconcat
         [ updatedAt <-. B.val_ now,
           maybe mempty (\x -> firstName <-. B.val_ (Just x)) mbFirstN,
           maybe mempty (\x -> middleName <-. B.val_ (Just x)) mbMiddleN,
           maybe mempty (\x -> lastName <-. B.val_ (Just x)) mbLastN,
-          maybe mempty (\x -> fullName <-. B.val_ (Just x)) mbFullN,
-          maybe mempty (\x -> gender <-. B.val_ x) mbG,
-          maybe mempty (\x -> email <-. B.val_ (Just x)) mbE,
           maybe mempty (\x -> deviceToken <-. B.val_ (Just x)) mbDToken
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_

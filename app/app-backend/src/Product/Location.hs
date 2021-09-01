@@ -20,16 +20,12 @@ getDistance ::
   ( CoreMetrics m,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
-  Common.Location ->
-  Common.Location ->
+  Common.GPS ->
+  Common.GPS ->
   m (Maybe Double)
 getDistance pickupLoc dropLoc = do
-  pickupMapPoint <-
-    Common.gps pickupLoc & fromMaybeM (InvalidRequest "No long / lat.")
-      >>= mkMapPoint
-  dropMapPoint <-
-    Common.gps dropLoc & fromMaybeM (InvalidRequest "No long / lat.")
-      >>= mkMapPoint
+  pickupMapPoint <- mkMapPoint pickupLoc
+  dropMapPoint <- mkMapPoint dropLoc
   MapSearch.getDistanceMb (Just MapSearch.CAR) [pickupMapPoint, dropMapPoint]
 
 mkMapPoint :: (MonadThrow m, Log m) => Common.GPS -> m MapSearch.LatLong

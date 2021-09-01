@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Utils where
 
 import Beckn.Types.Flow
@@ -36,7 +38,7 @@ runClient' clientEnv x = do
 --
 -- The first argument describes attempted delays prior to running an action,
 -- in mcs.
-pollWith :: (HasCallStack, MonadIO m) => [Int] -> m (Maybe a) -> m a
+pollWith :: (HasCallStack, MonadIO m, MonadCatch m) => [Int] -> m (Maybe a) -> m a
 pollWith allDelays action = withFrozenCallStack $ go allDelays
   where
     go [] =
@@ -46,7 +48,7 @@ pollWith allDelays action = withFrozenCallStack $ go allDelays
           <> " seconds"
     go (delay : remDelays) = do
       liftIO $ threadDelay delay
-      action >>= maybe (go remDelays) pure
+      try @_ @SomeException action <&> either (const Nothing) identity >>= maybe (go remDelays) pure
 
 expBackoff :: Int -> Int -> [Int]
 expBackoff startDelay maxDelay =
@@ -55,7 +57,7 @@ expBackoff startDelay maxDelay =
 -- | 'pollWith' with default timing.
 --
 -- Optimized for requesting a server for a result of async action.
-poll :: (HasCallStack, MonadIO m) => m (Maybe a) -> m a
+poll :: (HasCallStack, MonadIO m, MonadCatch m) => m (Maybe a) -> m a
 poll = pollWith (expBackoff 0.1e6 10e6)
 
 getLoggerCfg :: String -> T.LoggerConfig

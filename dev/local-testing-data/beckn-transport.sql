@@ -17,7 +17,7 @@ INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, t
 
 -- BAP app entry.
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('505e4651-5340-4836-81a7-045394ba6dc3', 'Mobility BAP', 'JUSPAY.MOBILITY.APP.UAT.1', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, '9777777777', '+91', NULL, NULL, 'bpp-1-key', 'http://localhost:8013/v1', 'bap-key-1', NULL, now(), now(), NULL);
+  ('505e4651-5340-4836-81a7-045394ba6dc3', 'Mobility BAP', 'JUSPAY.MOBILITY.APP.UAT.1', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, '9777777777', '+91', NULL, NULL, 'bpp-1-key', 'http://localhost:8013/v2', 'bap-key-1', NULL, now(), now(), NULL);
 
 -- NSDL entry
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES

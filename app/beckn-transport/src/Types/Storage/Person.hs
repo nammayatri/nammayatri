@@ -135,16 +135,6 @@ instance B.Table PersonT where
 
 deriveTableEncryption ''PersonTE
 
--- TODO: move it to appropriate place
-maskPerson :: DecryptedPerson -> DecryptedPerson
-maskPerson person =
-  person {deviceToken = FCM.FCMRecipientToken . trimToken . FCM.getFCMRecipientToken <$> (person.deviceToken)}
-  where
-    trimToken token =
-      if length token > 6
-        then T.take 3 token <> "..." <> T.takeEnd 3 token
-        else "..."
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)
 fieldEMod =

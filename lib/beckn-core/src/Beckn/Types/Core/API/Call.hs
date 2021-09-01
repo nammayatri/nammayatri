@@ -4,12 +4,13 @@ module Beckn.Types.Core.API.Call where
 
 import Beckn.Types.Core.Ack
 import EulerHS.Prelude
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Capture, JSON, Post, (:>))
 
 type CallAPI =
-  "call"
-    :> "to_customer"
-    :> ReqBody '[JSON] CallReq
+  "ride"
+    :> Capture "rideId" Text
+    :> "call"
+    :> "customer"
     :> Post '[JSON] CallRes
 
 callsAPI :: Proxy CallAPI

@@ -17,6 +17,7 @@ import Beckn.Utils.Logging as Common
 import Beckn.Utils.Servant.Client as Common
 import Beckn.Utils.Text as Common
 import Beckn.Utils.Time as Common
+import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
 
 foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc
@@ -24,3 +25,9 @@ foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) 
 
 identity :: p -> p
 identity a = a
+
+maskText :: Text -> Text
+maskText text =
+  if length text > 6
+    then T.take 3 text <> "..." <> T.takeEnd 3 text
+    else "..."

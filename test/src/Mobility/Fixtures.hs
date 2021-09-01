@@ -14,16 +14,16 @@ import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client
 import qualified Types.API.Cancel as CancelAPI
-import qualified "app-backend" Types.API.Case as AppCase
 import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified "beckn-transport" Types.API.DriverInformation as DriverInformationAPI
 import qualified "app-backend" Types.API.Feedback as AppFeedback
 import qualified "beckn-transport" Types.API.Person as TbePerson
-import qualified "app-backend" Types.API.ProductInstance as AppPI
 import qualified "beckn-transport" Types.API.ProductInstance as TbePI
+import qualified Types.API.Quote as QuoteAPI
 import qualified "app-backend" Types.API.Registration as Reg
 import qualified "beckn-transport" Types.API.Ride as RideAPI
+import qualified Types.API.RideBooking as AppRideBooking
 import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 import "beckn-transport" Types.App
@@ -34,7 +34,7 @@ import qualified "beckn-transport" Types.Storage.Case as TCase
 import qualified "beckn-transport" Types.Storage.Person as TPerson
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
-import qualified "app-backend" Types.Storage.RegistrationToken as BSR
+import qualified "app-backend" Types.Storage.SearchReqLocation as AppBESearchReqLoc
 import qualified Types.Storage.Vehicle as SV
 
 address :: AppCommon.Address
@@ -102,20 +102,16 @@ getStop stopTime gps =
       departureTime = AppCommon.StopTime stopTime (Just stopTime)
     }
 
-searchReq :: Text -> UTCTime -> UTCTime -> AppBESearch.SearchReq
-searchReq tid utcTime futureTime =
+searchReq :: AppBESearch.SearchReq
+searchReq =
   AppBESearch.SearchReq
-    { transaction_id = tid,
-      startTime = utcTime,
-      origin = getStop futureTime $ AppCommon.GPS "10.0739" "76.2733",
-      destination = getStop futureTime $ AppCommon.GPS "10.5449" "76.4356",
-      vehicle = vehicle,
-      travellers = [],
-      fare = AppCommon.DecimalValue "360" $ Just "50"
+    { origin = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ AppCommon.GPS "10.0739" "76.2733",
+      destination = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ AppCommon.GPS "10.5449" "76.4356",
+      vehicle = AppBESearch.SUV
     }
 
-bppTransporterOrgId :: Text
-bppTransporterOrgId = "70c76e36-f035-46fd-98a7-572dc8934323"
+bapTransporterName :: Text
+bapTransporterName = "[A] Transporter #1"
 
 getFutureTime :: IO UTCTime
 getFutureTime =
@@ -128,13 +124,7 @@ searchServices ::
   ClientM AppBESearch.SearchRes
 searchServices :<|> _ = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
-buildSearchReq :: MonadIO m => Text -> m AppBESearch.SearchReq
-buildSearchReq guid = do
-  futureTime <- liftIO getFutureTime
-  utcTime <- liftIO getCurrentTime
-  pure $ searchReq guid utcTime futureTime
-
-cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
+cancelRide :: Id BPI.ProductInstance -> Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
 rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriverAcceptanceRes
@@ -154,50 +144,16 @@ _
   :<|> _
   :<|> _ = client (Proxy :: Proxy TbeRoutes.DriverInformationAPI)
 
-buildAppCancelReq :: Text -> CancelAPI.Entity -> CancelAPI.CancelReq
-buildAppCancelReq entityId entityType =
+buildAppCancelReq :: CancelAPI.CancelReq
+buildAppCancelReq =
   CancelAPI.CancelReq
-    { entityId = entityId,
-      entityType = entityType,
-      rideCancellationReason = Just $ CancelAPI.RideCancellationReasonEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
+    { rideCancellationReason = Just $ CancelAPI.RideCancellationReasonEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
     }
 
--- For the idea behind generating a client, when nested routes are involved,
--- see https://github.com/haskell-servant/servant/issues/335
-newtype CaseAPIClient = CaseAPIClient {mkCaseClient :: Text -> CaseClient}
+getQuotes :: Id BCase.Case -> Text -> ClientM QuoteAPI.GetQuotesRes
+getQuotes = client (Proxy :: Proxy AbeRoutes.QuoteAPI)
 
-data CaseClient = CaseClient
-  { getCaseListRes ::
-      BCase.CaseType ->
-      [BCase.CaseStatus] ->
-      Maybe Integer ->
-      Maybe Integer ->
-      ClientM AppCase.CaseListRes,
-    getCaseStatusRes :: Id BCase.Case -> ClientM AppCase.GetStatusRes
-  }
-
-getCase :: CaseAPIClient
-getCase = CaseAPIClient {..}
-  where
-    caseAPIClient = client (Proxy :: Proxy AbeRoutes.CaseAPI)
-    mkCaseClient regToken = CaseClient {..}
-      where
-        getCaseListRes :<|> getCaseStatusRes = caseAPIClient regToken
-
-buildCaseListRes :: Text -> ClientM AppCase.CaseListRes
-buildCaseListRes regToken = do
-  let CaseAPIClient {..} = getCase
-      CaseClient {..} = mkCaseClient regToken
-  getCaseListRes BCase.RIDESEARCH [BCase.NEW] (Just 10) (Just 0)
-
-buildCaseStatusRes :: Text -> ClientM AppCase.GetStatusRes
-buildCaseStatusRes caseId = do
-  let CaseAPIClient {..} = getCase
-      CaseClient {..} = mkCaseClient appRegistrationToken
-      appCaseId = Id caseId
-  getCaseStatusRes appCaseId
-
-appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM APISuccess
+appConfirmRide :: Text -> Id BCase.Case -> Id BPI.ProductInstance -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
@@ -212,13 +168,6 @@ callAppFeedback ratingValue productInstanceId =
           }
    in appFeedback appRegistrationToken request
 
-buildAppConfirmReq :: Text -> Text -> ConfirmAPI.ConfirmReq
-buildAppConfirmReq cid pid =
-  ConfirmAPI.ConfirmReq
-    { caseId = cid,
-      productInstanceId = pid
-    }
-
 listLeads :: Text -> [TCase.CaseStatus] -> TCase.CaseType -> Maybe Int -> Maybe Int -> ClientM [TbeCase.CaseRes]
 listLeads = client (Proxy :: Proxy TbeRoutes.CaseAPI)
 
@@ -231,11 +180,9 @@ listVehicleRides :: Text -> Id SV.Vehicle -> ClientM TbePI.RideListRes
 listCasesByProductInstance :: Text -> Id TPI.ProductInstance -> Maybe TCase.CaseType -> ClientM [TbeCase.CaseRes]
 listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
 
-listPIs :: Text -> [BPI.ProductInstanceStatus] -> [BCase.CaseType] -> Maybe Int -> Maybe Int -> ClientM AppPI.ProductInstanceList
-listPIs = client (Proxy :: Proxy AbeRoutes.ProductInstanceAPI)
-
-buildListPIs :: BPI.ProductInstanceStatus -> ClientM AppPI.ProductInstanceList
-buildListPIs status = listPIs appRegistrationToken [status] [BCase.RIDEORDER] (Just 50) Nothing
+rideBookingStatus :: Id BPI.ProductInstance -> Text -> ClientM AppRideBooking.RideBookingStatusRes
+rideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppRideBooking.RideBookingListRes
+rideBookingStatus :<|> rideBookingList = client (Proxy :: Proxy AbeRoutes.RideBookingAPI)
 
 updatePerson :: Text -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
 deletePerson :: Text -> Id TPerson.Person -> ClientM TbePerson.DeletePersonRes
@@ -286,42 +233,35 @@ testVehicleId = "0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94"
 testDriverId :: Text
 testDriverId = "6bc4bc84-2c43-425d-8853-22f47bd06691"
 
-appInitiateLogin :: Reg.InitiateLoginReq -> ClientM Reg.InitiateLoginRes
-appVerifyLogin :: Text -> Reg.LoginReq -> ClientM Reg.LoginRes
-appReInitiateLogin :: Text -> Reg.ReInitiateLoginReq -> ClientM Reg.InitiateLoginRes
+appAuth :: Reg.AuthReq -> ClientM Reg.AuthRes
+appVerify :: Text -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
+appReInitiateLogin :: Text -> ClientM Reg.ResendAuthRes
 logout :: RegToken -> ClientM APISuccess
-appInitiateLogin
-  :<|> appVerifyLogin
+appAuth
+  :<|> appVerify
   :<|> appReInitiateLogin
   :<|> logout =
     client (Proxy :: Proxy AbeRoutes.RegistrationAPI)
 
-buildInitiateLoginReq :: Reg.InitiateLoginReq
-buildInitiateLoginReq =
-  Reg.InitiateLoginReq
-    { medium = BSR.SMS,
-      __type = BSR.OTP,
-      mobileNumber = "9000090000",
-      mobileCountryCode = "+91",
-      deviceToken = Nothing
+mkAuthReq :: Reg.AuthReq
+mkAuthReq =
+  Reg.AuthReq
+    { mobileNumber = "9000090000",
+      mobileCountryCode = "+91"
     }
 
-buildLoginReq :: Reg.LoginReq
-buildLoginReq =
-  Reg.LoginReq
-    { medium = BSR.SMS,
-      __type = BSR.OTP,
-      hash = "7891",
-      mobileNumber = "9000090000",
-      mobileCountryCode = "+91",
+mkAuthVerifyReq :: Reg.AuthVerifyReq
+mkAuthVerifyReq =
+  Reg.AuthVerifyReq
+    { otp = "7891",
       deviceToken = Just $ FCMRecipientToken "AN_DEV_TOKEN"
     }
 
-initiateLoginReq :: ClientM Reg.InitiateLoginRes
-initiateLoginReq = appInitiateLogin buildInitiateLoginReq
+initiateAuth :: ClientM Reg.AuthRes
+initiateAuth = appAuth mkAuthReq
 
-verifyLoginReq :: Text -> ClientM Reg.LoginRes
-verifyLoginReq tokenId = appVerifyLogin tokenId buildLoginReq
+verifyAuth :: Text -> ClientM Reg.AuthVerifyRes
+verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq
 
 getAppBaseUrl :: BaseUrl
 getAppBaseUrl =
@@ -329,7 +269,7 @@ getAppBaseUrl =
     { baseUrlScheme = Http,
       baseUrlHost = "localhost",
       baseUrlPort = 8013,
-      baseUrlPath = "/v1"
+      baseUrlPath = "/v2"
     }
 
 getTransporterBaseUrl :: BaseUrl

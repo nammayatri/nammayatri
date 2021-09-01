@@ -9,23 +9,23 @@ import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
+import Beckn.Types.Core.Location (Location (..))
+import Beckn.Types.Core.Price (Price (..))
 import Beckn.Types.Core.Tag
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Catalog as BM
-import Beckn.Types.Mobility.Stop as BS
+import Beckn.Types.Mobility.Intent (Intent (..))
+import Beckn.Types.Mobility.Payload (Payload (..))
+import Beckn.Types.Mobility.Stop (Stop (..), StopTime (..))
+import Beckn.Types.Mobility.Vehicle (Vehicle (..))
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
-import Data.Aeson (encode)
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map as Map
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
 import Product.Serviceability
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as MPI
@@ -50,11 +50,11 @@ import qualified Utils.Metrics as Metrics
 
 search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  validateDateTime req
   validateServiceability req
-  fromLocation <- buildSearchReqLoc $ toBeckn $ req.origin
-  toLocation <- buildSearchReqLoc $ toBeckn $ req.destination
-  case_ <- mkCase req (getId personId) fromLocation toLocation
+  fromLocation <- Location.buildSearchReqLoc req.origin
+  toLocation <- Location.buildSearchReqLoc req.destination
+  now <- getCurrentTime
+  case_ <- mkCase req (getId personId) fromLocation toLocation now
   Metrics.incrementCaseCount Case.NEW Case.RIDESEARCH
   let txnId = getId (case_.id)
   Metrics.startSearchMetrics txnId
@@ -65,24 +65,15 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   env <- ask
   let bapNwAddr = env.bapNwAddress
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
-  let intent = mkIntent req
+  let intent = mkIntent req now
       tags = Just [Tag "distance" (fromMaybe "" $ case_.udf5)]
   fork "search" . withRetry $
     ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
-  return $ API.SearchRes txnId
+  return . API.SearchRes $ case_.id
   where
-    validateDateTime sreq = do
-      currTime <- getCurrentTime
-      let allowedStartTime = addUTCTime (-2 * 60) currTime
-      when ((sreq.origin.departureTime.estimated) < allowedStartTime) $
-        throwError $ InvalidRequest "Invalid start time."
     validateServiceability sreq = do
-      originGps <-
-        sreq.origin.location.gps
-          & fromMaybeM (InvalidRequest "GPS coordinates required for the origin location")
-      destinationGps <-
-        req.destination.location.gps
-          & fromMaybeM (InvalidRequest "GPS coordinates required for the destination location")
+      let originGps = sreq.origin.gps
+      let destinationGps = req.destination.gps
       let serviceabilityReq = RideServiceabilityReq originGps destinationGps
       unlessM (rideServiceable serviceabilityReq) $
         throwError $ ProductNotServiceable "due to georestrictions"
@@ -106,7 +97,7 @@ searchCb _ _ req = withFlowHandlerBecknAPI $
 searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], DBFlow m r) => Search.OnSearchReq -> BM.Catalog -> m ()
 searchCbService req catalog = do
   let caseId = Id $ req.context.transaction_id --CaseId $ service.id
-  case_ <- Case.findByIdAndType caseId Case.RIDESEARCH >>= fromMaybeM CaseDoesNotExist
+  case_ <- QCase.findByIdAndType caseId Case.RIDESEARCH >>= fromMaybeM CaseDoesNotExist
   when (case_.status /= Case.CLOSED) $ do
     bpp <-
       Org.findOrganizationByCallbackUri (req.context.bpp_uri) Org.PROVIDER
@@ -153,11 +144,11 @@ mkCase ::
   Text ->
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
+  UTCTime ->
   m Case.Case
-mkCase req userId from to = do
-  now <- getCurrentTime
+mkCase req userId from to now = do
   cid <- generateGUID
-  distance <- Location.getDistance (req.origin.location) (req.destination.location)
+  distance <- Location.getDistance (req.origin.gps) (req.destination.gps)
   orgs <- Org.listOrganizations Nothing Nothing [Org.PROVIDER] [Org.APPROVED]
   let info = encodeToText $ API.CaseInfo (Just $ toInteger $ length orgs) (Just 0) (Just 0)
   -- TODO: consider collision probability for shortId
@@ -165,7 +156,7 @@ mkCase req userId from to = do
   -- If the insert fails, maybe retry automatically as there
   -- is a unique constraint on `shortId`
   shortId_ <- generateShortId
-  validTill <- getCaseExpiry $ req.origin.departureTime.estimated
+  validTill <- getCaseExpiry now
   return
     Case.Case
       { id = cid,
@@ -176,7 +167,7 @@ mkCase req userId from to = do
         _type = Case.RIDESEARCH,
         exchangeType = Case.FULFILLMENT,
         status = Case.NEW,
-        startTime = req.origin.departureTime.estimated,
+        startTime = now,
         endTime = Nothing,
         validTill = validTill,
         provider = Nothing,
@@ -186,10 +177,10 @@ mkCase req userId from to = do
         parentCaseId = Nothing,
         fromLocationId = from.id,
         toLocationId = to.id,
-        udf1 = Just $ req.vehicle.variant,
-        udf2 = Just . show . length $ req.travellers,
+        udf1 = Just . show $ req.vehicle,
+        udf2 = Nothing,
         udf3 = Nothing,
-        udf4 = Just $ req.transaction_id,
+        udf4 = Nothing,
         udf5 = show <$> distance,
         info = Just info,
         createdAt = now,
@@ -198,35 +189,11 @@ mkCase req userId from to = do
   where
     getCaseExpiry :: (HasFlowEnv m r '["searchCaseExpiry" ::: Maybe Seconds]) => UTCTime -> m UTCTime
     getCaseExpiry startTime = do
-      now <- getCurrentTime
       caseExpiry <- maybe 7200 fromIntegral <$> asks (.searchCaseExpiry)
       let minExpiry = 300 -- 5 minutes
           timeToRide = startTime `diffUTCTime` now
           validTill = addUTCTime (minimum [fromInteger caseExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
-
-buildSearchReqLoc :: MonadFlow m => BS.Stop -> m Location.SearchReqLocation
-buildSearchReqLoc BS.Stop {..} = do
-  let loc = location
-  now <- getCurrentTime
-  locId <- generateGUID
-  let mgps = loc.gps
-  lat <- mgps >>= readMaybe . T.unpack . (.lat) & fromMaybeM (InvalidRequest "Lat field is not present.")
-  lon <- mgps >>= readMaybe . T.unpack . (.lon) & fromMaybeM (InvalidRequest "Lon field is not present.")
-  return
-    Location.SearchReqLocation
-      { id = locId,
-        lat = lat,
-        long = lon,
-        district = Nothing,
-        city = (.name) <$> loc.city,
-        state = (.state) <$> loc.address,
-        country = (.name) <$> loc.country,
-        pincode = Nothing,
-        address = T.decodeUtf8 . BSL.toStrict . encode <$> loc.address,
-        createdAt = now,
-        updatedAt = now
-      }
 
 mkProduct :: MonadFlow m => Case.Case -> Core.Item -> m Products.Products
 mkProduct case_ item = do
@@ -308,7 +275,7 @@ mkProductInstance case_ bppOrg provider personId item = do
         updatedAt = now
       }
   where
-    getNearestDriverDist = value <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
+    getNearestDriverDist = (.value) <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
 
 mkDeclinedProductInstance :: MonadFlow m => Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> m PI.ProductInstance
 mkDeclinedProductInstance case_ bppOrg provider personId = do
@@ -347,3 +314,82 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         createdAt = now,
         updatedAt = now
       }
+
+mkIntent :: API.SearchReq -> UTCTime -> Intent
+mkIntent req now = do
+  let pickupLocation =
+        Location
+          { gps = Just $ toBeckn req.origin.gps,
+            address = Just $ toBeckn req.origin.address,
+            station_code = Nothing,
+            city = Nothing,
+            country = Nothing,
+            circle = Nothing,
+            polygon = Nothing,
+            _3dspace = Nothing
+          }
+      dropLocation =
+        Location
+          { gps = Just $ toBeckn req.destination.gps,
+            address = Just $ toBeckn req.destination.address,
+            station_code = Nothing,
+            city = Nothing,
+            country = Nothing,
+            circle = Nothing,
+            polygon = Nothing,
+            _3dspace = Nothing
+          }
+      pickup =
+        Stop
+          { id = "",
+            descriptor = Nothing,
+            location = pickupLocation,
+            arrival_time = StopTime now Nothing,
+            departure_time = StopTime now Nothing,
+            transfers = []
+          }
+      drop' =
+        Stop
+          { id = "",
+            descriptor = Nothing,
+            location = dropLocation,
+            arrival_time = StopTime now Nothing,
+            departure_time = StopTime now Nothing,
+            transfers = []
+          }
+      vehicle =
+        Vehicle
+          { category = Nothing,
+            capacity = Nothing,
+            make = Nothing,
+            model = Nothing,
+            size = Nothing,
+            variant = show req.vehicle,
+            color = Nothing,
+            energy_type = Nothing,
+            registration = Nothing
+          }
+      fare =
+        Price
+          { currency = "",
+            value = Nothing,
+            estimated_value = Nothing,
+            computed_value = Nothing,
+            listed_value = Nothing,
+            offered_value = Nothing,
+            minimum_value = Nothing,
+            maximum_value = Nothing
+          }
+  Intent
+    { query_string = Nothing,
+      provider_id = Nothing,
+      category_id = Nothing,
+      item_id = Nothing,
+      tags = Nothing,
+      pickups = [pickup],
+      drops = [drop'],
+      vehicle = vehicle,
+      payload = Payload Nothing Nothing [] Nothing,
+      transfer = Nothing,
+      fare = fare
+    }

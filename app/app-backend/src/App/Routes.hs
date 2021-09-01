@@ -25,9 +25,12 @@ import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Info as Info
 import qualified Product.Location as Location
-import qualified Product.Person as Person
 import qualified Product.ProductInstance as ProductInstance
+import qualified Product.Profile as Profile
+import qualified Product.Quote as Quote
 import qualified Product.Registration as Registration
+import qualified Product.Ride as Ride
+import qualified Product.RideBooking as RideBooking
 import qualified Product.Search as Search
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
@@ -42,10 +45,13 @@ import qualified Types.API.Confirm as ConfirmAPI
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
-import qualified Types.API.Person as Person
 import Types.API.Product
 import qualified Types.API.ProductInstance as ProductInstance
+import qualified Types.API.Profile as Profile
+import qualified Types.API.Quote as QuoteAPI
 import Types.API.Registration
+import qualified Types.API.Ride as RideAPI
+import qualified Types.API.RideBooking as RideBookingAPI
 import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
@@ -55,25 +61,28 @@ import Types.Storage.ProductInstance
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
 type AppAPI =
-  "v1"
+  "v2"
     :> ( Get '[JSON] Text
            :<|> RegistrationAPI
+           :<|> ProfileAPI
            :<|> SearchAPI
+           :<|> QuoteAPI
            :<|> ConfirmAPI
+           :<|> RideBookingAPI
+           :<|> CancelAPI
+           :<|> RideAPI
+           :<|> CallAPIs
+           :<|> SupportAPI
            :<|> CaseAPI
            :<|> InfoAPI
            :<|> UpdateAPI
            :<|> ProductInstanceAPI
-           :<|> CancelAPI
-           :<|> CallAPIs
            :<|> RouteAPI
            :<|> StatusAPI
-           :<|> SupportAPI
            :<|> ServiceabilityAPI
            :<|> FeedbackAPI
            :<|> CustomerSupportAPI
            :<|> GoogleMapsProxyAPI
-           :<|> PersonAPI
            :<|> CancellationReasonAPI
        )
 
@@ -84,37 +93,40 @@ appServer :: FlowServer AppAPI
 appServer =
   pure "App is UP"
     :<|> registrationFlow
+    :<|> profileFlow
     :<|> searchFlow
+    :<|> quoteFlow
     :<|> confirmFlow
+    :<|> rideBookingFlow
+    :<|> cancelFlow
+    :<|> rideFlow
+    :<|> callFlow
+    :<|> supportFlow
     :<|> caseFlow
     :<|> infoFlow
     :<|> updateFlow
     :<|> productInstanceFlow
-    :<|> cancelFlow
-    :<|> callFlow
     :<|> routeApiFlow
     :<|> statusFlow
-    :<|> supportFlow
     :<|> serviceabilityFlow
     :<|> feedbackFlow
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
-    :<|> personFlow
     :<|> cancellationReasonFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
-  "token"
-    :> ( ReqBody '[JSON] InitiateLoginReq
-           :> Post '[JSON] InitiateLoginRes
-           :<|> Capture "tokenId" Text
+  "auth"
+    :> ( ReqBody '[JSON] AuthReq
+           :> Post '[JSON] AuthRes
+           :<|> Capture "authId" Text
              :> "verify"
-             :> ReqBody '[JSON] LoginReq
-             :> Post '[JSON] LoginRes
-           :<|> Capture "tokenId" Text
+             :> ReqBody '[JSON] AuthVerifyReq
+             :> Post '[JSON] AuthVerifyRes
+           :<|> "otp"
+             :> Capture "authId" Text
              :> "resend"
-             :> ReqBody '[JSON] ReInitiateLoginReq
-             :> Post '[JSON] InitiateLoginRes
+             :> Post '[JSON] ResendAuthRes
            :<|> "logout"
              :> TokenAuth
              :> Post '[JSON] APISuccess
@@ -122,14 +134,28 @@ type RegistrationAPI =
 
 registrationFlow :: FlowServer RegistrationAPI
 registrationFlow =
-  Registration.initiateLogin
-    :<|> Registration.login
-    :<|> Registration.reInitiateLogin
+  Registration.auth
+    :<|> Registration.verify
+    :<|> Registration.resend
     :<|> Registration.logout
+
+type ProfileAPI =
+  "profile"
+    :> ( TokenAuth
+           :> Get '[JSON] Profile.ProfileRes
+           :<|> TokenAuth
+             :> ReqBody '[JSON] Profile.UpdateProfileReq
+             :> Post '[JSON] APISuccess
+       )
+
+profileFlow :: FlowServer ProfileAPI
+profileFlow =
+  Profile.getPersonDetails
+    :<|> Profile.updatePerson
 
 -------- Search Flow --------
 type SearchAPI =
-  "search"
+  "rideSearch"
     :> TokenAuth
     :> ReqBody '[JSON] Search.SearchReq
     :> Post '[JSON] Search.SearchRes
@@ -142,22 +168,113 @@ searchFlow =
   Search.search
     :<|> Search.searchCb
 
+type QuoteAPI =
+  "rideSearch"
+    :> Capture "searchId" (Id Case.Case)
+    :> TokenAuth
+    :> "quotes"
+    :> Get '[JSON] QuoteAPI.GetQuotesRes
+
+quoteFlow :: FlowServer QuoteAPI
+quoteFlow =
+  Quote.getQuotes
+
 -------- Confirm Flow --------
 type ConfirmAPI =
-  ( "confirm"
-      :> TokenAuth
-      :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
-      :> Post '[JSON] ConfirmAPI.ConfirmRes
-      :<|> SignatureAuth "Authorization" LookupRegistryOrg
-      :> "on_confirm"
-      :> ReqBody '[JSON] API.OnConfirmReq
-      :> Post '[JSON] API.OnConfirmRes
-  )
+  "rideSearch"
+    :> TokenAuth
+    :> Capture "searchId" (Id Case.Case)
+    :> "quotes"
+    :> Capture "quoteId" (Id ProductInstance)
+    :> "confirm"
+    :> Post '[JSON] ConfirmAPI.ConfirmRes
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_confirm"
+    :> ReqBody '[JSON] API.OnConfirmReq
+    :> Post '[JSON] API.OnConfirmRes
 
 confirmFlow :: FlowServer ConfirmAPI
 confirmFlow =
   Confirm.confirm
     :<|> Confirm.onConfirm
+
+type RideBookingAPI =
+  "rideBooking"
+    :> ( Capture "bookingId" (Id ProductInstance)
+           :> TokenAuth
+           :> Post '[JSON] RideBookingAPI.RideBookingStatusRes
+           :<|> "list"
+             :> TokenAuth
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> QueryParam "isOnlyActive" Bool
+             :> Get '[JSON] RideBookingAPI.RideBookingListRes
+       )
+
+rideBookingFlow :: FlowServer RideBookingAPI
+rideBookingFlow =
+  RideBooking.rideBookingStatus
+    :<|> RideBooking.rideBookingList
+
+-------- Cancel Flow----------
+
+type CancelAPI =
+  "rideBooking"
+    :> Capture "bookingId" (Id ProductInstance)
+    :> "cancel"
+    :> TokenAuth
+    :> ReqBody '[JSON] Cancel.CancelReq
+    :> Post '[JSON] Cancel.CancelRes
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_cancel"
+    :> ReqBody '[JSON] API.OnCancelReq
+    :> Post '[JSON] API.OnCancelRes
+
+cancelFlow :: FlowServer CancelAPI
+cancelFlow =
+  Cancel.cancel
+    :<|> Cancel.onCancel
+
+type RideAPI =
+  "ride"
+    :> Capture "rideId" (Id ProductInstance)
+    :> "driver"
+    :> "location"
+    :> TokenAuth
+    :> Post '[JSON] RideAPI.GetDriverLocRes
+
+rideFlow :: FlowServer RideAPI
+rideFlow =
+  Ride.getDriverLoc
+
+-------- Initiate a call (Exotel) APIs --------
+type CallAPIs =
+  "ride"
+    :> Capture "rideId" (Id ProductInstance)
+    :> "call"
+    :> ( "driver"
+           :> TokenAuth
+           :> Post '[JSON] API.CallRes
+           :<|> "customer"
+           :> Post '[JSON] API.CallRes
+       )
+
+callFlow :: FlowServer CallAPIs
+callFlow rideId =
+  Call.initiateCallToDriver rideId
+    :<|> Call.initiateCallToCustomer rideId
+
+-------- Support Flow----------
+type SupportAPI =
+  "support"
+    :> ( "sendIssue"
+           :> TokenAuth
+           :> ReqBody '[JSON] Support.SendIssueReq
+           :> Post '[JSON] Support.SendIssueRes
+       )
+
+supportFlow :: FlowServer SupportAPI
+supportFlow = Support.sendIssue
 
 ------- Case Flow -------
 type CaseAPI =
@@ -220,39 +337,6 @@ productInstanceFlow :: FlowServer ProductInstanceAPI
 productInstanceFlow =
   ProductInstance.list
 
--------- Cancel Flow----------
-type CancelAPI =
-  "cancel"
-    :> TokenAuth
-    :> ReqBody '[JSON] Cancel.CancelReq
-    :> Post '[JSON] Cancel.CancelRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
-    :> "on_cancel"
-    :> ReqBody '[JSON] API.OnCancelReq
-    :> Post '[JSON] API.OnCancelRes
-
-cancelFlow :: FlowServer CancelAPI
-cancelFlow =
-  Cancel.cancel
-    :<|> Cancel.onCancel
-
--------- Initiate a call (Exotel) APIs --------
-type CallAPIs =
-  "call"
-    :> ( "to_provider"
-           :> TokenAuth
-           :> ReqBody '[JSON] API.CallReq
-           :> Post '[JSON] API.CallRes
-           :<|> "to_customer"
-           :> ReqBody '[JSON] API.CallReq
-           :> Post '[JSON] API.CallRes
-       )
-
-callFlow :: FlowServer CallAPIs
-callFlow =
-  Call.initiateCallToProvider
-    :<|> Call.initiateCallToCustomer
-
 type RouteAPI =
   "route"
     :> TokenAuth
@@ -272,18 +356,6 @@ type StatusAPI =
 statusFlow :: FlowServer StatusAPI
 statusFlow =
   Status.onStatus
-
--------- Support Flow----------
-type SupportAPI =
-  "support"
-    :> ( "sendIssue"
-           :> TokenAuth
-           :> ReqBody '[JSON] Support.SendIssueReq
-           :> Post '[JSON] Support.SendIssueRes
-       )
-
-supportFlow :: FlowServer SupportAPI
-supportFlow = Support.sendIssue
 
 -------- Serviceability----------
 type ServiceabilityAPI =
@@ -367,21 +439,6 @@ googleMapsProxyFlow =
   GoogleMapsFlow.autoComplete
     :<|> GoogleMapsFlow.placeDetails
     :<|> GoogleMapsFlow.getPlaceName
-
-type PersonAPI =
-  "person"
-    :> ( TokenAuth
-           :> Get '[JSON] Person.GetPersonDetailsRes
-           :<|> "update"
-             :> TokenAuth
-             :> ReqBody '[JSON] Person.UpdateReq
-             :> Post '[JSON] APISuccess
-       )
-
-personFlow :: FlowServer PersonAPI
-personFlow =
-  Person.getPersonDetails
-    :<|> Person.updatePerson
 
 type CancellationReasonAPI =
   "cancellationReason"

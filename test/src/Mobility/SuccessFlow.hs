@@ -1,10 +1,6 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Mobility.SuccessFlow where
 
 import Beckn.Types.Id
-import qualified Data.UUID as UUID
-import qualified Data.UUID.V4 as UUID
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
@@ -12,43 +8,44 @@ import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "beckn-transport" Types.Storage.Case as TCase
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
+import qualified Types.Storage.Ride as AppRide
+import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
 
-doAnAppSearch :: HasCallStack => ClientsM (Text, TPI.ProductInstance)
+doAnAppSearch :: HasCallStack => ClientsM (Id BPI.ProductInstance, Id BPI.ProductInstance, TPI.ProductInstance)
 doAnAppSearch = do
   -- Driver sets online
   void . callBPP $ setDriverOnline driverToken True
 
   -- Do an App Search
-  appCaseid <-
-    liftIO UUID.nextRandom
-      <&> UUID.toText
-      >>= buildSearchReq
-      >>= callBAP . searchServices appRegistrationToken
-      <&> (.caseId)
+  appSearchId <-
+    callBAP $
+      searchServices appRegistrationToken searchReq
+        <&> (.searchId)
 
   -- Do a Case Status request for getting product instance to confirm ride
-  productInstance <- expectSingletonNE <=< poll $ do
+  quoteAPIEntity <- expectSingletonNE <=< poll $ do
     -- List all confirmed rides (type = RIDEORDER)
-    callBAP (buildCaseStatusRes appCaseid)
-      <&> (.productInstance)
+    callBAP (getQuotes appSearchId appRegistrationToken)
+      <&> (.quotes)
       -- since all BPP can give quote for now we filter by orgId
-      <&> filter (\p -> p.organizationId == Id bppTransporterOrgId)
+      <&> filter (\p -> p.agencyName == bapTransporterName)
       <&> nonEmpty
-  let productInstanceId = getId productInstance.id
+  let bQuoteId = quoteAPIEntity.id
 
   -- check if calculated price is greater than 0
-  productInstance `shouldSatisfy` isJust . (.price)
-  let (Just prodPrice) = productInstance.price
-  prodPrice `shouldSatisfy` (> 100) -- should at least be more than 100
+  quoteAPIEntity.estimatedPrice `shouldSatisfy` (> 100) -- should at least be more than 100
 
   -- Confirm ride from app backend
-  void . callBAP $
-    appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId
+  confirmResult <-
+    callBAP $
+      appConfirmRide appRegistrationToken appSearchId bQuoteId
+  let bRideBookingId = confirmResult.bookingId
 
-  transporterOrderPi <- pollBPPForOrgOrderPi (cast productInstance.id) TPI.CONFIRMED TCase.RIDEORDER
+  transporterOrderPi <- pollBPPForOrgOrderPi (cast bQuoteId) TPI.CONFIRMED TCase.RIDEORDER
   transporterOrderPi.udf4 `shouldSatisfy` isJust
-  return (productInstanceId, transporterOrderPi)
+
+  return (bQuoteId, bRideBookingId, transporterOrderPi)
 
 pollBPPForOrgOrderPi ::
   Id TPI.ProductInstance ->
@@ -68,13 +65,13 @@ spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for successful booking and completion of ride" $ withBecknClients clients do
-      (productInstanceId, transporterOrderPi) <- doAnAppSearch
+      (productInstanceId, bRideBookingId, transporterOrderPi) <- doAnAppSearch
       let transporterOrderPiId = transporterOrderPi.id
 
       rideInfo <-
-        poll $
-          try @_ @SomeException (callBPP $ getNotificationInfo driverToken (Just $ cast transporterOrderPiId))
-            <&> either (const Nothing) (.rideRequest)
+        poll . callBPP $
+          getNotificationInfo driverToken (Just $ cast transporterOrderPiId)
+            <&> (.rideRequest)
       rideInfo.productInstanceId `shouldBe` transporterOrderPiId
 
       -- Driver Accepts a ride
@@ -82,7 +79,7 @@ spec = do
         rideRespond driverToken $
           RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.ACCEPT
 
-      tripAssignedPI <- pollBPPForOrgOrderPi (Id productInstanceId) TPI.TRIP_ASSIGNED TCase.RIDEORDER
+      tripAssignedPI <- pollBPPForOrgOrderPi (cast productInstanceId) TPI.TRIP_ASSIGNED TCase.RIDEORDER
       tripAssignedPI.status `shouldBe` TPI.TRIP_ASSIGNED
 
       void . callBPP $
@@ -90,20 +87,23 @@ spec = do
           buildStartRideReq $
             fromJust transporterOrderPi.udf4
 
-      bapOrderPi <-
-        callBAP (buildListPIs BPI.INPROGRESS)
-          <&> map (.productInstance)
-          <&> filter (\pI -> pI.parentId == Just (Id productInstanceId))
-          >>= expectSingletonList
+      void . poll $ do 
+        inprogressRBStatusResult <- callBAP (rideBookingStatus bRideBookingId appRegistrationToken)
+        inprogressRBStatusResult.ride `shouldSatisfy` isJust
+        inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
+        let Just inprogressRide = inprogressRBStatusResult.ride
+        inprogressRide.status `shouldBe` AppRide.INPROGRESS
+        return $ Just ()
 
-      -- Update RIDEORDER PI to COMPLETED once driver ends his trip
       void . callBPP $ rideEnd driverToken transporterOrderPiId
 
-      void $
-        callBAP (buildListPIs BPI.COMPLETED)
-          <&> map (.productInstance)
-          <&> filter (\pI -> pI.id == bapOrderPi.id)
-          >>= expectSingletonList
+      completedRideId <- poll $ do
+        completedRBStatusResult <- callBAP (rideBookingStatus bRideBookingId appRegistrationToken)
+        completedRBStatusResult.ride `shouldSatisfy` isJust
+        completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
+        let Just completedRide = completedRBStatusResult.ride
+        completedRide.status `shouldBe` AppRide.COMPLETED
+        return $ Just completedRide.id
 
       -- Leave feedback
-      void . callBAP $ callAppFeedback 5 bapOrderPi.id
+      void . callBAP $ callAppFeedback 5 completedRideId

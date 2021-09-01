@@ -41,7 +41,7 @@ mkDBIssue issueId customerId SendIssueReq {..} time =
   SIssue.Issue
     { id = Id issueId,
       customerId = Id customerId,
-      productInstanceId = Id <$> productInstanceId,
+      productInstanceId = rideBookingId,
       contactEmail = contactEmail,
       reason = issue.reason,
       description = issue.description,
@@ -60,13 +60,13 @@ mkMailBody issueId personId SendIssueReq {..} time =
     <> "\nOrder id: "
     <> orderId
     <> "\nContact email: "
-    <> contactEmail
+    <> email
     <> "\nCreation time: "
     <> show time
     <> "\n\nReason: "
     <> issue.reason
     <> "\n\nDetails: "
-    <> description
+    <> issue.description
   where
-    orderId = fromMaybe "issue does not belong to specific order." productInstanceId
-    description = fromMaybe "no details provided by user." (issue.description)
+    email = fromMaybe "No email provided by user." contactEmail
+    orderId = maybe "issue does not belong to specific order." getId rideBookingId

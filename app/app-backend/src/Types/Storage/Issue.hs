@@ -14,9 +14,9 @@ data IssueT f = Issue
   { id :: B.C f (Id Issue),
     customerId :: B.C f (Id Person.Person),
     productInstanceId :: B.C f (Maybe (Id ProdInst.ProductInstance)),
-    contactEmail :: B.C f Text,
+    contactEmail :: B.C f (Maybe Text),
     reason :: B.C f Text,
-    description :: B.C f (Maybe Text),
+    description :: B.C f Text,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }

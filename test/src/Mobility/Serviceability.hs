@@ -3,9 +3,6 @@
 module Mobility.Serviceability where
 
 import Common
-import Control.Lens (_Just)
-import qualified Data.UUID as UUID
-import qualified Data.UUID.V1 as UUID
 import EulerHS.Prelude
 import Mobility.Fixtures
 import qualified Network.HTTP.Client as Client
@@ -74,12 +71,11 @@ nonServiceableRide appClientEnv =
 
 nonServiceableSearchRequest :: ClientEnv -> IO ()
 nonServiceableSearchRequest appClientEnv = do
-  transactionId <- UUID.nextUUID
-  sreq <- buildSearchReq $ UUID.toText $ fromJust transactionId
+  let sreq = searchReq
   let updatedSearchReq =
         sreq
-          & #origin . #location . #gps . _Just .~ keralaLocation
-          & #destination . #location . #gps . _Just .~ karnatakaLocation
+          & #origin . #gps .~ keralaLocation
+          & #destination . #gps .~ karnatakaLocation
 
   result <- runClient appClientEnv (searchServices appRegistrationToken updatedSearchReq)
   verifyError 400 "PRODUCT_NOT_SERVICEABLE" result
