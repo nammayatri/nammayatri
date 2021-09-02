@@ -49,7 +49,7 @@ validateUpdatePersonReq UpdatePersonReq {..} =
       validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
       validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
       validateField "fullName" fullName $ InMaybe $ MinLength 3 `And` P.name,
-      validateField "description" description . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
+      validateField "description" description . InMaybe $ LengthInRange 2 255 `And` P.name
     ]
 
 modifyPerson :: DBFlow m r => UpdatePersonReq -> SP.Person -> m SP.Person
@@ -107,22 +107,10 @@ data PersonReqEntity = PersonReqEntity
 
 validatePersonReqEntity :: Validate PersonReqEntity
 validatePersonReqEntity PersonReqEntity {..} =
-  sequenceA_
-    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.name,
-      validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
-      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
-      validateField "fullName" fullName $ InMaybe $ MinLength 3 `And` P.name,
-      validateField "rating" rating . InMaybe $ NotEmpty `And` P.digit,
-      validateField "mobileNumber" mobileNumber $ InMaybe P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode $ InMaybe P.mobileCountryCode,
-      validateField "description" description . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "district" district . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "city" city . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "state" state . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "country" country . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name,
-      validateField "pincode" pincode . InMaybe $ NotEmpty `And` star P.digit `And` ExactLength 6,
-      validateField "address" address . InMaybe $ NotEmpty `And` LengthInRange 2 255 `And` P.name
-    ]
+  validateUpdatePersonReq UpdatePersonReq {..}
+    -- same fields in UpdatePersonReq
+    *> validateField "mobileNumber" mobileNumber (InMaybe P.mobileNumber)
+    *> validateField "mobileCountryCode" mobileCountryCode (InMaybe P.mobileCountryCode)
 
 buildDriver :: (DBFlow m r, EncFlow m r) => PersonReqEntity -> Id Org.Organization -> m SP.Person
 buildDriver req orgId = do
