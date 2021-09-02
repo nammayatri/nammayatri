@@ -56,7 +56,7 @@ data BTMEnv = BTMEnv
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     defaultRadiusOfSearch :: Meters,
-    driverPositionInfoExpiry :: Seconds,
+    driverPositionInfoExpiry :: Maybe Seconds,
     driverAllocationConfig :: DriverAllocationConfig,
     btmMetrics :: BTMMetricsContainer,
     httpClientOptions :: HttpClientOptions

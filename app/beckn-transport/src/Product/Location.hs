@@ -40,13 +40,11 @@ updateLocation personId req = withFlowHandlerAPI $ do
         then do
           let lastWaypoint = locationToLatLong loc
           let traversedWaypoints = lastWaypoint : waypointList
-          res <- MapSearch.getDistanceMb (Just MapSearch.CAR) traversedWaypoints
-          whenNothing_ res $ logWarning "Can't calculate distance when updating location"
-          return res
+          getDistanceMb traversedWaypoints
         else do
           logWarning "UpdateLocation called before refresh period passed, ignoring"
           return Nothing
-    Nothing -> return Nothing
+    Nothing -> getDistanceMb waypointList
   let lastUpdate = fromMaybe now (req.lastUpdate)
   DB.runSqlDBTransaction $ do
     whenJust distanceMb $ QPI.updateDistance driver.id
@@ -56,6 +54,10 @@ updateLocation personId req = withFlowHandlerAPI $ do
   where
     currPoint = NE.last (req.waypoints)
     waypointList = NE.toList (req.waypoints)
+    getDistanceMb waypoints = do
+      res <- MapSearch.getDistanceMb (Just MapSearch.CAR) waypoints
+      whenNothing_ res $ logWarning "Can't calculate distance when updating location"
+      return res
 
 getLocation :: Id PI.ProductInstance -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandlerAPI $ do

@@ -1,3 +1,6 @@
+CREATE TABLE atlas_transporter.location_backup AS
+    SELECT * FROM atlas_transporter.location;
+
 DELETE FROM atlas_transporter.location WHERE id IN (SELECT location_id FROM atlas_transporter.organization); 
 ALTER TABLE atlas_transporter.organization DROP COLUMN location_id;
 

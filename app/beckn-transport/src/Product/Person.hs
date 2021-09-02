@@ -139,7 +139,7 @@ driverPoolKey = ("beckn:driverpool:" <>) . getId
 
 getDriverPool ::
   ( DBFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Seconds]
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
   ) =>
   Id ProductInstance ->
   m [Id Driver]
@@ -165,7 +165,7 @@ setDriverPool piId ids =
 
 calculateDriverPool ::
   ( DBFlow m r,
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Seconds]
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
   ) =>
   Id SearchReqLocation ->
   Id Organization ->

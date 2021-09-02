@@ -1,3 +1,6 @@
+CREATE TABLE atlas_app.location_backup AS
+  SELECT * FROM atlas_app.location;
+
 DELETE FROM atlas_app.location WHERE id IN (SELECT location_id FROM atlas_app.organization); 
 
 ALTER TABLE atlas_app.person DROP COLUMN location_id;

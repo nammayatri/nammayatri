@@ -12,7 +12,6 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Types.Schema
-import Data.Time (addUTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import Database.PostgreSQL.Simple.SqlQQ (sql)
@@ -235,16 +234,14 @@ updateAverageRating personId newAverageRating = do
     predicate pId Storage.Person {..} = id ==. B.val_ pId
 
 getNearestDrivers ::
-  (DBFlow m r, HasFlowEnv m r '["driverPositionInfoExpiry" ::: Seconds]) =>
+  (DBFlow m r, HasFlowEnv m r '["driverPositionInfoExpiry" ::: Maybe Seconds]) =>
   LatLong ->
   Integer ->
   Id Org.Organization ->
   Vehicle.Variant ->
   m [(Id Driver, Double)]
 getNearestDrivers LatLong {..} radius orgId variant = do
-  driverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
-  now <- getCurrentTime
-  let expiredDriverLocationInfoBorder = addUTCTime (negate $ fromIntegral driverPositionInfoExpiry) now
+  mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   map (first Id)
     <$> postgreSQLSimpleQuery
       [sql|
@@ -264,11 +261,11 @@ getNearestDrivers LatLong {..} radius orgId variant = do
             AND driver_information."active"
             AND NOT driver_information."on_ride"
             AND vehicle."variant" = ?
-            AND driver_location.updated_at >= ?
+            AND (? OR driver_location.updated_at + interval '? seconds' >= now())
         )
         SELECT id, dist
         FROM a
         WHERE dist < ?
         ORDER BY dist ASC
       |]
-      (lon, lat, getId orgId, show variant :: Text, expiredDriverLocationInfoBorder, radius)
+      (lon, lat, getId orgId, show variant :: Text, isNothing mbDriverPositionInfoExpiry, maybe 0 getSeconds mbDriverPositionInfoExpiry, radius)

@@ -85,16 +85,16 @@ UPDATE atlas_transporter.person SET
 INSERT INTO atlas_transporter.location (id, location_type, lat, long) VALUES
   ('e95d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 10.082713, 76.268572);
 
-INSERT INTO atlas_transporter.location (id, location_type, long, lat, point, updated_at) VALUES
+INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
                                                                                          -- lon        lat
-  ('furthest_driver', 'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.593360, 13.005432), 4326), '2121-08-10 15:23:24.998492+00'),
-  ('closest_driver',  'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.601921, 12.995477), 4326), '2121-08-10 15:23:24.998492+00'),
-  ('other_driver',    'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.601922, 12.995478), 4326), '2121-08-10 15:23:24.998492+00');
+  ('furthest_driver', 'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.593360, 13.005432), 4326)),
+  ('closest_driver',  'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.601921, 12.995477), 4326)),
+  ('other_driver',    'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.601922, 12.995478), 4326));
 
-INSERT INTO atlas_transporter.location (id, location_type, long, lat, point, updated_at) VALUES
-  ('0202b94d-dbf0-4e95-bbf9-25cafc888173', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326), '2121-08-10 15:23:24.998492+00');
-INSERT INTO atlas_transporter.location (id, location_type, long, lat, point, updated_at) VALUES
-  ('9db237f9-3061-4bad-a616-42e91f092407', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326), '2121-08-10 15:23:24.998492+00');
+INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
+  ('0202b94d-dbf0-4e95-bbf9-25cafc888173', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326));
+INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
+  ('9db237f9-3061-4bad-a616-42e91f092407', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326));
 
 INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, True, False, now(), now() from atlas_transporter.person where role ='DRIVER';
 INSERT INTO atlas_transporter.driver_stats (driver_id, idle_since) SELECT id, now() FROM atlas_transporter.person WHERE role ='DRIVER';
@@ -109,8 +109,8 @@ INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id,
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
   ('001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'WHITE', NULL, '4277', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
 
-INSERT INTO atlas_transporter.location (id, location_type, long, lat, point, updated_at) VALUES
-  ('001d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326), '2121-08-10 15:23:24.998492+00');
+INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
+  ('001d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326));
 
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email,password_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
   ('001b93df-4f7c-440f-bada-4d46c396d7d0', 'Some', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+92', '001', NULL, true, '001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '001d2f36-a455-4625-bfb4-22807fefa1eb', NULL, now(), now());
@@ -122,8 +122,8 @@ INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, au
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
   ('002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'GREEN', NULL, '3211', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
 
-INSERT INTO atlas_transporter.location (id, location_type, long, lat, point, updated_at) VALUES
-  ('002d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326), '2121-08-10 15:23:24.998492+00');
+INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
+  ('002d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326));
 
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, password_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
   ('002b93df-4f7c-440f-bada-4d46c396d7d0', 'Another', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+93', '002', NULL, true, '002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '002d2f36-a455-4625-bfb4-22807fefa1eb', NULL, now(), now());

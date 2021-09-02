@@ -142,7 +142,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
 
 onSearchCallback ::
   ( DBFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Seconds],
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
     CoreMetrics m
   ) =>

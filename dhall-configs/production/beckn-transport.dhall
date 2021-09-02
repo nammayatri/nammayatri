@@ -85,7 +85,7 @@ in
 , graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
-, driverPositionInfoExpiry = +600
+, driverPositionInfoExpiry = Some +600
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
 , authTokenCacheExpiry = +600
