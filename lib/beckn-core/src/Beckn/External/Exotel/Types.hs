@@ -149,19 +149,19 @@ data ExotelResponseBody = ExotelResponseBody
     exoStartTime :: Text,
     -- Time in format YYYY-MM-DD HH:mm:ss
     -- Date and time when the call was completed
-    exoEndTime :: Text,
+    exoEndTime :: Maybe Text,
     -- Call duration in seconds
-    exoDuration :: Text,
+    exoDuration :: Maybe Text,
     -- Double; If present, this will be the amount (in INR or USD) you have been charged for the call
-    exoPrice :: Text,
+    exoPrice :: Maybe Text,
     -- Call direction
     exoDirection :: ExotelDirection,
     -- human
-    exoAnsweredBy :: Text,
+    exoAnsweredBy :: Maybe Text,
     -- Uri is the path of the CallSid
     exoUri :: Text,
     -- Link to the call recording
-    exoRecordingUrl :: Text
+    exoRecordingUrl :: Maybe Text
   }
   deriving (Eq, Show)
 
