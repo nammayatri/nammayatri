@@ -52,24 +52,23 @@ validateUpdatePersonReq UpdatePersonReq {..} =
       validateField "description" description . InMaybe $ LengthInRange 2 255 `And` P.name
     ]
 
-modifyPerson :: DBFlow m r => UpdatePersonReq -> SP.Person -> m SP.Person
-modifyPerson req person = do
-  return
-    -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-    person{firstName = ifJust (req.firstName) (person.firstName),
-           middleName = ifJust (req.middleName) (person.middleName),
-           lastName = ifJust (req.lastName) (person.lastName),
-           fullName = ifJust (req.fullName) (person.fullName),
-           role = ifJustExtract (req.role) (person.role),
-           gender = ifJustExtract (req.gender) (person.gender),
-           email = ifJust (req.email) (person.email),
-           identifier = ifJust (req.identifier) (person.identifier),
-           deviceToken = ifJust (req.deviceToken) (person.deviceToken),
-           udf1 = person.udf1,
-           udf2 = person.udf2,
-           organizationId = person.organizationId,
-           description = ifJust (req.description) (person.description)
-          }
+modifyPerson :: UpdatePersonReq -> SP.Person -> SP.Person
+modifyPerson req person =
+  -- only these below will be updated in the person table. if you want to add something extra please add in queries also
+  person{firstName = ifJust (req.firstName) (person.firstName),
+         middleName = ifJust (req.middleName) (person.middleName),
+         lastName = ifJust (req.lastName) (person.lastName),
+         fullName = ifJust (req.fullName) (person.fullName),
+         role = ifJustExtract (req.role) (person.role),
+         gender = ifJustExtract (req.gender) (person.gender),
+         email = ifJust (req.email) (person.email),
+         identifier = ifJust (req.identifier) (person.identifier),
+         deviceToken = ifJust (req.deviceToken) (person.deviceToken),
+         udf1 = person.udf1,
+         udf2 = person.udf2,
+         organizationId = person.organizationId,
+         description = ifJust (req.description) (person.description)
+        }
 
 ifJust :: Maybe a -> Maybe a -> Maybe a
 ifJust a b = if isJust a then a else b

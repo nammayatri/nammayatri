@@ -52,7 +52,7 @@ updatePerson personId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdatePersonReq req
   person <- QP.findPersonById personId >>= fromMaybeM PersonNotFound
   isValidUpdate person
-  updatedPerson <- modifyPerson req person
+  let updatedPerson = modifyPerson req person
   DB.runSqlDB (QP.updatePersonRec personId updatedPerson)
   decPerson <- decrypt updatedPerson
   return . UpdatePersonRes $ makeUserInfoRes decPerson
