@@ -9,6 +9,7 @@ import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.Throwing
 import Beckn.Utils.Logging
+import Beckn.Utils.Servant.BaseUrl
 import Beckn.Utils.Time
 import qualified Data.Aeson as A
 import qualified Data.Map.Strict as Map
@@ -55,7 +56,7 @@ callAPI' mbManagerSelector baseUrl eulerClient desc =
   withLogTag "callAPI" $ do
     let managerSelector = fromMaybe defaultHttpManager mbManagerSelector
     res <-
-      measuringDuration (Metrics.addRequestLatency (T.pack $ showBaseUrl baseUrl) desc) $
+      measuringDuration (Metrics.addRequestLatency (showBaseUrlText baseUrl) desc) $
         L.callAPI' (Just managerSelector) baseUrl eulerClient
     case res of
       Right r -> logDebug $ "Ok response: " <> decodeUtf8 (A.encode r)
@@ -110,6 +111,34 @@ createManagers managerSettings = do
     . Map.insert defaultHttpManager Http.tlsManagerSettings
     $ managerSettings
 
+performAction :: MonadCatch m => m a -> (ExternalAPICallError -> m a) -> m a
+performAction action errorHandler =
+  action `catch` \err -> errorHandler err
+
+retryAction ::
+  ( MonadCatch m,
+    Metrics.CoreMetrics m,
+    Log m
+  ) =>
+  ExternalAPICallError ->
+  Int ->
+  Int ->
+  m a ->
+  m a
+retryAction currentErr currentRetryCount maxRetries action = do
+  logWarning $ getErrorText currentErr
+  logWarning $ "Retrying attempt " <> show currentRetryCount <> " calling " <> showBaseUrlText currentErr.baseUrl
+  Metrics.addUrlCallRetries currentErr.baseUrl currentRetryCount maxRetries
+  performAction action $ \err -> do
+    if currentRetryCount < maxRetries
+      then retryAction err (currentRetryCount + 1) maxRetries action
+      else do
+        logError $ getErrorText err
+        logError $ "Maximum of retrying attempts is reached calling " <> showBaseUrlText err.baseUrl
+        throwError err
+  where
+    getErrorText err = "Error calling " <> showBaseUrlText err.baseUrl <> ": " <> show err.clientError
+
 withRetry ::
   ( MonadCatch m,
     MonadReader r m,
@@ -119,22 +148,9 @@ withRetry ::
   ) =>
   m a ->
   m a
-withRetry f = do
-  asks (.httpClientOptions.maxRetries) >>= withRetry' Nothing 1
-  where
-    withRetry' mbMetricsInfo n maxRetries
-      | n <= maxRetries = do
-        funcWithMetrics mbMetricsInfo maxRetries `catch` \(ExternalAPICallError _ baseUrl _) -> do
-          logError $ "Retrying attempt " <> show n <> " calling " <> toText (showBaseUrl baseUrl)
-          withRetry' (Just (baseUrl, n)) (succ n) maxRetries
-      | otherwise =
-        funcWithMetrics mbMetricsInfo maxRetries `catch` \err@(ExternalAPICallError _ baseUrl _) -> do
-          logError $ "Maximum of retrying attempts is reached calling " <> toText (showBaseUrl baseUrl)
-          whenJust mbMetricsInfo $ \(_, prevN) ->
-            Metrics.addUrlCallRetries baseUrl prevN maxRetries
-          throwError err
-    funcWithMetrics mbMetricsInfo maxRetries = do
-      res <- f
-      whenJust mbMetricsInfo $ \(baseUrl, n) ->
-        Metrics.addUrlCallRetries baseUrl n maxRetries
-      return res
+withRetry action = do
+  maxRetries <- asks (.httpClientOptions.maxRetries)
+  performAction action $ \err -> do
+    if maxRetries > 0
+      then retryAction err 1 maxRetries action
+      else throwError err

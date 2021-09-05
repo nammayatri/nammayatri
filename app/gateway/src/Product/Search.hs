@@ -8,14 +8,14 @@ import App.Types
 import Beckn.Types.Core.Ack
 import Beckn.Types.Error
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (callBecknAPI')
+import Beckn.Utils.Servant.BaseUrl
+import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..), signatureAuthManagerKey)
-import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Product.Validation
-import Servant.Client (showBaseUrl)
 import qualified Temporary.Utils as TempUtils
 import qualified Types.API.Gateway.Search as ExternalAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
@@ -44,7 +44,7 @@ search (SignatureAuthResult proxySign org) req = withFlowHandlerBecknAPI $
     when (null providers) $ throwError NoProviders
     forM_ providers $ \provider -> fork "Provider search" . withLogTag "search_req" $ do
       providerUrl <- provider.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
-      withLogTag ("providerUrl_" <> T.pack (showBaseUrl providerUrl)) . withRetry $
+      withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) . withRetry $
         -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
         callBecknAPI'
           (Just signatureAuthManagerKey)
@@ -61,7 +61,7 @@ searchCb ::
 searchCb (SignatureAuthResult proxySign org) req@CallbackReq {context} = withFlowHandlerBecknAPI $
   TempUtils.withTransactionIdLogTag req . withLogTag "search_cb" $ do
     providerUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-    withLogTag ("providerUrl_" <> T.pack (showBaseUrl providerUrl)) do
+    withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) do
       validateContext "on_search" context
       let gatewayOnSearchSignAuth = ET.client ExternalAPI.onSearchAPI
           messageId = req.context.transaction_id

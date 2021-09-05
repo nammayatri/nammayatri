@@ -7,11 +7,12 @@ import Beckn.External.MyValueFirst.Types (SubmitSmsRes, submitSmsResToText)
 import Beckn.Types.Error.BaseError
 import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (fromResponse))
+import Beckn.Utils.Servant.BaseUrl
 import EulerHS.Prelude
 import EulerHS.Types (KVDBReply)
 import Network.HTTP.Types (Header, Status (statusCode))
 import Network.HTTP.Types.Header (HeaderName)
-import Servant.Client (BaseUrl, ClientError, ResponseF (responseStatusCode), showBaseUrl)
+import Servant.Client (BaseUrl, ClientError, ResponseF (responseStatusCode))
 
 -- TODO: sort out proper codes, namings and usages for Unauthorized and AccessDenied
 data AuthError
@@ -392,8 +393,11 @@ instance IsAPIError ContextError
 instance IsBecknAPIError ContextError where
   toType _ = CONTEXT_ERROR
 
-data ExternalAPICallError
-  = ExternalAPICallError (Maybe Text) BaseUrl ClientError
+data ExternalAPICallError = ExternalAPICallError
+  { errCode :: Maybe Text,
+    baseUrl :: BaseUrl,
+    clientError :: ClientError
+  }
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''ExternalAPICallError
@@ -410,7 +414,7 @@ externalAPICallErrorMessage :: BaseUrl -> ClientError -> Maybe Text
 externalAPICallErrorMessage baseUrl clientErr =
   Just $
     "Failure in the external API call to "
-      <> toText (showBaseUrl baseUrl)
+      <> showBaseUrlText baseUrl
       <> ": "
       <> show clientErr
 

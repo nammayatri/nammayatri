@@ -8,6 +8,7 @@ import Beckn.Types.Error.BaseError.HTTPError (IsHTTPError (toErrorCode, toHttpCo
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, HasCoreMetrics)
 import Beckn.Types.Time (Milliseconds, getMilliseconds)
 import Beckn.Utils.Monitoring.Prometheus.Servant
+import Beckn.Utils.Servant.BaseUrl
 import Data.Text as DT
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as E
@@ -18,7 +19,7 @@ import Network.Wai.Middleware.Prometheus
 import Prometheus as P
 import Prometheus.Metric.GHC (ghcMetrics)
 import Prometheus.Metric.Proc
-import Servant.Client (BaseUrl, ClientError (..), ResponseF (..), showBaseUrl)
+import Servant.Client (BaseUrl, ClientError (..), ResponseF (..))
 
 serve :: Int -> IO ()
 serve port = do
@@ -117,5 +118,5 @@ addUrlCallRetries' cmContainers url retryCount maxRetry = do
   L.runIO $
     P.withLabel
       urlCallRetriesCounterMetric
-      (toText $ showBaseUrl url, show maxRetry)
+      (showBaseUrlText url, show maxRetry)
       (`P.observe` fromIntegral retryCount)
