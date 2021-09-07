@@ -6,9 +6,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
-import Control.Lens ((?~))
 import Control.Lens.Combinators hiding (Context)
-import Data.Time (addUTCTime)
 import EulerHS.Prelude hiding (drop)
 import qualified EulerHS.Types as ET
 import qualified ExternalAPI.Dunzo.Flow as API
@@ -77,43 +75,20 @@ confirm org req = do
   cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req.message.order
   whenJust reqOrder.id \_ -> throwError $ InvalidRequest "Order id must not be presented."
-  txnId <-
-    reqOrder ^. #payment . #params . _Just . #transaction_id
-      & fromMaybeErr "TXN_ID_NOT_PRESENT" Nothing
-  let caseId = context.transaction_id
-  mbCase <- Storage.findById $ Id caseId
-  order <- case mbCase of
-    Nothing -> pure reqOrder
-    Just case_ -> do
-      initOrder <- case_.udf1 >>= decodeFromText & fromMaybeErr "INIT_ORDER_NOT_FOUND" (Just CORE003)
-      validateDelayFromInit dzQuotationTTLinMin case_
-      verifyPayment reqOrder initOrder
-      pure $ initOrder & ((#payment . #params . _Just . #transaction_id) ?~ txnId)
+  whenNothing_
+    (reqOrder ^. #payment . #params . _Just . #transaction_id)
+    $ throwError (ErrorCodeWithMessage "TXN_ID_NOT_PRESENT" CORE001)
   dzBACreds <- getDzBAPCreds org
   orderId <- generateGUID
   currTime <- getCurrentTime
-  taskReq <- mkCreateTaskReq orderId order
+  taskReq <- mkCreateTaskReq orderId reqOrder
   withCallback CONFIRM ConfirmAPI.onConfirmAPI context cbUrl $ do
     taskStatus <- createTaskAPI dzBACreds dconf taskReq
-    let uOrder = updateOrder (Just orderId) currTime order taskStatus
-    checkAndLogPriceDiff order uOrder
-    maybe
-      (createCase orderId uOrder taskStatus currTime)
-      (\c -> updateCase c orderId uOrder taskStatus)
-      mbCase
+    let uOrder = updateOrder (Just orderId) currTime reqOrder taskStatus
+    checkAndLogPriceDiff reqOrder uOrder
+    createCase orderId uOrder taskStatus currTime
     return $ API.OrderObject uOrder
   where
-    verifyPayment reqOrder order = do
-      confirmAmount <-
-        reqOrder ^? #payment . #params . _Just . #amount
-          & fromMaybeErr "INVALID_PAYMENT_AMOUNT" (Just CORE003)
-      orderAmount <-
-        order ^? #payment . #params . _Just . #amount
-          & fromMaybeErr "ORDER_AMOUNT_NOT_FOUND" (Just CORE003)
-      if confirmAmount == orderAmount
-        then pass
-        else throwError (InvalidRequest "Invalid order amount.")
-
     createCase orderId order taskStatus now = do
       let caseId = Id req.context.transaction_id
       let case_ =
@@ -145,17 +120,6 @@ confirm org req = do
               }
       Storage.create case_
 
-    updateCase case_ orderId order taskStatus = do
-      let caseId = case_.id
-      let updatedCase =
-            case_
-              { shortId = ShortId orderId,
-                Case.status = CONFIRMED,
-                udf1 = Just $ encodeToText order,
-                udf2 = Just $ encodeToText taskStatus
-              }
-      Storage.update caseId updatedCase
-
     createTaskAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} req' = do
       token <- fetchToken dzBACreds conf
       API.createTask dzClientId token dzUrl dzTestMode req'
@@ -169,13 +133,6 @@ confirm org req = do
           when (initAmount /= confirmAmount) $
             logTagInfo ("Order_" <> orderId) ("Price diff of amount " <> show (confirmAmount - initAmount))
         _ -> pass
-
-    validateDelayFromInit dzQuotationTTLinMin case_ = do
-      now <- getCurrentTime
-      let orderCreatedAt = case_.createdAt
-      let thresholdTime = addUTCTime (fromInteger (dzQuotationTTLinMin * 60)) orderCreatedAt
-      when (thresholdTime < now) $
-        throwError (InvalidRequest "Took too long to confirm.")
 
 track ::
   ( DBFlow m r,
