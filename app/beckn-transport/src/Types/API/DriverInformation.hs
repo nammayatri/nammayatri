@@ -64,6 +64,7 @@ data DriverEntityRes = DriverEntityRes
     rating :: Maybe Int,
     active :: Bool,
     onRide :: Bool,
+    enabled :: Bool,
     registeredAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON)

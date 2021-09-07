@@ -187,6 +187,7 @@ buildDriverEntityRes (person, driverInfo) = do
         linkedVehicle = vehicle,
         active = driverInfo.active,
         onRide = driverInfo.onRide,
+        enabled = driverInfo.enabled,
         registeredAt = person.createdAt
       }
 
