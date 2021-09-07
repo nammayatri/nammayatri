@@ -4,8 +4,8 @@ import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
 import Mobility.SuccessFlow
-import qualified "beckn-transport" Types.API.Ride as RideAPI
-import qualified Types.Storage.RideBooking as AppRB
+import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
+import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
 
 spec :: Spec
@@ -18,11 +18,11 @@ spec = do
 
       -- Driver Rejects a ride
       void . callBPP $
-        rideRespond driverToken $
-          RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.REJECT
+        rideRespond transporterOrderPiId driverToken $
+          RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.REJECT
 
       void . poll $
-        callBAP (rideBookingStatus bRideBookingId appRegistrationToken)
+        callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
           <&> (.status)
           >>= (`shouldBe` AppRB.CANCELLED)
           <&> Just

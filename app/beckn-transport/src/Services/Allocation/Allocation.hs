@@ -7,7 +7,7 @@ import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude
-import qualified Types.API.Ride as Ride (DriverResponse (..), NotificationStatus (..))
+import qualified Types.API.RideBooking as RideBooking
 import Types.App
 import Types.Storage.AllocationEvent (AllocationEventType (..))
 import qualified Types.Storage.CancellationReason as SCR
@@ -24,7 +24,7 @@ newtype OrderTime = OrderTime
 data RequestData
   = Allocation
   | Cancellation
-  | DriverResponse Ride.DriverResponse
+  | DriverResponse RideBooking.DriverResponse
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data RideRequest = RideRequest
@@ -144,12 +144,12 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
                   Just (CurrentNotification driverId _) -> do
                     if driverId == response.driverId
                       then case response.status of
-                        Ride.ACCEPT -> do
+                        RideBooking.ACCEPT -> do
                           logInfo $ "Assigning driver" <> show response.driverId
                           assignDriver rideId response.driverId
                           cleanupNotifications rideId
                           logEvent MarkedAsAccepted rideId $ Just response.driverId
-                        Ride.REJECT ->
+                        RideBooking.REJECT ->
                           processRejection handle False rideId response.driverId shortOrgId
                       else logDriverNoLongerNotified rideId response.driverId
                   Nothing ->

@@ -2,9 +2,7 @@
 
 module Types.API.Person where
 
-import Beckn.External.Encryption (encrypt)
 import Beckn.External.FCM.Types as FCM
-import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
@@ -16,7 +14,6 @@ import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id, state)
 import Servant.API
-import Types.API.Registration
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as SP
 
@@ -77,74 +74,11 @@ ifJustExtract :: Maybe a -> a -> a
 ifJustExtract a b = fromMaybe b a
 
 newtype UpdatePersonRes = UpdatePersonRes
-  {user :: UserInfoRes}
+  {user :: SP.PersonAPIEntity}
   deriving (Generic, ToJSON, FromJSON)
 
-data PersonReqEntity = PersonReqEntity
-  { firstName :: Maybe Text,
-    middleName :: Maybe Text,
-    lastName :: Maybe Text,
-    fullName :: Maybe Text,
-    role :: Maybe SP.Role,
-    gender :: Maybe SP.Gender,
-    email :: Maybe Text,
-    identifier :: Maybe Text,
-    identifierType :: Maybe SP.IdentifierType,
-    rating :: Maybe Text,
-    deviceToken :: Maybe FCM.FCMRecipientToken,
-    mobileNumber :: Maybe Text,
-    mobileCountryCode :: Maybe Text,
-    description :: Maybe Text,
-    district :: Maybe Text,
-    city :: Maybe Text,
-    state :: Maybe Text,
-    country :: Maybe Text,
-    pincode :: Maybe Text,
-    address :: Maybe Text
-  }
-  deriving (Generic, FromJSON, ToJSON)
-
-validatePersonReqEntity :: Validate PersonReqEntity
-validatePersonReqEntity PersonReqEntity {..} =
-  validateUpdatePersonReq UpdatePersonReq {..}
-    -- same fields in UpdatePersonReq
-    *> validateField "mobileNumber" mobileNumber (InMaybe P.mobileNumber)
-    *> validateField "mobileCountryCode" mobileCountryCode (InMaybe P.mobileCountryCode)
-
-buildDriver :: (DBFlow m r, EncFlow m r) => PersonReqEntity -> Id Org.Organization -> m SP.Person
-buildDriver req orgId = do
-  pid <- generateGUID
-  now <- getCurrentTime
-  mobileNumber <- encrypt req.mobileNumber
-  return
-    SP.Person
-      { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
-        SP.id = pid,
-        SP.firstName = req.firstName,
-        SP.middleName = req.middleName,
-        SP.lastName = req.lastName,
-        SP.fullName = req.fullName,
-        SP.role = ifJustExtract (req.role) SP.DRIVER,
-        SP.gender = ifJustExtract (req.gender) SP.UNKNOWN,
-        SP.email = req.email,
-        SP.passwordHash = Nothing,
-        SP.identifier = req.identifier,
-        SP.identifierType = fromMaybe SP.MOBILENUMBER $ req.identifierType,
-        SP.mobileNumber = mobileNumber,
-        SP.mobileCountryCode = req.mobileCountryCode,
-        SP.isNew = True,
-        SP.rating = Nothing,
-        SP.deviceToken = req.deviceToken,
-        SP.udf1 = Nothing,
-        SP.udf2 = Nothing,
-        SP.organizationId = Just orgId,
-        SP.description = req.description,
-        SP.createdAt = now,
-        SP.updatedAt = now
-      }
-
 newtype PersonRes = PersonRes
-  {user :: UserInfoRes}
+  {user :: SP.PersonAPIEntity}
   deriving (Generic, ToJSON, FromJSON)
 
 newtype DeletePersonRes = DeletePersonRes

@@ -4,12 +4,12 @@ import Beckn.Types.Id
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
-import qualified "beckn-transport" Types.API.Ride as RideAPI
+import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import qualified "beckn-transport" Types.Storage.Case as TCase
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
-import qualified Types.Storage.Ride as AppRide
 import qualified "app-backend" Types.Storage.RideBooking as AppRB
+import qualified "app-backend" Types.Storage.Ride as AppRide
 import Utils
 
 doAnAppSearch :: HasCallStack => ClientsM (Id BPI.ProductInstance, Id BPI.ProductInstance, TPI.ProductInstance)
@@ -70,14 +70,14 @@ spec = do
 
       rideInfo <-
         poll . callBPP $
-          getNotificationInfo driverToken (Just $ cast transporterOrderPiId)
+          getNotificationInfo (cast transporterOrderPiId) driverToken
             <&> (.rideRequest)
-      rideInfo.productInstanceId `shouldBe` transporterOrderPiId
+      rideInfo.bookingId `shouldBe` transporterOrderPiId
 
       -- Driver Accepts a ride
       void . callBPP $
-        rideRespond driverToken $
-          RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.ACCEPT
+        rideRespond transporterOrderPiId driverToken $
+          RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
 
       tripAssignedPI <- pollBPPForOrgOrderPi (cast productInstanceId) TPI.TRIP_ASSIGNED TCase.RIDEORDER
       tripAssignedPI.status `shouldBe` TPI.TRIP_ASSIGNED
@@ -88,7 +88,7 @@ spec = do
             fromJust transporterOrderPi.udf4
 
       void . poll $ do
-        inprogressRBStatusResult <- callBAP (rideBookingStatus bRideBookingId appRegistrationToken)
+        inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
         inprogressRBStatusResult.ride `shouldSatisfy` isJust
         inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
         let Just inprogressRide = inprogressRBStatusResult.ride
@@ -98,7 +98,7 @@ spec = do
       void . callBPP $ rideEnd driverToken transporterOrderPiId
 
       completedRideId <- poll $ do
-        completedRBStatusResult <- callBAP (rideBookingStatus bRideBookingId appRegistrationToken)
+        completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
         completedRBStatusResult.ride `shouldSatisfy` isJust
         completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
         let Just completedRide = completedRBStatusResult.ride

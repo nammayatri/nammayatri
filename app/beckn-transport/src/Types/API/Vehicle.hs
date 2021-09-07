@@ -1,5 +1,6 @@
 module Types.API.Vehicle where
 
+import Beckn.Types.APISuccess
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.Predicate
@@ -65,18 +66,13 @@ newtype CreateVehicleRes = CreateVehicleRes
 
 newtype ListVehicleRes = ListVehicleRes
   {vehicles :: [VehicleRes]}
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON)
 
 data UpdateVehicleReq = UpdateVehicleReq
-  { capacity :: Maybe Int,
-    category :: Maybe Category,
-    make :: Maybe Text,
-    model :: Maybe Text,
-    size :: Maybe Text,
-    variant :: Maybe Variant,
+  { model :: Maybe Text,
     color :: Maybe Text,
-    energyType :: Maybe EnergyType,
-    registrationCategory :: Maybe RegistrationCategory
+    variant :: Maybe Variant,
+    category :: Maybe Category
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -85,39 +81,18 @@ validateUpdateVehicleReq UpdateVehicleReq {..} =
   sequenceA_
     [ validateField "model" model . InMaybe $
         NotEmpty `And` star P.latinOrSpace,
-      validateField "make" make . InMaybe $ NotEmpty `And` P.name,
       validateField "color" color . InMaybe $ NotEmpty `And` P.name
     ]
 
-modifyVehicle :: DBFlow m r => UpdateVehicleReq -> SV.Vehicle -> m SV.Vehicle
-modifyVehicle req vehicle = do
-  now <- getCurrentTime
-  return $
-    vehicle
-      { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
-        SV.capacity = (req.capacity) <|> (vehicle.capacity),
-        SV.category = (req.category) <|> (vehicle.category),
-        SV.make = (req.make) <|> (vehicle.make),
-        SV.model = (req.model) <|> (vehicle.model),
-        SV.size = (req.size) <|> (vehicle.size),
-        SV.variant = (req.variant) <|> (vehicle.variant),
-        SV.color = (req.color) <|> (vehicle.color),
-        SV.energyType = (req.energyType) <|> (vehicle.energyType),
-        SV.registrationCategory = (req.registrationCategory) <|> (vehicle.registrationCategory),
-        SV.updatedAt = now
-      }
+type UpdateVehicleRes = VehicleAPIEntity
 
-type UpdateVehicleRes = CreateVehicleRes
-
-newtype DeleteVehicleRes = DeleteVehicleRes
-  {vehicleId :: Text}
-  deriving (Generic, ToJSON, ToSchema)
+type DeleteVehicleRes = APISuccess
 
 data VehicleRes = VehicleRes
-  { vehicle :: SV.Vehicle,
+  { vehicle :: SV.VehicleAPIEntity,
     driver :: Maybe Driver
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON)
 
 data Driver = Driver
   { id :: Text,

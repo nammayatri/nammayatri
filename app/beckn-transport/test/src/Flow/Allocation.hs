@@ -13,6 +13,7 @@ import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Types.API.Ride as Ride
+import qualified Types.API.RideBooking as RideBooking
 import Types.App
 import Types.Metrics
 import Types.Storage.Organization
@@ -76,10 +77,10 @@ addRequest requestData Repository {..} rideId = do
   modifyIORef currentIdVar (+ 1)
   modifyIORef rideRequestsVar $ Map.insert requestId request
 
-addResponse :: Repository -> Id Ride -> Id Driver -> Ride.NotificationStatus -> IO ()
+addResponse :: Repository -> Id Ride -> Id Driver -> RideBooking.NotificationStatus -> IO ()
 addResponse repository@Repository {..} rideId driverId status = do
   currentTime <- Time.getCurrentTime
-  let driverResponse = Ride.DriverResponse driverId status
+  let driverResponse = RideBooking.DriverResponse driverId status
   addRequest (DriverResponse driverResponse) repository rideId
 
 checkRideStatus :: Repository -> Id Ride -> RideStatus -> IO ()
@@ -215,14 +216,14 @@ twoAllocations = testCase "Two allocations" $ do
   addRequest Allocation r ride02Id
 
   process (handle r) org1 numRequestsToProcess
-  addResponse r ride01Id (Id "driver01") Ride.REJECT
-  addResponse r ride02Id (Id "driver05") Ride.REJECT
+  addResponse r ride01Id (Id "driver01") RideBooking.REJECT
+  addResponse r ride02Id (Id "driver05") RideBooking.REJECT
   process (handle r) org1 numRequestsToProcess
-  addResponse r ride01Id (Id "driver02") Ride.REJECT
-  addResponse r ride02Id (Id "driver07") Ride.REJECT
+  addResponse r ride01Id (Id "driver02") RideBooking.REJECT
+  addResponse r ride02Id (Id "driver07") RideBooking.REJECT
   process (handle r) org1 numRequestsToProcess
-  addResponse r ride01Id (Id "driver03") Ride.ACCEPT
-  addResponse r ride02Id (Id "driver08") Ride.ACCEPT
+  addResponse r ride01Id (Id "driver03") RideBooking.ACCEPT
+  addResponse r ride02Id (Id "driver08") RideBooking.ACCEPT
   process (handle r) org1 numRequestsToProcess
 
   assignments <- readIORef assignmentsVar
@@ -240,7 +241,7 @@ cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
   addRequest Allocation r ride01Id
 
   process (handle r) org1 numRequestsToProcess
-  addResponse r ride01Id (Id "driver01") Ride.ACCEPT
+  addResponse r ride01Id (Id "driver01") RideBooking.ACCEPT
 
   process (handle r) org1 numRequestsToProcess
   checkRideStatus r ride01Id Assigned

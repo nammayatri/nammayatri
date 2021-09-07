@@ -10,15 +10,10 @@ type CallAPI =
   "ride"
     :> Capture "rideId" Text
     :> "call"
-    :> "customer"
+    :> "rider"
     :> Post '[JSON] CallRes
 
 callsAPI :: Proxy CallAPI
 callsAPI = Proxy
-
-newtype CallReq = CallReq
-  { productInstanceId :: Text
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
 
 type CallRes = AckResponse

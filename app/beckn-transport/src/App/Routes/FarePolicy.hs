@@ -5,20 +5,21 @@ import Beckn.Types.Id (Id)
 import Product.FarePolicy (listFarePolicies, updateFarePolicy)
 import Servant
 import Types.API.FarePolicy
-  ( ListFarePolicyResponse,
-    UpdateFarePolicyRequest,
-    UpdateFarePolicyResponse,
+  ( ListFarePolicyRes,
+    UpdateFarePolicyReq,
+    UpdateFarePolicyRes,
   )
 import Types.Domain.FarePolicy (FarePolicy)
 import Utils.Auth
 
 type FarePolicyAPI =
-  "farePolicy"
-    :> ( TokenAuth :> Get '[JSON] ListFarePolicyResponse
+  "org" :> "farePolicy"
+    :> ( AdminTokenAuth
+           :> Get '[JSON] ListFarePolicyRes
            :<|> TokenAuth
              :> Capture "farePolicyId" (Id FarePolicy)
-             :> ReqBody '[JSON] UpdateFarePolicyRequest
-             :> Post '[JSON] UpdateFarePolicyResponse
+             :> ReqBody '[JSON] UpdateFarePolicyReq
+             :> Post '[JSON] UpdateFarePolicyRes
        )
 
 farePolicyFlow :: FlowServer FarePolicyAPI

@@ -8,6 +8,7 @@ import Data.Swagger
 import Data.Time
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
+import qualified Types.Common as Common
 
 data SearchReqLocationT f = SearchReqLocation
   { id :: B.C f (Id SearchReqLocation),
@@ -54,3 +55,31 @@ fieldEMod =
         { createdAt = "created_at",
           updatedAt = "updated_at"
         }
+
+data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
+  { address :: Common.Address,
+    gps :: Common.GPS
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+makeSearchReqLocationAPIEntity :: SearchReqLocation -> SearchReqLocationAPIEntity
+makeSearchReqLocationAPIEntity loc = do
+  let address =
+        Common.Address
+          { door = "",
+            building = "",
+            street = "",
+            area = "",
+            city = fromMaybe "" loc.city,
+            country = fromMaybe "" loc.country,
+            areaCode = "",
+            state = fromMaybe "" loc.state
+          }
+      gps =
+        Common.GPS
+          { lat = show loc.lat,
+            lon = show loc.long
+          }
+  SearchReqLocationAPIEntity
+    { ..
+    }

@@ -88,16 +88,16 @@ updateVehicleRec vehicle = do
   where
     setClause pVehicle Storage.Vehicle {..} =
       mconcat
-        [ capacity <-. B.val_ (Storage.capacity pVehicle),
-          category <-. B.val_ (Storage.category pVehicle),
-          make <-. B.val_ (Storage.make pVehicle),
-          model <-. B.val_ (Storage.model pVehicle),
-          size <-. B.val_ (Storage.size pVehicle),
-          variant <-. B.val_ (Storage.variant pVehicle),
-          color <-. B.val_ (Storage.color pVehicle),
-          energyType <-. B.val_ (Storage.energyType pVehicle),
-          registrationCategory <-. B.val_ (Storage.registrationCategory pVehicle),
-          updatedAt <-. B.val_ (Storage.updatedAt pVehicle)
+        [ capacity <-. B.val_ pVehicle.capacity,
+          category <-. B.val_ pVehicle.category,
+          make <-. B.val_ pVehicle.make,
+          model <-. B.val_ pVehicle.model,
+          size <-. B.val_ pVehicle.size,
+          variant <-. B.val_ pVehicle.variant,
+          color <-. B.val_ pVehicle.color,
+          energyType <-. B.val_ pVehicle.energyType,
+          registrationCategory <-. B.val_ pVehicle.registrationCategory,
+          updatedAt <-. B.val_ pVehicle.updatedAt
         ]
     predicate vid Storage.Vehicle {..} = id ==. B.val_ vid
 

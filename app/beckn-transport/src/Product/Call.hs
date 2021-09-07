@@ -9,11 +9,12 @@ import ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.ProductInstance as PI
 import Types.Error
 import qualified Types.Storage.Person as SP
+import Types.Storage.ProductInstance (ProductInstance)
 import Utils.Common
 
-initiateCall :: Id SP.Person -> CallReq -> FlowHandler CallRes
-initiateCall _ req = withFlowHandlerAPI $ do
-  prdInstance <- PI.findById (Id req.productInstanceId) >>= fromMaybeM PIDoesNotExist -- RIDEORDER PI
-  Id rideSearchProductInstanceId <- prdInstance.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
-  ExternalAPI.initiateCall $ CallReq rideSearchProductInstanceId -- RIDESEARCH PI
+initiateCall :: Id ProductInstance -> Id SP.Person -> FlowHandler CallRes
+initiateCall rideId _ = withFlowHandlerAPI $ do
+  prdInstance <- PI.findById rideId >>= fromMaybeM PIDoesNotExist -- RIDEORDER PI
+  rideSearchProductInstanceId <- prdInstance.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  ExternalAPI.initiateCall rideSearchProductInstanceId -- RIDESEARCH PI
   return Ack

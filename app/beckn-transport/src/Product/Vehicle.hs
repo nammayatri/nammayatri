@@ -1,6 +1,7 @@
 module Product.Vehicle where
 
 import App.Types
+import Beckn.Types.APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.Validation (runRequestValidation)
 import EulerHS.Prelude hiding (id)
@@ -44,9 +45,14 @@ updateVehicle admin vehicleId req = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   runRequestValidation validateUpdateVehicleReq req
   vehicle <- QV.findByIdAndOrgId vehicleId orgId >>= fromMaybeM VehicleDoesNotExist
-  updatedVehicle <- modifyVehicle req vehicle
-  QV.updateVehicleRec updatedVehicle
-  return $ CreateVehicleRes {vehicle = updatedVehicle}
+  let updVehicle =
+        vehicle{model = if isJust req.model then req.model else vehicle.model,
+                color = if isJust req.color then req.color else vehicle.color,
+                variant = if isJust req.variant then req.variant else vehicle.variant,
+                category = if isJust req.category then req.category else vehicle.category
+               }
+  QV.updateVehicleRec updVehicle
+  return $ SV.makeVehicleAPIEntity updVehicle
 
 deleteVehicle :: SP.Person -> Id SV.Vehicle -> FlowHandler DeleteVehicleRes
 deleteVehicle admin vehicleId = withFlowHandlerAPI $ do
@@ -54,11 +60,9 @@ deleteVehicle admin vehicleId = withFlowHandlerAPI $ do
   vehicle <-
     QV.findVehicleById vehicleId
       >>= fromMaybeM VehicleDoesNotExist
-  if vehicle.organizationId == orgId
-    then do
-      QV.deleteById vehicleId
-      return . DeleteVehicleRes $ getId vehicleId
-    else throwError Unauthorized
+  unless (vehicle.organizationId == orgId) $ throwError Unauthorized
+  QV.deleteById vehicleId
+  return Success
 
 getVehicle :: Id SP.Person -> Maybe Text -> Maybe (Id SV.Vehicle) -> FlowHandler CreateVehicleRes
 getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
@@ -89,7 +93,7 @@ mkVehicleRes personList vehicle =
           )
           personList
    in VehicleRes
-        { vehicle = vehicle,
+        { vehicle = SV.makeVehicleAPIEntity vehicle,
           driver = mkDriverObj <$> mdriver
         }
 

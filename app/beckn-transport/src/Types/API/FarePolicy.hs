@@ -1,41 +1,26 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Types.API.FarePolicy
-  ( ListFarePolicyResponse (..),
-    UpdateFarePolicyRequest (..),
-    FarePolicyResponse (..),
-    UpdateFarePolicyResponse,
+  ( ListFarePolicyRes (..),
+    UpdateFarePolicyReq (..),
+    UpdateFarePolicyRes,
     validateUpdateFarePolicyRequest,
   )
 where
 
 import Beckn.Types.APISuccess
-import Beckn.Types.Id (Id)
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation
 import Data.Time (TimeOfDay (..))
 import EulerHS.Prelude hiding (id)
-import Types.Domain.FarePolicy (FarePolicy)
-import qualified Types.Storage.Vehicle as Vehicle
+import Types.Storage.FarePolicy (FarePolicyAPIEntity)
 
-data FarePolicyResponse = FarePolicyResponse
-  { id :: Id FarePolicy,
-    vehicleVariant :: Vehicle.Variant,
-    baseFare :: Maybe Double,
-    baseDistance :: Maybe Double,
-    perExtraKmRate :: Double,
-    nightShiftStart :: Maybe TimeOfDay,
-    nightShiftEnd :: Maybe TimeOfDay,
-    nightShiftRate :: Maybe Double
+newtype ListFarePolicyRes = ListFarePolicyRes
+  { farePolicies :: [FarePolicyAPIEntity]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-newtype ListFarePolicyResponse = ListFarePolicyResponse
-  { farePolicies :: [FarePolicyResponse]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data UpdateFarePolicyRequest = UpdateFarePolicyRequest
+data UpdateFarePolicyReq = UpdateFarePolicyReq
   { baseFare :: Maybe Double,
     baseDistance :: Maybe Double,
     perExtraKmRate :: Double,
@@ -45,10 +30,10 @@ data UpdateFarePolicyRequest = UpdateFarePolicyRequest
   }
   deriving (Generic, Show, FromJSON)
 
-type UpdateFarePolicyResponse = APISuccess
+type UpdateFarePolicyRes = APISuccess
 
-validateUpdateFarePolicyRequest :: Validate UpdateFarePolicyRequest
-validateUpdateFarePolicyRequest UpdateFarePolicyRequest {..} =
+validateUpdateFarePolicyRequest :: Validate UpdateFarePolicyReq
+validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
   sequenceA_
     [ validateField "baseFare" baseFare . InMaybe $ InRange @Double 0 500,
       validateField "baseDistance" baseDistance . InMaybe $ InRange @Double 0 10000,

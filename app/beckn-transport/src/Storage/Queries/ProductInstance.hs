@@ -92,6 +92,36 @@ findAllByIds' ids = do
     predicate Storage.ProductInstance {..} =
       B.in_ id (B.val_ <$> ids)
 
+findAllOrdersByOrg :: DBFlow m r => Id Org.Organization -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.ProductInstance]
+findAllOrdersByOrg orgId mbLimit mbOffset mbIsOnlyActive = do
+  dbTable <- getDbTable
+  let limit = fromMaybe 0 mbLimit
+      offset = fromMaybe 0 mbOffset
+      isOnlyActive = Just True == mbIsOnlyActive
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset) $ predicate isOnlyActive
+  where
+    predicate isOnlyActive Storage.ProductInstance {..} =
+      organizationId ==. B.val_ orgId
+        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. if isOnlyActive
+          then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
+          else B.val_ True
+
+findAllOrdersByDriver :: DBFlow m r => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.ProductInstance]
+findAllOrdersByDriver driverId mbLimit mbOffset mbIsOnlyActive = do
+  dbTable <- getDbTable
+  let limit = fromMaybe 0 mbLimit
+      offset = fromMaybe 0 mbOffset
+      isOnlyActive = Just True == mbIsOnlyActive
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset) $ predicate isOnlyActive
+  where
+    predicate isOnlyActive Storage.ProductInstance {..} =
+      personId ==. B.val_ (Just driverId)
+        &&. _type ==. B.val_ Case.RIDEORDER
+        &&. if isOnlyActive
+          then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
+          else B.val_ True
+
 updateStatusForProducts :: DBFlow m r => Id Product.Products -> Storage.ProductInstanceStatus -> m ()
 updateStatusForProducts productId_ status_ = do
   dbTable <- getDbTable

@@ -22,7 +22,12 @@ spec = do
       transporterBaseUrl = getTransporterBaseUrl
       appClientEnv = mkClientEnv appManager appBaseUrl
       tbeClientEnv = mkClientEnv appManager transporterBaseUrl
-      gatewayClientEnv = mkClientEnv appManager $ transporterBaseUrl {baseUrlPort = 8015}
+      gatewayClientEnv =
+        mkClientEnv appManager $
+          transporterBaseUrl
+            { baseUrlPort = 8015,
+              baseUrlPath = "/v1"
+            }
   describe "Testing App Backend APIs" $
     it "Testing health check API" $
       hspec $

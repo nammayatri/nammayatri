@@ -152,3 +152,19 @@ fieldEMod =
         callbackUrl = "callback_url",
         callbackApiKey = "callback_api_key"
       }
+
+data OrganizationAPIEntity = OrganizationAPIEntity
+  { name :: Text,
+    description :: Maybe Text,
+    contactNumber :: Text,
+    status :: Status,
+    enabled :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+makeOrganizationAPIEntity :: Organization -> OrganizationAPIEntity
+makeOrganizationAPIEntity Organization {..} =
+  OrganizationAPIEntity
+    { contactNumber = fromMaybe "Unknown" $ mobileCountryCode <> mobileNumber,
+      ..
+    }

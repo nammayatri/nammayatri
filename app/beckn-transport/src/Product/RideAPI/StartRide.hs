@@ -20,7 +20,7 @@ import Utils.Common (withFlowHandlerAPI)
 
 startRide :: Id SP.Person -> Id ProductInstance.ProductInstance -> StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide personId rideId req = withFlowHandlerAPI $ do
-  Handler.startRideHandler handle personId (cast rideId) (req.otp)
+  Handler.startRideHandler handle personId (cast rideId) (req.rideOtp)
   where
     handle =
       Handler.ServiceHandle

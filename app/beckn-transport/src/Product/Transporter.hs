@@ -1,7 +1,6 @@
 module Product.Transporter where
 
 import App.Types
-import Beckn.Types.Common
 import Beckn.Types.Id (Id (..))
 import Beckn.Utils.Validation (runRequestValidation)
 import EulerHS.Prelude hiding (id)
@@ -13,26 +12,20 @@ import qualified Types.Storage.Organization as SO
 import qualified Types.Storage.Person as SP
 import Utils.Common
 
-updateTransporter :: Id SP.Person -> Id SO.Organization -> UpdateTransporterReq -> FlowHandler TransporterRec
-updateTransporter personId orgId req = withFlowHandlerAPI $ do
+updateTransporter :: SP.Person -> Id SO.Organization -> UpdateTransporterReq -> FlowHandler UpdateTransporterRes
+updateTransporter admin orgId req = withFlowHandlerAPI $ do
+  unless (Just orgId == admin.organizationId) $ throwError AccessDenied
   runRequestValidation validateUpdateTransporterReq req
-  maybePerson <- QP.findPersonByIdAndRoleAndOrgId personId SP.ADMIN orgId
-  now <- getCurrentTime
-  case maybePerson of
-    Just _ -> do
-      org <-
-        QO.findOrganizationById orgId
-          >>= fromMaybeM OrgDoesNotExist
-      organization <-
-        if req.enabled /= Just False
-          then modifyOrganization req org >>= addTime (Just now)
-          else modifyOrganization req org
-      QO.updateOrganizationRec organization
-      return $ TransporterRec organization
-    Nothing -> throwError PersonDoesNotExist
-  where
-    addTime fromTime org =
-      return $ org {SO.fromTime = fromTime}
+  org <-
+    QO.findOrganizationById orgId
+      >>= fromMaybeM OrgDoesNotExist
+  let updOrg =
+        org{SO.name = fromMaybe (org.name) (req.name),
+            SO.description = (req.description) <|> (org.description),
+            SO.enabled = fromMaybe (org.enabled) (req.enabled)
+           }
+  QO.updateOrganizationRec updOrg
+  return $ SO.makeOrganizationAPIEntity updOrg
 
 getTransporter :: Id SP.Person -> FlowHandler TransporterRec
 getTransporter personId = withFlowHandlerAPI $ do

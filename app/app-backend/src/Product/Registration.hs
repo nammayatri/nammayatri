@@ -126,29 +126,28 @@ verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
 verify :: Text -> AuthVerifyReq -> FlowHandler AuthVerifyRes
-verify tokenId req =
-  withFlowHandlerAPI $ do
-    runRequestValidation validateAuthVerifyReq req
-    regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
-    checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
-    when verified $ throwError $ AuthBlocked "Already verified."
-    checkForExpiry authExpiry updatedAt
-    if authValueHash == req.otp
-      then do
-        person <- checkPersonExists entityId
-        let isNewPerson = person.isNew
-        clearOldRegToken person $ Id tokenId
-        let deviceToken = (req.deviceToken) <|> (person.deviceToken)
-        DB.runSqlDBTransaction $ do
-          RegistrationToken.setVerified $ Id tokenId
-          Person.updateDeviceToken person.id deviceToken
-          when isNewPerson $
-            Person.setIsNewFalse person.id
+verify tokenId req = withFlowHandlerAPI $ do
+  runRequestValidation validateAuthVerifyReq req
+  regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
+  checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
+  when verified $ throwError $ AuthBlocked "Already verified."
+  checkForExpiry authExpiry updatedAt
+  if authValueHash == req.otp
+    then do
+      person <- checkPersonExists entityId
+      let isNewPerson = person.isNew
+      clearOldRegToken person $ Id tokenId
+      let deviceToken = (req.deviceToken) <|> (person.deviceToken)
+      DB.runSqlDBTransaction $ do
+        RegistrationToken.setVerified $ Id tokenId
+        Person.updateDeviceToken person.id deviceToken
         when isNewPerson $
-          Notify.notifyOnRegistration regToken person.id deviceToken
-        decPerson <- decrypt person
-        return $ AuthVerifyRes token (SP.makePersonAPIEntity $ decPerson{deviceToken})
-      else throwError InvalidAuthData
+          Person.setIsNewFalse person.id
+      when isNewPerson $
+        Notify.notifyOnRegistration regToken person.id deviceToken
+      decPerson <- decrypt person
+      return $ AuthVerifyRes token (SP.makePersonAPIEntity $ decPerson{deviceToken})
+    else throwError InvalidAuthData
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
@@ -169,22 +168,21 @@ checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
 
 resend :: Text -> FlowHandler ResendAuthRes
-resend tokenId =
-  withFlowHandlerAPI $ do
-    SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
-    person <- checkPersonExists entityId
-    if attempts > 0
-      then do
-        smsCfg <- smsCfg <$> ask
-        otpSmsTemplate <- otpSmsTemplate <$> ask
-        mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-        countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
-        withLogTag ("personId_" <> entityId) $
-          SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
+resend tokenId = withFlowHandlerAPI $ do
+  SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
+  person <- checkPersonExists entityId
+  if attempts > 0
+    then do
+      smsCfg <- smsCfg <$> ask
+      otpSmsTemplate <- otpSmsTemplate <$> ask
+      mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+      withLogTag ("personId_" <> entityId) $
+        SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
             >>= SF.checkRegistrationSmsResult
-        _ <- RegistrationToken.updateAttempts (attempts - 1) id
-        return $ AuthRes tokenId (attempts - 1)
-      else throwError $ AuthBlocked "Attempts limit exceed."
+      _ <- RegistrationToken.updateAttempts (attempts - 1) id
+      return $ AuthRes tokenId (attempts - 1)
+    else throwError $ AuthBlocked "Attempts limit exceed."
 
 clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()
 clearOldRegToken person = RegistrationToken.deleteByPersonIdExceptNew (getId $ person.id)

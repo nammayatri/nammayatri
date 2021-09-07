@@ -101,16 +101,17 @@ update orgId status_ = do
 updateOrganizationRec :: DBFlow m r => Storage.Organization -> m ()
 updateOrganizationRec org = do
   dbTable <- getDbTable
-  DB.update dbTable (setClause org) (predicate $ org.id)
+  now <- getCurrentTime
+  DB.update dbTable (setClause org now) (predicate $ org.id)
   where
-    setClause sOrg Storage.Organization {..} =
+    setClause sOrg now Storage.Organization {..} =
       mconcat
-        [ name <-. B.val_ (Storage.name sOrg),
-          description <-. B.val_ (Storage.description sOrg),
-          headCount <-. B.val_ (Storage.headCount sOrg),
-          enabled <-. B.val_ (Storage.enabled sOrg),
-          updatedAt <-. B.val_ (Storage.updatedAt sOrg),
-          fromTime <-. B.val_ (Storage.fromTime sOrg)
+        [ name <-. B.val_ sOrg.name,
+          description <-. B.val_ sOrg.description,
+          headCount <-. B.val_ sOrg.headCount,
+          enabled <-. B.val_ sOrg.enabled,
+          updatedAt <-. B.val_ now,
+          fromTime <-. B.val_ sOrg.fromTime
         ]
     predicate orgId Storage.Organization {..} = id ==. B.val_ orgId
 

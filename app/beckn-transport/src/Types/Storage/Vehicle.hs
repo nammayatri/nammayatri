@@ -116,7 +116,7 @@ type VehiclePrimaryKey = B.PrimaryKey VehicleT Identity
 instance B.Table VehicleT where
   data PrimaryKey VehicleT f = VehiclePrimaryKey (B.C f (Id Vehicle))
     deriving (Generic, B.Beamable)
-  primaryKey = VehiclePrimaryKey . id
+  primaryKey t = VehiclePrimaryKey t.id
 
 deriving instance Show Vehicle
 
@@ -141,3 +141,23 @@ fieldEMod =
           registrationCategory = "registration_category",
           organizationId = "organization_id"
         }
+
+data VehicleAPIEntity = VehicleAPIEntity
+  { id :: Id Vehicle,
+    capacity :: Maybe Int,
+    category :: Maybe Category,
+    make :: Maybe Text,
+    model :: Maybe Text,
+    size :: Maybe Text,
+    variant :: Maybe Variant,
+    color :: Maybe Text,
+    registrationNo :: Text,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+makeVehicleAPIEntity :: Vehicle -> VehicleAPIEntity
+makeVehicleAPIEntity Vehicle {..} =
+  VehicleAPIEntity
+    { ..
+    }

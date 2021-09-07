@@ -58,7 +58,7 @@ let geofencingConfig =
 
 let gwUri = "http://localhost:8015/v1"
 
-let providerUri = "http://localhost:8014/v1"
+let providerUri = "http://localhost:8014/v2"
 
 let apiRateLimitOptions =
   { limit = +4

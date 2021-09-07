@@ -20,32 +20,34 @@ import Product.BecknProvider.Search as BP
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Case as Case
-import qualified Product.DriverInformation as DriverInformation
+import qualified Product.Driver as Driver
 import qualified Product.Location as Location
+import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Person as Person
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Products as Product
 import qualified Product.Registration as Registration
-import qualified Product.Ride as Ride
 import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
 import qualified Product.RideAPI.EndRide as RideAPI.EndRide
 import qualified Product.RideAPI.StartRide as RideAPI.StartRide
+import qualified Product.RideBooking as RideBooking
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import Types.API.Case
-import qualified Types.API.DriverInformation as DriverInformationAPI
+import qualified Types.API.Driver as DriverAPI
 import Types.API.Location as Location
+import qualified Types.API.OrgAdmin as OrgAdminAPI
 import Types.API.Person
 import Types.API.ProductInstance
 import Types.API.Products
 import Types.API.Registration
 import qualified Types.API.Ride as RideAPI
+import qualified Types.API.RideBooking as RideBookingAPI
 import Types.API.Transporter
 import Types.API.Vehicle
-import Types.App (Ride)
 import Types.Storage.Case
 import Types.Storage.Organization (Organization)
 import Types.Storage.Person as SP
@@ -54,21 +56,23 @@ import Types.Storage.Vehicle
 import Utils.Auth (AdminTokenAuth, LookupRegistryOrg, TokenAuth)
 
 type TransportAPI =
-  "v1"
+  "v2"
     :> ( HealthCheckAPI
            :<|> RegistrationAPI
-           :<|> PersonAPI
+           :<|> OrgAdminAPI
+           :<|> DriverAPI
+           :<|> VehicleAPI
            :<|> OrganizationAPI --Transporter
+           :<|> RideBookingAPI
+           :<|> FarePolicyAPI
+           :<|> PersonAPI
            :<|> OrgBecknAPI
            :<|> CaseAPI
            :<|> ProductInstanceAPI
-           :<|> VehicleAPI
            :<|> LocationAPI
            :<|> ProductAPI
            :<|> CallAPIs
            :<|> RouteAPI
-           :<|> DriverInformationAPI
-           :<|> FarePolicyAPI
            :<|> RideAPI
            :<|> CancellationReasonAPI
            :<|> GoogleMapsProxyAPI
@@ -76,17 +80,17 @@ type TransportAPI =
 
 ---- Registration Flow ------
 type RegistrationAPI =
-  "token"
-    :> ( ReqBody '[JSON] InitiateLoginReq
-           :> Post '[JSON] InitiateLoginRes
-           :<|> Capture "tokenId" Text
+  "auth"
+    :> ( ReqBody '[JSON] AuthReq
+           :> Post '[JSON] AuthRes
+           :<|> Capture "authId" Text
              :> "verify"
-             :> ReqBody '[JSON] LoginReq
-             :> Post '[JSON] LoginRes
-           :<|> Capture "tokenId" Text
+             :> ReqBody '[JSON] AuthVerifyReq
+             :> Post '[JSON] AuthVerifyRes
+           :<|> "otp"
+             :> Capture "authId" Text
              :> "resend"
-             :> ReqBody '[JSON] ReInitiateLoginReq
-             :> Post '[JSON] ReInitiateLoginRes
+             :> Post '[JSON] ResendAuthRes
            :<|> "logout"
              :> TokenAuth
              :> Post '[JSON] APISuccess
@@ -94,34 +98,81 @@ type RegistrationAPI =
 
 registrationFlow :: FlowServer RegistrationAPI
 registrationFlow =
-  Registration.initiateLogin
-    :<|> Registration.login
-    :<|> Registration.reInitiateLogin
+  Registration.auth
+    :<|> Registration.verify
+    :<|> Registration.resend
     :<|> Registration.logout
 
--- Following is person flow
-type PersonAPI =
-  "person"
-    :> ( TokenAuth
-           :> Get '[JSON] GetPersonDetailsRes
-           :<|> TokenAuth
-             :> "update"
-             :> ReqBody '[JSON] UpdatePersonReq
-             :> Post '[JSON] UpdatePersonRes
+type OrgAdminAPI =
+  "orgAdmin" :> "profile"
+    :> ( AdminTokenAuth
+           :> Get '[JSON] OrgAdminAPI.OrgAdminProfileRes
            :<|> AdminTokenAuth
-             :> Capture "personId" (Id Person)
-             :> Delete '[JSON] DeletePersonRes
+             :> ReqBody '[JSON] OrgAdminAPI.UpdateOrgAdminProfileReq
+             :> Post '[JSON] OrgAdminAPI.UpdateOrgAdminProfileRes
        )
 
-personFlow :: FlowServer PersonAPI
-personFlow =
-  Person.getPersonDetails
-    :<|> Person.updatePerson
-    :<|> Person.deletePerson
+orgAdminFlow :: FlowServer OrgAdminAPI
+orgAdminFlow =
+  OrgAdmin.getProfile
+    :<|> OrgAdmin.updateProfile
+
+type DriverAPI =
+  "org" :> "driver"
+    :> ( AdminTokenAuth
+           :> ReqBody '[JSON] DriverAPI.OnboardDriverReq
+           :> Post '[JSON] DriverAPI.OnboardDriverRes
+           :<|> "list"
+             :> AdminTokenAuth
+             :> QueryParam "searchString" Text
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> Get '[JSON] DriverAPI.ListDriverRes
+           :<|> AdminTokenAuth
+             :> Capture "driverId" (Id Person)
+             :> "vehicle"
+             :> Capture "vehicleId" (Id Vehicle)
+             :> "link"
+             :> Post '[JSON] DriverAPI.LinkVehicleRes
+           :<|> AdminTokenAuth
+             :> Capture "driverId" (Id Person)
+             :> MandatoryQueryParam "enabled" Bool
+             :> Post '[JSON] APISuccess
+           :<|> AdminTokenAuth
+             :> Capture "driverId" (Id Person)
+             :> Delete '[JSON] APISuccess
+       )
+    :<|> "driver"
+      :> ( "setActivity"
+             :> TokenAuth
+             :> MandatoryQueryParam "active" Bool
+             :> Post '[JSON] APISuccess
+             :<|> "profile"
+               :> ( TokenAuth
+                      :> Get '[JSON] DriverAPI.DriverInformationRes
+                      :<|> TokenAuth
+                        :> ReqBody '[JSON] DriverAPI.UpdateDriverReq
+                        :> Post '[JSON] DriverAPI.UpdateDriverRes
+                  )
+         )
+
+driverFlow :: FlowServer DriverAPI
+driverFlow =
+  ( Driver.createDriver
+      :<|> Driver.listDriver
+      :<|> Driver.linkVehicle
+      :<|> Driver.changeDriverEnableState
+      :<|> Driver.deleteDriver
+  )
+    :<|> ( Driver.setActivity
+             :<|> ( Driver.getInformation
+                      :<|> Driver.updateDriver
+                  )
+         )
 
 -- Following is vehicle flow
 type VehicleAPI =
-  "vehicle"
+  "org" :> "vehicle"
     :> ( AdminTokenAuth
            :> ReqBody '[JSON] CreateVehicleReq
            :> Post '[JSON] CreateVehicleRes
@@ -160,16 +211,76 @@ type OrganizationAPI =
   "transporter"
     :> ( TokenAuth
            :> Get '[JSON] TransporterRec
-           :<|> TokenAuth
+           :<|> AdminTokenAuth
            :> Capture "orgId" (Id Organization)
            :> ReqBody '[JSON] UpdateTransporterReq
-           :> Post '[JSON] TransporterRec
+           :> Post '[JSON] UpdateTransporterRes
        )
 
 organizationFlow :: FlowServer OrganizationAPI
 organizationFlow =
   Transporter.getTransporter
     :<|> Transporter.updateTransporter
+
+type RideBookingAPI =
+  "org" :> "rideBooking"
+    :> ( Capture "bookingId" (Id ProductInstance)
+           :> TokenAuth
+           :> Post '[JSON] RideBookingAPI.RideBookingStatusRes
+           :<|> "list"
+             :> AdminTokenAuth
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> QueryParam "isOnlyActive" Bool
+             :> Get '[JSON] RideBookingAPI.RideBookingListRes
+           :<|> Capture "bookingId" (Id ProductInstance)
+             :> "cancel"
+             :> AdminTokenAuth
+             :> Get '[JSON] APISuccess
+       )
+    :<|> "driver"
+      :> "rideBooking"
+      :> ( Capture "bookingId" (Id ProductInstance)
+             :> "notification"
+             :> ( "respond"
+                    :> TokenAuth
+                    :> ReqBody '[JSON] RideBookingAPI.SetDriverAcceptanceReq
+                    :> Post '[JSON] RideBookingAPI.SetDriverAcceptanceRes
+                    :<|> TokenAuth
+                    :> Get '[JSON] RideBookingAPI.GetRideInfoRes
+                )
+         )
+
+rideBookingFlow :: FlowServer RideBookingAPI
+rideBookingFlow =
+  ( RideBooking.rideBookingStatus
+      :<|> RideBooking.rideBookingList
+      :<|> RideBooking.rideBookingCancel
+  )
+    :<|> ( \rideBookingId ->
+             RideBooking.setDriverAcceptance rideBookingId
+               :<|> RideBooking.getRideInfo rideBookingId
+         )
+
+-- Following is person flow
+type PersonAPI =
+  "driver" :> "profile"
+    :> ( TokenAuth
+           :> Get '[JSON] GetPersonDetailsRes
+           :<|> TokenAuth
+             :> "update"
+             :> ReqBody '[JSON] UpdatePersonReq
+             :> Post '[JSON] UpdatePersonRes
+           :<|> AdminTokenAuth
+             :> Capture "personId" (Id Person)
+             :> Delete '[JSON] DeletePersonRes
+       )
+
+personFlow :: FlowServer PersonAPI
+personFlow =
+  Person.getPersonDetails
+    :<|> Person.updatePerson
+    :<|> Person.deletePerson
 
 -----------------------------
 -------- Case Flow----------
@@ -233,7 +344,7 @@ productFlow =
 
 -- Location update and get for tracking is as follows
 type LocationAPI =
-  "location"
+  "driver" :> "location"
     :> ( Capture "productInstanceId" (Id ProductInstance) -- TODO: add auth
            :> Get '[JSON] GetLocationRes
            :<|> TokenAuth
@@ -255,18 +366,20 @@ transporterServer :: FlowServer TransportAPI
 transporterServer =
   pure "App is UP"
     :<|> registrationFlow
-    :<|> personFlow
+    :<|> orgAdminFlow
+    :<|> driverFlow
+    :<|> vehicleFlow
     :<|> organizationFlow
+    :<|> rideBookingFlow
+    :<|> farePolicyFlow
+    :<|> personFlow
     :<|> orgBecknApiFlow
     :<|> caseFlow
     :<|> productInstanceFlow
-    :<|> vehicleFlow
     :<|> locationFlow
     :<|> productFlow
     :<|> callFlow
     :<|> routeApiFlow
-    :<|> driverInformationFlow
-    :<|> farePolicyFlow
     :<|> rideFlow
     :<|> cancellationReasonFlow
     :<|> googleMapsProxyFlow
@@ -295,10 +408,11 @@ orgBecknApiFlow =
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =
-  "call"
-    :> "to_customer"
+  "driver" :> "ride"
+    :> Capture "rideId" (Id ProductInstance)
+    :> "call"
+    :> "rider"
     :> TokenAuth
-    :> ReqBody '[JSON] Call.CallReq
     :> Post '[JSON] Call.CallRes
 
 callFlow :: FlowServer CallAPIs
@@ -314,64 +428,13 @@ type RouteAPI =
 routeApiFlow :: FlowServer RouteAPI
 routeApiFlow = Location.getRoutes
 
-type DriverInformationAPI =
-  "driver"
-    :> ( AdminTokenAuth
-           :> ReqBody '[JSON] DriverInformationAPI.CreateDriverReq
-           :> Post '[JSON] DriverInformationAPI.CreateDriverRes
-           :<|> TokenAuth
-             :> Get '[JSON] DriverInformationAPI.DriverInformationResponse
-           :<|> "setActivity"
-             :> TokenAuth
-             :> MandatoryQueryParam "active" Bool
-             :> Post '[JSON] APISuccess
-           :<|> "notification"
-             :> TokenAuth
-             :> QueryParam "productInstanceId" (Id Ride)
-             :> Get '[JSON] DriverInformationAPI.GetRideInfoRes
-           :<|> "list"
-             :> AdminTokenAuth
-             :> QueryParam "searchString" Text
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
-             :> Get '[JSON] DriverInformationAPI.ListDriverRes
-           :<|> AdminTokenAuth
-             :> "linkVehicle"
-             :> Capture "personId" (Id Person)
-             :> ReqBody '[JSON] DriverInformationAPI.LinkVehicleReq
-             :> Post '[JSON] DriverInformationAPI.LinkVehicleRes
-           :<|> "enable"
-             :> AdminTokenAuth
-             :> Capture "personId" (Id Person)
-             :> Post '[JSON] APISuccess
-           :<|> "disable"
-             :> AdminTokenAuth
-             :> Capture "personId" (Id Person)
-             :> Post '[JSON] APISuccess
-       )
-
-driverInformationFlow :: FlowServer DriverInformationAPI
-driverInformationFlow =
-  DriverInformation.createDriver
-    :<|> DriverInformation.getInformation
-    :<|> DriverInformation.setActivity
-    :<|> DriverInformation.getRideInfo
-    :<|> DriverInformation.listDriver
-    :<|> DriverInformation.linkVehicle
-    :<|> DriverInformation.enableDriver
-    :<|> DriverInformation.disableDriver
-
 type RideAPI =
-  "ride"
-    :> ( "respond"
-           :> TokenAuth
-           :> ReqBody '[JSON] RideAPI.SetDriverAcceptanceReq
-           :> Post '[JSON] RideAPI.SetDriverAcceptanceRes
-           :<|> TokenAuth
-             :> Capture "rideId" (Id ProductInstance)
-             :> "start"
-             :> ReqBody '[JSON] RideAPI.StartRideReq
-             :> Post '[JSON] APISuccess
+  "driver" :> "ride"
+    :> ( TokenAuth
+           :> Capture "rideId" (Id ProductInstance)
+           :> "start"
+           :> ReqBody '[JSON] RideAPI.StartRideReq
+           :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "rideId" (Id ProductInstance)
              :> "end"
@@ -385,8 +448,7 @@ type RideAPI =
 
 rideFlow :: FlowServer RideAPI
 rideFlow =
-  Ride.setDriverAcceptance
-    :<|> RideAPI.StartRide.startRide
+  RideAPI.StartRide.startRide
     :<|> RideAPI.EndRide.endRide
     :<|> RideAPI.CancelRide.cancelRide
 

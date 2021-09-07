@@ -34,7 +34,7 @@ type FarePolicyPrimaryKey = B.PrimaryKey FarePolicyT Identity
 instance B.Table FarePolicyT where
   data PrimaryKey FarePolicyT f = FarePolicyPrimaryKey (B.C f (Id D.FarePolicy))
     deriving (Generic, B.Beamable)
-  primaryKey = FarePolicyPrimaryKey . id
+  primaryKey t = FarePolicyPrimaryKey t.id
 
 deriving instance Show FarePolicy
 
@@ -75,3 +75,21 @@ fromTable sFarePolicy =
       nightShiftEnd = sFarePolicy.nightShiftEnd,
       nightShiftRate = toRational <$> sFarePolicy.nightShiftRate
     }
+
+data FarePolicyAPIEntity = FarePolicyAPIEntity
+  { id :: Id D.FarePolicy,
+    vehicleVariant :: Vehicle.Variant,
+    baseFare :: Maybe Double,
+    baseDistance :: Maybe Double,
+    perExtraKmRate :: Double,
+    nightShiftStart :: Maybe TimeOfDay,
+    nightShiftEnd :: Maybe TimeOfDay,
+    nightShiftRate :: Maybe Double,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+makeFarePolicyAPIEntity :: FarePolicy -> FarePolicyAPIEntity
+makeFarePolicyAPIEntity FarePolicy {..} =
+  FarePolicyAPIEntity {..}

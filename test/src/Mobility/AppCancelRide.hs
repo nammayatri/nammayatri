@@ -18,7 +18,7 @@ spec = do
       void . callBAP $ cancelRide bRideBookingId appRegistrationToken buildAppCancelReq
 
       void . poll $
-        callBAP (rideBookingStatus bRideBookingId appRegistrationToken)
+        callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
           <&> (.status)
-          <&> (== AppRB.CANCELLED)
-          <&> bool Nothing (Just ())
+          >>= (`shouldBe` AppRB.CANCELLED)
+          <&> Just

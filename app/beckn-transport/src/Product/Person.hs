@@ -35,7 +35,6 @@ import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.SearchReqLocation as QL
 import qualified Storage.Queries.TransporterConfig as QTC
 import Types.API.Person
-import Types.API.Registration (makeUserInfoRes)
 import Types.App (Driver)
 import Types.Error
 import Types.Metrics (CoreMetrics)
@@ -55,7 +54,7 @@ updatePerson personId req = withFlowHandlerAPI $ do
   let updatedPerson = modifyPerson req person
   DB.runSqlDB (QP.updatePersonRec personId updatedPerson)
   decPerson <- decrypt updatedPerson
-  return . UpdatePersonRes $ makeUserInfoRes decPerson
+  return . UpdatePersonRes $ SP.makePersonAPIEntity decPerson
   where
     isValidUpdate person =
       when (isJust (req.role) && person.role /= SP.ADMIN) $

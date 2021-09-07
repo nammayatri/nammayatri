@@ -5,6 +5,7 @@ import HSpec
 import Mobility.Fixtures
 import Mobility.SuccessFlow
 import qualified "beckn-transport" Types.API.Ride as RideAPI
+import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import qualified "beckn-transport" Types.Storage.CancellationReason as SCR
 import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
@@ -19,15 +20,15 @@ spec = do
 
       -- Driver Accepts a ride
       void . callBPP $
-        rideRespond driverToken $
-          RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.ACCEPT
+        rideRespond transporterOrderPiId driverToken $
+          RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
 
       void . callBPP $
         rideCancel appRegistrationToken transporterOrderPiId $
           RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
 
       void . poll $
-        callBAP (rideBookingStatus bRideBookingId appRegistrationToken)
+        callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
           <&> (.status)
           >>= (`shouldBe` AppRB.CANCELLED)
           <&> Just

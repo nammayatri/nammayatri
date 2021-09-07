@@ -7,6 +7,7 @@ module Types.Storage.Person where
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
+import Beckn.Utils.Common (maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.Swagger hiding (description, email)
@@ -158,3 +159,21 @@ fieldEMod =
         identifierType = "identifier_type",
         deviceToken = "device_token"
       }
+
+data PersonAPIEntity = PersonAPIEntity
+  { id :: Id Person,
+    firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    maskedMobileNumber :: Maybe Text,
+    maskedDeviceToken :: Maybe FCM.FCMRecipientToken
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
+makePersonAPIEntity Person {..} =
+  PersonAPIEntity
+    { maskedMobileNumber = maskText <$> mobileNumber,
+      maskedDeviceToken = FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken) <$> deviceToken,
+      ..
+    }

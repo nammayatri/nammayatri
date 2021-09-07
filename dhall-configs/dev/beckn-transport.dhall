@@ -64,7 +64,7 @@ in
 , xGatewayNsdlUrl = None Text
 , xAppUri = appUri
 , selfId = "JUSPAY.MOBILITY.PROVIDER.UAT.1"
-, nwAddress = "http://localhost:8014/v1/"
+, nwAddress = "http://localhost:8014/v2/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , caseExpiry = Some +7200

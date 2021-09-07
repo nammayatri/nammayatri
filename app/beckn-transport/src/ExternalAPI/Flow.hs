@@ -19,6 +19,7 @@ import Types.Error
 import Types.Metrics (CoreMetrics)
 import Types.Storage.Case as Case
 import Types.Storage.Organization as Org
+import Types.Storage.ProductInstance (ProductInstance)
 import Utils.Auth
 import Utils.Common
 
@@ -100,8 +101,8 @@ initiateCall ::
   ( HasFlowEnv m r '["xAppUri" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  CallReq ->
+  Id ProductInstance ->
   m ()
-initiateCall req = do
+initiateCall searchPIId = do
   url <- asks (.xAppUri)
-  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI req.productInstanceId) "/v2/ride/{rideId}/call/customer"
+  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId searchPIId)) "/v2/ride/{rideId}/call/customer"

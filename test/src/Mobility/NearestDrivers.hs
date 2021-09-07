@@ -1,9 +1,7 @@
 module Mobility.NearestDrivers (spec) where
 
-import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
-import Beckn.Utils.Dhall (readDhallConfig)
 import EulerHS.Prelude
 import qualified "beckn-transport" Storage.Queries.Person as Q (getNearestDrivers)
 import Test.Hspec
@@ -12,30 +10,29 @@ import Utils
 
 spec :: Spec
 spec = do
-  (appEnv :: BecknTransport.AppEnv) <- runIO $ BecknTransport.buildAppEnv =<< readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
   describe "getNearestDrivers function" $ do
-    it "Test ordering" $ testOrder appEnv
-    it "Test radius filtration" $ testInRadius appEnv
-    it "Test outside radius filtration" $ testNotInRadius appEnv
+    it "Test ordering" testOrder
+    it "Test radius filtration" testInRadius
+    it "Test outside radius filtration" testNotInRadius
 
-testOrder :: BecknTransport.AppEnv -> IO ()
-testOrder appEnv = do
+testOrder :: IO ()
+testOrder = do
   res <-
-    runFlow "Test ordering" appEnv $
+    runTransporterFlow "Test ordering" $
       Q.getNearestDrivers pickupPoint 5000 org1 SUV <&> map (getId . fst)
   res `shouldBe` ["002093df-4f7c-440f-ba-closest_driver", "001093df-4f7c-440f-b-furthest_driver"]
 
-testInRadius :: BecknTransport.AppEnv -> IO ()
-testInRadius appEnv = do
+testInRadius :: IO ()
+testInRadius = do
   res <-
-    runFlow "Test readius filtration" appEnv $
+    runTransporterFlow "Test readius filtration" $
       Q.getNearestDrivers pickupPoint 800 org1 SUV <&> map (getId . fst)
   res `shouldBe` ["002093df-4f7c-440f-ba-closest_driver"]
 
-testNotInRadius :: BecknTransport.AppEnv -> IO ()
-testNotInRadius appEnv = do
+testNotInRadius :: IO ()
+testNotInRadius = do
   res <-
-    runFlow "Test outside radius filtration" appEnv $
+    runTransporterFlow "Test outside radius filtration" $
       Q.getNearestDrivers pickupPoint 0 org1 SUV <&> map (getId . fst)
   res `shouldBe` []
 

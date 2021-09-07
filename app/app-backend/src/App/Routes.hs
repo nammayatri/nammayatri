@@ -243,7 +243,7 @@ type CallAPIs =
     :> ( "driver"
            :> TokenAuth
            :> Post '[JSON] API.CallRes
-           :<|> "customer"
+           :<|> "rider"
            :> Post '[JSON] API.CallRes
        )
 
