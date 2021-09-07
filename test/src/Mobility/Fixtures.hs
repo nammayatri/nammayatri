@@ -206,17 +206,12 @@ buildStartRideReq otp =
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 originServiceability regToken = origin
   where
-    origin :<|> _ :<|> _ = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
+    origin :<|> _ = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
 destinationServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 destinationServiceability regToken = destination
   where
-    _ :<|> destination :<|> _ = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
-
-rideServiceability :: RegToken -> AppServ.RideServiceabilityReq -> ClientM AppServ.RideServiceabilityRes
-rideServiceability regToken = ride
-  where
-    _ :<|> _ :<|> ride = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
+    _ :<|> destination = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
 buildOrgRideReq :: TPI.ProductInstanceStatus -> TCase.CaseType -> ClientM TbePI.ProductInstanceList
 buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csType] (Just 50) Nothing

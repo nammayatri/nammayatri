@@ -22,11 +22,6 @@ rideServiceable RideServiceabilityReq {..} = do
       Region region -> someGeometriesContain destination region
   pure $ originServiceable && destinationServiceable
 
-checkRideServiceability :: Id Person.Person -> RideServiceabilityReq -> FlowHandler RideServiceabilityRes
-checkRideServiceability _ req =
-  withFlowHandlerAPI $
-    RideServiceabilityRes <$> rideServiceable req
-
 checkServiceability ::
   (GeofencingConfig -> GeoRestriction) ->
   Id Person.Person ->

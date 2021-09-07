@@ -19,13 +19,10 @@ import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
 import qualified Product.CancellationReason as CancellationReason
-import qualified Product.Case as Case
 import qualified Product.Confirm as Confirm
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
-import qualified Product.Info as Info
 import qualified Product.Location as Location
-import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Profile as Profile
 import qualified Product.Quote as Quote
 import qualified Product.Registration as Registration
@@ -40,13 +37,10 @@ import qualified Product.Update as Update
 import Servant hiding (throwError)
 import qualified Types.API.Cancel as Cancel
 import qualified Types.API.CancellationReason as CancellationReasonAPI
-import qualified Types.API.Case as Case
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
 import qualified Types.API.Location as Location
-import Types.API.Product
-import qualified Types.API.ProductInstance as ProductInstance
 import qualified Types.API.Profile as Profile
 import qualified Types.API.Quote as QuoteAPI
 import Types.API.Registration
@@ -73,10 +67,7 @@ type AppAPI =
            :<|> RideAPI
            :<|> CallAPIs
            :<|> SupportAPI
-           :<|> CaseAPI
-           :<|> InfoAPI
            :<|> UpdateAPI
-           :<|> ProductInstanceAPI
            :<|> RouteAPI
            :<|> StatusAPI
            :<|> ServiceabilityAPI
@@ -102,10 +93,7 @@ appServer =
     :<|> rideFlow
     :<|> callFlow
     :<|> supportFlow
-    :<|> caseFlow
-    :<|> infoFlow
     :<|> updateFlow
-    :<|> productInstanceFlow
     :<|> routeApiFlow
     :<|> statusFlow
     :<|> serviceabilityFlow
@@ -276,41 +264,6 @@ type SupportAPI =
 supportFlow :: FlowServer SupportAPI
 supportFlow = Support.sendIssue
 
-------- Case Flow -------
-type CaseAPI =
-  "case"
-    :> TokenAuth
-    :> ( "list"
-           :> MandatoryQueryParam "type" Case.CaseType
-           :> QueryParams "status" Case.CaseStatus
-           :> QueryParam "limit" Integer
-           :> QueryParam "offset" Integer
-           :> Get '[JSON] Case.CaseListRes
-           :<|> Capture "caseId" (Id Case.Case)
-           :> Get '[JSON] Case.GetStatusRes
-       )
-
-caseFlow :: FlowServer CaseAPI
-caseFlow regToken =
-  Case.list regToken
-    :<|> Case.getStatus regToken
-
--------- Info Flow ------
-type InfoAPI =
-  TokenAuth
-    :> ( "product"
-           :> Capture "id" (Id ProductInstance)
-           :> Get '[JSON] GetProductInfoRes
-           :<|> "location"
-           :> Capture "caseId" (Id Case.Case)
-           :> Get '[JSON] Location.GetLocationRes
-       )
-
-infoFlow :: FlowServer InfoAPI
-infoFlow regToken =
-  Info.getProductInfo regToken
-    :<|> Info.getLocation regToken
-
 ------- Update Flow -------
 type UpdateAPI =
   SignatureAuth "Authorization" LookupRegistryOrg
@@ -321,21 +274,6 @@ type UpdateAPI =
 updateFlow :: FlowServer UpdateAPI
 updateFlow =
   Update.onUpdate
-
--------- ProductInstance Flow----------
-type ProductInstanceAPI =
-  "productInstance"
-    :> ( TokenAuth
-           :> QueryParams "status" ProductInstanceStatus
-           :> QueryParams "type" Case.CaseType
-           :> QueryParam "limit" Int
-           :> QueryParam "offset" Int
-           :> Get '[JSON] ProductInstance.ProductInstanceList
-       )
-
-productInstanceFlow :: FlowServer ProductInstanceAPI
-productInstanceFlow =
-  ProductInstance.list
 
 type RouteAPI =
   "route"
@@ -367,16 +305,12 @@ type ServiceabilityAPI =
            :<|> "destination"
              :> ReqBody '[JSON] Serviceability.ServiceabilityReq
              :> Post '[JSON] Serviceability.ServiceabilityRes
-           :<|> "ride"
-             :> ReqBody '[JSON] Serviceability.RideServiceabilityReq
-             :> Post '[JSON] Serviceability.RideServiceabilityRes
        )
 
 serviceabilityFlow :: FlowServer ServiceabilityAPI
 serviceabilityFlow regToken =
   Serviceability.checkServiceability origin regToken
     :<|> Serviceability.checkServiceability destination regToken
-    :<|> Serviceability.checkRideServiceability regToken
 
 -------- Feedback Flow ----------
 type FeedbackAPI =

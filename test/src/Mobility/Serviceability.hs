@@ -55,20 +55,6 @@ nonServiceableDestination appClientEnv =
   where
     req = ServiceabilityReq karnatakaLocation
 
-serviceableRide :: ClientEnv -> IO ()
-serviceableRide appClientEnv =
-  runClient appClientEnv (rideServiceability appRegistrationToken req)
-    >>= verifyServiceability (RideServiceabilityRes True)
-  where
-    req = RideServiceabilityReq ernakulamLocation keralaLocation
-
-nonServiceableRide :: ClientEnv -> IO ()
-nonServiceableRide appClientEnv =
-  runClient appClientEnv (rideServiceability appRegistrationToken req)
-    >>= verifyServiceability (RideServiceabilityRes False)
-  where
-    req = RideServiceabilityReq keralaLocation karnatakaLocation
-
 nonServiceableSearchRequest :: ClientEnv -> IO ()
 nonServiceableSearchRequest appClientEnv = do
   let sreq = searchReq
@@ -91,6 +77,4 @@ spec = do
     it "Non-serviceable origin" $ nonServiceableOrigin appClientEnv
     it "Serviceable destination" $ serviceableDestination appClientEnv
     it "Non-serviceable destination" $ nonServiceableDestination appClientEnv
-    it "Serviceable ride" $ serviceableRide appClientEnv
-    it "Non-serviceable ride" $ nonServiceableRide appClientEnv
     it "Non-serviceable search request" $ nonServiceableSearchRequest appClientEnv

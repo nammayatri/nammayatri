@@ -19,3 +19,10 @@ newtype SearchRes = SearchRes
   { searchId :: Id Case
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+data CaseInfo = CaseInfo
+  { total :: Maybe Integer,
+    accepted :: Maybe Integer,
+    declined :: Maybe Integer
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)

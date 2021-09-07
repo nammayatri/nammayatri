@@ -32,7 +32,6 @@ import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.Products as QProducts
 import qualified Storage.Queries.SearchReqLocation as Location
-import qualified Types.API.Case as API
 import qualified Types.API.Search as API
 import Types.API.Serviceability
 import qualified Types.Common as Common
