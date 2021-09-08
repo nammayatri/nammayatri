@@ -58,11 +58,10 @@ addUrlCallRetries ::
   ) =>
   BaseUrl ->
   Int ->
-  Int ->
   m ()
-addUrlCallRetries url retryCount maxRetry = do
+addUrlCallRetries url retryCount = do
   cmContainer <- asks (.coreMetrics)
-  addUrlCallRetries' cmContainer url retryCount maxRetry
+  addUrlCallRetries' cmContainer url retryCount
 
 addRequestLatency ::
   ( HasCoreMetrics r,
@@ -112,11 +111,11 @@ incrementErrorCounter' cmContainers err = do
       (show $ toHttpCode err, toErrorCode err)
       P.incCounter
 
-addUrlCallRetries' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> Int -> Int -> m ()
-addUrlCallRetries' cmContainers url retryCount maxRetry = do
-  let urlCallRetriesCounterMetric = cmContainers.urlCallRetriesCounter
+addUrlCallRetries' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> Int -> m ()
+addUrlCallRetries' cmContainers url retryCount = do
+  let urlCallRetriesMetric = cmContainers.urlCallRetries
   L.runIO $
     P.withLabel
-      urlCallRetriesCounterMetric
-      (showBaseUrlText url, show maxRetry)
-      (`P.observe` fromIntegral retryCount)
+      urlCallRetriesMetric
+      (showBaseUrlText url, show retryCount)
+      P.incCounter

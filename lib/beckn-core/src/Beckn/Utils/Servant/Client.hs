@@ -128,7 +128,7 @@ retryAction ::
 retryAction currentErr currentRetryCount maxRetries action = do
   logWarning $ getErrorText currentErr
   logWarning $ "Retrying attempt " <> show currentRetryCount <> " calling " <> showBaseUrlText currentErr.baseUrl
-  Metrics.addUrlCallRetries currentErr.baseUrl currentRetryCount maxRetries
+  Metrics.addUrlCallRetries currentErr.baseUrl currentRetryCount
   performAction action $ \err -> do
     if currentRetryCount < maxRetries
       then retryAction err (currentRetryCount + 1) maxRetries action
