@@ -1,5 +1,6 @@
 module Main where
 
+import DistanceCalculation
 import EulerHS.Prelude
 import FareCalculator
 import Flow.Allocation
@@ -14,5 +15,11 @@ main = defaultMain =<< specs
 specs :: IO TestTree
 specs = do
   let rideAPI = testGroup "Ride API" [startRide, endRideTests, cancelRide]
-  let unitTests = testGroup "Unit tests" [fareCalculator, allocation, rideAPI]
-  return $ testGroup "Tests" [unitTests]
+  return $
+    testGroup
+      "Unit tests"
+      [ fareCalculator,
+        allocation,
+        rideAPI,
+        distanceCalculation
+      ]

@@ -35,15 +35,15 @@ updateLocation personId req = withFlowHandlerAPI $ do
   mbLoc <- DrLoc.findById driverId
   now <- getCurrentTime
   refreshPeriod <- asks (.updateLocationRefreshPeriod) <&> fromIntegral
-  distanceMb <-
-    mbLoc & maybe (pure . Just $ getRouteLinearLength waypointList) \loc ->
+  distanceMb <- case mbLoc of
+    Just loc ->
       if now `diffUTCTime` loc.updatedAt > refreshPeriod
         then
-          pure . Just $
-            let lastWaypoint = locationToLatLong loc
-                traversedWaypoints = lastWaypoint : waypointList
-             in getRouteLinearLength traversedWaypoints
+          let lastWaypoint = locationToLatLong loc
+              traversedWaypoints = lastWaypoint : waypointList
+           in pure . Just $ getRouteLinearLength traversedWaypoints
         else logWarning "UpdateLocation called before refresh period passed, ignoring" $> Nothing
+    Nothing -> pure . Just $ getRouteLinearLength waypointList
   let lastUpdate = fromMaybe now (req.lastUpdate)
   DB.runSqlDBTransaction $ do
     whenJust distanceMb $ QPI.updateDistance driver.id
