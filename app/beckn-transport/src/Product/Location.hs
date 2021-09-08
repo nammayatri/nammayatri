@@ -7,7 +7,7 @@ import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong)
+import Beckn.Types.MapSearch (LatLong (..))
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.List.NonEmpty as NE
 import Data.Time (diffUTCTime)
@@ -23,6 +23,7 @@ import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
 import Utils.Common hiding (id)
+import Prelude (atan2)
 
 updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
 updateLocation personId req = withFlowHandlerAPI $ do
@@ -34,17 +35,15 @@ updateLocation personId req = withFlowHandlerAPI $ do
   mbLoc <- DrLoc.findById driverId
   now <- getCurrentTime
   refreshPeriod <- asks (.updateLocationRefreshPeriod) <&> fromIntegral
-  distanceMb <- case mbLoc of
-    Just loc ->
+  distanceMb <-
+    mbLoc & maybe (pure . Just $ getRouteLinearLength waypointList) \loc ->
       if now `diffUTCTime` loc.updatedAt > refreshPeriod
-        then do
-          let lastWaypoint = locationToLatLong loc
-          let traversedWaypoints = lastWaypoint : waypointList
-          getDistanceMb traversedWaypoints
-        else do
-          logWarning "UpdateLocation called before refresh period passed, ignoring"
-          return Nothing
-    Nothing -> getDistanceMb waypointList
+        then
+          pure . Just $
+            let lastWaypoint = locationToLatLong loc
+                traversedWaypoints = lastWaypoint : waypointList
+             in getRouteLinearLength traversedWaypoints
+        else logWarning "UpdateLocation called before refresh period passed, ignoring" $> Nothing
   let lastUpdate = fromMaybe now (req.lastUpdate)
   DB.runSqlDBTransaction $ do
     whenJust distanceMb $ QPI.updateDistance driver.id
@@ -54,10 +53,6 @@ updateLocation personId req = withFlowHandlerAPI $ do
   where
     currPoint = NE.last (req.waypoints)
     waypointList = NE.toList (req.waypoints)
-    getDistanceMb waypoints = do
-      res <- MapSearch.getDistanceMb (Just MapSearch.CAR) waypoints
-      whenNothing_ res $ logWarning "Can't calculate distance when updating location"
-      return res
 
 getLocation :: Id PI.ProductInstance -> FlowHandler GetLocationRes
 getLocation piId = withFlowHandlerAPI $ do
@@ -105,3 +100,24 @@ calculateDistance ::
   m (Maybe Double)
 calculateDistance sourceLoc destinationLoc = do
   MapSearch.getDistanceMb (Just MapSearch.CAR) [sourceLoc, destinationLoc]
+
+distanceBetweenInMeters :: LatLong -> LatLong -> Double
+distanceBetweenInMeters (LatLong lat1 lon1) (LatLong lat2 lon2) =
+  -- Calculating using haversine formula
+  let r = 6371000 -- Radius of earth in meters
+      dlat = deg2Rad $ lat2 - lat1
+      dlon = deg2Rad $ lon2 - lon1
+      rlat1 = deg2Rad lat1
+      rlat2 = deg2Rad lat2
+      sq x = x * x
+      -- Calculated distance is real (not imaginary) when 0 <= h <= 1
+      -- Ideally in our use case h wouldn't go out of bounds
+      h = sq (sin (dlat / 2)) + cos rlat1 * cos rlat2 * sq (sin (dlon / 2))
+   in 2 * r * atan2 (sqrt h) (sqrt (1 - h))
+
+deg2Rad :: Double -> Double
+deg2Rad degree = degree * pi / 180
+
+getRouteLinearLength :: [LatLong] -> Double
+getRouteLinearLength pts@(_ : t) = sum $ zipWith distanceBetweenInMeters pts t
+getRouteLinearLength _ = 0
