@@ -16,7 +16,6 @@ data InitiateLoginReq = InitiateLoginReq
     __type :: LoginType,
     mobileNumber :: Text,
     mobileCountryCode :: Text,
-    role :: Maybe Person.Role,
     deviceToken :: Maybe FCMRecipientToken
   }
   deriving (Generic)

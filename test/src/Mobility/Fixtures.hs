@@ -31,7 +31,6 @@ import qualified "app-backend" Types.Common as AppCommon
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
 import qualified "app-backend" Types.Storage.Case as BCase
 import qualified "beckn-transport" Types.Storage.Case as TCase
-import qualified "app-backend" Types.Storage.Person as BPerson
 import qualified "beckn-transport" Types.Storage.Person as TPerson
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
@@ -304,7 +303,6 @@ buildInitiateLoginReq =
       __type = BSR.OTP,
       mobileNumber = "9000090000",
       mobileCountryCode = "+91",
-      role = Just BPerson.USER,
       deviceToken = Nothing
     }
 

@@ -77,7 +77,6 @@ initiateFlow req smsCfg = do
 
 makePerson :: EncFlow m r => InitiateLoginReq -> m SP.Person
 makePerson req = do
-  role <- (req.role) & fromMaybeM (InvalidRequest "You should pass person's role.")
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt $ Just req.mobileNumber
@@ -88,7 +87,7 @@ makePerson req = do
         middleName = Nothing,
         lastName = Nothing,
         fullName = Nothing,
-        role = role,
+        role = SP.USER,
         gender = SP.UNKNOWN,
         identifierType = SP.MOBILENUMBER,
         email = Nothing,
