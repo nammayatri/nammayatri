@@ -1,10 +1,12 @@
-module Product.BecknProvider.Confirm (confirm) where
+module Product.BecknProvider.Confirm (confirm, calculateDriverPool, getDriverPool) where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Redis.Queries as Redis
 import qualified Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong (LatLong))
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import Data.Time (UTCTime)
@@ -13,18 +15,24 @@ import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
-import Product.Person (calculateDriverPool, setDriverPool)
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as Organization
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QProductInstance
 import qualified Storage.Queries.RideRequest as RideRequest
+import qualified Storage.Queries.SearchReqLocation as QSReqLoc
+import qualified Storage.Queries.TransporterConfig as QTConf
 import qualified Test.RandomStrings as RS
+import Types.App (Driver)
 import Types.Error
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RideRequest as RideRequest
+import qualified Types.Storage.SearchReqLocation as SSReqLoc
+import qualified Types.Storage.TransporterConfig as STConf
+import qualified Types.Storage.Vehicle as SV
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
@@ -109,6 +117,66 @@ onConfirmCallback orderProductInstance productInstance orderCase trackerCaseId t
   setDriverPool prodInstId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   mkOnConfirmPayload orderProductInstance trackerCaseId
+
+driverPoolKey :: Id ProductInstance.ProductInstance -> Text
+driverPoolKey = ("beckn:driverpool:" <>) . getId
+
+getDriverPool ::
+  ( DBFlow m r,
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
+  ) =>
+  Id ProductInstance.ProductInstance ->
+  m [Id Driver]
+getDriverPool piId =
+  Redis.getKeyRedis (driverPoolKey piId)
+    >>= maybe calcDriverPool (pure . map Id)
+  where
+    calcDriverPool = do
+      prodInst <- QProductInstance.findById piId >>= fromMaybeM PIDoesNotExist
+      case_ <- Case.findById (prodInst.caseId) >>= fromMaybeM CaseNotFound
+      vehicleVariant :: SV.Variant <-
+        (case_.udf1 >>= readMaybe . T.unpack)
+          & fromMaybeM (CaseFieldNotPresent "udf1")
+      pickupPoint <-
+        prodInst.fromLocation
+          & fromMaybeM (PIFieldNotPresent "location_id")
+      let orgId = prodInst.organizationId
+      map fst <$> calculateDriverPool pickupPoint orgId vehicleVariant
+
+setDriverPool :: DBFlow m r => Id ProductInstance.ProductInstance -> [Id Driver] -> m ()
+setDriverPool piId ids =
+  Redis.setExRedis (driverPoolKey piId) (map getId ids) (60 * 10)
+
+calculateDriverPool ::
+  ( DBFlow m r,
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
+  ) =>
+  Id SSReqLoc.SearchReqLocation ->
+  Id Organization.Organization ->
+  SV.Variant ->
+  m [(Id Driver, Double)]
+calculateDriverPool locId orgId variant = do
+  location <- QSReqLoc.findLocationById locId >>= fromMaybeM LocationNotFound
+  let lat = location.lat
+      long = location.long
+  radius <- getRadius
+  measuringDurationToLog INFO "calculateDriverPool" $
+    QP.getNearestDrivers
+      (LatLong lat long)
+      radius
+      orgId
+      variant
+  where
+    getRadius =
+      QTConf.findValueByOrgIdAndKey orgId (STConf.ConfigKey "radius")
+        >>= maybe
+          (fromIntegral <$> asks (.defaultRadiusOfSearch))
+          radiusFromTransporterConfig
+    radiusFromTransporterConfig conf =
+      fromMaybeM (InternalError "The radius is not a number.")
+        . readMaybe
+        . toString
+        $ conf.value
 
 mkOrderCase :: MonadFlow m => Case.Case -> m Case.Case
 mkOrderCase Case.Case {..} = do

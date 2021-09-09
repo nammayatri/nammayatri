@@ -20,15 +20,15 @@ import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
+import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
-import qualified Product.Person as Person
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Products as SProduct
 import qualified Storage.Queries.SearchReqLocation as Loc
 import qualified Test.RandomStrings as RS
-import qualified Types.API.Case as APICase
+import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics, HasBPPMetrics)
 import qualified Types.Storage.Case as Case
@@ -160,7 +160,7 @@ onSearchCallback productCase transporter fromLocation toLocation searchMetricsMV
   vehicleVariant <-
     (productCase.udf1 >>= readMaybe . T.unpack)
       & fromMaybeM (CaseFieldNotPresent "udf1")
-  pool <- Person.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
+  pool <- Confirm.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId . fst <$> pool) |+ ""
   let piStatus =
@@ -249,18 +249,18 @@ mkOnSearchPayload productCase productInstances transporterOrg = do
     >>= ExternalAPITransform.mkCatalog productCase productInstances
     <&> API.OnSearchServices
 
-mkProviderInfo :: Org.Organization -> APICase.ProviderStats -> APICase.ProviderInfo
+mkProviderInfo :: Org.Organization -> Common.ProviderStats -> Common.ProviderInfo
 mkProviderInfo org stats =
-  APICase.ProviderInfo
+  Common.ProviderInfo
     { id = getId $ org.id,
       name = org.name,
       stats = encodeToText stats,
       contacts = fromMaybe "" (org.mobileNumber)
     }
 
-mkProviderStats :: [(ProductInstance.ProductInstanceStatus, Int)] -> APICase.ProviderStats
+mkProviderStats :: [(ProductInstance.ProductInstanceStatus, Int)] -> Common.ProviderStats
 mkProviderStats piCount =
-  APICase.ProviderStats
+  Common.ProviderStats
     { completed = List.lookup ProductInstance.COMPLETED piCount,
       inprogress = List.lookup ProductInstance.INPROGRESS piCount,
       confirmed = List.lookup ProductInstance.CONFIRMED piCount

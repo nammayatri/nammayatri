@@ -1,14 +1,17 @@
 module Services.Allocation.Internal where
 
 import App.BackgroundTaskManager.Types (DriverAllocationConfig)
+import Beckn.External.Encryption (decrypt)
+import qualified Beckn.External.FCM.Types as FCM
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
-import qualified Product.Person as Person
-import qualified Product.ProductInstance as PI
+import qualified Product.BecknProvider.Confirm as Confirm
 import Services.Allocation.Allocation as Alloc
+import qualified Storage.Queries.Allocation as QA
 import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
@@ -16,6 +19,7 @@ import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as QPI
 import qualified Storage.Queries.RideRequest as QRR
+import qualified Storage.Queries.Vehicle as QVeh
 import Types.App
 import Types.Error
 import Types.Metrics (CoreMetrics)
@@ -28,6 +32,7 @@ import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.Notifications
+import qualified Utils.Notifications as Notify
 
 getDriverSortMode :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m SortMode
 getDriverSortMode = asks (.driverAllocationConfig.defaultSortMode)
@@ -39,7 +44,7 @@ getConfiguredAllocationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: Dri
 getConfiguredAllocationTime = asks (.driverAllocationConfig.rideAllocationExpiry)
 
 getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]) => Id Ride -> m [Id Driver]
-getDriverPool rideId = Person.getDriverPool (cast rideId)
+getDriverPool rideId = Confirm.getDriverPool (cast rideId)
 
 getRequests :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest]
 getRequests shortOrgId numRequests = do
@@ -59,7 +64,43 @@ assignDriver ::
   Id Ride ->
   Id Driver ->
   m ()
-assignDriver rideId = PI.assignDriver (cast rideId)
+assignDriver rideId driverId = do
+  ordPi <- QPI.findById orderPIId >>= fromMaybeM PIDoesNotExist
+  searchPIId <- ordPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  searchPi <- QPI.findById searchPIId >>= fromMaybeM PINotFound
+  piList <-
+    ordPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+      >>= QPI.findAllByParentId
+  headPi <- case piList of
+    p : _ -> pure p
+    [] -> throwError PIDoesNotExist
+  driver <-
+    QP.findPersonById (cast driverId)
+      >>= fromMaybeM PersonDoesNotExist
+  vehicleId <-
+    driver.udf1
+      & fromMaybeM (PersonFieldNotPresent "udf1 - vehicle")
+      <&> Id
+  vehicle <-
+    QVeh.findVehicleById vehicleId
+      >>= fromMaybeM VehicleNotFound
+  let piIdList = PI.id <$> piList
+  decDriver <- decrypt driver
+  DB.runSqlDBTransaction (QA.assignDriver piIdList vehicle decDriver)
+
+  fork "assignDriver - Notify BAP" $ do
+    BP.notifyUpdateToBAP searchPi ordPi PI.TRIP_ASSIGNED
+    Notify.notifyDriver notificationType notificationTitle (message headPi) driver.id driver.deviceToken
+  where
+    orderPIId = cast rideId
+    notificationType = FCM.DRIVER_ASSIGNMENT
+    notificationTitle = "Driver has been assigned the ride!"
+    message p' =
+      unwords
+        [ "You have been assigned a ride for",
+          showTimeIst (PI.startTime p') <> ".",
+          "Check the app for more details."
+        ]
 
 toRideRequest :: SRR.RideRequest -> Either Text Alloc.RideRequest
 toRideRequest req =

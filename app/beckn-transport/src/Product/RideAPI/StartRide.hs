@@ -7,7 +7,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import EulerHS.Prelude hiding (id)
-import Product.ProductInstance (notifyUpdateToBAP)
+import Product.BecknProvider.BP
 import qualified Product.RideAPI.Handlers.StartRide as Handler
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Person as QPerson

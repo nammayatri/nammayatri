@@ -21,7 +21,7 @@ import Beckn.Types.Mobility.Order as Mobility
 import Beckn.Types.Mobility.Trip
 import Beckn.Types.Mobility.Vehicle as BVehicle
 import EulerHS.Prelude
-import Types.API.Case
+import Types.Common
 import Types.Storage.Case
 import Types.Storage.Organization as Organization
 import Types.Storage.Person as Person

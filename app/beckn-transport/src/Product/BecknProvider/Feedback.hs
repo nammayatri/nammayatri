@@ -9,7 +9,7 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
-import qualified Product.Person as Person
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.ProductInstance as ProductInstance
 import qualified Storage.Queries.Rating as Rating
 import Types.Error
@@ -52,8 +52,25 @@ feedback _ _ req = withFlowHandlerBecknAPI $
         logTagInfo "FeedbackAPI" $
           "Updating existing rating for " +|| orderPI.id ||+ " with new rating " +|| ratingValue ||+ "."
         Rating.updateRatingValue rating.id driverId ratingValue
-    Person.calculateAverageRating driverId
+    calculateAverageRating driverId
     return Ack
+
+calculateAverageRating ::
+  (DBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
+  Id SP.Person ->
+  m ()
+calculateAverageRating personId = do
+  logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
+  allRatings <- Rating.findAllRatingsForPerson personId
+  let ratingsSum :: Double = fromIntegral $ sum (allRatings <&> (.ratingValue))
+  let ratingCount = length allRatings
+  when (ratingCount == 0) $
+    logTagInfo "PersonAPI" "No rating found to calculate"
+  minimumDriverRatesCount <- asks (.minimumDriverRatesCount)
+  when (ratingCount >= minimumDriverRatesCount) $ do
+    let newAverage = ratingsSum / fromIntegral ratingCount
+    logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
+    QP.updateAverageRating personId newAverage
 
 mkRating :: MonadFlow m => Id ProductInstance.ProductInstance -> Id SP.Person -> Int -> m Rating.Rating
 mkRating productInstanceId driverId ratingValue = do

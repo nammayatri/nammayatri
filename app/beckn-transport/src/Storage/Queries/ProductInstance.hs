@@ -14,13 +14,11 @@ import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.SearchReqLocation as Loc
-import Types.API.ProductInstance
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import qualified Types.Storage.ProductInstance as Storage
-import Types.Storage.Products
 import qualified Types.Storage.Products as Product
 import qualified Types.Storage.SearchReqLocation as Loc
 import Types.Storage.Vehicle (Vehicle)
@@ -256,91 +254,6 @@ complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool
 complementVal l
   | null l = B.val_ True
   | otherwise = B.val_ False
-
-productInstancejoinQuery ::
-  ( B.Database be db,
-    B.HasSqlEqualityCheck be (Id Case.Case),
-    B.HasSqlEqualityCheck be (Id Product)
-  ) =>
-  B.DatabaseEntity be db (B.TableEntity Case.CaseT) ->
-  B.DatabaseEntity be db (B.TableEntity ProductsT) ->
-  B.DatabaseEntity be db (B.TableEntity Storage.ProductInstanceT) ->
-  (Case.CaseT (B.QExpr be s) -> B.QExpr be s Bool) ->
-  (ProductsT (B.QExpr be s) -> B.QExpr be s Bool) ->
-  (Storage.ProductInstanceT (B.QExpr be s) -> B.QExpr be s Bool) ->
-  B.Q
-    be
-    db
-    s
-    ( Case.CaseT (B.QExpr be s),
-      ProductsT (B.QExpr be s),
-      Storage.ProductInstanceT (B.QExpr be s)
-    )
-productInstancejoinQuery tbl1 tbl2 tbl3 pred1 pred2 pred3 = do
-  i <- B.filter_ pred1 $ B.all_ tbl1
-  j <- B.filter_ pred2 $ B.all_ tbl2
-  k <- B.filter_ pred3 $
-    B.join_ tbl3 $
-      \line ->
-        Case.CasePrimaryKey (Storage.caseId line) B.==. B.primaryKey i
-          B.&&. ProductsPrimaryKey (Storage.productId line) B.==. B.primaryKey j
-  pure (i, j, k)
-
-productInstanceJoin :: DBFlow m r => Int -> Int -> [Case.CaseType] -> Id Org.Organization -> [Storage.ProductInstanceStatus] -> m ProductInstanceList
-productInstanceJoin limit_ offset_ csTypes orgId status_ = do
-  dbTable <- getDbTable
-  prodTable <- getProdTable
-  csTable <- getCsTable
-  joinedValues <-
-    DB.findAllByJoin
-      (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc)
-      (productInstancejoinQuery csTable prodTable dbTable csPred prodPred piPred)
-  return $ mkJoinRes <$> joinedValues
-  where
-    limit = toInteger limit_
-    offset = toInteger offset_
-    orderByDesc (_, _, Storage.ProductInstance {..}) = B.desc_ createdAt
-    csPred Case.Case {..} =
-      _type `B.in_` (B.val_ <$> csTypes) ||. complementVal csTypes
-    prodPred Product.Products {..} = B.val_ True
-    piPred Storage.ProductInstance {..} =
-      organizationId ==. B.val_ orgId
-        &&. (status `B.in_` (B.val_ <$> status_) ||. complementVal status_)
-    mkJoinRes (cs, pr, cpr) =
-      ProductInstanceRes
-        { _case = cs,
-          product = pr,
-          productInstance = cpr,
-          fromLocation = Nothing,
-          toLocation = Nothing
-        }
-
-productInstanceJoinWithoutLimits :: DBFlow m r => Case.CaseType -> Id Org.Organization -> [Storage.ProductInstanceStatus] -> m ProductInstanceList
-productInstanceJoinWithoutLimits csType orgId status_ = do
-  dbTable <- getDbTable
-  csTable <- getCsTable
-  prodTable <- getProdTable
-  joinedValues <-
-    DB.findAllByJoin
-      (B.orderBy_ orderByDesc)
-      (productInstancejoinQuery csTable prodTable dbTable csPred prodPred cprPred)
-  return $ mkJoinRes <$> joinedValues
-  where
-    orderByDesc (_, _, Storage.ProductInstance {..}) = B.desc_ createdAt
-    csPred Case.Case {..} =
-      _type ==. B.val_ csType
-    prodPred Product.Products {..} = B.val_ True
-    cprPred Storage.ProductInstance {..} =
-      organizationId ==. B.val_ orgId
-        &&. (status `B.in_` (B.val_ <$> status_) ||. complementVal status_)
-    mkJoinRes (cs, pr, cpr) =
-      ProductInstanceRes
-        { _case = cs,
-          product = pr,
-          productInstance = cpr,
-          fromLocation = Nothing,
-          toLocation = Nothing
-        }
 
 findById :: DBFlow m r => Id Storage.ProductInstance -> m (Maybe Storage.ProductInstance)
 findById pid = do

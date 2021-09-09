@@ -7,8 +7,8 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
+import Product.BecknProvider.BP
 import qualified Product.FareCalculator.Interpreter as Fare
-import Product.ProductInstance as PI
 import qualified Product.RideAPI.Handlers.EndRide as Handler
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.DriverInformation as DriverInformation
@@ -32,7 +32,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
           findPIById = PI.findById',
           findAllPIByParentId = PI.findAllByParentId,
           findCaseByIdAndType = Case.findByIdType,
-          notifyUpdateToBAP = PI.notifyUpdateToBAP,
+          notifyUpdateToBAP = notifyUpdateToBAP,
           endRideTransaction,
           calculateFare = \orgId vehicleVariant distance -> Fare.calculateFare orgId vehicleVariant (Right distance),
           recalculateFareEnabled = asks (.recalculateFareEnabled),

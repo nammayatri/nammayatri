@@ -307,3 +307,70 @@ mkRideReq prodInstID shortOrgId rideRequestType = do
         _type = rideRequestType,
         info = Nothing
       }
+
+notifyUpdateToBAP ::
+  ( DBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  ProductInstance.ProductInstance ->
+  ProductInstance.ProductInstance ->
+  ProductInstance.ProductInstanceStatus ->
+  m ()
+notifyUpdateToBAP searchPi orderPi updatedStatus = do
+  -- Send callbacks to BAP
+  transporter <-
+    Organization.findOrganizationById searchPi.organizationId
+      >>= fromMaybeM OrgNotFound
+  notifyTripDetailsToGateway transporter searchPi orderPi
+  notifyStatusUpdateReq transporter searchPi updatedStatus
+
+notifyTripDetailsToGateway ::
+  ( DBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  Organization.Organization ->
+  ProductInstance.ProductInstance ->
+  ProductInstance.ProductInstance ->
+  m ()
+notifyTripDetailsToGateway transporter searchPi orderPi = do
+  trackerCaseMb <- QCase.findByParentCaseIdAndType (searchPi.caseId) Case.LOCATIONTRACKER
+  whenJust trackerCaseMb $ \trackerCase ->
+    notifyTripInfoToGateway orderPi (trackerCase.id) transporter (searchPi.caseId)
+
+notifyStatusUpdateReq ::
+  ( DBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  Organization.Organization ->
+  ProductInstance.ProductInstance ->
+  ProductInstance.ProductInstanceStatus ->
+  m ()
+notifyStatusUpdateReq transporterOrg searchPi status = do
+  case status of
+    ProductInstance.CANCELLED -> do
+      admins <- getAdmins
+      notifyCancelToGateway searchPi transporterOrg Mobility.ByOrganization
+      Notify.notifyCancelReqByBP searchPi admins
+    ProductInstance.TRIP_REASSIGNMENT -> do
+      admins <- getAdmins
+      Notify.notifyDriverCancelledRideRequest searchPi admins
+      notifyStatusToGateway
+    _ -> notifyStatusToGateway
+  where
+    getAdmins = do
+      if transporterOrg.enabled
+        then Person.findAllByOrgId [Person.ADMIN] searchPi.organizationId
+        else pure []
+    notifyStatusToGateway = do
+      trackerPi <-
+        ProductInstance.findByParentIdType (searchPi.id) Case.LOCATIONTRACKER
+          >>= fromMaybeM PINotFound
+      notifyServiceStatusToGateway transporterOrg searchPi trackerPi

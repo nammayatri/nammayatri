@@ -19,13 +19,9 @@ import Product.BecknProvider.Feedback as BP
 import Product.BecknProvider.Search as BP
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
-import qualified Product.Case as Case
 import qualified Product.Driver as Driver
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
-import qualified Product.Person as Person
-import qualified Product.ProductInstance as ProductInstance
-import qualified Product.Products as Product
 import qualified Product.Registration as Registration
 import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
 import qualified Product.RideAPI.EndRide as RideAPI.EndRide
@@ -36,19 +32,14 @@ import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
 import qualified Types.API.CancellationReason as CancellationReasonAPI
-import Types.API.Case
 import qualified Types.API.Driver as DriverAPI
 import Types.API.Location as Location
 import qualified Types.API.OrgAdmin as OrgAdminAPI
-import Types.API.Person
-import Types.API.ProductInstance
-import Types.API.Products
 import Types.API.Registration
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.RideBooking as RideBookingAPI
 import Types.API.Transporter
 import Types.API.Vehicle
-import Types.Storage.Case
 import Types.Storage.Organization (Organization)
 import Types.Storage.Person as SP
 import Types.Storage.ProductInstance
@@ -65,12 +56,8 @@ type TransportAPI =
            :<|> OrganizationAPI --Transporter
            :<|> RideBookingAPI
            :<|> FarePolicyAPI
-           :<|> PersonAPI
            :<|> OrgBecknAPI
-           :<|> CaseAPI
-           :<|> ProductInstanceAPI
            :<|> LocationAPI
-           :<|> ProductAPI
            :<|> CallAPIs
            :<|> RouteAPI
            :<|> RideAPI
@@ -262,86 +249,6 @@ rideBookingFlow =
                :<|> RideBooking.getRideInfo rideBookingId
          )
 
--- Following is person flow
-type PersonAPI =
-  "driver" :> "profile"
-    :> ( TokenAuth
-           :> Get '[JSON] GetPersonDetailsRes
-           :<|> TokenAuth
-             :> "update"
-             :> ReqBody '[JSON] UpdatePersonReq
-             :> Post '[JSON] UpdatePersonRes
-           :<|> AdminTokenAuth
-             :> Capture "personId" (Id Person)
-             :> Delete '[JSON] DeletePersonRes
-       )
-
-personFlow :: FlowServer PersonAPI
-personFlow =
-  Person.getPersonDetails
-    :<|> Person.updatePerson
-    :<|> Person.deletePerson
-
------------------------------
--------- Case Flow----------
-type CaseAPI =
-  "case"
-    :> ( TokenAuth
-           :> QueryParams "status" CaseStatus
-           :> MandatoryQueryParam "type" CaseType
-           :> QueryParam "limit" Int
-           :> QueryParam "offset" Int
-           :> Get '[JSON] CaseListRes
-       )
-
-caseFlow :: FlowServer CaseAPI
-caseFlow = Case.list
-
--------- ProductInstance Flow----------
-type ProductInstanceAPI =
-  "productInstance"
-    :> ( TokenAuth
-           :> QueryParams "status" ProductInstanceStatus
-           :> QueryParams "type" CaseType
-           :> QueryParam "limit" Int
-           :> QueryParam "offset" Int
-           :> Get '[JSON] ProductInstanceList
-           :<|> "person"
-           :> TokenAuth
-           :> Capture "personId" (Id Person)
-           :> QueryParam "limit" Integer
-           :> QueryParam "offset" Integer
-           :> Get '[JSON] RideListRes
-           :<|> "vehicle"
-           :> TokenAuth
-           :> Capture "vehicleId" (Id Vehicle)
-           :> Get '[JSON] RideListRes
-           :<|> TokenAuth
-           :> Capture "productInstanceId" (Id ProductInstance)
-           :> "cases"
-           :> QueryParam "type" CaseType
-           :> Get '[JSON] CaseListRes
-       )
-
-productInstanceFlow :: FlowServer ProductInstanceAPI
-productInstanceFlow =
-  ProductInstance.list
-    :<|> ProductInstance.listDriverRides
-    :<|> ProductInstance.listVehicleRides
-    :<|> ProductInstance.listCasesByProductInstance
-
--------- Product Flow----------
-type ProductAPI =
-  "product"
-    :> ( AdminTokenAuth
-           :> ReqBody '[JSON] CreateProdReq
-           :> Post '[JSON] ProdRes
-       )
-
-productFlow :: FlowServer ProductAPI
-productFlow =
-  Product.createProduct
-
 -- Location update and get for tracking is as follows
 type LocationAPI =
   "driver" :> "location"
@@ -372,12 +279,8 @@ transporterServer =
     :<|> organizationFlow
     :<|> rideBookingFlow
     :<|> farePolicyFlow
-    :<|> personFlow
     :<|> orgBecknApiFlow
-    :<|> caseFlow
-    :<|> productInstanceFlow
     :<|> locationFlow
-    :<|> productFlow
     :<|> callFlow
     :<|> routeApiFlow
     :<|> rideFlow

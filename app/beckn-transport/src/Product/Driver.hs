@@ -15,6 +15,8 @@ import qualified App.Types as App
 import Beckn.External.Encryption (decrypt, encrypt)
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.MyValueFirst.Flow as SF
+import qualified Beckn.External.MyValueFirst.Types as SMS
+import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -23,7 +25,6 @@ import Beckn.Types.Id
 import Beckn.Utils.Validation
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
-import Product.Person (sendInviteSms)
 import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -32,6 +33,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Types.API.Driver as DriverAPI
 import Types.Error
+import Types.Metrics
 import Types.Storage.DriverInformation (DriverInformation, DriverInformationT (createdAt))
 import qualified Types.Storage.DriverInformation as DriverInfo
 import qualified Types.Storage.Organization as Org
@@ -202,6 +204,29 @@ updateDriver personId req = withFlowHandlerAPI $ do
     QOrganization.findOrganizationById orgId
       >>= fromMaybeM OrgNotFound
   return $ makeDriverInformationRes driverEntity org
+
+sendInviteSms ::
+  ( DBFlow m r,
+    CoreMetrics m
+  ) =>
+  SmsConfig ->
+  Text ->
+  Text ->
+  Text ->
+  m SMS.SubmitSmsRes
+sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
+  let url = smsCfg.url
+  let smsCred = smsCfg.credConfig
+  let sender = smsCfg.sender
+  SF.submitSms
+    url
+    SMS.SubmitSms
+      { SMS.username = smsCred.username,
+        SMS.password = smsCred.password,
+        SMS.from = sender,
+        SMS.to = phoneNumber,
+        SMS.text = SF.constructInviteSms orgName inviteTemplate
+      }
 
 buildDriver :: (DBFlow m r, EncFlow m r) => DriverAPI.CreatePerson -> Id Org.Organization -> m SP.Person
 buildDriver req orgId = do

@@ -14,12 +14,9 @@ import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client
 import qualified Types.API.Cancel as CancelAPI
-import qualified "beckn-transport" Types.API.Case as TbeCase
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified "beckn-transport" Types.API.Driver as DriverAPI
 import qualified "app-backend" Types.API.Feedback as AppFeedback
-import qualified "beckn-transport" Types.API.Person as TbePerson
-import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified Types.API.Quote as QuoteAPI
 import qualified "app-backend" Types.API.Registration as Reg
 import qualified "beckn-transport" Types.API.Ride as RideAPI
@@ -30,12 +27,9 @@ import qualified "app-backend" Types.API.Serviceability as AppServ
 import qualified "app-backend" Types.Common as AppCommon
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
 import qualified "app-backend" Types.Storage.Case as BCase
-import qualified "beckn-transport" Types.Storage.Case as TCase
-import qualified "beckn-transport" Types.Storage.Person as TPerson
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
 import qualified "app-backend" Types.Storage.SearchReqLocation as AppBESearchReqLoc
-import qualified Types.Storage.Vehicle as SV
 
 address :: AppCommon.Address
 address =
@@ -182,18 +176,6 @@ callAppFeedback ratingValue productInstanceId =
           }
    in appFeedback appRegistrationToken request
 
-listLeads :: Text -> [TCase.CaseStatus] -> TCase.CaseType -> Maybe Int -> Maybe Int -> ClientM [TbeCase.CaseRes]
-listLeads = client (Proxy :: Proxy TbeRoutes.CaseAPI)
-
-buildListLeads :: ClientM [TbeCase.CaseRes]
-buildListLeads = listLeads appRegistrationToken [TCase.NEW] TCase.RIDESEARCH (Just 50) Nothing
-
-listOrgRides :: Text -> [TPI.ProductInstanceStatus] -> [TCase.CaseType] -> Maybe Int -> Maybe Int -> ClientM TbePI.ProductInstanceList
-listDriverRides :: Text -> Id TPerson.Person -> Maybe Integer -> Maybe Integer -> ClientM TbePI.RideListRes
-listVehicleRides :: Text -> Id SV.Vehicle -> ClientM TbePI.RideListRes
-listCasesByProductInstance :: Text -> Id TPI.ProductInstance -> Maybe TCase.CaseType -> ClientM [TbeCase.CaseRes]
-listOrgRides :<|> listDriverRides :<|> listVehicleRides :<|> listCasesByProductInstance = client (Proxy :: Proxy TbeRoutes.ProductInstanceAPI)
-
 tRideBookingStatus :: Id TPI.ProductInstance -> Text -> ClientM TRideBookingAPI.RideBookingStatusRes
 tRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM TRideBookingAPI.RideBookingListRes
 (tRideBookingStatus :<|> tRideBookingList :<|> _) :<|> _ = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
@@ -201,19 +183,6 @@ tRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Clie
 appRideBookingStatus :: Id BPI.ProductInstance -> Text -> ClientM AppRideBooking.RideBookingStatusRes
 appRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppRideBooking.RideBookingListRes
 appRideBookingStatus :<|> appRideBookingList = client (Proxy :: Proxy AbeRoutes.RideBookingAPI)
-
-updatePerson :: Text -> TbePerson.UpdatePersonReq -> ClientM TbePerson.UpdatePersonRes
-deletePerson :: Text -> Id TPerson.Person -> ClientM TbePerson.DeletePersonRes
-_
-  :<|> updatePerson
-  :<|> deletePerson = client (Proxy :: Proxy TbeRoutes.PersonAPI)
-
-buildUpdateCaseReq :: TbeCase.UpdateCaseReq
-buildUpdateCaseReq =
-  TbeCase.UpdateCaseReq
-    { quote = Just 150.50,
-      transporterChoice = "ACCEPTED"
-    }
 
 buildStartRideReq :: Text -> RideAPI.StartRideReq
 buildStartRideReq otp =
@@ -231,8 +200,8 @@ destinationServiceability regToken = destination
   where
     _ :<|> destination = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
-buildOrgRideReq :: TPI.ProductInstanceStatus -> TCase.CaseType -> ClientM TbePI.ProductInstanceList
-buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csType] (Just 50) Nothing
+-- buildOrgRideReq :: TPI.ProductInstanceStatus -> TCase.CaseType -> ClientM TbePI.ProductInstanceList
+-- buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csType] (Just 50) Nothing
 
 appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"

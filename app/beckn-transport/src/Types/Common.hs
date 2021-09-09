@@ -19,3 +19,18 @@ data Address = Address
     state :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+data ProviderInfo = ProviderInfo
+  { id :: Text,
+    name :: Text,
+    stats :: Text,
+    contacts :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+data ProviderStats = ProviderStats
+  { completed :: Maybe Int,
+    inprogress :: Maybe Int,
+    confirmed :: Maybe Int
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
