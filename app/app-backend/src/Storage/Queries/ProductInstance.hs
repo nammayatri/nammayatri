@@ -69,11 +69,11 @@ findByProductId pId = do
       productId ==. B.val_ pId
 
 findAllOrdersByPerson :: DBFlow m r => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.ProductInstance]
-findAllOrdersByPerson perId mbLimit mbOffset mbIsOnlyActive = do
+findAllOrdersByPerson perId mbLimit mbOffset mbOnlyActive = do
   dbTable <- getDbTable
   let limit = fromMaybe 100 mbLimit
       offset = fromMaybe 0 mbOffset
-      isOnlyActive = Just True == mbIsOnlyActive
+      isOnlyActive = Just True == mbOnlyActive
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset) $ predicate isOnlyActive
   where
     predicate isOnlyActive Storage.ProductInstance {..} =

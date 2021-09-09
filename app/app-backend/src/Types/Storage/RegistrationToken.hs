@@ -5,6 +5,7 @@
 
 module Types.Storage.RegistrationToken where
 
+import Beckn.Types.Id
 import Data.Aeson
 import Data.Swagger hiding (info)
 import qualified Data.Text as T
@@ -48,7 +49,7 @@ instance FromBackendRow Postgres LoginType where
   fromBackendRow = read . T.unpack <$> fromBackendRow
 
 data RegistrationTokenT f = RegistrationToken
-  { id :: B.C f Text,
+  { id :: B.C f (Id RegistrationToken),
     token :: B.C f Text,
     attempts :: B.C f Int,
     authMedium :: B.C f Medium,
@@ -72,7 +73,7 @@ type RegistrationTokenPrimaryKey = B.PrimaryKey RegistrationTokenT Identity
 {-# ANN module ("HLint: ignore Redundant id" :: String) #-}
 
 instance B.Table RegistrationTokenT where
-  data PrimaryKey RegistrationTokenT f = RegistrationTokenPrimaryKey (B.C f Text)
+  data PrimaryKey RegistrationTokenT f = RegistrationTokenPrimaryKey (B.C f (Id RegistrationToken))
     deriving (Generic, B.Beamable)
   primaryKey = RegistrationTokenPrimaryKey . id
 

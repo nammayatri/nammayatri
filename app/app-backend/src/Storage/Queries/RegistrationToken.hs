@@ -26,7 +26,7 @@ create Storage.RegistrationToken {..} = do
   dbTable <- getDbTable
   DB.createOne' dbTable (Storage.insertValue Storage.RegistrationToken {..})
 
-findById :: DBFlow m r => Text -> m (Maybe Storage.RegistrationToken)
+findById :: DBFlow m r => Id Storage.RegistrationToken -> m (Maybe Storage.RegistrationToken)
 findById rtId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
@@ -44,7 +44,7 @@ setVerified :: Id Storage.RegistrationToken -> DB.SqlDB ()
 setVerified rtId = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update' dbTable (setClause now) (predicate $ getId rtId)
+  DB.update' dbTable (setClause now) (predicate rtId)
   where
     setClause currTime Storage.RegistrationToken {..} =
       mconcat
@@ -53,12 +53,12 @@ setVerified rtId = do
         ]
     predicate rtid Storage.RegistrationToken {..} = id ==. B.val_ rtid
 
-updateAttempts :: DBFlow m r => Int -> Text -> m Storage.RegistrationToken
+updateAttempts :: DBFlow m r => Int -> Id Storage.RegistrationToken -> m Storage.RegistrationToken
 updateAttempts attemps rtId = do
   dbTable <- getDbTable
   now <- getCurrentTime
   DB.update dbTable (setClause attemps now) (predicate rtId)
-  findById rtId >>= fromMaybeM (TokenNotFound rtId)
+  findById rtId >>= fromMaybeM (TokenNotFound $ getId rtId)
   where
     predicate i Storage.RegistrationToken {..} = id ==. B.val_ i
     setClause a n Storage.RegistrationToken {..} =
@@ -72,12 +72,12 @@ deleteByPersonId (Id personId) = do
     predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid
 
 deleteByPersonIdExceptNew :: DBFlow m r => Text -> Id Storage.RegistrationToken -> m ()
-deleteByPersonIdExceptNew id_ (Id newRT) = do
+deleteByPersonIdExceptNew personId newRT = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate id_ newRT)
+  DB.delete dbTable (predicate personId newRT)
   where
-    predicate rtid newRTId Storage.RegistrationToken {..} =
-      entityId ==. B.val_ rtid
+    predicate personId_ newRTId Storage.RegistrationToken {..} =
+      entityId ==. B.val_ personId_
         B.&&. B.not_ (id B.==. B.val_ newRTId)
 
 findAllByPersonId :: DBFlow m r => Id SP.Person -> m [Storage.RegistrationToken]

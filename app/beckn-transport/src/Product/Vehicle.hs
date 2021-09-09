@@ -22,7 +22,8 @@ createVehicle admin req = withFlowHandlerAPI $ do
   validateVehicle
   vehicle <- API.createVehicle req orgId
   QV.createFlow vehicle
-  return $ CreateVehicleRes vehicle
+  vehAPIEntity <- SV.buildVehicleAPIEntity vehicle
+  return $ CreateVehicleRes vehAPIEntity
   where
     validateVehicle = do
       mVehicle <- QV.findByRegistrationNo $ req.registrationNo
@@ -34,7 +35,7 @@ listVehicles admin variantM categoryM energyTypeM mbRegNum limitM offsetM = with
   let Just orgId = admin.organizationId
   personList <- QP.findAllByOrgId [SP.DRIVER] orgId
   vehicleList <- QV.findAllByVariantCatOrgId variantM categoryM energyTypeM mbRegNum limit offset orgId
-  let respList = mkVehicleRes personList <$> vehicleList
+  respList <- buildVehicleRes personList `traverse` vehicleList
   return $ ListVehicleRes respList
   where
     limit = toInteger $ fromMaybe Default.limit limitM
@@ -46,13 +47,13 @@ updateVehicle admin vehicleId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdateVehicleReq req
   vehicle <- QV.findByIdAndOrgId vehicleId orgId >>= fromMaybeM VehicleDoesNotExist
   let updVehicle =
-        vehicle{model = if isJust req.model then req.model else vehicle.model,
-                color = if isJust req.color then req.color else vehicle.color,
-                variant = if isJust req.variant then req.variant else vehicle.variant,
-                category = if isJust req.category then req.category else vehicle.category
+        vehicle{model = req.model <|> vehicle.model,
+                color = req.color <|> vehicle.color,
+                variant = req.variant <|> vehicle.variant,
+                category = req.category <|> vehicle.category
                }
   QV.updateVehicleRec updVehicle
-  return $ SV.makeVehicleAPIEntity updVehicle
+  SV.buildVehicleAPIEntity vehicle
 
 deleteVehicle :: SP.Person -> Id SV.Vehicle -> FlowHandler DeleteVehicleRes
 deleteVehicle admin vehicleId = withFlowHandlerAPI $ do
@@ -75,7 +76,8 @@ getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
       QV.findByAnyOf registrationNoM vehicleIdM
         >>= fromMaybeM VehicleDoesNotExist
   hasAccess user vehicle
-  return $ CreateVehicleRes vehicle
+  vehAPIEntity <- SV.buildVehicleAPIEntity vehicle
+  return $ CreateVehicleRes vehAPIEntity
   where
     hasAccess user vehicle =
       when (user.organizationId /= Just (vehicle.organizationId)) $
@@ -84,18 +86,20 @@ getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
 addOrgId :: Id Org.Organization -> SV.Vehicle -> SV.Vehicle
 addOrgId orgId vehicle = vehicle {SV.organizationId = orgId}
 
-mkVehicleRes :: [SP.Person] -> SV.Vehicle -> VehicleRes
-mkVehicleRes personList vehicle =
+buildVehicleRes :: MonadFlow m => [SP.Person] -> SV.Vehicle -> m VehicleRes
+buildVehicleRes personList vehicle = do
   let mdriver =
         find
           ( \person ->
               person.udf1 == Just (getId $ vehicle.id)
           )
           personList
-   in VehicleRes
-        { vehicle = SV.makeVehicleAPIEntity vehicle,
-          driver = mkDriverObj <$> mdriver
-        }
+  vehAPIEntity <- SV.buildVehicleAPIEntity vehicle
+  return
+    VehicleRes
+      { vehicle = vehAPIEntity,
+        driver = mkDriverObj <$> mdriver
+      }
 
 mkDriverObj :: SP.Person -> Driver
 mkDriverObj person =

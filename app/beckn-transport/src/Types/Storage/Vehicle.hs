@@ -14,7 +14,9 @@ import Database.Beam.Backend
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
+import Types.Error (VehicleError (VehicleFieldNotPresent))
 import qualified Types.Storage.Organization as Org
+import Utils.Common
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -144,20 +146,27 @@ fieldEMod =
 
 data VehicleAPIEntity = VehicleAPIEntity
   { id :: Id Vehicle,
-    capacity :: Maybe Int,
-    category :: Maybe Category,
-    make :: Maybe Text,
-    model :: Maybe Text,
-    size :: Maybe Text,
-    variant :: Maybe Variant,
-    color :: Maybe Text,
+    category :: Category,
+    model :: Text,
+    variant :: Variant,
+    color :: Text,
     registrationNo :: Text,
+    capacity :: Int,
     createdAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
-makeVehicleAPIEntity :: Vehicle -> VehicleAPIEntity
-makeVehicleAPIEntity Vehicle {..} =
-  VehicleAPIEntity
-    { ..
-    }
+buildVehicleAPIEntity :: MonadFlow m => Vehicle -> m VehicleAPIEntity
+buildVehicleAPIEntity veh = do
+  category <- veh.category & fromMaybeM (VehicleFieldNotPresent "category")
+  model <- veh.model & fromMaybeM (VehicleFieldNotPresent "model")
+  variant <- veh.variant & fromMaybeM (VehicleFieldNotPresent "variant")
+  color <- veh.color & fromMaybeM (VehicleFieldNotPresent "color")
+  capacity <- veh.capacity & fromMaybeM (VehicleFieldNotPresent "capacity")
+  return
+    VehicleAPIEntity
+      { id = veh.id,
+        registrationNo = veh.registrationNo,
+        createdAt = veh.createdAt,
+        ..
+      }

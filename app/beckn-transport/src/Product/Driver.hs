@@ -123,6 +123,7 @@ buildDriverEntityRes :: (DBFlow m r, EncFlow m r) => (SP.Person, DriverInformati
 buildDriverEntityRes (person, driverInfo) = do
   vehicle <- traverse QVehicle.findVehicleById (Id <$> person.udf1) >>= fromMaybeM VehicleNotFound . join
   decMobNum <- decrypt person.mobileNumber
+  vehAPIEntity <- SV.buildVehicleAPIEntity vehicle
   return $
     DriverAPI.DriverEntityRes
       { id = person.id,
@@ -131,7 +132,7 @@ buildDriverEntityRes (person, driverInfo) = do
         lastName = person.lastName,
         maskedMobileNumber = maskText <$> decMobNum,
         rating = round <$> person.rating,
-        linkedVehicle = SV.makeVehicleAPIEntity vehicle,
+        linkedVehicle = vehAPIEntity,
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
@@ -268,7 +269,7 @@ buildVehicle req orgId = do
     SV.Vehicle
       { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
         SV.id = vid,
-        SV.capacity = Nothing,
+        SV.capacity = Just req.capacity,
         SV.category = Just req.category,
         SV.make = Nothing,
         SV.model = Just req.model,

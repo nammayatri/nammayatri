@@ -61,8 +61,8 @@ createVehicle req orgId = do
       }
 
 newtype CreateVehicleRes = CreateVehicleRes
-  {vehicle :: SV.Vehicle}
-  deriving (Generic, ToJSON, ToSchema)
+  {vehicle :: SV.VehicleAPIEntity}
+  deriving (Generic, ToJSON)
 
 newtype ListVehicleRes = ListVehicleRes
   {vehicles :: [VehicleRes]}

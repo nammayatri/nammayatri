@@ -38,9 +38,9 @@ rideBookingStatus rideBookingId _ = withFlowHandlerAPI $ do
   buildRideBookingStatusRes orderPI
 
 rideBookingList :: SP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> FlowHandler API.RideBookingListRes
-rideBookingList person mbLimit mbOffset mbIsOnlyActive = withFlowHandlerAPI $ do
+rideBookingList person mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
   let Just orgId = person.organizationId
-  orderPIList <- QPI.findAllOrdersByOrg orgId mbLimit mbOffset mbIsOnlyActive
+  orderPIList <- QPI.findAllOrdersByOrg orgId mbLimit mbOffset mbOnlyActive
   API.RideBookingListRes <$> traverse buildRideBookingStatusRes orderPIList
 
 rideBookingCancel ::
@@ -143,8 +143,8 @@ listDriverRides ::
   Maybe Integer ->
   Maybe Bool ->
   FlowHandler API.RideBookingListRes
-listDriverRides driverId mbLimit mbOffset mbIsOnlyActive = withFlowHandlerAPI $ do
-  orderPIList <- QPI.findAllOrdersByDriver driverId mbLimit mbOffset mbIsOnlyActive
+listDriverRides driverId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
+  orderPIList <- QPI.findAllOrdersByDriver driverId mbLimit mbOffset mbOnlyActive
   API.RideBookingListRes <$> traverse buildRideBookingStatusRes orderPIList
 
 buildRideBookingStatusRes :: (DBFlow m r, EncFlow m r) => SPI.ProductInstance -> m API.RideBookingStatusRes

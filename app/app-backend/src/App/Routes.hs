@@ -52,6 +52,7 @@ import qualified Types.API.Support as Support
 import Types.Geofencing
 import qualified Types.Storage.Case as Case hiding (status)
 import Types.Storage.ProductInstance
+import qualified Types.Storage.RegistrationToken as SRT
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
 type AppAPI =
@@ -107,12 +108,12 @@ type RegistrationAPI =
   "auth"
     :> ( ReqBody '[JSON] AuthReq
            :> Post '[JSON] AuthRes
-           :<|> Capture "authId" Text
+           :<|> Capture "authId" (Id SRT.RegistrationToken)
              :> "verify"
              :> ReqBody '[JSON] AuthVerifyReq
              :> Post '[JSON] AuthVerifyRes
            :<|> "otp"
-             :> Capture "authId" Text
+             :> Capture "authId" (Id SRT.RegistrationToken)
              :> "resend"
              :> Post '[JSON] ResendAuthRes
            :<|> "logout"

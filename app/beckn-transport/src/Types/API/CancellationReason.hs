@@ -1,12 +1,5 @@
 module Types.API.CancellationReason where
 
-import EulerHS.Prelude
-import Types.Storage.CancellationReason (CancellationReasonCode)
+import Types.Storage.CancellationReason (CancellationReasonAPIEntity)
 
-data CancellationReasonEntity = CancellationReasonEntity
-  { reasonCode :: CancellationReasonCode,
-    description :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-type ListRes = [CancellationReasonEntity]
+type ListRes = [CancellationReasonAPIEntity]

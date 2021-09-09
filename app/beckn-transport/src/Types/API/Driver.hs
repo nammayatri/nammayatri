@@ -104,7 +104,8 @@ data CreateVehicle = CreateVehicle
     model :: Text,
     variant :: Veh.Variant,
     color :: Text,
-    registrationNo :: Text
+    registrationNo :: Text,
+    capacity :: Int
   }
   deriving (Generic, FromJSON, ToJSON)
 

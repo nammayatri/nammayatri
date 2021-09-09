@@ -24,10 +24,10 @@ updateProfile :: SP.Person -> API.UpdateOrgAdminProfileReq -> FlowHandler API.Up
 updateProfile admin req = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
       updAdmin =
-        admin{firstName = if isJust req.firstName then req.firstName else admin.firstName,
-              middleName = if isJust req.middleName then req.middleName else admin.middleName,
-              lastName = if isJust req.lastName then req.lastName else admin.lastName,
-              deviceToken = if isJust req.deviceToken then req.deviceToken else admin.deviceToken
+        admin{firstName = req.firstName <|> admin.firstName,
+              middleName = req.middleName <|> admin.middleName,
+              lastName = req.lastName <|> admin.lastName,
+              deviceToken = req.deviceToken <|> admin.deviceToken
              }
   DB.runSqlDBTransaction $
     QPerson.updatePersonRec updAdmin.id updAdmin

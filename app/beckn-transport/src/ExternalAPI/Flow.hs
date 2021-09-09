@@ -105,4 +105,4 @@ initiateCall ::
   m ()
 initiateCall searchPIId = do
   url <- asks (.xAppUri)
-  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId searchPIId)) "/v2/ride/{rideId}/call/customer"
+  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId searchPIId)) "/v2/ride/{rideId}/call/rider"

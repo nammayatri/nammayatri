@@ -4,12 +4,12 @@ import Beckn.Types.Id
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
+import qualified "beckn-transport" Storage.Queries.ProductInstance as TQPI
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
-import qualified "beckn-transport" Types.Storage.Case as TCase
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
-import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import qualified "app-backend" Types.Storage.Ride as AppRide
+import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
 
 doAnAppSearch :: HasCallStack => ClientsM (Id BPI.ProductInstance, Id BPI.ProductInstance, TPI.ProductInstance)
@@ -42,23 +42,18 @@ doAnAppSearch = do
       appConfirmRide appRegistrationToken appSearchId bQuoteId
   let bRideBookingId = confirmResult.bookingId
 
-  transporterOrderPi <- pollBPPForOrgOrderPi (cast bQuoteId) TPI.CONFIRMED TCase.RIDEORDER
+  transporterOrderPi <- getBPPOrderPi (cast bQuoteId)
   transporterOrderPi.udf4 `shouldSatisfy` isJust
 
   return (bQuoteId, bRideBookingId, transporterOrderPi)
 
-pollBPPForOrgOrderPi ::
+getBPPOrderPi ::
   Id TPI.ProductInstance ->
-  TPI.ProductInstanceStatus ->
-  TCase.CaseType ->
   ClientsM TPI.ProductInstance
-pollBPPForOrgOrderPi searchPiId status type_ =
-  expectSingletonNE <=< poll $ do
-    -- List all confirmed rides (type = RIDEORDER)
-    callBPP (buildOrgRideReq status type_)
-      <&> map (.productInstance)
-      <&> filter (\pI -> pI.parentId == Just searchPiId) -- Filter order productInstance
-      <&> nonEmpty
+getBPPOrderPi searchPiId = do
+  mbTOrderPI <- liftIO $ runTransporterFlow "" $ TQPI.findOrderPIByParentId (cast searchPiId)
+  mbTOrderPI `shouldSatisfy` isJust
+  return $ fromJust mbTOrderPI
 
 spec :: Spec
 spec = do
@@ -79,8 +74,11 @@ spec = do
         rideRespond transporterOrderPiId driverToken $
           RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
 
-      tripAssignedPI <- pollBPPForOrgOrderPi (cast productInstanceId) TPI.TRIP_ASSIGNED TCase.RIDEORDER
-      tripAssignedPI.status `shouldBe` TPI.TRIP_ASSIGNED
+      void . poll $
+        getBPPOrderPi (cast productInstanceId)
+          <&> (.status)
+          >>= (`shouldBe` TPI.TRIP_ASSIGNED)
+          <&> Just
 
       void . callBPP $
         rideStart driverToken transporterOrderPiId $

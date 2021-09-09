@@ -14,7 +14,4 @@ import Utils.Common
 
 list :: Id Person.Person -> FlowHandler CancellationReasonAPI.ListRes
 list _ = withFlowHandlerAPI $ do
-  (toCancellationReasonEntity <$>) <$> QCR.findAll
-  where
-    toCancellationReasonEntity SCR.CancellationReason {..} =
-      CancellationReasonAPI.CancellationReasonEntity {..}
+  (SCR.makeCancellationReasonAPIEntity <$>) <$> QCR.findAll

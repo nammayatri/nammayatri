@@ -7,7 +7,7 @@ import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.Organization as SO
 
 newtype TransporterRec = TransporterRec
-  { organization :: SO.Organization
+  { organization :: SO.OrganizationAPIEntity
   }
   deriving (Generic, ToJSON)
 

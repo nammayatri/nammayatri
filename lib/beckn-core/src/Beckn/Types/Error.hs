@@ -119,21 +119,27 @@ instance IsAPIError AuthPIError
 data VehicleError
   = VehicleNotFound
   | VehicleDoesNotExist
+  | VehicleFieldNotPresent Text
   | VehicleAlreadyLinked
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''VehicleError
 
-instance IsBaseError VehicleError
+instance IsBaseError VehicleError where
+  toMessage = \case
+    VehicleFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this vehicle."
+    _ -> Nothing
 
 instance IsHTTPError VehicleError where
   toErrorCode = \case
     VehicleNotFound -> "VEHICLE_NOT_FOUND"
     VehicleDoesNotExist -> "VEHICLE_DOES_NOT_EXIST"
+    VehicleFieldNotPresent _ -> "VEHICLE_FIELD_NOT_PRESENT"
     VehicleAlreadyLinked -> "VEHICLE_ALREADY_LINKED"
   toHttpCode = \case
     VehicleNotFound -> E500
     VehicleDoesNotExist -> E400
+    VehicleFieldNotPresent _ -> E500
     VehicleAlreadyLinked -> E400
 
 instance IsAPIError VehicleError

@@ -22,6 +22,7 @@ import Types.Storage.Case as C
 import Types.Storage.Person as SP
 import Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RegistrationToken as SR
+import qualified Types.Storage.SearchReqLocation as SSearchLoc
 import Utils.Common
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
@@ -55,7 +56,7 @@ createSupportRegToken entityId = do
   now <- getCurrentTime
   return $
     SR.RegistrationToken
-      { id = rtid,
+      { id = Id rtid,
         token = token,
         attempts = 1, -- Token
         authMedium = SR.EMAIL,
@@ -118,14 +119,14 @@ makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
             updatedAt = updatedAt,
             startTime = startTime,
             endTime = endTime,
-            fromLocation = fromLocation,
-            toLocation = toLocation,
+            fromLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> fromLocation,
+            toLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> toLocation,
             travellerName = fullName,
             travellerPhone = decMobNum,
             vehicleVariant = udf1, -- Note: UDF1 Contain vehicleVariant info
             trip = trip
           }
-  pure $ T.OrderResp {_order = details}
+  pure $ T.OrderResp {order = details}
 
 makeTripDetails :: DBFlow m r => Maybe C.Case -> m (Maybe T.TripDetails)
 makeTripDetails caseM = case caseM of

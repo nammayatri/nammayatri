@@ -32,7 +32,7 @@ type CancellationReasonPrimaryKey = B.PrimaryKey CancellationReasonT Identity
 instance B.Table CancellationReasonT where
   data PrimaryKey CancellationReasonT f = CancellationReasonPrimaryKey (B.C f CancellationReasonCode)
     deriving (Generic, B.Beamable)
-  primaryKey = CancellationReasonPrimaryKey . reasonCode
+  primaryKey a = CancellationReasonPrimaryKey a.reasonCode
 
 instance ToJSON CancellationReason
 
@@ -43,6 +43,15 @@ fieldEMod ::
 fieldEMod =
   B.setEntityName "cancellation_reason"
     <> B.modifyTableFields
-      B.tableModification
-        { reasonCode = "reason_code"
-        }
+      B.tableModification{reasonCode = "reason_code"
+                         }
+
+data CancellationReasonAPIEntity = CancellationReasonAPIEntity
+  { reasonCode :: CancellationReasonCode,
+    description :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+makeCancellationReasonAPIEntity :: CancellationReason -> CancellationReasonAPIEntity
+makeCancellationReasonAPIEntity CancellationReason {..} =
+  CancellationReasonAPIEntity {..}

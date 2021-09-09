@@ -33,5 +33,5 @@ getTransporter personId = withFlowHandlerAPI $ do
     QP.findPersonById personId
       >>= fromMaybeM PersonNotFound
   case person.organizationId of
-    Just orgId -> TransporterRec <$> (QO.findOrganizationById orgId >>= fromMaybeM OrgNotFound)
+    Just orgId -> TransporterRec . SO.makeOrganizationAPIEntity <$> (QO.findOrganizationById orgId >>= fromMaybeM OrgNotFound)
     Nothing -> throwError (PersonFieldNotPresent "organization_id")

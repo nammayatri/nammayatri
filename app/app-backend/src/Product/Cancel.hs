@@ -49,7 +49,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   return Success
   where
     makeRideCancelationReason orderPIId rideCancellationReasonAPI = do
-      let RideCancellationReasonEntity {..} = rideCancellationReasonAPI
+      let RideCancellationReasonAPIEntity {..} = rideCancellationReasonAPI
       SRCR.RideCancellationReason
         { rideId = cast orderPIId,
           source = ByUser,

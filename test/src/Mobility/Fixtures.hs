@@ -29,6 +29,7 @@ import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
 import qualified "app-backend" Types.Storage.Case as BCase
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
+import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
 import qualified "app-backend" Types.Storage.SearchReqLocation as AppBESearchReqLoc
 
 address :: AppCommon.Address
@@ -143,19 +144,19 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
 rideRespond :: Id TPI.ProductInstance -> Text -> TRideBookingAPI.SetDriverAcceptanceReq -> ClientM TRideBookingAPI.SetDriverAcceptanceRes
 rideRespond rideBookingId = rideResp
   where
-    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+    _ :<|> (_ :<|> driver_rb_path) = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
     rideResp :<|> _ = driver_rb_path rideBookingId
 
 getNotificationInfo :: Id TPI.ProductInstance -> Text -> ClientM TRideBookingAPI.GetRideInfoRes
 getNotificationInfo rideBookingId = getNotif
   where
-    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+    _ :<|> (_ :<|> driver_rb_path) = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
     _ :<|> getNotif = driver_rb_path rideBookingId
 
 buildAppCancelReq :: CancelAPI.CancelReq
 buildAppCancelReq =
   CancelAPI.CancelReq
-    { rideCancellationReason = Just $ CancelAPI.RideCancellationReasonEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
+    { rideCancellationReason = Just $ CancelAPI.RideCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
     }
 
 getQuotes :: Id BCase.Case -> Text -> ClientM QuoteAPI.GetQuotesRes
@@ -216,8 +217,8 @@ testDriverId :: Text
 testDriverId = "6bc4bc84-2c43-425d-8853-22f47bd06691"
 
 appAuth :: Reg.AuthReq -> ClientM Reg.AuthRes
-appVerify :: Text -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
-appReInitiateLogin :: Text -> ClientM Reg.ResendAuthRes
+appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
+appReInitiateLogin :: Id AppSRT.RegistrationToken -> ClientM Reg.ResendAuthRes
 logout :: RegToken -> ClientM APISuccess
 appAuth
   :<|> appVerify
@@ -242,7 +243,7 @@ mkAuthVerifyReq =
 initiateAuth :: ClientM Reg.AuthRes
 initiateAuth = appAuth mkAuthReq
 
-verifyAuth :: Text -> ClientM Reg.AuthVerifyRes
+verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
 verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq
 
 getAppBaseUrl :: BaseUrl

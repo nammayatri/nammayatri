@@ -5,13 +5,13 @@ import EulerHS.Prelude
 import Types.Storage.CancellationReason (CancellationReasonCode)
 
 newtype CancelReq = CancelReq
-  { rideCancellationReason :: Maybe RideCancellationReasonEntity
+  { rideCancellationReason :: Maybe RideCancellationReasonAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 type CancelRes = APISuccess
 
-data RideCancellationReasonEntity = RideCancellationReasonEntity
+data RideCancellationReasonAPIEntity = RideCancellationReasonAPIEntity
   { reasonCode :: CancellationReasonCode,
     additionalInfo :: Maybe Text
   }

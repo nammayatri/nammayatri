@@ -12,7 +12,7 @@ data OrgAdminProfileRes = OrgAdminProfileRes
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
-    maskedDeviceToken :: Maybe FCMRecipientToken,
+    maskedDeviceToken :: FCMRecipientToken,
     organization :: OrganizationAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON)

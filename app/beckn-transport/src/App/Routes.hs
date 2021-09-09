@@ -43,6 +43,7 @@ import Types.API.Vehicle
 import Types.Storage.Organization (Organization)
 import Types.Storage.Person as SP
 import Types.Storage.ProductInstance
+import qualified Types.Storage.RegistrationToken as SRT
 import Types.Storage.Vehicle
 import Utils.Auth (AdminTokenAuth, LookupRegistryOrg, TokenAuth)
 
@@ -70,12 +71,12 @@ type RegistrationAPI =
   "auth"
     :> ( ReqBody '[JSON] AuthReq
            :> Post '[JSON] AuthRes
-           :<|> Capture "authId" Text
+           :<|> Capture "authId" (Id SRT.RegistrationToken)
              :> "verify"
              :> ReqBody '[JSON] AuthVerifyReq
              :> Post '[JSON] AuthVerifyRes
            :<|> "otp"
-             :> Capture "authId" Text
+             :> Capture "authId" (Id SRT.RegistrationToken)
              :> "resend"
              :> Post '[JSON] ResendAuthRes
            :<|> "logout"
@@ -218,7 +219,7 @@ type RideBookingAPI =
              :> AdminTokenAuth
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
-             :> QueryParam "isOnlyActive" Bool
+             :> QueryParam "onlyActive" Bool
              :> Get '[JSON] RideBookingAPI.RideBookingListRes
            :<|> Capture "bookingId" (Id ProductInstance)
              :> "cancel"
@@ -227,15 +228,21 @@ type RideBookingAPI =
        )
     :<|> "driver"
       :> "rideBooking"
-      :> ( Capture "bookingId" (Id ProductInstance)
-             :> "notification"
-             :> ( "respond"
-                    :> TokenAuth
-                    :> ReqBody '[JSON] RideBookingAPI.SetDriverAcceptanceReq
-                    :> Post '[JSON] RideBookingAPI.SetDriverAcceptanceRes
-                    :<|> TokenAuth
-                    :> Get '[JSON] RideBookingAPI.GetRideInfoRes
-                )
+      :> ( "list"
+             :> TokenAuth
+             :> QueryParam "limit" Integer
+             :> QueryParam "offset" Integer
+             :> QueryParam "onlyActive" Bool
+             :> Get '[JSON] RideBookingAPI.RideBookingListRes
+             :<|> Capture "bookingId" (Id ProductInstance)
+               :> "notification"
+               :> ( "respond"
+                      :> TokenAuth
+                      :> ReqBody '[JSON] RideBookingAPI.SetDriverAcceptanceReq
+                      :> Post '[JSON] RideBookingAPI.SetDriverAcceptanceRes
+                      :<|> TokenAuth
+                      :> Get '[JSON] RideBookingAPI.GetRideInfoRes
+                  )
          )
 
 rideBookingFlow :: FlowServer RideBookingAPI
@@ -244,9 +251,11 @@ rideBookingFlow =
       :<|> RideBooking.rideBookingList
       :<|> RideBooking.rideBookingCancel
   )
-    :<|> ( \rideBookingId ->
-             RideBooking.setDriverAcceptance rideBookingId
-               :<|> RideBooking.getRideInfo rideBookingId
+    :<|> ( RideBooking.listDriverRides
+             :<|> ( \rideBookingId ->
+                      RideBooking.setDriverAcceptance rideBookingId
+                        :<|> RideBooking.getRideInfo rideBookingId
+                  )
          )
 
 -- Location update and get for tracking is as follows

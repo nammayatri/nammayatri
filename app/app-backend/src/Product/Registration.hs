@@ -102,7 +102,7 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
   now <- getCurrentTime
   return $
     SR.RegistrationToken
-      { id = rtid,
+      { id = Id rtid,
         token = token,
         attempts = attempts,
         authMedium = SR.SMS,
@@ -125,7 +125,7 @@ generateOTPCode =
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"
 
-verify :: Text -> AuthVerifyReq -> FlowHandler AuthVerifyRes
+verify :: Id SR.RegistrationToken -> AuthVerifyReq -> FlowHandler AuthVerifyRes
 verify tokenId req = withFlowHandlerAPI $ do
   runRequestValidation validateAuthVerifyReq req
   regToken@SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
@@ -136,10 +136,10 @@ verify tokenId req = withFlowHandlerAPI $ do
     then do
       person <- checkPersonExists entityId
       let isNewPerson = person.isNew
-      clearOldRegToken person $ Id tokenId
+      clearOldRegToken person tokenId
       let deviceToken = (req.deviceToken) <|> (person.deviceToken)
       DB.runSqlDBTransaction $ do
-        RegistrationToken.setVerified $ Id tokenId
+        RegistrationToken.setVerified tokenId
         Person.updateDeviceToken person.id deviceToken
         when isNewPerson $
           Person.setIsNewFalse person.id
@@ -153,9 +153,9 @@ verify tokenId req = withFlowHandlerAPI $ do
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
 
-getRegistrationTokenE :: DBFlow m r => Text -> m SR.RegistrationToken
+getRegistrationTokenE :: DBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
-  RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound tokenId)
+  RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
 createPerson :: (EncFlow m r, DBFlow m r) => AuthReq -> m SP.Person
 createPerson req = do
@@ -167,7 +167,7 @@ checkPersonExists :: DBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
 
-resend :: Text -> FlowHandler ResendAuthRes
+resend :: Id SR.RegistrationToken -> FlowHandler ResendAuthRes
 resend tokenId = withFlowHandlerAPI $ do
   SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   person <- checkPersonExists entityId
@@ -179,7 +179,7 @@ resend tokenId = withFlowHandlerAPI $ do
       countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
       withLogTag ("personId_" <> entityId) $
         SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
-            >>= SF.checkRegistrationSmsResult
+          >>= SF.checkRegistrationSmsResult
       _ <- RegistrationToken.updateAttempts (attempts - 1) id
       return $ AuthRes tokenId (attempts - 1)
     else throwError $ AuthBlocked "Attempts limit exceed."
