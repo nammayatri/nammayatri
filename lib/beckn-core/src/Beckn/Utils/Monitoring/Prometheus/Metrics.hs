@@ -63,6 +63,17 @@ addUrlCallRetries url retryCount = do
   cmContainer <- asks (.coreMetrics)
   addUrlCallRetries' cmContainer url retryCount
 
+addUrlCallFailures ::
+  ( HasCoreMetrics r,
+    L.MonadFlow m,
+    MonadReader r m
+  ) =>
+  BaseUrl ->
+  m ()
+addUrlCallFailures url = do
+  cmContainer <- asks (.coreMetrics)
+  addUrlCallFailures' cmContainer url
+
 addRequestLatency ::
   ( HasCoreMetrics r,
     L.MonadFlow m,
@@ -118,4 +129,13 @@ addUrlCallRetries' cmContainers url retryCount = do
     P.withLabel
       urlCallRetriesMetric
       (showBaseUrlText url, show retryCount)
+      P.incCounter
+
+addUrlCallFailures' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> m ()
+addUrlCallFailures' cmContainers url = do
+  let urlCallRetriesMetric = cmContainers.urlCallRetryFailures
+  L.runIO $
+    P.withLabel
+      urlCallRetriesMetric
+      (showBaseUrlText url)
       P.incCounter

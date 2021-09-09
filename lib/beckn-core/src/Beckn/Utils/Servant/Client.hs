@@ -111,9 +111,12 @@ createManagers managerSettings = do
     . Map.insert defaultHttpManager Http.tlsManagerSettings
     $ managerSettings
 
-performAction :: MonadCatch m => m a -> (ExternalAPICallError -> m a) -> m a
-performAction action errorHandler =
-  action `catch` \err -> errorHandler err
+catchConnectionErrors :: (MonadCatch m, Log m) => m a -> (ExternalAPICallError -> m a) -> m a
+catchConnectionErrors action errorHandler =
+  action `catch` \err -> do
+    case err.clientError of
+      ConnectionError _ -> errorHandler err
+      _ -> throwError err
 
 retryAction ::
   ( MonadCatch m,
@@ -129,12 +132,13 @@ retryAction currentErr currentRetryCount maxRetries action = do
   logWarning $ getErrorText currentErr
   logWarning $ "Retrying attempt " <> show currentRetryCount <> " calling " <> showBaseUrlText currentErr.baseUrl
   Metrics.addUrlCallRetries currentErr.baseUrl currentRetryCount
-  performAction action $ \err -> do
+  catchConnectionErrors action $ \err -> do
     if currentRetryCount < maxRetries
       then retryAction err (currentRetryCount + 1) maxRetries action
       else do
         logError $ getErrorText err
         logError $ "Maximum of retrying attempts is reached calling " <> showBaseUrlText err.baseUrl
+        Metrics.addUrlCallRetryFailures currentErr.baseUrl
         throwError err
   where
     getErrorText err = "Error calling " <> showBaseUrlText err.baseUrl <> ": " <> show err.clientError
@@ -150,7 +154,9 @@ withRetry ::
   m a
 withRetry action = do
   maxRetries <- asks (.httpClientOptions.maxRetries)
-  performAction action $ \err -> do
+  catchConnectionErrors action $ \err -> do
     if maxRetries > 0
       then retryAction err 1 maxRetries action
-      else throwError err
+      else do
+        Metrics.addUrlCallRetryFailures err.baseUrl
+        throwError err

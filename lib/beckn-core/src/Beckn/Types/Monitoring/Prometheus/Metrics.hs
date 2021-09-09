@@ -19,6 +19,8 @@ type ErrorCounterMetric = P.Vector P.Label2 P.Counter
 
 type URLCallRetriesMetric = P.Vector P.Label2 P.Counter
 
+type URLCallRetryFailuresMetric = P.Vector P.Label1 P.Counter
+
 type HasCoreMetrics r =
   ( HasField "coreMetrics" r CoreMetricsContainer
   )
@@ -32,11 +34,13 @@ class CoreMetrics m where
     m ()
   incrementErrorCounter :: IsHTTPException e => e -> m ()
   addUrlCallRetries :: BaseUrl -> Int -> m ()
+  addUrlCallRetryFailures :: BaseUrl -> m ()
 
 data CoreMetricsContainer = CoreMetricsContainer
   { requestLatency :: RequestLatencyMetric,
     errorCounter :: ErrorCounterMetric,
-    urlCallRetries :: URLCallRetriesMetric
+    urlCallRetries :: URLCallRetriesMetric,
+    urlCallRetryFailures :: URLCallRetryFailuresMetric
   }
 
 registerCoreMetricsContainer :: IO CoreMetricsContainer
@@ -44,6 +48,8 @@ registerCoreMetricsContainer = do
   requestLatency <- registerRequestLatencyMetric
   errorCounter <- registerErrorCounterMetric
   urlCallRetries <- registerURLCallRetriesMetric
+  urlCallRetryFailures <- registerURLCallRetryFailuresMetric
+
   return CoreMetricsContainer {..}
 
 registerRequestLatencyMetric :: IO RequestLatencyMetric
@@ -66,6 +72,14 @@ registerURLCallRetriesMetric :: IO URLCallRetriesMetric
 registerURLCallRetriesMetric =
   P.register $
     P.vector ("URL", "RetryCount") $
+      P.counter info
+  where
+    info = P.Info "url_call_retries_counter" ""
+
+registerURLCallRetryFailuresMetric :: IO URLCallRetryFailuresMetric
+registerURLCallRetryFailuresMetric =
+  P.register $
+    P.vector "URL" $
       P.counter info
   where
     info = P.Info "url_call_retries_counter" ""

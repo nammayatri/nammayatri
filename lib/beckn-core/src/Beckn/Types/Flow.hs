@@ -100,6 +100,7 @@ instance HasCoreMetrics r => CoreMetrics (FlowR r) where
   addRequestLatency = Metrics.addRequestLatency
   incrementErrorCounter = Metrics.incrementErrorCounter
   addUrlCallRetries = Metrics.addUrlCallRetries
+  addUrlCallRetryFailures = Metrics.addUrlCallFailures
 
 instance MonadMonitor (FlowR r) where
   doIO = liftIO
