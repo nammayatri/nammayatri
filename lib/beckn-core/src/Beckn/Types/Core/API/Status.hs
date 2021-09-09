@@ -9,18 +9,9 @@ where
 import Beckn.Types.Common (IdObject (..))
 import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Context
 import Beckn.Types.Core.Order
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
-
-type StatusAPI =
-  "status"
-    :> ReqBody '[JSON] StatusReq
-    :> Post '[JSON] StatusRes
-
-status :: Proxy StatusAPI
-status = Proxy
 
 type OnStatusAPI =
   "on_status"
@@ -29,14 +20,6 @@ type OnStatusAPI =
 
 onStatus :: Proxy OnStatusAPI
 onStatus = Proxy
-
-data StatusReq = StatusReq
-  { context :: Context,
-    message :: StatusReqMessage
-  }
-  deriving (Generic, Show, FromJSON, ToJSON)
-
-type StatusRes = AckResponse
 
 type OnStatusReq = CallbackReq OnStatusReqMessage
 

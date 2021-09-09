@@ -4,8 +4,6 @@ import Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.API.Feedback as API
 import Beckn.Types.Core.API.Search as API
-import Beckn.Types.Core.API.Status as API
-import Beckn.Types.Core.API.Track as API
 import Beckn.Types.Error
 import Beckn.Utils.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
@@ -55,15 +53,6 @@ location url req = do
   -- TODO: fix authentication
   callOwnAPI Nothing Nothing url (API.location req) "location"
 
-track ::
-  ( MonadFlow m,
-    CoreMetrics m
-  ) =>
-  BaseUrl ->
-  TrackTripReq ->
-  m ()
-track = callBecknAPIWithSignature "track" API.trackTrip
-
 cancel ::
   ( MonadFlow m,
     CoreMetrics m
@@ -72,15 +61,6 @@ cancel ::
   CancelReq ->
   m ()
 cancel = callBecknAPIWithSignature "cancel" API.cancel
-
-status ::
-  ( MonadFlow m,
-    CoreMetrics m
-  ) =>
-  BaseUrl ->
-  StatusReq ->
-  m ()
-status = callBecknAPIWithSignature "status" API.status
 
 feedback ::
   ( MonadFlow m,

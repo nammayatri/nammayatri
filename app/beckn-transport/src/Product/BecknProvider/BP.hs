@@ -11,7 +11,6 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Status as API
-import qualified Beckn.Types.Core.API.Track as API
 import qualified Beckn.Types.Core.API.Update as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Context (Context (..))
@@ -143,25 +142,6 @@ cancelRideTransaction piList searchPiId trackerPiId orderPiId rideCReason = DB.r
       DriverInformation.updateOnRide driverId False
       when (rideCReason.source == Mobility.ByDriver) $ QDriverStats.updateIdleTime driverId
 
-serviceStatus ::
-  Id Organization.Organization ->
-  SignatureAuthResult Organization.Organization ->
-  API.StatusReq ->
-  FlowHandler API.StatusRes
-serviceStatus transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $ do
-  logTagInfo "serviceStatus API Flow" $ show req
-  let piId = Id $ req.message.order.id -- transporter search product instance id
-  trackerPi <-
-    ProductInstance.findByParentIdType piId Case.LOCATIONTRACKER
-      >>= fromMaybeM PIDoesNotExist
-  callbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  transporter <-
-    Organization.findOrganizationById transporterId
-      >>= fromMaybeM OrgNotFound
-  let context = req.context
-  ExternalAPI.withCallback transporter "status" API.onStatus context callbackUrl $
-    mkOnServiceStatusPayload piId trackerPi
-
 notifyServiceStatusToGateway ::
   ( DBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -194,27 +174,6 @@ mkOnServiceStatusPayload piId trackerPi = do
             update_action = Nothing,
             quotation = Nothing
           }
-
-trackTrip ::
-  Id Organization.Organization ->
-  SignatureAuthResult Organization.Organization ->
-  API.TrackTripReq ->
-  FlowHandler API.TrackTripRes
-trackTrip transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    logTagInfo "track trip API Flow" $ show req
-    let context = req.context
-    validateContext "track" context
-    let tripId = req.message.order_id
-    trackerCase <- Case.findById (Id tripId) >>= fromMaybeM CaseDoesNotExist
-    callbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-    transporter <-
-      Organization.findOrganizationById transporterId
-        >>= fromMaybeM OrgNotFound
-    ExternalAPI.withCallback transporter "track" API.onTrackTrip context callbackUrl $ do
-      let data_url = ExternalAPITransform.baseTrackingUrl <> "/" <> getId (trackerCase.id)
-      let tracking = ExternalAPITransform.mkTracking "PULL" data_url
-      return $ API.OnTrackReqMessage (Just tracking)
 
 notifyTripInfoToGateway ::
   ( DBFlow m r,

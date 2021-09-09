@@ -12,7 +12,6 @@ import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.API.Status as API
-import qualified Beckn.Types.Core.API.Track as API
 import qualified Beckn.Types.Core.API.Update as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
@@ -34,7 +33,6 @@ import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Status as Status
 import qualified Product.Support as Support
-import qualified Product.TrackTrip as TrackTrip
 import qualified Product.Update as Update
 import Servant hiding (throwError)
 import qualified Types.API.Cancel as Cancel
@@ -50,9 +48,7 @@ import qualified Types.API.ProductInstance as ProductInstance
 import Types.API.Registration
 import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
-import Types.API.Status
 import qualified Types.API.Support as Support
-import qualified Types.API.Track as TrackTrip
 import Types.Geofencing
 import qualified Types.Storage.Case as Case hiding (status)
 import Types.Storage.ProductInstance
@@ -66,7 +62,6 @@ type AppAPI =
            :<|> ConfirmAPI
            :<|> CaseAPI
            :<|> InfoAPI
-           :<|> TrackTripAPI
            :<|> UpdateAPI
            :<|> ProductInstanceAPI
            :<|> CancelAPI
@@ -93,7 +88,6 @@ appServer =
     :<|> confirmFlow
     :<|> caseFlow
     :<|> infoFlow
-    :<|> trackTripFlow
     :<|> updateFlow
     :<|> productInstanceFlow
     :<|> cancelFlow
@@ -200,22 +194,6 @@ infoFlow regToken =
   Info.getProductInfo regToken
     :<|> Info.getLocation regToken
 
-------- Track trip Flow -------
-type TrackTripAPI =
-  "track"
-    :> TokenAuth
-    :> ReqBody '[JSON] TrackTrip.TrackTripReq
-    :> Post '[JSON] TrackTrip.TrackTripRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
-    :> "on_track"
-    :> ReqBody '[JSON] API.OnTrackTripReq
-    :> Post '[JSON] API.OnTrackTripRes
-
-trackTripFlow :: FlowServer TrackTripAPI
-trackTripFlow =
-  TrackTrip.track
-    :<|> TrackTrip.trackCb
-
 ------- Update Flow -------
 type UpdateAPI =
   SignatureAuth "Authorization" LookupRegistryOrg
@@ -286,19 +264,14 @@ routeApiFlow = Location.getRoute
 
 -------- Status Flow----------
 type StatusAPI =
-  "status"
-    :> TokenAuth
-    :> ReqBody '[JSON] StatusReq
-    :> Post '[JSON] StatusRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+  SignatureAuth "Authorization" LookupRegistryOrg
     :> "on_status"
     :> ReqBody '[JSON] API.OnStatusReq
     :> Post '[JSON] API.OnStatusRes
 
 statusFlow :: FlowServer StatusAPI
 statusFlow =
-  Status.status
-    :<|> Status.onStatus
+  Status.onStatus
 
 -------- Support Flow----------
 type SupportAPI =

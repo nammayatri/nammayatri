@@ -10,8 +10,6 @@ import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Confirm as API
 import qualified Beckn.Types.Core.API.Feedback as API
 import qualified Beckn.Types.Core.API.Search as API
-import qualified Beckn.Types.Core.API.Status as API
-import qualified Beckn.Types.Core.API.Track as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
@@ -286,12 +284,6 @@ type OrgBecknAPI =
     :> API.CancelAPI
     :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization" LookupRegistryOrg
-    :> API.StatusAPI
-    :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistryOrg
-    :> API.TrackAPI
-    :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistryOrg
     :> API.FeedbackAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
@@ -299,8 +291,6 @@ orgBecknApiFlow =
   BP.search
     :<|> BP.confirm
     :<|> BP.cancel
-    :<|> BP.serviceStatus
-    :<|> BP.trackTrip
     :<|> BP.feedback
 
 -------- Initiate a call (Exotel) APIs --------
