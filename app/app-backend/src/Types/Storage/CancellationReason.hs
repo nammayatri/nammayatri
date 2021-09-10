@@ -2,11 +2,24 @@
 
 module Types.Storage.CancellationReason where
 
-import Data.OpenApi (ToSchema)
+import Data.OpenApi (ToSchema, ToParamSchema)
+import Data.Aeson (eitherDecode)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
+import Servant (FromHttpApiData (..))
+
+data CancellationStage = OnSearch | OnConfirm | OnAssign
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData CancellationStage where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 newtype CancellationReasonCode = CancellationReasonCode Text
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -22,7 +35,10 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationReasonCode
 data CancellationReasonT f = CancellationReason
   { reasonCode :: B.C f CancellationReasonCode,
     description :: B.C f Text,
-    enabled :: B.C f Bool
+    enabled :: B.C f Bool,
+    onSearch :: B.C f Bool,
+    onConfirm :: B.C f Bool,
+    onAssign :: B.C f Bool
   }
   deriving (Generic, B.Beamable)
 
@@ -44,8 +60,12 @@ fieldEMod ::
 fieldEMod =
   B.setEntityName "cancellation_reason"
     <> B.modifyTableFields
-      B.tableModification{reasonCode = "reason_code"
-                         }
+      B.tableModification
+        { reasonCode = "reason_code",
+          onSearch = "on_search",
+          onConfirm = "on_confirm",
+          onAssign = "on_assign"
+        }
 
 data CancellationReasonAPIEntity = CancellationReasonAPIEntity
   { reasonCode :: CancellationReasonCode,

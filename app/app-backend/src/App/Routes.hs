@@ -57,6 +57,7 @@ import qualified Types.Storage.RegistrationToken as SRT
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.SearchRequest as SSR
+import qualified Types.Storage.CancellationReason as SCancellationReason
 import Utils.Auth (TokenAuth)
 
 type AppAPI =
@@ -385,6 +386,7 @@ type CancellationReasonAPI =
   "cancellationReason"
     :> ( "list"
            :> TokenAuth
+           :> MandatoryQueryParam "cancellationStage" SCancellationReason.CancellationStage
            :> Get '[JSON] CancellationReasonAPI.ListRes
        )
 

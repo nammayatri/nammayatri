@@ -13,9 +13,14 @@ getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B
 getDbTable =
   DB.cancellationReason . DB.appDb <$> getSchemaName
 
-findAll :: DBFlow m r => m [SCR.CancellationReason]
-findAll = do
+findAll :: DBFlow m r => SCR.CancellationStage -> m [SCR.CancellationReason]
+findAll cancStage = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate SCR.CancellationReason {..} = enabled B.==. B.val_ True
+    predicate SCR.CancellationReason {..} =
+      enabled
+        B.&&. case cancStage of
+          SCR.OnSearch -> onSearch
+          SCR.OnConfirm -> onConfirm
+          SCR.OnAssign -> onAssign

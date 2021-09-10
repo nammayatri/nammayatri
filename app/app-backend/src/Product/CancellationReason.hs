@@ -12,6 +12,6 @@ import qualified Types.Storage.CancellationReason as SCR
 import qualified Types.Storage.Person as Person
 import Utils.Common
 
-list :: Id Person.Person -> FlowHandler CancellationReasonAPI.ListRes
-list _ = withFlowHandlerAPI $ do
-  (SCR.makeCancellationReasonAPIEntity <$>) <$> QCR.findAll
+list :: Id Person.Person -> SCR.CancellationStage -> FlowHandler CancellationReasonAPI.ListRes
+list _ cancStage = withFlowHandlerAPI $ do
+  map SCR.makeCancellationReasonAPIEntity <$> QCR.findAll cancStage
