@@ -152,7 +152,7 @@ throwHTTPError ::
 throwHTTPError toJsonError err = do
   let someExc = toException err
   logError $ makeLogSomeException someExc
-  Metrics.incrementErrorCounter err
+  Metrics.incrementErrorCounter "DEFAULT_ERROR" someExc
   throwServantError (toHttpCode err) (toCustomHeaders err) (toJsonError err)
 
 throwServantError ::

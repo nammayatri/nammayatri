@@ -47,7 +47,7 @@ instanceExceptionWithParent 'HTTPException ''SomeBecknAPIError
 
 instance Metrics.CoreMetrics IO where
   addRequestLatency _ _ _ _ = return ()
-  incrementErrorCounter _ = return ()
+  incrementErrorCounter _ _ = return ()
   addUrlCallRetries _ _ = return ()
   addUrlCallRetryFailures _ = return ()
 

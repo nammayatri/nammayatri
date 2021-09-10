@@ -78,7 +78,8 @@ type MonadHandler m =
 data BTMMetricsHandle m = BTMMetricsHandle
   { incrementTaskCounter :: m (),
     incrementFailedTaskCounter :: m (),
-    putTaskDuration :: Milliseconds -> m ()
+    putTaskDuration :: Milliseconds -> m (),
+    incrementErrorCounter :: SomeException -> m ()
   }
 
 data ServiceHandle m = ServiceHandle
@@ -170,9 +171,10 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
                 logWarning $ "Ride status is " <> show rideStatus <> ", cancellation request skipped"
         logInfo "End processing request"
     whenLeft eres $
-      \(err :: SomeException) -> do
-        let message = "Error processing request " <> show requestId <> ": " <> show err
+      \(exc :: SomeException) -> do
+        let message = "Error processing request " <> show requestId <> ": " <> makeLogSomeException exc
         logError message
+        metrics.incrementErrorCounter exc
         metrics.incrementFailedTaskCounter
     removeRequest requestId
 

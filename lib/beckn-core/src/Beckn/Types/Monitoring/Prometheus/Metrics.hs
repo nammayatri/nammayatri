@@ -6,7 +6,6 @@ module Beckn.Types.Monitoring.Prometheus.Metrics
   )
 where
 
-import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Time (Milliseconds)
 import EulerHS.Prelude as E
 import GHC.Records.Extra
@@ -15,7 +14,7 @@ import Servant.Client (BaseUrl, ClientError)
 
 type RequestLatencyMetric = P.Vector P.Label3 P.Histogram
 
-type ErrorCounterMetric = P.Vector P.Label2 P.Counter
+type ErrorCounterMetric = P.Vector P.Label3 P.Counter
 
 type URLCallRetriesMetric = P.Vector P.Label2 P.Counter
 
@@ -32,7 +31,7 @@ class CoreMetrics m where
     Milliseconds ->
     Either ClientError a ->
     m ()
-  incrementErrorCounter :: IsHTTPException e => e -> m ()
+  incrementErrorCounter :: Text -> SomeException -> m ()
   addUrlCallRetries :: BaseUrl -> Int -> m ()
   addUrlCallRetryFailures :: BaseUrl -> m ()
 
@@ -63,7 +62,7 @@ registerRequestLatencyMetric =
 registerErrorCounterMetric :: IO ErrorCounterMetric
 registerErrorCounterMetric =
   P.register $
-    P.vector ("HttpCode", "ErrorCode") $
+    P.vector ("HttpCode", "ErrorContext", "ErrorCode") $
       P.counter info
   where
     info = P.Info "error_counter" ""

@@ -13,6 +13,7 @@ import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
 import Types.Error
 import Types.Metrics (CoreMetrics, HasBTMMetrics)
+import qualified Types.Metrics as TMetrics
 import Types.Storage.Organization
 import Utils.Common
 import qualified Utils.Metrics as Metrics
@@ -60,7 +61,8 @@ handle =
         Allocation.BTMMetricsHandle
           { incrementTaskCounter = Metrics.incrementTaskCounter,
             incrementFailedTaskCounter = Metrics.incrementFailedTaskCounter,
-            putTaskDuration = Metrics.putTaskDuration
+            putTaskDuration = Metrics.putTaskDuration,
+            incrementErrorCounter = TMetrics.incrementErrorCounter "ALLOCATOR_ERROR"
           }
     }
 

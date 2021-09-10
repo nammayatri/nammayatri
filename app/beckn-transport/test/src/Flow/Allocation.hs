@@ -194,7 +194,8 @@ handle repository@Repository {..} =
         BTMMetricsHandle
           { incrementTaskCounter = return (),
             incrementFailedTaskCounter = return (),
-            putTaskDuration = \_ -> return ()
+            putTaskDuration = \_ -> return (),
+            incrementErrorCounter = \_ -> return ()
           }
     }
 
