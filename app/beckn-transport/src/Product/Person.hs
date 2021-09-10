@@ -103,7 +103,7 @@ sendInviteSms ::
   Text ->
   Text ->
   Text ->
-  m ()
+  m SMS.SubmitSmsRes
 sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
   let url = smsCfg.url
   let smsCred = smsCfg.credConfig

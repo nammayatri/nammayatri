@@ -17,10 +17,10 @@ type ServiceAPI =
     :> MandatoryQueryParam "from" Text
     :> MandatoryQueryParam "to" Text
     :> MandatoryQueryParam "text" Text
-    :> Post '[PlainText_ISO_8859_1] Text
+    :> Post '[PlainText_ISO_8859_1] SubmitSmsRes
 
 serviceAPI :: Proxy ServiceAPI
 serviceAPI = Proxy
 
-submitSms :: SubmitSms -> ET.EulerClient Text
+submitSms :: SubmitSms -> ET.EulerClient SubmitSmsRes
 submitSms SubmitSms {..} = ET.client serviceAPI username password from to text

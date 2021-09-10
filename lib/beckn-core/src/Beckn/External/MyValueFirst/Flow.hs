@@ -1,7 +1,7 @@
 module Beckn.External.MyValueFirst.Flow where
 
 import qualified Beckn.External.MyValueFirst.API as API
-import Beckn.External.MyValueFirst.Types (SubmitSms (..))
+import Beckn.External.MyValueFirst.Types (SubmitSms (..), SubmitSmsRes (..))
 import Beckn.Sms.Config (SmsConfig (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -16,11 +16,10 @@ submitSms ::
   ) =>
   BaseUrl ->
   SubmitSms ->
-  m ()
+  m SubmitSmsRes
 submitSms url params = do
-  res <- callAPI url (API.submitSms params) "submitSms"
-  body <- res & fromEitherM (ExternalAPICallError (Just "UNABLE_TO_SEND_SMS") url)
-  unless (T.isPrefixOf "Sent" body) $ throwError $ SMSError body
+  callAPI url (API.submitSms params) "submitSms"
+    >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_SEND_SMS") url)
 
 type OtpTemplate = Text
 
@@ -45,7 +44,7 @@ sendOTP ::
   Text ->
   Text ->
   Text ->
-  m ()
+  m SubmitSmsRes
 sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
   let smsCred = smsCfg.credConfig
   let url = smsCfg.url
@@ -59,3 +58,10 @@ sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
         to = phoneNumber,
         text = constructOtpSms otpCode otpHash otpSmsTemplate
       }
+
+checkRegistrationSmsResult :: (Log m, MonadThrow m) => SubmitSmsRes -> m ()
+checkRegistrationSmsResult =
+  \case
+    Sent -> pure ()
+    BadNumber -> throwError SMSInvalidNumber
+    err -> throwError $ SMSError err

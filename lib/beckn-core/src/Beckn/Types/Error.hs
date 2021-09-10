@@ -3,6 +3,7 @@
 
 module Beckn.Types.Error where
 
+import Beckn.External.MyValueFirst.Types (SubmitSmsRes, submitSmsResToText)
 import Beckn.Types.Error.BaseError
 import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (fromResponse))
@@ -506,18 +507,26 @@ instance IsHTTPError ActionNotSupported where
 
 instance IsAPIError ActionNotSupported
 
-newtype SMSError = SMSError Text
+data SMSError
+  = SMSError SubmitSmsRes
+  | SMSInvalidNumber
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SMSError
 
 instance IsBaseError SMSError where
   toMessage = \case
-    SMSError err -> Just err
+    SMSError err -> Just $ submitSmsResToText err
+    _ -> Nothing
 
 instance IsHTTPError SMSError where
   toErrorCode = \case
     SMSError _ -> "SMS_NOT_SENT"
+    SMSInvalidNumber -> "SMS_INVALID_NUMBER"
+
+  toHttpCode = \case
+    SMSError _ -> E500
+    SMSInvalidNumber -> E400
 
 instance IsAPIError SMSError
 

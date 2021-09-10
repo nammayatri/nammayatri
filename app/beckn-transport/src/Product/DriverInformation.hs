@@ -14,6 +14,7 @@ import App.Types
 import qualified App.Types as App
 import Beckn.External.Encryption (decrypt)
 import qualified Beckn.External.FCM.Types as FCM
+import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
@@ -71,6 +72,7 @@ createDriver admin req = withFlowHandlerAPI $ do
   smsCfg <- smsCfg <$> ask
   inviteSmsTemplate <- inviteSmsTemplate <$> ask
   sendInviteSms smsCfg inviteSmsTemplate (mobCounCode <> mobNum) (org.name)
+    >>= SF.checkRegistrationSmsResult
   return . DriverInformationAPI.CreateDriverRes $ makeUserInfoRes decPerson
   where
     validateDriver preq =

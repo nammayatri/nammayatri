@@ -1,6 +1,7 @@
 module Product.Sms where
 
 import App.Types
+import Beckn.External.MyValueFirst.Types
 import Beckn.Utils.Error.FlowHandling (withFlowHandler)
 import Control.Concurrent.MVar (modifyMVar, modifyMVar_)
 import qualified Data.Map as Map
@@ -8,10 +9,10 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import Types.API.Sms
 
-sendSms :: Text -> Text -> Text -> Text -> Text -> FlowHandler Text
+sendSms :: Text -> Text -> Text -> Text -> Text -> FlowHandler SubmitSmsRes
 sendSms _username _password _from to text = withFlowHandler $ do
   asks smsMap >>= L.runIO . (`modifyMVar_` (pure . set))
-  return "Sent."
+  return Sent
   where
     set smss = Map.insert to (text : fromMaybe [] (Map.lookup to smss)) smss
 
