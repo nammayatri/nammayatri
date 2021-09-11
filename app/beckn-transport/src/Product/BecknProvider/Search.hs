@@ -46,7 +46,6 @@ search ::
   FlowHandler AckResponse
 search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    searchMetricsMVar <- Metrics.startSearchMetrics
     let context = req.context
     BP.validateContext "search" context
     transporter <-
@@ -58,6 +57,7 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
         ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
           throwError AgencyDisabled
       else do
+        searchMetricsMVar <- Metrics.startSearchMetrics transporterId
         let intent = req.message.intent
         now <- getCurrentTime
         let pickup = head $ intent.pickups
@@ -186,7 +186,7 @@ onSearchCallback productCase transporter fromLocation toLocation searchMetricsMV
           ProductInstance.OUTOFSTOCK -> []
           _ -> [prodInst]
   res <- mkOnSearchPayload productCase productInstances transporter
-  Metrics.finishSearchMetrics searchMetricsMVar
+  Metrics.finishSearchMetrics transporterId searchMetricsMVar
   return res
 
 mkProductInstance ::

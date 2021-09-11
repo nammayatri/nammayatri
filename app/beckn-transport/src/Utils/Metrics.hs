@@ -6,6 +6,7 @@ where
 
 import Beckn.Types.Amount
 import Beckn.Types.Common (Milliseconds, getSeconds)
+import Beckn.Types.Id
 import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
 import Beckn.Utils.Time (getClockTimeInMs)
 import qualified EulerHS.Language as L
@@ -13,6 +14,7 @@ import EulerHS.Prelude
 import GHC.Records.Extra
 import Prometheus as P
 import qualified Types.Metrics as Metric
+import Types.Storage.Organization
 import Utils.Common (Forkable (fork), MonadFlow)
 
 incrementTaskCounter :: Metric.HasBTMMetrics m r => m ()
@@ -53,34 +55,44 @@ putFareAndDistanceDeviations fareDiff distanceDiff = do
 
 type SearchMetricsMVar = MVar Milliseconds
 
-startSearchMetrics :: Metric.HasBPPMetrics m r => m SearchMetricsMVar
-startSearchMetrics = do
+startSearchMetrics :: Metric.HasBPPMetrics m r => Id Organization -> m SearchMetricsMVar
+startSearchMetrics transporterId = do
   bmContainer <- asks (.bppMetrics)
-  startSearchMetrics' bmContainer
+  startSearchMetrics' transporterId bmContainer
 
-finishSearchMetrics :: Metric.HasBPPMetrics m r => SearchMetricsMVar -> m ()
-finishSearchMetrics searchMetricsMVar = do
+finishSearchMetrics :: Metric.HasBPPMetrics m r => Id Organization -> SearchMetricsMVar -> m ()
+finishSearchMetrics transporterId searchMetricsMVar = do
   bmContainer <- asks (.bppMetrics)
-  finishSearchMetrics' bmContainer searchMetricsMVar
+  finishSearchMetrics' transporterId bmContainer searchMetricsMVar
 
-putSearchDuration :: L.MonadFlow m => P.Histogram -> Double -> m ()
-putSearchDuration searchDurationHistogram duration = L.runIO $ P.observe searchDurationHistogram duration
+putSearchDuration :: L.MonadFlow m => Id Organization -> P.Vector P.Label1 P.Histogram -> Double -> m ()
+putSearchDuration transporterId searchDurationHistogram duration =
+  L.runIO $
+    P.withLabel
+      searchDurationHistogram
+      (show transporterId)
+      (`P.observe` duration)
 
-startSearchMetrics' :: MonadFlow m => Metric.BPPMetricsContainer -> m SearchMetricsMVar
-startSearchMetrics' bmContainer = do
+startSearchMetrics' :: MonadFlow m => Id Organization -> Metric.BPPMetricsContainer -> m SearchMetricsMVar
+startSearchMetrics' transporterId bmContainer = do
   let (_, failureCounter) = bmContainer.searchDuration
-      searchRedisExTime = getSeconds bmContainer.searchDurationTimeout
+      searchDurationTimeout = getSeconds bmContainer.searchDurationTimeout
   startTime <- getClockTimeInMs
   searchMetricsMVar <- L.runIO $ newMVar startTime
   fork "BPP Search Metrics" $ do
-    L.runIO $ threadDelay $ searchRedisExTime * 1000000
+    L.runIO $ threadDelay $ searchDurationTimeout * 1000000
     whenJustM (L.runIO $ tryTakeMVar searchMetricsMVar) $ \_ -> do
-      L.runIO $ P.incCounter failureCounter
+      L.runIO $ P.withLabel failureCounter (show transporterId) P.incCounter
   return searchMetricsMVar
 
-finishSearchMetrics' :: MonadFlow m => Metric.BPPMetricsContainer -> SearchMetricsMVar -> m ()
-finishSearchMetrics' bmContainer searchMetricsMVar = do
+finishSearchMetrics' ::
+  MonadFlow m =>
+  Id Organization ->
+  Metric.BPPMetricsContainer ->
+  SearchMetricsMVar ->
+  m ()
+finishSearchMetrics' transporterId bmContainer searchMetricsMVar = do
   let (searchDurationHistogram, _) = bmContainer.searchDuration
   whenJustM (L.runIO $ tryTakeMVar searchMetricsMVar) $ \startTime -> do
     endTime <- getClockTimeInMs
-    putSearchDuration searchDurationHistogram . fromIntegral $ endTime - startTime
+    putSearchDuration transporterId searchDurationHistogram $ fromIntegral $ endTime - startTime

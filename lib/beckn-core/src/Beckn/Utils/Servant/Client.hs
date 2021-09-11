@@ -129,19 +129,16 @@ retryAction ::
   m a ->
   m a
 retryAction currentErr currentRetryCount maxRetries action = do
-  logWarning $ getErrorText currentErr
+  logWarning $ "Error calling " <> showBaseUrlText currentErr.baseUrl <> ": " <> show currentErr.clientError
   logWarning $ "Retrying attempt " <> show currentRetryCount <> " calling " <> showBaseUrlText currentErr.baseUrl
   Metrics.addUrlCallRetries currentErr.baseUrl currentRetryCount
   catchConnectionErrors action $ \err -> do
     if currentRetryCount < maxRetries
       then retryAction err (currentRetryCount + 1) maxRetries action
       else do
-        logError $ getErrorText err
         logError $ "Maximum of retrying attempts is reached calling " <> showBaseUrlText err.baseUrl
         Metrics.addUrlCallRetryFailures currentErr.baseUrl
         throwError err
-  where
-    getErrorText err = "Error calling " <> showBaseUrlText err.baseUrl <> ": " <> show err.clientError
 
 withRetry ::
   ( MonadCatch m,

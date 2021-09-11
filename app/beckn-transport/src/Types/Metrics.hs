@@ -33,7 +33,7 @@ data BTMMetricsContainer = BTMMetricsContainer
     failedTaskCounter :: FailedTaskCounterMetric
   }
 
-type SearchDurationMetric = (P.Histogram, P.Counter)
+type SearchDurationMetric = (P.Vector P.Label1 P.Histogram, P.Vector P.Label1 P.Counter)
 
 data BPPMetricsContainer = BPPMetricsContainer
   { searchDurationTimeout :: Seconds,
@@ -88,7 +88,26 @@ registerBPPMetricsContainer searchDurationTimeout = do
 
 registerSearchDurationMetric :: Seconds -> IO SearchDurationMetric
 registerSearchDurationMetric searchDurationTimeout = do
-  let bucketsCount = (getSeconds searchDurationTimeout + 1) * 2
-  searchDurationHistogram <- P.register . P.histogram (P.Info "BPP_search_time" "") $ P.linearBuckets 0 0.5 bucketsCount
-  failureCounter <- P.register $ P.counter $ P.Info "BPP_search_failure_counter" ""
-  return (searchDurationHistogram, failureCounter)
+  searchDurationHistogram <-
+    P.register $
+      P.vector "transporter_id" $
+        P.histogram
+          infoSearchDuration
+          buckets
+  failureCounter <-
+    P.register $
+      P.vector "transporter_id" $
+        P.counter $ P.Info "BPP_search_failure_counter" ""
+
+  pure (searchDurationHistogram, failureCounter)
+  where
+    infoSearchDuration =
+      P.Info
+        "BPP_search_time"
+        ""
+    buckets =
+      P.linearBuckets
+        0
+        0.5
+        searchDurationBucketCount
+    searchDurationBucketCount = (getSeconds searchDurationTimeout + 1) * 2
