@@ -39,7 +39,7 @@ endif
 
 NS := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 
-.PHONY: build-dep push-dep build push run-svc run-monitoring stop-all-containers
+.PHONY: build-dep push-dep build push run-svc run-monitoring stop-all-containers run-mobility-stack
 
 build-dep: Dockerfile.dep
 	$(info Building $(DEP_IMAGE):$(DEP_LABEL) / git-head: $(SOURCE_COMMIT))
@@ -75,3 +75,7 @@ run-monitoring: ./dev/docker-compose.yml
 stop-all-containers: ./dev/docker-compose.yml
 	# Stop all docker containers
 	docker-compose -f ./dev/docker-compose.yml down
+
+run-mobility-stack: ./dev/run.sh
+	# Run all binaries needed for mobility network
+	./dev/run.sh
