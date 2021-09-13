@@ -82,4 +82,4 @@ registerURLCallRetryFailuresMetric =
     P.vector "URL" $
       P.counter info
   where
-    info = P.Info "url_call_retries_counter" ""
+    info = P.Info "url_call_retry_failures_counter" ""
