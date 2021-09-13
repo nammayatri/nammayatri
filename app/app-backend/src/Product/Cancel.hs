@@ -45,6 +45,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
         { rideBookingId = rideBookingId,
           source = ReqCancel.ByUser,
           reasonCode = Just reasonCode,
+          reasonStage = Just reasonStage,
           additionalInfo = additionalInfo
         }
 

@@ -4,6 +4,7 @@ import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
 import Mobility.SuccessFlow (doAnAppSearch)
+import qualified "app-backend" Types.Storage.CancellationReason as AppCR
 import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
 
@@ -15,7 +16,7 @@ spec = do
       (_, bRideBookingId) <- doAnAppSearch
 
       -- cancel request initiated by App
-      void . callBAP $ cancelRide bRideBookingId appRegistrationToken buildAppCancelReq
+      void . callBAP $ cancelRide bRideBookingId appRegistrationToken (buildAppCancelReq AppCR.OnConfirm)
 
       void . poll $
         callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)

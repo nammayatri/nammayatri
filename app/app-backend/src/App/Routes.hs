@@ -52,12 +52,12 @@ import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
 import Types.Geofencing
+import qualified Types.Storage.CancellationReason as SCancellationReason
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RegistrationToken as SRT
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.SearchRequest as SSR
-import qualified Types.Storage.CancellationReason as SCancellationReason
 import Utils.Auth (TokenAuth)
 
 type AppAPI =

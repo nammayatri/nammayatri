@@ -2,19 +2,27 @@
 
 module Types.Storage.CancellationReason where
 
-import Data.OpenApi (ToSchema, ToParamSchema)
 import Data.Aeson (eitherDecode)
 import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Database.Beam as B
-import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), fromBackendRow)
+import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
 import Servant (FromHttpApiData (..))
 
 data CancellationStage = OnSearch | OnConfirm | OnAssign
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationStage where
+  sqlValueSyntax = autoSqlValueSyntax
+
+instance FromBackendRow Postgres CancellationStage where
+  fromBackendRow = read . T.unpack <$> fromBackendRow
+
+instance BeamSqlBackend be => B.HasSqlEqualityCheck be CancellationStage
 
 instance FromHttpApiData CancellationStage where
   parseUrlPiece = parseHeader . DT.encodeUtf8

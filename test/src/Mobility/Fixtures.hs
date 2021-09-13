@@ -99,10 +99,10 @@ getNotificationInfo rideBookingId = getNotif
     _ :<|> (_ :<|> driver_rb_path) = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
     _ :<|> getNotif = driver_rb_path rideBookingId
 
-buildAppCancelReq :: CancelAPI.CancelReq
-buildAppCancelReq =
+buildAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
+buildAppCancelReq stage =
   CancelAPI.CancelReq
-    { rideCancellationReason = CancelAPI.RideCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
+    { rideCancellationReason = CancelAPI.RideCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
     }
 
 getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM QuoteAPI.GetQuotesRes

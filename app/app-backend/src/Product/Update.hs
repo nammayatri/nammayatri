@@ -111,7 +111,7 @@ processEvent (OnUpdate.RideBookingCancelled tcEvent) = do
     QRB.updateStatus rideBooking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
     unless (cancellationSource == OnUpdate.ByUser) $
-      QRCR.create $ SRCR.RideCancellationReason rideBooking.id cancellationSource Nothing Nothing
+      QRCR.create $ SRCR.RideCancellationReason rideBooking.id cancellationSource Nothing Nothing Nothing
   -- notify customer
   Notify.notifyOnRideBookingCancelled rideBooking cancellationSource
 
