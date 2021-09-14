@@ -128,10 +128,10 @@ searchServices ::
   ClientM AppBESearch.SearchRes
 searchServices :<|> _ = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
-buildSearchReq :: Text -> IO AppBESearch.SearchReq
+buildSearchReq :: MonadIO m => Text -> m AppBESearch.SearchReq
 buildSearchReq guid = do
-  futureTime <- getFutureTime
-  utcTime <- getCurrentTime
+  futureTime <- liftIO getFutureTime
+  utcTime <- liftIO getCurrentTime
   pure $ searchReq guid utcTime futureTime
 
 cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
@@ -203,7 +203,7 @@ appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
 
-callAppFeedback :: Int -> Id TPI.ProductInstance -> ClientM APISuccess
+callAppFeedback :: Int -> Id BPI.ProductInstance -> ClientM APISuccess
 callAppFeedback ratingValue productInstanceId =
   let request =
         AppFeedback.FeedbackReq

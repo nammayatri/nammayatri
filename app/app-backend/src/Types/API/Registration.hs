@@ -90,7 +90,7 @@ data LoginRes = LoginRes
   { registrationToken :: Text,
     user :: UserInfoRes
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data UserInfoRes = UserInfoRes
   { id :: Id Person.Person,
@@ -102,7 +102,7 @@ data UserInfoRes = UserInfoRes
     organizationId :: Maybe (Id Org.Organization),
     deviceToken :: Maybe FCMRecipientToken
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 makeUserInfoRes :: Person.DecryptedPerson -> UserInfoRes
 makeUserInfoRes Person.Person {..} = UserInfoRes {..}

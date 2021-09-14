@@ -1,137 +1,109 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Mobility.SuccessFlow where
 
 import Beckn.Types.Id
--- import Data.Text (isSuffixOf)
 import qualified Data.UUID as UUID
-import qualified Data.UUID.V1 as UUID
+import qualified Data.UUID.V4 as UUID
 import EulerHS.Prelude
+import HSpec
 import Mobility.Fixtures
-import qualified Network.HTTP.Client as Client
-import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Servant.Client
-import Test.Hspec
-import qualified "app-backend" Types.API.Case as AppCase
--- import qualified "beckn-transport" Types.API.Case as TbeCase
-import qualified "app-backend" Types.API.ProductInstance as AppPI
-import qualified "beckn-transport" Types.API.ProductInstance as TbePI
 import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "beckn-transport" Types.Storage.Case as TCase
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
 import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
 import Utils
 
+doAnAppSearch :: HasCallStack => ClientsM (Text, TPI.ProductInstance)
+doAnAppSearch = do
+  -- Driver sets online
+  void . callBPP $ setDriverOnline driverToken True
+
+  -- Do an App Search
+  appCaseid <-
+    liftIO UUID.nextRandom
+      <&> UUID.toText
+      >>= buildSearchReq
+      >>= callBAP . searchServices appRegistrationToken
+      <&> (.caseId)
+
+  -- Do a Case Status request for getting product instance to confirm ride
+  productInstance <- expectSingletonNE <=< poll $ do
+    -- List all confirmed rides (type = RIDEORDER)
+    callBAP (buildCaseStatusRes appCaseid)
+      <&> (.productInstance)
+      -- since all BPP can give quote for now we filter by orgId
+      <&> filter (\p -> p.organizationId == Id bppTransporterOrgId)
+      <&> nonEmpty
+  let productInstanceId = getId productInstance.id
+
+  -- check if calculated price is greater than 0
+  productInstance `shouldSatisfy` isJust . (.price)
+  let (Just prodPrice) = productInstance.price
+  prodPrice `shouldSatisfy` (> 100) -- should at least be more than 100
+
+  -- Confirm ride from app backend
+  void . callBAP $
+    appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId
+
+  transporterOrderPi <- pollBPPForOrgOrderPi (cast productInstance.id) TPI.CONFIRMED TCase.RIDEORDER
+  transporterOrderPi.udf4 `shouldSatisfy` isJust
+  return (productInstanceId, transporterOrderPi)
+
+pollBPPForOrgOrderPi ::
+  Id TPI.ProductInstance ->
+  TPI.ProductInstanceStatus ->
+  TCase.CaseType ->
+  ClientsM TPI.ProductInstance
+pollBPPForOrgOrderPi searchPiId status type_ =
+  expectSingletonNE <=< poll $ do
+    -- List all confirmed rides (type = RIDEORDER)
+    callBPP (buildOrgRideReq status type_)
+      <&> map (.productInstance)
+      <&> filter (\pI -> pI.parentId == Just searchPiId) -- Filter order productInstance
+      <&> nonEmpty
+
 spec :: Spec
 spec = do
-  appManager <- runIO $ Client.newManager tlsManagerSettings
-  let appBaseUrl = getAppBaseUrl
-      transporterBaseUrl = getTransporterBaseUrl
-      appClientEnv = mkClientEnv appManager appBaseUrl
-      tbeClientEnv = mkClientEnv appManager transporterBaseUrl
+  clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
-    it "Testing API flow for successful booking and completion of ride" do
-      -- Driver sets online
-      setDriverOnlineResponse <-
-        runClient tbeClientEnv $ setDriverOnline driverToken True
-      setDriverOnlineResponse `shouldSatisfy` isRight
+    it "Testing API flow for successful booking and completion of ride" $ withBecknClients clients do
+      (productInstanceId, transporterOrderPi) <- doAnAppSearch
+      let transporterOrderPiId = transporterOrderPi.id
 
-      -- Do an App Search
-      transactionId <- UUID.nextUUID
-      sreq <- buildSearchReq $ UUID.toText $ fromJust transactionId
-      searchResult <- runClient appClientEnv (searchServices appRegistrationToken sreq)
-      searchResult `shouldSatisfy` isRight
-      -- If we reach here, the 'Right' pattern match will always succeed
-      let Right searchResponse = searchResult
-          appCaseid = searchResponse.caseId
-
-      -- All rides are accepted by default and has fare calculated
-
-      productInstance :| [] <- poll $ do
-        -- Do a Case Status request for getting case product to confirm ride
-        -- on app side next
-        statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
-        statusResResult `shouldSatisfy` isRight
-        let Right statusRes = statusResResult
-        -- since all BPP can give quote for now we filter by orgId
-        return $ nonEmpty . filter (\p -> p.organizationId == Id bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = getId $ AppCase.id productInstance
-
-      -- check if calculated price is greater than 0
-      let (Just prodPrice) = productInstance.price
-      prodPrice `shouldSatisfy` (> 100) -- should at least be more than 100
-
-      -- Confirm ride from app backend
-      confirmResult <-
-        runClient
-          appClientEnv
-          (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)
-      confirmResult `shouldSatisfy` isRight
-
-      transporterOrderPi :| [] <- poll $ do
-        -- List all confirmed rides (type = RIDEORDER)
-        rideReqResult <- runClient tbeClientEnv (buildOrgRideReq TPI.CONFIRMED TCase.RIDEORDER)
-        rideReqResult `shouldSatisfy` isRight
-
-        -- Filter order productInstance
-        let Right rideListRes = rideReqResult
-            tbePiList = TbePI.productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> TPI.parentId pI) == Just productInstanceId) tbePiList
-        return $ nonEmpty transporterOrdersPi
-      let transporterOrderPiId = TPI.id transporterOrderPi
-
-      rideInfo <- poll $ do
-        res <-
-          runClient
-            tbeClientEnv
-            $ getNotificationInfo driverToken (Just $ cast transporterOrderPiId)
-        pure $ either (const Nothing) (.rideRequest) res
+      rideInfo <-
+        poll $
+          try @_ @SomeException (callBPP $ getNotificationInfo driverToken (Just $ cast transporterOrderPiId))
+            <&> either (const Nothing) (.rideRequest)
       rideInfo.productInstanceId `shouldBe` transporterOrderPiId
 
       -- Driver Accepts a ride
-      let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.ACCEPT
-      driverAcceptRideRequestResult <-
-        runClient
-          tbeClientEnv
-          $ rideRespond driverToken respondBody
-      driverAcceptRideRequestResult `shouldSatisfy` isRight
+      void . callBPP $
+        rideRespond driverToken $
+          RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.ACCEPT
 
-      tripAssignedPI :| [] <- poll $ do
-        -- List all confirmed rides (type = RIDEORDER)
-        rideReqRes <- runClient tbeClientEnv (buildOrgRideReq TPI.TRIP_ASSIGNED TCase.RIDEORDER)
-        rideReqRes `shouldSatisfy` isRight
-
-        -- Filter order productInstance
-        let Right rideListRes = rideReqRes
-            tbePiList = TbePI.productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> TPI.parentId pI) == Just productInstanceId) tbePiList
-        return $ nonEmpty transporterOrdersPi
+      tripAssignedPI <- pollBPPForOrgOrderPi (Id productInstanceId) TPI.TRIP_ASSIGNED TCase.RIDEORDER
       tripAssignedPI.status `shouldBe` TPI.TRIP_ASSIGNED
 
-      -- Update RIDEORDER PI to INPROGRESS once driver starts his trip
-      inProgressStatusResult <-
-        runClient
-          tbeClientEnv
-          (rideStart driverToken transporterOrderPiId (buildStartRideReq . fromMaybe "OTP is not present" $ transporterOrderPi.udf4))
-      inProgressStatusResult `shouldSatisfy` isRight
+      void . callBPP $
+        rideStart driverToken transporterOrderPiId $
+          buildStartRideReq $
+            fromJust transporterOrderPi.udf4
 
-      inprogressPiListResult <- runClient appClientEnv (buildListPIs BPI.INPROGRESS)
-      inprogressPiListResult `shouldSatisfy` isRight
-
-      -- Check if app RIDEORDER PI got updated to status INPROGRESS
-      checkPiInResult inprogressPiListResult productInstanceId
+      bapOrderPi <-
+        callBAP (buildListPIs BPI.INPROGRESS)
+          <&> map (.productInstance)
+          <&> filter (\pI -> pI.parentId == Just (Id productInstanceId))
+          >>= expectSingletonList
 
       -- Update RIDEORDER PI to COMPLETED once driver ends his trip
-      completedStatusResult <-
-        runClient
-          tbeClientEnv
-          (rideEnd driverToken transporterOrderPiId)
-      completedStatusResult `shouldSatisfy` isRight
-  where
-    productInstances :: AppCase.GetStatusRes -> [AppCase.ProdInstRes]
-    productInstances = AppCase.productInstance
+      void . callBPP $ rideEnd driverToken transporterOrderPiId
 
-    checkPiInResult :: Either ClientError [AppPI.ProductInstanceRes] -> Text -> Expectation
-    checkPiInResult piListResult productInstanceId =
-      let Right piListRes = piListResult
-          appPiList = AppPI.productInstance <$> piListRes
-          appOrderPI = filter (\pI -> (getId <$> BPI.parentId pI) == Just productInstanceId) appPiList
-       in length appOrderPI `shouldBe` 1
+      void $
+        callBAP (buildListPIs BPI.COMPLETED)
+          <&> map (.productInstance)
+          <&> filter (\pI -> pI.id == bapOrderPi.id)
+          >>= expectSingletonList
+
+      -- Leave feedback
+      void . callBAP $ callAppFeedback 5 bapOrderPi.id

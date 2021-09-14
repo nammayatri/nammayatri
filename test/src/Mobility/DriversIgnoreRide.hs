@@ -1,93 +1,31 @@
 module Mobility.DriversIgnoreRide where
 
 import Beckn.Types.Id
-import qualified Data.UUID as UUID
-import qualified Data.UUID.V1 as UUID
+import Control.Arrow ((>>>))
 import EulerHS.Prelude
+import HSpec
 import Mobility.Fixtures
-import qualified Network.HTTP.Client as Client
-import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Servant.Client
-import Test.Hspec
-import qualified "app-backend" Types.API.Case as AppCase
-import qualified "app-backend" Types.API.ProductInstance as AppPI
-import qualified "beckn-transport" Types.API.ProductInstance as TbePI
+import Mobility.SuccessFlow
 import qualified "beckn-transport" Types.API.Ride as RideAPI
-import qualified "beckn-transport" Types.Storage.Case as TCase
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
-import qualified "beckn-transport" Types.Storage.ProductInstance as TPI
 import Utils
 
 spec :: Spec
 spec = do
-  appManager <- runIO $ Client.newManager tlsManagerSettings
-  let appBaseUrl = getAppBaseUrl
-      transporterBaseUrl = getTransporterBaseUrl
-      appClientEnv = mkClientEnv appManager appBaseUrl
-      tbeClientEnv = mkClientEnv appManager transporterBaseUrl
+  clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
-    it "Testing API flow for ride cancelled by Driver" do
-      -- Driver sets online
-      setDriverOnlineResponse <-
-        runClient tbeClientEnv $ setDriverOnline driverToken True
-      setDriverOnlineResponse `shouldSatisfy` isRight
-
-      -- Do an App Search
-      transactionId <- UUID.nextUUID
-      sreq <- buildSearchReq $ UUID.toText $ fromJust transactionId
-      searchResult <- runClient appClientEnv (searchServices appRegistrationToken sreq)
-      searchResult `shouldSatisfy` isRight
-      -- If we reach here, the 'Right' pattern match will always succeed
-      let Right searchResponse = searchResult
-          appCaseid = searchResponse.caseId
-
-      productInstance :| [] <- poll $ do
-        -- Do a Case Status request for getting case product to confirm ride
-        -- on app side next
-        statusResResult <- runClient appClientEnv (buildCaseStatusRes appCaseid)
-        statusResResult `shouldSatisfy` isRight
-        let Right statusRes = statusResResult
-        return . nonEmpty . filter (\p -> p.organizationId == Id bppTransporterOrgId) $ productInstances statusRes
-      let productInstanceId = getId $ AppCase.id productInstance
-      -- Confirm ride from app backend
-      confirmResult <-
-        runClient
-          appClientEnv
-          (appConfirmRide appRegistrationToken $ buildAppConfirmReq appCaseid productInstanceId)
-      confirmResult `shouldSatisfy` isRight
-
-      transporterOrderPi :| [] <- poll $ do
-        -- List all confirmed rides (type = RIDEORDER)
-        rideReqResult <- runClient tbeClientEnv (buildOrgRideReq TPI.CONFIRMED TCase.RIDEORDER)
-        rideReqResult `shouldSatisfy` isRight
-
-        -- Filter order productInstance
-        let Right rideListRes = rideReqResult
-            tbePiList = TbePI.productInstance <$> rideListRes
-            transporterOrdersPi = filter (\pI -> (getId <$> TPI.parentId pI) == Just productInstanceId) tbePiList
-        return $ nonEmpty transporterOrdersPi
-      let transporterOrderPiId = TPI.id transporterOrderPi
+    it "Testing API flow for ride cancelled by Driver" $ withBecknClients clients do
+      (productInstanceId, transporterOrderPi) <- doAnAppSearch
+      let transporterOrderPiId = transporterOrderPi.id
 
       -- Driver Rejects a ride
-      let respondBody = RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.REJECT
-      driverAcceptRideRequestResult <-
-        runClient
-          tbeClientEnv
-          $ rideRespond driverToken respondBody
-      driverAcceptRideRequestResult `shouldSatisfy` isRight
+      void . callBPP $
+        rideRespond driverToken $
+          RideAPI.SetDriverAcceptanceReq transporterOrderPiId RideAPI.REJECT
 
-      piListResult <- runClient appClientEnv (buildListPIs BPI.CANCELLED)
-      piListResult `shouldSatisfy` isRight
-
-      -- Check if app RIDEORDER PI is not CANCELLED. Only Customer can cancel the order.
-      checkPiInResult piListResult productInstanceId
-  where
-    productInstances :: AppCase.GetStatusRes -> [AppCase.ProdInstRes]
-    productInstances = AppCase.productInstance
-
-    checkPiInResult :: Either ClientError [AppPI.ProductInstanceRes] -> Text -> Expectation
-    checkPiInResult piListResult productInstanceId =
-      let Right piListRes = piListResult
-          appPiList = AppPI.productInstance <$> piListRes
-          appOrderPI = filter (\pI -> (getId <$> BPI.parentId pI) == Just productInstanceId) appPiList
-       in length appOrderPI `shouldBe` 0
+      -- Only Customer can cancel the order.
+      void $
+        callBAP (buildListPIs BPI.CANCELLED)
+          <&> map (.productInstance)
+          <&> filter (\pI -> pI.parentId == Just (Id productInstanceId))
+          >>= (length >>> (`shouldBe` 0))

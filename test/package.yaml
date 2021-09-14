@@ -85,6 +85,8 @@ dependencies:
   - record-hasfield
   - record-dot-preprocessor
   - unordered-containers
+  - hspec-expectations-lifted
+  - HUnit
 
 ghc-options:
   - -fwrite-ide-info

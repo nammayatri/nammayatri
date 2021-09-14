@@ -3,7 +3,6 @@ module Mobility.Spec where
 import EulerHS.Prelude
 import qualified Mobility.AppCancelRide as CR
 import qualified Mobility.AppCaseList as CL
-import qualified Mobility.AppRateRide as RateRide
 import qualified Mobility.DriverCancelRide as DCR
 import qualified Mobility.DriversIgnoreRide as DIR
 import qualified Mobility.HealthCheck as HC
@@ -23,7 +22,6 @@ mkTestTree = do
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
   srvSpec <- testSpec "Serviceability" SRV.spec
   ndSpec <- testSpec "NearestDriver" ND.spec
-  feedbackSpec <- testSpec "RateRide" RateRide.spec
   return $
     testGroup
       "Mobility"
@@ -33,11 +31,14 @@ mkTestTree = do
             "APIs"
             [ ndSpec,
               clSpec,
-              sfSpec,
-              dirSpec,
-              feedbackSpec,
               srvSpec,
-              crSpec,
-              dcrSpec
+              sfSpec,
+              after AllSucceed "SuccessFlow" $
+                testGroup
+                  "Flows"
+                  [ dirSpec,
+                    crSpec,
+                    dcrSpec
+                  ]
             ]
       ]
