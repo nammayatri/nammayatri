@@ -5,6 +5,7 @@ module Types.Storage.Vehicle where
 import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -16,10 +17,9 @@ import Servant.API
 import Types.Error (VehicleError (VehicleFieldNotPresent))
 import qualified Types.Storage.Organization as Org
 import Utils.Common
-import Data.OpenApi (ToSchema)
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
   sqlValueSyntax = autoSqlValueSyntax
@@ -36,7 +36,7 @@ instance FromHttpApiData Category where
 
 --------
 data Variant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS | HATCHBACK
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
   sqlValueSyntax = autoSqlValueSyntax
@@ -53,7 +53,7 @@ instance FromHttpApiData Variant where
 
 -----
 data EnergyType = PETROL | DIESEL | HYBRID | ELECTRIC | NG
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be EnergyType where
   sqlValueSyntax = autoSqlValueSyntax

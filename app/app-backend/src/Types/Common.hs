@@ -20,8 +20,8 @@ import qualified Beckn.Types.Mobility.Traveller as Traveller
 import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Mobility.Vehicle as Vehicle
 import Control.Lens.Prism (_Just)
-import qualified Data.Text as T
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (drop, id, state)
 

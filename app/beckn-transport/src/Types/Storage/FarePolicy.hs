@@ -3,6 +3,7 @@
 module Types.Storage.FarePolicy where
 
 import Beckn.Types.Id (Id)
+import Data.OpenApi (ToSchema)
 import Data.Time (TimeOfDay, UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -88,7 +89,7 @@ data FarePolicyAPIEntity = FarePolicyAPIEntity
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 makeFarePolicyAPIEntity :: FarePolicy -> FarePolicyAPIEntity
 makeFarePolicyAPIEntity FarePolicy {..} =

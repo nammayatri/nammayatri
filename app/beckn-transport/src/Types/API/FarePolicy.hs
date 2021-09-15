@@ -11,6 +11,7 @@ where
 import Beckn.Types.APISuccess
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation
+import Data.OpenApi (ToSchema)
 import Data.Time (TimeOfDay (..))
 import EulerHS.Prelude hiding (id)
 import Types.Storage.FarePolicy (FarePolicyAPIEntity)
@@ -18,7 +19,7 @@ import Types.Storage.FarePolicy (FarePolicyAPIEntity)
 newtype ListFarePolicyRes = ListFarePolicyRes
   { farePolicies :: [FarePolicyAPIEntity]
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data UpdateFarePolicyReq = UpdateFarePolicyReq
   { baseFare :: Maybe Double,
@@ -28,7 +29,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
   }
-  deriving (Generic, Show, FromJSON)
+  deriving (Generic, Show, FromJSON, ToSchema)
 
 type UpdateFarePolicyRes = APISuccess
 

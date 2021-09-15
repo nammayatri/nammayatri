@@ -2,11 +2,11 @@
 
 module Types.Storage.CancellationReason where
 
+import Data.OpenApi (ToSchema)
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), fromBackendRow)
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude hiding (id)
-import Data.OpenApi (ToSchema)
 
 newtype CancellationReasonCode = CancellationReasonCode Text
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)

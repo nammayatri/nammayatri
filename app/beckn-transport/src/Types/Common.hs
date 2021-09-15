@@ -1,7 +1,7 @@
 module Types.Common where
 
-import EulerHS.Prelude hiding (drop, id, state)
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude hiding (drop, id, state)
 
 data GPS = GPS
   { lat :: Text,

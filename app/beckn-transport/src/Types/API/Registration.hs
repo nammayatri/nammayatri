@@ -5,6 +5,7 @@ import Beckn.Types.Id
 import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Person as Person
 import Types.Storage.RegistrationToken (RegistrationToken)
@@ -13,7 +14,7 @@ data AuthReq = AuthReq
   { mobileNumber :: Text,
     mobileCountryCode :: Text
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToSchema)
 
 validateInitiateLoginReq :: Validate AuthReq
 validateInitiateLoginReq AuthReq {..} =
@@ -26,7 +27,7 @@ data AuthRes = AuthRes
   { authId :: Id RegistrationToken,
     attempts :: Int
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 type ResendAuthRes = AuthRes
 
@@ -35,7 +36,7 @@ data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
     deviceToken :: Maybe FCMRecipientToken
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 validateAuthVerifyReq :: Validate AuthVerifyReq
 validateAuthVerifyReq AuthVerifyReq {..} =
@@ -47,4 +48,4 @@ data AuthVerifyRes = AuthVerifyRes
   { token :: Text,
     person :: Person.PersonAPIEntity
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

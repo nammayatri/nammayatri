@@ -2,13 +2,13 @@ module Types.API.RideBooking where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Types.Storage.ProductInstance (ProductInstance)
 import Types.Storage.Ride (RideAPIEntity)
 import Types.Storage.RideBooking (RideBookingStatus)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
-import Data.OpenApi (ToSchema)
 
 data RideBookingStatusRes = RideBookingStatusRes
   { id :: Id ProductInstance,

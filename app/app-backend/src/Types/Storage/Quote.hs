@@ -2,10 +2,10 @@ module Types.Storage.Quote where
 
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Types.Storage.ProductInstance (ProductInstance)
-import Data.OpenApi (ToSchema)
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id ProductInstance,

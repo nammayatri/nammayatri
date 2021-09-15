@@ -6,8 +6,9 @@ import Beckn.Types.Core.Address
 import Beckn.Types.Core.Scalar
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
+import qualified Beckn.Utils.Schema as Schema
 import Data.Default.Class (Default (..))
-import Data.OpenApi (ToSchema)
+import Data.OpenApi (ToSchema (declareNamedSchema), genericDeclareNamedSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -21,7 +22,10 @@ data Location = Location
     polygon :: Maybe Text,
     _3dspace :: Maybe Text
   }
-  deriving (Generic, Show, ToSchema)
+  deriving (Generic, Show)
+
+instance ToSchema Location where
+  declareNamedSchema = genericDeclareNamedSchema Schema.stripPrefixUnderscoreIfAny
 
 instance FromJSON Location where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

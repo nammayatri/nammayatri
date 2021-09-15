@@ -4,7 +4,8 @@ module Beckn.Types.Core.Description
 where
 
 import Beckn.Utils.JSON
-import Data.OpenApi (ToSchema)
+import qualified Beckn.Utils.Schema as Schema
+import Data.OpenApi (ToSchema (declareNamedSchema), genericDeclareNamedSchema)
 import EulerHS.Prelude
   ( FromJSON (..),
     Generic,
@@ -26,7 +27,10 @@ data Description = Description
     audio :: Maybe Text,
     _3d_render :: Maybe Text
   }
-  deriving (Show, Generic, ToSchema)
+  deriving (Show, Generic)
+
+instance ToSchema Description where
+  declareNamedSchema = genericDeclareNamedSchema Schema.stripPrefixUnderscoreIfAny
 
 instance FromJSON Description where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

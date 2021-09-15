@@ -8,12 +8,12 @@ module Beckn.Types.MapSearch
   )
 where
 
+import Beckn.Types.App (Value)
+import Control.Lens.Operators
 import Data.Geospatial
 import Data.LineString
 import Data.OpenApi
 import EulerHS.Prelude
-import Control.Lens.Operators
-import Beckn.Types.App (Value)
 
 data LatLong = LatLong
   { lat :: Double,

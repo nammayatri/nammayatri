@@ -4,7 +4,8 @@ module Beckn.Types.Core.Person where
 
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import Data.OpenApi (ToSchema)
+import qualified Beckn.Utils.Schema as Schema
+import Data.OpenApi (ToSchema (declareNamedSchema), genericDeclareNamedSchema)
 import Data.Text
 import EulerHS.Prelude
 
@@ -37,7 +38,10 @@ data Image = Image
     url :: Maybe Text,
     _data :: Maybe Text
   }
-  deriving (Generic, Show, Eq, ToSchema)
+  deriving (Generic, Show, Eq)
+
+instance ToSchema Image where
+  declareNamedSchema = genericDeclareNamedSchema Schema.stripPrefixUnderscoreIfAny
 
 instance FromJSON Image where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

@@ -1,8 +1,8 @@
 module Types.API.Search where
 
 import Beckn.Types.Id
-import EulerHS.Prelude hiding (id)
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude hiding (id)
 import Types.Storage.Case (Case)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 

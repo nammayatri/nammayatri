@@ -4,11 +4,11 @@ module Types.Storage.SearchReqLocation where
 
 import Beckn.Types.Id
 import Data.Aeson
+import Data.OpenApi (ToSchema)
 import Data.Time
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Common as Common
-import Data.OpenApi (ToSchema)
 
 data SearchReqLocationT f = SearchReqLocation
   { id :: B.C f (Id SearchReqLocation),

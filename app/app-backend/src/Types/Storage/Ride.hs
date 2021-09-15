@@ -2,10 +2,10 @@ module Types.Storage.Ride where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Types.Storage.ProductInstance (ProductInstance)
-import Data.OpenApi (ToSchema)
 
 data RideStatus = NEW | INPROGRESS | COMPLETED | CANCELLED
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

@@ -2,6 +2,7 @@ module Types.API.OrgAdmin where
 
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import Beckn.Types.Id
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import Types.Storage.Organization (OrganizationAPIEntity)
 import qualified Types.Storage.Person as SP
@@ -15,7 +16,7 @@ data OrgAdminProfileRes = OrgAdminProfileRes
     maskedDeviceToken :: FCMRecipientToken,
     organization :: OrganizationAPIEntity
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data UpdateOrgAdminProfileReq = UpdateOrgAdminProfileReq
   { firstName :: Maybe Text,
@@ -23,6 +24,6 @@ data UpdateOrgAdminProfileReq = UpdateOrgAdminProfileReq
     lastName :: Maybe Text,
     deviceToken :: Maybe FCMRecipientToken
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 type UpdateOrgAdminProfileRes = OrgAdminProfileRes

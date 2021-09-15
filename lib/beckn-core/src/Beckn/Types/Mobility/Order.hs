@@ -8,8 +8,8 @@ import Beckn.Types.Core.Payment
 import Beckn.Types.Mobility.Trip
 import Beckn.Utils.Example
 import Data.Aeson.Types
-import qualified Data.Text as T
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import Data.Time
 import Database.Beam (FromBackendRow)
 import Database.Beam.Backend (FromBackendRow (fromBackendRow), HasSqlValueSyntax (sqlValueSyntax), autoSqlValueSyntax)

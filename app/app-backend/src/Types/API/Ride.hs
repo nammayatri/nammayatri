@@ -1,7 +1,7 @@
 module Types.API.Ride where
 
-import EulerHS.Prelude hiding (id)
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude hiding (id)
 
 data GetDriverLocRes = GetDriverLocRes
   { lat :: Double,

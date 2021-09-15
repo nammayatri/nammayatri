@@ -59,30 +59,29 @@ import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
 type AppAPI =
   "v2"
-    :> ( MainAPI
-           :<|> SwaggerAPI
-       )
+    :> MainAPI
+      :<|> SwaggerAPI
 
 type MainAPI =
   Get '[JSON] Text
-      :<|> RegistrationAPI
-      :<|> ProfileAPI
-      :<|> SearchAPI
-      :<|> QuoteAPI
-      :<|> ConfirmAPI
-      :<|> RideBookingAPI
-      :<|> CancelAPI
-      :<|> RideAPI
-      :<|> CallAPIs
-      :<|> SupportAPI
-      :<|> UpdateAPI
-      :<|> RouteAPI
-      :<|> StatusAPI
-      :<|> ServiceabilityAPI
-      :<|> FeedbackAPI
-      :<|> CustomerSupportAPI
-      :<|> GoogleMapsProxyAPI
-      :<|> CancellationReasonAPI
+    :<|> RegistrationAPI
+    :<|> ProfileAPI
+    :<|> SearchAPI
+    :<|> QuoteAPI
+    :<|> ConfirmAPI
+    :<|> RideBookingAPI
+    :<|> CancelAPI
+    :<|> RideAPI
+    :<|> CallAPIs
+    :<|> SupportAPI
+    :<|> UpdateAPI
+    :<|> RouteAPI
+    :<|> StatusAPI
+    :<|> ServiceabilityAPI
+    :<|> FeedbackAPI
+    :<|> CustomerSupportAPI
+    :<|> GoogleMapsProxyAPI
+    :<|> CancellationReasonAPI
 
 appAPI :: Proxy AppAPI
 appAPI = Proxy

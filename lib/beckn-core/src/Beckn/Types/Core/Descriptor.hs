@@ -5,7 +5,8 @@ module Beckn.Types.Core.Descriptor where
 import Beckn.Types.Core.Image
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import Data.OpenApi (ToSchema)
+import qualified Beckn.Utils.Schema as Schema
+import Data.OpenApi (ToSchema (declareNamedSchema), genericDeclareNamedSchema)
 import EulerHS.Prelude
 
 data Descriptor = Descriptor
@@ -18,7 +19,10 @@ data Descriptor = Descriptor
     audio :: Maybe Text,
     _3d_render :: Maybe Text
   }
-  deriving (Generic, Show, Eq, ToSchema)
+  deriving (Generic, Show, Eq)
+
+instance ToSchema Descriptor where
+  declareNamedSchema = genericDeclareNamedSchema Schema.stripPrefixUnderscoreIfAny
 
 instance FromJSON Descriptor where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

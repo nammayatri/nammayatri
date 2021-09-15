@@ -6,6 +6,7 @@ module Types.Storage.SearchReqLocation where
 import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime)
@@ -14,7 +15,6 @@ import EulerHS.Prelude hiding (id, state)
 import qualified Types.Common as Common
 import Types.Error
 import Utils.Common hiding (id)
-import Data.OpenApi (ToSchema)
 
 data SearchReqLocationT f = SearchReqLocation
   { id :: B.C f (Id SearchReqLocation),

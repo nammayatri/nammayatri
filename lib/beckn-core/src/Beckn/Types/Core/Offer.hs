@@ -3,7 +3,8 @@ module Beckn.Types.Core.Offer where
 import Beckn.Types.Core.Descriptor
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import Data.OpenApi (ToSchema)
+import qualified Beckn.Utils.Schema as Schema
+import Data.OpenApi (ToSchema (declareNamedSchema), genericDeclareNamedSchema)
 import Data.Text
 import Data.Time
 import EulerHS.Prelude hiding (id)
@@ -31,7 +32,10 @@ data OfferRef = OfferRef
   { _type :: Text, --"category", "service", "item"
     ids :: [Text]
   }
-  deriving (Generic, Show, ToSchema)
+  deriving (Generic, Show)
+
+instance ToSchema OfferRef where
+  declareNamedSchema = genericDeclareNamedSchema Schema.stripPrefixUnderscoreIfAny
 
 instance FromJSON OfferRef where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

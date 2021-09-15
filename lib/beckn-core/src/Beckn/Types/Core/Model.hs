@@ -5,7 +5,8 @@ module Beckn.Types.Core.Model where
 import Beckn.Types.Core.Image
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import Data.OpenApi (ToSchema)
+import qualified Beckn.Utils.Schema as Schema
+import Data.OpenApi (ToSchema (declareNamedSchema), genericDeclareNamedSchema)
 import EulerHS.Prelude hiding (id)
 
 data Model = Model
@@ -20,7 +21,10 @@ data Model = Model
     audio :: Maybe Text,
     _3d_render :: Maybe Text
   }
-  deriving (Generic, Show, ToSchema)
+  deriving (Generic, Show)
+
+instance ToSchema Model where
+  declareNamedSchema = genericDeclareNamedSchema Schema.stripPrefixUnderscoreIfAny
 
 instance FromJSON Model where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

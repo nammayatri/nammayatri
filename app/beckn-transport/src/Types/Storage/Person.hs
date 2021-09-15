@@ -10,6 +10,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common (maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -23,7 +24,7 @@ import qualified Types.Storage.Organization as Org
 data Role
   = DRIVER
   | ADMIN
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, Enum, Bounded, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
@@ -162,7 +163,7 @@ data PersonAPIEntity = PersonAPIEntity
     maskedDeviceToken :: FCM.FCMRecipientToken,
     role :: Role
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
 makePersonAPIEntity Person {..} =

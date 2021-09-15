@@ -3,20 +3,21 @@ module Types.API.Transporter where
 import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.Organization as SO
 
 newtype TransporterRec = TransporterRec
   { organization :: SO.OrganizationAPIEntity
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 data UpdateTransporterReq = UpdateTransporterReq
   { name :: Maybe Text,
     description :: Maybe Text,
     enabled :: Maybe Bool
   }
-  deriving (Generic, Show, FromJSON)
+  deriving (Generic, Show, FromJSON, ToSchema)
 
 type UpdateTransporterRes = SO.OrganizationAPIEntity
 

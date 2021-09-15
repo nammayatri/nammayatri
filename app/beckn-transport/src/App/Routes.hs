@@ -12,6 +12,7 @@ import qualified Beckn.Types.Core.API.Feedback as API
 import qualified Beckn.Types.Core.API.Search as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
+import Data.OpenApi
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
 import Product.BecknProvider.Confirm as BP
@@ -31,6 +32,7 @@ import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
+import Servant.OpenApi
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Driver as DriverAPI
 import Types.API.Location as Location
@@ -49,22 +51,51 @@ import Utils.Auth (AdminTokenAuth, LookupRegistryOrg, TokenAuth)
 
 type TransportAPI =
   "v2"
-    :> ( HealthCheckAPI
-           :<|> RegistrationAPI
-           :<|> OrgAdminAPI
-           :<|> DriverAPI
-           :<|> VehicleAPI
-           :<|> OrganizationAPI --Transporter
-           :<|> RideBookingAPI
-           :<|> FarePolicyAPI
-           :<|> OrgBecknAPI
-           :<|> LocationAPI
-           :<|> CallAPIs
-           :<|> RouteAPI
-           :<|> RideAPI
-           :<|> CancellationReasonAPI
-           :<|> GoogleMapsProxyAPI
-       )
+    :> MainAPI
+      :<|> SwaggerAPI
+
+type MainAPI =
+  HealthCheckAPI
+    :<|> RegistrationAPI
+    :<|> OrgAdminAPI
+    :<|> DriverAPI
+    :<|> VehicleAPI
+    :<|> OrganizationAPI --Transporter
+    :<|> RideBookingAPI
+    :<|> FarePolicyAPI
+    :<|> OrgBecknAPI
+    :<|> LocationAPI
+    :<|> CallAPIs
+    :<|> RouteAPI
+    :<|> RideAPI
+    :<|> CancellationReasonAPI
+    :<|> GoogleMapsProxyAPI
+
+transporterAPI :: Proxy TransportAPI
+transporterAPI = Proxy
+
+mainServer :: FlowServer MainAPI
+mainServer =
+  pure "App is UP"
+    :<|> registrationFlow
+    :<|> orgAdminFlow
+    :<|> driverFlow
+    :<|> vehicleFlow
+    :<|> organizationFlow
+    :<|> rideBookingFlow
+    :<|> farePolicyFlow
+    :<|> orgBecknApiFlow
+    :<|> locationFlow
+    :<|> callFlow
+    :<|> routeApiFlow
+    :<|> rideFlow
+    :<|> cancellationReasonFlow
+    :<|> googleMapsProxyFlow
+
+transporterServer :: FlowServer TransportAPI
+transporterServer =
+  mainServer
+    :<|> writeSwaggerJSONFlow
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -275,27 +306,6 @@ locationFlow =
 
 -- location flow over
 
-transporterAPI :: Proxy TransportAPI
-transporterAPI = Proxy
-
-transporterServer :: FlowServer TransportAPI
-transporterServer =
-  pure "App is UP"
-    :<|> registrationFlow
-    :<|> orgAdminFlow
-    :<|> driverFlow
-    :<|> vehicleFlow
-    :<|> organizationFlow
-    :<|> rideBookingFlow
-    :<|> farePolicyFlow
-    :<|> orgBecknApiFlow
-    :<|> locationFlow
-    :<|> callFlow
-    :<|> routeApiFlow
-    :<|> rideFlow
-    :<|> cancellationReasonFlow
-    :<|> googleMapsProxyFlow
-
 type OrgBecknAPI =
   Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization" LookupRegistryOrg
@@ -400,3 +410,19 @@ googleMapsProxyFlow =
   GoogleMapsFlow.autoComplete
     :<|> GoogleMapsFlow.placeDetails
     :<|> GoogleMapsFlow.getPlaceName
+
+type SwaggerAPI = "swagger" :> Get '[JSON] OpenApi
+
+swagger :: OpenApi
+swagger = do
+  let openApi = toOpenApi (Proxy :: Proxy MainAPI)
+  openApi
+    { _openApiInfo =
+        (_openApiInfo openApi)
+          { _infoTitle = "Yatri",
+            _infoVersion = "1.0"
+          }
+    }
+
+writeSwaggerJSONFlow :: FlowServer SwaggerAPI
+writeSwaggerJSONFlow = return swagger

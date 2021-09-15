@@ -4,6 +4,7 @@ import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong)
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Types.App (Driver)
@@ -22,17 +23,17 @@ data RideBookingStatusRes = RideBookingStatusRes
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 newtype RideBookingListRes = RideBookingListRes
   { list :: [RideBookingStatusRes]
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 newtype GetRideInfoRes = GetRideInfoRes
   { rideRequest :: Maybe RideInfo
   }
-  deriving (Generic, ToJSON, FromJSON, Show)
+  deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
 
 data RideInfo = RideInfo
   { bookingId :: Id ProductInstance,
@@ -43,22 +44,22 @@ data RideInfo = RideInfo
     notificationExpiryTime :: UTCTime,
     estimatedPrice :: Maybe Text
   }
-  deriving (Generic, ToJSON, FromJSON, Show)
+  deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
 
 newtype SetDriverAcceptanceReq = SetDriverAcceptanceReq
   { response :: NotificationStatus
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 type SetDriverAcceptanceRes = APISuccess
 
 data NotificationStatus
   = ACCEPT
   | REJECT
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 data DriverResponse = DriverResponse
   { driverId :: Id Driver,
     status :: NotificationStatus
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)

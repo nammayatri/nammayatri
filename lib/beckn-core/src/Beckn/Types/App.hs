@@ -5,7 +5,7 @@
 module Beckn.Types.App
   ( module Beckn.Types.App,
     Servant.BaseUrl,
-    Aeson.Value
+    Aeson.Value,
   )
 where
 

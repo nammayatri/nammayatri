@@ -7,6 +7,7 @@ import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -17,7 +18,7 @@ import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data Status = PENDING_VERIFICATION | APPROVED | REJECTED
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
   sqlValueSyntax = autoSqlValueSyntax
@@ -151,7 +152,7 @@ data OrganizationAPIEntity = OrganizationAPIEntity
     status :: Status,
     enabled :: Bool
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 makeOrganizationAPIEntity :: Organization -> OrganizationAPIEntity
 makeOrganizationAPIEntity Organization {..} =

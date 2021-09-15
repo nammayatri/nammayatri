@@ -5,6 +5,7 @@ module Types.Storage.DriverLocation where
 
 import Beckn.Types.Id
 import Data.Aeson
+import Data.OpenApi (ToSchema)
 import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL
@@ -14,7 +15,6 @@ import qualified Database.Beam.Postgres.Syntax as B
 import qualified Database.PostgreSQL.Simple.FromField as Pg
 import EulerHS.Prelude hiding (id, state)
 import Types.Storage.Person (Person)
-import Data.OpenApi (ToSchema)
 
 data DriverLocationT f = DriverLocation
   { driverId :: B.C f (Id Person),

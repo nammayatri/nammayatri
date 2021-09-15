@@ -23,6 +23,7 @@ import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.Aeson
+import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Organization as Organization
@@ -43,11 +44,11 @@ data DriverInformationRes = DriverInformationRes
     enabled :: Bool,
     organization :: Organization.OrganizationAPIEntity
   }
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 newtype ListDriverRes = ListDriverRes
   {list :: [DriverEntityRes]}
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data DriverEntityRes = DriverEntityRes
   { id :: Id Person,
@@ -62,7 +63,7 @@ data DriverEntityRes = DriverEntityRes
     enabled :: Bool,
     registeredAt :: UTCTime
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 type LinkVehicleRes = APISuccess
 
@@ -71,7 +72,7 @@ data OnboardDriverReq = OnboardDriverReq
   { person :: CreatePerson,
     vehicle :: CreateVehicle
   }
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 validateOnboardDriverReq :: Validate OnboardDriverReq
 validateOnboardDriverReq OnboardDriverReq {..} =
@@ -87,7 +88,7 @@ data CreatePerson = CreatePerson
     mobileNumber :: Text,
     mobileCountryCode :: Text
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 validateCreatePerson :: Validate CreatePerson
 validateCreatePerson CreatePerson {..} =
@@ -107,7 +108,7 @@ data CreateVehicle = CreateVehicle
     registrationNo :: Text,
     capacity :: Int
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
 
 validateCreateVehicle :: Validate CreateVehicle
 validateCreateVehicle CreateVehicle {..} =
@@ -121,7 +122,7 @@ validateCreateVehicle CreateVehicle {..} =
 
 newtype OnboardDriverRes = OnboardDriverRes
   {driver :: PersonAPIEntity}
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data UpdateDriverReq = UpdateDriverReq
   { firstName :: Maybe Text,
@@ -129,7 +130,7 @@ data UpdateDriverReq = UpdateDriverReq
     lastName :: Maybe Text,
     deviceToken :: Maybe FCMRecipientToken
   }
-  deriving (Generic, ToJSON, FromJSON)
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 validateUpdateDriverReq :: Validate UpdateDriverReq
 validateUpdateDriverReq UpdateDriverReq {..} =
