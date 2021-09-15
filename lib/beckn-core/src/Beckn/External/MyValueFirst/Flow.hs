@@ -64,4 +64,5 @@ checkRegistrationSmsResult =
   \case
     Sent -> pure ()
     BadNumber -> throwError SMSInvalidNumber
+    InvalidReceiver -> throwError SMSInvalidNumber
     err -> throwError $ SMSError err

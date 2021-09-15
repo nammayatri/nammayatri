@@ -24,6 +24,7 @@ data SubmitSms = SubmitSms
 data SubmitSmsRes
   = Sent
   | BadNumber
+  | InvalidReceiver
   | EmptyNumber
   | MissingSender
   | EmptyText
@@ -41,6 +42,7 @@ parseSubmitSmsRes :: Text -> SubmitSmsRes
 parseSubmitSmsRes txt
   | "Sent." `T.isPrefixOf` txt = Sent
   | "Number" `T.isPrefixOf` txt = BadNumber
+  | "Invalid Receiver" `T.isPrefixOf` txt = InvalidReceiver
   | "Empty receiver number" `T.isPrefixOf` txt = EmptyNumber
   | "Sender" `T.isPrefixOf` txt = MissingSender
   | "Empty text not allowed" `T.isPrefixOf` txt = EmptyText
@@ -52,6 +54,7 @@ submitSmsResToText :: SubmitSmsRes -> Text
 submitSmsResToText = \case
   Sent -> "Sent."
   BadNumber -> "Number(s) has/have been denied by white-and/or black-lists."
+  InvalidReceiver -> "Invalid Receiver"
   EmptyNumber -> "Empty receiver number not allowed, rejected"
   MissingSender -> "Sender missing and no global set, rejected"
   EmptyText -> "Empty text not allowed, rejected."
