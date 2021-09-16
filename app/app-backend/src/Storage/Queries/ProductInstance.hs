@@ -52,6 +52,14 @@ findAllByCaseId caseId_ = do
     predicate Storage.ProductInstance {..} =
       caseId ==. B.val_ caseId_
 
+findOneByCaseId :: DBFlow m r => Id Case.Case -> m (Maybe Storage.ProductInstance)
+findOneByCaseId caseId_ = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+  where
+    predicate Storage.ProductInstance {..} =
+      caseId ==. B.val_ caseId_
+
 findByProductId :: DBFlow m r => Id Products -> m (Maybe Storage.ProductInstance)
 findByProductId pId = do
   dbTable <- getDbTable

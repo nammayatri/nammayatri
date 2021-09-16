@@ -10,6 +10,7 @@ import Types.API.Location
 import Types.API.Product
 import Types.Error
 import Types.ProductInfo as ProductInfo
+import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Case as SC
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as SPI
@@ -39,10 +40,10 @@ getProductInfo personId prodInstId = withFlowHandlerAPI . withPersonIdLogTag per
 
 -- TODO: fetch tracking URL from tracker info
 getLocation :: Id Person.Person -> Id SC.Case -> FlowHandler GetLocationRes
-getLocation personId caseId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  _ <- Case.findIdByPersonId personId caseId >>= fromMaybeM CaseDoesNotExist
+getLocation personId searchCaseId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  _ <- Case.findIdByPersonId personId searchCaseId >>= fromMaybeM CaseDoesNotExist
   baseUrl <- xProviderUri <$> ask
-  productInstances <- MPI.listAllProductInstance (SPI.ByApplicationId caseId) [SPI.CONFIRMED]
-  when (null productInstances) $ throwError PIDoesNotExist
-  let pI = head productInstances
-  ExternalAPI.location baseUrl (getId $ pI.id)
+  orderCase <- Case.findOneByParentIdAndCaseType searchCaseId Case.RIDEORDER >>= fromMaybeM CaseDoesNotExist
+  orderPI <- MPI.findOneByCaseId orderCase.id >>= fromMaybeM PIDoesNotExist
+  orderPIid <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
+  ExternalAPI.location baseUrl (getId orderPIid)
