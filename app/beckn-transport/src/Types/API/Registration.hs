@@ -49,8 +49,15 @@ validateReInitiateLoginReq ReInitiateLoginReq {..} =
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
 
+data ReInitiateLoginRes = ReInitiateLoginRes
+  { tokenId :: Text,
+    attempts :: Int
+  }
+  deriving (Generic, ToJSON)
+
 data InitiateLoginRes = InitiateLoginRes
   { tokenId :: Text,
+    role :: Person.Role,
     attempts :: Int
   }
   deriving (Generic, ToJSON)

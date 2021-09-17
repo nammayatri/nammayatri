@@ -70,7 +70,8 @@ initiateFlow req smsCfg = do
       return token
   let attempts = SR.attempts regToken
       tokenId = SR.id regToken
-  return $ InitiateLoginRes {attempts, tokenId}
+      role = person.role
+  return $ InitiateLoginRes {tokenId, role, attempts}
 
 makeSession ::
   MonadFlow m =>
@@ -152,7 +153,7 @@ checkPersonExists :: DBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
 
-reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler InitiateLoginRes
+reInitiateLogin :: Text -> ReInitiateLoginReq -> FlowHandler ReInitiateLoginRes
 reInitiateLogin tokenId req =
   withFlowHandlerAPI $ do
     runRequestValidation validateReInitiateLoginReq req
@@ -168,7 +169,7 @@ reInitiateLogin tokenId req =
           SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
             >>= SF.checkRegistrationSmsResult
         _ <- QR.updateAttempts (attempts - 1) id
-        return $ InitiateLoginRes tokenId (attempts - 1)
+        return $ ReInitiateLoginRes tokenId (attempts - 1)
       else throwError $ AuthBlocked "Limit exceeded."
 
 clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()

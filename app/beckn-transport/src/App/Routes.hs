@@ -88,7 +88,7 @@ type RegistrationAPI =
            :<|> Capture "tokenId" Text
              :> "resend"
              :> ReqBody '[JSON] ReInitiateLoginReq
-             :> Post '[JSON] InitiateLoginRes
+             :> Post '[JSON] ReInitiateLoginRes
            :<|> "logout"
              :> TokenAuth
              :> Post '[JSON] APISuccess
