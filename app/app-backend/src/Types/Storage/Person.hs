@@ -167,7 +167,7 @@ data PersonAPIEntity = PersonAPIEntity
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
-    maskedDeviceToken :: Maybe FCM.FCMRecipientToken
+    maskedDeviceToken :: FCM.FCMRecipientToken
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -175,6 +175,6 @@ makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
 makePersonAPIEntity Person {..} =
   PersonAPIEntity
     { maskedMobileNumber = maskText <$> mobileNumber,
-      maskedDeviceToken = FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken) <$> deviceToken,
+      maskedDeviceToken = maybe (FCM.FCMRecipientToken "...") (FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken)) deviceToken,
       ..
     }

@@ -9,15 +9,15 @@ import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
-import Beckn.Types.Core.Location (Location (..))
-import Beckn.Types.Core.Price (Price (..))
+import Beckn.Types.Core.Location
+import Beckn.Types.Core.Price
 import Beckn.Types.Core.Tag
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Catalog as BM
-import Beckn.Types.Mobility.Intent (Intent (..))
-import Beckn.Types.Mobility.Payload (Payload (..))
-import Beckn.Types.Mobility.Stop (Stop (..), StopTime (..))
-import Beckn.Types.Mobility.Vehicle (Vehicle (..))
+import Beckn.Types.Mobility.Intent
+import Beckn.Types.Mobility.Payload
+import Beckn.Types.Mobility.Stop
+import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Map as Map
@@ -49,7 +49,7 @@ import qualified Utils.Metrics as Metrics
 
 search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  validateServiceability req
+  validateServiceability
   fromLocation <- Location.buildSearchReqLoc req.origin
   toLocation <- Location.buildSearchReqLoc req.destination
   now <- getCurrentTime
@@ -70,8 +70,8 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
   return . API.SearchRes $ case_.id
   where
-    validateServiceability sreq = do
-      let originGps = sreq.origin.gps
+    validateServiceability = do
+      let originGps = req.origin.gps
       let destinationGps = req.destination.gps
       let serviceabilityReq = RideServiceabilityReq originGps destinationGps
       unlessM (rideServiceable serviceabilityReq) $
@@ -317,26 +317,14 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
 mkIntent :: API.SearchReq -> UTCTime -> Intent
 mkIntent req now = do
   let pickupLocation =
-        Location
+        emptyLocation
           { gps = Just $ toBeckn req.origin.gps,
-            address = Just $ toBeckn req.origin.address,
-            station_code = Nothing,
-            city = Nothing,
-            country = Nothing,
-            circle = Nothing,
-            polygon = Nothing,
-            _3dspace = Nothing
+            address = Just $ toBeckn req.origin.address
           }
       dropLocation =
-        Location
+        emptyLocation
           { gps = Just $ toBeckn req.destination.gps,
-            address = Just $ toBeckn req.destination.address,
-            station_code = Nothing,
-            city = Nothing,
-            country = Nothing,
-            circle = Nothing,
-            polygon = Nothing,
-            _3dspace = Nothing
+            address = Just $ toBeckn req.destination.address
           }
       pickup =
         Stop
@@ -357,28 +345,10 @@ mkIntent req now = do
             transfers = []
           }
       vehicle =
-        Vehicle
-          { category = Nothing,
-            capacity = Nothing,
-            make = Nothing,
-            model = Nothing,
-            size = Nothing,
-            variant = show req.vehicle,
-            color = Nothing,
-            energy_type = Nothing,
-            registration = Nothing
+        emptyVehicle
+          { variant = show req.vehicle
           }
-      fare =
-        Price
-          { currency = "",
-            value = Nothing,
-            estimated_value = Nothing,
-            computed_value = Nothing,
-            listed_value = Nothing,
-            offered_value = Nothing,
-            minimum_value = Nothing,
-            maximum_value = Nothing
-          }
+      fare = emptyPrice
   Intent
     { query_string = Nothing,
       provider_id = Nothing,

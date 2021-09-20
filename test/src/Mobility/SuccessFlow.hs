@@ -87,7 +87,7 @@ spec = do
           buildStartRideReq $
             fromJust transporterOrderPi.udf4
 
-      void . poll $ do 
+      void . poll $ do
         inprogressRBStatusResult <- callBAP (rideBookingStatus bRideBookingId appRegistrationToken)
         inprogressRBStatusResult.ride `shouldSatisfy` isJust
         inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED

@@ -13,7 +13,6 @@ import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as Storage
 import Types.Storage.Products
@@ -72,7 +71,7 @@ findByProductId pId = do
 findAllOrdersByPerson :: DBFlow m r => Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.ProductInstance]
 findAllOrdersByPerson perId mbLimit mbOffset mbIsOnlyActive = do
   dbTable <- getDbTable
-  let limit = fromMaybe 0 mbLimit
+  let limit = fromMaybe 100 mbLimit
       offset = fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbIsOnlyActive
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset) $ predicate isOnlyActive
@@ -253,17 +252,3 @@ findAllExpiredByStatus statuses expiryTime = do
     predicate Storage.ProductInstance {..} =
       B.in_ status (B.val_ <$> statuses)
         &&. startTime B.<=. B.val_ expiryTime
-
-countCompletedRides :: DBFlow m r => Id Org.Organization -> m Int
-countCompletedRides orgId = do
-  dbTable <- getDbTable
-  count <- DB.findAll dbTable (B.aggregate_ aggregator) predicate
-  return $ case count of
-    [cnt] -> cnt
-    _ -> 0
-  where
-    aggregator Storage.ProductInstance {..} = B.countAll_
-    predicate Storage.ProductInstance {..} =
-      organizationId ==. B.val_ orgId
-        &&. _type ==. B.val_ Case.RIDEORDER
-        &&. status ==. B.val_ Storage.COMPLETED

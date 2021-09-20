@@ -24,8 +24,8 @@ rideBookingStatus rideBookingId personId = withFlowHandlerAPI $ do
   buildRideBookingStatusRes orderPI
 
 rideBookingList :: Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> FlowHandler API.RideBookingListRes
-rideBookingList personId mbLimit mbOffset mbIsOnlyActive = withFlowHandlerAPI $ do
-  orderPIList <- QPI.findAllOrdersByPerson personId mbLimit mbOffset mbIsOnlyActive
+rideBookingList personId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
+  orderPIList <- QPI.findAllOrdersByPerson personId mbLimit mbOffset mbOnlyActive
   API.RideBookingListRes <$> traverse buildRideBookingStatusRes orderPIList
 
 buildRideBookingStatusRes :: DBFlow m r => SPI.ProductInstance -> m API.RideBookingStatusRes
@@ -86,7 +86,7 @@ buildRideAPIEntity orderPI = do
         vehicleModel = info.tracker >>= (.trip.vehicle) >>= (.model),
         rideOtp = orderPI.udf4,
         computedPrice = orderPI.price,
-        actualRideDistance = Nothing,
+        actualRideDistance = orderPI.actualDistance,
         createdAt = orderPI.createdAt,
         updatedAt = orderPI.updatedAt
       }

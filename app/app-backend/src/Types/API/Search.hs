@@ -5,7 +5,7 @@ import EulerHS.Prelude hiding (id)
 import Types.Storage.Case (Case)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 
-data VehicleVariant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS | HATCHBACK
+data VehicleVariant = SEDAN | SUV | HATCHBACK
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 data SearchReq = SearchReq

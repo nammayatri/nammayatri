@@ -45,3 +45,17 @@ instance Example Registration where
       { category = "PERSONAL",
         number = "AA-12-BB-3456"
       }
+
+emptyVehicle :: Vehicle
+emptyVehicle =
+  Vehicle
+    { category = Nothing,
+      capacity = Nothing,
+      make = Nothing,
+      model = Nothing,
+      size = Nothing,
+      variant = "",
+      color = Nothing,
+      energy_type = Nothing,
+      registration = Nothing
+    }

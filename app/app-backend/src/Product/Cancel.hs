@@ -30,7 +30,7 @@ cancel :: Id PI.ProductInstance -> Id Person.Person -> Cancel.CancelReq -> FlowH
 cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let orderPIId = bookingId
   rideCancellationReasonAPI <- req.rideCancellationReason & fromMaybeM (InvalidRequest "Cancellation reason is not present.")
-  orderPI <- MPI.findById orderPIId >>= fromMaybeM PIDoesNotExist
+  orderPI <- MPI.findOrderPIById orderPIId >>= fromMaybeM PIDoesNotExist
   searchPIId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
   searchPI <- MPI.findById searchPIId >>= fromMaybeM PIDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
   searchCase <- MC.findIdByPersonId personId (searchPI.caseId) >>= fromMaybeM CaseNotFound

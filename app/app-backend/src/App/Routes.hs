@@ -195,7 +195,7 @@ type RideBookingAPI =
              :> TokenAuth
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
-             :> QueryParam "isOnlyActive" Bool
+             :> QueryParam "onlyActive" Bool
              :> Get '[JSON] RideBookingAPI.RideBookingListRes
        )
 

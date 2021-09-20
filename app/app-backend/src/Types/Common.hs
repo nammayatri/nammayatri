@@ -20,6 +20,7 @@ import qualified Beckn.Types.Mobility.Traveller as Traveller
 import qualified Beckn.Types.Mobility.Trip as Trip
 import qualified Beckn.Types.Mobility.Vehicle as Vehicle
 import Control.Lens.Prism (_Just)
+import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (drop, id, state)
 
@@ -121,9 +122,16 @@ data Provider = Provider
   { id :: Text,
     name :: Maybe Text,
     phones :: [Text],
-    info :: Maybe Text
+    info :: Maybe ProviderStats
   }
   deriving (Generic, Show, FromJSON, ToJSON)
+
+data ProviderStats = ProviderStats
+  { completed :: Maybe Int,
+    inprogress :: Maybe Int,
+    confirmed :: Maybe Int
+  }
+  deriving (Generic, Read, FromJSON, ToJSON, Show)
 
 instance FromBeckn Location.City City where
   fromBeckn city = City $ city.name
@@ -401,7 +409,7 @@ instance FromBeckn Category.Category Provider where
       { id = category.id,
         name = category.descriptor.name,
         phones = Tag.value <$> filter (\x -> x.key == "contacts") (category.tags),
-        info = Tag.value <$> find (\x -> x.key == "stats") (category.tags)
+        info = readMaybe . T.unpack . Tag.value =<< find (\x -> x.key == "stats") (category.tags)
       }
 
 instance ToBeckn Category.Category Provider where
