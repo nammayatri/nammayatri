@@ -6,7 +6,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [4.0.0] - 25-08-2021
+## [5.0.0] - 20-09-2021
+
+### Added
+
+- #973: add `Invalid Receiver` error case to sms response
+
+- #835: dev: add promtheus and grafana monitoring configs
+
+- #946: Add run and stop apps scripts
+
+- #912: [BKN-803,BKN-804] Add metrics
+
+- #963: Add driver enabled field in driver info api entity
+
+- #935: [BKN-816] added updating confluent public key in docker build
+
+- #924: Added actor to front-end facing APIs
+
+- #960: [BKN-834] added constructor with text field to Domain type
+
+- #908: [BKN-809] Activate|Deactivate driver
+
+### Changed
+
+- #942: [BKN-838] Return 400 on bad number in registration APIs
+
+- #932: [BKN-832] Relax person API address validation and simplify it
+
+- #783: [BKN-713] Return error on Exotel error
+
+- #910: [BKN-815] Split location table
+
+- #886: [BKN-710] Refactor FlowR
+
+- #939: Updated Ernakulam shape file
+
+- #945: [BKN-840] Check for verified token
+
+### Fixed
+
+- #975: app-backend: fix getLocation API lookup based on `status` instead of `id`s
+
+### Removed
+
+- #964: [BKN-867] remove fetching case on confirm in FMD
+
+- #921: Remove DriverToken, AdminTokenAuth result changed to Id Organization type
+
+- #720: [BKN-675] Remove listPerson EP
+
+- #936: Removed Cron APIs
+
+- #943: [BKN-839] Remove "create transporter API"
+
+## [4.0.0] - 26-08-2021
 
 ### Added
 
@@ -238,7 +292,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Go-live production release 
 
-[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v4.0.0
+[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v5.0.0
+[5.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v5.0.0
 [4.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v4.0.0
 [3.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v3.0.0
 [2.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v2.0.0
