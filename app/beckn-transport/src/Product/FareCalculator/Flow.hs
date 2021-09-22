@@ -57,19 +57,12 @@ doCalculateFare ::
   ServiceHandle m ->
   Id Organization.Organization ->
   Vehicle.Variant ->
-  Either
-    ( PickupLocation,
-      DropLocation
-    )
-    DistanceInM ->
+  DistanceInM ->
   JourneyTrip ->
   TripStartTime ->
   m FareParameters
-doCalculateFare ServiceHandle {..} orgId vehicleVariant distanceSrc journeyType startTime = do
+doCalculateFare ServiceHandle {..} orgId vehicleVariant actualDistance journeyType startTime = do
   farePolicy <- getFarePolicy orgId vehicleVariant >>= fromMaybeM NoFarePolicy
-  actualDistance <-
-    distanceSrc
-      & fromEitherM' (uncurry getDistance >=> fromMaybeM CantCalculateDistance)
   baseFare <- calculateBaseFare farePolicy
   distanceFare <- calculateDistanceFare farePolicy actualDistance journeyType
   nightShiftRate <- calculateNightShiftRate farePolicy startTime

@@ -9,6 +9,7 @@ import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
@@ -17,12 +18,10 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import Types.Storage.Products (Products)
-import qualified Types.Storage.SearchReqLocation as Loc
-import Data.OpenApi (ToSchema)
+import qualified Types.Storage.SearchRequest as SearchRequest
 
 -- TODO: INVALID status seems to be unused
 data QuoteStatus
@@ -70,30 +69,11 @@ data QuoteT f = Quote
   { id :: B.C f (Id Quote),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     productId :: B.C f (Id Products),
-    personId :: B.C f (Maybe (Id Person)),
-    personUpdatedAt :: B.C f (Maybe UTCTime),
-    shortId :: B.C f (ShortId Quote),
-    entityType :: B.C f EntityType,
-    entityId :: B.C f (Maybe Text),
-    quantity :: B.C f Int,
     price :: B.C f Amount,
-    actualPrice :: B.C f (Maybe Amount),
-    status :: B.C f QuoteStatus,
-    startTime :: B.C f UTCTime,
-    endTime :: B.C f (Maybe UTCTime),
-    validTill :: B.C f UTCTime,
-    fromLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
-    toLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     providerId :: B.C f (Id Org.Organization),
     distance :: B.C f Double,
     distanceToNearestDriver :: B.C f Double,
-    udf2 :: B.C f (Maybe Text),
-    udf3 :: B.C f (Maybe Text),
-    udf4 :: B.C f (Maybe Text),
-    udf5 :: B.C f (Maybe Text),
-    info :: B.C f (Maybe Text),
-    createdAt :: B.C f UTCTime,
-    updatedAt :: B.C f UTCTime
+    createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -128,21 +108,9 @@ fieldEMod =
       B.tableModification
         { requestId = "request_id",
           productId = "product_id",
-          personId = "person_id",
-          personUpdatedAt = "person_updated_at",
-          entityType = "entity_type",
-          entityId = "entity_id",
-          actualPrice = "actual_price",
-          startTime = "start_time",
-          endTime = "end_time",
-          shortId = "short_id",
-          validTill = "valid_till",
-          fromLocation = "from_location_id",
-          toLocation = "to_location_id",
           distanceToNearestDriver = "distance_to_nearest_driver",
           providerId = "provider_id",
-          createdAt = "created_at",
-          updatedAt = "updated_at"
+          createdAt = "created_at"
         }
 
 validateStatusTransition :: QuoteStatus -> QuoteStatus -> Either Text ()

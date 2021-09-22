@@ -24,7 +24,6 @@ import qualified Storage.Queries.TransporterConfig as QTConf
 import Types.App (Driver)
 import Types.Error
 import qualified Types.Storage.Organization as Organization
-import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.SearchReqLocation as SSReqLoc
@@ -69,7 +68,6 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
     ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) bapCallbackUrl $
       onConfirmCallback
         rideBooking
-        quote
         searchRequest
         transporterOrg
   where
@@ -101,14 +99,13 @@ onConfirmCallback ::
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
   ) =>
   SRB.RideBooking ->
-  Quote.Quote ->
   SearchRequest.SearchRequest ->
   Organization.Organization ->
   m API.ConfirmOrder
-onConfirmCallback rideBooking quote searchRequest transporterOrg = do
+onConfirmCallback rideBooking searchRequest transporterOrg = do
   let transporterId = transporterOrg.id
   let rideBookingId = rideBooking.id
-  pickupPoint <- (quote.fromLocation) & fromMaybeM (QuoteFieldNotPresent "location_id")
+  let pickupPoint = searchRequest.fromLocationId
   let vehicleVariant = searchRequest.vehicleVariant
   driverPool <- map fst <$> calculateDriverPool pickupPoint transporterId vehicleVariant
   setDriverPool rideBookingId driverPool

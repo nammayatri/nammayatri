@@ -2,7 +2,6 @@ module Product.FareCalculator.Interpreter (calculateFare) where
 
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
-import Control.Arrow (left, (***))
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Flow
@@ -19,7 +18,6 @@ import Types.Domain.FarePolicy
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.FarePolicy as FarePolicyS
 import Types.Storage.Organization (Organization)
-import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
@@ -30,11 +28,7 @@ calculateFare ::
   ) =>
   Id Organization ->
   Vehicle.Variant ->
-  Either
-    ( Location.SearchReqLocation,
-      Location.SearchReqLocation
-    )
-    Double ->
+  Double ->
   UTCTime ->
   m Amount
 calculateFare orgId vehicleVariant distanceSrc startTime = do
@@ -44,7 +38,7 @@ calculateFare orgId vehicleVariant distanceSrc startTime = do
       serviceHandle
       orgId
       vehicleVariant
-      (distanceSrc & left (PickupLocation *** DropLocation))
+      distanceSrc
       OneWayTrip -- TODO :: determine the type of trip
       startTime
   let totalFare = fareSum fareParams
