@@ -6,6 +6,7 @@ import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
 import qualified "fmd-wrapper" App as FmdWrapper
+import qualified "mock-fcm" App as MockFcm
 import qualified "mock-sms" App as MockSms
 import qualified "beckn-transport" BackgroundTaskManager as TransporterBGTM
 import qualified Data.Text as T (replace, toUpper, unpack)
@@ -81,6 +82,9 @@ specs = do
           cfg & #loggerConfig . #logToConsole .~ False
             & #loggerConfig . #logRawSql .~ False,
         MockSms.runMockSms $
+          (#loggerConfig . #logToConsole .~ False)
+            . (#loggerConfig . #logRawSql .~ False),
+        MockFcm.runMockFcm $
           (#loggerConfig . #logToConsole .~ False)
             . (#loggerConfig . #logRawSql .~ False)
       ]

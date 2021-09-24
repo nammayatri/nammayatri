@@ -1,4 +1,4 @@
-name: beckn-test
+name: mock-fcm
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
@@ -33,7 +33,7 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
-  - NumDecimals
+  - OverloadedLabels
   - OverloadedStrings
   - PackageImports
   - PatternSynonyms
@@ -51,40 +51,10 @@ default-extensions:
   - UndecidableInstances
 
 dependencies:
-  - mock-sms
-  - mock-fcm
-  - app-backend
-  - beckn-transport
-  - beckn-gateway
-  - fmd-wrapper
-  - beckn-core
-  - aeson
   - base >= 4.7 && < 5
-  - generic-lens
-  - lens
-  - async
-  - data-default-class
   - euler-hs
-  - http-client
-  - http-client-tls
-  - http-types
-  - servant
-  - servant-client
-  - servant-server
-  - text
-  - bytestring
-  - utf8-string
-  - time
-  - uuid
-  - warp
-  - wai
-  - hspec
-  - hspec-core
-  - tasty
-  - tasty-hspec
   - record-hasfield
   - record-dot-preprocessor
-  - unordered-containers
 
 ghc-options:
   - -fwrite-ide-info
@@ -92,19 +62,38 @@ ghc-options:
   - -Wall
   - -Wcompat
   - -Widentities
-  - -fhide-source-paths
+  - -Wunused-imports
   - -Werror
-  - -Wno-unrecognised-pragmas
   - -fplugin=RecordDotPreprocessor
 
 library:
-  source-dirs:
-    - src
+  source-dirs: src
+  ghc-options:
+    - -Wincomplete-uni-patterns
+  dependencies:
+    - aeson
+    - beckn-core
+    - bytestring
+    - clock
+    - containers
+    - http-types
+    - servant-server
+    - stm
+    - text
+    - time
+    - time-units
+    - wai
+    - wai-extra
+    - warp
 
-tests:
-  beckn-integ-test:
+executables:
+  mock-fcm-exe:
     main: Main.hs
-    source-dirs:
-      - app
+    source-dirs: server
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+      - -Wincomplete-uni-patterns
     dependencies:
-      - beckn-test
+      - mock-fcm

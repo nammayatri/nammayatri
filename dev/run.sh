@@ -6,8 +6,9 @@ app-backend
 beckn-gateway
 beckn-transport-btm
 beckn-transport
-mock-sms
 mock-registry
+mock-sms
+mock-fcm
 EOF
 }
 

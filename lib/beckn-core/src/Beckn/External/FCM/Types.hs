@@ -11,11 +11,12 @@ module Beckn.External.FCM.Types where
 import Beckn.Types.App
 import Beckn.Types.Field ((:::))
 import Beckn.Utils.TH
-import Beckn.Utils.Text (encodeToText)
+import Beckn.Utils.Text (decodeFromText, encodeToText)
 import Control.Lens.TH
 import Data.Aeson
 import Data.Aeson.Casing
 import Data.Aeson.TH
+import Data.Aeson.Types
 import Data.Default.Class
 import EulerHS.Prelude hiding (id, (.=))
 
@@ -110,6 +111,12 @@ instance ToJSON FCMShowNotification where
   toJSON SHOW = "true"
   toJSON _ = "false"
 
+instance FromJSON FCMShowNotification where
+  parseJSON = withText "FCMShowNotification" \case
+    "true" -> pure SHOW
+    "false" -> pure DO_NOT_SHOW
+    str -> typeMismatch "FCMShowNotification" (String str)
+
 -- | HTTP request headers
 type FCMHeaders = Map Text Text
 
@@ -127,7 +134,7 @@ data FCMColor = FCMColor
 
 $(makeLenses ''FCMColor)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMColor)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMColor)
 
 -- | Options for features provided by the FCM SDK for Android.
 newtype FCMAndroidOptions = FCMAndroidOptions
@@ -137,7 +144,7 @@ newtype FCMAndroidOptions = FCMAndroidOptions
 
 $(makeLenses ''FCMAndroidOptions)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidOptions)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidOptions)
 
 instance Default FCMAndroidOptions where
   def = FCMAndroidOptions Nothing
@@ -151,7 +158,7 @@ data FCMApnsOptions = FCMApnsOptions
 
 $(makeLenses ''FCMApnsOptions)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMApnsOptions)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMApnsOptions)
 
 instance Default FCMApnsOptions where
   def = FCMApnsOptions Nothing Nothing
@@ -165,7 +172,7 @@ data FCMWebpushOptions = FCMWebpushOptions
 
 $(makeLenses ''FCMWebpushOptions)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMWebpushOptions)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMWebpushOptions)
 
 instance Default FCMWebpushOptions where
   def = FCMWebpushOptions Nothing Nothing
@@ -180,7 +187,7 @@ data FCMLightSettings = FCMLightSettings
 
 $(makeLenses ''FCMLightSettings)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMLightSettings)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMLightSettings)
 
 instance Default FCMLightSettings where
   def = FCMLightSettings Nothing Nothing Nothing
@@ -195,7 +202,7 @@ data FCMNotification = FCMNotification
 
 $(makeLenses ''FCMNotification)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMNotification)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMNotification)
 
 instance Default FCMNotification where
   def = FCMNotification Nothing Nothing Nothing
@@ -228,7 +235,7 @@ data FCMAndroidNotification = FCMAndroidNotification
 
 $(makeLenses ''FCMAndroidNotification)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidNotification)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidNotification)
 
 instance Default FCMAndroidNotification where
   def =
@@ -280,6 +287,18 @@ instance ToJSON FCMAndroidData where
         "notification_json" .= encodeToText fcmNotificationJSON
       ]
 
+instance FromJSON FCMAndroidData where
+  parseJSON = withObject "FCMAndroidData" \o ->
+    FCMAndroidData
+      <$> o .: "notification_type"
+      <*> o .: "show_notification"
+      <*> o .: "entity_type"
+      <*> o .: "entity_ids"
+      <*> (o .: "notification_json" >>= parseNotificationJson)
+    where
+      parseNotificationJson str =
+        maybe (typeMismatch "Json string" (String str)) pure $ decodeFromText str
+
 -- | Android specific options for messages sent through FCM connection server
 data FCMAndroidConfig = FCMAndroidConfig
   { fcmdCollapseKey :: !(Maybe Text),
@@ -294,7 +313,7 @@ data FCMAndroidConfig = FCMAndroidConfig
 
 $(makeLenses ''FCMAndroidConfig)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidConfig)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMAndroidConfig)
 
 instance Default FCMAndroidConfig where
   def =
@@ -311,7 +330,7 @@ data FCMApnsConfig = FCMApnsConfig
 
 $(makeLenses ''FCMApnsConfig)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMApnsConfig)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMApnsConfig)
 
 instance Default FCMApnsConfig where
   def = FCMApnsConfig Nothing Nothing Nothing
@@ -327,7 +346,7 @@ data FCMWebpushConfig = FCMWebpushConfig
 
 $(makeLenses ''FCMWebpushConfig)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMWebpushConfig)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMWebpushConfig)
 
 instance Default FCMWebpushConfig where
   def = FCMWebpushConfig Nothing Nothing Nothing Nothing
@@ -347,7 +366,7 @@ data FCMMessage = FCMMessage
 
 $(makeLenses ''FCMMessage)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMMessage)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMMessage)
 
 instance Default FCMMessage where
   def =
@@ -361,7 +380,7 @@ newtype FCMRequest = FCMRequest
 
 $(makeLenses ''FCMRequest)
 
-$(deriveToJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMRequest)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMRequest)
 
 -- | Priority levels of a notification
 data FCMErrorCode
@@ -398,7 +417,7 @@ data FCMError = FCMError
 
 $(makeLenses ''FCMError)
 
-$(deriveFromJSON (aesonPrefix snakeCase) ''FCMError)
+$(deriveJSON (aesonPrefix snakeCase) ''FCMError)
 
 -- | Message to send by Firebase Cloud Messaging Service
 data FCMResponse = FCMResponse
@@ -407,4 +426,4 @@ data FCMResponse = FCMResponse
   }
   deriving (Show, Eq, Read, Generic)
 
-$(deriveFromJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMResponse)
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMResponse)
