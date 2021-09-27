@@ -7,6 +7,7 @@ import qualified Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
+import qualified Beckn.Types.Mobility.Order as Mobility
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
@@ -110,7 +111,7 @@ onConfirmCallback rideBooking searchRequest transporterOrg = do
   driverPool <- map fst <$> calculateDriverPool pickupPoint transporterId vehicleVariant
   setDriverPool rideBookingId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId rideBookingId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  order <- ExternalAPITransform.mkOrder rideBooking.id Nothing Nothing
+  order <- ExternalAPITransform.mkOrder rideBooking.id Nothing Nothing Mobility.CONFIRMED
   return $ API.ConfirmOrder order
 
 driverPoolKey :: Id SRB.RideBooking -> Text

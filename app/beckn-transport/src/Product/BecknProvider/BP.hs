@@ -50,16 +50,16 @@ import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.Quote as SQ
+import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
+import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as SVeh
 import Utils.Common
 import qualified Utils.Notifications as Notify
-import qualified Types.Storage.Quote as SQuote
 
 cancel ::
   Id Organization.Organization ->
@@ -163,9 +163,10 @@ notifyTripInfoToGateway ::
   SRide.Ride ->
   Id SearchRequest.SearchRequest ->
   Organization.Organization ->
+  Mobility.OrderState ->
   m ()
-notifyTripInfoToGateway ride searchRequestId transporter = do
-  mkOnUpdatePayload ride
+notifyTripInfoToGateway ride searchRequestId transporter orderState = do
+  mkOnUpdatePayload ride orderState
     >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter searchRequestId . Right
 
 notifyCancelToGateway ::
@@ -181,7 +182,7 @@ notifyCancelToGateway ::
   m ()
 notifyCancelToGateway rideBooking mbRide transporter cancellationSource = do
   trip <- mkCancelTripObj rideBooking `traverse` mbRide
-  order <- ExternalAPITransform.mkOrder rideBooking.id trip $ Just cancellationSource
+  order <- ExternalAPITransform.mkOrder rideBooking.id trip (Just cancellationSource) Mobility.CANCELLED
   ExternalAPI.callBAP "on_cancel" API.onCancel transporter rideBooking.requestId . Right $ API.OnCancelReqMessage order
 
 mkTrip :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Trip
@@ -215,11 +216,12 @@ mkTrip ride = do
 mkOnUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
   SRide.Ride ->
+  Mobility.OrderState ->
   m API.OnUpdateOrder
-mkOnUpdatePayload ride = do
+mkOnUpdatePayload ride orderState = do
   trip <- mkTrip ride
   let rideBookingId = ride.bookingId
-  order <- ExternalAPITransform.mkOrder rideBookingId (Just trip) Nothing
+  order <- ExternalAPITransform.mkOrder rideBookingId (Just trip) Nothing orderState
   return $ API.OnUpdateOrder order
 
 mkDriverInfo :: (DBFlow m r, EncFlow m r) => Id Person.Person -> m Driver
@@ -285,15 +287,15 @@ notifyUpdateToBAP ::
   SQuote.Quote ->
   SRB.RideBooking ->
   SRide.Ride ->
-  SRide.RideStatus ->
+  Mobility.OrderState ->
   m ()
-notifyUpdateToBAP quote rideBooking ride updatedStatus = do
+notifyUpdateToBAP quote rideBooking ride orderState = do
   -- Send callbacks to BAP
   transporter <-
     Organization.findOrganizationById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
-  notifyTripDetailsToGateway transporter rideBooking ride
-  notifyStatusUpdateReq transporter quote rideBooking ride updatedStatus
+  notifyTripDetailsToGateway transporter rideBooking ride orderState
+  notifyStatusUpdateReq transporter quote rideBooking ride orderState
 
 notifyTripDetailsToGateway ::
   ( DBFlow m r,
@@ -304,9 +306,10 @@ notifyTripDetailsToGateway ::
   Organization.Organization ->
   SRB.RideBooking ->
   SRide.Ride ->
+  Mobility.OrderState ->
   m ()
-notifyTripDetailsToGateway transporter rideBooking ride = do
-  notifyTripInfoToGateway ride rideBooking.requestId transporter
+notifyTripDetailsToGateway transporter rideBooking ride orderState = do
+  notifyTripInfoToGateway ride rideBooking.requestId transporter orderState
 
 notifyStatusUpdateReq ::
   ( DBFlow m r,
@@ -319,11 +322,11 @@ notifyStatusUpdateReq ::
   SQuote.Quote ->
   SRB.RideBooking ->
   SRide.Ride ->
-  SRide.RideStatus ->
+  Mobility.OrderState ->
   m ()
 notifyStatusUpdateReq transporterOrg quote rideBooking ride status = do
   case status of
-    SRide.CANCELLED -> do
+    Mobility.CANCELLED -> do
       admins <- getAdmins
       notifyCancelToGateway rideBooking (Just ride) transporterOrg Mobility.ByOrganization
       Notify.notifyCancelReqByBP rideBooking admins

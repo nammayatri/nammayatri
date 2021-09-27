@@ -12,20 +12,20 @@ import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideCancellationReason as QRCR
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideBooking as QRB
+import qualified Storage.Queries.RideCancellationReason as QRCR
 import qualified Storage.Queries.SearchRequest as MC
 import Types.API.Cancel as Cancel
 import Types.Error
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.OldRide as Ride
+import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideCancellationReason as SRCR
 import Utils.Common
 import qualified Utils.Notifications as Notify
-import qualified Types.Storage.RideBooking as SRB
-import qualified Storage.Queries.RideBooking as QRB
 
 cancel :: Id SRB.RideBooking -> Id Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
 cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
@@ -85,7 +85,7 @@ onCancel _org req = withFlowHandlerBecknAPI $
           QRB.updateStatus rideBooking.id SRB.CANCELLED
           whenJust mbRide $ \ride -> QRide.updateStatus ride.id Ride.CANCELLED
           unless (cancellationSource == ByUser) $
-              QRCR.create $ SRCR.RideCancellationReason rideBooking.id cancellationSource Nothing Nothing
+            QRCR.create $ SRCR.RideCancellationReason rideBooking.id cancellationSource Nothing Nothing
         -- notify customer
         mbPerson <- Person.findById rideBooking.requestorId
         whenJust mbPerson $ \person -> Notify.notifyOnCancel quote person.id person.deviceToken cancellationSource

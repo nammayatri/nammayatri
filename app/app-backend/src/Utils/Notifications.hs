@@ -12,15 +12,15 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.SearchRequest as SearchRequest
+import qualified Storage.Queries.RideBooking as QRB
 import Types.Metrics
 import Types.ProductInfo as ProductInfo
 import Types.Storage.Person as Person
 import Types.Storage.Quote as Quote
 import Types.Storage.RegistrationToken as RegToken
+import qualified Types.Storage.Ride as SRide
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
-import qualified Types.Storage.OldRide as SRide
 
 -- Note:
 -- When customer searches case is created in the BA, and search request is
@@ -48,106 +48,69 @@ notifyOnStatusUpdate ::
   m ()
 notifyOnStatusUpdate ride rideStatus =
   when (ride.status /= rideStatus) $ do
-    searchRequest <- SearchRequest.findById (ride.requestId) >>= fromMaybeM SearchRequestNotFound
-    let personId = searchRequest.requestorId
+    rideBooking <- QRB.findById (ride.bookingId) >>= fromMaybeM RideBookingNotFound
+    org <- QOrg.findOrganizationById rideBooking.providerId >>= fromMaybeM OrgNotFound
+    let personId = rideBooking.requestorId
         rideId = ride.id
-        minfo :: (Maybe ProductInfo) = decodeFromText =<< ride.info
-    case minfo of
-      Just info -> do
-        person <- Person.findById personId
-        case person of
-          Just p -> case rideStatus of
-            SRide.CANCELLED -> do
-              let notificationData =
-                    FCM.FCMAndroidData
-                      { fcmNotificationType = FCM.CANCELLED_PRODUCT,
-                        fcmShowNotification = FCM.SHOW,
-                        fcmEntityType = FCM.Product,
-                        fcmEntityIds = show $ getId rideId,
-                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CANCELLED_PRODUCT
-                      }
-                  title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-                  providerName = info ^. #provider . _Just . #name . _Just
-                  body =
-                    FCMNotificationBody $
-                      unwords
-                        [ providerName,
-                          "had to cancel your ride for",
-                          showTimeIst (SearchRequest.startTime searchRequest) <> ".",
-                          "Check the app for more details."
-                        ]
-              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
-            SRide.INPROGRESS -> do
-              let notificationData =
-                    FCM.FCMAndroidData
-                      { fcmNotificationType = FCM.TRIP_STARTED,
-                        fcmShowNotification = FCM.SHOW,
-                        fcmEntityType = FCM.Product,
-                        fcmEntityIds = show $ getId rideId,
-                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_STARTED
-                      }
-                  title = FCMNotificationTitle $ T.pack "Trip started!"
-                  driverName = info ^. #tracker . _Just . #trip . #driver . _Just . #name
-                  body =
-                    FCMNotificationBody $
-                      unwords
-                        [ driverName,
-                          "has started your trip. Please enjoy the ride!"
-                        ]
-              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
-            SRide.COMPLETED -> do
-              let notificationData =
-                    FCM.FCMAndroidData
-                      { fcmNotificationType = FCM.TRIP_FINISHED,
-                        fcmShowNotification = FCM.SHOW,
-                        fcmEntityType = FCM.Product,
-                        fcmEntityIds = show $ getId rideId,
-                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_FINISHED
-                      }
-                  title = FCMNotificationTitle $ T.pack "Trip finished!"
-                  driverName = info ^. #tracker . _Just . #trip . #driver . _Just . #name
-                  body =
-                    FCMNotificationBody $
-                      unwords
-                        [ "Hope you enjoyed your trip with",
-                          driverName
-                        ]
-              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
-            SRide.TRIP_REASSIGNMENT -> do
-              let notificationData =
-                    FCM.FCMAndroidData
-                      { fcmNotificationType = FCM.DRIVER_UNASSIGNED,
-                        fcmShowNotification = FCM.SHOW,
-                        fcmEntityType = FCM.Product,
-                        fcmEntityIds = show $ getId rideId,
-                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_UNASSIGNED
-                      }
-                  title = FCMNotificationTitle $ T.pack "Assigning another driver for the ride!"
-                  body =
-                    FCMNotificationBody $
-                      unwords
-                        ["Current driver has cancelled the ride. Looking for other drivers..."]
-              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
-            SRide.TRIP_ASSIGNED -> do
-              let notificationData =
-                    FCM.FCMAndroidData
-                      { fcmNotificationType = FCM.DRIVER_ASSIGNMENT,
-                        fcmShowNotification = FCM.SHOW,
-                        fcmEntityType = FCM.Product,
-                        fcmEntityIds = show $ getId rideId,
-                        fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ASSIGNMENT
-                      }
-                  title = FCMNotificationTitle $ T.pack "Driver assigned!"
-                  driverName = info ^. #tracker . _Just . #trip . #driver . _Just . #name
-                  body =
-                    FCMNotificationBody $
-                      unwords
-                        [ driverName,
-                          "will be your driver for this trip."
-                        ]
-              FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
-            _ -> pure ()
-          _ -> pure ()
+        providerName = org.name
+        driverName = ride.driverName
+    person <- Person.findById personId
+    case person of
+      Just p -> case rideStatus of
+        SRide.CANCELLED -> do
+          let notificationData =
+                FCM.FCMAndroidData
+                  { fcmNotificationType = FCM.CANCELLED_PRODUCT,
+                    fcmShowNotification = FCM.SHOW,
+                    fcmEntityType = FCM.Product,
+                    fcmEntityIds = show $ getId rideId,
+                    fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CANCELLED_PRODUCT
+                  }
+              title = FCMNotificationTitle $ T.pack "Ride cancelled!"
+              body =
+                FCMNotificationBody $
+                  unwords
+                    [ providerName,
+                      "had to cancel your ride for",
+                      showTimeIst (rideBooking.startTime) <> ".",
+                      "Check the app for more details."
+                    ]
+          FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
+        SRide.INPROGRESS -> do
+          let notificationData =
+                FCM.FCMAndroidData
+                  { fcmNotificationType = FCM.TRIP_STARTED,
+                    fcmShowNotification = FCM.SHOW,
+                    fcmEntityType = FCM.Product,
+                    fcmEntityIds = show $ getId rideId,
+                    fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_STARTED
+                  }
+              title = FCMNotificationTitle $ T.pack "Trip started!"
+              body =
+                FCMNotificationBody $
+                  unwords
+                    [ driverName,
+                      "has started your trip. Please enjoy the ride!"
+                    ]
+          FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
+        SRide.COMPLETED -> do
+          let notificationData =
+                FCM.FCMAndroidData
+                  { fcmNotificationType = FCM.TRIP_FINISHED,
+                    fcmShowNotification = FCM.SHOW,
+                    fcmEntityType = FCM.Product,
+                    fcmEntityIds = show $ getId rideId,
+                    fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_FINISHED
+                  }
+              title = FCMNotificationTitle $ T.pack "Trip finished!"
+              body =
+                FCMNotificationBody $
+                  unwords
+                    [ "Hope you enjoyed your trip with",
+                      driverName
+                    ]
+          FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
+        _ -> pure ()
       _ -> pure ()
 
 notifyOnExpiration ::

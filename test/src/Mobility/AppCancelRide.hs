@@ -12,7 +12,7 @@ spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $ do
     it "Testing API flow for ride cancelled by App" . withBecknClients clients $ do
-      (_, bRideBookingId, _) <- doAnAppSearch
+      (_, bRideBookingId) <- doAnAppSearch
 
       -- cancel request initiated by App
       void . callBAP $ cancelRide bRideBookingId appRegistrationToken buildAppCancelReq

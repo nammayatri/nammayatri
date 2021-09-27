@@ -54,10 +54,10 @@ import qualified Types.API.Support as Support
 import Types.Geofencing
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RegistrationToken as SRT
-import Utils.Auth (LookupRegistryOrg, TokenAuth)
-import qualified Types.Storage.SearchRequest as SSR
-import qualified Types.Storage.OldRide as SRide
+import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
+import qualified Types.Storage.SearchRequest as SSR
+import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
 type AppAPI =
   "v2"
@@ -201,7 +201,7 @@ confirmFlow =
 
 type RideBookingAPI =
   "rideBooking"
-    :> ( Capture "bookingId" (Id SRide.Ride)
+    :> ( Capture "bookingId" (Id SRB.RideBooking)
            :> TokenAuth
            :> Post '[JSON] RideBookingAPI.RideBookingStatusRes
            :<|> "list"
@@ -272,7 +272,7 @@ type SupportAPI =
            :> TokenAuth
            :> ReqBody '[JSON] Support.SendIssueReq
            :> Post '[JSON] Support.SendIssueRes
-    )
+       )
 
 supportFlow :: FlowServer SupportAPI
 supportFlow = Support.sendIssue

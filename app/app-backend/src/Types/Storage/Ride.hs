@@ -1,14 +1,14 @@
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Types.Storage.Ride where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Data.OpenApi (ToSchema)
 import Beckn.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time (UTCTime)
@@ -17,8 +17,8 @@ import Database.Beam.Backend (FromBackendRow (fromBackendRow), HasSqlValueSyntax
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.RideBooking as RideB
+import qualified Types.Storage.SearchRequest as SSR
 import Utils.Common
 
 data RideStatus
@@ -52,15 +52,16 @@ data RideT f = Ride
     shortId :: B.C f (ShortId Ride),
     status :: B.C f RideStatus,
     driverName :: B.C f Text,
+    driverRating :: B.C f (Maybe Double),
     driverMobileNumber :: B.C f Text,
+    driverRegisteredAt :: B.C f UTCTime,
     vehicleNumber :: B.C f Text,
     vehicleModel :: B.C f Text,
     vehicleColor :: B.C f Text,
     otp :: B.C f Text,
     trackingUrl :: B.C f Text,
-    finalPrice :: B.C f Amount,
+    finalPrice :: B.C f (Maybe Amount),
     finalDistance :: B.C f Double,
-    finalLocationId :: B.C f (Id Loc.SearchReqLocation),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -96,14 +97,15 @@ fieldEMod =
         { bookingId = "booking_id",
           shortId = "short_id",
           driverName = "driver_name",
+          driverRating = "driver_rating",
           driverMobileNumber = "driver_mobile_number",
+          driverRegisteredAt = "driver_registered_at",
           vehicleNumber = "vehicle_number",
           vehicleModel = "vehicle_model",
           vehicleColor = "vehicle_color",
           trackingUrl = "tracking_url",
           finalPrice = "final_price",
           finalDistance = "final_distance",
-          finalLocationId = "final_location_id",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
@@ -129,18 +131,31 @@ data RideAPIEntity = RideAPIEntity
   { id :: Id Ride,
     shortRideId :: ShortId Ride,
     status :: RideStatus,
-    driverName :: Maybe Text,
-    driverNumber :: Maybe Text,
-    driverRatings :: Maybe Float,
-    driverRegisteredAt :: Maybe UTCTime,
-    vehicleNumber :: Maybe Text,
-    vehicleColor :: Maybe Text,
-    vehicleVariant :: Maybe Text,
-    vehicleModel :: Maybe Text,
-    rideOtp :: Maybe Text,
+    driverName :: Text,
+    driverNumber :: Text,
+    driverRatings :: Maybe Double,
+    driverRegisteredAt :: UTCTime,
+    vehicleNumber :: Text,
+    vehicleColor :: Text,
+    vehicleVariant :: SSR.VehicleVariant,
+    vehicleModel :: Text,
+    rideOtp :: Text,
     computedPrice :: Maybe Amount,
-    actualRideDistance :: Maybe Double,
+    actualRideDistance :: Double,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
+
+makeRideAPIEntity :: SSR.SearchRequest -> Ride -> RideAPIEntity
+makeRideAPIEntity searchRequest Ride {..} = do
+  RideAPIEntity
+    { shortRideId = shortId,
+      driverNumber = driverMobileNumber,
+      driverRatings = driverRating,
+      vehicleVariant = searchRequest.vehicleVariant,
+      rideOtp = otp,
+      computedPrice = finalPrice,
+      actualRideDistance = finalDistance,
+      ..
+    }

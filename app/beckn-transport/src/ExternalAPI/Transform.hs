@@ -127,8 +127,8 @@ mkPrice amount =
           maximum_value = amt
         }
 
-mkOrder :: MonadFlow m => Id RideBooking -> Maybe Trip -> Maybe CancellationSource -> m Mobility.Order
-mkOrder rideBookingId trip mbCancellationSource = do
+mkOrder :: MonadFlow m => Id RideBooking -> Maybe Trip -> Maybe CancellationSource -> OrderState -> m Mobility.Order
+mkOrder rideBookingId trip mbCancellationSource orderState = do
   now <- getCurrentTime
   return
     Mobility.Order
@@ -136,7 +136,7 @@ mkOrder rideBookingId trip mbCancellationSource = do
         items = [OrderItem (getId rideBookingId) Nothing],
         created_at = now,
         updated_at = now,
-        state = Nothing,
+        state = Just orderState,
         billing = Nothing,
         payment = Nothing,
         trip = trip,

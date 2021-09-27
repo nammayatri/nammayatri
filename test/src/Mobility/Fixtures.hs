@@ -28,12 +28,12 @@ import qualified "app-backend" Types.Common as AppCommon
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
 import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
-import qualified "app-backend" Types.Storage.OldRide as BRide
 import qualified "beckn-transport" Types.Storage.Ride as TRide
+import qualified "app-backend" Types.Storage.RideBooking as BRB
+import qualified "beckn-transport" Types.Storage.RideBooking as TRB
 import qualified "app-backend" Types.Storage.SearchReqLocation as AppBESearchReqLoc
 import qualified "app-backend" Types.Storage.SearchRequest as BSearchRequest
-import qualified "beckn-transport" Types.Storage.RideBooking as TRB
-import qualified "app-backend" Types.Storage.RideBooking as BRB
+import qualified "app-backend" Types.Storage.Ride as BRide
 
 address :: AppCommon.Address
 address =
@@ -184,7 +184,7 @@ tRideBookingStatus :: Id TRB.RideBooking -> Text -> ClientM TRideBookingAPI.Ride
 tRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM TRideBookingAPI.RideBookingListRes
 (tRideBookingStatus :<|> tRideBookingList :<|> _) :<|> _ = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
 
-appRideBookingStatus :: Id BRide.Ride -> Text -> ClientM AppRideBooking.RideBookingStatusRes
+appRideBookingStatus :: Id BRB.RideBooking -> Text -> ClientM AppRideBooking.RideBookingStatusRes
 appRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppRideBooking.RideBookingListRes
 appRideBookingStatus :<|> appRideBookingList = client (Proxy :: Proxy AbeRoutes.RideBookingAPI)
 

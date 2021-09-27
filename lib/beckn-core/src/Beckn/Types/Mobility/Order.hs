@@ -18,7 +18,7 @@ import EulerHS.Prelude hiding (id, state)
 
 data Order = Order
   { id :: Text,
-    state :: Maybe Text,
+    state :: Maybe OrderState,
     created_at :: UTCTime,
     updated_at :: UTCTime,
     items :: [OrderItem],
@@ -39,6 +39,9 @@ data CancelPolicy = CancelPolicy
     terms :: [Text]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data OrderState = CONFIRMED | TRIP_ASSIGNED | INPROGRESS | COMPLETED | CANCELLED
+  deriving (Generic, Eq, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example CancelPolicy where
   example =

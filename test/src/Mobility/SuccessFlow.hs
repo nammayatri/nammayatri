@@ -10,11 +10,13 @@ import qualified "beckn-transport" Types.Storage.Quote as TQuote
 import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
 import qualified "beckn-transport" Storage.Queries.RideBooking as TQRB
-import qualified "beckn-transport" Types.Storage.RideBooking as TRB
+import qualified "beckn-transport" Types.Storage.Ride as TRide
 import qualified "app-backend" Types.Storage.RideBooking as BRB
-import qualified "app-backend" Types.Storage.OldRide as BRide
+import qualified "app-backend" Types.Storage.Ride as BRide
+import qualified "beckn-transport" Types.Storage.RideBooking as TRB
+import qualified "beckn-transport" Storage.Queries.Ride as TQRide
 
-doAnAppSearch :: HasCallStack => ClientsM (Id BQuote.Quote, Id BRB.RideBooking, TRB.RideBooking)
+doAnAppSearch :: HasCallStack => ClientsM (Id BQuote.Quote, Id BRB.RideBooking)
 doAnAppSearch = do
   -- Driver sets online
   void . callBPP $ setDriverOnline driverToken True
@@ -44,25 +46,35 @@ doAnAppSearch = do
       appConfirmRide appRegistrationToken appSearchId bQuoteId
   let bRideBookingId = confirmResult.bookingId
 
-  tRideBooking <- getBPPRideBooking (cast bQuoteId)
-  tRideBooking.udf4 `shouldSatisfy` isJust
-
-  return (bQuoteId, bRideBookingId, tRideBooking)
-
+  return (bQuoteId, bRideBookingId)
+  
 getBPPRideBooking ::
   Id TQuote.Quote ->
   ClientsM TRB.RideBooking
 getBPPRideBooking quoteId = do
-  mbRideBooking <- liftIO $ runTransporterFlow "" $ TQRB.findByQuoteId (cast quoteId)
+  mbRideBooking <- liftIO $ runTransporterFlow "" $ TQRB.findByQuoteId quoteId
   mbRideBooking `shouldSatisfy` isJust
   return $ fromJust mbRideBooking
+
+getBPPRide ::
+  Id TRB.RideBooking ->
+  ClientsM TRide.Ride
+getBPPRide rideBookingId = do
+  mbRide <- liftIO $ runTransporterFlow "" $ TQRide.findByRBId rideBookingId
+  mbRide `shouldSatisfy` isJust
+  return $ fromJust mbRide
 
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for successful booking and completion of ride" $ withBecknClients clients do
-      (quoteId, bRideBookingId, tRideBooking) <- doAnAppSearch
+      (quoteId, bRideBookingId) <- doAnAppSearch
+
+      tRideBooking <- poll $ do 
+        trb <- getBPPRideBooking (cast quoteId)
+        trb.status `shouldBe` TRB.CONFIRMED
+        return $ Just trb
 
       rideInfo <-
         poll . callBPP $
@@ -75,16 +87,14 @@ spec = do
         rideRespond tRideBooking.id driverToken $
           RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
 
-      void . poll $
-        getBPPRideBooking (cast quoteId)
-          <&> (.status)
-          >>= (`shouldBe` TRB.TRIP_ASSIGNED)
-          <&> Just
+      tRide <- poll $ do
+        tRide <- getBPPRide (cast quoteId)
+        tRide.status `shouldBe` TRide.NEW
+        return $ Just tRide
 
       void . callBPP $
-        rideStart driverToken tRideBooking.id $
-          buildStartRideReq $
-            fromJust tRideBooking.udf4
+        rideStart driverToken tRide.id $
+          buildStartRideReq tRide.otp
 
       void . poll $ do
         inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
@@ -94,7 +104,7 @@ spec = do
         inprogressRide.status `shouldBe` BRide.INPROGRESS
         return $ Just ()
 
-      void . callBPP $ rideEnd driverToken tRideBooking.id
+      void . callBPP $ rideEnd driverToken tRide.id
 
       completedRideId <- poll $ do
         completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)

@@ -8,14 +8,14 @@ import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (pi)
 import Types.App (Driver)
 import Types.Error
-import qualified Types.Storage.SearchRequest as SSearchRequest
 import Types.Storage.Organization (Organization)
-import qualified Types.Storage.Vehicle as Vehicle
 import qualified Types.Storage.Person as Person
+import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideBooking as SRB
+import qualified Types.Storage.SearchRequest as SSearchRequest
+import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
-import qualified Types.Storage.Quote as SQuote
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
@@ -24,7 +24,7 @@ data ServiceHandle m = ServiceHandle
     findQuoteById :: Id SQuote.Quote -> m (Maybe SQuote.Quote),
     endRideTransaction :: Id SRB.RideBooking -> Id Ride.Ride -> Id Driver -> Amount -> m (),
     findSearchRequestById :: Id SSearchRequest.SearchRequest -> m (Maybe SSearchRequest.SearchRequest),
-    notifyUpdateToBAP :: SQuote.Quote -> SRB.RideBooking -> Ride.Ride -> Ride.RideStatus -> m (),
+    notifyCompleteToBAP :: SQuote.Quote -> SRB.RideBooking -> Ride.Ride -> m (),
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
@@ -63,14 +63,14 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   quote <- findQuoteById rideBooking.quoteId >>= fromMaybeM QuoteNotFound
 
-  notifyUpdateToBAP quote rideBooking (updateActualPrice actualPrice ride){status = Ride.COMPLETED} Ride.COMPLETED
+  notifyCompleteToBAP quote rideBooking (updateActualPrice actualPrice ride){status = Ride.COMPLETED}
 
   return APISuccess.Success
   where
     recalculateFare rideBooking ride = do
       let transporterId = rideBooking.providerId
           vehicleVariant = rideBooking.vehicleVariant
-          oldDistance = rideBooking.distance 
+          oldDistance = rideBooking.distance
           actualDistance = ride.finalDistance
       fare <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime
       let distanceDiff = actualDistance - oldDistance

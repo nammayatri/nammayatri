@@ -6,6 +6,7 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Beckn.Types.Mobility.Order as Mobility
 import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP
 import qualified Product.FareCalculator.Interpreter as Fare
@@ -35,7 +36,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
           findRideById = QRide.findById,
           findSearchRequestById = QSearchRequest.findById,
           findQuoteById = QQuote.findById,
-          notifyUpdateToBAP = notifyUpdateToBAP,
+          notifyCompleteToBAP = \quote rideBooking ride -> notifyUpdateToBAP quote rideBooking ride Mobility.COMPLETED,
           endRideTransaction,
           calculateFare = Fare.calculateFare,
           recalculateFareEnabled = asks (.recalculateFareEnabled),

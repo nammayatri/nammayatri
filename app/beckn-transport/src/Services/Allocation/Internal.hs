@@ -5,6 +5,7 @@ import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Beckn.Types.Mobility.Order as Mobility
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
@@ -81,7 +82,7 @@ assignDriver rideBookingId driverId = do
     QRide.create ride
 
   fork "assignDriver - Notify BAP" $ do
-    BP.notifyUpdateToBAP quote rideBooking ride SRide.NEW
+    BP.notifyUpdateToBAP quote rideBooking ride Mobility.TRIP_ASSIGNED
     Notify.notifyDriver notificationType notificationTitle (message rideBooking) driver.id driver.deviceToken
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
@@ -104,20 +105,21 @@ assignDriver rideBookingId driverId = do
       shortId <- generateShortId
       otp <- generateOTPCode
       now <- getCurrentTime
-      return SRide.Ride
-        { id = guid,
-          bookingId = rideBooking.id,
-          shortId = shortId,
-          status = SRide.NEW,
-          driverId = driver.id,
-          vehicleId = vehicle.id,
-          otp = otp,
-          trackingUrl = "", -- TODO: Fill this field
-          finalPrice = Nothing,
-          finalDistance = 0,
-          createdAt = now,
-          updatedAt = now
-        }
+      return
+        SRide.Ride
+          { id = guid,
+            bookingId = rideBooking.id,
+            shortId = shortId,
+            status = SRide.NEW,
+            driverId = driver.id,
+            vehicleId = vehicle.id,
+            otp = otp,
+            trackingUrl = "", -- TODO: Fill this field
+            finalPrice = Nothing,
+            finalDistance = 0,
+            createdAt = now,
+            updatedAt = now
+          }
 
 toRideRequest :: SRR.RideRequest -> Either Text Alloc.RideRequest
 toRideRequest req =

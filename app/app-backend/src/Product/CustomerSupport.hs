@@ -7,23 +7,25 @@ import App.Types
 import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
+import Beckn.Types.Core.Rating
 import Beckn.Types.Id
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Storage.Queries.SearchRequest as SearchRequest
+import qualified Storage.Queries.Organization as QOrg
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.SearchReqLocation as Location
+import Storage.Queries.SearchRequest as SearchRequest
 import Types.API.CustomerSupport as T
+import Types.Common
 import Types.Error
-import Types.ProductInfo as ProductInfo
 import Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SR
 import qualified Types.Storage.SearchReqLocation as SSearchLoc
 import Types.Storage.SearchRequest as C
 import Utils.Common
-import qualified Storage.Queries.Ride as QRide
-import qualified Types.Storage.OldRide as Ride
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandlerAPI $ do
@@ -129,21 +131,51 @@ makeTripDetails :: DBFlow m r => Maybe C.SearchRequest -> m (Maybe T.TripDetails
 makeTripDetails mbSearchRequest = case mbSearchRequest of
   Nothing -> pure Nothing
   Just searchRequest -> do
-    Ride.Ride {id, status, info, price} <-
-      QRide.findByRequestId (searchRequest.id) >>= fromMaybeM RideNotFound
-    let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< info
-        provider = (.provider) =<< mproductInfo
-        mtracker = (.tracker) =<< mproductInfo
-        mtrip = (\x -> Just $ x.trip) =<< mtracker
-        driver = (.driver) =<< mtrip
-        vehicle = (.vehicle) =<< mtrip
+    rideBooking <- QRB.findByRequestId (searchRequest.id) >>= fromMaybeM RideBookingNotFound
+    org <- QOrg.findOrganizationById rideBooking.providerId >>= fromMaybeM OrgNotFound
+    mbRide <- QRide.findByRBId rideBooking.id
+    let provider =
+          Provider
+            { id = getId rideBooking.providerId,
+              name = Just org.name,
+              phones = [rideBooking.providerMobileNumber],
+              info = Nothing
+            }
+        driver =
+          mbRide <&> \ride ->
+            Driver
+              { name = ride.driverName,
+                gender = "",
+                phones = [ride.driverMobileNumber],
+                rating =
+                  ride.driverRating <&> \rating ->
+                    Rating
+                      { value = show rating,
+                        unit = "U+2B50",
+                        max_value = Nothing,
+                        direction = Nothing
+                      },
+                registeredAt = ride.driverRegisteredAt
+              }
+        vehicle =
+          mbRide <&> \ride ->
+            Vehicle
+              { category = Nothing,
+                capacity = Nothing,
+                make = Nothing,
+                model = Just ride.vehicleModel,
+                size = Nothing,
+                variant = show searchRequest.vehicleVariant,
+                color = Just ride.vehicleColor,
+                registrationNumber = Just ride.vehicleNumber
+              }
     pure $
       Just $
         T.TripDetails
-          { id = getId id,
-            status = status,
+          { id = getId rideBooking.id,
+            status = rideBooking.status,
             driver = driver,
-            price = price,
-            provider = provider,
+            price = Just rideBooking.price,
+            provider = Just provider,
             vehicle = vehicle
           }
