@@ -15,8 +15,8 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
 import Types.App
-import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Vehicle as Veh
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED

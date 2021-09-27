@@ -4,16 +4,16 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import Database.Beam ((<-.), (==.), (&&.), (||.))
+import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Organization as Org
+import qualified Types.Storage.Person as SPers
 import qualified Types.Storage.Quote as Quote
+import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as Storage
 import Utils.Common
-import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.Ride as SRide
-import qualified Types.Storage.Person as SPers
 
 getDbTable ::
   (Functor m, HasSchemaName m) =>
@@ -82,7 +82,7 @@ findAllByDriver driverId_ mbLimit mbOffset mbIsOnlyActive = do
     query dbTable rideTable isOnlyActive = do
       rideBooking <- B.all_ dbTable
       ride <- B.join_ rideTable $ \row ->
-        row.bookingId ==. rideBooking.id 
+        row.bookingId ==. rideBooking.id
       B.guard_ $ predicate ride isOnlyActive
       return rideBooking
     predicate SRide.Ride {..} isOnlyActive =

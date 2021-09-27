@@ -12,8 +12,8 @@ import Types.App
 import Types.Storage.AllocationEvent (AllocationEventType (..))
 import qualified Types.Storage.CancellationReason as SCR
 import Types.Storage.Organization
-import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.RideBooking as SRB
+import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 

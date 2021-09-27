@@ -3,8 +3,8 @@ module Types.API.Search where
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
-import Types.Storage.SearchRequest (SearchRequest, VehicleVariant)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
+import Types.Storage.SearchRequest (SearchRequest, VehicleVariant)
 
 data SearchReq = SearchReq
   { origin :: SearchReqLocationAPIEntity,

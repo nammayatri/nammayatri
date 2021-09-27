@@ -18,10 +18,10 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
+import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.SearchRequest as SearchRequest
 
 -- TODO: INVALID status seems to be unused

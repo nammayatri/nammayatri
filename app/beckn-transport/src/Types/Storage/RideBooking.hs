@@ -19,9 +19,9 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
 import Types.App (BAPPerson)
-import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Quote as Quote
+import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
 

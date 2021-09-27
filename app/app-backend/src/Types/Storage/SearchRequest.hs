@@ -16,8 +16,8 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
-import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.Person as SP
+import qualified Types.Storage.SearchReqLocation as Loc
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -73,7 +73,7 @@ instance ToJSON SearchRequest where
 
 instance FromJSON SearchRequest where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-  
+
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity SearchRequestT)
 fieldEMod =

@@ -249,7 +249,7 @@ instance IsHTTPError OrganizationError where
   toHttpCode _ = E500
 
 instance IsAPIError OrganizationError
-  
+
 data SearchRequestError
   = SearchRequestNotFound
   | SearchRequestDoesNotExist
@@ -258,7 +258,6 @@ data SearchRequestError
   | SearchRequestFieldNotPresent Text
   deriving (Eq, Show, IsBecknAPIError)
 
-  
 instanceExceptionWithParent 'HTTPException ''SearchRequestError
 
 instance IsBaseError SearchRequestError where
@@ -366,7 +365,7 @@ instance IsHTTPError RideError where
     RideDoesNotExist -> "RIDE_DOES_NOT_EXISTS"
     RideFieldNotPresent _ -> "RIDE_FIELD_NOT_PRESENT"
     RideInvalidStatus _ -> "RIDE_INVALID_STATUS"
-  
+
   toHttpCode = \case
     RideNotFound -> E500
     RideDoesNotExist -> E400

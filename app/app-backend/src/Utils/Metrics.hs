@@ -24,7 +24,7 @@ finishSearchMetrics txnId = do
   bmContainer <- asks (.bapMetrics)
   finishSearchMetrics' bmContainer txnId
 
-incrementSearchRequestCount:: HasBAPMetrics m r => m ()
+incrementSearchRequestCount :: HasBAPMetrics m r => m ()
 incrementSearchRequestCount = do
   bmContainer <- asks (.bapMetrics)
   incrementCaseCount' bmContainer

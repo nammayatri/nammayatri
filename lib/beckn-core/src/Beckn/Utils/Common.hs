@@ -34,6 +34,6 @@ maskText text =
   if length text > 6
     then T.take 3 text <> "..." <> T.takeEnd 3 text
     else "..."
-    
+
 generateShortId :: MonadFlow m => m (ShortId a)
 generateShortId = ShortId . T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)

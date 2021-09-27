@@ -18,9 +18,9 @@ import qualified Types.Storage.Products as Product
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Rating as Rating
 import qualified Types.Storage.RegistrationToken as RegistrationToken
-import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideBooking as RideB
+import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.SearchRequest as SearchRequest

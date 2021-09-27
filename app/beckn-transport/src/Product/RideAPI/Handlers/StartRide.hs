@@ -6,10 +6,10 @@ import Beckn.Types.Id
 import EulerHS.Prelude
 import Types.Error
 import qualified Types.Storage.Person as Person
+import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import Utils.Common
-import qualified Types.Storage.Quote as SQuote
 
 data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),

@@ -18,10 +18,10 @@ import Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import Types.Storage.Organization as Org
+import qualified Types.Storage.Ride as SRide
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Auth
 import Utils.Common
-import qualified Types.Storage.Ride as SRide
 
 getGatewayUrl ::
   ( DBFlow m r,

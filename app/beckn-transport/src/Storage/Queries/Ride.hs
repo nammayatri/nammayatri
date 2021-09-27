@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.Ride where
 
 import qualified Beckn.Storage.Common as Storage
@@ -11,11 +13,11 @@ import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
+import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Pers
 import qualified Types.Storage.Ride as Storage
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.Vehicle as Veh
-import qualified Types.Storage.Organization as Org
 
 getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RideT))
 getDbTable = DB.ride . DB.transporterDb <$> getSchemaName
@@ -144,5 +146,5 @@ getCountByStatus orgId = do
       ride <- B.all_ dbTable
       rideBooking <- B.join_ rbTable $ \row ->
         row.id B.==. ride.bookingId
-      B.guard_  $ rideBooking.providerId ==. B.val_ orgId
+      B.guard_ $ rideBooking.providerId ==. B.val_ orgId
       return ride

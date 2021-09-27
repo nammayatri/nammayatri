@@ -9,7 +9,7 @@ import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Types.App (Driver)
 import Types.Storage.Ride (RideAPIEntity)
-import Types.Storage.RideBooking (RideBookingStatus, RideBooking)
+import Types.Storage.RideBooking (RideBooking, RideBookingStatus)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 
 data RideBookingStatusRes = RideBookingStatusRes
