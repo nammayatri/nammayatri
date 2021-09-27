@@ -16,7 +16,6 @@ import qualified Storage.Queries.RideBooking as QRideB
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Types.API.Confirm as API
 import Types.Error
-import qualified Types.ProductInfo as Products
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as SQuote
@@ -35,7 +34,7 @@ confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPerson
     OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
   now <- getCurrentTime
-  rideBooking <- buildRideBooking searchRequest quote organization now
+  rideBooking <- buildRideBooking searchRequest quote now
   DB.runSqlDBTransaction $
     QRideB.create rideBooking
   context <- buildContext "confirm" (getId searchRequestId) Nothing Nothing
@@ -58,7 +57,7 @@ confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPerson
           cancellation_reasons = [],
           cancellation_policy = Nothing
         }
-    buildRideBooking searchRequest quote provider now = do
+    buildRideBooking searchRequest quote now = do
       id <- generateGUID
       return $
         SRB.RideBooking
@@ -66,8 +65,8 @@ confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPerson
             requestId = searchRequest.id,
             quoteId = quote.id,
             status = SRB.CONFIRMED,
-            providerId = provider.id,
-            providerMobileNumber = fromMaybe "" provider.mobileNumber,
+            providerId = quote.providerId,
+            providerMobileNumber = quote.providerMobileNumber,
             startTime = searchRequest.startTime,
             requestorId = searchRequest.requestorId,
             fromLocationId = searchRequest.fromLocationId,
@@ -88,21 +87,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
     logTagInfo "on_confirm req" (show req)
     validateContext "on_confirm" $ req.context
     case req.contents of
-      Right msg -> do
-        let trip = fromBeckn <$> msg.order.trip
-            quoteId = Id $ msg.order.id
-            tracker = flip Products.Tracker Nothing <$> trip
-        quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
-        -- TODO: update tracking prodInfo in.info
-        let mprdInfo = decodeFromText =<< (quote.info)
-        let uInfo = (\info -> info {Products.tracker = tracker}) <$> mprdInfo
-        let uQuote =
-              quote{info = encodeToText <$> uInfo,
-                    udf4 = (.id) <$> trip,
-                    status = SQuote.CONFIRMED
-                   }
-        SQuote.validateStatusTransition quote.status SQuote.CONFIRMED & fromEitherM QuoteInvalidStatus
-        DB.runSqlDBTransaction $ do
-          QQuote.updateMultiple quoteId uQuote
+      Right _ -> do
+        return ()
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack

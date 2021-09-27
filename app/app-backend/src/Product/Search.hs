@@ -35,7 +35,6 @@ import Types.API.Serviceability
 import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import Types.ProductInfo
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as SQuote
@@ -98,13 +97,12 @@ searchCbService req catalog = do
   bpp <-
     Org.findOrganizationByCallbackUri (req.context.bpp_uri) Org.PROVIDER
       >>= fromMaybeM OrgDoesNotExist
-  let personId = searchRequest.requestorId
   case (catalog.categories, catalog.items) of
     ([], _) -> throwError $ InvalidRequest "Missing provider"
     (_ : _, []) -> return ()
     (category : _, items) -> do
       let provider = fromBeckn category
-      quotes <- traverse (mkQuote searchRequest bpp provider personId) items
+      quotes <- traverse (mkQuote searchRequest bpp provider) items
       DB.runSqlDBTransaction $ traverse_ QQuote.create quotes
 
 buildSearchRequest ::
@@ -149,12 +147,10 @@ mkQuote ::
   SearchRequest.SearchRequest ->
   Org.Organization ->
   Common.Provider ->
-  Id Person.Person ->
   Core.Item ->
   m SQuote.Quote
-mkQuote searchRequest bppOrg provider personId item = do
+mkQuote searchRequest bppOrg provider item = do
   now <- getCurrentTime
-  let info = ProductInfo (Just provider) Nothing
   price <- item.price.listed_value >>= convertDecimalValueToAmount & fromMaybeM (InternalError "Unable to parse price")
   nearestDriverDist <- getNearestDriverDist
   -- There is loss of data in coversion Product -> Item -> Product
@@ -163,73 +159,19 @@ mkQuote searchRequest bppOrg provider personId item = do
   return
     SQuote.Quote
       { id = Id $ item.id,
-        shortId = "",
         requestId = searchRequest.id,
-        personId = Just personId,
-        personUpdatedAt = Nothing,
-        quantity = 1,
-        entityType = SQuote.VEHICLE,
-        status = SQuote.INSTOCK,
-        startTime = searchRequest.startTime,
-        endTime = Nothing,
-        validTill = searchRequest.validTill,
-        actualDistance = Nothing,
-        entityId = Nothing,
         price = price,
-        actualPrice = Nothing,
         distanceToNearestDriver = nearestDriverDist,
-        providerMobileNumber = "UNKNOWN",
-        udf2 = Nothing,
-        udf3 = Nothing,
-        udf4 = Nothing,
-        udf5 = Nothing,
-        fromLocation = Just $ searchRequest.fromLocationId,
-        toLocation = Just $ searchRequest.toLocationId,
-        info = Just $ encodeToText info,
+        providerMobileNumber = fromMaybe "UNKNOWN" $ listToMaybe provider.phones,
+        providerName = fromMaybe "" provider.name,
+        providerCompletedRidesCount = fromMaybe 0 $ provider.info >>= (.completed),
         providerId = bppOrg.id,
-        createdAt = now,
-        updatedAt = now
+        createdAt = now
       }
   where
     getNearestDriverDist = do
       let dist = (.value) <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
       (readMaybe . T.unpack =<< dist) & fromMaybeM (InternalError "Unable to parse nearestDriverDist")
-
-mkDeclinedQuote :: MonadFlow m => SearchRequest.SearchRequest -> Org.Organization -> Common.Provider -> Id Person.Person -> m SQuote.Quote
-mkDeclinedQuote searchRequest bppOrg provider personId = do
-  now <- getCurrentTime
-  quoteId <- generateGUID
-  let info = ProductInfo (Just provider) Nothing
-  return
-    SQuote.Quote
-      { id = Id quoteId,
-        shortId = "",
-        requestId = searchRequest.id,
-        personId = Just personId,
-        personUpdatedAt = Nothing,
-        quantity = 1,
-        entityType = SQuote.VEHICLE,
-        status = SQuote.OUTOFSTOCK,
-        startTime = searchRequest.startTime,
-        endTime = Nothing,
-        validTill = searchRequest.validTill,
-        actualDistance = Nothing,
-        entityId = Nothing,
-        price = 0,
-        actualPrice = Nothing,
-        distanceToNearestDriver = 0,
-        providerMobileNumber = "UNKNOWN",
-        udf2 = Nothing,
-        udf3 = Nothing,
-        udf4 = Nothing,
-        udf5 = Nothing,
-        fromLocation = Just $ searchRequest.fromLocationId,
-        toLocation = Just $ searchRequest.toLocationId,
-        info = Just $ encodeToText info,
-        providerId = bppOrg.id,
-        createdAt = now,
-        updatedAt = now
-      }
 
 mkIntent :: API.SearchReq -> UTCTime -> Intent
 mkIntent req now = do

@@ -88,6 +88,6 @@ onCancel _org req = withFlowHandlerBecknAPI $
             QRCR.create $ SRCR.RideCancellationReason rideBooking.id cancellationSource Nothing Nothing
         -- notify customer
         mbPerson <- Person.findById rideBooking.requestorId
-        whenJust mbPerson $ \person -> Notify.notifyOnCancel quote person.id person.deviceToken cancellationSource
+        whenJust mbPerson $ \person -> Notify.notifyOnCancel rideBooking person.id person.deviceToken cancellationSource
       Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err
     return Ack
