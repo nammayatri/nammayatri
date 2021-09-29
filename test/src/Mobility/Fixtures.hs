@@ -28,12 +28,12 @@ import qualified "app-backend" Types.Common as AppCommon
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
 import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
+import qualified "app-backend" Types.Storage.Ride as BRide
 import qualified "beckn-transport" Types.Storage.Ride as TRide
 import qualified "app-backend" Types.Storage.RideBooking as BRB
 import qualified "beckn-transport" Types.Storage.RideBooking as TRB
 import qualified "app-backend" Types.Storage.SearchReqLocation as AppBESearchReqLoc
 import qualified "app-backend" Types.Storage.SearchRequest as BSearchRequest
-import qualified "app-backend" Types.Storage.Ride as BRide
 
 address :: AppCommon.Address
 address =
@@ -175,7 +175,7 @@ callAppFeedback :: Int -> Id BRide.Ride -> ClientM APISuccess
 callAppFeedback ratingValue rideId =
   let request =
         AppFeedback.FeedbackReq
-          { rideId = getId rideId,
+          { rideId = rideId,
             rating = ratingValue
           }
    in appFeedback appRegistrationToken request

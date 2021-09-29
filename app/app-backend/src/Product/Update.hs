@@ -39,9 +39,6 @@ onUpdate _org req = withFlowHandlerBecknAPI $
               whenJust mbState $ \state -> do
                 unless (state == Mobility.INPROGRESS) $
                   QRB.updateStatus rideBooking.id $ convertRBStatus state
-                whenJust mbRide $ \ride ->
-                  unless (state == Mobility.CONFIRMED) $
-                    QRide.updateStatus ride.id $ convertRideStatus state
 
         mbBuildRideTransaction <- do
           case mbState of
@@ -54,7 +51,8 @@ onUpdate _org req = withFlowHandlerBecknAPI $
         let updateTransaction =
               whenJust mbRide $ \ride -> do
                 let uRide =
-                      ride{finalPrice =
+                      ride{status = maybe ride.status convertRideStatus mbState,
+                           finalPrice =
                              trip >>= fare >>= (.computed_value) >>= convertDecimalValueToAmount,
                            finalDistance =
                              fromMaybe 0 $ trip >>= (.route) >>= (.edge.distance.computed_value)
@@ -99,7 +97,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
             bookingId = rideBooking.id,
             driverRating = mbTrip >>= (.driver) >>= (.rating) <&> (.value) >>= readMaybe . T.unpack,
             status = SRide.NEW,
-            trackingUrl = "", -- TODO: Fill this field
+            trackingUrl = "UNKNOWN", -- TODO: Fill this field
             finalPrice = Nothing,
             finalDistance = 0,
             createdAt = now,

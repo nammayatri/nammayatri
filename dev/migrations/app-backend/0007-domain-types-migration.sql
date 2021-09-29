@@ -129,19 +129,29 @@ ALTER TABLE atlas_app.search_request DROP COLUMN requestor_type;
 ALTER TABLE atlas_app.search_request DROP COLUMN udf2;
 ALTER TABLE atlas_app.search_request DROP COLUMN udf3;
 ALTER TABLE atlas_app.search_request DROP COLUMN udf4;
-ALTER TABLE atlas_app.search_request DROP COLUMN udf5;
 ALTER TABLE atlas_app.search_request DROP COLUMN info;
 ALTER TABLE atlas_app.search_request DROP COLUMN updated_at;
 
 ALTER TABLE atlas_app.search_request RENAME COLUMN udf1 TO vehicle_variant;
-ALTER TABLE atlas_app.search_request RENAME COLUMN requestor TO requestor_id;
+UPDATE atlas_app.search_request AS T1 
+	SET vehicle_variant = 'UNKNOWN' WHERE vehicle_variant IS NULL;
+ALTER TABLE atlas_app.search_request ALTER COLUMN vehicle_variant SET NOT NULL;
 
+ALTER TABLE atlas_app.search_request RENAME COLUMN udf5 TO distance;
+ALTER TABLE atlas_app.search_request ALTER COLUMN distance TYPE double precision USING (distance :: double precision);
+UPDATE atlas_app.search_request AS T1 
+	SET distance = 0 WHERE distance IS NULL;
+ALTER TABLE atlas_app.search_request ALTER COLUMN distance SET NOT NULL;
+
+ALTER TABLE atlas_app.search_request RENAME COLUMN requestor TO requestor_id;
 UPDATE atlas_app.search_request AS T1 
 	SET requestor_id = 'UNKNOWN' WHERE requestor_id IS NULL;
-
 ALTER TABLE atlas_app.search_request ALTER COLUMN requestor_id SET NOT NULL;
 
 ALTER TABLE atlas_app.ride RENAME TO old_ride;
+
+UPDATE atlas_app.old_ride AS T1 
+	SET udf4 = (SELECT udf4 FROM atlas_app.quote AS T2 WHERE T1.quote_id = T2.id);
 
 CREATE TABLE atlas_app.ride_booking (
     id character(36) PRIMARY KEY NOT NULL,
@@ -154,8 +164,8 @@ CREATE TABLE atlas_app.ride_booking (
     requestor_id character(36) NOT NULL,
     from_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
     to_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
-    price character varying(255) NOT NULL,
-    distance float NOT NULL,
+    price double precision NOT NULL,
+    distance double precision NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -166,15 +176,16 @@ CREATE TABLE atlas_app.ride (
     short_id character varying(36) NOT NULL,
     status character varying(255) NOT NULL,
     driver_name character varying(255) NOT NULL,
+    driver_rating double precision,
     driver_mobile_number character varying(255) NOT NULL,
+    driver_registered_at timestamp with time zone NOT NULL,
     vehicle_number character varying(255) NOT NULL,
     vehicle_model character varying(255) NOT NULL,
     vehicle_color character varying(255) NOT NULL,
     otp character(4) NOT NULL,
     tracking_url character varying(255) NOT NULL,
-    final_price character varying(255) NOT NULL,
-    final_distance float NOT NULL,
-    final_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
+    final_price double precision,
+    final_distance double precision NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -197,3 +208,94 @@ UPDATE atlas_app.quote AS T1
 ALTER TABLE atlas_app.quote ALTER COLUMN provider_mobile_number SET NOT NULL;
 ALTER TABLE atlas_app.quote ALTER COLUMN distance_to_nearest_driver SET NOT NULL;
 ALTER TABLE atlas_app.quote ALTER COLUMN price SET NOT NULL;
+
+INSERT INTO atlas_app.ride_booking 
+    SELECT 
+        T1.id, 
+        T1.request_id, 
+        T1.quote_id, 
+        T1.status, 
+        T1.organization_id, 
+        COALESCE ((T1.info :: json) -> 'provider' -> 'phones' ->> 0, 'UNKNOWN'),
+        T2.start_time,
+        T2.requestor_id,
+        T1.from_location_id,
+        T1.to_location_id,
+        T1.price,
+        T2.distance :: double precision,
+        T1.created_at,
+        T1.updated_at
+    FROM atlas_app.old_ride AS T1
+    JOIN atlas_app.search_request AS T2
+        ON T1.request_id = T2.id;
+
+UPDATE atlas_app.ride_booking AS T1 
+	SET status = 'TRIP_ASSIGNED' WHERE T1.status = 'INPROGRESS';
+
+INSERT INTO atlas_app.ride
+    SELECT 
+        T1.id, 
+        T1.id, 
+        T1.short_id, 
+        T1.status, 
+        COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' ->> 'name', 'UNKNOWN'),
+        ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' ->> 'rating') :: double precision,
+        COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' -> 'phones' ->> 0, 'UNKNOWN'),
+        COALESCE (((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' ->> 'registeredAt') :: timestamp with time zone, now ()),
+        COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'vehicle' ->> 'registrationNumber', 'UNKNOWN'),
+        COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'vehicle' ->> 'model', 'UNKNOWN'),
+        COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'vehicle' ->> 'color', 'UNKNOWN'),
+        T1.udf4,
+        'UNKNOWN',
+        T1.actual_price,
+        T1.actual_distance,
+        T1.created_at,
+        T1.updated_at
+    FROM atlas_app.old_ride AS T1
+    WHERE T1.status != 'CONFIRMED' AND ((T1.info :: json) -> 'tracker' -> 'trip' ->> 'driver') != 'null';
+
+UPDATE atlas_app.ride AS T1 
+	SET status = 'NEW' WHERE T1.status = 'TRIP_ASSIGNED';
+
+ALTER TABLE atlas_app.quote ADD COLUMN provider_name character varying(255);
+ALTER TABLE atlas_app.quote ADD COLUMN provider_completed_rides_count integer;
+
+UPDATE atlas_app.quote AS T1 
+	SET provider_name = COALESCE ((T1.info :: json) -> 'provider' ->> 'name', 'UNKNOWN');
+
+UPDATE atlas_app.quote AS T1 
+	SET provider_completed_rides_count = COALESCE (((T1.info :: json) -> 'provider' -> 'info' ->> 'completed') :: integer, 0);
+
+ALTER TABLE atlas_app.quote ALTER COLUMN provider_name SET NOT NULL;
+ALTER TABLE atlas_app.quote ALTER COLUMN provider_completed_rides_count SET NOT NULL;
+
+ALTER TABLE atlas_app.quote DROP COLUMN person_id;
+ALTER TABLE atlas_app.quote DROP COLUMN person_updated_at;
+ALTER TABLE atlas_app.quote DROP COLUMN short_id;
+ALTER TABLE atlas_app.quote DROP COLUMN entity_id;
+ALTER TABLE atlas_app.quote DROP COLUMN entity_type;
+ALTER TABLE atlas_app.quote DROP COLUMN quantity;
+ALTER TABLE atlas_app.quote DROP COLUMN status;
+ALTER TABLE atlas_app.quote DROP COLUMN start_time;
+ALTER TABLE atlas_app.quote DROP COLUMN end_time;
+ALTER TABLE atlas_app.quote DROP COLUMN valid_till;
+ALTER TABLE atlas_app.quote DROP COLUMN from_location_id;
+ALTER TABLE atlas_app.quote DROP COLUMN to_location_id;
+ALTER TABLE atlas_app.quote DROP COLUMN info;
+ALTER TABLE atlas_app.quote DROP COLUMN udf1;
+ALTER TABLE atlas_app.quote DROP COLUMN udf2;
+ALTER TABLE atlas_app.quote DROP COLUMN udf3;
+ALTER TABLE atlas_app.quote DROP COLUMN udf4;
+ALTER TABLE atlas_app.quote DROP COLUMN udf5;
+ALTER TABLE atlas_app.quote DROP COLUMN updated_at;
+ALTER TABLE atlas_app.quote DROP COLUMN actual_distance;
+ALTER TABLE atlas_app.quote DROP COLUMN actual_price;
+
+ALTER TABLE atlas_app.ride_cancellation_reason RENAME COLUMN ride_id TO ride_booking_id;
+
+ALTER TABLE atlas_app.ride_cancellation_reason
+   DROP CONSTRAINT ride_cancellation_reason_ride_id_fkey
+ , ADD  CONSTRAINT ride_cancellation_reason_ride_booking_id_fkey FOREIGN KEY (ride_booking_id)
+      REFERENCES atlas_app.ride_booking (id) on delete cascade;
+
+DROP TABLE atlas_app.old_ride;

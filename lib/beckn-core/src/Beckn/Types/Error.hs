@@ -191,7 +191,7 @@ instance IsBaseError LocationError where
 instance IsHTTPError LocationError where
   toErrorCode = \case
     LocationNotFound -> "LOCATION_NOT_FOUND"
-    LocationDoesNotExist -> "LOCATION_DOES_NOT_EXISTS"
+    LocationDoesNotExist -> "LOCATION_DOES_NOT_EXIST"
     LocationFieldNotPresent _ -> "LOCATION_FIELD_NOT_PRESENT"
   toHttpCode = \case
     LocationNotFound -> E500
@@ -241,7 +241,7 @@ instance IsBaseError OrganizationError where
 instance IsHTTPError OrganizationError where
   toErrorCode = \case
     OrgNotFound -> "ORGANIZATION_NOT_FOUND"
-    OrgDoesNotExist -> "ORGANIZATION_DOES_NOT_EXISTS"
+    OrgDoesNotExist -> "ORGANIZATION_DOES_NOT_EXIST"
     OrgFieldNotPresent _ -> "ORGANIZATION_FIELD_NOT_PRESENT"
     OrgMobilePhoneUsed -> "ORGANIZATION_MOBILE_PHONE_USED"
   toHttpCode OrgDoesNotExist = E400
@@ -270,7 +270,7 @@ instance IsBaseError SearchRequestError where
 instance IsHTTPError SearchRequestError where
   toErrorCode = \case
     SearchRequestNotFound -> "SEARCH_REQUEST_NOT_FOUND"
-    SearchRequestDoesNotExist -> "SEARCH_REQUEST_DOES_NOT_EXISTS"
+    SearchRequestDoesNotExist -> "SEARCH_REQUEST_DOES_NOT_EXIST"
     SearchRequestExpired -> "SEARCH_REQUEST_EXPIRED"
     SearchRequestFieldNotPresent _ -> "SEARCH_REQUEST_FIELD_NOT_PRESENT"
     SearchRequestInvalidStatus _ -> "SEARCH_REQUEST_INVALID_STATUS"
@@ -302,7 +302,7 @@ instance IsBaseError QuoteError where
 instance IsHTTPError QuoteError where
   toErrorCode = \case
     QuoteNotFound -> "QUOTE_NOT_FOUND"
-    QuoteDoesNotExist -> "QUOTE_DOES_NOT_EXISTS"
+    QuoteDoesNotExist -> "QUOTE_DOES_NOT_EXIST"
     QuoteFieldNotPresent _ -> "QUOTE_FIELD_NOT_PRESENT"
     QuoteInvalidStatus _ -> "QUOTE_INVALID_STATUS"
   toHttpCode = \case
@@ -332,7 +332,7 @@ instance IsBaseError RideBookingError where
 instance IsHTTPError RideBookingError where
   toErrorCode = \case
     RideBookingNotFound -> "RIDE_BOOKING_NOT_FOUND"
-    RideBookingDoesNotExist -> "RIDE_BOOKING_DOES_NOT_EXISTS"
+    RideBookingDoesNotExist -> "RIDE_BOOKING_DOES_NOT_EXIST"
     RideBookingFieldNotPresent _ -> "RIDE_BOOKING_FIELD_NOT_PRESENT"
     RideBookingInvalidStatus _ -> "RIDE_BOOKING_INVALID_STATUS"
   toHttpCode = \case
@@ -362,7 +362,7 @@ instance IsBaseError RideError where
 instance IsHTTPError RideError where
   toErrorCode = \case
     RideNotFound -> "RIDE_NOT_FOUND"
-    RideDoesNotExist -> "RIDE_DOES_NOT_EXISTS"
+    RideDoesNotExist -> "RIDE_DOES_NOT_EXIST"
     RideFieldNotPresent _ -> "RIDE_FIELD_NOT_PRESENT"
     RideInvalidStatus _ -> "RIDE_INVALID_STATUS"
 

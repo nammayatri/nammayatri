@@ -62,8 +62,8 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
         now
 
     DB.runSqlDBTransaction $ do
-      RideRequest.create rideRequest
       QRideBooking.create rideBooking
+      RideRequest.create rideRequest
 
     bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) bapCallbackUrl $
@@ -111,7 +111,7 @@ onConfirmCallback rideBooking searchRequest transporterOrg = do
   driverPool <- map fst <$> calculateDriverPool pickupPoint transporterId vehicleVariant
   setDriverPool rideBookingId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId rideBookingId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  order <- ExternalAPITransform.mkOrder rideBooking.id Nothing Nothing Mobility.CONFIRMED
+  order <- ExternalAPITransform.mkOrder rideBooking.quoteId rideBooking.id Nothing Nothing Mobility.CONFIRMED
   return $ API.ConfirmOrder order
 
 driverPoolKey :: Id SRB.RideBooking -> Text

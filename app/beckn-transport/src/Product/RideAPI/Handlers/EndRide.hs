@@ -63,7 +63,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   quote <- findQuoteById rideBooking.quoteId >>= fromMaybeM QuoteNotFound
 
-  notifyCompleteToBAP quote rideBooking (updateActualPrice actualPrice ride){status = Ride.COMPLETED}
+  notifyCompleteToBAP quote rideBooking (updateActualPrice actualPrice ride)
 
   return APISuccess.Success
   where

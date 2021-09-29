@@ -24,12 +24,12 @@ import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 
 confirm :: Id Person.Person -> Id SearchRequest.SearchRequest -> Id SQuote.Quote -> FlowHandler API.ConfirmRes
-confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   lt <- getCurrentTime
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
   when ((searchRequest.validTill) < lt) $
     throwError SearchRequestExpired
-  quote <- QQuote.findById rideBookingId >>= fromMaybeM QuoteDoesNotExist
+  quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
   organization <-
     OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
@@ -39,13 +39,13 @@ confirm personId searchRequestId rideBookingId = withFlowHandlerAPI . withPerson
     QRideB.create rideBooking
   context <- buildContext "confirm" (getId searchRequestId) Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  let order = mkOrder rideBooking now
+  let order = mkOrder quote now
   ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)
   return $ API.ConfirmRes rideBooking.id
   where
-    mkOrder rideBooking now = do
+    mkOrder quote now = do
       BO.Order
-        { id = getId $ rideBooking.id,
+        { id = getId $ quote.id,
           state = Nothing,
           created_at = now,
           updated_at = now,

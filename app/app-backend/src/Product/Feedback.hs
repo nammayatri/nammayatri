@@ -26,7 +26,7 @@ feedback :: Id Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackR
 feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
-  let rideId = Id request.rideId
+  let rideId = request.rideId
   ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
   let txnId = getId rideBooking.requestId

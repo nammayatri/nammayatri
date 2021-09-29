@@ -56,7 +56,6 @@ import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideCancellationReason as SRCR
 import qualified Types.Storage.RideRequest as SRideRequest
-import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as SVeh
 import Utils.Common
 import qualified Utils.Notifications as Notify
@@ -136,14 +135,14 @@ notifyServiceStatusToGateway transporter quote rideBooking = do
 
 mkOnServiceStatusPayload :: MonadTime m => SQ.Quote -> SRB.RideBooking -> m API.OnStatusReqMessage
 mkOnServiceStatusPayload quote rideBooking = do
-  mkOrderRes rideBooking.id (getId $ quote.productId) (show $ rideBooking.status)
+  mkOrderRes quote.id (getId $ quote.productId) (show $ rideBooking.status)
     <&> API.OnStatusReqMessage
   where
-    mkOrderRes rideBookingId' productId status = do
+    mkOrderRes quoteId productId status = do
       now <- getCurrentTime
       return $
         Order
-          { id = getId rideBookingId',
+          { id = getId quoteId,
             state = T.pack status,
             items = [OrderItem productId Nothing],
             created_at = now,
@@ -160,14 +159,14 @@ notifyTripInfoToGateway ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
+  SRB.RideBooking ->
   SRide.Ride ->
-  Id SearchRequest.SearchRequest ->
   Organization.Organization ->
   Mobility.OrderState ->
   m ()
-notifyTripInfoToGateway ride searchRequestId transporter orderState = do
-  mkOnUpdatePayload ride orderState
-    >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter searchRequestId . Right
+notifyTripInfoToGateway rideBooking ride transporter orderState = do
+  mkOnUpdatePayload rideBooking ride orderState
+    >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter rideBooking.requestId . Right
 
 notifyCancelToGateway ::
   ( DBFlow m r,
@@ -182,7 +181,7 @@ notifyCancelToGateway ::
   m ()
 notifyCancelToGateway rideBooking mbRide transporter cancellationSource = do
   trip <- mkCancelTripObj rideBooking `traverse` mbRide
-  order <- ExternalAPITransform.mkOrder rideBooking.id trip (Just cancellationSource) Mobility.CANCELLED
+  order <- ExternalAPITransform.mkOrder rideBooking.quoteId rideBooking.id trip (Just cancellationSource) Mobility.CANCELLED
   ExternalAPI.callBAP "on_cancel" API.onCancel transporter rideBooking.requestId . Right $ API.OnCancelReqMessage order
 
 mkTrip :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Trip
@@ -215,13 +214,13 @@ mkTrip ride = do
 
 mkOnUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
+  SRB.RideBooking ->
   SRide.Ride ->
   Mobility.OrderState ->
   m API.OnUpdateOrder
-mkOnUpdatePayload ride orderState = do
+mkOnUpdatePayload rideBooking ride orderState = do
   trip <- mkTrip ride
-  let rideBookingId = ride.bookingId
-  order <- ExternalAPITransform.mkOrder rideBookingId (Just trip) Nothing orderState
+  order <- ExternalAPITransform.mkOrder rideBooking.quoteId rideBooking.id (Just trip) Nothing orderState
   return $ API.OnUpdateOrder order
 
 mkDriverInfo :: (DBFlow m r, EncFlow m r) => Id Person.Person -> m Driver
@@ -309,7 +308,7 @@ notifyTripDetailsToGateway ::
   Mobility.OrderState ->
   m ()
 notifyTripDetailsToGateway transporter rideBooking ride orderState = do
-  notifyTripInfoToGateway ride rideBooking.requestId transporter orderState
+  notifyTripInfoToGateway rideBooking ride transporter orderState
 
 notifyStatusUpdateReq ::
   ( DBFlow m r,

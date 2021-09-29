@@ -53,7 +53,7 @@ fieldEMod =
   B.setEntityName "notification_status"
     <> B.modifyTableFields
       B.tableModification
-        { rideBookingId = "ride_id",
+        { rideBookingId = "ride_booking_id",
           driverId = "driver_id",
           expiresAt = "expires_at"
         }

@@ -69,10 +69,10 @@ INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, au
 --
 
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
-  ('0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'Black', NULL, '4810', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
+  ('0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, 'Model1', NULL, 'SUV', 'Black', NULL, '4810', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
 
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
-  ('f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', NULL, NULL, NULL, NULL, NULL, 'SUV', 'Black', NULL, '5613', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', now(), now());
+  ('f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', NULL, NULL, NULL, 'Model2', NULL, 'SUV', 'Black', NULL, '5613', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', now(), now());
 
 UPDATE atlas_transporter.person SET
     mobile_number_encrypted = '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw=='
@@ -107,7 +107,7 @@ INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id,
 
 -- Driver1
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
-  ('001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'WHITE', NULL, '4277', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
+  ('001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, 'Model3', NULL, 'SUV', 'WHITE', NULL, '4277', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
 
 INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
   ('001d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326));
@@ -120,7 +120,7 @@ INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, au
 
 -- Driver2
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
-  ('002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, NULL, NULL, 'SUV', 'GREEN', NULL, '3211', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
+  ('002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, 'Model4', NULL, 'SUV', 'GREEN', NULL, '3211', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
 
 INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
   ('002d2f36-a455-4625-bfb4-22807fefa1eb', 'POINT', 76.2733, 10, public.ST_SetSRID(public.ST_Point(76.2733, 10), 4326));

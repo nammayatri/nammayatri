@@ -32,13 +32,13 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
       unless (rideDriver == requestorId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
-  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM QuoteNotFound
+  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM RideBookingNotFound
   let inAppOtp = ride.otp
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
   startRide ride.id
   quote <- findQuoteById rideBooking.quoteId >>= fromMaybeM QuoteNotFound
-  notifyBAPRideStarted quote rideBooking ride{status = SRide.INPROGRESS}
+  notifyBAPRideStarted quote rideBooking ride
   pure APISuccess.Success
   where
     isValidRideStatus status = status == SRide.NEW

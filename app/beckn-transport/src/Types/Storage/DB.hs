@@ -64,6 +64,7 @@ transporterDb dbSchemaName =
         searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod,
         products = setSchema dbSchemaName <> Product.fieldEMod,
         quote = setSchema dbSchemaName <> Quote.fieldEMod,
+        rideBooking = setSchema dbSchemaName <> RideB.fieldEMod,
         ride = setSchema dbSchemaName <> Ride.fieldEMod,
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
         rating = setSchema dbSchemaName <> Rating.fieldEMod,

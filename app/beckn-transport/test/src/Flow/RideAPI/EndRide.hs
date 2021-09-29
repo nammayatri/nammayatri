@@ -15,6 +15,7 @@ import Types.Error
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as PI
 import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
 import Utils.Common (throwError)
@@ -46,7 +47,10 @@ handle =
         Id "2" -> pure . Just $ Fixtures.defaultDriver{id = "2"}
         Id "admin" -> pure $ Just Fixtures.defaultAdmin
         _ -> throwError PersonDoesNotExist,
-      findPIById = \quoteId -> pure $ case quoteId of
+      findRideBookingById = \rbId -> pure $ case rbId of
+        Id "rideBooking" -> Just rideBooking
+        _ -> Nothing,
+      findQuoteById = \quoteId -> pure $ case quoteId of
         Id "search" -> Just searchQuote
         _ -> Nothing,
       findRideById = \rideId -> pure $ case rideId of
@@ -57,8 +61,8 @@ handle =
         if searchRequestId == "search"
           then pure $ Just searchRequest
           else throwError SearchRequestNotFound,
-      notifyUpdateToBAP = \_ _ _ -> pure (),
-      endRideTransaction = \_ _ _ -> pure (),
+      notifyCompleteToBAP = \_ _ _ -> pure (),
+      endRideTransaction = \_ _ _ _ -> pure (),
       calculateFare = \_ _ _ _ -> pure 100,
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure ()
@@ -75,16 +79,22 @@ ride =
   Fixtures.defaultRide
     { Ride.id = "ride",
       Ride.status = Ride.INPROGRESS,
-      Ride.requestId = "ride",
-      Ride.quoteId = "search"
+      Ride.bookingId = Id "rideBooking"
+    }
+
+rideBooking :: SRB.RideBooking
+rideBooking =
+  Fixtures.defaultRideBooking
+    { SRB.id = Id "rideBooking",
+      SRB.status = SRB.TRIP_ASSIGNED,
+      SRB.quoteId = Id "search"
     }
 
 searchQuote :: PI.Quote
 searchQuote =
   Fixtures.defaultQuote
     { PI.id = "search",
-      PI.requestId = "search",
-      PI.status = PI.INPROGRESS
+      PI.requestId = "search"
     }
 
 searchRequest :: SearchRequest.SearchRequest

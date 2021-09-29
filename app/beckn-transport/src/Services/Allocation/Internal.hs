@@ -79,6 +79,7 @@ assignDriver rideBookingId driverId = do
   ride <- buildRide rideBooking driver
   DB.runSqlDBTransaction $ do
     QDI.updateOnRide (cast driver.id) True
+    QRB.updateStatus rideBookingId SRB.TRIP_ASSIGNED
     QRide.create ride
 
   fork "assignDriver - Notify BAP" $ do
@@ -114,7 +115,7 @@ assignDriver rideBookingId driverId = do
             driverId = driver.id,
             vehicleId = vehicle.id,
             otp = otp,
-            trackingUrl = "", -- TODO: Fill this field
+            trackingUrl = "UNKNOWN", -- TODO: Fill this field
             finalPrice = Nothing,
             finalDistance = 0,
             createdAt = now,

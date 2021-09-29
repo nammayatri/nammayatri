@@ -19,6 +19,7 @@ import Types.Metrics
 import Types.Storage.Organization
 import Types.Storage.Person
 import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.SilentLogger ()
@@ -29,11 +30,11 @@ org1 = ShortId "Org1"
 numRequestsToProcess :: Integer
 numRequestsToProcess = 10
 
-ride01Id :: Id Ride.Ride
-ride01Id = Id "ride01"
+rideBooking01Id :: Id SRB.RideBooking
+rideBooking01Id = Id "rideBooking01"
 
-ride02Id :: Id Ride.Ride
-ride02Id = Id "ride02"
+rideBooking02Id :: Id SRB.RideBooking
+rideBooking02Id = Id "rideBooking02"
 
 allocationTime :: Seconds
 allocationTime = 120
@@ -46,49 +47,49 @@ isNotified currentTime (Notified, expiryTime) = expiryTime > currentTime
 isNotified _ _ = False
 
 attemptedNotification ::
-  Id Ride.Ride ->
-  (Id Ride.Ride, Id Driver) ->
+  Id SRB.RideBooking ->
+  (Id SRB.RideBooking, Id Driver) ->
   (NotificationStatus, UTCTime) ->
   Bool
-attemptedNotification rideId (id, _) (status, _) =
-  id == rideId && (status == Rejected || status == Ignored)
+attemptedNotification rideBookingId (id, _) (status, _) =
+  id == rideBookingId && (status == Rejected || status == Ignored)
 
-addRide :: Repository -> Id Ride.Ride -> IO ()
-addRide Repository {..} rideId = do
+addRideBooking :: Repository -> Id SRB.RideBooking -> IO ()
+addRideBooking Repository {..} rideBookingId = do
   currTime <- Time.getCurrentTime
   let rideInfo =
         RideInfo
-          { rideId = rideId,
+          { rideBookingId = rideBookingId,
             rideStatus = Confirmed,
             orderTime = OrderTime currTime
           }
-  modifyIORef ridesVar $ Map.insert rideId rideInfo
+  modifyIORef rideBookingsVar $ Map.insert rideBookingId rideInfo
 
-addRequest :: RequestData -> Repository -> Id Ride.Ride -> IO ()
-addRequest requestData Repository {..} rideId = do
+addRequest :: RequestData -> Repository -> Id SRB.RideBooking -> IO ()
+addRequest requestData Repository {..} rideBookingId = do
   currentId <- readIORef currentIdVar
   let requestId = Id $ show currentId
   currTime <- Time.getCurrentTime
   let request =
         RideRequest
           { requestId = requestId,
-            rideId = rideId,
+            rideBookingId = rideBookingId,
             requestData = requestData
           }
   modifyIORef currentIdVar (+ 1)
   modifyIORef rideRequestsVar $ Map.insert requestId request
 
-addResponse :: Repository -> Id Ride.Ride -> Id Driver -> RideBooking.NotificationStatus -> IO ()
-addResponse repository@Repository {..} rideId driverId status = do
+addResponse :: Repository -> Id SRB.RideBooking -> Id Driver -> RideBooking.NotificationStatus -> IO ()
+addResponse repository@Repository {..} rideBookingId driverId status = do
   currentTime <- Time.getCurrentTime
   let driverResponse = RideBooking.DriverResponse driverId status
-  addRequest (DriverResponse driverResponse) repository rideId
+  addRequest (DriverResponse driverResponse) repository rideBookingId
 
-checkRideStatus :: Repository -> Id Ride.Ride -> RideStatus -> IO ()
-checkRideStatus Repository {..} rideId expectedStatus = do
-  rides <- readIORef ridesVar
-  case Map.lookup ride01Id rides of
-    Nothing -> assertFailure $ "Ride " <> show (rideId.getId) <> " not found"
+checkRideStatus :: Repository -> Id SRB.RideBooking -> RideStatus -> IO ()
+checkRideStatus Repository {..} rideBookingId expectedStatus = do
+  rideBookings <- readIORef rideBookingsVar
+  case Map.lookup rideBookingId rideBookings of
+    Nothing -> assertFailure $ "RideBooking " <> show (rideBookingId.getId) <> " not found"
     Just rideInfo -> rideInfo.rideStatus @?= expectedStatus
 
 handle :: Repository -> ServiceHandle IO
@@ -143,10 +144,10 @@ handle repository@Repository {..} =
         notificationStatus <- readIORef notificationStatusVar
         let filtered = fmap snd $ Map.keys $ Map.filter (isNotified currentTime) notificationStatus
         pure filtered,
-      assignDriver = \rideId driverId -> do
-        modifyIORef assignmentsVar $ (:) (rideId, driverId)
-        modifyIORef ridesVar $ Map.adjust (#rideStatus .~ Assigned) rideId,
-      cancelRide = \rideId _ -> modifyIORef ridesVar $ Map.adjust (#rideStatus .~ Cancelled) rideId,
+      assignDriver = \rideBookingId driverId -> do
+        modifyIORef assignmentsVar $ (:) (rideBookingId, driverId)
+        modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Assigned) rideBookingId,
+      cancelRide = \rideBookingId _ -> modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Cancelled) rideBookingId,
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),
       getFirstDriverInTheQueue = pure . NonEmpty.head,
@@ -154,11 +155,11 @@ handle repository@Repository {..} =
       sendRideNotAssignedNotification = \_ _ -> pure (),
       removeRequest = modifyIORef rideRequestsVar . Map.delete,
       addAllocationRequest = \_ -> addRequest Allocation repository,
-      getRideInfo = \rideId -> do
-        rides <- readIORef ridesVar
-        case Map.lookup rideId rides of
+      getRideInfo = \rideBookingId -> do
+        rideBookings <- readIORef rideBookingsVar
+        case Map.lookup rideBookingId rideBookings of
           Just rideInfo -> pure rideInfo
-          Nothing -> assertFailure $ "Ride " <> show rideId <> " not found in the map.",
+          Nothing -> assertFailure $ "RideBooking " <> show rideBookingId <> " not found in the map.",
       logEvent = \_ _ _ -> pure (),
       metrics =
         BTMMetricsHandle
@@ -174,16 +175,16 @@ driverPool1 = [Id "driver01", Id "driver02", Id "driver03"]
 driverPool2 :: [Id Driver]
 driverPool2 = [Id "driver05", Id "driver07", Id "driver08"]
 
-driverPoolPerRide :: Map (Id Ride.Ride) [Id Driver]
-driverPoolPerRide = Map.fromList [(ride01Id, driverPool1), (ride02Id, driverPool2)]
+driverPoolPerRide :: Map (Id SRB.RideBooking) [Id Driver]
+driverPoolPerRide = Map.fromList [(rideBooking01Id, driverPool1), (rideBooking02Id, driverPool2)]
 
 data Repository = Repository
   { currentIdVar :: IORef Int,
-    driverPoolVar :: IORef (Map (Id Ride.Ride) [Id Driver]),
-    ridesVar :: IORef (Map (Id Ride.Ride) RideInfo),
+    driverPoolVar :: IORef (Map (Id SRB.RideBooking) [Id Driver]),
+    rideBookingsVar :: IORef (Map (Id SRB.RideBooking) RideInfo),
     rideRequestsVar :: IORef (Map (Id SRR.RideRequest) RideRequest),
-    notificationStatusVar :: IORef (Map (Id Ride.Ride, Id Driver) (NotificationStatus, UTCTime)),
-    assignmentsVar :: IORef [(Id Ride.Ride, Id Driver)]
+    notificationStatusVar :: IORef (Map (Id SRB.RideBooking, Id Driver) (NotificationStatus, UTCTime)),
+    assignmentsVar :: IORef [(Id SRB.RideBooking, Id Driver)]
   }
 
 initRepository :: IO Repository
@@ -211,46 +212,46 @@ twoAllocations = testCase "Two allocations" $ do
   r@Repository {..} <- initRepository
 
   currTime <- Time.getCurrentTime
-  addRide r ride01Id
-  addRide r ride02Id
-  addRequest Allocation r ride01Id
-  addRequest Allocation r ride02Id
+  addRideBooking r rideBooking01Id
+  addRideBooking r rideBooking02Id
+  addRequest Allocation r rideBooking01Id
+  addRequest Allocation r rideBooking02Id
 
   process (handle r) org1 numRequestsToProcess
-  addResponse r ride01Id (Id "driver01") RideBooking.REJECT
-  addResponse r ride02Id (Id "driver05") RideBooking.REJECT
+  addResponse r rideBooking01Id (Id "driver01") RideBooking.REJECT
+  addResponse r rideBooking02Id (Id "driver05") RideBooking.REJECT
   process (handle r) org1 numRequestsToProcess
-  addResponse r ride01Id (Id "driver02") RideBooking.REJECT
-  addResponse r ride02Id (Id "driver07") RideBooking.REJECT
+  addResponse r rideBooking01Id (Id "driver02") RideBooking.REJECT
+  addResponse r rideBooking02Id (Id "driver07") RideBooking.REJECT
   process (handle r) org1 numRequestsToProcess
-  addResponse r ride01Id (Id "driver03") RideBooking.ACCEPT
-  addResponse r ride02Id (Id "driver08") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver03") RideBooking.ACCEPT
+  addResponse r rideBooking02Id (Id "driver08") RideBooking.ACCEPT
   process (handle r) org1 numRequestsToProcess
 
   assignments <- readIORef assignmentsVar
-  assignments @?= [(ride02Id, Id "driver08"), (ride01Id, Id "driver03")]
+  assignments @?= [(rideBooking02Id, Id "driver08"), (rideBooking01Id, Id "driver03")]
 
-  checkRideStatus r ride01Id Assigned
-  checkRideStatus r ride02Id Assigned
+  checkRideStatus r rideBooking01Id Assigned
+  checkRideStatus r rideBooking02Id Assigned
 
 cancellationAfterAssignment :: TestTree
 cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
   r@Repository {..} <- initRepository
 
   currTime <- Time.getCurrentTime
-  addRide r ride01Id
-  addRequest Allocation r ride01Id
+  addRideBooking r rideBooking01Id
+  addRequest Allocation r rideBooking01Id
 
   process (handle r) org1 numRequestsToProcess
-  addResponse r ride01Id (Id "driver01") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver01") RideBooking.ACCEPT
 
   process (handle r) org1 numRequestsToProcess
-  checkRideStatus r ride01Id Assigned
+  checkRideStatus r rideBooking01Id Assigned
 
-  addRequest Cancellation r ride01Id
+  addRequest Cancellation r rideBooking01Id
 
   process (handle r) org1 numRequestsToProcess
-  checkRideStatus r ride01Id Cancelled
+  checkRideStatus r rideBooking01Id Cancelled
 
 allocation :: TestTree
 allocation =

@@ -89,7 +89,7 @@ hatchback20km = testCase "Calculate fare for 20km with FullReturnTrip for Hatchb
       handle
       orgID
       Vehicle.HATCHBACK
-      (Right distance)
+      distance
       FullReturnTrip
       startTime
   let totalFare = fareSum fareParams
@@ -105,7 +105,7 @@ sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ d
       handle'
       orgID
       Vehicle.SEDAN
-      (Right distance)
+      distance
       FullReturnTrip
       startTime
   let totalFare = fareSum fareParams
@@ -132,7 +132,7 @@ suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
       handle'
       orgID
       Vehicle.SUV
-      (Right distance)
+      distance
       FullReturnTrip
       startTime
   let totalFare = fareSum fareParams
@@ -162,7 +162,7 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTr
       handle'
       orgID
       Vehicle.HATCHBACK
-      (Right distance)
+      distance
       OneWayTrip
       startTime
   let totalFare = fareSum fareParams
@@ -193,7 +193,7 @@ nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip f
       handle'
       orgID
       Vehicle.SEDAN
-      (Right distance)
+      distance
       OneWayTrip
       startTime
   let totalFare = fareSum fareParams
@@ -224,7 +224,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
       handle'
       orgID
       Vehicle.SUV
-      (Right distance)
+      distance
       OneWayTrip
       startTime
   let totalFare = fareSum fareParams
@@ -256,7 +256,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     handle'
     orgID
     Vehicle.SEDAN
-    (Right distance)
+    distance
     OneWayTrip
     startTime
     `shouldThrow` (== NoFarePolicy)

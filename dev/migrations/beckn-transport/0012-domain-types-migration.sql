@@ -132,12 +132,12 @@ ALTER TABLE atlas_transporter.search_request DROP COLUMN provider_type;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN requestor_type;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN udf2;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN udf3;
-ALTER TABLE atlas_transporter.search_request DROP COLUMN udf4;
+ALTER TABLE atlas_transporter.search_request DROP COLUMN udf5;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN info;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN updated_at;
 
 ALTER TABLE atlas_transporter.search_request RENAME COLUMN udf1 TO vehicle_variant;
-ALTER TABLE atlas_transporter.search_request RENAME COLUMN udf5 TO bap_id;
+ALTER TABLE atlas_transporter.search_request RENAME COLUMN udf4 TO bap_id;
 ALTER TABLE atlas_transporter.search_request RENAME COLUMN requestor TO requestor_id;
 ALTER TABLE atlas_transporter.search_request RENAME COLUMN provider TO provider_id;
 
@@ -172,13 +172,14 @@ CREATE TABLE atlas_transporter.ride_booking (
     quote_id character(36) NOT NULL REFERENCES atlas_transporter.quote (id) on delete cascade,
     status character varying(255) NOT NULL,
     provider_id character(36) NOT NULL REFERENCES atlas_transporter.organization (id) on delete cascade,
+    vehicle_variant character varying(255) NOT NULL,
     bap_id character varying(255) NOT NULL,
     start_time timestamp with time zone NOT NULL,
     requestor_id character(36) NOT NULL,
     from_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
     to_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
-    price character varying(255) NOT NULL,
-    distance float NOT NULL,
+    price double precision NOT NULL,
+    distance double precision NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -192,9 +193,8 @@ CREATE TABLE atlas_transporter.ride (
     vehicle_id character(36) NOT NULL REFERENCES atlas_transporter.vehicle (id) on delete cascade,
     otp character(4) NOT NULL,
     tracking_url character varying(255) NOT NULL,
-    final_price character varying(255) NOT NULL,
-    final_distance float NOT NULL,
-    final_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
+    final_price double precision,
+    final_distance double precision NOT NULL DEFAULT 0,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -210,3 +210,95 @@ UPDATE atlas_transporter.quote AS T1
 
 ALTER TABLE atlas_transporter.quote ALTER COLUMN distance_to_nearest_driver SET NOT NULL;
 ALTER TABLE atlas_transporter.quote ALTER COLUMN price SET NOT NULL;
+
+INSERT INTO atlas_transporter.ride_booking 
+    SELECT 
+        T1.id, 
+        T2.transaction_id, 
+        T1.request_id, 
+        T1.quote_id, 
+        T1.status, 
+        T1.organization_id, 
+        T2.vehicle_variant,
+        T2.bap_id, 
+        T2.start_time,
+        T2.requestor_id,
+        T1.from_location_id,
+        T1.to_location_id,
+        T1.price,
+        T1.distance,
+        T1.created_at,
+        T1.updated_at
+    FROM atlas_transporter.old_ride AS T1
+    JOIN atlas_transporter.search_request AS T2
+        ON T1.request_id = T2.id;
+
+UPDATE atlas_transporter.ride_booking AS T1 
+	SET status = 'TRIP_ASSIGNED' WHERE T1.status = 'INPROGRESS';
+
+INSERT INTO atlas_transporter.ride
+    SELECT 
+        T1.id, 
+        T1.id, 
+        T1.short_id, 
+        T1.status, 
+        T1.person_id, 
+        T1.entity_id, 
+        T1.udf4,
+        'UNKNOWN',
+        T1.actual_price,
+        T1.distance,
+        T1.created_at,
+        T1.updated_at
+    FROM atlas_transporter.old_ride AS T1
+    WHERE T1.status != 'CONFIRMED' AND T1.person_id IS NOT NULL;
+
+UPDATE atlas_transporter.ride AS T1 
+	SET status = 'NEW' WHERE T1.status = 'TRIP_ASSIGNED';
+
+ALTER TABLE atlas_transporter.quote DROP COLUMN person_id;
+ALTER TABLE atlas_transporter.quote DROP COLUMN person_updated_at;
+ALTER TABLE atlas_transporter.quote DROP COLUMN short_id;
+ALTER TABLE atlas_transporter.quote DROP COLUMN entity_id;
+ALTER TABLE atlas_transporter.quote DROP COLUMN entity_type;
+ALTER TABLE atlas_transporter.quote DROP COLUMN quantity;
+ALTER TABLE atlas_transporter.quote DROP COLUMN status;
+ALTER TABLE atlas_transporter.quote DROP COLUMN start_time;
+ALTER TABLE atlas_transporter.quote DROP COLUMN end_time;
+ALTER TABLE atlas_transporter.quote DROP COLUMN valid_till;
+ALTER TABLE atlas_transporter.quote DROP COLUMN from_location_id;
+ALTER TABLE atlas_transporter.quote DROP COLUMN to_location_id;
+ALTER TABLE atlas_transporter.quote DROP COLUMN info;
+ALTER TABLE atlas_transporter.quote DROP COLUMN udf1;
+ALTER TABLE atlas_transporter.quote DROP COLUMN udf2;
+ALTER TABLE atlas_transporter.quote DROP COLUMN udf3;
+ALTER TABLE atlas_transporter.quote DROP COLUMN udf4;
+ALTER TABLE atlas_transporter.quote DROP COLUMN udf5;
+ALTER TABLE atlas_transporter.quote DROP COLUMN updated_at;
+ALTER TABLE atlas_transporter.quote DROP COLUMN actual_price;
+
+ALTER TABLE atlas_transporter.ride_request RENAME COLUMN ride_id TO ride_booking_id;
+ALTER TABLE atlas_transporter.ride_cancellation_reason RENAME COLUMN ride_id TO ride_booking_id;
+ALTER TABLE atlas_transporter.notification_status RENAME COLUMN ride_id TO ride_booking_id;
+ALTER TABLE atlas_transporter.allocation_event RENAME COLUMN ride_id TO ride_booking_id;
+
+ALTER TABLE atlas_transporter.ride_cancellation_reason
+   DROP CONSTRAINT ride_cancellation_reason_ride_id_fkey
+ , ADD  CONSTRAINT ride_cancellation_reason_ride_booking_id_fkey FOREIGN KEY (ride_booking_id)
+      REFERENCES atlas_transporter.ride_booking (id) on delete cascade;
+
+ALTER TABLE atlas_transporter.ride_request
+   DROP CONSTRAINT ride_request_ride_id_fkey
+ , ADD  CONSTRAINT ride_request_ride_booking_id_fkey FOREIGN KEY (ride_booking_id)
+      REFERENCES atlas_transporter.ride_booking (id) on delete cascade;
+
+ALTER TABLE atlas_transporter.notification_status
+   DROP CONSTRAINT notification_status_ride_id_fkey
+ , ADD  CONSTRAINT notification_status_ride_booking_id_fkey FOREIGN KEY (ride_booking_id)
+      REFERENCES atlas_transporter.ride_booking (id) on delete cascade;
+
+ALTER TABLE atlas_transporter.allocation_event
+   ADD  CONSTRAINT allocation_event_ride_booking_id_fkey FOREIGN KEY (ride_booking_id)
+      REFERENCES atlas_transporter.ride_booking (id) on delete cascade;
+
+DROP TABLE atlas_transporter.old_ride;

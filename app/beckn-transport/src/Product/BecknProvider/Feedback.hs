@@ -12,6 +12,7 @@ import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideBooking as QRB
 import Types.Error
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as SP
@@ -32,9 +33,10 @@ feedback _ _ req = withFlowHandlerBecknAPI $
     logTagInfo "FeedbackAPI" "Received feedback API call."
     let context = req.context
     BP.validateContext "feedback" context
-    let rideId = Id $ req.message.order_id
+    let quoteId = Id $ req.message.order_id
+    rideBooking <- QRB.findByQuoteId quoteId >>= fromMaybeM RideBookingDoesNotExist
     ride <-
-      QRide.findById rideId
+      QRide.findByRBId rideBooking.id
         >>= fromMaybeM RideNotFound
     let driverId = ride.driverId
     unless (ride.status == Ride.COMPLETED) $

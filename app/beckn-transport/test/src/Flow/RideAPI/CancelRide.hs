@@ -31,7 +31,7 @@ handle =
 ride :: Ride.Ride
 ride =
   Fixtures.defaultRide
-    { Ride.status = Ride.CONFIRMED
+    { Ride.status = Ride.NEW
     }
 
 cancelRide :: TestTree
@@ -40,9 +40,7 @@ cancelRide =
     "Ride cancellation"
     [ successfulCancellationByDriver,
       successfulCancellationByAdmin,
-      successfulCancellationWithoutDriverByAdmin,
       failedCancellationByAnotherDriver,
-      failedCancellationWithoutDriverByDriver,
       failedCancellationWhenQuoteStatusIsWrong
     ]
 
@@ -71,23 +69,6 @@ successfulCancellationByAdmin =
                              role = Person.ADMIN
                             }
 
-successfulCancellationWithoutDriverByAdmin :: TestTree
-successfulCancellationWithoutDriverByAdmin =
-  testCase "Cancel successfully if ride has no driver but requested by admin" $ do
-    runHandler handleCase (Id "1") "1" someCancelRideReq
-      `shouldReturn` APISuccess.Success
-  where
-    handleCase =
-      handle
-        { CancelRide.findRideById = \rideId -> pure $ Just piWithoutDriver,
-          CancelRide.findPersonById = \personId -> pure $ Just admin
-        }
-    piWithoutDriver = ride {Ride.personId = Nothing}
-    admin =
-      Fixtures.defaultDriver{id = Id "adminId",
-                             role = Person.ADMIN
-                            }
-
 failedCancellationByAnotherDriver :: TestTree
 failedCancellationByAnotherDriver =
   testCase "Fail cancellation if requested by driver not executor" $ do
@@ -96,15 +77,6 @@ failedCancellationByAnotherDriver =
   where
     handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just driverNotExecutor}
     driverNotExecutor = Fixtures.defaultDriver{id = Id "driverNotExecutorId"}
-
-failedCancellationWithoutDriverByDriver :: TestTree
-failedCancellationWithoutDriverByDriver =
-  testCase "Fail cancellation if ride has no driver and requested by driver" $ do
-    runHandler handleCase (Id "1") "1" someCancelRideReq
-      `shouldThrow` (== RideFieldNotPresent "person")
-  where
-    handleCase = handle {CancelRide.findRideById = \rideId -> pure $ Just piWithoutDriver}
-    piWithoutDriver = ride {Ride.personId = Nothing}
 
 failedCancellationWhenQuoteStatusIsWrong :: TestTree
 failedCancellationWhenQuoteStatusIsWrong =

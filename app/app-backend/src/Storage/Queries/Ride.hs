@@ -112,8 +112,6 @@ updateMultiple rideId ride = do
 findByRBId :: DBFlow m r => Id SRB.RideBooking -> m (Maybe Storage.Ride)
 findByRBId rbId = do
   dbTable <- getDbTable
-  list <- DB.findAll dbTable (B.orderBy_ orderBy) predicate
-  return $ listToMaybe list
+  DB.findOne dbTable predicate
   where
-    orderBy Storage.Ride {..} = B.desc_ createdAt
     predicate Storage.Ride {..} = bookingId ==. B.val_ rbId

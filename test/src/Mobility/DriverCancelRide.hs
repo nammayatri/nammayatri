@@ -31,7 +31,7 @@ spec = do
           RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
 
       tRide <- poll $ do
-        tRide <- getBPPRide (cast quoteId)
+        tRide <- getBPPRide tRideBooking.id
         tRide.status `shouldBe` TRide.NEW
         return $ Just tRide
 

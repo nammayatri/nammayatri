@@ -20,9 +20,9 @@ import qualified Storage.Queries.Ride as QRide
 import Types.API.Location as Location
 import Types.Metrics
 import qualified Types.Storage.Person as Person
+import qualified Types.Storage.Ride as SRide
 import Utils.Common hiding (id)
 import Prelude (atan2)
-import qualified Types.Storage.Ride as SRide
 
 updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
 updateLocation personId req = withFlowHandlerAPI $ do

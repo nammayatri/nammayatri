@@ -13,6 +13,7 @@ import Types.Error
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Ride as Ride
+import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.SilentLogger ()
 
@@ -24,6 +25,11 @@ handle =
         pure $
           if quoteId == Id "2"
             then Just searchQuote
+            else Nothing,
+      findRideBookingById = \rbId ->
+        pure $
+          if rbId == Id "1"
+            then Just rideBooking
             else Nothing,
       findRideById = \rideId ->
         pure $
@@ -39,15 +45,21 @@ ride :: Ride.Ride
 ride =
   Fixtures.defaultRide
     { Ride.status = Ride.NEW,
-      Ride.bookingId = "2",
+      Ride.bookingId = "1",
       Ride.otp = "otp"
+    }
+
+rideBooking :: SRB.RideBooking
+rideBooking =
+  Fixtures.defaultRideBooking
+    { SRB.status = SRB.CONFIRMED,
+      SRB.quoteId = Id "2"
     }
 
 searchQuote :: Quote.Quote
 searchQuote =
   Fixtures.defaultQuote
-    { Quote.id = "2",
-      Quote.status = Quote.CONFIRMED
+    { Quote.id = "2"
     }
 
 searchRequest :: SearchRequest.SearchRequest
