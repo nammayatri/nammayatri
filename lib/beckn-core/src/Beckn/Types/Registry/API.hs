@@ -5,23 +5,7 @@ import Beckn.Types.Registry.Country (Country)
 import Beckn.Types.Registry.Domain (Domain)
 import Beckn.Types.Registry.Subscriber (Subscriber)
 import Beckn.Utils.JSON (constructorsToLowerOptions, stripPrefixUnderscoreIfAny)
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuth)
 import EulerHS.Prelude
-import Servant
-
-type LookupAPI registryLookup =
-  SignatureAuth "Signature" registryLookup
-    :> "lookup"
-    :> ReqBody '[JSON] LookupRequest
-    :> Post '[JSON] LookupResponse
-
-lookupAPI ::
-  Proxy
-    ( "lookup"
-        :> ReqBody '[JSON] LookupRequest
-        :> Post '[JSON] LookupResponse
-    )
-lookupAPI = Proxy
 
 data LookupRequest = LookupRequest
   { subscriber_id :: Maybe Text,
@@ -48,3 +32,9 @@ instance ToJSON ParticipantRole where
   toJSON = genericToJSON constructorsToLowerOptions
 
 type LookupResponse = [Subscriber]
+
+newtype OnSubscribeRequest = OnSubscribeRequest {challenge :: Text}
+  deriving (Show, Generic, FromJSON, ToJSON)
+
+newtype OnSubscribeResponse = OnSubscribeResponse {answer :: Text}
+  deriving (Show, Generic, FromJSON, ToJSON)

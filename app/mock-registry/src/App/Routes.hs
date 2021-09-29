@@ -1,7 +1,7 @@
 module App.Routes where
 
 import App.Types (FlowServer)
-import Beckn.Types.Registry.API (LookupAPI)
+import Beckn.Types.Registry.Routes (LookupAPI)
 import EulerHS.Prelude
 import qualified Flow.Lookup as Flow
 import Utils.Auth (LookupRegistryOrg)

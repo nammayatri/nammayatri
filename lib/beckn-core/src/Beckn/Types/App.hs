@@ -13,6 +13,7 @@ import Beckn.Types.Forkable
 import Beckn.Types.Logging
 import Beckn.Types.MonadGuid
 import Beckn.Types.Time
+import Beckn.Utils.Dhall (FromDhall)
 import Control.Lens ((?~))
 import qualified Data.Swagger as S
 import Database.Beam.Backend
@@ -80,3 +81,8 @@ instance FromBackendRow Postgres Servant.BaseUrl where
     either (fail . show) pure . Servant.parseBaseUrl =<< fromBackendRow
 
 instance HasSqlEqualityCheck Postgres Servant.BaseUrl
+
+newtype RegistrySecrets = RegistrySecrets
+  { encryptionPrivKeyB16 :: Text
+  }
+  deriving (Generic, FromDhall)

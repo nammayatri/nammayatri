@@ -41,7 +41,8 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     httpClientOptions :: HttpClientOptions,
     nwAddress :: BaseUrl,
-    registryUrl :: BaseUrl
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets
   }
   deriving (Generic, FromDhall)
 
@@ -59,12 +60,16 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
     nwAddress :: BaseUrl,
-    registryUrl :: BaseUrl
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets
   }
   deriving (Generic)
 
 instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
   runLookup = lookup
+
+instance HasLookupAction LookupRegistryOnSubscribe (FlowR AppEnv) where
+  runLookup = lookupAndGetEncPubKey
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
