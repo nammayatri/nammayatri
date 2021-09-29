@@ -14,6 +14,7 @@ import Beckn.Types.Forkable
 import Beckn.Types.Logging
 import Beckn.Types.MonadGuid
 import Beckn.Types.Time
+import Beckn.Utils.Dhall (FromDhall)
 import Control.Lens.Operators
 import Data.Aeson as Aeson (Value)
 import Data.OpenApi
@@ -90,3 +91,8 @@ instance ToSchema Value where
         aSchema
           & description
             ?~ "Some JSON."
+
+newtype RegistrySecrets = RegistrySecrets
+  { encryptionPrivKeyB16 :: Text
+  }
+  deriving (Generic, FromDhall)

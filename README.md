@@ -20,6 +20,8 @@
 
 [Signature authentication](./doc/signatures.md)
 
+[Registry encryption](./doc/registry-encryption.md)
+
 ## Developer guidelines
 
 [PR reviews](./doc/reviews.md)

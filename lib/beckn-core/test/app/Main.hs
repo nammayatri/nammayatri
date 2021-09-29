@@ -4,6 +4,7 @@ import APIExceptions
 import Amount
 import DecimalValue
 import EulerHS.Prelude
+import OnSubscribeDecryption (decryptionTest)
 import SignatureAuth
 import SlidingWindowLimiter
 import Test.Tasty
@@ -21,5 +22,6 @@ specs = return $ testGroup "Tests" [unitTests]
           decimalValueTests,
           signatureAuthTests,
           httpExceptionTests,
-          slidingWindowLimiterTests
+          slidingWindowLimiterTests,
+          decryptionTest
         ]
