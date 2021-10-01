@@ -6,17 +6,15 @@ import Beckn.Types.Id (Id)
 import Data.Time (TimeOfDay, UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Types.Domain.FarePolicy as D
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Vehicle as Vehicle
 
 data FarePolicyT f = FarePolicy
-  { id :: B.C f (Id D.FarePolicy),
+  { id :: B.C f (Id FarePolicy),
     vehicleVariant :: B.C f Vehicle.Variant,
     organizationId :: B.C f (Id Organization.Organization),
     baseFare :: B.C f (Maybe Double),
     baseDistance :: B.C f (Maybe Double),
-    perExtraKmRate :: B.C f Double,
     nightShiftStart :: B.C f (Maybe TimeOfDay),
     nightShiftEnd :: B.C f (Maybe TimeOfDay),
     nightShiftRate :: B.C f (Maybe Double),
@@ -32,7 +30,7 @@ type FarePolicyPrimaryKey = B.PrimaryKey FarePolicyT Identity
 {-# ANN module ("HLint: ignore Redundant id" :: String) #-}
 
 instance B.Table FarePolicyT where
-  data PrimaryKey FarePolicyT f = FarePolicyPrimaryKey (B.C f (Id D.FarePolicy))
+  data PrimaryKey FarePolicyT f = FarePolicyPrimaryKey (B.C f (Id FarePolicy))
     deriving (Generic, B.Beamable)
   primaryKey = FarePolicyPrimaryKey . id
 
@@ -54,24 +52,9 @@ fieldEMod =
           organizationId = "organization_id",
           baseFare = "base_fare",
           baseDistance = "base_distance",
-          perExtraKmRate = "per_extra_km_rate",
           nightShiftStart = "night_shift_start",
           nightShiftEnd = "night_shift_end",
           nightShiftRate = "night_shift_rate",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
-
-fromTable :: FarePolicy -> D.FarePolicy
-fromTable sFarePolicy =
-  D.FarePolicy
-    { id = sFarePolicy.id,
-      vehicleVariant = sFarePolicy.vehicleVariant,
-      organizationId = sFarePolicy.organizationId,
-      baseFare = toRational <$> sFarePolicy.baseFare,
-      baseDistance = toRational <$> sFarePolicy.baseDistance,
-      perExtraKmRate = toRational $ sFarePolicy.perExtraKmRate,
-      nightShiftStart = sFarePolicy.nightShiftStart,
-      nightShiftEnd = sFarePolicy.nightShiftEnd,
-      nightShiftRate = toRational <$> sFarePolicy.nightShiftRate
-    }

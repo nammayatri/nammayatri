@@ -10,7 +10,6 @@ import qualified Storage.Queries.Person as SPerson
 import Types.API.FarePolicy
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import Types.Error
-import qualified Types.Storage.FarePolicy as SFarePolicy
 import qualified Types.Storage.Person as SP
 import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
@@ -27,12 +26,12 @@ listFarePolicies personId = withFlowHandlerAPI $ do
       FarePolicyResponse
         { id = fp.id,
           vehicleVariant = fp.vehicleVariant,
-          baseFare = fp.baseFare,
-          baseDistance = fp.baseDistance,
-          perExtraKmRate = fp.perExtraKmRate,
+          baseFare = fromRational <$> fp.baseFare,
+          baseDistance = fromRational <$> fp.baseDistance,
+          perExtraKmRateList = DFarePolicy.makeExtraKmRateAPIEntity <$> fp.perExtraKmRateList,
           nightShiftStart = fp.nightShiftStart,
           nightShiftEnd = fp.nightShiftEnd,
-          nightShiftRate = fp.nightShiftRate
+          nightShiftRate = fromRational <$> fp.nightShiftRate
         }
 
 updateFarePolicy :: Id SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyRequest -> FlowHandler UpdateFarePolicyResponse
@@ -41,12 +40,12 @@ updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
   farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM NoFarePolicy
   let updatedFarePolicy =
         farePolicy
-          { SFarePolicy.baseFare = req.baseFare,
-            SFarePolicy.baseDistance = req.baseDistance,
-            SFarePolicy.perExtraKmRate = req.perExtraKmRate,
-            SFarePolicy.nightShiftStart = req.nightShiftStart,
-            SFarePolicy.nightShiftEnd = req.nightShiftEnd,
-            SFarePolicy.nightShiftRate = req.nightShiftRate
+          { DFarePolicy.baseFare = toRational <$> req.baseFare,
+            DFarePolicy.baseDistance = toRational <$> req.baseDistance,
+            DFarePolicy.perExtraKmRateList = DFarePolicy.fromExtraKmRateAPIEntity <$> req.perExtraKmRateList,
+            DFarePolicy.nightShiftStart = req.nightShiftStart,
+            DFarePolicy.nightShiftEnd = req.nightShiftEnd,
+            DFarePolicy.nightShiftRate = toRational <$> req.nightShiftRate
           }
   SFarePolicy.updateFarePolicy updatedFarePolicy
   pure Success

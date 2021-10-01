@@ -14,7 +14,7 @@ import Data.Time
     utcToLocalTime,
   )
 import EulerHS.Prelude
-import Types.Domain.FarePolicy (FarePolicy)
+import Types.Domain.FarePolicy (FarePolicy, defaultExtraKmRate)
 import Types.Error
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.SearchReqLocation as Location
@@ -91,16 +91,23 @@ calculateDistanceFare ::
   m Amount
 calculateDistanceFare farePolicy actualDistance journeyType = do
   let baseDistance = fromMaybe 0 $ farePolicy.baseDistance
-  let perKmRate = farePolicy.perExtraKmRate
-  let distanceMultiplier = case journeyType of
-        OneWayTrip -> 1.0
-        HalfReturnTrip -> 1.5
-        FullReturnTrip -> 2.0
-  let baseDistanceFare =
-        if toRational actualDistance > baseDistance
-          then ((toRational actualDistance * distanceMultiplier) - baseDistance) / 1000
-          else 0
-  pure . Amount $ baseDistanceFare * perKmRate
+      extraDistance = toRational actualDistance - baseDistance
+  if extraDistance <= 0
+    then return $ Amount 0
+    else do
+      let extraKmRate = findRequiredExtraKmRate extraDistance farePolicy.perExtraKmRateList
+      let distanceMultiplier = case journeyType of
+            OneWayTrip -> 1.0
+            HalfReturnTrip -> 1.5
+            FullReturnTrip -> 2.0
+      let extraDistanceFare = ((toRational actualDistance * distanceMultiplier) - baseDistance) / 1000
+      pure . Amount $ extraDistanceFare * extraKmRate.extraFare
+  where
+    findRequiredExtraKmRate extraDistance = do
+      foldr
+        (\eKmRate a -> if eKmRate.fromExtraDistance >= a.fromExtraDistance then eKmRate else a)
+        defaultExtraKmRate
+        . filter (\a -> a.fromExtraDistance < extraDistance)
 
 calculateNightShiftRate ::
   MonadHandler m =>
