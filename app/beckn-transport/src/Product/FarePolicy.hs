@@ -9,7 +9,7 @@ import qualified Storage.Queries.FarePolicy as SFarePolicy
 import Types.API.FarePolicy
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import Types.Error
-import Types.Storage.FarePolicy (makeFarePolicyAPIEntity)
+import Types.Domain.FarePolicy (makeFarePolicyAPIEntity)
 import qualified Types.Storage.Person as SP
 import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
@@ -24,12 +24,13 @@ updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM NoFarePolicy
   let updatedFarePolicy =
-        farePolicy{baseFare = req.baseFare,
-                   baseDistance = req.baseDistance,
-                   perExtraKmRate = req.perExtraKmRate,
-                   nightShiftStart = req.nightShiftStart,
-                   nightShiftEnd = req.nightShiftEnd,
-                   nightShiftRate = req.nightShiftRate
-                  }
+        farePolicy
+          { DFarePolicy.baseFare = toRational <$> req.baseFare,
+            DFarePolicy.baseDistance = toRational <$> req.baseDistance,
+            DFarePolicy.perExtraKmRateList = DFarePolicy.fromExtraKmRateAPIEntity <$> req.perExtraKmRateList,
+            DFarePolicy.nightShiftStart = req.nightShiftStart,
+            DFarePolicy.nightShiftEnd = req.nightShiftEnd,
+            DFarePolicy.nightShiftRate = toRational <$> req.nightShiftRate
+          }
   SFarePolicy.updateFarePolicy updatedFarePolicy
   pure Success

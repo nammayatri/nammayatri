@@ -88,7 +88,24 @@ findAll ::
   ) ->
   (table (BI.QExpr Postgres s) -> BI.QExpr Postgres s Bool) ->
   m [B.QExprToIdentity res]
-findAll dbTable commands predicate = runSqlDB $ lift . L.findRows . B.select . commands . B.filter_ predicate $ B.all_ dbTable
+findAll dbTable commands predicate = runSqlDB $ findAll' dbTable commands predicate
+
+findAll' ::
+  ( ReadablePgTable table db,
+    B.FromBackendRow Postgres (B.QExprToIdentity res),
+    BI.ProjectibleWithPredicate
+      BI.AnyType
+      Postgres
+      (BI.WithExprContext (BI.BeamSqlBackendExpressionSyntax' Postgres))
+      res
+  ) =>
+  B.DatabaseEntity Postgres db (B.TableEntity table) ->
+  ( BI.Q Postgres db s (table (BI.QExpr Postgres s)) ->
+    BI.Q Postgres db B.QBaseScope res
+  ) ->
+  (table (BI.QExpr Postgres s) -> BI.QExpr Postgres s Bool) ->
+  SqlDB [B.QExprToIdentity res]
+findAll' dbTable commands predicate = lift . L.findRows . B.select . commands . B.filter_ predicate $ B.all_ dbTable
 
 update ::
   ( HasCallStack,

@@ -27,7 +27,7 @@ defaultFarePolicy =
       organizationId = orgID,
       baseFare = Just 120.0,
       baseDistance = Just 5000.0,
-      perExtraKmRate = 12.0,
+      perExtraKmRateList = [defaultExtraKmRate],
       nightShiftStart = Just midnight,
       nightShiftEnd = Just midnight,
       nightShiftRate = Just 1.0
@@ -121,7 +121,10 @@ sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ d
                 defaultFarePolicy
                   { vehicleVariant = Vehicle.SEDAN,
                     baseFare = Just 150.0,
-                    perExtraKmRate = 15.0
+                    perExtraKmRateList =
+                      [ defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 15},
+                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 25}
+                      ]
                   }
         }
 
@@ -149,7 +152,11 @@ suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
                   { vehicleVariant = Vehicle.SUV,
                     baseFare = Just 0,
                     baseDistance = Just 0,
-                    perExtraKmRate = 20.0
+                    perExtraKmRateList =
+                      [ defaultExtraKmRate,
+                        defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 20},
+                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 25}
+                      ]
                   }
         }
 
@@ -179,7 +186,11 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTr
                   { vehicleVariant = Vehicle.HATCHBACK,
                     baseFare = Just 100.0,
                     baseDistance = Just 4000.0,
-                    perExtraKmRate = 13.5,
+                    perExtraKmRateList =
+                      [ defaultExtraKmRate,
+                        defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 13.5},
+                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 20}
+                      ],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1
@@ -210,7 +221,11 @@ nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip f
                   { vehicleVariant = Vehicle.SEDAN,
                     baseFare = Just 100.0,
                     baseDistance = Just 3000.0,
-                    perExtraKmRate = 15.0,
+                    perExtraKmRateList =
+                      [ defaultExtraKmRate,
+                        defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 15},
+                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 18}
+                      ],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1
@@ -241,7 +256,11 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
                   { vehicleVariant = Vehicle.SUV,
                     baseFare = Just 150.0,
                     baseDistance = Just 3000.0,
-                    perExtraKmRate = 20.0,
+                    perExtraKmRateList =
+                      [ defaultExtraKmRate,
+                        defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 20},
+                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 25}
+                      ],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1

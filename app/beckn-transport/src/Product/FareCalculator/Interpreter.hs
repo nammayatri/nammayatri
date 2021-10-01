@@ -14,9 +14,7 @@ import Product.FareCalculator.Flow
   )
 import qualified Product.Location as Location
 import qualified Storage.Queries.FarePolicy as FarePolicyS
-import Types.Domain.FarePolicy
 import Types.Metrics (CoreMetrics)
-import qualified Types.Storage.FarePolicy as FarePolicyS
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
@@ -56,25 +54,9 @@ serviceHandle ::
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do
-        sFarePolicy <- FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
-        let farePolicy = fromTable <$> sFarePolicy
-        pure farePolicy,
+        FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant,
       getDistance = \(PickupLocation pickupLoc) (DropLocation dropLoc) -> do
         let pickupLocLatLong = Location.locationToLatLong pickupLoc
             dropLocLatLong = Location.locationToLatLong dropLoc
         Location.calculateDistance pickupLocLatLong dropLocLatLong
-    }
-
-fromTable :: FarePolicyS.FarePolicy -> FarePolicy
-fromTable FarePolicyS.FarePolicy {..} =
-  FarePolicy
-    { id = id,
-      vehicleVariant = vehicleVariant,
-      organizationId = organizationId,
-      baseFare = toRational <$> baseFare,
-      baseDistance = toRational <$> baseDistance,
-      perExtraKmRate = toRational perExtraKmRate,
-      nightShiftStart = nightShiftStart,
-      nightShiftEnd = nightShiftEnd,
-      nightShiftRate = toRational <$> nightShiftRate
     }

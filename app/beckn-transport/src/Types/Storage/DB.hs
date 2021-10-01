@@ -11,6 +11,7 @@ import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverLocation as DriverLocation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
+import qualified Types.Storage.FarePolicy.ExtraKmRate as FPExtraKmRate
 import qualified Types.Storage.NotificationStatus as NotificationStatus
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
@@ -44,6 +45,7 @@ data TransporterDb f = TransporterDb
     transporterConfig :: f (B.TableEntity TransporterConfig.TransporterConfigT),
     driverInformation :: f (B.TableEntity DriverInformation.DriverInformationT),
     farePolicy :: f (B.TableEntity FarePolicy.FarePolicyT),
+    farePolicyExtraKmRate :: f (B.TableEntity FPExtraKmRate.ExtraKmRateT),
     rideRequest :: f (B.TableEntity RideRequest.RideRequestT),
     notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT),
     allocationEvent :: f (B.TableEntity AllocationEvent.AllocationEventT),
@@ -72,6 +74,7 @@ transporterDb dbSchemaName =
         transporterConfig = setSchema dbSchemaName <> TransporterConfig.fieldEMod,
         driverInformation = setSchema dbSchemaName <> DriverInformation.fieldEMod,
         farePolicy = setSchema dbSchemaName <> FarePolicy.fieldEMod,
+        farePolicyExtraKmRate = setSchema dbSchemaName <> FPExtraKmRate.fieldEMod,
         rideRequest = setSchema dbSchemaName <> RideRequest.fieldEMod,
         notificationStatus = setSchema dbSchemaName <> NotificationStatus.fieldEMod,
         allocationEvent = setSchema dbSchemaName <> AllocationEvent.fieldEMod,
