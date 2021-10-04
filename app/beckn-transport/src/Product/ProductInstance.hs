@@ -210,9 +210,7 @@ notifyTripDetailsToGateway ::
   PI.ProductInstance ->
   m ()
 notifyTripDetailsToGateway transporter searchPi orderPi = do
-  trackerCaseMb <- CQ.findByParentCaseIdAndType (searchPi.caseId) Case.LOCATIONTRACKER
-  whenJust trackerCaseMb $ \trackerCase ->
-    BP.notifyTripInfoToGateway orderPi (trackerCase.id) transporter (searchPi.caseId)
+  BP.notifyTripInfoToGateway orderPi transporter (searchPi.caseId)
 
 notifyStatusUpdateReq ::
   ( DBFlow m r,

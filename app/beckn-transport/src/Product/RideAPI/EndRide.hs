@@ -34,7 +34,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
           findCaseByIdAndType = Case.findByIdType,
           notifyUpdateToBAP = PI.notifyUpdateToBAP,
           endRideTransaction,
-          calculateFare = \orgId vehicleVariant distance -> Fare.calculateFare orgId vehicleVariant (Right distance),
+          calculateFare = Fare.calculateFare,
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations
         }

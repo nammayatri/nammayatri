@@ -21,7 +21,7 @@ data Intent = Intent
     -- Mobility specific
     pickups :: [Stop],
     drops :: [Stop],
-    vehicle :: Vehicle,
+    vehicle :: Maybe Vehicle,
     payload :: Payload,
     transfer :: Maybe TransferAttrs,
     fare :: Price

@@ -69,6 +69,7 @@ data ProdInstRes = ProdInstRes
     organizationId :: Id Organization,
     parentId :: Maybe (Id ProductInstance),
     chargableDistance :: Maybe Double,
+    vehicleVariant :: Text,
     udf1 :: Maybe Text,
     udf2 :: Maybe Text,
     udf3 :: Maybe Text,

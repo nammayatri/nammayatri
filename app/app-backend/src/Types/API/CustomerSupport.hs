@@ -28,7 +28,6 @@ data OrderDetails = OrderDetails
     endTime :: Maybe UTCTime,
     fromLocation :: Maybe L.SearchReqLocation,
     toLocation :: Maybe L.SearchReqLocation,
-    vehicleVariant :: Maybe Text,
     travellerName :: Maybe Text,
     travellerPhone :: Maybe Text,
     trip :: Maybe TripDetails

@@ -25,7 +25,6 @@ import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RideRequest as RideRequest
-import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
 confirm ::
@@ -82,9 +81,6 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
     ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) bapCallbackUrl $
       onConfirmCallback
         orderProductInstance
-        productInstance
-        orderCase
-        (trackerCase.id)
         transporterOrg
 
 onConfirmCallback ::
@@ -93,22 +89,16 @@ onConfirmCallback ::
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
   ) =>
   ProductInstance.ProductInstance ->
-  ProductInstance.ProductInstance ->
-  Case.Case ->
-  Id Case.Case ->
   Organization.Organization ->
   m API.ConfirmOrder
-onConfirmCallback orderProductInstance productInstance orderCase trackerCaseId transporterOrg = do
+onConfirmCallback orderPi transporterOrg = do
   let transporterId = transporterOrg.id
-  let prodInstId = productInstance.id
-  pickupPoint <- (productInstance.fromLocation) & fromMaybeM (PIFieldNotPresent "location_id")
-  vehicleVariant :: Vehicle.Variant <-
-    (orderCase.udf1 >>= readMaybe . T.unpack)
-      & fromMaybeM (CaseFieldNotPresent "udf1")
-  driverPool <- map fst <$> calculateDriverPool pickupPoint transporterId vehicleVariant
-  setDriverPool prodInstId driverPool
-  logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId prodInstId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  mkOnConfirmPayload orderProductInstance trackerCaseId
+  searchPiId <- orderPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
+  pickupPoint <- (orderPi.fromLocation) & fromMaybeM (PIFieldNotPresent "location_id")
+  driverPool <- map (.driverId) <$> calculateDriverPool pickupPoint transporterId (Just orderPi.vehicleVariant)
+  setDriverPool searchPiId driverPool
+  logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId searchPiId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
+  mkOnConfirmPayload orderPi
 
 mkOrderCase :: MonadFlow m => Case.Case -> m Case.Case
 mkOrderCase Case.Case {..} = do
@@ -131,41 +121,30 @@ mkOrderCase Case.Case {..} = do
       }
 
 mkOrderProductInstance :: MonadFlow m => Id Case.Case -> ProductInstance.ProductInstance -> m ProductInstance.ProductInstance
-mkOrderProductInstance caseId prodInst = do
-  (now, pid, shortId) <- BP.getIdShortIdAndTime
+mkOrderProductInstance caseId' ProductInstance.ProductInstance {..} = do
+  (now, pid, shortId') <- BP.getIdShortIdAndTime
   inAppOtpCode <- generateOTPCode
   return $
     ProductInstance.ProductInstance
       { id = Id pid,
-        caseId = caseId,
-        productId = prodInst.productId,
+        caseId = caseId',
         personId = Nothing,
         personUpdatedAt = Nothing,
         entityType = ProductInstance.VEHICLE,
         entityId = Nothing,
-        shortId = shortId,
+        shortId = shortId',
         quantity = 1,
-        price = prodInst.price,
         actualPrice = Nothing,
         _type = Case.RIDEORDER,
-        organizationId = prodInst.organizationId,
-        fromLocation = prodInst.fromLocation,
-        toLocation = prodInst.toLocation,
-        startTime = prodInst.startTime,
-        endTime = prodInst.endTime,
-        validTill = prodInst.validTill,
-        parentId = Just (prodInst.id),
         traveledDistance = 0,
         chargableDistance = Nothing,
+        parentId = Just id,
         status = ProductInstance.CONFIRMED,
         info = Nothing,
         createdAt = now,
         updatedAt = now,
-        udf1 = prodInst.udf1,
-        udf2 = prodInst.udf2,
-        udf3 = prodInst.udf3,
         udf4 = Just inAppOtpCode,
-        udf5 = prodInst.udf5
+        ..
       }
 
 mkTrackerCase :: Case.Case -> Text -> UTCTime -> ShortId Case.Case -> Case.Case
@@ -187,46 +166,34 @@ mkTrackerCase case_@Case.Case {..} uuid now shortId_ =
     }
 
 mkTrackerProductInstance :: MonadFlow m => Id Case.Case -> ProductInstance.ProductInstance -> UTCTime -> m ProductInstance.ProductInstance
-mkTrackerProductInstance caseId prodInst currTime = do
-  shortId <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
+mkTrackerProductInstance caseId' ProductInstance.ProductInstance {..} currTime = do
+  shortId' <- T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16)
   piId <- L.generateGUID
   return $
     ProductInstance.ProductInstance
       { id = Id piId,
-        caseId = caseId,
-        productId = prodInst.productId,
+        caseId = caseId',
         personId = Nothing,
         personUpdatedAt = Nothing,
-        shortId = ShortId shortId,
+        shortId = ShortId shortId',
         entityType = ProductInstance.VEHICLE,
-        parentId = Just (prodInst.id),
-        organizationId = prodInst.organizationId,
+        parentId = Just id,
         entityId = Nothing,
         traveledDistance = 0,
         chargableDistance = Nothing,
         _type = Case.LOCATIONTRACKER,
-        startTime = prodInst.startTime,
-        endTime = prodInst.endTime,
-        fromLocation = prodInst.fromLocation,
-        toLocation = prodInst.toLocation,
-        validTill = prodInst.validTill,
         quantity = 1,
-        price = Nothing,
         actualPrice = Nothing,
         status = ProductInstance.INSTOCK,
         info = Nothing,
         createdAt = currTime,
         updatedAt = currTime,
-        udf1 = prodInst.udf1,
-        udf2 = prodInst.udf2,
-        udf3 = prodInst.udf3,
-        udf4 = prodInst.udf4,
-        udf5 = prodInst.udf5
+        ..
       }
 
-mkOnConfirmPayload :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> Id Case.Case -> m API.ConfirmOrder
-mkOnConfirmPayload orderPI trackerCaseId = do
-  trip <- BP.mkTrip trackerCaseId orderPI
+mkOnConfirmPayload :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> m API.ConfirmOrder
+mkOnConfirmPayload orderPI = do
+  trip <- BP.mkTrip orderPI
   searchPiId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
   order <- ExternalAPITransform.mkOrder searchPiId (Just trip) Nothing
   return $ API.ConfirmOrder order

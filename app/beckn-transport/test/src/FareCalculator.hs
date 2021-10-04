@@ -78,8 +78,7 @@ orgID = "organization_id"
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
-    { getFarePolicy = \orgId vehicleVariant -> pure $ Just defaultFarePolicy,
-      getDistance = \pickup drop -> pure $ Just 0
+    { getFarePolicy = \orgId vehicleVariant -> pure $ Just defaultFarePolicy
     }
 
 -- Calculation tests
@@ -91,7 +90,7 @@ hatchback20km = testCase "Calculate fare for 20km for Hatchback" $ do
       handle
       orgID
       Vehicle.HATCHBACK
-      (Right distance)
+      distance
       startTime
   let totalFare = fareSum fareParams
   totalFare @?= Amount 300.0
@@ -106,7 +105,7 @@ sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
       handle'
       orgID
       Vehicle.SEDAN
-      (Right distance)
+      distance
       startTime
   let totalFare = fareSum fareParams
   totalFare @?= Amount 250.0
@@ -135,7 +134,7 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
       handle'
       orgID
       Vehicle.SEDAN
-      (Right distance)
+      distance
       startTime
   let totalFare = fareSum fareParams
   totalFare @?= Amount 475.0
@@ -164,7 +163,7 @@ sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
       handle'
       orgID
       Vehicle.SEDAN
-      (Right distance)
+      distance
       startTime
   let totalFare = fareSum fareParams
   totalFare @?= Amount 775.0
@@ -193,7 +192,7 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
       handle'
       orgID
       Vehicle.SUV
-      (Right distance)
+      distance
       startTime
   let totalFare = fareSum fareParams
   totalFare @?= Amount 320.0
@@ -225,7 +224,7 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
       handle'
       orgID
       Vehicle.HATCHBACK
-      (Right distance)
+      distance
       startTime
   let totalFare = fareSum fareParams
   totalFare @?= Amount 331.1
@@ -258,7 +257,7 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
       handle'
       orgID
       Vehicle.SEDAN
-      (Right distance)
+      distance
       startTime
   let totalFare = fareSum fareParams
   totalFare @?= Amount 357.5
@@ -291,7 +290,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
       handle'
       orgID
       Vehicle.SUV
-      (Right distance)
+      distance
       startTime
   let totalFare = fareSum fareParams
   totalFare @?= Amount 451.0
@@ -325,7 +324,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     handle'
     orgID
     Vehicle.SEDAN
-    (Right distance)
+    distance
     startTime
     `shouldThrow` (== NoFarePolicy)
   where

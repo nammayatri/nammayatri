@@ -182,12 +182,11 @@ notifyTripInfoToGateway ::
     CoreMetrics m
   ) =>
   ProductInstance.ProductInstance ->
-  Id Case.Case ->
   Organization.Organization ->
   Id Case.Case ->
   m ()
-notifyTripInfoToGateway orderPI trackerCaseId transporter parentCaseId = do
-  mkOnUpdatePayload orderPI trackerCaseId
+notifyTripInfoToGateway orderPI transporter parentCaseId = do
+  mkOnUpdatePayload orderPI
     >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter parentCaseId . Right
 
 notifyCancelToGateway ::
@@ -205,13 +204,10 @@ notifyCancelToGateway searchPi transporter cancellationSource = do
   order <- ExternalAPITransform.mkOrder searchPi.id (Just trip) $ Just cancellationSource
   ExternalAPI.callBAP "on_cancel" API.onCancel transporter (searchPi.caseId) . Right $ API.OnCancelReqMessage order
 
-mkTrip :: (DBFlow m r, EncFlow m r) => Id Case.Case -> ProductInstance.ProductInstance -> m Trip
-mkTrip cId orderPi = do
-  prodInst <-
-    ProductInstance.findByCaseId cId
-      >>= fromMaybeM PINotFound
-  driver <- mapM mkDriverInfo $ prodInst.personId
-  vehicle <- join <$> mapM mkVehicleInfo (prodInst.entityId)
+mkTrip :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> m Trip
+mkTrip orderPi = do
+  driver <- mapM mkDriverInfo $ orderPi.personId
+  vehicle <- join <$> mapM mkVehicleInfo (orderPi.entityId)
   tripCode <- orderPi.udf4 & fromMaybeM (PIFieldNotPresent "udf4")
   logTagInfo "vehicle" $ show vehicle
   return $
@@ -240,10 +236,9 @@ mkTrip cId orderPi = do
 mkOnUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
   ProductInstance.ProductInstance ->
-  Id Case.Case ->
   m API.OnUpdateOrder
-mkOnUpdatePayload orderPI caseId = do
-  trip <- mkTrip caseId orderPI
+mkOnUpdatePayload orderPI = do
+  trip <- mkTrip orderPI
   searchPiId <- orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
   order <- ExternalAPITransform.mkOrder searchPiId (Just trip) Nothing
   return $ API.OnUpdateOrder order

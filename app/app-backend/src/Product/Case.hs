@@ -53,36 +53,10 @@ list personId caseType statuses mlimit moffset =
 
 -- Core Utility functions are below
 mkProdRes :: [Products.Products] -> PI.ProductInstance -> ProdInstRes
-mkProdRes prodList prodInst =
+mkProdRes prodList PI.ProductInstance {..} =
   ProdInstRes
-    { id = prodInst.id,
-      caseId = prodInst.caseId,
-      productId = prodInst.productId,
-      personId = prodInst.personId,
-      shortId = prodInst.shortId,
-      entityType = prodInst.entityType,
-      entityId = prodInst.entityId,
-      quantity = prodInst.quantity,
-      price = prodInst.price,
-      actualPrice = prodInst.actualPrice,
-      status = prodInst.status,
-      startTime = prodInst.startTime,
-      endTime = prodInst.endTime,
-      validTill = prodInst.validTill,
-      fromLocation = prodInst.fromLocation,
-      toLocation = prodInst.toLocation,
-      organizationId = prodInst.organizationId,
-      parentId = prodInst.parentId,
-      chargableDistance = prodInst.chargableDistance,
-      udf1 = prodInst.udf1,
-      udf2 = prodInst.udf2,
-      udf3 = prodInst.udf3,
-      udf4 = prodInst.udf4,
-      udf5 = prodInst.udf5,
-      info = prodInst.info,
-      createdAt = prodInst.createdAt,
-      updatedAt = prodInst.updatedAt,
-      product = find (\x -> x.id == prodInst.productId) prodList
+    { product = find (\x -> x.id == productId) prodList,
+      ..
     }
 
 getProdInstances :: DBFlow m r => Case.Case -> m [ProdInstRes]

@@ -12,9 +12,11 @@ import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
+import Database.PostgreSQL.Simple.FromField (FromField (..))
 import EulerHS.Prelude hiding (id)
 import Servant.API
 import qualified Types.Storage.Organization as Org
+import Utils.PostgreSQLSimple (fromFieldRead)
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -36,7 +38,9 @@ instance FromHttpApiData Category where
 
 --------
 data Variant = SEDAN | SUV | HATCHBACK
-  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded)
+
+instance FromField Variant where fromField = fromFieldRead "Variant"
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
   sqlValueSyntax = autoSqlValueSyntax

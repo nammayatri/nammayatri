@@ -56,6 +56,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   (chargableDistance, actualPrice) <- recalculateFare orderCase orderPi
+
   endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) actualPrice
   notifyUpdateToBAP
     (updatePriceAndDistance chargableDistance actualPrice searchPi)
@@ -66,17 +67,14 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   where
     recalculateFare orderCase orderPi = do
       transporterId <- Id <$> orderCase.provider & fromMaybeM (CaseFieldNotPresent "provider")
-      vehicleVariant <-
-        (orderCase.udf1 >>= readMaybe . T.unpack)
-          & fromMaybeM (CaseFieldNotPresent "udf1")
       oldDistance <-
         (orderCase.udf5 >>= readMaybe . T.unpack)
           & fromMaybeM (CaseFieldNotPresent "udf5")
-      estimatedPrice <- orderPi.price & fromMaybeM (PIFieldNotPresent "price")
+      let estimatedPrice = orderPi.price
       shouldRecalculateFare <- recalculateFareEnabled
       if shouldRecalculateFare
         then do
-          updatedPrice <- calculateFare transporterId vehicleVariant orderPi.traveledDistance orderCase.startTime
+          updatedPrice <- calculateFare transporterId orderPi.vehicleVariant orderPi.traveledDistance orderCase.startTime
           let distanceDiff = orderPi.traveledDistance - oldDistance
           let priceDiff = updatedPrice - estimatedPrice
           logTagInfo "Fare recalculation" $

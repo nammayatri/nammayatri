@@ -22,6 +22,7 @@ import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import Types.Storage.Products (Products)
 import qualified Types.Storage.SearchReqLocation as Loc
+import qualified Types.Storage.Vehicle as Vehicle
 
 -- TODO: INVALID status seems to be unused
 data ProductInstanceStatus
@@ -77,7 +78,7 @@ data ProductInstanceT f = ProductInstance
     entityType :: B.C f EntityType,
     entityId :: B.C f (Maybe Text),
     quantity :: B.C f Int,
-    price :: B.C f (Maybe Amount),
+    price :: B.C f Amount,
     actualPrice :: B.C f (Maybe Amount),
     _type :: B.C f ProductInstanceType,
     status :: B.C f ProductInstanceStatus,
@@ -90,6 +91,7 @@ data ProductInstanceT f = ProductInstance
     parentId :: B.C f (Maybe (Id ProductInstance)),
     traveledDistance :: B.C f Double,
     chargableDistance :: B.C f (Maybe Double),
+    vehicleVariant :: B.C f Vehicle.Variant, -- for future Quote/Order only
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     udf3 :: B.C f (Maybe Text),
@@ -148,6 +150,7 @@ fieldEMod =
           parentId = "parent_id",
           traveledDistance = "traveled_distance",
           chargableDistance = "chargable_distance",
+          vehicleVariant = "vehicle_variant",
           organizationId = "organization_id",
           createdAt = "created_at",
           updatedAt = "updated_at"

@@ -43,10 +43,10 @@ mkCatalog c prodInsts provider =
       }
 
 mkItemDescriptor :: ProductInstance -> Descriptor
-mkItemDescriptor _prodInst =
+mkItemDescriptor prodInst =
   Descriptor
     { name = Nothing,
-      code = Nothing,
+      code = Just $ show prodInst.vehicleVariant,
       symbol = Nothing,
       short_desc = Nothing,
       long_desc = Nothing,
@@ -113,7 +113,7 @@ mkItem prodInst =
 
 mkPrice :: ProductInstance -> Price
 mkPrice prodInst =
-  let amt = convertAmountToDecimalValue <$> prodInst.price
+  let amt = Just $ convertAmountToDecimalValue prodInst.price
    in Price
         { currency = "INR", -- TODO : Fetch this from product
           value = amt,

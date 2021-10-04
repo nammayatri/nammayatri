@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedWildCards #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Storage.Queries.Person where
 
@@ -14,6 +15,7 @@ import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Types.Schema
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
+import Database.PostgreSQL.Simple (FromRow)
 import Database.PostgreSQL.Simple.SqlQQ (sql)
 import EulerHS.Prelude hiding (id)
 import Types.App
@@ -233,39 +235,46 @@ updateAverageRating personId newAverageRating = do
         ]
     predicate pId Storage.Person {..} = id ==. B.val_ pId
 
+data DriverPoolResult = DriverPoolResult
+  { driverId :: Id Driver,
+    distanceToDriver :: Double,
+    variant :: Vehicle.Variant
+  }
+  deriving (Generic, FromRow)
+
 getNearestDrivers ::
   (DBFlow m r, HasFlowEnv m r '["driverPositionInfoExpiry" ::: Maybe Seconds]) =>
   LatLong ->
   Integer ->
   Id Org.Organization ->
-  Vehicle.Variant ->
-  m [(Id Driver, Double)]
+  Maybe Vehicle.Variant ->
+  m [DriverPoolResult]
 getNearestDrivers LatLong {..} radius orgId variant = do
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
-  map (first Id)
-    <$> postgreSQLSimpleQuery
-      [sql|
+  postgreSQLSimpleQuery
+    [sql|
         WITH a AS (
           SELECT
-            person."id" as id,
-            driver_location."point" <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) as dist
-          FROM atlas_transporter."person"
-          JOIN atlas_transporter."driver_location"
-            ON person."id" = driver_location."driver_id"
-          JOIN atlas_transporter."driver_information"
-            ON person."id" = driver_information."driver_id"
-          JOIN atlas_transporter."vehicle"
-            ON person."udf1" = vehicle."id"
-          WHERE person."role" = 'DRIVER'
-            AND person."organization_id" = ?
-            AND driver_information."active"
-            AND NOT driver_information."on_ride"
-            AND vehicle."variant" = ?
+            person.id AS id,
+            driver_location.point <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) AS dist,
+            vehicle.variant AS vehicle_variant
+          FROM atlas_transporter.person
+          JOIN atlas_transporter.driver_location
+            ON person.id = driver_location.driver_id
+          JOIN atlas_transporter.driver_information
+            ON person.id = driver_information.driver_id
+          JOIN atlas_transporter.vehicle
+            ON person.udf1 = vehicle.id
+          WHERE person.role = 'DRIVER'
+            AND person.organization_id = ?
+            AND driver_information.active
+            AND NOT driver_information.on_ride
+            AND COALESCE(vehicle.variant = ?, true)
             AND (? OR driver_location.updated_at + interval '? seconds' >= now())
         )
-        SELECT id, dist
+        SELECT id, dist, vehicle_variant
         FROM a
         WHERE dist < ?
         ORDER BY dist ASC
       |]
-      (lon, lat, getId orgId, show variant :: Text, isNothing mbDriverPositionInfoExpiry, maybe 0 getSeconds mbDriverPositionInfoExpiry, radius)
+    (lon, lat, getId orgId, show @Text <$> variant, isNothing mbDriverPositionInfoExpiry, maybe 0 getSeconds mbDriverPositionInfoExpiry, radius)

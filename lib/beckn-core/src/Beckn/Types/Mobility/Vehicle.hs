@@ -24,10 +24,10 @@ instance Example Vehicle where
     Vehicle
       { category = Just "CAR",
         capacity = Just 5,
-        make = Just "Logan",
-        model = Just "Renault",
+        make = Just "Renault",
+        model = Just "Logan",
         size = Just "small",
-        variant = "X10",
+        variant = "HATCHBACK",
         color = Just "indigo",
         energy_type = Just "PETROL",
         registration = example

@@ -9,7 +9,6 @@ data SearchReq = SearchReq
     startTime :: UTCTime,
     origin :: Stop,
     destination :: Stop,
-    vehicle :: Vehicle,
     travellers :: [Traveller],
     fare :: DecimalValue
   }

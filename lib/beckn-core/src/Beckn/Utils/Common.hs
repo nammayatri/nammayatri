@@ -20,7 +20,10 @@ import Beckn.Utils.Time as Common
 import EulerHS.Prelude hiding (id)
 
 foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc
-foldWIndex f acc p = snd $ foldl (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) p
+foldWIndex f acc p = snd $ foldl' (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) p
 
 identity :: p -> p
 identity a = a
+
+everyPossibleVariant :: (Enum a, Bounded a) => [a]
+everyPossibleVariant = [minBound .. maxBound]

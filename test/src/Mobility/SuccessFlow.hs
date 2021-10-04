@@ -28,7 +28,7 @@ doAnAppSearch = do
       <&> (.caseId)
 
   -- Do a Case Status request for getting product instance to confirm ride
-  productInstance <- expectSingletonNE <=< poll $ do
+  (productInstance :| _) <- poll do
     -- List all confirmed rides (type = RIDEORDER)
     callBAP (buildCaseStatusRes appCaseid)
       <&> (.productInstance)

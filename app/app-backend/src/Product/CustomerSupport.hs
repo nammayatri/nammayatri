@@ -108,7 +108,6 @@ makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
   toLocation <- Location.findLocationById toLocationId
   trip <- makeTripDetails confiremedOrder
   decMobNum <- decrypt mobileNumber
-  --  Info: udf1 is vechicle variant
   let details =
         T.OrderDetails
           { id = getId id,
@@ -121,7 +120,6 @@ makeCaseToOrder SP.Person {fullName, mobileNumber} C.Case {..} = do
             toLocation = toLocation,
             travellerName = fullName,
             travellerPhone = decMobNum,
-            vehicleVariant = udf1, -- Note: UDF1 Contain vehicleVariant info
             trip = trip
           }
   pure $ T.OrderResp {_order = details}

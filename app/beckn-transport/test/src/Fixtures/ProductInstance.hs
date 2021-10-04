@@ -7,6 +7,7 @@ import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.Vehicle as Vehicle
 
 defaultProductInstance :: ProductInstance.ProductInstance
 defaultProductInstance =
@@ -20,7 +21,7 @@ defaultProductInstance =
       entityType = ProductInstance.VEHICLE,
       entityId = Nothing,
       quantity = 0,
-      price = Just . Amount.Amount $ 100 % 1,
+      price = Amount.Amount $ 100 % 1,
       actualPrice = Nothing,
       _type = Case.RIDEORDER,
       status = ProductInstance.COMPLETED,
@@ -33,6 +34,7 @@ defaultProductInstance =
       parentId = Nothing,
       traveledDistance = 0,
       chargableDistance = Nothing,
+      vehicleVariant = Vehicle.SUV,
       udf1 = Nothing,
       udf2 = Nothing,
       udf3 = Nothing,

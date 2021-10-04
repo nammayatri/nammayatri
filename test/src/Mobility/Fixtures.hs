@@ -109,7 +109,6 @@ searchReq tid utcTime futureTime =
       startTime = utcTime,
       origin = getStop futureTime $ AppCommon.GPS "10.0739" "76.2733",
       destination = getStop futureTime $ AppCommon.GPS "10.5449" "76.4356",
-      vehicle = vehicle,
       travellers = [],
       fare = AppCommon.DecimalValue "360" $ Just "50"
     }

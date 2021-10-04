@@ -3,6 +3,7 @@
 module Product.BecknProvider.Search (search) where
 
 import App.Types
+import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Amount
 import Beckn.Types.Common
@@ -10,21 +11,24 @@ import qualified Beckn.Types.Core.API.Search as API
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Tag as Tag
 import Beckn.Types.Id
+import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Mobility.Stop as Stop
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
+import Data.Traversable
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
 import Product.FareCalculator
+import qualified Product.Location as Loc
 import qualified Product.Person as Person
 import qualified Storage.Queries.Case as QCase
 import qualified Storage.Queries.Organization as Org
-import qualified Storage.Queries.ProductInstance as ProductInstance
+import qualified Storage.Queries.ProductInstance as PI
 import qualified Storage.Queries.Products as SProduct
 import qualified Storage.Queries.SearchReqLocation as Loc
 import qualified Test.RandomStrings as RS
@@ -33,8 +37,9 @@ import Types.Error
 import Types.Metrics (CoreMetrics, HasBPPMetrics)
 import qualified Types.Storage.Case as Case
 import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.ProductInstance as ProductInstance
+import qualified Types.Storage.ProductInstance as PI
 import qualified Types.Storage.SearchReqLocation as Location
+import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
@@ -132,7 +137,7 @@ mkCase req uuid now validity startTime fromLocation toLocation transporterId bap
       parentCaseId = Nothing,
       fromLocationId = fromLocation.id,
       toLocationId = toLocation.id,
-      udf1 = Just $ intent.vehicle.variant,
+      udf1 = intent.vehicle <&> (.variant),
       udf2 = Just $ show $ length $ intent.payload.travellers,
       udf3 = Nothing,
       udf4 = Just bapId,
@@ -157,66 +162,66 @@ onSearchCallback ::
   m API.OnSearchServices
 onSearchCallback productCase transporter fromLocation toLocation searchMetricsMVar = do
   let transporterId = transporter.id
-  vehicleVariant <-
-    (productCase.udf1 >>= readMaybe . T.unpack)
-      & fromMaybeM (CaseFieldNotPresent "udf1")
-  pool <- Person.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
+  let desiredVehicleVariant = productCase.udf1 >>= readMaybe . T.unpack
+  pool <- Person.calculateDriverPool (fromLocation.id) transporterId desiredVehicleVariant
   logTagInfo "OnSearchCallback" $
-    "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId . fst <$> pool) |+ ""
-  let piStatus =
-        if null pool
-          then ProductInstance.OUTOFSTOCK
-          else ProductInstance.INSTOCK
-  (price, nearestDriverDist) <-
-    case pool of
-      [] -> return (Nothing, Nothing)
-      (fstDriverValue : _) -> do
-        let dstSrc = maybe (Left (fromLocation, toLocation)) Right (productCase.udf5 >>= readMaybe . T.unpack)
-        fare <- Just <$> calculateFare transporterId vehicleVariant dstSrc (productCase.startTime)
-        let nearestDist = Just $ snd fstDriverValue
-        return (fare, nearestDist)
-  prodInst <- mkProductInstance productCase price piStatus transporterId nearestDriverDist
-  let caseStatus ProductInstance.INSTOCK = Case.CONFIRMED
-      caseStatus _ = Case.CLOSED
+    "Calculated Driver Pool for organization " +|| getId transporterId
+      ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""
+
+  let listOfProtoPIs =
+        catMaybes $
+          everyPossibleVariant <&> \var ->
+            find ((== var) . (.variant)) pool
+  -- drivers sorted from nearest to furthest, so with `find`
+  -- we take nearest one and calculate fare and make PI for him
+
+  distance <-
+    map Loc.locationToLatLong [fromLocation, toLocation]
+      & MapSearch.getDistanceMb (Just MapSearch.CAR)
+      >>= fromMaybeM CantCalculateDistance
+
+  listOfPIs <-
+    for listOfProtoPIs $ \poolResult -> do
+      price <- calculateFare transporterId poolResult.variant distance productCase.startTime
+      mkProductInstance productCase price PI.INSTOCK transporterId poolResult.distanceToDriver poolResult.variant
+
   DB.runSqlDBTransaction $ do
-    ProductInstance.create prodInst
-    QCase.updateStatus (productCase.id) (caseStatus $ prodInst.status)
-  let productInstances =
-        case prodInst.status of
-          ProductInstance.OUTOFSTOCK -> []
-          _ -> [prodInst]
-  res <- mkOnSearchPayload productCase productInstances transporter
-  Metrics.finishSearchMetrics transporterId searchMetricsMVar
-  return res
+    for_ listOfPIs PI.create
+    let newCaseStatus = if null listOfPIs then Case.CLOSED else Case.CONFIRMED
+    QCase.updateStatus productCase.id newCaseStatus
+
+  mkOnSearchPayload productCase listOfPIs transporter
+    <* Metrics.finishSearchMetrics transporterId searchMetricsMVar
 
 mkProductInstance ::
   DBFlow m r =>
   Case.Case ->
-  Maybe Amount ->
-  ProductInstance.ProductInstanceStatus ->
+  Amount ->
+  PI.ProductInstanceStatus ->
   Id Org.Organization ->
-  Maybe Double ->
-  m ProductInstance.ProductInstance
-mkProductInstance productCase price status transporterId nearestDriverDist = do
+  Double ->
+  Vehicle.Variant ->
+  m PI.ProductInstance
+mkProductInstance productCase price status transporterId nearestDriverDist vehicleVariant = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
   products <-
-    SProduct.findByName (fromMaybe "DONT MATCH" (productCase.udf1))
+    SProduct.findByName (show vehicleVariant)
       >>= fromMaybeM ProductsNotFound
   return
-    ProductInstance.ProductInstance
+    PI.ProductInstance
       { id = productInstanceId,
         caseId = productCase.id,
         productId = products.id,
         personId = Nothing,
         personUpdatedAt = Nothing,
         shortId = ShortId shortId,
-        entityType = ProductInstance.VEHICLE,
+        entityType = PI.VEHICLE,
         entityId = Nothing,
         quantity = 1,
         _type = Case.RIDESEARCH,
-        price = price,
+        price,
         actualPrice = Nothing,
         status = status,
         startTime = productCase.startTime,
@@ -228,7 +233,8 @@ mkProductInstance productCase price status transporterId nearestDriverDist = do
         parentId = Nothing,
         traveledDistance = 0,
         chargableDistance = Nothing,
-        udf1 = show <$> nearestDriverDist,
+        vehicleVariant,
+        udf1 = Just $ show nearestDriverDist,
         udf2 = Nothing,
         udf3 = Nothing,
         udf4 = Nothing,
@@ -241,11 +247,11 @@ mkProductInstance productCase price status transporterId nearestDriverDist = do
 mkOnSearchPayload ::
   DBFlow m r =>
   Case.Case ->
-  [ProductInstance.ProductInstance] ->
+  [PI.ProductInstance] ->
   Org.Organization ->
   m API.OnSearchServices
 mkOnSearchPayload productCase productInstances transporterOrg = do
-  ProductInstance.getCountByStatus (transporterOrg.id) Case.RIDEORDER
+  PI.getCountRideOrder (transporterOrg.id)
     <&> mkProviderInfo transporterOrg . mkProviderStats
     >>= ExternalAPITransform.mkCatalog productCase productInstances
     <&> API.OnSearchServices
@@ -259,10 +265,10 @@ mkProviderInfo org stats =
       contacts = fromMaybe "" (org.mobileNumber)
     }
 
-mkProviderStats :: [(ProductInstance.ProductInstanceStatus, Int)] -> APICase.ProviderStats
+mkProviderStats :: [(PI.ProductInstanceStatus, Int)] -> APICase.ProviderStats
 mkProviderStats piCount =
   APICase.ProviderStats
-    { completed = List.lookup ProductInstance.COMPLETED piCount,
-      inprogress = List.lookup ProductInstance.INPROGRESS piCount,
-      confirmed = List.lookup ProductInstance.CONFIRMED piCount
+    { completed = List.lookup PI.COMPLETED piCount,
+      inprogress = List.lookup PI.INPROGRESS piCount,
+      confirmed = List.lookup PI.CONFIRMED piCount
     }

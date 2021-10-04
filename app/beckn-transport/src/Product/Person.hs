@@ -23,9 +23,7 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Utils.Validation (runRequestValidation)
 import Data.Maybe
-import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
@@ -150,15 +148,11 @@ getDriverPool piId =
   where
     calcDriverPool = do
       prodInst <- QPI.findById piId >>= fromMaybeM PIDoesNotExist
-      case_ <- Case.findById (prodInst.caseId) >>= fromMaybeM CaseNotFound
-      vehicleVariant :: SV.Variant <-
-        (case_.udf1 >>= readMaybe . T.unpack)
-          & fromMaybeM (CaseFieldNotPresent "udf1")
       pickupPoint <-
         prodInst.fromLocation
           & fromMaybeM (PIFieldNotPresent "location_id")
       let orgId = prodInst.organizationId
-      map fst <$> calculateDriverPool pickupPoint orgId vehicleVariant
+      map (.driverId) <$> calculateDriverPool pickupPoint orgId (Just prodInst.vehicleVariant)
 
 setDriverPool :: DBFlow m r => Id ProductInstance -> [Id Driver] -> m ()
 setDriverPool piId ids =
@@ -170,8 +164,8 @@ calculateDriverPool ::
   ) =>
   Id SearchReqLocation ->
   Id Organization ->
-  SV.Variant ->
-  m [(Id Driver, Double)]
+  Maybe SV.Variant ->
+  m [QP.DriverPoolResult]
 calculateDriverPool locId orgId variant = do
   location <- QL.findLocationById locId >>= fromMaybeM LocationNotFound
   let lat = location.lat

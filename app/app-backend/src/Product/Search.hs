@@ -186,7 +186,7 @@ mkCase req userId from to = do
         parentCaseId = Nothing,
         fromLocationId = from.id,
         toLocationId = to.id,
-        udf1 = Just $ req.vehicle.variant,
+        udf1 = Nothing,
         udf2 = Just . show . length $ req.travellers,
         udf3 = Nothing,
         udf4 = Just $ req.transaction_id,
@@ -272,6 +272,7 @@ mkProductInstance case_ bppOrg provider personId item = do
   now <- getCurrentTime
   let info = ProductInfo (Just provider) Nothing
       price = convertDecimalValueToAmount =<< item.price.listed_value
+  vehicleVariant <- item.descriptor.code & fromMaybeM (InvalidRequest "Missing item.descriptor.code")
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where case.startTime != product.startTime, etc
@@ -304,6 +305,7 @@ mkProductInstance case_ bppOrg provider personId item = do
         toLocation = Just $ case_.toLocationId,
         info = Just $ encodeToText info,
         organizationId = bppOrg.id,
+        vehicleVariant,
         createdAt = now,
         updatedAt = now
       }
@@ -335,6 +337,7 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         price = Nothing,
         actualPrice = Nothing,
         _type = Case.RIDESEARCH,
+        vehicleVariant = "",
         udf1 = Nothing,
         udf2 = Nothing,
         udf3 = Nothing,
