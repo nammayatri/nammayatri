@@ -1,5 +1,6 @@
 module Beckn.Utils.JSON where
 
+import Beckn.Utils.Text (recursiveStrip)
 import Data.Aeson (Options (..), SumEncoding (ObjectWithSingleField, UntaggedValue), Value (..), defaultOptions)
 import Data.HashMap.Strict (size, unions)
 import Data.Text (pack, replace, toLower, unpack)
@@ -66,7 +67,3 @@ stripPrefixUnderscoreIfAny =
   defaultOptions
     { fieldLabelModifier = recursiveStrip
     }
-  where
-    recursiveStrip = \case
-      ('_' : xs) -> recursiveStrip xs
-      a -> a

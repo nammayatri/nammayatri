@@ -25,7 +25,6 @@ import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
 
--- TODO: INVALID status seems to be unused
 data RideBookingStatus
   = CONFIRMED
   | COMPLETED
@@ -74,8 +73,6 @@ data RideBookingT f = RideBooking
 type RideBooking = RideBookingT Identity
 
 type RideBookingPrimaryKey = B.PrimaryKey RideBookingT Identity
-
-{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
 
 instance B.Table RideBookingT where
   data PrimaryKey RideBookingT f = RideBookingPrimaryKey (B.C f (Id RideBooking))
@@ -145,9 +142,4 @@ instance FromBeckn Text RideBookingStatus where
       _ -> CANCELLED
 
 instance ToBeckn Text RideBookingStatus where
-  toBeckn piStatus =
-    case piStatus of
-      CONFIRMED -> "CONFIRMED"
-      COMPLETED -> "COMPLETED"
-      CANCELLED -> "CANCELLED"
-      TRIP_ASSIGNED -> "TRIP_ASSIGNED"
+  toBeckn = show

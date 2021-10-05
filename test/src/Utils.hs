@@ -50,8 +50,11 @@ pollWith allDelays action = withFrozenCallStack $ go allDelays
           <> show (fromIntegral (sum allDelays) / 1e6 :: Float)
           <> " seconds"
     go (delay : remDelays) = do
+      let printLastError err = do
+            when (null remDelays) $ print ("Last error: " <> show err :: Text)
+            return Nothing
       liftIO $ threadDelay delay
-      try @_ @SomeException action <&> either (const Nothing) identity >>= maybe (go remDelays) pure
+      try @_ @SomeException action >>= either printLastError return >>= maybe (go remDelays) pure
 
 expBackoff :: Int -> Int -> [Int]
 expBackoff startDelay maxDelay =

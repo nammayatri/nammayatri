@@ -71,8 +71,6 @@ type Ride = RideT Identity
 
 type RidePrimaryKey = B.PrimaryKey RideT Identity
 
-{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
-
 instance B.Table RideT where
   data PrimaryKey RideT f = RidePrimaryKey (B.C f (Id Ride))
     deriving (Generic, B.Beamable)
@@ -120,12 +118,7 @@ instance FromBeckn Text RideStatus where
       _ -> CANCELLED
 
 instance ToBeckn Text RideStatus where
-  toBeckn piStatus =
-    case piStatus of
-      NEW -> "NEW"
-      INPROGRESS -> "INPROGRESS"
-      COMPLETED -> "COMPLETED"
-      CANCELLED -> "CANCELLED"
+  toBeckn = show
 
 data RideAPIEntity = RideAPIEntity
   { id :: Id Ride,

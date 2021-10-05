@@ -29,6 +29,5 @@ getQuotes searchRequestId _ = withFlowHandlerAPI $ do
       }
   where
     sortByNearestDriverDistance quoteList = do
-      let sortFunc = \a b -> do
-            compare a.distanceToNearestDriver b.distanceToNearestDriver
+      let sortFunc = compare `on` (.distanceToNearestDriver)
       sortBy sortFunc quoteList
