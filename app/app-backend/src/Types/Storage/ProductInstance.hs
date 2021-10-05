@@ -89,7 +89,7 @@ data ProductInstanceT f = ProductInstance
     toLocation :: B.C f (Maybe (Id Loc.SearchReqLocation)),
     organizationId :: B.C f (Id Org.Organization),
     parentId :: B.C f (Maybe (Id ProductInstance)),
-    actualDistance :: B.C f (Maybe Double),
+    chargableDistance :: B.C f (Maybe Double),
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
     udf3 :: B.C f (Maybe Text),
@@ -146,7 +146,7 @@ fieldEMod =
           fromLocation = "from_location_id",
           toLocation = "to_location_id",
           parentId = "parent_id",
-          actualDistance = "actual_distance",
+          chargableDistance = "chargable_distance",
           organizationId = "organization_id",
           createdAt = "created_at",
           updatedAt = "updated_at"

@@ -20,7 +20,6 @@ import Types.Error
 import Types.ProductInfo as ProductInfo
 import Types.Storage.Case as C
 import Types.Storage.Person as SP
-import Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RegistrationToken as SR
 import Utils.Common
 
@@ -131,23 +130,21 @@ makeTripDetails :: DBFlow m r => Maybe C.Case -> m (Maybe T.TripDetails)
 makeTripDetails caseM = case caseM of
   Nothing -> pure Nothing
   Just _case -> do
-    -- Note: In case of Confirmed Order only one Product Instance will be Present
-    ProductInstance.ProductInstance {id, status, info, price} <-
-      head
-        <$> PI.findAllByCaseId (_case.id)
-    let (mproductInfo :: Maybe ProductInfo) = decodeFromText =<< info
-        provider = (.provider) =<< mproductInfo
-        mtracker = (.tracker) =<< mproductInfo
-        mtrip = (\x -> Just $ x.trip) =<< mtracker
-        driver = (.driver) =<< mtrip
-        vehicle = (.vehicle) =<< mtrip
+    productInstance <- findOneByCaseId (_case.id) >>= fromMaybeM PINotFound
+    let (mProductInfo :: Maybe ProductInfo) = productInstance.info >>= decodeFromText
+        provider = mProductInfo >>= (.provider)
+        mTracker = mProductInfo >>= (.tracker)
+        mTrip = mTracker <&> (.trip)
+        driver = mTrip >>= (.driver)
+        vehicle = mTrip >>= (.vehicle)
     pure $
       Just $
         T.TripDetails
-          { id = getId id,
-            status = status,
+          { id = getId productInstance.id,
+            status = productInstance.status,
             driver = driver,
-            price = price,
+            price = productInstance.price,
+            actualPrice = productInstance.actualPrice,
             provider = provider,
             vehicle = vehicle
           }

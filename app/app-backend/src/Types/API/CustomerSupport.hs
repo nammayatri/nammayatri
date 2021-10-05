@@ -41,7 +41,8 @@ data TripDetails = TripDetails
     driver :: Maybe Driver, -- info -> driver
     vehicle :: Maybe Vehicle,
     provider :: Maybe Provider,
-    price :: Maybe Amount
+    price :: Maybe Amount,
+    actualPrice :: Maybe Amount
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 

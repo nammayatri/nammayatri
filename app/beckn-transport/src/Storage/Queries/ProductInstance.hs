@@ -204,7 +204,8 @@ updateDistance driverId distance' = do
     predicate driverId' Storage.ProductInstance {..} =
       personId ==. B.val_ (Just driverId')
         &&. status ==. B.val_ Storage.INPROGRESS
-    setClause distance'' Storage.ProductInstance {..} = distance <-. B.current_ distance + B.val_ distance''
+    setClause distance'' Storage.ProductInstance {..} =
+      traveledDistance <-. B.current_ traveledDistance + B.val_ distance''
 
 findAllByProdId :: DBFlow m r => Id Product.Products -> m [Storage.ProductInstance]
 findAllByProdId piId = do

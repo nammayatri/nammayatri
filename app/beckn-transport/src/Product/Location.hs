@@ -72,7 +72,7 @@ getLocation piId = withFlowHandlerAPI $ do
     DriverLocation.findById driver.id
       >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
-  let totalDistance = ride.distance
+  let totalDistance = ride.traveledDistance
       currPoint = locationToLatLong currLocation
   return $ GetLocationRes {..}
 

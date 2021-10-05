@@ -38,9 +38,9 @@ onUpdate _org req = withFlowHandlerBecknAPI $
               orderPi
                 { SPI.info = encodeToText <$> uInfo,
                   SPI.actualPrice =
-                    trip >>= fare >>= (.computed_value) >>= convertDecimalValueToAmount,
-                  SPI.actualDistance =
-                    trip >>= (.route) >>= (.edge.distance.computed_value)
+                    trip >>= fare >>= (.value) >>= convertDecimalValueToAmount,
+                  SPI.chargableDistance =
+                    trip >>= (.route) >>= (.edge.distance.value)
                 }
         MPI.updateMultipleFlow (orderPi.id) uPrd
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err

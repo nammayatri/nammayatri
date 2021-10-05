@@ -55,17 +55,11 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER >>= fromMaybeM CaseNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  actualPrice <-
-    ifM
-      recalculateFareEnabled
-      (recalculateFare orderCase orderPi)
-      (orderPi.price & fromMaybeM (PIFieldNotPresent "price"))
-
+  (chargableDistance, actualPrice) <- recalculateFare orderCase orderPi
   endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) actualPrice
-
   notifyUpdateToBAP
-    (updateActualPrice actualPrice searchPi)
-    (updateActualPrice actualPrice orderPi)
+    (updatePriceAndDistance chargableDistance actualPrice searchPi)
+    (updatePriceAndDistance chargableDistance actualPrice orderPi)
     PI.COMPLETED
 
   return APISuccess.Success
@@ -78,16 +72,22 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       oldDistance <-
         (orderCase.udf5 >>= readMaybe . T.unpack)
           & fromMaybeM (CaseFieldNotPresent "udf5")
-      fare <- calculateFare transporterId vehicleVariant orderPi.distance orderCase.startTime
-      let distanceDiff = orderPi.distance - oldDistance
-      price <- orderPi.price & fromMaybeM (PIFieldNotPresent "price")
-      let fareDiff = fare - price
-      logTagInfo "Fare recalculation" $
-        "Fare difference: "
-          <> show (amountToDouble fareDiff)
-          <> ", Distance difference: "
-          <> show distanceDiff
-      putDiffMetric fareDiff distanceDiff
-      pure fare
-    updateActualPrice :: Amount -> PI.ProductInstance -> PI.ProductInstance
-    updateActualPrice = \p pi -> pi {PI.actualPrice = Just p}
+      estimatedPrice <- orderPi.price & fromMaybeM (PIFieldNotPresent "price")
+      shouldRecalculateFare <- recalculateFareEnabled
+      if shouldRecalculateFare
+        then do
+          updatedPrice <- calculateFare transporterId vehicleVariant orderPi.traveledDistance orderCase.startTime
+          let distanceDiff = orderPi.traveledDistance - oldDistance
+          let priceDiff = updatedPrice - estimatedPrice
+          logTagInfo "Fare recalculation" $
+            "Fare difference: "
+              <> show (amountToDouble priceDiff)
+              <> ", Distance difference: "
+              <> show distanceDiff
+          putDiffMetric priceDiff distanceDiff
+          pure (orderPi.traveledDistance, updatedPrice)
+        else pure (oldDistance, estimatedPrice)
+
+    updatePriceAndDistance :: Double -> Amount -> PI.ProductInstance -> PI.ProductInstance
+    updatePriceAndDistance distance price pi =
+      pi {PI.chargableDistance = Just distance, PI.actualPrice = Just price}
