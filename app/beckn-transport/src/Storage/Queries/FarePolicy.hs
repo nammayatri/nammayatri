@@ -8,11 +8,11 @@ import Beckn.Types.Schema
 import Database.Beam
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.FarePolicy.ExtraKmRate as QExtraKMRate
+import qualified Storage.Queries.FarePolicy.PerExtraKmRate as QExtraKMRate
 import qualified Types.Domain.FarePolicy as D
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.FarePolicy as Storage
-import qualified Types.Storage.FarePolicy.ExtraKmRate as SExtraKmRate
+import qualified Types.Storage.FarePolicy.PerExtraKmRate as SExtraKmRate
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Vehicle as Vehicle
 
@@ -63,7 +63,7 @@ updateFarePolicy :: DBFlow m r => D.FarePolicy -> m ()
 updateFarePolicy farePolicy = do
   dbTable <- getDbTable
   now <- getCurrentTime
-  sExtraKmRateList <- traverse buildStorageExtraKmRate farePolicy.perExtraKmRateList
+  sExtraKmRateList <- traverse buildStoragePerExtraKmRate farePolicy.perExtraKmRateList
   DB.runSqlDBTransaction $ do
     QExtraKMRate.deleteAll farePolicy.organizationId farePolicy.vehicleVariant
     traverse_ QExtraKMRate.create sExtraKmRateList
@@ -79,15 +79,15 @@ updateFarePolicy farePolicy = do
           updatedAt <-. B.val_ now
         ]
     predicate fpId Storage.FarePolicy {..} = id ==. B.val_ fpId
-    buildStorageExtraKmRate :: MonadFlow m => D.ExtraKmRate -> m SExtraKmRate.ExtraKmRate
-    buildStorageExtraKmRate dExtraKmRate = do
+    buildStoragePerExtraKmRate :: MonadFlow m => D.PerExtraKmRate -> m SExtraKmRate.FarePolicyPerExtraKmRate
+    buildStoragePerExtraKmRate dExtraKmRate = do
       uuid <- generateGUID
       return $
-        SExtraKmRate.ExtraKmRate
+        SExtraKmRate.FarePolicyPerExtraKmRate
           { id = uuid,
             organizationId = farePolicy.organizationId,
             vehicleVariant = farePolicy.vehicleVariant,
-            fromExtraDistance = fromRational dExtraKmRate.fromExtraDistance,
+            extraDistanceRangeStart = fromRational dExtraKmRate.extraDistanceRangeStart,
             extraFare = fromRational dExtraKmRate.extraFare
           }
 
@@ -96,7 +96,7 @@ buildDomainFarePolicy sFarePolicy = do
   sExtraKmRate <- QExtraKMRate.findAll sFarePolicy.organizationId sFarePolicy.vehicleVariant
   return $ fromTable sFarePolicy sExtraKmRate
 
-fromTable :: Storage.FarePolicy -> [SExtraKmRate.ExtraKmRate] -> D.FarePolicy
+fromTable :: Storage.FarePolicy -> [SExtraKmRate.FarePolicyPerExtraKmRate] -> D.FarePolicy
 fromTable sFarePolicy extraKmRateList =
   D.FarePolicy
     { id = cast sFarePolicy.id,
@@ -111,7 +111,7 @@ fromTable sFarePolicy extraKmRateList =
     }
   where
     extraKmRateFromTable sExtraKmRate =
-      D.ExtraKmRate
-        { fromExtraDistance = toRational $ sExtraKmRate.fromExtraDistance,
+      D.PerExtraKmRate
+        { extraDistanceRangeStart = toRational $ sExtraKmRate.extraDistanceRangeStart,
           extraFare = toRational $ sExtraKmRate.extraFare
         }

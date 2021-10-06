@@ -12,7 +12,7 @@ import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverLocation as DriverLocation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
-import qualified Types.Storage.FarePolicy.ExtraKmRate as FPExtraKmRate
+import qualified Types.Storage.FarePolicy.PerExtraKmRate as FPExtraKmRate
 import qualified Types.Storage.NotificationStatus as NotificationStatus
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
@@ -41,7 +41,7 @@ data TransporterDb f = TransporterDb
     transporterConfig :: f (B.TableEntity TransporterConfig.TransporterConfigT),
     driverInformation :: f (B.TableEntity DriverInformation.DriverInformationT),
     farePolicy :: f (B.TableEntity FarePolicy.FarePolicyT),
-    farePolicyExtraKmRate :: f (B.TableEntity FPExtraKmRate.ExtraKmRateT),
+    farePolicyExtraKmRate :: f (B.TableEntity FPExtraKmRate.FarePolicyPerExtraKmRateT),
     rideRequest :: f (B.TableEntity RideRequest.RideRequestT),
     notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT),
     allocationEvent :: f (B.TableEntity AllocationEvent.AllocationEventT),

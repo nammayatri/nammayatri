@@ -14,7 +14,7 @@ import Data.Time
     utcToLocalTime,
   )
 import EulerHS.Prelude
-import Types.Domain.FarePolicy (FarePolicy, defaultExtraKmRate)
+import Types.Domain.FarePolicy (FarePolicy, PerExtraKmRate (..), defaultPerExtraKmRate)
 import Types.Error
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.SearchReqLocation as Location
@@ -30,9 +30,6 @@ newtype DropLocation = DropLocation {getDropLocation :: Location.SearchReqLocati
 type TripStartTime = UTCTime
 
 type DistanceInM = Double
-
-data JourneyTrip = OneWayTrip | HalfReturnTrip | FullReturnTrip
-  deriving stock (Show, Eq)
 
 type MonadHandler m = (MonadThrow m, Log m)
 
@@ -62,16 +59,15 @@ doCalculateFare ::
       DropLocation
     )
     DistanceInM ->
-  JourneyTrip ->
   TripStartTime ->
   m FareParameters
-doCalculateFare ServiceHandle {..} orgId vehicleVariant distanceSrc journeyType startTime = do
+doCalculateFare ServiceHandle {..} orgId vehicleVariant distanceSrc startTime = do
   farePolicy <- getFarePolicy orgId vehicleVariant >>= fromMaybeM NoFarePolicy
   actualDistance <-
     distanceSrc
       & fromEitherM' (uncurry getDistance >=> fromMaybeM CantCalculateDistance)
   baseFare <- calculateBaseFare farePolicy
-  distanceFare <- calculateDistanceFare farePolicy actualDistance journeyType
+  distanceFare <- calculateDistanceFare farePolicy actualDistance
   nightShiftRate <- calculateNightShiftRate farePolicy startTime
   pure $ FareParameters baseFare distanceFare nightShiftRate
 
@@ -87,27 +83,27 @@ calculateDistanceFare ::
   MonadHandler m =>
   FarePolicy ->
   DistanceInM ->
-  JourneyTrip ->
   m Amount
-calculateDistanceFare farePolicy actualDistance journeyType = do
+calculateDistanceFare farePolicy actualDistance = do
   let baseDistance = fromMaybe 0 $ farePolicy.baseDistance
       extraDistance = toRational actualDistance - baseDistance
   if extraDistance <= 0
     then return $ Amount 0
     else do
-      let extraKmRate = findRequiredExtraKmRate extraDistance farePolicy.perExtraKmRateList
-      let distanceMultiplier = case journeyType of
-            OneWayTrip -> 1.0
-            HalfReturnTrip -> 1.5
-            FullReturnTrip -> 2.0
-      let extraDistanceFare = ((toRational actualDistance * distanceMultiplier) - baseDistance) / 1000
-      pure . Amount $ extraDistanceFare * extraKmRate.extraFare
+      let sortedPerExtraKmRateList = sortBy (compare `on` (.extraDistanceRangeStart)) farePolicy.perExtraKmRateList -- sort it again just in case
+      let finalPerExtraKmRateList =
+            if null sortedPerExtraKmRateList || 0 /= head ((.extraDistanceRangeStart) <$> sortedPerExtraKmRateList)
+              then defaultPerExtraKmRate : sortedPerExtraKmRateList -- add default PerExtraKmRate if rate for extraDistanceRangeStart = 0 is not present
+              else sortedPerExtraKmRateList
+      pure . Amount $ calculateExtraDistFare 0 extraDistance finalPerExtraKmRateList
   where
-    findRequiredExtraKmRate extraDistance = do
-      foldr
-        (\eKmRate a -> if eKmRate.fromExtraDistance >= a.fromExtraDistance then eKmRate else a)
-        defaultExtraKmRate
-        . filter (\a -> a.fromExtraDistance < extraDistance)
+    calculateExtraDistFare summ extraDist (PerExtraKmRate _ perKmRate : sndPerExtraKmRate@(PerExtraKmRate upperBorder _) : perExtraKmRateList) = do
+      let distWithinBounds = min extraDist upperBorder
+          fareWithinBounds = distWithinBounds / 1000 * perKmRate
+      calculateExtraDistFare (summ + fareWithinBounds) (extraDist - distWithinBounds) (sndPerExtraKmRate : perExtraKmRateList)
+    calculateExtraDistFare summ 0 _ = summ
+    calculateExtraDistFare summ extraDist [PerExtraKmRate _ perKmRate] = summ + (extraDist / 1000 * perKmRate)
+    calculateExtraDistFare summ extraDist [] = summ + (extraDist / 1000 * defaultPerExtraKmRate.extraFare)
 
 calculateNightShiftRate ::
   MonadHandler m =>
