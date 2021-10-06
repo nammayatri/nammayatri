@@ -27,7 +27,7 @@ defaultFarePolicy =
       organizationId = orgID,
       baseFare = Just 120.0,
       baseDistance = Just 5000.0,
-      perExtraKmRateList = [defaultExtraKmRate],
+      perExtraKmRateList = [],
       nightShiftStart = Just midnight,
       nightShiftEnd = Just midnight,
       nightShiftRate = Just 1.0
@@ -83,33 +83,31 @@ handle =
 -- Calculation tests
 
 hatchback20km :: TestTree
-hatchback20km = testCase "Calculate fare for 20km with FullReturnTrip for Hatchback" $ do
+hatchback20km = testCase "Calculate fare for 20km for Hatchback" $ do
   fareParams <-
     doCalculateFare
       handle
       orgID
       Vehicle.HATCHBACK
       distance
-      FullReturnTrip
       startTime
   let totalFare = fareSum fareParams
-  totalFare @?= Amount 540.0
+  totalFare @?= Amount 300.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = 20000.0
 
 sedan20km :: TestTree
-sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ do
+sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
   fareParams <-
     doCalculateFare
       handle'
       orgID
       Vehicle.SEDAN
       distance
-      FullReturnTrip
       startTime
   let totalFare = fareSum fareParams
-  totalFare @?= Amount 675.0
+  totalFare @?= Amount 345.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = 20000.0
@@ -118,28 +116,26 @@ sedan20km = testCase "Calculate fare for 20km with FullReturnTrip for Sedan" $ d
         { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy
-                  { vehicleVariant = Vehicle.SEDAN,
-                    baseFare = Just 150.0,
-                    perExtraKmRateList =
-                      [ defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 15},
-                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 25}
-                      ]
-                  }
+                defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
+                                  baseFare = Just 150.0,
+                                  perExtraKmRateList =
+                                    [ defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 15},
+                                      defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 25}
+                                    ]
+                                 }
         }
 
 suv20km :: TestTree
-suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
+suv20km = testCase "Calculate fare for 20km for SUV" $ do
   fareParams <-
     doCalculateFare
       handle'
       orgID
       Vehicle.SUV
       distance
-      FullReturnTrip
       startTime
   let totalFare = fareSum fareParams
-  totalFare @?= Amount 800.0
+  totalFare @?= Amount 320.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = 20000.0
@@ -148,32 +144,30 @@ suv20km = testCase "Calculate fare for 20km with FullReturnTrip for SUV" $ do
         { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy
-                  { vehicleVariant = Vehicle.SUV,
-                    baseFare = Just 0,
-                    baseDistance = Just 0,
-                    perExtraKmRateList =
-                      [ defaultExtraKmRate,
-                        defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 20},
-                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 25}
-                      ]
-                  }
+                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
+                                  baseFare = Just 0,
+                                  baseDistance = Just 0,
+                                  perExtraKmRateList =
+                                    [ defaultPerExtraKmRate,
+                                      defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 20},
+                                      defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 25}
+                                    ]
+                                 }
         }
 
 -- Night Shift
 
 nightHatchback20km :: TestTree
-nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTrip for Hatchback at 21:00" $ do
+nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback at 21:00" $ do
   fareParams <-
     doCalculateFare
       handle'
       orgID
       Vehicle.HATCHBACK
       distance
-      OneWayTrip
       startTime
   let totalFare = fareSum fareParams
-  totalFare @?= Amount 347.6
+  totalFare @?= Amount 331.1
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = 20000.0
@@ -182,33 +176,31 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km with OneWayTr
         { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy
-                  { vehicleVariant = Vehicle.HATCHBACK,
-                    baseFare = Just 100.0,
-                    baseDistance = Just 4000.0,
-                    perExtraKmRateList =
-                      [ defaultExtraKmRate,
-                        defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 13.5},
-                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 20}
-                      ],
-                    nightShiftStart = Just $ TimeOfDay 20 0 0,
-                    nightShiftEnd = Just $ TimeOfDay 5 30 0,
-                    nightShiftRate = Just 1.1
-                  }
+                defaultFarePolicy{vehicleVariant = Vehicle.HATCHBACK,
+                                  baseFare = Just 100.0,
+                                  baseDistance = Just 4000.0,
+                                  perExtraKmRateList =
+                                    [ defaultPerExtraKmRate,
+                                      defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 13.5},
+                                      defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 20}
+                                    ],
+                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                  nightShiftRate = Just 1.1
+                                 }
         }
 
 nightSedan20km :: TestTree
-nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip for Sedan" $ do
+nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
   fareParams <-
     doCalculateFare
       handle'
       orgID
       Vehicle.SEDAN
       distance
-      OneWayTrip
       startTime
   let totalFare = fareSum fareParams
-  totalFare @?= Amount 390.5
+  totalFare @?= Amount 357.5
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = 20000.0
@@ -217,33 +209,31 @@ nightSedan20km = testCase "Calculate night shift fare for 20km with OneWayTrip f
         { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy
-                  { vehicleVariant = Vehicle.SEDAN,
-                    baseFare = Just 100.0,
-                    baseDistance = Just 3000.0,
-                    perExtraKmRateList =
-                      [ defaultExtraKmRate,
-                        defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 15},
-                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 18}
-                      ],
-                    nightShiftStart = Just $ TimeOfDay 20 0 0,
-                    nightShiftEnd = Just $ TimeOfDay 5 30 0,
-                    nightShiftRate = Just 1.1
-                  }
+                defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
+                                  baseFare = Just 100.0,
+                                  baseDistance = Just 3000.0,
+                                  perExtraKmRateList =
+                                    [ defaultPerExtraKmRate,
+                                      defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 15},
+                                      defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 18}
+                                    ],
+                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                  nightShiftRate = Just 1.1
+                                 }
         }
 
 nightSuv20km :: TestTree
-nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for SUV" $ do
+nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
   fareParams <-
     doCalculateFare
       handle'
       orgID
       Vehicle.SUV
       distance
-      OneWayTrip
       startTime
   let totalFare = fareSum fareParams
-  totalFare @?= Amount 539.0
+  totalFare @?= Amount 451.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = 20000.0
@@ -252,19 +242,18 @@ nightSuv20km = testCase "Calculate night shift fare for 20km with OneWayTrip for
         { getFarePolicy = \_orgId vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy
-                  { vehicleVariant = Vehicle.SUV,
-                    baseFare = Just 150.0,
-                    baseDistance = Just 3000.0,
-                    perExtraKmRateList =
-                      [ defaultExtraKmRate,
-                        defaultExtraKmRate{fromExtraDistance = 10000, extraFare = 20},
-                        defaultExtraKmRate{fromExtraDistance = 20000, extraFare = 25}
-                      ],
-                    nightShiftStart = Just $ TimeOfDay 20 0 0,
-                    nightShiftEnd = Just $ TimeOfDay 5 30 0,
-                    nightShiftRate = Just 1.1
-                  }
+                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
+                                  baseFare = Just 150.0,
+                                  baseDistance = Just 3000.0,
+                                  perExtraKmRateList =
+                                    [ defaultPerExtraKmRate,
+                                      defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 20},
+                                      defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 25}
+                                    ],
+                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                  nightShiftRate = Just 1.1
+                                 }
         }
 
 -- Effects tests
@@ -276,7 +265,6 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     orgID
     Vehicle.SEDAN
     distance
-    OneWayTrip
     startTime
     `shouldThrow` (== NoFarePolicy)
   where

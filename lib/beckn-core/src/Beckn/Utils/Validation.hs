@@ -53,9 +53,20 @@ validateObject ::
   a ->
   Validate a ->
   Validation
-validateObject fieldName object validator = first addPrefixes $ validator object
+validateObject fieldName object validator = addPrefixes fieldName $ validator object
+
+validateList ::
+  Text ->
+  [a] ->
+  Validate a ->
+  Validation
+validateList fieldName list validator =
+  traverse_ f (zip (map (\i -> fieldName <> "[" <> show i <> "]") [0 :: Int ..]) list)
   where
-    addPrefixes = map (addPrefixToFieldName fieldName)
+    f (pref, val) = addPrefixes pref $ validator val
+
+addPrefixes :: Text -> Validation -> Validation
+addPrefixes fieldName = first $ map (addPrefixToFieldName fieldName)
 
 addPrefixToFieldName ::
   Text ->

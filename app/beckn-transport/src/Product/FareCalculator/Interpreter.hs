@@ -6,7 +6,6 @@ import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Flow
   ( DropLocation (DropLocation),
-    JourneyTrip (OneWayTrip),
     PickupLocation (PickupLocation),
     ServiceHandle (..),
     doCalculateFare,
@@ -37,7 +36,6 @@ calculateFare orgId vehicleVariant distanceSrc startTime = do
       orgId
       vehicleVariant
       distanceSrc
-      OneWayTrip -- TODO :: determine the type of trip
       startTime
   let totalFare = fareSum fareParams
   logTagInfo
