@@ -56,12 +56,13 @@ validateObject ::
 validateObject fieldName object validator = addPrefixes fieldName $ validator object
 
 validateList ::
+  Container a =>
   Text ->
-  [a] ->
-  Validate a ->
+  a ->
+  Validate (Element a) ->
   Validation
 validateList fieldName list validator =
-  traverse_ f (zip (map (\i -> fieldName <> "[" <> show i <> "]") [0 :: Int ..]) list)
+  traverse_ f (zip (map (\i -> fieldName <> "[" <> show i <> "]") [0 :: Int ..]) $ toList list)
   where
     f (pref, val) = addPrefixes pref $ validator val
 

@@ -19,6 +19,9 @@ import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 import Utils.Time
 
+defaultPerExtraKmRate :: PerExtraKmRate
+defaultPerExtraKmRate = PerExtraKmRate 5000 12.0
+
 defaultFarePolicy :: FarePolicy
 defaultFarePolicy =
   FarePolicy
@@ -26,8 +29,7 @@ defaultFarePolicy =
       vehicleVariant = Vehicle.HATCHBACK,
       organizationId = orgID,
       baseFare = Just 120.0,
-      baseDistance = Just 5000.0,
-      perExtraKmRateList = [],
+      perExtraKmRateList = defaultPerExtraKmRate :| [],
       nightShiftStart = Just midnight,
       nightShiftEnd = Just midnight,
       nightShiftRate = Just 1.0
@@ -120,9 +122,10 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
                   { vehicleVariant = Vehicle.SEDAN,
                     baseFare = Just 150.0,
                     perExtraKmRateList =
-                      [ defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 15},
-                        defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 25}
-                      ]
+                      defaultPerExtraKmRate
+                        :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 15},
+                             defaultPerExtraKmRate{distanceRangeStart = 25000, fare = 25}
+                           ]
                   }
         }
 
@@ -148,12 +151,11 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
                 defaultFarePolicy
                   { vehicleVariant = Vehicle.SUV,
                     baseFare = Just 0,
-                    baseDistance = Just 0,
                     perExtraKmRateList =
-                      [ defaultPerExtraKmRate,
-                        defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 20},
-                        defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 25}
-                      ]
+                      defaultPerExtraKmRate{distanceRangeStart = 0}
+                        :| [ defaultPerExtraKmRate{distanceRangeStart = 10000, fare = 20},
+                             defaultPerExtraKmRate{distanceRangeStart = 20000, fare = 25}
+                           ]
                   }
         }
 
@@ -181,12 +183,11 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
                 defaultFarePolicy
                   { vehicleVariant = Vehicle.HATCHBACK,
                     baseFare = Just 100.0,
-                    baseDistance = Just 4000.0,
                     perExtraKmRateList =
-                      [ defaultPerExtraKmRate,
-                        defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 13.5},
-                        defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 20}
-                      ],
+                      defaultPerExtraKmRate{distanceRangeStart = 4000}
+                        :| [ defaultPerExtraKmRate{distanceRangeStart = 14000, fare = 13.5},
+                             defaultPerExtraKmRate{distanceRangeStart = 24000, fare = 20}
+                           ],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1
@@ -215,12 +216,11 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
                 defaultFarePolicy
                   { vehicleVariant = Vehicle.SEDAN,
                     baseFare = Just 100.0,
-                    baseDistance = Just 3000.0,
                     perExtraKmRateList =
-                      [ defaultPerExtraKmRate,
-                        defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 15},
-                        defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 18}
-                      ],
+                      defaultPerExtraKmRate{distanceRangeStart = 3000}
+                        :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 15},
+                             defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 18}
+                           ],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1
@@ -249,12 +249,11 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
                 defaultFarePolicy
                   { vehicleVariant = Vehicle.SUV,
                     baseFare = Just 150.0,
-                    baseDistance = Just 3000.0,
                     perExtraKmRateList =
-                      [ defaultPerExtraKmRate,
-                        defaultPerExtraKmRate{extraDistanceRangeStart = 10000, extraFare = 20},
-                        defaultPerExtraKmRate{extraDistanceRangeStart = 20000, extraFare = 25}
-                      ],
+                      defaultPerExtraKmRate{distanceRangeStart = 3000}
+                        :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
+                             defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
+                           ],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1

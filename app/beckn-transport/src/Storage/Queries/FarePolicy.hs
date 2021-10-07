@@ -1,6 +1,5 @@
 module Storage.Queries.FarePolicy where
 
-import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id (Id, cast)
@@ -19,11 +18,6 @@ import qualified Types.Storage.Vehicle as Vehicle
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyT))
 getDbTable =
   DB.farePolicy . DB.transporterDb <$> getSchemaName
-
-create :: DBFlow m r => Storage.FarePolicy -> m ()
-create Storage.FarePolicy {..} = do
-  dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertValue Storage.FarePolicy {..})
 
 findFarePolicyByOrgAndVehicleVariant ::
   DBFlow m r =>
@@ -72,7 +66,6 @@ updateFarePolicy farePolicy = do
     setClause fp now Storage.FarePolicy {..} =
       mconcat
         [ baseFare <-. B.val_ (fromRational <$> fp.baseFare),
-          baseDistance <-. B.val_ (fromRational <$> fp.baseDistance),
           nightShiftStart <-. B.val_ (fp.nightShiftStart),
           nightShiftEnd <-. B.val_ (fp.nightShiftEnd),
           nightShiftRate <-. B.val_ (fromRational <$> fp.nightShiftRate),
@@ -87,8 +80,8 @@ updateFarePolicy farePolicy = do
           { id = uuid,
             organizationId = farePolicy.organizationId,
             vehicleVariant = farePolicy.vehicleVariant,
-            extraDistanceRangeStart = fromRational dExtraKmRate.extraDistanceRangeStart,
-            extraFare = fromRational dExtraKmRate.extraFare
+            distanceRangeStart = fromRational dExtraKmRate.distanceRangeStart,
+            fare = fromRational dExtraKmRate.fare
           }
 
 buildDomainFarePolicy :: Storage.FarePolicy -> DB.SqlDB D.FarePolicy
@@ -96,14 +89,13 @@ buildDomainFarePolicy sFarePolicy = do
   sExtraKmRate <- QExtraKMRate.findAll sFarePolicy.organizationId sFarePolicy.vehicleVariant
   return $ fromTable sFarePolicy sExtraKmRate
 
-fromTable :: Storage.FarePolicy -> [SExtraKmRate.FarePolicyPerExtraKmRate] -> D.FarePolicy
+fromTable :: Storage.FarePolicy -> NonEmpty SExtraKmRate.FarePolicyPerExtraKmRate -> D.FarePolicy
 fromTable sFarePolicy extraKmRateList =
   D.FarePolicy
     { id = cast sFarePolicy.id,
       vehicleVariant = sFarePolicy.vehicleVariant,
       organizationId = sFarePolicy.organizationId,
       baseFare = toRational <$> sFarePolicy.baseFare,
-      baseDistance = toRational <$> sFarePolicy.baseDistance,
       perExtraKmRateList = extraKmRateFromTable <$> extraKmRateList,
       nightShiftStart = sFarePolicy.nightShiftStart,
       nightShiftEnd = sFarePolicy.nightShiftEnd,
@@ -112,6 +104,6 @@ fromTable sFarePolicy extraKmRateList =
   where
     extraKmRateFromTable sExtraKmRate =
       D.PerExtraKmRate
-        { extraDistanceRangeStart = toRational $ sExtraKmRate.extraDistanceRangeStart,
-          extraFare = toRational $ sExtraKmRate.extraFare
+        { distanceRangeStart = toRational $ sExtraKmRate.distanceRangeStart,
+          fare = toRational $ sExtraKmRate.fare
         }

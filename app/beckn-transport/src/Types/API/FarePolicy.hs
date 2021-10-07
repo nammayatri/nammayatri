@@ -22,8 +22,7 @@ data FarePolicyResponse = FarePolicyResponse
   { id :: Id FarePolicy,
     vehicleVariant :: Vehicle.Variant,
     baseFare :: Maybe Double,
-    baseDistance :: Maybe Double,
-    perExtraKmRateList :: [PerExtraKmRateAPIEntity],
+    perExtraKmRateList :: NonEmpty PerExtraKmRateAPIEntity,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
@@ -37,8 +36,7 @@ newtype ListFarePolicyResponse = ListFarePolicyResponse
 
 data UpdateFarePolicyRequest = UpdateFarePolicyRequest
   { baseFare :: Maybe Double,
-    baseDistance :: Maybe Double,
-    perExtraKmRateList :: [PerExtraKmRateAPIEntity],
+    perExtraKmRateList :: NonEmpty PerExtraKmRateAPIEntity,
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
@@ -51,7 +49,6 @@ validateUpdateFarePolicyRequest :: Validate UpdateFarePolicyRequest
 validateUpdateFarePolicyRequest UpdateFarePolicyRequest {..} =
   sequenceA_
     [ validateField "baseFare" baseFare . InMaybe $ InRange @Double 0 500,
-      validateField "baseDistance" baseDistance . InMaybe $ InRange @Double 0 10000,
       validateList "perExtraKmRateList" perExtraKmRateList validatePerExtraKmRateAPIEntity,
       validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Double 1 2,
       validateField "nightShiftStart" nightShiftStart . InMaybe $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 30 0),

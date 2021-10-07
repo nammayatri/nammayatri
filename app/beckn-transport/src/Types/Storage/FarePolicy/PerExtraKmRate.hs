@@ -12,8 +12,8 @@ data FarePolicyPerExtraKmRateT f = FarePolicyPerExtraKmRate
   { id :: B.C f (Id FarePolicyPerExtraKmRateT),
     vehicleVariant :: B.C f Vehicle.Variant,
     organizationId :: B.C f (Id Organization.Organization),
-    extraDistanceRangeStart :: B.C f Double,
-    extraFare :: B.C f Double
+    distanceRangeStart :: B.C f Double,
+    fare :: B.C f Double
   }
   deriving (Generic, B.Beamable)
 
@@ -42,6 +42,5 @@ fieldEMod =
       B.tableModification
         { vehicleVariant = "vehicle_variant",
           organizationId = "organization_id",
-          extraDistanceRangeStart = "extra_distance_range_start",
-          extraFare = "extra_fare"
+          distanceRangeStart = "distance_range_start"
         }

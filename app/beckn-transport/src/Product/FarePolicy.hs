@@ -27,7 +27,6 @@ listFarePolicies personId = withFlowHandlerAPI $ do
         { id = fp.id,
           vehicleVariant = fp.vehicleVariant,
           baseFare = fromRational <$> fp.baseFare,
-          baseDistance = fromRational <$> fp.baseDistance,
           perExtraKmRateList = DFarePolicy.makeExtraKmRateAPIEntity <$> fp.perExtraKmRateList,
           nightShiftStart = fp.nightShiftStart,
           nightShiftEnd = fp.nightShiftEnd,
@@ -41,7 +40,6 @@ updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
   let updatedFarePolicy =
         farePolicy
           { DFarePolicy.baseFare = toRational <$> req.baseFare,
-            DFarePolicy.baseDistance = toRational <$> req.baseDistance,
             DFarePolicy.perExtraKmRateList = DFarePolicy.fromExtraKmRateAPIEntity <$> req.perExtraKmRateList,
             DFarePolicy.nightShiftStart = req.nightShiftStart,
             DFarePolicy.nightShiftEnd = req.nightShiftEnd,
