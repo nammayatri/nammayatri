@@ -25,7 +25,6 @@ updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
   farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM NoFarePolicy
   let updatedFarePolicy =
         farePolicy{baseFare = toRational <$> req.baseFare,
-                   baseDistance = toRational <$> req.baseDistance,
                    perExtraKmRateList = DFarePolicy.fromExtraKmRateAPIEntity <$> req.perExtraKmRateList,
                    nightShiftStart = req.nightShiftStart,
                    nightShiftEnd = req.nightShiftEnd,

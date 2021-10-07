@@ -34,8 +34,7 @@ instance FromHttpApiData Category where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
---------
-data Variant = SEDAN | SUV | COMPACT | PASSENGER | METRO | AIRBUS | HATCHBACK
+data Variant = SEDAN | SUV | HATCHBACK
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where

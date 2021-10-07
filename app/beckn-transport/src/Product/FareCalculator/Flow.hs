@@ -6,6 +6,7 @@ module Product.FareCalculator.Flow where
 import Beckn.Types.Amount (Amount (..))
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
+import qualified Data.List.NonEmpty as NonEmpty
 import Data.Time
   ( LocalTime (localTimeOfDay),
     UTCTime,
@@ -14,7 +15,7 @@ import Data.Time
     utcToLocalTime,
   )
 import EulerHS.Prelude
-import Types.Domain.FarePolicy (FarePolicy, PerExtraKmRate (..), defaultPerExtraKmRate)
+import Types.Domain.FarePolicy (FarePolicy, PerExtraKmRate (..))
 import Types.Error
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.SearchReqLocation as Location
@@ -78,25 +79,21 @@ calculateDistanceFare ::
   DistanceInM ->
   m Amount
 calculateDistanceFare farePolicy actualDistance = do
-  let baseDistance = fromMaybe 0 $ farePolicy.baseDistance
+  let sortedPerExtraKmRateList = NonEmpty.sortBy (compare `on` (.distanceRangeStart)) farePolicy.perExtraKmRateList -- sort it again just in case
+  let baseDistance = (.distanceRangeStart) $ NonEmpty.head sortedPerExtraKmRateList
       extraDistance = toRational actualDistance - baseDistance
   if extraDistance <= 0
     then return $ Amount 0
     else do
-      let sortedPerExtraKmRateList = sortBy (compare `on` (.extraDistanceRangeStart)) farePolicy.perExtraKmRateList -- sort it again just in case
-      let finalPerExtraKmRateList =
-            if null sortedPerExtraKmRateList || 0 /= head ((.extraDistanceRangeStart) <$> sortedPerExtraKmRateList)
-              then defaultPerExtraKmRate : sortedPerExtraKmRateList -- add default PerExtraKmRate if rate for extraDistanceRangeStart = 0 is not present
-              else sortedPerExtraKmRateList
-      pure . Amount $ calculateExtraDistFare 0 extraDistance finalPerExtraKmRateList
+      pure . Amount $ calculateExtraDistFare 0 extraDistance sortedPerExtraKmRateList
   where
-    calculateExtraDistFare summ extraDist (PerExtraKmRate _ perKmRate : sndPerExtraKmRate@(PerExtraKmRate upperBorder _) : perExtraKmRateList) = do
-      let distWithinBounds = min extraDist upperBorder
+    calculateExtraDistFare summ extraDist (PerExtraKmRate lowerBorder perKmRate :| sndPerExtraKmRate@(PerExtraKmRate upperBorder _) : perExtraKmRateList) = do
+      let boundSize = upperBorder - lowerBorder
+      let distWithinBounds = min extraDist boundSize
           fareWithinBounds = distWithinBounds / 1000 * perKmRate
-      calculateExtraDistFare (summ + fareWithinBounds) (extraDist - distWithinBounds) (sndPerExtraKmRate : perExtraKmRateList)
+      calculateExtraDistFare (summ + fareWithinBounds) (extraDist - distWithinBounds) (sndPerExtraKmRate :| perExtraKmRateList)
     calculateExtraDistFare summ 0 _ = summ
-    calculateExtraDistFare summ extraDist [PerExtraKmRate _ perKmRate] = summ + (extraDist / 1000 * perKmRate)
-    calculateExtraDistFare summ extraDist [] = summ + (extraDist / 1000 * defaultPerExtraKmRate.extraFare)
+    calculateExtraDistFare summ extraDist (PerExtraKmRate _ perKmRate :| []) = summ + (extraDist / 1000 * perKmRate)
 
 calculateNightShiftRate ::
   MonadHandler m =>
