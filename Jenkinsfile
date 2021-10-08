@@ -19,6 +19,7 @@ pipeline {
         allOf {
           anyOf {
             branch "master"
+            branch "release-version-7"
             branch "sandbox"
             branch "production"
           }
@@ -44,6 +45,7 @@ pipeline {
       when {
         anyOf {
           branch "master"
+          branch "release-version-7"
           branch "sandbox"
           branch "production"
           changeRequest()
@@ -61,6 +63,7 @@ pipeline {
           when {
             anyOf {
               branch "master"
+              branch "release-version-7"
               branch "sandbox"
               branch "production"
             }
@@ -79,6 +82,7 @@ pipeline {
               when {
                 anyOf {
                   branch "master"
+                  branch "release-version-7"
                   branch "sandbox"
                 }
               }
@@ -106,7 +110,12 @@ pipeline {
             }
 
             stage('Deploy master') {
-              when { branch "master" }
+              when {
+                anyOf {
+                  branch "master"
+                  branch "release-version-7"
+                }
+              }
               steps {
                 kubernetesDeploy(
                       kubeconfigId: 'jenkins-baby-hulk-deployer',
