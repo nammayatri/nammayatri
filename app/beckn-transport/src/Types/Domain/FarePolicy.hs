@@ -3,9 +3,9 @@
 module Types.Domain.FarePolicy where
 
 import Beckn.Types.Id (Id)
-import Data.OpenApi (ToSchema)
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation
+import Data.OpenApi (ToSchema)
 import Data.Time (TimeOfDay)
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Organization as Organization
