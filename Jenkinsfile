@@ -6,11 +6,7 @@ pipeline {
             returnStdout: true,
             script: 'git rev-parse --short HEAD'
         )}"""
-      BRANCH_NAME="""${sh(
-            returnStdout: true,
-            script: 'if [ "$BRANCH_NAME" = "release-version-7" ]; then echo "master"; else echo "$BRANCH_NAME"; fi;'
-        )}"""
-      DEPLOY_VARIANT="${env.BRANCH_NAME}"
+      DEPLOY_VARIANT = overrideBranchName()
   }
 
   stages {
@@ -34,6 +30,10 @@ pipeline {
         }
       }
 
+      environment { 
+          BRANCH_NAME= overrideBranchName()
+      }
+
       steps {
         sh 'make build-dep'
         sh 'make push-dep -e IMAGE_REPO=SANDBOX'
@@ -50,6 +50,10 @@ pipeline {
           branch "production"
           changeRequest()
         }
+      }
+
+      environment { 
+          BRANCH_NAME= overrideBranchName()
       }
 
       stages {
@@ -158,4 +162,14 @@ pipeline {
     }
 
   }
+}
+
+def overrideBranchName() {
+    def branchName = "${env.BRANCH_NAME}"
+    if (branchName == "release-version-7") {
+        return 'master'
+    }
+    else {
+        return branchName
+    }
 }
