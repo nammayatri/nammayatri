@@ -27,9 +27,9 @@ CREATE FUNCTION atlas_transporter.uuid_generate_v4() RETURNS character (36)
 CREATE OR REPLACE FUNCTION atlas_transporter.create_fare_policy_on_org_creation() RETURNS TRIGGER AS $create_fare_policy_on_org_creation$
     BEGIN
         INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, night_shift_start, night_shift_end, night_shift_rate) VALUES
-            (atlas_transporter.uuid_generate_v4(), 'SUV', NEW.id, 120.0, '21:00:00', '5:00:00', 1.1),
-            (atlas_transporter.uuid_generate_v4(), 'SEDAN', NEW.id, 120.0, '21:00:00', '5:00:00', 1.1),
-            (atlas_transporter.uuid_generate_v4(), 'HATCHBACK', NEW.id, 120.0, '21:00:00', '5:00:00', 1.1);
+            (atlas_transporter.uuid_generate_v4(), 'SUV', NEW.id, 120.0, NULL, NULL, 1.0),
+            (atlas_transporter.uuid_generate_v4(), 'SEDAN', NEW.id, 120.0, NULL, NULL, 1.0),
+            (atlas_transporter.uuid_generate_v4(), 'HATCHBACK', NEW.id, 120.0, NULL, NULL, 1.0);
         INSERT INTO atlas_transporter.fare_policy_per_extra_km_rate VALUES 
             (atlas_transporter.uuid_generate_v4(), 'SUV', NEW.id, 5000, 12),
             (atlas_transporter.uuid_generate_v4(), 'SEDAN', NEW.id, 5000, 12),

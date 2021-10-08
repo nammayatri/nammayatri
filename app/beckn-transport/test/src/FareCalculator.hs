@@ -99,6 +99,35 @@ hatchback20km = testCase "Calculate fare for 20km for Hatchback" $ do
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = 20000.0
 
+sedan10km :: TestTree
+sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
+  fareParams <-
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SEDAN
+      (Right distance)
+      startTime
+  let totalFare = fareSum fareParams
+  totalFare @?= Amount 250.0
+  where
+    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    distance = 10000.0
+    handle' =
+      handle
+        { getFarePolicy = \_orgId vehicleVariant ->
+            pure $
+              Just
+                defaultFarePolicy
+                  { vehicleVariant = Vehicle.SEDAN,
+                    baseFare = Just 175.0,
+                    perExtraKmRateList =
+                      defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
+                        :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
+                           ]
+                  }
+        }
+
 sedan20km :: TestTree
 sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
   fareParams <-
@@ -109,7 +138,7 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
       (Right distance)
       startTime
   let totalFare = fareSum fareParams
-  totalFare @?= Amount 345.0
+  totalFare @?= Amount 475.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
     distance = 20000.0
@@ -120,11 +149,39 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
               Just
                 defaultFarePolicy
                   { vehicleVariant = Vehicle.SEDAN,
-                    baseFare = Just 150.0,
+                    baseFare = Just 175.0,
                     perExtraKmRateList =
-                      defaultPerExtraKmRate
-                        :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 15},
-                             defaultPerExtraKmRate{distanceRangeStart = 25000, fare = 25}
+                      defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
+                        :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
+                           ]
+                  }
+        }
+
+sedan30km :: TestTree
+sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
+  fareParams <-
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SEDAN
+      (Right distance)
+      startTime
+  let totalFare = fareSum fareParams
+  totalFare @?= Amount 775.0
+  where
+    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    distance = 30000.0
+    handle' =
+      handle
+        { getFarePolicy = \_orgId vehicleVariant ->
+            pure $
+              Just
+                defaultFarePolicy
+                  { vehicleVariant = Vehicle.SEDAN,
+                    baseFare = Just 175.0,
+                    perExtraKmRateList =
+                      defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
+                        :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
                            ]
                   }
         }
@@ -284,7 +341,9 @@ fareCalculator =
   testGroup
     "Fare Calculator"
     [ hatchback20km,
+      sedan10km,
       sedan20km,
+      sedan30km,
       suv20km,
       nightHatchback20km,
       nightSedan20km,
