@@ -15,7 +15,7 @@ import Beckn.Types.Predicate
 import Beckn.Utils.Validation
 import Data.Time (TimeOfDay (..))
 import EulerHS.Prelude hiding (id)
-import Types.Domain.FarePolicy (FarePolicy, PerExtraKmRateAPIEntity, validatePerExtraKmRateAPIEntity)
+import Types.Domain.FarePolicy (DiscountAPIEntity, FarePolicy, PerExtraKmRateAPIEntity, validateDiscountAPIEntity, validatePerExtraKmRateAPIEntity)
 import qualified Types.Storage.Vehicle as Vehicle
 
 data FarePolicyResponse = FarePolicyResponse
@@ -23,6 +23,7 @@ data FarePolicyResponse = FarePolicyResponse
     vehicleVariant :: Vehicle.Variant,
     baseFare :: Maybe Double,
     perExtraKmRateList :: NonEmpty PerExtraKmRateAPIEntity,
+    discountList :: [DiscountAPIEntity],
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
@@ -37,6 +38,7 @@ newtype ListFarePolicyResponse = ListFarePolicyResponse
 data UpdateFarePolicyRequest = UpdateFarePolicyRequest
   { baseFare :: Maybe Double,
     perExtraKmRateList :: NonEmpty PerExtraKmRateAPIEntity,
+    discountList :: [DiscountAPIEntity],
     nightShiftStart :: Maybe TimeOfDay,
     nightShiftEnd :: Maybe TimeOfDay,
     nightShiftRate :: Maybe Double
@@ -51,6 +53,7 @@ validateUpdateFarePolicyRequest UpdateFarePolicyRequest {..} =
     [ validateField "baseFare" baseFare . InMaybe $ InRange @Double 0 500,
       validateList "perExtraKmRateList" perExtraKmRateList validatePerExtraKmRateAPIEntity,
       validateField "perExtraKmRateList" perExtraKmRateList $ UniqueField @"distanceRangeStart",
+      validateList "discountList" discountList (validateDiscountAPIEntity baseFare),
       validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Double 1 2,
       validateField "nightShiftStart" nightShiftStart . InMaybe $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 30 0),
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)

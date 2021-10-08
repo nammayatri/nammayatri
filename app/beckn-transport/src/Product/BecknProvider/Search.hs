@@ -182,8 +182,9 @@ onSearchCallback productCase transporter fromLocation toLocation searchMetricsMV
 
   listOfPIs <-
     for listOfProtoPIs $ \poolResult -> do
-      price <- calculateFare transporterId poolResult.variant distance productCase.startTime
-      mkProductInstance productCase price PI.INSTOCK transporterId poolResult.distanceToDriver poolResult.variant
+      fareParams <- calculateFare transporterId poolResult.variant distance productCase.startTime
+      let price = fareSum fareParams
+      mkProductInstance productCase price fareParams.discount PI.INSTOCK transporterId poolResult.distanceToDriver poolResult.variant
 
   DB.runSqlDBTransaction $ do
     for_ listOfPIs PI.create
@@ -197,12 +198,13 @@ mkProductInstance ::
   DBFlow m r =>
   Case.Case ->
   Amount ->
+  Maybe Amount ->
   PI.ProductInstanceStatus ->
   Id Org.Organization ->
   Double ->
   Vehicle.Variant ->
   m PI.ProductInstance
-mkProductInstance productCase price status transporterId nearestDriverDist vehicleVariant = do
+mkProductInstance productCase price discount status transporterId nearestDriverDist vehicleVariant = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
@@ -223,6 +225,7 @@ mkProductInstance productCase price status transporterId nearestDriverDist vehic
         _type = Case.RIDESEARCH,
         price,
         actualPrice = Nothing,
+        discount = discount,
         status = status,
         startTime = productCase.startTime,
         endTime = productCase.endTime,

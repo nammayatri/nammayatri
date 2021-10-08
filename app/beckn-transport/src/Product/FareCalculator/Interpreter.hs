@@ -1,13 +1,13 @@
-module Product.FareCalculator.Interpreter (calculateFare) where
+module Product.FareCalculator.Interpreter (calculateFare, fareSum, fareSumWithDiscount) where
 
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Flow
-  ( ServiceHandle (..),
+  ( FareParameters (..),
+    ServiceHandle (..),
     doCalculateFare,
-    fareSum,
   )
 import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Metrics (CoreMetrics)
@@ -24,7 +24,7 @@ calculateFare ::
   Vehicle.Variant ->
   Double ->
   UTCTime ->
-  m Amount
+  m FareParameters
 calculateFare orgId vehicleVariant distance startTime = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   fareParams <-
@@ -34,11 +34,10 @@ calculateFare orgId vehicleVariant distance startTime = do
       vehicleVariant
       distance
       startTime
-  let totalFare = fareSum fareParams
   logTagInfo
     "FareCalculator"
-    $ "Fare parameters calculated: " +|| fareParams ||+ ". Total fare: " +|| totalFare ||+ ""
-  pure totalFare
+    $ "Fare parameters calculated: " +|| fareParams ||+ ""
+  pure fareParams
 
 serviceHandle ::
   ( DBFlow m r,
@@ -51,3 +50,12 @@ serviceHandle =
     { getFarePolicy = \orgId vehicleVariant -> do
         FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
     }
+
+fareSum :: FareParameters -> Amount
+fareSum FareParameters {..} =
+  nightShiftRate * (baseFare + distanceFare)
+
+fareSumWithDiscount :: FareParameters -> Amount
+fareSumWithDiscount fp@FareParameters {..} = do
+  let fareSumm = fareSum fp
+  maybe fareSumm (fareSumm -) discount

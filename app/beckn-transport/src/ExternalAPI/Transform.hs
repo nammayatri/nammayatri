@@ -107,9 +107,14 @@ mkItem prodInst =
       package_category_id = Nothing,
       model_id = Nothing,
       brand_id = Nothing,
-      tags = maybe [] (\dist -> [Tag "nearestDriverDist" dist]) prodInst.udf1,
+      tags =
+        mbAttach "discount" (show <$> prodInst.discount) $
+          mbAttach "nearestDriverDist" prodInst.udf1 [],
       ttl = Nothing
     }
+  where
+    mbAttach name mbValue list =
+      maybe list (\val -> Tag name val : list) mbValue
 
 mkPrice :: ProductInstance -> Price
 mkPrice prodInst =

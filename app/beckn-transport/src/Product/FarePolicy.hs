@@ -28,6 +28,7 @@ listFarePolicies personId = withFlowHandlerAPI $ do
           vehicleVariant = fp.vehicleVariant,
           baseFare = fromRational <$> fp.baseFare,
           perExtraKmRateList = DFarePolicy.makeExtraKmRateAPIEntity <$> fp.perExtraKmRateList,
+          discountList = DFarePolicy.makeDiscountAPIEntity <$> fp.discountList,
           nightShiftStart = fp.nightShiftStart,
           nightShiftEnd = fp.nightShiftEnd,
           nightShiftRate = fromRational <$> fp.nightShiftRate

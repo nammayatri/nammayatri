@@ -295,6 +295,7 @@ mkProductInstance case_ bppOrg provider personId item = do
         entityId = Nothing,
         price = price,
         actualPrice = Nothing,
+        discount = discount,
         _type = Case.RIDESEARCH,
         udf1 = getNearestDriverDist,
         udf2 = Nothing,
@@ -311,6 +312,7 @@ mkProductInstance case_ bppOrg provider personId item = do
       }
   where
     getNearestDriverDist = value <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
+    discount = listToMaybe (filter (\tag -> tag.key == "discount") item.tags) >>= readMaybe . T.unpack . value
 
 mkDeclinedProductInstance :: MonadFlow m => Case.Case -> Org.Organization -> Common.Provider -> Id Person.Person -> m PI.ProductInstance
 mkDeclinedProductInstance case_ bppOrg provider personId = do
@@ -336,6 +338,7 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         entityId = Nothing,
         price = Nothing,
         actualPrice = Nothing,
+        discount = Nothing,
         _type = Case.RIDESEARCH,
         vehicleVariant = "",
         udf1 = Nothing,

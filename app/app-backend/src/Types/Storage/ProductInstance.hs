@@ -80,6 +80,7 @@ data ProductInstanceT f = ProductInstance
     quantity :: B.C f Int,
     price :: B.C f (Maybe Amount),
     actualPrice :: B.C f (Maybe Amount),
+    discount :: B.C f (Maybe Amount),
     _type :: B.C f ProductInstanceType,
     status :: B.C f ProductInstanceStatus,
     startTime :: B.C f UTCTime,

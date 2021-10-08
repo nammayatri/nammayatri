@@ -22,6 +22,7 @@ defaultProductInstance =
       entityId = Nothing,
       quantity = 0,
       price = Amount.Amount $ 100 % 1,
+      discount = Nothing,
       actualPrice = Nothing,
       _type = Case.RIDEORDER,
       status = ProductInstance.COMPLETED,

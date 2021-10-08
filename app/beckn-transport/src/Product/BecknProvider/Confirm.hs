@@ -2,6 +2,7 @@ module Product.BecknProvider.Confirm (confirm) where
 
 import App.Types
 import qualified Beckn.Storage.Queries as DB
+import Beckn.Types.Amount (Amount)
 import qualified Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
@@ -16,12 +17,14 @@ import qualified Product.BecknProvider.BP as BP
 import Product.Person (calculateDriverPool, setDriverPool)
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Case as QCase
+import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.ProductInstance as QProductInstance
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Test.RandomStrings as RS
 import Types.Error
 import qualified Types.Storage.Case as Case
+import Types.Storage.DiscountTransaction
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.ProductInstance as ProductInstance
 import qualified Types.Storage.RideRequest as RideRequest
@@ -76,6 +79,8 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
       QProductInstance.updateStatus (productInstance.id) newProductInstanceStatus
       QCase.create trackerCase
       QProductInstance.create trackerProductInstance
+      whenJust orderProductInstance.discount $ \disc ->
+        QDiscTransaction.create $ mkDiscountTransaction orderProductInstance disc currTime
 
     bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) bapCallbackUrl $
@@ -184,12 +189,22 @@ mkTrackerProductInstance caseId' ProductInstance.ProductInstance {..} currTime =
         _type = Case.LOCATIONTRACKER,
         quantity = 1,
         actualPrice = Nothing,
+        discount = Nothing,
         status = ProductInstance.INSTOCK,
         info = Nothing,
         createdAt = currTime,
         updatedAt = currTime,
         ..
       }
+
+mkDiscountTransaction :: ProductInstance.ProductInstance -> Amount -> UTCTime -> DiscountTransaction
+mkDiscountTransaction orderPI discount currTime =
+  DiscountTransaction
+    { rideBookingid = orderPI.id,
+      organizationId = orderPI.organizationId,
+      discount = discount,
+      createdAt = currTime
+    }
 
 mkOnConfirmPayload :: (DBFlow m r, EncFlow m r) => ProductInstance.ProductInstance -> m API.ConfirmOrder
 mkOnConfirmPayload orderPI = do
