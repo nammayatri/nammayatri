@@ -3,6 +3,7 @@ module Product.BecknProvider.Confirm (confirm, calculateDriverPool, getDriverPoo
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
+import Beckn.Types.Amount (Amount)
 import qualified Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
@@ -14,6 +15,7 @@ import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
+import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
@@ -24,6 +26,7 @@ import qualified Storage.Queries.SearchRequest as SearchRequest
 import qualified Storage.Queries.TransporterConfig as QTConf
 import Types.App (Driver)
 import Types.Error
+import Types.Storage.DiscountTransaction
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideRequest as RideRequest
@@ -32,6 +35,7 @@ import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.TransporterConfig as STConf
 import qualified Types.Storage.Vehicle as SV
 import Utils.Common
+import Data.Time (UTCTime)
 
 confirm ::
   Id Organization.Organization ->
@@ -64,6 +68,8 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
     DB.runSqlDBTransaction $ do
       QRideBooking.create rideBooking
       RideRequest.create rideRequest
+      whenJust quote.discount $ \disc ->
+        QDiscTransaction.create $ mkDiscountTransaction rideBooking disc now
 
     bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) bapCallbackUrl $
@@ -169,3 +175,12 @@ calculateDriverPool locId orgId variant = do
         . readMaybe
         . toString
         $ conf.value
+
+mkDiscountTransaction :: SRB.RideBooking -> Amount -> UTCTime -> DiscountTransaction
+mkDiscountTransaction rideBooking discount currTime =
+  DiscountTransaction
+    { rideBookingid = rideBooking.id,
+      organizationId = rideBooking.providerId,
+      discount = discount,
+      createdAt = currTime
+    }

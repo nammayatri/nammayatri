@@ -30,10 +30,6 @@ deriving instance Show FarePolicyPerExtraKmRate
 
 deriving instance Eq FarePolicyPerExtraKmRate
 
-deriving instance FromJSON FarePolicyPerExtraKmRate
-
-deriving instance ToJSON FarePolicyPerExtraKmRate
-
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity FarePolicyPerExtraKmRateT)
 fieldEMod =

@@ -6,6 +6,7 @@ import Beckn.Types.Id
 import Data.Time hiding (parseTime)
 import EulerHS.Prelude
 import Product.FareCalculator.Flow
+import Product.FareCalculator.Interpreter
 import Servant.Server
 import Test.Hspec
 import Test.Tasty
@@ -30,6 +31,7 @@ defaultFarePolicy =
       organizationId = orgID,
       baseFare = Just 120.0,
       perExtraKmRateList = defaultPerExtraKmRate :| [],
+      discountList = [],
       nightShiftStart = Just midnight,
       nightShiftEnd = Just midnight,
       nightShiftRate = Just 1.0
@@ -92,7 +94,7 @@ hatchback20km = testCase "Calculate fare for 20km for Hatchback" $ do
       Vehicle.HATCHBACK
       distance
       startTime
-  let totalFare = fareSum fareParams
+  let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 300.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
@@ -107,7 +109,7 @@ sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
       Vehicle.SEDAN
       distance
       startTime
-  let totalFare = fareSum fareParams
+  let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 250.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
@@ -135,7 +137,7 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
       Vehicle.SEDAN
       distance
       startTime
-  let totalFare = fareSum fareParams
+  let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 475.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
@@ -163,7 +165,7 @@ sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
       Vehicle.SEDAN
       distance
       startTime
-  let totalFare = fareSum fareParams
+  let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 775.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
@@ -191,7 +193,7 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
       Vehicle.SUV
       distance
       startTime
-  let totalFare = fareSum fareParams
+  let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 320.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
@@ -222,7 +224,7 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
       Vehicle.HATCHBACK
       distance
       startTime
-  let totalFare = fareSum fareParams
+  let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 331.1
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
@@ -254,7 +256,7 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
       Vehicle.SEDAN
       distance
       startTime
-  let totalFare = fareSum fareParams
+  let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 357.5
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
@@ -286,7 +288,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
       Vehicle.SUV
       distance
       startTime
-  let totalFare = fareSum fareParams
+  let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 451.0
   where
     startTime = parseTime "2018-12-06T21:00:00.000Z"
@@ -303,6 +305,105 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
                                       :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
                                            defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
                                          ],
+                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                  nightShiftRate = Just 1.1
+                                 }
+        }
+
+nightSuv20kmWithDiscount :: TestTree
+nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV with discount" $ do
+  fareParams <-
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SUV
+      distance
+      startTime
+  let totalFare = fareSumWithDiscount fareParams
+  totalFare @?= Amount 401.0
+  where
+    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    distance = 20000.0
+    handle' =
+      handle
+        { getFarePolicy = \_orgId vehicleVariant ->
+            pure $
+              Just
+                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
+                                  baseFare = Just 150.0,
+                                  perExtraKmRateList =
+                                    defaultPerExtraKmRate{distanceRangeStart = 3000}
+                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
+                                           defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
+                                         ],
+                                  discountList = [Discount midnight midday 50 True, Discount midday midnight 50 True],
+                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                  nightShiftRate = Just 1.1
+                                 }
+        }
+
+nightSuv20kmWithDiscountOff :: TestTree
+nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for SUV with discount off" $ do
+  fareParams <-
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SUV
+      distance
+      startTime
+  let totalFare = fareSumWithDiscount fareParams
+  totalFare @?= Amount 451.0
+  where
+    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    distance = 20000.0
+    handle' =
+      handle
+        { getFarePolicy = \_orgId vehicleVariant ->
+            pure $
+              Just
+                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
+                                  baseFare = Just 150.0,
+                                  perExtraKmRateList =
+                                    defaultPerExtraKmRate{distanceRangeStart = 3000}
+                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
+                                           defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
+                                         ],
+                                  discountList = [Discount midnight midday 50 False],
+                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                  nightShiftRate = Just 1.1
+                                 }
+        }
+
+nightSuv20kmWithClashedDiscounts :: TestTree
+nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km for SUV with clashed discounts" $ do
+  fareParams <-
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SUV
+      distance
+      startTime
+  let totalFare = fareSumWithDiscount fareParams
+  totalFare @?= Amount 351.0
+  where
+    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    distance = 20000.0
+    handle' =
+      handle
+        { getFarePolicy = \_orgId vehicleVariant ->
+            pure $
+              Just
+                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
+                                  baseFare = Just 150.0,
+                                  perExtraKmRateList =
+                                    defaultPerExtraKmRate{distanceRangeStart = 3000}
+                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
+                                           defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
+                                         ],
+                                  discountList = [Discount midnight midday 50 True, Discount midnight midday 50 True],
                                   nightShiftStart = Just $ TimeOfDay 20 0 0,
                                   nightShiftEnd = Just $ TimeOfDay 5 30 0,
                                   nightShiftRate = Just 1.1
@@ -340,5 +441,8 @@ fareCalculator =
       nightHatchback20km,
       nightSedan20km,
       nightSuv20km,
+      nightSuv20kmWithDiscount,
+      nightSuv20kmWithDiscountOff,
+      nightSuv20kmWithClashedDiscounts,
       failOnMissingFareConfig
     ]

@@ -9,6 +9,8 @@ import Beckn.Types.Id (Id)
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Time
   ( LocalTime (localTimeOfDay),
+    TimeOfDay (..),
+    TimeZone,
     UTCTime,
     midnight,
     minutesToTimeZone,
@@ -41,13 +43,10 @@ newtype ServiceHandle m = ServiceHandle
 data FareParameters = FareParameters
   { baseFare :: Amount,
     distanceFare :: Amount,
-    nightShiftRate :: Amount
+    nightShiftRate :: Amount,
+    discount :: Maybe Amount
   }
   deriving stock (Show, Eq)
-
-fareSum :: FareParameters -> Amount
-fareSum FareParameters {..} =
-  nightShiftRate * (baseFare + distanceFare)
 
 doCalculateFare ::
   MonadHandler m =>
@@ -62,7 +61,8 @@ doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
   baseFare <- calculateBaseFare farePolicy
   distanceFare <- calculateDistanceFare farePolicy distance
   nightShiftRate <- calculateNightShiftRate farePolicy startTime
-  pure $ FareParameters baseFare distanceFare nightShiftRate
+  let discount = calculateDiscount farePolicy startTime
+  pure $ FareParameters baseFare distanceFare nightShiftRate discount
 
 calculateBaseFare ::
   MonadHandler m =>
@@ -100,12 +100,34 @@ calculateNightShiftRate ::
   TripStartTime ->
   m Amount
 calculateNightShiftRate farePolicy startTime = do
-  let timeZone = minutesToTimeZone 330 -- TODO: Should be configurable. Hardcoded to IST +0530
   let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone startTime
   let nightShiftRate = fromMaybe 1 $ farePolicy.nightShiftRate
   let nightShiftStart = fromMaybe midnight $ farePolicy.nightShiftStart
   let nightShiftEnd = fromMaybe midnight $ farePolicy.nightShiftEnd
   pure . Amount $
-    if timeOfDay > nightShiftStart || timeOfDay < nightShiftEnd
+    if isTimeWithinBounds nightShiftStart nightShiftEnd timeOfDay
       then nightShiftRate
       else 1
+
+calculateDiscount :: FarePolicy -> TripStartTime -> Maybe Amount
+calculateDiscount farePolicy startTime = do
+  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone startTime
+      discount = calculateDiscount' 0 timeOfDay farePolicy.discountList
+  if discount <= 0 then Nothing else Just $ Amount discount
+  where
+    calculateDiscount' summ timeOfDay (discount : discountList) = do
+      if discount.enabled && isTimeWithinBounds discount.startTime discount.endTime timeOfDay
+        then calculateDiscount' (summ + discount.discount) timeOfDay discountList
+        else calculateDiscount' summ timeOfDay discountList
+    calculateDiscount' summ _ [] = summ
+
+timeZone :: TimeZone
+timeZone = minutesToTimeZone 330 -- TODO: Should be configurable. Hardcoded to IST +0530
+
+isTimeWithinBounds :: TimeOfDay -> TimeOfDay -> TimeOfDay -> Bool
+isTimeWithinBounds startTime endTime time =
+  if startTime >= endTime
+    then do
+      let midnightBeforeTimeleap = TimeOfDay 23 59 60
+      (startTime < time && time < midnightBeforeTimeleap) || (midnight <= time && time < endTime)
+    else startTime < time && time < endTime

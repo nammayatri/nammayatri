@@ -163,6 +163,7 @@ mkQuote searchRequest bppOrg provider item = do
       { id = Id $ item.id,
         requestId = searchRequest.id,
         price = price,
+        discount = discount,
         distanceToNearestDriver = nearestDriverDist,
         providerMobileNumber = fromMaybe "UNKNOWN" $ listToMaybe provider.phones,
         providerName = fromMaybe "" provider.name,
@@ -175,6 +176,7 @@ mkQuote searchRequest bppOrg provider item = do
     getNearestDriverDist = do
       let dist = (.value) <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
       (readMaybe . T.unpack =<< dist) & fromMaybeM (InternalError "Unable to parse nearestDriverDist")
+    discount = listToMaybe (filter (\tag -> tag.key == "discount") item.tags) >>= readMaybe . T.unpack . (.value)
 
 mkIntent :: API.SearchReq -> UTCTime -> Intent
 mkIntent req now = do

@@ -7,10 +7,12 @@ import qualified Database.Beam.Schema.Tables as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.AllocationEvent as AllocationEvent
 import qualified Types.Storage.CancellationReason as CancellationReason
+import qualified Types.Storage.DiscountTransaction as DiscountTransaction
 import qualified Types.Storage.DriverInformation as DriverInformation
 import qualified Types.Storage.DriverLocation as DriverLocation
 import qualified Types.Storage.DriverStats as DriverStats
 import qualified Types.Storage.FarePolicy as FarePolicy
+import qualified Types.Storage.FarePolicy.Discount as FPDiscount
 import qualified Types.Storage.FarePolicy.PerExtraKmRate as FPExtraKmRate
 import qualified Types.Storage.NotificationStatus as NotificationStatus
 import qualified Types.Storage.Organization as Organization
@@ -46,6 +48,8 @@ data TransporterDb f = TransporterDb
     driverInformation :: f (B.TableEntity DriverInformation.DriverInformationT),
     farePolicy :: f (B.TableEntity FarePolicy.FarePolicyT),
     farePolicyExtraKmRate :: f (B.TableEntity FPExtraKmRate.FarePolicyPerExtraKmRateT),
+    farePolicyDiscount :: f (B.TableEntity FPDiscount.FarePolicyDiscountT),
+    discountTransaction :: f (B.TableEntity DiscountTransaction.DiscountTransactionT),
     rideRequest :: f (B.TableEntity RideRequest.RideRequestT),
     notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT),
     allocationEvent :: f (B.TableEntity AllocationEvent.AllocationEventT),
@@ -75,6 +79,8 @@ transporterDb dbSchemaName =
         driverInformation = setSchema dbSchemaName <> DriverInformation.fieldEMod,
         farePolicy = setSchema dbSchemaName <> FarePolicy.fieldEMod,
         farePolicyExtraKmRate = setSchema dbSchemaName <> FPExtraKmRate.fieldEMod,
+        farePolicyDiscount = setSchema dbSchemaName <> FPDiscount.fieldEMod,
+        discountTransaction = setSchema dbSchemaName <> DiscountTransaction.fieldEMod,
         rideRequest = setSchema dbSchemaName <> RideRequest.fieldEMod,
         notificationStatus = setSchema dbSchemaName <> NotificationStatus.fieldEMod,
         allocationEvent = setSchema dbSchemaName <> AllocationEvent.fieldEMod,

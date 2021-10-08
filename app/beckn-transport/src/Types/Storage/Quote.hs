@@ -21,6 +21,7 @@ data QuoteT f = Quote
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     productId :: B.C f (Id Products),
     price :: B.C f Amount,
+    discount :: B.C f (Maybe Amount),
     providerId :: B.C f (Id Org.Organization),
     distance :: B.C f Double,
     distanceToNearestDriver :: B.C f Double,

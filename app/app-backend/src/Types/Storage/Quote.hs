@@ -18,6 +18,7 @@ data QuoteT f = Quote
   { id :: B.C f (Id Quote),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     price :: B.C f Amount,
+    discount :: B.C f (Maybe Amount),
     providerId :: B.C f (Id Org.Organization),
     providerName :: B.C f Text,
     providerMobileNumber :: B.C f Text,

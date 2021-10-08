@@ -35,7 +35,7 @@ import qualified Money as M
 -- the maximum precision will fail with an error.
 -- Functions / and recip will fail with an error if the denominator is zero.
 newtype Amount = Amount Rational
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Ord, Show, Read, Generic)
   deriving newtype (Num, Real, Fractional)
 
 instance Example Amount where

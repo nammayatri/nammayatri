@@ -180,8 +180,9 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
 
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
-      fare <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
-      mkQuote searchRequest fare transporterId distance poolResult.distanceToDriver poolResult.variant
+      fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
+      let fare = fareSum fareParams
+      mkQuote searchRequest fare fareParams.discount transporterId distance poolResult.distanceToDriver poolResult.variant
 
   DB.runSqlDBTransaction $
     for_ listOfQuotes Quote.create
@@ -193,12 +194,13 @@ mkQuote ::
   DBFlow m r =>
   SearchRequest.SearchRequest ->
   Amount ->
+  Maybe Amount ->
   Id Org.Organization ->
   Double ->
   Double ->
   Veh.Variant ->
   m Quote.Quote
-mkQuote productSearchRequest price transporterId distance nearestDriverDist vehicleVariant = do
+mkQuote productSearchRequest price discount transporterId distance nearestDriverDist vehicleVariant = do
   quoteId <- Id <$> L.generateGUID
   now <- getCurrentTime
   products <-
