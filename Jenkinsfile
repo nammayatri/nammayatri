@@ -6,6 +6,10 @@ pipeline {
             returnStdout: true,
             script: 'git rev-parse --short HEAD'
         )}"""
+      BRANCH_NAME="""${sh(
+            returnStdout: true,
+            script: 'if [ "$BRANCH_NAME" = "release-version-7" ]; then echo "master"; else echo "$BRANCH_NAME"; fi;'
+        )}"""
       DEPLOY_VARIANT="${env.BRANCH_NAME}"
   }
 
