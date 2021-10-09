@@ -68,7 +68,7 @@ data ProdInstRes = ProdInstRes
     toLocation :: Maybe (Id SearchReqLocation),
     organizationId :: Id Organization,
     parentId :: Maybe (Id ProductInstance),
-    chargableDistance :: Maybe Double,
+    chargeableDistance :: Maybe Double,
     vehicleVariant :: Text,
     udf1 :: Maybe Text,
     udf2 :: Maybe Text,

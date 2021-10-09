@@ -55,12 +55,12 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER >>= fromMaybeM CaseNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  (chargableDistance, actualPrice) <- recalculateFare orderCase orderPi
+  (chargeableDistance, actualPrice) <- recalculateFare orderCase orderPi
 
   endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) actualPrice
   notifyUpdateToBAP
-    (updatePriceAndDistance chargableDistance actualPrice searchPi)
-    (updatePriceAndDistance chargableDistance actualPrice orderPi)
+    (updatePriceAndDistance chargeableDistance actualPrice searchPi)
+    (updatePriceAndDistance chargeableDistance actualPrice orderPi)
     PI.COMPLETED
 
   return APISuccess.Success
@@ -88,4 +88,4 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
     updatePriceAndDistance :: Double -> Amount -> PI.ProductInstance -> PI.ProductInstance
     updatePriceAndDistance distance price pi =
-      pi {PI.chargableDistance = Just distance, PI.actualPrice = Just price}
+      pi {PI.chargeableDistance = Just distance, PI.actualPrice = Just price}

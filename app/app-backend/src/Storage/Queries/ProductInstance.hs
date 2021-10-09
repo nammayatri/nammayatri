@@ -200,7 +200,7 @@ updateMultiple piId prdInst = do
           toLocation <-. B.val_ (Storage.toLocation prodInst),
           info <-. B.val_ (Storage.info prodInst),
           udf4 <-. B.val_ (Storage.udf4 prodInst),
-          chargableDistance <-. B.val_ (Storage.chargableDistance prodInst),
+          chargeableDistance <-. B.val_ (Storage.chargeableDistance prodInst),
           actualPrice <-. B.val_ (Storage.actualPrice prodInst)
         ]
 

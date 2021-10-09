@@ -226,7 +226,7 @@ mkTrip orderPi = do
               RouteEdge
                 { path = "",
                   duration = emptyScalar "seconds", -- TODO: calculate duration and put it here
-                  distance = emptyScalar "meters" & #value .~ orderPi.chargableDistance
+                  distance = emptyScalar "meters" & #value .~ orderPi.chargeableDistance
                 }
       }
   where

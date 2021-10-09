@@ -232,7 +232,7 @@ mkProductInstance productCase price status transporterId nearestDriverDist vehic
         organizationId = transporterId,
         parentId = Nothing,
         traveledDistance = 0,
-        chargableDistance = Nothing,
+        chargeableDistance = Nothing,
         vehicleVariant,
         udf1 = Just $ show nearestDriverDist,
         udf2 = Nothing,

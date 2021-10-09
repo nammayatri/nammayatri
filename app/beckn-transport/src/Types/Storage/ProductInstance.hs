@@ -90,7 +90,7 @@ data ProductInstanceT f = ProductInstance
     organizationId :: B.C f (Id Org.Organization),
     parentId :: B.C f (Maybe (Id ProductInstance)),
     traveledDistance :: B.C f Double,
-    chargableDistance :: B.C f (Maybe Double),
+    chargeableDistance :: B.C f (Maybe Double),
     vehicleVariant :: B.C f Vehicle.Variant, -- for future Quote/Order only
     udf1 :: B.C f (Maybe Text),
     udf2 :: B.C f (Maybe Text),
@@ -149,7 +149,7 @@ fieldEMod =
           toLocation = "to_location_id",
           parentId = "parent_id",
           traveledDistance = "traveled_distance",
-          chargableDistance = "chargable_distance",
+          chargeableDistance = "chargeable_distance",
           vehicleVariant = "vehicle_variant",
           organizationId = "organization_id",
           createdAt = "created_at",

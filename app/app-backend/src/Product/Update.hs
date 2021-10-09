@@ -39,7 +39,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
                 { SPI.info = encodeToText <$> uInfo,
                   SPI.actualPrice =
                     trip >>= fare >>= (.value) >>= convertDecimalValueToAmount,
-                  SPI.chargableDistance =
+                  SPI.chargeableDistance =
                     trip >>= (.route) >>= (.edge.distance.value)
                 }
         MPI.updateMultipleFlow (orderPi.id) uPrd
