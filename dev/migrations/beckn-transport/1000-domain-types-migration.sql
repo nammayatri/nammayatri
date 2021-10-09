@@ -33,7 +33,7 @@ CREATE TABLE atlas_transporter.ride (
     organization_id character varying(255) NOT NULL,
     product_instance_id character varying(255),
     traveled_distance double precision NOT NULL DEFAULT 0,
-    chargable_distance double precision,
+    chargeable_distance double precision,
     info text,
     vehicle_variant character varying(60) NOT NULL,
     udf1 character varying(255),
@@ -87,7 +87,7 @@ INSERT INTO atlas_transporter.ride
     organization_id,
     parent_id AS product_instance_id,
     traveled_distance,
-    chargable_distance,
+    chargeable_distance,
     info,
     vehicle_variant,
     udf1,
@@ -198,7 +198,7 @@ CREATE TABLE atlas_transporter.ride (
     tracking_url character varying(255) NOT NULL,
     final_price double precision,
     traveled_distance double precision NOT NULL DEFAULT 0,
-    chargable_distance double precision,
+    chargeable_distance double precision,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -262,7 +262,7 @@ INSERT INTO atlas_transporter.ride
         'UNKNOWN',
         T1.actual_price,
         T1.traveled_distance,
-        T1.chargable_distance,
+        T1.chargeable_distance,
         T1.created_at,
         T1.updated_at
     FROM atlas_transporter.old_ride AS T1

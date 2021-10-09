@@ -53,9 +53,9 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM RideBookingNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  (actualDistance, actualFare) <- recalculateFare rideBooking ride
+  (chargeableDistance, actualFare) <- recalculateFare rideBooking ride
 
-  let updRide = updateActualDistanceAndPrice actualDistance actualFare ride
+  let updRide = updateActualDistanceAndPrice chargeableDistance actualFare ride
 
   endRideTransaction rideBooking.id updRide (cast driverId)
 
@@ -86,4 +86,4 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           pure (actualDistance, updatedPrice)
         else pure (oldDistance, estimatedPrice)
     updateActualDistanceAndPrice :: Double -> Amount -> Ride.Ride -> Ride.Ride
-    updateActualDistanceAndPrice = \distance fare ride -> ride{chargableDistance = Just distance, finalPrice = Just fare}
+    updateActualDistanceAndPrice = \distance fare ride -> ride{chargeableDistance = Just distance, finalPrice = Just fare}

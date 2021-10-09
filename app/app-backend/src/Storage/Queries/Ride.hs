@@ -106,7 +106,7 @@ updateMultiple rideId ride = do
         [ updatedAt <-. B.val_ now,
           status <-. B.val_ (ride_.status),
           finalPrice <-. B.val_ (ride_.finalPrice),
-          chargableDistance <-. B.val_ (ride_.chargableDistance)
+          chargeableDistance <-. B.val_ (ride_.chargeableDistance)
         ]
 
 findByRBId :: DBFlow m r => Id SRB.RideBooking -> m (Maybe Storage.Ride)

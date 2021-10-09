@@ -61,7 +61,7 @@ data RideT f = Ride
     otp :: B.C f Text,
     trackingUrl :: B.C f Text,
     finalPrice :: B.C f (Maybe Amount),
-    chargableDistance :: B.C f (Maybe Double),
+    chargeableDistance :: B.C f (Maybe Double),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -104,7 +104,7 @@ fieldEMod =
           vehicleVariant = "vehicle_variant",
           trackingUrl = "tracking_url",
           finalPrice = "final_price",
-          chargableDistance = "chargable_distance",
+          chargeableDistance = "chargeable_distance",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
@@ -135,7 +135,7 @@ data RideAPIEntity = RideAPIEntity
     vehicleModel :: Text,
     rideOtp :: Text,
     computedPrice :: Maybe Amount,
-    chargableRideDistance :: Maybe Double,
+    chargeableRideDistance :: Maybe Double,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -149,6 +149,6 @@ makeRideAPIEntity Ride {..} = do
       driverRatings = driverRating,
       rideOtp = otp,
       computedPrice = finalPrice,
-      chargableRideDistance = chargableDistance,
+      chargeableRideDistance = chargeableDistance,
       ..
     }

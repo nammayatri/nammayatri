@@ -59,7 +59,7 @@ data RideT f = Ride
     trackingUrl :: B.C f Text,
     finalPrice :: B.C f (Maybe Amount),
     traveledDistance :: B.C f Double,
-    chargableDistance :: B.C f (Maybe Double),
+    chargeableDistance :: B.C f (Maybe Double),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -97,7 +97,7 @@ fieldEMod =
           trackingUrl = "tracking_url",
           finalPrice = "final_price",
           traveledDistance = "traveled_distance",
-          chargableDistance = "chargable_distance",
+          chargeableDistance = "chargeable_distance",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }

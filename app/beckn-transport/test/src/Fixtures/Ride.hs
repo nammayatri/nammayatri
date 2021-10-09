@@ -21,7 +21,7 @@ defaultRide =
       finalPrice = Nothing,
       status = Ride.COMPLETED,
       traveledDistance = 0,
-      chargableDistance = Nothing,
+      chargeableDistance = Nothing,
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime
     }
