@@ -89,17 +89,15 @@ updateFarePolicy farePolicy = do
             fare = fromRational dExtraKmRate.fare
           }
     buildStorageDiscount :: MonadFlow m => D.Discount -> m SDiscount.FarePolicyDiscount
-    buildStorageDiscount discount = do
+    buildStorageDiscount D.Discount {..} = do
       uuid <- generateGUID
       return $
         SDiscount.FarePolicyDiscount
           { id = uuid,
             organizationId = farePolicy.organizationId,
             vehicleVariant = farePolicy.vehicleVariant,
-            startTime = discount.startTime,
-            endTime = discount.endTime,
-            enabled = discount.enabled,
-            discount = fromRational discount.discount
+            discount = fromRational discount,
+            ..
           }
 
 buildDomainFarePolicy :: Storage.FarePolicy -> DB.SqlDB D.FarePolicy

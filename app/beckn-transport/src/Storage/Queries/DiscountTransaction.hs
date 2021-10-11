@@ -13,6 +13,6 @@ getDbTable =
   DB.discountTransaction . DB.transporterDb <$> getSchemaName
 
 create :: Storage.DiscountTransaction -> DB.SqlDB ()
-create Storage.DiscountTransaction {..} = do
+create discTrans = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue Storage.DiscountTransaction {..})
+  DB.createOne' dbTable (Storage.insertValue discTrans)

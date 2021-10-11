@@ -109,14 +109,10 @@ mkItem quote =
       package_category_id = Nothing,
       model_id = Nothing,
       brand_id = Nothing,
-      tags =
-        [Tag "nearestDriverDist" (show quote.distanceToNearestDriver)]
-          & mbAttach "discount" (show <$> quote.discount),
-      ttl = Nothing
+      tags = [Tag "nearestDriverDist" $ show quote.distanceToNearestDriver],
+      ttl = Nothing,
+      discount = quote.discount
     }
-  where
-    mbAttach name mbValue list =
-      maybe list (\val -> Tag name val : list) mbValue
 
 mkPrice :: Amount -> Price
 mkPrice amount =

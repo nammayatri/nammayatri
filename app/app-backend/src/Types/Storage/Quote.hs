@@ -71,6 +71,7 @@ fieldEMod =
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
     estimatedPrice :: Amount,
+    discount :: Maybe Amount,
     agencyName :: Text,
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,
