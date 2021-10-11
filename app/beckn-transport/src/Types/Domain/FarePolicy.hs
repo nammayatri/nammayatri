@@ -86,8 +86,6 @@ fromDiscountAPIEntity DiscountAPIEntity {..} =
       ..
     }
 
-validateDiscountAPIEntity :: Maybe Double -> Validate DiscountAPIEntity
-validateDiscountAPIEntity mbBaseFare discountApiEntity =
-  sequenceA_
-    [ validateField "discount" discountApiEntity.discount . InRange @Double 0 $ fromMaybe 0 mbBaseFare
-    ]
+validateDiscountAPIEntity :: Validate DiscountAPIEntity
+validateDiscountAPIEntity discountApiEntity =
+  validateField "discount" discountApiEntity.discount $ Min @Double 0.01

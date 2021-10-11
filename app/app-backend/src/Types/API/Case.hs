@@ -60,6 +60,7 @@ data ProdInstRes = ProdInstRes
     quantity :: Int,
     price :: Maybe Amount,
     actualPrice :: Maybe Amount,
+    discount :: Maybe Amount,
     status :: ProductInstanceStatus,
     startTime :: UTCTime,
     endTime :: Maybe UTCTime,

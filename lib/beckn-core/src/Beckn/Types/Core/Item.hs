@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Item where
 
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Core.Descriptor
 import Beckn.Types.Core.Duration
 import Beckn.Types.Core.Price
@@ -19,7 +20,9 @@ data Item = Item
     brand_id :: Maybe Text,
     promotional :: Bool,
     ttl :: Maybe Duration,
-    tags :: [Tag]
+    tags :: [Tag],
+    -- Not in spec
+    discount :: Maybe Amount
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -36,5 +39,6 @@ instance Example Item where
         package_category_id = Just idExample,
         tags = example,
         promotional = False,
-        ttl = Nothing
+        ttl = Nothing,
+        discount = Nothing
       }

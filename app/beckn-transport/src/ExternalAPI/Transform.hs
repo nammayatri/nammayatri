@@ -107,10 +107,9 @@ mkItem prodInst =
       package_category_id = Nothing,
       model_id = Nothing,
       brand_id = Nothing,
-      tags =
-        mbAttach "discount" (show <$> prodInst.discount) $
-          mbAttach "nearestDriverDist" prodInst.udf1 [],
-      ttl = Nothing
+      tags = mbAttach "nearestDriverDist" prodInst.udf1 [],
+      ttl = Nothing,
+      discount = prodInst.discount
     }
   where
     mbAttach name mbValue list =

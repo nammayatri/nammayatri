@@ -58,4 +58,4 @@ fareSum FareParameters {..} =
 fareSumWithDiscount :: FareParameters -> Amount
 fareSumWithDiscount fp@FareParameters {..} = do
   let fareSumm = fareSum fp
-  maybe fareSumm (fareSumm -) discount
+  max 0 $ maybe fareSumm (fareSumm -) discount
