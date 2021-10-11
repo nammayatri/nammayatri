@@ -3,9 +3,9 @@ ALTER TABLE ONLY atlas_transporter.product_instance
 
 UPDATE atlas_transporter.product_instance
   SET vehicle_variant =
-    ( SELECT COALESCE(variant, 'SUV')
-        FROM atlas_transporter.vehicle
-        WHERE atlas_transporter.vehicle.id = atlas_transporter.product_instance.entity_id
+    ( SELECT COALESCE(atlas_transporter."case".udf1, 'SUV')
+        FROM atlas_transporter."case"
+        WHERE atlas_transporter."case".id = atlas_transporter.product_instance.case_id
     );
 
 UPDATE atlas_transporter.product_instance
