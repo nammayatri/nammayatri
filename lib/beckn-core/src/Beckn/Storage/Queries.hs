@@ -126,7 +126,17 @@ createOne ::
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   m ()
-createOne dbTable value = runSqlDB $ createOne' dbTable value
+createOne = create
+
+create ::
+  ( HasCallStack,
+    DBFlow m r,
+    PgTable table db
+  ) =>
+  Table table db ->
+  B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
+  m ()
+create dbTable value = runSqlDB $ create' dbTable value
 
 delete ::
   ( HasCallStack,
@@ -161,7 +171,21 @@ createOne' ::
   Table table db ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
   SqlDB ()
-createOne' dbTable value = lift . L.insertRows $ B.insert dbTable value
+createOne' = create'
+
+createMany' ::
+  (HasCallStack, PgTable table db) =>
+  Table table db ->
+  B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
+  SqlDB ()
+createMany' = create'
+
+create' ::
+  (HasCallStack, PgTable table db) =>
+  Table table db ->
+  B.SqlInsertValues Postgres (table (B.QExpr Postgres s)) ->
+  SqlDB ()
+create' dbTable value = lift . L.insertRows $ B.insert dbTable value
 
 delete' ::
   (HasCallStack, ReadablePgTable table db) =>

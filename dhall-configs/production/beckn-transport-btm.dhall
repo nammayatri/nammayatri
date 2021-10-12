@@ -22,6 +22,7 @@ let driverAllocationConfig =
   { defaultSortMode = SortMode.ETA
   , driverNotificationExpiry = +25 -- seconds
   , rideAllocationExpiry = +180 -- seconds
+  , driverBatchSize = +5
   , requestsNumPerIteration = +50
   , processDelay = +1000 -- ms
   , shards = shards

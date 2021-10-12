@@ -17,20 +17,20 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.notificationStatus . DB.transporterDb <$> getSchemaName
 
-create :: DBFlow m r => NotificationStatus.NotificationStatus -> m ()
-create NotificationStatus.NotificationStatus {..} = do
+createMany :: DBFlow m r => [NotificationStatus.NotificationStatus] -> m ()
+createMany notificationStatus = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertValue NotificationStatus.NotificationStatus {..})
+  DB.create dbTable $ Storage.insertValues notificationStatus
 
-updateStatus :: DBFlow m r => Id Ride -> Id Driver -> NotificationStatus.AnswerStatus -> m ()
-updateStatus rideId_ driverId_ status_ = do
+updateStatus :: DBFlow m r => Id Ride -> NotificationStatus.AnswerStatus -> [Id Driver] -> m ()
+updateStatus rideId_ status_ driverIds = do
   dbTable <- getDbTable
-  DB.update dbTable (setClause status_) (predicate rideId_ driverId_)
+  DB.update dbTable (setClause status_) (predicate rideId_ driverIds)
   where
     setClause s NotificationStatus.NotificationStatus {..} = status <-. B.val_ s
-    predicate rId dId NotificationStatus.NotificationStatus {..} =
+    predicate rId ids NotificationStatus.NotificationStatus {..} =
       rideId ==. B.val_ rId
-        &&. driverId ==. B.val_ dId
+        &&. driverId `B.in_` (B.val_ <$> ids)
 
 fetchRefusedNotificationsByRideId :: DBFlow m r => Id Ride -> m [NotificationStatus.NotificationStatus]
 fetchRefusedNotificationsByRideId rideId_ = do
@@ -49,10 +49,10 @@ fetchActiveNotifications = do
     predicate NotificationStatus.NotificationStatus {..} =
       status ==. B.val_ NotificationStatus.NOTIFIED
 
-findActiveNotificationByRideId :: DBFlow m r => Id Ride -> m (Maybe NotificationStatus.NotificationStatus)
+findActiveNotificationByRideId :: DBFlow m r => Id Ride -> m [NotificationStatus.NotificationStatus]
 findActiveNotificationByRideId rideId_ = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate
+  DB.findAll dbTable identity predicate
   where
     predicate NotificationStatus.NotificationStatus {..} =
       rideId ==. B.val_ rideId_

@@ -3,6 +3,7 @@ module Services.Allocation.Allocation where
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Order (CancellationSource (..))
+import Beckn.Utils.NonEmpty
 import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime)
@@ -40,8 +41,10 @@ data NotificationStatus
   | Ignored
   deriving (Eq, Show)
 
-data CurrentNotification
-  = CurrentNotification (Id Driver) UTCTime
+data CurrentNotification = CurrentNotification
+  { driverId :: Id Driver,
+    expiryTime :: UTCTime
+  }
   deriving (Show)
 
 data RideStatus
@@ -83,18 +86,19 @@ data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,
     getConfiguredNotificationTime :: m Seconds,
     getConfiguredAllocationTime :: m Seconds,
+    getDriverBatchSize :: m Int,
     getRequests :: ShortId Organization -> Integer -> m [RideRequest],
     getDriverPool :: Id Ride -> m [Id Driver],
-    getCurrentNotification :: Id Ride -> m (Maybe CurrentNotification),
+    getCurrentNotifications :: Id Ride -> m [CurrentNotification],
     cleanupOldNotifications :: m Int,
-    sendNewRideNotification :: Id Ride -> Id Driver -> m (),
+    sendNewRideNotifications :: Id Ride -> NonEmpty (Id Driver) -> m (),
     sendRideNotAssignedNotification :: Id Ride -> Id Driver -> m (),
-    addNotificationStatus :: Id Ride -> Id Driver -> UTCTime -> m (),
-    updateNotificationStatus :: Id Ride -> Id Driver -> NotificationStatus -> m (),
-    resetLastRejectionTime :: Id Driver -> m (),
+    addNotificationStatuses :: Id Ride -> NonEmpty (Id Driver) -> UTCTime -> m (),
+    updateNotificationStatuses :: Id Ride -> NotificationStatus -> NonEmpty (Id Driver) -> m (),
+    resetLastRejectionTimes :: NonEmpty (Id Driver) -> m (),
     getAttemptedDrivers :: Id Ride -> m [Id Driver],
     getDriversWithNotification :: m [Id Driver],
-    getFirstDriverInTheQueue :: NonEmpty (Id Driver) -> m (Id Driver),
+    getTopDriversByIdleTime :: Int -> [Id Driver] -> m [Id Driver],
     checkAvailability :: NonEmpty (Id Driver) -> m [Id Driver],
     assignDriver :: Id Ride -> Id Driver -> m (),
     cancelRide :: Id Ride -> SRCR.RideCancellationReason -> m (),
@@ -102,7 +106,8 @@ data ServiceHandle m = ServiceHandle
     addAllocationRequest :: ShortId Organization -> Id Ride -> m (),
     getRideInfo :: Id Ride -> m RideInfo,
     removeRequest :: Id SRR.RideRequest -> m (),
-    logEvent :: AllocationEventType -> Id Ride -> Maybe (Id Driver) -> m (),
+    logEvent :: AllocationEventType -> Id Ride -> m (),
+    logDriverEvents :: AllocationEventType -> Id Ride -> NonEmpty (Id Driver) -> m (),
     metrics :: BTMMetricsHandle m
   }
 
@@ -138,32 +143,30 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
           DriverResponse response ->
             case rideStatus of
               Confirmed -> do
-                mCurrentNotification <- getCurrentNotification rideId
-                logInfo $ "getCurrentNotification " <> show mCurrentNotification
-                case mCurrentNotification of
-                  Just (CurrentNotification driverId _) -> do
-                    if driverId == response.driverId
-                      then case response.status of
-                        Ride.ACCEPT -> do
-                          logInfo $ "Assigning driver" <> show response.driverId
-                          assignDriver rideId response.driverId
-                          cleanupNotifications rideId
-                          logEvent MarkedAsAccepted rideId $ Just response.driverId
-                        Ride.REJECT ->
-                          processRejection handle False rideId response.driverId shortOrgId
-                      else logDriverNoLongerNotified rideId response.driverId
-                  Nothing ->
-                    logDriverNoLongerNotified rideId response.driverId
-              Assigned ->
+                currentNotifications <- getCurrentNotifications rideId
+                logInfo $ "getCurrentNotifications" <> show currentNotifications
+                if response.driverId `elem` map (.driverId) currentNotifications
+                  then case response.status of
+                    Ride.ACCEPT -> do
+                      logInfo $ "Assigning driver" <> show response.driverId
+                      assignDriver rideId response.driverId
+                      cleanupNotifications rideId
+                      logDriverEvents MarkedAsAccepted rideId $ singleton response.driverId
+                    Ride.REJECT ->
+                      processRejection handle rideId response.driverId
+                  else logDriverNoLongerNotified rideId response.driverId
+              Assigned -> do
                 logInfo "Ride is assigned, response request skipped"
-              Cancelled ->
+                sendRideNotAssignedNotification rideId response.driverId
+              Cancelled -> do
                 logInfo "Ride is cancelled, response request skipped"
+                sendRideNotAssignedNotification rideId response.driverId
               _ -> logWarning $ "Ride status is " <> show rideStatus <> ", response request skipped"
           Cancellation ->
             case rideStatus of
               status | status == Confirmed || status == Assigned -> do
                 cancel handle rideId ByUser Nothing
-                logEvent ConsumerCancelled rideId Nothing
+                logEvent ConsumerCancelled rideId
               _ ->
                 logWarning $ "Ride status is " <> show rideStatus <> ", cancellation request skipped"
         logInfo "End processing request"
@@ -189,59 +192,50 @@ processAllocation handle@ServiceHandle {..} shortOrgId rideInfo = do
   if allocationTimeFinished
     then do
       cancel handle rideId ByAllocator $ Just AllocationTimeExpired
-      logEvent AllocationTimeFinished rideId Nothing
+      logEvent AllocationTimeFinished rideId
     else do
-      mCurrentNotification <- getCurrentNotification rideId
-      logInfo $ "getCurrentNotification " <> show mCurrentNotification
-      case mCurrentNotification of
-        Just (CurrentNotification driverId expiryTime) -> do
-          let notificationTimeFinished = currentTime > expiryTime
+      currentNotifications <- getCurrentNotifications rideId
+      logInfo $ "getCurrentNotification " <> show currentNotifications
+      case currentNotifications of
+        notification : notifications -> do
+          let notificationTimeFinished = currentTime > notification.expiryTime
           if notificationTimeFinished
-            then processExpiredNotification handle shortOrgId rideId driverId
+            then do
+              processExpiration handle rideId $ fmap (.driverId) $ notification :| notifications
+              proceedToNewDrivers handle rideId shortOrgId
             else checkRideLater handle shortOrgId rideId
-        Nothing ->
-          proceedToNextDriver handle rideId shortOrgId
-
-processExpiredNotification ::
-  MonadHandler m =>
-  ServiceHandle m ->
-  ShortId Organization ->
-  Id Ride ->
-  Id Driver ->
-  m ()
-processExpiredNotification handle@ServiceHandle {..} shortOrgId rideId driverId = do
-  logInfo $ "Notified ride not assigned to driver " <> getId driverId
-  sendRideNotAssignedNotification rideId driverId
-  processRejection handle True rideId driverId shortOrgId
+        [] ->
+          proceedToNewDrivers handle rideId shortOrgId
 
 processRejection ::
   MonadHandler m =>
   ServiceHandle m ->
-  Bool ->
   Id Ride ->
   Id Driver ->
-  ShortId Organization ->
   m ()
-processRejection handle@ServiceHandle {..} ignored rideId driverId shortOrgId = do
+processRejection ServiceHandle {..} rideId driverId = do
   logInfo "Processing rejection"
-  let status = if ignored then Ignored else Rejected
-  let event = if ignored then MarkedAsIgnored else MarkedAsRejected
-  resetLastRejectionTime driverId
-  updateNotificationStatus rideId driverId status
-  logEvent event rideId $ Just driverId
-  proceedToNextDriver handle rideId shortOrgId
+  resetLastRejectionTimes $ singleton driverId
+  updateNotificationStatuses rideId Rejected $ singleton driverId
+  logDriverEvents MarkedAsRejected rideId $ singleton driverId
 
-proceedToNextDriver ::
+processExpiration :: MonadHandler m => ServiceHandle m -> Id Ride -> NonEmpty (Id Driver) -> m ()
+processExpiration ServiceHandle {..} rideId driverIds = do
+  logInfo "Processing expiration"
+  resetLastRejectionTimes driverIds
+  updateNotificationStatuses rideId Ignored driverIds
+  logDriverEvents MarkedAsIgnored rideId driverIds
+
+proceedToNewDrivers ::
   MonadHandler m =>
   ServiceHandle m ->
   Id Ride ->
   ShortId Organization ->
   m ()
-proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
-  logInfo "Proceed to next driver"
+proceedToNewDrivers handle@ServiceHandle {..} rideId shortOrgId = do
+  logInfo "Proceed to new drivers"
   driverPool <- getDriverPool rideId
   logInfo $ "DriverPool " <> T.intercalate ", " (getId <$> driverPool)
-
   attemptedDrivers <- getAttemptedDrivers rideId
   let newDrivers = filter (`notElem` attemptedDrivers) driverPool
   case newDrivers of
@@ -253,7 +247,7 @@ proceedToNextDriver handle@ServiceHandle {..} rideId shortOrgId = do
       processFilteredPool handle rideId filteredPool shortOrgId
     [] -> do
       cancel handle rideId ByAllocator $ Just NoDriversInRange
-      logEvent EmptyDriverPool rideId Nothing
+      logEvent EmptyDriverPool rideId
 
 processFilteredPool ::
   MonadHandler m =>
@@ -263,20 +257,22 @@ processFilteredPool ::
   ShortId Organization ->
   m ()
 processFilteredPool handle@ServiceHandle {..} rideId filteredPool shortOrgId = do
-  case filteredPool of
+  sortMode <- getDriverSortMode
+  batchSize <- getDriverBatchSize
+  topDrivers <-
+    case sortMode of
+      ETA -> pure $ take batchSize filteredPool
+      IdleTime -> getTopDriversByIdleTime batchSize filteredPool
+  case topDrivers of
     driverId : driverIds -> do
-      sortMode <- getDriverSortMode
-      firstDriver <-
-        case sortMode of
-          ETA -> pure driverId
-          IdleTime -> getFirstDriverInTheQueue $ driverId :| driverIds
+      let drivers = driverId :| driverIds
       currentTime <- getCurrentTime
       notificationTime <- fromIntegral <$> getConfiguredNotificationTime
       let expiryTime = addUTCTime notificationTime currentTime
-      sendNewRideNotification rideId firstDriver
-      addNotificationStatus rideId firstDriver expiryTime
-      logInfo $ "Notified driver " <> getId firstDriver
-      logEvent NotificationSent rideId $ Just firstDriver
+      sendNewRideNotifications rideId drivers
+      addNotificationStatuses rideId drivers expiryTime
+      logInfo $ "Notified drivers " <> show (map getId topDrivers)
+      logDriverEvents NotificationSent rideId drivers
     [] -> do
       logInfo "All new drivers are unavailable or already have notifications. Waiting."
   checkRideLater handle shortOrgId rideId

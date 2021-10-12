@@ -36,6 +36,7 @@ data DriverAllocationConfig = DriverAllocationConfig
   { driverNotificationExpiry :: Seconds,
     rideAllocationExpiry :: Seconds,
     defaultSortMode :: SortMode,
+    driverBatchSize :: Int,
     requestsNumPerIteration :: Integer,
     processDelay :: Milliseconds,
     shards :: Shards

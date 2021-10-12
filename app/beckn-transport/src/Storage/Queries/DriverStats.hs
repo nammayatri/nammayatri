@@ -9,7 +9,6 @@ import Database.Beam ((<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.App
-import Types.Error
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.DriverStats as Storage
 import Utils.Common
@@ -28,18 +27,22 @@ createInitialDriverStats driverId_ = do
           }
   DB.createOne' dbTable (Storage.Common.insertValue driverStats)
 
-getFirstDriverInTheQueue :: DBFlow m r => [Id Driver] -> m (Id Driver)
-getFirstDriverInTheQueue ids = do
+getTopDriversByIdleTime :: Int -> DBFlow m r => [Id Driver] -> m [Id Driver]
+getTopDriversByIdleTime count ids = do
   dbTable <- getDbTable
-  DB.findAll dbTable (B.limit_ 1 . B.orderBy_ order) predicate
-    >>= fromMaybeM EmptyDriverPool . listToMaybe . map (.driverId)
+  let integerCount = fromIntegral count
+  drivers <- DB.findAll dbTable (B.limit_ integerCount . B.orderBy_ order) predicate
+  pure $ map (.driverId) drivers
   where
     predicate Storage.DriverStats {..} = driverId `B.in_` (B.val_ <$> ids)
     order Storage.DriverStats {..} = B.asc_ idleSince
 
--- TODO: delete in favour of transactional version
+-- TODO: delete in favour of transactional versions
 updateIdleTimeFlow :: DBFlow m r => Id Driver -> m ()
 updateIdleTimeFlow = DB.runSqlDB . updateIdleTime
+
+updateIdleTimesFlow :: DBFlow m r => [Id Driver] -> m ()
+updateIdleTimesFlow = DB.runSqlDB . updateIdleTimes
 
 updateIdleTime :: Id Driver -> DB.SqlDB ()
 updateIdleTime driverId_ = do
@@ -52,6 +55,18 @@ updateIdleTime driverId_ = do
         [ idleSince <-. B.val_ now
         ]
     predicate id Storage.DriverStats {..} = driverId ==. B.val_ id
+
+updateIdleTimes :: [Id Driver] -> DB.SqlDB ()
+updateIdleTimes driverIds = do
+  dbTable <- getDbTable
+  now <- asks DB.currentTime
+  DB.update' dbTable (setClause now) (predicate driverIds)
+  where
+    setClause now Storage.DriverStats {..} =
+      mconcat
+        [ idleSince <-. B.val_ now
+        ]
+    predicate ids Storage.DriverStats {..} = driverId `B.in_` (B.val_ <$> ids)
 
 fetchAll :: DBFlow m r => m [Storage.DriverStats]
 fetchAll = do
