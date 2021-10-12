@@ -21,6 +21,8 @@ import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.SilentLogger ()
 
+type NotificationStatusMap = (Map (Id Ride, Id Driver) (NotificationStatus, UTCTime))
+
 org1 :: ShortId Organization
 org1 = ShortId "Org1"
 
@@ -89,12 +91,41 @@ checkRideStatus Repository {..} rideId expectedStatus = do
     Nothing -> assertFailure $ "Ride " <> show (rideId.getId) <> " not found"
     Just rideInfo -> rideInfo.rideStatus @?= expectedStatus
 
+addNotification ::
+  Id Ride ->
+  UTCTime ->
+  NotificationStatusMap ->
+  Id Driver ->
+  NotificationStatusMap
+addNotification rideId expiryTime notificationStatuses driverId =
+  Map.insert
+    (rideId, driverId)
+    (Notified, expiryTime)
+    notificationStatuses
+
+updateNotification ::
+  Id Ride ->
+  NotificationStatus ->
+  NotificationStatusMap ->
+  Id Driver ->
+  NotificationStatusMap
+updateNotification rideId nStatus notificationStatuses driverId =
+  Map.adjust
+    (\(_, expiryTime) -> (nStatus, expiryTime))
+    (rideId, driverId)
+    notificationStatuses
+
+toCurrentNotification :: ((Id Ride, Id Driver), (NotificationStatus, UTCTime)) -> CurrentNotification
+toCurrentNotification ((_, driverId), (_, expiryTime)) =
+  CurrentNotification driverId expiryTime
+
 handle :: Repository -> ServiceHandle IO
 handle repository@Repository {..} =
   ServiceHandle
     { getDriverSortMode = pure ETA,
       getConfiguredAllocationTime = pure allocationTime,
       getConfiguredNotificationTime = pure notificationTime,
+      getDriverBatchSize = pure 5,
       getRequests = \_ numRides -> do
         rideRequests <- readIORef rideRequestsVar
         let requests = Map.elems rideRequests
@@ -103,8 +134,8 @@ handle repository@Repository {..} =
         poolMap <- readIORef driverPoolVar
         let pool = fromMaybe [] $ Map.lookup rideId poolMap
         pure pool,
-      sendNewRideNotification = \_ _ -> pure (),
-      getCurrentNotification = \rideId -> do
+      sendNewRideNotifications = \_ _ -> pure (),
+      getCurrentNotifications = \rideId -> do
         currentTime <- Time.getCurrentTime
         notificationStatus <- readIORef notificationStatusVar
         let filtered =
@@ -112,24 +143,21 @@ handle repository@Repository {..} =
                 Map.filterWithKey
                   (\(id, _) notification -> id == rideId && isNotified currentTime notification)
                   notificationStatus
-        case filtered of
-          [((_, driverId), (_, expiryTime))] ->
-            pure $ Just $ CurrentNotification driverId expiryTime
-          _ -> pure Nothing,
+        pure $ map toCurrentNotification filtered,
       cleanupOldNotifications = do
         compareTime <- Time.getCurrentTime <&> Time.addUTCTime (-300)
         modifyIORef notificationStatusVar $
           Map.filter (\(_, expiryTime) -> compareTime < expiryTime)
         return 0,
-      addNotificationStatus = \rideId driverId expiryTime -> do
+      addNotificationStatuses = \rideId driverIds expiryTime ->
         modifyIORef notificationStatusVar $
-          Map.insert (rideId, driverId) (Notified, expiryTime),
-      updateNotificationStatus = \rideId driverId nStatus -> do
+          \notificationStatuses ->
+            foldl' (addNotification rideId expiryTime) notificationStatuses driverIds,
+      updateNotificationStatuses = \rideId nStatus driverIds ->
         modifyIORef notificationStatusVar $
-          Map.adjust
-            (\(_, expiryTime) -> (nStatus, expiryTime))
-            (rideId, driverId),
-      resetLastRejectionTime = \_ -> pure (),
+          \notificationStatuses ->
+            foldl' (updateNotification rideId nStatus) notificationStatuses driverIds,
+      resetLastRejectionTimes = \_ -> pure (),
       getAttemptedDrivers = \rideId -> do
         notificationStatus <- readIORef notificationStatusVar
         let filtered =
@@ -147,7 +175,7 @@ handle repository@Repository {..} =
       cancelRide = \rideId _ -> modifyIORef ridesVar $ Map.adjust (#rideStatus .~ Cancelled) rideId,
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),
-      getFirstDriverInTheQueue = pure . NonEmpty.head,
+      getTopDriversByIdleTime = \count driverIds -> pure $ take count driverIds,
       checkAvailability = pure . NonEmpty.toList,
       sendRideNotAssignedNotification = \_ _ -> pure (),
       removeRequest = modifyIORef rideRequestsVar . Map.delete,
@@ -157,7 +185,8 @@ handle repository@Repository {..} =
         case Map.lookup rideId rides of
           Just rideInfo -> pure rideInfo
           Nothing -> assertFailure $ "Ride " <> show rideId <> " not found in the map.",
-      logEvent = \_ _ _ -> pure (),
+      logEvent = \_ _ -> pure (),
+      logDriverEvents = \_ _ _ -> pure (),
       metrics =
         BTMMetricsHandle
           { incrementTaskCounter = return (),
@@ -180,7 +209,7 @@ data Repository = Repository
     driverPoolVar :: IORef (Map (Id Ride) [Id Driver]),
     ridesVar :: IORef (Map (Id Ride) RideInfo),
     rideRequestsVar :: IORef (Map (Id SRR.RideRequest) RideRequest),
-    notificationStatusVar :: IORef (Map (Id Ride, Id Driver) (NotificationStatus, UTCTime)),
+    notificationStatusVar :: IORef NotificationStatusMap,
     assignmentsVar :: IORef [(Id Ride, Id Driver)]
   }
 
