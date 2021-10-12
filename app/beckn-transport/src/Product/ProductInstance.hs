@@ -169,9 +169,6 @@ assignDriver productInstanceId driverId = do
   piList <-
     ordPi.parentId & fromMaybeM (PIFieldNotPresent "parent_id")
       >>= PIQ.findAllByParentId
-  headPi <- case piList of
-    p : _ -> pure p
-    [] -> throwError PIDoesNotExist
   driver <-
     PersQ.findPersonById (cast driverId)
       >>= fromMaybeM PersonDoesNotExist
@@ -187,8 +184,9 @@ assignDriver productInstanceId driverId = do
   DB.runSqlDBTransaction (AQ.assignDriver piIdList vehicle decDriver)
 
   fork "assignDriver - Notify BAP" $ do
-    notifyUpdateToBAP searchPi ordPi PI.TRIP_ASSIGNED
-    Notify.notifyDriver notificationType notificationTitle (message headPi) driver.id driver.deviceToken
+    uOrdPi <- PIQ.findById productInstanceId >>= fromMaybeM PIDoesNotExist
+    notifyUpdateToBAP searchPi uOrdPi PI.TRIP_ASSIGNED
+    Notify.notifyDriver notificationType notificationTitle (message uOrdPi) driver.id driver.deviceToken
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
