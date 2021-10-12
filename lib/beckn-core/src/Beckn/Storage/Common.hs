@@ -4,6 +4,7 @@
 
 module Beckn.Storage.Common
   ( insertValue,
+    insertValues,
     prepareDBConnections,
     getOrInitConn,
     insertExpression,
@@ -23,6 +24,12 @@ insertValue ::
   table B.Identity ->
   B.SqlInsertValues Postgres (table (B.QExpr Postgres s))
 insertValue value = B.insertValues [value]
+
+insertValues ::
+  _ =>
+  [table B.Identity] ->
+  B.SqlInsertValues Postgres (table (B.QExpr Postgres s))
+insertValues = B.insertValues
 
 insertExpression ::
   (B.Beamable table) =>

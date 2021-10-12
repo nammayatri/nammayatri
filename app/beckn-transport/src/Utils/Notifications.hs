@@ -227,7 +227,7 @@ notifyDriverNewAllocation rideBookingId personId =
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST
         }
 
-notifyDriverUnassigned ::
+notifyRideNotAssigned ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
@@ -235,13 +235,14 @@ notifyDriverUnassigned ::
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverUnassigned rideBookingId personId = FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
+notifyRideNotAssigned rideBookingId personId =
+  FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "Ride not assigned."
     body =
       FCM.FCMNotificationBody $
         unwords
-          [ "Ride could not be assigned to you.",
+          [ "Could not assign the ride as it is no longer available",
             "Please wait for another request."
           ]
     notificationData =

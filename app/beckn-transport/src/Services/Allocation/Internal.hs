@@ -51,6 +51,9 @@ getConfiguredAllocationTime = asks (.driverAllocationConfig.rideAllocationExpiry
 getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]) => Id RideBooking -> m [Id Driver]
 getDriverPool = Confirm.getDriverPool
 
+getDriverBatchSize :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Int
+getDriverBatchSize = asks (.driverAllocationConfig.driverBatchSize)
+
 getRequests :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest]
 getRequests shortOrgId numRequests = do
   allRequests <- QRR.fetchOldest shortOrgId numRequests
@@ -144,13 +147,13 @@ toRideRequest req =
           Just driverResponse -> Right $ DriverResponse driverResponse
           Nothing -> Left $ "Error decoding driver response: " <> show req.info
 
-getCurrentNotification ::
+getCurrentNotifications ::
   DBFlow m r =>
   Id RideBooking ->
-  m (Maybe CurrentNotification)
-getCurrentNotification rideBookingId = do
-  notificationStatus <- QNS.findActiveNotificationByRideId rideBookingId
-  pure $ buildCurrentNotification <$> notificationStatus
+  m [CurrentNotification]
+getCurrentNotifications rideBookingId = do
+  notificationStatuses <- QNS.findActiveNotificationByRideId rideBookingId
+  pure $ map buildCurrentNotification notificationStatuses
   where
     buildCurrentNotification notificationStatus =
       Alloc.CurrentNotification
@@ -160,20 +163,22 @@ getCurrentNotification rideBookingId = do
 cleanupOldNotifications :: DBFlow m r => m Int
 cleanupOldNotifications = QNS.cleanupOldNotifications
 
-sendNewRideNotification ::
+sendNewRideNotifications ::
   ( DBFlow m r,
     FCMFlow m r,
     CoreMetrics m
   ) =>
   Id RideBooking ->
-  Id Driver ->
+  NonEmpty (Id Driver) ->
   m ()
-sendNewRideNotification rideBookingId driverId = do
-  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
-  person <-
-    QP.findPersonById (cast driverId)
-      >>= fromMaybeM PersonNotFound
-  notifyDriverNewAllocation rideBooking.id person.id person.deviceToken
+sendNewRideNotifications rideBookingId = traverse_ sendNewRideNotification
+  where
+    sendNewRideNotification driverId = do
+      rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
+      person <-
+        QP.findPersonById (cast driverId)
+          >>= fromMaybeM PersonNotFound
+      notifyDriverNewAllocation rideBooking.id person.id person.deviceToken
 
 sendRideNotAssignedNotification ::
   ( DBFlow m r,
@@ -188,14 +193,15 @@ sendRideNotAssignedNotification rideBookingId driverId = do
   person <-
     QP.findPersonById (cast driverId)
       >>= fromMaybeM PersonNotFound
-  notifyDriverUnassigned rideBooking.id person.id person.deviceToken
+  notifyRideNotAssigned rideBooking.id person.id person.deviceToken
 
-updateNotificationStatus :: DBFlow m r => Id RideBooking -> Id Driver -> NotificationStatus -> m ()
-updateNotificationStatus rideBookingId driverId =
-  QNS.updateStatus rideBookingId driverId . allocNotifStatusToStorageStatus
+updateNotificationStatuses :: DBFlow m r => Id RideBooking -> NotificationStatus -> NonEmpty (Id Driver) -> m ()
+updateNotificationStatuses rideBookingId status driverIds = do
+  let storageStatus = allocNotifStatusToStorageStatus status
+  QNS.updateStatus rideBookingId storageStatus $ toList driverIds
 
-resetLastRejectionTime :: DBFlow m r => Id Driver -> m ()
-resetLastRejectionTime = QDS.updateIdleTimeFlow
+resetLastRejectionTimes :: DBFlow m r => NonEmpty (Id Driver) -> m ()
+resetLastRejectionTimes driverIds = QDS.updateIdleTimesFlow $ toList driverIds
 
 getAttemptedDrivers :: DBFlow m r => Id RideBooking -> m [Id Driver]
 getAttemptedDrivers rideBookingId =
@@ -204,8 +210,8 @@ getAttemptedDrivers rideBookingId =
 getDriversWithNotification :: DBFlow m r => m [Id Driver]
 getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (.driverId)
 
-getFirstDriverInTheQueue :: DBFlow m r => NonEmpty (Id Driver) -> m (Id Driver)
-getFirstDriverInTheQueue = QDS.getFirstDriverInTheQueue . toList
+getTopDriversByIdleTime :: DBFlow m r => Int -> [Id Driver] -> m [Id Driver]
+getTopDriversByIdleTime = QDS.getTopDriversByIdleTime
 
 checkAvailability :: DBFlow m r => NonEmpty (Id Driver) -> m [Id Driver]
 checkAvailability driverIds = do
@@ -263,22 +269,26 @@ addAllocationRequest shortOrgId rideBookingId = do
           }
   QRR.createFlow rideRequest
 
-addNotificationStatus ::
+addNotificationStatuses ::
   DBFlow m r =>
   Id RideBooking ->
-  Id Driver ->
+  NonEmpty (Id Driver) ->
   UTCTime ->
   m ()
-addNotificationStatus rideBookingId driverId expiryTime = do
-  uuid <- generateGUID
-  QNS.create
-    SNS.NotificationStatus
-      { id = Id uuid,
-        rideBookingId = rideBookingId,
-        driverId = driverId,
-        status = SNS.NOTIFIED,
-        expiresAt = expiryTime
-      }
+addNotificationStatuses rideBookingId driverIds expiryTime = do
+  notificationStatuses <- traverse createNotificationStatus driverIds
+  QNS.createMany $ toList notificationStatuses
+  where
+    createNotificationStatus driverId = do
+      uuid <- generateGUID
+      pure $
+        SNS.NotificationStatus
+          { id = Id uuid,
+            rideBookingId = rideBookingId,
+            driverId = driverId,
+            status = SNS.NOTIFIED,
+            expiresAt = expiryTime
+          }
 
 addAvailableDriver :: SDriverInfo.DriverInformation -> [Id Driver] -> [Id Driver]
 addAvailableDriver driverInfo availableDriversIds =
@@ -286,8 +296,13 @@ addAvailableDriver driverInfo availableDriversIds =
     then cast (driverInfo.driverId) : availableDriversIds
     else availableDriversIds
 
-logEvent :: DBFlow m r => AllocationEventType -> Id RideBooking -> Maybe (Id Driver) -> m ()
-logEvent = logAllocationEvent
+logEvent :: DBFlow m r => AllocationEventType -> Id RideBooking -> m ()
+logEvent eventType rideBookingId = logAllocationEvent eventType rideBookingId Nothing
+
+logDriverEvents :: DBFlow m r => AllocationEventType -> Id RideBooking -> NonEmpty (Id Driver) -> m ()
+logDriverEvents eventType rideBookingId = traverse_ logDriverEvent
+  where
+    logDriverEvent driver = logAllocationEvent eventType rideBookingId $ Just driver
 
 -- TODO: We don't need RideInfo anymore, we can just use RideBooking directly. Remove this.
 getRideInfo :: DBFlow m r => Id RideBooking -> m RideInfo
