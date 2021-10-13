@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.Types.Predicate
   ( module Beckn.Types.Predicate,
     module Kleene,
@@ -8,8 +10,11 @@ where
 import Algebra.Lattice
 import qualified Data.Foldable as F
 import Data.Ix (inRange)
+import Data.List (nub)
 import qualified Data.Text as T
 import EulerHS.Prelude
+import GHC.Records.Extra
+import GHC.TypeLits (KnownSymbol, symbolVal)
 import Kleene
 import qualified Kleene.DFA as KDFA
 import Kleene.Internal.Pretty (pretty)
@@ -148,6 +153,14 @@ instance Show n => ShowablePredicate (Max n) where
 
 instance Ord n => Predicate n (Max n) where
   pFun (Max m) = (<= m)
+
+data UniqueField f = UniqueField
+
+instance KnownSymbol f => ShowablePredicate (UniqueField f) where
+  pShow _ name = T.pack (symbolVal (Proxy @f)) <> " field must be unique for each element of the " <> name <> " list."
+
+instance (Container c, Ord a, HasField n (Element c) a) => Predicate c (UniqueField n) where
+  pFun _ list = length list == (length . nub . map (getField @n) $ toList list)
 
 liftPredShow :: ShowablePredicate p => Text -> p -> Text -> Text
 liftPredShow fname p text = showFunction fname (pShow p text)
