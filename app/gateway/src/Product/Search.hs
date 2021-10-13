@@ -16,7 +16,6 @@ import qualified EulerHS.Types as ET
 import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Product.Validation
-import qualified Temporary.Utils as TempUtils
 import qualified Types.API.Gateway.Search as ExternalAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
 import Types.Beckn.API.Callback
@@ -29,7 +28,7 @@ search ::
   SearchReq ->
   FlowHandler AckResponse
 search (SignatureAuthResult proxySign org) req = withFlowHandlerBecknAPI $
-  TempUtils.withTransactionIdLogTag req $ do
+  withTransactionIdLogTag req $ do
     validateContext "search" (req.context)
     unless (isJust (req.context.bap_uri)) $
       throwError $ InvalidRequest "No bap URI in context."
@@ -59,7 +58,7 @@ searchCb ::
   OnSearchReq ->
   FlowHandler AckResponse
 searchCb (SignatureAuthResult proxySign org) req@CallbackReq {context} = withFlowHandlerBecknAPI $
-  TempUtils.withTransactionIdLogTag req . withLogTag "search_cb" $ do
+  withTransactionIdLogTag req . withLogTag "search_cb" $ do
     providerUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) do
       validateContext "on_search" context

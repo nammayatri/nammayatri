@@ -222,7 +222,7 @@ makeSignatureString params bodyHash allHeaders =
               "(expires)" | alg == Hs2019 || alg == Ed25519 -> (show :: Int -> ByteString) . floor <$> expires params
               "(created)" -> Nothing -- FIXME: this should error out
               "(expires)" -> Nothing -- FIXME: this should error out
-              "digest" -> pure $ "BLAKE-512=" <> Base64.encode (show bodyHash)
+              "digest" -> pure $ "BLAKE-512=" <> Base64.encode (BA.convert bodyHash)
               _ ->
                 -- Find all instances of this header, concatenate values separated by a comma
                 let ciHeader = CI.mk $ encodeUtf8 h

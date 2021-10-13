@@ -5,11 +5,20 @@ module Product.Search where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
+import qualified Beckn.Types.Core.API.Callback as Core8
 import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
 import qualified Beckn.Types.Core.Item as Core
 import Beckn.Types.Core.Location
+import qualified Beckn.Types.Core.Migration.API.Search as Core9
+import qualified Beckn.Types.Core.Migration.API.Types as Core9
+import qualified Beckn.Types.Core.Migration.Context as Core9
+import qualified Beckn.Types.Core.Migration.Gps as Mig
+import qualified Beckn.Types.Core.Migration.Intent as Mig
+import qualified Beckn.Types.Core.Migration.Location as Mig
+import qualified Beckn.Types.Core.Multiversional.Callback as MVCallback
+import qualified Beckn.Types.Core.Multiversional.Search as MVSearch
 import Beckn.Types.Core.Price
 import Beckn.Types.Core.Tag
 import Beckn.Types.Id
@@ -20,11 +29,15 @@ import Beckn.Types.Mobility.Stop
 import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Control.Lens ((?~))
+import Data.Aeson (withObject, (.:))
+import Data.Aeson.Types (parseEither, parseMaybe)
 import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
+import Product.MetroOffer (buildContextMetro, searchCbMetro)
 import Product.Serviceability
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Quote as QQuote
@@ -62,11 +75,16 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     QSearchRequest.create searchRequest
   env <- ask
   let bapNwAddr = env.nwAddress
-  context <- buildContext "search" txnId (Just bapNwAddr) Nothing
-  let intent = mkIntent req now
-      tags = Just [Tag "distance" $ show distance]
-  fork "search" . withRetry $
-    ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
+  fork "search" . withRetry $ do
+    fork "search 0.8" $ do
+      context <- buildContext "search" txnId (Just bapNwAddr) Nothing
+      let intent = mkIntent req now
+          tags = Just [Tag "distance" $ show distance]
+      ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
+    fork "search 0.9" $ do
+      contextMig <- buildContextMetro Core9.SEARCH txnId bapNwAddr Nothing
+      intentMig <- mkIntentMig req
+      ExternalAPI.searchMig (xGatewayUri env) (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
   return . API.SearchRes $ searchRequest.id
   where
     validateServiceability = do
@@ -76,12 +94,38 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
       unlessM (rideServiceable serviceabilityReq) $
         throwError $ ProductNotServiceable "due to georestrictions"
 
+searchCbMultiversional ::
+  SignatureAuthResult Org.Organization ->
+  SignatureAuthResult Org.Organization ->
+  MVSearch.OnSearchReq ->
+  FlowHandler AckResponse
+searchCbMultiversional _ _ MVCallback.CallbackReq {..} =
+  withFlowHandlerBecknAPI $
+    parseMaybe (withObject "" (.: "core_version")) context
+      & fromMaybeM (InvalidRequest "No core_version in context")
+      >>= \case
+        '0' : '.' : '9' : _ ->
+          ( Core9.BecknCallbackReq
+              <$> parse context
+              <*> either (pure . Left) (fmap Right . parse) contents
+          )
+            >>= searchCbMetro
+        '0' : '.' : '8' : _ ->
+          ( Core8.CallbackReq
+              <$> parse context
+              <*> either (pure . Left) (fmap Right . parse) contents
+          )
+            >>= searchCb
+        _ -> throwError UnsupportedCoreVer
+  where
+    parse value = parseEither parseJSON value & fromEitherM (InvalidRequest . T.pack)
+
 searchCb ::
-  SignatureAuthResult Org.Organization ->
-  SignatureAuthResult Org.Organization ->
+  SearchCbFlow m r =>
+  MonadReader AppEnv m =>
   Search.OnSearchReq ->
-  FlowHandler Search.OnSearchRes
-searchCb _ _ req = withFlowHandlerBecknAPI $
+  m Search.OnSearchRes
+searchCb req =
   withTransactionIdLogTag req $ do
     validateContext "on_search" $ req.context
     Metrics.finishSearchMetrics $ req.context.transaction_id
@@ -92,7 +136,9 @@ searchCb _ _ req = withFlowHandlerBecknAPI $
       Left err -> logTagError "on_search req" $ "on_search error: " <> show err
     return Ack
 
-searchCbService :: (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], DBFlow m r) => Search.OnSearchReq -> BM.Catalog -> m ()
+type SearchCbFlow m r = (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], DBFlow m r)
+
+searchCbService :: SearchCbFlow m r => Search.OnSearchReq -> BM.Catalog -> m ()
 searchCbService req catalog = do
   let searchRequestId = Id $ req.context.transaction_id --searchRequestId $ service.id
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
@@ -223,3 +269,32 @@ mkIntent req now = do
       transfer = Nothing,
       fare = emptyPrice
     }
+
+mkIntentMig :: (MonadThrow m, Log m) => API.SearchReq -> m Mig.Intent
+mkIntentMig req = do
+  from <- stopToLoc req.origin
+  to <- stopToLoc req.destination
+  pure $
+    Mig.emptyIntent
+      & #fulfillment
+        ?~ ( Mig.emptyFulFillmentInfo
+               & #start
+                 ?~ Mig.LocationAndTime
+                   { location = Just from,
+                     time = Nothing
+                   }
+               & #end
+                 ?~ Mig.LocationAndTime
+                   { location = Just to,
+                     time = Nothing
+                   }
+           )
+  where
+    stopToLoc Location.SearchReqLocationAPIEntity {gps} = do
+      let GPS {lat, lon} = toBeckn gps
+      gps' <-
+        fromMaybeM (InvalidRequest "bad coordinates") $
+          Mig.Gps
+            <$> readMaybe (T.unpack lat)
+            <*> readMaybe (T.unpack lon)
+      pure $ Mig.emptyLocation & #gps ?~ gps'

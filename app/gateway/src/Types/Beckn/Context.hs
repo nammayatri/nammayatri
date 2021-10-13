@@ -16,9 +16,9 @@ data Context = Context
     action :: Text, -- becomes sumtype in 0.9. for now using Text like in 0.8
     core_version :: Maybe Text, -- Maybe in 0.8 only
     domain_version :: Maybe Text, -- present only in 0.8
-    bap_id :: Maybe BaseUrl, -- present only in 0.9
+    bap_id :: Maybe Text, -- present only in 0.9
     bap_uri :: Maybe BaseUrl, -- Maybe in 0.8 only
-    bpp_id :: Maybe BaseUrl, -- present only in 0.9
+    bpp_id :: Maybe Text, -- present only in 0.9
     bpp_uri :: Maybe BaseUrl,
     transaction_id :: Text,
     message_id :: Text,

@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Migration.Time (Time (..), Range (..)) where
+module Beckn.Types.Core.Migration.Time where
 
 import Beckn.Types.Core.Migration.Duration (Duration)
 import Data.Time (UTCTime)
@@ -12,6 +12,16 @@ data Time = Time
     days :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, Eq)
+
+emptyTime :: Time
+emptyTime =
+  Time
+    { label = Nothing,
+      timestamp = Nothing,
+      duration = Nothing,
+      range = Nothing,
+      days = Nothing
+    }
 
 data Range = Range
   { start :: UTCTime,

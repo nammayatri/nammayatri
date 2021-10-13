@@ -1,6 +1,7 @@
 module Fmd where
 
 import Beckn.Utils.Example
+import Beckn.Utils.Servant.BaseUrl (showBaseUrlText)
 import Data.Time
 import EulerHS.Prelude
 import FmdWrapper.Common (fmdTestAppBaseUrl)
@@ -32,7 +33,7 @@ buildContext act tid = do
         city = "Bangalore",
         action = act,
         core_version = "0.9.1",
-        bap_id = fmdTestAppBaseUrl,
+        bap_id = showBaseUrlText fmdTestAppBaseUrl,
         bap_uri = fmdTestAppBaseUrl,
         bpp_id = Nothing,
         bpp_uri = Nothing,

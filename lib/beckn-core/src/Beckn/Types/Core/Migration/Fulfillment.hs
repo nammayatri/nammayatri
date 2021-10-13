@@ -1,9 +1,4 @@
-module Beckn.Types.Core.Migration.Fulfillment
-  ( Fulfillment (..),
-    FulfillmentParticipant (..),
-    FulfillmentDetails (..),
-  )
-where
+module Beckn.Types.Core.Migration.Fulfillment where
 
 import Beckn.Types.Core.Migration.Agent (Agent)
 import Beckn.Types.Core.Migration.Contact (Contact)
@@ -33,6 +28,22 @@ data Fulfillment = Fulfillment
     tags :: Maybe Tags
   }
   deriving (Generic, Show)
+
+emptyFulfillment :: Fulfillment
+emptyFulfillment =
+  Fulfillment
+    { id = Nothing,
+      _type = Nothing,
+      provider_id = Nothing,
+      state = Nothing,
+      tracking = False,
+      customer = Nothing,
+      agent = Nothing,
+      vehicle = Nothing,
+      start = Nothing,
+      end = Nothing,
+      tags = Nothing
+    }
 
 instance FromJSON Fulfillment where
   parseJSON = withObject "Fulfillment" $ \o ->
@@ -82,3 +93,13 @@ data FulfillmentDetails = FulfillmentDetails
     person :: Maybe Person
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+emptyFulfillmentDetails :: FulfillmentDetails
+emptyFulfillmentDetails =
+  FulfillmentDetails
+    { location = Nothing,
+      time = Nothing,
+      instructions = Nothing,
+      contact = Nothing,
+      person = Nothing
+    }

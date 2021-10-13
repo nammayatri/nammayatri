@@ -50,10 +50,8 @@ withPersonIdLogTag personId = do
   withLogTag ("actor-" <> getId personId)
 
 withTransactionIdLogTag :: (HasField "context" b c, HasField "transaction_id" c Text, Log m) => b -> m a -> m a
-withTransactionIdLogTag req = do
-  let context = req.context
-      transaction_id_ = context.transaction_id
-  withLogTag ("txnId-" <> transaction_id_)
+withTransactionIdLogTag req =
+  withLogTag ("txnId-" <> req.context.transaction_id)
 
 makeLogSomeException :: SomeException -> Text
 makeLogSomeException someExc

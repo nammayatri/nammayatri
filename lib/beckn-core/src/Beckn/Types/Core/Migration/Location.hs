@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Migration.Location (Location (..)) where
+module Beckn.Types.Core.Migration.Location where
 
 import Beckn.Types.Core.Migration.Address (Address)
 import Beckn.Types.Core.Migration.Circle (Circle)
@@ -25,6 +25,22 @@ data Location = Location
     time :: Maybe Time
   }
   deriving (Generic, Show)
+
+emptyLocation :: Location
+emptyLocation =
+  Location
+    { id = Nothing,
+      descriptor = Nothing,
+      gps = Nothing,
+      address = Nothing,
+      station_code = Nothing,
+      city = Nothing,
+      country = Nothing,
+      circle = Nothing,
+      polygon = Nothing,
+      _3dspace = Nothing,
+      time = Nothing
+    }
 
 instance Example Location where
   example =

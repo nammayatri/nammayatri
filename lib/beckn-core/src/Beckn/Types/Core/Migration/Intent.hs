@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Migration.Intent (Intent (..)) where
+module Beckn.Types.Core.Migration.Intent where
 
 import Beckn.Types.Common (IdObject)
 import Beckn.Types.Core.Migration.Category (Category)
@@ -22,6 +22,18 @@ data Intent = Intent
     tags :: Maybe Tags
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+emptyIntent :: Intent
+emptyIntent =
+  Intent
+    { provider = Nothing,
+      fulfillment = Nothing,
+      payment = Nothing,
+      category = Nothing,
+      offer = Nothing,
+      item = Nothing,
+      tags = Nothing
+    }
 
 instance Example Intent where
   example =
@@ -54,6 +66,16 @@ data FulFillmentInfo = FulFillmentInfo
     vehicle :: Maybe Vehicle
   }
   deriving (Generic, FromJSON, ToJSON, Show)
+
+emptyFulFillmentInfo :: FulFillmentInfo
+emptyFulFillmentInfo =
+  FulFillmentInfo
+    { id = Nothing,
+      start = Nothing,
+      end = Nothing,
+      tags = Nothing,
+      vehicle = Nothing
+    }
 
 instance Example FulFillmentInfo where
   example =

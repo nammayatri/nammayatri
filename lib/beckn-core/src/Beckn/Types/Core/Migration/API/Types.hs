@@ -4,6 +4,7 @@ import Beckn.Types.Core.Migration.Context (Context)
 import Beckn.Types.Core.Migration.Error (Error)
 import Beckn.Types.Core.Migration.Order (Order)
 import Data.Aeson
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding ((.=))
 
 data BecknReq a = BecknReq
@@ -12,11 +13,15 @@ data BecknReq a = BecknReq
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
+instance ToSchema a => ToSchema (BecknReq a)
+
 data BecknCallbackReq a = BecknCallbackReq
   { context :: Context,
     contents :: Either Error a
   }
   deriving (Generic, Show)
+
+instance ToSchema a => ToSchema (BecknCallbackReq a)
 
 instance ToJSON a => ToJSON (BecknCallbackReq a) where
   toJSON (BecknCallbackReq context contents) = object $ contextField : errorOrMessage

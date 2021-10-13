@@ -3,7 +3,9 @@ module ExternalAPI.Flow where
 import Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.API.Feedback as API
-import Beckn.Types.Core.API.Search as API
+import qualified Beckn.Types.Core.API.Search as API
+import qualified Beckn.Types.Core.Migration.API.Search as MigAPI
+import Beckn.Types.Core.Migration.API.Types (BecknReq)
 import Beckn.Types.Error
 import Beckn.Utils.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
@@ -21,17 +23,34 @@ search ::
     CoreMetrics m
   ) =>
   BaseUrl ->
-  SearchReq ->
+  API.SearchReq ->
   m ()
 search url req = do
-  url' <-
-    asks (.xGatewaySelector)
-      >>= fromMaybeM GatewaySelectorNotSet
-      >>= \case
-        "NSDL.BG.1" -> asks (.xGatewayNsdlUrl) >>= fromMaybeM NSDLBaseUrlNotSet
-        "JUSPAY.BG.1" -> pure url
-        _ -> throwError UnsupportedGatewaySelector
+  url' <- getSearchUrl url
   callBecknAPIWithSignature "search" API.search url' req
+
+searchMig ::
+  ( HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl],
+    CoreMetrics m
+  ) =>
+  BaseUrl ->
+  BecknReq MigAPI.SearchIntent ->
+  m ()
+searchMig url req = do
+  url' <- getSearchUrl url
+  callBecknAPIWithSignature "search" MigAPI.searchAPI url' req
+
+getSearchUrl ::
+  (HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl]) =>
+  BaseUrl ->
+  m BaseUrl
+getSearchUrl url =
+  asks (.xGatewaySelector)
+    >>= fromMaybeM GatewaySelectorNotSet
+    >>= \case
+      "NSDL.BG.1" -> asks (.xGatewayNsdlUrl) >>= fromMaybeM NSDLBaseUrlNotSet
+      "JUSPAY.BG.1" -> pure url
+      _ -> throwError UnsupportedGatewaySelector
 
 confirm ::
   ( MonadFlow m,

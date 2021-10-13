@@ -6,6 +6,7 @@ import HSpec
 import Mobility.Fixtures
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
 import qualified "beckn-transport" Storage.Queries.RideBooking as TQRB
+import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "beckn-transport" Types.Storage.Quote as TQuote
@@ -33,6 +34,9 @@ doAnAppSearch = do
     callBAP (getQuotes appSearchId appRegistrationToken)
       <&> (.quotes)
       -- since all BPP can give quote for now we filter by orgId
+      <&> mapMaybe \case
+        OnDemandCab p -> Just p
+        _ -> Nothing
       <&> filter (\p -> p.agencyName == bapTransporterName)
       <&> nonEmpty
   let bQuoteId = quoteAPIEntity.id

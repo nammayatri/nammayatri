@@ -6,6 +6,7 @@ module Beckn.Types.Time where
 import Beckn.Utils.Dhall (FromDhall)
 import Data.Aeson (Value (..))
 import Data.Aeson.Types (typeMismatch)
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as Text
 import Data.Time (UTCTime)
 import qualified Data.Time as Time
@@ -47,6 +48,7 @@ instance MonadClock IO where
 
 newtype Iso8601Time = Iso8601Time {getUtcTime :: UTCTime}
   deriving (Show, Eq)
+  deriving newtype (ToSchema)
 
 instance FromJSON Iso8601Time where
   parseJSON (String s) = Iso8601Time <$> iso8601ParseM (Text.unpack s)

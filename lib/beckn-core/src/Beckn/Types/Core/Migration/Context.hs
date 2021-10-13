@@ -1,12 +1,13 @@
 module Beckn.Types.Core.Migration.Context where
 
+import Beckn.Types.App
 import Beckn.Types.Core.Migration.Domain (Domain)
 import Beckn.Types.Time (Iso8601Time)
 import Beckn.Utils.JSON
 import Data.Aeson
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
-import Servant.Client (BaseUrl)
 
 data Context = Context
   { domain :: Domain,
@@ -14,7 +15,7 @@ data Context = Context
     city :: Text,
     action :: Action,
     core_version :: Text,
-    bap_id :: BaseUrl,
+    bap_id :: Text,
     bap_uri :: BaseUrl,
     bpp_id :: Maybe Text,
     bpp_uri :: Maybe BaseUrl,
@@ -24,7 +25,7 @@ data Context = Context
     key :: Maybe Text,
     ttl :: Maybe Iso8601Time
   }
-  deriving (Generic, FromJSON, Show)
+  deriving (Generic, FromJSON, Show, ToSchema)
 
 instance ToJSON Context where
   toJSON = genericToJSON $ defaultOptions {omitNothingFields = True}
@@ -50,7 +51,7 @@ data Action
   | ON_CANCEL
   | ON_RATING
   | ON_SUPPORT
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 instance FromJSON Action where
   parseJSON = genericParseJSON constructorsToLowerOptions
