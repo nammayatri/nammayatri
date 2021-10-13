@@ -9,7 +9,7 @@ import qualified Beckn.Types.Registry.Routes as Registry
 import Beckn.Types.Registry.Subscriber (Subscriber)
 import Beckn.Utils.Common
 import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.SignatureAuth (LookupAction, LookupRegistry, registryAuthManagerKey)
+import Beckn.Utils.Servant.SignatureAuth (LookupAction, LookupRegistry)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Servant.Client.Core (ClientError)
@@ -77,7 +77,7 @@ registryLookup ::
   Domain ->
   m [Subscriber]
 registryLookup url shortId domain = do
-  callAPI' (Just registryAuthManagerKey) url (T.client Registry.lookupAPI request) "lookup"
+  callAPI url (T.client Registry.lookupAPI request) "lookup"
     >>= fromEitherM (registryLookupCallError url)
   where
     request = RegistryAPI.LookupRequest (Just shortId) Nothing (Just domain) Nothing Nothing

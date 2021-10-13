@@ -7,12 +7,11 @@ import Beckn.Types.Registry.API (LookupRequest, LookupResponse)
 import Beckn.Types.Registry.Subscriber (Subscriber (..))
 import Beckn.Utils.Error (fromMaybeM, withFlowHandlerAPI)
 import Beckn.Utils.Registry (lookupCredByShortId)
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
 import Data.Time (addUTCTime)
 import EulerHS.Prelude
 
-lookup :: SignatureAuthResult () -> LookupRequest -> FlowHandler LookupResponse
-lookup _signatureAuth req = withFlowHandlerAPI $ do
+lookup :: LookupRequest -> FlowHandler LookupResponse
+lookup req = withFlowHandlerAPI $ do
   env <- ask
   let creds = env.credRegistry
   shortId <- req.subscriber_id & fromMaybeM (InvalidRequest "subscriber_id is not specified.")

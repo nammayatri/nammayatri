@@ -5,9 +5,8 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuth)
 import EulerHS.Prelude
 import Servant
 
-type LookupAPI registryLookup =
-  SignatureAuth "Signature" registryLookup
-    :> "lookup"
+type LookupAPI =
+  "lookup"
     :> ReqBody '[JSON] API.LookupRequest
     :> Post '[JSON] API.LookupResponse
 
