@@ -4,9 +4,8 @@ import App.Types (FlowServer)
 import Beckn.Types.Registry.Routes (LookupAPI)
 import EulerHS.Prelude
 import qualified Flow.Lookup as Flow
-import Utils.Auth (LookupRegistryOrg)
 
-type RegistryAPI = LookupAPI LookupRegistryOrg
+type RegistryAPI = LookupAPI
 
 registryFlow :: FlowServer RegistryAPI
 registryFlow = lookupFlow
@@ -14,5 +13,5 @@ registryFlow = lookupFlow
 registryAPI :: Proxy RegistryAPI
 registryAPI = Proxy
 
-lookupFlow :: FlowServer (LookupAPI LookupRegistryOrg)
+lookupFlow :: FlowServer LookupAPI
 lookupFlow = Flow.lookup
