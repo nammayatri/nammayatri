@@ -10,9 +10,9 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as API
 import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Confirm as API
-import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Update as API
+import qualified Beckn.Types.Core.Multiversional.Search as API
 import Beckn.Types.Id
 import Beckn.Types.Registry.Routes (OnSubscribeAPI)
 import Beckn.Utils.Servant.SignatureAuth
@@ -144,7 +144,7 @@ type SearchAPI =
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> Search.searchCb
+    :<|> Search.searchCbMultiversional
 
 -------- Confirm Flow --------
 type ConfirmAPI =

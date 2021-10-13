@@ -3,9 +3,11 @@ module Types.API.Case where
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.JSON
+import Data.Char (toLower)
 import Data.Swagger hiding (info)
 import Data.Time
 import EulerHS.Prelude hiding (id, product)
+import Types.API.MetroOffer (MetroOffer (..))
 import Types.Storage.Case
 import Types.Storage.Organization (Organization)
 import Types.Storage.Person
@@ -15,7 +17,7 @@ import Types.Storage.SearchReqLocation
 
 data GetStatusRes = GetStatusRes
   { _case :: Case,
-    productInstance :: [ProdInstRes],
+    productInstance :: [OfferRes],
     fromLocation :: SearchReqLocation,
     toLocation :: SearchReqLocation
   }
@@ -35,7 +37,7 @@ data UpdateCaseReq = UpdateCaseReq
 
 data CaseRes = CaseRes
   { _case :: Case,
-    productInstance :: [ProdInstRes],
+    productInstance :: [OfferRes],
     fromLocation :: Maybe SearchReqLocation,
     toLocation :: Maybe SearchReqLocation
   }
@@ -46,6 +48,26 @@ instance FromJSON CaseRes where
 
 instance ToJSON CaseRes where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+data OfferRes
+  = OnDemandCab ProdInstRes
+  | Metro MetroOffer
+  deriving (Show, Generic, ToSchema)
+
+instance ToJSON OfferRes where
+  toJSON = genericToJSON $ objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
+
+instance FromJSON OfferRes where
+  parseJSON = genericParseJSON $ objectWithSingleFieldParsing \(f : rest) -> toLower f : rest
+
+-- either:
+-- {"onDemandCab": ...old type}
+-- or
+-- {"metro": ...new MetroOffer type}
+
+creationTime :: OfferRes -> UTCTime
+creationTime (OnDemandCab ProdInstRes {createdAt}) = createdAt
+creationTime (Metro MetroOffer {createdAt}) = createdAt
 
 type CaseListRes = [CaseRes]
 

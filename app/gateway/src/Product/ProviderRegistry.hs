@@ -18,6 +18,7 @@ lookup context = do
     B.LOCAL_RETAIL -> listDomainProviders Org.LOCAL_RETAIL
     B.FOOD_AND_BEVERAGE -> listDomainProviders Org.FOOD_AND_BEVERAGE
     B.HEALTHCARE -> listDomainProviders Org.HEALTHCARE
+    B.METRO -> listDomainProviders Org.METRO
     B.UNKNOWN_DOMAIN _ -> pure []
   pure $ filter (isJust . Org.callbackUrl) providers
   where

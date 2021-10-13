@@ -14,7 +14,7 @@ data Context = Context
     city :: Text,
     action :: Action,
     core_version :: Text,
-    bap_id :: BaseUrl,
+    bap_id :: Text,
     bap_uri :: BaseUrl,
     bpp_id :: Maybe Text,
     bpp_uri :: Maybe BaseUrl,

@@ -201,14 +201,6 @@ incorrectCountry clientEnv _ = do
   gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
   verifyError 400 "INVALID_COUNTRY" gatewayResponse
 
-incorrectCoreVersion :: ClientEnv -> CallbackData -> IO ()
-incorrectCoreVersion clientEnv _ = do
-  ctx <- buildContext SEARCH "dummy-txn-id"
-  let searchReq = buildFMDSearchReq ctx {core_version = "0.7.0"}
-
-  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "UNSUPPORTED_CORE_VERSION" gatewayResponse
-
 spec :: Spec
 spec = do
   around withCallbackApp $ do
@@ -222,4 +214,3 @@ spec = do
       it "Incorrect API key" $ incorrectApiKey appClientEnv
       it "Incorrect action" $ incorrectAction appClientEnv
       it "Incorrect country" $ incorrectCountry appClientEnv
-      it "Incorrect core version" $ incorrectCoreVersion appClientEnv

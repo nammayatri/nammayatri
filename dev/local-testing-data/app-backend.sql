@@ -46,3 +46,6 @@ INSERT INTO atlas_app.person (id, first_name, middle_name, last_name, full_name,
 INSERT INTO atlas_app.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
   ('003d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '4321', '003df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '003b93df-4f7c-440f-bada-4d46c396d7d0', 'USER', now(), now());
 
+
+INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES
+    ('metro-0a-81d2-404b-ada5-20aac58005e6', 'Metro BPP', 'metro-bpp', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'key1', 'http://4c75-49-207-207-115.ngrok.io', NULL, now(), now(), 'key1', NULL);

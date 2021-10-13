@@ -14,6 +14,7 @@ let credRegistry =
   , globalCommon.mkCredential "juspay-mock-bpp-1-key" "JUSPAY.BPP.MOCK.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , globalCommon.mkCredential "another-test-cabs" "another-test-cabs" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , globalCommon.mkCredential "nsdl_bg_1" "NSDL.BG.1" "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
+  , globalCommon.mkCredential "key1" "metro-bpp" "pmek0EB6os4OAG5JV3BAaAvVV7miNlJBJHpXWCMMXXU="
   ]
 
 in { defaultPoolConfig = globalCommon.defaultPoolConfig

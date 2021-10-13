@@ -60,6 +60,7 @@ data OrganizationDomain
   | LOCAL_RETAIL
   | FOOD_AND_BEVERAGE
   | HEALTHCARE
+  | METRO
   deriving (Show, Eq, Read, Generic)
 
 instance ToJSON OrganizationDomain where

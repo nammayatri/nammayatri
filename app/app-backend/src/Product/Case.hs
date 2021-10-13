@@ -1,11 +1,10 @@
-{-# OPTIONS_GHC -Wno-missing-signatures #-}
-
 module Product.Case where
 
 import App.Types
 import Beckn.Types.Id
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
+import Product.MetroOffer
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.ProductInstance as MPI
 import qualified Storage.Queries.Products as Products
@@ -24,14 +23,22 @@ getStatus ::
   FlowHandler GetStatusRes
 getStatus personId caseId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   case_ <- Case.findIdByPersonId personId caseId >>= fromMaybeM CaseDoesNotExist
-  prodInstRes <- getProdInstances case_
   fromLocation <-
     fromMaybeM LocationNotFound
       =<< Location.findLocationById (case_.fromLocationId)
   toLocation <-
     fromMaybeM LocationNotFound
       =<< Location.findLocationById (case_.toLocationId)
-  return $ GetStatusRes case_ prodInstRes fromLocation toLocation
+  offers <- getOffers case_
+  return $ GetStatusRes case_ offers fromLocation toLocation
+
+getOffers :: DBFlow m r => Case.Case -> m [OfferRes]
+getOffers case_ =
+  sortBy (compare `on` creationTime)
+    <$> ( (<>)
+            <$> (map OnDemandCab <$> getProdInstances case_)
+            <*> (map Metro <$> getMetroOffers case_.id)
+        )
 
 list ::
   Id Person.Person ->
@@ -46,10 +53,10 @@ list personId caseType statuses mlimit moffset =
       >>= traverse mapProductInstance
   where
     mapProductInstance case_@Case.Case {..} = do
-      prodInstRes <- getProdInstances case_
       fromLocation <- Location.findLocationById fromLocationId
       toLocation <- Location.findLocationById toLocationId
-      return $ API.CaseRes case_ prodInstRes fromLocation toLocation
+      offers <- getOffers case_
+      return $ API.CaseRes case_ offers fromLocation toLocation
 
 -- Core Utility functions are below
 mkProdRes :: [Products.Products] -> PI.ProductInstance -> ProdInstRes

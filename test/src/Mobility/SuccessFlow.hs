@@ -8,6 +8,7 @@ import qualified Data.UUID.V4 as UUID
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
+import "app-backend" Types.API.Case (OfferRes (OnDemandCab))
 import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "beckn-transport" Types.Storage.Case as TCase
 import qualified "app-backend" Types.Storage.ProductInstance as BPI
@@ -33,6 +34,9 @@ doAnAppSearch = do
     callBAP (buildCaseStatusRes appCaseid)
       <&> (.productInstance)
       -- since all BPP can give quote for now we filter by orgId
+      <&> mapMaybe \case
+        OnDemandCab p -> Just p
+        _ -> Nothing
       <&> filter (\p -> p.organizationId == Id bppTransporterOrgId)
       <&> nonEmpty
   let productInstanceId = getId productInstance.id

@@ -9,13 +9,14 @@ where
 
 import Data.Geospatial
 import Data.LineString
+import Data.Swagger (ToSchema)
 import EulerHS.Prelude
 
 data LatLong = LatLong
   { lat :: Double,
     lon :: Double
   }
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data TravelMode = CAR | MOTORCYCLE | BICYCLE | FOOT
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
