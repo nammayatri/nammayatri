@@ -37,6 +37,7 @@ validateUpdateFarePolicyRequest UpdateFarePolicyReq {..} =
   sequenceA_
     [ validateField "baseFare" baseFare . InMaybe $ InRange @Double 0 500,
       validateList "perExtraKmRateList" perExtraKmRateList validatePerExtraKmRateAPIEntity,
+      validateField "perExtraKmRateList" perExtraKmRateList $ UniqueField @"distanceRangeStart",
       validateField "nightShiftRate" nightShiftRate . InMaybe $ InRange @Double 1 2,
       validateField "nightShiftStart" nightShiftStart . InMaybe $ InRange (TimeOfDay 18 0 0) (TimeOfDay 23 30 0),
       validateField "nightShiftEnd" nightShiftEnd . InMaybe $ InRange (TimeOfDay 0 30 0) (TimeOfDay 7 0 0)
