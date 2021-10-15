@@ -2,12 +2,13 @@ module Storage.Queries.FarePolicy.Discount where
 
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Id (Id)
+import Beckn.Types.Id (Id, cast)
 import Beckn.Types.Schema
 import Beckn.Utils.Common
 import Database.Beam
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified Types.Domain.FarePolicy.Discount as D
 import qualified Types.Storage.DB as DB
 import qualified Types.Storage.FarePolicy.Discount as Storage
 import qualified Types.Storage.Organization as Organization
@@ -17,28 +18,75 @@ getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.Transpor
 getDbTable =
   DB.farePolicyDiscount . DB.transporterDb <$> getSchemaName
 
-create :: Storage.FarePolicyDiscount -> DB.SqlDB ()
-create Storage.FarePolicyDiscount {..} = do
+create :: D.Discount -> DB.SqlDB ()
+create disc = do
   dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue Storage.FarePolicyDiscount {..})
+  let storageDisc = toTable disc
+  DB.createOne' dbTable (Storage.insertValue storageDisc)
+
+findById ::
+  DBFlow m r =>
+  Id D.Discount ->
+  m (Maybe D.Discount)
+findById discId = do
+  dbTable <- getDbTable
+  map fromTable <$> DB.findOne dbTable (predicate (cast discId))
+  where
+    predicate discId_ Storage.FarePolicyDiscount {..} =
+      id ==. B.val_ discId_
 
 findAll ::
   Id Organization.Organization ->
   Vehicle.Variant ->
-  DB.SqlDB [Storage.FarePolicyDiscount]
+  DB.SqlDB [D.Discount]
 findAll orgId vehicleVariant_ = do
   dbTable <- getDbTable
-  DB.findAll' dbTable identity predicate
+  map fromTable <$> DB.findAll' dbTable identity predicate
   where
     predicate Storage.FarePolicyDiscount {..} =
       organizationId ==. B.val_ orgId
         &&. vehicleVariant ==. B.val_ vehicleVariant_
 
-deleteAll :: Id Organization.Organization -> Vehicle.Variant -> DB.SqlDB ()
-deleteAll orgId var = do
+update :: Id D.Discount -> D.Discount -> DB.SqlDB ()
+update discId disc = do
   dbTable <- getDbTable
-  DB.delete' dbTable $ predicate orgId var
+  let storageDisc = toTable disc
+  currTime <- getCurrentTime
+  DB.update'
+    dbTable
+    (setClause storageDisc currTime)
+    (predicate $ cast discId)
   where
-    predicate orgId_ var_ Storage.FarePolicyDiscount {..} =
-      organizationId ==. B.val_ orgId_
-        &&. vehicleVariant ==. B.val_ var_
+    predicate discId_ Storage.FarePolicyDiscount {..} = id ==. B.val_ discId_
+    setClause storageDisc currTime Storage.FarePolicyDiscount {..} =
+      mconcat
+        [ startTime <-. B.val_ storageDisc.startTime,
+          endTime <-. B.val_ storageDisc.endTime,
+          enabled <-. B.val_ storageDisc.enabled,
+          discount <-. B.val_ storageDisc.discount,
+          updatedAt <-. B.val_ currTime
+        ]
+
+deleteById :: Id D.Discount -> DB.SqlDB ()
+deleteById discId = do
+  dbTable <- getDbTable
+  DB.delete' dbTable $ predicate (cast discId)
+  where
+    predicate discId_ Storage.FarePolicyDiscount {..} =
+      id ==. B.val_ discId_
+
+fromTable :: Storage.FarePolicyDiscount -> D.Discount
+fromTable Storage.FarePolicyDiscount {..} =
+  D.Discount
+    { id = cast id,
+      discount = toRational discount,
+      ..
+    }
+
+toTable :: D.Discount -> Storage.FarePolicyDiscount
+toTable D.Discount {..} =
+  Storage.FarePolicyDiscount
+    { id = cast id,
+      discount = fromRational discount,
+      ..
+    }

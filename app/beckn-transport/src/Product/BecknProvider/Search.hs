@@ -5,7 +5,6 @@ module Product.BecknProvider.Search (search) where
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Search as API
 import Beckn.Types.Core.Ack
@@ -24,6 +23,7 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
 import Product.FareCalculator
+import qualified Product.FareCalculator.Flow as Fare
 import qualified Product.Location as Loc
 import qualified Product.Person as Person
 import qualified Storage.Queries.Case as QCase
@@ -183,8 +183,7 @@ onSearchCallback productCase transporter fromLocation toLocation searchMetricsMV
   listOfPIs <-
     for listOfProtoPIs $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance productCase.startTime
-      let price = fareSum fareParams
-      mkProductInstance productCase price fareParams.discount PI.INSTOCK transporterId poolResult.distanceToDriver poolResult.variant
+      mkProductInstance productCase fareParams PI.INSTOCK transporterId poolResult.distanceToDriver poolResult.variant
 
   DB.runSqlDBTransaction $ do
     for_ listOfPIs PI.create
@@ -197,17 +196,18 @@ onSearchCallback productCase transporter fromLocation toLocation searchMetricsMV
 mkProductInstance ::
   DBFlow m r =>
   Case.Case ->
-  Amount ->
-  Maybe Amount ->
+  Fare.FareParameters ->
   PI.ProductInstanceStatus ->
   Id Org.Organization ->
   Double ->
   Vehicle.Variant ->
   m PI.ProductInstance
-mkProductInstance productCase price discount status transporterId nearestDriverDist vehicleVariant = do
+mkProductInstance productCase fareParams status transporterId nearestDriverDist vehicleVariant = do
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
+  let price = fareSum fareParams
+      estimatedTotalFare = fareSumWithDiscount fareParams
   products <-
     SProduct.findByName (show vehicleVariant)
       >>= fromMaybeM ProductsNotFound
@@ -225,7 +225,9 @@ mkProductInstance productCase price discount status transporterId nearestDriverD
         _type = Case.RIDESEARCH,
         price,
         actualPrice = Nothing,
-        discount = discount,
+        estimatedTotalFare,
+        totalFare = Nothing,
+        discount = fareParams.discount,
         status = status,
         startTime = productCase.startTime,
         endTime = productCase.endTime,

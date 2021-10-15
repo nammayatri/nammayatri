@@ -1,6 +1,7 @@
 module ExternalAPI.Transform where
 
 import Beckn.External.Encryption
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common
 import Beckn.Types.Core.Brand
 import Beckn.Types.Core.Category
@@ -101,7 +102,7 @@ mkItem prodInst =
     { id = getId $ prodInst.id,
       parent_item_id = Nothing,
       descriptor = mkItemDescriptor prodInst,
-      price = mkPrice prodInst,
+      price = mkPrice prodInst.price,
       promotional = False,
       category_id = Nothing,
       package_category_id = Nothing,
@@ -109,15 +110,16 @@ mkItem prodInst =
       brand_id = Nothing,
       tags = mbAttach "nearestDriverDist" prodInst.udf1 [],
       ttl = Nothing,
-      discount = prodInst.discount
+      discount = prodInst.discount,
+      totalPrice = mkPrice prodInst.estimatedTotalFare
     }
   where
     mbAttach name mbValue list =
       maybe list (\val -> Tag name val : list) mbValue
 
-mkPrice :: ProductInstance -> Price
-mkPrice prodInst =
-  let amt = Just $ convertAmountToDecimalValue prodInst.price
+mkPrice :: Amount -> Price
+mkPrice amount =
+  let amt = Just $ convertAmountToDecimalValue amount
    in Price
         { currency = "INR", -- TODO : Fetch this from product
           value = amt,

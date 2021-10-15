@@ -22,7 +22,9 @@ data Trip = Trip
     driver :: Maybe Driver,
     payload :: Payload,
     fare :: Maybe Price,
-    route :: Maybe Route
+    route :: Maybe Route,
+    -- not in spec
+    totalFare :: Maybe Price
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -37,5 +39,6 @@ instance Example Trip where
         driver = example,
         payload = example,
         fare = example,
-        route = example
+        route = example,
+        totalFare = example
       }

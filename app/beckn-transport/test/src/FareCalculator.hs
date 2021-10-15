@@ -12,6 +12,7 @@ import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Domain.FarePolicy
+import Types.Domain.FarePolicy.Discount
 import Types.Error
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.SearchReqLocation as Location
@@ -70,6 +71,8 @@ defaultDropLocation =
         createdAt = mockTime,
         updatedAt = mockTime
       }
+
+mkDiscount vehVar from to disc isOn = Discount (Id "") vehVar (Id "") from to disc isOn mockTime mockTime
 
 mockTime :: UTCTime
 mockTime = parseTime "2018-12-06T11:39:57.153Z"
@@ -345,7 +348,7 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
                         :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
                              defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
                            ],
-                    discountList = [Discount midnight midday 50 True, Discount midday midnight 50 True],
+                    discountList = [mkDiscount Vehicle.SUV midnight midday 50 True, mkDiscount Vehicle.SUV midday midnight 50 True],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1
@@ -379,7 +382,7 @@ nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for 
                         :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
                              defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
                            ],
-                    discountList = [Discount midnight midday 50 False],
+                    discountList = [mkDiscount Vehicle.SUV midnight midday 50 False],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1
@@ -413,7 +416,7 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
                         :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
                              defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
                            ],
-                    discountList = [Discount midnight midday 50 True, Discount midnight midday 50 True],
+                    discountList = [mkDiscount Vehicle.SUV midnight midday 50 True, mkDiscount Vehicle.SUV midnight midday 50 True],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1

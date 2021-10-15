@@ -7,6 +7,7 @@ import Beckn.Types.Id
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (pi)
+import qualified Product.FareCalculator.Interpreter as Fare
 import Types.App (Driver)
 import Types.Error
 import qualified Types.Storage.Case as Case
@@ -20,7 +21,7 @@ data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
     findAllPIByParentId :: Id PI.ProductInstance -> m [PI.ProductInstance],
-    endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> m (),
+    endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> Amount -> m (),
     findCaseByIdAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
     notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> m (),
     calculateFare ::
@@ -28,7 +29,7 @@ data ServiceHandle m = ServiceHandle
       Vehicle.Variant ->
       Double ->
       UTCTime ->
-      m Amount,
+      m Fare.FareParameters,
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Amount -> Double -> m ()
   }
@@ -55,12 +56,12 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER >>= fromMaybeM CaseNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  (chargeableDistance, actualPrice) <- recalculateFare orderCase orderPi
+  (chargeableDistance, actualPrice, totalFare) <- recalculateFare orderCase orderPi
 
-  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) actualPrice
+  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) actualPrice totalFare
   notifyUpdateToBAP
-    (updatePriceAndDistance chargeableDistance actualPrice searchPi)
-    (updatePriceAndDistance chargeableDistance actualPrice orderPi)
+    searchPi{chargeableDistance = Just chargeableDistance, actualPrice = Just actualPrice, totalFare = Just totalFare}
+    orderPi{chargeableDistance = Just chargeableDistance, actualPrice = Just actualPrice, totalFare = Just totalFare}
     PI.COMPLETED
 
   return APISuccess.Success
@@ -70,22 +71,21 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       oldDistance <-
         (orderCase.udf5 >>= readMaybe . T.unpack)
           & fromMaybeM (CaseFieldNotPresent "udf5")
-      let estimatedPrice = orderPi.price
+      let estimatedFare = orderPi.price
+      let estimatedTotalFare = orderPi.estimatedTotalFare
       shouldRecalculateFare <- recalculateFareEnabled
       if shouldRecalculateFare
         then do
-          updatedPrice <- calculateFare transporterId orderPi.vehicleVariant orderPi.traveledDistance orderCase.startTime
+          fareParams <- calculateFare transporterId orderPi.vehicleVariant orderPi.traveledDistance orderCase.startTime
+          let updatedFare = Fare.fareSum fareParams
+              totalFare = Fare.fareSumWithDiscount fareParams
           let distanceDiff = orderPi.traveledDistance - oldDistance
-          let priceDiff = updatedPrice - estimatedPrice
+          let priceDiff = updatedFare - estimatedFare
           logTagInfo "Fare recalculation" $
             "Fare difference: "
               <> show (amountToDouble priceDiff)
               <> ", Distance difference: "
               <> show distanceDiff
           putDiffMetric priceDiff distanceDiff
-          pure (orderPi.traveledDistance, updatedPrice)
-        else pure (oldDistance, estimatedPrice)
-
-    updatePriceAndDistance :: Double -> Amount -> PI.ProductInstance -> PI.ProductInstance
-    updatePriceAndDistance distance price pi =
-      pi {PI.chargeableDistance = Just distance, PI.actualPrice = Just price}
+          pure (orderPi.traveledDistance, updatedFare, totalFare)
+        else pure (oldDistance, estimatedFare, estimatedTotalFare)

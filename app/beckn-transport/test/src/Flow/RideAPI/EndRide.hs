@@ -5,6 +5,7 @@ import Beckn.Types.Id
 import Data.List (isSubsequenceOf)
 import EulerHS.Prelude
 import qualified Fixtures
+import Product.FareCalculator.Flow
 import qualified Product.RideAPI.Handlers.EndRide as Handle
 import Servant.Server as Serv (ServerError)
 import Test.Hspec
@@ -61,8 +62,15 @@ handle =
             _ -> throwError CaseNotFound
           else throwError CaseNotFound,
       notifyUpdateToBAP = \_ _ _ -> pure (),
-      endRideTransaction = \_ _ _ _ _ -> pure (),
-      calculateFare = \_ _ _ _ -> pure 100,
+      endRideTransaction = \_ _ _ _ _ _ -> pure (),
+      calculateFare = \_ _ _ _ ->
+        return $
+          FareParameters
+            { baseFare = 100,
+              distanceFare = 0,
+              nightShiftRate = 0,
+              discount = Nothing
+            },
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure ()
     }

@@ -272,6 +272,7 @@ mkProductInstance case_ bppOrg provider personId item = do
   now <- getCurrentTime
   let info = ProductInfo (Just provider) Nothing
       price = convertDecimalValueToAmount =<< item.price.listed_value
+      totalPrice = convertDecimalValueToAmount =<< item.totalPrice.listed_value
   vehicleVariant <- item.descriptor.code & fromMaybeM (InvalidRequest "Missing item.descriptor.code")
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
@@ -295,6 +296,8 @@ mkProductInstance case_ bppOrg provider personId item = do
         entityId = Nothing,
         price = price,
         actualPrice = Nothing,
+        estimatedTotalFare = totalPrice,
+        totalFare = Nothing,
         discount = item.discount,
         _type = Case.RIDESEARCH,
         udf1 = getNearestDriverDist,
@@ -337,6 +340,8 @@ mkDeclinedProductInstance case_ bppOrg provider personId = do
         entityId = Nothing,
         price = Nothing,
         actualPrice = Nothing,
+        estimatedTotalFare = Nothing,
+        totalFare = Nothing,
         discount = Nothing,
         _type = Case.RIDESEARCH,
         vehicleVariant = "",

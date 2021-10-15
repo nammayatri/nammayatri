@@ -298,6 +298,22 @@ updateActualPrice price' prodInstId = do
           updatedAt <-. B.val_ currTime
         ]
 
+updateTotalFare :: Amount -> Id Storage.ProductInstance -> DB.SqlDB ()
+updateTotalFare totalFare' prodInstId = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update'
+    dbTable
+    (setClause totalFare' now)
+    (predicate prodInstId)
+  where
+    predicate piId Storage.ProductInstance {..} = id ==. B.val_ piId
+    setClause totalFare_ currTime Storage.ProductInstance {..} =
+      mconcat
+        [ totalFare <-. B.val_ (Just totalFare_),
+          updatedAt <-. B.val_ currTime
+        ]
+
 findAllByVehicleId :: DBFlow m r => Maybe (Id Vehicle) -> m [Storage.ProductInstance]
 findAllByVehicleId piId = do
   dbTable <- getDbTable
