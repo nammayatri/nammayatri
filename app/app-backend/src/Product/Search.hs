@@ -61,7 +61,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     Location.create toLocation
     QSearchRequest.create searchRequest
   env <- ask
-  let bapNwAddr = env.bapNwAddress
+  let bapNwAddr = env.nwAddress
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
   let intent = mkIntent req now
       tags = Just [Tag "distance" $ show distance]

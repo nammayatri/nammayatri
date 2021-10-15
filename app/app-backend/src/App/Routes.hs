@@ -14,6 +14,7 @@ import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Update as API
 import Beckn.Types.Id
+import Beckn.Types.Registry.Routes (OnSubscribeAPI)
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi (Info (..), OpenApi (..))
 import EulerHS.Prelude
@@ -26,6 +27,7 @@ import qualified Product.Feedback as Feedback
 import qualified Product.Location as Location
 import qualified Product.Profile as Profile
 import qualified Product.Quote as Quote
+import Product.OnSubscribe (onSubscribe)
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
 import qualified Product.RideBooking as RideBooking
@@ -84,6 +86,7 @@ type MainAPI =
     :<|> CustomerSupportAPI
     :<|> GoogleMapsProxyAPI
     :<|> CancellationReasonAPI
+    :<|> OnSubscribeAPI LookupRegistryOnSubscribe
 
 appAPI :: Proxy AppAPI
 appAPI = Proxy
@@ -109,6 +112,7 @@ mainServer =
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
+    :<|> onSubscribe
 
 appServer :: FlowServer AppAPI
 appServer =

@@ -40,7 +40,7 @@ data AppCfg = AppCfg
     xGatewayNsdlUrl :: Maybe BaseUrl,
     xProviderUri :: BaseUrl,
     bapSelfId :: Text,
-    bapNwAddress :: BaseUrl,
+    nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     searchConfirmExpiry :: Maybe Seconds,
@@ -63,7 +63,9 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Seconds
+    authTokenCacheExpiry :: Seconds,
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets
   }
   deriving (Generic, FromDhall)
 
@@ -77,7 +79,7 @@ data AppEnv = AppEnv
     xGatewayNsdlUrl :: Maybe BaseUrl,
     xProviderUri :: BaseUrl,
     bapSelfId :: Text,
-    bapNwAddress :: BaseUrl,
+    nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     searchConfirmExpiry :: Maybe Seconds,
@@ -98,7 +100,9 @@ data AppEnv = AppEnv
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
-    authTokenCacheExpiry :: Seconds
+    authTokenCacheExpiry :: Seconds,
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets
   }
   deriving (Generic)
 
@@ -119,10 +123,13 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getSelfUrl = bapNwAddress
+  getSelfUrl = nwAddress
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
 
 instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
   runLookup = lookup
+
+instance HasLookupAction LookupRegistryOnSubscribe (FlowR AppEnv) where
+  runLookup = lookupAndGetEncPubKey

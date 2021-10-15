@@ -64,7 +64,9 @@ data AppCfg = AppCfg
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
     updateLocationRefreshPeriod :: Seconds,
-    metricsSearchDurationTimeout :: Seconds
+    metricsSearchDurationTimeout :: Seconds,
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets
   }
   deriving (Generic, FromDhall)
 
@@ -102,7 +104,9 @@ data AppEnv = AppEnv
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
-    updateLocationRefreshPeriod :: Seconds
+    updateLocationRefreshPeriod :: Seconds,
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets
   }
   deriving (Generic)
 
@@ -128,3 +132,6 @@ instance AuthenticatingEntity AppEnv where
 
 instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
   runLookup = lookup
+
+instance HasLookupAction LookupRegistryOnSubscribe (FlowR AppEnv) where
+  runLookup = lookupAndGetEncPubKey

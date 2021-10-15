@@ -66,7 +66,7 @@ in
 , xGatewayNsdlUrl = Some nsdlUrl
 , xAppUri = appUri
 , selfId = "JUSPAY.MOBILITY.PROVIDER.UAT.1"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/transport/v1/"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/transport/v2/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , caseExpiry = Some +7200
@@ -93,4 +93,6 @@ in
 , recalculateFareEnabled = True
 , updateLocationRefreshPeriod = +5
 , metricsSearchDurationTimeout = +45
+, registryUrl = common.registryUrl
+, registrySecrets = sec.registrySecrets
 }

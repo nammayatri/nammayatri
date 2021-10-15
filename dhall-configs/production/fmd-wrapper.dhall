@@ -63,6 +63,6 @@ in
 , graceTerminationPeriod = +90
 , httpClientOptions = httpClientOptions
 , nwAddress = "http://localhost:8018/v1/"
-, registryUrl = "http://localhost:8020/"
+, registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets
 }

@@ -4,6 +4,7 @@ import Beckn.Utils.JSON (constructorsWithHyphensUntagged)
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
 import EulerHS.Prelude
+import Data.OpenApi (ToSchema)
 
 data Domain
   = MOBILITY
@@ -12,7 +13,7 @@ data Domain
   | FOOD_AND_BEVERAGE
   | HEALTHCARE
   | UNKNOWN_DOMAIN Text
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Generic, Show, ToSchema)
 
 instance ToJSON Domain where
   toJSON LOCAL_RETAIL = String "nic2004:52110"

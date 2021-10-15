@@ -4,9 +4,13 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
+import Beckn.Types.Registry.Domain (Domain (MOBILITY))
+import Beckn.Utils.Common ((:::))
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
+import qualified Beckn.Utils.Servant.RegistryService as RegistryService
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude hiding (id)
 import Servant hiding (Context)
@@ -33,8 +37,21 @@ type LookupRegistryOrg = (HttpSig.LookupRegistry SOrganization.Organization)
 verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction QOrganization.verifyApiKey
 
-lookup :: (DBFlow m r, HttpSig.AuthenticatingEntity r) => HttpSig.LookupAction LookupRegistryOrg m
-lookup = HttpSig.lookupRegistryAction findOrgByShortId
+lookup ::
+  ( DBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  HttpSig.LookupAction LookupRegistryOrg m
+lookup = RegistryService.decodeViaRegistry findOrgByShortId MOBILITY
+
+lookupAndGetEncPubKey ::
+  ( DBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  HttpSig.LookupAction HttpSig.LookupRegistryOnSubscribe m
+lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey findOrgByShortId MOBILITY
 
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken

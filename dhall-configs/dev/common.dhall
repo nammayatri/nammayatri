@@ -36,4 +36,5 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "http://localhost:4545/"
    , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"
+   , registryUrl = "http://localhost:8020/"
    }

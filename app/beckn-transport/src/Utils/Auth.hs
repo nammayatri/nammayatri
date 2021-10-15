@@ -3,10 +3,13 @@ module Utils.Auth where
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Id
+import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
+import Beckn.Types.Registry.Domain (Domain (MOBILITY))
 import Beckn.Utils.Common as CoreCommon
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
+import qualified Beckn.Utils.Servant.RegistryService as RegistryService
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Text as T
 import EulerHS.Prelude hiding (id)
@@ -34,8 +37,21 @@ type LookupRegistryOrg = LookupRegistry Organization
 verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM OrgNotFound
 
-lookup :: (DBFlow m r, AuthenticatingEntity r) => LookupAction LookupRegistryOrg m
-lookup = lookupRegistryAction Org.findOrganizationByShortId
+lookup ::
+  ( DBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  LookupAction LookupRegistryOrg m
+lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId MOBILITY
+
+lookupAndGetEncPubKey ::
+  ( DBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  LookupAction LookupRegistryOnSubscribe m
+lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey Org.findOrgByShortId MOBILITY
 
 getHttpManagerKey :: Text -> String
 getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId
