@@ -93,4 +93,6 @@ in
 , recalculateFareEnabled = True
 , updateLocationRefreshPeriod = +5
 , metricsSearchDurationTimeout = +45
+, registryUrl = common.registryUrl
+, registrySecrets = sec.registrySecrets
 }

@@ -63,7 +63,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     Location.create toLocation
     QCase.create case_
   env <- ask
-  let bapNwAddr = env.bapNwAddress
+  let bapNwAddr = env.nwAddress
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
   let intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_.udf5)]

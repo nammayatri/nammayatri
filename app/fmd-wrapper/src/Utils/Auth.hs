@@ -35,12 +35,10 @@ lookup ::
   HttpSig.LookupAction LookupRegistryOrg m
 lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId FINAL_MILE_DELIVERY
 
-type LookupRegistryOnSubscribe = (HttpSig.LookupRegistry Text)
-
 lookupAndGetEncPubKey ::
   ( DBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  HttpSig.LookupAction LookupRegistryOnSubscribe m
+  HttpSig.LookupAction HttpSig.LookupRegistryOnSubscribe m
 lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey Org.findOrgByShortId FINAL_MILE_DELIVERY

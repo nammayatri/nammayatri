@@ -88,7 +88,7 @@ in
 , xGatewayNsdlUrl = Some nsdlUrl
 , xProviderUri = providerUri
 , bapSelfId = "JUSPAY.MOBILITY.APP.1.DEV"
-, bapNwAddress = "https://api.sandbox.beckn.juspay.in/dev/app/v1/"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/app/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , searchConfirmExpiry = Some +600
@@ -112,4 +112,6 @@ in
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
 , authTokenCacheExpiry = +600
+, registryUrl = common.registryUrl
+, registrySecrets = sec.registrySecrets
 }
