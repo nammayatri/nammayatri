@@ -99,8 +99,8 @@ calculateNightShiftRate ::
   FarePolicy ->
   TripStartTime ->
   m Amount
-calculateNightShiftRate farePolicy startTime = do
-  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone startTime
+calculateNightShiftRate farePolicy tripStartTime = do
+  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone tripStartTime
   let nightShiftRate = fromMaybe 1 $ farePolicy.nightShiftRate
   let nightShiftStart = fromMaybe midnight $ farePolicy.nightShiftStart
   let nightShiftEnd = fromMaybe midnight $ farePolicy.nightShiftEnd
@@ -110,8 +110,8 @@ calculateNightShiftRate farePolicy startTime = do
       else 1
 
 calculateDiscount :: FarePolicy -> TripStartTime -> Maybe Amount
-calculateDiscount farePolicy startTime = do
-  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone startTime
+calculateDiscount farePolicy tripStartTime = do
+  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone tripStartTime
       discount = calculateDiscount' 0 timeOfDay farePolicy.discountList
   if discount <= 0 then Nothing else Just $ Amount discount
   where

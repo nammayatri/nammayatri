@@ -111,7 +111,8 @@ mkItem quote =
       brand_id = Nothing,
       tags = [Tag "nearestDriverDist" $ show quote.distanceToNearestDriver],
       ttl = Nothing,
-      discount = quote.discount
+      discount = quote.discount,
+      totalPrice = mkPrice quote.estimatedTotalFare
     }
 
 mkPrice :: Amount -> Price

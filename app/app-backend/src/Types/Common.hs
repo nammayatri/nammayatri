@@ -115,7 +115,8 @@ data Trip = Trip
     vehicle :: Maybe Vehicle,
     driver :: Maybe Driver,
     travellers :: [Traveller],
-    fare :: Maybe DecimalValue
+    fare :: Maybe DecimalValue,
+    totalFare :: Maybe DecimalValue
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -365,19 +366,16 @@ instance ToBeckn Payload.Payload [Traveller] where
 
 instance FromBeckn Trip.Trip Trip where
   fromBeckn trip =
-    let mbPrice = trip.fare
-        mbFare = case mbPrice of
-          Nothing -> Nothing
-          Just p -> p.value
-     in Trip
-          { id = trip.id,
-            pickup = fromBeckn <$> trip.pickup,
-            drop = fromBeckn <$> trip.drop,
-            vehicle = fromBeckn <$> trip.vehicle,
-            driver = fromBeckn <$> trip.driver,
-            travellers = [],
-            fare = fromBeckn <$> mbFare
-          }
+    Trip
+      { id = trip.id,
+        pickup = fromBeckn <$> trip.pickup,
+        drop = fromBeckn <$> trip.drop,
+        vehicle = fromBeckn <$> trip.vehicle,
+        driver = fromBeckn <$> trip.driver,
+        travellers = [],
+        fare = fromBeckn <$> (trip.fare >>= (.value)),
+        totalFare = fromBeckn <$> (trip.totalFare >>= (.value))
+      }
 
 instance ToBeckn Trip.Trip Trip where
   toBeckn trip =
@@ -390,6 +388,7 @@ instance ToBeckn Trip.Trip Trip where
         driver = toBeckn <$> trip.driver,
         payload = toBeckn $ trip.travellers,
         fare = toBeckn <$> trip.fare,
+        totalFare = toBeckn <$> trip.totalFare,
         route = Nothing
       }
 

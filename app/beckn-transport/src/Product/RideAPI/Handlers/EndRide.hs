@@ -6,6 +6,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (pi)
+import qualified Product.FareCalculator.Interpreter as Fare
 import Types.App (Driver)
 import Types.Error
 import Types.Storage.Organization (Organization)
@@ -30,7 +31,7 @@ data ServiceHandle m = ServiceHandle
       Vehicle.Variant ->
       Double ->
       UTCTime ->
-      m Amount,
+      m Fare.FareParameters,
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Amount -> Double -> m ()
   }
@@ -53,9 +54,13 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM RideBookingNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  (chargeableDistance, actualFare) <- recalculateFare rideBooking ride
+  (chargeableDistance, actualFare, totalFare) <- recalculateFare rideBooking ride
 
-  let updRide = updateActualDistanceAndPrice chargeableDistance actualFare ride
+  let updRide = 
+        ride{chargeableDistance = Just chargeableDistance,
+             finalPrice = Just actualFare,
+             totalFare = Just totalFare
+            }
 
   endRideTransaction rideBooking.id updRide (cast driverId)
 
@@ -69,21 +74,21 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       let transporterId = rideBooking.providerId
           vehicleVariant = rideBooking.vehicleVariant
           oldDistance = rideBooking.distance
-          estimatedPrice = rideBooking.price
+          estimatedFare = rideBooking.price
       shouldRecalculateFare <- recalculateFareEnabled
       if shouldRecalculateFare
         then do
           let actualDistance = ride.traveledDistance
-          updatedPrice <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime
+          fareParams <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime
+          let updatedFare = Fare.fareSum fareParams
+              totalFare = Fare.fareSumWithDiscount fareParams
           let distanceDiff = actualDistance - oldDistance
-          let fareDiff = updatedPrice - estimatedPrice
+          let fareDiff = updatedFare - estimatedFare
           logTagInfo "Fare recalculation" $
             "Fare difference: "
               <> show (amountToDouble fareDiff)
               <> ", Distance difference: "
               <> show distanceDiff
           putDiffMetric fareDiff distanceDiff
-          pure (actualDistance, updatedPrice)
-        else pure (oldDistance, estimatedPrice)
-    updateActualDistanceAndPrice :: Double -> Amount -> Ride.Ride -> Ride.Ride
-    updateActualDistanceAndPrice = \distance fare ride -> ride{chargeableDistance = Just distance, finalPrice = Just fare}
+          pure (actualDistance, updatedFare, totalFare)
+        else pure (oldDistance, estimatedFare, rideBooking.estimatedTotalFare)

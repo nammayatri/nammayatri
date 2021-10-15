@@ -11,7 +11,7 @@ import Types.Domain.FarePolicy (makeFarePolicyAPIEntity)
 import qualified Types.Domain.FarePolicy as DFarePolicy
 import Types.Error
 import qualified Types.Storage.Person as SP
-import Utils.Common (fromMaybeM, withFlowHandlerAPI)
+import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 
 listFarePolicies :: SP.Person -> FlowHandler ListFarePolicyRes
 listFarePolicies person = withFlowHandlerAPI $ do
@@ -19,10 +19,11 @@ listFarePolicies person = withFlowHandlerAPI $ do
   farePolicies <- SFarePolicy.findFarePoliciesByOrgId orgId
   pure $ ListFarePolicyRes $ makeFarePolicyAPIEntity <$> farePolicies
 
-updateFarePolicy :: Id SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> FlowHandler UpdateFarePolicyRes
-updateFarePolicy _ fpId req = withFlowHandlerAPI $ do
+updateFarePolicy :: SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> FlowHandler UpdateFarePolicyRes
+updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findFarePolicyById fpId >>= fromMaybeM NoFarePolicy
+  unless (admin.organizationId == Just farePolicy.organizationId) $ throwError AccessDenied
   let updatedFarePolicy =
         farePolicy{baseFare = toRational <$> req.baseFare,
                    perExtraKmRateList = DFarePolicy.fromExtraKmRateAPIEntity <$> req.perExtraKmRateList,

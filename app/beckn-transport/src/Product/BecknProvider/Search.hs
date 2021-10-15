@@ -5,7 +5,6 @@ module Product.BecknProvider.Search (search) where
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Search as API
 import Beckn.Types.Core.Ack
@@ -26,6 +25,7 @@ import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
 import qualified Product.Location as Loc
 import Servant.Client (showBaseUrl)
+import qualified Product.FareCalculator.Flow as Fare
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Products as SProduct
 import qualified Storage.Queries.Quote as Quote
@@ -181,8 +181,7 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
-      let fare = fareSum fareParams
-      mkQuote searchRequest fare fareParams.discount transporterId distance poolResult.distanceToDriver poolResult.variant
+      mkQuote searchRequest fareParams transporterId distance poolResult.distanceToDriver poolResult.variant
 
   DB.runSqlDBTransaction $
     for_ listOfQuotes Quote.create
@@ -193,16 +192,18 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
 mkQuote ::
   DBFlow m r =>
   SearchRequest.SearchRequest ->
-  Amount ->
-  Maybe Amount ->
+  Fare.FareParameters ->
   Id Org.Organization ->
   Double ->
   Double ->
   Veh.Variant ->
   m Quote.Quote
-mkQuote productSearchRequest price discount transporterId distance nearestDriverDist vehicleVariant = do
+mkQuote productSearchRequest fareParams transporterId distance nearestDriverDist vehicleVariant = do
   quoteId <- Id <$> L.generateGUID
   now <- getCurrentTime
+  let price = fareSum fareParams
+      discount = fareParams.discount
+      estimatedTotalFare = fareSumWithDiscount fareParams
   products <-
     SProduct.findByName (show vehicleVariant)
       >>= fromMaybeM ProductsNotFound

@@ -153,6 +153,8 @@ mkQuote searchRequest bppOrg provider item = do
   price <-
     item.price.listed_value >>= convertDecimalValueToAmount
       & fromMaybeM (InternalError "Unable to parse price")
+  estimatedTotalPrice <- 
+    item.totalPrice.listed_value >>= convertDecimalValueToAmount & fromMaybeM (InternalError "Unable to parse estimated total price")
   nearestDriverDist <- getNearestDriverDist
   vehicleVariant <- item.descriptor.code & fromMaybeM (InvalidRequest "Missing item.descriptor.code")
   -- There is loss of data in coversion Product -> Item -> Product
@@ -163,6 +165,7 @@ mkQuote searchRequest bppOrg provider item = do
       { id = Id $ item.id,
         requestId = searchRequest.id,
         price = price,
+        estimatedTotalFare = estimatedTotalPrice,
         discount = item.discount,
         distanceToNearestDriver = nearestDriverDist,
         providerMobileNumber = fromMaybe "UNKNOWN" $ listToMaybe provider.phones,

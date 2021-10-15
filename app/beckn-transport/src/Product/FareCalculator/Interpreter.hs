@@ -1,4 +1,10 @@
-module Product.FareCalculator.Interpreter (calculateFare, fareSum, fareSumWithDiscount) where
+module Product.FareCalculator.Interpreter
+  ( FareParameters (..),
+    calculateFare,
+    fareSum,
+    fareSumWithDiscount,
+  )
+where
 
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id

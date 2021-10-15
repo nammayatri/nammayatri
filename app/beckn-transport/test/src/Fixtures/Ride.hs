@@ -19,6 +19,7 @@ defaultRide =
       trackingUrl = "",
       shortId = "",
       finalPrice = Nothing,
+      totalFare = Nothing,
       status = Ride.COMPLETED,
       traveledDistance = 0,
       chargeableDistance = Nothing,

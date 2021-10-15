@@ -106,6 +106,7 @@ updateMultiple rideId ride = do
         [ updatedAt <-. B.val_ now,
           status <-. B.val_ (ride_.status),
           finalPrice <-. B.val_ (ride_.finalPrice),
+          totalFare <-. B.val_ (ride_.totalFare),
           chargeableDistance <-. B.val_ (ride_.chargeableDistance)
         ]
 

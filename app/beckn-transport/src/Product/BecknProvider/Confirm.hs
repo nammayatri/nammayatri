@@ -94,6 +94,7 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
             toLocationId = searchRequest.toLocationId,
             bapId = searchRequest.bapId,
             price = quote.price,
+            estimatedTotalFare = quote.estimatedTotalFare,
             distance = quote.distance,
             vehicleVariant = quote.vehicleVariant,
             createdAt = now,

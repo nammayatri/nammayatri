@@ -16,6 +16,7 @@ defaultQuote =
       requestId = Id "1",
       productId = Id "1",
       price = 0,
+      estimatedTotalFare = 0,
       discount = Nothing,
       distance = 0,
       providerId = "",

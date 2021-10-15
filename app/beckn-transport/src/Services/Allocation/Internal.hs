@@ -121,6 +121,7 @@ assignDriver rideBookingId driverId = do
             otp = otp,
             trackingUrl = "UNKNOWN", -- TODO: Fill this field
             finalPrice = Nothing,
+            totalFare = Nothing,
             traveledDistance = 0,
             chargeableDistance = Nothing,
             createdAt = now,

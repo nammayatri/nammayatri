@@ -22,6 +22,7 @@ data QuoteT f = Quote
     productId :: B.C f (Id Products),
     price :: B.C f Amount,
     discount :: B.C f (Maybe Amount),
+    estimatedTotalFare :: B.C f Amount,
     providerId :: B.C f (Id Org.Organization),
     distance :: B.C f Double,
     distanceToNearestDriver :: B.C f Double,
@@ -62,6 +63,7 @@ fieldEMod =
         { requestId = "request_id",
           productId = "product_id",
           distanceToNearestDriver = "distance_to_nearest_driver",
+          estimatedTotalFare = "estimated_total_fare",
           providerId = "provider_id",
           vehicleVariant = "vehicle_variant",
           createdAt = "created_at"

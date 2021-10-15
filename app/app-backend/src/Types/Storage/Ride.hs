@@ -61,6 +61,7 @@ data RideT f = Ride
     otp :: B.C f Text,
     trackingUrl :: B.C f Text,
     finalPrice :: B.C f (Maybe Amount),
+    totalFare :: B.C f  (Maybe Amount),
     chargeableDistance :: B.C f (Maybe Double),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
@@ -104,6 +105,7 @@ fieldEMod =
           vehicleVariant = "vehicle_variant",
           trackingUrl = "tracking_url",
           finalPrice = "final_price",
+          totalFare = "total_fare",
           chargeableDistance = "chargeable_distance",
           createdAt = "created_at",
           updatedAt = "updated_at"

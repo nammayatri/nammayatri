@@ -24,6 +24,9 @@ CREATE TABLE atlas_transporter.ride (
     quantity bigint NOT NULL,
     price numeric(30,10),
     actual_price double precision,
+    discount double precision,
+    estimated_total_fare numeric(30,2),
+    total_fare numeric(30,2),
     status character varying(255) NOT NULL,
     start_time timestamp with time zone NOT NULL,
     end_time timestamp with time zone,
@@ -78,6 +81,9 @@ INSERT INTO atlas_transporter.ride
     quantity,
     price,
     actual_price,
+    discount,
+    estimated_total_fare,
+    total_fare,
     status,
     start_time,
     end_time,
@@ -182,6 +188,8 @@ CREATE TABLE atlas_transporter.ride_booking (
     from_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
     to_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
     price double precision NOT NULL,
+    discount double precision,
+    estimated_total_fare numeric(30,2) NOT NULL,
     distance double precision NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
@@ -197,6 +205,7 @@ CREATE TABLE atlas_transporter.ride (
     otp character(4) NOT NULL,
     tracking_url character varying(255) NOT NULL,
     final_price double precision,
+    total_fare numeric(30,2),
     traveled_distance double precision NOT NULL DEFAULT 0,
     chargeable_distance double precision,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -238,6 +247,8 @@ INSERT INTO atlas_transporter.ride_booking
         T1.from_location_id,
         T1.to_location_id,
         T1.price,
+        T1.discount,
+        T1.estimated_total_fare,
         T3.distance,
         T1.created_at,
         T1.updated_at
@@ -261,6 +272,7 @@ INSERT INTO atlas_transporter.ride
         T1.udf4,
         'UNKNOWN',
         T1.actual_price,
+        T1.total_fare,
         T1.traveled_distance,
         T1.chargeable_distance,
         T1.created_at,
@@ -314,6 +326,11 @@ ALTER TABLE atlas_transporter.notification_status
 
 ALTER TABLE atlas_transporter.allocation_event
    ADD  CONSTRAINT allocation_event_ride_booking_id_fkey FOREIGN KEY (ride_booking_id)
+      REFERENCES atlas_transporter.ride_booking (id) on delete cascade;
+
+ALTER TABLE atlas_transporter.discount_transaction
+   DROP CONSTRAINT discount_transaction_ride_booking_id_fkey
+ , ADD  CONSTRAINT discount_transaction_ride_booking_id_fkey FOREIGN KEY (ride_booking_id)
       REFERENCES atlas_transporter.ride_booking (id) on delete cascade;
 
 DROP TABLE atlas_transporter.old_ride;

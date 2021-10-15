@@ -26,6 +26,21 @@ instance IsHTTPError FarePolicyError where
 
 instance IsAPIError FarePolicyError
 
+data FPDiscountError
+  = FPDiscountDoesNotExist
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''FPDiscountError
+
+instance IsBaseError FPDiscountError where
+  toMessage FPDiscountDoesNotExist = Just "No discount matches passed data."
+
+instance IsHTTPError FPDiscountError where
+  toErrorCode FPDiscountDoesNotExist = "FARE_POLICY_DISCOUNT_DOES_NOT_EXIST"
+  toHttpCode FPDiscountDoesNotExist = E400
+
+instance IsAPIError FPDiscountError
+
 data AllocationError
   = EmptyDriverPool
   deriving (Eq, Show, IsBecknAPIError)

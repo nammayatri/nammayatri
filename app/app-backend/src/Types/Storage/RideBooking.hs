@@ -61,6 +61,8 @@ data RideBookingT f = RideBooking
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     price :: B.C f Amount,
+    discount :: B.C f (Maybe Amount),
+    estimatedTotalFare :: B.C f  Amount,
     distance :: B.C f Double,
     vehicleVariant :: B.C f Text,
     createdAt :: B.C f UTCTime,
@@ -101,6 +103,7 @@ fieldEMod =
           startTime = "start_time",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",
+          estimatedTotalFare = "estimated_total_fare",
           vehicleVariant = "vehicle_variant",
           createdAt = "created_at",
           updatedAt = "updated_at"

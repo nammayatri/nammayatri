@@ -23,7 +23,8 @@ data Item = Item
     ttl :: Maybe Duration,
     tags :: [Tag],
     -- Not in spec
-    discount :: Maybe Amount
+    discount :: Maybe Amount,
+    totalPrice :: Price
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -34,6 +35,7 @@ instance Example Item where
         parent_item_id = Just idExample,
         descriptor = example,
         price = example,
+        totalPrice = example,
         model_id = Just idExample,
         brand_id = Just idExample,
         category_id = Just idExample,

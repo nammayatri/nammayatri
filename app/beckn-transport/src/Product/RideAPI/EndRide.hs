@@ -37,7 +37,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
           findQuoteById = QQuote.findById,
           notifyCompleteToBAP = \quote rideBooking ride -> notifyUpdateToBAP quote rideBooking ride Mobility.COMPLETED,
           endRideTransaction,
-          calculateFare = \orgId vehicleVariant distance time -> Fare.fareSum <$> Fare.calculateFare orgId vehicleVariant distance time,
+          calculateFare = Fare.calculateFare,
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations
         }

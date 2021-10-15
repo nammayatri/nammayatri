@@ -19,6 +19,7 @@ data QuoteT f = Quote
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     price :: B.C f Amount,
     discount :: B.C f (Maybe Amount),
+    estimatedTotalFare :: B.C f  Amount,
     providerId :: B.C f (Id Org.Organization),
     providerName :: B.C f Text,
     providerMobileNumber :: B.C f Text,
@@ -63,6 +64,7 @@ fieldEMod =
           providerCompletedRidesCount = "provider_completed_rides_count",
           providerMobileNumber = "provider_mobile_number",
           distanceToNearestDriver = "distance_to_nearest_driver",
+          estimatedTotalFare = "estimated_total_fare",
           vehicleVariant = "vehicle_variant",
           providerId = "provider_id",
           createdAt = "created_at"
@@ -71,6 +73,7 @@ fieldEMod =
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
     estimatedPrice :: Amount,
+    estimatedTotalFare :: Amount,
     discount :: Maybe Amount,
     agencyName :: Text,
     agencyNumber :: Text,

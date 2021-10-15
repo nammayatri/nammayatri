@@ -54,6 +54,8 @@ onUpdate _org req = withFlowHandlerBecknAPI $
                       ride{status = maybe ride.status convertRideStatus mbState,
                            finalPrice =
                              trip >>= fare >>= (.value) >>= convertDecimalValueToAmount,
+                           totalFare =
+                             trip >>= totalFare >>= (.value) >>= convertDecimalValueToAmount,
                            chargeableDistance = trip >>= (.route) >>= (.edge.distance.value)
                           }
                 QRide.updateMultiple (uRide.id) uRide
@@ -98,6 +100,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
             status = SRide.NEW,
             trackingUrl = "UNKNOWN", -- TODO: Fill this field
             finalPrice = Nothing,
+            totalFare = Nothing,
             chargeableDistance = Nothing,
             vehicleVariant = rideBooking.vehicleVariant,
             createdAt = now,
