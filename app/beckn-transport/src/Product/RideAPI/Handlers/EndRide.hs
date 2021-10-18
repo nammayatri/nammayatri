@@ -54,11 +54,11 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM RideBookingNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  (chargeableDistance, actualFare, totalFare) <- recalculateFare rideBooking ride
+  (chargeableDistance, fare, totalFare) <- recalculateFare rideBooking ride
 
   let updRide = 
         ride{chargeableDistance = Just chargeableDistance,
-             finalPrice = Just actualFare,
+             fare = Just fare,
              totalFare = Just totalFare
             }
 
@@ -74,7 +74,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       let transporterId = rideBooking.providerId
           vehicleVariant = rideBooking.vehicleVariant
           oldDistance = rideBooking.distance
-          estimatedFare = rideBooking.price
+          estimatedFare = rideBooking.estimatedFare
       shouldRecalculateFare <- recalculateFareEnabled
       if shouldRecalculateFare
         then do

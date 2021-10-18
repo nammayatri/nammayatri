@@ -105,7 +105,7 @@ updateMultiple rideId ride = do
       mconcat
         [ updatedAt <-. B.val_ now,
           status <-. B.val_ (ride_.status),
-          finalPrice <-. B.val_ (ride_.finalPrice),
+          fare <-. B.val_ (ride_.fare),
           totalFare <-. B.val_ (ride_.totalFare),
           chargeableDistance <-. B.val_ (ride_.chargeableDistance)
         ]

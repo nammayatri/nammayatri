@@ -19,7 +19,7 @@ type FPDiscountAPI =
              :> Post '[JSON] UpdateFarePolicyDiscountRes
            :<|> AdminTokenAuth
              :> Capture "discountId" (Id Discount)
-             :> Post '[JSON] DeleteFarePolicyDiscountRes
+             :> Delete '[JSON] DeleteFarePolicyDiscountRes
        )
 
 discountFlow :: FlowServer FPDiscountAPI

@@ -34,3 +34,8 @@ UPDATE atlas_transporter.product_instance AS T1
     );
 
 ALTER TABLE atlas_transporter.product_instance ALTER COLUMN estimated_total_fare SET NOT NULL;
+
+ALTER TABLE atlas_transporter.product_instance
+  RENAME COLUMN price TO estimated_fare;
+ALTER TABLE atlas_transporter.product_instance
+  RENAME COLUMN actual_price TO fare;

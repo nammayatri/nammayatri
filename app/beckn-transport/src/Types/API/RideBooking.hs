@@ -15,7 +15,7 @@ import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 data RideBookingStatusRes = RideBookingStatusRes
   { id :: Id RideBooking,
     status :: RideBookingStatus,
-    estimatedPrice :: Maybe Amount,
+    estimatedFare :: Amount,
     toLocation :: SearchReqLocationAPIEntity,
     fromLocation :: SearchReqLocationAPIEntity,
     ride :: Maybe RideAPIEntity,
@@ -41,7 +41,7 @@ data RideInfo = RideInfo
     etaForPickupLoc :: Maybe Integer,
     distanceToPickupLoc :: Maybe Double,
     notificationExpiryTime :: UTCTime,
-    estimatedPrice :: Maybe Text
+    estimatedFare :: Text
   }
   deriving (Generic, ToJSON, FromJSON, Show, ToSchema)
 

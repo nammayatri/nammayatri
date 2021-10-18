@@ -150,7 +150,7 @@ mkQuote ::
   m SQuote.Quote
 mkQuote searchRequest bppOrg provider item = do
   now <- getCurrentTime
-  price <-
+  estimatedFare <-
     item.price.listed_value >>= convertDecimalValueToAmount
       & fromMaybeM (InternalError "Unable to parse price")
   estimatedTotalPrice <- 
@@ -164,7 +164,7 @@ mkQuote searchRequest bppOrg provider item = do
     SQuote.Quote
       { id = Id $ item.id,
         requestId = searchRequest.id,
-        price = price,
+        estimatedFare = estimatedFare,
         estimatedTotalFare = estimatedTotalPrice,
         discount = item.discount,
         distanceToNearestDriver = nearestDriverDist,

@@ -60,7 +60,7 @@ data RideT f = Ride
     vehicleVariant :: B.C f Text,
     otp :: B.C f Text,
     trackingUrl :: B.C f Text,
-    finalPrice :: B.C f (Maybe Amount),
+    fare :: B.C f (Maybe Amount),
     totalFare :: B.C f  (Maybe Amount),
     chargeableDistance :: B.C f (Maybe Double),
     createdAt :: B.C f UTCTime,
@@ -104,7 +104,6 @@ fieldEMod =
           vehicleColor = "vehicle_color",
           vehicleVariant = "vehicle_variant",
           trackingUrl = "tracking_url",
-          finalPrice = "final_price",
           totalFare = "total_fare",
           chargeableDistance = "chargeable_distance",
           createdAt = "created_at",
@@ -150,7 +149,7 @@ makeRideAPIEntity Ride {..} = do
       driverNumber = driverMobileNumber,
       driverRatings = driverRating,
       rideOtp = otp,
-      computedPrice = finalPrice,
+      computedPrice = fare,
       chargeableRideDistance = chargeableDistance,
       ..
     }

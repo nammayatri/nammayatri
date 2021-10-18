@@ -173,8 +173,8 @@ makeTripDetails mbSearchRequest = case mbSearchRequest of
           { id = getId rideBooking.id,
             status = rideBooking.status,
             driver = driver,
-            price = Just rideBooking.price,
+            price = Just rideBooking.estimatedFare,
             provider = Just provider,
-            actualPrice = mbRide >>= (.finalPrice),
+            actualPrice = mbRide >>= (.fare),
             vehicle = vehicle
           }

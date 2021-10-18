@@ -20,8 +20,8 @@ CREATE TABLE atlas_app.ride (
     entity_id character varying(255),
     entity_type character varying(255) NOT NULL,
     quantity bigint NOT NULL,
-    price numeric(30,10),
-    actual_price double precision,
+    estimated_fare numeric(30,10),
+    fare double precision,
     discount double precision,
     estimated_total_fare numeric(30,2),
     total_fare numeric(30,2),
@@ -74,8 +74,8 @@ INSERT INTO atlas_app.ride
     entity_id,
     entity_type,
     quantity,
-    price,
-    actual_price,
+    estimated_fare,
+    fare,
     discount,
     estimated_total_fare,
     total_fare,
@@ -168,7 +168,7 @@ CREATE TABLE atlas_app.ride_booking (
     requestor_id character(36) NOT NULL,
     from_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
     to_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
-    price double precision NOT NULL,
+    estimated_fare double precision NOT NULL,
     discount double precision,
     estimated_total_fare numeric(30,2) NOT NULL,
     distance double precision NOT NULL,
@@ -191,7 +191,7 @@ CREATE TABLE atlas_app.ride (
     vehicle_color character varying(255) NOT NULL,
     otp character(4) NOT NULL,
     tracking_url character varying(255) NOT NULL,
-    final_price double precision,
+    fare double precision,
     total_fare numeric(30,2),
     chargeable_distance double precision,
     vehicle_variant character varying(60) NOT NULL,
@@ -199,7 +199,7 @@ CREATE TABLE atlas_app.ride (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-ALTER TABLE atlas_app.quote ALTER COLUMN price SET NOT NULL;
+ALTER TABLE atlas_app.quote ALTER COLUMN estimated_fare SET NOT NULL;
 ALTER TABLE atlas_app.quote RENAME COLUMN organization_id TO provider_id;
 ALTER TABLE atlas_app.quote ADD COLUMN provider_mobile_number character varying(255);
 ALTER TABLE atlas_app.quote ADD COLUMN distance_to_nearest_driver float;
@@ -216,7 +216,7 @@ UPDATE atlas_app.quote AS T1
 
 ALTER TABLE atlas_app.quote ALTER COLUMN provider_mobile_number SET NOT NULL;
 ALTER TABLE atlas_app.quote ALTER COLUMN distance_to_nearest_driver SET NOT NULL;
-ALTER TABLE atlas_app.quote ALTER COLUMN price SET NOT NULL;
+ALTER TABLE atlas_app.quote ALTER COLUMN estimated_fare SET NOT NULL;
 
 INSERT INTO atlas_app.ride_booking
     SELECT
@@ -230,7 +230,7 @@ INSERT INTO atlas_app.ride_booking
         T2.requestor_id,
         T1.from_location_id,
         T1.to_location_id,
-        T1.price,
+        T1.estimated_fare,
         T1.discount,
         T1.estimated_total_fare,
         T2.distance :: double precision,
@@ -259,7 +259,7 @@ INSERT INTO atlas_app.ride
         COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'vehicle' ->> 'color', 'UNKNOWN'),
         T1.udf4,
         'UNKNOWN',
-        T1.actual_price,
+        T1.fare,
         T1.total_fare,
         T1.chargeable_distance,
         T1.vehicle_variant,
@@ -303,7 +303,7 @@ ALTER TABLE atlas_app.quote DROP COLUMN udf4;
 ALTER TABLE atlas_app.quote DROP COLUMN udf5;
 ALTER TABLE atlas_app.quote DROP COLUMN updated_at;
 ALTER TABLE atlas_app.quote DROP COLUMN chargeable_distance;
-ALTER TABLE atlas_app.quote DROP COLUMN actual_price;
+ALTER TABLE atlas_app.quote DROP COLUMN fare;
 
 ALTER TABLE atlas_app.ride_cancellation_reason RENAME COLUMN ride_id TO ride_booking_id;
 

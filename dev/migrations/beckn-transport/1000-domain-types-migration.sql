@@ -22,8 +22,8 @@ CREATE TABLE atlas_transporter.ride (
     entity_id character varying(255),
     entity_type character varying(255) NOT NULL,
     quantity bigint NOT NULL,
-    price numeric(30,10),
-    actual_price double precision,
+    estimated_fare numeric(30,10),
+    fare double precision,
     discount double precision,
     estimated_total_fare numeric(30,2),
     total_fare numeric(30,2),
@@ -79,8 +79,8 @@ INSERT INTO atlas_transporter.ride
     entity_id,
     entity_type,
     quantity,
-    price,
-    actual_price,
+    estimated_fare,
+    fare,
     discount,
     estimated_total_fare,
     total_fare,
@@ -187,7 +187,7 @@ CREATE TABLE atlas_transporter.ride_booking (
     requestor_id character(36) NOT NULL,
     from_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
     to_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
-    price double precision NOT NULL,
+    estimated_fare double precision NOT NULL,
     discount double precision,
     estimated_total_fare numeric(30,2) NOT NULL,
     distance double precision NOT NULL,
@@ -204,7 +204,7 @@ CREATE TABLE atlas_transporter.ride (
     vehicle_id character(36) NOT NULL REFERENCES atlas_transporter.vehicle (id) on delete cascade,
     otp character(4) NOT NULL,
     tracking_url character varying(255) NOT NULL,
-    final_price double precision,
+    fare double precision,
     total_fare numeric(30,2),
     traveled_distance double precision NOT NULL DEFAULT 0,
     chargeable_distance double precision,
@@ -212,7 +212,7 @@ CREATE TABLE atlas_transporter.ride (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-ALTER TABLE atlas_transporter.quote ALTER COLUMN price SET NOT NULL;
+ALTER TABLE atlas_transporter.quote ALTER COLUMN estimated_fare SET NOT NULL;
 ALTER TABLE atlas_transporter.quote RENAME COLUMN organization_id TO provider_id;
 ALTER TABLE atlas_transporter.quote ADD COLUMN distance_to_nearest_driver float;
 ALTER TABLE atlas_transporter.quote ADD COLUMN distance float;
@@ -229,7 +229,7 @@ UPDATE atlas_transporter.quote AS T1
 
 ALTER TABLE atlas_transporter.search_request DROP COLUMN udf5;
 ALTER TABLE atlas_transporter.quote ALTER COLUMN distance_to_nearest_driver SET NOT NULL;
-ALTER TABLE atlas_transporter.quote ALTER COLUMN price SET NOT NULL;
+ALTER TABLE atlas_transporter.quote ALTER COLUMN estimated_fare SET NOT NULL;
 ALTER TABLE atlas_transporter.quote ALTER COLUMN distance SET NOT NULL;
 
 INSERT INTO atlas_transporter.ride_booking
@@ -246,7 +246,7 @@ INSERT INTO atlas_transporter.ride_booking
         T2.requestor_id,
         T1.from_location_id,
         T1.to_location_id,
-        T1.price,
+        T1.estimated_fare,
         T1.discount,
         T1.estimated_total_fare,
         T3.distance,
@@ -271,7 +271,7 @@ INSERT INTO atlas_transporter.ride
         T1.entity_id,
         T1.udf4,
         'UNKNOWN',
-        T1.actual_price,
+        T1.fare,
         T1.total_fare,
         T1.traveled_distance,
         T1.chargeable_distance,
@@ -302,7 +302,7 @@ ALTER TABLE atlas_transporter.quote DROP COLUMN udf3;
 ALTER TABLE atlas_transporter.quote DROP COLUMN udf4;
 ALTER TABLE atlas_transporter.quote DROP COLUMN udf5;
 ALTER TABLE atlas_transporter.quote DROP COLUMN updated_at;
-ALTER TABLE atlas_transporter.quote DROP COLUMN actual_price;
+ALTER TABLE atlas_transporter.quote DROP COLUMN fare;
 
 ALTER TABLE atlas_transporter.ride_request RENAME COLUMN ride_id TO ride_booking_id;
 ALTER TABLE atlas_transporter.ride_cancellation_reason RENAME COLUMN ride_id TO ride_booking_id;

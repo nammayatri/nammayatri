@@ -86,7 +86,7 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
                 etaForPickupLoc = (`div` 60) . (.durationInS) <$> mbRoute,
                 distanceToPickupLoc = (.distanceInM) <$> mbRoute,
                 notificationExpiryTime = notificationExpiryTime,
-                estimatedPrice = Just $ amountToString rideBooking.price
+                estimatedFare = amountToString rideBooking.estimatedFare
               }
   where
     driverId = cast personId
@@ -161,7 +161,7 @@ buildRideBookingStatusRes rideBooking = do
     API.RideBookingStatusRes
       { id = rideBooking.id,
         status = rbStatus,
-        estimatedPrice = Just rideBooking.price,
+        estimatedFare = rideBooking.estimatedFare,
         toLocation = SLoc.makeSearchReqLocationAPIEntity toLocation,
         fromLocation = SLoc.makeSearchReqLocationAPIEntity fromLocation,
         ride = mbRideAPIEntity,

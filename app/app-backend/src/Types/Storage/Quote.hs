@@ -17,7 +17,7 @@ import qualified Types.Storage.SearchRequest as SearchRequest
 data QuoteT f = Quote
   { id :: B.C f (Id Quote),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
-    price :: B.C f Amount,
+    estimatedFare :: B.C f Amount,
     discount :: B.C f (Maybe Amount),
     estimatedTotalFare :: B.C f  Amount,
     providerId :: B.C f (Id Org.Organization),
@@ -64,6 +64,7 @@ fieldEMod =
           providerCompletedRidesCount = "provider_completed_rides_count",
           providerMobileNumber = "provider_mobile_number",
           distanceToNearestDriver = "distance_to_nearest_driver",
+          estimatedFare = "estimated_fare",
           estimatedTotalFare = "estimated_total_fare",
           vehicleVariant = "vehicle_variant",
           providerId = "provider_id",
@@ -72,7 +73,7 @@ fieldEMod =
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
-    estimatedPrice :: Amount,
+    estimatedFare :: Amount,
     estimatedTotalFare :: Amount,
     discount :: Maybe Amount,
     agencyName :: Text,
@@ -86,8 +87,7 @@ data QuoteAPIEntity = QuoteAPIEntity
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} =
   QuoteAPIEntity
-    { estimatedPrice = price,
-      agencyName = providerName,
+    { agencyName = providerName,
       agencyNumber = providerMobileNumber,
       agencyCompletedRidesCount = providerCompletedRidesCount,
       nearestDriverDistance = distanceToNearestDriver,

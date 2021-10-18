@@ -38,7 +38,7 @@ doAnAppSearch = do
   let bQuoteId = quoteAPIEntity.id
 
   -- check if calculated price is greater than 0
-  quoteAPIEntity.estimatedPrice `shouldSatisfy` (> 100) -- should at least be more than 100
+  quoteAPIEntity.estimatedFare `shouldSatisfy` (> 100) -- should at least be more than 100
 
   -- Confirm ride from app backend
   confirmResult <-

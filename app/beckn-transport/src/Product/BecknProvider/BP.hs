@@ -198,7 +198,7 @@ mkTrip ride = do
         vehicle = vehicle,
         driver = Just driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = mkPrice <$> ride.finalPrice,
+        fare = mkPrice <$> ride.fare,
         totalFare = mkPrice <$> ride.totalFare,
         route =
           Just $
@@ -249,7 +249,7 @@ mkCancelTripObj rideBooking ride = do
         vehicle = vehicle,
         driver = Just driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = Just $ ExternalAPITransform.mkPrice rideBooking.price,
+        fare = Just $ ExternalAPITransform.mkPrice rideBooking.estimatedFare,
         totalFare = Just $ ExternalAPITransform.mkPrice rideBooking.estimatedTotalFare,
         route = Nothing
       }

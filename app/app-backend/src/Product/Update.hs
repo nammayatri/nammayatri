@@ -52,7 +52,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
               whenJust mbRide $ \ride -> do
                 let uRide =
                       ride{status = maybe ride.status convertRideStatus mbState,
-                           finalPrice =
+                           fare =
                              trip >>= fare >>= (.value) >>= convertDecimalValueToAmount,
                            totalFare =
                              trip >>= totalFare >>= (.value) >>= convertDecimalValueToAmount,
@@ -99,7 +99,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
             driverRating = mbTrip >>= (.driver) >>= (.rating) <&> (.value) >>= readMaybe . T.unpack,
             status = SRide.NEW,
             trackingUrl = "UNKNOWN", -- TODO: Fill this field
-            finalPrice = Nothing,
+            fare = Nothing,
             totalFare = Nothing,
             chargeableDistance = Nothing,
             vehicleVariant = rideBooking.vehicleVariant,

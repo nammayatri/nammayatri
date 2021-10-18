@@ -201,7 +201,7 @@ mkQuote ::
 mkQuote productSearchRequest fareParams transporterId distance nearestDriverDist vehicleVariant = do
   quoteId <- Id <$> L.generateGUID
   now <- getCurrentTime
-  let price = fareSum fareParams
+  let estimatedFare = fareSum fareParams
       discount = fareParams.discount
       estimatedTotalFare = fareSumWithDiscount fareParams
   products <-
