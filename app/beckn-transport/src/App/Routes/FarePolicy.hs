@@ -15,16 +15,16 @@ import Utils.Auth
 
 type FarePolicyAPI =
   "farePolicy"
-    :> ( TokenAuth :> Get '[JSON] ListFarePolicyResponse
+    :> ( FPDiscountAPI
+           :<|> TokenAuth :> Get '[JSON] ListFarePolicyResponse
            :<|> AdminTokenAuth
              :> Capture "farePolicyId" (Id FarePolicy)
              :> ReqBody '[JSON] UpdateFarePolicyRequest
              :> Post '[JSON] UpdateFarePolicyResponse
-           :<|> FPDiscountAPI
        )
 
 farePolicyFlow :: FlowServer FarePolicyAPI
 farePolicyFlow =
-  listFarePolicies
+  discountFlow
+    :<|> listFarePolicies
     :<|> updateFarePolicy
-    :<|> discountFlow

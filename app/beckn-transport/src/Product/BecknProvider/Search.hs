@@ -206,7 +206,7 @@ mkProductInstance productCase fareParams status transporterId nearestDriverDist 
   productInstanceId <- Id <$> L.generateGUID
   now <- getCurrentTime
   shortId <- L.runIO $ T.pack <$> RS.randomString (RS.onlyAlphaNum RS.randomASCII) 16
-  let price = fareSum fareParams
+  let estimatedFare = fareSum fareParams
       estimatedTotalFare = fareSumWithDiscount fareParams
   products <-
     SProduct.findByName (show vehicleVariant)
@@ -223,8 +223,8 @@ mkProductInstance productCase fareParams status transporterId nearestDriverDist 
         entityId = Nothing,
         quantity = 1,
         _type = Case.RIDESEARCH,
-        price,
-        actualPrice = Nothing,
+        estimatedFare,
+        fare = Nothing,
         estimatedTotalFare,
         totalFare = Nothing,
         discount = fareParams.discount,

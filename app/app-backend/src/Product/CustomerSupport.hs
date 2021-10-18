@@ -141,8 +141,8 @@ makeTripDetails caseM = case caseM of
           { id = getId productInstance.id,
             status = productInstance.status,
             driver = driver,
-            price = productInstance.price,
-            actualPrice = productInstance.actualPrice,
+            price = productInstance.estimatedFare,
+            actualPrice = productInstance.fare,
             provider = provider,
             vehicle = vehicle
           }

@@ -13,3 +13,8 @@ UPDATE atlas_app.product_instance AS T1
         FROM atlas_app.product_instance AS T2
         WHERE T1.id = T2.id
     );
+
+ALTER TABLE atlas_app.product_instance
+  RENAME COLUMN price TO estimated_fare;
+ALTER TABLE atlas_app.product_instance
+  RENAME COLUMN actual_price TO fare;

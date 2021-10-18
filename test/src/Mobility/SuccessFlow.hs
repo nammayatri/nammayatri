@@ -37,8 +37,8 @@ doAnAppSearch = do
       <&> nonEmpty
   let productInstanceId = getId productInstance.id
 
-  case productInstance.price of
-    Just prodPrice -> prodPrice `shouldSatisfy` (> 100) -- should at least be more than 100
+  case productInstance.estimatedFare of
+    Just prodFare -> prodFare `shouldSatisfy` (> 100) -- should at least be more than 100
     Nothing -> expectationFailure "Estimated price is Nothing."
 
   -- Confirm ride from app backend

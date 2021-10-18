@@ -56,12 +56,12 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   orderCase <- findCaseByIdAndType (PI.caseId <$> piList) Case.RIDEORDER >>= fromMaybeM CaseNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  (chargeableDistance, actualPrice, totalFare) <- recalculateFare orderCase orderPi
+  (chargeableDistance, fare, totalFare) <- recalculateFare orderCase orderPi
 
-  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) actualPrice totalFare
+  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) fare totalFare
   notifyUpdateToBAP
-    searchPi{chargeableDistance = Just chargeableDistance, actualPrice = Just actualPrice, totalFare = Just totalFare}
-    orderPi{chargeableDistance = Just chargeableDistance, actualPrice = Just actualPrice, totalFare = Just totalFare}
+    searchPi{chargeableDistance = Just chargeableDistance, fare = Just fare, totalFare = Just totalFare}
+    orderPi{chargeableDistance = Just chargeableDistance, fare = Just fare, totalFare = Just totalFare}
     PI.COMPLETED
 
   return APISuccess.Success
@@ -71,7 +71,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       oldDistance <-
         (orderCase.udf5 >>= readMaybe . T.unpack)
           & fromMaybeM (CaseFieldNotPresent "udf5")
-      let estimatedFare = orderPi.price
+      let estimatedFare = orderPi.estimatedFare
       let estimatedTotalFare = orderPi.estimatedTotalFare
       shouldRecalculateFare <- recalculateFareEnabled
       if shouldRecalculateFare

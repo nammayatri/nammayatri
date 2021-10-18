@@ -219,7 +219,7 @@ mkTrip orderPi = do
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = mkPrice <$> orderPi.actualPrice,
+        fare = mkPrice <$> orderPi.fare,
         totalFare = mkPrice <$> orderPi.totalFare,
         route =
           Just $
@@ -269,7 +269,7 @@ mkCancelTripObj searchPI = do
         vehicle = vehicle,
         driver,
         payload = Payload Nothing Nothing [] Nothing,
-        fare = Just $ ExternalAPITransform.mkPrice searchPI.price,
+        fare = Just $ ExternalAPITransform.mkPrice searchPI.estimatedFare,
         totalFare = Just $ ExternalAPITransform.mkPrice searchPI.estimatedTotalFare,
         route = Nothing
       }

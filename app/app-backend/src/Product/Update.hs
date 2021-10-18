@@ -37,7 +37,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
             uPrd =
               orderPi
                 { SPI.info = encodeToText <$> uInfo,
-                  SPI.actualPrice =
+                  SPI.fare =
                     trip >>= fare >>= (.value) >>= convertDecimalValueToAmount,
                   SPI.totalFare =
                     trip >>= totalFare >>= (.value) >>= convertDecimalValueToAmount,

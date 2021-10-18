@@ -164,7 +164,7 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
                 etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
                 distanceToPickupLoc = distanceInM <$> mbRoute,
                 notificationExpiryTime = notificationExpiryTime,
-                estimatedPrice = amountToString productInstance.price
+                estimatedPrice = amountToString productInstance.estimatedFare
               }
   where
     driverId = cast personId
