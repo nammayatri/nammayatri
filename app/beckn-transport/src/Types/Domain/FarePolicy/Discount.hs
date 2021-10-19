@@ -5,7 +5,7 @@ module Types.Domain.FarePolicy.Discount where
 import Beckn.Types.Id (Id)
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation
-import Data.Time (TimeOfDay, UTCTime)
+import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Vehicle as Vehicle
@@ -15,8 +15,8 @@ data Discount = Discount
   { id :: Id Discount,
     vehicleVariant :: Vehicle.Variant,
     organizationId :: Id Organization.Organization,
-    startTime :: TimeOfDay,
-    endTime :: TimeOfDay,
+    fromDate :: UTCTime,
+    toDate :: UTCTime,
     discount :: Rational,
     enabled :: Bool,
     createdAt :: UTCTime,
@@ -26,8 +26,8 @@ data Discount = Discount
 
 data DiscountAPIEntity = DiscountAPIEntity
   { id :: Id Discount,
-    startTime :: TimeOfDay,
-    endTime :: TimeOfDay,
+    fromDate :: UTCTime,
+    toDate :: UTCTime,
     discount :: Double,
     enabled :: Bool
   }
