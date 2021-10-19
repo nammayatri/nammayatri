@@ -18,6 +18,8 @@ createFarePolicyDiscount :: SP.Person -> CreateFarePolicyDiscountReq -> FlowHand
 createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   runRequestValidation validateCreateFarePolicyDiscountReq req
+  discounts <- QDisc.findAllFlow orgId req.vehicleVariant
+  when (req.enabled && any (.enabled) discounts) $ throwError FPDiscountAlreadyEnabled
   disc <- buildDiscount orgId
   DB.runSqlDBTransaction $ QDisc.create disc
   pure Success
@@ -45,6 +47,8 @@ updateFarePolicyDiscount admin discId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdateFarePolicyDiscountReq req
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.organizationId == orgId) $ throwError AccessDenied
+  discounts <- QDisc.findAllFlow orgId discount.vehicleVariant
+  when (req.enabled && any (.enabled) (filter (\disc -> disc.id /= discId) discounts)) $ throwError FPDiscountAlreadyEnabled
   let updatedFarePolicy =
         discount{fromDate = req.fromDate,
                  toDate = req.toDate,
