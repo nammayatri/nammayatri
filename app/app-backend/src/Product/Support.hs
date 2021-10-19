@@ -32,7 +32,7 @@ sendIssue personId request@SendIssueReq {..} = withFlowHandlerAPI . withPersonId
   Queries.insertIssue (mkDBIssue issueId personIdTxt request utcNow)
   let mailSubject = mkMailSubject issueId (issue.reason)
   let mailBody = mkMailBody issueId personIdTxt request utcNow
-  responseError <- L.runIO $ SES.sendEmail issuesConfig mailSubject mailBody
+  responseError <- liftIO $ SES.sendEmail issuesConfig mailSubject mailBody
   whenJust responseError $ throwError . EmailSendingError
   return Success
 

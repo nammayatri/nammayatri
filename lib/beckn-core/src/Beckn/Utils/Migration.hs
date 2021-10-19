@@ -8,7 +8,6 @@ import Beckn.Types.Common
 import Beckn.Utils.Common
 import qualified Database.PostgreSQL.Simple as PS
 import Database.PostgreSQL.Simple.Migration
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 
@@ -21,8 +20,8 @@ migrateIfNeeded mPath dbCfg autoMigrate =
     Just path | autoMigrate ->
       fmap resultToEither $ do
         logInfo $ "Running migrations (" <> show path <> ") ..."
-        conn <- L.runIO . connect $ pgConfig dbCfg
-        L.runIO . PS.withTransaction conn $
+        conn <- liftIO . connect $ pgConfig dbCfg
+        liftIO . PS.withTransaction conn $
           runMigrations
             True
             conn

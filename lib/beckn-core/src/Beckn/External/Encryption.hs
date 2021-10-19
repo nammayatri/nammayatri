@@ -43,7 +43,6 @@ import Database.Beam (Beamable, Columnar, HasSqlEqualityCheck (..), Nullable)
 import Database.Beam.Backend (FromBackendRow (..), HasSqlValueSyntax (..))
 import Database.Beam.Postgres (Postgres)
 import Database.Beam.Postgres.Syntax (PgValueSyntax)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.TypeLits (ErrorMessage (..), TypeError)
 import qualified Language.Haskell.TH as TH
@@ -195,7 +194,7 @@ type EncFlow m r = (HasFlowEnv m r '["encService" ::: (String, Word16)])
 withPassettoCtx :: EncFlow m r => ReaderT PassettoContext IO a -> m a
 withPassettoCtx action = do
   (host, port) <- asks (.encService)
-  L.runIO (mkDefPassettoContext host port) >>= L.runIO . runReaderT action
+  liftIO (mkDefPassettoContext host port) >>= liftIO . runReaderT action
 
 -- | Encrypt given value.
 --

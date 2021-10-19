@@ -33,6 +33,7 @@ data EnvR r = EnvR
 
 type MonadFlow m =
   ( Monad m,
+    MonadIO m,
     L.MonadFlow m,
     Forkable m,
     Log m,

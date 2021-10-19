@@ -27,7 +27,6 @@ import qualified Data.OpenApi as DS
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Typeable (typeRep)
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.Exts (fromList)
@@ -211,7 +210,7 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
   Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
     doSignature req = do
-      now <- L.runIO getPOSIXTime
+      now <- liftIO getPOSIXTime
       let params = HttpSig.mkSignatureParams shortOrgId uniqueKeyId now signatureExpiry HttpSig.Ed25519
       body <- getBody $ Http.requestBody req
       let bodyHash = HttpSig.becknSignatureHash body

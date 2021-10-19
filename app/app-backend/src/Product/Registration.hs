@@ -120,7 +120,7 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
 
 generateOTPCode :: MonadFlow m => m Text
 generateOTPCode =
-  L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
+  liftIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
 
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"

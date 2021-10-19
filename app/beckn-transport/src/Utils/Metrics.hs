@@ -78,11 +78,11 @@ startSearchMetrics' transporterId bmContainer = do
   let (_, failureCounter) = bmContainer.searchDuration
       searchDurationTimeout = getSeconds bmContainer.searchDurationTimeout
   startTime <- getClockTimeInMs
-  searchMetricsMVar <- L.runIO $ newMVar startTime
+  searchMetricsMVar <- liftIO $ newMVar startTime
   fork "BPP Search Metrics" $ do
-    L.runIO $ threadDelay $ searchDurationTimeout * 1000000
-    whenJustM (L.runIO $ tryTakeMVar searchMetricsMVar) $ \_ -> do
-      L.runIO $ P.withLabel failureCounter (show transporterId) P.incCounter
+    liftIO $ threadDelay $ searchDurationTimeout * 1000000
+    whenJustM (liftIO $ tryTakeMVar searchMetricsMVar) $ \_ -> do
+      liftIO $ P.withLabel failureCounter (show transporterId) P.incCounter
   return searchMetricsMVar
 
 finishSearchMetrics' ::
@@ -93,6 +93,6 @@ finishSearchMetrics' ::
   m ()
 finishSearchMetrics' transporterId bmContainer searchMetricsMVar = do
   let (searchDurationHistogram, _) = bmContainer.searchDuration
-  whenJustM (L.runIO $ tryTakeMVar searchMetricsMVar) $ \startTime -> do
+  whenJustM (liftIO $ tryTakeMVar searchMetricsMVar) $ \startTime -> do
     endTime <- getClockTimeInMs
     putSearchDuration transporterId searchDurationHistogram $ fromIntegral $ endTime - startTime

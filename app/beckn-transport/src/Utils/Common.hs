@@ -9,9 +9,8 @@ where
 import Beckn.Utils.Common as CoreCommon
 import qualified Crypto.Number.Generate as Cryptonite
 import Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
 
 generateOTPCode :: MonadFlow m => m Text
 generateOTPCode =
-  L.runIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
+  liftIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999

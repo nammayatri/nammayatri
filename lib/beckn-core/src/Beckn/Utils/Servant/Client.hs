@@ -105,7 +105,7 @@ createManagers ::
   m (Map String Http.Manager)
 createManagers managerSettings = do
   timeout <- asks (.httpClientOptions.timeoutMs)
-  L.runIO
+  liftIO
     . mapM Http.newManager
     . fmap (setResponseTimeout timeout)
     . Map.insert defaultHttpManager Http.tlsManagerSettings

@@ -51,12 +51,12 @@ startSearchMetrics' bmContainer txnId = do
   Redis.setExRedis (searchDurationKey txnId) startTime (searchRedisExTime + 1) -- a bit more time to
   -- allow forked thread to handle failure
   fork "Gateway Search Metrics" $ do
-    L.runIO $ threadDelay $ searchRedisExTime * 1000000
+    liftIO $ threadDelay $ searchRedisExTime * 1000000
     whenM (Redis.tryLockRedis (searchDurationLockKey txnId) searchRedisExTime) $ do
       Redis.getKeyRedis (searchDurationKey txnId) >>= \case
         Just (_ :: UTCTime) -> do
           void $ Redis.deleteKeyRedis (searchDurationKey txnId)
-          L.runIO $ P.incCounter failureCounter
+          liftIO $ P.incCounter failureCounter
         Nothing -> return ()
       Redis.unlockRedis $ searchDurationLockKey txnId
 

@@ -10,7 +10,6 @@ import qualified Beckn.Utils.Logging as Log
 import Control.Concurrent.STM.TMVar (isEmptyTMVar)
 import Control.Monad.Catch (Handler (..), catches)
 import qualified Data.Map as Map
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
@@ -107,8 +106,8 @@ run = do
       Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
     -- If process handling took less than processDelay we delay for remain to processDelay time
     processDelay <- asks (.driverAllocationConfig.processDelay)
-    L.runIO . threadDelay . max 0 . getMicroseconds $ millisecondsToMicroseconds (processDelay - processTime)
-  isRunning <- L.runIO . liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)
+    liftIO . threadDelay . max 0 . getMicroseconds $ millisecondsToMicroseconds (processDelay - processTime)
+  isRunning <- liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)
   when isRunning run
   where
     runnerHandler =
@@ -116,6 +115,6 @@ run = do
         catches
         [ Handler $ \(RedisError err) -> do
             Log.logTagError "Allocation service" $ show err
-            L.runIO $ threadDelay 1000000,
+            liftIO $ threadDelay 1000000,
           Handler $ \(e :: SomeException) -> Log.logTagError "Allocation service" $ makeLogSomeException e
         ]

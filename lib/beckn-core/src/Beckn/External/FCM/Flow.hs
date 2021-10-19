@@ -28,7 +28,6 @@ import qualified Control.Exception as E (try)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Default.Class
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding ((^.))
 import qualified EulerHS.Types as ET
 import Servant
@@ -140,7 +139,7 @@ getToken = do
     Redis.getKeyRedis "beckn:fcm_token" >>= \case
       Nothing -> pure $ Left "Token not found"
       Just jwt -> do
-        validityStatus <- L.runIO $ JWT.isValid jwt
+        validityStatus <- liftIO $ JWT.isValid jwt
         pure $ case validityStatus of
           JWT.JWTValid _ -> Right jwt
           JWT.JWTExpired _ -> Left "Token expired"
@@ -159,7 +158,7 @@ getAndParseFCMAccount = do
   case mbFcmFile of
     Nothing -> pure $ Left "FCM JSON file is not set in configs"
     Just fcmFile -> do
-      rawContent <- L.runIO . E.try @IOException . BL.readFile $ toString fcmFile
+      rawContent <- liftIO . E.try @IOException . BL.readFile $ toString fcmFile
       pure $ parseContent $ first show rawContent
   where
     parseContent :: Either String BL.ByteString -> Either String JWT.ServiceAccount
@@ -171,7 +170,7 @@ getNewToken = getAndParseFCMAccount >>= either (pure . Left) refreshToken
 refreshToken :: MonadFlow m => JWT.ServiceAccount -> m (Either String JWT.JWToken)
 refreshToken fcmAcc = do
   logTagInfo fcmTag "Refreshing token"
-  refreshRes <- L.runIO $ JWT.doRefreshToken fcmAcc
+  refreshRes <- liftIO $ JWT.doRefreshToken fcmAcc
   case refreshRes of
     Left err -> do
       logTagInfo fcmTag $ fromString err

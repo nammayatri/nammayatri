@@ -42,7 +42,7 @@ withPostgreSQLSimple f = do
         PostgresPool _connTag pool -> pure pool
         _ -> throwError NotPostgresBackend
   res <-
-    L.runIO . withResource pool $
+    liftIO . withResource pool $
       runPostgresqlSimple . fmap Right . f
   res & fromEitherM (SQLRequestError "postgresql-simple")
 

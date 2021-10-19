@@ -19,7 +19,6 @@ import Beckn.Utils.Servant.Client as Common
 import Beckn.Utils.Text as Common
 import Beckn.Utils.Time as Common
 import qualified Data.Text as T
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Test.RandomStrings as RS
 
@@ -30,4 +29,4 @@ identity :: p -> p
 identity a = a
 
 generateShortId :: MonadFlow m => m (ShortId a)
-generateShortId = ShortId . T.pack <$> L.runIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
+generateShortId = ShortId . T.pack <$> liftIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
