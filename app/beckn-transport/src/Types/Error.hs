@@ -28,16 +28,23 @@ instance IsAPIError FarePolicyError
 
 data FPDiscountError
   = FPDiscountDoesNotExist
+  | FPDiscountAlreadyEnabled
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FPDiscountError
 
 instance IsBaseError FPDiscountError where
-  toMessage FPDiscountDoesNotExist = Just "No discount matches passed data."
+  toMessage = \case
+    FPDiscountDoesNotExist -> Just "No discount matches passed data."
+    FPDiscountAlreadyEnabled -> Just "Some discount is already enabled."
 
 instance IsHTTPError FPDiscountError where
-  toErrorCode FPDiscountDoesNotExist = "FARE_POLICY_DISCOUNT_DOES_NOT_EXIST"
-  toHttpCode FPDiscountDoesNotExist = E400
+  toErrorCode = \case
+    FPDiscountDoesNotExist -> "FARE_POLICY_DISCOUNT_DOES_NOT_EXIST"
+    FPDiscountAlreadyEnabled -> "FARE_POLICY_DISCOUNT_ALREADY_ENABLED"
+  toHttpCode = \case
+    FPDiscountDoesNotExist -> E400
+    FPDiscountAlreadyEnabled -> E400
 
 instance IsAPIError FPDiscountError
 

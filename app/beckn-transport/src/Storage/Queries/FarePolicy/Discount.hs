@@ -35,6 +35,13 @@ findById discId = do
     predicate discId_ Storage.FarePolicyDiscount {..} =
       id ==. B.val_ discId_
 
+findAllFlow ::
+  DBFlow m r =>
+  Id Organization.Organization ->
+  Vehicle.Variant ->
+  m [D.Discount]
+findAllFlow orgId vehicleVariant_ = DB.runSqlDBTransaction $ findAll orgId vehicleVariant_
+
 findAll ::
   Id Organization.Organization ->
   Vehicle.Variant ->
