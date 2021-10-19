@@ -31,8 +31,8 @@ createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
           { id = uuid,
             vehicleVariant = req.vehicleVariant,
             organizationId = orgId,
-            startTime = req.startTime,
-            endTime = req.endTime,
+            fromDate = req.fromDate,
+            toDate = req.toDate,
             discount = toRational req.discount,
             enabled = req.enabled,
             createdAt = currTime,
@@ -46,8 +46,8 @@ updateFarePolicyDiscount admin discId req = withFlowHandlerAPI $ do
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.organizationId == orgId) $ throwError AccessDenied
   let updatedFarePolicy =
-        discount{startTime = req.startTime,
-                 endTime = req.endTime,
+        discount{fromDate = req.fromDate,
+                 toDate = req.toDate,
                  discount = toRational req.discount,
                  enabled = req.enabled
                 }

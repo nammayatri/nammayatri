@@ -51,8 +51,8 @@ defaultPickupLocation =
         country = Nothing,
         pincode = Nothing,
         address = Nothing,
-        createdAt = mockTime,
-        updatedAt = mockTime
+        createdAt = mockTime 0,
+        updatedAt = mockTime 0
       }
 
 defaultDropLocation :: DropLocation
@@ -68,14 +68,15 @@ defaultDropLocation =
         country = Nothing,
         pincode = Nothing,
         address = Nothing,
-        createdAt = mockTime,
-        updatedAt = mockTime
+        createdAt = mockTime 11,
+        updatedAt = mockTime 11
       }
 
-mkDiscount vehVar from to disc isOn = Discount (Id "") vehVar (Id "") from to disc isOn mockTime mockTime
+mkDiscount :: Vehicle.Variant -> UTCTime -> UTCTime -> Rational -> Bool -> Discount
+mkDiscount vehVar from to disc isOn = Discount (Id "") vehVar (Id "") from to disc isOn (mockTime 11) (mockTime 11)
 
-mockTime :: UTCTime
-mockTime = parseTime "2018-12-06T11:39:57.153Z"
+mockTime :: Int -> UTCTime
+mockTime hour = parseTime ("2018-12-06T" <> (if hour <= 9 then "0" else "") <> show hour <> ":00:00.000Z")
 
 orgID :: Id Organization.Organization
 orgID = "organization_id"
@@ -100,7 +101,7 @@ hatchback20km = testCase "Calculate fare for 20km for Hatchback" $ do
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 300.0
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 2
     distance = 20000.0
 
 sedan10km :: TestTree
@@ -115,7 +116,7 @@ sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 250.0
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 2
     distance = 10000.0
     handle' =
       handle
@@ -144,7 +145,7 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 475.0
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 2
     distance = 20000.0
     handle' =
       handle
@@ -173,7 +174,7 @@ sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 775.0
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 2
     distance = 30000.0
     handle' =
       handle
@@ -202,7 +203,7 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 320.0
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 2
     distance = 20000.0
     handle' =
       handle
@@ -234,7 +235,7 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 331.1
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 21
     distance = 20000.0
     handle' =
       handle
@@ -267,7 +268,7 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 357.5
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 21
     distance = 20000.0
     handle' =
       handle
@@ -300,7 +301,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 451.0
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 21
     distance = 20000.0
     handle' =
       handle
@@ -333,7 +334,7 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 401.0
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 21
     distance = 20000.0
     handle' =
       handle
@@ -348,7 +349,7 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
                         :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
                              defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
                            ],
-                    discountList = [mkDiscount Vehicle.SUV midnight midday 50 True, mkDiscount Vehicle.SUV midday midnight 50 True],
+                    discountList = [mkDiscount Vehicle.SUV (mockTime 19) (mockTime 20) 50 True, mkDiscount Vehicle.SUV (mockTime 20) (mockTime 23) 50 True],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1
@@ -367,7 +368,7 @@ nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for 
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 451.0
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 21
     distance = 20000.0
     handle' =
       handle
@@ -382,7 +383,7 @@ nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for 
                         :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
                              defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
                            ],
-                    discountList = [mkDiscount Vehicle.SUV midnight midday 50 False],
+                    discountList = [mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 False],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1
@@ -401,7 +402,7 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
   let totalFare = fareSumWithDiscount fareParams
   totalFare @?= Amount 351.0
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 21
     distance = 20000.0
     handle' =
       handle
@@ -416,7 +417,7 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
                         :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
                              defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
                            ],
-                    discountList = [mkDiscount Vehicle.SUV midnight midday 50 True, mkDiscount Vehicle.SUV midnight midday 50 True],
+                    discountList = [mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True, mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True],
                     nightShiftStart = Just $ TimeOfDay 20 0 0,
                     nightShiftEnd = Just $ TimeOfDay 5 30 0,
                     nightShiftRate = Just 1.1
@@ -435,7 +436,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     startTime
     `shouldThrow` (== NoFarePolicy)
   where
-    startTime = parseTime "2018-12-06T21:00:00.000Z"
+    startTime = mockTime 21
     distance = 0.0
     handle' =
       handle

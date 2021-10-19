@@ -60,8 +60,8 @@ update discId disc = do
     predicate discId_ Storage.FarePolicyDiscount {..} = id ==. B.val_ discId_
     setClause storageDisc currTime Storage.FarePolicyDiscount {..} =
       mconcat
-        [ startTime <-. B.val_ storageDisc.startTime,
-          endTime <-. B.val_ storageDisc.endTime,
+        [ fromDate <-. B.val_ storageDisc.fromDate,
+          toDate <-. B.val_ storageDisc.toDate,
           enabled <-. B.val_ storageDisc.enabled,
           discount <-. B.val_ storageDisc.discount,
           updatedAt <-. B.val_ currTime

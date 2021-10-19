@@ -3,7 +3,7 @@
 module Types.Storage.FarePolicy.Discount where
 
 import Beckn.Types.Id (Id)
-import Data.Time (TimeOfDay, UTCTime)
+import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Organization as Organization
@@ -13,8 +13,8 @@ data FarePolicyDiscountT f = FarePolicyDiscount
   { id :: B.C f (Id FarePolicyDiscount),
     vehicleVariant :: B.C f Vehicle.Variant,
     organizationId :: B.C f (Id Organization.Organization),
-    startTime :: B.C f TimeOfDay,
-    endTime :: B.C f TimeOfDay,
+    fromDate :: B.C f UTCTime,
+    toDate :: B.C f UTCTime,
     enabled :: B.C f Bool,
     discount :: B.C f Double,
     createdAt :: B.C f UTCTime,
@@ -43,8 +43,8 @@ fieldEMod =
       B.tableModification
         { vehicleVariant = "vehicle_variant",
           organizationId = "organization_id",
-          startTime = "start_time",
-          endTime = "end_time",
+          fromDate = "from_date",
+          toDate = "to_date",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }

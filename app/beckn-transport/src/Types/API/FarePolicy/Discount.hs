@@ -14,14 +14,14 @@ where
 import Beckn.Types.APISuccess
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation
-import Data.Time (TimeOfDay (..))
+import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Vehicle as Veh
 
 data CreateFarePolicyDiscountReq = CreateFarePolicyDiscountReq
   { vehicleVariant :: Veh.Variant,
-    startTime :: TimeOfDay,
-    endTime :: TimeOfDay,
+    fromDate :: UTCTime,
+    toDate :: UTCTime,
     discount :: Double,
     enabled :: Bool
   }
@@ -34,8 +34,8 @@ validateCreateFarePolicyDiscountReq CreateFarePolicyDiscountReq {..} =
   validateField "discount" discount $ Min @Double 0.01
 
 data UpdateFarePolicyDiscountReq = UpdateFarePolicyDiscountReq
-  { startTime :: TimeOfDay,
-    endTime :: TimeOfDay,
+  { fromDate :: UTCTime,
+    toDate :: UTCTime,
     discount :: Double,
     enabled :: Bool
   }

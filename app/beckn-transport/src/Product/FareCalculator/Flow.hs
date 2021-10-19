@@ -111,15 +111,14 @@ calculateNightShiftRate farePolicy tripStartTime = do
 
 calculateDiscount :: FarePolicy -> TripStartTime -> Maybe Amount
 calculateDiscount farePolicy tripStartTime = do
-  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone tripStartTime
-      discount = calculateDiscount' 0 timeOfDay farePolicy.discountList
+  let discount = calculateDiscount' 0 farePolicy.discountList
   if discount <= 0 then Nothing else Just $ Amount discount
   where
-    calculateDiscount' summ timeOfDay (discount : discountList) = do
-      if discount.enabled && isTimeWithinBounds discount.startTime discount.endTime timeOfDay
-        then calculateDiscount' (summ + discount.discount) timeOfDay discountList
-        else calculateDiscount' summ timeOfDay discountList
-    calculateDiscount' summ _ [] = summ
+    calculateDiscount' summ (discount : discountList) = do
+      if discount.enabled && (discount.fromDate <= tripStartTime && tripStartTime <= discount.toDate)
+        then calculateDiscount' (summ + discount.discount) discountList
+        else calculateDiscount' summ discountList
+    calculateDiscount' summ [] = summ
 
 timeZone :: TimeZone
 timeZone = minutesToTimeZone 330 -- TODO: Should be configurable. Hardcoded to IST +0530
