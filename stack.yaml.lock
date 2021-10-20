@@ -393,6 +393,13 @@ packages:
       sha256: b02f8fc5f43f4f1a0c18b25242669f45240ae0a160d484f92a190f49462acaf8
   original:
     hackage: openapi3-3.1.0@sha256:815236a5d92cc8b3bc3cbcbba5503bd39035ccaf517d21cd02f74795b9747ae5,4824
+- completed:
+    hackage: hw-kafka-client-4.0.3@sha256:20e3614454d5afd2a6acfc0709b9bf00bd6ee9a9bc646c2e2e4ccec1d16831a1,4861
+    pantry-tree:
+      size: 2057
+      sha256: 709ea6818b3b3beb8eed6f79ea76b8dc13cce9ae165870c17986d5de2d695447
+  original:
+    hackage: hw-kafka-client-4.0.3@sha256:20e3614454d5afd2a6acfc0709b9bf00bd6ee9a9bc646c2e2e4ccec1d16831a1,4861
 snapshots:
 - completed:
     size: 496112
