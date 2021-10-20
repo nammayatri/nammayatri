@@ -3,7 +3,6 @@ module Product.RideBooking where
 import App.Types
 import Beckn.External.Encryption (decrypt)
 import Beckn.Types.APISuccess
-import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
@@ -86,7 +85,9 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
                 etaForPickupLoc = (`div` 60) . (.durationInS) <$> mbRoute,
                 distanceToPickupLoc = (.distanceInM) <$> mbRoute,
                 notificationExpiryTime = notificationExpiryTime,
-                estimatedFare = amountToString rideBooking.estimatedFare
+                estimatedFare = rideBooking.estimatedFare,
+                discount = rideBooking.discount,
+                estimatedTotalFare = rideBooking.estimatedTotalFare
               }
   where
     driverId = cast personId

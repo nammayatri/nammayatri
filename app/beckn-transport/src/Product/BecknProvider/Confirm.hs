@@ -11,6 +11,7 @@ import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.Mobility.Order as Mobility
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
+import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import ExternalAPI.Transform as ExternalAPITransform
@@ -35,7 +36,6 @@ import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.TransporterConfig as STConf
 import qualified Types.Storage.Vehicle as SV
 import Utils.Common
-import Data.Time (UTCTime)
 
 confirm ::
   Id Organization.Organization ->
@@ -94,6 +94,7 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
             toLocationId = searchRequest.toLocationId,
             bapId = searchRequest.bapId,
             estimatedFare = quote.estimatedFare,
+            discount = quote.discount,
             estimatedTotalFare = quote.estimatedTotalFare,
             distance = quote.distance,
             vehicleVariant = quote.vehicleVariant,

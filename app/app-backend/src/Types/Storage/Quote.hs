@@ -19,7 +19,7 @@ data QuoteT f = Quote
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     estimatedFare :: B.C f Amount,
     discount :: B.C f (Maybe Amount),
-    estimatedTotalFare :: B.C f  Amount,
+    estimatedTotalFare :: B.C f Amount,
     providerId :: B.C f (Id Org.Organization),
     providerName :: B.C f Text,
     providerMobileNumber :: B.C f Text,

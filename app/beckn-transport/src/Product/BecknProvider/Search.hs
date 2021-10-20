@@ -23,9 +23,9 @@ import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
 import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
+import qualified Product.FareCalculator.Flow as Fare
 import qualified Product.Location as Loc
 import Servant.Client (showBaseUrl)
-import qualified Product.FareCalculator.Flow as Fare
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Products as SProduct
 import qualified Storage.Queries.Quote as Quote

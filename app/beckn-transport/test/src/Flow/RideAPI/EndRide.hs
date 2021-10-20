@@ -64,7 +64,7 @@ handle =
           else throwError SearchRequestNotFound,
       notifyCompleteToBAP = \_ _ _ -> pure (),
       endRideTransaction = \_ _ _ -> pure (),
-      calculateFare = \_ _ _ _ -> 
+      calculateFare = \_ _ _ _ ->
         return $
           FareParameters
             { baseFare = 100,

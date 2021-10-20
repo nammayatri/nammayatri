@@ -64,6 +64,7 @@ data RideBookingT f = RideBooking
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     vehicleVariant :: B.C f Veh.Variant,
     estimatedFare :: B.C f Amount,
+    discount :: B.C f (Maybe Amount),
     estimatedTotalFare :: B.C f Amount,
     distance :: B.C f Double,
     createdAt :: B.C f UTCTime,

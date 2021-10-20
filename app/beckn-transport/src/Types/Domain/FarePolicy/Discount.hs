@@ -5,11 +5,11 @@ module Types.Domain.FarePolicy.Discount where
 import Beckn.Types.Id (Id)
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Vehicle as Vehicle
-import Data.OpenApi (ToSchema)
 
 data Discount = Discount
   { id :: Id Discount,

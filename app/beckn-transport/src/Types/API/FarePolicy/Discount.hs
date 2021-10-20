@@ -14,10 +14,10 @@ where
 import Beckn.Types.APISuccess
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Vehicle as Veh
-import Data.OpenApi (ToSchema)
 
 data CreateFarePolicyDiscountReq = CreateFarePolicyDiscountReq
   { vehicleVariant :: Veh.Variant,

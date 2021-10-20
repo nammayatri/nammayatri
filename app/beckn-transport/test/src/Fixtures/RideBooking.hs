@@ -25,6 +25,7 @@ defaultRideBooking =
       toLocationId = Id "",
       vehicleVariant = Veh.SUV,
       estimatedFare = 0,
+      discount = Nothing,
       estimatedTotalFare = 0,
       distance = 0,
       createdAt = Fixtures.defaultTime,

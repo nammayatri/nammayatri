@@ -56,7 +56,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   (chargeableDistance, fare, totalFare) <- recalculateFare rideBooking ride
 
-  let updRide = 
+  let updRide =
         ride{chargeableDistance = Just chargeableDistance,
              fare = Just fare,
              totalFare = Just totalFare

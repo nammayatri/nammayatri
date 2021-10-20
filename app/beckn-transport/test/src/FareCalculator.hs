@@ -341,8 +341,10 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
                                       :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
                                            defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
                                          ],
-                                  discountList = [mkDiscount Vehicle.SUV (mockTime 19) (mockTime 20) 50 True, 
-                                                    mkDiscount Vehicle.SUV (mockTime 20) (mockTime 23) 50 True],
+                                  discountList =
+                                    [ mkDiscount Vehicle.SUV (mockTime 19) (mockTime 20) 50 True,
+                                      mkDiscount Vehicle.SUV (mockTime 20) (mockTime 23) 50 True
+                                    ],
                                   nightShiftStart = Just $ TimeOfDay 20 0 0,
                                   nightShiftEnd = Just $ TimeOfDay 5 30 0,
                                   nightShiftRate = Just 1.1
@@ -408,8 +410,10 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
                                       :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
                                            defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
                                          ],
-                                  discountList = [mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True,
-                                                     mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True],
+                                  discountList =
+                                    [ mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True,
+                                      mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True
+                                    ],
                                   nightShiftStart = Just $ TimeOfDay 20 0 0,
                                   nightShiftEnd = Just $ TimeOfDay 5 30 0,
                                   nightShiftRate = Just 1.1

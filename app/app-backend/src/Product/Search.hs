@@ -153,7 +153,7 @@ mkQuote searchRequest bppOrg provider item = do
   estimatedFare <-
     item.price.listed_value >>= convertDecimalValueToAmount
       & fromMaybeM (InternalError "Unable to parse price")
-  estimatedTotalPrice <- 
+  estimatedTotalPrice <-
     item.totalPrice.listed_value >>= convertDecimalValueToAmount & fromMaybeM (InternalError "Unable to parse estimated total price")
   nearestDriverDist <- getNearestDriverDist
   vehicleVariant <- item.descriptor.code & fromMaybeM (InvalidRequest "Missing item.descriptor.code")
