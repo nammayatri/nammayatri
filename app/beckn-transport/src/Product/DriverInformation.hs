@@ -18,7 +18,6 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Amount (amountToString)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
@@ -164,7 +163,9 @@ getRideInfo personId rideId = withFlowHandlerAPI $ do
                 etaForPickupLoc = (`div` 60) . durationInS <$> mbRoute,
                 distanceToPickupLoc = distanceInM <$> mbRoute,
                 notificationExpiryTime = notificationExpiryTime,
-                estimatedPrice = amountToString productInstance.estimatedFare
+                estimatedFare = productInstance.estimatedFare,
+                discount = productInstance.discount,
+                estimatedTotalFare = productInstance.estimatedTotalFare
               }
   where
     driverId = cast personId

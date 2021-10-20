@@ -13,6 +13,7 @@ module Types.API.DriverInformation
 where
 
 import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import Beckn.Utils.Validation
 import Data.Aeson
@@ -46,7 +47,9 @@ data RideInfo = RideInfo
     etaForPickupLoc :: Maybe Integer,
     distanceToPickupLoc :: Maybe Double,
     notificationExpiryTime :: UTCTime,
-    estimatedPrice :: Text
+    estimatedFare :: Amount,
+    discount :: Maybe Amount,
+    estimatedTotalFare :: Amount
   }
   deriving (Generic, ToJSON, FromJSON, Show)
 
