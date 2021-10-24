@@ -27,8 +27,8 @@ onSubscribe registryEncryptionPubKey req = do
   registrySecrets <- asks (.registrySecrets)
   let ourEncryptionPrivKey = registrySecrets.encryptionPrivKeyB16
   eitherDecryptedChallenge <- runIO $ decryptChallenge req.challenge ourEncryptionPrivKey registryEncryptionPubKey
-  decryptedChallnege <- eitherDecryptedChallenge & fromEitherM (InternalError . T.pack)
-  pure $ API.OnSubscribeResponse decryptedChallnege
+  decryptedChallenge <- eitherDecryptedChallenge & fromEitherM (InternalError . T.pack)
+  pure $ API.OnSubscribeResponse decryptedChallenge
 
 decryptChallenge :: Text -> Text -> Text -> IO (Either String Text)
 decryptChallenge challengeB64 ourPrivKeyB16 registryPubKeyB64 = do
