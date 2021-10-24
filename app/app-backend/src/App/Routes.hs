@@ -25,9 +25,9 @@ import qualified Product.Confirm as Confirm
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Location as Location
+import Product.OnSubscribe (onSubscribe)
 import qualified Product.Profile as Profile
 import qualified Product.Quote as Quote
-import Product.OnSubscribe (onSubscribe)
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
 import qualified Product.RideBooking as RideBooking

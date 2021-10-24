@@ -1,8 +1,8 @@
 module Beckn.Types.Registry.Country (Country (..)) where
 
 import Beckn.Utils.JSON (stripPrefixUnderscoreIfAny)
-import EulerHS.Prelude
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
 
 data Country = Country
   { name :: Maybe Text,

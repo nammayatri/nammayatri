@@ -1,8 +1,8 @@
 module Beckn.Types.Registry.City (City (..)) where
 
 import Beckn.Utils.JSON (stripPrefixUnderscoreIfAny)
-import EulerHS.Prelude
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
 
 data City = City
   { name :: Maybe Text,

@@ -3,8 +3,8 @@ module Beckn.Types.Registry.Domain (Domain (..)) where
 import Beckn.Utils.JSON (constructorsWithHyphensUntagged)
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
-import EulerHS.Prelude
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
 
 data Domain
   = MOBILITY

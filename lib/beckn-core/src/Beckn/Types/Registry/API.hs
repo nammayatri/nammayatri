@@ -5,8 +5,8 @@ import Beckn.Types.Registry.Country (Country)
 import Beckn.Types.Registry.Domain (Domain)
 import Beckn.Types.Registry.Subscriber (Subscriber)
 import Beckn.Utils.JSON (constructorsToLowerOptions, stripPrefixUnderscoreIfAny)
-import EulerHS.Prelude
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
 
 data LookupRequest = LookupRequest
   { subscriber_id :: Maybe Text,
