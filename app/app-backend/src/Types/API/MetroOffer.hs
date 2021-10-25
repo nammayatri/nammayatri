@@ -8,8 +8,6 @@ import Data.Time
 import EulerHS.Prelude hiding (id)
 import Types.Storage.Case (Case)
 
--- import Data.List(find)
-
 data MetroOffer = MetroOffer
   { rideSearchId :: Id Case, -- search case id now
     description :: Text,

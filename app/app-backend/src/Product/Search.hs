@@ -5,7 +5,6 @@ module Product.Search where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
-import qualified Beckn.Types.Core.API.Callback as Core8
 import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
@@ -13,16 +12,13 @@ import qualified Beckn.Types.Core.Item as Core
 import qualified Beckn.Types.Core.Migration.API.Search as Core9
 import qualified Beckn.Types.Core.Migration.API.Types as Core9
 import qualified Beckn.Types.Core.Migration.Context as Core9
-import qualified Beckn.Types.Core.Multiversional.Callback as MVCallback
-import qualified Beckn.Types.Core.Multiversional.Search as MVSearch
 import Beckn.Types.Core.Tag
 import Beckn.Types.Id
 import Beckn.Types.Mobility.Catalog as BM
 import Beckn.Types.Mobility.Stop as BS
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
-import Data.Aeson (encode, withObject, (.:))
-import Data.Aeson.Types (parseEither, parseMaybe)
+import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map as Map
 import qualified Data.Text as T
@@ -31,7 +27,7 @@ import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
-import Product.MetroOffer (buildContextMetro, searchCbMetro)
+import Product.MetroOffer (buildContextMetro)
 import Product.Serviceability
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.Case as QCase
@@ -81,7 +77,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     fork "search 0.8" $
       ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
     fork "search 0.9" $
-      ExternalAPI.searchMig (xGatewayUri env) (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
+      ExternalAPI.searchMetro (xGatewayUri env) (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
   return $ API.SearchRes txnId
   where
     validateDateTime sreq = do
@@ -100,47 +96,20 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
       unlessM (rideServiceable serviceabilityReq) $
         throwError $ ProductNotServiceable "due to georestrictions"
 
-searchCbMultiversional ::
-  SignatureAuthResult Org.Organization ->
-  SignatureAuthResult Org.Organization ->
-  MVSearch.OnSearchReq ->
-  FlowHandler AckResponse
-searchCbMultiversional _ _ MVCallback.CallbackReq {..} =
-  withFlowHandlerBecknAPI $
-    parseMaybe (withObject "" (.: "core_version")) context
-      & fromMaybeM (InvalidRequest "No core_version in context")
-      >>= \case
-        '0' : '.' : '9' : _ ->
-          ( Core9.BecknCallbackReq
-              <$> parse context
-              <*> either (pure . Left) (fmap Right . parse) contents
-          )
-            >>= searchCbMetro
-        '0' : '.' : '8' : _ ->
-          ( Core8.CallbackReq
-              <$> parse context
-              <*> either (pure . Left) (fmap Right . parse) contents
-          )
-            >>= searchCb
-        _ -> throwError UnsupportedCoreVer
-  where
-    parse value = parseEither parseJSON value & fromEitherM (InvalidRequest . T.pack)
-
 searchCb ::
-  SearchCbFlow m r =>
-  MonadReader AppEnv m =>
+  SignatureAuthResult Org.Organization ->
+  SignatureAuthResult Org.Organization ->
   Search.OnSearchReq ->
-  m Search.OnSearchRes
-searchCb req =
-  withTransactionIdLogTag req $ do
-    validateContext "on_search" $ req.context
-    Metrics.finishSearchMetrics $ req.context.transaction_id
-    case req.contents of
-      Right msg -> do
-        let catalog = msg.catalog
-        searchCbService req catalog
-      Left err -> logTagError "on_search req" $ "on_search error: " <> show err
-    return Ack
+  FlowHandler Search.OnSearchRes
+searchCb _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+  validateContext "on_search" $ req.context
+  Metrics.finishSearchMetrics $ req.context.transaction_id
+  case req.contents of
+    Right msg -> do
+      let catalog = msg.catalog
+      searchCbService req catalog
+    Left err -> logTagError "on_search req" $ "on_search error: " <> show err
+  return Ack
 
 type SearchCbFlow m r = (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], DBFlow m r)
 

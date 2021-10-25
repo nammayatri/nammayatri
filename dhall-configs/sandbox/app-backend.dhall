@@ -85,7 +85,10 @@ in
 , xGatewaySelector = Some "NSDL.BG.1"
 , xGatewayNsdlUrl = Some nsdlUrl
 , xProviderUri = providerUri
-, bapSelfId = "JUSPAY.MOBILITY.APP.1.SANDBOX"
+, bapSelfIds =
+  { cabs = "JUSPAY.MOBILITY.APP.UAT.1.SANDBOX"
+  , metro = "JUSPAY.MOBILITY.APP.UAT.2.SANDBOX"
+  }
 , nwAddress = "https://api.sandbox.beckn.juspay.in/app/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys

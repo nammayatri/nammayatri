@@ -15,7 +15,6 @@ import Beckn.Utils.FlowLogging
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
-import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -49,11 +48,12 @@ runAppBackend' appCfg = do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         logInfo "Setting up for signature auth..."
-        let shortOrgId = appCfg.bapSelfId
-        authManager <-
-          prepareAuthManager flowRt appEnv "Authorization" shortOrgId
-            & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: "
-        managers <- createManagers $ Map.singleton signatureAuthManagerKey authManager
+        let shortOrgId = appCfg.bapSelfIds.cabs
+        let shortOrgIdMetro = appCfg.bapSelfIds.metro
+        managers <-
+          prepareAuthManagers flowRt appEnv [shortOrgId, shortOrgIdMetro]
+            & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
+            >>= createManagers
         logInfo "Initializing DB Connections..."
         _ <- prepareDBConnections >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
         logInfo "Initializing Redis Connections..."

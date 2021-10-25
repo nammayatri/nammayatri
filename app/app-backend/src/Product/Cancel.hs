@@ -9,6 +9,7 @@ import Beckn.Types.Id
 import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
+import ExternalAPI.Flow (HasBapIds)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Case as MC
 import qualified Storage.Queries.Organization as OQ
@@ -36,7 +37,8 @@ cancel personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
 
 cancelProductInstance ::
   ( DBFlow m r,
-    Metrics.CoreMetrics m
+    Metrics.CoreMetrics m,
+    HasBapIds r m
   ) =>
   Id Person.Person ->
   CancelReq ->

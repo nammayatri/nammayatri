@@ -7,9 +7,11 @@ import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.Migration.API.Search as MigAPI
 import Beckn.Types.Core.Migration.API.Types (BecknReq)
 import Beckn.Types.Error
+import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified ExternalAPI.Types as API
 import GHC.Records.Extra
@@ -18,9 +20,16 @@ import Types.API.Location
 import Types.Metrics (CoreMetrics)
 import Utils.Common
 
+data BapIds = BapIds
+  { metro :: Text,
+    cabs :: Text
+  }
+  deriving (Generic, FromDhall)
+
 search ::
   ( HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl],
-    CoreMetrics m
+    CoreMetrics m,
+    HasBapIds r m
   ) =>
   BaseUrl ->
   API.SearchReq ->
@@ -29,16 +38,17 @@ search url req = do
   url' <- getSearchUrl url
   callBecknAPIWithSignature "search" API.search url' req
 
-searchMig ::
+searchMetro ::
   ( HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl],
-    CoreMetrics m
+    CoreMetrics m,
+    HasBapIds r m
   ) =>
   BaseUrl ->
   BecknReq MigAPI.SearchIntent ->
   m ()
-searchMig url req = do
+searchMetro url req = do
   url' <- getSearchUrl url
-  callBecknAPIWithSignature "search" MigAPI.searchAPI url' req
+  callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url' req
 
 getSearchUrl ::
   (HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl]) =>
@@ -54,7 +64,8 @@ getSearchUrl url =
 
 confirm ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasBapIds r m
   ) =>
   BaseUrl ->
   ConfirmReq ->
@@ -63,7 +74,8 @@ confirm = callBecknAPIWithSignature "confirm" API.confirm
 
 location ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasBapIds r m
   ) =>
   BaseUrl ->
   Text ->
@@ -74,7 +86,8 @@ location url req = do
 
 cancel ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasBapIds r m
   ) =>
   BaseUrl ->
   CancelReq ->
@@ -83,21 +96,37 @@ cancel = callBecknAPIWithSignature "cancel" API.cancel
 
 feedback ::
   ( MonadFlow m,
-    CoreMetrics m
+    CoreMetrics m,
+    HasBapIds r m
   ) =>
   BaseUrl ->
   FeedbackReq ->
   m ()
 feedback = callBecknAPIWithSignature "feedback" API.feedback
 
-callBecknAPIWithSignature ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    IsBecknAPI api req
-  ) =>
-  Text ->
-  Proxy api ->
-  BaseUrl ->
-  req ->
-  m ()
-callBecknAPIWithSignature = callBecknAPI (Just signatureAuthManagerKey) Nothing
+type HasBapIds r m =
+  ( HasField "bapSelfIds" r BapIds,
+    MonadReader r m
+  )
+
+callBecknAPIWithSignature,
+  callBecknAPIWithSignatureMetro ::
+    ( MonadFlow m,
+      CoreMetrics m,
+      IsBecknAPI api req,
+      HasBapIds r m
+    ) =>
+    Text ->
+    Proxy api ->
+    BaseUrl ->
+    req ->
+    m ()
+callBecknAPIWithSignature a b c d = do
+  bapId <- asks (.bapSelfIds.cabs)
+  callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+callBecknAPIWithSignatureMetro a b c d = do
+  bapId <- asks (.bapSelfIds.metro)
+  callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+
+getHttpManagerKey :: Text -> String
+getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId

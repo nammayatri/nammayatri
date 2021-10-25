@@ -10,9 +10,9 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as API
 import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Confirm as API
+import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Update as API
-import qualified Beckn.Types.Core.Multiversional.Search as API
 import Beckn.Types.Id
 import Beckn.Types.Registry.Routes (OnSubscribeAPI)
 import Beckn.Utils.Servant.SignatureAuth
@@ -26,6 +26,7 @@ import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Info as Info
 import qualified Product.Location as Location
+import qualified Product.MetroOffer as Metro
 import Product.OnSubscribe (onSubscribe)
 import qualified Product.Person as Person
 import qualified Product.ProductInstance as ProductInstance
@@ -79,32 +80,39 @@ type AppAPI =
            :<|> CancellationReasonAPI
            :<|> OnSubscribeAPI LookupRegistryOnSubscribe
        )
+    :<|> "metro"
+      :> "v1"
+      :> SignatureAuth "Authorization" LookupRegistryOrg
+      :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
+      :> Metro.OnSearch
 
 appAPI :: Proxy AppAPI
 appAPI = Proxy
 
 appServer :: FlowServer AppAPI
 appServer =
-  pure "App is UP"
-    :<|> registrationFlow
-    :<|> searchFlow
-    :<|> confirmFlow
-    :<|> caseFlow
-    :<|> infoFlow
-    :<|> updateFlow
-    :<|> productInstanceFlow
-    :<|> cancelFlow
-    :<|> callFlow
-    :<|> routeApiFlow
-    :<|> statusFlow
-    :<|> supportFlow
-    :<|> serviceabilityFlow
-    :<|> feedbackFlow
-    :<|> customerSupportFlow
-    :<|> googleMapsProxyFlow
-    :<|> personFlow
-    :<|> cancellationReasonFlow
-    :<|> onSubscribe
+  ( pure "App is UP"
+      :<|> registrationFlow
+      :<|> searchFlow
+      :<|> confirmFlow
+      :<|> caseFlow
+      :<|> infoFlow
+      :<|> updateFlow
+      :<|> productInstanceFlow
+      :<|> cancelFlow
+      :<|> callFlow
+      :<|> routeApiFlow
+      :<|> statusFlow
+      :<|> supportFlow
+      :<|> serviceabilityFlow
+      :<|> feedbackFlow
+      :<|> customerSupportFlow
+      :<|> googleMapsProxyFlow
+      :<|> personFlow
+      :<|> cancellationReasonFlow
+      :<|> onSubscribe
+  )
+    :<|> Metro.searchCbMetro
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -144,7 +152,7 @@ type SearchAPI =
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> Search.searchCbMultiversional
+    :<|> Search.searchCb
 
 -------- Confirm Flow --------
 type ConfirmAPI =

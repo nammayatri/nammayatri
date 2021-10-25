@@ -1,7 +1,6 @@
 module Product.MetroOffer where
 
--- import Beckn.Types.Core.Migration.API.Search
-
+import App.Types (FlowHandler)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Core.Migration.API.Types
@@ -15,22 +14,29 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.BaseUrl (showBaseUrlText)
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (id)
+import Servant (JSON, Post, ReqBody, (:>))
 import Types.API.MetroOffer
 import Types.CoreMetro.Catalog
 import Types.CoreMetro.Item
 import Types.CoreMetro.Location
 import Types.CoreMetro.Provider
-import Types.Metrics (HasBAPMetrics)
 import Types.Storage.Case (Case)
+import qualified Types.Storage.Organization as Org
 import qualified Utils.Metrics as Metrics
 
+type OnSearch =
+  "on_search"
+    :> ReqBody '[JSON] (BecknCallbackReq OnSearchCatalog)
+    :> Post '[JSON] AckResponse
+
 searchCbMetro ::
-  MonadFlow m =>
-  HasBAPMetrics m r =>
+  SignatureAuthResult Org.Organization ->
+  SignatureAuthResult Org.Organization ->
   BecknCallbackReq OnSearchCatalog ->
-  m AckResponse
-searchCbMetro req = withTransactionIdLogTag req $ do
+  FlowHandler AckResponse
+searchCbMetro _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   Metrics.finishSearchMetrics req.context.transaction_id
   case req.contents of
     Right msg -> setMetroOffers req.context msg.catalog
