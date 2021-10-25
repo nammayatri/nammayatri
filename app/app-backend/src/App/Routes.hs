@@ -10,9 +10,9 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as API
 import qualified Beckn.Types.Core.API.Cancel as API
 import qualified Beckn.Types.Core.API.Confirm as API
+import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Update as API
-import qualified Beckn.Types.Core.Multiversional.Search as API
 import Beckn.Types.Id
 import Beckn.Types.Registry.Routes (OnSubscribeAPI)
 import Beckn.Utils.Servant.SignatureAuth
@@ -25,6 +25,7 @@ import qualified Product.Confirm as Confirm
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
 import qualified Product.Location as Location
+import qualified Product.MetroOffer as Metro
 import Product.OnSubscribe (onSubscribe)
 import qualified Product.Profile as Profile
 import qualified Product.Quote as Quote
@@ -62,12 +63,19 @@ import qualified Types.Storage.SearchRequest as SSR
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
 type AppAPI =
-  "v2"
-    :> MainAPI
+  MainAPI
       :<|> SwaggerAPI
 
+type MetroAPI =
+  "metro"
+      :> "v1"
+      :> SignatureAuth "Authorization" LookupRegistryOrg
+      :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
+      :> Metro.OnSearch
+
 type MainAPI =
-  Get '[JSON] Text
+  "v2"
+    :> (Get '[JSON] Text
     :<|> RegistrationAPI
     :<|> ProfileAPI
     :<|> SearchAPI
@@ -86,14 +94,16 @@ type MainAPI =
     :<|> CustomerSupportAPI
     :<|> GoogleMapsProxyAPI
     :<|> CancellationReasonAPI
-    :<|> OnSubscribeAPI LookupRegistryOnSubscribe
+    :<|> OnSubscribeAPI LookupRegistryOnSubscribe)
+    :<|> MetroAPI
+
 
 appAPI :: Proxy AppAPI
 appAPI = Proxy
 
 mainServer :: FlowServer MainAPI
 mainServer =
-  pure "App is UP"
+  (pure "App is UP"
     :<|> registrationFlow
     :<|> profileFlow
     :<|> searchFlow
@@ -112,7 +122,8 @@ mainServer =
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
-    :<|> onSubscribe
+    :<|> onSubscribe)
+    :<|> Metro.searchCbMetro
 
 appServer :: FlowServer AppAPI
 appServer =
@@ -171,7 +182,7 @@ type SearchAPI =
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> Search.searchCbMultiversional
+    :<|> Search.searchCb
 
 type QuoteAPI =
   "rideSearch"

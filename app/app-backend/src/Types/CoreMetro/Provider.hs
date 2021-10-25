@@ -4,6 +4,7 @@ import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import EulerHS.Prelude hiding (exp, id)
 import Types.CoreMetro.Item
 import Types.CoreMetro.Location
+import Data.OpenApi (ToSchema)
 
 data Provider = Provider
   { id :: Text,
@@ -11,4 +12,4 @@ data Provider = Provider
     locations :: [Location],
     items :: [Item]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

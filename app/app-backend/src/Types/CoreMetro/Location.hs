@@ -3,6 +3,7 @@ module Types.CoreMetro.Location where
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Gps (Gps)
 import EulerHS.Prelude hiding (id)
+import Data.OpenApi (ToSchema)
 
 data Location = Location
   { id :: Text,
@@ -10,4 +11,4 @@ data Location = Location
     gps :: Gps,
     station_code :: Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

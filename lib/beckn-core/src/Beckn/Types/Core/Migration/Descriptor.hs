@@ -3,7 +3,8 @@ module Beckn.Types.Core.Migration.Descriptor (Descriptor (..), emptyDescriptor) 
 import Beckn.Types.Core.Migration.Image (Image)
 import Beckn.Utils.JSON
 import EulerHS.Prelude
-import Servant.Client (BaseUrl)
+import Data.OpenApi (ToSchema)
+import Beckn.Types.App (BaseUrl)
 
 data Descriptor = Descriptor
   { name :: Maybe Text,
@@ -15,7 +16,7 @@ data Descriptor = Descriptor
     audio :: Maybe BaseUrl,
     _3d_render :: Maybe BaseUrl
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, ToSchema)
 
 instance FromJSON Descriptor where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

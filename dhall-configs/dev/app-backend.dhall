@@ -84,7 +84,10 @@ in
 , xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = None Text
 , xProviderUri = providerUri
-, bapSelfId = "JUSPAY.MOBILITY.APP.UAT.1"
+, bapSelfIds = 
+  { cabs = "JUSPAY.MOBILITY.APP.UAT.1"
+  , metro = "JUSPAY.MOBILITY.APP.UAT.2"
+  }
 , nwAddress = "http://localhost:8013/v2/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys

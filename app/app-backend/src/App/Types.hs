@@ -22,6 +22,7 @@ import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import ExternalAPI.Flow
 import Types.Geofencing
 import Types.Metrics
 import Utils.Auth
@@ -39,7 +40,7 @@ data AppCfg = AppCfg
     xGatewaySelector :: Maybe Text,
     xGatewayNsdlUrl :: Maybe BaseUrl,
     xProviderUri :: BaseUrl,
-    bapSelfId :: Text,
+    bapSelfIds :: BapIds,
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
@@ -78,7 +79,7 @@ data AppEnv = AppEnv
     xGatewaySelector :: Maybe Text,
     xGatewayNsdlUrl :: Maybe BaseUrl,
     xProviderUri :: BaseUrl,
-    bapSelfId :: Text,
+    bapSelfIds :: BapIds,
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],

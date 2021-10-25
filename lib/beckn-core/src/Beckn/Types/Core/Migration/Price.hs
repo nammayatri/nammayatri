@@ -2,6 +2,7 @@ module Beckn.Types.Core.Migration.Price (Price (..)) where
 
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
 import EulerHS.Prelude
+import Data.OpenApi (ToSchema)
 
 data Price = Price
   { currency :: Maybe Text,
@@ -13,4 +14,4 @@ data Price = Price
     minimum_value :: Maybe DecimalValue,
     maximum_value :: Maybe DecimalValue
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

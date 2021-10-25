@@ -11,9 +11,10 @@ import Beckn.Types.Amount
     amountToString,
   )
 import EulerHS.Prelude
+import Data.OpenApi (ToSchema)
 
 newtype DecimalValue = DecimalValue Text
-  deriving (Eq, Show, Generic, FromJSON, ToJSON)
+  deriving (Eq, Show, Generic, FromJSON, ToJSON, ToSchema)
 
 convertDecimalValueToAmount :: DecimalValue -> Maybe Amount
 convertDecimalValueToAmount (DecimalValue d) = amountFromString d
