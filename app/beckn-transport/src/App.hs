@@ -36,7 +36,9 @@ runTransporterBackendApp' :: AppCfg -> IO ()
 runTransporterBackendApp' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
   let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
-  appEnv <- buildAppEnv appCfg
+  appEnv <- 
+    try (buildAppEnv appCfg)
+      >>= handleLeftIO @SomeException exitBuildingKafkaToolsFailure "Couldn't build KafkaTools: "
   let settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)

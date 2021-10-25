@@ -79,6 +79,12 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
+let kafkaTools = 
+  { brokers = ["localhost:29092"]
+  , serviceName = "BAP"
+  , targetTopic = "beckn_business_events"
+  }  
+  
 in
 
 { dbCfg = pgcfg
@@ -129,4 +135,5 @@ in
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
+, kafkaToolsConfig = kafkaTools
 }

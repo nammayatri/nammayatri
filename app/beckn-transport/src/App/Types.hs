@@ -26,6 +26,7 @@ import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Beckn.Utils.Registry as Registry
+import Beckn.Utils.Monitoring.Kafka (buildKafkaTools, releaseKafkaTools)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
@@ -75,7 +76,8 @@ data AppCfg = AppCfg
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets,
     disableSignatureAuth :: Bool,
-    encTools :: EncTools
+    encTools :: EncTools,
+    kafkaToolsConfig :: KafkaToolsConfig
   }
   deriving (Generic, FromDhall)
 
@@ -107,7 +109,8 @@ data AppEnv = AppEnv
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
     loggerEnv :: LoggerEnv,
-    encTools :: EncTools
+    encTools :: EncTools,
+    kafkaTools :: KafkaTools
   }
   deriving (Generic)
 
@@ -120,10 +123,12 @@ buildAppEnv config@AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  kafkaTools <- buildKafkaTools kafkaToolsConfig hostname
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
-releaseAppEnv AppEnv {..} =
+releaseAppEnv AppEnv {..} = do
+  releaseKafkaTools kafkaTools
   releaseLoggerEnv loggerEnv
 
 type Env = EnvR AppEnv

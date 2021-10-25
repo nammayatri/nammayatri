@@ -7,10 +7,12 @@ module Beckn.Types.Flow (FlowR, runFlowR) where
 import Beckn.Types.Forkable
 import Beckn.Types.Logging
 import Beckn.Types.MonadGuid
+import Beckn.Types.Monitoring.Kafka
 import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Types.Time
 import qualified Beckn.Utils.IOLogging as IOLogging
 import Beckn.Utils.Logging
+import qualified Beckn.Utils.Monitoring.Kafka as Kafka
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
@@ -117,3 +119,6 @@ instance (Log (FlowR r), HasCoreMetrics r) => Forkable (FlowR r) where
       err (e :: SomeException) = do
         logError $ "Thread " <> show desc <> " died with error: " <> makeLogSomeException e
         incrementErrorCounter "FORKED_THREAD_ERROR" e
+
+instance (Log (FlowR r), HasKafka r) => Kafka (FlowR r) where
+  produceMessage = Kafka.produceMessage

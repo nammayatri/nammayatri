@@ -111,7 +111,7 @@ runAppFlow tag flow = do
                            }
       updAppCfg = appCfg{loggerConfig = updLogCfg}
   (appEnv :: BecknApp.AppEnv) <- BecknApp.buildAppEnv updAppCfg
-  runFlow tag appEnv flow
+  BecknApp.releaseAppEnv appEnv *> runFlow tag appEnv flow
 
 runTransporterFlow :: Text -> FlowR BecknTransport.AppEnv a -> IO a
 runTransporterFlow tag flow = do
@@ -122,4 +122,4 @@ runTransporterFlow tag flow = do
                            }
       updAppCfg = appCfg{loggerConfig = updLogCfg}
   (appEnv :: BecknTransport.AppEnv) <- BecknTransport.buildAppEnv updAppCfg
-  runFlow tag appEnv flow
+  BecknTransport.releaseAppEnv appEnv *> runFlow tag appEnv flow

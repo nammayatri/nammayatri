@@ -22,3 +22,6 @@ exitRedisConnPrepFailure = ExitFailure 5
 
 exitConnCheckFailure :: ExitCode
 exitConnCheckFailure = ExitFailure 8
+
+exitBuildingKafkaToolsFailure :: ExitCode
+exitBuildingKafkaToolsFailure = ExitFailure 9

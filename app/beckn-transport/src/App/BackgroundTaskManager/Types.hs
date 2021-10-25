@@ -26,6 +26,7 @@ import EulerHS.Prelude
 import Types.App (SortMode)
 import Types.Metrics
 import Types.Shard
+import Beckn.Utils.Monitoring.Kafka (releaseKafkaTools)
 
 data BTMCfg = BTMCfg
   { appCfg :: App.AppCfg,
@@ -60,7 +61,8 @@ data BTMEnv = BTMEnv
     driverAllocationConfig :: DriverAllocationConfig,
     btmMetrics :: BTMMetricsContainer,
     loggerEnv :: LoggerEnv,
-    encTools :: EncTools
+    encTools :: EncTools,
+    kafkaTools :: KafkaTools
   }
   deriving (Generic)
 
@@ -75,7 +77,8 @@ buildBTMEnv btmConfig@BTMCfg {..} = do
       }
 
 releaseBTMEnv :: BTMEnv -> IO ()
-releaseBTMEnv BTMEnv {..} =
+releaseBTMEnv BTMEnv {..} = do
+  releaseKafkaTools kafkaTools
   releaseLoggerEnv loggerEnv
 
 type Env = EnvR BTMEnv

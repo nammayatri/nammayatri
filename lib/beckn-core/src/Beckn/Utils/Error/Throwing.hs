@@ -4,7 +4,6 @@ module Beckn.Utils.Error.Throwing
   )
 where
 
-import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Utils.Logging
 import Control.Exception (PatternMatchFail)

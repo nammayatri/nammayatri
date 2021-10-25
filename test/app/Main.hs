@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Main where
 
@@ -14,14 +15,15 @@ import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified FmdWrapper.Spec as FmdWrapper
 import qualified Mobility.Spec as Mobility
-import System.Environment (setEnv)
+import System.Environment as Env (setEnv)
+import System.Posix
 import Test.Tasty
 import "app-backend" Types.Geofencing
 
 main :: IO ()
 main = do
   -- We can't really spawn off multiple instances of our servers, so serialise...
-  setEnv "TASTY_NUM_THREADS" "1"
+  Env.setEnv "TASTY_NUM_THREADS" "1"
   -- Set some config paths in environment...
   mapM_
     setConfigEnv
@@ -36,10 +38,10 @@ main = do
   defaultMain =<< specs
   where
     setConfigEnv app = do
-      setEnv
+      Env.setEnv
         (T.unpack $ toEnvVar app <> "_CONFIG_PATH")
         (T.unpack $ "../dhall-configs/dev/" <> app <> ".dhall")
-      setEnv
+      Env.setEnv
         (T.unpack $ toEnvVar app <> "_MIGRATION_PATH")
         (T.unpack $ "../dev/migrations/" <> app)
 
@@ -95,9 +97,8 @@ specs = do
       ]
 
     startServers servers = do
-      threadIds <- traverse forkIO servers
+      traverse_ forkIO servers
       -- Wait for servers to start up and migrations to run
       threadDelay 5e6
-      return threadIds
 
-    cleanupServers = traverse_ killThread
+    cleanupServers _ = signalProcess sigINT =<< getProcessID

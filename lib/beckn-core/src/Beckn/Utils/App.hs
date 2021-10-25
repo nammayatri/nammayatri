@@ -2,6 +2,7 @@
 
 module Beckn.Utils.App
   ( Shutdown,
+    handleLeftIO,
     handleLeft,
     handleShutdown,
     logRequestAndResponse,
@@ -52,12 +53,21 @@ data ResponseInfo = ResponseInfo
   }
   deriving (Show)
 
-handleLeft :: forall a b m. (Show a, Log m, L.MonadFlow m) => ExitCode -> Text -> Either a b -> m b
-handleLeft exitCode msg = \case
-  Left err -> do
-    logError (msg <> show err)
-    L.runIO $ exitWith exitCode
-  Right res -> return res
+handleLeftIO :: forall a b. (Show a) => ExitCode -> Text -> Either a b -> IO b
+handleLeftIO exitCode msg =
+  fromEitherM'
+    ( \err -> do
+        print (msg <> show err)
+        liftIO $ exitWith exitCode
+    )
+
+handleLeft :: forall a b m. (Show a, Log m, MonadIO m) => ExitCode -> Text -> Either a b -> m b
+handleLeft exitCode msg =
+  fromEitherM'
+    ( \err -> do
+        logError (msg <> show err)
+        liftIO $ exitWith exitCode
+    )
 
 hashBodyForSignature :: Application -> Application
 hashBodyForSignature f req respF = do

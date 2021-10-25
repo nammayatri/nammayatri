@@ -721,3 +721,29 @@ instance IsHTTPError ExotelError where
     ExotelServerError -> "EXOTEL_SERVER_ERROR"
 
 instance IsAPIError ExotelError
+
+data KafkaError
+  = KafkaUnableToBuildTools Text
+  | KafkaUnableToProduceMessage Text
+  | KafkaTopicIsEmptyString
+  deriving (Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''KafkaError
+
+instance IsBaseError KafkaError where
+  toMessage = \case
+    KafkaUnableToBuildTools err -> Just $ "Attemption to build Kafka tools ended with error: " <> err
+    KafkaUnableToProduceMessage err -> Just $ "Attemption to produce message ended with error: " <> err
+    KafkaTopicIsEmptyString -> Just "Kafka topic is empty string."
+
+instance IsHTTPError KafkaError where
+  toErrorCode = \case
+    KafkaUnableToBuildTools _ -> "KAFKA_UNABLE_TO_BUILD_TOOLS"
+    KafkaUnableToProduceMessage _ -> "KAFKA_UNABLE_TO_PRODUCE_MESSAGE"
+    KafkaTopicIsEmptyString -> "KAFKA_TOPIC_IS_EMPTY_STRING"
+  toHttpCode = \case
+    KafkaUnableToBuildTools _ -> E500
+    KafkaUnableToProduceMessage _ -> E500
+    KafkaTopicIsEmptyString -> E500
+
+instance IsAPIError KafkaError

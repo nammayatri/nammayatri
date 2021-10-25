@@ -12,6 +12,7 @@ import Beckn.Types.Predicate
 import Beckn.Types.Validation
 import Beckn.Utils.Error.Throwing
 import qualified Data.Either.Validation as V
+import Data.Generics.Labels ()
 import EulerHS.Prelude hiding (pred)
 
 runRequestValidation ::

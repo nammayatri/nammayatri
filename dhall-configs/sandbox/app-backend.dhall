@@ -83,6 +83,12 @@ let encTools =
   { service = common.passetto
   , hashSalt = sec.encHashSalt
   }
+  
+let kafkaTools = 
+  { brokers = ["localhost:29092"]
+  , serviceName = "BAP"
+  , targetTopic = "beckn_business_events"
+  }  
 
 in
 
@@ -133,4 +139,5 @@ in
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
+, kafkaToolsConfig = kafkaTools
 }

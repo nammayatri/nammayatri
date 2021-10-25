@@ -35,7 +35,9 @@ runBackgroundTaskManager configModifier = do
   let redisCfg = appCfg.redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
   let port = appCfg.bgtmPort
-  btmEnv <- buildBTMEnv btmCfg
+  btmEnv <-
+    try (buildBTMEnv btmCfg)
+      >>= handleLeftIO @SomeException exitBuildingKafkaToolsFailure "Couldn't build KafkaTools: "
 
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt btmEnv $ do

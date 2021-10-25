@@ -88,6 +88,7 @@ dependencies:
   - unordered-containers
   - hspec-expectations-lifted
   - HUnit
+  - unix
 
 ghc-options:
   - -fwrite-ide-info
@@ -99,6 +100,7 @@ ghc-options:
   - -Werror
   - -Wno-unrecognised-pragmas
   - -fplugin=RecordDotPreprocessor
+  - -threaded
 
 library:
   source-dirs:
