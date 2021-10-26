@@ -4,7 +4,6 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Types.Registry.API as RegistryAPI
-import Beckn.Types.Registry.Domain (Domain)
 import qualified Beckn.Types.Registry.Routes as Registry
 import Beckn.Types.Registry.Subscriber (Subscriber)
 import Beckn.Utils.Common
@@ -19,19 +18,19 @@ decodeViaRegistry ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl]
   ) =>
   (ShortId a -> m (Maybe a)) ->
-  Domain ->
   LookupAction (LookupRegistry a) m
-decodeViaRegistry findOrgByShortId domain signaturePayload = do
+decodeViaRegistry findOrgByShortId signaturePayload = do
   registryUrl <- asks (.registryUrl)
   nwAddress <- asks (.nwAddress)
   let shortId = signaturePayload.params.keyId.subscriberId
-  pk <- getPubKeyFromRegistry registryUrl shortId
+  let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
+  pk <- getPubKeyFromRegistry registryUrl uniqueKeyId
   logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   org <- findOrgByShortId (ShortId shortId) >>= fromMaybeM OrgNotFound
   return (org, pk, nwAddress)
   where
-    getPubKeyFromRegistry registryUrl shortId =
-      registryLookup registryUrl shortId domain
+    getPubKeyFromRegistry registryUrl uniqueKeyId =
+      registryLookup registryUrl uniqueKeyId
         <&> listToMaybe
         >>= fromMaybeM (InternalError "Registry didn't provide information on Organization.")
         <&> (.signing_public_key)
@@ -44,20 +43,20 @@ decodeAndGetRegistryEncPubKey ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl]
   ) =>
   (ShortId a -> m (Maybe a)) ->
-  Domain ->
   LookupAction (LookupRegistry Text) m
-decodeAndGetRegistryEncPubKey findOrgByShortId domain signaturePayload = do
+decodeAndGetRegistryEncPubKey findOrgByShortId signaturePayload = do
   registryUrl <- asks (.registryUrl)
   nwAddress <- asks (.nwAddress)
   let shortId = signaturePayload.params.keyId.subscriberId
-  (signingPubKey, encryptionPubKey) <- getPubKeysFromRegistry registryUrl shortId
+  let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
+  (signingPubKey, encryptionPubKey) <- getPubKeysFromRegistry registryUrl uniqueKeyId
   logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   void $ findOrgByShortId (ShortId shortId) >>= fromMaybeM OrgNotFound -- Not sure if we need this
   return (encryptionPubKey, signingPubKey, nwAddress)
   where
-    getPubKeysFromRegistry registryUrl shortId = do
+    getPubKeysFromRegistry registryUrl uniqueKeyId = do
       subscriber <-
-        registryLookup registryUrl shortId domain
+        registryLookup registryUrl uniqueKeyId
           <&> listToMaybe
           >>= fromMaybeM (InternalError "Registry didn't provide information on Organization.")
       signingPubKey <-
@@ -74,13 +73,20 @@ registryLookup ::
   (MonadFlow m, Metrics.CoreMetrics m) =>
   BaseUrl ->
   Text ->
-  Domain ->
   m [Subscriber]
-registryLookup url shortId domain = do
+registryLookup url uniqueKeyId = do
   callAPI url (T.client Registry.lookupAPI request) "lookup"
     >>= fromEitherM (registryLookupCallError url)
   where
-    request = RegistryAPI.LookupRequest (Just shortId) Nothing (Just domain) Nothing Nothing
+    request =
+      RegistryAPI.LookupRequest
+        { unique_key_id = Just uniqueKeyId,
+          subscriber_id = Nothing,
+          _type = Nothing,
+          domain = Nothing,
+          country = Nothing,
+          city = Nothing
+        }
 
 registryLookupCallError :: BaseUrl -> ClientError -> ExternalAPICallError
 registryLookupCallError = ExternalAPICallError (Just "REGISTRY_CALL_ERROR")

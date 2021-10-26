@@ -8,7 +8,8 @@ import Beckn.Utils.JSON (constructorsToLowerOptions, stripPrefixUnderscoreIfAny)
 import EulerHS.Prelude
 
 data LookupRequest = LookupRequest
-  { subscriber_id :: Maybe Text,
+  { unique_key_id :: Maybe Text,
+    subscriber_id :: Maybe Text,
     _type :: Maybe ParticipantRole,
     domain :: Maybe Domain,
     country :: Maybe Country,

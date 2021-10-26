@@ -4,7 +4,6 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
-import Beckn.Types.Registry.Domain (Domain (MOBILITY))
 import Beckn.Utils.Common as CoreCommon
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
@@ -43,7 +42,7 @@ lookup ::
     CoreMetrics m
   ) =>
   LookupAction LookupRegistryOrg m
-lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId MOBILITY
+lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId
 
 lookupAndGetEncPubKey ::
   ( DBFlow m r,
@@ -51,7 +50,7 @@ lookupAndGetEncPubKey ::
     CoreMetrics m
   ) =>
   LookupAction LookupRegistryOnSubscribe m
-lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey Org.findOrgByShortId MOBILITY
+lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey Org.findOrgByShortId
 
 getHttpManagerKey :: Text -> String
 getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId

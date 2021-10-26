@@ -2,7 +2,6 @@ module Utils.Auth where
 
 import Beckn.Storage.DB.Config
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
-import Beckn.Types.Registry.Domain (Domain (FINAL_MILE_DELIVERY))
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.HeaderAuth
 import qualified Beckn.Utils.Servant.RegistryService as RegistryService
@@ -33,7 +32,7 @@ lookup ::
     CoreMetrics m
   ) =>
   HttpSig.LookupAction LookupRegistryOrg m
-lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId FINAL_MILE_DELIVERY
+lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId
 
 lookupAndGetEncPubKey ::
   ( DBFlow m r,
@@ -41,4 +40,4 @@ lookupAndGetEncPubKey ::
     CoreMetrics m
   ) =>
   HttpSig.LookupAction HttpSig.LookupRegistryOnSubscribe m
-lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey Org.findOrgByShortId FINAL_MILE_DELIVERY
+lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey Org.findOrgByShortId

@@ -5,7 +5,6 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
-import Beckn.Types.Registry.Domain (Domain (MOBILITY))
 import Beckn.Utils.Common ((:::))
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
@@ -43,7 +42,7 @@ lookup ::
     CoreMetrics m
   ) =>
   HttpSig.LookupAction LookupRegistryOrg m
-lookup = RegistryService.decodeViaRegistry findOrgByShortId MOBILITY
+lookup = RegistryService.decodeViaRegistry findOrgByShortId
 
 lookupAndGetEncPubKey ::
   ( DBFlow m r,
@@ -51,7 +50,7 @@ lookupAndGetEncPubKey ::
     CoreMetrics m
   ) =>
   HttpSig.LookupAction HttpSig.LookupRegistryOnSubscribe m
-lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey findOrgByShortId MOBILITY
+lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey findOrgByShortId
 
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken
