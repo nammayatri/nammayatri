@@ -52,7 +52,7 @@ exampleExpires :: Integer
 exampleExpires = 1402170699
 
 exampleSignature :: ByteString
-exampleSignature = "thx8bUj/FQ1j5eWKL52Uj1cz0zmbcPje8sh2vhHJjcH6po38GDfAMifL+hMM9coKZ3tQOilKukVMTbTWGm1LBg=="
+exampleSignature = "WJoZi2DBgQQ1ChHus4F6L0S4pOVeSvhmViZK3W0x+kCpmrVC6cgcmj2x7P2g5fHjft1OB5LKJLmIid2qd1XZCA=="
 
 exampleSignatureMessage :: ByteString
 exampleSignatureMessage =
@@ -64,7 +64,7 @@ exampleSignatureMessage =
         "host: example.com",
         "date: Sun, 05 Jan 2014 21:31:40 GMT",
         "content-type: application/json",
-        "digest: BLAKE-512=MjBjYjhmMTE3NWFhYTNmMjNmMDIwYjM5NjIzMDBjNDgzYmEzM2RkYTNmMWFlMzI3MzQ2MDVkYjRkODM0NDE5Zjg3NGYxOTk2MzYzNmZmMGM3OWQ0NWEwNTRhZjg5NWIyMGZkYWM3NDVmMzU0Yzg2NWQ5MzhlZjZlODAxYjhlMzM=",
+        "digest: BLAKE-512=IMuPEXWqo/I/Ags5YjAMSDujPdo/GuMnNGBdtNg0QZ+HTxmWNjb/DHnUWgVK+JWyD9rHRfNUyGXZOO9ugBuOMw==",
         "content-length: 18"
       ]
 
