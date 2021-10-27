@@ -58,6 +58,17 @@ import Types.Storage.ProductInstance
 import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
 type AppAPI =
+  UIAPI
+    :<|> "cab" :> "v1" :> BecknCabAPI
+    :<|> "metro" :> "v1" :> BecknMetroAPI
+
+type BecknMetroAPI =
+  SignatureAuth "Authorization" LookupRegistryOrg
+    :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
+    :> Metro.OnSearch
+      :<|> OnSubscribeAPI LookupRegistryOnSubscribe
+
+type UIAPI =
   "v1"
     :> ( Get '[JSON] Text
            :<|> RegistrationAPI
@@ -65,12 +76,10 @@ type AppAPI =
            :<|> ConfirmAPI
            :<|> CaseAPI
            :<|> InfoAPI
-           :<|> UpdateAPI
            :<|> ProductInstanceAPI
            :<|> CancelAPI
            :<|> CallAPIs
            :<|> RouteAPI
-           :<|> StatusAPI
            :<|> SupportAPI
            :<|> ServiceabilityAPI
            :<|> FeedbackAPI
@@ -78,41 +87,41 @@ type AppAPI =
            :<|> GoogleMapsProxyAPI
            :<|> PersonAPI
            :<|> CancellationReasonAPI
-           :<|> OnSubscribeAPI LookupRegistryOnSubscribe
        )
-    :<|> "metro"
-      :> "v1"
-      :> SignatureAuth "Authorization" LookupRegistryOrg
-      :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
-      :> Metro.OnSearch
 
 appAPI :: Proxy AppAPI
 appAPI = Proxy
 
 appServer :: FlowServer AppAPI
 appServer =
-  ( pure "App is UP"
-      :<|> registrationFlow
-      :<|> searchFlow
-      :<|> confirmFlow
-      :<|> caseFlow
-      :<|> infoFlow
-      :<|> updateFlow
-      :<|> productInstanceFlow
-      :<|> cancelFlow
-      :<|> callFlow
-      :<|> routeApiFlow
-      :<|> statusFlow
-      :<|> supportFlow
-      :<|> serviceabilityFlow
-      :<|> feedbackFlow
-      :<|> customerSupportFlow
-      :<|> googleMapsProxyFlow
-      :<|> personFlow
-      :<|> cancellationReasonFlow
-      :<|> onSubscribe
-  )
-    :<|> Metro.searchCbMetro
+  uiAPI
+    :<|> becknCabApi
+    :<|> becknMetroAPI
+
+uiAPI :: FlowServer UIAPI
+uiAPI =
+  pure "App is UP"
+    :<|> registrationFlow
+    :<|> searchFlow
+    :<|> confirmFlow
+    :<|> caseFlow
+    :<|> infoFlow
+    :<|> productInstanceFlow
+    :<|> cancelFlow
+    :<|> callFlow
+    :<|> routeApiFlow
+    :<|> supportFlow
+    :<|> serviceabilityFlow
+    :<|> feedbackFlow
+    :<|> customerSupportFlow
+    :<|> googleMapsProxyFlow
+    :<|> personFlow
+    :<|> cancellationReasonFlow
+
+becknMetroAPI :: FlowServer BecknMetroAPI
+becknMetroAPI =
+  Metro.searchCbMetro
+    :<|> onSubscribe
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -145,14 +154,41 @@ type SearchAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Search.SearchReq
     :> Post '[JSON] Search.SearchRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+
+type BecknCabAPI =
+  SignatureAuth "Authorization" LookupRegistryOrg
     :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
     :> API.OnSearchAPI
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_confirm"
+    :> ReqBody '[JSON] API.OnConfirmReq
+    :> Post '[JSON] API.OnConfirmRes
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_update"
+    :> ReqBody '[JSON] API.OnUpdateReq
+    :> Post '[JSON] API.OnUpdateRes
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_cancel"
+    :> ReqBody '[JSON] API.OnCancelReq
+    :> Post '[JSON] API.OnCancelRes
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_status"
+    :> ReqBody '[JSON] API.OnStatusReq
+    :> Post '[JSON] API.OnStatusRes
+    :<|> OnSubscribeAPI LookupRegistryOnSubscribe
+
+becknCabApi :: FlowServer BecknCabAPI
+becknCabApi =
+  Search.searchCb
+    :<|> Confirm.onConfirm
+    :<|> Update.onUpdate
+    :<|> Cancel.onCancel
+    :<|> Status.onStatus
+    :<|> onSubscribe
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> Search.searchCb
 
 -------- Confirm Flow --------
 type ConfirmAPI =
@@ -160,16 +196,11 @@ type ConfirmAPI =
       :> TokenAuth
       :> ReqBody '[JSON] ConfirmAPI.ConfirmReq
       :> Post '[JSON] ConfirmAPI.ConfirmRes
-      :<|> SignatureAuth "Authorization" LookupRegistryOrg
-      :> "on_confirm"
-      :> ReqBody '[JSON] API.OnConfirmReq
-      :> Post '[JSON] API.OnConfirmRes
   )
 
 confirmFlow :: FlowServer ConfirmAPI
 confirmFlow =
   Confirm.confirm
-    :<|> Confirm.onConfirm
 
 ------- Case Flow -------
 type CaseAPI =
@@ -206,17 +237,6 @@ infoFlow regToken =
   Info.getProductInfo regToken
     :<|> Info.getLocation regToken
 
-------- Update Flow -------
-type UpdateAPI =
-  SignatureAuth "Authorization" LookupRegistryOrg
-    :> "on_update"
-    :> ReqBody '[JSON] API.OnUpdateReq
-    :> Post '[JSON] API.OnUpdateRes
-
-updateFlow :: FlowServer UpdateAPI
-updateFlow =
-  Update.onUpdate
-
 -------- ProductInstance Flow----------
 type ProductInstanceAPI =
   "productInstance"
@@ -238,15 +258,10 @@ type CancelAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
-    :> "on_cancel"
-    :> ReqBody '[JSON] API.OnCancelReq
-    :> Post '[JSON] API.OnCancelRes
 
 cancelFlow :: FlowServer CancelAPI
 cancelFlow =
   Cancel.cancel
-    :<|> Cancel.onCancel
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =
@@ -273,17 +288,6 @@ type RouteAPI =
 
 routeApiFlow :: FlowServer RouteAPI
 routeApiFlow = Location.getRoute
-
--------- Status Flow----------
-type StatusAPI =
-  SignatureAuth "Authorization" LookupRegistryOrg
-    :> "on_status"
-    :> ReqBody '[JSON] API.OnStatusReq
-    :> Post '[JSON] API.OnStatusRes
-
-statusFlow :: FlowServer StatusAPI
-statusFlow =
-  Status.onStatus
 
 -------- Support Flow----------
 type SupportAPI =

@@ -125,7 +125,7 @@ searchServices ::
   Text ->
   AppBESearch.SearchReq ->
   ClientM AppBESearch.SearchRes
-searchServices :<|> _ = client (Proxy :: Proxy AbeRoutes.SearchAPI)
+searchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
 buildSearchReq :: MonadIO m => Text -> m AppBESearch.SearchReq
 buildSearchReq guid = do
@@ -134,7 +134,7 @@ buildSearchReq guid = do
   pure $ searchReq guid utcTime futureTime
 
 cancelRide :: Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
-cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
+cancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
 rideRespond :: Text -> RideAPI.SetDriverAcceptanceReq -> ClientM RideAPI.SetDriverAcceptanceRes
 rideStart :: Text -> Id TPI.ProductInstance -> RideAPI.StartRideReq -> ClientM APISuccess
@@ -197,7 +197,7 @@ buildCaseStatusRes caseId = do
   getCaseStatusRes appCaseId
 
 appConfirmRide :: Text -> ConfirmAPI.ConfirmReq -> ClientM APISuccess
-appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
+appConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
