@@ -4,16 +4,12 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
-import Beckn.Utils.Common ((:::))
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
-import qualified Beckn.Utils.Servant.RegistryService as RegistryService
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude hiding (id)
 import Servant hiding (Context)
-import Storage.Queries.Organization (findOrgByShortId)
 import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.Error
@@ -35,15 +31,6 @@ type LookupRegistryOrg = (HttpSig.LookupRegistry SOrganization.Organization)
 
 verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction QOrganization.verifyApiKey
-
-lookup ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["registryUrl" ::: BaseUrl],
-    HttpSig.AuthenticatingEntity r,
-    CoreMetrics m
-  ) =>
-  HttpSig.LookupAction LookupRegistryOrg m
-lookup = RegistryService.decodeViaRegistry findOrgByShortId
 
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken

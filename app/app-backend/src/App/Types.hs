@@ -19,10 +19,12 @@ import Beckn.Types.Flow
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
+import qualified Beckn.Utils.Servant.RegistryService as RegistryService
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Flow
+import qualified Storage.Queries.Organization as Org
 import Types.Geofencing
 import Types.Metrics
 import Utils.Auth
@@ -129,4 +131,4 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = signatureExpiry
 
 instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
-  runLookup = lookup
+  runLookup = RegistryService.decodeViaRegistry Org.findOrgByShortId
