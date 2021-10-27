@@ -65,8 +65,8 @@ in
 , xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = Some nsdlUrl
 , xAppUri = appUri
-, selfId = "JUSPAY.MOBILITY.PROVIDER.UAT.1"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/transport/v2/"
+, selfId = "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/565db72a-04d4-4211-90ae-c956461397b2"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/bpp/cab/v1"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , caseExpiry = Some +7200

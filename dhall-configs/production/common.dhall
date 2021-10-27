@@ -49,5 +49,5 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/beckn-d4a42/messages:send/"
    , graphhopperUrl = "http://graphhopper.atlas/"
-   , registryUrl = "TO BE FILLED"
+   , registryUrl = "https://gateway-1.beckn.nsdl.co.in"
    }

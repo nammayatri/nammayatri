@@ -3,7 +3,7 @@ let globalCommon = ../../generic/common.dhall
 let signingKeys =
   [
   -- Gateway
-    globalCommon.mkSigningKey "juspay-bg-1-key" "xxxxxxx"
+    globalCommon.mkSigningKey "22" "xxxxxxx"
 
   -- FMD
   -- BAP
@@ -15,15 +15,16 @@ let signingKeys =
 
   -- Mobility
   -- BAP
-  , globalCommon.mkSigningKey "juspay-mobility-bap-1-key-dev" "xxxxxxx"
+  , globalCommon.mkSigningKey "19" "xxxxxxx"
+  , globalCommon.mkSigningKey "20" "xxxxxxx"
   -- BPP
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-1-key-dev" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-2-key-dev" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-3-key-dev" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-4-key-dev" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-5-key-dev" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-6-key-dev" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-7-key-dev" "xxxxxxx"
+  , globalCommon.mkSigningKey "12" "xxxxxxx"
+  , globalCommon.mkSigningKey "13" "xxxxxxx"
+  , globalCommon.mkSigningKey "14" "xxxxxxx"
+  , globalCommon.mkSigningKey "15" "xxxxxxx"
+  , globalCommon.mkSigningKey "16" "xxxxxxx"
+  , globalCommon.mkSigningKey "17" "xxxxxxx"
+  , globalCommon.mkSigningKey "18" "xxxxxxx"
   ]
 
 let exotelCfg =

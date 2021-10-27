@@ -88,10 +88,10 @@ in
 , xGatewayNsdlUrl = Some nsdlUrl
 , xProviderUri = providerUri
 , bapSelfIds =
-  { cabs = "JUSPAY.MOBILITY.APP.UAT.1.DEV"
-  , metro = "JUSPAY.MOBILITY.APP.UAT.2.DEV"
+  { cabs = "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"
+  , metro = "api.sandbox.beckn.juspay.in/dev/bap/metro/v1"
   }
-, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/app/v2/"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/bap/cab/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , searchConfirmExpiry = Some +600
