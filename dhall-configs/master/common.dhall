@@ -7,8 +7,8 @@ let branchName = "$DEPLOY_VARIANT"
 let credRegistry =
   [
   -- Gateway
-    globalCommon.mkCredential "juspay-bg-1-key" "JUSPAY.BG.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "nsdl_bg_1"       "NSDL.BG.1"   "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
+    globalCommon.mkCredential "22" "api.sandbox.beckn.juspay.in/dev/gateway" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "21" "nsdl.co.in"                              "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
 
   -- FMD
   -- BAP
@@ -27,15 +27,16 @@ let credRegistry =
 
   -- Mobility
   -- BAP
-  , globalCommon.mkCredential "juspay-mobility-bap-1-key-dev" "JUSPAY.MOBILITY.APP.1.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "19" "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"   "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "20" "api.sandbox.beckn.juspay.in/dev/bap/metro/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   -- BPP
-  , globalCommon.mkCredential "juspay-mobility-bpp-1-key-dev" "JUSPAY.MOBILITY.PROVIDER.1.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-2-key-dev" "JUSPAY.MOBILITY.PROVIDER.2.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-3-key-dev" "JUSPAY.MOBILITY.PROVIDER.3.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-4-key-dev" "JUSPAY.MOBILITY.PROVIDER.4.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-5-key-dev" "JUSPAY.MOBILITY.PROVIDER.5.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-6-key-dev" "JUSPAY.MOBILITY.PROVIDER.6.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-7-key-dev" "JUSPAY.MOBILITY.PROVIDER.7.DEV" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "12" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/565db72a-04d4-4211-90ae-c956461397b2" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "13" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/a45f243f-9915-4842-b78b-6d718844a48d" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "14" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/fb6ee235-8cf5-4f8f-aba2-40de1fa733d1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "15" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/c26001a5-8a20-4e77-bebd-f9d7fce618bc" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "16" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/384786e9-63e1-4f00-bbd9-40480387907d" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "17" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/dc46e80a-99d7-4f96-9949-2c045106b081" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "18" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/092ef105-6fe6-4eab-9c6f-e8a57b51e1af" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   ]
 
 in { defaultPoolConfig = globalCommon.defaultPoolConfig
@@ -59,5 +60,5 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/"
    , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"
-   , registryUrl = "TO BE FILLED"
+   , registryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
    }
