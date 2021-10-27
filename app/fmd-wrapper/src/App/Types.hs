@@ -15,9 +15,11 @@ import Beckn.Types.Credentials
 import Beckn.Types.Flow
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
+import qualified Beckn.Utils.Servant.RegistryService as RegistryService
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import qualified Storage.Queries.Organization as Org
 import Types.Metrics
 import Types.Wrapper (DunzoConfig)
 import Utils.Auth
@@ -68,7 +70,7 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
-  runLookup = lookup
+  runLookup = RegistryService.decodeViaRegistry Org.findOrgByShortId
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
