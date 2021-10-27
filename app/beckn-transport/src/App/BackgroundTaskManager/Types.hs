@@ -45,7 +45,6 @@ data DriverAllocationConfig = DriverAllocationConfig
 
 data BTMEnv = BTMEnv
   { dbCfg :: DBConfig,
-    selfId :: Text,
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],

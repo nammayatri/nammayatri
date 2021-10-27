@@ -63,7 +63,6 @@ in
 , xGatewaySelector = Some "JUSPAY.BG.1"
 , xGatewayNsdlUrl = None Text
 , xAppUri = appUri
-, selfId = "JUSPAY.MOBILITY.PROVIDER.UAT.1"
 , nwAddress = "http://localhost:8014/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
