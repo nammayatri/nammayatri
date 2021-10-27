@@ -3,6 +3,7 @@ module Beckn.Types.Core.Domain where
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Aeson
+import Data.Aeson.Types (typeMismatch)
 import EulerHS.Prelude
 
 data Domain
@@ -17,7 +18,15 @@ instance Example Domain where
   example = MOBILITY
 
 instance ToJSON Domain where
-  toJSON = genericToJSON constructorsWithHyphens
+  toJSON MOBILITY = String "nic2004:60221"
+  toJSON LOCAL_RETAIL = String "nic2004:52110"
+  toJSON FINAL_MILE_DELIVERY = String "nic2004:55204"
+  toJSON val = genericToJSON constructorsWithHyphensUntagged val -- TODO: update remaining domains with codes
 
 instance FromJSON Domain where
-  parseJSON = genericParseJSON constructorsWithHyphens
+  parseJSON (String "nic2004:60221") = pure MOBILITY
+  parseJSON (String "nic2004:52110") = pure LOCAL_RETAIL
+  parseJSON (String "nic2004:55204") = pure FINAL_MILE_DELIVERY
+  parseJSON (String "FOOD-AND-BEVERAGE") = pure FOOD_AND_BEVERAGE
+  parseJSON (String "HEALTHCARE") = pure HEALTHCARE
+  parseJSON e = typeMismatch "Core Domain" e
