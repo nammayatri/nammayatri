@@ -7,11 +7,12 @@ import Beckn.Types.Credentials
 import Beckn.Types.Flow
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
+import qualified Beckn.Utils.Servant.RegistryService as RegistryService
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import Storage.Queries.Organization (findOrgByShortId)
+import qualified Storage.Queries.Organization as Org
 import Types.Metrics
 import Types.Storage.Organization (Organization)
 
@@ -33,7 +34,9 @@ data AppCfg = AppCfg
     mobilityDomainVersion :: Text,
     signatureExpiry :: Seconds,
     graceTerminationPeriod :: Seconds,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets
   }
   deriving (Generic, FromDhall)
 
@@ -41,7 +44,7 @@ data AppEnv = AppEnv
   { dbCfg :: DBConfig,
     hostName :: Text,
     gwId :: Text,
-    gwNwAddress :: BaseUrl,
+    nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     cache :: C.Cache Text Text,
@@ -50,7 +53,9 @@ data AppEnv = AppEnv
     signatureExpiry :: Seconds,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets
   }
   deriving (Generic)
 
@@ -70,7 +75,6 @@ buildAppEnv AppCfg {..} = do
   return $
     AppEnv
       { gwId = selfId,
-        gwNwAddress = nwAddress,
         ..
       }
 
@@ -84,4 +88,4 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = signatureExpiry
 
 instance HasLookupAction (LookupRegistry Organization) (FlowR AppEnv) where
-  runLookup = lookupRegistryAction findOrgByShortId
+  runLookup = RegistryService.decodeViaRegistry Org.findOrgByShortId

@@ -8,7 +8,6 @@ import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Types.Error
 import Beckn.Types.Flow
-import Beckn.Types.Id
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
@@ -91,35 +90,6 @@ instance LookupMethod (LookupRegistry (r :: Type)) where
   type LookupResult (LookupRegistry r) = r
   lookupDescription =
     "Looks up the given key Id in the Beckn registry."
-
-lookupRegistryAction ::
-  ( MonadReader r m,
-    MonadThrow m,
-    Log m,
-    AuthenticatingEntity r
-  ) =>
-  (ShortId a -> m (Maybe a)) ->
-  LookupAction (LookupRegistry a) m
-lookupRegistryAction findOrgByShortId signaturePayload = do
-  appEnv <- ask
-  let registry = getRegistry appEnv
-  logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
-  let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
-  let mCred = Registry.lookupKey uniqueKeyId registry
-  cred <- case mCred of
-    Just c -> return c
-    Nothing -> do
-      logTagError "SignatureAuth" $ "Could not look up uniqueKeyId: " <> uniqueKeyId
-      throwError Unauthorized
-  org <-
-    findOrgByShortId (ShortId $ cred.shortOrgId)
-      >>= maybe (throwError OrgNotFound) pure
-  pk <- case Registry.decodeKey $ cred.signPubKey of
-    Nothing -> do
-      logTagError "SignatureAuth" $ "Invalid public key: " <> show (cred.signPubKey)
-      throwError $ InternalError "Invalid public key."
-    Just key -> return key
-  pure $ Just (org, pk)
 
 data SignatureAuthResult res = SignatureAuthResult
   { signature :: HttpSig.SignaturePayload,

@@ -177,13 +177,13 @@ dunzoDifferentCity =
         _type `shouldBe` Error.DOMAIN_ERROR
     )
 
-incorrectApiKey :: ClientEnv -> CallbackData -> IO ()
-incorrectApiKey clientEnv _ = do
+unknownSubscriber :: ClientEnv -> CallbackData -> IO ()
+unknownSubscriber clientEnv _ = do
   ctx <- buildContext SEARCH "dummy-txn-id"
   let searchReq = buildFMDSearchReq ctx
 
   gatewayResponse <- runSearch clientEnv "" searchReq
-  verifyError 401 "UNAUTHORIZED" gatewayResponse
+  verifyError 401 "SIGNATURE_VERIFICATION_FAILURE" gatewayResponse
 
 incorrectAction :: ClientEnv -> CallbackData -> IO ()
 incorrectAction clientEnv _ = do
@@ -211,6 +211,6 @@ spec = do
       it "Dunzo: unserviceable location" $ dunzoUnserviceableLocation appClientEnv
       it "Dunzo: nearby location" $ dunzoNearByLocation appClientEnv
       it "Dunzo: different city" $ dunzoDifferentCity appClientEnv
-      it "Incorrect API key" $ incorrectApiKey appClientEnv
+      it "Unknown subscriber" $ unknownSubscriber appClientEnv
       it "Incorrect action" $ incorrectAction appClientEnv
       it "Incorrect country" $ incorrectCountry appClientEnv

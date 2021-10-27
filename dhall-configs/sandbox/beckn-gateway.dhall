@@ -58,4 +58,6 @@ in
 , signatureExpiry = common.signatureExpiry
 , graceTerminationPeriod = +90
 , httpClientOptions = httpClientOptions
+, registryUrl = common.registryUrl
+, registrySecrets = sec.registrySecrets
 }
