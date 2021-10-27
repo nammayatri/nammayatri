@@ -60,8 +60,7 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9997
-, xGatewaySelector = Some "JUSPAY.BG.1"
-, xGatewayNsdlUrl = None Text
+, xGatewaySelector = "JUSPAY.BG.1"
 , xAppUri = appUri
 , nwAddress = "http://localhost:8014/v1/"
 , credRegistry = common.credRegistry

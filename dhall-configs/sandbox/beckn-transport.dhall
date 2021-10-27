@@ -40,8 +40,6 @@ let smsConfig =
 
 let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v1"
 
-let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
-
 let apiRateLimitOptions =
   { limit = +4
   , limitResetTimeInSec = +600
@@ -62,8 +60,7 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9999
-, xGatewaySelector = Some "NSDL.BG.1"
-, xGatewayNsdlUrl = Some nsdlUrl
+, xGatewaySelector = "JUSPAY.BG.1"
 , xAppUri = appUri
 , nwAddress = "https://api.sandbox.beckn.juspay.in/transport/v1/"
 , credRegistry = common.credRegistry

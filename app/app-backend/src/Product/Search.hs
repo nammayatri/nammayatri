@@ -66,8 +66,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     Location.create fromLocation
     Location.create toLocation
     QCase.create case_
-  env <- ask
-  let bapNwAddr = env.nwAddress
+  bapNwAddr <- asks (.nwAddress)
   context <- buildContext "search" txnId (Just bapNwAddr) Nothing
   contextMig <- buildContextMetro Core9.SEARCH txnId bapNwAddr Nothing
   let intent = mkIntent req
@@ -75,9 +74,9 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   intentMig <- mkIntentMig req
   fork "search" . withRetry $ do
     fork "search 0.8" $
-      ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
+      ExternalAPI.search (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
     fork "search 0.9" $
-      ExternalAPI.searchMetro (xGatewayUri env) (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
+      ExternalAPI.searchMetro (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
   return $ API.SearchRes txnId
   where
     validateDateTime sreq = do
