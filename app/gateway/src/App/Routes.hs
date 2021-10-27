@@ -8,7 +8,7 @@ where
 import App.Types
 import Beckn.Types.App (FlowServerR)
 import EulerHS.Prelude
-import qualified Product.Search as P
+import qualified Product.Search as Search
 import Servant hiding (throwError)
 import Types.API.Search
 
@@ -39,5 +39,5 @@ healthHandler =
 gatewayHandler :: FlowServerR AppEnv GatewayAPI'
 gatewayHandler =
   pure "Gateway is UP"
-    :<|> P.search
-    :<|> P.searchCb
+    :<|> Search.search
+    :<|> Search.searchCb
