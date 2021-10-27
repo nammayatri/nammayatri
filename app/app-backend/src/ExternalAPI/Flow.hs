@@ -7,6 +7,7 @@ import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.Migration.API.Search as MigAPI
 import Beckn.Types.Core.Migration.API.Types (BecknReq)
 import Beckn.Types.Error
+import Beckn.Types.Id (ShortId (..))
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
@@ -16,6 +17,7 @@ import EulerHS.Prelude
 import qualified ExternalAPI.Types as API
 import GHC.Records.Extra
 import Servant.Client
+import Storage.Queries.Organization as Org
 import Types.API.Location
 import Types.Metrics (CoreMetrics)
 import Utils.Common
@@ -27,40 +29,38 @@ data BapIds = BapIds
   deriving (Generic, FromDhall)
 
 search ::
-  ( HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl],
+  ( HasFlowEnv m r '["xGatewaySelector" ::: Text],
+    DBFlow m r,
     CoreMetrics m,
     HasBapIds r m
   ) =>
-  BaseUrl ->
   API.SearchReq ->
   m ()
-search url req = do
-  url' <- getSearchUrl url
-  callBecknAPIWithSignature "search" API.search url' req
+search req = do
+  url <- getSearchUrl
+  callBecknAPIWithSignature "search" API.search url req
 
 searchMetro ::
-  ( HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl],
+  ( HasFlowEnv m r '["xGatewaySelector" ::: Text],
+    DBFlow m r,
     CoreMetrics m,
     HasBapIds r m
   ) =>
-  BaseUrl ->
   BecknReq MigAPI.SearchIntent ->
   m ()
-searchMetro url req = do
-  url' <- getSearchUrl url
-  callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url' req
+searchMetro req = do
+  url <- getSearchUrl
+  callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url req
 
 getSearchUrl ::
-  (HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl]) =>
-  BaseUrl ->
+  (HasFlowEnv m r '["xGatewaySelector" ::: Text], DBFlow m r) =>
   m BaseUrl
-getSearchUrl url =
+getSearchUrl =
   asks (.xGatewaySelector)
-    >>= fromMaybeM GatewaySelectorNotSet
-    >>= \case
-      "NSDL.BG.1" -> asks (.xGatewayNsdlUrl) >>= fromMaybeM NSDLBaseUrlNotSet
-      "JUSPAY.BG.1" -> pure url
-      _ -> throwError UnsupportedGatewaySelector
+    >>= Org.findOrgByShortId . ShortId
+    >>= fromMaybeM OrgNotFound
+    <&> (.callbackUrl)
+    >>= fromMaybeM (OrgFieldNotPresent "callback_url")
 
 confirm ::
   ( MonadFlow m,

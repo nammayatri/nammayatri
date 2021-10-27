@@ -61,8 +61,6 @@ let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
 
 let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v2"
 
-let nsdlUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
-
 let apiRateLimitOptions =
   { limit = +4
   , limitResetTimeInSec = +600
@@ -84,8 +82,7 @@ in
 , metricsPort = +9999
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
-, xGatewaySelector = Some "JUSPAY.BG.1"
-, xGatewayNsdlUrl = Some nsdlUrl
+, xGatewaySelector = "api.sandbox.beckn.juspay.in/dev/gateway"
 , xProviderUri = providerUri
 , bapSelfIds =
   { cabs = "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"

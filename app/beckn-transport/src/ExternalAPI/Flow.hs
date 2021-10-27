@@ -25,17 +25,15 @@ import Utils.Common
 
 getGatewayUrl ::
   ( DBFlow m r,
-    HasFlowEnv m r ["xGatewaySelector" ::: Maybe Text, "xGatewayNsdlUrl" ::: Maybe BaseUrl]
+    HasField "xGatewaySelector" r Text
   ) =>
   m BaseUrl
-getGatewayUrl = do
-  appConfig <- ask
-  gatewayShortId <- appConfig.xGatewaySelector & fromMaybeM GatewaySelectorNotSet
-  gatewayOrg <- Org.findOrgByShortId (ShortId gatewayShortId) >>= fromMaybeM OrgNotFound
-  case gatewayShortId of
-    "NSDL.BG.1" -> appConfig.xGatewayNsdlUrl & fromMaybeM NSDLBaseUrlNotSet
-    "JUSPAY.BG.1" -> gatewayOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-    _ -> throwError UnsupportedGatewaySelector
+getGatewayUrl =
+  asks (.xGatewaySelector)
+    >>= Org.findOrgByShortId . ShortId
+    >>= fromMaybeM OrgNotFound
+    <&> (.callbackUrl)
+    >>= fromMaybeM (OrgFieldNotPresent "callback_url")
 
 withCallback ::
   HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>

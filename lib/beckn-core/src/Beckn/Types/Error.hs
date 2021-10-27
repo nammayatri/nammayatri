@@ -375,9 +375,7 @@ instance IsHTTPError RideError where
 instance IsAPIError RideError
 
 data GatewayError
-  = GatewaySelectorNotSet
-  | NSDLBaseUrlNotSet
-  | UnsupportedGatewaySelector
+  = UnsupportedGatewaySelector
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''GatewayError
@@ -385,8 +383,6 @@ instanceExceptionWithParent 'HTTPException ''GatewayError
 instance IsBaseError GatewayError
 
 instance IsHTTPError GatewayError where
-  toErrorCode GatewaySelectorNotSet = "GATEWAY_SELECTOR_NOT_SET"
-  toErrorCode NSDLBaseUrlNotSet = "NSDL_BASEURL_NOT_SET"
   toErrorCode UnsupportedGatewaySelector = "UNSUPPORTED_GATEWAY_SELECTOR"
 
 instance IsAPIError GatewayError

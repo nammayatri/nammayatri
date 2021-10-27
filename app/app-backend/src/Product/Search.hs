@@ -75,11 +75,11 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
       context <- buildContext "search" txnId (Just bapNwAddr) Nothing
       let intent = mkIntent req now
           tags = Just [Tag "distance" $ show distance]
-      ExternalAPI.search (xGatewayUri env) (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
+      ExternalAPI.search (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
     fork "search 0.9" $ do
       contextMig <- buildContextMetro Core9.SEARCH txnId bapNwAddr Nothing
       intentMig <- mkIntentMig req
-      ExternalAPI.searchMetro (xGatewayUri env) (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
+      ExternalAPI.searchMetro (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
   return . API.SearchRes $ searchRequest.id
   where
     validateServiceability = do
