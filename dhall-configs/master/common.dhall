@@ -7,8 +7,8 @@ let branchName = "$DEPLOY_VARIANT"
 let credRegistry =
   [
   -- Gateway
-    globalCommon.mkCredential "22" "api.sandbox.beckn.juspay.in/dev/gateway" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "21" "nsdl.co.in"                              "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
+    globalCommon.mkCredential "22" "api.sandbox.beckn.juspay.in/dev/gateway/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "21" "nsdl.co.in"                                 "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
 
   -- FMD
   -- BAP
@@ -27,8 +27,7 @@ let credRegistry =
 
   -- Mobility
   -- BAP
-  , globalCommon.mkCredential "19" "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"   "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "20" "api.sandbox.beckn.juspay.in/dev/bap/metro/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "19" "api.sandbox.beckn.juspay.in/dev/bap/cab/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   -- BPP
   , globalCommon.mkCredential "12" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/565db72a-04d4-4211-90ae-c956461397b2" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , globalCommon.mkCredential "13" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/a45f243f-9915-4842-b78b-6d718844a48d" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
@@ -37,6 +36,12 @@ let credRegistry =
   , globalCommon.mkCredential "16" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/384786e9-63e1-4f00-bbd9-40480387907d" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , globalCommon.mkCredential "17" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/dc46e80a-99d7-4f96-9949-2c045106b081" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , globalCommon.mkCredential "18" "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/092ef105-6fe6-4eab-9c6f-e8a57b51e1af" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+
+  -- Metro
+  -- BAP
+  , globalCommon.mkCredential "20" "api.sandbox.beckn.juspay.in/dev/bap/metro/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  -- BPP
+  , globalCommon.mkCredential "25" "api.sandbox.beckn.juspay.in/bpp/metro/v1"     "OGfSqt352PXRfdd+pLXo3eLLd96iL8dcbireMynl5A4="
   ]
 
 in { defaultPoolConfig = globalCommon.defaultPoolConfig

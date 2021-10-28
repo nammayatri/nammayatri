@@ -82,7 +82,7 @@ in
 , metricsPort = +9999
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
-, xGatewaySelector = "api.sandbox.beckn.juspay.in/dev/gateway"
+, xGatewaySelector = "api.sandbox.beckn.juspay.in/dev/gateway/v1"
 , xProviderUri = providerUri
 , bapSelfIds =
   { cabs = "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"
