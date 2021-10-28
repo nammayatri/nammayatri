@@ -9,6 +9,7 @@ module App.Types
   )
 where
 
+import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.SesConfig (SesConfig)
 import Beckn.Sms.Config (SmsConfig)
@@ -50,7 +51,6 @@ data AppCfg = AppCfg
     bapSelfUniqueKeyIds :: BAPs Text,
     searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
-    encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
@@ -73,7 +73,8 @@ data AppCfg = AppCfg
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,
-    gatewayUrl :: BaseUrl
+    gatewayUrl :: BaseUrl,
+    encTools :: EncTools
   }
   deriving (Generic, FromDhall)
 
@@ -87,7 +88,6 @@ data AppEnv = AppEnv
     xProviderUri :: BaseUrl,
     searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
-    encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
@@ -102,7 +102,8 @@ data AppEnv = AppEnv
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
     authTokenCacheExpiry :: Seconds,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    encTools :: EncTools
   }
   deriving (Generic)
 

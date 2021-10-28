@@ -59,6 +59,11 @@ let httpClientOptions =
   , maxRetries = +3
   }
 
+let encTools =
+  { service = common.passetto
+  , hashSalt = sec.encHashSalt
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -76,7 +81,6 @@ in
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , caseExpiry = Some +7200
-, encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
 , exotelCfg = Some common.exotelCfg
 , migrationPath = None Text
@@ -102,4 +106,5 @@ in
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
+, encTools = encTools
 }

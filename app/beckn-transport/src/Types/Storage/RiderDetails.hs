@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Types.Storage.RiderDetails where
@@ -33,7 +33,19 @@ instance B.Table RiderDetailsT where
     deriving (Generic, B.Beamable)
   primaryKey t = RiderDetailsPrimaryKey t.id
 
-deriveTableEncryption ''RiderDetailsTE
+instance EncryptedItem RiderDetails where
+  type Unencrypted RiderDetails = (RiderDetailsDecrypted, HashSalt)
+  encryptItem (RiderDetails {..}, salt) = do
+    mobileNumber_ <- encryptItem $ Identity (mobileNumber, salt)
+    return RiderDetails {mobileNumber = mobileNumber_, ..}
+  decryptItem RiderDetails {..} = do
+    mobileNumber_ <- runIdentity . fmap fst <$> decryptItem mobileNumber
+    return (RiderDetails {mobileNumber = mobileNumber_, ..}, "")
+
+instance EncryptedItem' RiderDetails where
+  type UnencryptedItem RiderDetails = RiderDetailsDecrypted
+  toUnencrypted a salt = (a, salt)
+  fromUnencrypted a = fst a
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RiderDetailsT)

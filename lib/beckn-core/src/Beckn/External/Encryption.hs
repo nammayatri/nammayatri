@@ -1,9 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -18,11 +17,12 @@ module Beckn.External.Encryption
     EncryptedHashed (..),
     EncryptedHashedField,
     EncryptedBase64 (..),
+    EncTools (..),
+    HashSalt,
+    EncryptedItem' (..),
     encrypt,
     decrypt,
-    encryptOne,
-    decryptOne,
-    deriveTableEncryption,
+    getDbHash,
 
     -- * Re-exports
     EncryptedItem (..),
@@ -33,18 +33,18 @@ where
 
 import Beckn.Types.App
 import Beckn.Types.Field
+import Beckn.Utils.Dhall (FromDhall)
 import qualified Crypto.Hash as Hash
 import Crypto.Hash.Algorithms (SHA256)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as LBS
-import Database.Beam (Beamable, Columnar, HasSqlEqualityCheck (..), Nullable)
+import Database.Beam as B (Beamable, Columnar, HasSqlEqualityCheck (..), Nullable)
 import Database.Beam.Backend (FromBackendRow (..), HasSqlValueSyntax (..))
 import Database.Beam.Postgres (Postgres)
 import Database.Beam.Postgres.Syntax (PgValueSyntax)
 import EulerHS.Prelude
 import GHC.TypeLits (ErrorMessage (..), TypeError)
-import qualified Language.Haskell.TH as TH
 import Passetto.Client (EncryptedBase64 (..), EncryptedItem (..), PassettoContext, cliDecrypt, cliEncrypt, genericDecryptItem, genericEncryptItem, mkDefPassettoContext, throwLeft)
 import Passetto.Client.EncryptedItem (Encrypted (..))
 import Text.Hex (decodeHex, encodeHex)
@@ -116,31 +116,26 @@ deriving newtype instance FromBackendRow Postgres DbHash
 
 type HashAlgo = SHA256
 
--- FIXME: make configurable. We need to rehash everything with
---   a new salt periodically
-hashSalt :: LByteString
-hashSalt =
-  "How wonderful it is that nobody need wait a single \
-  \moment before starting to improve the world"
+type HashSalt = Text
 
 -- | Typeclass for values which can be hashed.
 class DbHashable a where
-  evalDbHash :: a -> DbHash
-  default evalDbHash :: ToJSON a => a -> DbHash
-  evalDbHash = evalDbHash . toJSON
+  evalDbHash :: (a, HashSalt) -> DbHash
+  default evalDbHash :: ToJSON a => (a, HashSalt) -> DbHash
+  evalDbHash = evalDbHash . first toJSON
 
 instance DbHashable ByteString where
-  evalDbHash = evalDbHash . LBS.fromStrict
+  evalDbHash = evalDbHash . first LBS.fromStrict
 
 instance DbHashable LByteString where
-  evalDbHash =
-    DbHash . BA.convert @(Hash.Digest HashAlgo) . Hash.hashlazy . (hashSalt <>)
+  evalDbHash (a, salt) =
+    DbHash . BA.convert @(Hash.Digest HashAlgo) $ Hash.hashlazy (encodeUtf8 salt <> a)
 
 instance DbHashable Text where
-  evalDbHash = evalDbHash @ByteString . encodeUtf8
+  evalDbHash = evalDbHash . first (encodeUtf8 @_ @ByteString)
 
 instance DbHashable Aeson.Value where
-  evalDbHash = evalDbHash . Aeson.encode
+  evalDbHash = evalDbHash . first Aeson.encode
 
 -- | A field which appears encrypted in database along with hash.
 --
@@ -159,23 +154,38 @@ instance
   (ToJSON a, FromJSON a, DbHashable a) =>
   EncryptedItem (EncryptedHashed a Identity)
   where
-  type Unencrypted (EncryptedHashed a Identity) = a
-  encryptItem value = do
+  type Unencrypted (EncryptedHashed a Identity) = Identity (a, HashSalt)
+  encryptItem (Identity value) = do
     let hash = evalDbHash value
-    encrypted <- encryptItem value
+    encrypted <- encryptItem $ fst value
     return EncryptedHashed {..}
-  decryptItem = decryptItem . encrypted
+  decryptItem mvalue = Identity . (,"") <$> decryptItem (encrypted mvalue)
 
 instance
   (ToJSON a, FromJSON a, DbHashable a) =>
-  EncryptedItem (EncryptedHashed a (Nullable Identity))
+  EncryptedItem (EncryptedHashed a (B.Nullable Identity))
   where
-  type Unencrypted (EncryptedHashed a (Nullable Identity)) = Maybe a
+  type Unencrypted (EncryptedHashed a (B.Nullable Identity)) = Maybe (a, HashSalt)
   encryptItem mvalue = do
     let hash = evalDbHash <$> mvalue
-    encrypted <- encryptItem mvalue
+    encrypted <- encryptItem $ fst <$> mvalue
     return EncryptedHashed {..}
-  decryptItem = decryptItem . encrypted
+  decryptItem mvalue = fmap (,"") <$> decryptItem (encrypted mvalue)
+
+class (EncryptedItem e) => EncryptedItem' e where
+  type UnencryptedItem e :: Type
+  toUnencrypted :: UnencryptedItem e -> HashSalt -> Unencrypted e
+  fromUnencrypted :: Unencrypted e -> UnencryptedItem e
+
+instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (EncryptedHashed a Identity) where
+  type UnencryptedItem (EncryptedHashed a Identity) = a
+  toUnencrypted a salt = Identity (a, salt)
+  fromUnencrypted a = fst $ runIdentity a
+
+instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (EncryptedHashed a (B.Nullable Identity)) where
+  type UnencryptedItem (EncryptedHashed a (B.Nullable Identity)) = Maybe a
+  toUnencrypted a salt = (,salt) <$> a
+  fromUnencrypted a = fst <$> a
 
 -- | Mark a field as encrypted with hash or not, depending on @e@ argument.
 --
@@ -186,13 +196,18 @@ type family EncryptedHashedField (e :: EncKind) (f :: Type -> Type) (a :: Type) 
 
 -- * Encryption methods
 
+data EncTools = EncTools
+  { hashSalt :: HashSalt,
+    service :: (String, Word16)
+  }
+  deriving (Generic, FromDhall)
+
 -- FIXME! Modify passetto to use BaseUrl and use it too!
-type EncFlow m r = (HasFlowEnv m r '["encService" ::: (String, Word16)])
+type EncFlow m r = (HasFlowEnv m r '["encTools" ::: EncTools])
 
 -- Helper which allows running passetto client operations in our monad.
-withPassettoCtx :: EncFlow m r => ReaderT PassettoContext IO a -> m a
-withPassettoCtx action = do
-  (host, port) <- asks (.encService)
+withPassettoCtx :: MonadIO m => (String, Word16) -> ReaderT PassettoContext IO a -> m a
+withPassettoCtx (host, port) action =
   liftIO (mkDefPassettoContext host port) >>= liftIO . runReaderT action
 
 -- | Encrypt given value.
@@ -200,48 +215,31 @@ withPassettoCtx action = do
 -- Note: this performs not more than one call to server, so try to avoid using
 -- multiple subsequent invocations of this method in favor of passing complex
 -- structures (e.g. tuples) through it.
-encrypt :: EncFlow m r => EncryptedItem e => Unencrypted e -> m e
-encrypt payload = withPassettoCtx $ throwLeft =<< cliEncrypt payload
+encrypt ::
+  forall (m :: Type -> Type) r e.
+  (EncFlow m r, EncryptedItem' e) =>
+  UnencryptedItem e ->
+  m e
+encrypt payload = do
+  encTools <- asks (.encTools)
+  let unencrypted = toUnencrypted @e payload encTools.hashSalt
+  withPassettoCtx encTools.service $ throwLeft =<< cliEncrypt unencrypted
 
 -- | Decrypt given value.
-decrypt :: (EncFlow m r, EncryptedItem e) => e -> m (Unencrypted e)
-decrypt encrypted = withPassettoCtx $ throwLeft =<< cliDecrypt encrypted
+decrypt ::
+  forall (m :: Type -> Type) r e.
+  (EncFlow m r, EncryptedItem' e) =>
+  e ->
+  m (UnencryptedItem e)
+decrypt encrypted = do
+  encTools <- asks (.encTools)
+  item <- withPassettoCtx encTools.service $ throwLeft =<< cliDecrypt encrypted
+  return $ fromUnencrypted @e item
 
--- | Simplified version of 'encrypt'.
---
--- In some cases 'encrypt' requires specifying resulting type explicitly,
--- but here it is not necessary.
-encryptOne :: (EncFlow m r, ToJSON a, FromJSON a) => a -> m (Encrypted a)
-encryptOne = encrypt
-
--- | Simplified version of 'decrypt'.
-decryptOne :: (EncFlow m r, ToJSON a, FromJSON a) => Encrypted a -> m a
-decryptOne = decrypt
-
--- | Derive an instance which allows running 'encrypt' and 'decrypt' on
--- the entire table.
---
--- Your table should be defined as a datatype standing for a Beam schema,
--- it must have two type arguments - @e :: EncKind@ and @f :: Type -> Type@.
---
--- Note that it is not yet clear how well automatic derivation will work,
--- in case of any problems (arising at compile-time) feel free to write
--- 'EncryptedItem' instance and implementation for its methods manually.
--- This definition is just a meta-programming helper alias.
-deriveTableEncryption :: TH.Name -> TH.DecsQ
-deriveTableEncryption name = do
-  let tyQ = pure (TH.ConT name)
-  [d|
-    -- Type arguments in instance head are constrained like this to make
-    -- GHC infer them when our table is encrypted or decrypted.
-    -- Otherwise, users of 'decrypt' would often have to specify the
-    -- exact type of the decrypted thing manually in order for this instance
-    -- to be applied.
-    instance
-      (e ~ 'AsEncrypted, f ~ Identity) =>
-      EncryptedItem ($tyQ e f)
-      where
-      type Unencrypted ($tyQ e f) = $tyQ 'AsUnencrypted Identity
-      encryptItem = genericEncryptItem
-      decryptItem = genericDecryptItem
-    |]
+getDbHash ::
+  (EncFlow m r, DbHashable a) =>
+  a ->
+  m DbHash
+getDbHash a = do
+  salt <- asks (.encTools.hashSalt)
+  return $ evalDbHash (a, salt)

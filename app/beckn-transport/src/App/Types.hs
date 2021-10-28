@@ -10,6 +10,7 @@ module App.Types
   )
 where
 
+import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.DB.Config (DBConfig)
@@ -49,7 +50,6 @@ data AppCfg = AppCfg
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
     caseExpiry :: Maybe Seconds,
-    encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     migrationPath :: Maybe FilePath,
@@ -74,7 +74,8 @@ data AppCfg = AppCfg
     metricsSearchDurationTimeout :: Seconds,
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets,
-    disableSignatureAuth :: Bool
+    disableSignatureAuth :: Bool,
+    encTools :: EncTools
   }
   deriving (Generic, FromDhall)
 
@@ -88,7 +89,6 @@ data AppEnv = AppEnv
     xAppUri :: BaseUrl,
     nwAddress :: BaseUrl,
     caseExpiry :: Maybe Seconds,
-    encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
@@ -106,7 +106,8 @@ data AppEnv = AppEnv
     driverPositionInfoExpiry :: Maybe Seconds,
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    encTools :: EncTools
   }
   deriving (Generic)
 

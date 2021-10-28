@@ -1,6 +1,5 @@
 module Fixtures.RideBooking where
 
-import Beckn.External.Encryption (Encrypted (Encrypted))
 import Beckn.Types.Id
 import EulerHS.Prelude
 import qualified Fixtures.BaseUrl as Fixtures

@@ -14,6 +14,7 @@ where
 
 import App.Types as App (AppCfg, AppEnv (..))
 import qualified App.Types as App
+import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.Common
@@ -49,7 +50,6 @@ data BTMEnv = BTMEnv
   { config :: BTMCfg,
     dbCfg :: DBConfig,
     nwAddress :: BaseUrl,
-    encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     fcmUrl :: BaseUrl,
@@ -59,7 +59,8 @@ data BTMEnv = BTMEnv
     driverPositionInfoExpiry :: Maybe Seconds,
     driverAllocationConfig :: DriverAllocationConfig,
     btmMetrics :: BTMMetricsContainer,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    encTools :: EncTools
   }
   deriving (Generic)
 

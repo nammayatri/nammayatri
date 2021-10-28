@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Types.Storage.Person where
@@ -129,7 +129,19 @@ instance B.Table PersonT where
     deriving (Generic, B.Beamable)
   primaryKey t = PersonPrimaryKey t.id
 
-deriveTableEncryption ''PersonTE
+instance EncryptedItem Person where
+  type Unencrypted Person = (DecryptedPerson, HashSalt)
+  encryptItem (Person {..}, salt) = do
+    mobileNumber_ <- encryptItem $ (,salt) <$> mobileNumber
+    return Person {mobileNumber = mobileNumber_, ..}
+  decryptItem Person {..} = do
+    mobileNumber_ <- fmap fst <$> decryptItem mobileNumber
+    return (Person {mobileNumber = mobileNumber_, ..}, "")
+
+instance EncryptedItem' Person where
+  type UnencryptedItem Person = DecryptedPerson
+  toUnencrypted a salt = (a, salt)
+  fromUnencrypted a = fst a
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity PersonT)

@@ -85,17 +85,18 @@ complementVal l
   | otherwise = B.val_ False
 
 findByMobileNumber ::
-  DBFlow m r =>
+  (DBFlow m r, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Storage.Person)
 findByMobileNumber countryCode mobileNumber_ = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  DB.findOne dbTable (predicate mobileNumberDbHash)
   where
-    predicate Storage.Person {..} =
+    predicate mobileNumberDbHash Storage.Person {..} =
       mobileCountryCode ==. B.val_ (Just countryCode)
-        &&. (mobileNumber.hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
+        &&. (mobileNumber.hash) ==. B.val_ (Just mobileNumberDbHash)
 
 findByIdentifier ::
   DBFlow m r =>

@@ -74,6 +74,11 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
+let encTools =
+  { service = common.passetto
+  , hashSalt = sec.encHashSalt
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -102,7 +107,6 @@ in
 , signatureExpiry = common.signatureExpiry
 , searchConfirmExpiry = Some +600
 , searchRequestExpiry = Some +600
-, encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
 , exotelCfg = Some common.exotelCfg
 , migrationPath = Some (env:APP_BACKEND_MIGRATION_PATH as Text ? "dev/migrations/app-backend")
@@ -124,4 +128,5 @@ in
 , gatewayUrl = gwUri
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
+, encTools = encTools
 }

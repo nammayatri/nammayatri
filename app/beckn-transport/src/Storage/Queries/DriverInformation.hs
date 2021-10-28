@@ -1,6 +1,6 @@
 module Storage.Queries.DriverInformation where
 
-import Beckn.External.Encryption (evalDbHash)
+import Beckn.External.Encryption (getDbHash)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
@@ -111,7 +111,7 @@ deleteById driverId_ = do
     predicate pid DriverInformation.DriverInformation {..} = driverId ==. B.val_ pid
 
 findAllWithLimitOffsetByOrgId ::
-  DBFlow m r =>
+  (DBFlow m r, EncFlow m r) =>
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
@@ -120,30 +120,30 @@ findAllWithLimitOffsetByOrgId ::
 findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
   personDbTable <- QPerson.getDbTable
   driverInfoDbTable <- getDbTable
-
-  DB.findAllByJoin (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (joinQuery personDbTable driverInfoDbTable)
+  mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
+  DB.findAllByJoin (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (joinQuery personDbTable driverInfoDbTable mbSearchStrDBHash)
   where
     orderByDesc (Person.Person {..}, _) = B.desc_ createdAt
     limit = fromMaybe 100 mbLimit
     offset = fromMaybe 0 mbOffset
-    joinQuery personDbTable driverInfoDbTable = do
+    joinQuery personDbTable driverInfoDbTable mbSearchStrDBHash = do
       person <- B.all_ personDbTable
       driverInfo <- B.join_ driverInfoDbTable $ \row -> do
         row.driverId B.==. person.id
-      B.guard_ $ predicate person
+      B.guard_ $ predicate mbSearchStrDBHash person
       return (person, driverInfo)
 
-    predicate p@Person.Person {..} =
+    predicate mbSearchStrDBHash p@Person.Person {..} =
       foldl
         (&&.)
         (B.val_ True)
         [ role B.==. B.val_ Person.DRIVER,
           organizationId B.==. B.val_ (Just orgId),
-          maybe (B.val_ True) (filterBySearchString p) mbSearchString
+          maybe (B.val_ True) (filterBySearchString p) $ liftA2 (,) mbSearchString mbSearchStrDBHash
         ]
 
-    filterBySearchString Person.Person {..} searchStr = do
+    filterBySearchString Person.Person {..} (searchStr, searchStrDBHash) = do
       let likeSearchStr = B.concat_ [B.val_ "%", B.val_ searchStr, B.val_ "%"]
       B.lower_ (B.concat_ [unMaybe firstName, B.val_ " ", unMaybe middleName, B.val_ " ", unMaybe lastName]) `B.like_` B.lower_ likeSearchStr
-        B.||. mobileNumber.hash B.==. B.val_ (Just $ evalDbHash searchStr)
+        B.||. mobileNumber.hash B.==. B.val_ (Just searchStrDBHash)
     unMaybe = B.maybe_ (B.val_ "") identity

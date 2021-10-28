@@ -35,11 +35,12 @@ findById rdId = do
     predicate Storage.RiderDetails {..} = id ==. B.val_ rdId
 
 findByMobileNumber ::
-  DBFlow m r =>
+  (DBFlow m r, EncFlow m r) =>
   Text ->
   m (Maybe Storage.RiderDetails)
 findByMobileNumber mobileNumber_ = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  DB.findOne dbTable (predicate mobileNumberDbHash)
   where
-    predicate Storage.RiderDetails {..} = mobileNumber.hash ==. B.val_ (evalDbHash mobileNumber_)
+    predicate mobileNumberDbHash Storage.RiderDetails {..} = mobileNumber.hash ==. B.val_ mobileNumberDbHash

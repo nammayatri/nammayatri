@@ -41,41 +41,44 @@ complementVal l
   | otherwise = B.val_ False
 
 findByEmailAndPassword ::
-  DBFlow m r =>
+  (DBFlow m r, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Storage.Person)
 findByEmailAndPassword email_ password = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate
+  passwordDbHash <- getDbHash password
+  DB.findOne dbTable (predicate passwordDbHash)
   where
-    predicate Storage.Person {..} =
+    predicate passwordDbHash Storage.Person {..} =
       email ==. B.val_ (Just email_)
-        &&. passwordHash ==. B.val_ (Just $ evalDbHash password)
+        &&. passwordHash ==. B.val_ (Just passwordDbHash)
 
 findByRoleAndMobileNumber ::
-  DBFlow m r =>
+  (DBFlow m r, EncFlow m r) =>
   Storage.Role ->
   Text ->
   Text ->
   m (Maybe Storage.Person)
 findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  DB.findOne dbTable (predicate mobileNumberDbHash)
   where
-    predicate Storage.Person {..} =
+    predicate mobileNumberDbHash Storage.Person {..} =
       role ==. B.val_ role_
         &&. mobileCountryCode ==. B.val_ (Just countryCode)
-        &&. (mobileNumber.hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
+        &&. (mobileNumber.hash) ==. B.val_ (Just mobileNumberDbHash)
 
-findByRoleAndMobileNumberWithoutCC :: DBFlow m r => Storage.Role -> Text -> m (Maybe Storage.Person)
+findByRoleAndMobileNumberWithoutCC :: (DBFlow m r, EncFlow m r) => Storage.Role -> Text -> m (Maybe Storage.Person)
 findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
   dbTable <- getDbTable
-  DB.findOne dbTable predicate
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  DB.findOne dbTable (predicate mobileNumberDbHash)
   where
-    predicate Storage.Person {..} =
+    predicate mobileNumberDbHash Storage.Person {..} =
       role ==. B.val_ role_
-        &&. (mobileNumber.hash) ==. B.val_ (Just $ evalDbHash mobileNumber_)
+        &&. (mobileNumber.hash) ==. B.val_ (Just mobileNumberDbHash)
 
 updateMultiple :: Id Storage.Person -> Storage.Person -> DB.SqlDB ()
 updateMultiple personId person = do
