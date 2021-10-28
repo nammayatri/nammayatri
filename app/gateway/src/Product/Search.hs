@@ -13,7 +13,6 @@ import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..), signatureAuthManagerKey)
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import qualified Product.AppLookup as BA
 import qualified Product.ProviderRegistry as BP
 import Product.Validation
 import qualified Types.API.Gateway.Search as ExternalAPI
@@ -27,19 +26,14 @@ search ::
   SignatureAuthResult Org.Organization ->
   SearchReq ->
   FlowHandler AckResponse
-search (SignatureAuthResult proxySign org) req = withFlowHandlerBecknAPI $
+search (SignatureAuthResult proxySign _) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext "search" (req.context)
     unless (isJust (req.context.bap_uri)) $
       throwError $ InvalidRequest "No bap URI in context."
     let gatewaySearchSignAuth = ET.client ExternalAPI.searchAPI
         context = req.context
-        messageId = context.transaction_id
-    cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-    cbApiKey <- org.callbackApiKey & fromMaybeM (OrgFieldNotPresent "callback_api_key")
     providers <- BP.lookup context
-    let bgSession = BA.GwSession cbUrl cbApiKey context
-    BA.insert messageId bgSession
     when (null providers) $ throwError NoProviders
     forM_ providers $ \provider -> fork "Provider search" . withLogTag "search_req" $ do
       providerUrl <- provider.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
@@ -63,14 +57,12 @@ searchCb (SignatureAuthResult proxySign org) req@CallbackReq {context} = withFlo
     withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) do
       validateContext "on_search" context
       let gatewayOnSearchSignAuth = ET.client ExternalAPI.onSearchAPI
-          messageId = req.context.transaction_id
-      bgSession <- BA.lookup messageId >>= fromMaybeM (InvalidRequest "Message not found.")
-      let baseUrl = bgSession.cbUrl
+      bap_uri <- context.bap_uri & fromMaybeM (InvalidRequest "Bap_uri not present")
       withRetry $
         callBecknAPI'
           (Just signatureAuthManagerKey)
           Nothing
-          baseUrl
+          bap_uri
           (gatewayOnSearchSignAuth (Just proxySign) req)
           "on_search"
       return Ack
