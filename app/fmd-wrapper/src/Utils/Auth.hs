@@ -28,7 +28,8 @@ verifyApiKey = VerificationAction (Org.findOrgByApiKey >=> fromMaybeM OrgNotFoun
 
 lookup ::
   ( DBFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl],
+    HasFlowEnv m r '["registryUrl" ::: BaseUrl],
+    HttpSig.AuthenticatingEntity r,
     CoreMetrics m
   ) =>
   HttpSig.LookupAction LookupRegistryOrg m
@@ -36,7 +37,8 @@ lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId
 
 lookupAndGetEncPubKey ::
   ( DBFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl],
+    HasFlowEnv m r '["registryUrl" ::: BaseUrl],
+    HttpSig.AuthenticatingEntity r,
     CoreMetrics m
   ) =>
   HttpSig.LookupAction HttpSig.LookupRegistryOnSubscribe m

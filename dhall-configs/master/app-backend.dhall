@@ -88,7 +88,10 @@ in
   { cabs = "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"
   , metro = "api.sandbox.beckn.juspay.in/dev/bap/metro/v1"
   }
-, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/bap/cab/v1/"
+, bapSelfURIs =
+  { cabs = "https://api.sandbox.beckn.juspay.in/dev/bap/cab/v1/"
+  , metro = "https://api.sandbox.beckn.juspay.in/dev/bap/metro/v1/"
+  }
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , searchConfirmExpiry = Some +600

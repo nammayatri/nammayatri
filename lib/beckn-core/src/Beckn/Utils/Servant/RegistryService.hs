@@ -8,20 +8,21 @@ import qualified Beckn.Types.Registry.Routes as Registry
 import Beckn.Types.Registry.Subscriber (Subscriber)
 import Beckn.Utils.Common
 import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Servant.SignatureAuth (LookupAction, LookupRegistry)
+import Beckn.Utils.Servant.SignatureAuth (AuthenticatingEntity (..), LookupAction, LookupRegistry)
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import Servant.Client.Core (ClientError)
 
 decodeViaRegistry ::
   ( Metrics.CoreMetrics m,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl]
+    HasFlowEnv m r '["registryUrl" ::: BaseUrl],
+    AuthenticatingEntity r
   ) =>
   (ShortId a -> m (Maybe a)) ->
   LookupAction (LookupRegistry a) m
 decodeViaRegistry findOrgByShortId signaturePayload = do
   registryUrl <- asks (.registryUrl)
-  nwAddress <- asks (.nwAddress)
+  nwAddress <- asks getSelfUrl
   let shortId = signaturePayload.params.keyId.subscriberId
   let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
   pk <- getPubKeyFromRegistry registryUrl uniqueKeyId
@@ -40,13 +41,14 @@ decodeViaRegistry findOrgByShortId signaturePayload = do
 
 decodeAndGetRegistryEncPubKey ::
   ( Metrics.CoreMetrics m,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "registryUrl" ::: BaseUrl]
+    HasFlowEnv m r '["registryUrl" ::: BaseUrl],
+    AuthenticatingEntity r
   ) =>
   (ShortId a -> m (Maybe a)) ->
   LookupAction (LookupRegistry Text) m
 decodeAndGetRegistryEncPubKey findOrgByShortId signaturePayload = do
   registryUrl <- asks (.registryUrl)
-  nwAddress <- asks (.nwAddress)
+  nwAddress <- asks getSelfUrl
   let shortId = signaturePayload.params.keyId.subscriberId
   let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
   (signingPubKey, encryptionPubKey) <- getPubKeysFromRegistry registryUrl uniqueKeyId
