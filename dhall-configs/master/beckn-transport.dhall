@@ -60,7 +60,7 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9999
-, xGatewaySelector = "api.sandbox.beckn.juspay.in/dev/gateway"
+, xGatewaySelector = "api.sandbox.beckn.juspay.in/dev/gateway/v1"
 , xAppUri = appUri
 , nwAddress = "https://api.sandbox.beckn.juspay.in/dev/bpp/cab/v1"
 , credRegistry = common.credRegistry
