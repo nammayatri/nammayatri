@@ -68,16 +68,15 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     Location.create fromLocation
     Location.create toLocation
     QSearchRequest.create searchRequest
-  env <- ask
-  let bapNwAddr = env.nwAddress
+  bapURIs <- asks (.bapSelfURIs)
   fork "search" . withRetry $ do
     fork "search 0.8" $ do
-      context <- buildContext "search" txnId (Just bapNwAddr) Nothing
+      context <- buildContext "search" txnId (Just bapURIs.cabs) Nothing
       let intent = mkIntent req now
           tags = Just [Tag "distance" $ show distance]
       ExternalAPI.search (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
     fork "search 0.9" $ do
-      contextMig <- buildContextMetro Core9.SEARCH txnId bapNwAddr Nothing
+      contextMig <- buildContextMetro Core9.SEARCH txnId bapURIs.metro Nothing
       intentMig <- mkIntentMig req
       ExternalAPI.searchMetro (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
   return . API.SearchRes $ searchRequest.id

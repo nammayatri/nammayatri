@@ -22,9 +22,9 @@ import Types.API.Location
 import Types.Metrics (CoreMetrics)
 import Utils.Common
 
-data BapIds = BapIds
-  { metro :: Text,
-    cabs :: Text
+data BAPs a = BAPs
+  { metro :: a,
+    cabs :: a
   }
   deriving (Generic, FromDhall)
 
@@ -105,7 +105,7 @@ feedback ::
 feedback = callBecknAPIWithSignature "feedback" API.feedback
 
 type HasBapIds r m =
-  ( HasField "bapSelfIds" r BapIds,
+  ( HasField "bapSelfIds" r (BAPs Text),
     MonadReader r m
   )
 

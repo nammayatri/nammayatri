@@ -86,7 +86,10 @@ in
   { cabs = "JUSPAY.MOBILITY.APP.UAT.1.SANDBOX"
   , metro = "JUSPAY.MOBILITY.APP.UAT.2.SANDBOX"
   }
-, nwAddress = "https://api.sandbox.beckn.juspay.in/app/v2/"
+, bapSelfURIs =
+  { cabs = "https://api.sandbox.beckn.juspay.in/app/cab/v1/"
+  , metro = "https://api.sandbox.beckn.juspay.in/app/metro/v1/"
+  }
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , searchConfirmExpiry = Some +600
