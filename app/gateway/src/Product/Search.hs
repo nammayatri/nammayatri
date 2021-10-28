@@ -11,22 +11,24 @@ import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (callBecknAPI')
 import Beckn.Utils.Servant.BaseUrl
 import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..), signatureAuthManagerKey)
+import qualified Data.Aeson as A
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.ProviderRegistry as BP
 import Product.Validation
 import qualified Types.API.Gateway.Search as ExternalAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
-import Types.Beckn.API.Callback
 import Types.Error
 import qualified Types.Storage.Organization as Org
 import Utils.Common
 
 search ::
   SignatureAuthResult Org.Organization ->
-  SearchReq ->
+  ByteString ->
   FlowHandler AckResponse
-search (SignatureAuthResult proxySign _) req = withFlowHandlerBecknAPI $
+search (SignatureAuthResult proxySign _) rawReq = withFlowHandlerBecknAPI do
+  req :: SearchReq <- rawReq & A.eitherDecodeStrict & fromEitherM (InvalidRequest . T.pack)
   withTransactionIdLogTag req $ do
     validateContext "search" (req.context)
     unless (isJust (req.context.bap_uri)) $
@@ -43,26 +45,27 @@ search (SignatureAuthResult proxySign _) req = withFlowHandlerBecknAPI $
           (Just signatureAuthManagerKey)
           Nothing
           providerUrl
-          (gatewaySearchSignAuth (Just proxySign) req)
+          (gatewaySearchSignAuth (Just proxySign) rawReq)
           "search"
     return Ack
 
 searchCb ::
   SignatureAuthResult Org.Organization ->
-  OnSearchReq ->
+  ByteString ->
   FlowHandler AckResponse
-searchCb (SignatureAuthResult proxySign org) req@CallbackReq {context} = withFlowHandlerBecknAPI $
+searchCb (SignatureAuthResult proxySign org) rawReq = withFlowHandlerBecknAPI do
+  req :: OnSearchReq <- rawReq & A.eitherDecodeStrict & fromEitherM (InvalidRequest . T.pack)
   withTransactionIdLogTag req . withLogTag "search_cb" $ do
     providerUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
     withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) do
-      validateContext "on_search" context
+      validateContext "on_search" req.context
       let gatewayOnSearchSignAuth = ET.client ExternalAPI.onSearchAPI
-      bap_uri <- context.bap_uri & fromMaybeM (InvalidRequest "Bap_uri not present")
+      bap_uri <- req.context.bap_uri & fromMaybeM (InvalidRequest "Bap_uri not present")
       withRetry $
         callBecknAPI'
           (Just signatureAuthManagerKey)
           Nothing
           bap_uri
-          (gatewayOnSearchSignAuth (Just proxySign) req)
+          (gatewayOnSearchSignAuth (Just proxySign) rawReq)
           "on_search"
       return Ack

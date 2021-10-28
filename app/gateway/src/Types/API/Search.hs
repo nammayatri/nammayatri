@@ -9,6 +9,7 @@ module Types.API.Search
 where
 
 import Beckn.Types.Core.Ack
+import Beckn.Utils.Servant.JSONBS
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Aeson (Value)
 import EulerHS.Prelude
@@ -17,9 +18,8 @@ import Types.Beckn.API.Callback
 import Types.Beckn.Context
 import Types.Storage.Organization (Organization)
 
-data SearchReq = SearchReq
-  { context :: Context,
-    message :: Value
+newtype SearchReq = SearchReq
+  { context :: Context
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -28,7 +28,7 @@ type OnSearchReq = CallbackReq Value
 type SearchAPI =
   SignatureAuth "Authorization" (LookupRegistry Organization)
     :> "search"
-    :> ReqBody '[JSON] SearchReq
+    :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] AckResponse
 
 searchAPI :: Proxy SearchAPI
@@ -37,7 +37,7 @@ searchAPI = Proxy
 type OnSearchAPI =
   SignatureAuth "Authorization" (LookupRegistry Organization)
     :> "on_search"
-    :> ReqBody '[JSON] OnSearchReq
+    :> ReqBody '[JSONBS] ByteString
     :> Post '[JSON] AckResponse
 
 onSearchAPI :: Proxy OnSearchAPI
