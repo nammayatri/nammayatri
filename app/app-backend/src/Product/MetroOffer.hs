@@ -55,7 +55,7 @@ buildContextMetro action txnId bapUri bppUri = do
   message_id <- generateGUIDText
   return
     Mig.Context
-      { Mig.domain = Mig.MOBILITY,
+      { Mig.domain = Mig.METRO,
         Mig.country = "IND",
         Mig.city = "",
         Mig.core_version = "0.9.1",
