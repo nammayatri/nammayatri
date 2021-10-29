@@ -45,15 +45,6 @@ lookup ::
   HttpSig.LookupAction LookupRegistryOrg m
 lookup = RegistryService.decodeViaRegistry findOrgByShortId
 
-lookupAndGetEncPubKey ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["registryUrl" ::: BaseUrl],
-    HttpSig.AuthenticatingEntity r,
-    CoreMetrics m
-  ) =>
-  HttpSig.LookupAction HttpSig.LookupRegistryOnSubscribe m
-lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey findOrgByShortId
-
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken
 

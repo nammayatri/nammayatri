@@ -128,6 +128,3 @@ instance AuthenticatingEntity AppEnv where
 
 instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
   runLookup = lookup
-
-instance HasLookupAction LookupRegistryOnSubscribe (FlowR AppEnv) where
-  runLookup = lookupAndGetEncPubKey

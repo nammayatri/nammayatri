@@ -1,7 +1,6 @@
 module Beckn.Types.Registry.Routes where
 
 import qualified Beckn.Types.Registry.API as API
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuth)
 import EulerHS.Prelude
 import Servant
 
@@ -12,9 +11,3 @@ type LookupAPI =
 
 lookupAPI :: Proxy LookupAPI
 lookupAPI = Proxy
-
-type OnSubscribeAPI registryLookup =
-  SignatureAuth "Signature" registryLookup
-    :> "on_subscribe"
-    :> ReqBody '[JSON] API.OnSubscribeRequest
-    :> Post '[JSON] API.OnSubscribeResponse

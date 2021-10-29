@@ -34,9 +34,3 @@ instance ToJSON ParticipantRole where
   toJSON = genericToJSON constructorsToLowerOptions
 
 type LookupResponse = [Subscriber]
-
-newtype OnSubscribeRequest = OnSubscribeRequest {challenge :: Text}
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
-newtype OnSubscribeResponse = OnSubscribeResponse {answer :: Text}
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)

@@ -39,38 +39,6 @@ decodeViaRegistry findOrgByShortId signaturePayload = do
         <&> Registry.decodeKey
         >>= fromMaybeM (InternalError "Couldn't decode public key from registry.")
 
-decodeAndGetRegistryEncPubKey ::
-  ( Metrics.CoreMetrics m,
-    HasFlowEnv m r '["registryUrl" ::: BaseUrl],
-    AuthenticatingEntity r
-  ) =>
-  (ShortId a -> m (Maybe a)) ->
-  LookupAction (LookupRegistry Text) m
-decodeAndGetRegistryEncPubKey findOrgByShortId signaturePayload = do
-  registryUrl <- asks (.registryUrl)
-  nwAddress <- asks getSelfUrl
-  let shortId = signaturePayload.params.keyId.subscriberId
-  let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
-  (signingPubKey, encryptionPubKey) <- getPubKeysFromRegistry registryUrl uniqueKeyId
-  logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
-  void $ findOrgByShortId (ShortId shortId) >>= fromMaybeM OrgNotFound -- Not sure if we need this
-  return (encryptionPubKey, signingPubKey, nwAddress)
-  where
-    getPubKeysFromRegistry registryUrl uniqueKeyId = do
-      subscriber <-
-        registryLookup registryUrl uniqueKeyId
-          <&> listToMaybe
-          >>= fromMaybeM (InternalError "Registry didn't provide information on Organization.")
-      signingPubKey <-
-        subscriber.signing_public_key
-          & fromMaybeM (InternalError "Registry responded with subscriber without signing public key.")
-          <&> Registry.decodeKey
-          >>= fromMaybeM (InternalError "Couldn't decode public key from registry.")
-      encryptionPubKey <-
-        subscriber.encr_public_key
-          & fromMaybeM (InternalError "Registry responded with subscriber without encryption public key.")
-      pure (signingPubKey, encryptionPubKey)
-
 registryLookup ::
   (MonadFlow m, Metrics.CoreMetrics m) =>
   BaseUrl ->

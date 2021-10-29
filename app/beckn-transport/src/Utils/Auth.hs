@@ -45,15 +45,6 @@ lookup ::
   LookupAction LookupRegistryOrg m
 lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId
 
-lookupAndGetEncPubKey ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["registryUrl" ::: BaseUrl],
-    AuthenticatingEntity r,
-    CoreMetrics m
-  ) =>
-  LookupAction LookupRegistryOnSubscribe m
-lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey Org.findOrgByShortId
-
 getHttpManagerKey :: Text -> String
 getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId
 

@@ -68,9 +68,6 @@ data AppEnv = AppEnv
 instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
   runLookup = lookup
 
-instance HasLookupAction LookupRegistryOnSubscribe (FlowR AppEnv) where
-  runLookup = lookupAndGetEncPubKey
-
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO

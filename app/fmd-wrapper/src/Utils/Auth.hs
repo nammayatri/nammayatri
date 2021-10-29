@@ -34,12 +34,3 @@ lookup ::
   ) =>
   HttpSig.LookupAction LookupRegistryOrg m
 lookup = RegistryService.decodeViaRegistry Org.findOrgByShortId
-
-lookupAndGetEncPubKey ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["registryUrl" ::: BaseUrl],
-    HttpSig.AuthenticatingEntity r,
-    CoreMetrics m
-  ) =>
-  HttpSig.LookupAction HttpSig.LookupRegistryOnSubscribe m
-lookupAndGetEncPubKey = RegistryService.decodeAndGetRegistryEncPubKey Org.findOrgByShortId
