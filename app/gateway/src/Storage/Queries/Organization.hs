@@ -1,7 +1,6 @@
 module Storage.Queries.Organization where
 
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App as App
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -31,18 +30,15 @@ findOrgByShortId shortOrgId = do
     predicate Org.Organization {..} =
       shortId ==. B.val_ shortOrgId
 
-findOrgByApiKey ::
-  DBFlow m r =>
-  Org.OrganizationType ->
-  App.APIKey ->
-  m (Maybe Org.Organization)
-findOrgByApiKey oType apiKey_ = do
+findByBapUrl :: DBFlow m r => BaseUrl -> m (Maybe Org.Organization)
+findByBapUrl bapUrl = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Org.Organization {..} =
-      apiKey ==. B.val_ (Just apiKey_)
-        &&. _type ==. B.val_ oType
+      callbackUrl ==. B.val_ (Just bapUrl)
+        &&. verified ==. B.val_ True
+        &&. enabled ==. B.val_ True
 
 listOrganizations ::
   DBFlow m r =>
