@@ -1,11 +1,9 @@
 module App.Handlers where
 
 import App.Types
-import Beckn.Types.Registry.Routes (OnSubscribeAPI)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified Product.APIMapper as API
-import Product.OnSubscribe (onSubscribe)
 import Servant
 import Types.Beckn.API.Cancel (CancelAPI)
 import Types.Beckn.API.Confirm (ConfirmAPI)
@@ -28,7 +26,6 @@ type WrapperAPI =
            :<|> SignatureAuth "Authorization" LookupRegistryOrg :> TrackAPI
            :<|> SignatureAuth "Authorization" LookupRegistryOrg :> CancelAPI
            :<|> SignatureAuth "Authorization" LookupRegistryOrg :> UpdateAPI
-           :<|> OnSubscribeAPI LookupRegistryOnSubscribe
        )
 
 wrapperAPI :: Proxy WrapperAPI
@@ -45,4 +42,3 @@ fmdWrapperBackendServer =
     :<|> API.track
     :<|> API.cancel
     :<|> API.update
-    :<|> onSubscribe

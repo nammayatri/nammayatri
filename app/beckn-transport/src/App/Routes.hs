@@ -11,7 +11,6 @@ import qualified Beckn.Types.Core.API.Confirm as API
 import qualified Beckn.Types.Core.API.Feedback as API
 import qualified Beckn.Types.Core.API.Search as API
 import Beckn.Types.Id
-import Beckn.Types.Registry.Routes (OnSubscribeAPI)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import Product.BecknProvider.BP as BP
@@ -23,7 +22,6 @@ import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Case as Case
 import qualified Product.DriverInformation as DriverInformation
 import qualified Product.Location as Location
-import Product.OnSubscribe (onSubscribe)
 import qualified Product.Person as Person
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Products as Product
@@ -74,7 +72,6 @@ type TransportAPI =
            :<|> RideAPI
            :<|> CancellationReasonAPI
            :<|> GoogleMapsProxyAPI
-           :<|> OnSubscribeAPI LookupRegistryOnSubscribe
        )
 
 ---- Registration Flow ------
@@ -273,7 +270,6 @@ transporterServer =
     :<|> rideFlow
     :<|> cancellationReasonFlow
     :<|> googleMapsProxyFlow
-    :<|> onSubscribe
 
 type OrgBecknAPI =
   Capture "orgId" (Id Organization)

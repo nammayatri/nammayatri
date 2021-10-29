@@ -14,7 +14,6 @@ import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.API.Status as API
 import qualified Beckn.Types.Core.API.Update as API
 import Beckn.Types.Id
-import Beckn.Types.Registry.Routes (OnSubscribeAPI)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified Product.Call as Call
@@ -27,7 +26,6 @@ import qualified Product.Feedback as Feedback
 import qualified Product.Info as Info
 import qualified Product.Location as Location
 import qualified Product.MetroOffer as Metro
-import Product.OnSubscribe (onSubscribe)
 import qualified Product.Person as Person
 import qualified Product.ProductInstance as ProductInstance
 import qualified Product.Registration as Registration
@@ -66,7 +64,6 @@ type BecknMetroAPI =
   SignatureAuth "Authorization" LookupRegistryOrg
     :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
     :> Metro.OnSearch
-      :<|> OnSubscribeAPI LookupRegistryOnSubscribe
 
 type UIAPI =
   "v1"
@@ -121,7 +118,6 @@ uiAPI =
 becknMetroAPI :: FlowServer BecknMetroAPI
 becknMetroAPI =
   Metro.searchCbMetro
-    :<|> onSubscribe
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -175,7 +171,6 @@ type BecknCabAPI =
     :> "on_status"
     :> ReqBody '[JSON] API.OnStatusReq
     :> Post '[JSON] API.OnStatusRes
-    :<|> OnSubscribeAPI LookupRegistryOnSubscribe
 
 becknCabApi :: FlowServer BecknCabAPI
 becknCabApi =
@@ -184,7 +179,6 @@ becknCabApi =
     :<|> Update.onUpdate
     :<|> Cancel.onCancel
     :<|> Status.onStatus
-    :<|> onSubscribe
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =

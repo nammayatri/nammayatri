@@ -94,8 +94,6 @@ instance LookupMethod (LookupRegistry (r :: Type)) where
   lookupDescription =
     "Looks up the given key Id in the Beckn registry."
 
-type LookupRegistryOnSubscribe = (LookupRegistry Text)
-
 lookupRegistryAction ::
   ( MonadReader r m,
     MonadThrow m,
