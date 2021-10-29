@@ -6,6 +6,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [7.0.0] - 21-10-2021
+
+### Added
+
+- #982: [BKN-841] onSubscribe API implementation 
+
+- #993: [BKN-902] Implement discounts
+
+- #1010: Add discount and estimated total fare to ride info
+
+### Changed
+
+- #1009: [BKN-938] Change discount bounds working
+
+### Removed
+
+- #999: [BKN-929] Remove auth from lookup API
+
+### Fixed
+
+## [6.0.0] - 15-10-2021
+
+### Added
+
+- #981: [BKN-890] Add mock-fcm
+
+- #986: [BKN-904] Added chargable distance to product instance
+
+- #984: [BKN-896] add offers per vehicle type
+
+- #1003: Add unique check for perExtraKmRateList
+
+### Changed
+
+- #966: [BKN-864] Revert back to linear distance calculation
+
+- #978: [BKN-852] Refactor and cleanup mobility integration tests
+
+- #947: [BKN-680] registry integration in FMD
+
+- #983: [BKN-893] Update fare policy ExtraKmRate
+
+- #990: Tmp update jenkinsfile
+
+- #996: Broadcast notifications
+
+- #1001: [BKN-913] Dissallow overlapping migration indices
+
+
+### Removed
+
+- #965: [BKN-858] remove role from login request in Mobility 
+
+- #969: [BKN-870] Remove Status and Track EPs
+
+### Fixed
+
+- #994: Fixed incorrect spelling
+
+- #995: Fix vehicle variant to PI migration
+
+- #997: Fix: driver info not being sent in on_update on allocation
+
+- #998: Fixed allocation service unit tests
+
 ## [5.0.0] - 20-09-2021
 
 ### Added
@@ -292,7 +357,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Go-live production release 
 
-[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v5.0.0
+[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/release-version-7..v7.0.0
+[7.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v7.0.0
+[6.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v6.0.0
 [5.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v5.0.0
 [4.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v4.0.0
 [3.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v3.0.0
