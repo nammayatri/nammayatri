@@ -1,9 +1,12 @@
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Types.Storage.RideBooking where
 
 import Beckn.Storage.DB.Utils (fromBackendRowEnum)
+import Beckn.External.Encryption
 import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -51,7 +54,7 @@ instance ToHttpApiData RideBookingStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-data RideBookingT f = RideBooking
+data RideBookingTE e f = RideBooking
   { id :: B.C f (Id RideBooking),
     transactionId :: B.C f Text,
     requestId :: B.C f (Id SearchRequest.SearchRequest),
@@ -61,6 +64,7 @@ data RideBookingT f = RideBooking
     bapId :: B.C f Text,
     startTime :: B.C f UTCTime,
     requestorId :: B.C f (Id Person),
+    requestorMobileNumber :: EncryptedField e f Text,
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     vehicleVariant :: B.C f Veh.Variant,
@@ -71,9 +75,13 @@ data RideBookingT f = RideBooking
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
-  deriving (Generic, B.Beamable)
+  deriving (Generic)
+
+type RideBookingT = RideBookingTE 'AsEncrypted
 
 type RideBooking = RideBookingT Identity
+
+type RideBookingDecrypted = RideBookingTE 'AsUnencrypted Identity
 
 type RideBookingPrimaryKey = B.PrimaryKey RideBookingT Identity
 
@@ -82,28 +90,29 @@ instance B.Table RideBookingT where
     deriving (Generic, B.Beamable)
   primaryKey = RideBookingPrimaryKey . id
 
-deriving instance Show RideBooking
+instance B.Beamable RideBookingT
 
-deriving instance Eq RideBooking
-
-instance ToJSON RideBooking where
+instance ToJSON RideBookingDecrypted where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
-instance FromJSON RideBooking where
+instance FromJSON RideBookingDecrypted where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+deriveTableEncryption ''RideBookingTE
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideBookingT)
 fieldEMod =
   B.setEntityName "ride_booking"
     <> B.modifyTableFields
-      B.tableModification
+      (B.tableModification @_ @RideBookingT)
         { requestId = "request_id",
           transactionId = "transaction_id",
           quoteId = "quote_id",
           providerId = "provider_id",
           bapId = "bap_id",
           requestorId = "requestor_id",
+          requestorMobileNumber = "requestor_mobile_number",
           startTime = "start_time",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",

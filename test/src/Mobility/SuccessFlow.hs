@@ -67,7 +67,7 @@ getBPPRideBooking ::
   ClientsM TRB.RideBooking
 getBPPRideBooking quoteId = do
   mbRideBooking <- liftIO $ runTransporterFlow "" $ TQRB.findByQuoteId quoteId
-  mbRideBooking `shouldSatisfy` isJust
+  mbRideBooking $> () `shouldSatisfy` isJust
   return $ fromJust mbRideBooking
 
 getBPPRide ::

@@ -1,6 +1,7 @@
 module Product.Confirm (confirm) where
 
 import App.Types
+import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.ReqTypes as Common
@@ -10,6 +11,7 @@ import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Organization as OQ
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RideBooking as QRideB
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -35,9 +37,17 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   bapIDs <- asks (.bapSelfIds)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   context <- buildTaxiContext Context.CONFIRM (getId searchRequestId) bapIDs.cabs bapURIs.cabs Nothing Nothing
+  person <- QPerson.findById personId >>= fromMaybeM PersonDoesNotExist
+  customerMobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  customerMobileCountryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   let order =
         ReqConfirm.Order
-          { items = [ReqConfirm.OrderItem {id = quote.bppQuoteId.getId}]
+          { items =
+              [ ReqConfirm.OrderItem
+                  { id = quote.bppQuoteId.getId,
+                    customer_mobile_number = customerMobileCountryCode <> customerMobileNumber
+                  }
+              ]
           }
   res <- ExternalAPI.confirm bppURI (Common.BecknReq context $ ReqConfirm.ConfirmReqMessage order)
 

@@ -16,8 +16,9 @@ newtype Order = Order
 instance ToSchema Order where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
-newtype OrderItem = OrderItem
-  { id :: Text
+data OrderItem = OrderItem
+  { id :: Text,
+    customer_mobile_number :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
@@ -27,5 +28,10 @@ instance ToSchema OrderItem where
 instance Example Order where
   example =
     Order
-      { items = [OrderItem "quote_id"]
+      { items =
+          [ OrderItem
+              { id = "quote_id",
+                customer_mobile_number = "+99999999999"
+              }
+          ]
       }

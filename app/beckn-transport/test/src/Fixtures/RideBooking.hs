@@ -1,12 +1,10 @@
 module Fixtures.RideBooking where
 
-import qualified Beckn.Types.Amount as Amount
+import Beckn.External.Encryption (Encrypted (Encrypted))
 import Beckn.Types.Id
-import Data.Ratio ((%))
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
 import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
 
 defaultRideBooking :: SRB.RideBooking
@@ -21,6 +19,7 @@ defaultRideBooking =
       bapId = "",
       startTime = Fixtures.defaultTime,
       requestorId = Id "",
+      requestorMobileNumber = Encrypted "",
       fromLocationId = Id "",
       toLocationId = Id "",
       vehicleVariant = Veh.SUV,

@@ -64,9 +64,9 @@ data EncKind
 --
 -- This always relies on 'ToJSON' and 'FromJSON' instances to serialize the value
 -- under the hood. If this does not suit you, use some other type family.
-type family EncryptedField (e :: EncKind) (a :: Type) :: Type where
-  EncryptedField 'AsEncrypted a = Encrypted a
-  EncryptedField 'AsUnencrypted a = a
+type family EncryptedField (e :: EncKind) (f :: Type -> Type) (a :: Type) :: Type where
+  EncryptedField 'AsUnencrypted f a = Columnar f a
+  EncryptedField 'AsEncrypted f a = Columnar f (Encrypted a)
 
 -- | 'Encrypted' always corresponds to a textual SQL type.
 -- Adjust the size to be @4/3@ times greater than JSON encoded plaintext value

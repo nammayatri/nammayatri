@@ -2,6 +2,7 @@ module Product.BecknProvider.Confirm (confirm, calculateDriverPool, getDriverPoo
 
 import App.Types
 import Beckn.Product.Validation.Context
+import Beckn.External.Encryption (encrypt)
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Amount (Amount)
@@ -45,10 +46,12 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
     logTagInfo "confirm API Flow" "Reached"
     validateContext req.context
     let items = req.message.order.items
-    quoteId <- case items of
+    item <- case items of
       [] -> throwError (InvalidRequest "List of confirmed items is empty.")
-      [item] -> return $ Id item.id
+      [item] -> return item
       _ -> throwError (InvalidRequest "List of confirmed items must contain exactly one item.")
+    let quoteId = Id item.id
+        customerPhoneNumber = item.customer_mobile_number
     quote <- QQuote.findById' quoteId >>= fromMaybeM QuoteDoesNotExist
     let transporterId' = quote.providerId
     transporterOrg <-
@@ -59,7 +62,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
     let bapOrgId = searchRequest.bapId
     unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
     now <- getCurrentTime
-    rideBooking <- buildRideBooking searchRequest quote transporterOrg now
+    rideBooking <- encrypt =<< buildRideBooking searchRequest quote transporterOrg customerPhoneNumber now
     rideRequest <-
       BP.buildRideReq
         (rideBooking.id)
@@ -78,7 +81,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
       searchRequest
       transporterOrg
   where
-    buildRideBooking searchRequest quote provider now = do
+    buildRideBooking searchRequest quote provider customerPhoneNumber now = do
       id <- generateGUID
       return $
         SRB.RideBooking
@@ -90,6 +93,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
             providerId = provider.id,
             startTime = searchRequest.startTime,
             requestorId = searchRequest.requestorId,
+            requestorMobileNumber = customerPhoneNumber,
             fromLocationId = searchRequest.fromLocationId,
             toLocationId = searchRequest.toLocationId,
             bapId = searchRequest.bapId,
