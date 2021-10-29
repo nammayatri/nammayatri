@@ -29,14 +29,6 @@ initiateCallToDriver rideId personId = withFlowHandlerAPI . withPersonIdLogTag p
   logTagInfo ("RideId:" <> getId rideId) "Call initiated from customer to provider."
   return Ack
 
--- | Try to initiate a call provider -> customer
-initiateCallToCustomer :: Id SRide.Ride -> FlowHandler CallRes
-initiateCallToCustomer rideId = withFlowHandlerAPI $ do
-  (customerPhone, providerPhone) <- getProductAndCustomerPhones rideId
-  initiateCall providerPhone customerPhone
-  logTagInfo ("RideId:" <> getId rideId) "Call initiated from provider to customer."
-  return Ack
-
 getPerson :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Person
 getPerson ride = do
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound

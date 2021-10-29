@@ -44,10 +44,12 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
         ReqConfirm.Order
           { items =
               [ ReqConfirm.OrderItem
-                  { id = quote.bppQuoteId.getId,
-                    customer_mobile_number = customerMobileCountryCode <> customerMobileNumber
+                  { id = quote.bppQuoteId.getId
                   }
-              ]
+              ],
+            fulfillment =
+              ReqConfirm.Fulfillment $
+                ReqConfirm.Customer {mobile_number = customerMobileCountryCode <> customerMobileNumber}
           }
   res <- ExternalAPI.confirm bppURI (Common.BecknReq context $ ReqConfirm.ConfirmReqMessage order)
 

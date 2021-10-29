@@ -271,14 +271,11 @@ type CallAPIs =
     :> ( "driver"
            :> TokenAuth
            :> Post '[JSON] API.CallRes
-           :<|> "rider"
-           :> Post '[JSON] API.CallRes
        )
 
 callFlow :: FlowServer CallAPIs
-callFlow rideId =
-  Call.initiateCallToDriver rideId
-    :<|> Call.initiateCallToCustomer rideId
+callFlow =
+  Call.initiateCallToDriver
 
 -------- Support Flow----------
 type SupportAPI =

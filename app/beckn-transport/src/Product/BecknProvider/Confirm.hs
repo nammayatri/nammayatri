@@ -1,8 +1,8 @@
 module Product.BecknProvider.Confirm (confirm, calculateDriverPool, getDriverPool) where
 
 import App.Types
-import Beckn.Product.Validation.Context
 import Beckn.External.Encryption (encrypt)
+import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Amount (Amount)
@@ -51,7 +51,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
       [item] -> return item
       _ -> throwError (InvalidRequest "List of confirmed items must contain exactly one item.")
     let quoteId = Id item.id
-        customerPhoneNumber = item.customer_mobile_number
+        customerPhoneNumber = req.message.order.fulfillment.customer.mobile_number
     quote <- QQuote.findById' quoteId >>= fromMaybeM QuoteDoesNotExist
     let transporterId' = quote.providerId
     transporterOrg <-

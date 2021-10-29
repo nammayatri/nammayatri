@@ -338,7 +338,7 @@ type CallAPIs =
 
 callFlow :: FlowServer CallAPIs
 callFlow =
-  Call.initiateCall
+  Call.initiateCallToCustomer
 
 type RouteAPI =
   "route"

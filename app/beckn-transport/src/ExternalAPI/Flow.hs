@@ -3,7 +3,6 @@
 module ExternalAPI.Flow where
 
 import Beckn.Types.Core.ReqTypes (BecknReq (..))
-import Beckn.Types.Core.Taxi.API.Call as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.Common.Context as Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
@@ -13,13 +12,11 @@ import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import EulerHS.Prelude
-import qualified EulerHS.Types as ET
 import Storage.Queries.Organization as Org
 import Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import Types.Storage.Organization as Org
-import qualified Types.Storage.Ride as SRide
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Auth
 import Utils.Common
@@ -99,13 +96,3 @@ makeBppUrl ::
 makeBppUrl (Id transporterId) =
   asks (.nwAddress)
     <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)
-
-initiateCall ::
-  ( HasFlowEnv m r '["xAppUri" ::: BaseUrl],
-    CoreMetrics m
-  ) =>
-  Id SRide.Ride ->
-  m ()
-initiateCall rideId = do
-  url <- asks (.xAppUri)
-  void $ Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId rideId)) "/v2/ride/{rideId}/call/rider"
