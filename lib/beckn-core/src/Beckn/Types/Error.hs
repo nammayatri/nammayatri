@@ -235,7 +235,7 @@ instance IsBaseError OrganizationError where
 instance IsHTTPError OrganizationError where
   toErrorCode = \case
     OrgNotFound -> "ORGANIZATION_NOT_FOUND"
-    OrgDoesNotExist -> "ORGANIZATION_DOES_NOT_EXISTS"
+    OrgDoesNotExist -> "ORGANIZATION_DOES_NOT_EXIST"
     OrgFieldNotPresent _ -> "ORGANIZATION_FIELD_NOT_PRESENT"
     OrgMobilePhoneUsed -> "ORGANIZATION_MOBILE_PHONE_USED"
   toHttpCode OrgDoesNotExist = E400

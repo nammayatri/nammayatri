@@ -122,13 +122,6 @@ findOrgByApiKey apiKey_ = do
     predicate Storage.Organization {..} =
       apiKey ==. B.val_ (Just apiKey_)
 
-findOrgByCbUrl :: DBFlow m r => BaseUrl -> m (Maybe Storage.Organization)
-findOrgByCbUrl url = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Organization {..} = callbackUrl ==. B.val_ (Just url)
-
 findOrgByShortId :: DBFlow m r => ShortId Storage.Organization -> m (Maybe Storage.Organization)
 findOrgByShortId shortId_ = do
   dbTable <- getDbTable
