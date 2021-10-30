@@ -45,6 +45,7 @@ in
 , port = +8015
 , metricsPort = +9998
 , selfId = "JUSPAY.BG.1"
+, hostName = "localhost"
 , nwAddress = "http://localhost:8015/v1/"  -- public address of a node
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys

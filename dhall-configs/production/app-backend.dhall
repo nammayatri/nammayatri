@@ -82,7 +82,8 @@ in
 , xGatewayApiKey = None Text
 , xGatewaySelector = "JUSPAY.BG.1"
 , xProviderUri = providerUri
-, bapSelfIds = 
+, hostName = "juspay.in"
+, bapSelfIds =
   { cabs = "JUSPAY.MOBILITY.APP.UAT.1.PROD"
   , metro = "JUSPAY.MOBILITY.APP.UAT.2.PROD"
   }

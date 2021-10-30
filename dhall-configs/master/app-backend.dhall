@@ -84,6 +84,7 @@ in
 , xGatewayApiKey = None Text
 , xGatewaySelector = "api.sandbox.beckn.juspay.in/dev/gateway/v1"
 , xProviderUri = providerUri
+, hostName = "juspay.in"
 , bapSelfIds =
   { cabs = "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"
   , metro = "api.sandbox.beckn.juspay.in/dev/bap/metro/v1"

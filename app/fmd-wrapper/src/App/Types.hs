@@ -27,6 +27,7 @@ data AppCfg = AppCfg
     redisCfg :: T.RedisConfig,
     port :: Int,
     metricsPort :: Int,
+    hostName :: Text,
     selfId :: Text,
     xGatewayUri :: BaseUrl,
     xGatewayApiKey :: Maybe Text,
@@ -48,6 +49,7 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
+    hostName :: Text,
     selfId :: Text,
     xGatewayUri :: BaseUrl,
     xGatewayApiKey :: Maybe Text,
@@ -84,7 +86,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getSelfUrl = xGatewayUri
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry

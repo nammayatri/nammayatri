@@ -62,6 +62,7 @@ in
 , selfId = "JUSPAY.DUNZO.FMD.BPP.PROD"
 , graceTerminationPeriod = +90
 , httpClientOptions = httpClientOptions
+, hostName = "localhost"
 , nwAddress = "http://localhost:8018/v1/"
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets

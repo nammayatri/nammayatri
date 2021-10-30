@@ -79,7 +79,6 @@ type FlowHandler = FlowHandlerR BTMEnv
 type FlowServer api = FlowServerR BTMEnv api
 
 instance AuthenticatingEntity BTMEnv where
-  getSelfUrl = nwAddress
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
