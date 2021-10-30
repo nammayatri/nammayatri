@@ -22,13 +22,12 @@ decodeViaRegistry ::
   LookupAction (LookupRegistry a) m
 decodeViaRegistry findOrgByShortId signaturePayload = do
   registryUrl <- asks (.registryUrl)
-  nwAddress <- asks getSelfUrl
   let shortId = signaturePayload.params.keyId.subscriberId
   let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
   pk <- getPubKeyFromRegistry registryUrl uniqueKeyId
   logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   org <- findOrgByShortId (ShortId shortId) >>= fromMaybeM OrgNotFound
-  return (org, pk, nwAddress)
+  return (org, pk)
   where
     getPubKeyFromRegistry registryUrl uniqueKeyId =
       registryLookup registryUrl uniqueKeyId

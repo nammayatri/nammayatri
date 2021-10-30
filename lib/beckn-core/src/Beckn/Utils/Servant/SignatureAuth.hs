@@ -4,7 +4,6 @@
 
 module Beckn.Utils.Servant.SignatureAuth where
 
-import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Types.Error
@@ -41,7 +40,7 @@ import Servant
     HasServer (..),
     type (:>),
   )
-import Servant.Client (BaseUrl (baseUrlHost), HasClient (..))
+import Servant.Client (HasClient (..))
 import Servant.Server.Internal.Delayed (addAuthCheck)
 import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
 import qualified Servant.Swagger as S
@@ -70,7 +69,6 @@ class LookupMethod lookup where
   lookupDescription :: Text
 
 class AuthenticatingEntity r where
-  getSelfUrl :: r -> BaseUrl
   getRegistry :: r -> [Credential]
   getSigningKeys :: r -> [SigningKey]
   getSignatureExpiry :: r -> Seconds
@@ -85,7 +83,7 @@ type LookupAction lookup m =
   -- | Look up the given keyId and return a result to pass to the request,
   -- and a key that can be used for signature verification
   HttpSig.SignaturePayload ->
-  m (LookupResult lookup, HttpSig.PublicKey, BaseUrl)
+  m (LookupResult lookup, HttpSig.PublicKey)
 
 data LookupRegistry r = LookupRegistry
 
@@ -104,7 +102,6 @@ lookupRegistryAction ::
   LookupAction (LookupRegistry a) m
 lookupRegistryAction findOrgByShortId signaturePayload = do
   appEnv <- ask
-  let selfUrl = getSelfUrl appEnv
   let registry = getRegistry appEnv
   logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
@@ -122,7 +119,7 @@ lookupRegistryAction findOrgByShortId signaturePayload = do
       logTagError "SignatureAuth" $ "Invalid public key: " <> show (cred.signPubKey)
       throwError $ InternalError "Invalid public key."
     Just key -> return key
-  return (org, pk, selfUrl)
+  return (org, pk)
 
 data SignatureAuthResult res = SignatureAuthResult
   { signature :: HttpSig.SignaturePayload,
@@ -135,6 +132,7 @@ instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,
     KnownSymbol header,
+    HasField "hostName" r Text,
     HasCoreMetrics r,
     HasLookupAction lookup (FlowR r)
   ) =>
@@ -237,19 +235,21 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
               Just $ req {Http.requestHeaders = (ciHeader, headerVal) : headers}
 
 verifySignature ::
-  forall lookup r m.
-  (MonadReader r m, MonadThrow m, Log m, HasLookupAction lookup m) =>
+  forall lookup r.
+  ( HasField "hostName" r Text,
+    HasLookupAction lookup (FlowR r)
+  ) =>
   Text ->
   HttpSig.SignaturePayload ->
   HttpSig.Hash ->
-  m (LookupResult lookup)
+  FlowR r (LookupResult lookup)
 verifySignature headerName signPayload bodyHash = do
-  (lookupResult, key, selfUrl) <- runLookup @lookup signPayload
-  let host = fromString $ baseUrlHost selfUrl
-  isVerified <- performVerification key host
+  (lookupResult, key) <- runLookup @lookup signPayload
+  hostName <- asks (.hostName)
+  isVerified <- performVerification key hostName
   unless isVerified $ do
     logTagError logTag "Signature is not valid."
-    throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm getRealm host]
+    throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm getRealm hostName]
   pure lookupResult
   where
     logTag = "verifySignature-" <> headerName
@@ -275,9 +275,9 @@ verifySignature headerName signPayload bodyHash = do
           bodyHash
           headers
           signature
-    throwVerificationFail host err = do
+    throwVerificationFail hostName err = do
       logTagError logTag $ "Failed to verify the signature. Error: " <> show err
-      throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm headerName host]
+      throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm headerName hostName]
 
 prepareAuthManager ::
   AuthenticatingEntity r =>

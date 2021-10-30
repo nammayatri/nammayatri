@@ -36,6 +36,7 @@ data AppCfg = AppCfg
     metricsPort :: Int,
     xGatewaySelector :: Text,
     xAppUri :: BaseUrl,
+    hostName :: Text,
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
@@ -75,6 +76,7 @@ data AppEnv = AppEnv
     inviteSmsTemplate :: Text,
     xGatewaySelector :: Text,
     xAppUri :: BaseUrl,
+    hostName :: Text,
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
@@ -121,7 +123,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getSelfUrl = nwAddress
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry

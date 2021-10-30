@@ -39,6 +39,7 @@ data AppCfg = AppCfg
     xGatewayApiKey :: Maybe Text,
     xGatewaySelector :: Text,
     xProviderUri :: BaseUrl,
+    hostName :: Text,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
     credRegistry :: [Credential],
@@ -77,6 +78,7 @@ data AppEnv = AppEnv
     xGatewayUri :: BaseUrl,
     xGatewaySelector :: Text,
     xProviderUri :: BaseUrl,
+    hostName :: Text,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
     credRegistry :: [Credential],
@@ -122,7 +124,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getSelfUrl = (.bapSelfURIs.cabs) -- FIXME: what about metro?
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry

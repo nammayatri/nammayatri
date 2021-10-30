@@ -62,6 +62,7 @@ in
 , metricsPort = +9999
 , xGatewaySelector = "JUSPAY.BG.1"
 , xAppUri = appUri
+, hostName = "juspay.in"
 , nwAddress = "https://api.beckn.juspay.in/transport/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys

@@ -45,6 +45,7 @@ in
 , port = +8015
 , metricsPort = +9999
 , selfId = "JUSPAY.BG.1"
+, hostName = "juspay.in"
 , nwAddress = "https://api.beckn.juspay.in/gateway/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys

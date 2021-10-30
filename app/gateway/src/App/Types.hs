@@ -21,6 +21,7 @@ data AppCfg = AppCfg
     port :: Int,
     metricsPort :: Int,
     selfId :: Text,
+    hostName :: Text,
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
@@ -38,6 +39,7 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
+    hostName :: Text,
     gwId :: Text,
     gwNwAddress :: BaseUrl,
     credRegistry :: [Credential],
@@ -77,7 +79,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer r api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getSelfUrl = gwNwAddress
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry

@@ -62,6 +62,7 @@ in
 , metricsPort = +9997
 , xGatewaySelector = "JUSPAY.BG.1"
 , xAppUri = appUri
+, hostName = "localhost"
 , nwAddress = "http://localhost:8014/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
