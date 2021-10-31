@@ -21,22 +21,30 @@ decodeViaRegistry ::
   (ShortId a -> m (Maybe a)) ->
   LookupAction (LookupRegistry a) m
 decodeViaRegistry findOrgByShortId signaturePayload = do
+  logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   registryUrl <- asks (.registryUrl)
   let shortId = signaturePayload.params.keyId.subscriberId
   let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
-  pk <- getPubKeyFromRegistry registryUrl uniqueKeyId
-  logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
-  org <- findOrgByShortId (ShortId shortId) >>= fromMaybeM OrgNotFound
-  return (org, pk)
+  mPublicKey <- getPubKeyFromRegistry registryUrl uniqueKeyId
+  case mPublicKey of
+    Just publicKey -> do
+      org <- findOrgByShortId (ShortId shortId) >>= fromMaybeM OrgNotFound
+      pure $ Just (org, publicKey)
+    Nothing -> pure Nothing
   where
-    getPubKeyFromRegistry registryUrl uniqueKeyId =
-      registryLookup registryUrl uniqueKeyId
-        <&> listToMaybe
-        >>= fromMaybeM (InternalError "Registry didn't provide information on Organization.")
-        <&> (.signing_public_key)
-        >>= fromMaybeM (InternalError "Registry responded with subscriber without signing public key.")
-        <&> Registry.decodeKey
-        >>= fromMaybeM (InternalError "Couldn't decode public key from registry.")
+    getPubKeyFromRegistry registryUrl uniqueKeyId = do
+      subscribers <- registryLookup registryUrl uniqueKeyId
+      case subscribers of
+        [subscriber] ->
+          pure subscriber
+            <&> (.signing_public_key)
+            >>= fromMaybeM (InternalError "Registry responded with subscriber without signing public key.")
+            <&> Registry.decodeKey
+            >>= fromMaybeM (InternalError "Couldn't decode public key from registry.")
+            <&> Just
+        _subscriber : _subscribers ->
+          throwError $ InternalError "Multiple subscribers returned for a unique key."
+        [] -> pure Nothing
 
 registryLookup ::
   (MonadFlow m, Metrics.CoreMetrics m) =>

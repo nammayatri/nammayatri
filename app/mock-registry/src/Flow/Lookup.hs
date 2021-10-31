@@ -15,17 +15,18 @@ lookup req = withFlowHandlerAPI $ do
   env <- ask
   let creds = env.credRegistry
   uniqueKeyId <- req.unique_key_id & fromMaybeM (InvalidRequest "Unique_key_id is not specified.")
-  cred <-
-    lookupKey uniqueKeyId creds
-      & fromMaybeM (InvalidRequest ("Unique_key_id " <> uniqueKeyId <> ": no match found."))
-  now <- getCurrentTime
-  let subscriber =
-        emptySubscriber
-          { signing_public_key = Just cred.signPubKey,
-            valid_from = Just $ (- oneYear) `addUTCTime` now,
-            valid_until = Just $ oneYear `addUTCTime` now
-          }
-  pure [subscriber]
+  let mCred = lookupKey uniqueKeyId creds
+  case mCred of
+    Just cred -> do
+      now <- getCurrentTime
+      let subscriber =
+            emptySubscriber
+              { signing_public_key = Just cred.signPubKey,
+                valid_from = Just $ (- oneYear) `addUTCTime` now,
+                valid_until = Just $ oneYear `addUTCTime` now
+              }
+      pure [subscriber]
+    Nothing -> pure []
   where
     oneYear = 31536000 -- in seconds
     emptySubscriber =
