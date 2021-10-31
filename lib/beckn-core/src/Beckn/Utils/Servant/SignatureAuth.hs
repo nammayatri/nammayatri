@@ -82,7 +82,7 @@ type LookupAction lookup m =
   -- | Look up the given keyId and return a result to pass to the request,
   -- and a key that can be used for signature verification
   HttpSig.SignaturePayload ->
-  m (LookupResult lookup, HttpSig.PublicKey)
+  m (Maybe (LookupResult lookup, HttpSig.PublicKey))
 
 data LookupRegistry r = LookupRegistry
 
@@ -118,7 +118,7 @@ lookupRegistryAction findOrgByShortId signaturePayload = do
       logTagError "SignatureAuth" $ "Invalid public key: " <> show (cred.signPubKey)
       throwError $ InternalError "Invalid public key."
     Just key -> return key
-  return (org, pk)
+  pure $ Just (org, pk)
 
 data SignatureAuthResult res = SignatureAuthResult
   { signature :: HttpSig.SignaturePayload,
@@ -243,20 +243,24 @@ verifySignature ::
   HttpSig.Hash ->
   FlowR r (LookupResult lookup)
 verifySignature headerName signPayload bodyHash = do
-  (lookupResult, key) <- runLookup @lookup signPayload
   hostName <- asks (.hostName)
-  isVerified <- performVerification key hostName
-  unless isVerified $ do
-    logTagError logTag "Signature is not valid."
-    throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm getRealm hostName]
-  pure lookupResult
+  mLookupRes <- runLookup @lookup signPayload
+  case mLookupRes of
+    Just (lookupResult, publicKey) -> do
+      isVerified <- performVerification publicKey hostName
+      unless isVerified $ do
+        logTagError logTag "Signature is not valid."
+        throwError $ getSignatureError hostName
+      pure lookupResult
+    Nothing -> do
+      logTagError logTag $
+        "Subscriber with unique_key_id "
+          <> signPayload.params.keyId.uniqueKeyId
+          <> " not found."
+      throwError $ getSignatureError hostName
   where
     logTag = "verifySignature-" <> headerName
-    getRealm = case headerName of
-      "Authorization" -> "WWW-Authenticate"
-      "Proxy-Authorization" -> "Proxy-Authenticate"
-      _ -> ""
-    performVerification key host = do
+    performVerification key hostName = do
       let headers =
             [ ("(created)", maybe "" show (signPayload.params.created)),
               ("(expires)", maybe "" show (signPayload.params.expires)),
@@ -267,16 +271,26 @@ verifySignature headerName signPayload bodyHash = do
       let signatureMsg = HttpSig.makeSignatureString signatureParams bodyHash headers
       logTagDebug logTag $
         "Start verifying. Signature: " +|| HttpSig.encode signPayload ||+ ", Signature Message: " +|| signatureMsg ||+ ", Body hash: " +|| bodyHash ||+ ""
-      either (throwVerificationFail host) pure $
-        HttpSig.verify
-          key
-          signatureParams
-          bodyHash
-          headers
-          signature
-    throwVerificationFail hostName err = do
-      logTagError logTag $ "Failed to verify the signature. Error: " <> show err
-      throwError $ SignatureVerificationFailure [HttpSig.mkSignatureRealm headerName hostName]
+      let verificationResult =
+            HttpSig.verify
+              key
+              signatureParams
+              bodyHash
+              headers
+              signature
+      case verificationResult of
+        Right result -> pure result
+        Left err -> do
+          logTagError logTag $ "Failed to verify the signature. Error: " <> show err
+          throwError $ getSignatureError hostName
+
+    getSignatureError hostName =
+      SignatureVerificationFailure [HttpSig.mkSignatureRealm getRealm hostName]
+
+    getRealm = case headerName of
+      "Authorization" -> "WWW-Authenticate"
+      "Proxy-Authorization" -> "Proxy-Authenticate"
+      _ -> ""
 
 prepareAuthManager ::
   AuthenticatingEntity r =>
