@@ -15,6 +15,7 @@ import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified FmdWrapper.Spec as FmdWrapper
 import qualified Mobility.Spec as Mobility
+import Resources
 import System.Environment as Env (setEnv)
 import System.Posix
 import Test.Tasty
@@ -97,8 +98,11 @@ specs = do
       ]
 
     startServers servers = do
+      prepareTestResources
       traverse_ forkIO servers
       -- Wait for servers to start up and migrations to run
       threadDelay 5e6
 
-    cleanupServers _ = signalProcess sigINT =<< getProcessID
+    cleanupServers _ = do
+      releaseTestResources
+      signalProcess sigINT =<< getProcessID

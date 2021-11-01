@@ -2,15 +2,14 @@ module Utils where
 
 import qualified App.BackgroundTaskManager.Types as BecknTransport
 import qualified "app-backend" App.Types as BecknApp
-import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Flow
 import Beckn.Utils.Common
-import Beckn.Utils.Dhall (readDhallConfig)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import HSpec
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
+import Resources (appBackendEnv, transporterAppEnv)
 import Servant.Client hiding (client)
 
 defaultTestLoggerConfig :: LoggerConfig
@@ -103,23 +102,7 @@ mkMobilityClients bapUrl bppUrl = do
       }
 
 runAppFlow :: Text -> FlowR BecknApp.AppEnv a -> IO a
-runAppFlow tag flow = do
-  appCfg <- readDhallConfig "../dhall-configs/dev/app-backend.dhall"
-  let updLogCfg =
-        appCfg.loggerConfig{logToFile = False,
-                            logToConsole = False
-                           }
-      updAppCfg = appCfg{loggerConfig = updLogCfg}
-  (appEnv :: BecknApp.AppEnv) <- BecknApp.buildAppEnv updAppCfg
-  BecknApp.releaseAppEnv appEnv *> runFlow tag appEnv flow
+runAppFlow tag = runFlow tag appBackendEnv
 
 runTransporterFlow :: Text -> FlowR BecknTransport.AppEnv a -> IO a
-runTransporterFlow tag flow = do
-  appCfg <- readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
-  let updLogCfg =
-        appCfg.loggerConfig{logToFile = False,
-                            logToConsole = False
-                           }
-      updAppCfg = appCfg{loggerConfig = updLogCfg}
-  (appEnv :: BecknTransport.AppEnv) <- BecknTransport.buildAppEnv updAppCfg
-  BecknTransport.releaseAppEnv appEnv *> runFlow tag appEnv flow
+runTransporterFlow tag = runFlow tag transporterAppEnv
