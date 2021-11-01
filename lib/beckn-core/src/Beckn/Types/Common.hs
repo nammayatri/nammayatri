@@ -20,6 +20,7 @@ import Beckn.Types.GuidLike as Common
 import Beckn.Types.Logging as Common
 import Beckn.Types.MonadGuid as Common
 import Beckn.Types.Monitoring.Kafka as Common
+import Beckn.Types.Monitoring.Kafka.BusinessEvent as Common
 import Beckn.Types.Time as Common
 import Beckn.Utils.Dhall (FromDhall)
 import Data.Aeson

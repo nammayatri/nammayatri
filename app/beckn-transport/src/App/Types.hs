@@ -123,7 +123,7 @@ buildAppEnv config@AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  kafkaTools <- buildKafkaTools kafkaToolsConfig hostname
+  kafkaTools <- buildKafkaTools kafkaToolsConfig 
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

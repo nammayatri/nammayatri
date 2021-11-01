@@ -1,18 +1,22 @@
 module Beckn.Utils.Monitoring.Kafka
   ( buildKafkaTools,
     Beckn.Utils.Monitoring.Kafka.produceMessage,
-    buildBusinessEvent,
     releaseKafkaTools,
+    (..=),
+    A.Value (Object),
+    A.emptyObject,
   )
 where
 
 import Beckn.Types.Error
 import Beckn.Types.Logging (Log)
 import Beckn.Types.Monitoring.Kafka
-import Beckn.Types.Time (MonadTime, getCurrentTime)
 import Beckn.Utils.Error.Throwing (throwError)
 import Data.Aeson (encode)
+import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.HashMap.Lazy as HM
 import EulerHS.Prelude
 import Kafka.Producer as KafkaProd
 
@@ -23,20 +27,18 @@ producerProps brokers =
   where
     castBrokers = BrokerAddress <$> brokers
 
-buildKafkaTools :: KafkaToolsConfig -> Maybe KafkaHostName -> IO KafkaTools
-buildKafkaTools KafkaToolsConfig {..} mbHostName = do
-  let hostName = fromMaybe "null" mbHostName
+buildKafkaTools :: KafkaToolsConfig -> IO KafkaTools
+buildKafkaTools KafkaToolsConfig {..}  = do
+  when (null targetTopic) $ throwM KafkaTopicIsEmptyString
   producer <- newProducer (producerProps brokers) >>= either (\err -> throwM (KafkaUnableToBuildTools $ show err)) return
   return $
     KafkaTools
       { ..
       }
 
-produceMessage ::
-  (MonadIO m, MonadThrow m, Log m, MonadReader r m, HasKafka r) =>
-  BusinessEvent ->
-  m ()
-produceMessage event = do
+produceMessage :: (MonadIO m, MonadThrow m, Log m, MonadReader r m, HasKafka r, ToJSON a) => 
+  Maybe KafkaKey -> a -> m ()
+produceMessage key event = do
   kafkaTools <- asks (.kafkaTools)
   when (null kafkaTools.targetTopic) $ throwError KafkaTopicIsEmptyString
   mbErr <- KafkaProd.produceMessage kafkaTools.producer (message kafkaTools)
@@ -46,28 +48,12 @@ produceMessage event = do
       ProducerRecord
         { prTopic = TopicName kafkaTools.targetTopic,
           prPartition = UnassignedPartition,
-          prKey = Just $ encodeUtf8 event.eventName,
+          prKey = key,
           prValue = Just . LBS.toStrict $ encode event
         }
 
 releaseKafkaTools :: KafkaTools -> IO ()
 releaseKafkaTools kafkaTools = closeProducer kafkaTools.producer
 
-buildBusinessEvent ::
-  (MonadIO m, MonadThrow m, Log m, MonadTime m, MonadReader r m, HasKafka r) =>
-  KafkaEventName ->
-  KafkaMetadata ->
-  KafkaPayload ->
-  m BusinessEvent
-buildBusinessEvent eventName metadata payload = do
-  kafkaTools <- asks (.kafkaTools)
-  currTime <- getCurrentTime
-  return $
-    BusinessEvent
-      { timestamp = currTime,
-        eventName,
-        hostName = kafkaTools.hostName,
-        serviceName = kafkaTools.serviceName,
-        metadata,
-        payload
-      }
+(..=) :: ToJSON a => Text -> a -> HM.HashMap Text A.Value
+(..=) = (A..=)
