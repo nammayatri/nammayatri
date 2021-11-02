@@ -8,6 +8,7 @@ import Beckn.Types.Id
 import Beckn.Types.Mobility.Order (CancellationSource (..))
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
+import Product.Person (mkPersonRes)
 import qualified Storage.Queries.Allocation as AQ
 import qualified Storage.Queries.Case as CQ
 import qualified Storage.Queries.Organization as OQ
@@ -39,21 +40,27 @@ list personId status csTypes limitM offsetM = withFlowHandlerAPI $ do
     Just orgId -> do
       result <- PIQ.productInstanceJoin limit offset csTypes orgId status
       locList <- LQ.findAllByLocIds (Case.fromLocationId <$> (_case <$> result)) (Case.toLocationId <$> (_case <$> result))
-      return $ buildResponse locList <$> result
+      buildResponse locList `traverse` result
     Nothing ->
       throwError (PersonFieldNotPresent "organization_id")
   where
     limit = fromMaybe Default.limit limitM
     offset = fromMaybe Default.offset offsetM
-    buildResponse :: [Loc.SearchReqLocation] -> ProductInstanceRes -> ProductInstanceRes
-    buildResponse locList res =
-      ProductInstanceRes
-        { _case = res._case,
-          product = res.product,
-          productInstance = res.productInstance,
-          fromLocation = find (\x -> Case.fromLocationId (res._case) == Loc.id x) locList,
-          toLocation = find (\x -> Case.toLocationId (res._case) == Loc.id x) locList
-        }
+    buildResponse :: (DBFlow m r, EncFlow m r) => [Loc.SearchReqLocation] -> ProductInstanceRes -> m ProductInstanceRes
+    buildResponse locList res = do
+      driver <- (join <$>) $ PersQ.findPersonById `traverse` res.productInstance.personId
+      decDriver <- mkPersonRes `traverse` driver
+      vehicle <- (join <$>) $ (VQ.findVehicleById . Id) `traverse` (driver >>= (.udf1))
+      return $
+        ProductInstanceRes
+          { _case = res._case,
+            product = res.product,
+            productInstance = res.productInstance,
+            fromLocation = find (\x -> Case.fromLocationId (res._case) == x.id) locList,
+            toLocation = find (\x -> Case.toLocationId (res._case) == x.id) locList,
+            driver = decDriver,
+            vehicle = vehicle
+          }
 
 notifyUpdateToBAP ::
   ( DBFlow m r,

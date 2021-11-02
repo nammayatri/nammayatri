@@ -220,7 +220,9 @@ productInstanceJoin limit_ offset_ csTypes orgId status_ = do
           product = pr,
           productInstance = cpr,
           fromLocation = Nothing,
-          toLocation = Nothing
+          toLocation = Nothing,
+          driver = Nothing,
+          vehicle = Nothing
         }
 
 findById :: DBFlow m r => Id Storage.ProductInstance -> m (Maybe Storage.ProductInstance)
