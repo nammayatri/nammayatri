@@ -62,7 +62,7 @@ handle =
             _ -> throwError CaseNotFound
           else throwError CaseNotFound,
       notifyUpdateToBAP = \_ _ _ -> pure (),
-      endRideTransaction = \_ _ _ _ _ _ -> pure (),
+      endRideTransaction = \_ _ _ _ _ _ _ -> pure (),
       calculateFare = \_ _ _ _ ->
         return $
           FareParameters

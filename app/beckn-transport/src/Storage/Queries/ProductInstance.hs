@@ -298,6 +298,22 @@ updateActualPrice fare' prodInstId = do
           updatedAt <-. B.val_ currTime
         ]
 
+updateChargeableDistance :: Double -> Id Storage.ProductInstance -> DB.SqlDB ()
+updateChargeableDistance chargeableDistance' prodInstId = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update'
+    dbTable
+    (setClause chargeableDistance' now)
+    (predicate prodInstId)
+  where
+    predicate piId Storage.ProductInstance {..} = id ==. B.val_ piId
+    setClause chargeableDistance_ currTime Storage.ProductInstance {..} =
+      mconcat
+        [ chargeableDistance <-. B.val_ (Just chargeableDistance_),
+          updatedAt <-. B.val_ currTime
+        ]
+
 updateTotalFare :: Amount -> Id Storage.ProductInstance -> DB.SqlDB ()
 updateTotalFare totalFare' prodInstId = do
   dbTable <- getDbTable

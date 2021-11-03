@@ -21,7 +21,7 @@ data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findPIById :: Id PI.ProductInstance -> m (Maybe PI.ProductInstance),
     findAllPIByParentId :: Id PI.ProductInstance -> m [PI.ProductInstance],
-    endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> Amount -> m (),
+    endRideTransaction :: [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> Amount -> Double -> m (),
     findCaseByIdAndType :: [Id Case.Case] -> Case.CaseType -> m (Maybe Case.Case),
     notifyUpdateToBAP :: PI.ProductInstance -> PI.ProductInstance -> PI.ProductInstanceStatus -> m (),
     calculateFare ::
@@ -58,7 +58,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   (chargeableDistance, fare, totalFare) <- recalculateFare orderCase orderPi
 
-  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) fare totalFare
+  endRideTransaction (PI.id <$> piList) (trackerCase.id) (orderCase.id) (cast driverId) fare totalFare chargeableDistance
   notifyUpdateToBAP
     searchPi{chargeableDistance = Just chargeableDistance, fare = Just fare, totalFare = Just totalFare}
     orderPi{chargeableDistance = Just chargeableDistance, fare = Just fare, totalFare = Just totalFare}

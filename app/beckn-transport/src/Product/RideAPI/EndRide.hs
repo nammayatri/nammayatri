@@ -39,9 +39,10 @@ endRide personId rideId = withFlowHandlerAPI $ do
           putDiffMetric = putFareAndDistanceDeviations
         }
 
-endRideTransaction :: DBFlow m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> Amount -> m ()
-endRideTransaction piIds trackerCaseId orderCaseId driverId actualPrice totalFare = DB.runSqlDBTransaction $ do
+endRideTransaction :: DBFlow m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> Amount -> Double -> m ()
+endRideTransaction piIds trackerCaseId orderCaseId driverId actualPrice totalFare chargeableDistance = DB.runSqlDBTransaction $ do
   forM_ piIds $ PI.updateActualPrice actualPrice
+  forM_ piIds $ PI.updateChargeableDistance chargeableDistance
   forM_ piIds $ PI.updateTotalFare totalFare
   PI.updateStatusByIds piIds PI.COMPLETED
   Case.updateStatus trackerCaseId Case.COMPLETED
