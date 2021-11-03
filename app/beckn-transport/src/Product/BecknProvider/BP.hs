@@ -205,12 +205,12 @@ mkTrip ride = do
               RouteEdge
                 { path = "",
                   duration = emptyScalar "seconds", -- TODO: calculate duration and put it here
-                  distance = emptyScalar "meters" & #computed_value ?~ ride.finalDistance
+                  distance = emptyScalar "meters" & #value .~ ride.chargableDistance
                 }
       }
   where
     mkPrice price =
-      emptyPrice & #computed_value ?~ convertAmountToDecimalValue price
+      emptyPrice & #value ?~ convertAmountToDecimalValue price
 
 mkOnUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>

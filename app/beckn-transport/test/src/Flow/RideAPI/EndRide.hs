@@ -62,7 +62,7 @@ handle =
           then pure $ Just searchRequest
           else throwError SearchRequestNotFound,
       notifyCompleteToBAP = \_ _ _ -> pure (),
-      endRideTransaction = \_ _ _ _ -> pure (),
+      endRideTransaction = \_ _ _ _ _ -> pure (),
       calculateFare = \_ _ _ _ -> pure 100,
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure ()

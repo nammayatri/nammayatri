@@ -32,7 +32,8 @@ CREATE TABLE atlas_transporter.ride (
     to_location_id character varying(255),
     organization_id character varying(255) NOT NULL,
     product_instance_id character varying(255),
-    distance double precision NOT NULL DEFAULT 0,
+    traveled_distance double precision NOT NULL DEFAULT 0,
+    chargable_distance double precision,
     info text,
     udf1 character varying(255),
     udf2 character varying(255),
@@ -84,7 +85,8 @@ INSERT INTO atlas_transporter.ride
     to_location_id,
     organization_id,
     parent_id AS product_instance_id,
-    distance,
+    traveled_distance,
+    chargable_distance,
     info,
     udf1,
     udf2,
@@ -132,7 +134,6 @@ ALTER TABLE atlas_transporter.search_request DROP COLUMN provider_type;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN requestor_type;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN udf2;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN udf3;
-ALTER TABLE atlas_transporter.search_request DROP COLUMN udf5;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN info;
 ALTER TABLE atlas_transporter.search_request DROP COLUMN updated_at;
 
@@ -194,7 +195,8 @@ CREATE TABLE atlas_transporter.ride (
     otp character(4) NOT NULL,
     tracking_url character varying(255) NOT NULL,
     final_price double precision,
-    final_distance double precision NOT NULL DEFAULT 0,
+    traveled_distance double precision NOT NULL DEFAULT 0,
+    chargable_distance double precision,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -202,14 +204,22 @@ CREATE TABLE atlas_transporter.ride (
 ALTER TABLE atlas_transporter.quote ALTER COLUMN price SET NOT NULL;
 ALTER TABLE atlas_transporter.quote RENAME COLUMN organization_id TO provider_id;
 ALTER TABLE atlas_transporter.quote ADD COLUMN distance_to_nearest_driver float;
+ALTER TABLE atlas_transporter.quote ADD COLUMN distance float;
 
 UPDATE atlas_transporter.quote AS T1 
 	SET distance_to_nearest_driver = CAST (udf1 AS float);
 UPDATE atlas_transporter.quote AS T1 
 	SET distance_to_nearest_driver = 0 WHERE distance_to_nearest_driver IS NULL;
+UPDATE atlas_transporter.quote AS T1 
+	SET distance = CAST ((SELECT udf5 FROM atlas_transporter.search_request AS T2 WHERE T1.request_id = T2.id) AS float);
+UPDATE atlas_transporter.quote AS T1 
+	SET distance = 0 WHERE distance_to_nearest_driver IS NULL;
 
+
+ALTER TABLE atlas_transporter.search_request DROP COLUMN udf5;
 ALTER TABLE atlas_transporter.quote ALTER COLUMN distance_to_nearest_driver SET NOT NULL;
 ALTER TABLE atlas_transporter.quote ALTER COLUMN price SET NOT NULL;
+ALTER TABLE atlas_transporter.quote ALTER COLUMN distance SET NOT NULL;
 
 INSERT INTO atlas_transporter.ride_booking 
     SELECT 
@@ -226,12 +236,14 @@ INSERT INTO atlas_transporter.ride_booking
         T1.from_location_id,
         T1.to_location_id,
         T1.price,
-        T1.distance,
+        T3.distance,
         T1.created_at,
         T1.updated_at
     FROM atlas_transporter.old_ride AS T1
     JOIN atlas_transporter.search_request AS T2
-        ON T1.request_id = T2.id;
+        ON T1.request_id = T2.id
+    JOIN atlas_transporter.quote AS T3
+        ON T1.quote_id = T3.id;
 
 UPDATE atlas_transporter.ride_booking AS T1 
 	SET status = 'TRIP_ASSIGNED' WHERE T1.status = 'INPROGRESS';
@@ -247,7 +259,8 @@ INSERT INTO atlas_transporter.ride
         T1.udf4,
         'UNKNOWN',
         T1.actual_price,
-        T1.distance,
+        T1.traveled_distance,
+        T1.chargable_distance,
         T1.created_at,
         T1.updated_at
     FROM atlas_transporter.old_ride AS T1

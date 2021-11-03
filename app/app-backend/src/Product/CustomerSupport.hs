@@ -177,5 +177,6 @@ makeTripDetails mbSearchRequest = case mbSearchRequest of
             driver = driver,
             price = Just rideBooking.price,
             provider = Just provider,
+            actualPrice = mbRide >>= (.finalPrice),
             vehicle = vehicle
           }

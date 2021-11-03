@@ -30,7 +30,7 @@ CREATE TABLE atlas_app.ride (
     to_location_id character varying(255),
     organization_id character varying(255) NOT NULL,
     product_instance_id character varying(255),
-    actual_distance double precision,
+    chargable_distance double precision,
     info text,
     udf1 character varying(255),
     udf2 character varying(255),
@@ -80,7 +80,7 @@ INSERT INTO atlas_app.ride
     to_location_id,
     organization_id,
     parent_id AS product_instance_id,
-    actual_distance,
+    chargable_distance,
     info,
     udf1,
     udf2,
@@ -185,7 +185,7 @@ CREATE TABLE atlas_app.ride (
     otp character(4) NOT NULL,
     tracking_url character varying(255) NOT NULL,
     final_price double precision,
-    final_distance double precision NOT NULL,
+    chargable_distance double precision,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -248,7 +248,7 @@ INSERT INTO atlas_app.ride
         T1.udf4,
         'UNKNOWN',
         T1.actual_price,
-        T1.actual_distance,
+        T1.chargable_distance,
         T1.created_at,
         T1.updated_at
     FROM atlas_app.old_ride AS T1
@@ -288,7 +288,7 @@ ALTER TABLE atlas_app.quote DROP COLUMN udf3;
 ALTER TABLE atlas_app.quote DROP COLUMN udf4;
 ALTER TABLE atlas_app.quote DROP COLUMN udf5;
 ALTER TABLE atlas_app.quote DROP COLUMN updated_at;
-ALTER TABLE atlas_app.quote DROP COLUMN actual_distance;
+ALTER TABLE atlas_app.quote DROP COLUMN chargable_distance;
 ALTER TABLE atlas_app.quote DROP COLUMN actual_price;
 
 ALTER TABLE atlas_app.ride_cancellation_reason RENAME COLUMN ride_id TO ride_booking_id;

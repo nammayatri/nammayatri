@@ -53,9 +53,8 @@ onUpdate _org req = withFlowHandlerBecknAPI $
                 let uRide =
                       ride{status = maybe ride.status convertRideStatus mbState,
                            finalPrice =
-                             trip >>= fare >>= (.computed_value) >>= convertDecimalValueToAmount,
-                           finalDistance =
-                             fromMaybe 0 $ trip >>= (.route) >>= (.edge.distance.computed_value)
+                             trip >>= fare >>= (.value) >>= convertDecimalValueToAmount,
+                           chargableDistance = trip >>= (.route) >>= (.edge.distance.value)
                           }
                 QRide.updateMultiple (uRide.id) uRide
         DB.runSqlDBTransaction $ do
@@ -99,7 +98,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
             status = SRide.NEW,
             trackingUrl = "UNKNOWN", -- TODO: Fill this field
             finalPrice = Nothing,
-            finalDistance = 0,
+            chargableDistance = Nothing,
             createdAt = now,
             updatedAt = now,
             ..

@@ -119,6 +119,22 @@ updateActualPrice price' rideId = do
           updatedAt <-. B.val_ currTime
         ]
 
+updateChargableDistance :: Double -> Id Storage.Ride -> DB.SqlDB ()
+updateChargableDistance chargableDistance' rideId = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update'
+    dbTable
+    (setClause chargableDistance' now)
+    (predicate rideId)
+  where
+    predicate piId Storage.Ride {..} = id ==. B.val_ piId
+    setClause chargableDistance'' currTime Storage.Ride {..} =
+      mconcat
+        [ chargableDistance <-. B.val_ (Just chargableDistance''),
+          updatedAt <-. B.val_ currTime
+        ]
+
 updateDistance ::
   Id Pers.Person ->
   Double ->
@@ -133,7 +149,7 @@ updateDistance driverId_ distance' = do
     predicate driverId' Storage.Ride {..} =
       driverId ==. B.val_ driverId'
         &&. status ==. B.val_ Storage.INPROGRESS
-    setClause distance'' Storage.Ride {..} = finalDistance <-. B.current_ finalDistance + B.val_ distance''
+    setClause distance'' Storage.Ride {..} = traveledDistance <-. B.current_ traveledDistance + B.val_ distance''
 
 getCountByStatus :: DBFlow m r => Id Org.Organization -> m [(Storage.RideStatus, Int)]
 getCountByStatus orgId = do

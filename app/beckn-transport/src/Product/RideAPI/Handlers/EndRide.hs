@@ -22,7 +22,7 @@ data ServiceHandle m = ServiceHandle
     findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     findQuoteById :: Id SQuote.Quote -> m (Maybe SQuote.Quote),
-    endRideTransaction :: Id SRB.RideBooking -> Id Ride.Ride -> Id Driver -> Amount -> m (),
+    endRideTransaction :: Id SRB.RideBooking -> Id Ride.Ride -> Id Driver -> Amount -> Double -> m (),
     findSearchRequestById :: Id SSearchRequest.SearchRequest -> m (Maybe SSearchRequest.SearchRequest),
     notifyCompleteToBAP :: SQuote.Quote -> SRB.RideBooking -> Ride.Ride -> m (),
     calculateFare ::
@@ -53,17 +53,13 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM RideBookingNotFound
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  actualPrice <-
-    ifM
-      recalculateFareEnabled
-      (recalculateFare rideBooking ride)
-      (return rideBooking.price)
+  (actualDistance, actualFare) <- recalculateFare rideBooking ride
 
-  endRideTransaction rideBooking.id ride.id (cast driverId) actualPrice
+  endRideTransaction rideBooking.id ride.id (cast driverId) actualFare actualDistance
 
   quote <- findQuoteById rideBooking.quoteId >>= fromMaybeM QuoteNotFound
 
-  notifyCompleteToBAP quote rideBooking (updateActualPrice actualPrice ride)
+  notifyCompleteToBAP quote rideBooking (updateActualDistanceAndPrice actualDistance actualFare ride)
 
   return APISuccess.Success
   where
@@ -71,17 +67,21 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       let transporterId = rideBooking.providerId
           vehicleVariant = rideBooking.vehicleVariant
           oldDistance = rideBooking.distance
-          actualDistance = ride.finalDistance
-      fare <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime
-      let distanceDiff = actualDistance - oldDistance
-      let price = rideBooking.price
-      let fareDiff = fare - price
-      logTagInfo "Fare recalculation" $
-        "Fare difference: "
-          <> show (amountToDouble fareDiff)
-          <> ", Distance difference: "
-          <> show distanceDiff
-      putDiffMetric fareDiff distanceDiff
-      pure fare
-    updateActualPrice :: Amount -> Ride.Ride -> Ride.Ride
-    updateActualPrice = \p ride -> ride{finalPrice = Just p}
+          estimatedPrice = rideBooking.price
+      shouldRecalculateFare <- recalculateFareEnabled
+      if shouldRecalculateFare
+        then do
+          let actualDistance = ride.traveledDistance
+          updatedPrice <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime
+          let distanceDiff = actualDistance - oldDistance
+          let fareDiff = updatedPrice - estimatedPrice
+          logTagInfo "Fare recalculation" $
+            "Fare difference: "
+              <> show (amountToDouble fareDiff)
+              <> ", Distance difference: "
+              <> show distanceDiff
+          putDiffMetric fareDiff distanceDiff
+          pure (actualDistance, updatedPrice)
+        else pure (oldDistance, estimatedPrice)
+    updateActualDistanceAndPrice :: Double -> Amount -> Ride.Ride -> Ride.Ride
+    updateActualDistanceAndPrice = \distance fare ride -> ride{chargableDistance = Just distance, finalPrice = Just fare}

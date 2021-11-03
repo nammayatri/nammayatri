@@ -43,9 +43,10 @@ endRide personId rideId = withFlowHandlerAPI $ do
           putDiffMetric = putFareAndDistanceDeviations
         }
 
-endRideTransaction :: DBFlow m r => Id SRB.RideBooking -> Id Ride.Ride -> Id Driver -> Amount -> m ()
-endRideTransaction rideBookingId rideId driverId actualPrice = DB.runSqlDBTransaction $ do
+endRideTransaction :: DBFlow m r => Id SRB.RideBooking -> Id Ride.Ride -> Id Driver -> Amount -> Double -> m ()
+endRideTransaction rideBookingId rideId driverId actualPrice chargableDistance = DB.runSqlDBTransaction $ do
   QRide.updateActualPrice actualPrice rideId
+  QRide.updateChargableDistance chargableDistance rideId
   QRide.updateStatus rideId Ride.COMPLETED
   QRB.updateStatus rideBookingId SRB.COMPLETED
   DriverInformation.updateOnRide driverId False
