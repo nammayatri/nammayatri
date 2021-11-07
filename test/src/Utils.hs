@@ -25,10 +25,10 @@ defaultTestLoggerConfig =
 runClient :: (HasCallStack, MonadIO m) => ClientEnv -> ClientM a -> m (Either ClientError a)
 runClient clientEnv x = liftIO $ runClientM x clientEnv
 
-runClient' :: (HasCallStack, MonadIO m) => ClientEnv -> ClientM a -> m a
+runClient' :: (HasCallStack, MonadIO m, Show a) => ClientEnv -> ClientM a -> m a
 runClient' clientEnv x = do
   res <- runClient clientEnv x
-  res $> () `shouldSatisfy` isRight
+  res `shouldSatisfy` isRight
   let Right r = res
   return r
 
@@ -93,7 +93,7 @@ type ClientsM = ReaderT ClientEnvs IO
 withBecknClients :: ClientEnvs -> ClientsM a -> IO a
 withBecknClients = flip runReaderT
 
-callBAP, callBPP :: HasCallStack => ClientM a -> ClientsM a
+callBAP, callBPP :: (HasCallStack, Show a) => ClientM a -> ClientsM a
 callBAP client = asks (.bap) >>= (`runClient'` client)
 callBPP client = asks (.bpp) >>= (`runClient'` client)
 

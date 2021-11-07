@@ -19,7 +19,7 @@ data ProductInstanceRes = ProductInstanceRes
     driver :: Maybe PersonEntityRes,
     vehicle :: Maybe SVeh.Vehicle
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 instance FromJSON ProductInstanceRes where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
