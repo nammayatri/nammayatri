@@ -48,10 +48,11 @@ list personId status csTypes limitM offsetM = withFlowHandlerAPI $ do
     offset = fromMaybe Default.offset offsetM
     buildResponse :: (DBFlow m r, EncFlow m r) => [Loc.SearchReqLocation] -> ProductInstanceRes -> m ProductInstanceRes
     buildResponse locList res = do
-      driver <- (join <$>) $ PersQ.findPersonById `traverse` res.productInstance.personId
-      decDriver <- mkPersonRes `traverse` driver
-      vehicle <- (join <$>) $ (VQ.findVehicleById . Id) `traverse` (driver >>= (.udf1))
-      return $
+      driver <- mapM getPersonById res.productInstance.personId
+      decDriver <- mapM mkPersonRes driver
+      let vehicleId = Id <$> (decDriver >>= (.udf1))
+      vehicle <- mapM getVehicleById vehicleId
+      pure $
         ProductInstanceRes
           { _case = res._case,
             product = res.product,
@@ -61,6 +62,12 @@ list personId status csTypes limitM offsetM = withFlowHandlerAPI $ do
             driver = decDriver,
             vehicle = vehicle
           }
+
+    getPersonById :: DBFlow m r => Id SP.Person -> m SP.Person
+    getPersonById = PersQ.findPersonById >=> fromMaybeM PersonNotFound
+
+    getVehicleById :: DBFlow m r => Id V.Vehicle -> m V.Vehicle
+    getVehicleById = VQ.findVehicleById >=> fromMaybeM VehicleNotFound
 
 notifyUpdateToBAP ::
   ( DBFlow m r,
