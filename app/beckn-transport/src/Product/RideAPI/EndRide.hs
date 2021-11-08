@@ -3,7 +3,6 @@ module Product.RideAPI.EndRide where
 import App.Types (FlowHandler)
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.APISuccess as APISuccess
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.Mobility.Order as Mobility
@@ -43,11 +42,10 @@ endRide personId rideId = withFlowHandlerAPI $ do
           putDiffMetric = putFareAndDistanceDeviations
         }
 
-endRideTransaction :: DBFlow m r => Id SRB.RideBooking -> Id Ride.Ride -> Id Driver -> Amount -> Double -> m ()
-endRideTransaction rideBookingId rideId driverId actualPrice chargableDistance = DB.runSqlDBTransaction $ do
-  QRide.updateActualPrice actualPrice rideId
-  QRide.updateChargableDistance chargableDistance rideId
-  QRide.updateStatus rideId Ride.COMPLETED
+endRideTransaction :: DBFlow m r => Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m ()
+endRideTransaction rideBookingId ride driverId = DB.runSqlDBTransaction $ do
+  QRide.updateAll ride.id ride
+  QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus rideBookingId SRB.COMPLETED
   DriverInformation.updateOnRide driverId False
   DriverStats.updateIdleTime driverId

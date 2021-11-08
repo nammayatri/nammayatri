@@ -4,7 +4,6 @@ module Storage.Queries.Ride where
 
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -103,38 +102,6 @@ updateStatusByIds ids status_ = do
           status <-. B.val_ scStatus
         ]
 
-updateActualPrice :: Amount -> Id Storage.Ride -> DB.SqlDB ()
-updateActualPrice price' rideId = do
-  dbTable <- getDbTable
-  now <- getCurrentTime
-  DB.update'
-    dbTable
-    (setClause price' now)
-    (predicate rideId)
-  where
-    predicate piId Storage.Ride {..} = id ==. B.val_ piId
-    setClause price'' currTime Storage.Ride {..} =
-      mconcat
-        [ finalPrice <-. B.val_ (Just price''),
-          updatedAt <-. B.val_ currTime
-        ]
-
-updateChargableDistance :: Double -> Id Storage.Ride -> DB.SqlDB ()
-updateChargableDistance chargableDistance' rideId = do
-  dbTable <- getDbTable
-  now <- getCurrentTime
-  DB.update'
-    dbTable
-    (setClause chargableDistance' now)
-    (predicate rideId)
-  where
-    predicate piId Storage.Ride {..} = id ==. B.val_ piId
-    setClause chargableDistance'' currTime Storage.Ride {..} =
-      mconcat
-        [ chargableDistance <-. B.val_ (Just chargableDistance''),
-          updatedAt <-. B.val_ currTime
-        ]
-
 updateDistance ::
   Id Pers.Person ->
   Double ->
@@ -150,6 +117,27 @@ updateDistance driverId_ distance' = do
       driverId ==. B.val_ driverId'
         &&. status ==. B.val_ Storage.INPROGRESS
     setClause distance'' Storage.Ride {..} = traveledDistance <-. B.current_ traveledDistance + B.val_ distance''
+
+updateAll ::
+  Id Storage.Ride ->
+  Storage.Ride ->
+  DB.SqlDB ()
+updateAll rideId ride = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update'
+    dbTable
+    (setClause now ride)
+    (predicate rideId)
+  where
+    predicate rideId_ Storage.Ride {..} = id ==. B.val_ rideId_
+    setClause currTime ride_ Storage.Ride {..} =
+      mconcat
+        [ status <-. B.val_ ride_.status,
+          finalPrice <-. B.val_ ride_.finalPrice,
+          chargableDistance <-. B.val_ ride_.chargableDistance,
+          updatedAt <-. B.val_ currTime
+        ]
 
 getCountByStatus :: DBFlow m r => Id Org.Organization -> m [(Storage.RideStatus, Int)]
 getCountByStatus orgId = do

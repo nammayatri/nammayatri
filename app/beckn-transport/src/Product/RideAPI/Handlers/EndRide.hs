@@ -22,7 +22,7 @@ data ServiceHandle m = ServiceHandle
     findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     findQuoteById :: Id SQuote.Quote -> m (Maybe SQuote.Quote),
-    endRideTransaction :: Id SRB.RideBooking -> Id Ride.Ride -> Id Driver -> Amount -> Double -> m (),
+    endRideTransaction :: Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m (),
     findSearchRequestById :: Id SSearchRequest.SearchRequest -> m (Maybe SSearchRequest.SearchRequest),
     notifyCompleteToBAP :: SQuote.Quote -> SRB.RideBooking -> Ride.Ride -> m (),
     calculateFare ::
@@ -55,11 +55,13 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   (actualDistance, actualFare) <- recalculateFare rideBooking ride
 
-  endRideTransaction rideBooking.id ride.id (cast driverId) actualFare actualDistance
+  let updRide = updateActualDistanceAndPrice actualDistance actualFare ride
+
+  endRideTransaction rideBooking.id updRide (cast driverId)
 
   quote <- findQuoteById rideBooking.quoteId >>= fromMaybeM QuoteNotFound
 
-  notifyCompleteToBAP quote rideBooking (updateActualDistanceAndPrice actualDistance actualFare ride)
+  notifyCompleteToBAP quote rideBooking updRide
 
   return APISuccess.Success
   where
