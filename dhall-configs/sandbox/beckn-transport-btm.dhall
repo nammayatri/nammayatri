@@ -4,15 +4,8 @@ let becknTransport = ./beckn-transport.dhall
 let SortMode = < ETA | IdleTime >
 
 let shards =
-  [ globalCommon.mkShard +0 "JUSPAY.MOBILITY.PROVIDER.1.SANDBOX"
-  , globalCommon.mkShard +1 "JUSPAY.MOBILITY.PROVIDER.2.SANDBOX"
-  , globalCommon.mkShard +2 "JUSPAY.MOBILITY.PROVIDER.3.SANDBOX"
-  , globalCommon.mkShard +3 "JUSPAY.MOBILITY.PROVIDER.4.SANDBOX"
-  , globalCommon.mkShard +4 "JUSPAY.MOBILITY.PROVIDER.5.SANDBOX"
-  , globalCommon.mkShard +5 "JUSPAY.MOBILITY.PROVIDER.6.SANDBOX"
-  , globalCommon.mkShard +6 "JUSPAY.MOBILITY.PROVIDER.7.SANDBOX"
-  , globalCommon.mkShard +7 "JUSPAY.MOBILITY.PROVIDER.12.SANDBOX"
-  , globalCommon.mkShard +8 "JUSPAY.MOBILITY.PROVIDER.13.SANDBOX"
+  [ globalCommon.mkShard +0 "api.sandbox.beckn.juspay.in/bpp/cab/v1/3041599b-2fcf-45e1-bfd5-115db5cd1353"
+  , globalCommon.mkShard +1 "api.sandbox.beckn.juspay.in/bpp/cab/v1/87a04bab-bc3b-4d2a-866a-3c5ee9cc3b34"
   ]
 
 let appCfg = becknTransport //

@@ -80,16 +80,16 @@ in
 , metricsPort = +9999
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
-, xGatewaySelector = "JUSPAY.BG.1"
+, xGatewaySelector = "nsdl.co.in"
 , xProviderUri = providerUri
 , hostName = "juspay.in"
 , bapSelfIds =
-  { cabs = "JUSPAY.MOBILITY.APP.UAT.1.SANDBOX"
-  , metro = "JUSPAY.MOBILITY.APP.UAT.2.SANDBOX"
+  { cabs = "api.sandbox.beckn.juspay.in/bap/cab/v1"
+  , metro = "api.sandbox.beckn.juspay.in/bap/metro/v1"
   }
 , bapSelfURIs =
-  { cabs = "https://api.sandbox.beckn.juspay.in/app/cab/v1/"
-  , metro = "https://api.sandbox.beckn.juspay.in/app/metro/v1/"
+  { cabs = "https://api.sandbox.beckn.juspay.in/bap/cab/v1/"
+  , metro = "https://api.sandbox.beckn.juspay.in/bap/metro/v1/"
   }
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys

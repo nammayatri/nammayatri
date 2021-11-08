@@ -3,7 +3,7 @@ let globalCommon = ../../generic/common.dhall
 let signingKeys =
 [
   -- Gateway
-    globalCommon.mkSigningKey "juspay-bg-1-key" "xxxxxxx"
+    globalCommon.mkSigningKey "39" "xxxxxxx"
 
   -- FMD
   -- BAP
@@ -15,23 +15,14 @@ let signingKeys =
 
   -- Mobility
   -- BAP
-  , globalCommon.mkSigningKey "juspay-mobility-bap-1-key-sandbox" "xxxxxxx"
+  , globalCommon.mkSigningKey "35" "xxxxxxx"
   -- BPP
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-1-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-2-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-3-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-4-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-5-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-6-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-7-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-8-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-9-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-10-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-11-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-12-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-13-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-14-key-sandbox" "xxxxxxx"
-  , globalCommon.mkSigningKey "juspay-mobility-bpp-15-key-sandbox" "xxxxxxx"
+  , globalCommon.mkSigningKey "37" "xxxxxxx"
+  , globalCommon.mkSigningKey "38" "xxxxxxx"
+
+  -- Metro
+  -- BAP
+  , globalCommon.mkSigningKey "36" "xxxxxxx"
 ]
 
 let exotelCfg =

@@ -7,8 +7,8 @@ let branchName = "$DEPLOY_VARIANT"
 let credRegistry =
   [
   -- Gateway
-    globalCommon.mkCredential "juspay-bg-1-key" "JUSPAY.BG.1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "nsdl_bg_1"       "NSDL.BG.1"   "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
+    globalCommon.mkCredential "39" "api.sandbox.beckn.juspay.in/gateway/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "21" "nsdl.co.in"                                 "Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs="
 
   -- FMD
   -- BAP
@@ -27,23 +27,23 @@ let credRegistry =
 
   -- Mobility
   -- BAP
-  , globalCommon.mkCredential "juspay-mobility-bap-1-key-sandbox" "JUSPAY.MOBILITY.APP.1.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "35" "api.sandbox.beckn.juspay.in/bap/cab/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   -- BPP
-  , globalCommon.mkCredential "juspay-mobility-bpp-1-key-sandbox"  "JUSPAY.MOBILITY.PROVIDER.1.SANDBOX"  "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-2-key-sandbox"  "JUSPAY.MOBILITY.PROVIDER.2.SANDBOX"  "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-3-key-sandbox"  "JUSPAY.MOBILITY.PROVIDER.3.SANDBOX"  "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-4-key-sandbox"  "JUSPAY.MOBILITY.PROVIDER.4.SANDBOX"  "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-5-key-sandbox"  "JUSPAY.MOBILITY.PROVIDER.5.SANDBOX"  "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-6-key-sandbox"  "JUSPAY.MOBILITY.PROVIDER.6.SANDBOX"  "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-7-key-sandbox"  "JUSPAY.MOBILITY.PROVIDER.7.SANDBOX"  "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-8-key-sandbox"  "JUSPAY.MOBILITY.PROVIDER.8.SANDBOX"  "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-9-key-sandbox"  "JUSPAY.MOBILITY.PROVIDER.9.SANDBOX"  "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-10-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.10.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-11-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.11.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-12-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.12.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-13-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.13.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-14-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.14.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
-  , globalCommon.mkCredential "juspay-mobility-bpp-15-key-sandbox" "JUSPAY.MOBILITY.PROVIDER.15.SANDBOX" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "37" "api.sandbox.beckn.juspay.in/bpp/cab/v1/3041599b-2fcf-45e1-bfd5-115db5cd1353" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "38" "api.sandbox.beckn.juspay.in/bpp/cab/v1/87a04bab-bc3b-4d2a-866a-3c5ee9cc3b34" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "50" "api.sandbox.beckn.juspay.in/bpp/cab/v1/8dfcf59d-e700-4ab1-a72e-12d716ae560c" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "51" "api.sandbox.beckn.juspay.in/bpp/cab/v1/2672dcf8-9c90-4e42-9644-0c3587ee00ac" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "52" "api.sandbox.beckn.juspay.in/bpp/cab/v1/ecddd512-585b-48b3-84d8-b325e09971d0" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "53" "api.sandbox.beckn.juspay.in/bpp/cab/v1/9eb9d5bd-1cf4-49a2-87db-df3d1a2c632d" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "54" "api.sandbox.beckn.juspay.in/bpp/cab/v1/110f9ce2-3618-46b1-aa3a-2ecb819a3088" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "55" "api.sandbox.beckn.juspay.in/bpp/cab/v1/07c66658-4d96-4181-b302-ad69de156156" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "56" "api.sandbox.beckn.juspay.in/bpp/cab/v1/76bbaf29-b245-46c4-aa2d-b57aca41b3da" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+
+  -- Metro
+  -- BAP
+  , globalCommon.mkCredential "36" "api.sandbox.beckn.juspay.in/bap/metro/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  -- BPP
+  , globalCommon.mkCredential "25" "api.sandbox.beckn.juspay.in/bpp/metro/v1"     "OGfSqt352PXRfdd+pLXo3eLLd96iL8dcbireMynl5A4="
   ]
 
 in { defaultPoolConfig = globalCommon.defaultPoolConfig
