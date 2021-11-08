@@ -16,7 +16,6 @@ let signingKeys =
   -- Mobility
   -- BAP
   , globalCommon.mkSigningKey "19" "xxxxxxx"
-  , globalCommon.mkSigningKey "20" "xxxxxxx"
   -- BPP
   , globalCommon.mkSigningKey "12" "xxxxxxx"
   , globalCommon.mkSigningKey "13" "xxxxxxx"
@@ -25,6 +24,10 @@ let signingKeys =
   , globalCommon.mkSigningKey "16" "xxxxxxx"
   , globalCommon.mkSigningKey "17" "xxxxxxx"
   , globalCommon.mkSigningKey "18" "xxxxxxx"
+
+  -- Metro
+  -- BAP
+  , globalCommon.mkSigningKey "20" "xxxxxxx"
   ]
 
 let exotelCfg =
