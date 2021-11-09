@@ -103,15 +103,18 @@ providerToMetroOffer rideSearchId Provider {descriptor, items, locations} = do
   createdAt <- getCurrentTime
   return $ MetroOffer {..}
 
-itemToMetroRide :: (MonadThrow m, Log m) => [Location] -> Item -> m MetroRide
+itemToMetroRide :: (MonadThrow m, MonadTime m, Log m) => [Location] -> Item -> m MetroRide
 itemToMetroRide locations item = do
+  now <- getCurrentTime
   price <-
     (item.price.value >>= convertDecimalValueToAmount)
       & fromMaybeM (InvalidRequest "Missing price.value in item")
   unless (length item.stops >= 2) $ throwError (InvalidRequest "There must be at least two stops in item")
   let stop1 = head item.stops
   let stop2 = last item.stops
-  let schedule = zipWith ScheduleElement stop1.time.schedule.times stop2.time.schedule.times
+  let schedule =
+        filter (isInTheFuture now) $
+          zipWith ScheduleElement stop1.time.schedule.times stop2.time.schedule.times
   arrivalStation <- findLoc stop1.id >>= locToStation
   departureStation <- findLoc stop2.id >>= locToStation
   return MetroRide {..}
@@ -128,3 +131,4 @@ itemToMetroRide locations item = do
             point = gpsToLatLon gps
           }
     gpsToLatLon Gps {..} = LatLong {..}
+    isInTheFuture now scheduleElement = scheduleElement.departureTime > now
