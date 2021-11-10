@@ -45,7 +45,7 @@ confirm personId API.ConfirmReq {..} = withFlowHandlerAPI . withPersonIdLogTag p
   DB.runSqlDBTransaction $ do
     QCase.create orderCase_
     QPI.create orderProductInstance
-  context <- buildContext "confirm" caseId Nothing Nothing
+  context <- buildMobilityContext "confirm" caseId Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   order <- mkOrder productInstance
   ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)

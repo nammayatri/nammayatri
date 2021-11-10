@@ -53,7 +53,7 @@ cancelProductInstance personId req = do
     throwError $ PIInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ searchCase.id
   let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder searchPIid Nothing)
-  context <- buildContext "cancel" txnId Nothing Nothing
+  context <- buildMobilityContext "cancel" txnId Nothing Nothing
   organization <-
     OQ.findOrganizationById (searchPI.organizationId)
       >>= fromMaybeM OrgNotFound

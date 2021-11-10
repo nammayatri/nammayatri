@@ -7,15 +7,21 @@ import Beckn.Types.MonadGuid
 import Beckn.Types.Time
 import EulerHS.Prelude
 
-buildContext :: (MonadTime m, MonadGuid m) => Text -> Text -> Maybe BaseUrl -> Maybe BaseUrl -> m Context
-buildContext action txnId bapUri bppUri = do
+buildMobilityContext ::
+  (MonadTime m, MonadGuid m) =>
+  Text ->
+  Text ->
+  Maybe BaseUrl ->
+  Maybe BaseUrl ->
+  m Context
+buildMobilityContext action txnId bapUri bppUri = do
   currTime <- getCurrentTime
   msgId <- generateGUIDText
   return $
     Context
       { domain = MOBILITY,
         country = Just "IND",
-        city = Nothing,
+        city = Just "Kochi",
         action = action,
         core_version = Just "0.8.2",
         domain_version = Just "0.8.2",

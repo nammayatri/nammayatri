@@ -67,7 +67,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     Location.create toLocation
     QCase.create case_
   bapURIs <- asks (.bapSelfURIs)
-  context <- buildContext "search" txnId (Just bapURIs.cabs) Nothing
+  context <- buildMobilityContext "search" txnId (Just bapURIs.cabs) Nothing
   contextMig <- buildContextMetro Core9.SEARCH txnId bapURIs.metro Nothing
   let intent = mkIntent req
       tags = Just [Tag "distance" (fromMaybe "" $ case_.udf5)]

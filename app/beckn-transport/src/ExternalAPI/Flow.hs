@@ -79,7 +79,7 @@ callBAP action api transporter caseId contents = do
       & listToMaybe
       & fromMaybeM (InternalError "Cannot exctract transaction id from case.short_id")
   bppUri <- makeBppUrl (transporter.id)
-  context <- buildContext action txnId (Just bapCallbackUrl) (Just bppUri)
+  context <- buildMobilityContext action txnId (Just bapCallbackUrl) (Just bppUri)
   Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $
     CallbackReq {contents, context}
 

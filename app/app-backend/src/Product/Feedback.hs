@@ -16,7 +16,7 @@ import qualified Types.API.Feedback as API
 import Types.Error
 import qualified Types.Storage.Person as Person
 import Utils.Common
-  ( buildContext,
+  ( buildMobilityContext,
     fromMaybeM,
     throwError,
     withFlowHandlerAPI,
@@ -31,7 +31,7 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   orderCase <- Case.findIdByPersonId personId (orderPI.caseId) >>= fromMaybeM CaseNotFound
   txnId <- getId <$> orderCase.parentCaseId & fromMaybeM (CaseFieldNotPresent "parentCaseId")
   searchPIId <- getId <$> orderPI.parentId & fromMaybeM (PIFieldNotPresent "parentId")
-  context <- buildContext "feedback" txnId Nothing Nothing
+  context <- buildMobilityContext "feedback" txnId Nothing Nothing
   organization <-
     Organization.findOrganizationById (orderPI.organizationId)
       >>= fromMaybeM OrgNotFound
