@@ -16,7 +16,7 @@ import qualified Types.API.Feedback as API
 import Types.Error
 import qualified Types.Storage.Person as Person
 import Utils.Common
-  ( buildContext,
+  ( buildMobilityContext,
     fromMaybeM,
     throwError,
     withFlowHandlerAPI,
@@ -31,7 +31,7 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
   let txnId = getId rideBooking.requestId
   let quoteId = getId rideBooking.quoteId
-  context <- buildContext "feedback" txnId Nothing Nothing
+  context <- buildMobilityContext "feedback" txnId Nothing Nothing
   organization <-
     Organization.findOrganizationById (rideBooking.providerId)
       >>= fromMaybeM OrgNotFound

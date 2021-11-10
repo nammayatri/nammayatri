@@ -38,7 +38,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ searchRequest.id
   let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder (getId quoteId) Nothing)
-  context <- buildContext "cancel" txnId Nothing Nothing
+  context <- buildMobilityContext "cancel" txnId Nothing Nothing
   organization <-
     OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound

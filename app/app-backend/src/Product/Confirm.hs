@@ -37,7 +37,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   rideBooking <- buildRideBooking searchRequest quote now
   DB.runSqlDBTransaction $
     QRideB.create rideBooking
-  context <- buildContext "confirm" (getId searchRequestId) Nothing Nothing
+  context <- buildMobilityContext "confirm" (getId searchRequestId) Nothing Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let order = mkOrder quote now
   ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)

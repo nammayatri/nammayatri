@@ -71,7 +71,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   bapURIs <- asks (.bapSelfURIs)
   fork "search" . withRetry $ do
     fork "search 0.8" $ do
-      context <- buildContext "search" txnId (Just bapURIs.cabs) Nothing
+      context <- buildMobilityContext "search" txnId (Just bapURIs.cabs) Nothing
       let intent = mkIntent req now
           tags = Just [Tag "distance" $ show distance]
       ExternalAPI.search (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))

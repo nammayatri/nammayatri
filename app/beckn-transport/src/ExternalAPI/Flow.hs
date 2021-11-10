@@ -76,7 +76,7 @@ callBAP action api transporter searchRequestId contents = do
       authKey = getHttpManagerKey bppShortId
       txnId = searchRequest.transactionId
   bppUri <- makeBppUrl (transporter.id)
-  context <- buildContext action txnId (Just bapCallbackUrl) (Just bppUri)
+  context <- buildMobilityContext action txnId (Just bapCallbackUrl) (Just bppUri)
   Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $
     CallbackReq {contents, context}
 
