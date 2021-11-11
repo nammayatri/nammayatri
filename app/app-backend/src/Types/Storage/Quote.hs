@@ -23,6 +23,7 @@ data QuoteT f = Quote
     providerMobileNumber :: B.C f Text,
     providerCompletedRidesCount :: B.C f Int,
     distanceToNearestDriver :: B.C f Double,
+    vehicleVariant :: B.C f Text,
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -61,6 +62,7 @@ fieldEMod =
           providerCompletedRidesCount = "provider_completed_rides_count",
           providerMobileNumber = "provider_mobile_number",
           distanceToNearestDriver = "distance_to_nearest_driver",
+          vehicleVariant = "vehicle_variant",
           providerId = "provider_id",
           createdAt = "created_at"
         }

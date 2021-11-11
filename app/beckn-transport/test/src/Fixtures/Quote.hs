@@ -7,6 +7,7 @@ import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.SearchRequest as SearchRequest
+import qualified Types.Storage.Vehicle as Veh
 
 defaultQuote :: Quote.Quote
 defaultQuote =
@@ -18,5 +19,6 @@ defaultQuote =
       distance = 0,
       providerId = "",
       distanceToNearestDriver = 0,
+      vehicleVariant = Veh.SUV,
       createdAt = Fixtures.defaultTime
     }

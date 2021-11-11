@@ -1,4 +1,4 @@
-UPDATE atlas_app.product_instance AS T1 
+UPDATE atlas_app.product_instance AS T1
 	SET case_id = (SELECT case_id FROM atlas_app.product_instance AS T2 WHERE T2.id = T1.parent_id)
 	WHERE T1.type <> 'RIDESEARCH';
 
@@ -32,6 +32,7 @@ CREATE TABLE atlas_app.ride (
     product_instance_id character varying(255),
     chargable_distance double precision,
     info text,
+    vehicle_variant character varying(60) NOT NULL,
     udf1 character varying(255),
     udf2 character varying(255),
     udf3 character varying(255),
@@ -60,7 +61,7 @@ CREATE INDEX idx_16395_product_id ON atlas_app.ride USING btree (product_id);
 
 CREATE INDEX idx_16395_status ON atlas_app.ride USING btree (status);
 
-INSERT INTO atlas_app.ride 
+INSERT INTO atlas_app.ride
     SELECT id,
     request_id,
     product_id,
@@ -82,6 +83,7 @@ INSERT INTO atlas_app.ride
     parent_id AS product_instance_id,
     chargable_distance,
     info,
+    vehicle_variant,
     udf1,
     udf2,
     udf3,
@@ -126,31 +128,27 @@ ALTER TABLE atlas_app.search_request DROP COLUMN exchange_type;
 ALTER TABLE atlas_app.search_request DROP COLUMN provider;
 ALTER TABLE atlas_app.search_request DROP COLUMN provider_type;
 ALTER TABLE atlas_app.search_request DROP COLUMN requestor_type;
+ALTER TABLE atlas_app.search_request DROP COLUMN udf1;
 ALTER TABLE atlas_app.search_request DROP COLUMN udf2;
 ALTER TABLE atlas_app.search_request DROP COLUMN udf3;
 ALTER TABLE atlas_app.search_request DROP COLUMN udf4;
 ALTER TABLE atlas_app.search_request DROP COLUMN info;
 ALTER TABLE atlas_app.search_request DROP COLUMN updated_at;
 
-ALTER TABLE atlas_app.search_request RENAME COLUMN udf1 TO vehicle_variant;
-UPDATE atlas_app.search_request AS T1 
-	SET vehicle_variant = 'UNKNOWN' WHERE vehicle_variant IS NULL;
-ALTER TABLE atlas_app.search_request ALTER COLUMN vehicle_variant SET NOT NULL;
-
 ALTER TABLE atlas_app.search_request RENAME COLUMN udf5 TO distance;
 ALTER TABLE atlas_app.search_request ALTER COLUMN distance TYPE double precision USING (distance :: double precision);
-UPDATE atlas_app.search_request AS T1 
+UPDATE atlas_app.search_request AS T1
 	SET distance = 0 WHERE distance IS NULL;
 ALTER TABLE atlas_app.search_request ALTER COLUMN distance SET NOT NULL;
 
 ALTER TABLE atlas_app.search_request RENAME COLUMN requestor TO requestor_id;
-UPDATE atlas_app.search_request AS T1 
+UPDATE atlas_app.search_request AS T1
 	SET requestor_id = 'UNKNOWN' WHERE requestor_id IS NULL;
 ALTER TABLE atlas_app.search_request ALTER COLUMN requestor_id SET NOT NULL;
 
 ALTER TABLE atlas_app.ride RENAME TO old_ride;
 
-UPDATE atlas_app.old_ride AS T1 
+UPDATE atlas_app.old_ride AS T1
 	SET udf4 = (SELECT udf4 FROM atlas_app.quote AS T2 WHERE T1.quote_id = T2.id);
 
 CREATE TABLE atlas_app.ride_booking (
@@ -166,6 +164,7 @@ CREATE TABLE atlas_app.ride_booking (
     to_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
     price double precision NOT NULL,
     distance double precision NOT NULL,
+    vehicle_variant character varying(60) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -186,6 +185,7 @@ CREATE TABLE atlas_app.ride (
     tracking_url character varying(255) NOT NULL,
     final_price double precision,
     chargable_distance double precision,
+    vehicle_variant character varying(60) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -195,27 +195,27 @@ ALTER TABLE atlas_app.quote RENAME COLUMN organization_id TO provider_id;
 ALTER TABLE atlas_app.quote ADD COLUMN provider_mobile_number character varying(255);
 ALTER TABLE atlas_app.quote ADD COLUMN distance_to_nearest_driver float;
 
-UPDATE atlas_app.quote AS T1 
+UPDATE atlas_app.quote AS T1
 	SET distance_to_nearest_driver = CAST (udf1 AS float);
-UPDATE atlas_app.quote AS T1 
+UPDATE atlas_app.quote AS T1
 	SET distance_to_nearest_driver = 0 WHERE distance_to_nearest_driver IS NULL;
 
-UPDATE atlas_app.quote AS T1 
+UPDATE atlas_app.quote AS T1
 	SET provider_mobile_number = (SELECT T2.mobile_number FROM atlas_app.organization AS T2 WHERE T2.id = T1.provider_id);
-UPDATE atlas_app.quote AS T1 
+UPDATE atlas_app.quote AS T1
 	SET provider_mobile_number = 'UNKNOWN' WHERE provider_mobile_number IS NULL;
 
 ALTER TABLE atlas_app.quote ALTER COLUMN provider_mobile_number SET NOT NULL;
 ALTER TABLE atlas_app.quote ALTER COLUMN distance_to_nearest_driver SET NOT NULL;
 ALTER TABLE atlas_app.quote ALTER COLUMN price SET NOT NULL;
 
-INSERT INTO atlas_app.ride_booking 
-    SELECT 
-        T1.id, 
-        T1.request_id, 
-        T1.quote_id, 
-        T1.status, 
-        T1.organization_id, 
+INSERT INTO atlas_app.ride_booking
+    SELECT
+        T1.id,
+        T1.request_id,
+        T1.quote_id,
+        T1.status,
+        T1.organization_id,
         COALESCE ((T1.info :: json) -> 'provider' -> 'phones' ->> 0, 'UNKNOWN'),
         T2.start_time,
         T2.requestor_id,
@@ -223,21 +223,22 @@ INSERT INTO atlas_app.ride_booking
         T1.to_location_id,
         T1.price,
         T2.distance :: double precision,
+        T1.vehicle_variant,
         T1.created_at,
         T1.updated_at
     FROM atlas_app.old_ride AS T1
     JOIN atlas_app.search_request AS T2
         ON T1.request_id = T2.id;
 
-UPDATE atlas_app.ride_booking AS T1 
+UPDATE atlas_app.ride_booking AS T1
 	SET status = 'TRIP_ASSIGNED' WHERE T1.status = 'INPROGRESS';
 
 INSERT INTO atlas_app.ride
-    SELECT 
-        T1.id, 
-        T1.id, 
-        T1.short_id, 
-        T1.status, 
+    SELECT
+        T1.id,
+        T1.id,
+        T1.short_id,
+        T1.status,
         COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' ->> 'name', 'UNKNOWN'),
         ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' ->> 'rating') :: double precision,
         COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' -> 'phones' ->> 0, 'UNKNOWN'),
@@ -249,21 +250,22 @@ INSERT INTO atlas_app.ride
         'UNKNOWN',
         T1.actual_price,
         T1.chargable_distance,
+        T1.vehicle_variant,
         T1.created_at,
         T1.updated_at
     FROM atlas_app.old_ride AS T1
     WHERE T1.status != 'CONFIRMED' AND ((T1.info :: json) -> 'tracker' -> 'trip' ->> 'driver') != 'null';
 
-UPDATE atlas_app.ride AS T1 
+UPDATE atlas_app.ride AS T1
 	SET status = 'NEW' WHERE T1.status = 'TRIP_ASSIGNED';
 
 ALTER TABLE atlas_app.quote ADD COLUMN provider_name character varying(255);
 ALTER TABLE atlas_app.quote ADD COLUMN provider_completed_rides_count integer;
 
-UPDATE atlas_app.quote AS T1 
+UPDATE atlas_app.quote AS T1
 	SET provider_name = COALESCE ((T1.info :: json) -> 'provider' ->> 'name', 'UNKNOWN');
 
-UPDATE atlas_app.quote AS T1 
+UPDATE atlas_app.quote AS T1
 	SET provider_completed_rides_count = COALESCE (((T1.info :: json) -> 'provider' -> 'info' ->> 'completed') :: integer, 0);
 
 ALTER TABLE atlas_app.quote ALTER COLUMN provider_name SET NOT NULL;

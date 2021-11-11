@@ -5,13 +5,10 @@ import Beckn.Types.Id
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Flow
-  ( DropLocation (DropLocation),
-    PickupLocation (PickupLocation),
-    ServiceHandle (..),
+  ( ServiceHandle (..),
     doCalculateFare,
     fareSum,
   )
-import qualified Product.Location as Location
 import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Metrics (CoreMetrics)
 import Types.Storage.Organization (Organization)
@@ -28,14 +25,14 @@ calculateFare ::
   Double ->
   UTCTime ->
   m Amount
-calculateFare orgId vehicleVariant distanceSrc startTime = do
+calculateFare orgId vehicleVariant distance startTime = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   fareParams <-
     doCalculateFare
       serviceHandle
       orgId
       vehicleVariant
-      distanceSrc
+      distance
       startTime
   let totalFare = fareSum fareParams
   logTagInfo
@@ -52,9 +49,5 @@ serviceHandle ::
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do
-        FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant,
-      getDistance = \(PickupLocation pickupLoc) (DropLocation dropLoc) -> do
-        let pickupLocLatLong = Location.locationToLatLong pickupLoc
-            dropLocLatLong = Location.locationToLatLong dropLoc
-        Location.calculateDistance pickupLocLatLong dropLocLatLong
+        FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
     }

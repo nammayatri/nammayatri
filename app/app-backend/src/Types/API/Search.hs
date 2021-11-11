@@ -4,12 +4,11 @@ import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
-import Types.Storage.SearchRequest (SearchRequest, VehicleVariant)
+import Types.Storage.SearchRequest (SearchRequest)
 
 data SearchReq = SearchReq
   { origin :: SearchReqLocationAPIEntity,
-    destination :: SearchReqLocationAPIEntity,
-    vehicle :: VehicleVariant
+    destination :: SearchReqLocationAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

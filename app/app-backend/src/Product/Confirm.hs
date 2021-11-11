@@ -73,6 +73,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
             toLocationId = searchRequest.toLocationId,
             price = quote.price,
             distance = searchRequest.distance,
+            vehicleVariant = quote.vehicleVariant,
             createdAt = now,
             updatedAt = now
           }

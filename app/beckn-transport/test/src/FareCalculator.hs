@@ -78,8 +78,7 @@ orgID = "organization_id"
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
-    { getFarePolicy = \orgId vehicleVariant -> pure $ Just defaultFarePolicy,
-      getDistance = \pickup drop -> pure $ Just 0
+    { getFarePolicy = \orgId vehicleVariant -> pure $ Just defaultFarePolicy
     }
 
 -- Calculation tests

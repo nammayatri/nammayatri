@@ -7,7 +7,6 @@ import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.SearchReqLocation as QLoc
-import qualified Storage.Queries.SearchRequest as QSR
 import qualified Types.API.RideBooking as API
 import Types.Error
 import qualified Types.Storage.Person as Person
@@ -33,13 +32,9 @@ buildRideBookingStatusRes rideBooking = do
   fromLocation <- QLoc.findLocationById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
   toLocation <- QLoc.findLocationById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
   let rbStatus = rideBooking.status
-  mbRideAPIEntity <- do
-    mbRide <- QRide.findByRBId rideBooking.id
-    case mbRide of
-      Just ride -> do
-        searchRequest <- QSR.findById rideBooking.requestId >>= fromMaybeM SearchRequestNotFound
-        return . Just $ SRide.makeRideAPIEntity searchRequest ride
-      _ -> return Nothing
+  mbRideAPIEntity <-
+    QRide.findByRBId rideBooking.id
+      <&> fmap SRide.makeRideAPIEntity
 
   return $
     API.RideBookingStatusRes

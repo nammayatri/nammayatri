@@ -14,6 +14,7 @@ import qualified Types.Storage.Organization as Org
 import Types.Storage.Person (Person)
 import Types.Storage.Products (Products)
 import qualified Types.Storage.SearchRequest as SearchRequest
+import qualified Types.Storage.Vehicle as Vehicle
 
 data QuoteT f = Quote
   { id :: B.C f (Id Quote),
@@ -23,6 +24,7 @@ data QuoteT f = Quote
     providerId :: B.C f (Id Org.Organization),
     distance :: B.C f Double,
     distanceToNearestDriver :: B.C f Double,
+    vehicleVariant :: B.C f Vehicle.Variant,
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -60,6 +62,7 @@ fieldEMod =
           productId = "product_id",
           distanceToNearestDriver = "distance_to_nearest_driver",
           providerId = "provider_id",
+          vehicleVariant = "vehicle_variant",
           createdAt = "created_at"
         }
 

@@ -27,8 +27,8 @@ doAnAppSearch = do
       searchServices appRegistrationToken searchReq
         <&> (.searchId)
 
-  -- Do a Case Status request for getting product instance to confirm ride
-  quoteAPIEntity <- expectSingletonNE <=< poll $ do
+  -- Do a get quotes request for getting quotes to confirm ride
+  (quoteAPIEntity :| _) <- poll do
     -- List all confirmed rides (type = RIDEORDER)
     callBAP (getQuotes appSearchId appRegistrationToken)
       <&> (.quotes)

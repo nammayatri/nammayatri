@@ -99,6 +99,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
             trackingUrl = "UNKNOWN", -- TODO: Fill this field
             finalPrice = Nothing,
             chargableDistance = Nothing,
+            vehicleVariant = rideBooking.vehicleVariant,
             createdAt = now,
             updatedAt = now,
             ..

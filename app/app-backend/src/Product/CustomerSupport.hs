@@ -110,7 +110,6 @@ makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..}
   toLocation <- Location.findLocationById toLocationId
   trip <- makeTripDetails confiremedOrder
   decMobNum <- decrypt mobileNumber
-  --  Info: udf1 is vechicle variant
   let details =
         T.OrderDetails
           { id = getId id,
@@ -122,7 +121,6 @@ makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..}
             toLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> toLocation,
             travellerName = fullName,
             travellerPhone = decMobNum,
-            vehicleVariant = Just $ show vehicleVariant, -- Note: UDF1 Contain vehicleVariant info
             trip = trip
           }
   pure $ T.OrderResp {order = details}
@@ -165,7 +163,7 @@ makeTripDetails mbSearchRequest = case mbSearchRequest of
                 make = Nothing,
                 model = Just ride.vehicleModel,
                 size = Nothing,
-                variant = show searchRequest.vehicleVariant,
+                variant = show ride.vehicleVariant,
                 color = Just ride.vehicleColor,
                 registrationNumber = Just ride.vehicleNumber
               }

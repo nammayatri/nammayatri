@@ -1,6 +1,6 @@
 DELETE FROM atlas_transporter.product_instance AS T1 WHERE T1.type = 'LOCATIONTRACKER';
 
-UPDATE atlas_transporter.product_instance AS T1 
+UPDATE atlas_transporter.product_instance AS T1
 	SET case_id = (SELECT case_id FROM atlas_transporter.product_instance AS T2 WHERE T2.id = T1.parent_id)
 	WHERE T1.type <> 'RIDESEARCH';
 
@@ -35,6 +35,7 @@ CREATE TABLE atlas_transporter.ride (
     traveled_distance double precision NOT NULL DEFAULT 0,
     chargable_distance double precision,
     info text,
+    vehicle_variant character varying(60) NOT NULL,
     udf1 character varying(255),
     udf2 character varying(255),
     udf3 character varying(255),
@@ -65,7 +66,7 @@ CREATE INDEX idx_16395_status ON atlas_transporter.ride USING btree (status);
 
 ALTER TABLE atlas_transporter.rating RENAME COLUMN product_instance_id TO ride_id;
 
-INSERT INTO atlas_transporter.ride 
+INSERT INTO atlas_transporter.ride
     SELECT id,
     request_id,
     product_id,
@@ -88,6 +89,7 @@ INSERT INTO atlas_transporter.ride
     traveled_distance,
     chargable_distance,
     info,
+    vehicle_variant,
     udf1,
     udf2,
     udf3,
@@ -144,18 +146,18 @@ ALTER TABLE atlas_transporter.search_request RENAME COLUMN provider TO provider_
 
 ALTER TABLE atlas_transporter.search_request ADD COLUMN transaction_id character(36);
 WITH txnIdsTable AS (SELECT id, regexp_split_to_array(T3.short_id, E'_') AS txn_id FROM atlas_transporter.search_request AS T3)
-UPDATE atlas_transporter.search_request AS T1 
+UPDATE atlas_transporter.search_request AS T1
 	SET transaction_id = (SELECT txn_id[2] FROM txnIdsTable AS T2 WHERE T2.id = T1.id);
 ALTER TABLE atlas_transporter.search_request DROP COLUMN short_id;
 ALTER TABLE atlas_transporter.search_request ADD COLUMN bap_uri character varying(255);
 
-UPDATE atlas_transporter.search_request AS T1 
+UPDATE atlas_transporter.search_request AS T1
 	SET requestor_id = 'UNKNOWN' WHERE requestor_id IS NULL;
-UPDATE atlas_transporter.search_request AS T1 
+UPDATE atlas_transporter.search_request AS T1
 	SET provider_id = 'UNKNOWN' WHERE provider_id IS NULL;
-UPDATE atlas_transporter.search_request AS T1 
+UPDATE atlas_transporter.search_request AS T1
 	SET bap_id = 'UNKNOWN' WHERE bap_id IS NULL;
-UPDATE atlas_transporter.search_request AS T1 
+UPDATE atlas_transporter.search_request AS T1
 	SET bap_uri = 'UNKNOWN' WHERE bap_uri IS NULL;
 
 ALTER TABLE atlas_transporter.search_request ALTER COLUMN transaction_id SET NOT NULL;
@@ -206,13 +208,13 @@ ALTER TABLE atlas_transporter.quote RENAME COLUMN organization_id TO provider_id
 ALTER TABLE atlas_transporter.quote ADD COLUMN distance_to_nearest_driver float;
 ALTER TABLE atlas_transporter.quote ADD COLUMN distance float;
 
-UPDATE atlas_transporter.quote AS T1 
+UPDATE atlas_transporter.quote AS T1
 	SET distance_to_nearest_driver = CAST (udf1 AS float);
-UPDATE atlas_transporter.quote AS T1 
+UPDATE atlas_transporter.quote AS T1
 	SET distance_to_nearest_driver = 0 WHERE distance_to_nearest_driver IS NULL;
-UPDATE atlas_transporter.quote AS T1 
+UPDATE atlas_transporter.quote AS T1
 	SET distance = CAST ((SELECT udf5 FROM atlas_transporter.search_request AS T2 WHERE T1.request_id = T2.id) AS float);
-UPDATE atlas_transporter.quote AS T1 
+UPDATE atlas_transporter.quote AS T1
 	SET distance = 0 WHERE distance_to_nearest_driver IS NULL;
 
 
@@ -221,16 +223,16 @@ ALTER TABLE atlas_transporter.quote ALTER COLUMN distance_to_nearest_driver SET 
 ALTER TABLE atlas_transporter.quote ALTER COLUMN price SET NOT NULL;
 ALTER TABLE atlas_transporter.quote ALTER COLUMN distance SET NOT NULL;
 
-INSERT INTO atlas_transporter.ride_booking 
-    SELECT 
-        T1.id, 
-        T2.transaction_id, 
-        T1.request_id, 
-        T1.quote_id, 
-        T1.status, 
-        T1.organization_id, 
+INSERT INTO atlas_transporter.ride_booking
+    SELECT
+        T1.id,
+        T2.transaction_id,
+        T1.request_id,
+        T1.quote_id,
+        T1.status,
+        T1.organization_id,
         T2.vehicle_variant,
-        T2.bap_id, 
+        T2.bap_id,
         T2.start_time,
         T2.requestor_id,
         T1.from_location_id,
@@ -245,17 +247,17 @@ INSERT INTO atlas_transporter.ride_booking
     JOIN atlas_transporter.quote AS T3
         ON T1.quote_id = T3.id;
 
-UPDATE atlas_transporter.ride_booking AS T1 
+UPDATE atlas_transporter.ride_booking AS T1
 	SET status = 'TRIP_ASSIGNED' WHERE T1.status = 'INPROGRESS';
 
 INSERT INTO atlas_transporter.ride
-    SELECT 
-        T1.id, 
-        T1.id, 
-        T1.short_id, 
-        T1.status, 
-        T1.person_id, 
-        T1.entity_id, 
+    SELECT
+        T1.id,
+        T1.id,
+        T1.short_id,
+        T1.status,
+        T1.person_id,
+        T1.entity_id,
         T1.udf4,
         'UNKNOWN',
         T1.actual_price,
@@ -266,7 +268,7 @@ INSERT INTO atlas_transporter.ride
     FROM atlas_transporter.old_ride AS T1
     WHERE T1.status != 'CONFIRMED' AND T1.person_id IS NOT NULL;
 
-UPDATE atlas_transporter.ride AS T1 
+UPDATE atlas_transporter.ride AS T1
 	SET status = 'NEW' WHERE T1.status = 'TRIP_ASSIGNED';
 
 ALTER TABLE atlas_transporter.quote DROP COLUMN person_id;

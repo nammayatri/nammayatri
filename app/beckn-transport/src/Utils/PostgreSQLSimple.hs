@@ -1,13 +1,18 @@
-module Utils.PostgreSQLSimple (postgreSQLSimpleExecute, postgreSQLSimpleQuery) where
+module Utils.PostgreSQLSimple
+  ( postgreSQLSimpleExecute,
+    postgreSQLSimpleQuery,
+    fromFieldRead,
+  )
+where
 
 import Beckn.Storage.DB.Config (DBConfig (..))
 import Beckn.Utils.Common
 import Control.Exception (Handler (..), catches)
-import Data.Aeson
 import Data.Pool (withResource)
 import Data.Text (pack)
 import Data.Text.Encoding (decodeUtf8)
 import Database.PostgreSQL.Simple
+import Database.PostgreSQL.Simple.FromField
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (decodeUtf8, encodeUtf8, pack, (.=))
 import EulerHS.Types (SqlConn (PostgresPool), mkPostgresPoolConfig)
@@ -20,8 +25,6 @@ postgreSQLSimpleExecute q qargs = do
 
 postgreSQLSimpleQuery ::
   ( DBFlow m r,
-    FromJSON res,
-    ToJSON res,
     FromRow res,
     ToRow row
   ) =>
@@ -32,7 +35,7 @@ postgreSQLSimpleQuery q qargs = do
   logQuery q qargs
   withPostgreSQLSimple (\conn -> query conn q qargs)
 
-withPostgreSQLSimple :: (DBFlow m r, FromJSON a, ToJSON a) => (Connection -> IO a) -> m a
+withPostgreSQLSimple :: (DBFlow m r) => (Connection -> IO a) -> m a
 withPostgreSQLSimple f = do
   DBConfig {..} <- asks (.dbCfg)
   pool <-
@@ -69,3 +72,13 @@ logQuery :: (DBFlow m r, ToRow q) => Query -> q -> m ()
 logQuery q qargs =
   withPostgreSQLSimple (\conn -> decodeUtf8 <$> formatQuery conn q qargs)
     >>= logTagDebug "raw sql query"
+
+fromFieldRead ::
+  (Typeable b, Read b) =>
+  String ->
+  Field ->
+  Maybe ByteString ->
+  Conversion b
+fromFieldRead typeName field bs = fromField field bs >>= maybe err pure . readMaybe
+  where
+    err = returnError ConversionFailed field $ "Cannot read " <> typeName

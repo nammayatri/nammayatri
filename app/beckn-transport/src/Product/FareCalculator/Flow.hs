@@ -34,9 +34,8 @@ type DistanceInM = Double
 
 type MonadHandler m = (MonadThrow m, Log m)
 
-data ServiceHandle m = ServiceHandle
-  { getFarePolicy :: Id Organization.Organization -> Vehicle.Variant -> m (Maybe FarePolicy),
-    getDistance :: PickupLocation -> DropLocation -> m (Maybe Double)
+newtype ServiceHandle m = ServiceHandle
+  { getFarePolicy :: Id Organization.Organization -> Vehicle.Variant -> m (Maybe FarePolicy)
   }
 
 data FareParameters = FareParameters
@@ -58,10 +57,10 @@ doCalculateFare ::
   DistanceInM ->
   TripStartTime ->
   m FareParameters
-doCalculateFare ServiceHandle {..} orgId vehicleVariant actualDistance startTime = do
+doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
   farePolicy <- getFarePolicy orgId vehicleVariant >>= fromMaybeM NoFarePolicy
   baseFare <- calculateBaseFare farePolicy
-  distanceFare <- calculateDistanceFare farePolicy actualDistance
+  distanceFare <- calculateDistanceFare farePolicy distance
   nightShiftRate <- calculateNightShiftRate farePolicy startTime
   pure $ FareParameters baseFare distanceFare nightShiftRate
 
@@ -78,10 +77,10 @@ calculateDistanceFare ::
   FarePolicy ->
   DistanceInM ->
   m Amount
-calculateDistanceFare farePolicy actualDistance = do
+calculateDistanceFare farePolicy distance = do
   let sortedPerExtraKmRateList = NonEmpty.sortBy (compare `on` (.distanceRangeStart)) farePolicy.perExtraKmRateList -- sort it again just in case
   let baseDistance = (.distanceRangeStart) $ NonEmpty.head sortedPerExtraKmRateList
-      extraDistance = toRational actualDistance - baseDistance
+      extraDistance = toRational distance - baseDistance
   if extraDistance <= 0
     then return $ Amount 0
     else do

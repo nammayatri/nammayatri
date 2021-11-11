@@ -49,8 +49,10 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   fromLocation <- Location.buildSearchReqLoc req.origin
   toLocation <- Location.buildSearchReqLoc req.destination
   now <- getCurrentTime
-  distance <- Location.getDistance (req.origin.gps) (req.destination.gps) >>= fromMaybeM (InternalError "Unable to count distance.")
-  searchRequest <- buildSearchRequest req (getId personId) fromLocation toLocation distance now
+  distance <-
+    Location.getDistance req.origin.gps req.destination.gps
+      >>= fromMaybeM (InternalError "Unable to count distance.")
+  searchRequest <- buildSearchRequest (getId personId) fromLocation toLocation distance now
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
@@ -110,17 +112,15 @@ buildSearchRequest ::
     DBFlow m r,
     CoreMetrics m
   ) =>
-  API.SearchReq ->
   Text ->
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
   Double ->
   UTCTime ->
   m SearchRequest.SearchRequest
-buildSearchRequest req userId from to distance now = do
+buildSearchRequest userId from to distance now = do
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
-  let vehVar = req.vehicle
   return
     SearchRequest.SearchRequest
       { id = searchRequestId,
@@ -129,7 +129,6 @@ buildSearchRequest req userId from to distance now = do
         requestorId = Id userId,
         fromLocationId = from.id,
         toLocationId = to.id,
-        vehicleVariant = vehVar,
         distance = distance,
         createdAt = now
       }
@@ -151,8 +150,11 @@ mkQuote ::
   m SQuote.Quote
 mkQuote searchRequest bppOrg provider item = do
   now <- getCurrentTime
-  price <- item.price.listed_value >>= convertDecimalValueToAmount & fromMaybeM (InternalError "Unable to parse price")
+  price <-
+    item.price.listed_value >>= convertDecimalValueToAmount
+      & fromMaybeM (InternalError "Unable to parse price")
   nearestDriverDist <- getNearestDriverDist
+  vehicleVariant <- item.descriptor.code & fromMaybeM (InvalidRequest "Missing item.descriptor.code")
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where searchRequest.startTime != product.startTime, etc
@@ -166,6 +168,7 @@ mkQuote searchRequest bppOrg provider item = do
         providerName = fromMaybe "" provider.name,
         providerCompletedRidesCount = fromMaybe 0 $ provider.info >>= (.completed),
         providerId = bppOrg.id,
+        vehicleVariant,
         createdAt = now
       }
   where
@@ -203,11 +206,6 @@ mkIntent req now = do
             departure_time = StopTime now Nothing,
             transfers = []
           }
-      vehicle =
-        emptyVehicle
-          { variant = show req.vehicle
-          }
-      fare = emptyPrice
   Intent
     { query_string = Nothing,
       provider_id = Nothing,
@@ -216,8 +214,8 @@ mkIntent req now = do
       tags = Nothing,
       pickups = [pickup],
       drops = [drop'],
-      vehicle = vehicle,
+      vehicle = emptyVehicle,
       payload = Payload Nothing Nothing [] Nothing,
       transfer = Nothing,
-      fare = fare
+      fare = emptyPrice
     }

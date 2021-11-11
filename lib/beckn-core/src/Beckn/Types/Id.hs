@@ -15,6 +15,7 @@ import Database.Beam.Backend.SQL
   )
 import Database.Beam.Postgres (Postgres)
 import Database.Beam.Query (HasSqlEqualityCheck)
+import Database.PostgreSQL.Simple.FromField (FromField)
 import Dhall
 import EulerHS.Prelude
 import Servant (FromHttpApiData (parseUrlPiece), ToHttpApiData)
@@ -22,7 +23,7 @@ import Servant (FromHttpApiData (parseUrlPiece), ToHttpApiData)
 newtype Id domain = Id
   {getId :: Text}
   deriving stock (Generic, Show, Eq, Ord)
-  deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema, ToParamSchema)
+  deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema, ToParamSchema, FromField)
 
 cast :: Id a -> Id b
 cast = Id . getId

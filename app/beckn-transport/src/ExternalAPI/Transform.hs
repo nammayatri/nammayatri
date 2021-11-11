@@ -45,10 +45,10 @@ mkCatalog searchRequest quotes provider =
       }
 
 mkItemDescriptor :: Quote -> Descriptor
-mkItemDescriptor _quote =
+mkItemDescriptor quote =
   Descriptor
     { name = Nothing,
-      code = Nothing,
+      code = Just $ show quote.vehicleVariant,
       symbol = Nothing,
       short_desc = Nothing,
       long_desc = Nothing,

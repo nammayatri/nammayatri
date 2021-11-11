@@ -49,7 +49,7 @@ data SearchRequestT f = SearchRequest
     requestorId :: B.C f (Id BAPPerson),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
-    vehicleVariant :: B.C f Veh.Variant,
+    vehicleVariant :: B.C f (Maybe Veh.Variant),
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
     createdAt :: B.C f UTCTime

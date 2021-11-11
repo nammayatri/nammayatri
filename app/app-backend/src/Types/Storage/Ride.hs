@@ -18,7 +18,6 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
 import qualified Types.Storage.RideBooking as RideB
-import qualified Types.Storage.SearchRequest as SSR
 import Utils.Common
 
 data RideStatus
@@ -58,6 +57,7 @@ data RideT f = Ride
     vehicleNumber :: B.C f Text,
     vehicleModel :: B.C f Text,
     vehicleColor :: B.C f Text,
+    vehicleVariant :: B.C f Text,
     otp :: B.C f Text,
     trackingUrl :: B.C f Text,
     finalPrice :: B.C f (Maybe Amount),
@@ -101,6 +101,7 @@ fieldEMod =
           vehicleNumber = "vehicle_number",
           vehicleModel = "vehicle_model",
           vehicleColor = "vehicle_color",
+          vehicleVariant = "vehicle_variant",
           trackingUrl = "tracking_url",
           finalPrice = "final_price",
           chargableDistance = "chargable_distance",
@@ -130,7 +131,7 @@ data RideAPIEntity = RideAPIEntity
     driverRegisteredAt :: UTCTime,
     vehicleNumber :: Text,
     vehicleColor :: Text,
-    vehicleVariant :: SSR.VehicleVariant,
+    vehicleVariant :: Text,
     vehicleModel :: Text,
     rideOtp :: Text,
     computedPrice :: Maybe Amount,
@@ -140,13 +141,12 @@ data RideAPIEntity = RideAPIEntity
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
 
-makeRideAPIEntity :: SSR.SearchRequest -> Ride -> RideAPIEntity
-makeRideAPIEntity searchRequest Ride {..} = do
+makeRideAPIEntity :: Ride -> RideAPIEntity
+makeRideAPIEntity Ride {..} = do
   RideAPIEntity
     { shortRideId = shortId,
       driverNumber = driverMobileNumber,
       driverRatings = driverRating,
-      vehicleVariant = searchRequest.vehicleVariant,
       rideOtp = otp,
       computedPrice = finalPrice,
       chargableRideDistance = chargableDistance,

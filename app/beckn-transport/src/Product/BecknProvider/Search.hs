@@ -3,18 +3,20 @@
 module Product.BecknProvider.Search (search) where
 
 import App.Types
+import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.API.Search as API
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Tag as Tag
 import Beckn.Types.Id
+import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Beckn.Types.Mobility.Stop as Stop
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
+import Data.Traversable
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -22,6 +24,7 @@ import qualified ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
 import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
+import qualified Product.Location as Loc
 import Servant.Client (showBaseUrl)
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Products as SProduct
@@ -71,17 +74,15 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
         toLocation <- buildFromStop now dropOff
         let bapOrgId = bapOrg.id
         uuid <- L.generateGUID
-        vehVariant <- readMaybe (T.unpack req.message.intent.vehicle.variant) & fromMaybeM (InvalidRequest "Unable to parse vehicle variant.")
+        let vehVariant = readMaybe (T.unpack req.message.intent.vehicle.variant)
         bapUri <- req.context.bap_uri & fromMaybeM (InvalidRequest "Context must have bap_uri")
         let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId vehVariant bapUri
-        let mbDistance :: Maybe Double = (readMaybe . T.unpack) . Tag.value =<< find (\x -> x.key == "distance") (fromMaybe [] $ intent.tags)
-        distance <- mbDistance & fromMaybeM (InvalidRequest "Distance tag is not present.")
         DB.runSqlDBTransaction $ do
           Loc.create fromLocation
           Loc.create toLocation
           QSearchRequest.create searchRequest
         ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
-          onSearchCallback searchRequest transporter fromLocation searchMetricsMVar distance
+          onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
 
 buildFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.SearchReqLocation
 buildFromStop now stop = do
@@ -124,7 +125,7 @@ mkSearchRequest ::
   Location.SearchReqLocation ->
   Id Org.Organization ->
   Id Org.Organization ->
-  Veh.Variant ->
+  Maybe Veh.Variant ->
   BaseUrl ->
   SearchRequest.SearchRequest
 mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId vehVariant bapUri = do
@@ -154,28 +155,39 @@ onSearchCallback ::
   SearchRequest.SearchRequest ->
   Org.Organization ->
   Location.SearchReqLocation ->
+  Location.SearchReqLocation ->
   Metrics.SearchMetricsMVar ->
-  Double ->
   m API.OnSearchServices
-onSearchCallback searchRequest transporter fromLocation searchMetricsMVar distance = do
+onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar = do
   let transporterId = transporter.id
-      vehicleVariant = searchRequest.vehicleVariant
-  pool <- Confirm.calculateDriverPool (fromLocation.id) transporterId vehicleVariant
+  let desiredVehicleVariant = searchRequest.vehicleVariant
+  pool <- Confirm.calculateDriverPool fromLocation.id transporterId desiredVehicleVariant
   logTagInfo "OnSearchCallback" $
-    "Calculated Driver Pool for organization " +|| getId transporterId ||+ " with drivers " +| T.intercalate ", " (getId . fst <$> pool) |+ ""
-  quotes <-
-    case pool of
-      [] -> return []
-      (fstDriverValue : _) -> do
-        fare <- calculateFare transporterId vehicleVariant distance (searchRequest.startTime)
-        let nearestDist = snd fstDriverValue
-        quote <- mkQuote searchRequest fare transporterId distance nearestDist
-        DB.runSqlDBTransaction $ do
-          Quote.create quote
-        return [quote]
-  res <- mkOnSearchPayload searchRequest quotes transporter
-  Metrics.finishSearchMetrics transporterId searchMetricsMVar
-  return res
+    "Calculated Driver Pool for organization " +|| getId transporterId
+      ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""
+
+  let listOfProtoQuotes =
+        catMaybes $
+          everyPossibleVariant <&> \var ->
+            find ((== var) . (.variant)) pool
+  -- drivers sorted from nearest to furthest, so with `find`
+  -- we take nearest one and calculate fare and make PI for him
+
+  distance <-
+    map Loc.locationToLatLong [fromLocation, toLocation]
+      & MapSearch.getDistanceMb (Just MapSearch.CAR)
+      >>= fromMaybeM CantCalculateDistance
+
+  listOfQuotes <-
+    for listOfProtoQuotes $ \poolResult -> do
+      fare <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
+      mkQuote searchRequest fare transporterId distance poolResult.distanceToDriver poolResult.variant
+
+  DB.runSqlDBTransaction $
+    for_ listOfQuotes Quote.create
+
+  mkOnSearchPayload searchRequest listOfQuotes transporter
+    <* Metrics.finishSearchMetrics transporterId searchMetricsMVar
 
 mkQuote ::
   DBFlow m r =>
@@ -184,23 +196,23 @@ mkQuote ::
   Id Org.Organization ->
   Double ->
   Double ->
+  Veh.Variant ->
   m Quote.Quote
-mkQuote productSearchRequest price transporterId distance nearestDriverDist = do
+mkQuote productSearchRequest price transporterId distance nearestDriverDist vehicleVariant = do
   quoteId <- Id <$> L.generateGUID
   now <- getCurrentTime
   products <-
-    SProduct.findByName (show productSearchRequest.vehicleVariant)
+    SProduct.findByName (show vehicleVariant)
       >>= fromMaybeM ProductsNotFound
   return
     Quote.Quote
       { id = quoteId,
         requestId = productSearchRequest.id,
         productId = products.id,
-        price = price,
         providerId = transporterId,
-        distance = distance,
         distanceToNearestDriver = nearestDriverDist,
-        createdAt = now
+        createdAt = now,
+        ..
       }
 
 mkOnSearchPayload ::

@@ -89,7 +89,7 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
             bapId = searchRequest.bapId,
             price = quote.price,
             distance = quote.distance,
-            vehicleVariant = searchRequest.vehicleVariant,
+            vehicleVariant = quote.vehicleVariant,
             createdAt = now,
             updatedAt = now
           }
@@ -107,8 +107,8 @@ onConfirmCallback rideBooking searchRequest transporterOrg = do
   let transporterId = transporterOrg.id
   let rideBookingId = rideBooking.id
   let pickupPoint = searchRequest.fromLocationId
-  let vehicleVariant = searchRequest.vehicleVariant
-  driverPool <- map fst <$> calculateDriverPool pickupPoint transporterId vehicleVariant
+  let vehicleVariant = rideBooking.vehicleVariant
+  driverPool <- map (.driverId) <$> calculateDriverPool pickupPoint transporterId (Just vehicleVariant)
   setDriverPool rideBookingId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId rideBookingId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   order <- ExternalAPITransform.mkOrder rideBooking.quoteId rideBooking.id Nothing Nothing Mobility.CONFIRMED
@@ -132,20 +132,21 @@ getDriverPool rideBookingId =
       let vehicleVariant = rideBooking.vehicleVariant
           pickupPoint = rideBooking.fromLocationId
           orgId = rideBooking.providerId
-      map fst <$> calculateDriverPool pickupPoint orgId vehicleVariant
+      map (.driverId) <$> calculateDriverPool pickupPoint orgId (Just vehicleVariant)
 
 setDriverPool :: DBFlow m r => Id SRB.RideBooking -> [Id Driver] -> m ()
 setDriverPool rideBookingId ids =
   Redis.setExRedis (driverPoolKey rideBookingId) (map getId ids) (60 * 10)
 
+-- TODO: move this function somewhere to avoid Product.Search importing Product.Confirm
 calculateDriverPool ::
   ( DBFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
   ) =>
   Id SSReqLoc.SearchReqLocation ->
   Id Organization.Organization ->
-  SV.Variant ->
-  m [(Id Driver, Double)]
+  Maybe SV.Variant ->
+  m [QP.DriverPoolResult]
 calculateDriverPool locId orgId variant = do
   location <- QSReqLoc.findLocationById locId >>= fromMaybeM LocationNotFound
   let lat = location.lat

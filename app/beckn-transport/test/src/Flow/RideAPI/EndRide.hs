@@ -102,7 +102,7 @@ searchRequest =
   Fixtures.defaultSearchRequest
     { SearchRequest.id = "search",
       SearchRequest.providerId = "someOrg",
-      SearchRequest.vehicleVariant = Veh.SEDAN
+      SearchRequest.vehicleVariant = Just Veh.SEDAN
     }
 
 successfulEndByDriver :: TestTree
