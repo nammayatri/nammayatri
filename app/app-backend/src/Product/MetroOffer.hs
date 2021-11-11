@@ -57,7 +57,7 @@ buildContextMetro action txnId bapUri bppUri = do
     Mig.Context
       { Mig.domain = Mig.METRO,
         Mig.country = "IND",
-        Mig.city = "",
+        Mig.city = "Kochi",
         Mig.core_version = "0.9.1",
         Mig.bap_id = showBaseUrlText bapUri,
         Mig.bap_uri = bapUri,
