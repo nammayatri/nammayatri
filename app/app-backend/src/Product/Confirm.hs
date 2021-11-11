@@ -99,7 +99,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
         SPI.validateStatusTransition (SPI.status prdInst) SPI.CONFIRMED & fromEitherM PIInvalidStatus
         DB.runSqlDBTransaction $ do
           QCase.updateStatus (prdInst.caseId) newCaseStatus
-          QPI.updateMultiple pid uPrd
+          QPI.updateMultipleWithStatus pid uPrd
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
     return Ack
 

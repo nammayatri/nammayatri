@@ -177,13 +177,6 @@ listAllProductInstance piId status_ = do
     predicate (Storage.ById i) [] Storage.ProductInstance {..} = productId ==. B.val_ i
     predicate (Storage.ById i) s Storage.ProductInstance {..} = productId ==. B.val_ i &&. B.in_ status (B.val_ <$> s)
 
-updateMultipleFlow ::
-  DBFlow m r =>
-  Id Storage.ProductInstance ->
-  Storage.ProductInstance ->
-  m ()
-updateMultipleFlow id prdInst = DB.runSqlDB (updateMultiple id prdInst)
-
 updateMultiple :: Id Storage.ProductInstance -> Storage.ProductInstance -> DB.SqlDB ()
 updateMultiple piId prdInst = do
   dbTable <- getDbTable
@@ -194,8 +187,26 @@ updateMultiple piId prdInst = do
     setClause now prodInst Storage.ProductInstance {..} =
       mconcat
         [ updatedAt <-. B.val_ now,
+          fromLocation <-. B.val_ (Storage.fromLocation prodInst),
+          toLocation <-. B.val_ (Storage.toLocation prodInst),
+          info <-. B.val_ (Storage.info prodInst),
+          udf4 <-. B.val_ (Storage.udf4 prodInst),
+          chargeableDistance <-. B.val_ (Storage.chargeableDistance prodInst),
+          fare <-. B.val_ (Storage.fare prodInst),
+          totalFare <-. B.val_ (Storage.totalFare prodInst)
+        ]
+
+updateMultipleWithStatus :: Id Storage.ProductInstance -> Storage.ProductInstance -> DB.SqlDB ()
+updateMultipleWithStatus piId prdInst = do
+  dbTable <- getDbTable
+  currTime <- asks DB.currentTime
+  DB.update' dbTable (setClause currTime prdInst) (predicate piId)
+  where
+    predicate piid Storage.ProductInstance {..} = id ==. B.val_ piid
+    setClause now prodInst Storage.ProductInstance {..} =
+      mconcat
+        [ updatedAt <-. B.val_ now,
           status <-. B.val_ (Storage.status prodInst),
-          --personId <-. B.val_ (Storage.personId prd),
           fromLocation <-. B.val_ (Storage.fromLocation prodInst),
           toLocation <-. B.val_ (Storage.toLocation prodInst),
           info <-. B.val_ (Storage.info prodInst),

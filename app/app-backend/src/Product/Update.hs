@@ -1,6 +1,7 @@
 module Product.Update where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.API.Update
 import Beckn.Types.Core.Ack
@@ -44,7 +45,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
                   SPI.chargeableDistance =
                     trip >>= (.route) >>= (.edge.distance.value)
                 }
-        MPI.updateMultipleFlow (orderPi.id) uPrd
+        DB.runSqlDB $ MPI.updateMultiple orderPi.id uPrd
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err
     return Ack
   where
