@@ -64,18 +64,21 @@ import Utils.Auth (LookupRegistryOrg, TokenAuth)
 
 type AppAPI =
   MainAPI
-      :<|> SwaggerAPI
-
-type MetroAPI =
-  "metro"
-      :> "v1"
-      :> SignatureAuth "Authorization" LookupRegistryOrg
-      :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
-      :> Metro.OnSearch
+    :<|> SwaggerAPI
 
 type MainAPI =
-  "v2"
-    :> (Get '[JSON] Text
+  "v2" :> UIAPI
+    :<|> "cab" :> "v1" :> BecknCabAPI
+    :<|> "metro" :> "v1" :> BecknMetroAPI
+
+type BecknMetroAPI =
+  SignatureAuth "Authorization" LookupRegistryOrg
+    :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
+    :> Metro.OnSearch
+      :<|> OnSubscribeAPI LookupRegistryOnSubscribe
+
+type UIAPI =
+  Get '[JSON] Text
     :<|> RegistrationAPI
     :<|> ProfileAPI
     :<|> SearchAPI
@@ -86,24 +89,30 @@ type MainAPI =
     :<|> RideAPI
     :<|> CallAPIs
     :<|> SupportAPI
-    :<|> UpdateAPI
     :<|> RouteAPI
-    :<|> StatusAPI
     :<|> ServiceabilityAPI
     :<|> FeedbackAPI
     :<|> CustomerSupportAPI
     :<|> GoogleMapsProxyAPI
     :<|> CancellationReasonAPI
-    :<|> OnSubscribeAPI LookupRegistryOnSubscribe)
-    :<|> MetroAPI
-
 
 appAPI :: Proxy AppAPI
 appAPI = Proxy
 
+appServer :: FlowServer AppAPI
+appServer =
+  mainServer
+    :<|> writeSwaggerJSONFlow
+
 mainServer :: FlowServer MainAPI
 mainServer =
-  (pure "App is UP"
+  uiAPI
+    :<|> becknCabApi
+    :<|> becknMetroAPI
+
+uiAPI :: FlowServer UIAPI
+uiAPI =
+  pure "App is UP"
     :<|> registrationFlow
     :<|> profileFlow
     :<|> searchFlow
@@ -114,21 +123,17 @@ mainServer =
     :<|> rideFlow
     :<|> callFlow
     :<|> supportFlow
-    :<|> updateFlow
     :<|> routeApiFlow
-    :<|> statusFlow
     :<|> serviceabilityFlow
     :<|> feedbackFlow
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
-    :<|> onSubscribe)
-    :<|> Metro.searchCbMetro
 
-appServer :: FlowServer AppAPI
-appServer =
-  mainServer
-    :<|> writeSwaggerJSONFlow
+becknMetroAPI :: FlowServer BecknMetroAPI
+becknMetroAPI =
+  Metro.searchCbMetro
+    :<|> onSubscribe
 
 ---- Registration Flow ------
 type RegistrationAPI =
@@ -170,19 +175,47 @@ profileFlow =
     :<|> Profile.updatePerson
 
 -------- Search Flow --------
+
+type BecknCabAPI =
+  SignatureAuth "Authorization" LookupRegistryOrg
+    :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
+    :> API.OnSearchAPI
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_confirm"
+    :> ReqBody '[JSON] API.OnConfirmReq
+    :> Post '[JSON] API.OnConfirmRes
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_update"
+    :> ReqBody '[JSON] API.OnUpdateReq
+    :> Post '[JSON] API.OnUpdateRes
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_cancel"
+    :> ReqBody '[JSON] API.OnCancelReq
+    :> Post '[JSON] API.OnCancelRes
+    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :> "on_status"
+    :> ReqBody '[JSON] API.OnStatusReq
+    :> Post '[JSON] API.OnStatusRes
+    :<|> OnSubscribeAPI LookupRegistryOnSubscribe
+
 type SearchAPI =
   "rideSearch"
     :> TokenAuth
     :> ReqBody '[JSON] Search.SearchReq
     :> Post '[JSON] Search.SearchRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
-    :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
-    :> API.OnSearchAPI
+
+becknCabApi :: FlowServer BecknCabAPI
+becknCabApi =
+  Search.searchCb
+    :<|> Confirm.onConfirm
+    :<|> Update.onUpdate
+    :<|> Cancel.onCancel
+    :<|> Status.onStatus
+    :<|> onSubscribe
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
-    :<|> Search.searchCb
 
 type QuoteAPI =
   "rideSearch"
@@ -204,15 +237,10 @@ type ConfirmAPI =
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
     :> Post '[JSON] ConfirmAPI.ConfirmRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
-    :> "on_confirm"
-    :> ReqBody '[JSON] API.OnConfirmReq
-    :> Post '[JSON] API.OnConfirmRes
 
 confirmFlow :: FlowServer ConfirmAPI
 confirmFlow =
   Confirm.confirm
-    :<|> Confirm.onConfirm
 
 type RideBookingAPI =
   "rideBooking"
@@ -241,15 +269,10 @@ type CancelAPI =
     :> TokenAuth
     :> ReqBody '[JSON] Cancel.CancelReq
     :> Post '[JSON] Cancel.CancelRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
-    :> "on_cancel"
-    :> ReqBody '[JSON] API.OnCancelReq
-    :> Post '[JSON] API.OnCancelRes
 
 cancelFlow :: FlowServer CancelAPI
 cancelFlow =
   Cancel.cancel
-    :<|> Cancel.onCancel
 
 type RideAPI =
   "ride"
@@ -311,17 +334,6 @@ type RouteAPI =
 
 routeApiFlow :: FlowServer RouteAPI
 routeApiFlow = Location.getRoute
-
--------- Status Flow----------
-type StatusAPI =
-  SignatureAuth "Authorization" LookupRegistryOrg
-    :> "on_status"
-    :> ReqBody '[JSON] API.OnStatusReq
-    :> Post '[JSON] API.OnStatusRes
-
-statusFlow :: FlowServer StatusAPI
-statusFlow =
-  Status.onStatus
 
 -------- Serviceability----------
 type ServiceabilityAPI =

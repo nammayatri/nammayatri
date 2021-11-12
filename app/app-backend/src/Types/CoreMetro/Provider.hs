@@ -1,10 +1,10 @@
 module Types.CoreMetro.Provider where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (exp, id)
 import Types.CoreMetro.Item
 import Types.CoreMetro.Location
-import Data.OpenApi (ToSchema)
 
 data Provider = Provider
   { id :: Text,

@@ -10,8 +10,8 @@ import Beckn.Types.Amount
     amountFromString,
     amountToString,
   )
-import EulerHS.Prelude
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
 
 newtype DecimalValue = DecimalValue Text
   deriving (Eq, Show, Generic, FromJSON, ToJSON, ToSchema)

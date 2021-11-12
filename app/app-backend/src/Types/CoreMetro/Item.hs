@@ -2,9 +2,9 @@ module Types.CoreMetro.Item where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.Price (Price)
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
-import Data.OpenApi (ToSchema)
 
 data Item = Item
   { id :: Text,

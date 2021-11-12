@@ -5,12 +5,12 @@ import Beckn.Utils.Example
 import Control.Arrow ((>>>))
 import Data.Aeson
 import Data.Aeson.Types (parseFail)
+import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (many, try, (<|>))
 import Text.Parsec
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as P
-import Data.OpenApi (ToSchema)
 
 -- Regular expression: ^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$
 

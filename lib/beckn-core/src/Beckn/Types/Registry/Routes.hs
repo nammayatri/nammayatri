@@ -10,12 +10,7 @@ type LookupAPI =
     :> ReqBody '[JSON] API.LookupRequest
     :> Post '[JSON] API.LookupResponse
 
-lookupAPI ::
-  Proxy
-    ( "lookup"
-        :> ReqBody '[JSON] API.LookupRequest
-        :> Post '[JSON] API.LookupResponse
-    )
+lookupAPI :: Proxy LookupAPI
 lookupAPI = Proxy
 
 type OnSubscribeAPI registryLookup =

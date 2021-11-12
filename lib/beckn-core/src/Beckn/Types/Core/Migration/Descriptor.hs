@@ -1,10 +1,10 @@
 module Beckn.Types.Core.Migration.Descriptor (Descriptor (..), emptyDescriptor) where
 
+import Beckn.Types.App (BaseUrl)
 import Beckn.Types.Core.Migration.Image (Image)
 import Beckn.Utils.JSON
-import EulerHS.Prelude
 import Data.OpenApi (ToSchema)
-import Beckn.Types.App (BaseUrl)
+import EulerHS.Prelude
 
 data Descriptor = Descriptor
   { name :: Maybe Text,

@@ -22,8 +22,8 @@ import Types.CoreMetro.Catalog
 import Types.CoreMetro.Item
 import Types.CoreMetro.Location
 import Types.CoreMetro.Provider
-import Types.Storage.SearchRequest (SearchRequest)
 import qualified Types.Storage.Organization as Org
+import Types.Storage.SearchRequest (SearchRequest)
 import qualified Utils.Metrics as Metrics
 
 type OnSearch =

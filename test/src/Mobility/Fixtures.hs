@@ -119,10 +119,10 @@ searchServices ::
   Text ->
   AppBESearch.SearchReq ->
   ClientM AppBESearch.SearchRes
-searchServices :<|> _ = client (Proxy :: Proxy AbeRoutes.SearchAPI)
+searchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
 cancelRide :: Id BRB.RideBooking -> Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
-cancelRide :<|> _ = client (Proxy :: Proxy AbeRoutes.CancelAPI)
+cancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> ClientM APISuccess
@@ -165,7 +165,7 @@ getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM QuoteAPI.GetQuot
 getQuotes = client (Proxy :: Proxy AbeRoutes.QuoteAPI)
 
 appConfirmRide :: Text -> Id BSearchRequest.SearchRequest -> Id BQuote.Quote -> ClientM ConfirmAPI.ConfirmRes
-appConfirmRide :<|> _ = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
+appConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)

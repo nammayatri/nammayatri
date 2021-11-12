@@ -1,7 +1,7 @@
 module Beckn.Types.Core.Migration.Image (Image (..)) where
 
-import EulerHS.Prelude
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
 
 newtype Image = Image Text
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

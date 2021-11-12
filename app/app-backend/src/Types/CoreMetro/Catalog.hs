@@ -2,9 +2,9 @@ module Types.CoreMetro.Catalog where
 
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Utils.JSON (slashedRecordFields)
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (exp, id)
 import Types.CoreMetro.Provider
-import Data.OpenApi (ToSchema)
 
 data Catalog = Catalog
   { bpp_descriptor :: Descriptor,

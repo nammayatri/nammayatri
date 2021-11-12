@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Migration.Price (Price (..)) where
 
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
-import EulerHS.Prelude
 import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
 
 data Price = Price
   { currency :: Maybe Text,
