@@ -76,7 +76,7 @@ getOrganizationLock = do
   case Map.lookup shardId shardMap of
     Just shortOrgId -> do
       lockAvailable <- Redis.tryLockRedis ("beckn:allocation:lock_" <> getShortId shortOrgId) 10
-      logInfo ("Lock available on " <> getShortId shortOrgId <> ": " <> show lockAvailable)
+      logInfo ("Counter: " <> show shardCounter <> " | Shard id: " <> show shardId <> " | Lock availability on " <> getShortId shortOrgId <> ": " <> show lockAvailable)
       if lockAvailable
         then pure shortOrgId
         else getOrganizationLock

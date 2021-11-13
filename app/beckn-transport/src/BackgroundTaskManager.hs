@@ -16,6 +16,7 @@ import Beckn.Utils.FlowLogging
 import qualified Beckn.Utils.Servant.Server as Server
 import Beckn.Utils.Servant.SignatureAuth
 import Control.Concurrent
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (exitSuccess)
 import qualified EulerHS.Runtime as R
@@ -56,6 +57,8 @@ runBackgroundTaskManager configModifier = do
             & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
         managers <- createManagers managersSettings
         logInfo ("Loaded http managers - " <> show (keys managers))
+        let shardMap = btmEnv.driverAllocationConfig.shards
+        logInfo $ "Shard config: " <> show shardMap <> " | Shard count: " <> show (Map.size shardMap)
         logInfo $ "Starting Background Task Manager on port " <> show port
         return $ flowRt {R._httpClientManagers = managers}
     let settings =
