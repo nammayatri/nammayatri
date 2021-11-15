@@ -16,6 +16,8 @@ data RideBookingStatusRes = RideBookingStatusRes
   { id :: Id RideBooking,
     status :: RideBookingStatus,
     estimatedFare :: Amount,
+    discount :: Maybe Amount,
+    estimatedTotalFare :: Amount,
     toLocation :: SearchReqLocationAPIEntity,
     fromLocation :: SearchReqLocationAPIEntity,
     ride :: Maybe RideAPIEntity,
