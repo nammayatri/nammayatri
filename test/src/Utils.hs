@@ -19,8 +19,7 @@ import Servant.Client hiding (client)
 defaultTestLoggerConfig :: LoggerConfig
 defaultTestLoggerConfig =
   LoggerConfig
-    { isAsync = True,
-      level = DEBUG,
+    { level = DEBUG,
       logToFile = True,
       logFilePath = "/tmp/beckn-integ-test.log",
       logToConsole = False,

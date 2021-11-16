@@ -42,8 +42,7 @@ defaultConfig =
     { port = 4343,
       loggerConfig =
         LoggerConfig
-          { isAsync = True,
-            level = DEBUG,
+          { level = DEBUG,
             logToFile = True,
             logFilePath = "/tmp/mock-sms.log",
             logToConsole = True,

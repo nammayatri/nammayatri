@@ -53,7 +53,7 @@ appendLogContext val lc =
 getEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig
 getEulerLoggerConfig LoggerConfig {..} =
   T.defaultLoggerConfig
-    { T._isAsync = isAsync,
+    { T._isAsync = True,
       T._logLevel = logLevel,
       T._logToFile = logToFile,
       T._logFilePath = logFilePath,

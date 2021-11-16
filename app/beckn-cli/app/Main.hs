@@ -101,8 +101,7 @@ runWithFlowRuntime flow = do
   let logRuntime =
         getEulerLoggerRuntime (Just "cli") $
           LoggerConfig
-            { isAsync = False,
-              level = DEBUG,
+            { level = DEBUG,
               logToFile = False,
               logFilePath = "",
               logToConsole = True,

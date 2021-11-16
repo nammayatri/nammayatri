@@ -40,8 +40,7 @@ defaultConfig =
     { port = 4545,
       loggerConfig =
         LoggerConfig
-          { isAsync = True,
-            level = DEBUG,
+          { level = DEBUG,
             logToFile = True,
             logFilePath = "/tmp/mock-fcm.log",
             logToConsole = True,

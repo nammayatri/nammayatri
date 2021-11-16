@@ -118,6 +118,7 @@ dependencies:
   - record-hasfield
   - record-dot-preprocessor
   - openapi3
+  - fast-logger
 
 ghc-options:
   - -fwrite-ide-info
