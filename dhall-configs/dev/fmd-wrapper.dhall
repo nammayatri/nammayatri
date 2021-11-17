@@ -16,6 +16,15 @@ let pgcfg =
   , schemaName = "atlas_fmd_wrapper"
   }
 
+let esqDBCfg = 
+  { connectHost = postgresConfig.connectHost
+  , connectPort = postgresConfig.connectPort
+  , connectUser = postgresConfig.connectUser
+  , connectPassword = postgresConfig.connectPassword
+  , connectDatabase = postgresConfig.connectDatabase
+  , connectSchemaName = pgcfg.schemaName
+  }
+
 let rcfg =
   { connectHost = "localhost"
   , connectPort = 6379
@@ -47,6 +56,7 @@ let httpClientOptions =
 in
 
 { dbCfg = pgcfg
+, esqDBCfg = esqDBCfg
 , redisCfg = rcfg
 , port = +8018
 , metricsPort = +9995

@@ -2,6 +2,7 @@ module Beckn.Utils.IOLogging
   ( LoggerConfig (..),
     logOutputImplementation,
     withLogTagImplementation,
+    logOutputIO,
     appendLogTag,
   )
 where
@@ -16,6 +17,10 @@ import System.Log.FastLogger
 logOutputImplementation :: (HasLog r, MonadReader r m, MonadIO m, MonadTime m) => LogLevel -> Text -> m ()
 logOutputImplementation logLevel message = do
   logEnv <- asks (.loggerEnv)
+  logOutputIO logEnv logLevel message
+
+logOutputIO :: (MonadIO m, MonadTime m) => LoggerEnv -> LogLevel -> Text -> m ()
+logOutputIO logEnv logLevel message = do
   when (logLevel >= logEnv.level) $ do
     now <- getCurrentTime
     let formattedMessage = logFormatterText now logEnv.hostName logLevel logEnv.tags message

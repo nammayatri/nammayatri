@@ -14,6 +14,7 @@ module Beckn.Types.Amount
   )
 where
 
+import Beckn.Storage.Esqueleto
 import Beckn.Utils.Example
 import Control.Lens.Operators
 import Data.Char
@@ -36,7 +37,7 @@ import qualified Money as M
 -- Functions / and recip will fail with an error if the denominator is zero.
 newtype Amount = Amount Rational
   deriving (Eq, Ord, Show, Read, Generic)
-  deriving newtype (Num, Real, Fractional)
+  deriving newtype (Num, Real, Fractional, PersistField, PersistFieldSql)
 
 instance Example Amount where
   example = Amount 10

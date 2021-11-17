@@ -10,6 +10,7 @@ module App.Types
 where
 
 import Beckn.Storage.DB.Config (DBConfig)
+import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
@@ -25,6 +26,7 @@ import Types.Wrapper (DunzoConfig)
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
+    esqDBCfg :: EsqDBConfig,
     redisCfg :: T.RedisConfig,
     port :: Int,
     metricsPort :: Int,
@@ -51,6 +53,7 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { config :: AppCfg,
     dbCfg :: DBConfig,
+    esqDBEnv :: EsqDBEnv,
     selfId :: Text,
     xGatewayUri :: BaseUrl,
     xGatewayApiKey :: Maybe Text,
@@ -74,6 +77,7 @@ buildAppEnv config@AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   return $
     AppEnv
       { ..

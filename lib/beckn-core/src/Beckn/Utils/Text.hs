@@ -2,6 +2,7 @@ module Beckn.Utils.Text where
 
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Char as Char
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import EulerHS.Prelude
@@ -29,3 +30,8 @@ maskText text =
   if length text > 6
     then T.take 3 text <> "..." <> T.takeEnd 3 text
     else "..."
+
+camelCaseToSnakeCase :: Text -> Text
+camelCaseToSnakeCase =
+  T.concatMap \c ->
+    if Char.isUpper c then T.pack ['_', Char.toLower c] else T.singleton c

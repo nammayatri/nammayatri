@@ -6,13 +6,13 @@ import Beckn.Types.Logging
   ( LogLevel (DEBUG),
     LoggerConfig (..),
   )
+import Beckn.Utils.FlowLogging (getEulerLoggerRuntime)
 import Beckn.Utils.Logging
 import qualified Data.Aeson as J
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import Beckn.Utils.FlowLogging (getEulerLoggerRuntime)
 import GenerateKeyPair (generateKeyPair)
 import Options.Applicative
   ( Parser,

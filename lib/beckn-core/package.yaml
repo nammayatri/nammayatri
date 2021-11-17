@@ -119,6 +119,13 @@ dependencies:
   - record-dot-preprocessor
   - openapi3
   - fast-logger
+  - persistent           
+  - persistent-postgresql 
+  - esqueleto           
+  - monad-logger
+  - resourcet
+  - unliftio-core
+  - resource-pool
 
 ghc-options:
   - -fwrite-ide-info

@@ -18,6 +18,15 @@ let pgcfg =
   , schemaName = "atlas_app"
   }
 
+let esqDBCfg = 
+  { connectHost = postgresConfig.connectHost
+  , connectPort = postgresConfig.connectPort
+  , connectUser = postgresConfig.connectUser
+  , connectPassword = postgresConfig.connectPassword
+  , connectDatabase = postgresConfig.connectDatabase
+  , connectSchemaName = pgcfg.schemaName
+  }
+
 let rcfg =
   { connectHost = "cache.primary.beckn.juspay.net"
   , connectPort = 6379
@@ -72,6 +81,7 @@ let httpClientOptions =
 in
 
 { dbCfg = pgcfg
+, esqDBCfg = esqDBCfg
 , redisCfg = rcfg
 , smsCfg = smsConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"

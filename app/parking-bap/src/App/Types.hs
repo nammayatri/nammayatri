@@ -1,6 +1,7 @@
 module App.Types where
 
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions (..))
@@ -10,7 +11,8 @@ import qualified Data.Text as T
 import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
-  { port :: Int,
+  { esqDBCfg :: EsqDBConfig,
+    port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     selfId :: Text,
@@ -21,6 +23,7 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { config :: AppCfg,
+    esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv
   }
@@ -30,6 +33,7 @@ buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
   hostname <- fmap T.pack <$> lookupEnv "POD_NAME"
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   isShuttingDown <- mkShutdown
   return $ AppEnv {..}
 

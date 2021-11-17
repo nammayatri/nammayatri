@@ -6,6 +6,7 @@ where
 import App.Routes (serverAPI, serverHandler)
 import App.Types
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Config (EsqDBConfig (..))
 import Beckn.Types.Logging
 import Beckn.Utils.Servant.Server (runServerService)
 import Servant (Context (..))
@@ -18,7 +19,16 @@ runService configModifier = do
 defaultConfig :: AppCfg
 defaultConfig =
   AppCfg
-    { port = 1111,
+    { esqDBCfg =
+        EsqDBConfig
+          { connectHost = "localhost",
+            connectPort = 1234,
+            connectUser = "User",
+            connectPassword = "Pass",
+            connectDatabase = "DB",
+            connectSchemaName = "Schema"
+          },
+      port = 1111,
       loggerConfig =
         LoggerConfig
           { level = DEBUG,

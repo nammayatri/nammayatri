@@ -13,6 +13,7 @@ where
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.DB.Config (DBConfig)
+import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
@@ -28,6 +29,7 @@ import Types.Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
+    esqDBCfg :: EsqDBConfig,
     redisCfg :: T.RedisConfig,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
@@ -73,6 +75,7 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { config :: AppCfg,
     dbCfg :: DBConfig,
+    esqDBEnv :: EsqDBEnv,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     inviteSmsTemplate :: Text,
@@ -116,6 +119,7 @@ buildAppEnv config@AppCfg {..} = do
   transporterMetrics <- registerTransporterMetricsContainer
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

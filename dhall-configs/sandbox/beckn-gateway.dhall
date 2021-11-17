@@ -16,6 +16,15 @@ let pgcfg =
   , schemaName = "atlas_gateway"
   }
 
+let esqDBCfg = 
+  { connectHost = postgresConfig.connectHost
+  , connectPort = postgresConfig.connectPort
+  , connectUser = postgresConfig.connectUser
+  , connectPassword = postgresConfig.connectPassword
+  , connectDatabase = postgresConfig.connectDatabase
+  , connectSchemaName = pgcfg.schemaName
+  }
+
 let rcfg =
   { connectHost = "ec-redis-beta.bfw4iw.ng.0001.apse1.cache.amazonaws.com"
   , connectPort = 6379
@@ -41,6 +50,7 @@ let coreVersions =
 in
 
 { dbCfg = pgcfg
+, esqDBCfg = esqDBCfg
 , redisCfg = rcfg
 , port = +8015
 , metricsPort = +9999
