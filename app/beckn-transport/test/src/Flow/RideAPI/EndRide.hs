@@ -2,23 +2,18 @@ module Flow.RideAPI.EndRide (endRideTests) where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
-import Data.List (isSubsequenceOf)
 import EulerHS.Prelude
 import qualified Fixtures
 import Product.FareCalculator.Flow
 import qualified Product.RideAPI.Handlers.EndRide as Handle
-import Servant.Server as Serv (ServerError)
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
-import Types.App
 import Types.Error
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Quote as PI
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.SearchRequest as SearchRequest
-import qualified Types.Storage.Vehicle as Veh
 import Utils.Common (throwError)
 import Utils.SilentLogger ()
 
@@ -70,7 +65,10 @@ handle =
               discount = Nothing
             },
       recalculateFareEnabled = pure False,
-      putDiffMetric = \_ _ -> pure ()
+      putDiffMetric = \_ _ -> pure (),
+      findDriverLocById = \_ -> pure Nothing,
+      getKeyRedis = \_ -> pure (Just ()),
+      updateLocationAllowedDelay = pure 60
     }
 
 endRide ::
@@ -93,13 +91,6 @@ rideBooking =
     { SRB.id = Id "rideBooking",
       SRB.status = SRB.TRIP_ASSIGNED,
       SRB.quoteId = Id "search"
-    }
-
-searchQuote :: PI.Quote
-searchQuote =
-  Fixtures.defaultQuote
-    { PI.id = "search",
-      PI.requestId = "search"
     }
 
 searchRequest :: SearchRequest.SearchRequest

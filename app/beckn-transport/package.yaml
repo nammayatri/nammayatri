@@ -137,3 +137,6 @@ tests:
     dependencies:
       - beckn-transport
       - beckn-core
+    ghc-options:
+      - -Wall
+      # - -Werror # turn it on in BKN-1069
