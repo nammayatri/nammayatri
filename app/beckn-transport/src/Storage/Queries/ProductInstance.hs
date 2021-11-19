@@ -143,6 +143,13 @@ updateCaseId prodInstId caseId_ = do
           caseId <-. B.val_ scCaseId
         ]
 
+getInProgressByDriverId :: DBFlow m r => Id Person -> m (Maybe Storage.ProductInstance)
+getInProgressByDriverId driverId = do
+  dbTable <- getDbTable
+  DB.findOne dbTable $ \Storage.ProductInstance {..} ->
+    personId ==. B.val_ (Just driverId)
+      &&. status ==. B.val_ Storage.INPROGRESS
+
 updateDistance ::
   Id Person ->
   Double ->

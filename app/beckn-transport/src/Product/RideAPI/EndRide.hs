@@ -2,6 +2,7 @@ module Product.RideAPI.EndRide where
 
 import App.Types (FlowHandler)
 import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Redis.Queries as Redis
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount
 import Beckn.Types.Common
@@ -12,6 +13,7 @@ import Product.ProductInstance as PI
 import qualified Product.RideAPI.Handlers.EndRide as Handler
 import qualified Storage.Queries.Case as Case
 import qualified Storage.Queries.DriverInformation as DriverInformation
+import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.ProductInstance as PI
@@ -36,7 +38,10 @@ endRide personId rideId = withFlowHandlerAPI $ do
           endRideTransaction,
           calculateFare = Fare.calculateFare,
           recalculateFareEnabled = asks (.recalculateFareEnabled),
-          putDiffMetric = putFareAndDistanceDeviations
+          putDiffMetric = putFareAndDistanceDeviations,
+          findDriverLocById = DrLoc.findById,
+          getKeyRedis = Redis.getKeyRedis,
+          updateLocationAllowedDelay = asks (.updateLocationAllowedDelay) <&> fromIntegral
         }
 
 endRideTransaction :: DBFlow m r => [Id PI.ProductInstance] -> Id Case.Case -> Id Case.Case -> Id Driver -> Amount -> Amount -> Double -> m ()

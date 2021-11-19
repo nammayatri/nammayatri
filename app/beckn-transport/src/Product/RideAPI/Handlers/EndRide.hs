@@ -5,12 +5,14 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Data.Text as T
-import Data.Time (UTCTime)
+import Data.Time (NominalDiffTime, UTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (pi)
 import qualified Product.FareCalculator.Interpreter as Fare
+import Product.Location (missingLocationUpdatesKey)
 import Types.App (Driver)
 import Types.Error
 import qualified Types.Storage.Case as Case
+import qualified Types.Storage.DriverLocation as DrLoc
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.ProductInstance as PI
@@ -31,11 +33,14 @@ data ServiceHandle m = ServiceHandle
       UTCTime ->
       m Fare.FareParameters,
     recalculateFareEnabled :: m Bool,
-    putDiffMetric :: Amount -> Double -> m ()
+    putDiffMetric :: Amount -> Double -> m (),
+    findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
+    getKeyRedis :: Text -> m (Maybe ()),
+    updateLocationAllowedDelay :: m NominalDiffTime
   }
 
 endRideHandler ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id Person.Person ->
   Id PI.ProductInstance ->
@@ -66,6 +71,16 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   return APISuccess.Success
   where
+    lastLocUdateTooLongAgo = do
+      now <- getCurrentTime
+      allowedUpdatesDelay <- updateLocationAllowedDelay
+      findDriverLocById requestorId
+        <&> maybe True (\loc -> now `diffUTCTime` loc.updatedAt > allowedUpdatesDelay)
+
+    thereWereMissingLocUpdates =
+      getKeyRedis (missingLocationUpdatesKey rideId)
+        <&> isJust
+
     recalculateFare orderCase orderPi = do
       transporterId <- Id <$> orderCase.provider & fromMaybeM (CaseFieldNotPresent "provider")
       oldDistance <-
@@ -74,7 +89,11 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       let estimatedFare = orderPi.estimatedFare
       let estimatedTotalFare = orderPi.estimatedTotalFare
       shouldRecalculateFare <- recalculateFareEnabled
-      if shouldRecalculateFare
+      missingLocationUpdates <-
+        (||)
+          <$> lastLocUdateTooLongAgo
+          <*> thereWereMissingLocUpdates
+      if shouldRecalculateFare && not missingLocationUpdates
         then do
           fareParams <- calculateFare transporterId orderPi.vehicleVariant orderPi.traveledDistance orderCase.startTime
           let updatedFare = Fare.fareSum fareParams

@@ -65,6 +65,7 @@ data AppCfg = AppCfg
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
     updateLocationRefreshPeriod :: Seconds,
+    updateLocationAllowedDelay :: Seconds,
     metricsSearchDurationTimeout :: Seconds,
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets
@@ -105,6 +106,7 @@ data AppEnv = AppEnv
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
     updateLocationRefreshPeriod :: Seconds,
+    updateLocationAllowedDelay :: Seconds,
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets
   }
