@@ -63,6 +63,13 @@ findAllByDriverId driverId_ = do
   where
     predicate Storage.Ride {..} = driverId ==. B.val_ driverId_
 
+getInProgressByDriverId :: DBFlow m r => Id Pers.Person -> m (Maybe Storage.Ride)
+getInProgressByDriverId driverId' = do
+  dbTable <- getDbTable
+  DB.findOne dbTable $ \Storage.Ride {..} ->
+    driverId ==. B.val_ driverId'
+      &&. status ==. B.val_ Storage.INPROGRESS
+
 updateStatus ::
   Id Storage.Ride ->
   Storage.RideStatus ->

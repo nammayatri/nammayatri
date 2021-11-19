@@ -4,11 +4,13 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Data.Time (UTCTime)
+import Data.Time (NominalDiffTime, UTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (pi)
 import qualified Product.FareCalculator.Interpreter as Fare
+import Product.Location (missingLocationUpdatesKey)
 import Types.App (Driver)
 import Types.Error
+import qualified Types.Storage.DriverLocation as DrLoc
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Ride as Ride
@@ -31,11 +33,14 @@ data ServiceHandle m = ServiceHandle
       UTCTime ->
       m Fare.FareParameters,
     recalculateFareEnabled :: m Bool,
-    putDiffMetric :: Amount -> Double -> m ()
+    putDiffMetric :: Amount -> Double -> m (),
+    findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
+    getKeyRedis :: Text -> m (Maybe ()),
+    updateLocationAllowedDelay :: m NominalDiffTime
   }
 
 endRideHandler ::
-  (MonadThrow m, Log m) =>
+  (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id Person.Person ->
   Id Ride.Ride ->
@@ -66,13 +71,27 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   return APISuccess.Success
   where
+    lastLocUdateTooLongAgo = do
+      now <- getCurrentTime
+      allowedUpdatesDelay <- updateLocationAllowedDelay
+      findDriverLocById requestorId
+        <&> maybe True (\loc -> now `diffUTCTime` loc.updatedAt > allowedUpdatesDelay)
+
+    thereWereMissingLocUpdates =
+      getKeyRedis (missingLocationUpdatesKey rideId)
+        <&> isJust
+
     recalculateFare rideBooking ride = do
       let transporterId = rideBooking.providerId
           vehicleVariant = rideBooking.vehicleVariant
           oldDistance = rideBooking.distance
           estimatedFare = rideBooking.estimatedFare
       shouldRecalculateFare <- recalculateFareEnabled
-      if shouldRecalculateFare
+      missingLocationUpdates <-
+        (||)
+          <$> lastLocUdateTooLongAgo
+          <*> thereWereMissingLocUpdates
+      if shouldRecalculateFare && not missingLocationUpdates
         then do
           let actualDistance = ride.traveledDistance
           fareParams <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime

@@ -6,9 +6,13 @@ import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
-data UpdateLocationReq = UpdateLocationReq
-  { lastUpdate :: Maybe UTCTime,
-    waypoints :: NonEmpty LatLong
+type UpdateLocationReq = NonEmpty Waypoint
+
+-- Short field names for lesser json array size:
+data Waypoint = Waypoint
+  { pt :: LatLong, -- point
+    ts :: UTCTime, -- timestamp
+    acc :: Maybe Double -- accuracy, optional for now
   }
   deriving (Generic, ToJSON, Show, FromJSON, ToSchema)
 

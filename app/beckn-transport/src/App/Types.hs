@@ -67,6 +67,7 @@ data AppCfg = AppCfg
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
     updateLocationRefreshPeriod :: Seconds,
+    updateLocationAllowedDelay :: Seconds,
     metricsSearchDurationTimeout :: Seconds,
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets,
@@ -106,9 +107,6 @@ data AppEnv = AppEnv
     driverPositionInfoExpiry :: Maybe Seconds,
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
-    recalculateFareEnabled :: Bool,
-    updateLocationRefreshPeriod :: Seconds,
-    registrySecrets :: RegistrySecrets,
     loggerEnv :: LoggerEnv
   }
   deriving (Generic)

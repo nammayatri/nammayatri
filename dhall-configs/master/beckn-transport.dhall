@@ -99,6 +99,7 @@ in
 , minimumDriverRatesCount = +5
 , recalculateFareEnabled = True
 , updateLocationRefreshPeriod = +5
+, updateLocationAllowedDelay = +60
 , metricsSearchDurationTimeout = +45
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets

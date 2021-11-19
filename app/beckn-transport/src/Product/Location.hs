@@ -3,6 +3,7 @@ module Product.Location where
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -14,7 +15,6 @@ import Data.Time (diffUTCTime)
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import qualified Storage.Queries.DriverLocation as DrLoc
-import qualified Storage.Queries.DriverLocation as DriverLocation
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import Types.API.Location as Location
@@ -24,34 +24,56 @@ import qualified Types.Storage.Ride as SRide
 import Utils.Common hiding (id)
 import Prelude (atan2)
 
+missingLocationUpdatesKey :: Id SRide.Ride -> Text
+missingLocationUpdatesKey (Id rideId) = "BPP:missingLocationUpdates:" <> rideId
+
 updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
-updateLocation personId req = withFlowHandlerAPI $ do
+updateLocation personId waypoints = withFlowHandlerAPI . withLogTag "driverLocationUpdate" $ do
   driver <-
     Person.findPersonById personId
       >>= fromMaybeM PersonNotFound
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
-  let driverId = driver.id
-  mbLoc <- DrLoc.findById driverId
+  mbLoc <- DrLoc.findById driver.id
   now <- getCurrentTime
-  refreshPeriod <- asks (.updateLocationRefreshPeriod) <&> fromIntegral
+  refreshPeriod <- askConfig (.updateLocationRefreshPeriod) <&> fromIntegral
   distanceMb <- case mbLoc of
     Just loc ->
       if now `diffUTCTime` loc.updatedAt > refreshPeriod
         then
-          let lastWaypoint = locationToLatLong loc
+          let lastWaypoint =
+                Waypoint
+                  { pt = locationToLatLong loc,
+                    ts = loc.updatedAt,
+                    acc = Nothing
+                  }
               traversedWaypoints = lastWaypoint : waypointList
-           in pure . Just $ getRouteLinearLength traversedWaypoints
-        else logWarning "UpdateLocation called before refresh period passed, ignoring" $> Nothing
-    Nothing -> pure . Just $ getRouteLinearLength waypointList
-  let lastUpdate = fromMaybe now (req.lastUpdate)
+           in calcDistanceMb driver.id traversedWaypoints
+        else logWarning "Called before refresh period passed, ignoring" $> Nothing
+    Nothing -> calcDistanceMb driver.id waypointList
   DB.runSqlDBTransaction $ do
     whenJust distanceMb $ QRide.updateDistance driver.id
-    DrLoc.upsertGpsCoord driverId currPoint lastUpdate
-  logTagInfo "driverLocationUpdate" (getId personId <> " " <> show req.waypoints)
+    DrLoc.upsertGpsCoord driver.id currPoint.pt currPoint.ts
+  logInfo $ getId personId <> " " <> encodeToText waypoints
   return Success
   where
-    currPoint = NE.last (req.waypoints)
-    waypointList = NE.toList (req.waypoints)
+    currPoint = NE.last waypoints
+    waypointList = NE.toList waypoints
+    checkWaypointsForMissingUpdates allowedDelay wps =
+      or $ zipWith (\a b -> b.ts `diffUTCTime` a.ts > allowedDelay) wps (tail wps)
+    calcDistanceMb driverId wps =
+      QRide.getInProgressByDriverId driverId >>= \case
+        Just ride -> do
+          missingLocationUpdates <-
+            Redis.getKeyRedis @() (missingLocationUpdatesKey ride.id)
+              <&> maybe False (const True)
+          allowedDelay <- askConfig (.updateLocationAllowedDelay) <&> fromIntegral
+          let missingUpdates =
+                missingLocationUpdates
+                  || checkWaypointsForMissingUpdates allowedDelay wps
+          if missingUpdates
+            then Redis.setExRedis (missingLocationUpdatesKey ride.id) () (60 * 60 * 24) $> Nothing
+            else pure . Just . getRouteLinearLength $ map (.pt) wps
+        Nothing -> logWarning "No ride is assigned to driver, ignoring" $> Nothing
 
 getLocation :: Id SRide.Ride -> FlowHandler GetLocationRes
 getLocation rideId = withFlowHandlerAPI $ do
@@ -68,7 +90,7 @@ getLocation rideId = withFlowHandlerAPI $ do
       & Person.findPersonById
       >>= fromMaybeM PersonNotFound
   currLocation <-
-    DriverLocation.findById driver.id
+    DrLoc.findById driver.id
       >>= fromMaybeM LocationNotFound
   let lastUpdate = currLocation.updatedAt
   let totalDistance = ride.traveledDistance

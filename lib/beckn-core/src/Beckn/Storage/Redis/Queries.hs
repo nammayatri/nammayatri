@@ -59,6 +59,7 @@ setExRedis key value ttl =
   void $ runKV $ L.setex (DTE.encodeUtf8 key) (toEnum ttl) (BSL.toStrict $ A.encode value)
 
 getKeyRedis ::
+  forall a m.
   ( HasCallStack,
     L.MonadFlow m,
     MonadThrow m,

@@ -2,6 +2,7 @@ module Product.RideAPI.EndRide where
 
 import App.Types (FlowHandler)
 import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Redis.Queries as Redis
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -10,6 +11,7 @@ import Product.BecknProvider.BP
 import qualified Product.FareCalculator.Interpreter as Fare
 import qualified Product.RideAPI.Handlers.EndRide as Handler
 import qualified Storage.Queries.DriverInformation as DriverInformation
+import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
@@ -35,8 +37,11 @@ endRide personId rideId = withFlowHandlerAPI $ do
           notifyCompleteToBAP = sendRideCompletedUpdateToBAP,
           endRideTransaction,
           calculateFare = Fare.calculateFare,
-          recalculateFareEnabled = asks (.recalculateFareEnabled),
-          putDiffMetric = putFareAndDistanceDeviations
+          recalculateFareEnabled = askConfig (.recalculateFareEnabled),
+          putDiffMetric = putFareAndDistanceDeviations,
+          findDriverLocById = DrLoc.findById,
+          getKeyRedis = Redis.getKeyRedis,
+          updateLocationAllowedDelay = askConfig (.updateLocationAllowedDelay) <&> fromIntegral
         }
 
 endRideTransaction :: DBFlow m r => Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m ()
