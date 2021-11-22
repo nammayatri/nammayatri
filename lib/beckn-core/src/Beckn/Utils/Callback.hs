@@ -55,18 +55,18 @@ withBecknCallback ::
   (m () -> m ()) ->
   Maybe ET.ManagerSelector ->
   WithBecknCallback api callback_success m
-withBecknCallback doWithCallback auth action api context cbUrl f = do
+withBecknCallback doWithCallback auth actionName api context cbUrl action = do
   now <- getCurrentTime
-  let cbAction = "on_" <> action
+  let cbAction = "on_" <> actionName
   let context' =
         context
           & #timestamp .~ now
-  safeFork
+  forkBecknCallback
     (someExceptionToCallbackReq context')
     (toCallbackReq context')
-    action
     (doWithCallback . void . callBecknAPI auth Nothing cbAction api cbUrl)
-    f
+    actionName
+    action
   return Ack
 
 type WithBecknCallbackMig api callback_success m =
@@ -87,19 +87,35 @@ withBecknCallbackMig ::
   (m () -> m ()) ->
   Maybe ET.ManagerSelector ->
   WithBecknCallbackMig api callback_success m
-withBecknCallbackMig doWithCallback auth action api context cbUrl f = do
+withBecknCallbackMig doWithCallback auth actionName api context cbUrl action = do
   now <- getCurrentTime
   cbAction <-
-    M.Context.mapToCbAction action
-      & fromMaybeM (InternalError $ "Beckn " <> show action <> " action doesn't have callback")
+    M.Context.mapToCbAction actionName
+      & fromMaybeM (InternalError $ "Beckn " <> show actionName <> " action doesn't have callback")
   let cbContext =
         context
           & #action .~ cbAction
           & #timestamp .~ now
-  safeFork
+  forkBecknCallback
     (someExceptionToCallbackReqMig cbContext)
     (M.API.BecknCallbackReq cbContext . Right)
-    (show action)
     (doWithCallback . void . callBecknAPI auth Nothing (show cbAction) api cbUrl)
-    f
+    (show actionName)
+    action
   return Ack
+
+forkBecknCallback ::
+  (Forkable m, MonadCatch m, Log m) =>
+  (SomeException -> result) ->
+  (success -> result) ->
+  (result -> m ()) ->
+  Text ->
+  m success ->
+  m ()
+forkBecknCallback fromError fromSuccess doWithResult actionName action =
+  fork actionName $
+    try action >>= \case
+      Right success -> doWithResult $ fromSuccess success
+      Left err -> do
+        logError $ "Error executing callback action " <> actionName <> ": " <> show err
+        doWithResult $ fromError err
