@@ -5,6 +5,7 @@ module Beckn.Utils.Common
   )
 where
 
+import Beckn.Prelude as Common (everyPossibleVariant, foldWIndex, identity)
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Ack as Common
 import Beckn.Types.Error.BaseError.HTTPError as Common
@@ -22,14 +23,5 @@ import qualified Data.Text as T
 import EulerHS.Prelude hiding (id)
 import qualified Test.RandomStrings as RS
 
-foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc
-foldWIndex f acc p = snd $ foldl' (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) p
-
-identity :: p -> p
-identity a = a
-
 generateShortId :: MonadFlow m => m (ShortId a)
 generateShortId = ShortId . T.pack <$> liftIO (RS.randomString (RS.onlyAlphaNum RS.randomASCII) 10)
-
-everyPossibleVariant :: (Enum a, Bounded a) => [a]
-everyPossibleVariant = [minBound .. maxBound]

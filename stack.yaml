@@ -38,6 +38,7 @@ packages:
   - app/mock-registry
   - app/mock-sms
   - app/mock-fcm
+  - app/example-service
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as

@@ -7,6 +7,7 @@ module Beckn.Utils.App
     logRequestAndResponse,
     withModifiedEnv,
     hashBodyForSignature,
+    handleShutdownMVar,
   )
 where
 
@@ -15,6 +16,7 @@ import Beckn.Types.Flow
 import Beckn.Utils.Common
 import Beckn.Utils.FlowLogging (appendLogContext)
 import qualified Beckn.Utils.SignatureAuth as HttpSig
+import Control.Concurrent.MVar (isEmptyMVar)
 import Control.Concurrent.STM.TMVar
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as B
@@ -56,18 +58,31 @@ handleLeft exitCode msg = \case
   Right res -> return res
 
 handleShutdown :: TMVar () -> IO () -> IO ()
-handleShutdown shutdown closeSocket = do
+handleShutdown shutdown closeSocket =
+  handleShutdown' closeSocket $
+    atomically $
+      isEmptyTMVar shutdown >>= \case
+        True -> do
+          putTMVar shutdown ()
+          return True
+        False -> return False
+
+handleShutdownMVar :: MVar () -> IO () -> IO ()
+handleShutdownMVar shutdown closeSocket =
+  handleShutdown' closeSocket $
+    isEmptyMVar shutdown >>= \case
+      True -> do
+        putMVar shutdown ()
+        return True
+      False -> return False
+
+handleShutdown' :: IO () -> IO Bool -> IO ()
+handleShutdown' closeSocket isLocked = do
   void $ installHandler sigTERM (Catch $ shutdownAction "sigTERM" >> closeSocket) Nothing
   void $ installHandler sigINT (Catch $ shutdownAction "sigINT" >> closeSocket) Nothing
   where
-    shutdownAction reason = do
-      isLocked <- atomically $ do
-        isEmptyTMVar shutdown >>= \case
-          True -> do
-            putTMVar shutdown ()
-            return True
-          False -> return False
-      when isLocked $ do
+    shutdownAction reason =
+      whenM isLocked $
         putStrLn @String $ "Shutting down by " <> reason
 
 hashBodyForSignature :: Application -> Application
