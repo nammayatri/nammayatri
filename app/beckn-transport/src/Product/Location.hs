@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Product.Location where
 
 import App.Types
