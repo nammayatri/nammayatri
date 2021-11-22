@@ -79,3 +79,7 @@ stop-all-containers: ./dev/docker-compose.yml
 run-mobility-stack: ./dev/run.sh
 	# Run all binaries needed for mobility network
 	./dev/run.sh
+
+new-service: ./dev/new-service.sh
+	# Create new service skeleton
+	./dev/new-service.sh
