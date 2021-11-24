@@ -31,10 +31,14 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
   ('6bc4bc84-2c43-425d-8853-22f47bd06691', 'Suresh', 'aka', 'Dhinesh', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+91', NULL, NULL, false, '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '9db237f9-3061-4bad-a616-42e91f092407', NULL, now(), now());
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
   ('3b2af603-c6a3-404e-9859-276085fc6e65', 'Thomas', 'aka', NULL, NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, NULL, '+91', NULL, NULL, false, 'f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', 'VEHICLE', 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, '0202b94d-dbf0-4e95-bbf9-25cafc888173', NULL, now(), now());
+
+-- Phone number: 9999999999
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw==', '\x0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', '91', '+919999999999', NULL, true, NULL, NULL, 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, NULL, NULL, now(), now());
+  ('ec34eede-5a3e-4a41-89d4-7290a0d7a629', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '0.1.0|1|8hdNzNRjeq0j7QRZoKzT2iMjoKkQJzwLoUeOEF9edh1wmRer7NbUaUT3foUI1wG2gZMjpB8vDuUKUDG+aQ==', '\xba0f72d2d550eb699914591dab2eadeb8fc83dd1eda6bde7cc3f68d7138f14fe', '+91', NULL, NULL, true, NULL, NULL, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, NULL, NULL, now(), now());
+
+-- Phone number: 9999988888
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('a30193df-4f7c-440f-bada-4d46c396d7d0', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, NULL, NULL, '91', '9999988888', NULL, true, NULL, NULL, 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, NULL, NULL, now(), now());
+  ('a30193df-4f7c-440f-bada-4d46c396d7d0', NULL, NULL, NULL, NULL, 'ADMIN', 'UNKNOWN', 'MOBILENUMBER', NULL, '0.1.0|0|BEr9F11LIq8SIoxEwzGp3sD3QWLhty3XYOvxyI5r6H90GIh8BUjXiTKsmj+F15FFICiUhSw4GB8yRj7wtA==', '\x0b0c9417ddba512efba45e716b6f6e7abfbb4307ac4dd8204a58936acfdbac37', '+91', NULL, NULL, true, NULL, NULL, 'ACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, NULL, NULL, now(), now());
 
 INSERT INTO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id, udf1, udf2, identifier_type) VALUES
   ('001093df-4f7c-440f-b-furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'furthest_driver', '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'MOBILENUMBER'),
@@ -73,10 +77,6 @@ INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size
 
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
   ('f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', NULL, NULL, NULL, 'Model2', NULL, 'SUV', 'Black', NULL, '5613', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', now(), now());
-
-UPDATE atlas_transporter.person SET
-    mobile_number_encrypted = '0.1.0|2|eLbi245mKsDG3RKb3t2ah1VjwVUEWb/czljklq+ZaRU9PvRUfoYXODW7h6lexchLSjCS4DW31iDFqhYjCUw8Tw=='
-  , mobile_number_hash = decode('0f298b3402584898975230a0a6c71362eab1bb7fbb4df662c1ce9f9ea8d08426', 'hex') where id = 'ec34eede-5a3e-4a41-89d4-7290a0d7a629';
 
 --
 -- PostgreSQL database dump complete
