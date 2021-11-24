@@ -13,7 +13,6 @@ import qualified ExternalAPI.Dunzo.Flow as API
 import ExternalAPI.Dunzo.Types
 import Product.Dunzo.Transform
 import qualified Storage.Queries.Dunzo as Dz
-import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.SearchRequest as Storage
 import qualified Types.Beckn.API.Cancel as CancelAPI
 import qualified Types.Beckn.API.Confirm as ConfirmAPI
@@ -38,7 +37,7 @@ import Utils.Common
 search ::
   ( DBFlow m r,
     HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
-    HasHttpClientOptions r,
+    HasHttpClientOptions r c,
     CoreMetrics m
   ) =>
   Org.Organization ->
@@ -48,9 +47,10 @@ search org req = do
   config@DunzoConfig {..} <- asks (.dzConfig)
   quoteReq <- mkQuoteReqFromSearch req
   let context = updateBppUri (req.context) dzBPNwAddress
-  bap <- Org.findByBapUrl context.bap_uri >>= fromMaybeM OrgDoesNotExist
-  dzBACreds <- getDzBAPCreds bap
-  cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  dzBACreds <- getDzBAPCreds org
+  cbUrl <-
+    org.callbackUrl
+      & fromMaybeM (OrgFieldNotPresent "callback_url")
   withBecknCallbackMig withRetry authKey SEARCH SearchAPI.onSearchAPI context cbUrl $
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog
@@ -72,7 +72,6 @@ confirm ::
 confirm org req = do
   dconf@DunzoConfig {..} <- asks (.dzConfig)
   let context = updateBppUri (req.context) dzBPNwAddress
-  cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let reqOrder = req.message.order
   whenJust reqOrder.id \_ -> throwError $ InvalidRequest "Order id must not be presented."
   whenNothing_
@@ -82,7 +81,7 @@ confirm org req = do
   orderId <- generateGUID
   currTime <- getCurrentTime
   taskReq <- mkCreateTaskReq orderId reqOrder
-  withCallback CONFIRM ConfirmAPI.onConfirmAPI context cbUrl $ do
+  withCallback CONFIRM ConfirmAPI.onConfirmAPI context req.context.bap_uri do
     taskStatus <- createTaskAPI dzBACreds dconf taskReq
     let uOrder = updateOrder (Just orderId) currTime reqOrder taskStatus
     checkAndLogPriceDiff reqOrder uOrder
@@ -145,12 +144,11 @@ track org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
   let orderId = req.context.transaction_id
   let context = updateBppUri (req.context) dzBPNwAddress
-  cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   searchRequest <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   taskInfo :: TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
   let taskId = taskInfo.task_id.getTaskId
   dzBACreds <- getDzBAPCreds org
-  withCallback TRACK TrackAPI.onTrackAPI context cbUrl $
+  withCallback TRACK TrackAPI.onTrackAPI context req.context.bap_uri $
     getStatus dzBACreds conf (TaskId taskId) <&> mkOnTrackMessage . (.tracking_url)
 
 status ::
@@ -164,7 +162,6 @@ status ::
 status org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
   let context = updateBppUri (req.context) dzBPNwAddress
-  cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let orderId = context.transaction_id
   searchRequest <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   taskInfo :: TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
@@ -173,7 +170,7 @@ status org req = do
     searchRequest.udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
   dzBACreds <- getDzBAPCreds org
-  withCallback STATUS StatusAPI.onStatusAPI context cbUrl $ do
+  withCallback STATUS StatusAPI.onStatusAPI context req.context.bap_uri do
     taskStatus <- getStatus dzBACreds conf (TaskId taskId)
     onStatusMessage <- mkOnStatusMessage order taskStatus
     let updatedOrder = onStatusMessage.order
@@ -195,13 +192,12 @@ cancel ::
 cancel org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
   let context = updateBppUri (req.context) dzBPNwAddress
-  cbUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   searchRequest <- Storage.findById (Id context.transaction_id) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   taskInfo :: TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
   let taskId = taskInfo.task_id.getTaskId
   order <- searchRequest.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
-  withCallback CANCEL CancelAPI.onCancelAPI context cbUrl $ do
+  withCallback CANCEL CancelAPI.onCancelAPI context req.context.bap_uri do
     callCancelAPI dzBACreds conf (TaskId taskId)
     let updatedOrder = cancelOrder order
     updateSearchRequest searchRequest.id updatedOrder searchRequest

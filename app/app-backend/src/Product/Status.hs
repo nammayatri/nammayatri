@@ -6,11 +6,10 @@ import Beckn.Types.Core.Ack
 import Beckn.Utils.Error
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
-import qualified Types.Storage.Organization as Organization
 import Utils.Common
 
 onStatus ::
-  SignatureAuthResult Organization.Organization ->
+  SignatureAuthResult ->
   API.OnStatusReq ->
   FlowHandler API.OnStatusRes
 onStatus _org req = withFlowHandlerBecknAPI $

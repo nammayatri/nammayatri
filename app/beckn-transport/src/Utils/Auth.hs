@@ -29,8 +29,6 @@ instance VerificationMethod VerifyAPIKey where
     "Checks whether app/gateway is registered.\
     \If you don't have an API key, register the app/gateway."
 
-type LookupRegistryOrg = LookupRegistry Organization
-
 verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM OrgNotFound
 

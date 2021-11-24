@@ -48,7 +48,7 @@ import qualified Types.Storage.RegistrationToken as SRT
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import Types.Storage.Vehicle
-import Utils.Auth (AdminTokenAuth, LookupRegistryOrg, TokenAuth)
+import Utils.Auth (AdminTokenAuth, TokenAuth)
 
 type TransportAPI =
   "v2"
@@ -308,17 +308,17 @@ locationFlow =
 -- location flow over
 type OrgBecknAPI =
   Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistryOrg
-    :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
+    :> SignatureAuth "Authorization"
+    :> SignatureAuth "Proxy-Authorization"
     :> API.SearchAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistryOrg
+    :> SignatureAuth "Authorization"
     :> API.ConfirmAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistryOrg
+    :> SignatureAuth "Authorization"
     :> API.CancelAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization" LookupRegistryOrg
+    :> SignatureAuth "Authorization"
     :> API.FeedbackAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI

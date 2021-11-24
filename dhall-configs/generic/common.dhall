@@ -48,6 +48,11 @@ let loggerConfig =
   , logRawSql = True
   }
 
+let httpClientOptions =
+  { timeoutMs = +2000
+  , maxRetries = +3
+  }
+
 in { defaultPoolConfig = defaultPoolConfig
    , smsSessionConfig = smsSessionConfig
    , autoMigrate = False
@@ -58,4 +63,5 @@ in { defaultPoolConfig = defaultPoolConfig
    , mkCredential = mkCredential
    , mkSigningKey = mkSigningKey
    , mkShard = mkShard
+   , httpClientOptions = httpClientOptions
    }

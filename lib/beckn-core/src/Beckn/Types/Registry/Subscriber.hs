@@ -6,14 +6,14 @@ import EulerHS.Prelude
 import Servant.Client (BaseUrl)
 
 data Subscriber = Subscriber
-  { unique_key_id :: Maybe Text,
-    subscriber_id :: Maybe Text,
+  { unique_key_id :: Text,
+    subscriber_id :: Text,
     subscriber_url :: Maybe BaseUrl,
     _type :: Maybe SubscriberType,
     domain :: Maybe Text,
     city :: Maybe Text,
     country :: Maybe Text,
-    signing_public_key :: Maybe Text,
+    signing_public_key :: Text,
     encr_public_key :: Maybe Text,
     valid_from :: Maybe UTCTime,
     valid_until :: Maybe UTCTime,

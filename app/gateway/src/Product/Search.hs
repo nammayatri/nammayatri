@@ -21,11 +21,10 @@ import Storage.Queries.Organization (findByBapUrl)
 import qualified Types.API.Gateway.Search as ExternalAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
 import Types.Error
-import qualified Types.Storage.Organization as Org
 import Utils.Common
 
 search ::
-  SignatureAuthResult Org.Organization ->
+  SignatureAuthResult ->
   ByteString ->
   FlowHandler AckResponse
 search (SignatureAuthResult proxySign _) rawReq = withFlowHandlerBecknAPI do
@@ -51,13 +50,14 @@ search (SignatureAuthResult proxySign _) rawReq = withFlowHandlerBecknAPI do
     return Ack
 
 searchCb ::
-  SignatureAuthResult Org.Organization ->
+  SignatureAuthResult ->
   ByteString ->
   FlowHandler AckResponse
-searchCb (SignatureAuthResult proxySign org) rawReq = withFlowHandlerBecknAPI do
+searchCb (SignatureAuthResult proxySign _subscriber) rawReq = withFlowHandlerBecknAPI do
   req :: OnSearchReq <- rawReq & A.eitherDecodeStrict & fromEitherM (InvalidRequest . T.pack)
   withTransactionIdLogTag req . withLogTag "search_cb" $ do
-    providerUrl <- org.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+    -- TODO: source providerUrl from _subscriber
+    providerUrl <- req.context.bpp_uri & fromMaybeM (InvalidRequest "Missing context.bpp_uri")
     withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) do
       validateContext "on_search" req.context
       let gatewayOnSearchSignAuth = ET.client ExternalAPI.onSearchAPI

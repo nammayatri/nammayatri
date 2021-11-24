@@ -9,6 +9,7 @@ beckn-transport
 mock-registry
 mock-sms
 mock-fcm
+parking-bap
 EOF
 }
 

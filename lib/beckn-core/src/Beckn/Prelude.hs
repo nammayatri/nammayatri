@@ -1,8 +1,10 @@
 module Beckn.Prelude (module E, module Beckn.Prelude) where
 
+import Control.Monad.Reader as E
 import Data.Aeson as E (FromJSON (..), ToJSON (..))
 import Data.Foldable as E
 import Data.Function as E
+import Data.Functor as E
 import Data.Maybe as E (fromMaybe)
 import Data.Proxy as E (Proxy (..))
 import Data.Text as E (Text)

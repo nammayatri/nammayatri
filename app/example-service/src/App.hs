@@ -13,7 +13,7 @@ import Servant (Context (..))
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
-  runServerService appEnv serverAPI serverHandler identity identity EmptyContext
+  runServerService appEnv serverAPI serverHandler identity identity EmptyContext pure
 
 defaultConfig :: AppCfg
 defaultConfig =

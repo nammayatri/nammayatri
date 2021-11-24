@@ -3,16 +3,19 @@ module App.Types where
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.Servant.Client (HttpClientOptions (..))
+import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
 
 data AppCfg = AppCfg
   { port :: Int,
     loggerConfig :: LoggerConfig,
-    graceTerminationPeriod :: Seconds
+    graceTerminationPeriod :: Seconds,
+    selfId :: Text,
+    httpClientOptions :: HttpClientOptions,
+    authEntity :: AuthenticatingEntity'
   }
   deriving (Generic, FromDhall)
-
-type MobileNumber = Text
 
 data AppEnv = AppEnv
   { config :: AppCfg,
@@ -28,3 +31,8 @@ buildAppEnv config@AppCfg {..} = do
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer r api = FlowServerR AppEnv api
+
+instance AuthenticatingEntity AppEnv where
+  getRegistry = (.config.authEntity.credRegistry)
+  getSigningKeys = (.config.authEntity.signingKeys)
+  getSignatureExpiry = (.config.authEntity.signatureExpiry)

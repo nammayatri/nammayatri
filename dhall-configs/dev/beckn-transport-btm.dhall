@@ -8,7 +8,6 @@ let shards =
  , globalCommon.mkShard +1 "another-test-cabs"
  ]
 
-
 let appCfg = becknTransport //
   { loggerConfig = becknTransport.loggerConfig //
     { logFilePath = "/tmp/beckn-transport-btm.log"
@@ -30,4 +29,5 @@ in
 { appCfg = appCfg
 , metricsPort = +9996
 , driverAllocationConfig = driverAllocationConfig
+, httpClientOptions = appCfg.httpClientOptions
 }

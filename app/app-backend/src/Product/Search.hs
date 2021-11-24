@@ -89,8 +89,8 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
         throwError $ ProductNotServiceable "due to georestrictions"
 
 searchCb ::
-  SignatureAuthResult Org.Organization ->
-  SignatureAuthResult Org.Organization ->
+  SignatureAuthResult ->
+  SignatureAuthResult ->
   Search.OnSearchReq ->
   FlowHandler Search.OnSearchRes
 searchCb _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do

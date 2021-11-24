@@ -14,13 +14,12 @@ import EulerHS.Prelude hiding (state)
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import Types.Error
-import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import Utils.Common
 
 onUpdate ::
-  SignatureAuthResult Organization.Organization ->
+  SignatureAuthResult ->
   OnUpdateReq ->
   FlowHandler AckResponse
 onUpdate _org req = withFlowHandlerBecknAPI $

@@ -28,7 +28,8 @@ import Types.Shard
 data BTMCfg = BTMCfg
   { appCfg :: App.AppCfg,
     metricsPort :: Int,
-    driverAllocationConfig :: DriverAllocationConfig
+    driverAllocationConfig :: DriverAllocationConfig,
+    httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
 
@@ -44,7 +45,8 @@ data DriverAllocationConfig = DriverAllocationConfig
   deriving (Generic, FromDhall)
 
 data BTMEnv = BTMEnv
-  { dbCfg :: DBConfig,
+  { config :: BTMCfg,
+    dbCfg :: DBConfig,
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
@@ -58,18 +60,18 @@ data BTMEnv = BTMEnv
     defaultRadiusOfSearch :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     driverAllocationConfig :: DriverAllocationConfig,
-    btmMetrics :: BTMMetricsContainer,
-    httpClientOptions :: HttpClientOptions
+    btmMetrics :: BTMMetricsContainer
   }
   deriving (Generic)
 
 buildBTMEnv :: BTMCfg -> IO BTMEnv
-buildBTMEnv BTMCfg {..} = do
+buildBTMEnv btmConfig@BTMCfg {..} = do
   App.AppEnv {..} <- App.buildAppEnv appCfg
   btmMetrics <- registerBTMMetricsContainer
   return $
     BTMEnv
-      { ..
+      { config = btmConfig,
+        ..
       }
 
 type Env = EnvR BTMEnv

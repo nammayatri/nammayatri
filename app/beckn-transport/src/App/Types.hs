@@ -15,17 +15,13 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
-import Beckn.Types.Flow
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
-import qualified Beckn.Utils.Servant.RegistryService as RegistryService
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified Storage.Queries.Organization as Org
 import Types.Metrics
-import Utils.Auth
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -72,13 +68,13 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { dbCfg :: DBConfig,
+  { config :: AppCfg,
+    dbCfg :: DBConfig,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     inviteSmsTemplate :: Text,
     xGatewaySelector :: Text,
     xAppUri :: BaseUrl,
-    hostName :: Text,
     nwAddress :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
@@ -100,18 +96,16 @@ data AppEnv = AppEnv
     apiRateLimitOptions :: APIRateLimitOptions,
     defaultRadiusOfSearch :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
-    httpClientOptions :: HttpClientOptions,
     authTokenCacheExpiry :: Seconds,
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
     updateLocationRefreshPeriod :: Seconds,
-    registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv AppCfg {..} = do
+buildAppEnv config@AppCfg {..} = do
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   transporterMetrics <- registerTransporterMetricsContainer
@@ -128,6 +122,3 @@ instance AuthenticatingEntity AppEnv where
   getRegistry = credRegistry
   getSigningKeys = signingKeys
   getSignatureExpiry = signatureExpiry
-
-instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
-  runLookup = RegistryService.decodeViaRegistry Org.findOrgByShortId

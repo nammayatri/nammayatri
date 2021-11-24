@@ -20,29 +20,23 @@ lookup req = withFlowHandlerAPI $ do
     Just cred -> do
       now <- getCurrentTime
       let subscriber =
-            emptySubscriber
-              { signing_public_key = Just cred.signPubKey,
-                valid_from = Just $ (- oneYear) `addUTCTime` now,
-                valid_until = Just $ oneYear `addUTCTime` now
+            Subscriber
+              { unique_key_id = uniqueKeyId,
+                subscriber_id = cred.shortOrgId,
+                subscriber_url = Nothing,
+                _type = Nothing,
+                domain = Nothing,
+                city = Nothing,
+                country = Nothing,
+                signing_public_key = cred.signPubKey,
+                encr_public_key = Nothing,
+                valid_from = Just $ (-oneYear) `addUTCTime` now,
+                valid_until = Just $ oneYear `addUTCTime` now,
+                status = Nothing,
+                created = Nothing,
+                updated = Nothing
               }
       pure [subscriber]
     Nothing -> pure []
   where
     oneYear = 31536000 -- in seconds
-    emptySubscriber =
-      Subscriber
-        { unique_key_id = Nothing,
-          subscriber_id = Nothing,
-          subscriber_url = Nothing,
-          _type = Nothing,
-          domain = Nothing,
-          city = Nothing,
-          country = Nothing,
-          signing_public_key = Nothing,
-          encr_public_key = Nothing,
-          valid_from = Nothing,
-          valid_until = Nothing,
-          status = Nothing,
-          created = Nothing,
-          updated = Nothing
-        }

@@ -7,7 +7,6 @@ import Beckn.Types.Id
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
-import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import EulerHS.Prelude hiding (id)
 import Servant hiding (Context)
 import qualified Storage.Queries.Organization as QOrganization
@@ -26,8 +25,6 @@ instance VerificationMethod VerifyAPIKey where
   verificationDescription =
     "Checks whether gateway/provider is registered.\
     \If you don't have an API key, register the gateway/provider."
-
-type LookupRegistryOrg = (HttpSig.LookupRegistry SOrganization.Organization)
 
 verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
 verifyApiKey = VerificationAction QOrganization.verifyApiKey

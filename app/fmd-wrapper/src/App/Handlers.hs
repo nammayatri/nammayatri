@@ -13,19 +13,18 @@ import Types.Beckn.API.Select (SelectAPI)
 import Types.Beckn.API.Status (StatusAPI)
 import Types.Beckn.API.Track (TrackAPI)
 import Types.Beckn.API.Update (UpdateAPI)
-import Utils.Auth
 
 type WrapperAPI =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> SignatureAuth "Authorization" LookupRegistryOrg :> SearchAPI
-           :<|> SignatureAuth "Authorization" LookupRegistryOrg :> SelectAPI
-           :<|> SignatureAuth "Authorization" LookupRegistryOrg :> InitAPI
-           :<|> SignatureAuth "Authorization" LookupRegistryOrg :> ConfirmAPI
-           :<|> SignatureAuth "Authorization" LookupRegistryOrg :> StatusAPI
-           :<|> SignatureAuth "Authorization" LookupRegistryOrg :> TrackAPI
-           :<|> SignatureAuth "Authorization" LookupRegistryOrg :> CancelAPI
-           :<|> SignatureAuth "Authorization" LookupRegistryOrg :> UpdateAPI
+           :<|> SignatureAuth "Authorization" :> SearchAPI
+           :<|> SignatureAuth "Authorization" :> SelectAPI
+           :<|> SignatureAuth "Authorization" :> InitAPI
+           :<|> SignatureAuth "Authorization" :> ConfirmAPI
+           :<|> SignatureAuth "Authorization" :> StatusAPI
+           :<|> SignatureAuth "Authorization" :> TrackAPI
+           :<|> SignatureAuth "Authorization" :> CancelAPI
+           :<|> SignatureAuth "Authorization" :> UpdateAPI
        )
 
 wrapperAPI :: Proxy WrapperAPI

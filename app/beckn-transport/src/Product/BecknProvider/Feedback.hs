@@ -25,7 +25,7 @@ import Utils.Common
 
 feedback ::
   Id Organization ->
-  SignatureAuthResult Organization ->
+  SignatureAuthResult ->
   API.FeedbackReq ->
   FlowHandler API.FeedbackRes
 feedback _ _ req = withFlowHandlerBecknAPI $

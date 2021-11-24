@@ -69,7 +69,7 @@ runServerService ::
   forall env config (api :: Type) ctx.
   ( HasField "config" env config,
     HasField "graceTerminationPeriod" config Seconds,
-    HasField "isShuttingDown" env (MVar ()),
+    HasField "isShuttingDown" env Shutdown,
     HasField "loggerConfig" config LoggerConfig,
     HasField "port" config Port,
     HasServer api '[EnvR env],
@@ -83,15 +83,16 @@ runServerService ::
   (Application -> Application) ->
   (Settings -> Settings) ->
   Context ctx ->
+  (E.FlowRuntime -> FlowR env E.FlowRuntime) ->
   IO ()
-runServerService appEnv serverAPI serverHandler waiMiddleware waiSettings servantCtx = do
+runServerService appEnv serverAPI serverHandler waiMiddleware waiSettings servantCtx initialize = do
   let port = appEnv.config.port
   hostname <- fmap T.pack <$> lookupEnv "POD_NAME"
   let loggerRt = getEulerLoggerRuntime hostname $ appEnv.config.loggerConfig
   let settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appEnv.config.graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdownMVar $ appEnv.isShuttingDown)
+          & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
           & setPort port
           & waiSettings
   let healthCheck = pure "App is UP"
@@ -101,7 +102,9 @@ runServerService appEnv serverAPI serverHandler waiMiddleware waiSettings servan
           & Metrics.addServantInfo serverAPI
           & waiMiddleware
   E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    runFlowR flowRt appEnv $ logInfo $ "Runtime created. Starting server at port " <> show port
-    runSettings settings $ server (EnvR flowRt appEnv)
+    flowRt' <-
+      runFlowR flowRt appEnv $
+        initialize flowRt <* logInfo ("Runtime created. Starting server at port " <> show port)
+    runSettings settings $ server (EnvR flowRt' appEnv)
 
 type HealthCheckAPI = Get '[JSON] Text

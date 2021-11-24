@@ -16,7 +16,6 @@ import qualified Storage.Queries.RideBooking as QRideB
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Types.API.Confirm as API
 import Types.Error
-import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.RideBooking as SRB
@@ -37,7 +36,8 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   rideBooking <- buildRideBooking searchRequest quote now
   DB.runSqlDBTransaction $
     QRideB.create rideBooking
-  context <- buildMobilityContext "confirm" (getId searchRequestId) Nothing Nothing
+  bapURIs <- asks (.bapSelfURIs)
+  context <- buildMobilityContext "confirm" (getId searchRequestId) (Just bapURIs.cabs) Nothing
   baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let order = mkOrder quote now
   ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)
@@ -81,7 +81,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
           }
 
 onConfirm ::
-  SignatureAuthResult Organization.Organization ->
+  SignatureAuthResult ->
   BecknAPI.OnConfirmReq ->
   FlowHandler AckResponse
 onConfirm _org req = withFlowHandlerBecknAPI $

@@ -1,13 +1,12 @@
-{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-warnings-deprecations #-}
 
 module Beckn.Utils.App
-  ( handleLeft,
+  ( Shutdown,
+    handleLeft,
     handleShutdown,
     logRequestAndResponse,
     withModifiedEnv,
     hashBodyForSignature,
-    handleShutdownMVar,
   )
 where
 
@@ -15,9 +14,8 @@ import Beckn.Types.App
 import Beckn.Types.Flow
 import Beckn.Utils.Common
 import Beckn.Utils.FlowLogging (appendLogContext)
+import Beckn.Utils.Shutdown
 import qualified Beckn.Utils.SignatureAuth as HttpSig
-import Control.Concurrent.MVar (isEmptyMVar)
-import Control.Concurrent.STM.TMVar
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Base64 as Base64
@@ -33,7 +31,6 @@ import Network.Wai
 import qualified Network.Wai as Wai
 import Network.Wai.Internal
 import System.Exit (ExitCode)
-import System.Posix.Signals (Handler (Catch), installHandler, sigINT, sigTERM)
 
 data RequestInfo = RequestInfo
   { requestMethod :: Method,
@@ -56,34 +53,6 @@ handleLeft exitCode msg = \case
     logError (msg <> show err)
     L.runIO $ exitWith exitCode
   Right res -> return res
-
-handleShutdown :: TMVar () -> IO () -> IO ()
-handleShutdown shutdown closeSocket =
-  handleShutdown' closeSocket $
-    atomically $
-      isEmptyTMVar shutdown >>= \case
-        True -> do
-          putTMVar shutdown ()
-          return True
-        False -> return False
-
-handleShutdownMVar :: MVar () -> IO () -> IO ()
-handleShutdownMVar shutdown closeSocket =
-  handleShutdown' closeSocket $
-    isEmptyMVar shutdown >>= \case
-      True -> do
-        putMVar shutdown ()
-        return True
-      False -> return False
-
-handleShutdown' :: IO () -> IO Bool -> IO ()
-handleShutdown' closeSocket isLocked = do
-  void $ installHandler sigTERM (Catch $ shutdownAction "sigTERM" >> closeSocket) Nothing
-  void $ installHandler sigINT (Catch $ shutdownAction "sigINT" >> closeSocket) Nothing
-  where
-    shutdownAction reason =
-      whenM isLocked $
-        putStrLn @String $ "Shutting down by " <> reason
 
 hashBodyForSignature :: Application -> Application
 hashBodyForSignature f req respF = do

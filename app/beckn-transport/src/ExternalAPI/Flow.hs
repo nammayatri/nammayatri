@@ -68,8 +68,7 @@ callBAP ::
 callBAP action api transporter searchRequestId contents = do
   searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestNotFound
   bapCallbackUrl <-
-    (searchRequest.bapId)
-      & (Id >>> Org.findOrganizationById)
+    Org.findOrganizationByShortId (ShortId searchRequest.bapId)
       >>= fromMaybeM OrgNotFound
       >>= ((.callbackUrl) >>> fromMaybeM (OrgFieldNotPresent "callback_url"))
   let bppShortId = getShortId $ transporter.shortId

@@ -19,7 +19,6 @@ import qualified Storage.Queries.RideCancellationReason as QRCR
 import qualified Storage.Queries.SearchRequest as MC
 import Types.API.Cancel as Cancel
 import Types.Error
-import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideBooking as SRB
@@ -62,7 +61,7 @@ isRideBookingCancellable ride =
   ride.status `elem` [SRB.CONFIRMED, SRB.TRIP_ASSIGNED]
 
 onCancel ::
-  SignatureAuthResult Organization.Organization ->
+  SignatureAuthResult ->
   API.OnCancelReq ->
   FlowHandler API.OnCancelRes
 onCancel _org req = withFlowHandlerBecknAPI $

@@ -39,10 +39,10 @@ import Utils.Common
 
 confirm ::
   Id Organization.Organization ->
-  SignatureAuthResult Organization.Organization ->
+  SignatureAuthResult ->
   API.ConfirmReq ->
   FlowHandler AckResponse
-confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknAPI $
+confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "confirm API Flow" "Reached"
     BP.validateContext "confirm" $ req.context
@@ -55,7 +55,7 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
     unless (transporterId' == transporterId) $ throwError AccessDenied
     searchRequest <- SearchRequest.findById quote.requestId >>= fromMaybeM SearchRequestNotFound
     let bapOrgId = searchRequest.bapId
-    unless (bapOrg.id == Id bapOrgId) $ throwError AccessDenied
+    unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
     now <- getCurrentTime
     rideBooking <- buildRideBooking searchRequest quote transporterOrg now
     rideRequest <-
@@ -71,8 +71,8 @@ confirm transporterId (SignatureAuthResult _ bapOrg) req = withFlowHandlerBecknA
       whenJust quote.discount $ \disc ->
         QDiscTransaction.create $ mkDiscountTransaction rideBooking disc now
 
-    bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-    ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) bapCallbackUrl $
+    cbUrl <- req.context.bap_uri & fromMaybeM (InvalidRequest "Missing context.bap_uri")
+    ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) cbUrl $
       onConfirmCallback
         rideBooking
         searchRequest

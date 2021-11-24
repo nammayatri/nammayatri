@@ -46,11 +46,11 @@ import qualified Utils.Metrics as Metrics
 
 search ::
   Id Org.Organization ->
-  SignatureAuthResult Org.Organization ->
-  SignatureAuthResult Org.Organization ->
+  SignatureAuthResult ->
+  SignatureAuthResult ->
   API.SearchReq ->
   FlowHandler AckResponse
-search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gateway) req =
+search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     let context = req.context
     BP.validateContext "search" context
@@ -72,7 +72,7 @@ search transporterId (SignatureAuthResult _ bapOrg) (SignatureAuthResult _ _gate
         validity <- getValidTime now startTime
         fromLocation <- buildFromStop now pickup
         toLocation <- buildFromStop now dropOff
-        let bapOrgId = bapOrg.id
+        let bapOrgId = Id subscriber.subscriber_id
         uuid <- L.generateGUID
         let vehVariant = readMaybe (T.unpack req.message.intent.vehicle.variant)
         bapUri <- req.context.bap_uri & fromMaybeM (InvalidRequest "Context must have bap_uri")

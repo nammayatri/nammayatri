@@ -62,7 +62,7 @@ import qualified Utils.Notifications as Notify
 
 cancel ::
   Id Organization.Organization ->
-  SignatureAuthResult Organization.Organization ->
+  SignatureAuthResult ->
   API.CancelReq ->
   FlowHandler AckResponse
 cancel transporterId _ req = withFlowHandlerBecknAPI $

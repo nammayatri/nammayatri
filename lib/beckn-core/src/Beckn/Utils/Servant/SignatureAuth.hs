@@ -4,12 +4,19 @@
 
 module Beckn.Utils.Servant.SignatureAuth where
 
+import Beckn.Exit
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Types.Error
 import Beckn.Types.Flow
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
+import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
+import qualified Beckn.Types.Registry.API as RegistryAPI
+import qualified Beckn.Types.Registry.Routes as Registry
+import Beckn.Types.Registry.Subscriber (Subscriber)
+import Beckn.Utils.App
 import Beckn.Utils.Common
+import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server (HasEnvEntry (..), runFlowRDelayedIO)
@@ -27,6 +34,7 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Typeable (typeRep)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import qualified EulerHS.Types as T
 import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Network.HTTP.Client as Http
@@ -39,6 +47,7 @@ import Servant
     type (:>),
   )
 import Servant.Client (HasClient (..))
+import Servant.Client.Core (ClientError)
 import qualified Servant.OpenApi as S
 import qualified Servant.OpenApi.Internal as S
 import Servant.Server.Internal.Delayed (addAuthCheck)
@@ -54,68 +63,48 @@ import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
 --
 -- The lookup argument defines how keys can be looked up for performing
 -- signature matches.
-data SignatureAuth (header :: Symbol) lookup
-
--- | How key lookup is performed
-class LookupMethod lookup where
-  -- | Lookup result, what is passed to the endpoint implementation. This can
-  -- be used to attach any result from the lookup (such as the calling entity)
-  -- if signature verification succeeds.
-  type LookupResult lookup
-
-  -- | Description of this lookup scheme as it appears in swagger.
-  lookupDescription :: Text
+data SignatureAuth (header :: Symbol)
 
 class AuthenticatingEntity r where
   getRegistry :: r -> [Credential]
   getSigningKeys :: r -> [SigningKey]
   getSignatureExpiry :: r -> Seconds
 
-class LookupMethod lookup => HasLookupAction lookup m where
-  runLookup :: LookupAction lookup m
+data AuthenticatingEntity' = AuthenticatingEntity'
+  { credRegistry :: [Credential],
+    signingKeys :: [SigningKey],
+    signatureExpiry :: Seconds
+  }
+  deriving (Generic, FromDhall)
 
 -- | Implementation of lookup.
-type LookupAction lookup m =
-  -- LookupMethod lookup =>
-
-  -- | Look up the given keyId and return a result to pass to the request,
-  -- and a key that can be used for signature verification
-  HttpSig.SignaturePayload ->
-  m (Maybe (LookupResult lookup, HttpSig.PublicKey))
-
-data LookupRegistry r = LookupRegistry
-
-instance LookupMethod (LookupRegistry (r :: Type)) where
-  type LookupResult (LookupRegistry r) = r
-  lookupDescription =
-    "Looks up the given key Id in the Beckn registry."
-
-data SignatureAuthResult res = SignatureAuthResult
+-- LookupMethod lookup =>
+data SignatureAuthResult = SignatureAuthResult
   { signature :: HttpSig.SignaturePayload,
-    lookupResult :: res
+    subscriber :: Subscriber
   }
 
 -- | This server part implementation accepts a signature in @header@ and
--- verifies it using @LookupAction@.
+-- verifies it using registry
 instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,
     KnownSymbol header,
-    HasField "hostName" r Text,
-    HasCoreMetrics r,
-    HasLookupAction lookup (FlowR r)
+    HasInConfig r c "hostName" Text,
+    HasInConfig r c "registryUrl" BaseUrl,
+    HasCoreMetrics r
   ) =>
-  HasServer (SignatureAuth header lookup :> api) ctx
+  HasServer (SignatureAuth header :> api) ctx
   where
   type
-    ServerT (SignatureAuth header lookup :> api) m =
-      SignatureAuthResult (LookupResult lookup) -> ServerT api m
+    ServerT (SignatureAuth header :> api) m =
+      SignatureAuthResult -> ServerT api m
 
   route _ ctx subserver =
     route (Proxy @api) ctx $
       subserver `addAuthCheck` withRequest authCheck
     where
-      authCheck :: Wai.Request -> DelayedIO (SignatureAuthResult (LookupResult lookup))
+      authCheck :: Wai.Request -> DelayedIO SignatureAuthResult
       authCheck req = runFlowRDelayedIO env . becknApiHandler . withLogTag "authCheck" $ do
         let headers = Wai.requestHeaders req
         logDebug $ "Incoming headers: " +|| headers ||+ ""
@@ -128,8 +117,8 @@ instance
             & (lookup headerName >>> fromMaybeM (MissingHeader headerName))
             >>= (parseHeader >>> fromEitherM (InvalidHeader headerName))
             >>= (HttpSig.decode . fromString >>> fromEitherM CannotDecodeSignature)
-        lookupResult <- verifySignature @lookup headerName signPayload bodyHash
-        return $ SignatureAuthResult signPayload lookupResult
+        subscriber <- verifySignature headerName signPayload bodyHash
+        return $ SignatureAuthResult signPayload subscriber
       headerName = fromString $ symbolVal (Proxy @header)
       headerName :: IsString a => a
       -- These are 500 because we must add that header in wai middleware
@@ -147,9 +136,9 @@ instance
 -- this regard given what plumbing options Servant gives us.
 instance
   (HasClient m api, KnownSymbol header) =>
-  HasClient m (SignatureAuth header lookup :> api)
+  HasClient m (SignatureAuth header :> api)
   where
-  type Client m (SignatureAuth header lookup :> api) = Client m api
+  type Client m (SignatureAuth header :> api) = Client m api
 
   clientWithRoute mp _ req =
     clientWithRoute
@@ -204,24 +193,28 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
               Just $ req {Http.requestHeaders = (ciHeader, headerVal) : headers}
 
 verifySignature ::
-  forall lookup r.
-  ( HasField "hostName" r Text,
-    HasLookupAction lookup (FlowR r)
+  ( MonadFlow m,
+    MonadReader r m,
+    Metrics.CoreMetrics m,
+    HasInConfig r c "hostName" Text,
+    HasInConfig r c "registryUrl" BaseUrl
   ) =>
   Text ->
   HttpSig.SignaturePayload ->
   HttpSig.Hash ->
-  FlowR r (LookupResult lookup)
+  m Subscriber
 verifySignature headerName signPayload bodyHash = do
-  hostName <- asks (.hostName)
-  mLookupRes <- runLookup @lookup signPayload
-  case mLookupRes of
-    Just (lookupResult, publicKey) -> do
+  hostName <- askConfig (.hostName)
+  decodeViaRegistry signPayload >>= \case
+    Just subscriber -> do
+      publicKey <-
+        Registry.decodeKey subscriber.signing_public_key
+          & fromMaybeM (InternalError "Couldn't decode public key from registry.")
       isVerified <- performVerification publicKey hostName
       unless isVerified $ do
         logTagError logTag "Signature is not valid."
         throwError $ getSignatureError hostName
-      pure lookupResult
+      pure subscriber
     Nothing -> do
       logTagError logTag $
         "Subscriber with unique_key_id "
@@ -296,22 +289,38 @@ prepareAuthManagers flowRt appEnv allShortIds = do
   mapM (prepareAuthManager flowRt appEnv "Authorization") allShortIds
     <&> makeManagerMap managerKeys
 
+modFlowRtWithAuthManagers ::
+  ( AuthenticatingEntity r,
+    HasHttpClientOptions r c,
+    MonadReader r m,
+    MonadFlow m
+  ) =>
+  R.FlowRuntime ->
+  r ->
+  [Text] ->
+  m R.FlowRuntime
+modFlowRtWithAuthManagers flowRt appEnv orgShortIds = do
+  managersSettings <-
+    prepareAuthManagers flowRt appEnv orgShortIds
+      & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
+  managers <- createManagers managersSettings
+  logInfo $ "Loaded http managers - " <> show (keys managers)
+  pure $ flowRt {R._httpClientManagers = managers}
+
 instance
   ( S.HasOpenApi api,
-    LookupMethod lookup,
-    Typeable lookup,
     KnownSymbol header
   ) =>
-  S.HasOpenApi (SignatureAuth header lookup :> api)
+  S.HasOpenApi (SignatureAuth header :> api)
   where
   toOpenApi _ =
     S.toOpenApi (Proxy @api)
-      & addSecurityRequirement (lookupDescription @lookup)
+      & addSecurityRequirement "Looks up the given key Id in the Beckn registry."
       & S.addDefaultResponse400 headerName
       & addResponse401
     where
       headerName = toText $ symbolVal (Proxy @header)
-      methodName = show $ typeRep (Proxy @lookup)
+      methodName = show $ typeRep (Proxy @Subscriber)
 
       addSecurityRequirement :: Text -> DS.OpenApi -> DS.OpenApi
       addSecurityRequirement description = execState $ do
@@ -343,6 +352,51 @@ instance
 
 instance
   SanitizedUrl (subroute :: Type) =>
-  SanitizedUrl (SignatureAuth h l :> subroute)
+  SanitizedUrl (SignatureAuth h :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
+
+decodeViaRegistry ::
+  ( MonadReader r m,
+    MonadFlow m,
+    HasInConfig r c "registryUrl" BaseUrl,
+    Metrics.CoreMetrics m
+  ) =>
+  HttpSig.SignaturePayload ->
+  m (Maybe Subscriber)
+decodeViaRegistry signaturePayload = do
+  logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
+  registryUrl <- askConfig (.registryUrl)
+  let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
+  getPubKeyFromRegistry registryUrl uniqueKeyId
+  where
+    getPubKeyFromRegistry registryUrl uniqueKeyId = do
+      subscribers <- registryLookup registryUrl uniqueKeyId
+      case subscribers of
+        [subscriber] ->
+          pure $ Just subscriber
+        _subscriber : _subscribers ->
+          throwError $ InternalError "Multiple subscribers returned for a unique key."
+        [] -> pure Nothing
+
+registryLookup ::
+  (MonadFlow m, Metrics.CoreMetrics m) =>
+  BaseUrl ->
+  Text ->
+  m [Subscriber]
+registryLookup url uniqueKeyId = do
+  callAPI url (T.client Registry.lookupAPI request) "lookup"
+    >>= fromEitherM (registryLookupCallError url)
+  where
+    request =
+      RegistryAPI.LookupRequest
+        { unique_key_id = Just uniqueKeyId,
+          subscriber_id = Nothing,
+          _type = Nothing,
+          domain = Nothing,
+          country = Nothing,
+          city = Nothing
+        }
+
+registryLookupCallError :: BaseUrl -> ClientError -> ExternalAPICallError
+registryLookupCallError = ExternalAPICallError (Just "REGISTRY_CALL_ERROR")

@@ -12,17 +12,13 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
-import Beckn.Types.Flow
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
-import qualified Beckn.Utils.Servant.RegistryService as RegistryService
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified Storage.Queries.Organization as Org
 import Types.Metrics
 import Types.Wrapper (DunzoConfig)
-import Utils.Auth
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -50,8 +46,8 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { dbCfg :: DBConfig,
-    hostName :: Text,
+  { config :: AppCfg,
+    dbCfg :: DBConfig,
     selfId :: Text,
     xGatewayUri :: BaseUrl,
     xGatewayApiKey :: Maybe Text,
@@ -64,16 +60,12 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
     nwAddress :: BaseUrl,
-    registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets
   }
   deriving (Generic)
 
-instance HasLookupAction LookupRegistryOrg (FlowR AppEnv) where
-  runLookup = RegistryService.decodeViaRegistry Org.findOrgByShortId
-
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv AppCfg {..} = do
+buildAppEnv config@AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   coreMetrics <- registerCoreMetricsContainer
   return $

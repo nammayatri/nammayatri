@@ -58,7 +58,7 @@ import qualified Types.Storage.RegistrationToken as SRT
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.SearchRequest as SSR
-import Utils.Auth (LookupRegistryOrg, TokenAuth)
+import Utils.Auth (TokenAuth)
 
 type AppAPI =
   MainAPI
@@ -70,8 +70,8 @@ type MainAPI =
     :<|> "metro" :> "v1" :> BecknMetroAPI
 
 type BecknMetroAPI =
-  SignatureAuth "Authorization" LookupRegistryOrg
-    :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
+  SignatureAuth "Authorization"
+    :> SignatureAuth "Proxy-Authorization"
     :> Metro.OnSearch
 
 type UIAPI =
@@ -173,22 +173,22 @@ profileFlow =
 -------- Search Flow --------
 
 type BecknCabAPI =
-  SignatureAuth "Authorization" LookupRegistryOrg
-    :> SignatureAuth "Proxy-Authorization" LookupRegistryOrg
+  SignatureAuth "Authorization"
+    :> SignatureAuth "Proxy-Authorization"
     :> API.OnSearchAPI
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :<|> SignatureAuth "Authorization"
     :> "on_confirm"
     :> ReqBody '[JSON] API.OnConfirmReq
     :> Post '[JSON] API.OnConfirmRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :<|> SignatureAuth "Authorization"
     :> "on_update"
     :> ReqBody '[JSON] API.OnUpdateReq
     :> Post '[JSON] API.OnUpdateRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :<|> SignatureAuth "Authorization"
     :> "on_cancel"
     :> ReqBody '[JSON] API.OnCancelReq
     :> Post '[JSON] API.OnCancelRes
-    :<|> SignatureAuth "Authorization" LookupRegistryOrg
+    :<|> SignatureAuth "Authorization"
     :> "on_status"
     :> ReqBody '[JSON] API.OnStatusReq
     :> Post '[JSON] API.OnStatusRes
@@ -311,7 +311,7 @@ supportFlow = Support.sendIssue
 
 ------- Update Flow -------
 type UpdateAPI =
-  SignatureAuth "Authorization" LookupRegistryOrg
+  SignatureAuth "Authorization"
     :> "on_update"
     :> ReqBody '[JSON] API.OnUpdateReq
     :> Post '[JSON] API.OnUpdateRes

@@ -29,7 +29,7 @@ data HttpClientOptions = HttpClientOptions
   }
   deriving (Generic, FromDhall)
 
-type HasHttpClientOptions r = HasField "httpClientOptions" r HttpClientOptions
+type HasHttpClientOptions r c = HasInConfig r c "httpClientOptions" HttpClientOptions
 
 type CallAPI' m res res' =
   ( HasCallStack,
@@ -98,18 +98,23 @@ setResponseTimeout timeout settings =
 
 createManagers ::
   ( MonadReader r m,
-    HasHttpClientOptions r,
+    HasHttpClientOptions r c,
     MonadFlow m
   ) =>
   Map String Http.ManagerSettings ->
   m (Map String Http.Manager)
 createManagers managerSettings = do
-  timeout <- asks (.httpClientOptions.timeoutMs)
-  liftIO
-    . mapM Http.newManager
+  timeout <- askConfig (.httpClientOptions.timeoutMs)
+  liftIO $ managersFromManagersSettings timeout managerSettings
+
+managersFromManagersSettings ::
+  Int ->
+  Map String Http.ManagerSettings ->
+  IO (Map String Http.Manager)
+managersFromManagersSettings timeout =
+  mapM Http.newManager
     . fmap (setResponseTimeout timeout)
     . Map.insert defaultHttpManager Http.tlsManagerSettings
-    $ managerSettings
 
 catchConnectionErrors :: (MonadCatch m, Log m) => m a -> (ExternalAPICallError -> m a) -> m a
 catchConnectionErrors action errorHandler =
@@ -143,14 +148,14 @@ retryAction currentErr currentRetryCount maxRetries action = do
 withRetry ::
   ( MonadCatch m,
     MonadReader r m,
-    HasHttpClientOptions r,
+    HasHttpClientOptions r c,
     Metrics.CoreMetrics m,
     Log m
   ) =>
   m a ->
   m a
 withRetry action = do
-  maxRetries <- asks (.httpClientOptions.maxRetries)
+  maxRetries <- askConfig (.httpClientOptions.maxRetries)
   catchConnectionErrors action $ \err -> do
     if maxRetries > 0
       then retryAction err 1 maxRetries action
