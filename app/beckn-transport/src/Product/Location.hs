@@ -64,7 +64,7 @@ updateLocation personId waypoints = withFlowHandlerAPI . withLogTag "driverLocat
     checkWaypointsForMissingUpdates allowedDelay wps =
       or $ zipWith (\a b -> b.ts `diffUTCTime` a.ts > allowedDelay) wps (tail wps)
     calcDistanceMb driverId wps =
-      QPI.getInProgressByDriverId driverId >>= \case
+      QPI.getInProgressOrderByDriverId driverId >>= \case
         Just ride -> do
           missingLocationUpdates <-
             Redis.getKeyRedis @() (missingLocationUpdatesKey ride.id)
@@ -74,7 +74,9 @@ updateLocation personId waypoints = withFlowHandlerAPI . withLogTag "driverLocat
                 missingLocationUpdates
                   || checkWaypointsForMissingUpdates allowedDelay wps
           if missingUpdates
-            then Redis.setExRedis (missingLocationUpdatesKey ride.id) () (60 * 60 * 24) $> Nothing
+            then do
+              logWarning "Identified missing location updates"
+              Redis.setExRedis (missingLocationUpdatesKey ride.id) () (60 * 60 * 24) $> Nothing
             else pure . Just . getRouteLinearLength $ map (.pt) wps
         Nothing -> logWarning "No ride is assigned to driver, ignoring" $> Nothing
 
