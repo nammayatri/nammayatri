@@ -135,8 +135,5 @@ tests:
       - test/app
       - test/src
     dependencies:
-      - tasty
-      - tasty-hunit
-      - uuid
       - beckn-transport
       - beckn-core
