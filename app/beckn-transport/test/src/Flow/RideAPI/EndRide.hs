@@ -3,6 +3,7 @@ module Flow.RideAPI.EndRide (endRideTests) where
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Data.List (isSubsequenceOf)
+import Data.Time.Clock (nominalDay)
 import EulerHS.Prelude
 import qualified Fixtures
 import Product.FareCalculator.Flow
@@ -72,7 +73,10 @@ handle =
               discount = Nothing
             },
       recalculateFareEnabled = pure False,
-      putDiffMetric = \_ _ -> pure ()
+      putDiffMetric = \_ _ -> pure (),
+      findDriverLocById = \_ -> pure Nothing,
+      getKeyRedis = \_ -> pure Nothing,
+      updateLocationAllowedDelay = pure nominalDay
     }
 
 endRide ::
