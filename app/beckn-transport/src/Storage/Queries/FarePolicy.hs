@@ -4,14 +4,17 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id (Id, cast)
 import Beckn.Types.Schema
+import Beckn.Utils.Common
 import Database.Beam
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified Storage.Queries.FarePolicy.Discount as Discount
 import qualified Storage.Queries.FarePolicy.Discount as QDiscount
 import qualified Storage.Queries.FarePolicy.PerExtraKmRate as QExtraKMRate
 import qualified Types.Domain.FarePolicy as D
-import qualified Types.Domain.FarePolicy.Discount as D
+import Types.Error
 import qualified Types.Storage.DB as DB
+import Types.Storage.FarePolicy
 import qualified Types.Storage.FarePolicy as Storage
 import qualified Types.Storage.FarePolicy.PerExtraKmRate as SExtraKmRate
 import qualified Types.Storage.Organization as Organization
@@ -28,9 +31,11 @@ findFarePolicyByOrgAndVehicleVariant ::
   m (Maybe D.FarePolicy)
 findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ = do
   dbTable <- getDbTable
-  DB.runSqlDBTransaction $ do
-    sFarePolicy <- DB.findOne' dbTable predicate
-    traverse buildDomainFarePolicy sFarePolicy
+  farePolicyData <-
+    DB.runSqlDB $
+      DB.findOne' dbTable predicate
+        >>= mapM loadFarePolicyData
+  mapM fromTable farePolicyData
   where
     predicate Storage.FarePolicy {..} =
       organizationId ==. B.val_ orgId
@@ -39,9 +44,10 @@ findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ = do
 findFarePoliciesByOrgId :: DBFlow m r => Id Organization.Organization -> m [D.FarePolicy]
 findFarePoliciesByOrgId orgId = do
   dbTable <- getDbTable
-  DB.runSqlDBTransaction $ do
+  farePolicyDataList <- DB.runSqlDB $ do
     sFarePolicyList <- DB.findAll' dbTable (B.orderBy_ orderByAsc) predicate
-    traverse buildDomainFarePolicy sFarePolicyList
+    traverse loadFarePolicyData sFarePolicyList
+  mapM fromTable farePolicyDataList
   where
     orderByAsc Storage.FarePolicy {..} = B.asc_ vehicleVariant
     predicate Storage.FarePolicy {..} = organizationId ==. B.val_ orgId
@@ -49,9 +55,10 @@ findFarePoliciesByOrgId orgId = do
 findFarePolicyById :: DBFlow m r => Id D.FarePolicy -> m (Maybe D.FarePolicy)
 findFarePolicyById fpId = do
   dbTable <- getDbTable
-  DB.runSqlDBTransaction $ do
+  farePolicyData <- DB.runSqlDB $ do
     sFarePolicy <- DB.findOne' dbTable (predicate $ cast fpId)
-    traverse buildDomainFarePolicy sFarePolicy
+    mapM loadFarePolicyData sFarePolicy
+  mapM fromTable farePolicyData
   where
     predicate fpId_ Storage.FarePolicy {..} = id ==. B.val_ fpId_
 
@@ -86,25 +93,30 @@ updateFarePolicy farePolicy = do
             fare = fromRational dExtraKmRate.fare
           }
 
-buildDomainFarePolicy :: Storage.FarePolicy -> DB.SqlDB D.FarePolicy
-buildDomainFarePolicy sFarePolicy = do
+loadFarePolicyData :: Storage.FarePolicy -> DB.SqlDB FarePolicyData
+loadFarePolicyData sFarePolicy = do
   sExtraKmRate <- QExtraKMRate.findAll sFarePolicy.organizationId sFarePolicy.vehicleVariant
   discountList <- QDiscount.findAll sFarePolicy.organizationId sFarePolicy.vehicleVariant
-  return $ fromTable sFarePolicy sExtraKmRate discountList
+  pure $ FarePolicyData sFarePolicy sExtraKmRate discountList
 
-fromTable :: Storage.FarePolicy -> NonEmpty SExtraKmRate.FarePolicyPerExtraKmRate -> [D.Discount] -> D.FarePolicy
-fromTable sFarePolicy extraKmRateList discountList =
-  D.FarePolicy
-    { id = cast sFarePolicy.id,
-      vehicleVariant = sFarePolicy.vehicleVariant,
-      organizationId = sFarePolicy.organizationId,
-      baseFare = toRational <$> sFarePolicy.baseFare,
-      perExtraKmRateList = extraKmRateFromTable <$> extraKmRateList,
-      discountList = discountList,
-      nightShiftStart = sFarePolicy.nightShiftStart,
-      nightShiftEnd = sFarePolicy.nightShiftEnd,
-      nightShiftRate = toRational <$> sFarePolicy.nightShiftRate
-    }
+fromTable :: (Monad m, MonadThrow m, Log m) => FarePolicyData -> m D.FarePolicy
+fromTable FarePolicyData {..} = do
+  extraKmRates <-
+    case extraKmRateList of
+      e : es -> pure $ e :| es
+      [] -> throwError NoPerExtraKmRate
+  pure $
+    D.FarePolicy
+      { id = cast farePolicy.id,
+        vehicleVariant = farePolicy.vehicleVariant,
+        organizationId = farePolicy.organizationId,
+        baseFare = toRational <$> farePolicy.baseFare,
+        perExtraKmRateList = extraKmRateFromTable <$> extraKmRates,
+        discountList = map Discount.fromTable discountList,
+        nightShiftStart = farePolicy.nightShiftStart,
+        nightShiftEnd = farePolicy.nightShiftEnd,
+        nightShiftRate = toRational <$> farePolicy.nightShiftRate
+      }
   where
     extraKmRateFromTable sExtraKmRate =
       D.PerExtraKmRate

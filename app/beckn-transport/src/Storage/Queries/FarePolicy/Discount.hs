@@ -40,15 +40,17 @@ findAllFlow ::
   Id Organization.Organization ->
   Vehicle.Variant ->
   m [D.Discount]
-findAllFlow orgId vehicleVariant_ = DB.runSqlDBTransaction $ findAll orgId vehicleVariant_
+findAllFlow orgId vehicleVariant_ = do
+  discountList <- DB.runSqlDB $ findAll orgId vehicleVariant_
+  pure $ map fromTable discountList
 
 findAll ::
   Id Organization.Organization ->
   Vehicle.Variant ->
-  DB.SqlDB [D.Discount]
+  DB.SqlDB [Storage.FarePolicyDiscount]
 findAll orgId vehicleVariant_ = do
   dbTable <- getDbTable
-  map fromTable <$> DB.findAll' dbTable identity predicate
+  DB.findAll' dbTable identity predicate
   where
     predicate Storage.FarePolicyDiscount {..} =
       organizationId ==. B.val_ orgId

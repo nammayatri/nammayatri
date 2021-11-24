@@ -6,6 +6,8 @@ import Beckn.Types.Id (Id)
 import Data.Time (TimeOfDay, UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import Types.Storage.FarePolicy.Discount
+import Types.Storage.FarePolicy.PerExtraKmRate
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Vehicle as Vehicle
 
@@ -56,3 +58,9 @@ fieldEMod =
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
+
+data FarePolicyData = FarePolicyData
+  { farePolicy :: FarePolicy,
+    extraKmRateList :: [FarePolicyPerExtraKmRate],
+    discountList :: [FarePolicyDiscount]
+  }

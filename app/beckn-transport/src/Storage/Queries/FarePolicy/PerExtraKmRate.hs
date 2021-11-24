@@ -4,7 +4,6 @@ import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id (Id)
 import Beckn.Types.Schema
-import Data.List.NonEmpty (fromList)
 import Database.Beam
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
@@ -25,10 +24,10 @@ create Storage.FarePolicyPerExtraKmRate {..} = do
 findAll ::
   Id Organization.Organization ->
   Vehicle.Variant ->
-  DB.SqlDB (NonEmpty Storage.FarePolicyPerExtraKmRate)
+  DB.SqlDB [Storage.FarePolicyPerExtraKmRate]
 findAll orgId vehicleVariant_ = do
   dbTable <- getDbTable
-  fromList <$> DB.findAll' dbTable (B.orderBy_ orderBy) predicate
+  DB.findAll' dbTable (B.orderBy_ orderBy) predicate
   where
     orderBy Storage.FarePolicyPerExtraKmRate {..} = B.asc_ distanceRangeStart
     predicate Storage.FarePolicyPerExtraKmRate {..} =

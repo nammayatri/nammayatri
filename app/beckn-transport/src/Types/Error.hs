@@ -9,6 +9,7 @@ import EulerHS.Prelude
 
 data FarePolicyError
   = NoFarePolicy
+  | NoPerExtraKmRate
   | CantCalculateDistance
   deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
 
@@ -20,9 +21,9 @@ instance IsBaseError FarePolicyError where
 
 instance IsHTTPError FarePolicyError where
   toErrorCode NoFarePolicy = "NO_FARE_POLICY"
+  toErrorCode NoPerExtraKmRate = "NO_PER_EXTRA_KM_RATE"
   toErrorCode CantCalculateDistance = "CANT_CALCULATE_DISTANCE"
-  toHttpCode NoFarePolicy = E400
-  toHttpCode CantCalculateDistance = E500
+  toHttpCode _ = E500
 
 instance IsAPIError FarePolicyError
 
