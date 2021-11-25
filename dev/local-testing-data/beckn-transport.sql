@@ -4,10 +4,10 @@
 
 -- Gateway entries
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Juspay Gateway', 'JUSPAY.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'juspay-gateway-bpp-key', 'http://localhost:8015/v1', 'mobility-provider-key', NULL, now(), now(), NULL);
+  ('1926d40f-1223-4eb2-ba5d-7983bde2fd02', 'Juspay Gateway', 'JUSPAY.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8015/v1', NULL, NULL, now(), now(), NULL);
 -- NSDL creds are fetched from config
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('0d7016d0-f9cd-4f9f-886f-bc4cbd6a86e5', 'NSDL Gateway', 'NSDL', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'nsdl-gateway-bpp-key', 'https://gateway-1.beckn.nsdl.co.in/v1', NULL, NULL, now(), now(), NULL);
+  ('0d7016d0-f9cd-4f9f-886f-bc4cbd6a86e5', 'NSDL Gateway', 'NSDL', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'https://gateway-1.beckn.nsdl.co.in/v1', NULL, NULL, now(), now(), NULL);
 
 -- Transporter entries. api_key, callback_url, callback_api_key are not needed to be populated. These are only looked up from id.
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
@@ -17,11 +17,11 @@ INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, t
 
 -- BAP app entry.
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, created_at, updated_at, info) VALUES
-  ('505e4651-5340-4836-81a7-045394ba6dc3', 'Mobility BAP', 'JUSPAY.MOBILITY.APP.UAT.1', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, '9777777777', '+91', NULL, NULL, 'bpp-1-key', 'http://localhost:8013/cab/v1', 'bap-key-1', NULL, now(), now(), NULL);
+  ('505e4651-5340-4836-81a7-045394ba6dc3', 'Mobility BAP', 'JUSPAY.MOBILITY.APP.UAT.1', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, '9777777777', '+91', NULL, NULL, NULL, 'http://localhost:8013/cab/v1', NULL, NULL, now(), now(), NULL);
 
 -- NSDL entry
 INSERT INTO atlas_transporter.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, callback_api_key, head_count, info, created_at, updated_at) VALUES
-  ('239ee68b-0818-4dba-ad31-032fe809cf71', 'NSDL Gateway', 'NSDL.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, 'nsdl-gateway-key', 'https://gateway-1.beckn.nsdl.co.in/v1', 'nsdl-app-key', NULL, NULL, now(), now());
+  ('239ee68b-0818-4dba-ad31-032fe809cf71', 'NSDL Gateway', 'NSDL.BG.1', NULL, 'APPROVED', 'GATEWAY', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'https://gateway-1.beckn.nsdl.co.in/v1', NULL, NULL, NULL, now(), now());
 
 --
 -- Data for Name: person; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
