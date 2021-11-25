@@ -105,6 +105,18 @@ INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id,
 INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
   ('f777fbfa-53a7-4f68-90b8-b55492f01b8b', 'SUV', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 120.0, 5000.0, 12.0, '21:00:00', '5:00:00', 1.1);
 
+INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
+  ('8e36611e-c2d5-4094-80f2-8306fba03d2c', 'SEDAN', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 120.0, 5000.0, 12.0, '21:00:00', '5:00:00', 1.1);
+
+INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
+  ('7fcf9719-2db4-41ea-8a1e-6922d8b23490', 'SEDAN', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 120.0, 5000.0, 12.0, '21:00:00', '5:00:00', 1.1);
+
+INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
+  ('9ec95f54-1ad5-4701-8c74-c935b24af0fb', 'HATCHBACK', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 120.0, 5000.0, 12.0, '21:00:00', '5:00:00', 1.1);
+
+INSERT INTO atlas_transporter.fare_policy (id, vehicle_variant, organization_id, base_fare, base_distance, per_extra_km_rate, night_shift_start, night_shift_end, night_shift_rate) VALUES
+  ('c66eb8af-496d-4042-abf1-8fb2dd194800', 'HATCHBACK', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 120.0, 5000.0, 12.0, '21:00:00', '5:00:00', 1.1);
+
 -- Driver1
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
   ('001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, 'Model3', NULL, 'SUV', 'WHITE', NULL, '4277', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
