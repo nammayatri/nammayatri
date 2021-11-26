@@ -7,6 +7,7 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Shutdown
 import qualified Data.Text as T
 import System.Environment (lookupEnv)
+import Tools.Metrics
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -22,7 +23,8 @@ data AppEnv = AppEnv
   { config :: AppCfg,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    coreMetrics :: CoreMetricsContainer
   }
   deriving (Generic)
 
@@ -31,6 +33,7 @@ buildAppEnv config@AppCfg {..} = do
   hostname <- fmap T.pack <$> lookupEnv "POD_NAME"
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
   return $ AppEnv {..}
 

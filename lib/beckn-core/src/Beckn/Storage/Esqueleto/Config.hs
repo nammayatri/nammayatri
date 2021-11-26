@@ -3,7 +3,7 @@ module Beckn.Storage.Esqueleto.Config where
 import Beckn.Storage.Esqueleto.Logger (runLoggerIO)
 import Beckn.Types.App (HasFlowEnv)
 import Beckn.Types.Field ((:::))
-import Beckn.Types.Logging (LoggerEnv)
+import Beckn.Types.Logging (HasLog, LoggerEnv)
 import Beckn.Utils.Dhall (FromDhall)
 import Data.Pool (Pool)
 import Database.Persist.Postgresql
@@ -47,4 +47,4 @@ prepareEsqDBEnv cfg logEnv = do
     modifyConn schemaName conn =
       void . execute_ conn . Query $ "set search_path to " <> schemaName <> ", public; "
 
-type EsqDBFlow m r = HasFlowEnv m r '["esqDBEnv" ::: EsqDBEnv]
+type EsqDBFlow m r = (HasFlowEnv m r '["esqDBEnv" ::: EsqDBEnv], HasLog r)

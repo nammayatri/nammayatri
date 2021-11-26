@@ -1,7 +1,19 @@
 let common = ./common.dhall
 
+
+
+let esqDBCfg =
+  { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
+  , connectPort = 5437
+  , connectUser = sec.dbUserId
+  , connectPassword = sec.dbPassword
+  , connectDatabase = "atlas_parking_v2"
+  , connectSchemaName = "atlas_parking"
+  }
+
 in
-{ port = +8022
+{ esqDBCfg = esqDBCfg
+, port = +8022
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/parking-bap.log"}
 , graceTerminationPeriod = +90
 , selfId = "api.sandbox.beckn.juspay.in/dev/bap/parking/v1"

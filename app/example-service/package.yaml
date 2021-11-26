@@ -60,6 +60,10 @@ dependencies:
   - text
   - time
   - servant-server
+  - persistent            
+  - persistent-postgresql 
+  - esqueleto           
+  - template-haskell
 
 ghc-options:
   - -Wall
