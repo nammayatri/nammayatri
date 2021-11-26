@@ -37,4 +37,4 @@ INSERT INTO atlas_app.registration_token (id, auth_medium, auth_type, auth_value
 
 
 INSERT INTO atlas_app.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES
-    ('metro-0a-81d2-404b-ada5-20aac58005e6', 'Metro BPP', 'metro-bpp', NULL, 'APPROVED', 'PROVIDER', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://4c75-49-207-207-115.ngrok.io', NULL, now(), now(), NULL, NULL);
+    ('71e8c026-aa08-4e58-a6a8-52ac1d90e86d', 'Metro BPP', 'metro-bpp', NULL, 'APPROVED', 'PROVIDER', 'METRO', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8000', NULL, now(), now(), NULL, NULL);
