@@ -24,36 +24,38 @@ CREATE OR REPLACE FUNCTION atlas_parking.uuid_generate_v4() RETURNS character (3
     LANGUAGE SQL
     IMMUTABLE;
 
-CREATE TABLE atlas_parking.parking_search (
+CREATE TABLE atlas_parking.search_location (
     id character(36) NOT NULL PRIMARY KEY DEFAULT atlas_parking.uuid_generate_v4(),
-    search_location_id character(36) NOT NULL,
+    lat double precision NOT NULL,
+    long double precision NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE atlas_parking.search (
+    id character(36) NOT NULL PRIMARY KEY DEFAULT atlas_parking.uuid_generate_v4(),
+    search_location_id character(36) NOT NULL REFERENCES atlas_parking.parking_location (id) on delete cascade,
     requestor_id character(36) NOT NULL,
     from_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     to_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-CREATE TABLE atlas_parking.parking_quote (
+CREATE TABLE atlas_parking.quote (
     id character(36) NOT NULL PRIMARY KEY DEFAULT atlas_parking.uuid_generate_v4(),
-    search_id character(36) NOT NULL REFERENCES atlas_parking.parking_search (id) on delete cascade,
-    additional_info character varying(255) NOT NULL,
+    search_id character(36) NOT NULL REFERENCES atlas_parking.search (id) on delete cascade,
     bpp_id character(36) NOT NULL,
     bpp_url character varying(255) NOT NULL,
     parking_space_name character varying(255) NOT NULL,
     parking_space_location_id character(36) NOT NULL,
-    parking_support_number character varying(16) NOT NULL,
     fare numeric(30,2) NOT NULL,
     available_spaces integer NOT NULL,
-    max_spaces integer NOT NULL,
-    from_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    to_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-CREATE TABLE atlas_parking.parking_booking (
+CREATE TABLE atlas_parking.booking (
     id character(36) NOT NULL PRIMARY KEY DEFAULT atlas_parking.uuid_generate_v4(),
-    search_id character(36) NOT NULL REFERENCES atlas_parking.parking_search (id) on delete cascade,
-    quote_id character(36) NOT NULL REFERENCES atlas_parking.parking_quote (id) on delete cascade,
+    search_id character(36) NOT NULL REFERENCES atlas_parking.search (id) on delete cascade,
+    quote_id character(36) NOT NULL REFERENCES atlas_parking.quote (id) on delete cascade,
     requestor_id character(36) NOT NULL,
     requestor_number character varying(16) NOT NULL,
     vehicle_number character varying(16) NOT NULL,
@@ -75,7 +77,7 @@ CREATE TABLE atlas_parking.parking_booking (
 
 CREATE TABLE atlas_parking.payment_transaction (
     id character(36) NOT NULL PRIMARY KEY DEFAULT atlas_parking.uuid_generate_v4(),
-    booking_id character(36) NOT NULL REFERENCES atlas_parking.parking_booking (id) on delete cascade,
+    booking_id character(36) NOT NULL REFERENCES atlas_parking.booking (id) on delete cascade,
     bkn_txn_id character(36) NOT NULL,
     payment_gateway_txn_id character varying(255) NOT NULL,
     fare numeric(30,2) NOT NULL,

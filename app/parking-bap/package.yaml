@@ -61,9 +61,7 @@ dependencies:
   - time
   - servant-server
   - servant-client
-  - persistent            
-  - persistent-postgresql 
-  - esqueleto           
+  - persistent         
   - template-haskell
 
 ghc-options:

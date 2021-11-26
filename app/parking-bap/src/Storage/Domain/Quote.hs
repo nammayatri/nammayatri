@@ -22,17 +22,12 @@ import Storage.Tabular.Quote as Reexport hiding (QuoteT (..))
 data Quote = Quote
   { id :: Id Quote,
     searchId :: Id Search,
-    additionalInfo :: Text,
     bppId :: Text,
     bppUrl :: BaseUrl,
     parkingSpaceName :: Text,
     parkingSpaceLocationId :: Text,
-    parkingSupportNumber :: Text,
     fare :: Amount,
-    fromDate :: UTCTime,
-    toDate :: UTCTime,
     availableSpaces :: Int,
-    maxSpaces :: Int,
     createdAt :: UTCTime
   }
 
@@ -48,34 +43,24 @@ instance TEntity QuoteT Quote where
     return $
       Quote
         { id = id,
-          searchId = let (SearchTKey _id) = quoteTSearchId in Id _id,
-          additionalInfo = quoteTAdditionalInfo,
+          searchId = fromKey quoteTSearchId,
           bppId = quoteTBppId,
           bppUrl = bppUrl,
           parkingSpaceName = quoteTParkingSpaceName,
           parkingSpaceLocationId = quoteTParkingSpaceLocationId,
-          parkingSupportNumber = quoteTParkingSupportNumber,
           fare = quoteTFare,
-          fromDate = quoteTFromDate,
-          toDate = quoteTToDate,
           availableSpaces = quoteTAvailableSpaces,
-          maxSpaces = quoteTMaxSpaces,
           createdAt = quoteTCreatedAt
         }
   toTType Quote {..} = do
     QuoteT
       { quoteTSearchId = SearchTKey searchId.getId,
-        quoteTAdditionalInfo = additionalInfo,
         quoteTBppId = bppId,
         quoteTBppUrl = T.pack $ showBaseUrl bppUrl,
         quoteTParkingSpaceName = parkingSpaceName,
         quoteTParkingSpaceLocationId = parkingSpaceLocationId,
-        quoteTParkingSupportNumber = parkingSupportNumber,
         quoteTFare = fare,
-        quoteTFromDate = fromDate,
-        quoteTToDate = toDate,
         quoteTAvailableSpaces = availableSpaces,
-        quoteTMaxSpaces = maxSpaces,
         quoteTCreatedAt = createdAt
       }
   toTEntity a = do

@@ -43,7 +43,7 @@ instance TEntity PaymentTransactionT PaymentTransaction where
     return $
       PaymentTransaction
         { id = Id _id,
-          bookingId = let (BookingTKey _id) = paymentTransactionTBookingId in Id _id,
+          bookingId = fromKey paymentTransactionTBookingId,
           bknTxnId = paymentTransactionTBknTxnId,
           paymentGatewayTxnId = paymentTransactionTPaymentGatewayTxnId,
           fare = paymentTransactionTFare,

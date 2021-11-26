@@ -1,16 +1,8 @@
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Storage.Tabular.Booking
   ( module Storage.Tabular.Booking,
@@ -30,7 +22,7 @@ import Storage.Tabular.Search
 share
   [mkPersist sqlSettings]
   [defaultQQ|
-    BookingT sql=parking_booking
+    BookingT sql=booking
       Id Text default=uuid_generate_v4() sqltype=varchar(36)
       searchId SearchTId
       quoteId QuoteTId

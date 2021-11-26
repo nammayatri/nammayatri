@@ -4,23 +4,20 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Storage.Tabular.Search where
+module Storage.Tabular.SearchLocation where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Data.Time (UTCTime)
 import Database.Persist.TH
-import Storage.Domain.SearchLocation (SearchLocationTId)
 
 share
   [mkPersist sqlSettings]
   [defaultQQ|
-    SearchT sql=search
+    SearchLocationT sql=search_location
       Id Text default=uuid_generate_v4() sqltype=varchar(36)
-      searchLocationId SearchLocationTId
-      requestorId Text
-      fromDate UTCTime
-      toDate UTCTime
+      lat Double
+      lon Double
       createdAt UTCTime
       deriving Generic
     |]

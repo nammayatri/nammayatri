@@ -24,7 +24,7 @@ data Booking = Booking
   { id :: Id Booking,
     searchId :: Id Search,
     quoteId :: Id Quote,
-    requestorId :: Text,
+    requestorId :: Id BAPPerson,
     requestorNumber :: Text,
     vehicleNumber :: Text,
     additionalInfo :: Text,
@@ -55,9 +55,9 @@ instance TEntity BookingT Booking where
     return $
       Booking
         { id = id,
-          searchId = let (SearchTKey _id) = bookingTSearchId in Id _id,
-          quoteId = let (QuoteTKey _id) = bookingTQuoteId in Id _id,
-          requestorId = bookingTRequestorId,
+          searchId = fromKey bookingTSearchId,
+          quoteId = fromKey bookingTQuoteId,
+          requestorId = Id bookingTRequestorId,
           requestorNumber = bookingTRequestorNumber,
           vehicleNumber = bookingTVehicleNumber,
           additionalInfo = bookingTAdditionalInfo,
@@ -79,7 +79,7 @@ instance TEntity BookingT Booking where
     BookingT
       { bookingTSearchId = SearchTKey searchId.getId,
         bookingTQuoteId = QuoteTKey quoteId.getId,
-        bookingTRequestorId = requestorId,
+        bookingTRequestorId = requestorId.getId,
         bookingTRequestorNumber = requestorNumber,
         bookingTVehicleNumber = vehicleNumber,
         bookingTAdditionalInfo = additionalInfo,
