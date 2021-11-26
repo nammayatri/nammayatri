@@ -9,11 +9,10 @@ import Beckn.InternalAPI.Auth.API as Auth
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as API
-import qualified Beckn.Types.Core.API.Cancel as API
-import qualified Beckn.Types.Core.API.Confirm as API
-import qualified Beckn.Types.Core.API.Search as API
-import qualified Beckn.Types.Core.API.Status as API
-import qualified Beckn.Types.Core.API.Update as API
+import qualified Beckn.Types.Core.Migration1.API.OnCancel as API
+import qualified Beckn.Types.Core.Migration1.API.OnConfirm as API
+import qualified Beckn.Types.Core.Migration1.API.OnSearch as API
+import qualified Beckn.Types.Core.Migration1.API.OnUpdate as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi (Info (..), OpenApi (..))
@@ -35,7 +34,6 @@ import qualified Product.RideBooking as RideBooking
 import qualified Product.Search as Search
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
-import qualified Product.Status as Status
 import qualified Product.Support as Support
 import qualified Product.Update as Update
 import Servant hiding (throwError)
@@ -181,21 +179,11 @@ type BecknCabAPI =
     :> SignatureAuth "Proxy-Authorization"
     :> API.OnSearchAPI
     :<|> SignatureAuth "Authorization"
-    :> "on_confirm"
-    :> ReqBody '[JSON] API.OnConfirmReq
-    :> Post '[JSON] API.OnConfirmRes
+    :> API.OnConfirmAPI
     :<|> SignatureAuth "Authorization"
-    :> "on_update"
-    :> ReqBody '[JSON] API.OnUpdateReq
-    :> Post '[JSON] API.OnUpdateRes
+    :> API.OnUpdateAPI
     :<|> SignatureAuth "Authorization"
-    :> "on_cancel"
-    :> ReqBody '[JSON] API.OnCancelReq
-    :> Post '[JSON] API.OnCancelRes
-    :<|> SignatureAuth "Authorization"
-    :> "on_status"
-    :> ReqBody '[JSON] API.OnStatusReq
-    :> Post '[JSON] API.OnStatusRes
+    :> API.OnCancelAPI
 
 type SearchAPI =
   "rideSearch"
@@ -209,7 +197,6 @@ becknCabApi =
     :<|> Confirm.onConfirm
     :<|> Update.onUpdate
     :<|> Cancel.onCancel
-    :<|> Status.onStatus
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =
@@ -312,17 +299,6 @@ type SupportAPI =
 
 supportFlow :: FlowServer SupportAPI
 supportFlow = Support.sendIssue
-
-------- Update Flow -------
-type UpdateAPI =
-  SignatureAuth "Authorization"
-    :> "on_update"
-    :> ReqBody '[JSON] API.OnUpdateReq
-    :> Post '[JSON] API.OnUpdateRes
-
-updateFlow :: FlowServer UpdateAPI
-updateFlow =
-  Update.onUpdate
 
 type RouteAPI =
   "route"

@@ -29,7 +29,7 @@ containsPredicate ::
   B.QGenExpr B.QValueContext Postgres B.QBaseScope Bool
 containsPredicate gps _ = containsPoint_ (B.val_ point)
   where
-    point = "POINT (" <> gps.lon <> " " <> gps.lat <> ")"
+    point = "POINT (" <> show gps.lon <> " " <> show gps.lat <> ")"
 
 findGeometriesContaining :: DBFlow m r => GPS -> Text -> m [Storage.Geometry]
 findGeometriesContaining gps region_ = do

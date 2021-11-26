@@ -1,16 +1,16 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Product.BecknProvider.Search (search) where
 
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
+import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.API.Search as API
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Migration1.API.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Migration1.API.Search as Search
+import qualified Beckn.Types.Core.Migration1.OnSearch as OnSearch
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
-import qualified Beckn.Types.Mobility.Stop as Stop
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List as List
 import qualified Data.Text as T
@@ -19,8 +19,6 @@ import Data.Traversable
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified ExternalAPI.Transform as ExternalAPITransform
-import qualified Product.BecknProvider.BP as BP
 import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
 import qualified Product.FareCalculator.Flow as Fare
@@ -32,7 +30,6 @@ import qualified Storage.Queries.Quote as Quote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchReqLocation as Loc
 import qualified Storage.Queries.SearchRequest as QSearchRequest
-import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics, HasBPPMetrics)
 import qualified Types.Storage.Organization as Org
@@ -48,64 +45,52 @@ search ::
   Id Org.Organization ->
   SignatureAuthResult ->
   SignatureAuthResult ->
-  API.SearchReq ->
+  Search.SearchReq ->
   FlowHandler AckResponse
 search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     let context = req.context
-    BP.validateContext "search" context
+    validateContextMig1 context
     transporter <-
       Org.findOrganizationById transporterId
         >>= fromMaybeM OrgDoesNotExist
     callbackUrl <- ExternalAPI.getGatewayUrl
     if not transporter.enabled
       then
-        ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
+        ExternalAPI.withCallback' withRetry transporter "search" OnSearch.onSearchAPI context callbackUrl $
           throwError AgencyDisabled
       else do
         searchMetricsMVar <- Metrics.startSearchMetrics transporterId
         let intent = req.message.intent
         now <- getCurrentTime
-        let pickup = head $ intent.pickups
-        let dropOff = head $ intent.drops
-        let startTime = pickup.departure_time.est
+        let pickup = intent.fulfillment.start
+        let dropOff = intent.fulfillment.end
+        let startTime = pickup.time.timestamp
         validity <- getValidTime now startTime
-        fromLocation <- buildFromStop now pickup
-        toLocation <- buildFromStop now dropOff
+        fromLocation <- buildFromLocation now pickup
+        toLocation <- buildFromLocation now dropOff
         let bapOrgId = Id subscriber.subscriber_id
         uuid <- L.generateGUID
-        let vehVariant = readMaybe (T.unpack req.message.intent.vehicle.variant)
-        bapUri <- req.context.bap_uri & fromMaybeM (InvalidRequest "Context must have bap_uri")
-        let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId vehVariant bapUri
+        let bapUri = req.context.bap_uri
+        let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId bapUri
         DB.runSqlDBTransaction $ do
           Loc.create fromLocation
           Loc.create toLocation
           QSearchRequest.create searchRequest
-        ExternalAPI.withCallback' withRetry transporter "search" API.onSearch context callbackUrl $
+        ExternalAPI.withCallback' withRetry transporter "search" OnSearch.onSearchAPI context callbackUrl $
           onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
-
-buildFromStop :: MonadFlow m => UTCTime -> Stop.Stop -> m Location.SearchReqLocation
-buildFromStop now stop = do
-  let loc = stop.location
-  let mgps = loc.gps
-  let maddress = loc.address
-  uuid <- Id <$> L.generateGUID
-  lat <- mgps >>= readMaybe . T.unpack . (.lat) & fromMaybeM (InvalidRequest "Lat field is not present.")
-  lon <- mgps >>= readMaybe . T.unpack . (.lon) & fromMaybeM (InvalidRequest "Lon field is not present.")
-  pure $
-    Location.SearchReqLocation
-      { id = uuid,
-        lat = lat,
-        long = lon,
-        district = Nothing,
-        city = (^. #city) <$> maddress,
-        state = (^. #state) <$> maddress,
-        country = (^. #country) <$> maddress,
-        pincode = (^. #area_code) <$> maddress,
-        address = encodeToText <$> maddress,
-        createdAt = now,
-        updatedAt = now
-      }
+  where
+    buildFromLocation now location = do
+      let mgps = location.gps
+      uuid <- Id <$> L.generateGUID
+      pure $
+        Location.SearchReqLocation
+          { id = uuid,
+            lat = mgps.lat,
+            long = mgps.lon,
+            createdAt = now,
+            updatedAt = now
+          }
 
 getValidTime :: HasFlowEnv m r '["caseExpiry" ::: Maybe Seconds] => UTCTime -> UTCTime -> m UTCTime
 getValidTime now startTime = do
@@ -116,7 +101,7 @@ getValidTime now startTime = do
   pure validTill
 
 mkSearchRequest ::
-  API.SearchReq ->
+  Search.SearchReq ->
   Text ->
   UTCTime ->
   UTCTime ->
@@ -125,10 +110,9 @@ mkSearchRequest ::
   Location.SearchReqLocation ->
   Id Org.Organization ->
   Id Org.Organization ->
-  Maybe Veh.Variant ->
   BaseUrl ->
   SearchRequest.SearchRequest
-mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId vehVariant bapUri = do
+mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId bapUri = do
   let bapId = getId bapOrgId
   SearchRequest.SearchRequest
     { id = Id uuid,
@@ -139,7 +123,6 @@ mkSearchRequest req uuid now validity startTime fromLocation toLocation transpor
       requestorId = Id "", -- TODO: Fill this field with Person id.
       fromLocationId = fromLocation.id,
       toLocationId = toLocation.id,
-      vehicleVariant = vehVariant,
       bapId = bapId,
       bapUri = T.pack $ showBaseUrl bapUri,
       createdAt = now
@@ -157,11 +140,10 @@ onSearchCallback ::
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
   Metrics.SearchMetricsMVar ->
-  m API.OnSearchServices
+  m OnSearch.OnSearchMessage
 onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar = do
   let transporterId = transporter.id
-  let desiredVehicleVariant = searchRequest.vehicleVariant
-  pool <- Confirm.calculateDriverPool fromLocation.id transporterId desiredVehicleVariant
+  pool <- Confirm.calculateDriverPool fromLocation.id transporterId Nothing
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId
       ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""
@@ -186,7 +168,7 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
   DB.runSqlDBTransaction $
     for_ listOfQuotes Quote.create
 
-  mkOnSearchPayload searchRequest listOfQuotes transporter
+  mkOnSearchMessage listOfQuotes transporter
     <* Metrics.finishSearchMetrics transporterId searchMetricsMVar
 
 mkQuote ::
@@ -218,31 +200,40 @@ mkQuote productSearchRequest fareParams transporterId distance nearestDriverDist
         ..
       }
 
-mkOnSearchPayload ::
+mkOnSearchMessage ::
   DBFlow m r =>
-  SearchRequest.SearchRequest ->
   [Quote.Quote] ->
   Org.Organization ->
-  m API.OnSearchServices
-mkOnSearchPayload productSearchRequest quotes transporterOrg = do
-  QRide.getCountByStatus (transporterOrg.id)
-    <&> mkProviderInfo transporterOrg . mkProviderStats
-    >>= ExternalAPITransform.mkCatalog productSearchRequest quotes
-    <&> API.OnSearchServices
+  m OnSearch.OnSearchMessage
+mkOnSearchMessage quotes transporterOrg = do
+  provider <- buildProvider transporterOrg quotes
+  return . OnSearch.OnSearchMessage $ OnSearch.Catalog [provider]
 
-mkProviderInfo :: Org.Organization -> Common.ProviderStats -> Common.ProviderInfo
-mkProviderInfo org stats =
-  Common.ProviderInfo
-    { id = getId $ org.id,
-      name = org.name,
-      stats = encodeToText stats,
-      contacts = fromMaybe "" (org.mobileNumber)
-    }
-
-mkProviderStats :: [(Ride.RideStatus, Int)] -> Common.ProviderStats
-mkProviderStats piCount =
-  Common.ProviderStats
-    { completed = List.lookup Ride.COMPLETED piCount,
-      inprogress = List.lookup Ride.INPROGRESS piCount,
-      confirmed = List.lookup Ride.NEW piCount
-    }
+buildProvider :: DBFlow m r => Org.Organization -> [Quote.Quote] -> m OnSearch.Provider
+buildProvider org quotes = do
+  count <- QRide.getCountByStatus (org.id)
+  let tags = mkTags count
+      items = map mkItem quotes
+  return $
+    OnSearch.Provider
+      { name = org.name,
+        items,
+        tags
+      }
+  where
+    mkTags count =
+      OnSearch.Tags
+        { contacts = fromMaybe "" org.mobileNumber,
+          rides_inprogress = fromMaybe 0 $ List.lookup Ride.INPROGRESS count,
+          rides_completed = fromMaybe 0 $ List.lookup Ride.COMPLETED count,
+          rides_confirmed = fromMaybe 0 $ List.lookup Ride.NEW count
+        }
+    mkItem quote =
+      OnSearch.Item
+        { id = quote.id.getId,
+          vehicle_variant = show quote.vehicleVariant,
+          estimated_price = OnSearch.Price $ realToFrac quote.estimatedFare,
+          discount = OnSearch.Price . realToFrac <$> quote.discount,
+          discounted_price = OnSearch.Price $ realToFrac quote.estimatedTotalFare,
+          nearest_driver_distance = quote.distanceToNearestDriver
+        }

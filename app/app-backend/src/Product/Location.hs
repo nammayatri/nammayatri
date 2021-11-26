@@ -4,11 +4,9 @@ import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
-import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Types.API.Location as Location
 import qualified Types.Common as Common
-import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Person as Person
 import Utils.Common
@@ -24,16 +22,9 @@ getDistance ::
   Common.GPS ->
   m (Maybe Double)
 getDistance pickupLoc dropLoc = do
-  pickupMapPoint <- mkMapPoint pickupLoc
-  dropMapPoint <- mkMapPoint dropLoc
+  let pickupMapPoint = mkMapPoint pickupLoc
+      dropMapPoint = mkMapPoint dropLoc
   MapSearch.getDistanceMb (Just MapSearch.CAR) [pickupMapPoint, dropMapPoint]
 
-mkMapPoint :: (MonadThrow m, Log m) => Common.GPS -> m MapSearch.LatLong
-mkMapPoint (Common.GPS lat lon) = do
-  MapSearch.LatLong
-    <$> readLatLng lat
-    <*> readLatLng lon
-
-readLatLng :: (MonadThrow m, Log m) => Text -> m Double
-readLatLng text = do
-  readMaybe (T.unpack text) & fromMaybeM (InternalError "Location read error")
+mkMapPoint :: Common.GPS -> MapSearch.LatLong
+mkMapPoint (Common.GPS lat lon) = MapSearch.LatLong lat lon

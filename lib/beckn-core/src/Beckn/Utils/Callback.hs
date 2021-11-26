@@ -1,11 +1,11 @@
 module Beckn.Utils.Callback (withBecknCallback, WithBecknCallback, withBecknCallbackMig, WithBecknCallbackMig) where
 
 import Beckn.Types.Common
-import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Context
-import qualified Beckn.Types.Core.Migration.API.Types as API
+import qualified Beckn.Types.Core.Migration.API.Types as M.API
 import qualified Beckn.Types.Core.Migration.Context as M.Context
+import qualified Beckn.Types.Core.Migration1.API.Types as API
+import qualified Beckn.Types.Core.Migration1.Common.Context as Context
 import Beckn.Types.Error
 import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics
@@ -14,25 +14,25 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import Servant.Client
 
-toCallbackReq :: Context -> a -> CallbackReq a
+toCallbackReq :: Context.Context -> a -> API.BecknCallbackReq a
 toCallbackReq context a =
-  CallbackReq
+  API.BecknCallbackReq
     { contents = Right a,
       context
     }
 
-someExceptionToCallbackReq :: Context -> SomeException -> CallbackReq a
+someExceptionToCallbackReq :: Context.Context -> SomeException -> API.BecknCallbackReq a
 someExceptionToCallbackReq context exc =
   let BecknAPIError err = someExceptionToBecknApiError exc
-   in CallbackReq
+   in API.BecknCallbackReq
         { contents = Left err,
           context
         }
 
-someExceptionToCallbackReqMig :: M.Context.Context -> SomeException -> API.BecknCallbackReq a
+someExceptionToCallbackReqMig :: M.Context.Context -> SomeException -> M.API.BecknCallbackReq a
 someExceptionToCallbackReqMig context exc =
   let BecknAPIError err = someExceptionToBecknApiError exc
-   in API.BecknCallbackReq
+   in M.API.BecknCallbackReq
         { contents = Left err,
           context
         }
@@ -42,11 +42,11 @@ type WithBecknCallback api callback_success m =
     CoreMetrics m,
     HasClient ET.EulerClient api,
     Client ET.EulerClient api
-      ~ (CallbackReq callback_success -> ET.EulerClient AckResponse)
+      ~ (API.BecknCallbackReq callback_success -> ET.EulerClient AckResponse)
   ) =>
   Text ->
   Proxy api ->
-  Context ->
+  Context.Context ->
   BaseUrl ->
   m callback_success ->
   m AckResponse
@@ -60,7 +60,6 @@ withBecknCallback doWithCallback auth action api context cbUrl f = do
   let cbAction = "on_" <> action
   let context' =
         context
-          & #action .~ cbAction
           & #timestamp .~ now
   safeFork
     (someExceptionToCallbackReq context')
@@ -75,7 +74,7 @@ type WithBecknCallbackMig api callback_success m =
     CoreMetrics m,
     HasClient ET.EulerClient api,
     Client ET.EulerClient api
-      ~ (API.BecknCallbackReq callback_success -> ET.EulerClient AckResponse)
+      ~ (M.API.BecknCallbackReq callback_success -> ET.EulerClient AckResponse)
   ) =>
   M.Context.Action ->
   Proxy api ->
@@ -99,7 +98,7 @@ withBecknCallbackMig doWithCallback auth action api context cbUrl f = do
           & #timestamp .~ now
   safeFork
     (someExceptionToCallbackReqMig cbContext)
-    (API.BecknCallbackReq cbContext . Right)
+    (M.API.BecknCallbackReq cbContext . Right)
     (show action)
     (doWithCallback . callBecknAPI auth Nothing (show cbAction) api cbUrl)
     f

@@ -17,7 +17,6 @@ import Servant
 import Types.App
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.SearchReqLocation as Loc
-import qualified Types.Storage.Vehicle as Veh
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -49,7 +48,6 @@ data SearchRequestT f = SearchRequest
     requestorId :: B.C f (Id Person),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
-    vehicleVariant :: B.C f (Maybe Veh.Variant),
     bapId :: B.C f Text,
     bapUri :: B.C f Text,
     createdAt :: B.C f UTCTime
@@ -90,7 +88,6 @@ fieldEMod =
           requestorId = "requestor_id",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",
-          vehicleVariant = "vehicle_variant",
           bapId = "bap_id",
           bapUri = "bap_uri",
           createdAt = "created_at"

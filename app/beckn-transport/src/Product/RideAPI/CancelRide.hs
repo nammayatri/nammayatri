@@ -4,7 +4,7 @@ import App.Types
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
-import qualified Product.BecknProvider.BP as BecknProvider
+import qualified Product.BecknProvider.Cancel as Cancel
 import qualified Product.RideAPI.Handlers.CancelRide as Handler
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -21,5 +21,5 @@ cancelRide personId rideId req = withFlowHandlerAPI $ do
       Handler.ServiceHandle
         { findRideById = QRide.findById,
           findPersonById = QPerson.findPersonById,
-          cancelRide = BecknProvider.cancelRide
+          cancelRide = Cancel.cancelRide
         }

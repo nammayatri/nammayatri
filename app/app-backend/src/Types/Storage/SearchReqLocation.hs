@@ -7,13 +7,11 @@ import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
-import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Common as Common
-import Types.Error
 import Utils.Common hiding (id)
 
 data SearchReqLocationT f = SearchReqLocation
@@ -81,8 +79,8 @@ makeSearchReqLocationAPIEntity loc = do
           }
       gps =
         Common.GPS
-          { lat = show loc.lat,
-            lon = show loc.long
+          { lat = loc.lat,
+            lon = loc.long
           }
   SearchReqLocationAPIEntity
     { ..
@@ -92,13 +90,11 @@ buildSearchReqLoc :: MonadFlow m => SearchReqLocationAPIEntity -> m SearchReqLoc
 buildSearchReqLoc SearchReqLocationAPIEntity {..} = do
   now <- getCurrentTime
   locId <- generateGUID
-  lat <- readMaybe (T.unpack gps.lat) & fromMaybeM (InvalidRequest "Lat field is not present.")
-  lon <- readMaybe (T.unpack gps.lon) & fromMaybeM (InvalidRequest "Lon field is not present.")
   return
     SearchReqLocation
       { id = locId,
-        lat = lat,
-        long = lon,
+        lat = gps.lat,
+        long = gps.lon,
         district = Nothing,
         city = Just address.city,
         state = Just address.state,

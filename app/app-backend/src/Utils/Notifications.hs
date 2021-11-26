@@ -4,9 +4,9 @@ module Utils.Notifications where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
+import Beckn.Types.Core.Migration1.Cancel.CancellationSource (CancellationSource (..))
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import EulerHS.Prelude

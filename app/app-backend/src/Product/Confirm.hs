@@ -3,10 +3,11 @@ module Product.Confirm (confirm, onConfirm) where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
-import qualified Beckn.Types.Core.API.Confirm as BecknAPI
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Migration1.API.OnConfirm as OnConfirm
+import qualified Beckn.Types.Core.Migration1.API.Types as Common
+import qualified Beckn.Types.Core.Migration1.Confirm as Confirm
 import Beckn.Types.Id
-import qualified Beckn.Types.Mobility.Order as BO
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -37,26 +38,15 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   DB.runSqlDBTransaction $
     QRideB.create rideBooking
   bapURIs <- asks (.bapSelfURIs)
-  context <- buildMobilityContext "confirm" (getId searchRequestId) (Just bapURIs.cabs) Nothing
-  baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  let order = mkOrder quote now
-  ExternalAPI.confirm baseUrl (BecknAPI.ConfirmReq context $ BecknAPI.ConfirmOrder order)
+  bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  context <- buildMobilityContext1 (getId searchRequestId) bapURIs.cabs (Just bppURI)
+  let order =
+        Confirm.Order
+          { items = [Confirm.OrderItem {id = quoteId.getId}]
+          }
+  ExternalAPI.confirm bppURI (Common.BecknReq context $ Confirm.ConfirmMessage order)
   return $ API.ConfirmRes rideBooking.id
   where
-    mkOrder quote now = do
-      BO.Order
-        { id = getId $ quote.id,
-          state = Nothing,
-          created_at = now,
-          updated_at = now,
-          items = [],
-          billing = Nothing,
-          payment = Nothing,
-          trip = Nothing,
-          cancellation_reason_id = Nothing,
-          cancellation_reasons = [],
-          cancellation_policy = Nothing
-        }
     buildRideBooking searchRequest quote now = do
       id <- generateGUID
       return $
@@ -82,13 +72,13 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
 
 onConfirm ::
   SignatureAuthResult ->
-  BecknAPI.OnConfirmReq ->
+  OnConfirm.OnConfirmReq ->
   FlowHandler AckResponse
 onConfirm _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here
     logTagInfo "on_confirm req" (show req)
-    validateContext "on_confirm" $ req.context
+    validateContextMig1 req.context
     case req.contents of
       Right _ -> do
         return ()

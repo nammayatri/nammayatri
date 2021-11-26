@@ -16,7 +16,6 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.ProviderRegistry as BP
-import Product.Validation
 import Storage.Queries.Organization (findByBapUrl)
 import qualified Types.API.Gateway.Search as ExternalAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
@@ -30,9 +29,6 @@ search ::
 search (SignatureAuthResult proxySign _) rawReq = withFlowHandlerBecknAPI do
   req :: SearchReq <- rawReq & A.eitherDecodeStrict & fromEitherM (InvalidRequest . T.pack)
   withTransactionIdLogTag req $ do
-    validateContext "search" (req.context)
-    unless (isJust (req.context.bap_uri)) $
-      throwError $ InvalidRequest "No bap URI in context."
     let gatewaySearchSignAuth = ET.client ExternalAPI.searchAPI
         context = req.context
     providers <- BP.lookup context
@@ -59,9 +55,8 @@ searchCb (SignatureAuthResult proxySign _subscriber) rawReq = withFlowHandlerBec
     -- TODO: source providerUrl from _subscriber
     providerUrl <- req.context.bpp_uri & fromMaybeM (InvalidRequest "Missing context.bpp_uri")
     withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) do
-      validateContext "on_search" req.context
       let gatewayOnSearchSignAuth = ET.client ExternalAPI.onSearchAPI
-      bapUri <- req.context.bap_uri & fromMaybeM (InvalidRequest "Bap_uri not present")
+      let bapUri = req.context.bap_uri
       bapOrg <- findByBapUrl bapUri >>= fromMaybeM OrgDoesNotExist
       cbUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
       withRetry $

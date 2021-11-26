@@ -14,12 +14,6 @@ data SearchReqLocationT f = SearchReqLocation
   { id :: B.C f (Id SearchReqLocation),
     lat :: B.C f Double,
     long :: B.C f Double,
-    district :: B.C f (Maybe Text),
-    city :: B.C f (Maybe Text),
-    state :: B.C f (Maybe Text),
-    country :: B.C f (Maybe Text),
-    pincode :: B.C f (Maybe Text),
-    address :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -68,10 +62,10 @@ makeSearchReqLocationAPIEntity loc = do
             building = "",
             street = "",
             area = "",
-            city = fromMaybe "" loc.city,
-            country = fromMaybe "" loc.country,
+            city = "",
+            country = "",
             areaCode = "",
-            state = fromMaybe "" loc.state
+            state = ""
           }
       gps =
         Common.GPS

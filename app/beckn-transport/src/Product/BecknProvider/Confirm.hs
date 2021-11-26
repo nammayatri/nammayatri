@@ -1,20 +1,21 @@
 module Product.BecknProvider.Confirm (confirm, calculateDriverPool, getDriverPool) where
 
 import App.Types
+import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Amount (Amount)
-import qualified Beckn.Types.Core.API.Confirm as API
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Migration1.API.Confirm as Confirm
+import qualified Beckn.Types.Core.Migration1.API.OnConfirm as OnConfirm
+import qualified Beckn.Types.Core.Migration1.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
-import qualified Beckn.Types.Mobility.Order as Mobility
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
-import ExternalAPI.Transform as ExternalAPITransform
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.Organization as Organization
@@ -40,13 +41,15 @@ import Utils.Common
 confirm ::
   Id Organization.Organization ->
   SignatureAuthResult ->
-  API.ConfirmReq ->
+  Confirm.ConfirmReq ->
   FlowHandler AckResponse
 confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "confirm API Flow" "Reached"
-    BP.validateContext "confirm" $ req.context
-    let quoteId = Id $ req.message.order.id
+    validateContextMig1 req.context
+    let items = req.message.order.items
+    when (null items) $ throwError (InvalidRequest "List of confirmed items is empty.")
+    let quoteId = Id . (.id) $ head items
     quote <- QQuote.findById' quoteId >>= fromMaybeM QuoteDoesNotExist
     let transporterId' = quote.providerId
     transporterOrg <-
@@ -71,8 +74,8 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
       whenJust quote.discount $ \disc ->
         QDiscTransaction.create $ mkDiscountTransaction rideBooking disc now
 
-    cbUrl <- req.context.bap_uri & fromMaybeM (InvalidRequest "Missing context.bap_uri")
-    ExternalAPI.withCallback transporterOrg "confirm" API.onConfirm (req.context) cbUrl $
+    let bapCallbackUrl = req.context.bap_uri
+    ExternalAPI.withCallback transporterOrg "confirm" OnConfirm.onConfirmAPI (req.context) bapCallbackUrl $
       onConfirmCallback
         rideBooking
         searchRequest
@@ -110,7 +113,7 @@ onConfirmCallback ::
   SRB.RideBooking ->
   SearchRequest.SearchRequest ->
   Organization.Organization ->
-  m API.ConfirmOrder
+  m OnConfirm.OnConfirmMessage
 onConfirmCallback rideBooking searchRequest transporterOrg = do
   let transporterId = transporterOrg.id
   let rideBookingId = rideBooking.id
@@ -119,8 +122,15 @@ onConfirmCallback rideBooking searchRequest transporterOrg = do
   driverPool <- map (.driverId) <$> calculateDriverPool pickupPoint transporterId (Just vehicleVariant)
   setDriverPool rideBookingId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId rideBookingId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  order <- ExternalAPITransform.mkOrder rideBooking.quoteId rideBooking.id Nothing Nothing Mobility.CONFIRMED
-  return $ API.ConfirmOrder order
+  return $ OnConfirm.OnConfirmMessage order
+  where
+    order =
+      OnConfirm.Order
+        { id = rideBooking.id.getId,
+          items = [OnConfirm.OrderItem $ rideBooking.quoteId.getId],
+          payment = OnConfirm.Payment (OnConfirm.Params $ realToFrac rideBooking.estimatedTotalFare),
+          provider = OnConfirm.Provider transporterOrg.name
+        }
 
 driverPoolKey :: Id SRB.RideBooking -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId

@@ -1,9 +1,9 @@
 module Product.APIMapper where
 
 import App.Types
-import Beckn.Product.Validation.Context
 import Beckn.Types.Id
 import Beckn.Types.Registry.Subscriber (Subscriber)
+import Beckn.Product.Validation.Context hiding (validateContext)
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ

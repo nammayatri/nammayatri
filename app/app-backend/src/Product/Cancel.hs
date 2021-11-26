@@ -3,10 +3,11 @@ module Product.Cancel (cancel, onCancel) where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
-import qualified Beckn.Types.Core.API.Cancel as API
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Migration1.API.OnCancel as OnCancel
+import qualified Beckn.Types.Core.Migration1.API.Types as Common
+import qualified Beckn.Types.Core.Migration1.Cancel as Cancel
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -17,7 +18,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideCancellationReason as QRCR
 import qualified Storage.Queries.SearchRequest as MC
-import Types.API.Cancel as Cancel
+import Types.API.Cancel as API
 import Types.Error
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Ride as Ride
@@ -26,7 +27,7 @@ import qualified Types.Storage.RideCancellationReason as SRCR
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
-cancel :: Id SRB.RideBooking -> Id Person.Person -> Cancel.CancelReq -> FlowHandler CancelRes
+cancel :: Id SRB.RideBooking -> Id Person.Person -> API.CancelReq -> FlowHandler CancelRes
 cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   rideCancellationReasonAPI <- req.rideCancellationReason & fromMaybeM (InvalidRequest "Cancellation reason is not present.")
   rideBooking <- QRB.findById bookingId >>= fromMaybeM RideBookingDoesNotExist
@@ -36,13 +37,13 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   unless (isRideBookingCancellable rideBooking) $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ searchRequest.id
-  let cancelReqMessage = API.CancelReqMessage (API.CancellationOrder (getId quoteId) Nothing)
-  context <- buildMobilityContext "cancel" txnId Nothing Nothing
   organization <-
     OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
-  baseUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  ExternalAPI.cancel baseUrl (API.CancelReq context cancelReqMessage)
+  bapURIs <- asks (.bapSelfURIs)
+  bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  context <- buildMobilityContext1 txnId bapURIs.cabs (Just bppURI)
+  ExternalAPI.cancel bppURI (Common.BecknReq context (Cancel.CancelMessage quote.id.getId Cancel.ByUser))
   DB.runSqlDBTransaction $
     QRCR.create $ makeRideCancelationReason rideBooking.id rideCancellationReasonAPI
   return Success
@@ -51,7 +52,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
       let RideCancellationReasonAPIEntity {..} = rideCancellationReasonAPI
       SRCR.RideCancellationReason
         { rideBookingId = rideBookingId,
-          source = ByUser,
+          source = Cancel.ByUser,
           reasonCode = Just reasonCode,
           additionalInfo = additionalInfo
         }
@@ -62,11 +63,11 @@ isRideBookingCancellable ride =
 
 onCancel ::
   SignatureAuthResult ->
-  API.OnCancelReq ->
-  FlowHandler API.OnCancelRes
+  OnCancel.OnCancelReq ->
+  FlowHandler AckResponse
 onCancel _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContext "on_cancel" $ req.context
+    validateContextMig1 req.context
     case req.contents of
       Right msg -> do
         let quoteId = Id $ msg.order.id
@@ -76,14 +77,14 @@ onCancel _org req = withFlowHandlerBecknAPI $
         unless (isRideBookingCancellable rideBooking) $
           throwError (RideBookingInvalidStatus (show rideBooking.status))
         mbRide <- QRide.findByRBId rideBooking.id
-        cancellationSource <- msg.order.cancellation_reason_id & fromMaybeM (InvalidRequest "No cancellation source.")
+        let cancellationSource = msg.cancellation_reason_id
         quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
         let searchRequestId = quote.requestId
         logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
         DB.runSqlDBTransaction $ do
           QRB.updateStatus rideBooking.id SRB.CANCELLED
           whenJust mbRide $ \ride -> QRide.updateStatus ride.id Ride.CANCELLED
-          unless (cancellationSource == ByUser) $
+          unless (cancellationSource == Cancel.ByUser) $
             QRCR.create $ SRCR.RideCancellationReason rideBooking.id cancellationSource Nothing Nothing
         -- notify customer
         mbPerson <- Person.findById rideBooking.requestorId

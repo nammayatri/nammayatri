@@ -14,13 +14,13 @@ import qualified "app-backend" Types.Common as AppCommon
 import Utils
 
 ernakulamLocation :: AppCommon.GPS
-ernakulamLocation = AppCommon.GPS "10.0739" "76.2733"
+ernakulamLocation = AppCommon.GPS 10.0739 76.2733
 
 keralaLocation :: AppCommon.GPS
-keralaLocation = AppCommon.GPS "10.5449" "76.4356"
+keralaLocation = AppCommon.GPS 10.5449 76.4356
 
 karnatakaLocation :: AppCommon.GPS
-karnatakaLocation = AppCommon.GPS "12.4725" "75.8328"
+karnatakaLocation = AppCommon.GPS 12.4725 75.8328
 
 verifyServiceability :: (Eq a, Show a) => a -> Either ClientError a -> IO ()
 verifyServiceability expectedValue = \case

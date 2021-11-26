@@ -1,14 +1,14 @@
-module Product.BecknProvider.Feedback where
+module Product.BecknProvider.Rating where
 
 import App.Types
+import Beckn.Product.Validation.Context
 import Beckn.Types.Common hiding (id)
-import qualified Beckn.Types.Core.API.Feedback as API
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Migration1.API.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.Ride as QRide
@@ -23,27 +23,25 @@ import Types.Storage.Rating as Rating
 import qualified Types.Storage.Ride as Ride
 import Utils.Common
 
-feedback ::
+ratingImpl ::
   Id Organization ->
   SignatureAuthResult ->
-  API.FeedbackReq ->
-  FlowHandler API.FeedbackRes
-feedback _ _ req = withFlowHandlerBecknAPI $
+  Rating.RatingReq ->
+  FlowHandler AckResponse
+ratingImpl _ _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    logTagInfo "FeedbackAPI" "Received feedback API call."
+    logTagInfo "ratingAPI" "Received rating API call."
     let context = req.context
-    BP.validateContext "feedback" context
-    let quoteId = Id $ req.message.order_id
-    rideBooking <- QRB.findByQuoteId quoteId >>= fromMaybeM RideBookingDoesNotExist
+    validateContextMig1 context
+    let rideBookingId = Id $ req.message.id
+    rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingDoesNotExist
     ride <-
       QRide.findByRBId rideBooking.id
         >>= fromMaybeM RideNotFound
     let driverId = ride.driverId
     unless (ride.status == Ride.COMPLETED) $
       throwError $ QuoteInvalidStatus "Order is not ready for rating."
-    ratingValue :: Int <-
-      decodeFromText (req.message.rating.value)
-        & fromMaybeM (InvalidRequest "Invalid rating type.")
+    let ratingValue = req.message.value
     mbRating <- Rating.findByRideId ride.id
     case mbRating of
       Nothing -> do

@@ -5,10 +5,7 @@ module Product.Search where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
-import qualified Beckn.Types.Core.API.Search as Search
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.DecimalValue (convertDecimalValueToAmount)
-import qualified Beckn.Types.Core.Item as Core
 import Beckn.Types.Core.Location
 import qualified Beckn.Types.Core.Migration.API.Search as Core9
 import qualified Beckn.Types.Core.Migration.API.Types as Core9
@@ -16,14 +13,12 @@ import qualified Beckn.Types.Core.Migration.Context as Core9
 import qualified Beckn.Types.Core.Migration.Gps as Mig
 import qualified Beckn.Types.Core.Migration.Intent as Mig
 import qualified Beckn.Types.Core.Migration.Location as Mig
-import Beckn.Types.Core.Price
-import Beckn.Types.Core.Tag
+import qualified Beckn.Types.Core.Migration1.API.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Migration1.API.Types as Common
+import qualified Beckn.Types.Core.Migration1.Common.Context as Common
+import qualified Beckn.Types.Core.Migration1.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Migration1.Search as Search
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Catalog as BM
-import Beckn.Types.Mobility.Intent
-import Beckn.Types.Mobility.Payload
-import Beckn.Types.Mobility.Stop
-import Beckn.Types.Mobility.Vehicle
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Control.Lens ((?~))
@@ -40,7 +35,6 @@ import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Types.API.Search as API
 import Types.API.Serviceability
-import qualified Types.Common as Common
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Organization as Org
@@ -71,10 +65,9 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   bapURIs <- asks (.bapSelfURIs)
   fork "search" . withRetry $ do
     fork "search 0.8" $ do
-      context <- buildMobilityContext "search" txnId (Just bapURIs.cabs) Nothing
-      let intent = mkIntent req now
-          tags = Just [Tag "distance" $ show distance]
-      ExternalAPI.search (Search.SearchReq context $ Search.SearchIntent (intent & #tags .~ tags))
+      context <- buildMobilityContext1 txnId bapURIs.cabs Nothing
+      let intent = mkIntent req now distance
+      ExternalAPI.search (Common.BecknReq context $ Search.SearchMessage intent)
     fork "search 0.9" $ do
       contextMig <- buildContextMetro Core9.SEARCH txnId bapURIs.metro Nothing
       intentMig <- mkIntentMig req
@@ -91,32 +84,31 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
 searchCb ::
   SignatureAuthResult ->
   SignatureAuthResult ->
-  Search.OnSearchReq ->
-  FlowHandler Search.OnSearchRes
+  OnSearch.OnSearchReq ->
+  FlowHandler AckResponse
 searchCb _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  validateContext "on_search" $ req.context
+  validateContextMig1 $ req.context
   Metrics.finishSearchMetrics $ req.context.transaction_id
   case req.contents of
     Right msg -> do
       let catalog = msg.catalog
-      searchCbService req catalog
+      searchCbService req.context catalog
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err
   return Ack
 
 type SearchCbFlow m r = (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], DBFlow m r)
 
-searchCbService :: SearchCbFlow m r => Search.OnSearchReq -> BM.Catalog -> m ()
-searchCbService req catalog = do
-  let searchRequestId = Id $ req.context.transaction_id --searchRequestId $ service.id
+searchCbService :: SearchCbFlow m r => Common.Context -> OnSearch.Catalog -> m ()
+searchCbService context catalog = do
+  let searchRequestId = Id $ context.transaction_id --searchRequestId $ service.id
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
   bpp <-
-    Org.findOrganizationByCallbackUri (req.context.bpp_uri) Org.PROVIDER
+    Org.findOrganizationByCallbackUri context.bpp_uri Org.PROVIDER
       >>= fromMaybeM OrgDoesNotExist
-  case (catalog.categories, catalog.items) of
-    ([], _) -> throwError $ InvalidRequest "Missing provider"
-    (_ : _, []) -> return ()
-    (category : _, items) -> do
-      let provider = fromBeckn category
+  case catalog.bpp_providers of
+    [] -> throwError $ InvalidRequest "Missing provider"
+    (provider : _) -> do
+      let items = provider.items
       quotes <- traverse (mkQuote searchRequest bpp provider) items
       DB.runSqlDBTransaction $ traverse_ QQuote.create quotes
 
@@ -158,18 +150,12 @@ mkQuote ::
   MonadFlow m =>
   SearchRequest.SearchRequest ->
   Org.Organization ->
-  Common.Provider ->
-  Core.Item ->
+  OnSearch.Provider ->
+  OnSearch.Item ->
   m SQuote.Quote
 mkQuote searchRequest bppOrg provider item = do
   now <- getCurrentTime
-  estimatedFare <-
-    item.price.listed_value >>= convertDecimalValueToAmount
-      & fromMaybeM (InternalError "Unable to parse price")
-  estimatedTotalPrice <-
-    item.totalPrice.listed_value >>= convertDecimalValueToAmount & fromMaybeM (InternalError "Unable to parse estimated total price")
-  nearestDriverDist <- getNearestDriverDist
-  vehicleVariant <- item.descriptor.code & fromMaybeM (InvalidRequest "Missing item.descriptor.code")
+
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where searchRequest.startTime != product.startTime, etc
@@ -177,64 +163,34 @@ mkQuote searchRequest bppOrg provider item = do
     SQuote.Quote
       { id = Id $ item.id,
         requestId = searchRequest.id,
-        estimatedFare = estimatedFare,
-        estimatedTotalFare = estimatedTotalPrice,
-        discount = item.discount,
-        distanceToNearestDriver = nearestDriverDist,
-        providerMobileNumber = fromMaybe "UNKNOWN" $ listToMaybe provider.phones,
-        providerName = fromMaybe "" provider.name,
-        providerCompletedRidesCount = fromMaybe 0 $ provider.info >>= (.completed),
+        estimatedFare = realToFrac item.estimated_price.value,
+        estimatedTotalFare = realToFrac item.discounted_price.value,
+        discount = realToFrac <$> (item.discount <&> (.value)),
+        distanceToNearestDriver = item.nearest_driver_distance,
+        providerMobileNumber = provider.tags.contacts,
+        providerName = provider.name,
+        providerCompletedRidesCount = provider.tags.rides_completed,
         providerId = bppOrg.id,
-        vehicleVariant,
+        vehicleVariant = item.vehicle_variant,
         createdAt = now
       }
-  where
-    getNearestDriverDist = do
-      let dist = (.value) <$> listToMaybe (filter (\tag -> tag.key == "nearestDriverDist") item.tags)
-      (readMaybe . T.unpack =<< dist) & fromMaybeM (InternalError "Unable to parse nearestDriverDist")
 
-mkIntent :: API.SearchReq -> UTCTime -> Intent
-mkIntent req now = do
-  let pickupLocation =
-        emptyLocation
-          { gps = Just $ toBeckn req.origin.gps,
-            address = Just $ toBeckn req.origin.address
+mkIntent :: API.SearchReq -> UTCTime -> Double -> Search.Intent
+mkIntent req startTime distance = do
+  let tags = Search.Tags {distance = distance}
+      startLocation =
+        Search.StartInfo
+          { gps =
+              Search.Gps
+                { lat = req.origin.gps.lat,
+                  lon = req.origin.gps.lon
+                },
+            time = Search.Time startTime
           }
-      dropLocation =
-        emptyLocation
-          { gps = Just $ toBeckn req.destination.gps,
-            address = Just $ toBeckn req.destination.address
-          }
-      pickup =
-        Stop
-          { id = "",
-            descriptor = Nothing,
-            location = pickupLocation,
-            arrival_time = StopTime now Nothing,
-            departure_time = StopTime now Nothing,
-            transfers = []
-          }
-      drop' =
-        Stop
-          { id = "",
-            descriptor = Nothing,
-            location = dropLocation,
-            arrival_time = StopTime now Nothing,
-            departure_time = StopTime now Nothing,
-            transfers = []
-          }
-  Intent
-    { query_string = Nothing,
-      provider_id = Nothing,
-      category_id = Nothing,
-      item_id = Nothing,
-      tags = Nothing,
-      pickups = [pickup],
-      drops = [drop'],
-      vehicle = emptyVehicle,
-      payload = Payload Nothing Nothing [] Nothing,
-      transfer = Nothing,
-      fare = emptyPrice
+      endLocation = Search.StopInfo {gps = Search.Gps {lat = req.destination.gps.lat, lon = req.destination.gps.lon}}
+      fulfillment = Search.FulFillmentInfo {start = startLocation, end = endLocation}
+  Search.Intent
+    { ..
     }
 
 mkIntentMig :: (MonadThrow m, Log m) => API.SearchReq -> m Mig.Intent

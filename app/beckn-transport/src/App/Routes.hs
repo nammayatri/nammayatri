@@ -6,17 +6,17 @@ import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as Call
-import qualified Beckn.Types.Core.API.Cancel as API
-import qualified Beckn.Types.Core.API.Confirm as API
-import qualified Beckn.Types.Core.API.Feedback as API
-import qualified Beckn.Types.Core.API.Search as API
+import qualified Beckn.Types.Core.Migration1.API.Cancel as API
+import qualified Beckn.Types.Core.Migration1.API.Confirm as API
+import qualified Beckn.Types.Core.Migration1.API.Rating as API
+import qualified Beckn.Types.Core.Migration1.API.Search as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi
 import EulerHS.Prelude
-import Product.BecknProvider.BP as BP
+import Product.BecknProvider.Cancel as BP
 import Product.BecknProvider.Confirm as BP
-import Product.BecknProvider.Feedback as BP
+import Product.BecknProvider.Rating as BP
 import Product.BecknProvider.Search as BP
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
@@ -318,14 +318,14 @@ type OrgBecknAPI =
     :> API.CancelAPI
     :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
-    :> API.FeedbackAPI
+    :> API.RatingAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
   BP.search
     :<|> BP.confirm
     :<|> BP.cancel
-    :<|> BP.feedback
+    :<|> BP.ratingImpl
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =

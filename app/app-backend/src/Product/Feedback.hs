@@ -2,9 +2,8 @@ module Product.Feedback where
 
 import qualified App.Types as App
 import Beckn.Types.APISuccess (APISuccess (Success))
-import qualified Beckn.Types.Core.API.Feedback as Beckn
-import qualified Beckn.Types.Core.Description as Beckn
-import qualified Beckn.Types.Core.Rating as Beckn
+import qualified Beckn.Types.Core.Migration1.API.Types as Common
+import qualified Beckn.Types.Core.Migration1.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import EulerHS.Prelude hiding (product)
@@ -16,11 +15,6 @@ import qualified Types.API.Feedback as API
 import Types.Error
 import qualified Types.Storage.Person as Person
 import Utils.Common
-  ( buildMobilityContext,
-    fromMaybeM,
-    throwError,
-    withFlowHandlerAPI,
-  )
 
 feedback :: Id Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes
 feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
@@ -31,32 +25,11 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
   let txnId = getId rideBooking.requestId
   let quoteId = getId rideBooking.quoteId
-  context <- buildMobilityContext "feedback" txnId Nothing Nothing
   organization <-
     Organization.findOrganizationById (rideBooking.providerId)
       >>= fromMaybeM OrgNotFound
-  let feedbackMsg =
-        Beckn.FeedbackReqMessage
-          { order_id = quoteId,
-            rating =
-              Beckn.Rating
-                { value = show ratingValue,
-                  unit = "U+2B50",
-                  max_value = Just "5",
-                  direction = Just "UP"
-                },
-            description =
-              Beckn.Description
-                { name = "Ride order rating",
-                  code = "RIDE_ORDER_RATING",
-                  symbol = Nothing,
-                  short_desc = Nothing,
-                  long_desc = Nothing,
-                  images = [],
-                  audio = Nothing,
-                  _3d_render = Nothing
-                }
-          }
-  gatewayUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  ExternalAPI.feedback gatewayUrl (Beckn.FeedbackReq context feedbackMsg)
+  bapURIs <- asks (.bapSelfURIs)
+  bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  context <- buildMobilityContext1 txnId bapURIs.cabs (Just bppURI)
+  ExternalAPI.feedback bppURI (Common.BecknReq context (Rating.RatingMessage quoteId ratingValue))
   return Success

@@ -26,8 +26,8 @@ import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (drop, id, state)
 
 data GPS = GPS
-  { lat :: Text,
-    lon :: Text
+  { lat :: Double,
+    lon :: Double
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -196,15 +196,15 @@ instance ToBeckn Vehicle.Vehicle Vehicle where
 instance FromBeckn Location.GPS GPS where
   fromBeckn gps =
     GPS
-      { lat = gps.lat,
-        lon = gps.lon
+      { lat = read $ T.unpack gps.lat,
+        lon = read $ T.unpack gps.lon
       }
 
 instance ToBeckn Location.GPS GPS where
   toBeckn gps =
     Location.GPS
-      { lat = gps.lat,
-        lon = gps.lon
+      { lat = show gps.lat,
+        lon = show gps.lon
       }
 
 instance FromBeckn Address.Address Address where

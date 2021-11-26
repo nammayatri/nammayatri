@@ -1,11 +1,11 @@
 module ExternalAPI.Flow where
 
-import Beckn.Types.Core.API.Cancel as API
-import Beckn.Types.Core.API.Confirm as API
-import Beckn.Types.Core.API.Feedback as API
-import qualified Beckn.Types.Core.API.Search as API
 import qualified Beckn.Types.Core.Migration.API.Search as MigAPI
 import Beckn.Types.Core.Migration.API.Types (BecknReq)
+import Beckn.Types.Core.Migration1.API.Cancel as API
+import Beckn.Types.Core.Migration1.API.Confirm as API
+import Beckn.Types.Core.Migration1.API.Rating as API
+import qualified Beckn.Types.Core.Migration1.API.Search as API
 import Beckn.Types.Error
 import Beckn.Types.Id (ShortId (..))
 import Beckn.Utils.Dhall (FromDhall)
@@ -38,7 +38,7 @@ search ::
   m ()
 search req = do
   url <- getSearchUrl
-  callBecknAPIWithSignature "search" API.search url req
+  callBecknAPIWithSignature "search" API.searchAPI url req
 
 searchMetro ::
   ( HasFlowEnv m r '["xGatewaySelector" ::: Text],
@@ -70,7 +70,7 @@ confirm ::
   BaseUrl ->
   ConfirmReq ->
   m ()
-confirm = callBecknAPIWithSignature "confirm" API.confirm
+confirm = callBecknAPIWithSignature "confirm" API.confirmAPI
 
 location ::
   ( MonadFlow m,
@@ -92,7 +92,7 @@ cancel ::
   BaseUrl ->
   CancelReq ->
   m ()
-cancel = callBecknAPIWithSignature "cancel" API.cancel
+cancel = callBecknAPIWithSignature "cancel" API.cancelAPI
 
 feedback ::
   ( MonadFlow m,
@@ -100,9 +100,9 @@ feedback ::
     HasBapIds r m
   ) =>
   BaseUrl ->
-  FeedbackReq ->
+  RatingReq ->
   m ()
-feedback = callBecknAPIWithSignature "feedback" API.feedback
+feedback = callBecknAPIWithSignature "feedback" API.ratingAPI
 
 type HasBapIds r m =
   ( HasField "bapSelfIds" r (BAPs Text),
