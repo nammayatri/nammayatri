@@ -1,55 +1,16 @@
-module Beckn.Utils.FlowLogging
-  ( LoggerConfig (..),
-    getEulerLoggerRuntime,
-    appendLogContext,
-    logOutputImplementation,
-    withLogTagImplementation,
+module FlowLogging
+  ( getEulerLoggerRuntime,
   )
 where
 
 import Beckn.Types.Logging
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Txt
 import qualified Data.Time as Time
-import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import EulerHS.Runtime
-import EulerHS.Types (LogContext)
 import qualified EulerHS.Types as T
-import qualified Prelude as P
-
-logOutputImplementation :: L.MonadFlow m => LogLevel -> T.Message -> m ()
-logOutputImplementation logLevel message =
-  case logLevel of
-    DEBUG -> L.logDebug EmtpyTag message
-    INFO -> L.logInfo EmtpyTag message
-    WARNING -> L.logWarning EmtpyTag message
-    ERROR -> L.logError EmtpyTag message
-
-withLogTagImplementation ::
-  L.MonadFlow m =>
-  Text ->
-  ReaderT r L.Flow a ->
-  ReaderT r m a
-withLogTagImplementation lc flowR =
-  ReaderT $
-    L.withLoggerContext (appendLogContext lc)
-      . runReaderT flowR
-
-data EmtpyTag = EmtpyTag
-
-instance P.Show EmtpyTag where
-  show _ = ""
-
-formatTag :: Text -> Text
-formatTag tag = "[" <> tag <> "]"
-
-appendLogContext :: Text -> LogContext -> LogContext
-appendLogContext val lc =
-  let oldLCText = fromMaybe "" $ HM.lookup logContextKey lc
-   in HM.insert logContextKey (oldLCText <> formatTag val) lc
 
 getEulerLoggerConfig :: LoggerConfig -> T.LoggerConfig
 getEulerLoggerConfig LoggerConfig {..} =
@@ -57,7 +18,7 @@ getEulerLoggerConfig LoggerConfig {..} =
     { T._isAsync = True,
       T._logLevel = logLevel,
       T._logToFile = logToFile,
-      T._logFilePath = eulLogsFilePath,
+      T._logFilePath = logFilePath,
       T._logToConsole = logToConsole,
       T._logRawSql = logSql
     }
@@ -71,12 +32,6 @@ getEulerLoggerConfig LoggerConfig {..} =
       if logRawSql
         then T.UnsafeLogSQL_DO_NOT_USE_IN_PRODUCTION
         else T.SafelyOmitSqlLogs
-    eulLogsFilePath = do
-      let (l, r) = Text.breakOnEnd "." (Text.pack logFilePath)
-      Text.unpack $
-        if null l
-          then r <> "-eul"
-          else Text.init l <> "-eul." <> r
 
 getEulerLoggerRuntime :: Maybe Text -> LoggerConfig -> IO LoggerRuntime
 getEulerLoggerRuntime hostname = createLoggerRuntime (logFlowFormatter hostname) . getEulerLoggerConfig
@@ -114,6 +69,9 @@ logFormatterText
             <> textToLBS tag
             <> " |> "
             <> textToLBS msg
+
+formatTag :: Text -> Text
+formatTag tag = "[" <> tag <> "]"
 
 logContextKey :: Text
 logContextKey = "log_context"

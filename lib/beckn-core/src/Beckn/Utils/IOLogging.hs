@@ -16,7 +16,7 @@ import System.Log.FastLogger
 logOutputImplementation :: (HasLog r, MonadReader r m, MonadIO m, MonadTime m) => LogLevel -> Text -> m ()
 logOutputImplementation logLevel message = do
   logEnv <- asks (.loggerEnv)
-  unless (logLevel < logEnv.level) $ do
+  when (logLevel >= logEnv.level) $ do
     now <- getCurrentTime
     let formattedMessage = logFormatterText now logEnv.hostName logLevel logEnv.tags message
     whenJust logEnv.fileLogger $ \logger ->
