@@ -34,12 +34,19 @@ withFlowHandler flow = do
   (EnvR flowRt appEnv) <- ask
   liftIO . runFlowR flowRt appEnv $ flow
 
-withFlowHandlerAPI :: (HasCoreMetrics r, HasField "isShuttingDown" r (TMVar ())) => FlowR r a -> FlowHandlerR r a
+withFlowHandlerAPI ::
+  ( HasCoreMetrics r,
+    HasField "isShuttingDown" r (TMVar ()),
+    Log (FlowR r)
+  ) =>
+  FlowR r a ->
+  FlowHandlerR r a
 withFlowHandlerAPI = withFlowHandler . apiHandler . handleIfUp
 
 withFlowHandlerBecknAPI ::
   ( HasCoreMetrics r,
-    HasField "isShuttingDown" r (TMVar ())
+    HasField "isShuttingDown" r (TMVar ()),
+    Log (FlowR r)
   ) =>
   FlowR r AckResponse ->
   FlowHandlerR r AckResponse

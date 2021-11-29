@@ -11,6 +11,7 @@ where
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
+import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, registerCoreMetricsContainer)
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
@@ -49,3 +50,7 @@ type Env = EnvR AppEnv
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
+
+instance {-# OVERLAPS #-} Log (FlowR AppEnv) where
+  logOutput _ _ = return ()
+  withLogTag _ m = m

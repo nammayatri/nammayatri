@@ -31,6 +31,7 @@ data EnvR r = EnvR
   { flowRuntime :: R.FlowRuntime,
     appEnv :: r
   }
+  deriving (Generic)
 
 type MonadFlow m =
   ( Monad m,

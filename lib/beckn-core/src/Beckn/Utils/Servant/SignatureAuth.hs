@@ -90,6 +90,7 @@ instance
   ( HasServer api ctx,
     HasEnvEntry r ctx,
     KnownSymbol header,
+    HasLog r,
     HasInConfig r c "hostName" Text,
     HasInConfig r c "registryUrl" BaseUrl,
     HasCoreMetrics r
@@ -152,6 +153,7 @@ signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
 signatureAuthManager ::
+  HasLog r =>
   R.FlowRuntime ->
   r ->
   Text ->
@@ -197,7 +199,8 @@ verifySignature ::
     MonadReader r m,
     Metrics.CoreMetrics m,
     HasInConfig r c "hostName" Text,
-    HasInConfig r c "registryUrl" BaseUrl
+    HasInConfig r c "registryUrl" BaseUrl,
+    HasLog r
   ) =>
   Text ->
   HttpSig.SignaturePayload ->
@@ -256,6 +259,7 @@ verifySignature headerName signPayload bodyHash = do
       _ -> ""
 
 prepareAuthManager ::
+  HasLog r =>
   AuthenticatingEntity r =>
   R.FlowRuntime ->
   r ->
@@ -279,7 +283,7 @@ makeManagerMap :: [String] -> [Http.ManagerSettings] -> Map String Http.ManagerS
 makeManagerMap managerKeys managers = Map.fromList $ zip managerKeys managers
 
 prepareAuthManagers ::
-  AuthenticatingEntity r =>
+  (AuthenticatingEntity r, HasLog r) =>
   R.FlowRuntime ->
   r ->
   [Text] ->
@@ -293,6 +297,7 @@ modFlowRtWithAuthManagers ::
   ( AuthenticatingEntity r,
     HasHttpClientOptions r c,
     MonadReader r m,
+    HasLog r,
     MonadFlow m
   ) =>
   R.FlowRuntime ->

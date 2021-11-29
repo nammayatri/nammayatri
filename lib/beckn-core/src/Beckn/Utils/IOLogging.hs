@@ -2,6 +2,7 @@ module Beckn.Utils.IOLogging
   ( LoggerConfig (..),
     logOutputImplementation,
     withLogTagImplementation,
+    appendLogTag,
   )
 where
 
@@ -32,8 +33,12 @@ withLogTagImplementation tag = local modifyEnv
   where
     modifyEnv env = do
       let logEnv = env.loggerEnv
-          updLogEnv = logEnv{tags = tag : logEnv.tags}
+          updLogEnv = appendLogTag tag logEnv
       env{loggerEnv = updLogEnv}
+
+appendLogTag :: Text -> LoggerEnv -> LoggerEnv
+appendLogTag tag logEnv = do
+  logEnv{tags = tag : logEnv.tags}
 
 formatTags :: [Text] -> Text
 formatTags tag = "[" <> T.intercalate ", " (reverse tag) <> "]"
@@ -46,9 +51,10 @@ logFormatterText timestamp hostname lvl tags msg = res
       show timestamp
         <> " "
         <> show lvl
-        <> "> @"
-        <> fromMaybe "null" hostname
+        <> "> "
+        <> maybe "" ("@" <>) hostname
         <> " "
         <> tag
         <> " |> "
         <> msg
+        <> "\n"

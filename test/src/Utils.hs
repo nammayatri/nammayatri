@@ -7,10 +7,8 @@ import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Flow
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (readDhallConfig)
-import Beckn.Utils.FlowLogging (getEulerLoggerRuntime)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import qualified EulerHS.Types as T
 import HSpec
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -65,19 +63,10 @@ expBackoff startDelay maxDelay =
 poll :: (HasCallStack, MonadIO m, MonadCatch m) => m (Maybe a) -> m a
 poll = pollWith (expBackoff 0.1e6 10e6)
 
-getLoggerCfg :: String -> T.LoggerConfig
-getLoggerCfg t =
-  T.defaultLoggerConfig
-    { T._logToFile = True,
-      T._logFilePath = "/tmp/log-" <> t,
-      T._isAsync = False
-    }
-
-runFlow :: MonadIO m => Text -> env -> FlowR env a -> m a
+runFlow :: (MonadIO m, Log (FlowR env)) => Text -> env -> FlowR env a -> m a
 runFlow tag appEnv flow = do
-  let loggerRt = getEulerLoggerRuntime (Just "Test_Transport_flow") defaultTestLoggerConfig
   liftIO $
-    R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
+    R.withFlowRuntime Nothing $ \flowRt -> do
       runFlowR flowRt appEnv $ withLogTag tag flow
 
 expectSingletonNE :: (HasCallStack, MonadIO m) => NonEmpty a -> m a
@@ -115,7 +104,11 @@ mkMobilityClients bapUrl bppUrl = do
 
 runTransporterFlow :: Text -> FlowR BecknTransport.AppEnv a -> IO a
 runTransporterFlow tag flow = do
-  (appEnv :: BecknTransport.AppEnv) <- BecknTransport.buildAppEnv =<< readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
-  let loggerRt = getEulerLoggerRuntime (Just "Test_Transport_flow") defaultTestLoggerConfig
-  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    runFlowR flowRt appEnv $ withLogTag tag flow
+  appCfg <- readDhallConfig "../dhall-configs/dev/beckn-transport.dhall"
+  let updLogCfg =
+        appCfg.loggerConfig{logToFile = False,
+                            logToConsole = False
+                           }
+      updAppCfg = appCfg{loggerConfig = updLogCfg}
+  (appEnv :: BecknTransport.AppEnv) <- BecknTransport.buildAppEnv updAppCfg
+  runFlow tag appEnv flow

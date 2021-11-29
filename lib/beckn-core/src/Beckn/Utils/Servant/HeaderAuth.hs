@@ -64,6 +64,7 @@ instance
     HasContextEntry ctx (VerificationAction verify (FlowR r)),
     VerificationMethod verify,
     KnownSymbol header,
+    HasLog r,
     HasCoreMetrics r
   ) =>
   HasServer (HeaderAuth header verify :> api) ctx

@@ -39,14 +39,14 @@ data LoggerEnv = LoggerEnv
 prepareLoggerEnv :: LoggerConfig -> Maybe Text -> IO LoggerEnv
 prepareLoggerEnv loggerConfig hostName = do
   fileLogger <-
-    if not loggerConfig.logToFile
-      then return Nothing
-      else Just <$> prepareLogger (LogFileNoRotate loggerConfig.logFilePath defaultBufSize)
+    if loggerConfig.logToFile
+      then Just <$> prepareLogger (LogFileNoRotate loggerConfig.logFilePath defaultBufSize)
+      else return Nothing
 
   consoleLogger <-
-    if not loggerConfig.logToFile
-      then return Nothing
-      else Just <$> prepareLogger (LogStdout defaultBufSize)
+    if loggerConfig.logToConsole
+      then Just <$> prepareLogger (LogStdout defaultBufSize)
+      else return Nothing
 
   return $
     LoggerEnv

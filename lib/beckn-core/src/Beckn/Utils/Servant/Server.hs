@@ -5,6 +5,7 @@ module Beckn.Utils.Servant.Server where
 
 import Beckn.Types.App (EnvR (..), FlowHandlerR, FlowServerR)
 import Beckn.Types.Flow
+import Beckn.Types.Logging (LoggerEnv)
 import Beckn.Types.Time
 import Beckn.Utils.App
 import qualified Beckn.Utils.FlowLogging as L
@@ -70,6 +71,7 @@ runServerService ::
     HasField "graceTerminationPeriod" config Seconds,
     HasField "isShuttingDown" env Shutdown,
     HasField "loggerConfig" config L.LoggerConfig,
+    HasField "loggerEnv" env LoggerEnv,
     HasField "port" config Port,
     HasServer api '[EnvR env],
     Metrics.SanitizedUrl api,

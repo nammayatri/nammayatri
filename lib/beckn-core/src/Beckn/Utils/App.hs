@@ -13,7 +13,8 @@ where
 import Beckn.Types.App
 import Beckn.Types.Flow
 import Beckn.Utils.Common
-import Beckn.Utils.FlowLogging (appendLogContext)
+import qualified Beckn.Utils.FlowLogging as L
+import Beckn.Utils.IOLogging (appendLogTag)
 import Beckn.Utils.Shutdown
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.ByteArray as BA
@@ -74,7 +75,7 @@ hashBodyForSignature f req respF = do
     headers = map fst $ Wai.requestHeaders req
     anyAuthHeaders = any (`elem` headers) ["Authorization", "Proxy-Authorization", "Signature"]
 
-logRequestAndResponse :: EnvR f -> Application -> Application
+logRequestAndResponse :: HasLog f => EnvR f -> Application -> Application
 logRequestAndResponse (EnvR flowRt appEnv) f req respF =
   f req loggedRespF
   where
@@ -96,14 +97,19 @@ logRequestAndResponse (EnvR flowRt appEnv) f req respF =
       logInfoIO "Request&Response" $ "Request: " <> show (toRequestInfo req) <> " || Response: " <> respLogText
       respF resp
 
-withModifiedEnv :: (EnvR f -> Application) -> EnvR f -> Application
+withModifiedEnv :: HasLog f => (EnvR f -> Application) -> EnvR f -> Application
 withModifiedEnv f env = \req resp -> do
   requestId <- getRequestId $ Wai.requestHeaders req
   let modifiedEnv = modifyEnvR requestId
   let app = f modifiedEnv
   app req resp
   where
-    modifyEnvR requestId = env {flowRuntime = L.updateLoggerContext (appendLogContext requestId) $ flowRuntime env}
+    modifyEnvR requestId = do
+      let appEnv = env.appEnv
+          updLogEnv = appendLogTag requestId appEnv.loggerEnv
+      env{appEnv = appEnv{loggerEnv = updLogEnv},
+          flowRuntime = L.updateLoggerContext (L.appendLogContext requestId) $ flowRuntime env
+         }
     getRequestId headers = do
       let value = lookup "x-request-id" headers
       case value of

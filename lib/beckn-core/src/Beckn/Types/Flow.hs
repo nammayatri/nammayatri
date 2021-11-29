@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Beckn.Types.Flow (FlowR, runFlowR) where
 
@@ -8,7 +9,7 @@ import Beckn.Types.Logging
 import Beckn.Types.MonadGuid
 import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Types.Time
-import qualified Beckn.Utils.FlowLogging as FlowLogging
+import qualified Beckn.Utils.IOLogging as IOLogging
 import Beckn.Utils.Logging
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified EulerHS.Interpreters as I
@@ -86,9 +87,9 @@ instance L.MonadFlow (FlowR r) where
 instance MonadIO (FlowR r) where
   liftIO = FlowR . L.runIO
 
-instance Log (FlowR r) where
-  logOutput = FlowLogging.logOutputImplementation
-  withLogTag lc (FlowR flowR) = FlowR $ FlowLogging.withLogTagImplementation lc flowR
+instance {-# OVERLAPPABLE #-} HasLog r => Log (FlowR r) where
+  logOutput = IOLogging.logOutputImplementation
+  withLogTag lc (FlowR flowR) = FlowR $ IOLogging.withLogTagImplementation lc flowR
 
 instance MonadTime (FlowR r) where
   getCurrentTime = liftIO getCurrentTime
@@ -108,7 +109,7 @@ instance MonadMonitor (FlowR r) where
 instance MonadGuid (FlowR r) where
   generateGUIDText = FlowR L.generateGUID
 
-instance Forkable (FlowR r) where
+instance Log (FlowR r) => Forkable (FlowR r) where
   fork desc f = do
     FlowR $ ReaderT $ L.forkFlow desc . runReaderT (unFlowR $ handleExc f)
     where
