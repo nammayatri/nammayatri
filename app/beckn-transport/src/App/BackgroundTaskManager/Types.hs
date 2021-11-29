@@ -8,6 +8,7 @@ module App.BackgroundTaskManager.Types
     Log (..),
     buildBTMEnv,
     module App,
+    releaseBTMEnv,
   )
 where
 
@@ -60,7 +61,8 @@ data BTMEnv = BTMEnv
     defaultRadiusOfSearch :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     driverAllocationConfig :: DriverAllocationConfig,
-    btmMetrics :: BTMMetricsContainer
+    btmMetrics :: BTMMetricsContainer,
+    loggerEnv :: LoggerEnv
   }
   deriving (Generic)
 
@@ -73,6 +75,10 @@ buildBTMEnv btmConfig@BTMCfg {..} = do
       { config = btmConfig,
         ..
       }
+
+releaseBTMEnv :: BTMEnv -> IO ()
+releaseBTMEnv BTMEnv {..} =
+  releaseLoggerEnv loggerEnv
 
 type Env = EnvR BTMEnv
 

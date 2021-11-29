@@ -42,7 +42,6 @@ let smsSessionConfig =
 
 let loggerConfig =
   { level = LogLevel.DEBUG
-  , isAsync = True
   , logToFile = True
   , logToConsole = True
   , logRawSql = True

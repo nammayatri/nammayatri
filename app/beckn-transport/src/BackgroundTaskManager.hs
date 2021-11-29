@@ -12,7 +12,7 @@ import Beckn.Types.Flow
 import Beckn.Types.Id
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.FlowLogging
+import qualified Beckn.Utils.FlowLogging as L
 import qualified Beckn.Utils.Servant.Server as Server
 import Beckn.Utils.Servant.SignatureAuth
 import Control.Concurrent
@@ -24,7 +24,7 @@ import Network.Wai.Handler.Warp
 import Servant
 import qualified Services.Allocation.Runner as Runner
 import qualified Storage.Queries.Organization as Storage
-import System.Environment
+import System.Environment (lookupEnv)
 import qualified Types.Storage.Organization as Organization
 import Utils.Common
 import qualified Utils.Metrics as Metrics
@@ -35,7 +35,7 @@ runBackgroundTaskManager configModifier = do
   Metrics.serve (btmCfg.metricsPort)
   let appCfg = btmCfg.appCfg
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
+  let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   let redisCfg = appCfg.redisCfg
   let checkConnections = prepareRedisConnections redisCfg >> prepareDBConnections
   let port = appCfg.bgtmPort
@@ -64,7 +64,11 @@ runBackgroundTaskManager configModifier = do
     let settings =
           defaultSettings
             & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)
-            & setInstallShutdownHandler (handleShutdown $ btmEnv.isShuttingDown)
+            & setInstallShutdownHandler (handleShutdown btmEnv.isShuttingDown . shutdownAction btmEnv)
             & setPort port
     void . forkIO . runSettings settings $ Server.run healthCheckAPI healthCheckServer EmptyContext (App.EnvR flowRt' btmEnv)
     runFlowR flowRt' btmEnv Runner.run
+  where
+    shutdownAction btmEnv closeSocket = do
+      releaseBTMEnv btmEnv
+      closeSocket

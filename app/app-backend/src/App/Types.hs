@@ -5,6 +5,7 @@ module App.Types
     AppCfg (),
     AppEnv (..),
     buildAppEnv,
+    releaseAppEnv,
   )
 where
 
@@ -19,9 +20,11 @@ import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Flow
+import System.Environment (lookupEnv)
 import Types.Geofencing
 import Types.Metrics
 
@@ -99,19 +102,26 @@ data AppEnv = AppEnv
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
     authTokenCacheExpiry :: Seconds,
-    registrySecrets :: RegistrySecrets
+    registrySecrets :: RegistrySecrets,
+    loggerEnv :: LoggerEnv
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
+  hostname <- map T.pack <$> lookupEnv "POD_NAME"
   isShuttingDown <- newEmptyTMVarIO
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
+  loggerEnv <- prepareLoggerEnv loggerConfig hostname
   return $
     AppEnv
       { ..
       }
+
+releaseAppEnv :: AppEnv -> IO ()
+releaseAppEnv AppEnv {..} =
+  releaseLoggerEnv loggerEnv
 
 type Env = EnvR AppEnv
 

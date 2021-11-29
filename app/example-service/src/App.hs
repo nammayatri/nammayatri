@@ -13,7 +13,7 @@ import Servant (Context (..))
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
-  runServerService appEnv serverAPI serverHandler identity identity EmptyContext pure
+  runServerService appEnv serverAPI serverHandler identity identity EmptyContext releaseAppEnv pure
 
 defaultConfig :: AppCfg
 defaultConfig =
@@ -21,8 +21,7 @@ defaultConfig =
     { port = 1111,
       loggerConfig =
         LoggerConfig
-          { isAsync = True,
-            level = DEBUG,
+          { level = DEBUG,
             logToFile = True,
             logFilePath = "/tmp/example-service.log",
             logToConsole = True,

@@ -11,7 +11,7 @@ import Beckn.Types.Flow
 import Beckn.Types.Id
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.FlowLogging
+import qualified Beckn.Utils.FlowLogging as L
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
@@ -26,7 +26,7 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import qualified Storage.Queries.Organization as Storage
-import System.Environment
+import System.Environment (lookupEnv)
 import qualified Types.Storage.Organization as Organization
 import Utils.Common
 
@@ -39,12 +39,12 @@ runTransporterBackendApp configModifier = do
 runTransporterBackendApp' :: AppCfg -> IO ()
 runTransporterBackendApp' appCfg = do
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
+  let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <- buildAppEnv appCfg
   let settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
+          & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown . shutdownAction appEnv)
           & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
@@ -67,3 +67,7 @@ runTransporterBackendApp' appCfg = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
+  where
+    shutdownAction appEnv closeSocket = do
+      releaseAppEnv appEnv
+      closeSocket

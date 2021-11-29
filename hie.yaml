@@ -68,6 +68,33 @@ cradle:
 
     - path: "app/parking-bap/server/Paths_beckn_gateway.hs"
       component: "parking-bap:exe:parking-bap-exe"
+      
+    - path: "app/mock-sms/src"
+      component: "mock-sms:lib"
+
+    - path: "app/mock-sms/server/Main.hs"
+      component: "mock-sms:exe:mock-fcm-exe"
+
+    - path: "app/mock-sms/server/Paths_mock_sms.hs"
+      component: "mock-sms:exe:mock-fcm-exe"
+
+    - path: "app/mock-fcm/src"
+      component: "mock-fcm:lib"
+
+    - path: "app/mock-fcm/server/Main.hs"
+      component: "mock-fcm:exe:mock-fcm-exe"
+
+    - path: "app/mock-fcm/server/Paths_mock_fcm.hs"
+      component: "mock-fcm:exe:mock-fcm-exe"
+
+    - path: "app/mock-registry/src"
+      component: "mock-registry:lib"
+
+    - path: "app/mock-registry/server/Main.hs"
+      component: "mock-registry:exe:mock-registry-exe"
+
+    - path: "app/mock-registry/server/Paths_mock_registry.hs"
+      component: "mock-registry:exe:mock-registry-exe"
 
     - path: "lib/beckn-core/src"
       component: "beckn-core:lib"

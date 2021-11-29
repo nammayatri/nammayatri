@@ -15,6 +15,6 @@ import Servant (Context (..))
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appEnv <- readDhallConfigDefault "parking-bap" <&> configModifier >>= buildAppEnv
-  runServerService appEnv serverAPI serverHandler identity identity EmptyContext \flowRt -> do
+  runServerService appEnv serverAPI serverHandler identity identity EmptyContext releaseAppEnv \flowRt -> do
     orgShortId <- askConfig (.selfId)
     modFlowRtWithAuthManagers flowRt appEnv [orgShortId]

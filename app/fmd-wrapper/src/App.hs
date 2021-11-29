@@ -13,7 +13,7 @@ import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.FlowLogging
+import qualified Beckn.Utils.FlowLogging as L
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
@@ -28,7 +28,7 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
-import System.Environment
+import System.Environment (lookupEnv)
 import Utils.Common
 
 runFMDWrapper :: (AppCfg -> AppCfg) -> IO ()
@@ -36,12 +36,12 @@ runFMDWrapper configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "fmd-wrapper"
   Metrics.serve (appCfg.metricsPort)
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
+  let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
   appEnv <- buildAppEnv appCfg
   let settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
+          & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown . shutdownAction appEnv)
           & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
@@ -58,3 +58,7 @@ runFMDWrapper configModifier = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ run $ App.EnvR flowRt' appEnv
+  where
+    shutdownAction appEnv closeSocket = do
+      releaseAppEnv appEnv
+      closeSocket

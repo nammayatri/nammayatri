@@ -8,8 +8,10 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import System.Environment (lookupEnv)
 import Types.Metrics
 
 data AppCfg = AppCfg
@@ -49,7 +51,8 @@ data AppEnv = AppEnv
     signatureExpiry :: Seconds,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
-    registrySecrets :: RegistrySecrets
+    registrySecrets :: RegistrySecrets,
+    loggerEnv :: LoggerEnv
   }
   deriving (Generic)
 
@@ -63,14 +66,20 @@ data CoreVersions = CoreVersions
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
+  hostname <- map T.pack <$> lookupEnv "POD_NAME"
   cache <- C.newCache Nothing
   isShuttingDown <- newEmptyTMVarIO
   coreMetrics <- registerCoreMetricsContainer
+  loggerEnv <- prepareLoggerEnv loggerConfig hostname
   return $
     AppEnv
       { gwId = selfId,
         ..
       }
+
+releaseAppEnv :: AppEnv -> IO ()
+releaseAppEnv AppEnv {..} =
+  releaseLoggerEnv loggerEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 

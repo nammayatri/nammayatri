@@ -5,7 +5,9 @@ import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import Beckn.Utils.Dhall (FromDhall)
 import qualified Data.Map as Map
+import qualified Data.Text as T
 import EulerHS.Prelude
+import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -15,15 +17,22 @@ data AppCfg = AppCfg
 
 type MobileNumber = Text
 
-newtype AppEnv = AppEnv
-  { notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage])
+data AppEnv = AppEnv
+  { notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage]),
+    loggerEnv :: LoggerEnv
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
+  hostname <- map T.pack <$> lookupEnv "POD_NAME"
   notificationsMap <- newMVar Map.empty
-  return $ AppEnv {notificationsMap}
+  loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  return $ AppEnv {..}
+
+releaseAppEnv :: AppEnv -> IO ()
+releaseAppEnv AppEnv {..} =
+  releaseLoggerEnv loggerEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 

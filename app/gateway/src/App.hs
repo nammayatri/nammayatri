@@ -15,7 +15,7 @@ import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.FlowLogging
+import qualified Beckn.Utils.FlowLogging as L
 import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
@@ -31,7 +31,7 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
-import System.Environment
+import System.Environment (lookupEnv)
 import Utils.Common
 
 runGateway :: (AppCfg -> AppCfg) -> IO ()
@@ -43,11 +43,11 @@ runGateway configModifier = do
   -- shutdown and activeConnections will be used to signal and detect our exit criteria
   appEnv <- buildAppEnv appCfg
   hostname <- (T.pack <$>) <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appCfg.loggerConfig
+  let loggerRt = L.getEulerLoggerRuntime hostname $ appCfg.loggerConfig
       settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
+          & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown . shutdownAction appEnv)
           & setPort port
   let redisCfg = appCfg.redisCfg
   let migrationPath = appCfg.migrationPath
@@ -72,3 +72,7 @@ runGateway configModifier = do
         logInfo ("Runtime created. Starting server at port " <> show port)
         return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ run (App.EnvR flowRt' appEnv)
+  where
+    shutdownAction appEnv closeSocket = do
+      releaseAppEnv appEnv
+      closeSocket

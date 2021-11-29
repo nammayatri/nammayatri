@@ -6,6 +6,7 @@ module App.Types
     FlowServer,
     Log (..),
     buildAppEnv,
+    releaseAppEnv,
   )
 where
 
@@ -19,8 +20,10 @@ import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
+import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import System.Environment (lookupEnv)
 import Types.Metrics
 
 data AppCfg = AppCfg
@@ -100,17 +103,24 @@ data AppEnv = AppEnv
     minimumDriverRatesCount :: Int,
     recalculateFareEnabled :: Bool,
     updateLocationRefreshPeriod :: Seconds,
-    registrySecrets :: RegistrySecrets
+    registrySecrets :: RegistrySecrets,
+    loggerEnv :: LoggerEnv
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
+  hostname <- map T.pack <$> lookupEnv "POD_NAME"
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   transporterMetrics <- registerTransporterMetricsContainer
   isShuttingDown <- newEmptyTMVarIO
+  loggerEnv <- prepareLoggerEnv loggerConfig hostname
   return AppEnv {..}
+
+releaseAppEnv :: AppEnv -> IO ()
+releaseAppEnv AppEnv {..} =
+  releaseLoggerEnv loggerEnv
 
 type Env = EnvR AppEnv
 

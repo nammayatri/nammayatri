@@ -5,10 +5,9 @@ module Beckn.Utils.Servant.Server where
 
 import Beckn.Types.App (EnvR (..), FlowHandlerR, FlowServerR)
 import Beckn.Types.Flow
-import Beckn.Types.Logging
 import Beckn.Types.Time
 import Beckn.Utils.App
-import Beckn.Utils.FlowLogging
+import qualified Beckn.Utils.FlowLogging as L
 import Beckn.Utils.Logging
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Monitoring.Prometheus.Servant as Metrics
@@ -27,7 +26,7 @@ import Network.Wai.Handler.Warp
   )
 import Servant
 import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal)
-import System.Environment
+import System.Environment (lookupEnv)
 
 class HasEnvEntry r (context :: [Type]) | context -> r where
   getEnvEntry :: Context context -> EnvR r
@@ -70,7 +69,7 @@ runServerService ::
   ( HasField "config" env config,
     HasField "graceTerminationPeriod" config Seconds,
     HasField "isShuttingDown" env Shutdown,
-    HasField "loggerConfig" config LoggerConfig,
+    HasField "loggerConfig" config L.LoggerConfig,
     HasField "port" config Port,
     HasServer api '[EnvR env],
     Metrics.SanitizedUrl api,
@@ -83,16 +82,17 @@ runServerService ::
   (Application -> Application) ->
   (Settings -> Settings) ->
   Context ctx ->
+  (env -> IO ()) ->
   (E.FlowRuntime -> FlowR env E.FlowRuntime) ->
   IO ()
-runServerService appEnv serverAPI serverHandler waiMiddleware waiSettings servantCtx initialize = do
+runServerService appEnv serverAPI serverHandler waiMiddleware waiSettings servantCtx shutdownAction initialize = do
   let port = appEnv.config.port
   hostname <- fmap T.pack <$> lookupEnv "POD_NAME"
-  let loggerRt = getEulerLoggerRuntime hostname $ appEnv.config.loggerConfig
+  let loggerRt = L.getEulerLoggerRuntime hostname $ appEnv.config.loggerConfig
   let settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appEnv.config.graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
+          & setInstallShutdownHandler (\io -> handleShutdown (appEnv.isShuttingDown) (shutdownAction appEnv >> io))
           & setPort port
           & waiSettings
   let healthCheck = pure "App is UP"
