@@ -109,7 +109,7 @@ searchCbService context catalog = do
     [] -> throwError $ InvalidRequest "Missing provider"
     (provider : _) -> do
       let items = provider.items
-      quotes <- traverse (mkQuote searchRequest bpp provider) items
+      quotes <- traverse (buildQuote searchRequest bpp provider) items
       DB.runSqlDBTransaction $ traverse_ QQuote.create quotes
 
 buildSearchRequest ::
@@ -146,22 +146,24 @@ buildSearchRequest userId from to distance now = do
           validTill = addUTCTime (minimum [fromInteger searchRequestExpiry, maximum [minExpiry, timeToRide]]) now
       pure validTill
 
-mkQuote ::
+buildQuote ::
   MonadFlow m =>
   SearchRequest.SearchRequest ->
   Org.Organization ->
   OnSearch.Provider ->
   OnSearch.Item ->
   m SQuote.Quote
-mkQuote searchRequest bppOrg provider item = do
+buildQuote searchRequest bppOrg provider item = do
   now <- getCurrentTime
+  uid <- generateGUID
 
   -- There is loss of data in coversion Product -> Item -> Product
   -- In api exchange between transporter and app-backend
   -- TODO: fit public transport, where searchRequest.startTime != product.startTime, etc
   return
     SQuote.Quote
-      { id = Id $ item.id,
+      { id = uid,
+        bppQuoteId = Id item.id,
         requestId = searchRequest.id,
         estimatedFare = realToFrac item.estimated_price.value,
         estimatedTotalFare = realToFrac item.discounted_price.value,

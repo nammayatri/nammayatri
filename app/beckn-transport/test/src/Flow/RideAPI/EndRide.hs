@@ -51,9 +51,6 @@ handle =
       findRideBookingById = \rbId -> pure $ case rbId of
         Id "rideBooking" -> Just rideBooking
         _ -> Nothing,
-      findQuoteById = \quoteId -> pure $ case quoteId of
-        Id "search" -> Just searchQuote
-        _ -> Nothing,
       findRideById = \rideId -> pure $ case rideId of
         Id "ride" -> Just ride
         Id "completed_ride" -> Just ride{status = Ride.COMPLETED}
@@ -62,7 +59,7 @@ handle =
         if searchRequestId == "search"
           then pure $ Just searchRequest
           else throwError SearchRequestNotFound,
-      notifyCompleteToBAP = \_ _ _ -> pure (),
+      notifyCompleteToBAP = \_ _ -> pure (),
       endRideTransaction = \_ _ _ -> pure (),
       calculateFare = \_ _ _ _ ->
         return $
@@ -109,8 +106,7 @@ searchRequest :: SearchRequest.SearchRequest
 searchRequest =
   Fixtures.defaultSearchRequest
     { SearchRequest.id = "search",
-      SearchRequest.providerId = "someOrg",
-      SearchRequest.vehicleVariant = Just Veh.SEDAN
+      SearchRequest.providerId = "someOrg"
     }
 
 successfulEndByDriver :: TestTree

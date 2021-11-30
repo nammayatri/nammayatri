@@ -5,13 +5,11 @@ import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.Mobility.Order as Mobility
 import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP
 import qualified Product.RideAPI.Handlers.StartRide as Handler
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import Types.API.Ride (StartRideReq (..))
@@ -28,9 +26,8 @@ startRide personId rideId req = withFlowHandlerAPI $ do
         { findPersonById = QPerson.findPersonById,
           findRideBookingById = QRB.findById,
           findRideById = QRide.findById,
-          findQuoteById = QQuote.findById,
           startRide = startRideTransaction,
-          notifyBAPRideStarted = \quote rideBooking rideId' -> notifyUpdateToBAP quote rideBooking rideId' Mobility.INPROGRESS,
+          notifyBAPRideStarted = sendRideStartedUpdateToBAP,
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId')
         }
 

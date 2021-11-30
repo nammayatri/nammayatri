@@ -82,8 +82,8 @@ in
 , exotelCfg = None common.ExotelCfg
 , migrationPath = Some (env:BECKN_TRANSPORT_MIGRATION_PATH as Text ? "dev/migrations/beckn-transport")
 , autoMigrate = True
-, coreVersion = "0.8.2"
-, domainVersion = "0.8.2"
+, coreVersion = "0.9.3"
+, domainVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , signatureExpiry = common.signatureExpiry
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"

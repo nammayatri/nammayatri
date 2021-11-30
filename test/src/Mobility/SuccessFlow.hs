@@ -4,6 +4,7 @@ import Beckn.Types.Id
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
+import qualified "app-backend" Storage.Queries.Quote as BQQuote
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
 import qualified "beckn-transport" Storage.Queries.RideBooking as TQRB
 import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
@@ -39,7 +40,7 @@ doAnAppSearch = do
         _ -> Nothing
       <&> filter (\p -> p.agencyName == bapTransporterName)
       <&> nonEmpty
-  let bQuoteId = quoteAPIEntity.id
+  let bapQuoteId = quoteAPIEntity.id
 
   -- check if calculated price is greater than 0
   quoteAPIEntity.estimatedFare `shouldSatisfy` (> 100) -- should at least be more than 100
@@ -47,10 +48,19 @@ doAnAppSearch = do
   -- Confirm ride from app backend
   confirmResult <-
     callBAP $
-      appConfirmRide appRegistrationToken appSearchId bQuoteId
-  let bRideBookingId = confirmResult.bookingId
+      appConfirmRide appRegistrationToken appSearchId bapQuoteId
+  let bapRideBookingId = confirmResult.bookingId
 
-  return (bQuoteId, bRideBookingId)
+  return (bapQuoteId, bapRideBookingId)
+
+getBPPQuoteId ::
+  Id BQuote.Quote ->
+  ClientsM (Id TQuote.Quote)
+getBPPQuoteId bapQuoteId = do
+  mbBQuote <- liftIO $ runAppFlow "" $ BQQuote.findById bapQuoteId
+  mbBQuote `shouldSatisfy` isJust
+  let Just bQuote = mbBQuote
+  return $ cast bQuote.bppQuoteId
 
 getBPPRideBooking ::
   Id TQuote.Quote ->
@@ -73,32 +83,39 @@ spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for successful booking and completion of ride" $ withBecknClients clients do
-      (quoteId, bRideBookingId) <- doAnAppSearch
+      (bapQuoteId, bRideBookingId) <- doAnAppSearch
 
       tRideBooking <- poll $ do
-        trb <- getBPPRideBooking (cast quoteId)
+        tQuoteId <- getBPPQuoteId bapQuoteId
+        trb <- getBPPRideBooking tQuoteId
         trb.status `shouldBe` TRB.CONFIRMED
         return $ Just trb
 
+      liftIO $ print ("Pepega" :: Text)
+
       rideInfo <-
         poll . callBPP $
-          getNotificationInfo (cast tRideBooking.id) driverToken
+          getNotificationInfo tRideBooking.id driverToken
             <&> (.rideRequest)
       rideInfo.bookingId `shouldBe` tRideBooking.id
+      liftIO $ print ("Pepega1" :: Text)
 
       -- Driver Accepts a ride
       void . callBPP $
         rideRespond tRideBooking.id driverToken $
           RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
+      liftIO $ print ("Pepega2" :: Text)
 
       tRide <- poll $ do
         tRide <- getBPPRide tRideBooking.id
         tRide.status `shouldBe` TRide.NEW
         return $ Just tRide
+      liftIO $ print ("Pepega3" :: Text)
 
       void . callBPP $
         rideStart driverToken tRide.id $
           buildStartRideReq tRide.otp
+      liftIO $ print ("Pepega4" :: Text)
 
       void . poll $ do
         inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
@@ -107,6 +124,7 @@ spec = do
         let Just inprogressRide = inprogressRBStatusResult.ride
         inprogressRide.status `shouldBe` BRide.INPROGRESS
         return $ Just ()
+      liftIO $ print ("Pepega5" :: Text)
 
       void . callBPP $ rideEnd driverToken tRide.id
 
@@ -117,6 +135,7 @@ spec = do
         let Just completedRide = completedRBStatusResult.ride
         completedRide.status `shouldBe` BRide.COMPLETED
         return $ Just completedRide.id
+      liftIO $ print ("Pepega6" :: Text)
 
       -- Leave feedback
       void . callBAP $ callAppFeedback 5 completedRideId

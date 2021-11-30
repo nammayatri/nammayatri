@@ -42,7 +42,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   context <- buildMobilityContext1 (getId searchRequestId) bapURIs.cabs (Just bppURI)
   let order =
         Confirm.Order
-          { items = [Confirm.OrderItem {id = quoteId.getId}]
+          { items = [Confirm.OrderItem {id = quote.bppQuoteId.getId}]
           }
   ExternalAPI.confirm bppURI (Common.BecknReq context $ Confirm.ConfirmMessage order)
   return $ API.ConfirmRes rideBooking.id
@@ -52,6 +52,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
       return $
         SRB.RideBooking
           { id = Id id,
+            bppBookingId = Id "WILL_BE_CHANGED_IN_ON_CONFIRM", -- TODO: Move RB creation to onConfirm
             requestId = searchRequest.id,
             quoteId = quote.id,
             status = SRB.CONFIRMED,
@@ -80,7 +81,12 @@ onConfirm _org req = withFlowHandlerBecknAPI $
     logTagInfo "on_confirm req" (show req)
     validateContextMig1 req.context
     case req.contents of
-      Right _ -> do
-        return ()
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
+      Right msg -> do
+        bppQuoteId <- (Id . (.id) <$> listToMaybe msg.order.items) & fromMaybeM (InternalError "Empty items list.")
+        let bppRideBookingId = Id msg.order.id
+        quote <- QQuote.findByBPPQuoteId bppQuoteId >>= fromMaybeM QuoteDoesNotExist
+        rb <- QRideB.findByQuoteId quote.id >>= fromMaybeM RideBookingNotFound
+        DB.runSqlDBTransaction $
+          QRideB.updateBPPBookingId rb.id bppRideBookingId
     return Ack

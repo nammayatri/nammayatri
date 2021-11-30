@@ -34,7 +34,7 @@ instance ToJSON RideCompletedOrder where
 instance FromJSON RideCompletedOrder where
   parseJSON = withObject "RideCompletedOrder" $ \obj -> do
     status <- obj .: "status"
-    when (status == COMPLETED) $ fail "Wrong status."
+    unless (status == COMPLETED) $ fail "Wrong status."
     RideCompletedOrder
       <$> obj .: "id"
       <*> obj .: "fulfillment"

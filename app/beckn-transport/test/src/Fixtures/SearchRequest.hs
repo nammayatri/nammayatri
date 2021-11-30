@@ -17,7 +17,6 @@ defaultSearchRequest =
       requestorId = Id "",
       fromLocationId = "",
       toLocationId = "",
-      vehicleVariant = Just Veh.SUV,
       bapId = "",
       bapUri = "",
       createdAt = Fixtures.defaultTime

@@ -2,8 +2,8 @@ module Product.RideAPI.Handlers.CancelRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
+import qualified Beckn.Types.Core.Migration1.Cancel.CancellationSource as Cancel
 import Beckn.Types.Id
-import qualified Beckn.Types.Mobility.Order as Mobility
 import EulerHS.Prelude
 import Types.API.Ride (CancelRideReq (..))
 import Types.Error
@@ -28,11 +28,11 @@ cancelRideHandler ServiceHandle {..} personId rideId req = do
     findPersonById personId
       >>= fromMaybeM PersonNotFound
   case authPerson.role of
-    Person.ADMIN -> cancelRide rideId $ rideCancelationReason Mobility.ByOrganization ride.bookingId
+    Person.ADMIN -> cancelRide rideId $ rideCancelationReason Cancel.ByOrganization ride.bookingId
     Person.DRIVER -> do
       let driverId = ride.driverId
       unless (authPerson.id == driverId) $ throwError NotAnExecutor
-      cancelRide rideId $ rideCancelationReason Mobility.ByDriver ride.bookingId
+      cancelRide rideId $ rideCancelationReason Cancel.ByDriver ride.bookingId
   pure APISuccess.Success
   where
     isValidRide ride =

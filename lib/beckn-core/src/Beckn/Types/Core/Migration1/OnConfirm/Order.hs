@@ -28,6 +28,6 @@ instance Example Order where
     Order
       { id = "ride_booking_id",
         provider = example,
-        items = [],
+        items = [OrderItem "quote_id"],
         payment = example
       }

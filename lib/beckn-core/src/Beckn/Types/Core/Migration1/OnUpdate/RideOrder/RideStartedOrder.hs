@@ -27,7 +27,7 @@ instance ToJSON RideStartedOrder where
 instance FromJSON RideStartedOrder where
   parseJSON = withObject "RideStartedOrder" $ \obj -> do
     status <- obj .: "status"
-    when (status == STARTED) $ fail "Wrong status."
+    unless (status == STARTED) $ fail "Wrong status."
     RideStartedOrder
       <$> obj .: "id"
       <*> obj .: "fulfillment"

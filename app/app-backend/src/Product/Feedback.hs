@@ -24,12 +24,12 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
   let txnId = getId rideBooking.requestId
-  let quoteId = getId rideBooking.quoteId
+  let bppRideBookingId = getId rideBooking.bppBookingId
   organization <-
     Organization.findOrganizationById (rideBooking.providerId)
       >>= fromMaybeM OrgNotFound
   bapURIs <- asks (.bapSelfURIs)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   context <- buildMobilityContext1 txnId bapURIs.cabs (Just bppURI)
-  ExternalAPI.feedback bppURI (Common.BecknReq context (Rating.RatingMessage quoteId ratingValue))
+  ExternalAPI.feedback bppURI (Common.BecknReq context (Rating.RatingMessage bppRideBookingId ratingValue))
   return Success

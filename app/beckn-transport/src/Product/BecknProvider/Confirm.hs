@@ -62,7 +62,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
     now <- getCurrentTime
     rideBooking <- buildRideBooking searchRequest quote transporterOrg now
     rideRequest <-
-      BP.mkRideReq
+      BP.buildRideReq
         (rideBooking.id)
         (transporterOrg.shortId)
         RideRequest.ALLOCATION

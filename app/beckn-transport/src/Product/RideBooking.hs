@@ -6,7 +6,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
-import Product.BecknProvider.BP (mkRideReq)
+import Product.BecknProvider.BP (buildRideReq)
 import qualified Product.Location as Location
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.DriverLocation as QDrLoc
@@ -51,7 +51,7 @@ rideBookingCancel rideBookingId admin = withFlowHandlerAPI $ do
     QOrg.findOrganizationById orgId
       >>= fromMaybeM OrgNotFound
   now <- getCurrentTime
-  RideRequest.createFlow =<< mkRideReq rideBookingId (org.shortId) SRideRequest.CANCELLATION now
+  RideRequest.createFlow =<< buildRideReq rideBookingId (org.shortId) SRideRequest.CANCELLATION now
   return Success
 
 getRideInfo :: Id SRB.RideBooking -> Id SP.Person -> FlowHandler API.GetRideInfoRes

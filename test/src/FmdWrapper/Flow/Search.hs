@@ -185,22 +185,6 @@ unknownSubscriber clientEnv _ = do
   gatewayResponse <- runSearch clientEnv "" searchReq
   verifyError 401 "SIGNATURE_VERIFICATION_FAILURE" gatewayResponse
 
-incorrectAction :: ClientEnv -> CallbackData -> IO ()
-incorrectAction clientEnv _ = do
-  ctx <- buildContext ON_UPDATE "dummy-txn-id"
-  let searchReq = buildFMDSearchReq ctx
-
-  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "INVALID_ACTION" gatewayResponse
-
-incorrectCountry :: ClientEnv -> CallbackData -> IO ()
-incorrectCountry clientEnv _ = do
-  ctx <- buildContext SEARCH "dummy-txn-id"
-  let searchReq = buildFMDSearchReq ctx {country = ""}
-
-  gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
-  verifyError 400 "INVALID_COUNTRY" gatewayResponse
-
 spec :: Spec
 spec = do
   around withCallbackApp $ do
@@ -212,5 +196,3 @@ spec = do
       it "Dunzo: nearby location" $ dunzoNearByLocation appClientEnv
       it "Dunzo: different city" $ dunzoDifferentCity appClientEnv
       it "Unknown subscriber" $ unknownSubscriber appClientEnv
-      it "Incorrect action" $ incorrectAction appClientEnv
-      it "Incorrect country" $ incorrectCountry appClientEnv

@@ -43,7 +43,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   bapURIs <- asks (.bapSelfURIs)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   context <- buildMobilityContext1 txnId bapURIs.cabs (Just bppURI)
-  ExternalAPI.cancel bppURI (Common.BecknReq context (Cancel.CancelMessage quote.id.getId Cancel.ByUser))
+  ExternalAPI.cancel bppURI (Common.BecknReq context (Cancel.CancelMessage quote.bppQuoteId.getId Cancel.ByUser))
   DB.runSqlDBTransaction $
     QRCR.create $ makeRideCancelationReason rideBooking.id rideCancellationReasonAPI
   return Success
@@ -70,15 +70,15 @@ onCancel _org req = withFlowHandlerBecknAPI $
     validateContextMig1 req.context
     case req.contents of
       Right msg -> do
-        let quoteId = Id $ msg.order.id
+        let bppRideBookingId = Id $ msg.order.id
         -- TODO: Handle usecase where multiple productinstances exists for one product
 
-        rideBooking <- QRB.findByQuoteId quoteId >>= fromMaybeM RideBookingDoesNotExist
+        rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM RideBookingDoesNotExist
         unless (isRideBookingCancellable rideBooking) $
           throwError (RideBookingInvalidStatus (show rideBooking.status))
         mbRide <- QRide.findByRBId rideBooking.id
         let cancellationSource = msg.cancellation_reason_id
-        quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
+        quote <- QQuote.findById rideBooking.quoteId >>= fromMaybeM QuoteDoesNotExist
         let searchRequestId = quote.requestId
         logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
         DB.runSqlDBTransaction $ do

@@ -94,6 +94,13 @@ findById pid = do
   where
     predicate Storage.Ride {..} = id ==. B.val_ pid
 
+findByBPPRideId :: DBFlow m r => Id Storage.BPPRide -> m (Maybe Storage.Ride)
+findByBPPRideId bppRideId_ = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+  where
+    predicate Storage.Ride {..} = bppRideId ==. B.val_ bppRideId_
+
 updateMultiple :: Id Storage.Ride -> Storage.Ride -> DB.SqlDB ()
 updateMultiple rideId ride = do
   dbTable <- getDbTable

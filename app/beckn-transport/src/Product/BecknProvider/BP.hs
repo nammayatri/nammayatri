@@ -1,81 +1,34 @@
-{-# LANGUAGE OverloadedLabels #-}
-
-module Product.BecknProvider.BP where
-
-import Beckn.Types.Common
-import qualified Beckn.Types.Core.API.Cancel as API
-import qualified Beckn.Types.Core.API.Status as API
-import qualified Beckn.Types.Core.API.Update as API
-import Beckn.Types.Core.DecimalValue (convertAmountToDecimalValue)
-import Beckn.Types.Core.Order
-  ( Order (..),
-    OrderItem (OrderItem),
+module Product.BecknProvider.BP
+  ( sendTripAssignedUpdateToBAP,
+    sendRideStartedUpdateToBAP,
+    sendRideCompletedUpdateToBAP,
+    sendCancelToBAP,
+    buildRideReq,
   )
-import Beckn.Types.Core.Price
-import Beckn.Types.Core.Scalar
+where
+
+import Beckn.External.Encryption (decrypt)
+import Beckn.Types.Common
+import qualified Beckn.Types.Core.Migration1.API.OnCancel as API
+import qualified Beckn.Types.Core.Migration1.API.OnUpdate as API
+import qualified Beckn.Types.Core.Migration1.OnCancel as OnCancel
+import qualified Beckn.Types.Core.Migration1.OnUpdate as OnUpdate
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Driver (Driver)
-import qualified Beckn.Types.Mobility.Order as Mobility
-import Beckn.Types.Mobility.Payload (Payload (..))
-import Beckn.Types.Mobility.Route
-import Beckn.Types.Mobility.Trip (Trip (..))
-import qualified Beckn.Types.Mobility.Vehicle as BVehicle
-import Control.Lens ((?~))
-import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified ExternalAPI.Transform as ExternalAPITransform
-import qualified Storage.Queries.Organization as Organization
+import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Vehicle as Vehicle
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import qualified Types.Storage.Organization as Organization
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Quote as SQ
-import qualified Types.Storage.Quote as SQuote
+import qualified Types.Storage.Organization as SOrg
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideRequest as SRideRequest
-import qualified Types.Storage.Vehicle as SVeh
 import Utils.Common
-import qualified Utils.Notifications as Notify
 
-notifyServiceStatusToGateway ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
-  ) =>
-  Organization.Organization ->
-  SQ.Quote ->
-  SRB.RideBooking ->
-  m ()
-notifyServiceStatusToGateway transporter quote rideBooking = do
-  mkOnServiceStatusPayload quote rideBooking
-    >>= ExternalAPI.callBAP "on_status" API.onStatus transporter (rideBooking.requestId) . Right
-
-mkOnServiceStatusPayload :: MonadTime m => SQ.Quote -> SRB.RideBooking -> m API.OnStatusReqMessage
-mkOnServiceStatusPayload quote rideBooking = do
-  mkOrderRes quote.id (getId $ quote.productId) (show $ rideBooking.status)
-    <&> API.OnStatusReqMessage
-  where
-    mkOrderRes quoteId productId status = do
-      now <- getCurrentTime
-      return $
-        Order
-          { id = getId quoteId,
-            state = T.pack status,
-            items = [OrderItem productId Nothing],
-            created_at = now,
-            updated_at = now,
-            billing = Nothing,
-            payment = Nothing,
-            update_action = Nothing,
-            quotation = Nothing
-          }
-
-notifyTripInfoToGateway ::
+sendTripAssignedUpdateToBAP ::
   ( DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -83,107 +36,150 @@ notifyTripInfoToGateway ::
   ) =>
   SRB.RideBooking ->
   SRide.Ride ->
-  Organization.Organization ->
-  Mobility.OrderState ->
   m ()
-notifyTripInfoToGateway rideBooking ride transporter orderState = do
-  mkOnUpdatePayload rideBooking ride orderState
-    >>= ExternalAPI.callBAP "on_update" API.onUpdate transporter rideBooking.requestId . Right
+sendTripAssignedUpdateToBAP rideBooking ride = do
+  transporter <-
+    QOrg.findOrganizationById rideBooking.providerId
+      >>= fromMaybeM OrgNotFound
+  buildTripAssignedUpdatePayload ride transporter
+    >>= ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
 
-notifyCancelToGateway ::
+sendRideStartedUpdateToBAP ::
   ( DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
   SRB.RideBooking ->
-  Maybe SRide.Ride ->
-  Organization.Organization ->
-  Mobility.CancellationSource ->
+  SRide.Ride ->
   m ()
-notifyCancelToGateway rideBooking mbRide transporter cancellationSource = do
-  trip <- mkCancelTripObj rideBooking `traverse` mbRide
-  order <- ExternalAPITransform.mkOrder rideBooking.quoteId rideBooking.id trip (Just cancellationSource) Mobility.CANCELLED
-  ExternalAPI.callBAP "on_cancel" API.onCancel transporter rideBooking.requestId . Right $ API.OnCancelReqMessage order
+sendRideStartedUpdateToBAP rideBooking ride = do
+  transporter <-
+    QOrg.findOrganizationById rideBooking.providerId
+      >>= fromMaybeM OrgNotFound
+  buildRideStartedUpdatePayload ride
+    >>= ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
 
-mkTrip :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Trip
-mkTrip ride = do
-  driver <- mkDriverInfo ride.driverId
-  vehicle <- mkVehicleInfo ride.vehicleId
-  logTagInfo "vehicle" $ show vehicle
-  return $
-    Trip
-      { id = ride.otp,
-        pickup = Nothing,
-        drop = Nothing,
-        state = Nothing,
-        vehicle = vehicle,
-        driver = Just driver,
-        payload = Payload Nothing Nothing [] Nothing,
-        fare = mkPrice <$> ride.fare,
-        totalFare = mkPrice <$> ride.totalFare,
-        route =
-          Just $
-            Route
-              RouteEdge
-                { path = "",
-                  duration = emptyScalar "seconds", -- TODO: calculate duration and put it here
-                  distance = emptyScalar "meters" & #value .~ ride.chargeableDistance
-                }
-      }
-  where
-    mkPrice price =
-      emptyPrice & #value ?~ convertAmountToDecimalValue price
+sendRideCompletedUpdateToBAP ::
+  ( DBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  SRB.RideBooking ->
+  SRide.Ride ->
+  m ()
+sendRideCompletedUpdateToBAP rideBooking ride = do
+  transporter <-
+    QOrg.findOrganizationById rideBooking.providerId
+      >>= fromMaybeM OrgNotFound
+  buildRideCompletedUpdatePayload ride
+    >>= ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
 
-mkOnUpdatePayload ::
+sendCancelToBAP ::
+  ( DBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  SRB.RideBooking ->
+  SOrg.Organization ->
+  OnCancel.CancellationSource ->
+  m ()
+sendCancelToBAP rideBooking transporter cancellationSource = do
+  let message = OnCancel.OnCancelMessage (OnCancel.Order rideBooking.id.getId) cancellationSource
+  ExternalAPI.callBAP "on_cancel" API.onCancelAPI transporter rideBooking.requestId $ Right message
+
+buildTripAssignedUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
-  SRB.RideBooking ->
   SRide.Ride ->
-  Mobility.OrderState ->
-  m API.OnUpdateOrder
-mkOnUpdatePayload rideBooking ride orderState = do
-  trip <- mkTrip ride
-  order <- ExternalAPITransform.mkOrder rideBooking.quoteId rideBooking.id (Just trip) Nothing orderState
-  return $ API.OnUpdateOrder order
-
-mkDriverInfo :: (DBFlow m r, EncFlow m r) => Id Person.Person -> m Driver
-mkDriverInfo driverId = do
-  person <-
-    Person.findPersonById driverId
+  SOrg.Organization ->
+  m OnUpdate.RideOrder
+buildTripAssignedUpdatePayload ride org = do
+  driver <-
+    Person.findPersonById ride.driverId
       >>= fromMaybeM PersonNotFound
-  ExternalAPITransform.mkDriverObj person
-
-mkVehicleInfo :: DBFlow m r => Id SVeh.Vehicle -> m (Maybe BVehicle.Vehicle)
-mkVehicleInfo vehicleId = do
-  vehicle <- Vehicle.findVehicleById vehicleId
-  return $ ExternalAPITransform.mkVehicleObj <$> vehicle
-
-mkCancelTripObj :: (DBFlow m r, EncFlow m r) => SRB.RideBooking -> SRide.Ride -> m Trip
-mkCancelTripObj rideBooking ride = do
-  driver <- mkDriverInfo ride.driverId
-  vehicle <- mkVehicleInfo ride.vehicleId
+  decDriver <- decrypt driver
+  veh <- Vehicle.findVehicleById ride.vehicleId >>= fromMaybeM VehicleNotFound
+  mobileNumber <- decDriver.mobileCountryCode <> decDriver.mobileNumber & fromMaybeM (InternalError "Driver mobile number is not present.")
+  let vehicleNumber = veh.registrationNo
+  vehicleColor <- veh.color & fromMaybeM (InternalError "Vehicle color is not present.")
+  vehicleModel <- veh.model & fromMaybeM (InternalError "Vehicle model is not present.")
+  vehicleVariant <- show <$> veh.variant & fromMaybeM (InternalError "Vehicle variant is not present.")
+  let agent =
+        OnUpdate.Agent
+          { name = org.name,
+            phone = mobileNumber,
+            rating = driver.rating,
+            registered_at = driver.createdAt
+          }
+      vehicle =
+        OnUpdate.Vehicle
+          { model = vehicleModel,
+            variant = vehicleVariant,
+            color = vehicleColor,
+            registration = vehicleNumber
+          }
+      fulfillment =
+        OnUpdate.TripAssignedFulfillment
+          { id = ride.id.getId,
+            otp = ride.otp,
+            ..
+          }
   return $
-    Trip
-      { id = getId ride.id,
-        pickup = Nothing,
-        drop = Nothing,
-        state = Nothing,
-        vehicle = vehicle,
-        driver = Just driver,
-        payload = Payload Nothing Nothing [] Nothing,
-        fare = Just $ ExternalAPITransform.mkPrice rideBooking.estimatedFare,
-        totalFare = Just $ ExternalAPITransform.mkPrice rideBooking.estimatedTotalFare,
-        route = Nothing
-      }
+    OnUpdate.TripAssigned
+      OnUpdate.TripAssignedOrder
+        { id = ride.bookingId.getId,
+          updated_at = ride.updatedAt,
+          ..
+        }
 
-mkRideReq ::
+buildRideStartedUpdatePayload ::
+  (DBFlow m r, EncFlow m r) =>
+  SRide.Ride ->
+  m OnUpdate.RideOrder
+buildRideStartedUpdatePayload ride = do
+  let fulfillment =
+        OnUpdate.RideStartedFulfillment
+          { id = ride.id.getId
+          }
+  return $
+    OnUpdate.RideStarted
+      OnUpdate.RideStartedOrder
+        { id = ride.bookingId.getId,
+          updated_at = ride.updatedAt,
+          ..
+        }
+
+buildRideCompletedUpdatePayload ::
+  (DBFlow m r, EncFlow m r) =>
+  SRide.Ride ->
+  m OnUpdate.RideOrder
+buildRideCompletedUpdatePayload ride = do
+  totalFare <- realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
+  chargeableDistance <- ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
+  let fulfillment =
+        OnUpdate.RideCompletedFulfillment
+          { id = ride.id.getId,
+            chargeable_distance = chargeableDistance
+          }
+      payment = OnUpdate.Payment $ OnUpdate.Params totalFare
+  return $
+    OnUpdate.RideCompleted
+      OnUpdate.RideCompletedOrder
+        { id = ride.bookingId.getId,
+          updated_at = ride.updatedAt,
+          ..
+        }
+
+buildRideReq ::
   MonadFlow m =>
   Id SRB.RideBooking ->
-  ShortId Organization.Organization ->
+  ShortId SOrg.Organization ->
   SRideRequest.RideRequestType ->
   UTCTime ->
   m SRideRequest.RideRequest
-mkRideReq rideId shortOrgId rideRequestType now = do
+buildRideReq rideId shortOrgId rideRequestType now = do
   guid <- generateGUID
   pure
     SRideRequest.RideRequest
@@ -194,65 +190,3 @@ mkRideReq rideId shortOrgId rideRequestType now = do
         _type = rideRequestType,
         info = Nothing
       }
-
-notifyUpdateToBAP ::
-  ( DBFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    FCMFlow m r,
-    CoreMetrics m
-  ) =>
-  SQuote.Quote ->
-  SRB.RideBooking ->
-  SRide.Ride ->
-  Mobility.OrderState ->
-  m ()
-notifyUpdateToBAP quote rideBooking ride orderState = do
-  -- Send callbacks to BAP
-  transporter <-
-    Organization.findOrganizationById rideBooking.providerId
-      >>= fromMaybeM OrgNotFound
-  notifyTripDetailsToGateway transporter rideBooking ride orderState
-  notifyStatusUpdateReq transporter quote rideBooking ride orderState
-
-notifyTripDetailsToGateway ::
-  ( DBFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
-  ) =>
-  Organization.Organization ->
-  SRB.RideBooking ->
-  SRide.Ride ->
-  Mobility.OrderState ->
-  m ()
-notifyTripDetailsToGateway transporter rideBooking ride orderState = do
-  notifyTripInfoToGateway rideBooking ride transporter orderState
-
-notifyStatusUpdateReq ::
-  ( DBFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    FCMFlow m r,
-    CoreMetrics m
-  ) =>
-  Organization.Organization ->
-  SQuote.Quote ->
-  SRB.RideBooking ->
-  SRide.Ride ->
-  Mobility.OrderState ->
-  m ()
-notifyStatusUpdateReq transporterOrg quote rideBooking ride status = do
-  case status of
-    Mobility.CANCELLED -> do
-      admins <- getAdmins
-      notifyCancelToGateway rideBooking (Just ride) transporterOrg Mobility.ByOrganization
-      Notify.notifyCancelReqByBP rideBooking admins
-    _ -> notifyStatusToGateway
-  where
-    getAdmins = do
-      if transporterOrg.enabled
-        then Person.findAllByOrgId [Person.ADMIN] rideBooking.providerId
-        else pure []
-    notifyStatusToGateway = do
-      notifyServiceStatusToGateway transporterOrg quote rideBooking

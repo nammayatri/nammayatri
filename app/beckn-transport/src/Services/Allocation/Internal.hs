@@ -5,7 +5,6 @@ import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Beckn.Types.Mobility.Order as Mobility
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
@@ -18,7 +17,6 @@ import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
-import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideRequest as QRR
@@ -74,8 +72,6 @@ assignDriver ::
   m ()
 assignDriver rideBookingId driverId = do
   rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingDoesNotExist
-  let quoteId = rideBooking.quoteId
-  quote <- QQuote.findById quoteId >>= fromMaybeM QuoteNotFound
   driver <-
     QP.findPersonById (cast driverId)
       >>= fromMaybeM PersonDoesNotExist
@@ -87,7 +83,7 @@ assignDriver rideBookingId driverId = do
 
   fork "assignDriver - Notify BAP" $ do
     uRideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
-    BP.notifyUpdateToBAP quote uRideBooking ride Mobility.TRIP_ASSIGNED
+    BP.sendTripAssignedUpdateToBAP uRideBooking ride
     Notify.notifyDriver notificationType notificationTitle (message uRideBooking) driver.id driver.deviceToken
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
@@ -239,7 +235,7 @@ cancelRide rideBookingId reason = do
     transporter <-
       QOrg.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    BP.notifyCancelToGateway rideBooking Nothing transporter reason.source
+    BP.sendCancelToBAP rideBooking transporter reason.source
 
 cleanupNotifications :: DBFlow m r => Id RideBooking -> m ()
 cleanupNotifications = QNS.cleanupNotifications

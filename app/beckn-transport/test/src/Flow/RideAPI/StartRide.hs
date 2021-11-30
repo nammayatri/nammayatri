@@ -21,11 +21,6 @@ handle :: StartRide.ServiceHandle IO
 handle =
   StartRide.ServiceHandle
     { findPersonById = \_personid -> pure $ Just Fixtures.defaultDriver,
-      findQuoteById = \quoteId ->
-        pure $
-          if quoteId == Id "2"
-            then Just searchQuote
-            else Nothing,
       findRideBookingById = \rbId ->
         pure $
           if rbId == Id "1"
@@ -37,7 +32,7 @@ handle =
             then Just ride
             else Nothing,
       startRide = \_quoteIds -> pure (),
-      notifyBAPRideStarted = \_quote _rideBooking _ride -> pure (),
+      notifyBAPRideStarted = \_rideBooking _ride -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure ()
     }
 

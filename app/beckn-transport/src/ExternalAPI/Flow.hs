@@ -3,8 +3,8 @@
 module ExternalAPI.Flow where
 
 import Beckn.Types.Core.API.Call as API
-import Beckn.Types.Core.API.Callback
 import Beckn.Types.Core.Error
+import Beckn.Types.Core.Migration1.API.Types (BecknCallbackReq (..))
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
 import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
@@ -58,7 +58,7 @@ callBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Beckn.IsBecknAPI api (CallbackReq req) =>
+  Beckn.IsBecknAPI api (BecknCallbackReq req) =>
   Text ->
   Proxy api ->
   Org.Organization ->
@@ -75,9 +75,9 @@ callBAP action api transporter searchRequestId contents = do
       authKey = getHttpManagerKey bppShortId
       txnId = searchRequest.transactionId
   bppUri <- makeBppUrl (transporter.id)
-  context <- buildMobilityContext action txnId (Just bapCallbackUrl) (Just bppUri)
+  context <- buildMobilityContext1 txnId bapCallbackUrl (Just bppUri)
   Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $
-    CallbackReq {contents, context}
+    BecknCallbackReq {contents, context}
 
 makeBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

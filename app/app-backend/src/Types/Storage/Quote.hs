@@ -14,8 +14,11 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.SearchRequest as SearchRequest
 
+data BPPQuote
+
 data QuoteT f = Quote
   { id :: B.C f (Id Quote),
+    bppQuoteId :: B.C f (Id BPPQuote),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     estimatedFare :: B.C f Amount,
     discount :: B.C f (Maybe Amount),
@@ -59,7 +62,8 @@ fieldEMod =
   B.setEntityName "quote"
     <> B.modifyTableFields
       B.tableModification
-        { requestId = "request_id",
+        { bppQuoteId = "bpp_quote_id",
+          requestId = "request_id",
           providerName = "provider_name",
           providerCompletedRidesCount = "provider_completed_rides_count",
           providerMobileNumber = "provider_mobile_number",

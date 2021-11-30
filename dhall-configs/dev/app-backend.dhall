@@ -111,8 +111,8 @@ in
 , exotelCfg = Some common.exotelCfg
 , migrationPath = Some (env:APP_BACKEND_MIGRATION_PATH as Text ? "dev/migrations/app-backend")
 , autoMigrate = True
-, coreVersion = "0.8.2"
-, domainVersion = "0.8.2"
+, coreVersion = "0.9.3"
+, domainVersion = "0.9.3"
 , geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 , signatureExpiry = common.signatureExpiry

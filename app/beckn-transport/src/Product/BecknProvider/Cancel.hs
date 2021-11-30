@@ -6,8 +6,8 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Migration1.API.Cancel as Cancel
+import qualified Beckn.Types.Core.Migration1.Cancel.CancellationSource as Cancel
 import Beckn.Types.Id
-import qualified Beckn.Types.Mobility.Order as Mobility
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
@@ -46,7 +46,7 @@ cancel transporterId _ req = withFlowHandlerBecknAPI $
     quote <- Quote.findById (Id quoteId) >>= fromMaybeM QuoteDoesNotExist
     rideBooking <- QRB.findByQuoteId (quote.id) >>= fromMaybeM RideNotFound
     now <- getCurrentTime
-    RideRequest.createFlow =<< BP.mkRideReq (rideBooking.id) (transporterOrg.shortId) SRideRequest.CANCELLATION now
+    RideRequest.createFlow =<< BP.buildRideReq (rideBooking.id) (transporterOrg.shortId) SRideRequest.CANCELLATION now
     return Ack
 
 cancelRide ::
@@ -69,7 +69,7 @@ cancelRide rideId rideCReason = do
     transporter <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    BP.notifyCancelToGateway rideBooking (Just ride) transporter rideCReason.source
+    BP.sendCancelToBAP rideBooking transporter rideCReason.source
     searchRequest <- SearchRequest.findById (rideBooking.requestId) >>= fromMaybeM SearchRequestNotFound
     driver <- Person.findPersonById ride.driverId >>= fromMaybeM PersonNotFound
     Notify.notifyOnCancel searchRequest driver.id driver.deviceToken rideCReason.source
@@ -88,4 +88,4 @@ cancelRideTransaction rideBooking ride rideCReason = DB.runSqlDBTransaction $ do
     updateDriverInfo personId = do
       let driverId = cast personId
       DriverInformation.updateOnRide driverId False
-      when (rideCReason.source == Mobility.ByDriver) $ QDriverStats.updateIdleTime driverId
+      when (rideCReason.source == Cancel.ByDriver) $ QDriverStats.updateIdleTime driverId

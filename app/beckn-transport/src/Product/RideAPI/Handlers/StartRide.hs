@@ -6,7 +6,6 @@ import Beckn.Types.Id
 import EulerHS.Prelude
 import Types.Error
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import Utils.Common
@@ -15,9 +14,8 @@ data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id SRide.Ride -> m (Maybe SRide.Ride),
-    findQuoteById :: Id SQuote.Quote -> m (Maybe SQuote.Quote),
     startRide :: Id SRide.Ride -> m (),
-    notifyBAPRideStarted :: SQuote.Quote -> SRB.RideBooking -> SRide.Ride -> m (),
+    notifyBAPRideStarted :: SRB.RideBooking -> SRide.Ride -> m (),
     rateLimitStartRide :: Id Person.Person -> Id SRide.Ride -> m ()
   }
 
@@ -37,8 +35,7 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
   startRide ride.id
-  quote <- findQuoteById rideBooking.quoteId >>= fromMaybeM QuoteNotFound
-  notifyBAPRideStarted quote rideBooking ride
+  notifyBAPRideStarted rideBooking ride
   pure APISuccess.Success
   where
     isValidRideStatus status = status == SRide.NEW

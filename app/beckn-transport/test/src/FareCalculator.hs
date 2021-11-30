@@ -45,12 +45,6 @@ defaultPickupLocation =
       { id = Id "",
         lat = 0.0,
         long = 0.0,
-        district = Nothing,
-        city = Nothing,
-        state = Nothing,
-        country = Nothing,
-        pincode = Nothing,
-        address = Nothing,
         createdAt = mockTime 0,
         updatedAt = mockTime 0
       }
@@ -62,12 +56,6 @@ defaultDropLocation =
       { id = Id "",
         lat = 0.0,
         long = 0.0,
-        district = Nothing,
-        city = Nothing,
-        state = Nothing,
-        country = Nothing,
-        pincode = Nothing,
-        address = Nothing,
         createdAt = mockTime 11,
         updatedAt = mockTime 11
       }

@@ -31,6 +31,13 @@ findById pid = do
   where
     predicate piid Storage.Quote {..} = id ==. B.val_ piid
 
+findByBPPQuoteId :: DBFlow m r => Id Storage.BPPQuote -> m (Maybe Storage.Quote)
+findByBPPQuoteId bppQuoteId_ = do
+  dbTable <- getDbTable
+  DB.findOne dbTable predicate
+  where
+    predicate Storage.Quote {..} = bppQuoteId ==. B.val_ bppQuoteId_
+
 findAllByRequestId :: DBFlow m r => Id SearchRequest.SearchRequest -> m [Storage.Quote]
 findAllByRequestId searchRequestId = do
   dbTable <- getDbTable

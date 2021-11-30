@@ -1,8 +1,8 @@
 module Services.Allocation.Allocation where
 
 import Beckn.Types.Common
+import Beckn.Types.Core.Migration1.Cancel.CancellationSource (CancellationSource (..))
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order (CancellationSource (..))
 import Beckn.Utils.NonEmpty
 import Data.Generics.Labels ()
 import qualified Data.Text as T

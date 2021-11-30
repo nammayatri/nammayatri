@@ -55,7 +55,7 @@ buildMobilityContext1 txnId bapUri bppUri = do
   return $
     Mig1.Context
       { domain = Mig1.MOBILITY,
-        core_version = "0.9",
+        core_version = "0.9.3",
         bap_id = Just "",
         bap_uri = bapUri,
         bpp_id = Just "",

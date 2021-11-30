@@ -49,8 +49,11 @@ instance ToHttpApiData RideBookingStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
+data BPPRideBooking
+
 data RideBookingT f = RideBooking
   { id :: B.C f (Id RideBooking),
+    bppBookingId :: B.C f (Id BPPRideBooking),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     quoteId :: B.C f (Id Quote.Quote),
     status :: B.C f RideBookingStatus,
@@ -95,7 +98,8 @@ fieldEMod =
   B.setEntityName "ride_booking"
     <> B.modifyTableFields
       B.tableModification
-        { requestId = "request_id",
+        { bppBookingId = "bpp_ride_booking_id",
+          requestId = "request_id",
           quoteId = "quote_id",
           providerId = "provider_id",
           providerMobileNumber = "provider_mobile_number",

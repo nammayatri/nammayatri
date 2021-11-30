@@ -11,7 +11,6 @@ import Types.App (Driver)
 import Types.Error
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.SearchRequest as SSearchRequest
@@ -22,10 +21,9 @@ data ServiceHandle m = ServiceHandle
   { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
     findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    findQuoteById :: Id SQuote.Quote -> m (Maybe SQuote.Quote),
     endRideTransaction :: Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m (),
     findSearchRequestById :: Id SSearchRequest.SearchRequest -> m (Maybe SSearchRequest.SearchRequest),
-    notifyCompleteToBAP :: SQuote.Quote -> SRB.RideBooking -> Ride.Ride -> m (),
+    notifyCompleteToBAP :: SRB.RideBooking -> Ride.Ride -> m (),
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
@@ -64,9 +62,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   endRideTransaction rideBooking.id updRide (cast driverId)
 
-  quote <- findQuoteById rideBooking.quoteId >>= fromMaybeM QuoteNotFound
-
-  notifyCompleteToBAP quote rideBooking updRide
+  notifyCompleteToBAP rideBooking updRide
 
   return APISuccess.Success
   where

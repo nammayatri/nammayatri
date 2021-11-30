@@ -64,7 +64,7 @@ in
 , searchTimeout = None Integer
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-gateway.log"}
 , coreVersions = coreVersions
-, mobilityDomainVersion = "0.8.2"
+, mobilityDomainVersion = "0.9.3"
 , signatureExpiry = common.signatureExpiry
 , graceTerminationPeriod = +90
 , httpClientOptions = httpClientOptions

@@ -1,6 +1,5 @@
 module Mobility.DriverCancelRide where
 
-import Beckn.Types.Id
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
@@ -18,10 +17,11 @@ spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for ride cancelled by Driver" $ withBecknClients clients do
-      (quoteId, bRideBookingId) <- doAnAppSearch
+      (bapQuoteId, bRideBookingId) <- doAnAppSearch
 
       tRideBooking <- poll $ do
-        trb <- getBPPRideBooking (cast quoteId)
+        tQuoteId <- getBPPQuoteId bapQuoteId
+        trb <- getBPPRideBooking tQuoteId
         trb.status `shouldBe` TRB.CONFIRMED
         return $ Just trb
 

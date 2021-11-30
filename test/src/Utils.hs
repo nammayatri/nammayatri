@@ -3,6 +3,7 @@
 module Utils where
 
 import qualified App.BackgroundTaskManager.Types as BecknTransport
+import qualified "app-backend" App.Types as BecknApp
 import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Flow
 import Beckn.Utils.Common
@@ -101,6 +102,13 @@ mkMobilityClients bapUrl bppUrl = do
       { bap = mkClientEnv appManager bapUrl,
         bpp = mkClientEnv appManager bppUrl
       }
+
+runAppFlow :: Text -> FlowR BecknApp.AppEnv a -> IO a
+runAppFlow tag flow = do
+  (appEnv :: BecknApp.AppEnv) <- BecknApp.buildAppEnv =<< readDhallConfig "../dhall-configs/dev/app-backend.dhall"
+  let loggerRt = getEulerLoggerRuntime (Just "Test_App_flow") defaultTestLoggerConfig
+  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
+    runFlowR flowRt appEnv $ withLogTag tag flow
 
 runTransporterFlow :: Text -> FlowR BecknTransport.AppEnv a -> IO a
 runTransporterFlow tag flow = do

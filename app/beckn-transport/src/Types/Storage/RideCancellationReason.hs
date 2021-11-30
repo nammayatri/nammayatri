@@ -2,8 +2,8 @@
 
 module Types.Storage.RideCancellationReason where
 
+import Beckn.Types.Core.Migration1.Cancel.CancellationSource (CancellationSource)
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Order (CancellationSource)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Storage.CancellationReason (CancellationReasonCode)

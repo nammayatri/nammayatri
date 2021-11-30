@@ -27,7 +27,7 @@ instance ToJSON TripAssignedOrder where
 instance FromJSON TripAssignedOrder where
   parseJSON = withObject "TripAssignedOrder" $ \obj -> do
     status <- obj .: "status"
-    when (status == TRIP_ASSIGNED) $ fail "Wrong status."
+    unless (status == TRIP_ASSIGNED) $ fail "Wrong status."
     TripAssignedOrder
       <$> obj .: "id"
       <*> obj .: "fulfillment"
@@ -95,20 +95,18 @@ instance Example Agent where
       }
 
 data Vehicle = Vehicle
-  { make :: Maybe Text,
-    model :: Maybe Text,
-    variant :: Maybe Text,
-    color :: Maybe Text,
-    registration :: Maybe Text
+  { model :: Text,
+    variant :: Text,
+    color :: Text,
+    registration :: Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance Example Vehicle where
   example =
     Vehicle
-      { make = Nothing,
-        model = Nothing,
-        variant = Nothing,
-        color = Nothing,
-        registration = Nothing
+      { model = "model",
+        variant = "variant",
+        color = "color",
+        registration = "regNum"
       }

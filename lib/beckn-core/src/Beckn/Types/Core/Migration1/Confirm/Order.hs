@@ -22,5 +22,5 @@ newtype OrderItem = OrderItem
 instance Example Order where
   example =
     Order
-      { items = []
+      { items = [OrderItem "quote_id"]
       }
