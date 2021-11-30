@@ -5,10 +5,7 @@ import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.App
-import Beckn.Types.Core.DecimalValue
-import Beckn.Types.Core.Price
 import Beckn.Types.Id
-import Beckn.Types.Mobility.Payload
 import Data.Time
 import EulerHS.Prelude
 import Servant hiding (Context)
@@ -46,58 +43,6 @@ address =
       country = "India",
       areaCode = "560047",
       state = "Karnataka"
-    }
-
-location :: AppCommon.GPS -> AppCommon.Location
-location gps =
-  AppCommon.Location
-    { gps = Just gps,
-      address = Just address,
-      city = Nothing
-    }
-
-vehicle :: AppCommon.Vehicle
-vehicle =
-  AppCommon.Vehicle
-    { category = Just AppCommon.CAR,
-      capacity = Nothing,
-      make = Nothing,
-      model = Nothing,
-      size = Nothing,
-      variant = "SUV",
-      color = Just "Black",
-      registrationNumber = Nothing
-    }
-
-intentPayload :: Payload
-intentPayload =
-  Payload
-    { travellers = [],
-      traveller_count = Just 2,
-      luggage = Nothing,
-      travel_group = Nothing
-    }
-
-price :: Price
-price =
-  let amt = DecimalValue "800" Nothing
-   in Price
-        { currency = "INR",
-          value = Just amt,
-          estimated_value = Just amt,
-          computed_value = Just amt,
-          listed_value = Just amt,
-          offered_value = Just amt,
-          minimum_value = Just amt,
-          maximum_value = Just amt
-        }
-
-getStop :: UTCTime -> AppCommon.GPS -> AppCommon.Stop
-getStop stopTime gps =
-  AppCommon.Stop
-    { location = location gps,
-      arrivalTime = AppCommon.StopTime stopTime (Just stopTime),
-      departureTime = AppCommon.StopTime stopTime (Just stopTime)
     }
 
 searchReq :: AppBESearch.SearchReq

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Utils.Notifications where
 
 import qualified Beckn.External.FCM.Flow as FCM
@@ -7,14 +5,12 @@ import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Core.Migration1.Cancel.CancellationSource (CancellationSource (..))
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Control.Lens.Prism (_Just)
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RideBooking as QRB
 import Types.Metrics
-import Types.ProductInfo as ProductInfo
 import Types.Storage.Person as Person
 import Types.Storage.RegistrationToken as RegToken
 import qualified Types.Storage.Ride as SRide
@@ -170,50 +166,6 @@ notifyOnRegistration regToken personId mbDeviceToken =
               "Click here to book your first ride with us."
             ]
    in FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
-
-notifyOnTrackCb ::
-  ( FCMFlow m r,
-    DBFlow m r,
-    CoreMetrics m
-  ) =>
-  Id Person ->
-  Tracker ->
-  SearchRequest ->
-  m ()
-notifyOnTrackCb personId tracker searchRequest = do
-  let searchRequestId = searchRequest.id
-  mperson <- Person.findById personId
-  case mperson of
-    Just p -> do
-      let trip = tracker.trip
-          regNumber =
-            trip ^. #vehicle . _Just . #registrationNumber . _Just
-          model =
-            fromMaybe "unknown" $ trip ^. #vehicle . _Just . #model
-          driverName =
-            trip ^. #driver . _Just . #name
-          title = FCMNotificationTitle $ T.pack "Ride details updated!"
-          body =
-            FCMNotificationBody $
-              unwords
-                [ driverName,
-                  "will be arriving in a",
-                  model,
-                  "(" <> regNumber <> "),",
-                  "to pick you up on",
-                  showTimeIst (SearchRequest.startTime searchRequest) <> ".",
-                  "You would be notified 15 mins before the scheduled pick up time."
-                ]
-          notificationData =
-            FCM.FCMAndroidData
-              { fcmNotificationType = FCM.TRACKING_CALLBACK,
-                fcmShowNotification = FCM.SHOW,
-                fcmEntityType = FCM.SearchRequest,
-                fcmEntityIds = show searchRequestId,
-                fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRACKING_CALLBACK
-              }
-      FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
-    _ -> pure ()
 
 notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => SRB.RideBooking -> Id Person -> Maybe FCM.FCMRecipientToken -> CancellationSource -> m ()
 notifyOnCancel rideBooking personId mbDeviceToken cancellationSource = do

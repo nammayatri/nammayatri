@@ -6,7 +6,6 @@ import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Location
 import qualified Beckn.Types.Core.Migration.API.Search as Core9
 import qualified Beckn.Types.Core.Migration.API.Types as Core9
 import qualified Beckn.Types.Core.Migration.Context as Core9
@@ -22,7 +21,6 @@ import Beckn.Types.Id
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Control.Lens ((?~))
-import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -216,10 +214,9 @@ mkIntentMig req = do
            )
   where
     stopToLoc Location.SearchReqLocationAPIEntity {gps} = do
-      let GPS {lat, lon} = toBeckn gps
       gps' <-
         fromMaybeM (InvalidRequest "bad coordinates") $
           Mig.Gps
-            <$> readMaybe (T.unpack lat)
-            <*> readMaybe (T.unpack lon)
+            <$> Just gps.lat
+            <*> Just gps.lon
       pure $ Mig.emptyLocation & #gps ?~ gps'

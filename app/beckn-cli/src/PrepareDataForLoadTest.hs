@@ -9,8 +9,10 @@ module PrepareDataForLoadTest
   )
 where
 
-import qualified Beckn.Types.Core.API.Search as API
-import qualified Beckn.Types.Core.Context as API
+import qualified Beckn.Types.Core.Migration1.API.Search as API
+import qualified Beckn.Types.Core.Migration1.API.Types as API
+import qualified Beckn.Types.Core.Migration1.Common.Context as API
+import qualified Beckn.Types.Core.Migration1.Search as API
 import Beckn.Utils.Example (Example (example))
 import qualified Beckn.Utils.SignatureAuth as S
 import qualified Data.Aeson as J
@@ -66,5 +68,5 @@ generateSearchRequest :: L.Flow API.SearchReq
 generateSearchRequest = do
   txnId <- L.generateGUID
   let context = example @API.Context & #transaction_id .~ txnId
-  let intent = example @API.SearchIntent
-  pure $ API.SearchReq context intent
+  let intent = example @API.SearchMessage
+  pure $ API.BecknReq context intent

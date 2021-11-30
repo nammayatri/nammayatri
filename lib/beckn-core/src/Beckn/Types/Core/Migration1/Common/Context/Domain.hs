@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Migration1.Common.Context.Domain (Domain (..)) where
 
+import Beckn.Utils.Example
 import Beckn.Utils.JSON (constructorsWithHyphensUntagged)
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
@@ -14,6 +15,9 @@ data Domain
   | HEALTHCARE
   | METRO
   deriving (Eq, Generic, Show, ToSchema)
+
+instance Example Domain where
+  example = MOBILITY
 
 instance ToJSON Domain where
   toJSON MOBILITY = String "nic2004:60221"

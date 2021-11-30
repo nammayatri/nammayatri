@@ -7,19 +7,16 @@ import App.Types
 import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
-import Beckn.Types.Core.Rating
 import Beckn.Types.Id
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Organization as QOrg
+import Product.RideBooking (buildRideBookingStatusRes)
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.SearchReqLocation as Location
 import Storage.Queries.SearchRequest as SearchRequest
 import Types.API.CustomerSupport as T
-import Types.Common
 import Types.Error
 import Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SR
@@ -105,10 +102,11 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
 
 makeSearchRequestToOrder :: (DBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
 makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..} = do
-  (confiremedOrder :: Maybe C.SearchRequest) <- SearchRequest.findById id
+  searchRequest <- SearchRequest.findById id
   fromLocation <- Location.findLocationById fromLocationId
   toLocation <- Location.findLocationById toLocationId
-  trip <- makeTripDetails confiremedOrder
+  rideBooking <- join <$> mapM QRB.findByRequestId (searchRequest <&> (.id))
+  rbStatus <- buildRideBookingStatusRes `mapM` rideBooking
   decMobNum <- decrypt mobileNumber
   let details =
         T.OrderDetails
@@ -121,60 +119,6 @@ makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..}
             toLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> toLocation,
             travellerName = fullName,
             travellerPhone = decMobNum,
-            trip = trip
+            rideBooking = rbStatus
           }
   pure $ T.OrderResp {order = details}
-
-makeTripDetails :: DBFlow m r => Maybe C.SearchRequest -> m (Maybe T.TripDetails)
-makeTripDetails mbSearchRequest = case mbSearchRequest of
-  Nothing -> pure Nothing
-  Just searchRequest -> do
-    rideBooking <- QRB.findByRequestId (searchRequest.id) >>= fromMaybeM RideBookingNotFound
-    org <- QOrg.findOrganizationById rideBooking.providerId >>= fromMaybeM OrgNotFound
-    mbRide <- QRide.findByRBId rideBooking.id
-    let provider =
-          Provider
-            { id = getId rideBooking.providerId,
-              name = Just org.name,
-              phones = [rideBooking.providerMobileNumber],
-              info = Nothing
-            }
-        driver =
-          mbRide <&> \ride ->
-            Driver
-              { name = ride.driverName,
-                gender = "",
-                phones = [ride.driverMobileNumber],
-                rating =
-                  ride.driverRating <&> \rating ->
-                    Rating
-                      { value = show rating,
-                        unit = "U+2B50",
-                        max_value = Nothing,
-                        direction = Nothing
-                      },
-                registeredAt = ride.driverRegisteredAt
-              }
-        vehicle =
-          mbRide <&> \ride ->
-            Vehicle
-              { category = Nothing,
-                capacity = Nothing,
-                make = Nothing,
-                model = Just ride.vehicleModel,
-                size = Nothing,
-                variant = show ride.vehicleVariant,
-                color = Just ride.vehicleColor,
-                registrationNumber = Just ride.vehicleNumber
-              }
-    pure $
-      Just $
-        T.TripDetails
-          { id = getId rideBooking.id,
-            status = rideBooking.status,
-            driver = driver,
-            price = Just rideBooking.estimatedFare,
-            provider = Just provider,
-            actualPrice = mbRide >>= (.fare),
-            vehicle = vehicle
-          }

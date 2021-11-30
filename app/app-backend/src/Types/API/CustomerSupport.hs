@@ -1,12 +1,10 @@
 module Types.API.CustomerSupport where
 
-import Beckn.Types.Amount
 import Data.OpenApi (ToSchema)
 import Data.Time
 import EulerHS.Prelude hiding (id)
-import Types.Common
+import Types.API.RideBooking (RideBookingStatusRes)
 import qualified Types.Storage.Person as P
-import qualified Types.Storage.RideBooking as SRB
 import Types.Storage.SearchReqLocation as L
 import Types.Storage.SearchRequest as C
 
@@ -23,18 +21,7 @@ data OrderDetails = OrderDetails
     toLocation :: Maybe L.SearchReqLocationAPIEntity,
     travellerName :: Maybe Text,
     travellerPhone :: Maybe Text,
-    trip :: Maybe TripDetails
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
-data TripDetails = TripDetails
-  { id :: Text, -- Product Instance Id
-    status :: SRB.RideBookingStatus,
-    driver :: Maybe Driver, -- info -> driver
-    vehicle :: Maybe Vehicle,
-    provider :: Maybe Provider,
-    price :: Maybe Amount,
-    actualPrice :: Maybe Amount
+    rideBooking :: Maybe RideBookingStatusRes
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
