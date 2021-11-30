@@ -87,7 +87,6 @@ dependencies:
   - directory
   - record-hasfield
   - record-dot-preprocessor
-  - unordered-containers
 
 ghc-options:
   - -fwrite-ide-info

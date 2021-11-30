@@ -12,7 +12,7 @@ import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import FlowLogging (getEulerLoggerRuntime)
+import Beckn.Utils.FlowLogging (getEulerLoggerRuntime)
 import GenerateKeyPair (generateKeyPair)
 import Options.Applicative
   ( Parser,
