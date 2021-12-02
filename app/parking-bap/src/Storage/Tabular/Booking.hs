@@ -3,27 +3,29 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.Booking
-  ( module Storage.Tabular.Booking,
-    module Reexport,
-  )
-where
+module Storage.Tabular.Booking where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
+import Beckn.Types.Id
+import qualified Data.Text as T
 import Data.Time (UTCTime)
 import Database.Persist.TH
-import Storage.Tabular.Booking.Internal as Reexport
-import Storage.Tabular.Quote
-import Storage.Tabular.Search
+import qualified Domain.Booking as Domain
+import Servant.Client
+import Storage.Tabular.Quote (QuoteTId)
+import Storage.Tabular.Search (SearchTId)
+
+derivePersistField "Domain.BookingStatus"
 
 share
-  [mkPersist sqlSettings]
+  [mkPersist defaultSqlSettings]
   [defaultQQ|
     BookingT sql=booking
-      Id Text default=uuid_generate_v4() sqltype=varchar(36)
+      id Text
       searchId SearchTId
       quoteId QuoteTId
       requestorId Text
@@ -38,10 +40,40 @@ share
       fare Amount
       fromDate UTCTime
       toDate UTCTime
-      status BookingStatus
+      status Domain.BookingStatus
       ticketId Text Maybe
       ticketCreatedAt UTCTime Maybe
       updatedAt UTCTime
       createdAt UTCTime
+      Primary id
       deriving Generic
     |]
+
+instance TEntityKey BookingT Domain.Booking where
+  fromKey (BookingTKey _id) = Id _id
+  toKey id = BookingTKey id.getId
+
+instance TEntity BookingT Domain.Booking where
+  fromTEntity entity = do
+    let BookingT {..} = entityVal entity
+    bppUrl_ <- parseBaseUrl $ T.unpack bppUrl
+    return $
+      Domain.Booking
+        { id = Id id,
+          searchId = fromKey searchId,
+          quoteId = fromKey quoteId,
+          requestorId = Id requestorId,
+          bppUrl = bppUrl_,
+          ..
+        }
+  toTType Domain.Booking {..} = do
+    BookingT
+      { id = id.getId,
+        searchId = toKey searchId,
+        quoteId = toKey quoteId,
+        requestorId = requestorId.getId,
+        bppUrl = T.pack $ showBaseUrl bppUrl,
+        ..
+      }
+  toTEntity a = do
+    Entity (toKey a.id) $ toTType a

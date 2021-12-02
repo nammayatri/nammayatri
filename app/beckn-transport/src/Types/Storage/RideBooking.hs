@@ -18,7 +18,7 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import Types.App (BAPPerson)
+import Types.App (Person)
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.SearchReqLocation as Loc
@@ -59,7 +59,7 @@ data RideBookingT f = RideBooking
     providerId :: B.C f (Id Org.Organization),
     bapId :: B.C f Text,
     startTime :: B.C f UTCTime,
-    requestorId :: B.C f (Id BAPPerson),
+    requestorId :: B.C f (Id Person),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     vehicleVariant :: B.C f Veh.Variant,

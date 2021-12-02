@@ -136,7 +136,7 @@ mkSearchRequest req uuid now validity startTime fromLocation toLocation transpor
       startTime = startTime,
       validTill = validity,
       providerId = transporterId,
-      requestorId = Id "", -- TODO: Fill this field with BAPPerson id.
+      requestorId = Id "", -- TODO: Fill this field with Person id.
       fromLocationId = fromLocation.id,
       toLocationId = toLocation.id,
       vehicleVariant = vehVariant,

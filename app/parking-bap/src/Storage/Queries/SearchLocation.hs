@@ -3,17 +3,18 @@
 module Storage.Queries.SearchLocation where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Beckn.Types.Logging (HasLog)
-import qualified Storage.Domain.SearchLocation as Domain
+import Domain.SearchLocation
+import Storage.Tabular.SearchLocation
 
-findById :: (Esq.EsqDBFlow m r, HasLog r) => Id Domain.SearchLocation -> m (Maybe Domain.SearchLocation)
-findById parkingSearchId =
-  Esq.runTransaction . Esq.findOne' $ do
-    parkingSearch <- Esq.from $ Esq.table @Domain.SearchLocationT
-    Esq.where_ $ parkingSearch Esq.^. Domain.SearchLocationTId Esq.==. Esq.val (Domain.SearchLocationTKey $ getId parkingSearchId)
-    return parkingSearch
+findById :: (EsqDBFlow m r, HasLog r) => Id SearchLocation -> m (Maybe SearchLocation)
+findById parkingLocationId =
+  runTransaction . findOne' $ do
+    parkingLocation <- from $ table @SearchLocationT
+    where_ $ parkingLocation ^. SearchLocationId ==. val (getId parkingLocationId)
+    return parkingLocation
 
-create :: Domain.SearchLocation -> SqlDB Domain.SearchLocation
-create = Esq.createReturningEntity'
+create :: SearchLocation -> SqlDB ()
+create = create'

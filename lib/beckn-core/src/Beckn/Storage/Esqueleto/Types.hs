@@ -33,7 +33,7 @@ class
       a -> t
   where
   fromKey :: Key t -> Id a
-  toKey :: a -> Key t
+  toKey :: Id a -> Key t
 
 data Point = Point
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq, ToSchema)

@@ -3,30 +3,39 @@
 module Storage.Queries.Booking where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Storage.Domain.Booking as Domain
+import Domain.Booking
+import Domain.Quote
+import Storage.Tabular.Booking
 
-findById :: (Esq.EsqDBFlow m r, HasLog r) => Id Domain.Booking -> m (Maybe Domain.Booking)
-findById parkingSearchId =
-  Esq.runTransaction . Esq.findOne' $ do
-    parkingSearch <- Esq.from $ Esq.table @Domain.BookingT
-    Esq.where_ $ parkingSearch Esq.^. Domain.BookingTId Esq.==. Esq.val (Domain.BookingTKey $ getId parkingSearchId)
-    return parkingSearch
+findById :: (EsqDBFlow m r, HasLog r) => Id Booking -> m (Maybe Booking)
+findById bookingId =
+  runTransaction . findOne' $ do
+    booking <- from $ table @BookingT
+    where_ $ booking ^. BookingId ==. val (getId bookingId)
+    return booking
 
-create :: Domain.Booking -> SqlDB Domain.Booking
-create = Esq.createReturningEntity'
+findByQuoteId :: (EsqDBFlow m r, HasLog r) => Id Quote -> m (Maybe Booking)
+findByQuoteId quoteId =
+  runTransaction . findOne' $ do
+    booking <- from $ table @BookingT
+    where_ $ booking ^. BookingQuoteId ==. val (toKey quoteId)
+    return booking
 
-update :: Domain.Booking -> SqlDB ()
+create :: Booking -> SqlDB ()
+create = create'
+
+update :: Booking -> SqlDB ()
 update parkingBooking = do
   now <- getCurrentTime
-  Esq.update' $ \tbl -> do
-    Esq.set
+  update' $ \tbl -> do
+    set
       tbl
-      [ Domain.BookingTStatus Esq.=. Esq.val parkingBooking.status,
-        Domain.BookingTTicketId Esq.=. Esq.val parkingBooking.ticketId,
-        Domain.BookingTTicketCreatedAt Esq.=. Esq.val parkingBooking.ticketCreatedAt,
-        Domain.BookingTUpdatedAt Esq.=. Esq.val now
+      [ BookingStatus =. val parkingBooking.status,
+        BookingTicketId =. val parkingBooking.ticketId,
+        BookingTicketCreatedAt =. val parkingBooking.ticketCreatedAt,
+        BookingUpdatedAt =. val now
       ]
-    Esq.where_ $ tbl Esq.^. Domain.BookingTId Esq.==. Esq.val (toKey parkingBooking)
+    where_ $ tbl ^. BookingId ==. val (getId parkingBooking.id)

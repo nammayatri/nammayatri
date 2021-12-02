@@ -3,28 +3,29 @@
 module Storage.Queries.PaymentTransaction where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Storage.Domain.PaymentTransaction as Domain
+import Domain.PaymentTransaction
+import Storage.Tabular.PaymentTransaction
 
-findById :: (Esq.EsqDBFlow m r, HasLog r) => Id Domain.PaymentTransaction -> m (Maybe Domain.PaymentTransaction)
-findById parkingSearchId =
-  Esq.runTransaction . Esq.findOne' $ do
-    parkingSearch <- Esq.from $ Esq.table @Domain.PaymentTransactionT
-    Esq.where_ $ parkingSearch Esq.^. Domain.PaymentTransactionTId Esq.==. Esq.val (Domain.PaymentTransactionTKey $ getId parkingSearchId)
-    return parkingSearch
+findById :: (EsqDBFlow m r, HasLog r) => Id PaymentTransaction -> m (Maybe PaymentTransaction)
+findById paymentTransactionId =
+  runTransaction . findOne' $ do
+    paymentTransaction <- from $ table @PaymentTransactionT
+    where_ $ paymentTransaction ^. PaymentTransactionId ==. val (getId paymentTransactionId)
+    return paymentTransaction
 
-create :: Domain.PaymentTransaction -> SqlDB Domain.PaymentTransaction
-create = Esq.createReturningEntity'
+create :: PaymentTransaction -> SqlDB ()
+create = create'
 
-updateStatus :: Domain.PaymentTransaction -> Domain.PaymentStatus -> SqlDB ()
-updateStatus paymentTransaction newStatus = do
+updateStatus :: Id PaymentTransaction -> PaymentStatus -> SqlDB ()
+updateStatus paymentTransactionId newStatus = do
   now <- getCurrentTime
-  Esq.update' $ \tbl -> do
-    Esq.set
+  update' $ \tbl -> do
+    set
       tbl
-      [ Domain.PaymentTransactionTStatus Esq.=. Esq.val newStatus,
-        Domain.PaymentTransactionTUpdatedAt Esq.=. Esq.val now
+      [ PaymentTransactionStatus =. val newStatus,
+        PaymentTransactionUpdatedAt =. val now
       ]
-    Esq.where_ $ tbl Esq.^. Domain.PaymentTransactionTId Esq.==. Esq.val (toKey paymentTransaction)
+    where_ $ tbl ^. PaymentTransactionId ==. val (getId paymentTransactionId)

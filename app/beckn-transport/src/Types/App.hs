@@ -19,4 +19,4 @@ data SortMode
   | IdleTime
   deriving (Eq, Generic, FromDhall)
 
-data BAPPerson
+data Person

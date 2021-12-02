@@ -1,4 +1,5 @@
 let common = ./common.dhall
+let sec = ./secrets/parking-bap.dhall
 
 let esqDBCfg =
   { connectHost = "adb.primary.beckn.juspay.net"

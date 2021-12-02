@@ -45,7 +45,13 @@ findOne :: (EsqDBFlow m r, Esq.SqlSelect b (Esq.Entity t), TEntity t a) => Esq.S
 findOne q = runTransaction $ findOne' q
 
 findOne' :: (Esq.SqlSelect b (Esq.Entity t), TEntity t a) => Esq.SqlQuery b -> SqlDB (Maybe a)
-findOne' q = traverse fromTEntity =<< lift (Esq.selectOne q)
+findOne' q = traverse fromTEntity =<< lift selectOnlyOne
+  where
+    selectOnlyOne = do
+      list <- Esq.select q
+      case list of
+        [res] -> return $ Just res
+        _ -> return Nothing
 
 findAll :: (EsqDBFlow m r, Esq.SqlSelect b (Esq.Entity t), TEntity t a) => Esq.SqlQuery b -> m [a]
 findAll q = runTransaction $ findAll' q
@@ -67,39 +73,6 @@ create' ::
   a ->
   SqlDB ()
 create' q = lift $ Esq.insert_ (toTType q)
-
-createReturningKey ::
-  ( EsqDBFlow m r,
-    TEntity t a,
-    TEntityKey t a
-  ) =>
-  a ->
-  m (Id a)
-createReturningKey = runTransaction . createReturningKey'
-
-createReturningKey' ::
-  (TEntityKey t b, TEntity t a) =>
-  a ->
-  SqlDB (Id b)
-createReturningKey' q = fromKey <$> lift (Esq.insert $ toTType q)
-
-createReturningEntity ::
-  ( EsqDBFlow m r,
-    TEntity t a,
-    TEntityKey t a
-  ) =>
-  a ->
-  m a
-createReturningEntity = runTransaction . createReturningEntity'
-
-createReturningEntity' ::
-  (TEntityKey t a, TEntity t a) =>
-  a ->
-  SqlDB a
-createReturningEntity' q = do
-  let tType = toTType q
-  key <- lift $ Esq.insert tType
-  fromTEntity $ Entity key tType
 
 update ::
   ( EsqDBFlow m r,
@@ -135,19 +108,19 @@ updateReturningCount' ::
   SqlDB Int64
 updateReturningCount' = lift . Esq.updateCount
 
-deleteByKey ::
+deleteById ::
   ( EsqDBFlow m r,
     TEntityKey t a
   ) =>
-  a ->
+  Id a ->
   m ()
-deleteByKey = runTransaction . deleteByKey'
+deleteById = runTransaction . deleteById'
 
-deleteByKey' ::
+deleteById' ::
   TEntityKey t a =>
-  a ->
+  Id a ->
   SqlDB ()
-deleteByKey' = lift . Esq.deleteKey . toKey
+deleteById' = lift . Esq.deleteKey . toKey
 
 delete ::
   (EsqDBFlow m r) =>

@@ -46,7 +46,7 @@ data SearchRequestT f = SearchRequest
     startTime :: B.C f UTCTime,
     validTill :: B.C f UTCTime,
     providerId :: B.C f (Id Org.Organization),
-    requestorId :: B.C f (Id BAPPerson),
+    requestorId :: B.C f (Id Person),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     vehicleVariant :: B.C f (Maybe Veh.Variant),

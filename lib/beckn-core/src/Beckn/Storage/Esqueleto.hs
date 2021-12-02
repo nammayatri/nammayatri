@@ -6,6 +6,7 @@ module Beckn.Storage.Esqueleto
     module Config,
     module SqlDB,
     defaultQQ,
+    defaultSqlSettings,
   )
 where
 
@@ -16,6 +17,7 @@ import Beckn.Storage.Esqueleto.Queries as Queries
 import Beckn.Storage.Esqueleto.SqlDB as SqlDB
 import Beckn.Storage.Esqueleto.Types as Types
 import Beckn.Utils.Text
+import qualified Data.Text as T
 import Database.Persist.Quasi.Internal
 import Database.Persist.TH
 import EulerHS.Prelude hiding (Key)
@@ -27,3 +29,13 @@ defaultQQ =
     upperCaseSettings
       { psToDBName = camelCaseToSnakeCase
       }
+
+defaultSqlSettings :: MkPersistSettings
+defaultSqlSettings =
+  sqlSettings
+    { mpsConstraintLabelModifier = \tableName fieldName ->
+        if T.last tableName /= 'T'
+          then "Table_name_must_end_with_T"
+          else T.init tableName <> fieldName,
+      mpsFieldLabelModifier = \_ fieldName -> fieldName
+    }

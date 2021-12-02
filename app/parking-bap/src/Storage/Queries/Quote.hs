@@ -3,17 +3,18 @@
 module Storage.Queries.Quote where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Beckn.Types.Logging (HasLog)
-import qualified Storage.Domain.Quote as Domain
+import Domain.Quote
+import Storage.Tabular.Quote
 
-findById :: (Esq.EsqDBFlow m r, HasLog r) => Id Domain.Quote -> m (Maybe Domain.Quote)
-findById parkingSearchId =
-  Esq.runTransaction . Esq.findOne' $ do
-    parkingSearch <- Esq.from $ Esq.table @Domain.QuoteT
-    Esq.where_ $ parkingSearch Esq.^. Domain.QuoteTId Esq.==. Esq.val (Domain.QuoteTKey $ getId parkingSearchId)
-    return parkingSearch
+findById :: (EsqDBFlow m r, HasLog r) => Id Quote -> m (Maybe Quote)
+findById quoteId =
+  runTransaction . findOne' $ do
+    quote <- from $ table @QuoteT
+    where_ $ quote ^. QuoteId ==. val (getId quoteId)
+    return quote
 
-create :: Domain.Quote -> SqlDB Domain.Quote
-create = Esq.createReturningEntity'
+create :: Quote -> SqlDB ()
+create = create'
