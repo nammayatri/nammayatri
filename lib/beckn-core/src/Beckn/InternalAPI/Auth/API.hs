@@ -6,7 +6,9 @@ import Servant
 type API =
   "internal"
     :> "auth"
-    :> Capture "token" Text
+    :> Capture "token" Token
     :> Get '[JSON] PersonId
+
+type Token = Text
 
 type PersonId = Text

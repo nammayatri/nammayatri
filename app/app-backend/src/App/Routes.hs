@@ -5,6 +5,7 @@ module App.Routes where
 
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import Beckn.InternalAPI.Auth.API as Auth
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.API.Call as API
@@ -17,6 +18,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi (Info (..), OpenApi (..))
 import EulerHS.Prelude
+import Product.Auth (authAPI)
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
 import qualified Product.CancellationReason as CancellationReason
@@ -68,6 +70,7 @@ type MainAPI =
   "v2" :> UIAPI
     :<|> "cab" :> "v1" :> BecknCabAPI
     :<|> "metro" :> "v1" :> BecknMetroAPI
+    :<|> Auth.API
 
 type BecknMetroAPI =
   SignatureAuth "Authorization"
@@ -106,6 +109,7 @@ mainServer =
   uiAPI
     :<|> becknCabApi
     :<|> becknMetroAPI
+    :<|> authAPI
 
 uiAPI :: FlowServer UIAPI
 uiAPI =
