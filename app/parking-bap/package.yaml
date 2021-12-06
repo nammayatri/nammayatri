@@ -16,18 +16,22 @@ copyright: "2021 Juspay Technologies Private Limited"
 description: Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
 
 default-extensions:
+  - BlockArguments
   - ConstraintKinds
   - DataKinds
   - DefaultSignatures
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
+  - EmptyDataDecls
   - ExplicitNamespaces
   - FlexibleContexts
   - FlexibleInstances
   - FunctionalDependencies
   - GADTs
+  - GeneralizedNewtypeDeriving
   - LambdaCase
   - MultiParamTypeClasses
   - MultiWayIf
@@ -38,17 +42,19 @@ default-extensions:
   - PackageImports
   - PatternSynonyms
   - PolyKinds
+  - QuasiQuotes
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
+  - StandaloneDeriving
+  - TemplateHaskell
   - TupleSections
   - TypeApplications
   - TypeFamilies
   - TypeOperators
-  - ViewPatterns
-  - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - ViewPatterns
 
 dependencies:
   - aeson
@@ -61,7 +67,7 @@ dependencies:
   - time
   - servant-server
   - servant-client
-  - persistent         
+  - persistent
   - template-haskell
 
 ghc-options:

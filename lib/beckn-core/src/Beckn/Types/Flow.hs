@@ -87,7 +87,7 @@ instance L.MonadFlow (FlowR r) where
 instance MonadIO (FlowR r) where
   liftIO = FlowR . L.runIO
 
-instance {-# OVERLAPPABLE #-} HasLog r => Log (FlowR r) where
+instance {-# OVERLAPPABLE #-} IOLogging.HasLog r => Log (FlowR r) where
   logOutput = IOLogging.logOutputImplementation
   withLogTag lc (FlowR flowR) = FlowR $ IOLogging.withLogTagImplementation lc flowR
 

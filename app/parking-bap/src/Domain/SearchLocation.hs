@@ -4,7 +4,6 @@ module Domain.SearchLocation where
 
 import Beckn.Prelude
 import Beckn.Types.Id
-import Data.Time (UTCTime)
 
 data SearchLocation = SearchLocation
   { id :: Id SearchLocation,

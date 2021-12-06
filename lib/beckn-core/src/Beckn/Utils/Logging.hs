@@ -1,6 +1,7 @@
 module Beckn.Utils.Logging
   ( Log (..),
     LogLevel (..),
+    log,
     logTagDebug,
     logTagInfo,
     logTagWarning,
@@ -20,6 +21,9 @@ import Beckn.Types.Id
 import Beckn.Types.Logging
 import EulerHS.Prelude
 import GHC.Records.Extra
+
+log :: Log m => LogLevel -> Text -> m ()
+log = logOutput
 
 logTagDebug :: Log m => Text -> Text -> m ()
 logTagDebug tag = withLogTag tag . logOutput DEBUG

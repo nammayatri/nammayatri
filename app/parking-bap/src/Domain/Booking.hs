@@ -6,7 +6,6 @@ import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.App (BaseUrl)
 import Beckn.Types.Id
-import Data.Time (UTCTime)
 import Domain.Quote (Quote)
 import Domain.Search (Person, Search)
 

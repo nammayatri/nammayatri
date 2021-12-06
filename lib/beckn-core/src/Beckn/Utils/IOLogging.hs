@@ -1,5 +1,10 @@
 module Beckn.Utils.IOLogging
   ( LoggerConfig (..),
+    Logger,
+    LoggerEnv,
+    HasLog,
+    prepareLoggerEnv,
+    releaseLoggerEnv,
     logOutputImplementation,
     withLogTagImplementation,
     logOutputIO,
@@ -7,12 +12,55 @@ module Beckn.Utils.IOLogging
   )
 where
 
+import Beckn.Prelude
 import Beckn.Types.Logging
 import Beckn.Types.Time
 import qualified Data.Text as T
 import qualified Data.Time as Time
-import EulerHS.Prelude
 import System.Log.FastLogger
+
+type HasLog r = HasField "loggerEnv" r LoggerEnv
+
+data Logger = Logger
+  { printLogFunc :: FastLogger,
+    cleanUpFunc :: IO ()
+  }
+
+data LoggerEnv = LoggerEnv
+  { level :: LogLevel,
+    hostName :: Maybe Text,
+    tags :: [Text],
+    fileLogger :: Maybe Logger,
+    consoleLogger :: Maybe Logger
+  }
+
+prepareLoggerEnv :: LoggerConfig -> Maybe Text -> IO LoggerEnv
+prepareLoggerEnv loggerConfig hostName = do
+  fileLogger <-
+    if loggerConfig.logToFile
+      then Just <$> prepareLogger (LogFileNoRotate loggerConfig.logFilePath defaultBufSize)
+      else return Nothing
+
+  consoleLogger <-
+    if loggerConfig.logToConsole
+      then Just <$> prepareLogger (LogStdout defaultBufSize)
+      else return Nothing
+
+  return $
+    LoggerEnv
+      { level = loggerConfig.level,
+        tags = [],
+        ..
+      }
+  where
+    prepareLogger logType = do
+      (printLogFunc, cleanUpFunc) <- newFastLogger logType
+      return $ Logger {..}
+
+releaseLoggerEnv :: LoggerEnv -> IO ()
+releaseLoggerEnv LoggerEnv {..} = do
+  whenJust fileLogger $ \logger -> logger.cleanUpFunc
+  whenJust consoleLogger $ \logger -> logger.cleanUpFunc
 
 logOutputImplementation :: (HasLog r, MonadReader r m, MonadIO m, MonadTime m) => LogLevel -> Text -> m ()
 logOutputImplementation logLevel message = do
@@ -53,9 +101,9 @@ logFormatterText timestamp hostname lvl tags msg = res
   where
     tag = if null tags then "" else formatTags tags
     res =
-      show timestamp
+      showT timestamp
         <> " "
-        <> show lvl
+        <> showT lvl
         <> "> "
         <> maybe "" ("@" <>) hostname
         <> " "

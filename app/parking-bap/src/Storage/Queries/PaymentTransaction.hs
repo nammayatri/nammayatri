@@ -9,7 +9,7 @@ import Beckn.Types.Id
 import Domain.PaymentTransaction
 import Storage.Tabular.PaymentTransaction
 
-findById :: (EsqDBFlow m r, HasLog r) => Id PaymentTransaction -> m (Maybe PaymentTransaction)
+findById :: EsqDBFlow m r => Id PaymentTransaction -> m (Maybe PaymentTransaction)
 findById paymentTransactionId =
   runTransaction . findOne' $ do
     paymentTransaction <- from $ table @PaymentTransactionT

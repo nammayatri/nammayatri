@@ -3,6 +3,7 @@ module App.Types where
 import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.IOLogging
 import qualified Data.Map as Map
 import qualified Data.Text as T
 import EulerHS.Prelude

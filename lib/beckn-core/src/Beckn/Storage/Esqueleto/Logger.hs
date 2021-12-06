@@ -3,9 +3,9 @@
 
 module Beckn.Storage.Esqueleto.Logger (LoggerIO (..), runLoggerIO) where
 
-import Beckn.Types.Logging (LogLevel (..), LoggerEnv)
+import Beckn.Types.Logging (LogLevel (..))
 import Beckn.Types.Time (MonadTime (..))
-import Beckn.Utils.IOLogging (logOutputIO)
+import Beckn.Utils.IOLogging (LoggerEnv, logOutputIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Logger as CMLogger
   ( Loc,

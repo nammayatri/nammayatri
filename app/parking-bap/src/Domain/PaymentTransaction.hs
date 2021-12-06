@@ -6,7 +6,6 @@ import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.App (BaseUrl)
 import Beckn.Types.Id
-import Data.Time (UTCTime)
 import Domain.Booking
 
 data PaymentStatus = INITIALIZED | PENDING | FAILED | SUCCESS

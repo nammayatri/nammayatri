@@ -3,8 +3,8 @@ module Beckn.Storage.Esqueleto.Config where
 import Beckn.Storage.Esqueleto.Logger (runLoggerIO)
 import Beckn.Types.App (HasFlowEnv)
 import Beckn.Types.Field ((:::))
-import Beckn.Types.Logging (HasLog, LoggerEnv)
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.IOLogging (HasLog, LoggerEnv)
 import Data.Pool (Pool)
 import Database.Persist.Postgresql
 import Database.PostgreSQL.Simple (execute_)

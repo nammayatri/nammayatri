@@ -11,15 +11,15 @@ let esqDBCfg =
   }
 
 in
-{ esqDBCfg = esqDBCfg
-, port = +8022
+{ port = +8022
+, esqDBCfg = esqDBCfg
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/parking-bap.log"}
 , graceTerminationPeriod = +90
-, selfId = "api.sandbox.beckn.juspay.in/dev/bap/parking/v1"
+, selfId = "api.sandbox.beckn.juspay.in/dev/bap/parking"
 , httpClientOptions = common.httpClientOptions
 , authEntity =
     { credRegistry = common.credRegistry
     , signingKeys = common.signingKeys
     , signatureExpiry = common.signatureExpiry
-    }
+, authServiceUrl = common.authServiceUrl
 }

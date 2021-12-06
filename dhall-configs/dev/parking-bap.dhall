@@ -22,4 +22,5 @@ in
     , signingKeys = common.signingKeys
     , signatureExpiry = common.signatureExpiry
     }
+, authServiceUrl = common.authServiceUrl
 }

@@ -7,6 +7,7 @@ module Beckn.Utils.App
     logRequestAndResponse,
     withModifiedEnv,
     hashBodyForSignature,
+    getPodName,
   )
 where
 
@@ -14,7 +15,7 @@ import Beckn.Types.App
 import Beckn.Types.Flow
 import Beckn.Utils.Common
 import qualified Beckn.Utils.FlowLogging as L
-import Beckn.Utils.IOLogging (appendLogTag)
+import Beckn.Utils.IOLogging (HasLog, appendLogTag)
 import Beckn.Utils.Shutdown
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.ByteArray as BA
@@ -23,6 +24,7 @@ import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.CaseInsensitive as CI
 import Data.List (lookup)
+import qualified Data.Text as T (pack)
 import Data.UUID.V4 (nextRandom)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (unpack)
@@ -31,6 +33,7 @@ import qualified Network.HTTP.Types as HTTP
 import Network.Wai
 import qualified Network.Wai as Wai
 import Network.Wai.Internal
+import System.Environment (lookupEnv)
 import System.Exit (ExitCode)
 
 data RequestInfo = RequestInfo
@@ -115,3 +118,6 @@ withModifiedEnv f env = \req resp -> do
       case value of
         Just val -> pure ("requestId-" <> decodeUtf8 val)
         Nothing -> pure "randomRequestId-" <> show <$> nextRandom
+
+getPodName :: IO (Maybe Text)
+getPodName = fmap T.pack <$> lookupEnv "POD_NAME"

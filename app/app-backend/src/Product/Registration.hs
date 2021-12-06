@@ -132,22 +132,20 @@ verify tokenId req = withFlowHandlerAPI $ do
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
-  if authValueHash == req.otp
-    then do
-      person <- checkPersonExists entityId
-      let isNewPerson = person.isNew
-      clearOldRegToken person tokenId
-      let deviceToken = (req.deviceToken) <|> (person.deviceToken)
-      DB.runSqlDBTransaction $ do
-        RegistrationToken.setVerified tokenId
-        Person.updateDeviceToken person.id deviceToken
-        when isNewPerson $
-          Person.setIsNewFalse person.id
-      when isNewPerson $
-        Notify.notifyOnRegistration regToken person.id deviceToken
-      decPerson <- decrypt person
-      return $ AuthVerifyRes token (SP.makePersonAPIEntity $ decPerson{deviceToken})
-    else throwError InvalidAuthData
+  unless (authValueHash == req.otp) $ throwError InvalidAuthData
+  person <- checkPersonExists entityId
+  let isNewPerson = person.isNew
+  clearOldRegToken person tokenId
+  let deviceToken = (req.deviceToken) <|> (person.deviceToken)
+  DB.runSqlDBTransaction $ do
+    RegistrationToken.setVerified tokenId
+    Person.updateDeviceToken person.id deviceToken
+    when isNewPerson $
+      Person.setIsNewFalse person.id
+  when isNewPerson $
+    Notify.notifyOnRegistration regToken person.id deviceToken
+  decPerson <- decrypt person
+  return $ AuthVerifyRes token (SP.makePersonAPIEntity $ decPerson{deviceToken})
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $

@@ -5,7 +5,7 @@ module Beckn.Utils.Common
   )
 where
 
-import Beckn.Prelude as Common (everyPossibleVariant, foldWIndex, identity)
+import Beckn.Prelude as Common (everyPossibleVariant, foldWIndex, identity, showT)
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Ack as Common
 import Beckn.Types.Error.BaseError.HTTPError as Common
@@ -17,6 +17,7 @@ import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (callBecknAPI)
 import Beckn.Utils.Error.DB as Common
 import Beckn.Utils.Logging as Common
 import Beckn.Utils.Servant.Client as Common
+import Beckn.Utils.Shutdown as Common (Shutdown)
 import Beckn.Utils.Text as Common
 import Beckn.Utils.Time as Common
 import qualified Data.Text as T

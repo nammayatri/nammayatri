@@ -17,6 +17,7 @@ import Beckn.Types.Registry.Subscriber (Subscriber)
 import Beckn.Utils.App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.IOLogging (HasLog)
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
 import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server (HasEnvEntry (..), runFlowRDelayedIO)

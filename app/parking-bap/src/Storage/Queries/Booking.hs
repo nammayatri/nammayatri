@@ -10,14 +10,14 @@ import Domain.Booking
 import Domain.Quote
 import Storage.Tabular.Booking
 
-findById :: (EsqDBFlow m r, HasLog r) => Id Booking -> m (Maybe Booking)
+findById :: EsqDBFlow m r => Id Booking -> m (Maybe Booking)
 findById bookingId =
   runTransaction . findOne' $ do
     booking <- from $ table @BookingT
     where_ $ booking ^. BookingId ==. val (getId bookingId)
     return booking
 
-findByQuoteId :: (EsqDBFlow m r, HasLog r) => Id Quote -> m (Maybe Booking)
+findByQuoteId :: EsqDBFlow m r => Id Quote -> m (Maybe Booking)
 findByQuoteId quoteId =
   runTransaction . findOne' $ do
     booking <- from $ table @BookingT

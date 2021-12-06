@@ -9,6 +9,7 @@ import Beckn.Types.Error
 import Beckn.Types.Flow
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
+import Beckn.Utils.IOLogging (HasLog)
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.Server
 import Control.Arrow

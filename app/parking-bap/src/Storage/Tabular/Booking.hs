@@ -12,7 +12,6 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Data.Text as T
-import Data.Time (UTCTime)
 import Database.Persist.TH
 import qualified Domain.Booking as Domain
 import Servant.Client

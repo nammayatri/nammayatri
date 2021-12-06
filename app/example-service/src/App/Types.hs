@@ -3,10 +3,10 @@ module App.Types where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Common
+import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.IOLogging
 import Beckn.Utils.Shutdown
-import qualified Data.Text as T
-import System.Environment (lookupEnv)
 import Tools.Metrics
 
 data AppCfg = AppCfg
@@ -30,8 +30,8 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
-  hostname <- fmap T.pack <$> lookupEnv "POD_NAME"
-  loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  podName <- getPodName
+  loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown

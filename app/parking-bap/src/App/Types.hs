@@ -3,22 +3,23 @@ module App.Types where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Common
+import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client (HttpClientOptions (..))
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
-import qualified Data.Text as T
-import System.Environment (lookupEnv)
 import Tools.Metrics
 
 data AppCfg = AppCfg
-  { esqDBCfg :: EsqDBConfig,
-    port :: Int,
+  { port :: Int,
+    esqDBCfg :: EsqDBConfig,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     selfId :: Text,
     httpClientOptions :: HttpClientOptions,
-    authEntity :: AuthenticatingEntity'
+    authEntity :: AuthenticatingEntity',
+    authServiceUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -33,12 +34,12 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
-  hostname <- fmap T.pack <$> lookupEnv "POD_NAME"
-  loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  podName <- getPodName
+  loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
-  return $ AppEnv {..}
+  pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} =
@@ -46,7 +47,7 @@ releaseAppEnv AppEnv {..} =
 
 type FlowHandler = FlowHandlerR AppEnv
 
-type FlowServer r api = FlowServerR AppEnv api
+type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
   getRegistry = (.config.authEntity.credRegistry)
