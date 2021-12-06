@@ -49,7 +49,7 @@ spec:
           livenessProbe:
             failureThreshold: 3
             httpGet:
-              path: /v1/
+              path: /v2/
               port: 8014
             initialDelaySeconds: 30
             periodSeconds: 20
@@ -58,7 +58,7 @@ spec:
           readinessProbe:
             failureThreshold: 2
             httpGet:
-              path: /v1/
+              path: /v2/
               port: 8014
             initialDelaySeconds: 30
             periodSeconds: 12

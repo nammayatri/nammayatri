@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-app-backend-$DEPLOY_VARIANT
+  name: beckn-parking-bap-$DEPLOY_VARIANT
   namespace: atlas
   labels:
     version: latest
@@ -9,7 +9,7 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: beckn-app-backend-$DEPLOY_VARIANT
+      app: beckn-parking-bap-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
-        app: beckn-app-backend-$DEPLOY_VARIANT
+        app: beckn-parking-bap-$DEPLOY_VARIANT
         version: latest
     spec:
       containers:
@@ -29,7 +29,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/app-backend-exe'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/parking-bap-exe'
           env:
             - name: POD_NAME
               valueFrom:
@@ -39,18 +39,18 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: APP_BACKEND_CONFIG_PATH
-              value: /etc/beckn/config/app-backend.dhall
+            - name: PARKING_BAP_CONFIG_PATH
+              value: /etc/beckn/config/parking-bap.dhall
           image: 701342709052.dkr.ecr.ap-southeast-1.amazonaws.com/beckn-uat:$BUILD_VERSION
-          name: beckn-app-backend-$DEPLOY_VARIANT
+          name: beckn-parking-bap-$DEPLOY_VARIANT
           ports:
-            - containerPort: 8013
+            - containerPort: 8022
               name: app-http
           livenessProbe:
             failureThreshold: 3
             httpGet:
-              path: /v2/
-              port: 8013
+              path: /v1/
+              port: 8022
             initialDelaySeconds: 30
             periodSeconds: 20
             successThreshold: 1
@@ -58,8 +58,8 @@ spec:
           readinessProbe:
             failureThreshold: 2
             httpGet:
-              path: /v2/
-              port: 8013
+              path: /v1/
+              port: 8022
             initialDelaySeconds: 30
             periodSeconds: 12
             successThreshold: 1
@@ -74,9 +74,6 @@ spec:
           securityContext:
             privileged: false
           volumeMounts:
-            - mountPath: "/var/local/beckn"
-              name: fcm-key
-              readOnly: true
             - name: dhall-configs
               mountPath: "/tmp/dhall-configs"
               readOnly: true
@@ -99,8 +96,8 @@ spec:
           configMap:
             name: beckn-dhall-config-$DEPLOY_VARIANT
             items:
-              - key: app-backend.dhall
-                path: config/app-backend.dhall
+              - key: parking-bap.dhall
+                path: config/parking-bap.dhall
               - key: common.dhall
                 path: config/common.dhall
               - key: globalCommon.dhall
@@ -109,8 +106,8 @@ spec:
           secret:
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
             items:
-              - key: app-backend.dhall
-                path: config/secrets/app-backend.dhall
+              - key: parking-bap.dhall
+                path: config/secrets/parking-bap.dhall
               - key: common.dhall
                 path: config/secrets/common.dhall
 status: {}
@@ -119,16 +116,16 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-app-backend-$DEPLOY_VARIANT
+  name: beckn-parking-bap-$DEPLOY_VARIANT
   labels:
-    app: beckn-app-backend-$DEPLOY_VARIANT
+    app: beckn-parking-bap-$DEPLOY_VARIANT
 spec:
   ports:
-    - port: 8013
-      targetPort: 8013
+    - port: 8022
+      targetPort: 8022
       name: app-http
     - port: 9999
       targetPort: 9999
       name: http-prom
   selector:
-    app: beckn-app-backend-$DEPLOY_VARIANT
+    app: beckn-parking-bap-$DEPLOY_VARIANT

@@ -54,9 +54,9 @@ in
 , redisCfg = rcfg
 , port = +8015
 , metricsPort = +9999
-, selfId = "api.sandbox.beckn.juspay.in/dev/gateway/v1"
+, selfId = "api.sandbox.beckn.juspay.in/latest/gateway/v1"
 , hostName = "juspay.in"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/gateway/v1/"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/latest/gateway/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , migrationPath = None Text

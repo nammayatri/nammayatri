@@ -29,4 +29,5 @@ in
 { appCfg = appCfg
 , metricsPort = +9999
 , driverAllocationConfig = driverAllocationConfig
+, httpClientOptions = appCfg.httpClientOptions
 }

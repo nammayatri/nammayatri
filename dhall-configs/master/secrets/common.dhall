@@ -28,6 +28,10 @@ let signingKeys =
   -- Metro
   -- BAP
   , globalCommon.mkSigningKey "20" "xxxxxxx"
+
+  -- Parking
+  -- BAP
+  , globalCommon.mkSigningKey "100" "xxxxxxx"
   ]
 
 let exotelCfg =

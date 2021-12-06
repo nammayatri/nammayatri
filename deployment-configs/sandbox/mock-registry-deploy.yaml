@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: beckn-app-backend-$DEPLOY_VARIANT
+  name: beckn-mock-registry-$DEPLOY_VARIANT
   namespace: atlas
   labels:
     version: latest
@@ -9,7 +9,7 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: beckn-app-backend-$DEPLOY_VARIANT
+      app: beckn-mock-registry-$DEPLOY_VARIANT
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -21,7 +21,7 @@ spec:
         iam.amazonaws.com/role: "arn:aws:iam::701342709052:role/aws-elasticbeanstalk-ec2-role"
         traffic.sidecar.istio.io/excludeOutboundPorts: 6379,5432
       labels:
-        app: beckn-app-backend-$DEPLOY_VARIANT
+        app: beckn-mock-registry-$DEPLOY_VARIANT
         version: latest
     spec:
       containers:
@@ -29,7 +29,7 @@ spec:
             - /bin/bash
             - -c
           args:
-            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/app-backend-exe'
+            - 'mkdir /etc/beckn && cp -HR /tmp/dhall-configs/* /etc/beckn/. && cp -HR /tmp/dhall-secrets/* /etc/beckn/. && echo "starting app server" && /opt/app/mock-registry-exe'
           env:
             - name: POD_NAME
               valueFrom:
@@ -39,31 +39,13 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
-            - name: APP_BACKEND_CONFIG_PATH
-              value: /etc/beckn/config/app-backend.dhall
+            - name: MOCK_REGISTRY_CONFIG_PATH
+              value: /etc/beckn/config/mock-registry.dhall
           image: 701342709052.dkr.ecr.ap-southeast-1.amazonaws.com/beckn-uat:$BUILD_VERSION
-          name: beckn-app-backend-$DEPLOY_VARIANT
+          name: beckn-mock-registry-$DEPLOY_VARIANT
           ports:
-            - containerPort: 8013
+            - containerPort: 8020
               name: app-http
-          livenessProbe:
-            failureThreshold: 3
-            httpGet:
-              path: /v2/
-              port: 8013
-            initialDelaySeconds: 30
-            periodSeconds: 20
-            successThreshold: 1
-            timeoutSeconds: 12
-          readinessProbe:
-            failureThreshold: 2
-            httpGet:
-              path: /v2/
-              port: 8013
-            initialDelaySeconds: 30
-            periodSeconds: 12
-            successThreshold: 1
-            timeoutSeconds: 10
           resources:
             requests:
               cpu: 100m
@@ -74,9 +56,6 @@ spec:
           securityContext:
             privileged: false
           volumeMounts:
-            - mountPath: "/var/local/beckn"
-              name: fcm-key
-              readOnly: true
             - name: dhall-configs
               mountPath: "/tmp/dhall-configs"
               readOnly: true
@@ -99,8 +78,8 @@ spec:
           configMap:
             name: beckn-dhall-config-$DEPLOY_VARIANT
             items:
-              - key: app-backend.dhall
-                path: config/app-backend.dhall
+              - key: mock-registry.dhall
+                path: config/mock-registry.dhall
               - key: common.dhall
                 path: config/common.dhall
               - key: globalCommon.dhall
@@ -109,8 +88,6 @@ spec:
           secret:
             secretName: beckn-dhall-secret-$DEPLOY_VARIANT
             items:
-              - key: app-backend.dhall
-                path: config/secrets/app-backend.dhall
               - key: common.dhall
                 path: config/secrets/common.dhall
 status: {}
@@ -119,16 +96,13 @@ apiVersion: v1
 kind: Service
 metadata:
   namespace: atlas
-  name: beckn-app-backend-$DEPLOY_VARIANT
+  name: beckn-mock-registry-$DEPLOY_VARIANT
   labels:
-    app: beckn-app-backend-$DEPLOY_VARIANT
+    app: beckn-mock-registry-$DEPLOY_VARIANT
 spec:
   ports:
-    - port: 8013
-      targetPort: 8013
+    - port: 8020
+      targetPort: 8020
       name: app-http
-    - port: 9999
-      targetPort: 9999
-      name: http-prom
   selector:
-    app: beckn-app-backend-$DEPLOY_VARIANT
+    app: beckn-mock-registry-$DEPLOY_VARIANT

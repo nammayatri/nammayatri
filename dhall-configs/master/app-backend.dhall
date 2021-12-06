@@ -92,16 +92,16 @@ in
 , metricsPort = +9999
 , xGatewayUri = gwUri
 , xGatewayApiKey = None Text
-, xGatewaySelector = "api.sandbox.beckn.juspay.in/dev/gateway/v1"
+, xGatewaySelector = "api.sandbox.beckn.juspay.in/latest/gateway/v1"
 , xProviderUri = providerUri
 , hostName = "juspay.in"
 , bapSelfIds =
-  { cabs = "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"
-  , metro = "api.sandbox.beckn.juspay.in/dev/bap/metro/v1"
+  { cabs = "api.sandbox.beckn.juspay.in/latest/bap/cab/v1"
+  , metro = "api.sandbox.beckn.juspay.in/latest/bap/metro/v1"
   }
 , bapSelfURIs =
-  { cabs = "https://api.sandbox.beckn.juspay.in/dev/bap/cab/v1/"
-  , metro = "https://api.sandbox.beckn.juspay.in/dev/bap/metro/v1/"
+  { cabs = "https://api.sandbox.beckn.juspay.in/latest/bap/cab/v1/"
+  , metro = "https://api.sandbox.beckn.juspay.in/latest/bap/metro/v1/"
   }
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys

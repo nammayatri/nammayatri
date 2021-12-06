@@ -1,8 +1,6 @@
 let common = ./common.dhall
 let sec = ./secrets/parking-bap.dhall
 
-
-
 let esqDBCfg =
   { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
   , connectPort = 5437
