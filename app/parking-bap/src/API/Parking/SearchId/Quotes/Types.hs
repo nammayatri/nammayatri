@@ -14,7 +14,7 @@ type API =
     :> Get '[JSON] GetQuotesRes
 
 newtype GetQuotesRes = GetQuotesRes
-  { quotes :: [DQuote.Quote]
+  { quotes :: [DQuote.QuoteAPIEntity]
   }
-  deriving stock (Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON)

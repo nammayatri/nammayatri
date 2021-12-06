@@ -22,10 +22,9 @@ import Tools.Context (buildContext)
 import qualified Tools.Metrics as Metrics
 
 handler :: PersonId -> Search.SearchReq -> FlowHandler Search.SearchRes
-handler personId req = withFlowHandlerAPI . withPersonIdLogTag (Id personId) $ do
+handler personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   now <- getCurrentTime
-  let bapPersonId = Id personId
-  searchRequest <- buildSearchRequest bapPersonId req now
+  searchRequest <- buildSearchRequest personId req now
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
@@ -39,7 +38,7 @@ handler personId req = withFlowHandlerAPI . withPersonIdLogTag (Id personId) $ d
 
 buildSearchRequest ::
   MonadFlow m =>
-  Id DSearch.BAPPerson ->
+  Id DSearch.Person ->
   Search.SearchReq ->
   UTCTime ->
   m DSearch.Search

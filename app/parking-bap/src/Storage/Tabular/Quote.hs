@@ -18,8 +18,8 @@ import Servant.Client
 import Storage.Tabular.ParkingLocation (ParkingLocationTId)
 import Storage.Tabular.Search (SearchTId)
 
-share
-  [mkPersist defaultSqlSettings]
+mkPersist
+  defaultSqlSettings
   [defaultQQ|
     QuoteT sql=quote
       id Text

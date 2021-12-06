@@ -19,8 +19,8 @@ import Storage.Tabular.Booking (BookingTId)
 
 derivePersistField "Domain.PaymentStatus"
 
-share
-  [mkPersist defaultSqlSettings]
+mkPersist
+  defaultSqlSettings
   [defaultQQ|
     PaymentTransactionT sql=payment_transaction
       id Text

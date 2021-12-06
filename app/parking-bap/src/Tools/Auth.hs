@@ -4,8 +4,10 @@ import Beckn.InternalAPI.Auth.Client
 import Beckn.Prelude
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Id
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
+import Domain.Search (Person)
 import Servant hiding (Context)
 import Tools.Metrics.Types (CoreMetrics)
 
@@ -20,7 +22,7 @@ instance
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy sub)
 
-type PersonId = Text
+type PersonId = Id Person
 
 instance VerificationMethod VerifyToken where
   type VerificationResult VerifyToken = PersonId
@@ -36,4 +38,4 @@ verifyPersonAction ::
     HasInConfig r c "authServiceUrl" BaseUrl
   ) =>
   VerificationAction VerifyToken m
-verifyPersonAction = VerificationAction auth
+verifyPersonAction = VerificationAction (fmap Id . auth)

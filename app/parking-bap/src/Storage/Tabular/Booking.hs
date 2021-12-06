@@ -20,8 +20,8 @@ import Storage.Tabular.Search (SearchTId)
 
 derivePersistField "Domain.BookingStatus"
 
-share
-  [mkPersist defaultSqlSettings]
+mkPersist
+  defaultSqlSettings
   [defaultQQ|
     BookingT sql=booking
       id Text

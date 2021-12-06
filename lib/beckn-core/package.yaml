@@ -127,6 +127,7 @@ dependencies:
   - resourcet
   - unliftio-core
   - resource-pool
+  - universum
 
 ghc-options:
   - -fwrite-ide-info

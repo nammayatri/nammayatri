@@ -19,3 +19,14 @@ data ParkingLocation = ParkingLocation
     areaCode :: Text,
     createdAt :: UTCTime
   }
+  deriving (Generic)
+
+data ParkingLocationAPIEntity = ParkingLocationAPIEntity
+  { lat :: Double,
+    lon :: Double
+  }
+  deriving (Generic, ToJSON)
+
+makeParkingLocationAPIEntity :: ParkingLocation -> ParkingLocationAPIEntity
+makeParkingLocationAPIEntity ParkingLocation {..} =
+  ParkingLocationAPIEntity {..}

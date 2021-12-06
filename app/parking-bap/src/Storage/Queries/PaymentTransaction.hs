@@ -6,6 +6,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Domain.Booking
 import Domain.PaymentTransaction
 import Storage.Tabular.PaymentTransaction
 
@@ -15,6 +16,13 @@ findById paymentTransactionId =
     paymentTransaction <- from $ table @PaymentTransactionT
     where_ $ paymentTransaction ^. PaymentTransactionId ==. val (getId paymentTransactionId)
     return paymentTransaction
+
+findByBookingId :: EsqDBFlow m r => Id Booking -> m (Maybe PaymentTransaction)
+findByBookingId bookingId =
+  findOne $ do
+    parkingSearch <- from $ table @PaymentTransactionT
+    where_ $ parkingSearch ^. PaymentTransactionBookingId ==. val (toKey bookingId)
+    return parkingSearch
 
 create :: PaymentTransaction -> SqlDB ()
 create = create'

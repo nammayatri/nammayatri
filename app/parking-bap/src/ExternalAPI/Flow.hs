@@ -5,8 +5,10 @@ import Beckn.Types.App
 import Beckn.Utils.Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
+import qualified Core.API.Confirm as Confirm
 import qualified Core.API.Search as Search
 import Core.API.Types (BecknReq)
+import qualified Core.Confirm as Confirm
 import qualified Data.Text as T
 import GHC.Records.Extra
 import Tools.Metrics.Types (CoreMetrics)
@@ -23,6 +25,17 @@ search ::
 search req = do
   url <- asks (.config.gatewayUrl)
   callBecknAPIWithSignature "search" Search.searchAPI url req
+
+confirm ::
+  ( MonadFlow m,
+    MonadReader r m,
+    CoreMetrics m,
+    HasInConfig r c "selfId" Text
+  ) =>
+  BaseUrl ->
+  BecknReq Confirm.ConfirmMessage ->
+  m ()
+confirm = callBecknAPIWithSignature "сonfirm" Confirm.confirmAPI
 
 callBecknAPIWithSignature ::
   ( MonadFlow m,

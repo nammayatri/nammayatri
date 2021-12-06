@@ -1,36 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
+module Domain.Booking
+  ( module Reexport,
+  )
+where
 
-module Domain.Booking where
-
-import Beckn.Prelude
-import Beckn.Types.Amount
-import Beckn.Types.App (BaseUrl)
-import Beckn.Types.Id
-import Domain.Quote (Quote)
-import Domain.Search (BAPPerson, Search)
-
-data BookingStatus = NEW | AWAITING_PAYMENT | CONFIRMED | CANCELLED
-  deriving (Generic, Show, Read)
-
-data Booking = Booking
-  { id :: Id Booking,
-    searchId :: Id Search,
-    quoteId :: Id Quote,
-    requestorId :: Id BAPPerson,
-    requestorNumber :: Text,
-    vehicleNumber :: Text,
-    additionalInfo :: Text,
-    bppId :: Text,
-    bppUrl :: BaseUrl,
-    parkingSpaceName :: Text,
-    parkingSpaceLocationId :: Text,
-    parkingSupportNumber :: Text,
-    fare :: Amount,
-    fromDate :: UTCTime,
-    toDate :: UTCTime,
-    status :: BookingStatus,
-    ticketId :: Maybe Text,
-    ticketCreatedAt :: Maybe UTCTime,
-    updatedAt :: UTCTime,
-    createdAt :: UTCTime
-  }
+import Domain.Booking.API as Reexport
+import Domain.Booking.Type as Reexport

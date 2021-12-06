@@ -13,8 +13,8 @@ import Beckn.Types.Id
 import Database.Persist.TH
 import qualified Domain.ParkingLocation as Domain
 
-share
-  [mkPersist defaultSqlSettings]
+mkPersist
+  defaultSqlSettings
   [defaultQQ|
     ParkingLocationT sql=search_location
       id Text
@@ -45,10 +45,10 @@ instance TEntity ParkingLocationT Domain.ParkingLocation where
         { id = Id id,
           ..
         }
-  toTType Domain.ParkingLocation {..} = do
+  toTType Domain.ParkingLocation {..} =
     ParkingLocationT
       { id = id.getId,
         ..
       }
-  toTEntity a = do
+  toTEntity a =
     Entity (toKey a.id) $ toTType a

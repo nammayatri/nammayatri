@@ -13,8 +13,8 @@ import Beckn.Types.Id
 import Database.Persist.TH
 import qualified Domain.Search as Domain
 
-share
-  [mkPersist defaultSqlSettings]
+mkPersist
+  defaultSqlSettings
   [defaultQQ|
     SearchT sql=search
       id Text
@@ -41,11 +41,11 @@ instance TEntity SearchT Domain.Search where
           requestorId = Id requestorId,
           ..
         }
-  toTType Domain.Search {..} = do
+  toTType Domain.Search {..} =
     SearchT
       { id = id.getId,
         requestorId = requestorId.getId,
         ..
       }
-  toTEntity a = do
+  toTEntity a =
     Entity (toKey a.id) $ toTType a
