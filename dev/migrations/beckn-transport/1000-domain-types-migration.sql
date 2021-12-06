@@ -12,43 +12,12 @@ ALTER TABLE atlas_transporter.product_instance RENAME COLUMN case_id TO request_
 
 ALTER TABLE atlas_transporter.search_request DROP COLUMN parent_case_id;
 
-CREATE TABLE atlas_transporter.ride (
-    id character(36) NOT NULL,
-    request_id character varying(255) NOT NULL,
-    product_id character varying(255) NOT NULL,
-    person_id character varying(255),
-    person_updated_at timestamp with time zone,
-    short_id character varying(36) NOT NULL,
-    entity_id character varying(255),
-    entity_type character varying(255) NOT NULL,
-    quantity bigint NOT NULL,
-    estimated_fare numeric(30,10),
-    fare double precision,
-    discount double precision,
-    estimated_total_fare numeric(30,2),
-    total_fare numeric(30,2),
-    status character varying(255) NOT NULL,
-    start_time timestamp with time zone NOT NULL,
-    end_time timestamp with time zone,
-    valid_till timestamp with time zone NOT NULL,
-    from_location_id character varying(255),
-    to_location_id character varying(255),
-    organization_id character varying(255) NOT NULL,
-    product_instance_id character varying(255),
-    traveled_distance double precision NOT NULL DEFAULT 0,
-    chargeable_distance double precision,
-    info text,
-    vehicle_variant character varying(60) NOT NULL,
-    udf1 character varying(255),
-    udf2 character varying(255),
-    udf3 character varying(255),
-    udf4 character varying(255),
-    udf5 character varying(255),
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
+
+CREATE TABLE atlas_transporter.ride AS SELECT * FROM atlas_transporter.product_instance where type = 'RIDEORDER'; 
 
 ALTER TABLE atlas_transporter.ride OWNER TO atlas;
+
+ALTER TABLE atlas_transporter.ride RENAME COLUMN parent_id TO product_instance_id; 
 
 ALTER TABLE ONLY atlas_transporter.ride
     ADD CONSTRAINT idx_16395_primary PRIMARY KEY (id);
@@ -68,42 +37,6 @@ CREATE INDEX idx_16395_product_id ON atlas_transporter.ride USING btree (product
 CREATE INDEX idx_16395_status ON atlas_transporter.ride USING btree (status);
 
 ALTER TABLE atlas_transporter.rating RENAME COLUMN product_instance_id TO ride_id;
-
-INSERT INTO atlas_transporter.ride
-    SELECT id,
-    request_id,
-    product_id,
-    person_id,
-    person_updated_at,
-    short_id,
-    entity_id,
-    entity_type,
-    quantity,
-    estimated_fare,
-    fare,
-    discount,
-    estimated_total_fare,
-    total_fare,
-    status,
-    start_time,
-    end_time,
-    valid_till,
-    from_location_id,
-    to_location_id,
-    organization_id,
-    parent_id AS product_instance_id,
-    traveled_distance,
-    chargeable_distance,
-    info,
-    vehicle_variant,
-    udf1,
-    udf2,
-    udf3,
-    udf4,
-    udf5,
-    created_at ,
-    updated_at FROM atlas_transporter.product_instance AS T1
-        WHERE T1.type = 'RIDEORDER';
 
 ALTER TABLE atlas_transporter.ride_cancellation_reason
    DROP CONSTRAINT ride_cancellation_reason_ride_id_fkey
@@ -156,7 +89,7 @@ UPDATE atlas_transporter.search_request AS T1
 	SET transaction_id = (SELECT txn_id[2] FROM txnIdsTable AS T2 WHERE T2.id = T1.id);
 ALTER TABLE atlas_transporter.search_request DROP COLUMN short_id;
 ALTER TABLE atlas_transporter.search_request ADD COLUMN bap_uri character varying(255);
-
+UPDATE atlas_transporter.search_request SET bap_uri = (SELECT callback_url FROM atlas_transporter.organization where id = atlas_transporter.search_request.bap_id);
 UPDATE atlas_transporter.search_request AS T1
 	SET requestor_id = 'UNKNOWN' WHERE requestor_id IS NULL;
 UPDATE atlas_transporter.search_request AS T1
@@ -177,16 +110,16 @@ ALTER TABLE atlas_transporter.ride RENAME TO old_ride;
 CREATE TABLE atlas_transporter.ride_booking (
     id character(36) PRIMARY KEY NOT NULL,
     transaction_id character(36) NOT NULL,
-    request_id character(36) NOT NULL REFERENCES atlas_transporter.search_request (id) on delete cascade,
-    quote_id character(36) NOT NULL REFERENCES atlas_transporter.quote (id) on delete cascade,
+    request_id character(36) NOT NULL REFERENCES atlas_transporter.search_request (id),
+    quote_id character(36) NOT NULL REFERENCES atlas_transporter.quote (id),
     status character varying(255) NOT NULL,
-    provider_id character(36) NOT NULL REFERENCES atlas_transporter.organization (id) on delete cascade,
+    provider_id character(36) NOT NULL REFERENCES atlas_transporter.organization (id),
     vehicle_variant character varying(255) NOT NULL,
     bap_id character varying(255) NOT NULL,
     start_time timestamp with time zone NOT NULL,
     requestor_id character(36) NOT NULL,
-    from_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
-    to_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id) on delete cascade,
+    from_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id),
+    to_location_id character(36) NOT NULL REFERENCES atlas_transporter.search_request_location (id),
     estimated_fare double precision NOT NULL,
     discount double precision,
     estimated_total_fare numeric(30,2) NOT NULL,
@@ -197,11 +130,11 @@ CREATE TABLE atlas_transporter.ride_booking (
 
 CREATE TABLE atlas_transporter.ride (
     id character(36) PRIMARY KEY NOT NULL,
-    booking_id character(36) NOT NULL REFERENCES atlas_transporter.ride_booking (id) on delete cascade,
+    booking_id character(36) NOT NULL REFERENCES atlas_transporter.ride_booking (id),
     short_id character varying(36) NOT NULL,
     status character varying(255) NOT NULL,
-    driver_id character(36) NOT NULL REFERENCES atlas_transporter.person (id) on delete cascade,
-    vehicle_id character(36) NOT NULL REFERENCES atlas_transporter.vehicle (id) on delete cascade,
+    driver_id character(36) NOT NULL REFERENCES atlas_transporter.person (id),
+    vehicle_id character(36) NOT NULL REFERENCES atlas_transporter.vehicle (id),
     otp character(4) NOT NULL,
     tracking_url character varying(255) NOT NULL,
     fare double precision,
@@ -218,9 +151,13 @@ ALTER TABLE atlas_transporter.quote ADD COLUMN distance_to_nearest_driver float;
 ALTER TABLE atlas_transporter.quote ADD COLUMN distance float;
 
 UPDATE atlas_transporter.quote AS T1
+	SET udf1 = '0' WHERE udf1 IN ('SEDAN', 'HATCHBACK', 'SUV');
+UPDATE atlas_transporter.quote AS T1
 	SET distance_to_nearest_driver = CAST (udf1 AS float);
 UPDATE atlas_transporter.quote AS T1
 	SET distance_to_nearest_driver = 0 WHERE distance_to_nearest_driver IS NULL;
+UPDATE atlas_transporter.search_request AS T1
+    SET udf5 = '0' WHERE udf5 IS NULL OR udf5 = '';
 UPDATE atlas_transporter.quote AS T1
 	SET distance = CAST ((SELECT udf5 FROM atlas_transporter.search_request AS T2 WHERE T1.request_id = T2.id) AS float);
 UPDATE atlas_transporter.quote AS T1
@@ -240,7 +177,7 @@ INSERT INTO atlas_transporter.ride_booking
         T1.quote_id,
         T1.status,
         T1.organization_id,
-        T2.vehicle_variant,
+        T3.vehicle_variant,
         T2.bap_id,
         T2.start_time,
         T2.requestor_id,

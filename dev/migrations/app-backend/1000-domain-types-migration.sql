@@ -10,40 +10,10 @@ ALTER TABLE atlas_app.product_instance RENAME COLUMN case_id TO request_id;
 
 ALTER TABLE atlas_app.search_request DROP COLUMN parent_case_id;
 
-CREATE TABLE atlas_app.ride (
-    id character(36) NOT NULL,
-    request_id character varying(255) NOT NULL,
-    product_id character varying(255) NOT NULL,
-    person_id character varying(255),
-    person_updated_at timestamp with time zone,
-    short_id character varying(36) NOT NULL,
-    entity_id character varying(255),
-    entity_type character varying(255) NOT NULL,
-    quantity bigint NOT NULL,
-    estimated_fare numeric(30,10),
-    fare double precision,
-    discount double precision,
-    estimated_total_fare numeric(30,2),
-    total_fare numeric(30,2),
-    status character varying(255) NOT NULL,
-    start_time timestamp with time zone NOT NULL,
-    end_time timestamp with time zone,
-    valid_till timestamp with time zone NOT NULL,
-    from_location_id character varying(255),
-    to_location_id character varying(255),
-    organization_id character varying(255) NOT NULL,
-    product_instance_id character varying(255),
-    chargeable_distance double precision,
-    info text,
-    vehicle_variant character varying(60) NOT NULL,
-    udf1 character varying(255),
-    udf2 character varying(255),
-    udf3 character varying(255),
-    udf4 character varying(255),
-    udf5 character varying(255),
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
+
+CREATE TABLE atlas_app.ride AS SELECT * FROM atlas_app.product_instance WHERE type = 'RIDEORDER';
+
+ALTER TABLE atlas_app.ride RENAME COLUMN parent_id TO product_instance_id;
 
 ALTER TABLE atlas_app.ride OWNER TO atlas;
 
@@ -64,40 +34,6 @@ CREATE INDEX idx_16395_product_id ON atlas_app.ride USING btree (product_id);
 
 CREATE INDEX idx_16395_status ON atlas_app.ride USING btree (status);
 
-INSERT INTO atlas_app.ride
-    SELECT id,
-    request_id,
-    product_id,
-    person_id,
-    person_updated_at,
-    short_id,
-    entity_id,
-    entity_type,
-    quantity,
-    estimated_fare,
-    fare,
-    discount,
-    estimated_total_fare,
-    total_fare,
-    status,
-    start_time,
-    end_time,
-    valid_till,
-    from_location_id,
-    to_location_id,
-    organization_id,
-    parent_id AS product_instance_id,
-    chargeable_distance,
-    info,
-    vehicle_variant,
-    udf1,
-    udf2,
-    udf3,
-    udf4,
-    udf5,
-    created_at ,
-    updated_at FROM atlas_app.product_instance AS T1
-        WHERE T1.type = 'RIDEORDER';
 
 ALTER TABLE atlas_app.ride_cancellation_reason
    DROP CONSTRAINT ride_cancellation_reason_ride_id_fkey
@@ -159,15 +95,15 @@ UPDATE atlas_app.old_ride AS T1
 
 CREATE TABLE atlas_app.ride_booking (
     id character(36) PRIMARY KEY NOT NULL,
-    request_id character(36) NOT NULL REFERENCES atlas_app.search_request (id) on delete cascade,
-    quote_id character(36) NOT NULL REFERENCES atlas_app.quote (id) on delete cascade,
+    request_id character(36) NOT NULL REFERENCES atlas_app.search_request (id),
+    quote_id character(36) NOT NULL REFERENCES atlas_app.quote (id),
     status character varying(255) NOT NULL,
-    provider_id character(36) NOT NULL REFERENCES atlas_app.organization (id) on delete cascade,
+    provider_id character(36) NOT NULL REFERENCES atlas_app.organization (id),
     provider_mobile_number character varying(255) NOT NULL,
     start_time timestamp with time zone NOT NULL,
     requestor_id character(36) NOT NULL,
-    from_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
-    to_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id) on delete cascade,
+    from_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id),
+    to_location_id character(36) NOT NULL REFERENCES atlas_app.search_request_location (id),
     estimated_fare double precision NOT NULL,
     discount double precision,
     estimated_total_fare numeric(30,2) NOT NULL,
@@ -179,7 +115,7 @@ CREATE TABLE atlas_app.ride_booking (
 
 CREATE TABLE atlas_app.ride (
     id character(36) PRIMARY KEY NOT NULL,
-    booking_id character(36) NOT NULL REFERENCES atlas_app.ride_booking (id) on delete cascade,
+    booking_id character(36) NOT NULL REFERENCES atlas_app.ride_booking (id),
     short_id character varying(36) NOT NULL,
     status character varying(255) NOT NULL,
     driver_name character varying(255) NOT NULL,
@@ -210,13 +146,13 @@ UPDATE atlas_app.quote AS T1
 	SET distance_to_nearest_driver = 0 WHERE distance_to_nearest_driver IS NULL;
 
 UPDATE atlas_app.quote AS T1
-	SET provider_mobile_number = (SELECT T2.mobile_number FROM atlas_app.organization AS T2 WHERE T2.id = T1.provider_id);
+	SET provider_mobile_number = COALESCE ((T1.info :: json) -> 'provider' -> 'phones' ->> 0, 'UNKNOWN');
+
 UPDATE atlas_app.quote AS T1
 	SET provider_mobile_number = 'UNKNOWN' WHERE provider_mobile_number IS NULL;
 
 ALTER TABLE atlas_app.quote ALTER COLUMN provider_mobile_number SET NOT NULL;
 ALTER TABLE atlas_app.quote ALTER COLUMN distance_to_nearest_driver SET NOT NULL;
-ALTER TABLE atlas_app.quote ALTER COLUMN estimated_fare SET NOT NULL;
 
 INSERT INTO atlas_app.ride_booking
     SELECT
@@ -251,13 +187,13 @@ INSERT INTO atlas_app.ride
         T1.short_id,
         T1.status,
         COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' ->> 'name', 'UNKNOWN'),
-        ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' ->> 'rating') :: double precision,
+        ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' -> 'rating' ->> 'value') :: double precision,
         COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' -> 'phones' ->> 0, 'UNKNOWN'),
         COALESCE (((T1.info :: json)  -> 'tracker' -> 'trip' -> 'driver' ->> 'registeredAt') :: timestamp with time zone, now ()),
         COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'vehicle' ->> 'registrationNumber', 'UNKNOWN'),
         COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'vehicle' ->> 'model', 'UNKNOWN'),
         COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' -> 'vehicle' ->> 'color', 'UNKNOWN'),
-        T1.udf4,
+        COALESCE ((T1.info :: json)  -> 'tracker' -> 'trip' ->> 'id', 'UNKNOWN'),
         'UNKNOWN',
         T1.fare,
         T1.total_fare,
