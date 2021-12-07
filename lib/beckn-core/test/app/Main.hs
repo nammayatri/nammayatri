@@ -2,7 +2,6 @@ module Main where
 
 import APIExceptions
 import Amount
-import DecimalValue
 import EulerHS.Prelude
 import SignatureAuth
 import SlidingWindowLimiter
@@ -18,7 +17,6 @@ specs = return $ testGroup "Tests" [unitTests]
       testGroup
         "Unit tests"
         [ amountTests,
-          decimalValueTests,
           signatureAuthTests,
           httpExceptionTests,
           slidingWindowLimiterTests

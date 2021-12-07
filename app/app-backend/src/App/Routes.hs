@@ -8,11 +8,11 @@ import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.InternalAPI.Auth.API as Auth
 import Beckn.Types.APISuccess
 import Beckn.Types.App
-import qualified Beckn.Types.Core.API.Call as API
-import qualified Beckn.Types.Core.Migration1.API.OnCancel as API
-import qualified Beckn.Types.Core.Migration1.API.OnConfirm as API
-import qualified Beckn.Types.Core.Migration1.API.OnSearch as API
-import qualified Beckn.Types.Core.Migration1.API.OnUpdate as API
+import qualified Beckn.Types.Core.Cabs.API.Call as API
+import qualified Beckn.Types.Core.Cabs.API.OnCancel as API
+import qualified Beckn.Types.Core.Cabs.API.OnConfirm as API
+import qualified Beckn.Types.Core.Cabs.API.OnSearch as API
+import qualified Beckn.Types.Core.Cabs.API.OnUpdate as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi (Info (..), OpenApi (..))

@@ -2,8 +2,8 @@ module Product.Feedback where
 
 import qualified App.Types as App
 import Beckn.Types.APISuccess (APISuccess (Success))
-import qualified Beckn.Types.Core.Migration1.API.Types as Common
-import qualified Beckn.Types.Core.Migration1.Rating as Rating
+import qualified Beckn.Types.Core.Cabs.API.Types as Common
+import qualified Beckn.Types.Core.Cabs.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import EulerHS.Prelude hiding (product)
@@ -30,6 +30,6 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
       >>= fromMaybeM OrgNotFound
   bapURIs <- asks (.bapSelfURIs)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  context <- buildMobilityContext1 txnId bapURIs.cabs (Just bppURI)
+  context <- buildCabsContext txnId bapURIs.cabs (Just bppURI)
   ExternalAPI.feedback bppURI (Common.BecknReq context (Rating.RatingMessage bppRideBookingId ratingValue))
   return Success

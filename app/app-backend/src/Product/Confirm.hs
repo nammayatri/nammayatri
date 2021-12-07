@@ -4,9 +4,9 @@ import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Migration1.API.OnConfirm as OnConfirm
-import qualified Beckn.Types.Core.Migration1.API.Types as Common
-import qualified Beckn.Types.Core.Migration1.Confirm as Confirm
+import qualified Beckn.Types.Core.Cabs.API.OnConfirm as OnConfirm
+import qualified Beckn.Types.Core.Cabs.API.Types as Common
+import qualified Beckn.Types.Core.Cabs.Confirm as Confirm
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (id)
@@ -39,7 +39,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
     QRideB.create rideBooking
   bapURIs <- asks (.bapSelfURIs)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  context <- buildMobilityContext1 (getId searchRequestId) bapURIs.cabs (Just bppURI)
+  context <- buildCabsContext (getId searchRequestId) bapURIs.cabs (Just bppURI)
   let order =
         Confirm.Order
           { items = [Confirm.OrderItem {id = quote.bppQuoteId.getId}]
@@ -79,7 +79,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here
     logTagInfo "on_confirm req" (show req)
-    validateContextMig1 req.context
+    validateContext req.context
     case req.contents of
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
       Right msg -> do

@@ -2,9 +2,9 @@
 
 module ExternalAPI.Flow where
 
-import Beckn.Types.Core.API.Call as API
+import Beckn.Types.Core.Cabs.API.Call as API
+import Beckn.Types.Core.Cabs.API.Types (BecknCallbackReq (..))
 import Beckn.Types.Core.Error
-import Beckn.Types.Core.Migration1.API.Types (BecknCallbackReq (..))
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
 import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
@@ -75,7 +75,7 @@ callBAP action api transporter searchRequestId contents = do
       authKey = getHttpManagerKey bppShortId
       txnId = searchRequest.transactionId
   bppUri <- makeBppUrl (transporter.id)
-  context <- buildMobilityContext1 txnId bapCallbackUrl (Just bppUri)
+  context <- buildCabsContext txnId bapCallbackUrl (Just bppUri)
   Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $
     BecknCallbackReq {contents, context}
 

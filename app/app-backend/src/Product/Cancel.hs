@@ -4,9 +4,9 @@ import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Migration1.API.OnCancel as OnCancel
-import qualified Beckn.Types.Core.Migration1.API.Types as Common
-import qualified Beckn.Types.Core.Migration1.Cancel as Cancel
+import qualified Beckn.Types.Core.Cabs.API.OnCancel as OnCancel
+import qualified Beckn.Types.Core.Cabs.API.Types as Common
+import qualified Beckn.Types.Core.Cabs.Cancel as Cancel
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
@@ -42,7 +42,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
       >>= fromMaybeM OrgNotFound
   bapURIs <- asks (.bapSelfURIs)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  context <- buildMobilityContext1 txnId bapURIs.cabs (Just bppURI)
+  context <- buildCabsContext txnId bapURIs.cabs (Just bppURI)
   ExternalAPI.cancel bppURI (Common.BecknReq context (Cancel.CancelMessage quote.bppQuoteId.getId Cancel.ByUser))
   DB.runSqlDBTransaction $
     QRCR.create $ makeRideCancelationReason rideBooking.id rideCancellationReasonAPI
@@ -67,7 +67,7 @@ onCancel ::
   FlowHandler AckResponse
 onCancel _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
-    validateContextMig1 req.context
+    validateContext req.context
     case req.contents of
       Right msg -> do
         let bppRideBookingId = Id $ msg.order.id

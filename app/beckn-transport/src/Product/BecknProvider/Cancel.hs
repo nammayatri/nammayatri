@@ -5,8 +5,8 @@ import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Migration1.API.Cancel as Cancel
-import qualified Beckn.Types.Core.Migration1.Cancel.CancellationSource as Cancel
+import qualified Beckn.Types.Core.Cabs.API.Cancel as Cancel
+import qualified Beckn.Types.Core.Cabs.Cancel.CancellationSource as Cancel
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
@@ -38,7 +38,7 @@ cancel ::
 cancel transporterId _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req.context
-    validateContextMig1 context
+    validateContext context
     let quoteId = req.message.order_id
     transporterOrg <-
       Organization.findOrganizationById transporterId

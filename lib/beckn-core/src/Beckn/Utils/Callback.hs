@@ -2,10 +2,10 @@ module Beckn.Utils.Callback (withBecknCallback, WithBecknCallback, withBecknCall
 
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Cabs.API.Types as API
+import qualified Beckn.Types.Core.Cabs.Common.Context as Context
 import qualified Beckn.Types.Core.Migration.API.Types as M.API
 import qualified Beckn.Types.Core.Migration.Context as M.Context
-import qualified Beckn.Types.Core.Migration1.API.Types as API
-import qualified Beckn.Types.Core.Migration1.Common.Context as Context
 import Beckn.Types.Error
 import Beckn.Types.Error.BaseError.HTTPError.BecknAPIError
 import Beckn.Types.Monitoring.Prometheus.Metrics

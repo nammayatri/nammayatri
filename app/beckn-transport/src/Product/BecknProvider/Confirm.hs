@@ -6,9 +6,9 @@ import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Migration1.API.Confirm as Confirm
-import qualified Beckn.Types.Core.Migration1.API.OnConfirm as OnConfirm
-import qualified Beckn.Types.Core.Migration1.OnConfirm as OnConfirm
+import qualified Beckn.Types.Core.Cabs.API.Confirm as Confirm
+import qualified Beckn.Types.Core.Cabs.API.OnConfirm as OnConfirm
+import qualified Beckn.Types.Core.Cabs.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -46,7 +46,7 @@ confirm ::
 confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "confirm API Flow" "Reached"
-    validateContextMig1 req.context
+    validateContext req.context
     let items = req.message.order.items
     when (null items) $ throwError (InvalidRequest "List of confirmed items is empty.")
     let quoteId = Id . (.id) $ head items

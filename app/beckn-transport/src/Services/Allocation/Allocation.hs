@@ -1,7 +1,7 @@
 module Services.Allocation.Allocation where
 
 import Beckn.Types.Common
-import Beckn.Types.Core.Migration1.Cancel.CancellationSource (CancellationSource (..))
+import Beckn.Types.Core.Cabs.Cancel.CancellationSource (CancellationSource (..))
 import Beckn.Types.Id
 import Beckn.Utils.NonEmpty
 import Data.Generics.Labels ()

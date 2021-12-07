@@ -7,8 +7,8 @@ import App.Types
 import Beckn.External.Encryption
 import Beckn.External.Exotel.Flow
 import Beckn.Types.Common
-import Beckn.Types.Core.API.Call
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Cabs.API.Call
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import Data.Semigroup

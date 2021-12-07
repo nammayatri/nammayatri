@@ -6,17 +6,17 @@ import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Cabs.API.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Cabs.API.Types as Common
+import qualified Beckn.Types.Core.Cabs.Common.Context as Common
+import qualified Beckn.Types.Core.Cabs.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Cabs.Search as Search
 import qualified Beckn.Types.Core.Migration.API.Search as Core9
 import qualified Beckn.Types.Core.Migration.API.Types as Core9
 import qualified Beckn.Types.Core.Migration.Context as Core9
 import qualified Beckn.Types.Core.Migration.Gps as Mig
 import qualified Beckn.Types.Core.Migration.Intent as Mig
 import qualified Beckn.Types.Core.Migration.Location as Mig
-import qualified Beckn.Types.Core.Migration1.API.OnSearch as OnSearch
-import qualified Beckn.Types.Core.Migration1.API.Types as Common
-import qualified Beckn.Types.Core.Migration1.Common.Context as Common
-import qualified Beckn.Types.Core.Migration1.OnSearch as OnSearch
-import qualified Beckn.Types.Core.Migration1.Search as Search
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -63,7 +63,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   bapURIs <- asks (.bapSelfURIs)
   fork "search" . withRetry $ do
     fork "search 0.8" $ do
-      context <- buildMobilityContext1 txnId bapURIs.cabs Nothing
+      context <- buildCabsContext txnId bapURIs.cabs Nothing
       let intent = mkIntent req now distance
       ExternalAPI.search (Common.BecknReq context $ Search.SearchMessage intent)
     fork "search 0.9" $ do
@@ -85,7 +85,7 @@ searchCb ::
   OnSearch.OnSearchReq ->
   FlowHandler AckResponse
 searchCb _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  validateContextMig1 $ req.context
+  validateContext $ req.context
   Metrics.finishSearchMetrics $ req.context.transaction_id
   case req.contents of
     Right msg -> do

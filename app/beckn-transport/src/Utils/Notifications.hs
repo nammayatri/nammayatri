@@ -2,7 +2,7 @@ module Utils.Notifications where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
-import Beckn.Types.Core.Migration1.Cancel.CancellationSource (CancellationSource (..))
+import Beckn.Types.Core.Cabs.Cancel.CancellationSource (CancellationSource (..))
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)

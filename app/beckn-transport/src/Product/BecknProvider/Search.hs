@@ -6,9 +6,9 @@ import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Migration1.API.OnSearch as OnSearch
-import qualified Beckn.Types.Core.Migration1.API.Search as Search
-import qualified Beckn.Types.Core.Migration1.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Cabs.API.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Cabs.API.Search as Search
+import qualified Beckn.Types.Core.Cabs.OnSearch as OnSearch
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -50,7 +50,7 @@ search ::
 search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     let context = req.context
-    validateContextMig1 context
+    validateContext context
     transporter <-
       Org.findOrganizationById transporterId
         >>= fromMaybeM OrgDoesNotExist

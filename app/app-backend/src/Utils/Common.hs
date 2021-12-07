@@ -8,11 +8,11 @@ where
 
 import Beckn.Product.Validation.Context
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Migration1.Common.Context as Mig1
+import qualified Beckn.Types.Core.Cabs.Common.Context as Cab
 import Beckn.Utils.Common as CoreCommon
 import Data.Text as DT
 
-validateContextMig1 :: (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) => Mig1.Context -> m ()
-validateContextMig1 context = do
-  validateDomainMig1 Mig1.MOBILITY context
-  validateContextCommonsMig1 context
+validateContext :: (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) => Cab.Context -> m ()
+validateContext context = do
+  validateDomain Cab.MOBILITY context
+  validateContextCommons context

@@ -3,8 +3,8 @@ module Product.Update where
 import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Migration1.API.OnUpdate as OnUpdate
-import qualified Beckn.Types.Core.Migration1.OnUpdate as OnUpdate
+import qualified Beckn.Types.Core.Cabs.API.OnUpdate as OnUpdate
+import qualified Beckn.Types.Core.Cabs.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (state)
@@ -23,7 +23,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here
     logTagInfo "on_update req" (show req)
-    validateContextMig1 req.context
+    validateContext req.context
     case req.contents of
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err
       Right msg -> processOrder msg.order
