@@ -51,9 +51,9 @@ import Types.Storage.Vehicle
 import Utils.Auth (AdminTokenAuth, TokenAuth)
 
 type TransportAPI =
-  "v2"
-    :> MainAPI
-      :<|> SwaggerAPI
+  "v2" :> MainAPI
+    :<|> "v1" :> OrgBecknAPI
+    :<|> SwaggerAPI
 
 type MainAPI =
   HealthCheckAPI
@@ -64,7 +64,6 @@ type MainAPI =
     :<|> OrganizationAPI --Transporter
     :<|> RideBookingAPI
     :<|> FarePolicyAPI
-    :<|> OrgBecknAPI
     :<|> LocationAPI
     :<|> CallAPIs
     :<|> RouteAPI
@@ -85,7 +84,6 @@ mainServer =
     :<|> organizationFlow
     :<|> rideBookingFlow
     :<|> farePolicyFlow
-    :<|> orgBecknApiFlow
     :<|> locationFlow
     :<|> callFlow
     :<|> routeApiFlow
@@ -96,6 +94,7 @@ mainServer =
 transporterServer :: FlowServer TransportAPI
 transporterServer =
   mainServer
+    :<|> orgBecknApiFlow
     :<|> writeSwaggerJSONFlow
 
 ---- Registration Flow ------

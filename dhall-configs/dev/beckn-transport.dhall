@@ -73,7 +73,7 @@ in
 , xGatewaySelector = "JUSPAY.BG.1"
 , xAppUri = appUri
 , hostName = "localhost"
-, nwAddress = "http://localhost:8014/v2/"
+, nwAddress = "http://localhost:8014/v1/"
 , credRegistry = common.credRegistry
 , signingKeys = common.signingKeys
 , caseExpiry = Some +7200
