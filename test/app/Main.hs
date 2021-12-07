@@ -89,7 +89,9 @@ specs = do
         MockFcm.runMockFcm $
           (#loggerConfig . #logToConsole .~ False)
             . (#loggerConfig . #logRawSql .~ False),
-        MockRegistry.runRegistryService
+        MockRegistry.runRegistryService $
+          (#loggerConfig . #logToConsole .~ False)
+            . (#loggerConfig . #logRawSql .~ False)
       ]
 
     startServers servers = do

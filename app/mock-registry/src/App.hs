@@ -1,31 +1,16 @@
-{-# LANGUAGE TypeApplications #-}
-
 module App where
 
-import qualified App.Server as App
+import App.Routes (lookupFlow, registryAPI)
 import App.Types
-import qualified Beckn.Types.App as App
+import Beckn.Prelude
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import EulerHS.Prelude
-import qualified EulerHS.Runtime as R
-import Network.Wai.Handler.Warp
-  ( defaultSettings,
-    runSettings,
-    setGracefulShutdownTimeout,
-    setInstallShutdownHandler,
-    setPort,
-  )
+import Beckn.Utils.Servant.Server (runServerService)
+import Servant (Context (..))
 
-runRegistryService :: IO ()
-runRegistryService = do
-  appCfg <- readDhallConfigDefault "mock-registry"
-  appEnv <- buildAppEnv appCfg
-  let settings =
-        defaultSettings
-          & setGracefulShutdownTimeout (Just $ appCfg.graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown $ appEnv.isShuttingDown)
-          & setPort (appCfg.port)
-  R.withFlowRuntime Nothing $ \flowRt -> do
-    putStrLn @String $ "Registry service: Runtime created. Starting server at port " <> show (appCfg.port)
-    runSettings settings $ App.runServer (App.EnvR flowRt appEnv)
+runRegistryService :: (AppCfg -> AppCfg) -> IO ()
+runRegistryService configModifier = do
+  appEnv <- readDhallConfigDefault "mock-registry" <&> configModifier >>= buildAppEnv
+  runServerService appEnv registryAPI lookupFlow middleware identity EmptyContext releaseAppEnv pure
+  where
+    middleware = hashBodyForSignature

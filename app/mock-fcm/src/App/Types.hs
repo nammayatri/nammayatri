@@ -3,12 +3,11 @@ module App.Types where
 import Beckn.External.FCM.Types
 import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
+import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Data.Map as Map
-import qualified Data.Text as T
 import EulerHS.Prelude
-import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -26,7 +25,7 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv AppCfg {..} = do
-  hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  hostname <- getPodName
   notificationsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   return $ AppEnv {..}

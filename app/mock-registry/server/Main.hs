@@ -1,7 +1,7 @@
 module Main where
 
 import App (runRegistryService)
-import EulerHS.Prelude
+import Prelude
 
 main :: IO ()
-main = runRegistryService
+main = runRegistryService id

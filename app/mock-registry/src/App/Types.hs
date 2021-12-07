@@ -5,52 +5,55 @@ module App.Types
     AppCfg (),
     AppEnv (..),
     buildAppEnv,
+    releaseAppEnv,
   )
 where
 
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Credentials
-import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, registerCoreMetricsContainer)
+import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.IOLogging
+import Beckn.Utils.Shutdown
 import EulerHS.Prelude
 
 data AppCfg = AppCfg
   { port :: Int,
-    serverUrl :: BaseUrl,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     signatureExpiry :: Seconds,
-    graceTerminationPeriod :: Int
+    graceTerminationPeriod :: Seconds,
+    loggerConfig :: LoggerConfig
   }
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { serverUrl :: BaseUrl,
+  { config :: AppCfg,
     credRegistry :: [Credential],
     signingKeys :: [SigningKey],
     signatureExpiry :: Seconds,
     isShuttingDown :: TMVar (),
-    coreMetrics :: CoreMetricsContainer
+    coreMetrics :: CoreMetricsContainer,
+    loggerEnv :: LoggerEnv
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv AppCfg {..} = do
-  isShuttingDown <- newEmptyTMVarIO
+buildAppEnv config@AppCfg {..} = do
+  isShuttingDown <- mkShutdown
   coreMetrics <- registerCoreMetricsContainer
-  return $
-    AppEnv
-      { ..
-      }
+  hostname <- getPodName
+  loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  return AppEnv {..}
+
+releaseAppEnv :: AppEnv -> IO ()
+releaseAppEnv AppEnv {..} =
+  releaseLoggerEnv loggerEnv
 
 type Env = EnvR AppEnv
 
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
-
-instance {-# OVERLAPS #-} Log (FlowR AppEnv) where
-  logOutput _ _ = return ()
-  withLogTag _ m = m

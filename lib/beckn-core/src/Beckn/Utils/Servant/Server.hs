@@ -12,7 +12,6 @@ import Beckn.Utils.IOLogging (LoggerEnv)
 import Beckn.Utils.Logging
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Monitoring.Prometheus.Servant as Metrics
-import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as E
 import GHC.Records.Extra (HasField)
@@ -27,7 +26,6 @@ import Network.Wai.Handler.Warp
   )
 import Servant
 import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal)
-import System.Environment (lookupEnv)
 
 class HasEnvEntry r (context :: [Type]) | context -> r where
   getEnvEntry :: Context context -> EnvR r
@@ -88,7 +86,7 @@ runServerService ::
   IO ()
 runServerService appEnv serverAPI serverHandler waiMiddleware waiSettings servantCtx shutdownAction initialize = do
   let port = appEnv.config.port
-  hostname <- fmap T.pack <$> lookupEnv "POD_NAME"
+  hostname <- getPodName
   let loggerRt = L.getEulerLoggerRuntime hostname $ appEnv.config.loggerConfig
   let settings =
         defaultSettings
