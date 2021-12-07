@@ -1,4 +1,4 @@
-module Beckn.Storage.Redis.Config where
+module Beckn.Storage.Redis.Config (prepareRedisConnections, AppException (..), T.RedisConfig) where
 
 import Beckn.Utils.Common
 import qualified EulerHS.Language as L

@@ -6,6 +6,7 @@ import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.App (BaseUrl)
 import Beckn.Types.Id
+import Domain.ParkingLocation
 import Domain.Search
 
 data Quote = Quote
@@ -14,8 +15,10 @@ data Quote = Quote
     bppId :: Text,
     bppUrl :: BaseUrl,
     parkingSpaceName :: Text,
-    parkingSpaceLocationId :: Text,
+    parkingLocationId :: Id ParkingLocation,
+    parkingLocationIdFromBpp :: Text,
     fare :: Amount,
     availableSpaces :: Int,
     createdAt :: UTCTime
   }
+  deriving (Generic, FromJSON, ToJSON, Show)

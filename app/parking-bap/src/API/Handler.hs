@@ -1,10 +1,12 @@
 module API.Handler where
 
-import API.API
+import qualified API.Beckn.Handler as Beckn
+import qualified API.Parking.Handler as Parking
+import qualified API.Types as API
 import App.Types
-import Beckn.Prelude
-import Beckn.Utils.Common
+import Servant
 
-handler :: FlowServer API
-handler personId = withFlowHandlerAPI do
-  log DEBUG $ "Hi, " <> showT personId
+handler :: FlowServer API.API
+handler =
+  Beckn.handler
+    :<|> Parking.handler

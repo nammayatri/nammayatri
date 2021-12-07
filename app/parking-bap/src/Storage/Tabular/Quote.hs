@@ -15,6 +15,7 @@ import qualified Data.Text as T
 import Database.Persist.TH
 import qualified Domain.Quote as Domain
 import Servant.Client
+import Storage.Tabular.ParkingLocation (ParkingLocationTId)
 import Storage.Tabular.Search (SearchTId)
 
 share
@@ -26,7 +27,8 @@ share
       bppId Text
       bppUrl Text
       parkingSpaceName Text
-      parkingSpaceLocationId Text
+      parkingLocationId ParkingLocationTId
+      parkingLocationIdFromBpp Text
       fare Amount
       availableSpaces Int
       createdAt UTCTime
@@ -46,6 +48,7 @@ instance TEntity QuoteT Domain.Quote where
       Domain.Quote
         { id = Id id,
           searchId = fromKey searchId,
+          parkingLocationId = fromKey parkingLocationId,
           bppUrl = bppUrl_,
           ..
         }
@@ -53,6 +56,7 @@ instance TEntity QuoteT Domain.Quote where
     QuoteT
       { id = id.getId,
         searchId = toKey searchId,
+        parkingLocationId = toKey parkingLocationId,
         bppUrl = T.pack $ showBaseUrl bppUrl,
         ..
       }

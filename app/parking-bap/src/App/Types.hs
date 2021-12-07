@@ -2,6 +2,7 @@ module App.Types where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
+import Beckn.Storage.Redis.Config (RedisConfig)
 import Beckn.Types.Common
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
@@ -9,17 +10,25 @@ import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client (HttpClientOptions (..))
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
-import Tools.Metrics
+import qualified Tools.Metrics.Types as Metrics
 
 data AppCfg = AppCfg
   { port :: Int,
     esqDBCfg :: EsqDBConfig,
+    redisCfg :: RedisConfig,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     selfId :: Text,
+    selfURI :: BaseUrl,
     httpClientOptions :: HttpClientOptions,
     authEntity :: AuthenticatingEntity',
-    authServiceUrl :: BaseUrl
+    authServiceUrl :: BaseUrl,
+    gatewayUrl :: BaseUrl,
+    metricsSearchDurationTimeout :: Seconds,
+    coreVersion :: Text,
+    domainVersion :: Text,
+    hostName :: Text,
+    registryUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -28,7 +37,10 @@ data AppEnv = AppEnv
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
-    coreMetrics :: CoreMetricsContainer
+    coreMetrics :: Metrics.CoreMetricsContainer,
+    bapMetrics :: Metrics.BAPMetricsContainer,
+    coreVersion :: Text, -- FIXME this two fields are duplicated with AppCfg fields for context validation
+    domainVersion :: Text -- FIXME this two fields are duplicated with AppCfg fields for context validation
   }
   deriving (Generic)
 
@@ -37,7 +49,8 @@ buildAppEnv config@AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  coreMetrics <- registerCoreMetricsContainer
+  coreMetrics <- Metrics.registerCoreMetricsContainer
+  bapMetrics <- Metrics.registerBAPMetricsContainer metricsSearchDurationTimeout
   isShuttingDown <- mkShutdown
   pure $ AppEnv {..}
 

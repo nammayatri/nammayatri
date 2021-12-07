@@ -61,6 +61,8 @@ dependencies:
   - base >= 4.7 && < 5
   - beckn-core
   - bytestring
+  - lens
+  - prometheus-client
   - record-dot-preprocessor
   - record-hasfield
   - text

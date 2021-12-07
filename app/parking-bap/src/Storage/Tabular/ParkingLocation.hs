@@ -5,40 +5,48 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.SearchLocation where
+module Storage.Tabular.ParkingLocation where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Database.Persist.TH
-import qualified Domain.SearchLocation as Domain
+import qualified Domain.ParkingLocation as Domain
 
 share
   [mkPersist defaultSqlSettings]
   [defaultQQ|
-    SearchLocationT sql=search_location
+    ParkingLocationT sql=search_location
       id Text
+      idFromBpp Text
       lat Double
       lon Double
+      name Text
+      streetAddress Text
+      locality Text
+      city Text Maybe
+      state Text
+      country Text
+      areaCode Text
       createdAt UTCTime
       deriving Generic
       Primary id
     |]
 
-instance TEntityKey SearchLocationT Domain.SearchLocation where
-  fromKey (SearchLocationTKey _id) = Id _id
-  toKey id = SearchLocationTKey id.getId
+instance TEntityKey ParkingLocationT Domain.ParkingLocation where
+  fromKey (ParkingLocationTKey _id) = Id _id
+  toKey id = ParkingLocationTKey id.getId
 
-instance TEntity SearchLocationT Domain.SearchLocation where
+instance TEntity ParkingLocationT Domain.ParkingLocation where
   fromTEntity entity = do
-    let SearchLocationT {..} = entityVal entity
+    let ParkingLocationT {..} = entityVal entity
     return $
-      Domain.SearchLocation
+      Domain.ParkingLocation
         { id = Id id,
           ..
         }
-  toTType Domain.SearchLocation {..} = do
-    SearchLocationT
+  toTType Domain.ParkingLocation {..} = do
+    ParkingLocationT
       { id = id.getId,
         ..
       }

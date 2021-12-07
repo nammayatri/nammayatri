@@ -7,7 +7,7 @@ import Beckn.Types.Amount
 import Beckn.Types.App (BaseUrl)
 import Beckn.Types.Id
 import Domain.Quote (Quote)
-import Domain.Search (Person, Search)
+import Domain.Search (BAPPerson, Search)
 
 data BookingStatus = NEW | AWAITING_PAYMENT | CONFIRMED | CANCELLED
   deriving (Generic, Show, Read)
@@ -16,7 +16,7 @@ data Booking = Booking
   { id :: Id Booking,
     searchId :: Id Search,
     quoteId :: Id Quote,
-    requestorId :: Id Person,
+    requestorId :: Id BAPPerson,
     requestorNumber :: Text,
     vehicleNumber :: Text,
     additionalInfo :: Text,

@@ -1,14 +1,19 @@
+{-# LANGUAGE TypeApplications #-}
+
 module App
   ( runService,
   )
 where
 
-import API.API
 import API.Handler
+import API.Types
 import App.Types
+import Beckn.Exit
 import Beckn.Prelude
+import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
+import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Servant.Server (runServerService)
 import Beckn.Utils.Servant.SignatureAuth (modFlowRtWithAuthManagers)
@@ -17,8 +22,11 @@ import Tools.Auth
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
-  appEnv <- readDhallConfigDefault "parking-bap" <&> configModifier >>= buildAppEnv
+  appCfg <- readDhallConfigDefault "parking-bap" <&> configModifier
+  appEnv <- buildAppEnv appCfg
   runServerService appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
+    try (prepareRedisConnections $ appCfg.redisCfg)
+      >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
     orgShortId <- askConfig (.selfId)
     modFlowRtWithAuthManagers flowRt appEnv [orgShortId]
   where

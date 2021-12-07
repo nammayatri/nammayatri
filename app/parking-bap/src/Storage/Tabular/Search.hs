@@ -12,14 +12,14 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Database.Persist.TH
 import qualified Domain.Search as Domain
-import Storage.Tabular.SearchLocation (SearchLocationTId)
 
 share
   [mkPersist defaultSqlSettings]
   [defaultQQ|
     SearchT sql=search
       id Text
-      searchLocationId SearchLocationTId
+      lat Double
+      lon Double
       requestorId Text
       fromDate UTCTime
       toDate UTCTime
@@ -38,14 +38,12 @@ instance TEntity SearchT Domain.Search where
     return $
       Domain.Search
         { id = Id id,
-          searchLocationId = fromKey searchLocationId,
           requestorId = Id requestorId,
           ..
         }
   toTType Domain.Search {..} = do
     SearchT
       { id = id.getId,
-        searchLocationId = toKey searchLocationId,
         requestorId = requestorId.getId,
         ..
       }

@@ -1,7 +1,9 @@
 module Beckn.Prelude (module E, module Beckn.Prelude) where
 
+import Control.Exception as E (SomeException)
+import Control.Exception.Safe as E (try)
 import Control.Monad.Reader as E
-import Data.Aeson as E (FromJSON (..), ToJSON (..))
+import Data.Aeson as E (FromJSON (..), ToJSON (..), genericParseJSON, genericToJSON)
 import Data.Foldable as E
 import Data.Function as E hiding (id)
 import Data.Functor as E
@@ -29,3 +31,8 @@ showT = T.pack . show
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust mg f = maybe (pure ()) f mg
+
+whenM :: Monad m => m Bool -> m () -> m ()
+whenM mb thing = do
+  b <- mb
+  when b thing

@@ -13,6 +13,7 @@ data Domain
   | FOOD_AND_BEVERAGE
   | HEALTHCARE
   | METRO
+  | PARKING
   | UNKNOWN_DOMAIN Text
   deriving (Eq, Generic, Show, ToSchema)
 
@@ -21,6 +22,7 @@ instance ToJSON Domain where
   toJSON LOCAL_RETAIL = String "nic2004:52110"
   toJSON FINAL_MILE_DELIVERY = String "nic2004:55204"
   toJSON METRO = String "nic2004:60212"
+  toJSON PARKING = String "nic2004:63031"
   toJSON (UNKNOWN_DOMAIN domain) = String domain
   toJSON val = genericToJSON constructorsWithHyphensUntagged val -- TODO: update remaining domains with codes
 

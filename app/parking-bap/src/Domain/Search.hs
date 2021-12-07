@@ -2,16 +2,16 @@
 
 module Domain.Search where
 
+import Beckn.Prelude
 import Beckn.Types.Id
-import Data.Time (UTCTime)
-import Domain.SearchLocation
 
-data Person
+data BAPPerson
 
 data Search = Search
   { id :: Id Search,
-    searchLocationId :: Id SearchLocation,
-    requestorId :: Id Person,
+    lat :: Double,
+    lon :: Double,
+    requestorId :: Id BAPPerson,
     fromDate :: UTCTime,
     toDate :: UTCTime,
     createdAt :: UTCTime

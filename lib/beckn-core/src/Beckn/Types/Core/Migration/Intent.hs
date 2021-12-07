@@ -93,6 +93,13 @@ data LocationAndTime = LocationAndTime
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
+emptyLocationAndTime :: LocationAndTime
+emptyLocationAndTime =
+  LocationAndTime
+    { location = Nothing,
+      time = Nothing
+    }
+
 instance Example LocationAndTime where
   example =
     LocationAndTime

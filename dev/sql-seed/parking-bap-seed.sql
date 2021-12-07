@@ -17,16 +17,25 @@ SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
-CREATE TABLE atlas_parking.search_location (
-    id character(36) NOT NULL PRIMARY KEY,
+CREATE TABLE atlas_parking.parking_location (
+    id character(36) NOT NULL PRIMARY KEY,,
+    id_from_bpp character(36),
     lat double precision NOT NULL,
-    long double precision NOT NULL,
+    lon double precision NOT NULL,
+    name character(36) NOT NULL,
+    street_address character(36) NOT NULL,
+    locality character(36) NOT NULL,
+    city character(36),
+    state character(36) NOT NULL,
+    country character(36) NOT NULL,
+    area_code character(36) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE atlas_parking.search (
-    id character(36) NOT NULL PRIMARY KEY,
-    search_location_id character(36) NOT NULL REFERENCES atlas_parking.search_location (id),
+    id character(36) NOT NULL PRIMARY KEY DEFAULT atlas_parking.uuid_generate_v4(),
+    lat double precision NOT NULL,
+    lon double precision NOT NULL,
     requestor_id character(36) NOT NULL,
     from_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     to_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -39,7 +48,8 @@ CREATE TABLE atlas_parking.quote (
     bpp_id character(36) NOT NULL,
     bpp_url character varying(255) NOT NULL,
     parking_space_name character varying(255) NOT NULL,
-    parking_space_location_id character(36) NOT NULL,
+    parking_location_id character(36) NOT NULL REFERENCES atlas_parking.parking_location (id) on delete cascade,
+    parking_location_id_from_bpp character(36) NOT NULL,
     fare numeric(30,2) NOT NULL,
     available_spaces integer NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
