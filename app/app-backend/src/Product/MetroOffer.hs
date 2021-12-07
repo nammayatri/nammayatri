@@ -104,13 +104,13 @@ providerToMetroOffer rideSearchId Provider {descriptor, items, locations} = do
 
 itemToMetroRide :: (MonadThrow m, MonadTime m, Log m) => [Location] -> Item -> m MetroRide
 itemToMetroRide locations item = do
-  now <- getCurrentTime
   price <-
     (item.price.value >>= convertDecimalValueToAmount)
       & fromMaybeM (InvalidRequest "Missing price.value in item")
   unless (length item.stops >= 2) $ throwError (InvalidRequest "There must be at least two stops in item")
   let departureStop = head item.stops
   let arrivalStop = last item.stops
+  now <- getCurrentTime
   let schedule =
         filter (isInTheFuture now) $
           zipWith ScheduleElement departureStop.time.schedule.times arrivalStop.time.schedule.times

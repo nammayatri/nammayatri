@@ -66,15 +66,15 @@ updateAttempts attemps rtId = do
     setClause a n Storage.RegistrationToken {..} =
       mconcat [attempts <-. B.val_ a, updatedAt <-. B.val_ n]
 
-deleteByEntitiyId :: Text -> DB.SqlDB ()
-deleteByEntitiyId id_ = do
+deleteByPersonId :: Text -> DB.SqlDB ()
+deleteByPersonId id_ = do
   dbTable <- getDbTable
   DB.delete' dbTable (predicate id_)
   where
     predicate personId Storage.RegistrationToken {..} = entityId ==. B.val_ personId
 
-deleteByEntitiyIdExceptNew :: DBFlow m r => Text -> Id Storage.RegistrationToken -> m ()
-deleteByEntitiyIdExceptNew personId newRT = do
+deleteByPersonIdExceptNew :: DBFlow m r => Text -> Id Storage.RegistrationToken -> m ()
+deleteByPersonIdExceptNew personId newRT = do
   dbTable <- getDbTable
   DB.delete dbTable (predicate personId newRT)
   where

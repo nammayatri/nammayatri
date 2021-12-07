@@ -136,7 +136,7 @@ verify tokenId req = withFlowHandlerAPI $ do
   person <- checkPersonExists entityId
   let isNewPerson = person.isNew
   clearOldRegToken person tokenId
-  let deviceToken = (req.deviceToken) <|> (person.deviceToken)
+  let deviceToken = Just req.deviceToken
   DB.runSqlDBTransaction $ do
     RegistrationToken.setVerified tokenId
     Person.updateDeviceToken person.id deviceToken
@@ -144,8 +144,10 @@ verify tokenId req = withFlowHandlerAPI $ do
       Person.setIsNewFalse person.id
   when isNewPerson $
     Notify.notifyOnRegistration regToken person.id deviceToken
-  decPerson <- decrypt person
-  return $ AuthVerifyRes token (SP.makePersonAPIEntity $ decPerson{deviceToken})
+  updPerson <- Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
+  decPerson <- decrypt updPerson
+  personAPIEntity <- SP.buildPersonAPIEntity decPerson
+  return $ AuthVerifyRes token personAPIEntity
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
@@ -169,18 +171,16 @@ resend :: Id SR.RegistrationToken -> FlowHandler ResendAuthRes
 resend tokenId = withFlowHandlerAPI $ do
   SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   person <- checkPersonExists entityId
-  if attempts > 0
-    then do
-      smsCfg <- smsCfg <$> ask
-      otpSmsTemplate <- otpSmsTemplate <$> ask
-      mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-      countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
-      withLogTag ("personId_" <> entityId) $
-        SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
-          >>= SF.checkRegistrationSmsResult
-      _ <- RegistrationToken.updateAttempts (attempts - 1) id
-      return $ AuthRes tokenId (attempts - 1)
-    else throwError $ AuthBlocked "Attempts limit exceed."
+  unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+  smsCfg <- smsCfg <$> ask
+  otpSmsTemplate <- otpSmsTemplate <$> ask
+  mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  withLogTag ("personId_" <> entityId) $
+    SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
+      >>= SF.checkRegistrationSmsResult
+  _ <- RegistrationToken.updateAttempts (attempts - 1) id
+  return $ AuthRes tokenId (attempts - 1)
 
 clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()
 clearOldRegToken person = RegistrationToken.deleteByPersonIdExceptNew (getId $ person.id)

@@ -1,6 +1,7 @@
 module Product.Vehicle where
 
 import App.Types
+import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.Validation (runRequestValidation)
@@ -22,8 +23,7 @@ createVehicle admin req = withFlowHandlerAPI $ do
   validateVehicle
   vehicle <- API.createVehicle req orgId
   QV.createFlow vehicle
-  vehAPIEntity <- SV.buildVehicleAPIEntity vehicle
-  return $ CreateVehicleRes vehAPIEntity
+  CreateVehicleRes <$> SV.buildVehicleAPIEntity vehicle
   where
     validateVehicle = do
       mVehicle <- QV.findByRegistrationNo $ req.registrationNo
@@ -62,7 +62,8 @@ deleteVehicle admin vehicleId = withFlowHandlerAPI $ do
     QV.findVehicleById vehicleId
       >>= fromMaybeM VehicleDoesNotExist
   unless (vehicle.organizationId == orgId) $ throwError Unauthorized
-  QV.deleteById vehicleId
+  DB.runSqlDBTransaction $
+    QV.deleteById vehicleId
   return Success
 
 getVehicle :: Id SP.Person -> Maybe Text -> Maybe (Id SV.Vehicle) -> FlowHandler CreateVehicleRes
@@ -76,8 +77,7 @@ getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
       QV.findByAnyOf registrationNoM vehicleIdM
         >>= fromMaybeM VehicleDoesNotExist
   hasAccess user vehicle
-  vehAPIEntity <- SV.buildVehicleAPIEntity vehicle
-  return $ CreateVehicleRes vehAPIEntity
+  CreateVehicleRes <$> SV.buildVehicleAPIEntity vehicle
   where
     hasAccess user vehicle =
       when (user.organizationId /= Just (vehicle.organizationId)) $

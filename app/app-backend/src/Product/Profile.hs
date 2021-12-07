@@ -16,7 +16,7 @@ getPersonDetails :: Id Person.Person -> FlowHandler Profile.ProfileRes
 getPersonDetails personId = withFlowHandlerAPI $ do
   person <- QPerson.findById personId >>= fromMaybeM PersonNotFound
   decPerson <- decrypt person
-  pure $ Person.makePersonAPIEntity decPerson
+  Person.buildPersonAPIEntity decPerson
 
 updatePerson :: Id Person.Person -> Profile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
 updatePerson personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do

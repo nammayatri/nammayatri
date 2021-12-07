@@ -65,7 +65,8 @@ createDriver admin req = withFlowHandlerAPI $ do
   inviteSmsTemplate <- inviteSmsTemplate <$> ask
   sendInviteSms smsCfg inviteSmsTemplate (mobCounCode <> mobNum) (org.name)
     >>= SF.checkRegistrationSmsResult
-  return . DriverAPI.OnboardDriverRes $ SP.makePersonAPIEntity decPerson
+  personAPIEntity <- SP.buildPersonAPIEntity decPerson
+  return $ DriverAPI.OnboardDriverRes personAPIEntity
   where
     validateVehicle preq =
       whenM (isJust <$> QVehicle.findByRegistrationNo preq.registrationNo) $
@@ -184,6 +185,7 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
       >>= fromMaybeM PersonDoesNotExist
   unless (driver.organizationId == Just orgId || driver.role == SP.DRIVER) $ throwError Unauthorized
   DB.runSqlDBTransaction $ do
+    whenJust driver.udf1 $ QVehicle.deleteById . Id
     QPerson.deleteById driverId
   return Success
 

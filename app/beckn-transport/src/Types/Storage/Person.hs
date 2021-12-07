@@ -6,8 +6,9 @@ module Types.Storage.Person where
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Storage.DB.Utils (fromBackendRowEnum)
+import Beckn.Types.Error (PersonError (PersonFieldNotPresent))
 import Beckn.Types.Id
-import Beckn.Utils.Common (maskText)
+import Beckn.Utils.Common (MonadFlow, fromMaybeM, maskText)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -165,10 +166,12 @@ data PersonAPIEntity = PersonAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
-makePersonAPIEntity Person {..} =
-  PersonAPIEntity
-    { maskedMobileNumber = maskText <$> mobileNumber,
-      maskedDeviceToken = maybe (FCM.FCMRecipientToken "...") (FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken)) deviceToken,
-      ..
-    }
+buildPersonAPIEntity :: MonadFlow m => DecryptedPerson -> m PersonAPIEntity
+buildPersonAPIEntity Person {..} = do
+  devToken <- deviceToken & fromMaybeM (PersonFieldNotPresent "deviceToken")
+  return
+    PersonAPIEntity
+      { maskedMobileNumber = maskText <$> mobileNumber,
+        maskedDeviceToken = FCM.FCMRecipientToken $ maskText devToken.getFCMRecipientToken,
+        ..
+      }

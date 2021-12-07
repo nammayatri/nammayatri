@@ -101,10 +101,10 @@ updateVehicleRec vehicle = do
         ]
     predicate vid Storage.Vehicle {..} = id ==. B.val_ vid
 
-deleteById :: DBFlow m r => Id Storage.Vehicle -> m ()
+deleteById :: Id Storage.Vehicle -> DB.SqlDB ()
 deleteById vehId = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate vehId)
+  DB.delete' dbTable (predicate vehId)
   where
     predicate vid Storage.Vehicle {..} = id ==. B.val_ vid
 

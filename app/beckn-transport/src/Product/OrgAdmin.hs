@@ -18,7 +18,8 @@ getProfile admin = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   org <- QOrg.findOrganizationById orgId >>= fromMaybeM OrgNotFound
   decAdmin <- decrypt admin
-  return $ makeOrgAdminProfileRes (SP.makePersonAPIEntity decAdmin) (Org.makeOrganizationAPIEntity org)
+  personAPIEntity <- SP.buildPersonAPIEntity decAdmin
+  return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
 
 updateProfile :: SP.Person -> API.UpdateOrgAdminProfileReq -> FlowHandler API.UpdateOrgAdminProfileRes
 updateProfile admin req = withFlowHandlerAPI $ do
@@ -33,7 +34,8 @@ updateProfile admin req = withFlowHandlerAPI $ do
     QPerson.updatePersonRec updAdmin.id updAdmin
   org <- QOrg.findOrganizationById orgId >>= fromMaybeM OrgNotFound
   decUpdAdmin <- decrypt updAdmin
-  return $ makeOrgAdminProfileRes (SP.makePersonAPIEntity decUpdAdmin) (Org.makeOrganizationAPIEntity org)
+  personAPIEntity <- SP.buildPersonAPIEntity decUpdAdmin
+  return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
 
 makeOrgAdminProfileRes :: SP.PersonAPIEntity -> Org.OrganizationAPIEntity -> API.OrgAdminProfileRes
 makeOrgAdminProfileRes SP.PersonAPIEntity {..} org =

@@ -34,7 +34,7 @@ type ResendAuthRes = AuthRes
 ---------- Verify Login --------
 data AuthVerifyReq = AuthVerifyReq
   { otp :: Text,
-    deviceToken :: Maybe FCMRecipientToken
+    deviceToken :: FCMRecipientToken
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

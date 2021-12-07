@@ -34,10 +34,3 @@ newtype SearchRes = SearchRes
   { searchId :: Id SearchRequest
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data SearchRequestInfo = SearchRequestInfo
-  { total :: Maybe Integer,
-    accepted :: Maybe Integer,
-    declined :: Maybe Integer
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)

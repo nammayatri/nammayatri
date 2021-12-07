@@ -183,7 +183,7 @@ mkAuthVerifyReq :: Reg.AuthVerifyReq
 mkAuthVerifyReq =
   Reg.AuthVerifyReq
     { otp = "7891",
-      deviceToken = Just $ FCMRecipientToken "AN_DEV_TOKEN"
+      deviceToken = FCMRecipientToken "AN_DEV_TOKEN"
     }
 
 initiateAuth :: ClientM Reg.AuthRes

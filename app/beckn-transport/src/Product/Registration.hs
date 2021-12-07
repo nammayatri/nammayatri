@@ -24,7 +24,7 @@ import Utils.Common
 import qualified Utils.Notifications as Notify
 
 authHitsCountKey :: SP.Person -> Text
-authHitsCountKey person = "Registration:auth" <> getId person.id <> ":hitsCount"
+authHitsCountKey person = "BPP:Registration:auth" <> getId person.id <> ":hitsCount"
 
 auth :: AuthReq -> FlowHandler AuthRes
 auth req = withFlowHandlerAPI $ do
@@ -85,7 +85,7 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
       }
 
 verifyHitsCountKey :: Id SP.Person -> Text
-verifyHitsCountKey id = "Registration:verify:" <> getId id <> ":hitsCount"
+verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
 verify :: Id SR.RegistrationToken -> AuthVerifyReq -> FlowHandler AuthVerifyRes
 verify tokenId req = withFlowHandlerAPI $ do
@@ -94,22 +94,22 @@ verify tokenId req = withFlowHandlerAPI $ do
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
-  if authValueHash == req.otp
-    then do
-      person <- checkPersonExists entityId
-      let isNewPerson = person.isNew
-      clearOldRegToken person tokenId
-      let deviceToken = (req.deviceToken) <|> (person.deviceToken)
-      DB.runSqlDBTransaction $ do
-        QR.setVerified tokenId
-        QP.updateDeviceToken person.id deviceToken
-        when isNewPerson $
-          QP.setIsNewFalse person.id
-      when isNewPerson $
-        Notify.notifyOnRegistration regToken person.id deviceToken
-      decPerson <- decrypt person
-      return $ AuthVerifyRes token (SP.makePersonAPIEntity $ decPerson{deviceToken})
-    else throwError InvalidAuthData
+  unless (authValueHash == req.otp) $ throwError InvalidAuthData
+  person <- checkPersonExists entityId
+  let isNewPerson = person.isNew
+  clearOldRegToken person tokenId
+  let deviceToken = Just req.deviceToken
+  DB.runSqlDBTransaction $ do
+    QR.setVerified tokenId
+    QP.updateDeviceToken person.id deviceToken
+    when isNewPerson $
+      QP.setIsNewFalse person.id
+  when isNewPerson $
+    Notify.notifyOnRegistration regToken person.id deviceToken
+  updPers <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
+  decPerson <- decrypt updPers
+  personAPIEntity <- SP.buildPersonAPIEntity decPerson
+  return $ AuthVerifyRes token personAPIEntity
   where
     checkForExpiry authExpiry updatedAt =
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
@@ -127,21 +127,19 @@ resend :: Id SR.RegistrationToken -> FlowHandler ResendAuthRes
 resend tokenId = withFlowHandlerAPI $ do
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
   person <- checkPersonExists entityId
-  if attempts > 0
-    then do
-      smsCfg <- smsCfg <$> ask
-      otpSmsTemplate <- otpSmsTemplate <$> ask
-      mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-      countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
-      withLogTag ("personId_" <> entityId) $
-        SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
-          >>= SF.checkRegistrationSmsResult
-      _ <- QR.updateAttempts (attempts - 1) id
-      return $ AuthRes tokenId (attempts - 1)
-    else throwError $ AuthBlocked "Limit exceeded."
+  unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
+  smsCfg <- smsCfg <$> ask
+  otpSmsTemplate <- otpSmsTemplate <$> ask
+  mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  withLogTag ("personId_" <> entityId) $
+    SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
+      >>= SF.checkRegistrationSmsResult
+  _ <- QR.updateAttempts (attempts - 1) id
+  return $ AuthRes tokenId (attempts - 1)
 
 clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()
-clearOldRegToken person = QR.deleteByEntitiyIdExceptNew (getId $ person.id)
+clearOldRegToken person = QR.deleteByPersonIdExceptNew (getId $ person.id)
 
 logout :: Id SP.Person -> FlowHandler APISuccess
 logout personId = withFlowHandlerAPI $ do
@@ -154,6 +152,6 @@ logout personId = withFlowHandlerAPI $ do
     QP.findPersonById personId
       >>= fromMaybeM PersonNotFound
   DB.runSqlDBTransaction $ do
-    QP.updatePersonRec (uperson.id) uperson {SP.deviceToken = Nothing}
-    QR.deleteByEntitiyId $ getId personId
+    QP.updateDeviceToken uperson.id Nothing
+    QR.deleteByPersonId $ getId personId
   pure Success
