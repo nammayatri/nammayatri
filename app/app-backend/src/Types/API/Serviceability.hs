@@ -1,11 +1,11 @@
 module Types.API.Serviceability where
 
+import Beckn.Types.MapSearch (LatLong)
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
-import Types.Common
 
 newtype ServiceabilityReq = ServiceabilityReq
-  { location :: GPS
+  { location :: LatLong
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -15,8 +15,8 @@ newtype ServiceabilityRes = ServiceabilityRes
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 data RideServiceabilityReq = RideServiceabilityReq
-  { origin :: GPS,
-    destination :: GPS
+  { origin :: LatLong,
+    destination :: LatLong
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

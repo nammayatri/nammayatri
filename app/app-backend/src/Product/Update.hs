@@ -1,6 +1,7 @@
 module Product.Update where
 
 import App.Types
+import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Cabs.API.OnUpdate as OnUpdate
@@ -49,7 +50,7 @@ processOrder (OnUpdate.TripAssigned taOrder) = do
           otp = fulfillment.otp
           driverName = fulfillment.agent.name
           driverMobileNumber = fulfillment.agent.phone
-          driverRating = fulfillment.agent.rating
+          driverRating = realToFrac <$> fulfillment.agent.rating
           driverRegisteredAt = fulfillment.agent.registered_at
           vehicleNumber = fulfillment.vehicle.registration
           vehicleColor = fulfillment.vehicle.color
@@ -87,7 +88,7 @@ processOrder (OnUpdate.RideCompleted rcOrder) = do
   let updRide =
         ride{status = SRide.COMPLETED,
              totalFare = Just $ realToFrac rcOrder.payment.params.amount,
-             chargeableDistance = Just rcOrder.fulfillment.chargeable_distance
+             chargeableDistance = Just $ realToFrac rcOrder.fulfillment.chargeable_distance
             }
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.COMPLETED

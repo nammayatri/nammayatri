@@ -5,14 +5,12 @@ import Beckn.Utils.Example
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
-import Data.Time
-import EulerHS.Prelude hiding (id, (.=))
+import EulerHS.Prelude hiding (id, state, (.=))
 import GHC.Exts (fromList)
 
 data RideStartedOrder = RideStartedOrder
   { id :: Text,
-    fulfillment :: RideStartedFulfillment,
-    updated_at :: UTCTime
+    fulfillment :: RideStartedFulfillment
   }
   deriving (Generic, Show)
 
@@ -21,24 +19,21 @@ instance ToJSON RideStartedOrder where
     A.Object $
       "id" .= id
         <> "fulfillment" .= fulfillment
-        <> "updated_at" .= updated_at
-        <> "status" .= STARTED
+        <> "state" .= STARTED
 
 instance FromJSON RideStartedOrder where
   parseJSON = withObject "RideStartedOrder" $ \obj -> do
-    status <- obj .: "status"
-    unless (status == STARTED) $ fail "Wrong status."
+    state <- obj .: "state"
+    unless (state == STARTED) $ fail "Wrong state."
     RideStartedOrder
       <$> obj .: "id"
       <*> obj .: "fulfillment"
-      <*> obj .: "updated_at"
 
 instance ToSchema RideStartedOrder where
   declareNamedSchema _ = do
     id <- declareSchemaRef (Proxy :: Proxy Text)
     fulfillment <- declareSchemaRef (Proxy :: Proxy RideStartedFulfillment)
-    updated_at <- declareSchemaRef (Proxy :: Proxy UTCTime)
-    status <- declareSchemaRef (Proxy :: Proxy RideOrderStatus)
+    state <- declareSchemaRef (Proxy :: Proxy RideOrderStatus)
     return $
       NamedSchema (Just "RideStartedOrder") $
         mempty
@@ -47,17 +42,15 @@ instance ToSchema RideStartedOrder where
             L..~ fromList
               [ ("id", id),
                 ("fulfillment", fulfillment),
-                ("updated_at", updated_at),
-                ("status", status)
+                ("state", state)
               ]
-          & required L..~ ["id", "fulfillment", "updated_at", "status"]
+          & required L..~ ["id", "fulfillment", "updated_at", "state"]
 
 instance Example RideStartedOrder where
   example =
     RideStartedOrder
       { id = "ride_booking_id",
-        fulfillment = example,
-        updated_at = example
+        fulfillment = example
       }
 
 newtype RideStartedFulfillment = RideStartedFulfillment

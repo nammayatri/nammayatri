@@ -3,6 +3,7 @@
 module Types.Storage.SearchReqLocation where
 
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong (..))
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
@@ -50,7 +51,7 @@ fieldEMod =
 
 data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
   { address :: Common.Address,
-    gps :: Common.GPS
+    gps :: LatLong
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -68,9 +69,9 @@ makeSearchReqLocationAPIEntity loc = do
             state = ""
           }
       gps =
-        Common.GPS
-          { lat = show loc.lat,
-            lon = show loc.long
+        LatLong
+          { lat = loc.lat,
+            lon = loc.long
           }
   SearchReqLocationAPIEntity
     { ..

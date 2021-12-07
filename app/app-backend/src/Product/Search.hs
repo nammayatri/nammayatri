@@ -3,6 +3,7 @@
 module Product.Search where
 
 import App.Types
+import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
@@ -62,11 +63,11 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     QSearchRequest.create searchRequest
   bapURIs <- asks (.bapSelfURIs)
   fork "search" . withRetry $ do
-    fork "search 0.8" $ do
+    fork "search cabs" $ do
       context <- buildCabsContext txnId bapURIs.cabs Nothing
       let intent = mkIntent req now distance
       ExternalAPI.search (Common.BecknReq context $ Search.SearchMessage intent)
-    fork "search 0.9" $ do
+    fork "search metro" $ do
       contextMig <- buildContextMetro Core9.SEARCH txnId bapURIs.metro Nothing
       intentMig <- mkIntentMig req
       ExternalAPI.searchMetro (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
@@ -98,7 +99,7 @@ type SearchCbFlow m r = (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Second
 
 searchCbService :: SearchCbFlow m r => Common.Context -> OnSearch.Catalog -> m ()
 searchCbService context catalog = do
-  let searchRequestId = Id $ context.transaction_id --searchRequestId $ service.id
+  let searchRequestId = Id $ context.transaction_id
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
   bpp <-
     Org.findOrganizationByCallbackUri context.bpp_uri Org.PROVIDER
@@ -154,10 +155,6 @@ buildQuote ::
 buildQuote searchRequest bppOrg provider item = do
   now <- getCurrentTime
   uid <- generateGUID
-
-  -- There is loss of data in coversion Product -> Item -> Product
-  -- In api exchange between transporter and app-backend
-  -- TODO: fit public transport, where searchRequest.startTime != product.startTime, etc
   return
     SQuote.Quote
       { id = uid,
@@ -166,7 +163,7 @@ buildQuote searchRequest bppOrg provider item = do
         estimatedFare = realToFrac item.estimated_price.value,
         estimatedTotalFare = realToFrac item.discounted_price.value,
         discount = realToFrac <$> (item.discount <&> (.value)),
-        distanceToNearestDriver = item.nearest_driver_distance,
+        distanceToNearestDriver = realToFrac item.nearest_driver_distance,
         providerMobileNumber = provider.tags.contacts,
         providerName = provider.name,
         providerCompletedRidesCount = provider.tags.rides_completed,
@@ -177,17 +174,26 @@ buildQuote searchRequest bppOrg provider item = do
 
 mkIntent :: API.SearchReq -> UTCTime -> Double -> Search.Intent
 mkIntent req startTime distance = do
-  let tags = Search.Tags {distance = distance}
+  let tags = Search.Tags {distance = realToFrac distance}
       startLocation =
         Search.StartInfo
-          { gps =
-              Search.Gps
-                { lat = req.origin.gps.lat,
-                  lon = req.origin.gps.lon
-                },
+          { location =
+              Search.Location $
+                Search.Gps
+                  { lat = req.origin.gps.lat,
+                    lon = req.origin.gps.lon
+                  },
             time = Search.Time startTime
           }
-      endLocation = Search.StopInfo {gps = Search.Gps {lat = req.destination.gps.lat, lon = req.destination.gps.lon}}
+      endLocation =
+        Search.StopInfo
+          { location =
+              Search.Location $
+                Search.Gps
+                  { lat = req.destination.gps.lat,
+                    lon = req.destination.gps.lon
+                  }
+          }
       fulfillment = Search.FulFillmentInfo {start = startLocation, end = endLocation}
   Search.Intent
     { ..

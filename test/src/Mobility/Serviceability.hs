@@ -2,6 +2,7 @@
 
 module Mobility.Serviceability where
 
+import Beckn.Types.MapSearch (LatLong (..))
 import Common
 import EulerHS.Prelude
 import Mobility.Fixtures
@@ -10,17 +11,16 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
 import Types.API.Serviceability
-import qualified "app-backend" Types.Common as AppCommon
 import Utils
 
-ernakulamLocation :: AppCommon.GPS
-ernakulamLocation = AppCommon.GPS 10.0739 76.2733
+ernakulamLocation :: LatLong
+ernakulamLocation = LatLong 10.0739 76.2733
 
-keralaLocation :: AppCommon.GPS
-keralaLocation = AppCommon.GPS 10.5449 76.4356
+keralaLocation :: LatLong
+keralaLocation = LatLong 10.5449 76.4356
 
-karnatakaLocation :: AppCommon.GPS
-karnatakaLocation = AppCommon.GPS 12.4725 75.8328
+karnatakaLocation :: LatLong
+karnatakaLocation = LatLong 12.4725 75.8328
 
 verifyServiceability :: (Eq a, Show a) => a -> Either ClientError a -> IO ()
 verifyServiceability expectedValue = \case

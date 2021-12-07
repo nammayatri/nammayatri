@@ -110,7 +110,7 @@ buildTripAssignedUpdatePayload ride org = do
         OnUpdate.Agent
           { name = org.name,
             phone = mobileNumber,
-            rating = driver.rating,
+            rating = realToFrac <$> driver.rating,
             registered_at = driver.createdAt
           }
       vehicle =
@@ -130,7 +130,6 @@ buildTripAssignedUpdatePayload ride org = do
     OnUpdate.TripAssigned
       OnUpdate.TripAssignedOrder
         { id = ride.bookingId.getId,
-          updated_at = ride.updatedAt,
           ..
         }
 
@@ -147,7 +146,6 @@ buildRideStartedUpdatePayload ride = do
     OnUpdate.RideStarted
       OnUpdate.RideStartedOrder
         { id = ride.bookingId.getId,
-          updated_at = ride.updatedAt,
           ..
         }
 
@@ -157,7 +155,7 @@ buildRideCompletedUpdatePayload ::
   m OnUpdate.RideOrder
 buildRideCompletedUpdatePayload ride = do
   totalFare <- realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
-  chargeableDistance <- ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
+  chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
   let fulfillment =
         OnUpdate.RideCompletedFulfillment
           { id = ride.id.getId,
@@ -168,7 +166,6 @@ buildRideCompletedUpdatePayload ride = do
     OnUpdate.RideCompleted
       OnUpdate.RideCompletedOrder
         { id = ride.bookingId.getId,
-          updated_at = ride.updatedAt,
           ..
         }
 

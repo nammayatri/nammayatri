@@ -6,7 +6,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import EulerHS.Prelude
 import qualified Types.API.Location as Location
-import qualified Types.Common as Common
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Person as Person
 import Utils.Common
@@ -18,13 +17,8 @@ getDistance ::
   ( CoreMetrics m,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
-  Common.GPS ->
-  Common.GPS ->
+  MapSearch.LatLong ->
+  MapSearch.LatLong ->
   m (Maybe Double)
 getDistance pickupLoc dropLoc = do
-  let pickupMapPoint = mkMapPoint pickupLoc
-      dropMapPoint = mkMapPoint dropLoc
-  MapSearch.getDistanceMb (Just MapSearch.CAR) [pickupMapPoint, dropMapPoint]
-
-mkMapPoint :: Common.GPS -> MapSearch.LatLong
-mkMapPoint (Common.GPS lat lon) = MapSearch.LatLong lat lon
+  MapSearch.getDistanceMb (Just MapSearch.CAR) [pickupLoc, dropLoc]

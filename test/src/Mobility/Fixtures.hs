@@ -6,6 +6,7 @@ import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong (..))
 import Data.Time
 import EulerHS.Prelude
 import Servant hiding (Context)
@@ -48,8 +49,8 @@ address =
 searchReq :: AppBESearch.SearchReq
 searchReq =
   AppBESearch.SearchReq
-    { origin = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ AppCommon.GPS 10.0739 76.2733,
-      destination = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ AppCommon.GPS 10.5449 76.4356
+    { origin = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ LatLong 10.0739 76.2733,
+      destination = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ LatLong 10.5449 76.4356
     }
 
 bapTransporterName :: Text

@@ -128,8 +128,7 @@ onConfirmCallback rideBooking searchRequest transporterOrg = do
       OnConfirm.Order
         { id = rideBooking.id.getId,
           items = [OnConfirm.OrderItem $ rideBooking.quoteId.getId],
-          payment = OnConfirm.Payment (OnConfirm.Params $ realToFrac rideBooking.estimatedTotalFare),
-          provider = OnConfirm.Provider transporterOrg.name
+          payment = OnConfirm.Payment (OnConfirm.Params $ realToFrac rideBooking.estimatedTotalFare)
         }
 
 driverPoolKey :: Id SRB.RideBooking -> Text

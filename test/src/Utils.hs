@@ -105,10 +105,14 @@ mkMobilityClients bapUrl bppUrl = do
 
 runAppFlow :: Text -> FlowR BecknApp.AppEnv a -> IO a
 runAppFlow tag flow = do
-  (appEnv :: BecknApp.AppEnv) <- BecknApp.buildAppEnv =<< readDhallConfig "../dhall-configs/dev/app-backend.dhall"
-  let loggerRt = getEulerLoggerRuntime (Just "Test_App_flow") defaultTestLoggerConfig
-  R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
-    runFlowR flowRt appEnv $ withLogTag tag flow
+  appCfg <- readDhallConfig "../dhall-configs/dev/app-backend.dhall"
+  let updLogCfg =
+        appCfg.loggerConfig{logToFile = False,
+                            logToConsole = False
+                           }
+      updAppCfg = appCfg{loggerConfig = updLogCfg}
+  (appEnv :: BecknApp.AppEnv) <- BecknApp.buildAppEnv updAppCfg
+  runFlow tag appEnv flow
 
 runTransporterFlow :: Text -> FlowR BecknTransport.AppEnv a -> IO a
 runTransporterFlow tag flow = do

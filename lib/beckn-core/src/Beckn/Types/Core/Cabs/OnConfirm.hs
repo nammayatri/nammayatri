@@ -5,7 +5,6 @@ module Beckn.Types.Core.Cabs.OnConfirm
 where
 
 import Beckn.Types.Core.Cabs.OnConfirm.Order as Reexport
-import Beckn.Types.Core.Cabs.OnConfirm.Provider as Reexport
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 

@@ -1,21 +1,22 @@
 module Beckn.Types.Core.Cabs.Common.Payment
   ( Payment (..),
     Params (..),
+    module Reexport,
   )
 where
 
+import Beckn.Types.Core.Cabs.Common.DecimalValue as Reexport
 import Beckn.Utils.Example
-import Beckn.Utils.JSON
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, (.=))
 
 newtype Payment = Payment
   { params :: Params
   }
-  deriving (Generic, Show, ToSchema)
+  deriving (Generic, Show, ToSchema, FromJSON, ToJSON)
 
 newtype Params = Params
-  { amount :: Double
+  { amount :: DecimalValue
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
 
@@ -24,12 +25,6 @@ instance Example Params where
     Params
       { amount = 123
       }
-
-instance FromJSON Payment where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON Payment where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
 instance Example Payment where
   example =

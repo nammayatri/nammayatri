@@ -1,18 +1,22 @@
-module Beckn.Types.Core.Cabs.OnUpdate.RideOrder.TripAssignedOrder where
+module Beckn.Types.Core.Cabs.OnUpdate.RideOrder.TripAssignedOrder
+  ( module Beckn.Types.Core.Cabs.OnUpdate.RideOrder.TripAssignedOrder,
+    module Reexport,
+  )
+where
 
+import Beckn.Types.Core.Cabs.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Cabs.OnUpdate.RideOrder.RideOrderStatus (RideOrderStatus (TRIP_ASSIGNED))
 import Beckn.Utils.Example
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name)
 import Data.Time
-import EulerHS.Prelude hiding (id, (.=))
+import EulerHS.Prelude hiding (id, state, (.=))
 import GHC.Exts (fromList)
 
 data TripAssignedOrder = TripAssignedOrder
   { id :: Text,
-    fulfillment :: TripAssignedFulfillment,
-    updated_at :: UTCTime
+    fulfillment :: TripAssignedFulfillment
   }
   deriving (Generic, Show)
 
@@ -21,24 +25,22 @@ instance ToJSON TripAssignedOrder where
     A.Object $
       "id" .= id
         <> "fulfillment" .= fulfillment
-        <> "updated_at" .= updated_at
-        <> "status" .= TRIP_ASSIGNED
+        <> "state" .= TRIP_ASSIGNED
 
 instance FromJSON TripAssignedOrder where
   parseJSON = withObject "TripAssignedOrder" $ \obj -> do
-    status <- obj .: "status"
-    unless (status == TRIP_ASSIGNED) $ fail "Wrong status."
+    state <- obj .: "state"
+    unless (state == TRIP_ASSIGNED) $ fail "Wrong state."
     TripAssignedOrder
       <$> obj .: "id"
       <*> obj .: "fulfillment"
-      <*> obj .: "updated_at"
 
 instance ToSchema TripAssignedOrder where
   declareNamedSchema _ = do
     id <- declareSchemaRef (Proxy :: Proxy Text)
     fulfillment <- declareSchemaRef (Proxy :: Proxy TripAssignedFulfillment)
     updated_at <- declareSchemaRef (Proxy :: Proxy UTCTime)
-    status <- declareSchemaRef (Proxy :: Proxy RideOrderStatus)
+    state <- declareSchemaRef (Proxy :: Proxy RideOrderStatus)
     return $
       NamedSchema (Just "TripAssignedOrder") $
         mempty
@@ -48,16 +50,15 @@ instance ToSchema TripAssignedOrder where
               [ ("id", id),
                 ("fulfillment", fulfillment),
                 ("updated_at", updated_at),
-                ("status", status)
+                ("state", state)
               ]
-          & required L..~ ["id", "fulfillment", "updated_at", "status"]
+          & required L..~ ["id", "fulfillment", "updated_at", "state"]
 
 instance Example TripAssignedOrder where
   example =
     TripAssignedOrder
       { id = "ride_booking_id",
-        fulfillment = example,
-        updated_at = example
+        fulfillment = example
       }
 
 data TripAssignedFulfillment = TripAssignedFulfillment
@@ -80,7 +81,7 @@ instance Example TripAssignedFulfillment where
 data Agent = Agent
   { name :: Text,
     phone :: Text,
-    rating :: Maybe Double,
+    rating :: Maybe DecimalValue,
     registered_at :: UTCTime
   }
   deriving (Eq, Generic, Show, FromJSON, ToJSON, ToSchema)

@@ -1,6 +1,7 @@
 module Product.Confirm (confirm, onConfirm) where
 
 import App.Types
+import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack

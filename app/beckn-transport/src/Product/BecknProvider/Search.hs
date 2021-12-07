@@ -67,8 +67,8 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _
         let dropOff = intent.fulfillment.end
         let startTime = pickup.time.timestamp
         validity <- getValidTime now startTime
-        fromLocation <- buildFromLocation now pickup
-        toLocation <- buildFromLocation now dropOff
+        fromLocation <- buildFromStop now pickup
+        toLocation <- buildFromStop now dropOff
         let bapOrgId = Id subscriber.subscriber_id
         uuid <- L.generateGUID
         let bapUri = req.context.bap_uri
@@ -80,8 +80,8 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _
         ExternalAPI.withCallback' withRetry transporter "search" OnSearch.onSearchAPI context callbackUrl $
           onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
   where
-    buildFromLocation now location = do
-      let mgps = location.gps
+    buildFromStop now stop = do
+      let mgps = stop.location.gps
       uuid <- Id <$> L.generateGUID
       pure $
         Location.SearchReqLocation
@@ -235,5 +235,5 @@ buildProvider org quotes = do
           estimated_price = OnSearch.Price $ realToFrac quote.estimatedFare,
           discount = OnSearch.Price . realToFrac <$> quote.discount,
           discounted_price = OnSearch.Price $ realToFrac quote.estimatedTotalFare,
-          nearest_driver_distance = quote.distanceToNearestDriver
+          nearest_driver_distance = realToFrac quote.distanceToNearestDriver
         }

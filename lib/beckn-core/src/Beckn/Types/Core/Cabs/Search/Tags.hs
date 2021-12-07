@@ -1,11 +1,16 @@
-module Beckn.Types.Core.Cabs.Search.Tags (Tags (..)) where
+module Beckn.Types.Core.Cabs.Search.Tags
+  ( Tags (..),
+    module Reexport,
+  )
+where
 
+import Beckn.Types.Core.Cabs.Common.DecimalValue as Reexport
 import Beckn.Utils.Example
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 newtype Tags = Tags
-  { distance :: Double
+  { distance :: DecimalValue
   }
   deriving (Eq, Generic, Show, FromJSON, ToJSON, ToSchema)
 

@@ -91,31 +91,25 @@ spec = do
         trb.status `shouldBe` TRB.CONFIRMED
         return $ Just trb
 
-      liftIO $ print ("Pepega" :: Text)
-
       rideInfo <-
         poll . callBPP $
           getNotificationInfo tRideBooking.id driverToken
             <&> (.rideRequest)
       rideInfo.bookingId `shouldBe` tRideBooking.id
-      liftIO $ print ("Pepega1" :: Text)
 
       -- Driver Accepts a ride
       void . callBPP $
         rideRespond tRideBooking.id driverToken $
           RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
-      liftIO $ print ("Pepega2" :: Text)
 
       tRide <- poll $ do
         tRide <- getBPPRide tRideBooking.id
         tRide.status `shouldBe` TRide.NEW
         return $ Just tRide
-      liftIO $ print ("Pepega3" :: Text)
 
       void . callBPP $
         rideStart driverToken tRide.id $
           buildStartRideReq tRide.otp
-      liftIO $ print ("Pepega4" :: Text)
 
       void . poll $ do
         inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
@@ -124,7 +118,6 @@ spec = do
         let Just inprogressRide = inprogressRBStatusResult.ride
         inprogressRide.status `shouldBe` BRide.INPROGRESS
         return $ Just ()
-      liftIO $ print ("Pepega5" :: Text)
 
       void . callBPP $ rideEnd driverToken tRide.id
 
@@ -135,7 +128,6 @@ spec = do
         let Just completedRide = completedRBStatusResult.ride
         completedRide.status `shouldBe` BRide.COMPLETED
         return $ Just completedRide.id
-      liftIO $ print ("Pepega6" :: Text)
 
       -- Leave feedback
       void . callBAP $ callAppFeedback 5 completedRideId

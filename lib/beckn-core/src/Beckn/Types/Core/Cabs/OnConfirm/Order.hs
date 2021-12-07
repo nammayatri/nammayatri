@@ -5,14 +5,12 @@ module Beckn.Types.Core.Cabs.OnConfirm.Order
 where
 
 import Beckn.Types.Core.Cabs.Common.Payment as Reexport
-import Beckn.Types.Core.Cabs.OnConfirm.Provider
 import Beckn.Utils.Example
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, id, state)
 
 data Order = Order
   { id :: Text,
-    provider :: Provider,
     items :: [OrderItem],
     payment :: Payment
   }
@@ -27,7 +25,6 @@ instance Example Order where
   example =
     Order
       { id = "ride_booking_id",
-        provider = example,
         items = [OrderItem "quote_id"],
         payment = example
       }

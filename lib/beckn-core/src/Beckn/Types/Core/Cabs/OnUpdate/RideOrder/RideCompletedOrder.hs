@@ -10,15 +10,13 @@ import Beckn.Utils.Example
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
-import Data.Time
-import EulerHS.Prelude hiding (id, (.=))
+import EulerHS.Prelude hiding (id, state, (.=))
 import GHC.Exts (fromList)
 
 data RideCompletedOrder = RideCompletedOrder
   { id :: Text,
     fulfillment :: RideCompletedFulfillment,
-    payment :: Payment,
-    updated_at :: UTCTime
+    payment :: Payment
   }
   deriving (Generic, Show)
 
@@ -28,26 +26,23 @@ instance ToJSON RideCompletedOrder where
       "id" .= id
         <> "fulfillment" .= fulfillment
         <> "payment" .= payment
-        <> "updated_at" .= updated_at
-        <> "status" .= COMPLETED
+        <> "state" .= COMPLETED
 
 instance FromJSON RideCompletedOrder where
   parseJSON = withObject "RideCompletedOrder" $ \obj -> do
-    status <- obj .: "status"
-    unless (status == COMPLETED) $ fail "Wrong status."
+    state <- obj .: "state"
+    unless (state == COMPLETED) $ fail "Wrong state."
     RideCompletedOrder
       <$> obj .: "id"
       <*> obj .: "fulfillment"
       <*> obj .: "payment"
-      <*> obj .: "updated_at"
 
 instance ToSchema RideCompletedOrder where
   declareNamedSchema _ = do
     id <- declareSchemaRef (Proxy :: Proxy Text)
     fulfillment <- declareSchemaRef (Proxy :: Proxy RideCompletedFulfillment)
     payment <- declareSchemaRef (Proxy :: Proxy Payment)
-    updated_at <- declareSchemaRef (Proxy :: Proxy UTCTime)
-    status <- declareSchemaRef (Proxy :: Proxy RideOrderStatus)
+    state <- declareSchemaRef (Proxy :: Proxy RideOrderStatus)
     return $
       NamedSchema (Just "RideCompletedOrder") $
         mempty
@@ -57,23 +52,21 @@ instance ToSchema RideCompletedOrder where
               [ ("id", id),
                 ("fulfillment", fulfillment),
                 ("payment", payment),
-                ("updated_at", updated_at),
-                ("status", status)
+                ("state", state)
               ]
-          & required L..~ ["id", "fulfillment", "payment", "updated_at", "status"]
+          & required L..~ ["id", "fulfillment", "payment", "state"]
 
 instance Example RideCompletedOrder where
   example =
     RideCompletedOrder
       { id = "ride_booking_id",
         fulfillment = example,
-        payment = example,
-        updated_at = example
+        payment = example
       }
 
 data RideCompletedFulfillment = RideCompletedFulfillment
   { id :: Text,
-    chargeable_distance :: Double
+    chargeable_distance :: DecimalValue
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 

@@ -6,6 +6,7 @@ where
 
 import Beckn.Types.Core.Cabs.Search.Gps as Reexport
 import Beckn.Types.Core.Cabs.Search.Intent as Reexport
+import Beckn.Types.Core.Cabs.Search.Location as Reexport
 import Beckn.Types.Core.Cabs.Search.StartInfo as Reexport
 import Beckn.Types.Core.Cabs.Search.StopInfo as Reexport
 import Beckn.Types.Core.Cabs.Search.Tags as Reexport

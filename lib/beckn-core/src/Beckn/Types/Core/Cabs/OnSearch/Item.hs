@@ -14,6 +14,6 @@ data Item = Item
     estimated_price :: Price,
     discount :: Maybe Price,
     discounted_price :: Price,
-    nearest_driver_distance :: Double
+    nearest_driver_distance :: DecimalValue
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
