@@ -11,7 +11,6 @@ data BookingAPIEntity = BookingAPIEntity
     additionalInfo :: Text,
     parkingSpaceName :: Text,
     parkingSpaceLocation :: ParkingLocationAPIEntity,
-    parkingSupportNumber :: Text,
     fare :: Amount,
     fromDate :: UTCTime,
     toDate :: UTCTime,

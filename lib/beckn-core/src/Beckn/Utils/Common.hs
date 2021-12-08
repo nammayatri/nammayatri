@@ -5,7 +5,7 @@ module Beckn.Utils.Common
   )
 where
 
-import Beckn.Prelude as Common (everyPossibleVariant, foldWIndex, identity, showT)
+import Beckn.Prelude as Common (everyPossibleVariant, foldWIndex, identity, show)
 import Beckn.Types.Common as Common
 import Beckn.Types.Core.Ack as Common
 import Beckn.Types.Error.BaseError.HTTPError as Common

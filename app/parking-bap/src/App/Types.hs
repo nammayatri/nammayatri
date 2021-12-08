@@ -28,7 +28,9 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     domainVersion :: Text,
     hostName :: Text,
-    registryUrl :: BaseUrl
+    registryUrl :: BaseUrl,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool
   }
   deriving (Generic, FromDhall)
 

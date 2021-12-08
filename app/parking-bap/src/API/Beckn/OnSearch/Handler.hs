@@ -36,7 +36,7 @@ handler _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     Right msg -> do
       let catalog = msg.catalog
       searchCbService req catalog
-    Left err -> logTagError "on_search req" $ "on_search error: " <> showT err
+    Left err -> logTagError "on_search req" $ "on_search error: " <> show err
   return Ack
 
 searchCbService :: EsqDBFlow m r => BecknCallbackReq OnSearch.OnSearchCatalog -> Catalog.Catalog -> m ()
@@ -46,8 +46,6 @@ searchCbService req catalog = do
   bppUrl <- maybe (throwError $ InvalidRequest "Missing bpp url") pure req.context.bpp_uri
   bppId <- maybe (throwError $ InvalidRequest "Missing bpp id") pure req.context.bpp_id
   case Catalog.bpp_providers catalog of
-    Nothing -> throwError $ InvalidRequest "Missing provider"
-    Just [] -> throwError $ InvalidRequest "Missing provider"
     Just providers -> do
       now <- getCurrentTime
       parkingLocations <- do
@@ -64,6 +62,7 @@ searchCbService req catalog = do
       Esq.runTransaction $ do
         traverse_ QParkingLocation.create parkingLocations
         traverse_ QQuote.create quotes
+    _ -> throwError $ InvalidRequest "Missing provider"
 
 buildQuote ::
   MonadFlow m =>
@@ -77,33 +76,30 @@ buildQuote ::
 buildQuote now searchId bppUrl bppId parkingLocations item = do
   decimalValue <-
     item.price.listed_value
-      & fromMaybeM (InternalError "Unable to parse price")
+      & fromMaybeM (InvalidRequest "Unable to parse price")
   fare <-
     decimalValue
       & DecimalValue.convertDecimalValueToAmount
-      & fromMaybeM (InternalError "Unable to parse price")
+      & fromMaybeM (InvalidRequest "Unable to parse price")
   parkingSpaceName <-
     item.descriptor.name
-      & fromMaybeM (InternalError "Unable to parse parking space name")
+      & fromMaybeM (InvalidRequest "Unable to parse parking space name")
   availableSpaces <-
     item.quantity.available >>= (.count) <&> fromInteger
-      & fromMaybeM (InternalError "Unable to parse available spaces")
-  quoteId <- generateGUID
+      & fromMaybeM (InvalidRequest "Unable to parse available spaces")
   parkingLocation <-
     find (\pl -> pl.idFromBpp == item.location_id) parkingLocations
-      & fromMaybeM (InternalError "Unable to parse parking location id")
+      & fromMaybeM (InvalidRequest "Unable to parse parking location id")
+  bppItemId <-
+    item.id & fromMaybeM (InvalidRequest "Parking space id is not present.")
+  quoteId <- generateGUID
   return
     DQuote.Quote
       { id = quoteId,
-        searchId = searchId,
-        bppId = bppId,
-        bppUrl = bppUrl,
-        parkingSpaceName = parkingSpaceName,
         parkingLocationId = parkingLocation.id,
         parkingLocationIdFromBpp = item.location_id,
-        fare = fare,
-        availableSpaces = availableSpaces,
-        createdAt = now
+        createdAt = now,
+        ..
       }
 
 buildParkingLocation :: MonadGuid m => UTCTime -> Location.Location -> m DParkingLocation.ParkingLocation

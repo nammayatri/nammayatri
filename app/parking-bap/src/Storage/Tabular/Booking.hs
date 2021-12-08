@@ -33,9 +33,9 @@ mkPersist
       additionalInfo Text
       bppId Text
       bppUrl Text
+      bppItemId Text
       parkingSpaceName Text
       parkingSpaceLocationId Text
-      parkingSupportNumber Text
       fare Amount
       fromDate UTCTime
       toDate UTCTime

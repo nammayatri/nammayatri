@@ -44,4 +44,6 @@ in
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
 , registryUrl = common.registryUrl
+, migrationPath = None Text
+, autoMigrate = common.autoMigrate
 }

@@ -13,6 +13,7 @@ data Quote = Quote
     searchId :: Id Search,
     bppId :: Text,
     bppUrl :: BaseUrl,
+    bppItemId :: Text,
     parkingSpaceName :: Text,
     parkingLocationId :: Id ParkingLocation,
     parkingLocationIdFromBpp :: Text,

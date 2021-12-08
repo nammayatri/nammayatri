@@ -44,4 +44,6 @@ in
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
 , registryUrl = common.registryUrl
+, migrationPath = Some (env:PARKING_BAP_MIGRATION_PATH as Text ? "dev/migrations/parking-bap")
+, autoMigrate = True
 }

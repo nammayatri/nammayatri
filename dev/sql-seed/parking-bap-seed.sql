@@ -18,8 +18,8 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 CREATE TABLE atlas_parking.parking_location (
-    id character(36) NOT NULL PRIMARY KEY,,
-    id_from_bpp character(36),
+    id character(36) NOT NULL PRIMARY KEY,
+    id_from_bpp character(36) NOT NULL,
     lat double precision NOT NULL,
     lon double precision NOT NULL,
     name character(36) NOT NULL,
@@ -33,7 +33,7 @@ CREATE TABLE atlas_parking.parking_location (
 );
 
 CREATE TABLE atlas_parking.search (
-    id character(36) NOT NULL PRIMARY KEY DEFAULT atlas_parking.uuid_generate_v4(),
+    id character(36) NOT NULL PRIMARY KEY,
     lat double precision NOT NULL,
     lon double precision NOT NULL,
     requestor_id character(36) NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE atlas_parking.quote (
     bpp_id character(36) NOT NULL,
     bpp_url character varying(255) NOT NULL,
     parking_space_name character varying(255) NOT NULL,
-    parking_location_id character(36) NOT NULL REFERENCES atlas_parking.parking_location (id) on delete cascade,
+    parking_location_id character(36) NOT NULL REFERENCES atlas_parking.parking_location (id),
     parking_location_id_from_bpp character(36) NOT NULL,
     fare numeric(30,2) NOT NULL,
     available_spaces integer NOT NULL,

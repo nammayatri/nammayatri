@@ -10,6 +10,7 @@ import API.Types
 import App.Types
 import Beckn.Exit
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
@@ -27,6 +28,8 @@ runService configModifier = do
   runServerService appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
     try (prepareRedisConnections $ appCfg.redisCfg)
       >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
+    migrateIfNeeded (appCfg.migrationPath) (appCfg.esqDBCfg) (appCfg.autoMigrate)
+      >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
     orgShortId <- askConfig (.selfId)
     modFlowRtWithAuthManagers flowRt appEnv [orgShortId]
   where

@@ -101,9 +101,9 @@ logFormatterText timestamp hostname lvl tags msg = res
   where
     tag = if null tags then "" else formatTags tags
     res =
-      showT timestamp
+      show timestamp
         <> " "
-        <> showT lvl
+        <> show lvl
         <> "> "
         <> maybe "" ("@" <>) hostname
         <> " "

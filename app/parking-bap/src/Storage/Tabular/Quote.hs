@@ -26,6 +26,7 @@ mkPersist
       searchId SearchTId
       bppId Text
       bppUrl Text
+      bppItemId Text
       parkingSpaceName Text
       parkingLocationId ParkingLocationTId
       parkingLocationIdFromBpp Text

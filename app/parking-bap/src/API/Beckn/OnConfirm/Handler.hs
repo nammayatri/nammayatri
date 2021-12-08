@@ -28,16 +28,13 @@ onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext Context.ON_CONFIRM $ req.context
   case req.contents of
     Right msg -> handleOnConfirm (Id req.context.transaction_id) msg
-    Left err -> logTagError "on_search req" $ "on_search error: " <> showT err
+    Left err -> logTagError "on_search req" $ "on_search error: " <> show err
   return Ack
 
 handleOnConfirm :: EsqDBFlow m r => Id DBooking.Booking -> OnConfirm.OnConfirmMessage -> m ()
-handleOnConfirm bookingId msg = do
+handleOnConfirm bookingId _ = do
   booking <- QBooking.findById bookingId >>= fromMaybeM BookingDoesNotExist
-  ticket <- listToMaybe msg.order.items & fromMaybeM (InvalidRequest "Empty items field.")
   let updBooking =
-        booking{status = DBooking.AWAITING_PAYMENT,
-                ticketId = Just ticket.id,
-                ticketCreatedAt = Just msg.order.created_at
+        booking{status = DBooking.AWAITING_PAYMENT
                }
   runTransaction $ QBooking.update updBooking
