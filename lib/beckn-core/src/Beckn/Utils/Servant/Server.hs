@@ -91,7 +91,7 @@ runServerService appEnv serverAPI serverHandler waiMiddleware waiSettings servan
   let settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appEnv.config.graceTerminationPeriod)
-          & setInstallShutdownHandler (\io -> handleShutdown (appEnv.isShuttingDown) (shutdownAction appEnv >> io))
+          & setInstallShutdownHandler (\io -> handleShutdown appEnv.isShuttingDown (shutdownAction appEnv >> io))
           & setPort port
           & waiSettings
   let healthCheck = pure "App is UP"

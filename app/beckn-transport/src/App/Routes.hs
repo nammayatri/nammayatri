@@ -418,7 +418,7 @@ swagger = do
   openApi
     { _openApiInfo =
         (_openApiInfo openApi)
-          { _infoTitle = "Yatri",
+          { _infoTitle = "Yatri Partner",
             _infoVersion = "1.0"
           }
     }

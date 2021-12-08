@@ -8,26 +8,31 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Data.Map as Map
 import EulerHS.Prelude
+import Beckn.Utils.Shutdown
 
 data AppCfg = AppCfg
   { port :: Int,
-    loggerConfig :: LoggerConfig
+    loggerConfig :: LoggerConfig,
+    graceTerminationPeriod :: Seconds
   }
   deriving (Generic, FromDhall)
 
 type MobileNumber = Text
 
 data AppEnv = AppEnv
-  { notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage]),
+  { config :: AppCfg,
+    notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage]),
+    isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv AppCfg {..} = do
+buildAppEnv config@AppCfg {..} = do
   hostname <- getPodName
   notificationsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  isShuttingDown <- mkShutdown
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -36,4 +41,4 @@ releaseAppEnv AppEnv {..} =
 
 type FlowHandler = FlowHandlerR AppEnv
 
-type FlowServer r api = FlowServerR AppEnv api
+type FlowServer api = FlowServerR AppEnv api
