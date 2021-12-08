@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.InternalAPI.Auth.Client where
 
 import Beckn.InternalAPI.Auth.API
