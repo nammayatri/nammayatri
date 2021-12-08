@@ -20,7 +20,7 @@ let rcfg =
   , connectTimeout = None Integer
   }
 
-let nsdlGatewayUrl = "https://gateway-1.beckn.nsdl.co.in/v1"
+let nsdlGatewayUrl = "https://gateway-1.beckn.nsdl.co.in"
 let juspayGatewayUrl = "http://localhost:8015/v1"
 
 in
@@ -30,7 +30,7 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/parking-bap.log"}
 , graceTerminationPeriod = +90
 , selfId = "JUSPAY.MOBILITY.APP.UAT.3"
-, selfURI = "http://localhost:8022/parking/v2/"
+, selfURI = "http://localhost:8022/parking/v1"
 , httpClientOptions = common.httpClientOptions
 , authEntity =
     { credRegistry = common.credRegistry
@@ -41,7 +41,7 @@ in
 , gatewayUrl = juspayGatewayUrl
 , hostName = "localhost"
 , metricsSearchDurationTimeout = +45
-, coreVersion = "0.9.3-draft"
-, domainVersion = "0.9.3-draft"
+, coreVersion = "0.9.3"
+, domainVersion = "0.9.3"
 , registryUrl = common.registryUrl
 }

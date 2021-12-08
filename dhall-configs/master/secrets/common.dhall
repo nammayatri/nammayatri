@@ -31,7 +31,7 @@ let signingKeys =
 
   -- Parking
   -- BAP
-  , globalCommon.mkSigningKey "100" "xxxxxxx"
+  , globalCommon.mkSigningKey "56" "xxxxxxx"
   ]
 
 let exotelCfg =

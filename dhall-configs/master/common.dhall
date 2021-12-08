@@ -45,7 +45,7 @@ let credRegistry =
 
   -- Parking
   -- BAP
-  , globalCommon.mkCredential "100" "api.sandbox.beckn.juspay.in/dev/bap/parking/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "56" "api.sandbox.beckn.juspay.in/dev/bap/parking/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   ]
 
 in { defaultPoolConfig = globalCommon.defaultPoolConfig
@@ -59,7 +59,6 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , mkCredential = globalCommon.mkCredential
    , mkSigningKey = globalCommon.mkSigningKey
    , httpClientOptions = globalCommon.httpClientOptions
-
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
    , branchName = branchName

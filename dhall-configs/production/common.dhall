@@ -39,6 +39,7 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , signatureExpiry = globalCommon.signatureExpiry
    , mkCredential = globalCommon.mkCredential
    , mkSigningKey = globalCommon.mkSigningKey
+   , httpClientOptions = globalCommon.httpClientOptions
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
    , branchName = branchName
