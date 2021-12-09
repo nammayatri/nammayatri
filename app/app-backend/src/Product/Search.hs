@@ -66,7 +66,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     fork "search cabs" $ do
       context <- buildTaxiContext txnId bapURIs.cabs Nothing
       let intent = mkIntent req now distance
-      ExternalAPI.search (Common.BecknReq context $ Search.SearchMessage intent)
+      void $ ExternalAPI.search (Common.BecknReq context $ Search.SearchMessage intent)
     fork "search metro" $ do
       contextMig <- buildContextMetro Core9.SEARCH txnId bapURIs.metro Nothing
       intentMig <- mkIntentMig req

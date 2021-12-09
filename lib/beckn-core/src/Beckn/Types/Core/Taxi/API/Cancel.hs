@@ -8,10 +8,12 @@ import Servant (JSON, Post, ReqBody, (:>))
 
 type CancelReq = BecknReq CancelMessage
 
+type CancelRes = AckResponse
+
 type CancelAPI =
   "cancel"
     :> ReqBody '[JSON] CancelReq
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] CancelRes
 
 cancelAPI :: Proxy CancelAPI
 cancelAPI = Proxy

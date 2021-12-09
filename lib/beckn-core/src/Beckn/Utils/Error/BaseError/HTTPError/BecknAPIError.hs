@@ -4,7 +4,6 @@
 module Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError where
 
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Servant.Client
@@ -26,15 +25,17 @@ instance IsBaseError BecknAPICallError where
 instance IsHTTPError BecknAPICallError where
   toErrorCode (BecknAPICallError _ _) = "BECKN_API_CALL_ERROR"
 
-type IsBecknAPI api req =
+type IsBecknAPI api req res =
   ( HasClient ET.EulerClient api,
-    Client ET.EulerClient api ~ (req -> ET.EulerClient AckResponse)
+    Client ET.EulerClient api ~ (req -> ET.EulerClient res),
+    ET.JSONEx res,
+    ToJSON res
   )
 
 callBecknAPI ::
   ( MonadFlow m,
     CoreMetrics m,
-    IsBecknAPI api req
+    IsBecknAPI api req res
   ) =>
   Maybe ET.ManagerSelector ->
   Maybe Text ->
@@ -42,7 +43,7 @@ callBecknAPI ::
   Proxy api ->
   BaseUrl ->
   req ->
-  m ()
+  m res
 callBecknAPI mbManagerSelector errorCodeMb action api baseUrl req =
   callBecknAPI' mbManagerSelector errorCodeMb baseUrl (ET.client api req) action
 
@@ -50,16 +51,15 @@ callBecknAPI' ::
   MonadFlow m =>
   Maybe ET.ManagerSelector ->
   Maybe Text ->
-  CallAPI' m AckResponse ()
+  CallAPI m res
 callBecknAPI' mbManagerSelector errorCodeMb baseUrl eulerClient name =
-  void $
-    callApiUnwrappingApiError
-      (becknAPIErrorToException name)
-      mbManagerSelector
-      errorCodeMb
-      baseUrl
-      eulerClient
-      name
+  callApiUnwrappingApiError
+    (becknAPIErrorToException name)
+    mbManagerSelector
+    errorCodeMb
+    baseUrl
+    eulerClient
+    name
 
 becknAPIErrorToException :: Text -> BecknAPIError -> BecknAPICallError
 becknAPIErrorToException name (BecknAPIError becknErr) = BecknAPICallError name becknErr

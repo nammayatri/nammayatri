@@ -8,10 +8,12 @@ import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchReq = BecknReq SearchMessage
 
+type SearchRes = AckResponse
+
 type SearchAPI =
   "search"
     :> ReqBody '[JSON] SearchReq
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] SearchRes
 
 searchAPI :: Proxy SearchAPI
 searchAPI = Proxy

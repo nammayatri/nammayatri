@@ -41,7 +41,7 @@ callBecknAPIWithSignature ::
   ( MonadFlow m,
     MonadReader r m,
     CoreMetrics m,
-    IsBecknAPI api req,
+    IsBecknAPI api req res,
     HasInConfig r c "selfId" Text
   ) =>
   Text ->
@@ -51,7 +51,7 @@ callBecknAPIWithSignature ::
   m ()
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.config.selfId)
-  callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
+  void $ callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
 
 getHttpManagerKey :: Text -> String
 getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId

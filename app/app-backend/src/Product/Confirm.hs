@@ -45,7 +45,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
         Confirm.Order
           { items = [Confirm.OrderItem {id = quote.bppQuoteId.getId}]
           }
-  ExternalAPI.confirm bppURI (Common.BecknReq context $ Confirm.ConfirmMessage order)
+  void $ ExternalAPI.confirm bppURI (Common.BecknReq context $ Confirm.ConfirmMessage order)
   return $ API.ConfirmRes rideBooking.id
   where
     buildRideBooking searchRequest quote now = do

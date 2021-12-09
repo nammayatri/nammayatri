@@ -8,10 +8,12 @@ import Servant (JSON, Post, ReqBody, (:>))
 
 type OnConfirmReq = BecknCallbackReq OnConfirmMessage
 
+type OnConfirmRes = AckResponse
+
 type OnConfirmAPI =
   "on_confirm"
     :> ReqBody '[JSON] OnConfirmReq
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] OnConfirmRes
 
 onConfirmAPI :: Proxy OnConfirmAPI
 onConfirmAPI = Proxy

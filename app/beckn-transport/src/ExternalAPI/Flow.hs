@@ -58,13 +58,13 @@ callBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Beckn.IsBecknAPI api (BecknCallbackReq req) =>
+  Beckn.IsBecknAPI api (BecknCallbackReq req) res =>
   Text ->
   Proxy api ->
   Org.Organization ->
   Id SearchRequest ->
   Either Error req ->
-  m ()
+  m res
 callBAP action api transporter searchRequestId contents = do
   searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestNotFound
   bapCallbackUrl <-
@@ -97,4 +97,4 @@ initiateCall ::
   m ()
 initiateCall rideId = do
   url <- asks (.xAppUri)
-  Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId rideId)) "/v2/ride/{rideId}/call/rider"
+  void $ Beckn.callBecknAPI' Nothing (Just "UNABLE_TO_CALL") url (ET.client API.callsAPI (getId rideId)) "/v2/ride/{rideId}/call/rider"

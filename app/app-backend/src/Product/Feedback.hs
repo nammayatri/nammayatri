@@ -31,5 +31,5 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   bapURIs <- asks (.bapSelfURIs)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   context <- buildTaxiContext txnId bapURIs.cabs (Just bppURI)
-  ExternalAPI.feedback bppURI (Common.BecknReq context (Rating.RatingMessage bppRideBookingId.getId ratingValue))
+  void $ ExternalAPI.feedback bppURI (Common.BecknReq context (Rating.RatingMessage bppRideBookingId.getId ratingValue))
   return Success

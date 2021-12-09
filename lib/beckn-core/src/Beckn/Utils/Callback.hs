@@ -65,7 +65,7 @@ withBecknCallback doWithCallback auth action api context cbUrl f = do
     (someExceptionToCallbackReq context')
     (toCallbackReq context')
     action
-    (doWithCallback . callBecknAPI auth Nothing cbAction api cbUrl)
+    (doWithCallback . void . callBecknAPI auth Nothing cbAction api cbUrl)
     f
   return Ack
 
@@ -100,6 +100,6 @@ withBecknCallbackMig doWithCallback auth action api context cbUrl f = do
     (someExceptionToCallbackReqMig cbContext)
     (M.API.BecknCallbackReq cbContext . Right)
     (show action)
-    (doWithCallback . callBecknAPI auth Nothing (show cbAction) api cbUrl)
+    (doWithCallback . void . callBecknAPI auth Nothing (show cbAction) api cbUrl)
     f
   return Ack

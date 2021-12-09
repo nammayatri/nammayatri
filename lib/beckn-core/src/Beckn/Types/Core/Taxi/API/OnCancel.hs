@@ -8,10 +8,12 @@ import Servant (JSON, Post, ReqBody, (:>))
 
 type OnCancelReq = BecknCallbackReq OnCancelMessage
 
+type OnCancelRes = AckResponse
+
 type OnCancelAPI =
   "on_cancel"
     :> ReqBody '[JSON] OnCancelReq
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] OnCancelRes
 
 onCancelAPI :: Proxy OnCancelAPI
 onCancelAPI = Proxy

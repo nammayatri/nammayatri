@@ -8,10 +8,12 @@ import Servant (JSON, Post, ReqBody, (:>))
 
 type RatingReq = BecknReq RatingMessage
 
+type RatingRes = AckResponse
+
 type RatingAPI =
   "rating"
     :> ReqBody '[JSON] RatingReq
-    :> Post '[JSON] AckResponse
+    :> Post '[JSON] RatingRes
 
 ratingAPI :: Proxy RatingAPI
 ratingAPI = Proxy

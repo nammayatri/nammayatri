@@ -42,7 +42,7 @@ sendRideAssignedUpdateToBAP rideBooking ride = do
     QOrg.findOrganizationById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
   buildRideAssignedUpdatePayload ride transporter
-    >>= ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
+    >>= void . ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
 
 sendRideStartedUpdateToBAP ::
   ( DBFlow m r,
@@ -58,7 +58,7 @@ sendRideStartedUpdateToBAP rideBooking ride = do
     QOrg.findOrganizationById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
   buildRideStartedUpdatePayload ride
-    >>= ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
+    >>= void . ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
 
 sendRideCompletedUpdateToBAP ::
   ( DBFlow m r,
@@ -74,7 +74,7 @@ sendRideCompletedUpdateToBAP rideBooking ride = do
     QOrg.findOrganizationById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
   buildRideCompletedUpdatePayload ride
-    >>= ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
+    >>= void . ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
 
 sendCancelToBAP ::
   ( DBFlow m r,
@@ -88,7 +88,7 @@ sendCancelToBAP ::
   m ()
 sendCancelToBAP rideBooking transporter cancellationSource = do
   let message = OnCancel.OnCancelMessage (OnCancel.Order rideBooking.id.getId) cancellationSource
-  ExternalAPI.callBAP "on_cancel" API.onCancelAPI transporter rideBooking.requestId $ Right message
+  void $ ExternalAPI.callBAP "on_cancel" API.onCancelAPI transporter rideBooking.requestId $ Right message
 
 buildRideAssignedUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>

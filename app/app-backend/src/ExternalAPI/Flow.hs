@@ -35,7 +35,7 @@ search ::
     HasBapIds r m
   ) =>
   API.SearchReq ->
-  m ()
+  m API.SearchRes
 search req = do
   url <- getSearchUrl
   callBecknAPIWithSignature "search" API.searchAPI url req
@@ -50,7 +50,7 @@ searchMetro ::
   m ()
 searchMetro req = do
   url <- getSearchUrl
-  callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url req
+  void $ callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url req
 
 getSearchUrl ::
   (HasFlowEnv m r '["xGatewaySelector" ::: Text], DBFlow m r) =>
@@ -69,7 +69,7 @@ confirm ::
   ) =>
   BaseUrl ->
   ConfirmReq ->
-  m ()
+  m ConfirmRes
 confirm = callBecknAPIWithSignature "confirm" API.confirmAPI
 
 location ::
@@ -91,7 +91,7 @@ cancel ::
   ) =>
   BaseUrl ->
   CancelReq ->
-  m ()
+  m CancelRes
 cancel = callBecknAPIWithSignature "cancel" API.cancelAPI
 
 feedback ::
@@ -101,7 +101,7 @@ feedback ::
   ) =>
   BaseUrl ->
   RatingReq ->
-  m ()
+  m RatingRes
 feedback = callBecknAPIWithSignature "feedback" API.ratingAPI
 
 type HasBapIds r m =
@@ -113,14 +113,14 @@ callBecknAPIWithSignature,
   callBecknAPIWithSignatureMetro ::
     ( MonadFlow m,
       CoreMetrics m,
-      IsBecknAPI api req,
+      IsBecknAPI api req res,
       HasBapIds r m
     ) =>
     Text ->
     Proxy api ->
     BaseUrl ->
     req ->
-    m ()
+    m res
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.bapSelfIds.cabs)
   callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d

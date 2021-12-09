@@ -37,12 +37,13 @@ search (SignatureAuthResult proxySign _) rawReq = withFlowHandlerBecknAPI do
       providerUrl <- provider.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
       withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) . withRetry $
         -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
-        callBecknAPI'
-          (Just signatureAuthManagerKey)
-          Nothing
-          providerUrl
-          (gatewaySearchSignAuth (Just proxySign) rawReq)
-          "search"
+        void $
+          callBecknAPI'
+            (Just signatureAuthManagerKey)
+            Nothing
+            providerUrl
+            (gatewaySearchSignAuth (Just proxySign) rawReq)
+            "search"
     return Ack
 
 searchCb ::
@@ -59,7 +60,7 @@ searchCb (SignatureAuthResult proxySign _subscriber) rawReq = withFlowHandlerBec
       let bapUri = req.context.bap_uri
       bapOrg <- findByBapUrl bapUri >>= fromMaybeM OrgDoesNotExist
       cbUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-      withRetry $
+      void . withRetry $
         callBecknAPI'
           (Just signatureAuthManagerKey)
           Nothing
