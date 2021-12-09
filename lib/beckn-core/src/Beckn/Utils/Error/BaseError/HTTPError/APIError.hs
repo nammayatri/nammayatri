@@ -4,6 +4,8 @@
 module Beckn.Utils.Error.BaseError.HTTPError.APIError where
 
 import Beckn.Types.Error.BaseError.HTTPError
+import Beckn.Utils.Error.Throwing
+import Beckn.Utils.Logging
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -29,6 +31,18 @@ callOwnAPI ::
   Maybe Text ->
   CallAPI env a
 callOwnAPI = callApiUnwrappingApiError APICallError
+
+catchOwnAPI ::
+  ( HasCallStack,
+    MonadCatch m,
+    Log m
+  ) =>
+  m a ->
+  (Text -> m a) ->
+  m a
+catchOwnAPI m f = m `safeCatch` \(APICallError (APIError {errorCode})) -> f errorCode
+
+infixl 1 `catchOwnAPI`
 
 toAPIError :: (IsHTTPError e, IsAPIError e) => e -> APIError
 toAPIError e =
