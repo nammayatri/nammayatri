@@ -9,7 +9,6 @@ import Beckn.Types.Core.Cabs.Search.Intent as Reexport
 import Beckn.Types.Core.Cabs.Search.Location as Reexport
 import Beckn.Types.Core.Cabs.Search.StartInfo as Reexport
 import Beckn.Types.Core.Cabs.Search.StopInfo as Reexport
-import Beckn.Types.Core.Cabs.Search.Tags as Reexport
 import Beckn.Types.Core.Cabs.Search.Time as Reexport
 import Beckn.Utils.Example
 import Data.OpenApi (ToSchema)

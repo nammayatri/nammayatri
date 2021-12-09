@@ -164,9 +164,9 @@ buildQuote searchRequest bppOrg provider item = do
         estimatedTotalFare = realToFrac item.discounted_price.value,
         discount = realToFrac <$> (item.discount <&> (.value)),
         distanceToNearestDriver = realToFrac item.nearest_driver_distance,
-        providerMobileNumber = provider.tags.contacts,
+        providerMobileNumber = provider.contacts,
         providerName = provider.name,
-        providerCompletedRidesCount = provider.tags.rides_completed,
+        providerCompletedRidesCount = provider.rides_completed,
         providerId = bppOrg.id,
         vehicleVariant = item.vehicle_variant,
         createdAt = now
@@ -174,8 +174,7 @@ buildQuote searchRequest bppOrg provider item = do
 
 mkIntent :: API.SearchReq -> UTCTime -> Double -> Search.Intent
 mkIntent req startTime distance = do
-  let tags = Search.Tags {distance = realToFrac distance}
-      startLocation =
+  let startLocation =
         Search.StartInfo
           { location =
               Search.Location $
@@ -194,7 +193,12 @@ mkIntent req startTime distance = do
                     lon = req.destination.gps.lon
                   }
           }
-      fulfillment = Search.FulFillmentInfo {start = startLocation, end = endLocation}
+      fulfillment =
+        Search.FulFillmentInfo
+          { distance = realToFrac distance,
+            start = startLocation,
+            end = endLocation
+          }
   Search.Intent
     { ..
     }

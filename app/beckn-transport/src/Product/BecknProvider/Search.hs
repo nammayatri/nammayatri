@@ -212,22 +212,17 @@ mkOnSearchMessage quotes transporterOrg = do
 buildProvider :: DBFlow m r => Org.Organization -> [Quote.Quote] -> m OnSearch.Provider
 buildProvider org quotes = do
   count <- QRide.getCountByStatus (org.id)
-  let tags = mkTags count
-      items = map mkItem quotes
+  let items = map mkItem quotes
   return $
     OnSearch.Provider
       { name = org.name,
         items,
-        tags
+        contacts = fromMaybe "" org.mobileNumber,
+        rides_inprogress = fromMaybe 0 $ List.lookup Ride.INPROGRESS count,
+        rides_completed = fromMaybe 0 $ List.lookup Ride.COMPLETED count,
+        rides_confirmed = fromMaybe 0 $ List.lookup Ride.NEW count
       }
   where
-    mkTags count =
-      OnSearch.Tags
-        { contacts = fromMaybe "" org.mobileNumber,
-          rides_inprogress = fromMaybe 0 $ List.lookup Ride.INPROGRESS count,
-          rides_completed = fromMaybe 0 $ List.lookup Ride.COMPLETED count,
-          rides_confirmed = fromMaybe 0 $ List.lookup Ride.NEW count
-        }
     mkItem quote =
       OnSearch.Item
         { id = quote.id.getId,

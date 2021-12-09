@@ -1,11 +1,9 @@
 module Beckn.Types.Core.Cabs.OnSearch.Provider
   ( Provider (..),
-    module Reexport,
   )
 where
 
 import Beckn.Types.Core.Cabs.OnSearch.Item (Item)
-import Beckn.Types.Core.Cabs.OnSearch.Tags as Reexport
 import Beckn.Utils.Example
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (exp, id)
@@ -13,7 +11,10 @@ import EulerHS.Prelude hiding (exp, id)
 data Provider = Provider
   { name :: Text,
     items :: [Item],
-    tags :: Tags
+    contacts :: Text,
+    rides_inprogress :: Int,
+    rides_completed :: Int,
+    rides_confirmed :: Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -22,5 +23,8 @@ instance Example Provider where
     Provider
       { name = "name",
         items = [],
-        tags = example
+        contacts = "99999999999",
+        rides_inprogress = 12,
+        rides_completed = 32,
+        rides_confirmed = 3
       }
