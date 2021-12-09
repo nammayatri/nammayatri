@@ -5,7 +5,7 @@ module Beckn.Types.Core.Cabs.Common.Context
 where
 
 import Beckn.Types.App
-import Beckn.Types.Core.Cabs.Common.Context.Domain as Reexport
+import Beckn.Types.Core.Domain as Reexport
 import Beckn.Utils.Example
 import Data.Aeson
 import Data.OpenApi (ToSchema)

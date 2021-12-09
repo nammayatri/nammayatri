@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Cabs.Common.Context.Domain (Domain (..)) where
+module Beckn.Types.Core.Domain (Domain (..)) where
 
 import Beckn.Utils.Example
 import Beckn.Utils.JSON (constructorsWithHyphensUntagged)

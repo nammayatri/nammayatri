@@ -3,8 +3,8 @@
 module ExternalAPI.Flow where
 
 import Beckn.Types.Core.Cabs.API.Call as API
-import Beckn.Types.Core.Cabs.API.Types (BecknCallbackReq (..))
 import Beckn.Types.Core.Error
+import Beckn.Types.Core.ReqTypes (BecknCallbackReq (..))
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
 import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn

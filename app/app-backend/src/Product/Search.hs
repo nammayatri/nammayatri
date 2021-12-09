@@ -8,7 +8,6 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Cabs.API.OnSearch as OnSearch
-import qualified Beckn.Types.Core.Cabs.API.Types as Common
 import qualified Beckn.Types.Core.Cabs.Common.Context as Common
 import qualified Beckn.Types.Core.Cabs.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Cabs.Search as Search
@@ -18,6 +17,7 @@ import qualified Beckn.Types.Core.Migration.Context as Core9
 import qualified Beckn.Types.Core.Migration.Gps as Mig
 import qualified Beckn.Types.Core.Migration.Intent as Mig
 import qualified Beckn.Types.Core.Migration.Location as Mig
+import qualified Beckn.Types.Core.ReqTypes as Common
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))

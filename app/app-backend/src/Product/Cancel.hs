@@ -6,8 +6,8 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Cabs.API.OnCancel as OnCancel
-import qualified Beckn.Types.Core.Cabs.API.Types as Common
 import qualified Beckn.Types.Core.Cabs.Cancel as Cancel
+import qualified Beckn.Types.Core.ReqTypes as Common
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude

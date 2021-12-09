@@ -48,8 +48,10 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
     logTagInfo "confirm API Flow" "Reached"
     validateContext req.context
     let items = req.message.order.items
-    when (null items) $ throwError (InvalidRequest "List of confirmed items is empty.")
-    let quoteId = Id . (.id) $ head items
+    quoteId <- case items of
+      [] -> throwError (InvalidRequest "List of confirmed items is empty.")
+      [item] -> return $ Id item.id
+      _ -> throwError (InvalidRequest "List of confirmed items must contain exactly one item.")
     quote <- QQuote.findById' quoteId >>= fromMaybeM QuoteDoesNotExist
     let transporterId' = quote.providerId
     transporterOrg <-

@@ -6,8 +6,8 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Cabs.API.OnConfirm as OnConfirm
-import qualified Beckn.Types.Core.Cabs.API.Types as Common
 import qualified Beckn.Types.Core.Cabs.Confirm as Confirm
+import qualified Beckn.Types.Core.ReqTypes as Common
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (id)
@@ -53,7 +53,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
       return $
         SRB.RideBooking
           { id = Id id,
-            bppBookingId = Id "WILL_BE_CHANGED_IN_ON_CONFIRM", -- TODO: Move RB creation to onConfirm
+            bppBookingId = Nothing,
             requestId = searchRequest.id,
             quoteId = quote.id,
             status = SRB.CONFIRMED,

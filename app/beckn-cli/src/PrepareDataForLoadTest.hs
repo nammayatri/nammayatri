@@ -10,9 +10,9 @@ module PrepareDataForLoadTest
 where
 
 import qualified Beckn.Types.Core.Cabs.API.Search as API
-import qualified Beckn.Types.Core.Cabs.API.Types as API
 import qualified Beckn.Types.Core.Cabs.Common.Context as API
 import qualified Beckn.Types.Core.Cabs.Search as API
+import qualified Beckn.Types.Core.ReqTypes as API
 import Beckn.Utils.Example (Example (example))
 import qualified Beckn.Utils.SignatureAuth as S
 import qualified Data.Aeson as J

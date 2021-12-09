@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Cabs.API.OnSearch where
 
 import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.Cabs.API.Types (BecknCallbackReq)
 import Beckn.Types.Core.Cabs.OnSearch
+import Beckn.Types.Core.ReqTypes (BecknCallbackReq)
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 

@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Cabs.API.Types where
+module Beckn.Types.Core.ReqTypes where
 
 import Beckn.Types.Core.Cabs.Common.Context (Context)
 import Beckn.Types.Core.Error (Error)

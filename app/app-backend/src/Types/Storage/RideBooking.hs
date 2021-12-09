@@ -53,7 +53,7 @@ data BPPRideBooking
 
 data RideBookingT f = RideBooking
   { id :: B.C f (Id RideBooking),
-    bppBookingId :: B.C f (Id BPPRideBooking),
+    bppBookingId :: B.C f (Maybe (Id BPPRideBooking)),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     quoteId :: B.C f (Id Quote.Quote),
     status :: B.C f RideBookingStatus,
