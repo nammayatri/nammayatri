@@ -3,7 +3,7 @@ let sec = ./secrets/parking-bap.dhall
 
 let esqDBCfg =
   { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
-  , connectPort = 5437
+  , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
   , connectDatabase = "atlas_parking"

@@ -3,7 +3,7 @@ let sec = ./secrets/parking-bap.dhall
 
 let esqDBCfg =
   { connectHost = "adb.primary.beckn.juspay.net"
-  , connectPort = 5437
+  , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
   , connectDatabase = "atlas_parking"
