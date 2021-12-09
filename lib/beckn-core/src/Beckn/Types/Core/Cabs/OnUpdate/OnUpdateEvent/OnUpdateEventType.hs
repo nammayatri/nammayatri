@@ -1,10 +1,10 @@
-module Beckn.Types.Core.Cabs.OnUpdate.RideOrder.RideOrderStatus where
+module Beckn.Types.Core.Cabs.OnUpdate.OnUpdateEvent.OnUpdateEventType where
 
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding ((.=))
 
-data RideOrderStatus
-  = COMPLETED
-  | STARTED
+data OnUpdateEventType
+  = RIDE_COMPLETED
+  | RIDE_STARTED
   | TRIP_ASSIGNED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

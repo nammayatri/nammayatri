@@ -27,12 +27,12 @@ onUpdate _org req = withFlowHandlerBecknAPI $
     validateContext req.context
     case req.contents of
       Left err -> logTagError "on_update req" $ "on_update error: " <> show err
-      Right msg -> processOrder msg.order
+      Right msg -> processOrder msg.cabs_update_event
     return Ack
 
-processOrder :: DBFlow m r => OnUpdate.RideOrder -> m ()
-processOrder (OnUpdate.TripAssigned taOrder) = do
-  let bppBookingId = Id taOrder.id
+processOrder :: DBFlow m r => OnUpdate.OnUpdateEvent -> m ()
+processOrder (OnUpdate.TripAssigned taEvent) = do
+  let bppBookingId = Id taEvent.order_id
   rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM RideBookingDoesNotExist
   unless (rideBooking.status == SRB.CONFIRMED) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
   ride <- buildRide rideBooking
@@ -45,16 +45,15 @@ processOrder (OnUpdate.TripAssigned taOrder) = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
-      let fulfillment = taOrder.fulfillment
-          bppRideId = Id taOrder.fulfillment.id
-          otp = fulfillment.otp
-          driverName = fulfillment.agent.name
-          driverMobileNumber = fulfillment.agent.phone
-          driverRating = realToFrac <$> fulfillment.agent.rating
-          driverRegisteredAt = fulfillment.agent.registered_at
-          vehicleNumber = fulfillment.vehicle.registration
-          vehicleColor = fulfillment.vehicle.color
-          vehicleModel = fulfillment.vehicle.model
+      let bppRideId = Id taEvent.fulfillment_id
+          otp = taEvent.otp
+          driverName = taEvent.agent.name
+          driverMobileNumber = taEvent.agent.phone
+          driverRating = realToFrac <$> taEvent.agent.rating
+          driverRegisteredAt = taEvent.agent.registered_at
+          vehicleNumber = taEvent.vehicle.registration
+          vehicleColor = taEvent.vehicle.color
+          vehicleModel = taEvent.vehicle.model
       return
         SRide.Ride
           { id = guid,
@@ -69,26 +68,26 @@ processOrder (OnUpdate.TripAssigned taOrder) = do
             updatedAt = now,
             ..
           }
-processOrder (OnUpdate.RideStarted rsOrder) = do
-  let bppBookingId = Id rsOrder.id
-      bppRideId = Id rsOrder.fulfillment.id
+processOrder (OnUpdate.RideStarted rsEvent) = do
+  let bppBookingId = Id rsEvent.order_id
+      bppRideId = Id rsEvent.fulfillment_id
   rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM RideBookingDoesNotExist
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM RideDoesNotExist
   unless (rideBooking.status == SRB.TRIP_ASSIGNED) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
   DB.runSqlDBTransaction $ do
     QRide.updateStatus ride.id SRide.INPROGRESS
-processOrder (OnUpdate.RideCompleted rcOrder) = do
-  let bppBookingId = Id rcOrder.id
-      bppRideId = Id rcOrder.fulfillment.id
+processOrder (OnUpdate.RideCompleted rcEvent) = do
+  let bppBookingId = Id rcEvent.order_id
+      bppRideId = Id rcEvent.fulfillment_id
   rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM RideBookingDoesNotExist
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM RideDoesNotExist
   unless (rideBooking.status == SRB.TRIP_ASSIGNED) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
   unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   let updRide =
         ride{status = SRide.COMPLETED,
-             totalFare = Just $ realToFrac rcOrder.payment.params.amount,
-             chargeableDistance = Just $ realToFrac rcOrder.fulfillment.chargeable_distance
+             totalFare = Just $ realToFrac rcEvent.payment.params.amount,
+             chargeableDistance = Just $ realToFrac rcEvent.chargeable_distance
             }
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.COMPLETED

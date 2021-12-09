@@ -94,7 +94,7 @@ buildTripAssignedUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
   SRide.Ride ->
   SOrg.Organization ->
-  m OnUpdate.RideOrder
+  m OnUpdate.OnUpdateEvent
 buildTripAssignedUpdatePayload ride org = do
   driver <-
     Person.findPersonById ride.driverId
@@ -120,52 +120,42 @@ buildTripAssignedUpdatePayload ride org = do
             color = vehicleColor,
             registration = vehicleNumber
           }
-      fulfillment =
-        OnUpdate.TripAssignedFulfillment
-          { id = ride.id.getId,
-            otp = ride.otp,
-            ..
-          }
   return $
     OnUpdate.TripAssigned
-      OnUpdate.TripAssignedOrder
-        { id = ride.bookingId.getId,
+      OnUpdate.TripAssignedEvent
+        { order_id = ride.bookingId.getId,
+          fulfillment_id = ride.id.getId,
+          otp = ride.otp,
           ..
         }
 
 buildRideStartedUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
   SRide.Ride ->
-  m OnUpdate.RideOrder
+  m OnUpdate.OnUpdateEvent
 buildRideStartedUpdatePayload ride = do
-  let fulfillment =
-        OnUpdate.RideStartedFulfillment
-          { id = ride.id.getId
-          }
   return $
     OnUpdate.RideStarted
-      OnUpdate.RideStartedOrder
-        { id = ride.bookingId.getId,
+      OnUpdate.RideStartedEvent
+        { order_id = ride.bookingId.getId,
+          fulfillment_id = ride.id.getId,
           ..
         }
 
 buildRideCompletedUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
   SRide.Ride ->
-  m OnUpdate.RideOrder
+  m OnUpdate.OnUpdateEvent
 buildRideCompletedUpdatePayload ride = do
   totalFare <- realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
   chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
-  let fulfillment =
-        OnUpdate.RideCompletedFulfillment
-          { id = ride.id.getId,
-            chargeable_distance = chargeableDistance
-          }
-      payment = OnUpdate.Payment $ OnUpdate.Params totalFare
+  let payment = OnUpdate.Payment $ OnUpdate.Params totalFare
   return $
     OnUpdate.RideCompleted
-      OnUpdate.RideCompletedOrder
-        { id = ride.bookingId.getId,
+      OnUpdate.RideCompletedEvent
+        { order_id = ride.bookingId.getId,
+          fulfillment_id = ride.id.getId,
+          chargeable_distance = chargeableDistance,
           ..
         }
 
