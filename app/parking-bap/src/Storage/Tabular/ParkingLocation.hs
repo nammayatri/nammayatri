@@ -16,7 +16,7 @@ import qualified Domain.ParkingLocation as Domain
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    ParkingLocationT sql=search_location
+    ParkingLocationT sql=parking_location
       id Text
       idFromBpp Text
       lat Double
