@@ -25,4 +25,4 @@ handler searchId _personId = withFlowHandlerAPI $ do
 mkQuote :: [DParkingLocation.ParkingLocation] -> DQuote.Quote -> Maybe DQuote.QuoteAPIEntity
 mkQuote locations quote = do
   parkingLocation <- find (\location -> location.id == quote.parkingLocationId) locations
-  pure $ DQuote.makeQuoteAPIEntity quote parkingLocation 
+  pure $ DQuote.makeQuoteAPIEntity quote parkingLocation

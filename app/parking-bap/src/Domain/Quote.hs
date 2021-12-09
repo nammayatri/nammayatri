@@ -38,7 +38,7 @@ data QuoteAPIEntity = QuoteAPIEntity
 makeQuoteAPIEntity :: Quote -> ParkingLocation -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} parkingLocation = do
   let parkingLocationAPIEntity = makeParkingLocationAPIEntity parkingLocation
-  QuoteAPIEntity 
+  QuoteAPIEntity
     { parkingSpaceLocation = parkingLocationAPIEntity,
       ..
     }
