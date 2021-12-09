@@ -33,5 +33,6 @@ instance FromJSON Domain where
   parseJSON (String "FOOD-AND-BEVERAGE") = pure FOOD_AND_BEVERAGE
   parseJSON (String "HEALTHCARE") = pure HEALTHCARE
   parseJSON (String "nic2004:60212") = pure METRO
+  parseJSON (String "nic2004:63031") = pure PARKING
   parseJSON (String domain) = pure $ UNKNOWN_DOMAIN domain
   parseJSON e = typeMismatch "Core Domain" e
