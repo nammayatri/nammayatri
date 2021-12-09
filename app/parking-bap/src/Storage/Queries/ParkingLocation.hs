@@ -17,3 +17,8 @@ findById parkingLocationId =
 
 create :: ParkingLocation -> SqlDB ()
 create = create'
+
+findAll :: EsqDBFlow m r => m [ParkingLocation]
+findAll =
+  runTransaction . findAll' $ do
+    from $ table @ParkingLocationT

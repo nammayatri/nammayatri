@@ -45,24 +45,22 @@ searchCbService req catalog = do
   _searchRequest <- QSearch.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
   bppUrl <- maybe (throwError $ InvalidRequest "Missing bpp url") pure req.context.bpp_uri
   bppId <- maybe (throwError $ InvalidRequest "Missing bpp id") pure req.context.bpp_id
-  case Catalog.bpp_providers catalog of
-    Just providers -> do
-      now <- getCurrentTime
-      parkingLocations <- do
-        allParkingLocationsByProvider <- forM providers $ \provider -> do
-          let locations = fromMaybe [] provider.locations
-          forM locations (buildParkingLocation now)
-        return $ concat allParkingLocationsByProvider
-      quotes <- do
-        allQuotesByProvider <- forM providers $ \provider -> do
-          let items = fromMaybe [] provider.items
-          forM items (buildQuote now searchRequestId bppUrl bppId parkingLocations)
-        return $ concat allQuotesByProvider
+  let providers = catalog.bpp_providers
+  when (null providers) $ throwError $ InvalidRequest "Missing provider"
+  now <- getCurrentTime
+  parkingLocations <- do
+    allParkingLocationsByProvider <- forM providers $ \provider -> do
+      forM provider.locations (buildParkingLocation now)
+    return $ concat allParkingLocationsByProvider
+  quotes <- do
+    allQuotesByProvider <- forM providers $ \provider -> do
+      let items = fromMaybe [] provider.items
+      forM items (buildQuote now searchRequestId bppUrl bppId parkingLocations)
+    return $ concat allQuotesByProvider
 
-      Esq.runTransaction $ do
-        traverse_ QParkingLocation.create parkingLocations
-        traverse_ QQuote.create quotes
-    _ -> throwError $ InvalidRequest "Missing provider"
+  Esq.runTransaction $ do
+    traverse_ QParkingLocation.create parkingLocations
+    traverse_ QQuote.create quotes
 
 buildQuote ::
   MonadFlow m =>

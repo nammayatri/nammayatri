@@ -25,18 +25,20 @@ data Quote = Quote
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
-    searchId :: Id Search,
     bppId :: Text,
     bppUrl :: BaseUrl,
     parkingSpaceName :: Text,
-    parkingLocationId :: Id ParkingLocation,
-    parkingLocationIdFromBpp :: Text,
+    parkingSpaceLocation :: ParkingLocationAPIEntity,
     fare :: Amount,
     availableSpaces :: Int,
     createdAt :: UTCTime
   }
   deriving (Generic, ToJSON)
 
-makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
-makeQuoteAPIEntity Quote {..} =
-  QuoteAPIEntity {..}
+makeQuoteAPIEntity :: Quote -> ParkingLocation -> QuoteAPIEntity
+makeQuoteAPIEntity Quote {..} parkingLocation = do
+  let parkingLocationAPIEntity = makeParkingLocationAPIEntity parkingLocation
+  QuoteAPIEntity 
+    { parkingSpaceLocation = parkingLocationAPIEntity,
+      ..
+    }

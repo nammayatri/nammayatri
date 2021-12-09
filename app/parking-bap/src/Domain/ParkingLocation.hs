@@ -23,7 +23,14 @@ data ParkingLocation = ParkingLocation
 
 data ParkingLocationAPIEntity = ParkingLocationAPIEntity
   { lat :: Double,
-    lon :: Double
+    lon :: Double,
+    name :: Text,
+    streetAddress :: Text,
+    locality :: Text,
+    city :: Maybe Text,
+    state :: Text,
+    country :: Text,
+    areaCode :: Text
   }
   deriving (Generic, ToJSON)
 
