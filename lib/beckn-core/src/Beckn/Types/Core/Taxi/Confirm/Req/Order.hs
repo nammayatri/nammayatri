@@ -1,5 +1,5 @@
-module Beckn.Types.Core.Taxi.OnConfirm.Order
-  ( module Beckn.Types.Core.Taxi.OnConfirm.Order,
+module Beckn.Types.Core.Taxi.Confirm.Req.Order
+  ( module Beckn.Types.Core.Taxi.Confirm.Req.Order,
     module Reexport,
   )
 where
@@ -9,10 +9,8 @@ import Beckn.Utils.Example
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, id, state)
 
-data Order = Order
-  { id :: Text,
-    items :: [OrderItem],
-    payment :: Payment
+newtype Order = Order
+  { items :: [OrderItem]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -24,7 +22,5 @@ newtype OrderItem = OrderItem
 instance Example Order where
   example =
     Order
-      { id = "ride_booking_id",
-        items = [OrderItem "quote_id"],
-        payment = example
+      { items = [OrderItem "quote_id"]
       }

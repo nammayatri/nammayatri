@@ -1,15 +1,11 @@
-module Product.Confirm (confirm, onConfirm) where
+module Product.Confirm (confirm) where
 
 import App.Types
-import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
-import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Taxi.Confirm.Req as ReqConfirm
 import qualified Beckn.Types.Core.ReqTypes as Common
-import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
-import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Organization as OQ
@@ -34,26 +30,28 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   organization <-
     OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
-  now <- getCurrentTime
-  rideBooking <- buildRideBooking searchRequest quote now
-  DB.runSqlDBTransaction $
-    QRideB.create rideBooking
   bapURIs <- asks (.bapSelfURIs)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   context <- buildTaxiContext (getId searchRequestId) bapURIs.cabs (Just bppURI)
   let order =
-        Confirm.Order
-          { items = [Confirm.OrderItem {id = quote.bppQuoteId.getId}]
+        ReqConfirm.Order
+          { items = [ReqConfirm.OrderItem {id = quote.bppQuoteId.getId}]
           }
-  void $ ExternalAPI.confirm bppURI (Common.BecknReq context $ Confirm.ConfirmMessage order)
+  res <- ExternalAPI.confirm bppURI (Common.BecknReq context $ ReqConfirm.ConfirmReqMessage order)
+
+  let bppRideBookingId = Id res.order.id
+  now <- getCurrentTime
+  rideBooking <- buildRideBooking searchRequest quote bppRideBookingId now
+  DB.runSqlDBTransaction $
+    QRideB.create rideBooking
   return $ API.ConfirmRes rideBooking.id
   where
-    buildRideBooking searchRequest quote now = do
+    buildRideBooking searchRequest quote bppRideBookingId now = do
       id <- generateGUID
       return $
         SRB.RideBooking
           { id = Id id,
-            bppBookingId = Nothing,
+            bppBookingId = bppRideBookingId,
             requestId = searchRequest.id,
             quoteId = quote.id,
             status = SRB.CONFIRMED,
@@ -71,23 +69,3 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
             createdAt = now,
             updatedAt = now
           }
-
-onConfirm ::
-  SignatureAuthResult ->
-  OnConfirm.OnConfirmReq ->
-  FlowHandler AckResponse
-onConfirm _org req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    -- TODO: Verify api key here
-    logTagInfo "on_confirm req" (show req)
-    validateContext req.context
-    case req.contents of
-      Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
-      Right msg -> do
-        bppQuoteId <- (Id . (.id) <$> listToMaybe msg.order.items) & fromMaybeM (InternalError "Empty items list.")
-        let bppRideBookingId = Id msg.order.id
-        quote <- QQuote.findByBPPQuoteId bppQuoteId >>= fromMaybeM QuoteDoesNotExist
-        rb <- QRideB.findByQuoteId quote.id >>= fromMaybeM RideBookingNotFound
-        DB.runSqlDBTransaction $
-          QRideB.updateBPPBookingId rb.id bppRideBookingId
-    return Ack

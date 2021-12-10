@@ -10,7 +10,6 @@ where
 
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
 import Beckn.Types.Error as Err
 import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Flow
@@ -48,8 +47,8 @@ withFlowHandlerBecknAPI ::
     HasField "isShuttingDown" r (TMVar ()),
     Log (FlowR r)
   ) =>
-  FlowR r AckResponse ->
-  FlowHandlerR r AckResponse
+  FlowR r a ->
+  FlowHandlerR r a
 withFlowHandlerBecknAPI = withFlowHandler . becknApiHandler . handleIfUp
 
 handleIfUp ::

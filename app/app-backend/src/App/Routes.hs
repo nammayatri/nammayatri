@@ -10,7 +10,6 @@ import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Taxi.API.Call as API
 import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
-import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import Beckn.Types.Id
@@ -179,8 +178,6 @@ type BecknCabAPI =
     :> SignatureAuth "Proxy-Authorization"
     :> API.OnSearchAPI
     :<|> SignatureAuth "Authorization"
-    :> API.OnConfirmAPI
-    :<|> SignatureAuth "Authorization"
     :> API.OnUpdateAPI
     :<|> SignatureAuth "Authorization"
     :> API.OnCancelAPI
@@ -194,7 +191,6 @@ type SearchAPI =
 becknCabApi :: FlowServer BecknCabAPI
 becknCabApi =
   Search.searchCb
-    :<|> Confirm.onConfirm
     :<|> Update.onUpdate
     :<|> Cancel.onCancel
 

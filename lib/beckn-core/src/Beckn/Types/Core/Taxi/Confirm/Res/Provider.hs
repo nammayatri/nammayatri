@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Taxi.OnConfirm.Provider where
+module Beckn.Types.Core.Taxi.Confirm.Res.Provider where
 
 import Beckn.Utils.Example (Example (..))
 import Data.OpenApi (ToSchema)

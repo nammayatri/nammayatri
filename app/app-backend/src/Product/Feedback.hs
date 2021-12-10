@@ -24,7 +24,7 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
   let txnId = getId rideBooking.requestId
-  bppRideBookingId <- rideBooking.bppBookingId & fromMaybeM (RideBookingFieldNotPresent "bppBookingId")
+      bppRideBookingId = rideBooking.bppBookingId
   organization <-
     Organization.findOrganizationById (rideBooking.providerId)
       >>= fromMaybeM OrgNotFound
