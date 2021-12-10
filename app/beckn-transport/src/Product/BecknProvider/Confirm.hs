@@ -6,14 +6,18 @@ import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Amount (Amount)
+import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
-import qualified Beckn.Types.Core.Taxi.Confirm.Res as ResConfirm
+import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
+import Beckn.Types.Core.Taxi.Common.Context (Action (CONFIRM))
+import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
+import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.BecknProvider.BP as BP
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.Organization as Organization
@@ -40,7 +44,7 @@ confirm ::
   Id Organization.Organization ->
   SignatureAuthResult ->
   Confirm.ConfirmReq ->
-  FlowHandler Confirm.ConfirmRes
+  FlowHandler AckResponse
 confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "confirm API Flow" "Reached"
@@ -76,10 +80,12 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
       whenJust quote.discount $ \disc ->
         QDiscTransaction.create $ mkDiscountTransaction rideBooking disc now
 
-    confirmRes
-      rideBooking
-      searchRequest
-      transporterOrg
+    let bapCallbackUrl = req.context.bap_uri
+    ExternalAPI.withCallback transporterOrg CONFIRM OnConfirm.onConfirmAPI (req.context) bapCallbackUrl $
+      onConfirmCallback
+        rideBooking
+        searchRequest
+        transporterOrg
   where
     buildRideBooking searchRequest quote provider customerPhoneNumber now = do
       id <- generateGUID
@@ -106,7 +112,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
             updatedAt = now
           }
 
-confirmRes ::
+onConfirmCallback ::
   ( DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
@@ -114,8 +120,8 @@ confirmRes ::
   SRB.RideBooking ->
   SearchRequest.SearchRequest ->
   Organization.Organization ->
-  m Confirm.ConfirmRes
-confirmRes rideBooking searchRequest transporterOrg = do
+  m OnConfirm.OnConfirmMessage
+onConfirmCallback rideBooking searchRequest transporterOrg = do
   let transporterId = transporterOrg.id
   let rideBookingId = rideBooking.id
   let pickupPoint = searchRequest.fromLocationId
@@ -123,13 +129,13 @@ confirmRes rideBooking searchRequest transporterOrg = do
   driverPool <- map (.driverId) <$> calculateDriverPool pickupPoint transporterId (Just vehicleVariant)
   setDriverPool rideBookingId driverPool
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId rideBookingId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  return $ ResConfirm.ConfirmResMessage order
+  return $ OnConfirm.OnConfirmMessage order
   where
     order =
-      ResConfirm.Order
+      OnConfirm.Order
         { id = rideBooking.id.getId,
-          items = [ResConfirm.OrderItem $ rideBooking.quoteId.getId],
-          estimated_total_fare = ResConfirm.Price $ realToFrac rideBooking.estimatedTotalFare
+          items = [OnConfirm.OrderItem $ rideBooking.quoteId.getId],
+          estimated_total_fare = OnConfirm.Price $ realToFrac rideBooking.estimatedTotalFare
         }
 
 driverPoolKey :: Id SRB.RideBooking -> Text

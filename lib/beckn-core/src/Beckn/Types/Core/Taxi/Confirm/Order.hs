@@ -1,5 +1,5 @@
-module Beckn.Types.Core.Taxi.Confirm.Req.Order
-  ( module Beckn.Types.Core.Taxi.Confirm.Req.Order,
+module Beckn.Types.Core.Taxi.Confirm.Order
+  ( module Beckn.Types.Core.Taxi.Confirm.Order,
   )
 where
 

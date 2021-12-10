@@ -35,6 +35,16 @@ updateStatus rbId rbStatus = do
     setClause rbStatus_ now Storage.RideBooking {..} =
       mconcat [status <-. B.val_ rbStatus_, updatedAt <-. B.val_ now]
 
+updateBPPBookingId :: Id Storage.RideBooking -> Id Storage.BPPRideBooking -> DB.SqlDB ()
+updateBPPBookingId rbId bppRbId = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update' dbTable (setClause bppRbId now) $ predicate rbId
+  where
+    predicate rbId_ Storage.RideBooking {..} = id ==. B.val_ rbId_
+    setClause bppRbId_ now Storage.RideBooking {..} =
+      mconcat [bppBookingId <-. B.val_ (Just bppRbId_), updatedAt <-. B.val_ now]
+
 findById :: DBFlow m r => Id Storage.RideBooking -> m (Maybe Storage.RideBooking)
 findById rbId = do
   dbTable <- getDbTable
@@ -47,7 +57,7 @@ findByBPPBookingId bppRbId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.RideBooking {..} = bppBookingId ==. B.val_ bppRbId
+    predicate Storage.RideBooking {..} = bppBookingId ==. B.val_ (Just bppRbId)
 
 findByQuoteId :: DBFlow m r => Id Quote.Quote -> m (Maybe Storage.RideBooking)
 findByQuoteId quoteId_ = do

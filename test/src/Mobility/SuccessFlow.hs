@@ -51,6 +51,12 @@ doAnAppSearch = do
       appConfirmRide appRegistrationToken appSearchId bapQuoteId
   let bapRideBookingId = confirmResult.bookingId
 
+  void . poll $
+    callBAP (appRideBookingStatus bapRideBookingId appRegistrationToken)
+      <&> (.status)
+      >>= (`shouldBe` AppRB.CONFIRMED)
+      <&> Just
+
   return (bapQuoteId, bapRideBookingId)
 
 getBPPQuoteId ::

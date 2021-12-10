@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.ride_booking ALTER COLUMN bpp_ride_booking_id DROP NOT NULL;

@@ -1,5 +1,5 @@
-module Beckn.Types.Core.Taxi.Confirm.Res.Order
-  ( module Beckn.Types.Core.Taxi.Confirm.Res.Order,
+module Beckn.Types.Core.Taxi.OnConfirm.Order
+  ( module Beckn.Types.Core.Taxi.OnConfirm.Order,
     module Reexport,
   )
 where

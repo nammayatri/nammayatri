@@ -26,7 +26,8 @@ import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.SearchRequest as SearchRequest
 
 data RideBookingStatus
-  = CONFIRMED
+  = NEW
+  | CONFIRMED
   | COMPLETED
   | CANCELLED
   | TRIP_ASSIGNED
@@ -54,7 +55,7 @@ data BPPRideBooking
 
 data RideBookingT f = RideBooking
   { id :: B.C f (Id RideBooking),
-    bppBookingId :: B.C f (Id BPPRideBooking),
+    bppBookingId :: B.C f (Maybe (Id BPPRideBooking)),
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     quoteId :: B.C f (Id Quote.Quote),
     status :: B.C f RideBookingStatus,
@@ -117,32 +118,10 @@ fieldEMod =
           updatedAt = "updated_at"
         }
 
-validateStatusTransition :: RideBookingStatus -> RideBookingStatus -> Either Text ()
-validateStatusTransition oldState newState =
-  if oldState == newState
-    then allowed
-    else t oldState newState
-  where
-    forbidden =
-      Left $
-        T.pack $
-          "It is not allowed to change Product Instance status from "
-            <> show oldState
-            <> " to "
-            <> show newState
-    allowed = Right ()
-    t CONFIRMED CANCELLED = allowed
-    t CONFIRMED TRIP_ASSIGNED = allowed
-    t CONFIRMED _ = forbidden
-    t TRIP_ASSIGNED CANCELLED = allowed
-    t TRIP_ASSIGNED COMPLETED = allowed
-    t TRIP_ASSIGNED _ = forbidden
-    t CANCELLED _ = forbidden
-    t COMPLETED _ = forbidden
-
 instance FromBeckn Text RideBookingStatus where
   fromBeckn piStatus =
     case piStatus of
+      "NEW" -> NEW
       "CONFIRMED" -> CONFIRMED
       "COMPLETED" -> COMPLETED
       "CANCELLED" -> CANCELLED
