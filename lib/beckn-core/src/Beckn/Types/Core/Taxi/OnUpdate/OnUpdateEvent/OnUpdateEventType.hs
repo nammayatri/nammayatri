@@ -7,4 +7,5 @@ data OnUpdateEventType
   = RIDE_COMPLETED
   | RIDE_STARTED
   | RIDE_ASSIGNED
+  | RIDE_BOOKING_CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

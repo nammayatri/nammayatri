@@ -9,12 +9,17 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (state)
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
+import qualified Storage.Queries.RideCancellationReason as QRCR
 import Types.Error
+import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
+import qualified Types.Storage.RideCancellationReason as SRCR
 import Utils.Common
+import qualified Utils.Notifications as Notify
 
 onUpdate ::
   SignatureAuthResult ->
@@ -30,7 +35,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
       Right msg -> processEvent msg.cabs_update_event
     return Ack
 
-processEvent :: DBFlow m r => OnUpdate.OnUpdateEvent -> m ()
+processEvent :: (DBFlow m r, FCMFlow m r, CoreMetrics m) => OnUpdate.OnUpdateEvent -> m ()
 processEvent (OnUpdate.RideAssigned taEvent) = do
   let bppBookingId = Id taEvent.order_id
   rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM RideBookingDoesNotExist
@@ -92,3 +97,24 @@ processEvent (OnUpdate.RideCompleted rcEvent) = do
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
+processEvent (OnUpdate.RideBookingCancelled tcEvent) = do
+  let bppRideBookingId = Id $ tcEvent.order_id
+  rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM RideBookingDoesNotExist
+  unless (isRideBookingCancellable rideBooking) $
+    throwError (RideBookingInvalidStatus (show rideBooking.status))
+  mbRide <- QRide.findByRBId rideBooking.id
+  let cancellationSource = tcEvent.cancellation_reason_id
+  let searchRequestId = rideBooking.requestId
+  logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
+  DB.runSqlDBTransaction $ do
+    QRB.updateStatus rideBooking.id SRB.CANCELLED
+    whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
+    unless (cancellationSource == OnUpdate.ByUser) $
+      QRCR.create $ SRCR.RideCancellationReason rideBooking.id cancellationSource Nothing Nothing
+  -- notify customer
+  mbPerson <- QPerson.findById rideBooking.requestorId
+  whenJust mbPerson $ \person -> Notify.notifyOnCancel rideBooking person.id person.deviceToken cancellationSource
+
+isRideBookingCancellable :: SRB.RideBooking -> Bool
+isRideBookingCancellable ride =
+  ride.status `elem` [SRB.CONFIRMED, SRB.TRIP_ASSIGNED]

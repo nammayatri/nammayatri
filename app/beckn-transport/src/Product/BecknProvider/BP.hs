@@ -2,16 +2,14 @@ module Product.BecknProvider.BP
   ( sendRideAssignedUpdateToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
-    sendCancelToBAP,
+    sendRideBookingCanceledUpdateToBAP,
     buildRideReq,
   )
 where
 
 import Beckn.External.Encryption (decrypt)
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
-import qualified Beckn.Types.Core.Taxi.OnCancel as OnCancel
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Data.Time (UTCTime)
@@ -26,6 +24,7 @@ import qualified Types.Storage.Organization as SOrg
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideRequest as SRideRequest
+import qualified Types.Storage.SearchRequest as SSR
 import Utils.Common
 
 sendRideAssignedUpdateToBAP ::
@@ -42,7 +41,7 @@ sendRideAssignedUpdateToBAP rideBooking ride = do
     QOrg.findOrganizationById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
   buildRideAssignedUpdatePayload ride transporter
-    >>= void . ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
+    >>= sendUpdateEvent transporter rideBooking.requestId
 
 sendRideStartedUpdateToBAP ::
   ( DBFlow m r,
@@ -58,7 +57,7 @@ sendRideStartedUpdateToBAP rideBooking ride = do
     QOrg.findOrganizationById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
   buildRideStartedUpdatePayload ride
-    >>= void . ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
+    >>= sendUpdateEvent transporter rideBooking.requestId
 
 sendRideCompletedUpdateToBAP ::
   ( DBFlow m r,
@@ -74,9 +73,9 @@ sendRideCompletedUpdateToBAP rideBooking ride = do
     QOrg.findOrganizationById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
   buildRideCompletedUpdatePayload ride
-    >>= void . ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
+    >>= sendUpdateEvent transporter rideBooking.requestId
 
-sendCancelToBAP ::
+sendRideBookingCanceledUpdateToBAP ::
   ( DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -84,11 +83,24 @@ sendCancelToBAP ::
   ) =>
   SRB.RideBooking ->
   SOrg.Organization ->
-  OnCancel.CancellationSource ->
+  OnUpdate.CancellationSource ->
   m ()
-sendCancelToBAP rideBooking transporter cancellationSource = do
-  let message = OnCancel.OnCancelMessage (OnCancel.Order rideBooking.id.getId) cancellationSource
-  void $ ExternalAPI.callBAP "on_cancel" API.onCancelAPI transporter rideBooking.requestId $ Right message
+sendRideBookingCanceledUpdateToBAP rideBooking transporter cancellationSource = do
+  let message = OnUpdate.RideBookingCancelled $ OnUpdate.RideBookingCancelledEvent rideBooking.id.getId cancellationSource
+  sendUpdateEvent transporter rideBooking.requestId message
+
+sendUpdateEvent ::
+  ( DBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  SOrg.Organization ->
+  Id SSR.SearchRequest ->
+  OnUpdate.OnUpdateEvent ->
+  m ()
+sendUpdateEvent transporter requestId =
+  void . ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter requestId . Right . OnUpdate.OnUpdateMessage
 
 buildRideAssignedUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>

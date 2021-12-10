@@ -6,7 +6,7 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
-import qualified Beckn.Types.Core.Taxi.Cancel.CancellationSource as Cancel
+import qualified Beckn.Types.Core.Taxi.Cancel.Req as ReqCancel
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
@@ -69,7 +69,7 @@ cancelRide rideId rideCReason = do
     transporter <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    BP.sendCancelToBAP rideBooking transporter rideCReason.source
+    BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter rideCReason.source
     searchRequest <- SearchRequest.findById (rideBooking.requestId) >>= fromMaybeM SearchRequestNotFound
     driver <- Person.findPersonById ride.driverId >>= fromMaybeM PersonNotFound
     Notify.notifyOnCancel searchRequest driver.id driver.deviceToken rideCReason.source
@@ -88,4 +88,4 @@ cancelRideTransaction rideBooking ride rideCReason = DB.runSqlDBTransaction $ do
     updateDriverInfo personId = do
       let driverId = cast personId
       DriverInformation.updateOnRide driverId False
-      when (rideCReason.source == Cancel.ByDriver) $ QDriverStats.updateIdleTime driverId
+      when (rideCReason.source == ReqCancel.ByDriver) $ QDriverStats.updateIdleTime driverId

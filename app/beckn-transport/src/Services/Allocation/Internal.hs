@@ -235,7 +235,7 @@ cancelRide rideBookingId reason = do
     transporter <-
       QOrg.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    BP.sendCancelToBAP rideBooking transporter reason.source
+    BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter reason.source
 
 cleanupNotifications :: DBFlow m r => Id RideBooking -> m ()
 cleanupNotifications = QNS.cleanupNotifications

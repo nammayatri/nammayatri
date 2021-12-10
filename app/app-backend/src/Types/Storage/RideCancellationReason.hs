@@ -2,7 +2,7 @@
 
 module Types.Storage.RideCancellationReason where
 
-import Beckn.Types.Core.Taxi.Cancel.CancellationSource (CancellationSource)
+import Beckn.Types.Core.Taxi.Common.CancellationSource (CancellationSource)
 import Beckn.Types.Id
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)

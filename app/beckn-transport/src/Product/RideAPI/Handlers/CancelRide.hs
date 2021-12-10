@@ -2,7 +2,7 @@ module Product.RideAPI.Handlers.CancelRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Taxi.Cancel.CancellationSource as Cancel
+import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Cancel
 import Beckn.Types.Id
 import EulerHS.Prelude
 import Types.API.Ride (CancelRideReq (..))

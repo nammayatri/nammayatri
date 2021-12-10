@@ -1,4 +1,4 @@
-module Beckn.Types.Core.Taxi.Cancel.CancellationSource where
+module Beckn.Types.Core.Taxi.Common.CancellationSource where
 
 import Data.Aeson
 import Data.OpenApi (ToSchema)
