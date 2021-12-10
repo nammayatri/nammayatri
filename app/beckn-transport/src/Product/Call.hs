@@ -2,7 +2,7 @@ module Product.Call where
 
 import App.Types
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Cabs.API.Call
+import Beckn.Types.Core.Taxi.API.Call
 import Beckn.Types.Id
 import EulerHS.Prelude
 import ExternalAPI.Flow as ExternalAPI

@@ -6,9 +6,9 @@ import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Cabs.API.OnSearch as OnSearch
-import qualified Beckn.Types.Core.Cabs.API.Search as Search
-import qualified Beckn.Types.Core.Cabs.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Taxi.API.Search as Search
+import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))

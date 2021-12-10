@@ -1,9 +1,9 @@
 module Beckn.Product.Validation.Context where
 
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Cabs.Common.Context as Cab
 import qualified Beckn.Types.Core.Migration.Context as Mig
 import qualified Beckn.Types.Core.Migration.Domain as Mig
+import qualified Beckn.Types.Core.Taxi.Common.Context as Cab
 import Beckn.Types.Error
 import Beckn.Types.Field
 import Beckn.Utils.Common

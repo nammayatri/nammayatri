@@ -9,10 +9,10 @@ where
 
 import Beckn.External.Encryption (decrypt)
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Cabs.API.OnCancel as API
-import qualified Beckn.Types.Core.Cabs.API.OnUpdate as API
-import qualified Beckn.Types.Core.Cabs.OnCancel as OnCancel
-import qualified Beckn.Types.Core.Cabs.OnUpdate as OnUpdate
+import qualified Beckn.Types.Core.Taxi.API.OnCancel as API
+import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
+import qualified Beckn.Types.Core.Taxi.OnCancel as OnCancel
+import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Data.Time (UTCTime)
 import EulerHS.Prelude

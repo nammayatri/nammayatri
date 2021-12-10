@@ -6,9 +6,9 @@ import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Cabs.API.Confirm as Confirm
-import qualified Beckn.Types.Core.Cabs.API.OnConfirm as OnConfirm
-import qualified Beckn.Types.Core.Cabs.OnConfirm as OnConfirm
+import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
+import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
+import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))

@@ -5,9 +5,9 @@ import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Cabs.API.OnConfirm as OnConfirm
-import qualified Beckn.Types.Core.Cabs.Confirm as Confirm
 import qualified Beckn.Types.Core.ReqTypes as Common
+import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
+import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (id)
@@ -40,7 +40,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
     QRideB.create rideBooking
   bapURIs <- asks (.bapSelfURIs)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  context <- buildCabsContext (getId searchRequestId) bapURIs.cabs (Just bppURI)
+  context <- buildTaxiContext (getId searchRequestId) bapURIs.cabs (Just bppURI)
   let order =
         Confirm.Order
           { items = [Confirm.OrderItem {id = quote.bppQuoteId.getId}]

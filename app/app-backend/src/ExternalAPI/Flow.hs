@@ -1,11 +1,11 @@
 module ExternalAPI.Flow where
 
-import Beckn.Types.Core.Cabs.API.Cancel as API
-import Beckn.Types.Core.Cabs.API.Confirm as API
-import Beckn.Types.Core.Cabs.API.Rating as API
-import qualified Beckn.Types.Core.Cabs.API.Search as API
 import qualified Beckn.Types.Core.Migration.API.Search as MigAPI
 import Beckn.Types.Core.Migration.API.Types (BecknReq)
+import Beckn.Types.Core.Taxi.API.Cancel as API
+import Beckn.Types.Core.Taxi.API.Confirm as API
+import Beckn.Types.Core.Taxi.API.Rating as API
+import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Error
 import Beckn.Types.Id (ShortId (..))
 import Beckn.Utils.Dhall (FromDhall)

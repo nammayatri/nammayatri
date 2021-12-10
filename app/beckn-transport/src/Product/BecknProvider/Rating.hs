@@ -4,7 +4,7 @@ import App.Types
 import Beckn.Product.Validation.Context
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Cabs.API.Rating as Rating
+import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified EulerHS.Language as L

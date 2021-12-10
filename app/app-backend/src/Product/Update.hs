@@ -4,8 +4,8 @@ import App.Types
 import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Cabs.API.OnUpdate as OnUpdate
-import qualified Beckn.Types.Core.Cabs.OnUpdate as OnUpdate
+import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
+import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (state)

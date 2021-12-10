@@ -1,18 +1,18 @@
 module Beckn.Utils.Context where
 
 import Beckn.Types.App
-import qualified Beckn.Types.Core.Cabs.Common.Context as Cab
+import qualified Beckn.Types.Core.Taxi.Common.Context as Cab
 import Beckn.Types.MonadGuid
 import Beckn.Types.Time
 import EulerHS.Prelude
 
-buildCabsContext ::
+buildTaxiContext ::
   (MonadTime m, MonadGuid m) =>
   Text ->
   BaseUrl ->
   Maybe BaseUrl ->
   m Cab.Context
-buildCabsContext txnId bapUri bppUri = do
+buildTaxiContext txnId bapUri bppUri = do
   currTime <- getCurrentTime
   msgId <- generateGUIDText
   return $

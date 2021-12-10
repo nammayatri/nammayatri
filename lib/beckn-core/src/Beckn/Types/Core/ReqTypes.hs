@@ -1,7 +1,7 @@
 module Beckn.Types.Core.ReqTypes where
 
-import Beckn.Types.Core.Cabs.Common.Context (Context)
 import Beckn.Types.Core.Error (Error)
+import Beckn.Types.Core.Taxi.Common.Context (Context)
 import qualified Control.Lens as L
 import Data.Aeson
 import Data.OpenApi

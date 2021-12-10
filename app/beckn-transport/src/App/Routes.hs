@@ -5,11 +5,11 @@ import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.App
-import qualified Beckn.Types.Core.Cabs.API.Call as Call
-import qualified Beckn.Types.Core.Cabs.API.Cancel as API
-import qualified Beckn.Types.Core.Cabs.API.Confirm as API
-import qualified Beckn.Types.Core.Cabs.API.Rating as API
-import qualified Beckn.Types.Core.Cabs.API.Search as API
+import qualified Beckn.Types.Core.Taxi.API.Call as Call
+import qualified Beckn.Types.Core.Taxi.API.Cancel as API
+import qualified Beckn.Types.Core.Taxi.API.Confirm as API
+import qualified Beckn.Types.Core.Taxi.API.Rating as API
+import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi

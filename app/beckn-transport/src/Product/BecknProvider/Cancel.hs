@@ -5,8 +5,8 @@ import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Cabs.API.Cancel as Cancel
-import qualified Beckn.Types.Core.Cabs.Cancel.CancellationSource as Cancel
+import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
+import qualified Beckn.Types.Core.Taxi.Cancel.CancellationSource as Cancel
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude

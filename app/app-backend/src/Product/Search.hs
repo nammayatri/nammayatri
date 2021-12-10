@@ -7,10 +7,6 @@ import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Cabs.API.OnSearch as OnSearch
-import qualified Beckn.Types.Core.Cabs.Common.Context as Common
-import qualified Beckn.Types.Core.Cabs.OnSearch as OnSearch
-import qualified Beckn.Types.Core.Cabs.Search as Search
 import qualified Beckn.Types.Core.Migration.API.Search as Core9
 import qualified Beckn.Types.Core.Migration.API.Types as Core9
 import qualified Beckn.Types.Core.Migration.Context as Core9
@@ -18,6 +14,10 @@ import qualified Beckn.Types.Core.Migration.Gps as Mig
 import qualified Beckn.Types.Core.Migration.Intent as Mig
 import qualified Beckn.Types.Core.Migration.Location as Mig
 import qualified Beckn.Types.Core.ReqTypes as Common
+import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Taxi.Common.Context as Common
+import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Taxi.Search as Search
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -64,7 +64,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   bapURIs <- asks (.bapSelfURIs)
   fork "search" . withRetry $ do
     fork "search cabs" $ do
-      context <- buildCabsContext txnId bapURIs.cabs Nothing
+      context <- buildTaxiContext txnId bapURIs.cabs Nothing
       let intent = mkIntent req now distance
       ExternalAPI.search (Common.BecknReq context $ Search.SearchMessage intent)
     fork "search metro" $ do
