@@ -9,13 +9,10 @@ import EulerHS.Prelude
 import qualified Product.Dunzo.Flow as DZ
 import qualified Storage.Queries.Organization as Org
 import Types.Beckn.API.Cancel (CancellationInfo)
-import Types.Beckn.API.Init (InitOrderObj)
 import Types.Beckn.API.Search (SearchIntent)
-import Types.Beckn.API.Select (SelectedObject)
 import Types.Beckn.API.Status (OrderId)
 import Types.Beckn.API.Track (TrackInfo)
 import qualified Types.Beckn.API.Types as API
-import Types.Beckn.API.Update (UpdateInfo)
 import Types.Beckn.Context
 import qualified Types.Beckn.Domain as Domain
 import Types.Error
@@ -34,22 +31,6 @@ search (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
     validateContext SEARCH $ req.context
     bapOrg <- findOrg subscriber
     DZ.search bapOrg req
-
-select :: SignatureAuthResult -> API.BecknReq SelectedObject -> FlowHandler AckResponse
-select (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    validateContext SELECT $ req.context
-    bapOrg <- findOrg subscriber
-    validateBapUrl subscriber $ req.context
-    DZ.select bapOrg req
-
-init :: SignatureAuthResult -> API.BecknReq InitOrderObj -> FlowHandler AckResponse
-init (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    bapOrg <- findOrg subscriber
-    validateContext INIT $ req.context
-    validateBapUrl subscriber $ req.context
-    DZ.init bapOrg req
 
 confirm :: SignatureAuthResult -> API.BecknReq API.OrderObject -> FlowHandler AckResponse
 confirm (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
@@ -82,14 +63,6 @@ cancel (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
     validateContext CANCEL $ req.context
     validateBapUrl subscriber $ req.context
     DZ.cancel bapOrg req
-
-update :: SignatureAuthResult -> API.BecknReq UpdateInfo -> FlowHandler AckResponse
-update (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    bapOrg <- findOrg subscriber
-    validateContext UPDATE $ req.context
-    validateBapUrl subscriber $ req.context
-    DZ.update bapOrg req
 
 validateContext :: HasFlowEnv m r '["coreVersion" ::: Text] => Action -> Context -> m ()
 validateContext action context = do

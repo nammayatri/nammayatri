@@ -16,13 +16,10 @@ import qualified Storage.Queries.Dunzo as Dz
 import qualified Storage.Queries.SearchRequest as Storage
 import qualified Types.Beckn.API.Cancel as CancelAPI
 import qualified Types.Beckn.API.Confirm as ConfirmAPI
-import qualified Types.Beckn.API.Init as InitAPI
 import qualified Types.Beckn.API.Search as SearchAPI
-import qualified Types.Beckn.API.Select as SelectAPI
 import qualified Types.Beckn.API.Status as StatusAPI
 import qualified Types.Beckn.API.Track as TrackAPI
 import qualified Types.Beckn.API.Types as API
-import qualified Types.Beckn.API.Update as UpdateAPI
 import Types.Beckn.Context (Action (..))
 import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
 import Types.Beckn.Order (Order)
@@ -54,12 +51,6 @@ search org req = do
   withBecknCallbackMig withRetry authKey SEARCH SearchAPI.onSearchAPI context cbUrl $
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog
-
-select :: MonadFlow m => Org.Organization -> API.BecknReq SelectAPI.SelectedObject -> m AckResponse
-select _org _req = throwError $ ActionNotSupported "select"
-
-init :: MonadFlow m => Org.Organization -> API.BecknReq InitAPI.InitOrderObj -> m AckResponse
-init _org _req = throwError $ ActionNotSupported "init"
 
 confirm ::
   ( DBFlow m r,
@@ -212,9 +203,6 @@ cancel org req = do
     updateSearchRequest searchRequestId order searchRequest = do
       let updatedSearchRequest = searchRequest {udf1 = Just $ encodeToText order}
       Storage.update searchRequestId updatedSearchRequest
-
-update :: MonadFlow m => Org.Organization -> API.BecknReq UpdateAPI.UpdateInfo -> m AckResponse
-update _org _req = throwError $ ActionNotSupported "update"
 
 -- Helpers
 getQuote ::
