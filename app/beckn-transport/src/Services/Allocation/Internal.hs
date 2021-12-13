@@ -83,7 +83,7 @@ assignDriver rideBookingId driverId = do
 
   fork "assignDriver - Notify BAP" $ do
     uRideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
-    BP.sendTripAssignedUpdateToBAP uRideBooking ride
+    BP.sendRideAssignedUpdateToBAP uRideBooking ride
     Notify.notifyDriver notificationType notificationTitle (message uRideBooking) driver.id driver.deviceToken
   where
     notificationType = FCM.DRIVER_ASSIGNMENT

@@ -4,15 +4,15 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent
   )
 where
 
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as Reexport
-import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.TripAssignedEvent as Reexport
 import Beckn.Utils.Schema (untaggedValue)
 import Data.OpenApi
 import EulerHS.Prelude hiding ((.=))
 
 data OnUpdateEvent
-  = TripAssigned TripAssignedEvent
+  = RideAssigned RideAssignedEvent
   | RideStarted RideStartedEvent
   | RideCompleted RideCompletedEvent
   deriving (Generic, Show, ToJSON, FromJSON)

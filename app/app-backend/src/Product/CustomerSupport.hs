@@ -102,10 +102,9 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
 
 makeSearchRequestToOrder :: (DBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
 makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..} = do
-  searchRequest <- SearchRequest.findById id
   fromLocation <- Location.findLocationById fromLocationId
   toLocation <- Location.findLocationById toLocationId
-  rideBooking <- join <$> mapM QRB.findByRequestId (searchRequest <&> (.id))
+  rideBooking <- QRB.findByRequestId id
   rbStatus <- buildRideBookingStatusRes `mapM` rideBooking
   decMobNum <- decrypt mobileNumber
   let details =

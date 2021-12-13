@@ -1,5 +1,5 @@
 module Product.BecknProvider.BP
-  ( sendTripAssignedUpdateToBAP,
+  ( sendRideAssignedUpdateToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
     sendCancelToBAP,
@@ -28,7 +28,7 @@ import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideRequest as SRideRequest
 import Utils.Common
 
-sendTripAssignedUpdateToBAP ::
+sendRideAssignedUpdateToBAP ::
   ( DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -37,11 +37,11 @@ sendTripAssignedUpdateToBAP ::
   SRB.RideBooking ->
   SRide.Ride ->
   m ()
-sendTripAssignedUpdateToBAP rideBooking ride = do
+sendRideAssignedUpdateToBAP rideBooking ride = do
   transporter <-
     QOrg.findOrganizationById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
-  buildTripAssignedUpdatePayload ride transporter
+  buildRideAssignedUpdatePayload ride transporter
     >>= ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter rideBooking.requestId . Right . OnUpdate.OnUpdateMessage
 
 sendRideStartedUpdateToBAP ::
@@ -90,12 +90,12 @@ sendCancelToBAP rideBooking transporter cancellationSource = do
   let message = OnCancel.OnCancelMessage (OnCancel.Order rideBooking.id.getId) cancellationSource
   ExternalAPI.callBAP "on_cancel" API.onCancelAPI transporter rideBooking.requestId $ Right message
 
-buildTripAssignedUpdatePayload ::
+buildRideAssignedUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
   SRide.Ride ->
   SOrg.Organization ->
   m OnUpdate.OnUpdateEvent
-buildTripAssignedUpdatePayload ride org = do
+buildRideAssignedUpdatePayload ride org = do
   driver <-
     Person.findPersonById ride.driverId
       >>= fromMaybeM PersonNotFound
@@ -121,10 +121,10 @@ buildTripAssignedUpdatePayload ride org = do
             registration = vehicleNumber
           }
   return $
-    OnUpdate.TripAssigned
-      OnUpdate.TripAssignedEvent
+    OnUpdate.RideAssigned
+      OnUpdate.RideAssignedEvent
         { order_id = ride.bookingId.getId,
-          fulfillment_id = ride.id.getId,
+          ride_id = ride.id.getId,
           otp = ride.otp,
           ..
         }
@@ -138,7 +138,7 @@ buildRideStartedUpdatePayload ride = do
     OnUpdate.RideStarted
       OnUpdate.RideStartedEvent
         { order_id = ride.bookingId.getId,
-          fulfillment_id = ride.id.getId,
+          ride_id = ride.id.getId,
           ..
         }
 
@@ -154,7 +154,7 @@ buildRideCompletedUpdatePayload ride = do
     OnUpdate.RideCompleted
       OnUpdate.RideCompletedEvent
         { order_id = ride.bookingId.getId,
-          fulfillment_id = ride.id.getId,
+          ride_id = ride.id.getId,
           chargeable_distance = chargeableDistance,
           ..
         }

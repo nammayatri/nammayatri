@@ -5,12 +5,12 @@ import Beckn.Utils.Example
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
-import EulerHS.Prelude hiding (id, state, (.=))
+import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
 
 data RideStartedEvent = RideStartedEvent
   { order_id :: Text,
-    fulfillment_id :: Text
+    ride_id :: Text
   }
   deriving (Generic, Show)
 
@@ -18,21 +18,21 @@ instance ToJSON RideStartedEvent where
   toJSON RideStartedEvent {..} =
     A.Object $
       "order_id" .= order_id
-        <> "fulfillment_id" .= fulfillment_id
-        <> "state" .= RIDE_STARTED
+        <> "ride_id" .= ride_id
+        <> "update_type" .= RIDE_STARTED
 
 instance FromJSON RideStartedEvent where
   parseJSON = withObject "RideStartedEvent" $ \obj -> do
-    state <- obj .: "state"
-    unless (state == RIDE_STARTED) $ fail "Wrong state."
+    update_type <- obj .: "update_type"
+    unless (update_type == RIDE_STARTED) $ fail "Wrong update_type."
     RideStartedEvent
       <$> obj .: "order_id"
-      <*> obj .: "fulfillment_id"
+      <*> obj .: "ride_id"
 
 instance ToSchema RideStartedEvent where
   declareNamedSchema _ = do
     id <- declareSchemaRef (Proxy :: Proxy Text)
-    state <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
+    update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     return $
       NamedSchema (Just "RideStartedEvent") $
         mempty
@@ -40,14 +40,14 @@ instance ToSchema RideStartedEvent where
           & properties
             L..~ fromList
               [ ("order_id", id),
-                ("fulfillment_id", id),
-                ("state", state)
+                ("ride_id", id),
+                ("update_type", update_type)
               ]
-          & required L..~ ["order_id", "fulfillment_id", "state"]
+          & required L..~ ["order_id", "ride_id", "update_type"]
 
 instance Example RideStartedEvent where
   example =
     RideStartedEvent
       { order_id = "ride_booking_id",
-        fulfillment_id = "ride_id"
+        ride_id = "ride_id"
       }

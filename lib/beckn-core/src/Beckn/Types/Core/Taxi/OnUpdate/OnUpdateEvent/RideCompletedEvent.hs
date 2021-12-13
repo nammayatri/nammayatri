@@ -10,12 +10,12 @@ import Beckn.Utils.Example
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example)
-import EulerHS.Prelude hiding (id, state, (.=))
+import EulerHS.Prelude hiding (id, (.=))
 import GHC.Exts (fromList)
 
 data RideCompletedEvent = RideCompletedEvent
   { order_id :: Text,
-    fulfillment_id :: Text,
+    ride_id :: Text,
     chargeable_distance :: DecimalValue,
     payment :: Payment
   }
@@ -25,18 +25,18 @@ instance ToJSON RideCompletedEvent where
   toJSON RideCompletedEvent {..} =
     A.Object $
       "order_id" .= order_id
-        <> "fulfillment_id" .= fulfillment_id
+        <> "ride_id" .= ride_id
         <> "chargeable_distance" .= chargeable_distance
         <> "payment" .= payment
-        <> "state" .= RIDE_COMPLETED
+        <> "update_type" .= RIDE_COMPLETED
 
 instance FromJSON RideCompletedEvent where
   parseJSON = withObject "RideCompletedEvent" $ \obj -> do
-    state <- obj .: "state"
-    unless (state == RIDE_COMPLETED) $ fail "Wrong state."
+    update_type <- obj .: "update_type"
+    unless (update_type == RIDE_COMPLETED) $ fail "Wrong update_type."
     RideCompletedEvent
       <$> obj .: "order_id"
-      <*> obj .: "fulfillment_id"
+      <*> obj .: "ride_id"
       <*> obj .: "chargeable_distance"
       <*> obj .: "payment"
 
@@ -45,7 +45,7 @@ instance ToSchema RideCompletedEvent where
     id <- declareSchemaRef (Proxy :: Proxy Text)
     decimalValue <- declareSchemaRef (Proxy :: Proxy DecimalValue)
     payment <- declareSchemaRef (Proxy :: Proxy Payment)
-    state <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
+    update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     return $
       NamedSchema (Just "RideCompletedEvent") $
         mempty
@@ -53,24 +53,24 @@ instance ToSchema RideCompletedEvent where
           & properties
             L..~ fromList
               [ ("order_id", id),
-                ("fulfillment_id", id),
+                ("ride_id", id),
                 ("chargeable_distance", decimalValue),
                 ("payment", payment),
-                ("state", state)
+                ("update_type", update_type)
               ]
           & required
             L..~ [ "order_id",
-                   "fulfillment_id",
+                   "ride_id",
                    "chargeable_distance",
                    "payment",
-                   "state"
+                   "update_type"
                  ]
 
 instance Example RideCompletedEvent where
   example =
     RideCompletedEvent
       { order_id = "ride_booking_id",
-        fulfillment_id = "ride_id",
+        ride_id = "ride_id",
         chargeable_distance = 123,
         payment = example
       }

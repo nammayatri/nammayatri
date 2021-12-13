@@ -6,5 +6,5 @@ import EulerHS.Prelude hiding ((.=))
 data OnUpdateEventType
   = RIDE_COMPLETED
   | RIDE_STARTED
-  | TRIP_ASSIGNED
+  | RIDE_ASSIGNED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
