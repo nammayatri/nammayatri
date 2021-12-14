@@ -4,10 +4,10 @@ module Beckn.Storage.Esqueleto.Queries
   )
 where
 
+import Beckn.Storage.Esqueleto.Class
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Esqueleto.Logger (runLoggerIO)
 import Beckn.Storage.Esqueleto.SqlDB
-import Beckn.Storage.Esqueleto.Types
 import Beckn.Types.Id (Id)
 import Beckn.Types.Time (getCurrentTime)
 import Database.Esqueleto.Experimental as EsqExport hiding
@@ -41,11 +41,11 @@ runTransaction run = do
           }
   liftIO . runLoggerIO logEnv $ runSqlPool (runReaderT run sqlDBEnv) dbEnv.connPool
 
-findOne :: (EsqDBFlow m r, Esq.SqlSelect b (Esq.Entity t), TEntity t a) => Esq.SqlQuery b -> m (Maybe a)
+findOne :: (EsqDBFlow m r, Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> m (Maybe a)
 findOne q = runTransaction $ findOne' q
 
-findOne' :: (Esq.SqlSelect b (Esq.Entity t), TEntity t a) => Esq.SqlQuery b -> SqlDB (Maybe a)
-findOne' q = traverse fromTEntity =<< lift selectOnlyOne
+findOne' :: (Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> SqlDB (Maybe a)
+findOne' q = traverse toResult =<< lift selectOnlyOne
   where
     selectOnlyOne = do
       list <- Esq.select q
@@ -53,11 +53,11 @@ findOne' q = traverse fromTEntity =<< lift selectOnlyOne
         [res] -> return $ Just res
         _ -> return Nothing
 
-findAll :: (EsqDBFlow m r, Esq.SqlSelect b (Esq.Entity t), TEntity t a) => Esq.SqlQuery b -> m [a]
+findAll :: (EsqDBFlow m r, Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> m [a]
 findAll q = runTransaction $ findAll' q
 
-findAll' :: (Esq.SqlSelect b (Esq.Entity t), TEntity t a) => Esq.SqlQuery b -> SqlDB [a]
-findAll' q = traverse fromTEntity =<< lift (Esq.select q)
+findAll' :: (Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> SqlDB [a]
+findAll' q = traverse toResult =<< lift (Esq.select q)
 
 create ::
   ( EsqDBFlow m r,

@@ -5,11 +5,13 @@ module Beckn.Storage.Esqueleto
     module Logger,
     module Config,
     module SqlDB,
+    module Class,
     defaultQQ,
     defaultSqlSettings,
   )
 where
 
+import Beckn.Storage.Esqueleto.Class as Class
 import Beckn.Storage.Esqueleto.Config as Config (EsqDBFlow)
 import Beckn.Storage.Esqueleto.Functions as Functions
 import Beckn.Storage.Esqueleto.Logger as Logger (LoggerIO)
