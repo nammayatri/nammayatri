@@ -1,6 +1,6 @@
 #!/bin/bash
 
-HS_FILES=$(git diff --name-only --diff-filter=ACMR "*.hs")
+HS_FILES=$(git diff --name-only --diff-filter=ACMR HEAD "*.hs")
 
 if ! which ormolu >& /dev/null; then
   echo "Could not find 'ormolu', is it installed?"
