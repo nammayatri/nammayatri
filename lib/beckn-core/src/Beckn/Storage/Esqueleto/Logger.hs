@@ -3,14 +3,12 @@
 
 module Beckn.Storage.Esqueleto.Logger (LoggerIO (..), runLoggerIO) where
 
-import Beckn.Types.Logging (LogLevel (..))
+import Beckn.Types.Logging as BLogging (Log (..), LogLevel (..))
 import Beckn.Types.Time (MonadTime (..))
-import Beckn.Utils.IOLogging (LoggerEnv, logOutputIO)
+import Beckn.Utils.IOLogging (LoggerEnv, appendLogTag, logOutputIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Logger as CMLogger
-  ( Loc,
-    LogLevel (..),
-    LogSource,
+  ( LogLevel (..),
     MonadLogger (..),
     MonadLoggerIO (..),
     ToLogStr (toLogStr),
@@ -29,22 +27,32 @@ instance MonadTime LoggerIO where
 runLoggerIO :: LoggerEnv -> LoggerIO a -> IO a
 runLoggerIO logEnv (LoggerIO rdr) = runReaderT rdr logEnv
 
-logFunc :: ToLogStr msg => LoggerEnv -> Loc -> LogSource -> CMLogger.LogLevel -> msg -> IO ()
-logFunc logEnv _ _ logLevel msg =
-  logOutputIO logEnv logLevel' . decodeUtf8 . fromLogStr $ toLogStr msg
-  where
-    logLevel' = case logLevel of
-      LevelError -> ERROR
-      LevelWarn -> WARNING
-      LevelDebug -> DEBUG
-      _ -> INFO
+logFunc :: ToLogStr msg => LoggerEnv -> BLogging.LogLevel -> msg -> IO ()
+logFunc logEnv logLevel msg =
+  logOutputIO logEnv logLevel . decodeUtf8 . fromLogStr $ toLogStr msg
+
+logLevelCMtoB :: CMLogger.LogLevel -> BLogging.LogLevel
+logLevelCMtoB cmLogLevel = case cmLogLevel of
+  LevelError -> ERROR
+  LevelWarn -> WARNING
+  LevelDebug -> DEBUG
+  _ -> INFO
 
 instance MonadLogger LoggerIO where
-  monadLoggerLog loc logSource logLevel msg = LoggerIO $ do
+  monadLoggerLog _ _ logLevel msg = LoggerIO $ do
     loggerEnv <- ask
-    liftIO $ logFunc loggerEnv loc logSource logLevel msg
+    liftIO $ logFunc loggerEnv (logLevelCMtoB logLevel) msg
 
 instance MonadLoggerIO LoggerIO where
   askLoggerIO =
     LoggerIO $
-      logFunc <$> ask
+      (\logEnv _ _ logLvl msg -> logFunc logEnv (logLevelCMtoB logLvl) msg) <$> ask
+
+instance Log LoggerIO where
+  logOutput logLevel msg = LoggerIO $ do
+    loggerEnv <- ask
+    liftIO $ logFunc loggerEnv logLevel msg
+
+  withLogTag tag (LoggerIO logger) = LoggerIO $ local modifyEnv logger
+    where
+      modifyEnv logEnv = appendLogTag tag logEnv
