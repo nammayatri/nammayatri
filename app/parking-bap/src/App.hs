@@ -25,7 +25,7 @@ runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appCfg <- readDhallConfigDefault "parking-bap" <&> configModifier
   appEnv <- buildAppEnv appCfg
-  runServerService appEnv (Proxy @API) handler identity identity context releaseAppEnv \flowRt -> do
+  runServerService appEnv (Proxy @API) handler middleware identity context releaseAppEnv \flowRt -> do
     try (prepareRedisConnections $ appCfg.redisCfg)
       >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
     migrateIfNeeded (appCfg.migrationPath) (appCfg.esqDBCfg) (appCfg.autoMigrate)
@@ -33,4 +33,5 @@ runService configModifier = do
     orgShortId <- askConfig (.selfId)
     modFlowRtWithAuthManagers flowRt appEnv [orgShortId]
   where
+    middleware = hashBodyForSignature
     context = verifyPersonAction @(FlowR AppEnv) :. EmptyContext
