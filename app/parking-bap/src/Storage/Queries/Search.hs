@@ -1,17 +1,13 @@
 module Storage.Queries.Search where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Search
-import Storage.Tabular.Search
+import Storage.Tabular.Search ()
 
 findById :: EsqDBFlow m r => Id Search -> m (Maybe Search)
-findById searchId =
-  runTransaction . findOne' $ do
-    search <- from $ table @SearchT
-    where_ $ search ^. SearchId ==. val (getId searchId)
-    return search
+findById = Esq.findById
 
 create :: Search -> SqlDB ()
 create = create'

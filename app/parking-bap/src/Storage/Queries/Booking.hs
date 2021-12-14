@@ -1,7 +1,7 @@
 module Storage.Queries.Booking where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Booking
@@ -11,11 +11,7 @@ import Storage.Tabular.Booking
 import Tools.Auth
 
 findById :: EsqDBFlow m r => Id Booking -> m (Maybe Booking)
-findById bookingId =
-  runTransaction . findOne' $ do
-    booking <- from $ table @BookingT
-    where_ $ booking ^. BookingId ==. val (getId bookingId)
-    return booking
+findById = Esq.findById
 
 findByQuoteId :: EsqDBFlow m r => Id Quote -> m (Maybe Booking)
 findByQuoteId quoteId =

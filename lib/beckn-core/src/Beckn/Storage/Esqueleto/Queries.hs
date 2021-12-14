@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Beckn.Storage.Esqueleto.Queries
   ( module Beckn.Storage.Esqueleto.Queries,
     module EsqExport,
@@ -8,7 +10,7 @@ import Beckn.Storage.Esqueleto.Class
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Esqueleto.Logger (runLoggerIO)
 import Beckn.Storage.Esqueleto.SqlDB
-import Beckn.Types.Id (Id)
+import Beckn.Types.Id (Id (..))
 import Beckn.Types.Time (getCurrentTime)
 import Database.Esqueleto.Experimental as EsqExport hiding
   ( delete,
@@ -25,7 +27,7 @@ import Database.Esqueleto.Experimental as EsqExport hiding
 import qualified Database.Esqueleto.Experimental as Esq
 import qualified Database.Esqueleto.Internal.Internal as Esq
 import Database.Persist.Postgresql
-import EulerHS.Prelude hiding (Key)
+import EulerHS.Prelude hiding (Key, id)
 
 runTransaction ::
   (EsqDBFlow m r) =>
@@ -52,6 +54,22 @@ findOne' q = traverse toResult =<< lift selectOnlyOne
       case list of
         [res] -> return $ Just res
         _ -> return Nothing
+
+findById :: (EsqDBFlow m r, TEntity t a, TEntityKey t a) => Id a -> m (Maybe a)
+findById id = runTransaction $ findById' id
+
+findById' ::
+  forall t a.
+  ( TEntity t a,
+    TEntityKey t a
+  ) =>
+  Id a ->
+  SqlDB (Maybe a)
+findById' id = findOne' $ do
+  let key = toKey id
+  res <- from $ table @t
+  where_ $ res Esq.^. persistIdField Esq.==. val key
+  return res
 
 findAll :: (EsqDBFlow m r, Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> m [a]
 findAll q = runTransaction $ findAll' q

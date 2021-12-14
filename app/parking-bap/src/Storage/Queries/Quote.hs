@@ -1,18 +1,14 @@
 module Storage.Queries.Quote where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Quote
 import Domain.Search
 import Storage.Tabular.Quote
 
 findById :: EsqDBFlow m r => Id Quote -> m (Maybe Quote)
-findById quoteId =
-  runTransaction . findOne' $ do
-    quote <- from $ table @QuoteT
-    where_ $ quote ^. QuoteId ==. val (getId quoteId)
-    return quote
+findById = Esq.findById
 
 create :: Quote -> SqlDB ()
 create = create'

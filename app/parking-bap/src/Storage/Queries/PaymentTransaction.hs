@@ -1,7 +1,7 @@
 module Storage.Queries.PaymentTransaction where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Booking
@@ -9,11 +9,7 @@ import Domain.PaymentTransaction
 import Storage.Tabular.PaymentTransaction
 
 findById :: EsqDBFlow m r => Id PaymentTransaction -> m (Maybe PaymentTransaction)
-findById paymentTransactionId =
-  runTransaction . findOne' $ do
-    paymentTransaction <- from $ table @PaymentTransactionT
-    where_ $ paymentTransaction ^. PaymentTransactionId ==. val (getId paymentTransactionId)
-    return paymentTransaction
+findById = Esq.findById
 
 findByBookingId :: EsqDBFlow m r => Id Booking -> m (Maybe PaymentTransaction)
 findByBookingId bookingId =

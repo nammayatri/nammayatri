@@ -2,6 +2,7 @@
 
 module Beckn.Storage.Esqueleto.Class where
 
+import Beckn.Storage.Esqueleto.SqlDB (SqlDB)
 import Beckn.Types.Id (Id)
 import Database.Esqueleto.Experimental
 import EulerHS.Prelude hiding (Key)
@@ -14,7 +15,7 @@ class
     | t -> a,
       a -> t
   where
-  fromTEntity :: MonadThrow m => Entity t -> m a
+  fromTEntity :: Entity t -> SqlDB a
   toTEntity :: a -> Entity t
   toTType :: a -> t
 
@@ -30,7 +31,7 @@ class
   toKey :: Id a -> Key t
 
 class QEntity a b where
-  toResult :: MonadThrow m => a -> m b
+  toResult :: a -> SqlDB b
 
 instance TEntity a b => QEntity (Entity a) b where
   toResult = fromTEntity
