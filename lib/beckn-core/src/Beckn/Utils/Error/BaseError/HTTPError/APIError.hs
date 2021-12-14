@@ -40,7 +40,7 @@ catchOwnAPI ::
   m a ->
   (Text -> m a) ->
   m a
-catchOwnAPI m f = m `safeCatch` \(APICallError (APIError {errorCode})) -> f errorCode
+catchOwnAPI m f = m `safeCatch` \(APICallError APIError {errorCode}) -> f errorCode
 
 infixl 1 `catchOwnAPI`
 
