@@ -32,7 +32,7 @@ create drLocId (LatLong lat long) updateTime = do
       Storage.DriverLocation
         { driverId = B.val_ drLocId,
           lat = B.val_ lat,
-          long = B.val_ long,
+          lon = B.val_ long,
           point = mkPointExpr long lat,
           createdAt = B.val_ updateTime,
           updatedAt = B.val_ updateTime
@@ -68,7 +68,7 @@ updateGpsCoord drLocationId (LatLong lat' long') updateTime = do
     setClause mLat mLong updTime Storage.DriverLocation {..} =
       mconcat
         [ lat <-. B.val_ mLat,
-          long <-. B.val_ mLong,
+          lon <-. B.val_ mLong,
           updatedAt <-. B.val_ updTime,
           point <-. mkPointExpr mLong mLat
         ]

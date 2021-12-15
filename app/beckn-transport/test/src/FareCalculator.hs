@@ -38,28 +38,6 @@ defaultFarePolicy =
       nightShiftRate = Just 1.0
     }
 
-defaultPickupLocation :: PickupLocation
-defaultPickupLocation =
-  PickupLocation $
-    Location.SearchReqLocation
-      { id = Id "",
-        lat = 0.0,
-        long = 0.0,
-        createdAt = mockTime 0,
-        updatedAt = mockTime 0
-      }
-
-defaultDropLocation :: DropLocation
-defaultDropLocation =
-  DropLocation $
-    Location.SearchReqLocation
-      { id = Id "",
-        lat = 0.0,
-        long = 0.0,
-        createdAt = mockTime 11,
-        updatedAt = mockTime 11
-      }
-
 mkDiscount :: Vehicle.Variant -> UTCTime -> UTCTime -> Rational -> Bool -> Discount
 mkDiscount vehVar from to disc isOn = Discount (Id "") vehVar (Id "") from to disc isOn (mockTime 11) (mockTime 11)
 

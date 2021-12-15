@@ -9,6 +9,7 @@ import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Taxi.Search as Search
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -17,7 +18,7 @@ import qualified Data.Text as T
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import Data.Traversable
 import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (state)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
@@ -67,8 +68,8 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _
         let dropOff = intent.fulfillment.end
         let startTime = pickup.time.timestamp
         validity <- getValidTime now startTime
-        fromLocation <- buildFromStop now pickup
-        toLocation <- buildFromStop now dropOff
+        fromLocation <- buildStartSearchReqLoc pickup.location now
+        toLocation <- buildStartSearchReqLoc dropOff.location now
         let bapOrgId = Id subscriber.subscriber_id
         uuid <- L.generateGUID
         let bapUri = req.context.bap_uri
@@ -79,18 +80,20 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _
           QSearchRequest.create searchRequest
         ExternalAPI.withCallback' withRetry transporter "search" OnSearch.onSearchAPI context callbackUrl $
           onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
-  where
-    buildFromStop now stop = do
-      let mgps = stop.location.gps
-      uuid <- Id <$> L.generateGUID
-      pure $
-        Location.SearchReqLocation
-          { id = uuid,
-            lat = mgps.lat,
-            long = mgps.lon,
-            createdAt = now,
-            updatedAt = now
-          }
+
+buildStartSearchReqLoc :: MonadFlow m => Search.Location -> UTCTime -> m Location.SearchReqLocation
+buildStartSearchReqLoc loc now = do
+  let Search.Gps {..} = loc.gps
+      Search.Address {..} = loc.address
+  locId <- generateGUID
+  return
+    Location.SearchReqLocation
+      { id = locId,
+        areaCode = area_code,
+        createdAt = now,
+        updatedAt = now,
+        ..
+      }
 
 getValidTime :: HasFlowEnv m r '["caseExpiry" ::: Maybe Seconds] => UTCTime -> UTCTime -> m UTCTime
 getValidTime now startTime = do

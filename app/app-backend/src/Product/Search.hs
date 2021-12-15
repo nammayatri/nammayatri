@@ -23,7 +23,7 @@ import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Control.Lens ((?~))
 import Data.Time (UTCTime, addUTCTime, diffUTCTime)
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
 import Product.MetroOffer (buildContextMetro)
@@ -47,8 +47,8 @@ import qualified Utils.Metrics as Metrics
 search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   validateServiceability
-  fromLocation <- Location.buildSearchReqLoc req.origin
-  toLocation <- Location.buildSearchReqLoc req.destination
+  fromLocation <- buildSearchReqLoc req.origin
+  toLocation <- buildSearchReqLoc req.destination
   now <- getCurrentTime
   distance <-
     Location.getDistance req.origin.gps req.destination.gps
@@ -176,22 +176,12 @@ mkIntent :: API.SearchReq -> UTCTime -> Double -> Search.Intent
 mkIntent req startTime distance = do
   let startLocation =
         Search.StartInfo
-          { location =
-              Search.Location $
-                Search.Gps
-                  { lat = req.origin.gps.lat,
-                    lon = req.origin.gps.lon
-                  },
+          { location = mkLocation req.origin,
             time = Search.Time startTime
           }
       endLocation =
         Search.StopInfo
-          { location =
-              Search.Location $
-                Search.Gps
-                  { lat = req.destination.gps.lat,
-                    lon = req.destination.gps.lon
-                  }
+          { location = mkLocation req.destination
           }
       fulfillment =
         Search.FulFillmentInfo
@@ -202,6 +192,21 @@ mkIntent req startTime distance = do
   Search.Intent
     { ..
     }
+  where
+    mkLocation info =
+      Search.Location
+        { gps =
+            Search.Gps
+              { lat = info.gps.lat,
+                lon = info.gps.lon
+              },
+          address = do
+            let API.SearchReqAddress {..} = info.address
+            Search.Address
+              { area_code = areaCode,
+                ..
+              }
+        }
 
 mkIntentMig :: (MonadThrow m, Log m) => API.SearchReq -> m Mig.Intent
 mkIntentMig req = do
@@ -223,10 +228,27 @@ mkIntentMig req = do
                    }
            )
   where
-    stopToLoc Location.SearchReqLocationAPIEntity {gps} = do
-      gps' <-
-        fromMaybeM (InvalidRequest "bad coordinates") $
-          Mig.Gps
-            <$> Just gps.lat
-            <*> Just gps.lon
+    stopToLoc API.SearchReqLocation {gps} = do
+      let gps' = Mig.Gps gps.lat gps.lon
       pure $ Mig.emptyLocation & #gps ?~ gps'
+
+buildSearchReqLoc :: MonadFlow m => API.SearchReqLocation -> m Location.SearchReqLocation
+buildSearchReqLoc API.SearchReqLocation {..} = do
+  now <- getCurrentTime
+  locId <- generateGUID
+  return
+    Location.SearchReqLocation
+      { id = locId,
+        lat = gps.lat,
+        lon = gps.lon,
+        city = address.city,
+        state = address.state,
+        country = address.country,
+        street = address.street,
+        door = address.door,
+        building = address.building,
+        areaCode = address.areaCode,
+        area = address.area,
+        createdAt = now,
+        updatedAt = now
+      }

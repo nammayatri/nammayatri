@@ -75,9 +75,9 @@ getLocation rideId = withFlowHandlerAPI $ do
       currPoint = locationToLatLong currLocation
   return $ GetLocationRes {..}
 
-locationToLatLong :: (HasField "lat" a Double, HasField "long" a Double) => a -> MapSearch.LatLong
+locationToLatLong :: (HasField "lat" a Double, HasField "lon" a Double) => a -> MapSearch.LatLong
 locationToLatLong loc =
-  MapSearch.LatLong loc.lat loc.long
+  MapSearch.LatLong loc.lat loc.lon
 
 getRoute' ::
   ( CoreMetrics m,

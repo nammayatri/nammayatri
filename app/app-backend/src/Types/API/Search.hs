@@ -1,16 +1,34 @@
 module Types.API.Search where
 
 import Beckn.Types.Id
+import Beckn.Types.MapSearch (LatLong)
 import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (id)
-import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
+import EulerHS.Prelude hiding (id, state)
 import Types.Storage.SearchRequest (SearchRequest)
 
 data SearchReq = SearchReq
-  { origin :: SearchReqLocationAPIEntity,
-    destination :: SearchReqLocationAPIEntity
+  { origin :: SearchReqLocation,
+    destination :: SearchReqLocation
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data SearchReqLocation = SearchReqLocation
+  { address :: SearchReqAddress,
+    gps :: LatLong
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data SearchReqAddress = SearchReqAddress
+  { door :: Maybe Text,
+    building :: Maybe Text,
+    street :: Maybe Text,
+    area :: Maybe Text,
+    city :: Maybe Text,
+    country :: Maybe Text,
+    areaCode :: Maybe Text,
+    state :: Maybe Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 newtype SearchRes = SearchRes
   { searchId :: Id SearchRequest

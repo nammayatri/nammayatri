@@ -4,6 +4,7 @@ module Beckn.Types.Core.Taxi.Search
   )
 where
 
+import Beckn.Types.Core.Taxi.Search.Address as Reexport
 import Beckn.Types.Core.Taxi.Search.Gps as Reexport
 import Beckn.Types.Core.Taxi.Search.Intent as Reexport
 import Beckn.Types.Core.Taxi.Search.Location as Reexport

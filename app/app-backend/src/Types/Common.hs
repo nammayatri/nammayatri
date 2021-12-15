@@ -1,16 +1,3 @@
-module Types.Common where
+module Types.Common (module Reexport) where
 
-import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (drop, id, state)
-
-data Address = Address
-  { door :: Text,
-    building :: Text,
-    street :: Text,
-    area :: Text,
-    city :: Text,
-    country :: Text,
-    areaCode :: Text,
-    state :: Text
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+import Beckn.Types.Common as Reexport

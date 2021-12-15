@@ -19,7 +19,7 @@ import Types.Storage.Person (Person)
 data DriverLocationT f = DriverLocation
   { driverId :: B.C f (Id Person),
     lat :: B.C f Double,
-    long :: B.C f Double,
+    lon :: B.C f Double,
     point :: B.C f Point,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime

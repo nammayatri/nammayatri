@@ -6,7 +6,7 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
-import Database.Beam ((&&.), (==.), (||.))
+import Database.Beam ((==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
 import qualified Types.Storage.DB as DB
@@ -34,35 +34,6 @@ findLocationById locId = do
   DB.findOne dbTable predicate
   where
     predicate Storage.SearchReqLocation {..} = id ==. B.val_ locId
-
-findAllWithLimitOffsetWhere ::
-  DBFlow m r =>
-  [Text] ->
-  [Text] ->
-  [Text] ->
-  [Text] ->
-  Maybe Int ->
-  Maybe Int ->
-  m [Storage.SearchReqLocation]
-findAllWithLimitOffsetWhere pins cities states districts mlimit moffset = do
-  dbTable <- getDbTable
-  DB.findAll
-    dbTable
-    (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc)
-    predicate
-  where
-    limit = toInteger $ fromMaybe 100 mlimit
-    offset = toInteger $ fromMaybe 0 moffset
-    orderByDesc Storage.SearchReqLocation {..} = B.desc_ createdAt
-    predicate Storage.SearchReqLocation {..} =
-      foldl
-        (&&.)
-        (B.val_ True)
-        [ pincode `B.in_` (B.val_ . Just <$> pins) ||. complementVal pins,
-          city `B.in_` (B.val_ . Just <$> cities) ||. complementVal cities,
-          state `B.in_` (B.val_ . Just <$> states) ||. complementVal states,
-          district `B.in_` (B.val_ . Just <$> districts) ||. complementVal districts
-        ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l

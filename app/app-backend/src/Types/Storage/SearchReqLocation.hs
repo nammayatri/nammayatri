@@ -4,27 +4,24 @@
 module Types.Storage.SearchReqLocation where
 
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import Data.Aeson
-import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
-import qualified Data.Text.Encoding as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id, state)
-import qualified Types.Common as Common
-import Utils.Common hiding (id)
 
 data SearchReqLocationT f = SearchReqLocation
   { id :: B.C f (Id SearchReqLocation),
     lat :: B.C f Double,
-    long :: B.C f Double,
-    district :: B.C f (Maybe Text),
+    lon :: B.C f Double,
+    street :: B.C f (Maybe Text),
+    door :: B.C f (Maybe Text),
     city :: B.C f (Maybe Text),
     state :: B.C f (Maybe Text),
     country :: B.C f (Maybe Text),
-    pincode :: B.C f (Maybe Text),
-    address :: B.C f (Maybe Text),
+    building :: B.C f (Maybe Text),
+    areaCode :: B.C f (Maybe Text),
+    area :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -55,53 +52,27 @@ fieldEMod =
   B.setEntityName "search_request_location"
     <> B.modifyTableFields
       B.tableModification
-        { createdAt = "created_at",
+        { areaCode = "area_code",
+          createdAt = "created_at",
           updatedAt = "updated_at"
         }
 
 data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
-  { address :: Common.Address,
-    gps :: LatLong
+  { lat :: Double,
+    lon :: Double,
+    street :: Maybe Text,
+    door :: Maybe Text,
+    city :: Maybe Text,
+    state :: Maybe Text,
+    country :: Maybe Text,
+    building :: Maybe Text,
+    areaCode :: Maybe Text,
+    area :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 makeSearchReqLocationAPIEntity :: SearchReqLocation -> SearchReqLocationAPIEntity
-makeSearchReqLocationAPIEntity loc = do
-  let address =
-        Common.Address
-          { door = "",
-            building = "",
-            street = "",
-            area = "",
-            city = fromMaybe "" loc.city,
-            country = fromMaybe "" loc.country,
-            areaCode = "",
-            state = fromMaybe "" loc.state
-          }
-      gps =
-        LatLong
-          { lat = loc.lat,
-            lon = loc.long
-          }
+makeSearchReqLocationAPIEntity SearchReqLocation {..} =
   SearchReqLocationAPIEntity
     { ..
     }
-
-buildSearchReqLoc :: MonadFlow m => SearchReqLocationAPIEntity -> m SearchReqLocation
-buildSearchReqLoc SearchReqLocationAPIEntity {..} = do
-  now <- getCurrentTime
-  locId <- generateGUID
-  return
-    SearchReqLocation
-      { id = locId,
-        lat = gps.lat,
-        long = gps.lon,
-        district = Nothing,
-        city = Just address.city,
-        state = Just address.state,
-        country = Just address.country,
-        pincode = Nothing,
-        address = Just . T.decodeUtf8 . BSL.toStrict $ encode address,
-        createdAt = now,
-        updatedAt = now
-      }

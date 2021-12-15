@@ -22,7 +22,6 @@ import qualified "app-backend" Types.API.RideBooking as AppRideBooking
 import qualified "beckn-transport" Types.API.RideBooking as TRideBookingAPI
 import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
-import qualified "app-backend" Types.Common as AppCommon
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
 import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
@@ -30,27 +29,26 @@ import qualified "app-backend" Types.Storage.Ride as BRide
 import qualified "beckn-transport" Types.Storage.Ride as TRide
 import qualified "app-backend" Types.Storage.RideBooking as BRB
 import qualified "beckn-transport" Types.Storage.RideBooking as TRB
-import qualified "app-backend" Types.Storage.SearchReqLocation as AppBESearchReqLoc
 import qualified "app-backend" Types.Storage.SearchRequest as BSearchRequest
 
-address :: AppCommon.Address
+address :: AppBESearch.SearchReqAddress
 address =
-  AppCommon.Address
-    { door = "#817",
-      building = "Juspay Apartments",
-      street = "27th Main",
-      area = "8th Block Koramangala",
-      city = "Bangalore",
-      country = "India",
-      areaCode = "560047",
-      state = "Karnataka"
+  AppBESearch.SearchReqAddress
+    { door = Just "#817",
+      building = Just "Juspay Apartments",
+      street = Just "27th Main",
+      area = Just "8th Block Koramangala",
+      city = Just "Bangalore",
+      country = Just "India",
+      areaCode = Just "560047",
+      state = Just "Karnataka"
     }
 
 searchReq :: AppBESearch.SearchReq
 searchReq =
   AppBESearch.SearchReq
-    { origin = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ LatLong 10.0739 76.2733,
-      destination = AppBESearchReqLoc.SearchReqLocationAPIEntity address $ LatLong 10.5449 76.4356
+    { origin = AppBESearch.SearchReqLocation address $ LatLong 10.0739 76.2733,
+      destination = AppBESearch.SearchReqLocation address $ LatLong 10.5449 76.4356
     }
 
 bapTransporterName :: Text
