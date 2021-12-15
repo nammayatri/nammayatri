@@ -56,6 +56,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
             quoteId = quote.id,
             status = SRB.CONFIRMED,
             providerId = quote.providerId,
+            providerName = quote.providerName,
             providerMobileNumber = quote.providerMobileNumber,
             startTime = searchRequest.startTime,
             requestorId = searchRequest.requestorId,

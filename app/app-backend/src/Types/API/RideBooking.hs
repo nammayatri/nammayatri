@@ -13,7 +13,7 @@ data RideBookingStatusRes = RideBookingStatusRes
   { id :: Id RideBooking,
     status :: RideBookingStatus,
     agencyName :: Text,
-    agencyNumber :: Maybe Text,
+    agencyNumber :: Text,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,

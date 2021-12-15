@@ -3,7 +3,6 @@ module Product.RideBooking where
 import App.Types
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.SearchReqLocation as QLoc
@@ -28,7 +27,6 @@ rideBookingList personId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 
 buildRideBookingStatusRes :: DBFlow m r => SRB.RideBooking -> m API.RideBookingStatusRes
 buildRideBookingStatusRes rideBooking = do
-  org <- QOrg.findOrganizationById rideBooking.providerId >>= fromMaybeM OrgNotFound
   fromLocation <- QLoc.findLocationById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
   toLocation <- QLoc.findLocationById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
   let rbStatus = rideBooking.status
@@ -40,8 +38,8 @@ buildRideBookingStatusRes rideBooking = do
     API.RideBookingStatusRes
       { id = rideBooking.id,
         status = rbStatus,
-        agencyName = org.name,
-        agencyNumber = org.mobileCountryCode <> org.mobileNumber,
+        agencyName = rideBooking.providerName,
+        agencyNumber = rideBooking.providerMobileNumber,
         estimatedFare = rideBooking.estimatedFare,
         discount = rideBooking.discount,
         estimatedTotalFare = rideBooking.estimatedTotalFare,
