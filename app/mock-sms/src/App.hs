@@ -5,18 +5,17 @@ module App
   )
 where
 
-import App.Types
-import Beckn.Types.Logging
-import Beckn.Prelude
 import App.Routes (mockSmsAPI, mockSmsServer)
-import Servant
+import App.Types
+import Beckn.Prelude
+import Beckn.Types.Logging
 import Beckn.Utils.Servant.Server
+import Servant
 
 runMockSms :: (AppCfg -> AppCfg) -> IO ()
 runMockSms configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
   runServerService appEnv mockSmsAPI mockSmsServer identity identity EmptyContext releaseAppEnv pure
-
 
 defaultConfig :: AppCfg
 defaultConfig =

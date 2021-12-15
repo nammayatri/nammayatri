@@ -6,9 +6,9 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
+import Beckn.Utils.Shutdown
 import qualified Data.Map as Map
 import EulerHS.Prelude
-import Beckn.Utils.Shutdown
 
 data AppCfg = AppCfg
   { port :: Int,
