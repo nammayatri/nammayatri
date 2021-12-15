@@ -1,13 +1,17 @@
 module Beckn.Types.Core.Taxi.Confirm.Res.Provider where
 
 import Beckn.Utils.Example (Example (..))
-import Data.OpenApi (ToSchema)
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude
 
 newtype Provider = Provider
   { name :: Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema Provider where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 instance Example Provider where
   example =

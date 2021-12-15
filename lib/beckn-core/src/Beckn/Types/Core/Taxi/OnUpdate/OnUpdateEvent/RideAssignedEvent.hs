@@ -7,6 +7,7 @@ where
 import Beckn.Types.Core.Taxi.Common.DecimalValue as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_ASSIGNED))
 import Beckn.Utils.Example
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import qualified Control.Lens as L
 import Data.Aeson as A
 import Data.OpenApi hiding (Example, example, name)
@@ -88,7 +89,10 @@ data Agent = Agent
     rating :: Maybe DecimalValue,
     registered_at :: UTCTime
   }
-  deriving (Eq, Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Eq, Generic, Show, FromJSON, ToJSON)
+
+instance ToSchema Agent where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 instance Example Agent where
   example =
@@ -105,7 +109,10 @@ data Vehicle = Vehicle
     color :: Text,
     registration :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Vehicle where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 instance Example Vehicle where
   example =

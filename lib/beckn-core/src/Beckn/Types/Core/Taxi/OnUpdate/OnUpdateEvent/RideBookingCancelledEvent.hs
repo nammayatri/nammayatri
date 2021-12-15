@@ -40,7 +40,7 @@ instance ToSchema RideBookingCancelledEvent where
     cancellationSource <- declareSchemaRef (Proxy :: Proxy CancellationSource)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     return $
-      NamedSchema (Just "RideCompletedEvent") $
+      NamedSchema (Just "RideBookingCancelledEvent") $
         mempty
           & type_ L.?~ OpenApiObject
           & properties

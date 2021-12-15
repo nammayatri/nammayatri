@@ -5,7 +5,8 @@ module Beckn.Types.Core.Taxi.OnSearch.Item
 where
 
 import Beckn.Types.Core.Taxi.Common.Price as Reexport
-import Data.OpenApi (ToSchema)
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
 
 data Item = Item
@@ -16,4 +17,7 @@ data Item = Item
     discounted_price :: Price,
     nearest_driver_distance :: DecimalValue
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Item where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

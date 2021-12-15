@@ -1,7 +1,8 @@
 module Beckn.Types.Core.Taxi.Search.Address where
 
 import Beckn.Utils.Example
-import Data.OpenApi (ToSchema)
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id, state)
 
 data Address = Address
@@ -14,7 +15,10 @@ data Address = Address
     country :: Maybe Text,
     area_code :: Maybe Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema Address where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 instance Example Address where
   example =

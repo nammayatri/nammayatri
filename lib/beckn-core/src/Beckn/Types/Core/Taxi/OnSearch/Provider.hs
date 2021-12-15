@@ -5,7 +5,8 @@ where
 
 import Beckn.Types.Core.Taxi.OnSearch.Item (Item)
 import Beckn.Utils.Example
-import Data.OpenApi (ToSchema)
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (exp, id)
 
 data Provider = Provider
@@ -16,7 +17,10 @@ data Provider = Provider
     rides_completed :: Int,
     rides_confirmed :: Int
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Provider where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 instance Example Provider where
   example =
