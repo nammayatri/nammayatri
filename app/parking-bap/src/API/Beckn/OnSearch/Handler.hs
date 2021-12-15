@@ -73,7 +73,7 @@ buildQuote ::
   m DQuote.Quote
 buildQuote now searchId bppUrl bppId parkingLocations item = do
   decimalValue <-
-    item.price.listed_value
+    item.price.value
       & fromMaybeM (InvalidRequest "Unable to parse price")
   fare <-
     decimalValue

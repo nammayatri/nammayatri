@@ -3,7 +3,7 @@ module Core.Item where
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Beckn.Types.Core.Migration.ItemQuantity (ItemQuantity)
-import Beckn.Types.Core.Migration.Price (Price)
+import Core.OnConfirm.Price (Price)
 
 -- 'Maybe' fields are fields, that is present in request, but we do not use it anyhow
 data Item = Item
