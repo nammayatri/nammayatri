@@ -31,3 +31,7 @@
 [Architecture](./doc/architechture.md)
 
 [Data validation](./doc/validation.md)
+
+## Running requests
+
+One can either use Postman collections or [rest client requests](./doc/rest-client.md).
