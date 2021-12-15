@@ -46,6 +46,8 @@ let credRegistry =
   -- Parking
   -- BAP
   , globalCommon.mkCredential "56" "api.sandbox.beckn.juspay.in/dev/bap/parking/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  -- BPP
+  , globalCommon.mkCredential "shop.pinpark.co.in" "shop.pinpark.co.in" "uglwgKDEm+MePsU//L6BAgB5SPb29YMZn/jTWPNFL6c="
   ]
 
 in { defaultPoolConfig = globalCommon.defaultPoolConfig
