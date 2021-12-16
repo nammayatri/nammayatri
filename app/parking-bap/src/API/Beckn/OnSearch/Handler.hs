@@ -33,9 +33,7 @@ handler _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext Context.ON_SEARCH $ req.context
   Metrics.finishSearchMetrics $ req.context.transaction_id
   case req.contents of
-    Right msg -> do
-      let catalog = msg.catalog
-      searchCbService req catalog
+    Right msg -> searchCbService req msg.catalog
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err
   return Ack
 
@@ -43,10 +41,10 @@ searchCbService :: EsqDBFlow m r => BecknCallbackReq OnSearch.OnSearchCatalog ->
 searchCbService req catalog = do
   let searchRequestId = Id $ req.context.transaction_id
   _searchRequest <- QSearch.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
-  bppUrl <- maybe (throwError $ InvalidRequest "Missing bpp url") pure req.context.bpp_uri
-  bppId <- maybe (throwError $ InvalidRequest "Missing bpp id") pure req.context.bpp_id
+  bppUrl <- req.context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_url")
+  bppId <- req.context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
   let providers = catalog.bpp_providers
-  when (null providers) $ throwError $ InvalidRequest "Missing provider"
+  when (null providers) $ throwError $ InvalidRequest "Missing bpp_provider"
   now <- getCurrentTime
   parkingLocations <- do
     allParkingLocationsByProvider <- forM providers $ \provider -> do
