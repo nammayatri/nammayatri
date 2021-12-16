@@ -39,3 +39,35 @@ update parkingBooking = do
         BookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. BookingId ==. val (getId parkingBooking.id)
+
+updateStatusAndBppOrderId :: Booking -> SqlDB ()
+updateStatusAndBppOrderId parkingBooking = do
+  now <- getCurrentTime
+  update' $ \tbl -> do
+    set
+      tbl
+      [ BookingStatus =. val parkingBooking.status,
+        BookingTicketId =. val parkingBooking.ticketId,
+        BookingTicketCreatedAt =. val parkingBooking.ticketCreatedAt,
+        BookingUpdatedAt =. val now,
+        BookingBppOrderId =. val parkingBooking.bppOrderId
+      ]
+    where_ $ tbl ^. BookingId ==. val (getId parkingBooking.id)
+
+updateStatus :: Booking -> BookingStatus -> SqlDB ()
+updateStatus booking newStatus = do
+  now <- getCurrentTime
+  update' $ \tbl -> do
+    set
+      tbl
+      [ BookingStatus =. val newStatus,
+        BookingUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. BookingId ==. val (getId booking.id)
+
+findByBppOrderId :: EsqDBFlow m r => Text -> m (Maybe Booking)
+findByBppOrderId bppOrderId =
+  runTransaction . findOne' $ do
+    parkingSearch <- from $ table @BookingT
+    where_ $ parkingSearch ^. BookingBppOrderId ==. val (Just bppOrderId)
+    return parkingSearch

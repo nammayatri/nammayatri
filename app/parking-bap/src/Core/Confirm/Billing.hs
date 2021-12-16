@@ -2,8 +2,8 @@ module Core.Confirm.Billing where
 
 import Beckn.Prelude
 
-data Billing = Billing
-  { name :: Text,
-    phone :: Text
+newtype Billing = Billing
+  { phone :: Text
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)

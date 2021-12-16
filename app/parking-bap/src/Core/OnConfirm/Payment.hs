@@ -3,17 +3,17 @@ module Core.OnConfirm.Payment where
 import Beckn.Prelude
 import Beckn.Utils.JSON
 
-data PaymentStatus = NOT_PAID deriving (Generic) --TODO: WHAT ARE POSSIBLE VALUES?
+data PaymentStatus = PAID | NOT_PAID deriving (Generic, Eq) --TODO: WHAT ARE POSSIBLE VALUES?
 
 instance FromJSON PaymentStatus where
   parseJSON = genericParseJSON constructorsWithHyphens
 
-data PaymentType = PRE_FULFILLMENT deriving (Generic) --TODO: WHAT ARE POSSIBLE VALUES?
+data PaymentType = PRE_FULFILLMENT | POST_FULFILLMENT deriving (Generic) --TODO: WHAT ARE POSSIBLE VALUES?
 
 instance FromJSON PaymentType where
   parseJSON = genericParseJSON constructorsWithHyphens
 
-data SpecTransactionStatus = PAYMENT_LINK_ISSUED deriving (Generic) --TODO: WHAT ARE POSSIBLE VALUES?
+data SpecTransactionStatus = PAYMENT_LINK_ISSUED | PAYMENT_LINK_NOT_ISSUED | CAPTURED deriving (Generic) --TODO: WHAT ARE POSSIBLE VALUES?
 
 instance FromJSON SpecTransactionStatus where
   parseJSON = genericParseJSON constructorsToLowerOptions

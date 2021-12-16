@@ -1,4 +1,4 @@
-module Core.OnConfirm.Order where
+module Core.Order where
 
 import Beckn.Prelude
 import Core.OnConfirm.Billing
@@ -8,7 +8,7 @@ import Core.OnConfirm.Payment
 import Core.OnConfirm.Provider
 import Core.OnConfirm.SpecQuote
 
-data OrderState = ACTIVE -- TODO: WHICH STATES ARE POSSIBLE?
+data OrderState = ACTIVE | INACTIVE -- TODO: WHICH STATES ARE POSSIBLE?
   deriving (Generic, FromJSON)
 
 newtype OrderProviderLocation = OrderProviderLocation

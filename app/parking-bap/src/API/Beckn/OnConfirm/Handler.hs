@@ -32,9 +32,10 @@ onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   return Ack
 
 handleOnConfirm :: EsqDBFlow m r => Id DBooking.Booking -> OnConfirm.OnConfirmMessage -> m ()
-handleOnConfirm bookingId _ = do
+handleOnConfirm bookingId msg = do
   booking <- QBooking.findById bookingId >>= fromMaybeM BookingDoesNotExist
   let updBooking =
-        booking{status = DBooking.AWAITING_PAYMENT
+        booking{status = DBooking.AWAITING_PAYMENT,
+                bppOrderId = Just msg.order.id
                }
-  runTransaction $ QBooking.update updBooking
+  runTransaction $ QBooking.updateStatusAndBppOrderId updBooking

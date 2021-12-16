@@ -50,7 +50,7 @@ confirm quoteId _ req = withFlowHandlerAPI $ do
             bppUrl = quote.bppUrl,
             bppItemId = quote.bppItemId,
             parkingSpaceName = quote.parkingSpaceName,
-            parkingSpaceLocationId = quote.parkingLocationIdFromBpp,
+            parkingSpaceLocationId = getId quote.parkingLocationId,
             fare = quote.fare,
             fromDate = search.fromDate,
             toDate = search.toDate,
@@ -58,9 +58,9 @@ confirm quoteId _ req = withFlowHandlerAPI $ do
             ticketId = Nothing,
             ticketCreatedAt = Nothing,
             updatedAt = now,
-            createdAt = now
+            createdAt = now,
+            bppOrderId = Nothing
           }
-
     mkConfirmMessage booking = do
       let vehicle = Confirm.Vehicle booking.vehicleNumber
           end = Confirm.StartEnd $ Confirm.Time booking.toDate
@@ -68,8 +68,7 @@ confirm quoteId _ req = withFlowHandlerAPI $ do
           fulfillment = Confirm.Fulfillment {..}
           billing =
             Confirm.Billing
-              { name = "UNKNOWN", -- TODO: FROM WHERE?
-                phone = booking.requestorNumber
+              { phone = booking.requestorNumber
               }
           items = [Confirm.Item booking.bppItemId $ Confirm.Quantity 1]
           locations = [Confirm.Location booking.parkingSpaceLocationId]

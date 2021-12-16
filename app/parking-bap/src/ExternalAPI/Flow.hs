@@ -7,6 +7,7 @@ import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import qualified Core.API.Confirm as Confirm
 import qualified Core.API.Search as Search
+import qualified Core.API.Status as Status
 import Core.API.Types (BecknReq)
 import qualified Core.Confirm as Confirm
 import qualified Data.Text as T
@@ -36,6 +37,17 @@ confirm ::
   BecknReq Confirm.ConfirmMessage ->
   m ()
 confirm = callBecknAPIWithSignature "сonfirm" Confirm.confirmAPI
+
+triggerStatusUpdate ::
+  ( MonadFlow m,
+    MonadReader r m,
+    CoreMetrics m,
+    HasInConfig r c "selfId" Text
+  ) =>
+  BaseUrl ->
+  BecknReq Text ->
+  m ()
+triggerStatusUpdate = callBecknAPIWithSignature "status" Status.statusAPI
 
 callBecknAPIWithSignature ::
   ( MonadFlow m,

@@ -12,7 +12,6 @@ import Core.OnConfirm.Descriptor as Reexport
 import Core.OnConfirm.End as Reexport
 import Core.OnConfirm.Fulfillment as Reexport
 import Core.OnConfirm.Item as Reexport
-import Core.OnConfirm.Order as Reexport
 import Core.OnConfirm.Payment as Reexport
 import Core.OnConfirm.Price as Reexport
 import Core.OnConfirm.Provider as Reexport
@@ -22,6 +21,7 @@ import Core.OnConfirm.Start as Reexport
 import Core.OnConfirm.StartLocation as Reexport
 import Core.OnConfirm.Time as Reexport
 import Core.OnConfirm.Vehicle as Reexport
+import Core.Order
 
 newtype OnConfirmMessage = OnConfirmMessage
   { order :: Order

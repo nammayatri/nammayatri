@@ -44,6 +44,7 @@ mkPersist
       ticketCreatedAt UTCTime Maybe
       updatedAt UTCTime
       createdAt UTCTime
+      bppOrderId Text Maybe
       Primary id
       deriving Generic
     |]

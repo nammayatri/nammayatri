@@ -57,7 +57,6 @@ searchCbService req catalog = do
       let items = fromMaybe [] provider.items
       forM items (buildQuote now searchRequestId bppUrl bppId parkingLocations)
     return $ concat allQuotesByProvider
-
   Esq.runTransaction $ do
     traverse_ QParkingLocation.create parkingLocations
     traverse_ QQuote.create quotes

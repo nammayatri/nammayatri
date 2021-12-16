@@ -21,7 +21,7 @@ data PaymentTransaction = PaymentTransaction
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 data PaymentTransactionAPIEntity = PaymentTransactionAPIEntity
   { id :: Id PaymentTransaction,

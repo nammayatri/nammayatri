@@ -31,6 +31,7 @@ data Booking = Booking
     ticketId :: Maybe Text,
     ticketCreatedAt :: Maybe UTCTime,
     updatedAt :: UTCTime,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    bppOrderId :: Maybe Text
   }
   deriving (Generic)
