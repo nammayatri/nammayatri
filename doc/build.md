@@ -34,6 +34,7 @@ stack exec beckn-gateway-exe
 stack exec app-backend-exe
 stack exec beckn-transport-exe
 stack exec beckn-transport-btm-exe
+stack exec parking-bap-exe
 ```
 
 ### FMD wrapper:

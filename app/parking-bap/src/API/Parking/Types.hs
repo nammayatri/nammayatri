@@ -3,6 +3,7 @@ module API.Parking.Types where
 import qualified API.Parking.Booking.Types as Booking
 import qualified API.Parking.Search.Types as Search
 import qualified API.Parking.SearchId.Quotes.Types as Quotes
+import API.Parking.Quotes.Types as Quote
 import Servant
 
 type API =
@@ -10,4 +11,5 @@ type API =
     :> ( Search.API
            :<|> Quotes.API
            :<|> Booking.API
+           :<|> Quote.API
        )

@@ -4,6 +4,7 @@ import qualified API.Parking.Booking.Handler as Booking
 import qualified API.Parking.Search.Handler as Search
 import qualified API.Parking.SearchId.Quotes.Handler as Quotes
 import qualified API.Parking.Types as Parking
+import API.Parking.Quotes.Handler as Quote
 import App.Types
 import Servant
 
@@ -12,3 +13,4 @@ handler =
   Search.handler
     :<|> Quotes.handler
     :<|> Booking.handler
+    :<|> Quote.handler
