@@ -1,11 +1,11 @@
 module API.Parking.Search.Types where
 
+import API.Types.Common (Gps)
 import Beckn.Prelude
 import Beckn.Types.Id
 import qualified Domain.Search as DSearch
 import Servant
 import Tools.Auth
-import API.Types.Common (Gps)
 
 type API =
   "search"

@@ -1,6 +1,7 @@
 module API.Parking.Search.Handler where
 
 import qualified API.Parking.Search.Types as Search
+import API.Types.Common (Gps)
 import App.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -24,7 +25,6 @@ import Tools.Auth (PersonId)
 import Tools.Context (buildContext)
 import Tools.Error
 import qualified Tools.Metrics as Metrics
-import API.Types.Common (Gps)
 
 handler :: PersonId -> Search.SearchReq -> FlowHandler Search.SearchRes
 handler personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
