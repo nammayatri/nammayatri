@@ -1,13 +1,13 @@
 module Core.Item where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.Descriptor (Descriptor)
-import Beckn.Types.Core.Migration.ItemQuantity (ItemQuantity)
 import Core.OnConfirm.Price (Price)
+import Core.OnSearch.Descriptor
+import Core.OnSearch.ItemQuantity
 
 -- 'Maybe' fields are fields, that is present in request, but we do not use it anyhow
 data Item = Item
-  { id :: Maybe Text,
+  { id :: Text,
     descriptor :: Descriptor,
     price :: Price,
     category_id :: Maybe Text,

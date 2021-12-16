@@ -7,4 +7,4 @@ data Descriptor = Descriptor
     short_desc :: Text,
     images :: [BaseUrl]
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON, Show)

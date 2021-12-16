@@ -31,7 +31,6 @@ default-extensions:
   - FlexibleInstances
   - FunctionalDependencies
   - GADTs
-  - GeneralizedNewtypeDeriving
   - LambdaCase
   - MultiParamTypeClasses
   - MultiWayIf

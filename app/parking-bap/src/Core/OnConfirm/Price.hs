@@ -5,6 +5,6 @@ import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
 
 data Price = Price
   { currency :: Text,
-    value :: Maybe DecimalValue
+    value :: DecimalValue
   }
   deriving (Generic, FromJSON, ToJSON, Show)

@@ -71,24 +71,15 @@ buildQuote ::
   Item.Item ->
   m DQuote.Quote
 buildQuote now searchId bppUrl bppId parkingLocations item = do
-  decimalValue <-
-    item.price.value
-      & fromMaybeM (InvalidRequest "Unable to parse price")
+  let parkingSpaceName = item.descriptor.name
+  let availableSpaces = item.quantity.available.count
+  let bppItemId = item.id
   fare <-
-    decimalValue
-      & DecimalValue.convertDecimalValueToAmount
+    DecimalValue.convertDecimalValueToAmount item.price.value
       & fromMaybeM (InvalidRequest "Unable to parse price")
-  parkingSpaceName <-
-    item.descriptor.name
-      & fromMaybeM (InvalidRequest "Unable to parse parking space name")
-  availableSpaces <-
-    item.quantity.available >>= (.count) <&> fromInteger
-      & fromMaybeM (InvalidRequest "Unable to parse available spaces")
   parkingLocation <-
     find (\pl -> pl.idFromBpp == item.location_id) parkingLocations
-      & fromMaybeM (InvalidRequest "Unable to parse parking location id")
-  bppItemId <-
-    item.id & fromMaybeM (InvalidRequest "Parking space id is not present.")
+      & fromMaybeM (InvalidRequest "Invalid item.location_id")
   quoteId <- generateGUID
   return
     DQuote.Quote
