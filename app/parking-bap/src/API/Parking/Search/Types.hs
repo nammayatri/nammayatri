@@ -2,10 +2,10 @@ module API.Parking.Search.Types where
 
 import Beckn.Prelude
 import Beckn.Types.Id
-import qualified Core.Gps as Gps
 import qualified Domain.Search as DSearch
 import Servant
 import Tools.Auth
+import API.Types.Common (Gps)
 
 type API =
   "search"
@@ -14,14 +14,14 @@ type API =
     :> Post '[JSON] SearchRes
 
 data SearchReq = SearchReq
-  { location :: Gps.Gps,
+  { location :: Gps,
     fromDate :: UTCTime,
     toDate :: UTCTime
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON)
 
 newtype SearchRes = SearchRes
   { searchId :: Id DSearch.Search
   }
-  deriving stock (Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON)
