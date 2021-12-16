@@ -11,7 +11,7 @@ type API =
   "search"
     :> TokenAuth
     :> ReqBody '[JSON] SearchReq
-    :> Get '[JSON] SearchRes
+    :> Post '[JSON] SearchRes
 
 data SearchReq = SearchReq
   { location :: Gps.Gps,
