@@ -92,7 +92,8 @@ processEvent (OnUpdate.RideCompleted rcEvent) = do
   unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   let updRide =
         ride{status = SRide.COMPLETED,
-             totalFare = Just $ realToFrac rcEvent.payment.params.amount,
+             fare = Just $ realToFrac rcEvent.fare.value,
+             totalFare = Just $ realToFrac rcEvent.total_fare.value,
              chargeableDistance = Just $ realToFrac rcEvent.chargeable_distance
             }
   DB.runSqlDBTransaction $ do

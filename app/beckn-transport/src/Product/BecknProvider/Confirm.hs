@@ -125,7 +125,7 @@ confirmRes rideBooking searchRequest transporterOrg = do
       ResConfirm.Order
         { id = rideBooking.id.getId,
           items = [ResConfirm.OrderItem $ rideBooking.quoteId.getId],
-          payment = ResConfirm.Payment (ResConfirm.Params $ realToFrac rideBooking.estimatedTotalFare)
+          estimated_total_fare = ResConfirm.Price $ realToFrac rideBooking.estimatedTotalFare
         }
 
 driverPoolKey :: Id SRB.RideBooking -> Text

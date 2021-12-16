@@ -4,7 +4,7 @@ module Beckn.Types.Core.Taxi.Confirm.Res.Order
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.Payment as Reexport
+import Beckn.Types.Core.Taxi.Common.Price as Reexport
 import Beckn.Utils.Example
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, id, state)
@@ -12,7 +12,7 @@ import EulerHS.Prelude hiding (State, id, state)
 data Order = Order
   { id :: Text,
     items :: [OrderItem],
-    payment :: Payment
+    estimated_total_fare :: Price
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -26,5 +26,5 @@ instance Example Order where
     Order
       { id = "ride_booking_id",
         items = [OrderItem "quote_id"],
-        payment = example
+        estimated_total_fare = example
       }

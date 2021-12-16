@@ -1,10 +1,8 @@
 module Beckn.Types.Core.Taxi.Confirm.Req.Order
   ( module Beckn.Types.Core.Taxi.Confirm.Req.Order,
-    module Reexport,
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.Payment as Reexport
 import Beckn.Utils.Example
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, id, state)

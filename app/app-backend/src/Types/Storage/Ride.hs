@@ -153,7 +153,7 @@ makeRideAPIEntity Ride {..} = do
       driverNumber = driverMobileNumber,
       driverRatings = driverRating,
       rideOtp = otp,
-      computedPrice = fare,
+      computedPrice = totalFare,
       chargeableRideDistance = chargeableDistance,
       ..
     }

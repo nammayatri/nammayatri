@@ -159,15 +159,16 @@ buildRideCompletedUpdatePayload ::
   SRide.Ride ->
   m OnUpdate.OnUpdateEvent
 buildRideCompletedUpdatePayload ride = do
-  totalFare <- realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
+  fare <- OnUpdate.Price . realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+  totalFare <- OnUpdate.Price . realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
   chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
-  let payment = OnUpdate.Payment $ OnUpdate.Params totalFare
   return $
     OnUpdate.RideCompleted
       OnUpdate.RideCompletedEvent
         { order_id = ride.bookingId.getId,
           ride_id = ride.id.getId,
           chargeable_distance = chargeableDistance,
+          total_fare = totalFare,
           ..
         }
 

@@ -4,7 +4,7 @@ module Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
   )
 where
 
-import Beckn.Types.Core.Taxi.Common.Payment as Reexport
+import Beckn.Types.Core.Taxi.Common.Price as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType (OnUpdateEventType (RIDE_COMPLETED))
 import Beckn.Utils.Example
 import qualified Control.Lens as L
@@ -17,7 +17,8 @@ data RideCompletedEvent = RideCompletedEvent
   { order_id :: Text,
     ride_id :: Text,
     chargeable_distance :: DecimalValue,
-    payment :: Payment
+    fare :: Price,
+    total_fare :: Price
   }
   deriving (Generic, Show)
 
@@ -27,7 +28,8 @@ instance ToJSON RideCompletedEvent where
       "order_id" .= order_id
         <> "ride_id" .= ride_id
         <> "chargeable_distance" .= chargeable_distance
-        <> "payment" .= payment
+        <> "fare" .= fare
+        <> "total_fare" .= total_fare
         <> "update_type" .= RIDE_COMPLETED
 
 instance FromJSON RideCompletedEvent where
@@ -38,13 +40,14 @@ instance FromJSON RideCompletedEvent where
       <$> obj .: "order_id"
       <*> obj .: "ride_id"
       <*> obj .: "chargeable_distance"
-      <*> obj .: "payment"
+      <*> obj .: "fare"
+      <*> obj .: "total_fare"
 
 instance ToSchema RideCompletedEvent where
   declareNamedSchema _ = do
     id <- declareSchemaRef (Proxy :: Proxy Text)
     decimalValue <- declareSchemaRef (Proxy :: Proxy DecimalValue)
-    payment <- declareSchemaRef (Proxy :: Proxy Payment)
+    price <- declareSchemaRef (Proxy :: Proxy Price)
     update_type <- declareSchemaRef (Proxy :: Proxy OnUpdateEventType)
     return $
       NamedSchema (Just "RideCompletedEvent") $
@@ -55,14 +58,16 @@ instance ToSchema RideCompletedEvent where
               [ ("order_id", id),
                 ("ride_id", id),
                 ("chargeable_distance", decimalValue),
-                ("payment", payment),
+                ("total_fare", price),
+                ("fare", price),
                 ("update_type", update_type)
               ]
           & required
             L..~ [ "order_id",
                    "ride_id",
                    "chargeable_distance",
-                   "payment",
+                   "total_fare",
+                   "fare",
                    "update_type"
                  ]
 
@@ -72,5 +77,6 @@ instance Example RideCompletedEvent where
       { order_id = "ride_booking_id",
         ride_id = "ride_id",
         chargeable_distance = 123,
-        payment = example
+        total_fare = example,
+        fare = example
       }
