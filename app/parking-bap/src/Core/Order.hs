@@ -9,13 +9,13 @@ import Core.OnConfirm.Provider
 import Core.OnConfirm.SpecQuote
 
 data OrderState = ACTIVE | INACTIVE -- TODO: WHICH STATES ARE POSSIBLE?
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)
 
 newtype OrderProviderLocation = OrderProviderLocation
   { id :: Text
   }
   deriving stock (Generic)
-  deriving anyclass (FromJSON)
+  deriving anyclass (FromJSON, ToJSON)
 
 data Order = Order
   { id :: Text,
@@ -30,4 +30,4 @@ data Order = Order
     created_at :: UTCTime,
     updated_at :: UTCTime
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)

@@ -7,4 +7,4 @@ data Breakup = Breakup
   { title :: Text,
     price :: Price
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)

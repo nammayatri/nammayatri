@@ -8,15 +8,24 @@ data PaymentStatus = PAID | NOT_PAID deriving (Generic, Eq) --TODO: WHAT ARE POS
 instance FromJSON PaymentStatus where
   parseJSON = genericParseJSON constructorsWithHyphens
 
+instance ToJSON PaymentStatus where
+  toJSON = genericToJSON constructorsWithHyphens
+
 data PaymentType = PRE_FULFILLMENT | POST_FULFILLMENT deriving (Generic) --TODO: WHAT ARE POSSIBLE VALUES?
 
 instance FromJSON PaymentType where
   parseJSON = genericParseJSON constructorsWithHyphens
 
+instance ToJSON PaymentType where
+  toJSON = genericToJSON constructorsWithHyphens
+
 data SpecTransactionStatus = PAYMENT_LINK_ISSUED | PAYMENT_LINK_NOT_ISSUED | CAPTURED deriving (Generic) --TODO: WHAT ARE POSSIBLE VALUES?
 
 instance FromJSON SpecTransactionStatus where
   parseJSON = genericParseJSON constructorsToLowerOptions
+
+instance ToJSON SpecTransactionStatus where
+  toJSON = genericToJSON constructorsToLowerOptions
 
 data PaymentParams = PaymentParams
   { amount :: Int,
@@ -24,7 +33,7 @@ data PaymentParams = PaymentParams
     transaction_status :: SpecTransactionStatus,
     transaction_id :: Text
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)
 
 data Payment = Payment
   { params :: PaymentParams,
@@ -37,3 +46,6 @@ data Payment = Payment
 
 instance FromJSON Payment where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON Payment where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

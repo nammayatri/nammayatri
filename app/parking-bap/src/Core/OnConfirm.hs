@@ -27,4 +27,4 @@ newtype OnConfirmMessage = OnConfirmMessage
   { order :: Order
   }
   deriving stock (Generic)
-  deriving anyclass (FromJSON)
+  deriving anyclass (FromJSON, ToJSON)

@@ -25,10 +25,11 @@ onConfirm ::
   BecknCallbackReq OnConfirm.OnConfirmMessage ->
   FlowHandler AckResponse
 onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+  logTagDebug "on_confirm req" (encodeToText req)
   validateContext Context.ON_CONFIRM $ req.context
   case req.contents of
     Right msg -> handleOnConfirm (Id req.context.transaction_id) msg
-    Left err -> logTagError "on_search req" $ "on_search error: " <> show err
+    Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
   return Ack
 
 handleOnConfirm :: EsqDBFlow m r => Id DBooking.Booking -> OnConfirm.OnConfirmMessage -> m ()

@@ -7,4 +7,4 @@ newtype End = End
   { time :: Time
   }
   deriving stock (Generic)
-  deriving anyclass (FromJSON)
+  deriving anyclass (FromJSON, ToJSON)

@@ -10,4 +10,4 @@ newtype OnStatusMessage = OnStatusMessage
   { order :: Order
   }
   deriving stock (Generic)
-  deriving anyclass (FromJSON)
+  deriving anyclass (FromJSON, ToJSON)

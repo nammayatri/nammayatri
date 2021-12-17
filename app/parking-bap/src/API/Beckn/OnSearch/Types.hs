@@ -17,4 +17,4 @@ newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog
   }
   deriving stock (Generic)
-  deriving anyclass (FromJSON)
+  deriving anyclass (FromJSON, ToJSON)

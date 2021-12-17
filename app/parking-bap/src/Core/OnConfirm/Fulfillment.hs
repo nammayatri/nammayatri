@@ -17,3 +17,6 @@ data Fulfillment = Fulfillment
 
 instance FromJSON Fulfillment where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON Fulfillment where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny

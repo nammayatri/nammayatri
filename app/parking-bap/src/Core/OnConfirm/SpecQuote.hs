@@ -8,4 +8,4 @@ data SpecQuote = SpecQuote
   { price :: Price,
     breakup :: [Breakup]
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)

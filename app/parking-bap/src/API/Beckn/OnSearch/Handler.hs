@@ -30,6 +30,7 @@ handler ::
   BecknCallbackReq OnSearch.OnSearchCatalog ->
   FlowHandler AckResponse
 handler _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+  logTagDebug "on_search req" (encodeToText req)
   validateContext Context.ON_SEARCH $ req.context
   Metrics.finishSearchMetrics $ req.context.transaction_id
   case req.contents of

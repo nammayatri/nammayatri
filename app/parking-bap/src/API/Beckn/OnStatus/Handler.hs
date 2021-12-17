@@ -8,12 +8,14 @@ import Beckn.Types.Core.Ack
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
 import Core.API.Types (BecknCallbackReq)
+import qualified Core.Context as Context
 import Core.OnConfirm
 import qualified Core.OnStatus as OnStatus
 import qualified Domain.Booking as BookingStatus
 import qualified Domain.PaymentTransaction as PaymentStatus
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PaymentTransaction as PaymentTransactionDB
+import Tools.Context (validateContext)
 import Tools.Error
 
 handler ::
@@ -26,9 +28,11 @@ onStatus ::
   BecknCallbackReq OnStatus.OnStatusMessage ->
   FlowHandler AckResponse
 onStatus _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+  logTagDebug "on_status req" (encodeToText req)
+  validateContext Context.ON_STATUS $ req.context
   case req.contents of
     Right msg -> handleOnStatus msg
-    Left err -> logTagError "on_search req" $ "on_search error: " <> show err
+    Left err -> logTagError "on_status req" $ "on_status error: " <> show err
   return Ack
 
 handleOnStatus :: EsqDBFlow m r => OnStatus.OnStatusMessage -> m ()

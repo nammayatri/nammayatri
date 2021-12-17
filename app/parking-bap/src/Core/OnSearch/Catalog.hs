@@ -13,3 +13,6 @@ data Catalog = Catalog
 
 instance FromJSON Catalog where
   parseJSON = genericParseJSON slashedRecordFields
+
+instance ToJSON Catalog where
+  toJSON = genericToJSON slashedRecordFields

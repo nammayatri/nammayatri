@@ -6,4 +6,4 @@ data Contact = Contact
   { phone :: Text,
     email :: Text
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)

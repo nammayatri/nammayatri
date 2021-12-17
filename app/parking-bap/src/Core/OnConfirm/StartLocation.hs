@@ -8,4 +8,4 @@ data StartLocation = StartLocation
     descriptor :: Descriptor,
     gps :: Text
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)

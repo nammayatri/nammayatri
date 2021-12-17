@@ -12,19 +12,19 @@ data Address = Address
     country :: Text,
     area_code :: Text
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)
 
 data Country = Country
   { name :: Text,
     code :: Text
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)
 
 data City = City
   { name :: Text,
     code :: Text
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)
 
 data ProviderLocation = ProviderLocation
   { id :: Text,
@@ -34,4 +34,4 @@ data ProviderLocation = ProviderLocation
     city :: City,
     country :: Country
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToJSON)
