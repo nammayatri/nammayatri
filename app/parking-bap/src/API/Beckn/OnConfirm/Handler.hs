@@ -11,7 +11,10 @@ import Core.API.Types (BecknCallbackReq)
 import qualified Core.Context as Context
 import qualified Core.OnConfirm as OnConfirm
 import qualified Domain.Booking as DBooking
+import Domain.PaymentTransaction (PaymentStatus (PENDING))
+import qualified Domain.PaymentTransaction as DPaymentTransaction
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.PaymentTransaction as PaymentTransactionDB
 import Tools.Context (validateContext)
 import Tools.Error
 
@@ -39,4 +42,24 @@ handleOnConfirm bookingId msg = do
         booking{status = DBooking.AWAITING_PAYMENT,
                 bppOrderId = Just msg.order.id
                }
-  runTransaction $ QBooking.updateStatusAndBppOrderId updBooking
+  paymentData <- buildPaymentData updBooking
+  runTransaction $ do
+    QBooking.updateStatusAndBppOrderId updBooking
+    PaymentTransactionDB.create paymentData
+
+buildPaymentData :: MonadFlow m => DBooking.Booking -> m DPaymentTransaction.PaymentTransaction
+buildPaymentData booking = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return
+    DPaymentTransaction.PaymentTransaction
+      { id = Id id,
+        bookingId = booking.id,
+        bknTxnId = getId booking.id,
+        paymentGatewayTxnId = getId booking.id,
+        fare = booking.fare,
+        status = PENDING,
+        paymentUrl = booking.bppUrl,
+        updatedAt = now,
+        createdAt = now
+      }
