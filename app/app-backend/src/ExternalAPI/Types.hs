@@ -9,8 +9,8 @@ import Servant
 import Types.API.Location
 
 type LocationAPI =
-  "location"
-    :> Capture "searchRequestId" Text
+  "driver" :> "location"
+    :> Capture "rideId" Text
     :> Get '[JSON] GetLocationRes
 
 locationAPI :: Proxy LocationAPI

@@ -1,10 +1,5 @@
 module Types.API.Ride where
 
-import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (id)
+import Beckn.Types.MapSearch (LatLong)
 
-data GetDriverLocRes = GetDriverLocRes
-  { lat :: Double,
-    long :: Double
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+type GetDriverLocRes = LatLong
