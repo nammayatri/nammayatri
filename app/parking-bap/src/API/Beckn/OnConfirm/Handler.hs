@@ -42,24 +42,23 @@ handleOnConfirm bookingId msg = do
         booking{status = DBooking.AWAITING_PAYMENT,
                 bppOrderId = Just msg.order.id
                }
-  paymentData <- buildPaymentData updBooking
+  paymentData <- buildPaymentData updBooking msg
   runTransaction $ do
     QBooking.updateStatusAndBppOrderId updBooking
     PaymentTransactionDB.create paymentData
 
-buildPaymentData :: MonadFlow m => DBooking.Booking -> m DPaymentTransaction.PaymentTransaction
-buildPaymentData booking = do
+buildPaymentData :: MonadFlow m => DBooking.Booking -> OnConfirm.OnConfirmMessage -> m DPaymentTransaction.PaymentTransaction
+buildPaymentData booking msg = do
   id <- generateGUID
   now <- getCurrentTime
   return
     DPaymentTransaction.PaymentTransaction
       { id = Id id,
         bookingId = booking.id,
-        bknTxnId = getId booking.id,
-        paymentGatewayTxnId = getId booking.id,
+        paymentGatewayTxnId = msg.order.payment.params.transaction_id,
         fare = booking.fare,
         status = PENDING,
-        paymentUrl = booking.bppUrl,
+        paymentUrl = msg.order.payment.uri,
         updatedAt = now,
         createdAt = now
       }

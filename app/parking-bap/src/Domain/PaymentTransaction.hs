@@ -13,7 +13,6 @@ data PaymentStatus = INITIALIZED | PENDING | FAILED | SUCCESS
 data PaymentTransaction = PaymentTransaction
   { id :: Id PaymentTransaction,
     bookingId :: Id Booking,
-    bknTxnId :: Text,
     paymentGatewayTxnId :: Text,
     fare :: Amount,
     status :: PaymentStatus,

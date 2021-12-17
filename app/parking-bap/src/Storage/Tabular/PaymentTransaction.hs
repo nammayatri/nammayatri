@@ -25,7 +25,6 @@ mkPersist
     PaymentTransactionT sql=payment_transaction
       id Text
       bookingId BookingTId
-      bknTxnId Text
       paymentGatewayTxnId Text
       fare Amount
       status Domain.PaymentStatus
