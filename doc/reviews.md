@@ -7,8 +7,19 @@ Try to make the PRs as small and focused as possible. Try to keep new features a
 
 Please add enough information to the PR description so that others can easier understand the changes.
 
+**Branch name** consists of two or three parts, separated by `/`:
+1. Either of three: `feature`, `fix`, `refactor`
+2. Task code, e.g. `BKN-123`
+3. Human readable description in kebab case
+
+2 or 3 may be absent, but not both at the same time. Examples: `fix/BKN-123/some-thing`, `refactor/BKN-123`, `feature/some-feature`. *Note: task code must be in branch name because it helps jira to track progress automatically and change task status.*
+
+**PR name** consists of tags and human readable description. Tags are codes enclosed in []. Common tag: `[WIP]` (meaning work in proggress PR, not yet ready for merge). Other times tags are just task codes: `[BKN-123]`. If there are few tasks for one PR either of two formats can be used: `[BKN-123][BKN-124]` or `[BKN-123,BKN-124]`. *Note: task name must be in PR name because it then becomes clickable to jira task and possibly also helps jira to track progress.*
+
+A good practice is to prefix commit with task code, like `[BKN-1037] Replace Proxy-Authorization -> X-Gateway-Authorization` it also becomes clickable and this commit is added to task even if it is in some branch that is not directly related to a PR. But this is not mandatory.
+
 ## Review
-All developers on the team are encouraged to review PRs (but it is also okay not to if you do not have much to say about a PR or are busy with other tasks). 
+All developers on the team are encouraged to review PRs (but it is also okay not to if you do not have much to say about a PR or are busy with other tasks).
 
 Try to focus on the PRs with less than 2 approvals.
 
