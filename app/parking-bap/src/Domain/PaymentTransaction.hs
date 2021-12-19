@@ -14,6 +14,7 @@ data PaymentTransaction = PaymentTransaction
   { id :: Id PaymentTransaction,
     bookingId :: Id Booking,
     paymentGatewayTxnId :: Text,
+    paymentGatewayTxnStatus :: Text,
     fare :: Amount,
     status :: PaymentStatus,
     paymentUrl :: BaseUrl,

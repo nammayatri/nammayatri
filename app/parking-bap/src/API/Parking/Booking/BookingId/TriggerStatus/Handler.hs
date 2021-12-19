@@ -9,6 +9,7 @@ import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.Migration.Domain
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import qualified Core.Status as Status
 import qualified Domain.Booking.Type as DBooking (Booking)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Booking as QBooking
@@ -21,9 +22,10 @@ handler = triggerStatusUpdate
 triggerStatusUpdate :: PersonId -> Id DBooking.Booking -> FlowHandler APISuccess
 triggerStatusUpdate _ bookingId = withFlowHandlerAPI $ do
   booking <- QBooking.findById bookingId >>= fromMaybeM BookingDoesNotExist
+  bppOrderId <- booking.bppOrderId & fromMaybeM BookingBppOrderIdNotFound
   let url = booking.bppUrl
   context <- buildParkingContext STATUS (getId bookingId)
-  ExternalAPI.triggerStatusUpdate url (BecknReq context "Making")
+  ExternalAPI.triggerStatusUpdate url (BecknReq context (makeStatusMessage bppOrderId))
   pure Success
   where
     buildParkingContext action txnId = do
@@ -48,3 +50,10 @@ triggerStatusUpdate _ bookingId = withFlowHandlerAPI $ do
             key = Nothing,
             ttl = Nothing
           }
+    makeStatusMessage bppOrderId =
+      Status.StatusMessage
+        { order =
+            Status.Order
+              { id = bppOrderId
+              }
+        }

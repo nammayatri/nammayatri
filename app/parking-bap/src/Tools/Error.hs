@@ -39,6 +39,7 @@ data BookingError
   | BookingDoesNotExist
   | BookingFieldNotPresent Text
   | BookingInvalidStatus Text
+  | BookingBppOrderIdNotFound
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''BookingError
@@ -56,11 +57,13 @@ instance IsHTTPError BookingError where
     BookingDoesNotExist -> "BOOKING_DOES_NOT_EXIST"
     BookingFieldNotPresent _ -> "BOOKING_FIELD_NOT_PRESENT"
     BookingInvalidStatus _ -> "BOOKING_INVALID_STATUS"
+    BookingBppOrderIdNotFound -> "BOOKING_BPP_ORDER_ID_NOT_FOUND"
   toHttpCode = \case
     BookingNotFound -> E500
     BookingDoesNotExist -> E400
     BookingFieldNotPresent _ -> E500
     BookingInvalidStatus _ -> E400
+    BookingBppOrderIdNotFound -> E500
 
 instance IsAPIError BookingError
 

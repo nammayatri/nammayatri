@@ -26,6 +26,7 @@ mkPersist
       id Text
       bookingId BookingTId
       paymentGatewayTxnId Text
+      paymentGatewayTxnStatus Text
       fare Amount
       status Domain.PaymentStatus
       paymentUrl Text

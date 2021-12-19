@@ -19,18 +19,10 @@ instance FromJSON PaymentType where
 instance ToJSON PaymentType where
   toJSON = genericToJSON constructorsWithHyphens
 
-data SpecTransactionStatus = PAYMENT_LINK_ISSUED | PAYMENT_LINK_NOT_ISSUED | CAPTURED deriving (Generic) --TODO: WHAT ARE POSSIBLE VALUES?
-
-instance FromJSON SpecTransactionStatus where
-  parseJSON = genericParseJSON constructorsToLowerOptions
-
-instance ToJSON SpecTransactionStatus where
-  toJSON = genericToJSON constructorsToLowerOptions
-
 data PaymentParams = PaymentParams
   { amount :: Int,
     currency :: Text,
-    transaction_status :: SpecTransactionStatus,
+    transaction_status :: Text,
     transaction_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON)

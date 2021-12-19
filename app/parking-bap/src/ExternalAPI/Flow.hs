@@ -10,6 +10,7 @@ import qualified Core.API.Search as Search
 import qualified Core.API.Status as Status
 import Core.API.Types (BecknReq)
 import qualified Core.Confirm as Confirm
+import qualified Core.Status as Status
 import qualified Data.Text as T
 import GHC.Records.Extra
 import Tools.Metrics.Types (CoreMetrics)
@@ -45,7 +46,7 @@ triggerStatusUpdate ::
     HasInConfig r c "selfId" Text
   ) =>
   BaseUrl ->
-  BecknReq Text ->
+  BecknReq Status.StatusMessage ->
   m ()
 triggerStatusUpdate = callBecknAPIWithSignature "status" Status.statusAPI
 
