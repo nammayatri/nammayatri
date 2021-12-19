@@ -3,7 +3,7 @@ module Core.OnConfirm.Payment where
 import Beckn.Prelude
 import Beckn.Utils.JSON
 
-data PaymentStatus = PAID | NOT_PAID deriving (Generic, Eq) --TODO: WHAT ARE POSSIBLE VALUES?
+data PaymentStatus = PAID | NOT_PAID deriving (Generic, Eq)
 
 instance FromJSON PaymentStatus where
   parseJSON = genericParseJSON constructorsWithHyphens
@@ -11,7 +11,7 @@ instance FromJSON PaymentStatus where
 instance ToJSON PaymentStatus where
   toJSON = genericToJSON constructorsWithHyphens
 
-data PaymentType = PRE_FULFILLMENT | POST_FULFILLMENT deriving (Generic) --TODO: WHAT ARE POSSIBLE VALUES?
+data PaymentType = PRE_FULFILLMENT | POST_FULFILLMENT deriving (Generic)
 
 instance FromJSON PaymentType where
   parseJSON = genericParseJSON constructorsWithHyphens
@@ -19,10 +19,18 @@ instance FromJSON PaymentType where
 instance ToJSON PaymentType where
   toJSON = genericToJSON constructorsWithHyphens
 
+data PaymentGatewayTransactionStatus = PAYMENT_LINK_CREATED | PAYMENT_LINK_EXPIRED | CAPTURED | REFUNDED deriving (Generic, Show)
+
+instance FromJSON PaymentGatewayTransactionStatus where
+  parseJSON = genericParseJSON constructorsToLowerOptions
+
+instance ToJSON PaymentGatewayTransactionStatus where
+  toJSON = genericToJSON constructorsToLowerOptions
+
 data PaymentParams = PaymentParams
   { amount :: Int,
     currency :: Text,
-    transaction_status :: Text,
+    transaction_status :: PaymentGatewayTransactionStatus,
     transaction_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON)

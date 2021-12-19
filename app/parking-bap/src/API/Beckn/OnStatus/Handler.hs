@@ -11,6 +11,7 @@ import Core.API.Types (BecknCallbackReq)
 import qualified Core.Context as Context
 import Core.OnConfirm
 import qualified Core.OnStatus as OnStatus
+import Core.Order (OrderState (ACTIVE, CANCELLED, COMPLETE))
 import qualified Domain.Booking as BookingStatus
 import qualified Domain.PaymentTransaction as PaymentStatus
 import qualified Storage.Queries.Booking as QBooking
@@ -37,18 +38,26 @@ onStatus _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
 
 handleOnStatus :: EsqDBFlow m r => OnStatus.OnStatusMessage -> m ()
 handleOnStatus msg = do
-  let mbpayment = msg.order.payment
+  let payment = msg.order.payment
       orderId = msg.order.id
-      status = mbpayment.status
+      bppOrderStatus = msg.order.state
+      bppPaymentStatus = payment.status
+      bppPaymentGatewayTxnStatus = payment.params.transaction_status
   booking <- QBooking.findByBppOrderId orderId >>= fromMaybeM BookingNotFound
   paymentDetails <- PaymentTransactionDB.findByBookingId booking.id >>= fromMaybeM PaymentDetailsNotFound
   runTransaction $ do
-    QBooking.updateStatus booking $ convertBookingStatus status
-    PaymentTransactionDB.updateStatus paymentDetails.id $ convertPaymentStatus status
+    QBooking.updateStatus booking $ convertBookingStatus bppOrderStatus
+    PaymentTransactionDB.updateStatus paymentDetails.id $ convertPaymentStatus (bppPaymentStatus, bppPaymentGatewayTxnStatus)
   where
     convertBookingStatus = \case
-      PAID -> BookingStatus.CONFIRMED
-      NOT_PAID -> BookingStatus.AWAITING_PAYMENT
+      Just ACTIVE -> BookingStatus.CONFIRMED
+      Just COMPLETE -> BookingStatus.CONFIRMED
+      Just CANCELLED -> BookingStatus.CANCELLED
+      Nothing -> BookingStatus.AWAITING_PAYMENT
     convertPaymentStatus = \case
-      PAID -> PaymentStatus.SUCCESS
-      NOT_PAID -> PaymentStatus.PENDING
+      (NOT_PAID, PAYMENT_LINK_CREATED) -> PaymentStatus.PENDING
+      (NOT_PAID, PAYMENT_LINK_EXPIRED) -> PaymentStatus.FAILED
+      (NOT_PAID, _) -> PaymentStatus.PENDING
+      (PAID, CAPTURED) -> PaymentStatus.SUCCESS
+      (PAID, REFUNDED) -> PaymentStatus.FAILED
+      (PAID, _) -> PaymentStatus.PENDING

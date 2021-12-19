@@ -7,7 +7,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import Domain.Booking.Type
 
-data PaymentStatus = INITIALIZED | PENDING | FAILED | SUCCESS
+data PaymentStatus = PENDING | FAILED | SUCCESS
   deriving (Generic, Show, Read, FromJSON, ToJSON)
 
 data PaymentTransaction = PaymentTransaction

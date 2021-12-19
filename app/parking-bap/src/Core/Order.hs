@@ -8,7 +8,7 @@ import Core.OnConfirm.Payment
 import Core.OnConfirm.Provider
 import Core.OnConfirm.SpecQuote
 
-data OrderState = ACTIVE | INACTIVE -- TODO: WHICH STATES ARE POSSIBLE?
+data OrderState = ACTIVE | CANCELLED | COMPLETE
   deriving (Generic, FromJSON, ToJSON)
 
 newtype OrderProviderLocation = OrderProviderLocation
@@ -19,7 +19,7 @@ newtype OrderProviderLocation = OrderProviderLocation
 
 data Order = Order
   { id :: Text,
-    state :: OrderState,
+    state :: Maybe OrderState,
     provider :: Provider,
     provider_location :: OrderProviderLocation,
     items :: [Item],
