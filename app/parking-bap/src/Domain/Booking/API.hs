@@ -30,3 +30,8 @@ makeBookingAPIEntity Booking {..} searchLoc mbPaymentTxn =
       paymentTxn = makePaymentTransactionAPIEntity <$> mbPaymentTxn,
       ..
     }
+
+newtype BookingListRes = BookingListRes
+  { list :: [BookingAPIEntity]
+  }
+  deriving (Generic, ToJSON)
