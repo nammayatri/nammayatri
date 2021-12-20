@@ -1,0 +1,23 @@
+POST {{app-host}}/serviceability/origin
+content-type: application/json
+token: {{app-token}}
+
+{
+  "location": {
+      "lon": 76.308364,
+      "lat": 10.025263
+   }
+}
+
+###
+
+POST {{app-host}}/serviceability/destination
+content-type: application/json
+token: {{app-token}}
+
+{
+  "location": {
+      "lon": 76.308364,
+      "lat": 10.025263
+   }
+}

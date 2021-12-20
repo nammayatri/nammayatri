@@ -4,7 +4,7 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.MapSearch (LatLong)
 import Beckn.Types.Schema
 import Beckn.Utils.Common
-import Database.Beam ((&&.), (==.))
+import Database.Beam ((&&.))
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
@@ -31,15 +31,15 @@ containsPredicate gps _ = containsPoint_ (B.val_ point)
   where
     point = "POINT (" <> show gps.lon <> " " <> show gps.lat <> ")"
 
-findGeometriesContaining :: DBFlow m r => LatLong -> Text -> m [Storage.Geometry]
-findGeometriesContaining gps region_ = do
+findGeometriesContaining :: DBFlow m r => LatLong -> [Text] -> m [Storage.Geometry]
+findGeometriesContaining gps regions = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate geometry@Geometry {..} =
-      region ==. B.val_ region_ &&. containsPredicate gps geometry
+      B.in_ region (B.val_ <$> regions) &&. containsPredicate gps geometry
 
-someGeometriesContain :: DBFlow m r => LatLong -> Text -> m Bool
-someGeometriesContain gps region = do
-  geometries <- findGeometriesContaining gps region
+someGeometriesContain :: DBFlow m r => LatLong -> [Text] -> m Bool
+someGeometriesContain gps regions = do
+  geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries

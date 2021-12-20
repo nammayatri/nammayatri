@@ -1,7 +1,7 @@
 let common = ./common.dhall
 let sec = ./secrets/app-backend.dhall
 
-let GeoRestriction = < Unrestricted | Region : Text>
+let GeoRestriction = < Unrestricted | Regions : List Text>
 
 let postgresConfig =
   { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
@@ -62,8 +62,8 @@ let sesConfig =
 
 
 let geofencingConfig =
-{ origin = GeoRestriction.Region "Ernakulam"
-, destination = GeoRestriction.Region "Kerala"
+{ origin = GeoRestriction.Regions ["Ernakulam", "Kochi"]
+, destination = GeoRestriction.Regions ["Kerala", "Kochi"]
 }
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"

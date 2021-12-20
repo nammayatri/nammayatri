@@ -5,7 +5,7 @@ import EulerHS.Prelude
 
 data GeoRestriction
   = Unrestricted
-  | Region Text
+  | Regions [Text]
   deriving (Show, Generic, FromDhall)
 
 data GeofencingConfig = GeofencingConfig

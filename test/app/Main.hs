@@ -75,8 +75,8 @@ specs = do
           \cfg ->
             cfg & #loggerConfig . #logToConsole .~ False
               & #loggerConfig . #logRawSql .~ False
-              & #geofencingConfig . #origin .~ Region "Ernakulam"
-              & #geofencingConfig . #destination .~ Region "Kerala",
+              & #geofencingConfig . #origin .~ Regions ["Ernakulam", "Kochi"]
+              & #geofencingConfig . #destination .~ Regions ["Kerala", "Kochi"],
         TransporterBackend.runTransporterBackendApp $ \cfg ->
           cfg & #loggerConfig . #logToConsole .~ False
             & #loggerConfig . #logRawSql .~ False,

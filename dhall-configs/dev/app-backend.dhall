@@ -1,7 +1,7 @@
 let common = ./common.dhall
 let sec = ./secrets/app-backend.dhall
 
-let GeoRestriction = < Unrestricted | Region : Text>
+let GeoRestriction = < Unrestricted | Regions : List Text>
 
 let postgresConfig =
   { connectHost = "localhost"
@@ -61,8 +61,8 @@ let sesConfig =
   }
 
 let geofencingConfig =
-{ origin = GeoRestriction.Region "Ernakulam"
-, destination = GeoRestriction.Region "Kerala"
+{ origin = GeoRestriction.Regions ["Ernakulam"]
+, destination = GeoRestriction.Regions ["Kerala", "Kochi"]
 }
 
 let gwUri = "http://localhost:8015/v1"

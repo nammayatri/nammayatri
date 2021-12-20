@@ -1,7 +1,7 @@
 let common = ./common.dhall
 let sec = ./secrets/app-backend.dhall
 
-let GeoRestriction = < Unrestricted | Region : Text>
+let GeoRestriction = < Unrestricted | Regions : List Text>
 
 let postgresConfig =
   { connectHost = "adb.primary.beckn.juspay.net"
@@ -59,9 +59,10 @@ let sesConfig =
     , fromArn = Some "arn:aws:ses:eu-west-1:980691203742:identity/no-reply@juspay.in"
     }
   }
+
 let geofencingConfig =
-{ origin = GeoRestriction.Region "Ernakulam"
-, destination = GeoRestriction.Region "Kerala"
+{ origin = GeoRestriction.Regions ["Ernakulam", "Kochi"]
+, destination = GeoRestriction.Regions ["Kerala", "Kochi"]
 }
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"

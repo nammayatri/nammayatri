@@ -15,11 +15,11 @@ rideServiceable RideServiceabilityReq {..} = do
   originServiceable <-
     case geofencingConfig.origin of
       Unrestricted -> pure True
-      Region region -> someGeometriesContain origin region
+      Regions regions -> someGeometriesContain origin regions
   destinationServiceable <-
     case geofencingConfig.destination of
       Unrestricted -> pure True
-      Region region -> someGeometriesContain destination region
+      Regions regions -> someGeometriesContain destination regions
   pure $ originServiceable && destinationServiceable
 
 checkServiceability ::
@@ -32,5 +32,5 @@ checkServiceability settingAccessor personId ServiceabilityReq {..} = withFlowHa
   locationServiceable <-
     case geoRestriction of
       Unrestricted -> pure True
-      Region region -> someGeometriesContain location region
+      Regions regions -> someGeometriesContain location regions
   pure $ ServiceabilityRes locationServiceable

@@ -1,7 +1,7 @@
 let common = ./common.dhall
 let sec = ./secrets/app-backend.dhall
 
-let GeoRestriction = < Unrestricted | Region : Text>
+let GeoRestriction = < Unrestricted | Regions : List Text>
 
 let postgresConfig =
   { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
@@ -59,6 +59,7 @@ let sesConfig =
     , fromArn = None Text
     }
   }
+  
 let geofencingConfig =
 { origin = GeoRestriction.Unrestricted
 , destination = GeoRestriction.Unrestricted
