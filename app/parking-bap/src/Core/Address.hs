@@ -1,6 +1,6 @@
 module Core.Address (Address (..)) where
 
-import Beckn.Prelude --hiding (state)
+import Beckn.Prelude
 
 data Address = Address
   { name :: Text,

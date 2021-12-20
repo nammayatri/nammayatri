@@ -1,4 +1,4 @@
-module Core.OnSearch.Location where
+module Core.Location where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.Gps (Gps)

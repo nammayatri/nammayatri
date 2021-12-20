@@ -15,7 +15,6 @@ import Core.OnConfirm.Item as Reexport
 import Core.OnConfirm.Payment as Reexport
 import Core.OnConfirm.Price as Reexport
 import Core.OnConfirm.Provider as Reexport
-import Core.OnConfirm.ProviderLocation as Reexport
 import Core.OnConfirm.SpecQuote as Reexport
 import Core.OnConfirm.Start as Reexport
 import Core.OnConfirm.StartLocation as Reexport

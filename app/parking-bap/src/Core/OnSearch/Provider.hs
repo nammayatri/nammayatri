@@ -4,7 +4,7 @@ import Beckn.Prelude hiding (exp)
 import Beckn.Types.Core.Migration.Category (Category)
 import Beckn.Types.Core.Migration.Descriptor (Descriptor)
 import Core.Item (Item)
-import Core.OnSearch.Location (Location)
+import Core.Location (Location)
 
 data Provider = Provider
   { id :: Maybe Text,
