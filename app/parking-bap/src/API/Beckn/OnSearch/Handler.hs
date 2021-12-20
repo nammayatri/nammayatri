@@ -13,8 +13,8 @@ import Core.API.Types (BecknCallbackReq)
 import qualified Core.Context as Context
 import qualified Core.DecimalValue as DecimalValue
 import qualified Core.Item as Item
-import qualified Core.OnSearch.Catalog as Catalog
 import qualified Core.Location as Location
+import qualified Core.OnSearch.Catalog as Catalog
 import qualified Domain.ParkingLocation as DParkingLocation
 import qualified Domain.Quote as DQuote
 import qualified Domain.Search as DSearch
