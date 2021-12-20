@@ -128,4 +128,5 @@ in
 , authTokenCacheExpiry = +600
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets
+, disableSignatureAuth = False
 }

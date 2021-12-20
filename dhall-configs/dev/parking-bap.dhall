@@ -46,4 +46,5 @@ in
 , registryUrl = common.registryUrl
 , migrationPath = Some (env:PARKING_BAP_MIGRATION_PATH as Text ? "dev/migrations/parking-bap")
 , autoMigrate = True
+, disableSignatureAuth = False
 }

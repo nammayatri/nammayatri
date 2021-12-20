@@ -47,7 +47,8 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     nwAddress :: BaseUrl,
     registryUrl :: BaseUrl,
-    registrySecrets :: RegistrySecrets
+    registrySecrets :: RegistrySecrets,
+    disableSignatureAuth :: Bool
   }
   deriving (Generic, FromDhall)
 

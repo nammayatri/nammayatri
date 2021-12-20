@@ -77,4 +77,5 @@ in
 , nwAddress = "http://localhost:8018/v1/"
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets
+, disableSignatureAuth = False
 }

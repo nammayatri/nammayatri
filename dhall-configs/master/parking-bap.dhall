@@ -46,4 +46,5 @@ in
 , registryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
+, disableSignatureAuth = False
 }

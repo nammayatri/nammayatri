@@ -102,4 +102,5 @@ in
 , metricsSearchDurationTimeout = +45
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets
+, disableSignatureAuth = False
 }

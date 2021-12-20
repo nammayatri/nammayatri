@@ -69,7 +69,8 @@ data AppCfg = AppCfg
     updateLocationRefreshPeriod :: Seconds,
     metricsSearchDurationTimeout :: Seconds,
     registryUrl :: BaseUrl,
-    registrySecrets :: RegistrySecrets
+    registrySecrets :: RegistrySecrets,
+    disableSignatureAuth :: Bool
   }
   deriving (Generic, FromDhall)
 

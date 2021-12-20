@@ -37,7 +37,8 @@ data AppCfg = AppCfg
     graceTerminationPeriod :: Seconds,
     httpClientOptions :: HttpClientOptions,
     registryUrl :: BaseUrl,
-    registrySecrets :: RegistrySecrets
+    registrySecrets :: RegistrySecrets,
+    disableSignatureAuth :: Bool
   }
   deriving (Generic, FromDhall)
 

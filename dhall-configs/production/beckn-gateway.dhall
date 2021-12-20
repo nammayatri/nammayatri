@@ -68,5 +68,5 @@ in
 , signatureExpiry = common.signatureExpiry
 , graceTerminationPeriod = +90
 , httpClientOptions = httpClientOptions
-
+, disableSignatureAuth = False
 }

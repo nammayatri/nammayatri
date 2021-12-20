@@ -46,4 +46,5 @@ in
 , registryUrl = common.registryUrl
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
+, disableSignatureAuth = False
 }

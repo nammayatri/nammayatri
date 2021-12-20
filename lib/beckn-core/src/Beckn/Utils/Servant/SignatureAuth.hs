@@ -94,6 +94,7 @@ instance
     HasLog r,
     HasInConfig r c "hostName" Text,
     HasInConfig r c "registryUrl" BaseUrl,
+    HasInConfig r c "disableSignatureAuth" Bool,
     HasCoreMetrics r
   ) =>
   HasServer (SignatureAuth header :> api) ctx
@@ -201,6 +202,7 @@ verifySignature ::
     Metrics.CoreMetrics m,
     HasInConfig r c "hostName" Text,
     HasInConfig r c "registryUrl" BaseUrl,
+    HasInConfig r c "disableSignatureAuth" Bool,
     HasLog r
   ) =>
   Text ->
@@ -211,13 +213,15 @@ verifySignature headerName signPayload bodyHash = do
   hostName <- askConfig (.hostName)
   decodeViaRegistry signPayload >>= \case
     Just subscriber -> do
-      publicKey <-
-        Registry.decodeKey subscriber.signing_public_key
-          & fromMaybeM (InternalError "Couldn't decode public key from registry.")
-      isVerified <- performVerification publicKey hostName
-      unless isVerified $ do
-        logTagError logTag "Signature is not valid."
-        throwError $ getSignatureError hostName
+      disableSignatureAuth <- askConfig (.disableSignatureAuth)
+      unless disableSignatureAuth do
+        publicKey <-
+          Registry.decodeKey subscriber.signing_public_key
+            & fromMaybeM (InternalError "Couldn't decode public key from registry.")
+        isVerified <- performVerification publicKey hostName
+        unless isVerified $ do
+          logTagError logTag "Signature is not valid."
+          throwError $ getSignatureError hostName
       pure subscriber
     Nothing -> do
       logTagError logTag $

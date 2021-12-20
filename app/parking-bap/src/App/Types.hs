@@ -30,7 +30,8 @@ data AppCfg = AppCfg
     hostName :: Text,
     registryUrl :: BaseUrl,
     migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool
+    autoMigrate :: Bool,
+    disableSignatureAuth :: Bool
   }
   deriving (Generic, FromDhall)
 
