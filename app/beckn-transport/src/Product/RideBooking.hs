@@ -80,8 +80,8 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
           Just $
             API.RideInfo
               { bookingId = rideBooking.id,
-                pickupLoc = fromLatLong,
-                dropLoc = Location.locationToLatLong toLocation,
+                pickupLoc = SLoc.makeSearchReqLocationAPIEntity fromLocation,
+                dropLoc = SLoc.makeSearchReqLocationAPIEntity toLocation,
                 etaForPickupLoc = (`div` 60) . (.durationInS) <$> mbRoute,
                 distanceToPickupLoc = (.distanceInM) <$> mbRoute,
                 notificationExpiryTime = notificationExpiryTime,

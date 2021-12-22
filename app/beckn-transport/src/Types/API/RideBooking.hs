@@ -3,7 +3,6 @@ module Types.API.RideBooking where
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong)
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
@@ -38,8 +37,8 @@ newtype GetRideInfoRes = GetRideInfoRes
 
 data RideInfo = RideInfo
   { bookingId :: Id RideBooking,
-    pickupLoc :: LatLong,
-    dropLoc :: LatLong,
+    pickupLoc :: SearchReqLocationAPIEntity,
+    dropLoc :: SearchReqLocationAPIEntity,
     etaForPickupLoc :: Maybe Integer,
     distanceToPickupLoc :: Maybe Double,
     notificationExpiryTime :: UTCTime,
