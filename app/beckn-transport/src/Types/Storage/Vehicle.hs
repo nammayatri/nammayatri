@@ -15,7 +15,6 @@ import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (..))
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import Types.Error (VehicleError (VehicleFieldNotPresent))
 import qualified Types.Storage.Organization as Org
 import Utils.Common
 import Utils.PostgreSQLSimple (fromFieldRead)
@@ -99,16 +98,16 @@ instance FromHttpApiData RegistrationCategory where
 
 data VehicleT f = Vehicle
   { id :: B.C f (Id Vehicle),
-    capacity :: B.C f (Maybe Int),
     organizationId :: B.C f (Id Org.Organization),
+    variant :: B.C f Variant,
+    model :: B.C f Text,
+    color :: B.C f Text,
+    registrationNo :: B.C f Text,
+    capacity :: B.C f (Maybe Int),
     category :: B.C f (Maybe Category),
     make :: B.C f (Maybe Text),
-    model :: B.C f (Maybe Text),
     size :: B.C f (Maybe Text),
-    variant :: B.C f (Maybe Variant),
-    color :: B.C f (Maybe Text),
     energyType :: B.C f (Maybe EnergyType),
-    registrationNo :: B.C f Text,
     registrationCategory :: B.C f (Maybe RegistrationCategory),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
@@ -150,27 +149,26 @@ fieldEMod =
 
 data VehicleAPIEntity = VehicleAPIEntity
   { id :: Id Vehicle,
-    category :: Category,
-    model :: Text,
     variant :: Variant,
+    model :: Text,
     color :: Text,
     registrationNo :: Text,
-    capacity :: Int,
+    category :: Maybe Category,
+    capacity :: Maybe Int,
     createdAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 buildVehicleAPIEntity :: MonadFlow m => Vehicle -> m VehicleAPIEntity
 buildVehicleAPIEntity veh = do
-  category <- veh.category & fromMaybeM (VehicleFieldNotPresent "category")
-  model <- veh.model & fromMaybeM (VehicleFieldNotPresent "model")
-  variant <- veh.variant & fromMaybeM (VehicleFieldNotPresent "variant")
-  color <- veh.color & fromMaybeM (VehicleFieldNotPresent "color")
-  capacity <- veh.capacity & fromMaybeM (VehicleFieldNotPresent "capacity")
   return
     VehicleAPIEntity
       { id = veh.id,
+        variant = veh.variant,
+        model = veh.model,
+        color = veh.color,
         registrationNo = veh.registrationNo,
-        createdAt = veh.createdAt,
-        ..
+        category = veh.category,
+        capacity = veh.capacity,
+        createdAt = veh.createdAt
       }

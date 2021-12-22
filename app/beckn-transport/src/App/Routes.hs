@@ -197,7 +197,7 @@ type VehicleAPI =
            :> Post '[JSON] CreateVehicleRes
            :<|> "list"
              :> AdminTokenAuth
-             :> QueryParam "variant" Variant
+             :> MandatoryQueryParam "variant" Variant
              :> QueryParam "category" Category
              :> QueryParam "energyType" EnergyType
              :> QueryParam "registrationNo" Text

@@ -2,7 +2,9 @@
     "rest-client.environmentVariables": {
         "dev": {
             "app-host": "http://localhost:8013/v2",
-            "app-token": "ea37f941-427a-4085-a7d0-96240f166672"
+            "transporter-host": "http://localhost:8014/v2",
+            "app-token": "ea37f941-427a-4085-a7d0-96240f166672",
+            "coordinator-token": "ea37f941-427a-4085-a7d0-96240f166672"
         }
     }
 }

@@ -134,7 +134,7 @@ findAllByVariantCatOrgId variantM categoryM energyTypeM mbRegNum limit offset or
     orderByDesc Storage.Vehicle {..} = B.desc_ createdAt
     predicate Storage.Vehicle {..} =
       organizationId ==. B.val_ orgId
-        &&. (B.val_ (isNothing variantM) ||. variant ==. B.val_ variantM)
+        &&. maybe (B.val_ True) (\variant_ -> B.val_ variant_ ==. variant) variantM
         &&. (B.val_ (isNothing categoryM) ||. category ==. B.val_ categoryM)
         &&. (B.val_ (isNothing energyTypeM) ||. energyType ==. B.val_ energyTypeM)
         &&. maybe (B.val_ True) (\regNum -> registrationNo `B.like_` B.val_ ("%" <> regNum <> "%")) mbRegNum

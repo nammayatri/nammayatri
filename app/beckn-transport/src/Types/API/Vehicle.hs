@@ -13,13 +13,13 @@ import Types.Storage.Vehicle as SV
 
 -- Create Person request and response
 data CreateVehicleReq = CreateVehicleReq
-  { capacity :: Maybe Int,
+  { variant :: Variant,
+    model :: Text,
+    color :: Text,
+    capacity :: Maybe Int,
     category :: Maybe Category,
     make :: Maybe Text,
-    model :: Maybe Text,
     size :: Maybe Text,
-    variant :: Maybe Variant,
-    color :: Maybe Text,
     energyType :: Maybe EnergyType,
     registrationNo :: Text,
     registrationCategory :: Maybe RegistrationCategory
@@ -29,12 +29,12 @@ data CreateVehicleReq = CreateVehicleReq
 validateCreateVehicleReq :: Validate CreateVehicleReq
 validateCreateVehicleReq CreateVehicleReq {..} =
   sequenceA_
-    [ validateField "registrationNo" registrationNo $
-        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit),
-      validateField "model" model . InMaybe $
+    [ validateField "model" model $
         NotEmpty `And` star P.latinOrSpace,
-      validateField "make" make . InMaybe $ NotEmpty `And` P.name,
-      validateField "color" color . InMaybe $ NotEmpty `And` P.name
+      validateField "color" color $ NotEmpty `And` P.name,
+      validateField "registrationNo" registrationNo $
+        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit),
+      validateField "make" make . InMaybe $ NotEmpty `And` P.name
     ]
 
 createVehicle :: DBFlow m r => CreateVehicleReq -> Id Org.Organization -> m SV.Vehicle
@@ -69,9 +69,9 @@ newtype ListVehicleRes = ListVehicleRes
   deriving (Generic, ToJSON, ToSchema)
 
 data UpdateVehicleReq = UpdateVehicleReq
-  { model :: Maybe Text,
+  { variant :: Maybe Variant,
+    model :: Maybe Text,
     color :: Maybe Text,
-    variant :: Maybe Variant,
     category :: Maybe Category
   }
   deriving (Generic, FromJSON, ToSchema)

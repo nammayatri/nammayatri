@@ -115,9 +115,6 @@ buildRideAssignedUpdatePayload ride org = do
   veh <- Vehicle.findVehicleById ride.vehicleId >>= fromMaybeM VehicleNotFound
   mobileNumber <- decDriver.mobileCountryCode <> decDriver.mobileNumber & fromMaybeM (InternalError "Driver mobile number is not present.")
   let vehicleNumber = veh.registrationNo
-  vehicleColor <- veh.color & fromMaybeM (InternalError "Vehicle color is not present.")
-  vehicleModel <- veh.model & fromMaybeM (InternalError "Vehicle model is not present.")
-  vehicleVariant <- show <$> veh.variant & fromMaybeM (InternalError "Vehicle variant is not present.")
   let agent =
         OnUpdate.Agent
           { name = org.name,
@@ -127,9 +124,9 @@ buildRideAssignedUpdatePayload ride org = do
           }
       vehicle =
         OnUpdate.Vehicle
-          { model = vehicleModel,
-            variant = vehicleVariant,
-            color = vehicleColor,
+          { model = veh.model,
+            variant = show veh.variant,
+            color = veh.color,
             registration = vehicleNumber
           }
   return $
