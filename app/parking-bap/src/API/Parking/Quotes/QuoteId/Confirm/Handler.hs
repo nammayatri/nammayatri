@@ -69,7 +69,7 @@ confirm quoteId _ req = withFlowHandlerAPI $ do
           billing =
             Confirm.Billing
               { phone = booking.requestorNumber,
-                requestorName = booking.requestorName
+                name = booking.requestorName
               }
           items = [Confirm.Item booking.bppItemId $ Confirm.Quantity 1]
           locations = [Confirm.Location booking.parkingSpaceLocationId]

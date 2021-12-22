@@ -4,7 +4,7 @@ import Beckn.Prelude
 
 data Billing = Billing
   { phone :: Text,
-    requestorName :: Text
+    name :: Text
   }
   deriving (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
