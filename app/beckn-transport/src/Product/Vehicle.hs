@@ -30,11 +30,11 @@ createVehicle admin req = withFlowHandlerAPI $ do
       when (isJust mVehicle) $
         throwError $ InvalidRequest "Registration number already exists."
 
-listVehicles :: SP.Person -> SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Text -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
-listVehicles admin variant categoryM energyTypeM mbRegNum limitM offsetM = withFlowHandlerAPI $ do
+listVehicles :: SP.Person -> Maybe SV.Variant -> Maybe SV.Category -> Maybe SV.EnergyType -> Maybe Text -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
+listVehicles admin variantM categoryM energyTypeM mbRegNum limitM offsetM = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   personList <- QP.findAllByOrgId [SP.DRIVER] orgId
-  vehicleList <- QV.findAllByVariantCatOrgId variant categoryM energyTypeM mbRegNum limit offset orgId
+  vehicleList <- QV.findAllByVariantCatOrgId variantM categoryM energyTypeM mbRegNum limit offset orgId
   respList <- buildVehicleRes personList `traverse` vehicleList
   return $ ListVehicleRes respList
   where
