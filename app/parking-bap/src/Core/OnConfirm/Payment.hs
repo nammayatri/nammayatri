@@ -11,7 +11,7 @@ instance FromJSON PaymentStatus where
 instance ToJSON PaymentStatus where
   toJSON = genericToJSON constructorsWithHyphens
 
-data PaymentType = PRE_FULFILLMENT | POST_FULFILLMENT deriving (Generic)
+data PaymentType = PRE_FULFILLMENT | POST_FULFILLMENT | ON_ORDER deriving (Generic)
 
 instance FromJSON PaymentType where
   parseJSON = genericParseJSON constructorsWithHyphens

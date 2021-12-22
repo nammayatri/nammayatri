@@ -26,8 +26,6 @@ data Order = Order
     billing :: Billing,
     fulfillment :: Fulfillment,
     quote :: SpecQuote,
-    payment :: Payment,
-    created_at :: UTCTime,
-    updated_at :: UTCTime
+    payment :: Payment
   }
   deriving (Generic, FromJSON, ToJSON)
