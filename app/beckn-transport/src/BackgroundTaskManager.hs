@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module BackgroundTaskManager where
 
 import App.BackgroundTaskManager.Routes

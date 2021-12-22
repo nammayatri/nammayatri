@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.Booking where
 
 import Beckn.Prelude

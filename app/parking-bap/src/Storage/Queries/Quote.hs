@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.Quote where
 
 import Beckn.Prelude

@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.Types.Predicate
   ( module Beckn.Types.Predicate,
     module Kleene,

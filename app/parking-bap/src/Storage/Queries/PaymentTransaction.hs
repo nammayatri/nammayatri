@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.PaymentTransaction where
 
 import Beckn.Prelude

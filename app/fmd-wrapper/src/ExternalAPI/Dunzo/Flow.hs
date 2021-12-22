@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module ExternalAPI.Dunzo.Flow where
 
 import Beckn.Types.Common

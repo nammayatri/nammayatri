@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Beckn.External.Exotel.Flow where
 
 import Beckn.External.Exotel.Types

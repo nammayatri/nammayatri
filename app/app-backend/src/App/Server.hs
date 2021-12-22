@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module App.Server where
 
 import App.Routes (appAPI, appServer)

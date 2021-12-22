@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.Ride where
 
 import qualified Beckn.Storage.Common as Storage

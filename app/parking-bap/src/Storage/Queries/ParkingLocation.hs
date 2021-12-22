@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.ParkingLocation where
 
 import Beckn.Prelude

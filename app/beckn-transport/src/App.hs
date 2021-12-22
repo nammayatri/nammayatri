@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module App where
 
 import qualified App.Server as App

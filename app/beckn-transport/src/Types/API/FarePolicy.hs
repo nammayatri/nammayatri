@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Types.API.FarePolicy
   ( ListFarePolicyRes (..),
     UpdateFarePolicyReq (..),

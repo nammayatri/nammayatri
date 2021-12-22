@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module App
   ( runFMDWrapper,
   )

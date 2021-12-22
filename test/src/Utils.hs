@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Utils where
 
 import qualified App.BackgroundTaskManager.Types as BecknTransport

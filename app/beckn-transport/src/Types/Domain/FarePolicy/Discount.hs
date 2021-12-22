@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Types.Domain.FarePolicy.Discount where
 
 import Beckn.Types.Id (Id)
