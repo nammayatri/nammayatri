@@ -1,4 +1,6 @@
 ALTER TABLE atlas_parking.booking ADD COLUMN bpp_order_id character varying(255);
+ALTER TABLE atlas_parking.booking ADD COLUMN requestor_name character varying(255);
+ALTER TABLE atlas_parking.booking DROP COLUMN additional_info;
 
 ALTER TABLE atlas_parking.payment_transaction DROP COLUMN bkn_txn_id;
 ALTER TABLE atlas_parking.payment_transaction ADD COLUMN payment_gateway_txn_status character(36) NOT NULL;

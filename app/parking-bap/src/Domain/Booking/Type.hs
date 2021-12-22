@@ -18,7 +18,6 @@ data Booking = Booking
     requestorId :: Id Person,
     requestorNumber :: Text,
     vehicleNumber :: Text,
-    additionalInfo :: Text,
     bppId :: Text,
     bppUrl :: BaseUrl,
     bppItemId :: Text,
@@ -32,6 +31,7 @@ data Booking = Booking
     ticketCreatedAt :: Maybe UTCTime,
     updatedAt :: UTCTime,
     createdAt :: UTCTime,
-    bppOrderId :: Maybe Text
+    bppOrderId :: Maybe Text,
+    requestorName :: Text
   }
   deriving (Generic)

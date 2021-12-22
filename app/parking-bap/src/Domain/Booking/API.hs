@@ -8,7 +8,6 @@ import Domain.PaymentTransaction
 
 data BookingAPIEntity = BookingAPIEntity
   { vehicleNumber :: Text,
-    additionalInfo :: Text,
     parkingSpaceName :: Text,
     parkingSpaceLocation :: ParkingLocationAPIEntity,
     fare :: Amount,

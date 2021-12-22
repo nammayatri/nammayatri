@@ -30,7 +30,6 @@ mkPersist
       requestorId Text
       requestorNumber Text
       vehicleNumber Text
-      additionalInfo Text
       bppId Text
       bppUrl Text
       bppItemId Text
@@ -45,6 +44,7 @@ mkPersist
       updatedAt UTCTime
       createdAt UTCTime
       bppOrderId Text Maybe
+      requestorName Text
       Primary id
       deriving Generic
     |]

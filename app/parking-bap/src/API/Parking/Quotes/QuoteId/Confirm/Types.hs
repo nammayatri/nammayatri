@@ -18,7 +18,7 @@ type PostQuoteConfirmAPI =
 data PostQuoteConfirmReq = PostQuoteConfirmReq
   { requestorNumber :: Text,
     vehicleNumber :: Text,
-    additionalInfo :: Text
+    requestorName :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
