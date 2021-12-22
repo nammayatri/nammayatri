@@ -69,8 +69,9 @@ findAllByRequestorId personId mbLimit mbOffset mbOnlyActive = do
   let limit = fromMaybe 0 mbLimit
       offset = fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset) $ predicate isOnlyActive
+  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) $ predicate isOnlyActive
   where
+    orderBy Storage.RideBooking {..} = B.desc_ createdAt
     predicate isOnlyActive Storage.RideBooking {..} =
       requestorId ==. B.val_ personId
         &&. if isOnlyActive
