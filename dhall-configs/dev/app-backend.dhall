@@ -61,7 +61,7 @@ let sesConfig =
   }
 
 let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Ernakulam"]
+{ origin = GeoRestriction.Regions ["Ernakulam", "Kochi"]
 , destination = GeoRestriction.Regions ["Kerala", "Kochi"]
 }
 
