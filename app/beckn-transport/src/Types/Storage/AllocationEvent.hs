@@ -39,7 +39,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be AllocationEventType
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres AllocationEventType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse AllocationEventType; invalid value: " ++ str
+      Just val -> pure val
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be AllocationEventType
 

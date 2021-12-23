@@ -28,7 +28,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Category where
 instance B.HasSqlEqualityCheck Postgres Category
 
 instance FromBackendRow Postgres Category where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse Category; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData Category where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -57,7 +61,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Variant where
 instance B.HasSqlEqualityCheck Postgres Variant
 
 instance FromBackendRow Postgres Variant where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse Variant; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData Variant where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -74,7 +82,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be EnergyType where
 instance B.HasSqlEqualityCheck Postgres EnergyType
 
 instance FromBackendRow Postgres EnergyType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse EnergyType; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData EnergyType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -89,7 +101,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be RegistrationCategor
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres RegistrationCategory where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse RegistrationCategory; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData RegistrationCategory where
   parseUrlPiece = parseHeader . DT.encodeUtf8

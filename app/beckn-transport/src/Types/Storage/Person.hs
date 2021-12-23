@@ -29,7 +29,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres Role where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse Role; invalid value: " ++ str
+      Just val -> pure val
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Role
 
@@ -53,7 +57,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType wher
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
 
 instance FromBackendRow Postgres IdentifierType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse IdentifierType; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData IdentifierType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -73,7 +81,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Gender where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres Gender where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse Gender; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData Gender where
   parseUrlPiece = parseHeader . DT.encodeUtf8

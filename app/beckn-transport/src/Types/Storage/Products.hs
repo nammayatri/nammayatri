@@ -23,7 +23,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsType where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres ProductsType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse ProductsType; invalid value: " ++ str
+      Just val -> pure val
 
 -- data ProductsIndustry = MOBILITY | GOVT | GROCERY
 --   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -43,7 +47,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsStatus wher
 instance B.HasSqlEqualityCheck Postgres ProductsStatus
 
 instance FromBackendRow Postgres ProductsStatus where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse ProductsStatus; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData ProductsStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

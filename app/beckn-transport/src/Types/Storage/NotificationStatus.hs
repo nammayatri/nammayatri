@@ -19,7 +19,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be AnswerStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres AnswerStatus where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse AnswerStatus; invalid value: " ++ str
+      Just val -> pure val
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerStatus
 

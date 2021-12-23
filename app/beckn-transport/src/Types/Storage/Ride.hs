@@ -36,7 +36,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be RideStatus where
 instance B.HasSqlEqualityCheck Postgres RideStatus
 
 instance FromBackendRow Postgres RideStatus where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse RideStatus; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData RideStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

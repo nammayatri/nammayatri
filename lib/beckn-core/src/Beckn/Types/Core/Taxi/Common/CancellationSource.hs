@@ -37,4 +37,8 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationSource 
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres CancellationSource where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse CancellationSource; invalid value: " ++ str
+      Just val -> pure val

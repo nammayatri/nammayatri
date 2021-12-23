@@ -32,7 +32,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestStatus
 instance B.HasSqlEqualityCheck Postgres SearchRequestStatus
 
 instance FromBackendRow Postgres SearchRequestStatus where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse SearchRequestStatus; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData SearchRequestStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

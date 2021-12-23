@@ -26,7 +26,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Status where
 instance B.HasSqlEqualityCheck Postgres Status
 
 instance FromBackendRow Postgres Status where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse Status; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData Status where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -47,7 +51,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationType wh
 instance B.HasSqlEqualityCheck Postgres OrganizationType
 
 instance FromBackendRow Postgres OrganizationType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse OrganizationType; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData OrganizationType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -74,7 +82,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be OrganizationDomain 
 instance B.HasSqlEqualityCheck Postgres OrganizationDomain
 
 instance FromBackendRow Postgres OrganizationDomain where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse OrganizationDomain; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData OrganizationDomain where
   parseUrlPiece = parseHeader . DT.encodeUtf8

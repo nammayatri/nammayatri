@@ -20,7 +20,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be RideRequestType whe
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres RideRequestType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse RideRequestType; invalid value: " ++ str
+      Just val -> pure val
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be RideRequestType
 

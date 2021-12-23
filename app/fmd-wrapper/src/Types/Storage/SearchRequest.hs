@@ -30,7 +30,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestType w
 instance B.HasSqlEqualityCheck Postgres SearchRequestType
 
 instance FromBackendRow Postgres SearchRequestType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse SearchRequestType; invalid value: " ++ str
+      Just val -> pure val
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -46,7 +50,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestStatus
 instance B.HasSqlEqualityCheck Postgres SearchRequestStatus
 
 instance FromBackendRow Postgres SearchRequestStatus where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse SearchRequestStatus; invalid value: " ++ str
+      Just val -> pure val
 
 data Industry = MOBILITY | GOVT | GROCERY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -55,7 +63,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Industry where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres Industry where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse Industry; invalid value: " ++ str
+      Just val -> pure val
 
 data ExchangeType = ORDER | FULFILLMENT
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -64,7 +76,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExchangeType where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres ExchangeType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse ExchangeType; invalid value: " ++ str
+      Just val -> pure val
 
 data RequestorType = CONSUMER
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -73,7 +89,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be RequestorType where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres RequestorType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse RequestorType; invalid value: " ++ str
+      Just val -> pure val
 
 data ProviderType = TRANSPORTER | DRIVER | GOVTADMIN | DELIVERYPERSON
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -82,7 +102,11 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProviderType where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres ProviderType where
-  fromBackendRow = read . T.unpack <$> fromBackendRow
+  fromBackendRow = do
+    str <- T.unpack <$> fromBackendRow
+    case readMaybe str of
+      Nothing -> fail $ "failed to parse ProviderType; invalid value: " ++ str
+      Just val -> pure val
 
 instance FromHttpApiData SearchRequestStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
