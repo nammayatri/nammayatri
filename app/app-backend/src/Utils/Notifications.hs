@@ -9,7 +9,6 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.RideBooking as QRB
 import Types.Metrics
 import Types.Storage.Person as Person
 import Types.Storage.RegistrationToken as RegToken
@@ -18,96 +17,95 @@ import qualified Types.Storage.RideBooking as SRB
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 
--- Note:
--- When customer searches case is created in the BA, and search request is
--- sent to BP, which creates a case in the BP also. When someone responds to
--- that saying, they can offer this ride, onSearch is called to BP for each
--- of these and product/caseProduct is created. Then the customer would
--- confirm one of these product. Which would be basically choosing on of
--- the offers. Only these are cancellable in the BP, which needs to send
--- a notification in BA as a part of onCancel. Similary, when BA is cancelling,
--- cancel should send a notification to the provider who had the ride.
--- This will be basically cancelling the product/caseProduct. Here, when the
--- onCancel comes, it would be ideal not to send a notification in BA. But
--- it's also okay to send this in the first cut. The BA also has a case
--- cancellation flow, which basically cancels the case with or without products.
--- If the case with product is being cancelled, you have to send notification
--- in the BP for each product. Here it would be mostly one product again.
--- When case doesn't have any product, there is no notification.
-notifyOnStatusUpdate ::
+notifyOnRideAssigned ::
   ( DBFlow m r,
     FCMFlow m r,
     CoreMetrics m
   ) =>
+  SRB.RideBooking ->
   SRide.Ride ->
-  SRide.RideStatus ->
   m ()
-notifyOnStatusUpdate ride rideStatus =
-  when (ride.status /= rideStatus) $ do
-    rideBooking <- QRB.findById (ride.bookingId) >>= fromMaybeM RideBookingNotFound
-    org <- QOrg.findOrganizationById rideBooking.providerId >>= fromMaybeM OrgNotFound
-    let personId = rideBooking.requestorId
-        rideId = ride.id
-        providerName = org.name
-        driverName = ride.driverName
-    person <- Person.findById personId
-    case person of
-      Just p -> case rideStatus of
-        SRide.CANCELLED -> do
-          let notificationData =
-                FCM.FCMAndroidData
-                  { fcmNotificationType = FCM.CANCELLED_PRODUCT,
-                    fcmShowNotification = FCM.SHOW,
-                    fcmEntityType = FCM.Product,
-                    fcmEntityIds = show $ getId rideId,
-                    fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CANCELLED_PRODUCT
-                  }
-              title = FCMNotificationTitle $ T.pack "Ride cancelled!"
-              body =
-                FCMNotificationBody $
-                  unwords
-                    [ providerName,
-                      "had to cancel your ride for",
-                      showTimeIst (rideBooking.startTime) <> ".",
-                      "Check the app for more details."
-                    ]
-          FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
-        SRide.INPROGRESS -> do
-          let notificationData =
-                FCM.FCMAndroidData
-                  { fcmNotificationType = FCM.TRIP_STARTED,
-                    fcmShowNotification = FCM.SHOW,
-                    fcmEntityType = FCM.Product,
-                    fcmEntityIds = show $ getId rideId,
-                    fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_STARTED
-                  }
-              title = FCMNotificationTitle $ T.pack "Trip started!"
-              body =
-                FCMNotificationBody $
-                  unwords
-                    [ driverName,
-                      "has started your trip. Please enjoy the ride!"
-                    ]
-          FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
-        SRide.COMPLETED -> do
-          let notificationData =
-                FCM.FCMAndroidData
-                  { fcmNotificationType = FCM.TRIP_FINISHED,
-                    fcmShowNotification = FCM.SHOW,
-                    fcmEntityType = FCM.Product,
-                    fcmEntityIds = show $ getId rideId,
-                    fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_FINISHED
-                  }
-              title = FCMNotificationTitle $ T.pack "Trip finished!"
-              body =
-                FCMNotificationBody $
-                  unwords
-                    [ "Hope you enjoyed your trip with",
-                      driverName
-                    ]
-          FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
-        _ -> pure ()
-      _ -> pure ()
+notifyOnRideAssigned rideBooking ride = do
+  let personId = rideBooking.requestorId
+      rideId = ride.id
+      driverName = ride.driverName
+  person <- Person.findById personId >>= fromMaybeM PersonNotFound
+  let notificationData =
+        FCM.FCMAndroidData
+          { fcmNotificationType = FCM.DRIVER_ASSIGNMENT,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Product,
+            fcmEntityIds = show $ getId rideId,
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ASSIGNMENT
+          }
+      title = FCMNotificationTitle $ T.pack "Driver assigned!"
+      body =
+        FCMNotificationBody $
+          unwords
+            [ driverName,
+              "will be your driver for this trip."
+            ]
+  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+
+notifyOnRideStarted ::
+  ( DBFlow m r,
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  SRB.RideBooking ->
+  SRide.Ride ->
+  m ()
+notifyOnRideStarted rideBooking ride = do
+  let personId = rideBooking.requestorId
+      rideId = ride.id
+      driverName = ride.driverName
+  person <- Person.findById personId >>= fromMaybeM PersonNotFound
+  let notificationData =
+        FCM.FCMAndroidData
+          { fcmNotificationType = FCM.TRIP_STARTED,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Product,
+            fcmEntityIds = show $ getId rideId,
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_STARTED
+          }
+      title = FCMNotificationTitle $ T.pack "Trip started!"
+      body =
+        FCMNotificationBody $
+          unwords
+            [ driverName,
+              "has started your trip. Please enjoy the ride!"
+            ]
+  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+
+notifyOnRideCompleted ::
+  ( DBFlow m r,
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  SRB.RideBooking ->
+  SRide.Ride ->
+  m ()
+notifyOnRideCompleted rideBooking ride = do
+  let personId = rideBooking.requestorId
+      rideId = ride.id
+      driverName = ride.driverName
+  person <- Person.findById personId >>= fromMaybeM PersonNotFound
+  let notificationData =
+        FCM.FCMAndroidData
+          { fcmNotificationType = FCM.TRIP_FINISHED,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Product,
+            fcmEntityIds = show $ getId rideId,
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_FINISHED
+          }
+      title = FCMNotificationTitle $ T.pack "Trip finished!"
+      body =
+        FCMNotificationBody $
+          unwords
+            [ "Hope you enjoyed your trip with",
+              driverName
+            ]
+  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnExpiration ::
   ( FCMFlow m r,
@@ -167,10 +165,11 @@ notifyOnRegistration regToken personId mbDeviceToken =
             ]
    in FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
 
-notifyOnCancel :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => SRB.RideBooking -> Id Person -> Maybe FCM.FCMRecipientToken -> CancellationSource -> m ()
-notifyOnCancel rideBooking personId mbDeviceToken cancellationSource = do
+notifyOnRideBookingCancelled :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
+notifyOnRideBookingCancelled rideBooking cancellationSource = do
   org <- QOrg.findOrganizationById (rideBooking.providerId) >>= fromMaybeM OrgNotFound
-  FCM.notifyPerson (notificationData $ org.name) $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
+  person <- Person.findById rideBooking.requestorId >>= fromMaybeM PersonNotFound
+  FCM.notifyPerson (notificationData $ org.name) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
     notificationData orgName =
       FCM.FCMAndroidData

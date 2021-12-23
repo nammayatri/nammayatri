@@ -9,7 +9,6 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (state)
-import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideCancellationReason as QRCR
@@ -44,6 +43,7 @@ processEvent (OnUpdate.RideAssigned taEvent) = do
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.TRIP_ASSIGNED
     QRide.create ride
+  Notify.notifyOnRideAssigned rideBooking ride
   where
     buildRide :: MonadFlow m => SRB.RideBooking -> m SRide.Ride
     buildRide rideBooking = do
@@ -82,6 +82,7 @@ processEvent (OnUpdate.RideStarted rsEvent) = do
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
   DB.runSqlDBTransaction $ do
     QRide.updateStatus ride.id SRide.INPROGRESS
+  Notify.notifyOnRideStarted rideBooking ride
 processEvent (OnUpdate.RideCompleted rcEvent) = do
   let bppBookingId = Id rcEvent.order_id
       bppRideId = Id rcEvent.ride_id
@@ -97,6 +98,7 @@ processEvent (OnUpdate.RideCompleted rcEvent) = do
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
+  Notify.notifyOnRideCompleted rideBooking ride
 processEvent (OnUpdate.RideBookingCancelled tcEvent) = do
   let bppRideBookingId = Id $ tcEvent.order_id
   rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM RideBookingDoesNotExist
@@ -112,8 +114,7 @@ processEvent (OnUpdate.RideBookingCancelled tcEvent) = do
     unless (cancellationSource == OnUpdate.ByUser) $
       QRCR.create $ SRCR.RideCancellationReason rideBooking.id cancellationSource Nothing Nothing
   -- notify customer
-  mbPerson <- QPerson.findById rideBooking.requestorId
-  whenJust mbPerson $ \person -> Notify.notifyOnCancel rideBooking person.id person.deviceToken cancellationSource
+  Notify.notifyOnRideBookingCancelled rideBooking cancellationSource
 
 isRideBookingCancellable :: SRB.RideBooking -> Bool
 isRideBookingCancellable ride =
