@@ -40,7 +40,7 @@ sendRideAssignedUpdateToBAP rideBooking ride = do
   transporter <-
     QOrg.findOrganizationById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
-  buildRideAssignedUpdatePayload ride transporter
+  buildRideAssignedUpdatePayload ride
     >>= sendUpdateEvent transporter rideBooking.requestId
 
 sendRideStartedUpdateToBAP ::
@@ -105,19 +105,22 @@ sendUpdateEvent transporter requestId =
 buildRideAssignedUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>
   SRide.Ride ->
-  SOrg.Organization ->
   m OnUpdate.OnUpdateEvent
-buildRideAssignedUpdatePayload ride org = do
+buildRideAssignedUpdatePayload ride = do
   driver <-
     Person.findPersonById ride.driverId
       >>= fromMaybeM PersonNotFound
   decDriver <- decrypt driver
   veh <- Vehicle.findVehicleById ride.vehicleId >>= fromMaybeM VehicleNotFound
   mobileNumber <- decDriver.mobileCountryCode <> decDriver.mobileNumber & fromMaybeM (InternalError "Driver mobile number is not present.")
+  firstName <- decDriver.firstName & fromMaybeM (PersonFieldNotPresent "firstName")
+  let middleName = decDriver.middleName
+  lastName <- decDriver.lastName & fromMaybeM (PersonFieldNotPresent "lastName")
+  let name = firstName <> " " <> maybe "" (<> " ") middleName <> lastName
   let vehicleNumber = veh.registrationNo
   let agent =
         OnUpdate.Agent
-          { name = org.name,
+          { name = name,
             phone = mobileNumber,
             rating = realToFrac <$> driver.rating,
             registered_at = driver.createdAt
