@@ -3,6 +3,7 @@
 
 module Types.Storage.RideBooking where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
@@ -38,11 +39,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be RideBookingStatus w
 instance B.HasSqlEqualityCheck Postgres RideBookingStatus
 
 instance FromBackendRow Postgres RideBookingStatus where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse RideBookingStatus; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "RideBookingStatus"
 
 instance FromHttpApiData RideBookingStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

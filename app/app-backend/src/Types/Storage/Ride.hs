@@ -3,6 +3,7 @@
 
 module Types.Storage.Ride where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.JSON (stripPrefixUnderscoreIfAny)
@@ -33,11 +34,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be RideStatus where
 instance B.HasSqlEqualityCheck Postgres RideStatus
 
 instance FromBackendRow Postgres RideStatus where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse RideStatus; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "RideStatus"
 
 instance FromHttpApiData RideStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

@@ -2,8 +2,8 @@
 
 module Types.Storage.NotificationStatus where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Types.Id
-import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
@@ -19,11 +19,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be AnswerStatus where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres AnswerStatus where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse AnswerStatus; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "AnswerStatus"
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be AnswerStatus
 

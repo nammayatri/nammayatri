@@ -5,6 +5,7 @@ module Types.Storage.Person where
 
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Types.Id
 import Beckn.Utils.Common (maskText)
 import Data.Aeson
@@ -29,11 +30,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Role where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres Role where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse Role; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "Role"
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be Role
 
@@ -57,11 +54,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be IdentifierType wher
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be IdentifierType
 
 instance FromBackendRow Postgres IdentifierType where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse IdentifierType; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "IdentifierType"
 
 instance FromHttpApiData IdentifierType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -81,11 +74,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Gender where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres Gender where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse Gender; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "Gender"
 
 instance FromHttpApiData Gender where
   parseUrlPiece = parseHeader . DT.encodeUtf8

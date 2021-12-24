@@ -2,9 +2,9 @@
 
 module Types.Storage.RideRequest where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Types.Id
 import Beckn.Utils.JSON
-import qualified Data.Text as T
 import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Backend.SQL (BeamSqlBackend, FromBackendRow, HasSqlValueSyntax (..), autoSqlValueSyntax, fromBackendRow)
@@ -20,11 +20,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be RideRequestType whe
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres RideRequestType where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse RideRequestType; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "RideRequestType"
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be RideRequestType
 

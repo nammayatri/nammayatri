@@ -4,9 +4,9 @@
 
 module Types.Storage.RegistrationToken where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Types.Id
 import Data.Aeson
-import qualified Data.Text as T
 import Data.Time
 import qualified Database.Beam as B
 import Database.Beam.Backend
@@ -22,11 +22,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be Medium where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres Medium where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse Medium; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "Medium"
 
 data RTEntityType
   = CUSTOMER
@@ -37,11 +33,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be RTEntityType where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres RTEntityType where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse RTEntityType; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "RTEntityType"
 
 data LoginType
   = OTP
@@ -52,11 +44,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be LoginType where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres LoginType where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse LoginType; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "LoginType"
 
 data RegistrationTokenT f = RegistrationToken
   { id :: B.C f (Id RegistrationToken),

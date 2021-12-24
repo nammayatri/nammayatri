@@ -2,6 +2,7 @@
 
 module Types.Storage.SearchRequest where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
@@ -32,11 +33,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be SearchRequestStatus
 instance B.HasSqlEqualityCheck Postgres SearchRequestStatus
 
 instance FromBackendRow Postgres SearchRequestStatus where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse SearchRequestStatus; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "SearchRequestStatus"
 
 instance FromHttpApiData SearchRequestStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8

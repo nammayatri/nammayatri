@@ -2,6 +2,7 @@
 
 module Types.Storage.Products where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.JSON
@@ -23,11 +24,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsType where
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres ProductsType where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse ProductsType; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "ProductsType"
 
 -- data ProductsIndustry = MOBILITY | GOVT | GROCERY
 --   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -47,11 +44,7 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ProductsStatus wher
 instance B.HasSqlEqualityCheck Postgres ProductsStatus
 
 instance FromBackendRow Postgres ProductsStatus where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse ProductsStatus; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "ProductsStatus"
 
 instance FromHttpApiData ProductsStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
