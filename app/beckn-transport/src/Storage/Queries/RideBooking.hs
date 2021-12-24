@@ -79,8 +79,9 @@ findAllByDriver driverId_ mbLimit mbOffset mbIsOnlyActive = do
   let limit = fromMaybe 0 mbLimit
       offset = fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbIsOnlyActive
-  DB.findAllByJoin (B.limit_ limit . B.offset_ offset) $ query dbTable rideTable isOnlyActive
+  DB.findAllByJoin (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) $ query dbTable rideTable isOnlyActive
   where
+    orderBy Storage.RideBooking {..} = B.desc_ createdAt
     query dbTable rideTable isOnlyActive = do
       rideBooking <- B.all_ dbTable
       ride <- B.join_ rideTable $ \row ->

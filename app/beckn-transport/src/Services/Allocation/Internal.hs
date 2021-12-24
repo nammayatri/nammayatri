@@ -227,8 +227,12 @@ cancelRide ::
   m ()
 cancelRide rideBookingId reason = do
   rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
+  mbRide <- QRide.findByRBId rideBookingId
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.CANCELLED
+    whenJust mbRide $ \ride -> do
+      QRide.updateStatus ride.id SRide.CANCELLED
+      QDriverInfo.updateOnRide (cast ride.driverId) False
   logTagInfo ("rideBookingId-" <> getId rideBookingId) ("Cancellation reason " <> show reason.source)
   fork "cancelRide - Notify BAP" $ do
     let transporterId = rideBooking.providerId
