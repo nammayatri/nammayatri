@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Taxi.Common.CancellationSource where
 
+import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Data.Aeson
 import Data.OpenApi (ToSchema)
-import qualified Data.Text as T
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import EulerHS.Prelude
@@ -37,8 +37,4 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationSource 
   sqlValueSyntax = autoSqlValueSyntax
 
 instance FromBackendRow Postgres CancellationSource where
-  fromBackendRow = do
-    str <- T.unpack <$> fromBackendRow
-    case readMaybe str of
-      Nothing -> fail $ "failed to parse CancellationSource; invalid value: " ++ str
-      Just val -> pure val
+  fromBackendRow = fromBackendRowEnum "CancellationSource"
