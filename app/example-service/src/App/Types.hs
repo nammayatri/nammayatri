@@ -43,4 +43,4 @@ releaseAppEnv AppEnv {..} =
 
 type FlowHandler = FlowHandlerR AppEnv
 
-type FlowServer r api = FlowServerR AppEnv api
+type FlowServer api = FlowServerR AppEnv api

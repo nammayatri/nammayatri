@@ -3,7 +3,8 @@ module App
   )
 where
 
-import App.Routes (serverAPI, serverHandler)
+import API.Handler
+import API.Types
 import App.Types
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config (EsqDBConfig (..))
@@ -14,7 +15,7 @@ import Servant (Context (..))
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
-  runServerService appEnv serverAPI serverHandler identity identity EmptyContext releaseAppEnv pure
+  runServerService appEnv (Proxy @API) handler identity identity EmptyContext releaseAppEnv pure
 
 defaultConfig :: AppCfg
 defaultConfig =
