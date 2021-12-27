@@ -1,5 +1,7 @@
 pipeline {
-  agent any
+  agent {
+    label 'beckn'
+  }
 
   environment {
       BUILD_VERSION="""${sh(
