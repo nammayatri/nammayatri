@@ -4,12 +4,13 @@ apps () {
 cat << EOF
 app-backend
 beckn-gateway
-beckn-transport-btm
 beckn-transport
+beckn-transport-btm
+mock-fcm
 mock-registry
 mock-sms
-mock-fcm
 parking-bap
+public-transport-bap
 EOF
 }
 

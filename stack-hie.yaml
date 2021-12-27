@@ -41,6 +41,7 @@ packages:
   - app/fmd-wrapper
   - app/example-service
   - app/parking-bap
+  - app/public-transport-bap
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as

@@ -70,6 +70,19 @@ services:
       - POSTGRES_PASSWORD=atlas
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
+  public-transport-db:
+    image: "postgis/postgis:12-3.0"
+    container_name: "atlas_public_transport"
+    ports:
+      - "5438:5432"
+    volumes:
+      - ./sql-seed/public-transport-bap-seed.sql:/docker-entrypoint-initdb.d/1-public-transport-bap-seed.sql:Z
+    environment:
+      - POSTGRES_DB=atlas_public_transport
+      - POSTGRES_USER=atlas
+      - POSTGRES_PASSWORD=atlas
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   redis:
     image: "redis:5"
     ports:
@@ -122,5 +135,5 @@ services:
       - prometheus
     profiles:
       - monitoring
-volumes: 
+volumes:
   prometheus-volume:

@@ -57,7 +57,7 @@ cradle:
     - path: "app/example-service/server/Main.hs"
       component: "example-service:exe:example-service-exe"
 
-    - path: "app/example-service/server/Paths_beckn_gateway.hs"
+    - path: "app/example-service/server/Paths_example_service.hs"
       component: "example-service:exe:example-service-exe"
 
     - path: "app/parking-bap/src"
@@ -66,9 +66,18 @@ cradle:
     - path: "app/parking-bap/server/Main.hs"
       component: "parking-bap:exe:parking-bap-exe"
 
-    - path: "app/parking-bap/server/Paths_beckn_gateway.hs"
+    - path: "app/parking-bap/server/Paths_parking_bap.hs"
       component: "parking-bap:exe:parking-bap-exe"
-      
+
+    - path: "app/public-transport-bap/src"
+      component: "public-transport-bap:lib"
+
+    - path: "app/public-transport-bap/server/Main.hs"
+      component: "public-transport-bap:exe:public-transport-bap-exe"
+
+    - path: "app/public-transport-bap/server/Paths_public_transport_bap.hs"
+      component: "public-transport-bap:exe:public-transport-bap-exe"
+
     - path: "app/mock-sms/src"
       component: "mock-sms:lib"
 
