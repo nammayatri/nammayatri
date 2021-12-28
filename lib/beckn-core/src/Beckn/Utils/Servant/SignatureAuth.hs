@@ -377,10 +377,11 @@ decodeViaRegistry signaturePayload = do
   logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
   registryUrl <- askConfig (.registryUrl)
   let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
-  getPubKeyFromRegistry registryUrl uniqueKeyId
+  let subscriberId = signaturePayload.params.keyId.subscriberId
+  getPubKeyFromRegistry registryUrl uniqueKeyId subscriberId
   where
-    getPubKeyFromRegistry registryUrl uniqueKeyId = do
-      subscribers <- registryLookup registryUrl uniqueKeyId
+    getPubKeyFromRegistry registryUrl uniqueKeyId subscriberId = do
+      subscribers <- registryLookup registryUrl uniqueKeyId subscriberId
       case subscribers of
         [subscriber] ->
           pure $ Just subscriber
@@ -392,15 +393,16 @@ registryLookup ::
   (MonadFlow m, Metrics.CoreMetrics m) =>
   BaseUrl ->
   Text ->
+  Text ->
   m [Subscriber]
-registryLookup url uniqueKeyId = do
+registryLookup url uniqueKeyId subscriberId = do
   callAPI url (T.client Registry.lookupAPI request) "lookup"
     >>= fromEitherM (registryLookupCallError url)
   where
     request =
       RegistryAPI.LookupRequest
         { unique_key_id = Just uniqueKeyId,
-          subscriber_id = Nothing,
+          subscriber_id = Just subscriberId,
           _type = Nothing,
           domain = Nothing,
           country = Nothing,

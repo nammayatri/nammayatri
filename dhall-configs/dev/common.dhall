@@ -19,6 +19,10 @@ let credRegistry =
   , globalCommon.mkCredential "metro-bpp-key" "metro-bpp" "OGfSqt352PXRfdd+pLXo3eLLd96iL8dcbireMynl5A4="
   ]
 
+let mockRegistryUrl = "http://localhost:8020/"
+let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
+let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
+
 in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , smsSessionConfig = globalCommon.smsSessionConfig
    , autoMigrate = globalCommon.autoMigrate
@@ -40,6 +44,6 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "http://localhost:4545/"
    , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"
-   , registryUrl = "http://localhost:8020/"
+   , registryUrl = mockRegistryUrl
    , authServiceUrl = "http://localhost:8013/"
    }
