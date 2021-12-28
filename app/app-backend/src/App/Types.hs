@@ -27,13 +27,14 @@ import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Monitoring.Kafka (buildKafkaTools, releaseKafkaTools)
+import Beckn.Utils.Monitoring.Kafka.Producer (buildKafkaProducerTools, releaseKafkaProducerTools)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Flow
 import Types.Geofencing
+import Types.Kafka
 import Types.Metrics
 
 data AppCfg = AppCfg
@@ -76,7 +77,8 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     gatewayUrl :: BaseUrl,
     encTools :: EncTools,
-    kafkaToolsConfig :: KafkaToolsConfig
+    kafkaBrokersList :: KafkaBrokersList,
+    kafkaEnvCfgs :: BAPKafkaEnvConfigs
   }
   deriving (Generic, FromDhall)
 
@@ -106,7 +108,8 @@ data AppEnv = AppEnv
     authTokenCacheExpiry :: Seconds,
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
-    kafkaTools :: KafkaTools
+    kafkaProducerTools :: KafkaProducerTools,
+    kafkaEnvs :: BAPKafkaEnvs
   }
   deriving (Generic)
 
@@ -118,12 +121,13 @@ buildAppEnv config@AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  kafkaTools <- buildKafkaTools kafkaToolsConfig
+  kafkaProducerTools <- buildKafkaProducerTools kafkaBrokersList
+  kafkaEnvs <- buildBAPKafkaEnvs kafkaEnvCfgs
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
-  releaseKafkaTools kafkaTools
+  releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
 
 type Env = EnvR AppEnv

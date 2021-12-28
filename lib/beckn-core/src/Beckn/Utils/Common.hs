@@ -16,8 +16,8 @@ import Beckn.Utils.Error as Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (callBecknAPI)
 import Beckn.Utils.Error.DB as Common
 import Beckn.Utils.Logging as Common
-import Beckn.Utils.Monitoring.Kafka as Common
-import Beckn.Utils.Monitoring.Kafka.BusinessEvent as Common
+import Beckn.Utils.Monitoring.Kafka.Producer as Common
+import Beckn.Utils.Monitoring.Kafka.Producer.BusinessEvent as Common
 import Beckn.Utils.Servant.Client as Common
 import Beckn.Utils.Shutdown as Common (Shutdown)
 import Beckn.Utils.Text as Common

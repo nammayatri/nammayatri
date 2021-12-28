@@ -37,7 +37,7 @@ runBackgroundTaskManager configModifier = do
   let port = appCfg.bgtmPort
   btmEnv <-
     try (buildBTMEnv btmCfg)
-      >>= handleLeftIO @SomeException exitBuildingKafkaToolsFailure "Couldn't build KafkaTools: "
+      >>= handleLeftIO @SomeException exitBuildingAppEnvFailure "Couldn't build BTMEnv: "
 
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt btmEnv $ do

@@ -20,13 +20,14 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
+import Beckn.Utils.Monitoring.Kafka.Producer (releaseKafkaProducerTools)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import Types.App (SortMode)
+import Types.Kafka
 import Types.Metrics
 import Types.Shard
-import Beckn.Utils.Monitoring.Kafka (releaseKafkaTools)
 
 data BTMCfg = BTMCfg
   { appCfg :: App.AppCfg,
@@ -62,7 +63,8 @@ data BTMEnv = BTMEnv
     btmMetrics :: BTMMetricsContainer,
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
-    kafkaTools :: KafkaTools
+    kafkaProducerTools :: KafkaProducerTools,
+    kafkaEnvs :: BPPKafkaEnvs
   }
   deriving (Generic)
 
@@ -78,7 +80,7 @@ buildBTMEnv btmConfig@BTMCfg {..} = do
 
 releaseBTMEnv :: BTMEnv -> IO ()
 releaseBTMEnv BTMEnv {..} = do
-  releaseKafkaTools kafkaTools
+  releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
 
 type Env = EnvR BTMEnv

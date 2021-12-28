@@ -25,15 +25,16 @@ import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
-import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Monitoring.Kafka (buildKafkaTools, releaseKafkaTools)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
+import qualified Beckn.Utils.Registry as Registry
 import System.Environment (lookupEnv)
+import Types.Kafka
 import Types.Metrics
+import Utils.Kafka (buildKafkaProducerTools, releaseKafkaProducerTools)
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -77,7 +78,8 @@ data AppCfg = AppCfg
     registrySecrets :: RegistrySecrets,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
-    kafkaToolsConfig :: KafkaToolsConfig
+    kafkaBrokersList :: KafkaBrokersList,
+    kafkaEnvCfgs :: BPPKafkaEnvConfigs
   }
   deriving (Generic, FromDhall)
 
@@ -110,7 +112,8 @@ data AppEnv = AppEnv
     minimumDriverRatesCount :: Int,
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
-    kafkaTools :: KafkaTools
+    kafkaProducerTools :: KafkaProducerTools,
+    kafkaEnvs :: BPPKafkaEnvs
   }
   deriving (Generic)
 
@@ -123,12 +126,13 @@ buildAppEnv config@AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  kafkaTools <- buildKafkaTools kafkaToolsConfig 
+  kafkaProducerTools <- buildKafkaProducerTools kafkaBrokersList
+  kafkaEnvs <- buildBPPKafkaEnvs kafkaEnvCfgs
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
-  releaseKafkaTools kafkaTools
+  releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
 
 type Env = EnvR AppEnv

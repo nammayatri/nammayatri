@@ -1,4 +1,4 @@
-module Beckn.Utils.Monitoring.Kafka.BusinessEvent
+module Beckn.Utils.Monitoring.Kafka.Producer.BusinessEvent
   ( buildBusinessEvent,
     produceBusinessEventMessage,
     (..=),
@@ -8,10 +8,10 @@ module Beckn.Utils.Monitoring.Kafka.BusinessEvent
 where
 
 import Beckn.Types.Logging (Log)
-import Beckn.Types.Monitoring.Kafka
-import Beckn.Types.Monitoring.Kafka.BusinessEvent
+import Beckn.Types.Monitoring.Kafka.Producer
+import Beckn.Types.Monitoring.Kafka.Topic.BusinessEvent
 import Beckn.Types.Time (MonadTime, getCurrentTime)
-import Beckn.Utils.Monitoring.Kafka ((..=))
+import Beckn.Utils.Monitoring.Kafka.Producer ((..=))
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as A
 import EulerHS.Prelude
@@ -31,7 +31,7 @@ buildBusinessEvent ::
   b ->
   m BusinessEvent
 buildBusinessEvent eventName metadata payload = do
-  kafkaBEEnv <- asks (.kafkaEnvs.kafkaBEEnv)
+  kafkaBEEnv <- asks (.kafkaEnvs.businessEventEnv)
   currTime <- getCurrentTime
   return $
     BusinessEvent
@@ -50,7 +50,7 @@ produceBusinessEventMessage ::
     MonadTime m,
     MonadReader r m,
     HasKafkaBE r kafkaEnvs,
-    Kafka m,
+    KafkaProducer m,
     ToJSON a,
     ToJSON b
   ) =>
@@ -58,5 +58,6 @@ produceBusinessEventMessage ::
   a ->
   b ->
   m ()
-produceBusinessEventMessage eventName eventMeta eventPayload =
-  produceMessage (Just $ encodeUtf8 eventName) =<< buildBusinessEvent eventName eventMeta eventPayload
+produceBusinessEventMessage eventName eventMeta eventPayload = do
+  kafkaBEEnv <- asks (.kafkaEnvs.businessEventEnv)
+  produceMessage kafkaBEEnv.targetTopic (Just $ encodeUtf8 eventName) =<< buildBusinessEvent eventName eventMeta eventPayload
