@@ -562,6 +562,9 @@ instance IsHTTPError RouteError where
   toErrorCode = \case
     RouteRequestError _ _ -> "UNABLE_TO_GET_ROUTE"
     RouteNotLatLong -> "GET_ROUTE_UNSUPPORTED_FORMAT"
+  toHttpCode = \case
+    RouteRequestError _ _ -> E400
+    _ -> E500
 
 instance IsAPIError RouteError
 
