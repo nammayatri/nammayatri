@@ -102,7 +102,7 @@ getNotificationInfo rideBookingId = getNotif
 buildAppCancelReq :: CancelAPI.CancelReq
 buildAppCancelReq =
   CancelAPI.CancelReq
-    { rideCancellationReason = Just $ CancelAPI.RideCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
+    { rideCancellationReason = CancelAPI.RideCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") Nothing
     }
 
 getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM QuoteAPI.GetQuotesRes

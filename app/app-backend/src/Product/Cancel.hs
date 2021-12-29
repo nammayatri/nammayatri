@@ -22,7 +22,7 @@ import Utils.Common
 
 cancel :: Id SRB.RideBooking -> Id Person.Person -> API.CancelReq -> FlowHandler CancelRes
 cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  rideCancellationReasonAPI <- req.rideCancellationReason & fromMaybeM (InvalidRequest "Cancellation reason is not present.")
+  let rideCancellationReasonAPI = req.rideCancellationReason
   rideBooking <- QRB.findById bookingId >>= fromMaybeM RideBookingDoesNotExist
   let quoteId = rideBooking.quoteId
   quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
@@ -34,11 +34,12 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
     OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
   bapURIs <- asks (.bapSelfURIs)
-  bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  context <- buildTaxiContext txnId bapURIs.cabs (Just bppURI)
-  void $ ExternalAPI.cancel bppURI (Common.BecknReq context (ReqCancel.CancelReqMessage quote.bppQuoteId.getId ReqCancel.ByUser))
-  DB.runSqlDBTransaction $
-    QRCR.create $ makeRideCancelationReason rideBooking.id rideCancellationReasonAPI
+  bppUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  context <- buildTaxiContext txnId bapURIs.cabs (Just bppUrl)
+  void $ ExternalAPI.cancel bppUrl (Common.BecknReq context (ReqCancel.CancelReqMessage quote.bppQuoteId.getId ReqCancel.ByUser))
+  DB.runSqlDBTransaction
+    (QRCR.create $ makeRideCancelationReason rideBooking.id rideCancellationReasonAPI)
+    `rethrow` \(SQLRequestError _ _) -> RideInvalidStatus "This ride is already cancelled"
   return Success
   where
     makeRideCancelationReason rideBookingId rideCancellationReasonAPI = do
