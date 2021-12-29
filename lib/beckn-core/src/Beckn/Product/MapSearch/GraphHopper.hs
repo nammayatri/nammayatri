@@ -21,13 +21,13 @@ getRoutes' ::
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
   ) =>
   MapSearch.Request ->
-  m (Either ExternalAPICallError [MapSearch.Route])
+  m (Either GraphHopperError [MapSearch.Route])
 getRoutes' MapSearch.Request {..} = do
   -- Currently integrated only with graphhopper
   let mode' = fromMaybe MapSearch.CAR mode
       vehicle = mapToVehicle mode'
   graphhopperUrl <- asks (.graphhopperUrl)
-  let toError = ExternalAPICallError (Just "UNABLE_TO_GET_ROUTE") graphhopperUrl
+  let toError = GraphHopperError (Just "UNABLE_TO_GET_ROUTE") graphhopperUrl
   Grphr.search graphhopperUrl (grphrReq waypoints vehicle)
     <&> toError `mapBoth` (map mapToRoute . Grphr.paths)
   where

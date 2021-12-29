@@ -493,6 +493,14 @@ instance IsAPIError ContextError
 instance IsBecknAPIError ContextError where
   toType _ = CONTEXT_ERROR
 
+externalAPICallErrorMessage :: BaseUrl -> ClientError -> Maybe Text
+externalAPICallErrorMessage baseUrl clientErr =
+  Just $
+    "Failure in the external API call to "
+      <> showBaseUrlText baseUrl
+      <> ": "
+      <> show clientErr
+
 data ExternalAPICallError = ExternalAPICallError
   { errCode :: Maybe Text,
     baseUrl :: BaseUrl,
@@ -510,13 +518,23 @@ instance IsHTTPError ExternalAPICallError where
 
 instance IsAPIError ExternalAPICallError
 
-externalAPICallErrorMessage :: BaseUrl -> ClientError -> Maybe Text
-externalAPICallErrorMessage baseUrl clientErr =
-  Just $
-    "Failure in the external API call to "
-      <> showBaseUrlText baseUrl
-      <> ": "
-      <> show clientErr
+data GraphHopperError = GraphHopperError
+  { errCode :: Maybe Text,
+    baseUrl :: BaseUrl,
+    clientError :: ClientError
+  }
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''GraphHopperError
+
+instance IsBaseError GraphHopperError where
+  toMessage (GraphHopperError _ url err) = externalAPICallErrorMessage url err
+
+instance IsHTTPError GraphHopperError where
+  toErrorCode (GraphHopperError codeMb _ _) = fromMaybe "EXTERNAL_API_CALL_ERROR" codeMb
+  toHttpCode _ = E400
+
+instance IsAPIError GraphHopperError
 
 newtype EmailSendingError
   = EmailSendingError Text
@@ -562,9 +580,6 @@ instance IsHTTPError RouteError where
   toErrorCode = \case
     RouteRequestError _ _ -> "UNABLE_TO_GET_ROUTE"
     RouteNotLatLong -> "GET_ROUTE_UNSUPPORTED_FORMAT"
-  toHttpCode = \case
-    RouteRequestError _ _ -> E400
-    _ -> E500
 
 instance IsAPIError RouteError
 
