@@ -10,6 +10,7 @@ import Beckn.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (fromRes
 import Beckn.Utils.Servant.BaseUrl
 import EulerHS.Prelude
 import EulerHS.Types (KVDBReply)
+import qualified Kafka.Types as Kafka
 import Network.HTTP.Types (Header, Status (statusCode))
 import Network.HTTP.Types.Header (HeaderName)
 import Servant.Client (BaseUrl, ClientError, ResponseF (responseStatusCode))
@@ -723,8 +724,10 @@ instance IsHTTPError ExotelError where
 instance IsAPIError ExotelError
 
 data KafkaError
-  = KafkaUnableToBuildTools Text
-  | KafkaUnableToProduceMessage Text
+  = KafkaUnableToBuildTools Kafka.KafkaError
+  | KafkaUnableToReleaseTools Kafka.KafkaError
+  | KafkaUnableToProduceMessage Kafka.KafkaError
+  | KafkaUnableToParseValue
   | KafkaTopicIsEmptyString
   deriving (Show, IsBecknAPIError)
 
@@ -732,18 +735,24 @@ instanceExceptionWithParent 'HTTPException ''KafkaError
 
 instance IsBaseError KafkaError where
   toMessage = \case
-    KafkaUnableToBuildTools err -> Just $ "Attemption to build Kafka tools ended with error: " <> err
-    KafkaUnableToProduceMessage err -> Just $ "Attemption to produce message ended with error: " <> err
+    KafkaUnableToBuildTools err -> Just $ "Attemption to build Kafka tools ended with error: " <> show err
+    KafkaUnableToReleaseTools err -> Just $ "Attemption to release Kafka tools ended with error: " <> show err
+    KafkaUnableToProduceMessage err -> Just $ "Attemption to produce message ended with error: " <> show err
+    KafkaUnableToParseValue -> Just "Unable to parse value of received message."
     KafkaTopicIsEmptyString -> Just "Kafka topic is empty string."
 
 instance IsHTTPError KafkaError where
   toErrorCode = \case
     KafkaUnableToBuildTools _ -> "KAFKA_UNABLE_TO_BUILD_TOOLS"
+    KafkaUnableToReleaseTools _ -> "KAFKA_UNABLE_TO_RELEASE_TOOLS"
     KafkaUnableToProduceMessage _ -> "KAFKA_UNABLE_TO_PRODUCE_MESSAGE"
+    KafkaUnableToParseValue -> "KAFKA_UNABLE_TO_PARSE_VALUE"
     KafkaTopicIsEmptyString -> "KAFKA_TOPIC_IS_EMPTY_STRING"
   toHttpCode = \case
     KafkaUnableToBuildTools _ -> E500
+    KafkaUnableToReleaseTools _ -> E500
     KafkaUnableToProduceMessage _ -> E500
+    KafkaUnableToParseValue -> E500
     KafkaTopicIsEmptyString -> E500
 
 instance IsAPIError KafkaError

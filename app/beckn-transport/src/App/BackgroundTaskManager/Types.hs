@@ -20,7 +20,6 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
-import Beckn.Utils.Monitoring.Kafka.Producer (releaseKafkaProducerTools)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude

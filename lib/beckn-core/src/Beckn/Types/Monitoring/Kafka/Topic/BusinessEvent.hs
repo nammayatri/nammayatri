@@ -1,13 +1,12 @@
 module Beckn.Types.Monitoring.Kafka.Topic.BusinessEvent where
 
 import Beckn.Types.Monitoring.Kafka.Producer
+import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
 import Data.Aeson (Value)
-import qualified Data.Text as T
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
-import System.Environment (lookupEnv)
 
 type KafkaBEName = Text
 
@@ -42,5 +41,5 @@ data BusinessEvent = BusinessEvent
 
 buildKafkaBEEnv :: KafkaBECfg -> IO KafkaBEEnv
 buildKafkaBEEnv KafkaBECfg {..} = do
-  hostName <- map T.pack <$> lookupEnv "POD_NAME"
+  hostName <- getPodName
   return $ KafkaBEEnv {..}

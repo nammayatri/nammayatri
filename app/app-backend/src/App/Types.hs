@@ -27,7 +27,6 @@ import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import qualified Beckn.Utils.Registry as Registry
-import Beckn.Utils.Monitoring.Kafka.Producer (buildKafkaProducerTools, releaseKafkaProducerTools)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
@@ -77,7 +76,7 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     gatewayUrl :: BaseUrl,
     encTools :: EncTools,
-    kafkaBrokersList :: KafkaBrokersList,
+    kafkaProducerCfg :: KafkaProducerCfg,
     kafkaEnvCfgs :: BAPKafkaEnvConfigs
   }
   deriving (Generic, FromDhall)
@@ -121,7 +120,7 @@ buildAppEnv config@AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  kafkaProducerTools <- buildKafkaProducerTools kafkaBrokersList
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs kafkaEnvCfgs
   return AppEnv {..}
 

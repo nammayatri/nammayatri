@@ -1,27 +1,42 @@
-module Beckn.Types.Monitoring.Kafka.Producer where
+module Beckn.Types.Monitoring.Kafka.Producer
+  ( module Beckn.Types.Monitoring.Kafka.Producer,
+    module Reexport,
+  )
+where
 
+import Beckn.Types.Error
+import Beckn.Types.Monitoring.Kafka.Commons as Reexport
+import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
 import Kafka.Producer as Producer
 
 type HasKafkaProducer r = HasField "kafkaProducerTools" r KafkaProducerTools
 
-type KafkaBrokerAddress = Text
+class KafkaProducer m where
+  produceMessage :: ToJSON a => KafkaTopic -> Maybe KafkaKey -> a -> m ()
 
-type KafkaBrokersList = [KafkaBrokerAddress]
-
-type KafkaTopic = Text
-
-type KafkaKey = ByteString
-
-type KafkaHostName = Maybe Text
-
-type KafkaServiceName = Text
+newtype KafkaProducerCfg = KafkaProducerCfg
+  { brokers :: KafkaBrokersList
+  }
+  deriving (Generic, FromDhall)
 
 newtype KafkaProducerTools = KafkaProducerTools
   { producer :: Producer.KafkaProducer
   }
   deriving (Generic)
 
-class KafkaProducer m where
-  produceMessage :: ToJSON a => KafkaTopic -> Maybe KafkaKey -> a -> m ()
+producerProps :: KafkaProducerCfg -> ProducerProperties
+producerProps kafkaProducerCfg =
+  brokersList castBrokers
+    <> logLevel KafkaLogDebug
+  where
+    castBrokers = BrokerAddress <$> kafkaProducerCfg.brokers
+
+buildKafkaProducerTools :: KafkaProducerCfg -> IO KafkaProducerTools
+buildKafkaProducerTools kafkaProducerCfg = do
+  producer <- newProducer (producerProps kafkaProducerCfg) >>= either (throwM . KafkaUnableToBuildTools) return
+  return $ KafkaProducerTools {..}
+
+releaseKafkaProducerTools :: KafkaProducerTools -> IO ()
+releaseKafkaProducerTools kafkaProducerTools = closeProducer kafkaProducerTools.producer

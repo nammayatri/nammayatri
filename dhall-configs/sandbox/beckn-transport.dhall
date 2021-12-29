@@ -58,8 +58,10 @@ let httpClientOptions =
   { timeoutMs = +2000
   , maxRetries = +3
   } 
-  
-let kafkaBrokersList = ["localhost:29092"]
+
+let kafkaProducerCfg = 
+  { brokers = ["localhost:29092"]
+  }
 
 let encTools =
   { service = common.passetto
@@ -118,6 +120,6 @@ in
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
-, kafkaBrokersList = kafkaBrokersList
+, kafkaProducerCfg = kafkaProducerCfg
 , kafkaEnvCfgs = kafkaEnvCfgs
 }

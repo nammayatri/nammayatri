@@ -21,27 +21,13 @@ import qualified Data.HashMap.Lazy as HM
 import EulerHS.Prelude
 import Kafka.Producer as KafkaProd
 
-producerProps :: KafkaBrokersList -> ProducerProperties
-producerProps brokers =
-  brokersList castBrokers
-    <> logLevel KafkaLogDebug
-  where
-    castBrokers = BrokerAddress <$> brokers
-
-buildKafkaProducerTools :: KafkaBrokersList -> IO KafkaProducerTools
-buildKafkaProducerTools kafkaBrokersList = do
-  -- when (null targetTopic) $ throwM KafkaTopicIsEmptyString
-  producer <- newProducer (producerProps kafkaBrokersList) >>= either (\err -> throwM (KafkaUnableToBuildTools $ show err)) return
-  return $
-    KafkaProducerTools
-      { ..
-      }
-
-produceMessage :: (MonadIO m, MonadThrow m, Log m, MonadTime m, MonadReader r m, HasKafkaProducer r, ToJSON a) => KafkaTopic -> Maybe KafkaKey -> a -> m ()
+produceMessage :: (MonadIO m, MonadThrow m, Log m, MonadTime m, MonadReader r m,
+   HasKafkaProducer r, ToJSON a) => KafkaTopic -> Maybe KafkaKey -> a -> m ()
 produceMessage topic key event = do
   kafkaProducerTools <- asks (.kafkaProducerTools)
+  when (null topic) $ throwM KafkaTopicIsEmptyString
   mbErr <- KafkaProd.produceMessage kafkaProducerTools.producer message
-  whenJust mbErr $ \err -> throwError (KafkaUnableToProduceMessage $ show err)
+  whenJust mbErr (throwError . KafkaUnableToProduceMessage)
   where
     message =
       ProducerRecord
@@ -50,9 +36,6 @@ produceMessage topic key event = do
           prKey = key,
           prValue = Just . LBS.toStrict $ encode event
         }
-
-releaseKafkaProducerTools :: KafkaProducerTools -> IO ()
-releaseKafkaProducerTools kafkaProducerTools = closeProducer kafkaProducerTools.producer
 
 (..=) :: ToJSON a => Text -> a -> HM.HashMap Text A.Value
 (..=) = (A..=)

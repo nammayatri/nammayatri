@@ -34,7 +34,6 @@ import qualified Beckn.Utils.Registry as Registry
 import System.Environment (lookupEnv)
 import Types.Kafka
 import Types.Metrics
-import Utils.Kafka (buildKafkaProducerTools, releaseKafkaProducerTools)
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,
@@ -78,7 +77,7 @@ data AppCfg = AppCfg
     registrySecrets :: RegistrySecrets,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
-    kafkaBrokersList :: KafkaBrokersList,
+    kafkaProducerCfg :: KafkaProducerCfg,
     kafkaEnvCfgs :: BPPKafkaEnvConfigs
   }
   deriving (Generic, FromDhall)
@@ -126,7 +125,7 @@ buildAppEnv config@AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  kafkaProducerTools <- buildKafkaProducerTools kafkaBrokersList
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBPPKafkaEnvs kafkaEnvCfgs
   return AppEnv {..}
 

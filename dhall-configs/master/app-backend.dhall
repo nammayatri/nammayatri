@@ -85,7 +85,9 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
   
-let kafkaBrokersList = ["localhost:29092"]
+let kafkaProducerCfg = 
+  { brokers = ["localhost:29092"]
+  }
 
 let kafkaBECfg = 
   { serviceName = "BAP"
@@ -146,6 +148,6 @@ in
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
-, kafkaBrokersList = kafkaBrokersList
+, kafkaProducerCfg = kafkaProducerCfg
 , kafkaEnvCfgs = kafkaEnvCfgs
 }

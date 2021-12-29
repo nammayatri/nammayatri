@@ -6,7 +6,7 @@ module Beckn.Utils.Common
 where
 
 import Beckn.Prelude as Common (everyPossibleVariant, foldWIndex, identity, show)
-import Beckn.Types.Common as Common hiding (produceMessage)
+import Beckn.Types.Common as Common
 import Beckn.Types.Core.Ack as Common
 import Beckn.Types.Error.BaseError.HTTPError as Common
 import Beckn.Types.Field as Common
@@ -16,8 +16,6 @@ import Beckn.Utils.Error as Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (callBecknAPI)
 import Beckn.Utils.Error.DB as Common
 import Beckn.Utils.Logging as Common
-import Beckn.Utils.Monitoring.Kafka.Producer as Common
-import Beckn.Utils.Monitoring.Kafka.Producer.BusinessEvent as Common
 import Beckn.Utils.Servant.Client as Common
 import Beckn.Utils.Shutdown as Common (Shutdown)
 import Beckn.Utils.Text as Common
