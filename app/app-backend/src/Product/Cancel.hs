@@ -34,8 +34,9 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
     OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
   bapURIs <- asks (.bapSelfURIs)
+  bapIDs <- asks (.bapSelfIds)
   bppUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  context <- buildTaxiContext txnId bapURIs.cabs (Just bppUrl)
+  context <- buildTaxiContext txnId bapIDs.cabs bapURIs.cabs (Just organization.shortId.getShortId) (Just bppUrl)
   void $ ExternalAPI.cancel bppUrl (Common.BecknReq context (ReqCancel.CancelReqMessage quote.bppQuoteId.getId ReqCancel.ByUser))
   DB.runSqlDBTransaction
     (QRCR.create $ makeRideCancelationReason rideBooking.id rideCancellationReasonAPI)

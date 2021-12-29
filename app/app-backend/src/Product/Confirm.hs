@@ -31,8 +31,9 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
     OQ.findOrganizationById (quote.providerId)
       >>= fromMaybeM OrgNotFound
   bapURIs <- asks (.bapSelfURIs)
+  bapIDs <- asks (.bapSelfIds)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  context <- buildTaxiContext (getId searchRequestId) bapURIs.cabs (Just bppURI)
+  context <- buildTaxiContext (getId searchRequestId) bapIDs.cabs bapURIs.cabs (Just organization.shortId.getShortId) (Just bppURI)
   let order =
         ReqConfirm.Order
           { items = [ReqConfirm.OrderItem {id = quote.bppQuoteId.getId}]

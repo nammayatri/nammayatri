@@ -218,7 +218,8 @@ buildProvider org quotes = do
   let items = map mkItem quotes
   return $
     OnSearch.Provider
-      { name = org.name,
+      { id = getShortId org.shortId,
+        name = org.name,
         items,
         contacts = fromMaybe "" org.mobileNumber,
         rides_inprogress = fromMaybe 0 $ List.lookup Ride.INPROGRESS count,

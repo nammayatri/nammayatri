@@ -10,7 +10,8 @@ import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (exp, id)
 
 data Provider = Provider
-  { name :: Text,
+  { id :: Text,
+    name :: Text,
     items :: [Item],
     contacts :: Text,
     rides_inprogress :: Int,
@@ -25,7 +26,8 @@ instance ToSchema Provider where
 instance Example Provider where
   example =
     Provider
-      { name = "name",
+      { id = "id",
+        name = "name",
         items = [],
         contacts = "99999999999",
         rides_inprogress = 12,

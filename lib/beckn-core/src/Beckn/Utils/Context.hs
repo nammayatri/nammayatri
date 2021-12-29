@@ -9,19 +9,21 @@ import EulerHS.Prelude
 buildTaxiContext ::
   (MonadTime m, MonadGuid m) =>
   Text ->
+  Text ->
   BaseUrl ->
+  Maybe Text ->
   Maybe BaseUrl ->
   m Cab.Context
-buildTaxiContext txnId bapUri bppUri = do
+buildTaxiContext txnId bapId bapUri bppId bppUri = do
   currTime <- getCurrentTime
   msgId <- generateGUIDText
   return $
     Cab.Context
       { domain = Cab.MOBILITY,
         core_version = "0.9.3",
-        bap_id = Just "",
+        bap_id = bapId,
         bap_uri = bapUri,
-        bpp_id = Just "",
+        bpp_id = bppId,
         bpp_uri = bppUri,
         transaction_id = txnId,
         message_id = msgId,

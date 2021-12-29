@@ -16,7 +16,7 @@ import Servant.Client (parseBaseUrl)
 data Context = Context
   { domain :: Domain,
     core_version :: Text,
-    bap_id :: Maybe Text,
+    bap_id :: Text,
     bap_uri :: BaseUrl,
     bpp_id :: Maybe Text,
     bpp_uri :: Maybe BaseUrl,
@@ -34,9 +34,9 @@ instance Example Context where
     Context
       { domain = example,
         core_version = "0.9.3",
-        bap_id = Just "",
+        bap_id = "API.DOMAIN",
         bap_uri = fromJust $ parseBaseUrl "https://api.domain.com/",
-        bpp_id = Just "",
+        bpp_id = Just "API.DOMAIN",
         bpp_uri = parseBaseUrl "https://api.domain.com/",
         transaction_id = idExample,
         message_id = idExample,

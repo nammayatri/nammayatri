@@ -29,9 +29,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
     -- TODO: Verify api key here
     logTagInfo "on_update req" (show req)
     validateContext req.context
-    case req.contents of
-      Left err -> logTagError "on_update req" $ "on_update error: " <> show err
-      Right msg -> processEvent msg.cabs_update_event
+    processEvent req.message.cabs_update_event
     return Ack
 
 processEvent :: (DBFlow m r, FCMFlow m r, CoreMetrics m) => OnUpdate.OnUpdateEvent -> m ()

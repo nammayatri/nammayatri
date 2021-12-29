@@ -1,10 +1,9 @@
 module Beckn.Types.Core.Domain (Domain (..)) where
 
 import Beckn.Utils.Example
-import Beckn.Utils.JSON (constructorsWithHyphensUntagged)
+import Beckn.Utils.JSON (replaceUnderscoresString)
 import Data.Aeson
-import Data.Aeson.Types (typeMismatch)
-import Data.OpenApi (ToSchema (..))
+import Data.OpenApi hiding (Example)
 import EulerHS.Prelude
 
 data Domain
@@ -15,25 +14,29 @@ data Domain
   | HEALTHCARE
   | METRO
   | PARKING
-  deriving (Eq, Generic, Show, ToSchema)
+  deriving (Eq, Generic, Show)
 
 instance Example Domain where
   example = MOBILITY
 
+customAesonOptions :: Options
+customAesonOptions =
+  defaultOptions
+    { constructorTagModifier = \case
+        "MOBILITY" -> "nic2004:60221"
+        "LOCAL_RETAIL" -> "nic2004:52110"
+        "FINAL_MILE_DELIVERY" -> "nic2004:55204"
+        "METRO" -> "nic2004:60212"
+        "PARKING" -> "nic2004:63031"
+        val -> replaceUnderscoresString val, -- TODO: update remaining domains with codes
+      sumEncoding = UntaggedValue
+    }
+
+instance ToSchema Domain where
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions customAesonOptions
+
 instance ToJSON Domain where
-  toJSON MOBILITY = String "nic2004:60221"
-  toJSON LOCAL_RETAIL = String "nic2004:52110"
-  toJSON FINAL_MILE_DELIVERY = String "nic2004:55204"
-  toJSON METRO = String "nic2004:60212"
-  toJSON PARKING = String "nic2004:63031"
-  toJSON val = genericToJSON constructorsWithHyphensUntagged val -- TODO: update remaining domains with codes
+  toJSON = genericToJSON customAesonOptions
 
 instance FromJSON Domain where
-  parseJSON (String "nic2004:60221") = pure MOBILITY
-  parseJSON (String "nic2004:52110") = pure LOCAL_RETAIL
-  parseJSON (String "nic2004:55204") = pure FINAL_MILE_DELIVERY
-  parseJSON (String "FOOD-AND-BEVERAGE") = pure FOOD_AND_BEVERAGE
-  parseJSON (String "HEALTHCARE") = pure HEALTHCARE
-  parseJSON (String "nic2004:60212") = pure METRO
-  parseJSON (String "nic2004:63031") = pure PARKING
-  parseJSON e = typeMismatch "Core Domain" e
+  parseJSON = genericParseJSON customAesonOptions

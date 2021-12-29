@@ -9,12 +9,11 @@ where
 
 import Beckn.External.Encryption (decrypt)
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Data.Time (UTCTime)
 import EulerHS.Prelude
-import qualified ExternalAPI.Flow as ExternalAPI
+import ExternalAPI.Flow (callOnUpdate)
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Vehicle as Vehicle
@@ -100,7 +99,7 @@ sendUpdateEvent ::
   OnUpdate.OnUpdateEvent ->
   m ()
 sendUpdateEvent transporter requestId =
-  void . ExternalAPI.callBAP "on_update" API.onUpdateAPI transporter requestId . Right . OnUpdate.OnUpdateMessage
+  void . callOnUpdate transporter requestId . OnUpdate.OnUpdateMessage
 
 buildRideAssignedUpdatePayload ::
   (DBFlow m r, EncFlow m r) =>

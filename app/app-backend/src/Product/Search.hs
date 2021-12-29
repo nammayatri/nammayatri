@@ -62,9 +62,10 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     Location.create toLocation
     QSearchRequest.create searchRequest
   bapURIs <- asks (.bapSelfURIs)
+  bapIDs <- asks (.bapSelfIds)
   fork "search" . withRetry $ do
     fork "search cabs" $ do
-      context <- buildTaxiContext txnId bapURIs.cabs Nothing
+      context <- buildTaxiContext txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
       let intent = mkIntent req now distance
       void $ ExternalAPI.search (Common.BecknReq context $ Search.SearchMessage intent)
     fork "search metro" $ do

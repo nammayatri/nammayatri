@@ -2,13 +2,14 @@
 
 module ExternalAPI.Flow where
 
-import Beckn.Types.Core.Error
-import Beckn.Types.Core.ReqTypes (BecknCallbackReq (..))
+import Beckn.Types.Core.ReqTypes (BecknReq (..))
 import Beckn.Types.Core.Taxi.API.Call as API
+import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
+import qualified Beckn.Types.Core.Taxi.Common.Context as Common
+import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
 import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
-import Control.Arrow ((>>>))
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -58,26 +59,38 @@ callBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  Beckn.IsBecknAPI api (BecknCallbackReq req) res =>
+  Beckn.IsBecknAPI api req res =>
   Text ->
   Proxy api ->
   Org.Organization ->
   Id SearchRequest ->
-  Either Error req ->
+  (Common.Context -> content -> req) ->
+  content ->
   m res
-callBAP action api transporter searchRequestId contents = do
+callBAP action api transporter searchRequestId reqConstr content = do
   searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestNotFound
-  bapCallbackUrl <-
+  bapOrg <-
     Org.findOrganizationByShortId (ShortId searchRequest.bapId)
       >>= fromMaybeM OrgNotFound
-      >>= ((.callbackUrl) >>> fromMaybeM (OrgFieldNotPresent "callback_url"))
+  bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
       txnId = searchRequest.transactionId
   bppUri <- makeBppUrl (transporter.id)
-  context <- buildTaxiContext txnId bapCallbackUrl (Just bppUri)
-  Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $
-    BecknCallbackReq {contents, context}
+  context <- buildTaxiContext txnId bapOrg.shortId.getShortId bapCallbackUrl (Just transporter.shortId.getShortId) (Just bppUri)
+  Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $ reqConstr context content
+
+callOnUpdate ::
+  ( DBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  Org.Organization ->
+  Id SearchRequest ->
+  OnUpdate.OnUpdateMessage ->
+  m ()
+callOnUpdate transporter searchRequestId =
+  void . callBAP "on_update" API.onUpdateAPI transporter searchRequestId BecknReq
 
 makeBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
