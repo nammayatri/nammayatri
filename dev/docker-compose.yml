@@ -77,6 +77,7 @@ services:
       - "5438:5432"
     volumes:
       - ./sql-seed/public-transport-bap-seed.sql:/docker-entrypoint-initdb.d/1-public-transport-bap-seed.sql:Z
+      - ./local-testing-data/public-transport-bap.sql:/docker-entrypoint-initdb.d/2-public-transport-bap-testing-data.sql:Z
     environment:
       - POSTGRES_DB=atlas_public_transport
       - POSTGRES_USER=atlas

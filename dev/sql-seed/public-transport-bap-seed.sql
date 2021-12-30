@@ -16,3 +16,68 @@ ALTER SCHEMA atlas_public_transport OWNER TO atlas;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+CREATE TABLE atlas_public_transport.ferry_station (
+    id character(36) NOT NULL PRIMARY KEY,
+    name character varying(255) NOT NULL,
+    station_code character varying(255) NOT NULL UNIQUE,
+    lat double precision NOT NULL,
+    lon double precision NOT NULL
+);
+
+CREATE TABLE atlas_public_transport.search (
+    id character(36) NOT NULL PRIMARY KEY,
+    lat double precision NOT NULL,
+    lon double precision NOT NULL,
+    requestor_id character(36) NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE atlas_public_transport.quote (
+    id character(36) NOT NULL PRIMARY KEY,
+    search_id character(36) NOT NULL REFERENCES atlas_public_transport.search (id),
+    bpp_id character(36) NOT NULL,
+    bpp_url character varying(255) NOT NULL,
+    description character varying(255) NOT NULL,
+    fare numeric(30,2) NOT NULL,
+    departure_time timestamp with time zone,
+    arrival_time timestamp with time zone,
+    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.ferry_station (id),
+    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.ferry_station (id),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE atlas_public_transport.booking (
+    id character(36) NOT NULL PRIMARY KEY,
+    search_id character(36) NOT NULL REFERENCES atlas_public_transport.search (id),
+    quote_id character(36) NOT NULL REFERENCES atlas_public_transport.quote (id),
+    bkn_txn_id character(36) NOT NULL,
+    requestor_id character(36) NOT NULL,
+    quantity integer NOT NULL,
+    bpp_id character(36) NOT NULL,
+    bpp_url character varying(255) NOT NULL,
+    ferry_support_number character varying(16) NOT NULL,
+    description character varying(255) NOT NULL,
+    fare numeric(30,2) NOT NULL,
+    departure_time timestamp with time zone,
+    arrival_time timestamp with time zone,
+    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.ferry_station (id),
+    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.ferry_station (id),
+    status character varying(255) NOT NULL,
+    ticket_id character varying(255),
+    ticket_created_at timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE TABLE atlas_public_transport.payment_transaction (
+    id character(36) NOT NULL PRIMARY KEY,
+    booking_id character(36) NOT NULL REFERENCES atlas_public_transport.booking (id) UNIQUE,
+    bkn_txn_id character(36) NOT NULL,
+    payment_gateway_txn_id character varying(255) NOT NULL,
+    fare numeric(30,2) NOT NULL,
+    status character varying(255) NOT NULL,
+    payment_url character varying(255) NOT NULL,
+    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);

@@ -59,6 +59,7 @@ dependencies:
   - record-hasfield
   - text
   - time
+  - servant-client
   - servant-server
   - persistent            
   - persistent-postgresql 
