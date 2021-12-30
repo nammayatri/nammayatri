@@ -6,6 +6,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [9.0.0] - 25-11-2021
+
+### Changed
+
+- #1106: [BKN 990] Fallback to estimates on missing location updates. Fix DB lookup
+
+- #1097: [BKN-990] Fallback to estimates on missing location updates 
+
+## [8.0.0] - 15-11-2021
+
+### Added
+
+- #1039: [BKN-953] Add driver and vehicle to list rides EP
+
+- #1037: Added registry support to gateway
+
+- #1004: [WIP][BKN-918] Metro BPP support at app-backend
+
+- #1007: [BKN-933] Registry integration for Mobility 
+
+### Changed
+
+- #1068: added more logs to btm
+
+- #1052: Added city name as required by NSDL gateway
+
+- #1047: Show future times in the schedule
+
+- #1035: Added hostName config setting
+
+- #1031: Using callback_url instead of bap_uri in the callback
+
+- #1029: [BKN-959] Make gateway proxy raw body
+
+- #1017: Registry: lookup subscribers by unique_key_id
+
+- #1026: Use bap_uri from the context in gateway
+
+- #1021: Refactor gateway selection
+
+- #1013: [BKN-918] Split on_search in BAP
+
+- #1014: update: signature validation tests
+
+### Removed
+
+- #1032: Removed on_subscribe APIs
+
+- #1020: Remove selfId from transporter
+
+### Fixed
+
+- #1054: Don't update status in on_update
+
+- #1048: Fixed station order
+
+- #1041: [BKN-964] Save BPP ChargeableDistance in db
+
+- #1036: Report signature verification error if the subscriber is unknown
+
+- #1022: Fix/BKN-958 metro domain
+
+- #1018: Fix mobility domain variant in spec
+
 ## [7.0.0] - 21-10-2021
 
 ### Added
@@ -357,7 +421,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Go-live production release 
 
-[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/release-version-7..v7.0.0
+[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/release-version-7..v9.0.0
+[9.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v9.0.0
+[8.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v8.0.0
 [7.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v7.0.0
 [6.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v6.0.0
 [5.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v5.0.0
