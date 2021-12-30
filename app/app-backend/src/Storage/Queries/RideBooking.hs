@@ -66,7 +66,7 @@ findByRequestId searchRequestId = do
 findAllByRequestorId :: DBFlow m r => Id SPers.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.RideBooking]
 findAllByRequestorId personId mbLimit mbOffset mbOnlyActive = do
   dbTable <- getDbTable
-  let limit = fromMaybe 0 mbLimit
+  let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) $ predicate isOnlyActive

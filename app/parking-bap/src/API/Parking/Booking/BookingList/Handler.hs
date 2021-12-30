@@ -18,7 +18,7 @@ handler = bookingList
 
 bookingList :: PersonId -> Maybe Integer -> Maybe Integer -> FlowHandler Booking.BookingListRes
 bookingList personId mbLimit mbOffset = withFlowHandlerAPI $ do
-  let limit = fromMaybe 0 mbLimit
+  let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
   bList <- QBooking.findAllByRequestorId personId limit offset
   Booking.BookingListRes <$> traverse buildBookingListRes bList
