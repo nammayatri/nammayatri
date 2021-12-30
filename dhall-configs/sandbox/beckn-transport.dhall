@@ -1,4 +1,5 @@
 let common = ./common.dhall
+let kafka = ./kafka/beckn-transport.dhall
 let sec = ./secrets/beckn-transport.dhall
 
 let postgresConfig =
@@ -57,24 +58,11 @@ let apiRateLimitOptions =
 let httpClientOptions =
   { timeoutMs = +2000
   , maxRetries = +3
-  } 
-
-let kafkaProducerCfg = 
-  { brokers = ["localhost:29092"]
   }
 
 let encTools =
   { service = common.passetto
   , hashSalt = sec.encHashSalt
-  }
-  
-let kafkaBECfg = 
-  { serviceName = "BPP"
-  , targetTopic = "beckn_business_events"
-  }
-
-let kafkaEnvCfgs = 
-  { businessEventCfg = kafkaBECfg
   }
 
 in
@@ -120,6 +108,5 @@ in
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
-, kafkaProducerCfg = kafkaProducerCfg
-, kafkaEnvCfgs = kafkaEnvCfgs
+, kafkaProducerCfg = kafka.producerCfg
 }

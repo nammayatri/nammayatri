@@ -1,4 +1,4 @@
-module Beckn.Types.Monitoring.Kafka.Commons where
+module Beckn.Streaming.Kafka.Commons where
 
 import EulerHS.Prelude
 

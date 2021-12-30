@@ -1,6 +1,6 @@
-module Beckn.Utils.Monitoring.Kafka.Producer
+module Beckn.Streaming.Kafka.Producer
   ( buildKafkaProducerTools,
-    Beckn.Utils.Monitoring.Kafka.Producer.produceMessage,
+    Beckn.Streaming.Kafka.Producer.produceMessage,
     releaseKafkaProducerTools,
     (..=),
     A.Value (Object),
@@ -8,10 +8,9 @@ module Beckn.Utils.Monitoring.Kafka.Producer
   )
 where
 
+import Beckn.Streaming.Kafka.Producer.Types
 import Beckn.Types.Error
-import Beckn.Types.Logging (Log)
-import Beckn.Types.Monitoring.Kafka.Producer
-import Beckn.Types.Time (MonadTime)
+import Beckn.Types.Logging
 import Beckn.Utils.Error.Throwing (throwError)
 import Data.Aeson (encode)
 import qualified Data.Aeson as A
@@ -21,9 +20,8 @@ import qualified Data.HashMap.Lazy as HM
 import EulerHS.Prelude
 import Kafka.Producer as KafkaProd
 
-produceMessage :: (MonadIO m, MonadThrow m, Log m, MonadTime m, MonadReader r m,
-   HasKafkaProducer r, ToJSON a) => KafkaTopic -> Maybe KafkaKey -> a -> m ()
-produceMessage topic key event = do
+produceMessage :: (Log m, MonadThrow m, MonadIO m, MonadReader r m, HasKafkaProducer r, ToJSON a) => (KafkaTopic, Maybe KafkaKey) -> a -> m ()
+produceMessage (topic, key) event = do
   kafkaProducerTools <- asks (.kafkaProducerTools)
   when (null topic) $ throwM KafkaTopicIsEmptyString
   mbErr <- KafkaProd.produceMessage kafkaProducerTools.producer message

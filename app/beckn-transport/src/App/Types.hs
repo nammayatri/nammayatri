@@ -25,14 +25,14 @@ import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
+import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
-import qualified Beckn.Utils.Registry as Registry
 import System.Environment (lookupEnv)
-import Types.Kafka
+import Tools.Streaming.Kafka.Environment
 import Types.Metrics
 
 data AppCfg = AppCfg
@@ -77,8 +77,7 @@ data AppCfg = AppCfg
     registrySecrets :: RegistrySecrets,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
-    kafkaProducerCfg :: KafkaProducerCfg,
-    kafkaEnvCfgs :: BPPKafkaEnvConfigs
+    kafkaProducerCfg :: KafkaProducerCfg
   }
   deriving (Generic, FromDhall)
 
@@ -126,7 +125,7 @@ buildAppEnv config@AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
-  kafkaEnvs <- buildBPPKafkaEnvs kafkaEnvCfgs
+  kafkaEnvs <- buildBPPKafkaEnvs
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

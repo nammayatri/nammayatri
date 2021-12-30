@@ -1,4 +1,5 @@
 let common = ./common.dhall
+let kafka = ./kafka/app-backend.dhall
 let sec = ./secrets/app-backend.dhall
 
 let GeoRestriction = < Unrestricted | Regions : List Text>
@@ -84,19 +85,6 @@ let encTools =
   { service = common.passetto
   , hashSalt = sec.encHashSalt
   }
-  
-let kafkaProducerCfg = 
-  { brokers = ["localhost:29092"]
-  }
-
-let kafkaBECfg = 
-  { serviceName = "BAP"
-  , targetTopic = "beckn_business_events"
-  }
-
-let kafkaEnvCfgs = 
-  { businessEventCfg = kafkaBECfg
-  }
 
 in
 
@@ -148,6 +136,5 @@ in
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
-, kafkaProducerCfg = kafkaProducerCfg
-, kafkaEnvCfgs = kafkaEnvCfgs
+, kafkaProducerCfg = kafka.producerCfg
 }

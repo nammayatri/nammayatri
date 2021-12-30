@@ -22,7 +22,7 @@ connect EsqDBConfig {..} =
         connectDatabase = T.unpack connectDatabase
       }
 
-migrateIfNeeded :: MonadFlow m => Maybe FilePath -> EsqDBConfig -> Bool -> m (Either String ())
+migrateIfNeeded :: (MonadIO m, Log m) => Maybe FilePath -> EsqDBConfig -> Bool -> m (Either String ())
 migrateIfNeeded mPath dbCfg autoMigrate =
   case mPath of
     Just path | autoMigrate ->

@@ -1,26 +1,22 @@
-module Beckn.Types.Monitoring.Kafka.Consumer
-  ( module Beckn.Types.Monitoring.Kafka.Consumer,
+module Beckn.Streaming.Kafka.Consumer.Types
+  ( KafkaConsumerCfg (..),
+    KafkaConsumerTools,
+    buildKafkaConsumerTools,
+    releaseKafkaConsumerTools,
     module Reexport,
   )
 where
 
+import Beckn.Streaming.Kafka.Commons as Reexport
+import Beckn.Streaming.Kafka.HasKafkaTopics
 import Beckn.Types.Error
-import Beckn.Types.Monitoring.Kafka.Commons as Reexport
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
 import Kafka.Consumer as Consumer hiding (groupId)
-import qualified Kafka.Consumer as Consumer (groupId)
 
-type KafkaCGroupId = Text
-
-class KafkaConsumer a m where
-  receiveMessage :: m a
-
-data KafkaConsumerCfg = KafkaConsumerCfg
-  { groupId :: KafkaCGroupId,
-    brokers :: KafkaBrokersList,
-    topic :: KafkaTopic
+newtype KafkaConsumerCfg = KafkaConsumerCfg
+  { brokers :: KafkaBrokersList
   }
   deriving (Generic, FromDhall)
 
@@ -32,22 +28,21 @@ newtype KafkaConsumerTools a = KafkaConsumerTools
 consumerProps :: KafkaConsumerCfg -> ConsumerProperties
 consumerProps kafkaConsumerCfg =
   brokersList castBrokers
-    <> Consumer.groupId (ConsumerGroupId kafkaConsumerCfg.groupId)
     <> logLevel KafkaLogDebug
   where
     castBrokers = BrokerAddress <$> kafkaConsumerCfg.brokers
 
-consumerSub :: KafkaConsumerCfg -> Subscription
-consumerSub kafkaConsumerCfg =
-  Consumer.topics [castTopic]
+consumerSub :: [KafkaTopic] -> Subscription
+consumerSub topicList =
+  Consumer.topics castTopics
     <> offsetReset Earliest
   where
-    castTopic = TopicName kafkaConsumerCfg.topic
+    castTopics = TopicName <$> topicList
 
-buildKafkaConsumerTools :: KafkaConsumerCfg -> IO (KafkaConsumerTools a)
+buildKafkaConsumerTools :: forall a. HasKafkaTopics a => KafkaConsumerCfg -> IO (KafkaConsumerTools a)
 buildKafkaConsumerTools kafkaConsumerCfg = do
   consumer <-
-    newConsumer (consumerProps kafkaConsumerCfg) (consumerSub kafkaConsumerCfg)
+    newConsumer (consumerProps kafkaConsumerCfg) (consumerSub $ getTopics @a)
       >>= either (throwM . KafkaUnableToBuildTools) return
   return $ KafkaConsumerTools {..}
 

@@ -7,7 +7,6 @@ import Beckn.Mock.App
 import Beckn.Types.Common
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.IOLogging
-import Beckn.Utils.Logging
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.String.Conversions

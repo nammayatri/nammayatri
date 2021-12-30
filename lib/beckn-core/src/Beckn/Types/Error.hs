@@ -748,11 +748,5 @@ instance IsHTTPError KafkaError where
     KafkaUnableToProduceMessage _ -> "KAFKA_UNABLE_TO_PRODUCE_MESSAGE"
     KafkaUnableToParseValue -> "KAFKA_UNABLE_TO_PARSE_VALUE"
     KafkaTopicIsEmptyString -> "KAFKA_TOPIC_IS_EMPTY_STRING"
-  toHttpCode = \case
-    KafkaUnableToBuildTools _ -> E500
-    KafkaUnableToReleaseTools _ -> E500
-    KafkaUnableToProduceMessage _ -> E500
-    KafkaUnableToParseValue -> E500
-    KafkaTopicIsEmptyString -> E500
 
 instance IsAPIError KafkaError

@@ -32,8 +32,8 @@ import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Flow
+import Tools.Streaming.Kafka.Environment
 import Types.Geofencing
-import Types.Kafka
 import Types.Metrics
 
 data AppCfg = AppCfg
@@ -76,8 +76,7 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     gatewayUrl :: BaseUrl,
     encTools :: EncTools,
-    kafkaProducerCfg :: KafkaProducerCfg,
-    kafkaEnvCfgs :: BAPKafkaEnvConfigs
+    kafkaProducerCfg :: KafkaProducerCfg
   }
   deriving (Generic, FromDhall)
 
@@ -121,7 +120,7 @@ buildAppEnv config@AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
-  kafkaEnvs <- buildBAPKafkaEnvs kafkaEnvCfgs
+  kafkaEnvs <- buildBAPKafkaEnvs
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

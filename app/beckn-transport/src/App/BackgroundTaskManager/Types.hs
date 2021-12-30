@@ -23,8 +23,8 @@ import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
+import Tools.Streaming.Kafka.Environment
 import Types.App (SortMode)
-import Types.Kafka
 import Types.Metrics
 import Types.Shard
 

@@ -1,20 +1,21 @@
-module Beckn.Types.Monitoring.Kafka.Producer
-  ( module Beckn.Types.Monitoring.Kafka.Producer,
+module Beckn.Streaming.Kafka.Producer.Types
+  ( KafkaProducerCfg (..),
+    KafkaProducerTools,
+    buildKafkaProducerTools,
+    releaseKafkaProducerTools,
+    HasKafkaProducer,
     module Reexport,
   )
 where
 
+import Beckn.Streaming.Kafka.Commons as Reexport
 import Beckn.Types.Error
-import Beckn.Types.Monitoring.Kafka.Commons as Reexport
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
 import Kafka.Producer as Producer
 
 type HasKafkaProducer r = HasField "kafkaProducerTools" r KafkaProducerTools
-
-class KafkaProducer m where
-  produceMessage :: ToJSON a => KafkaTopic -> Maybe KafkaKey -> a -> m ()
 
 newtype KafkaProducerCfg = KafkaProducerCfg
   { brokers :: KafkaBrokersList

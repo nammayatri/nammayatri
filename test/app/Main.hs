@@ -10,7 +10,15 @@ import qualified "fmd-wrapper" App as FmdWrapper
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-registry" App as MockRegistry
 import qualified "mock-sms" App as MockSms
+import qualified "app-backend" App.Types as AppBackend
+import qualified "beckn-gateway" App.Types as Gateway
+import qualified "beckn-transport" App.Types as TransporterBackend
+import qualified "fmd-wrapper" App.Types as FmdWrapper
 import qualified "beckn-transport" BackgroundTaskManager as TransporterBGTM
+import Beckn.Exit (exitDBMigrationFailure)
+import Beckn.Utils.App (handleLeft)
+import Beckn.Utils.Dhall (readDhallConfigDefault)
+import Beckn.Utils.Migration (migrateIfNeeded)
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified FmdWrapper.Spec as FmdWrapper
@@ -19,6 +27,7 @@ import Resources
 import System.Environment as Env (setEnv)
 import System.Posix
 import Test.Tasty
+import TestSilentIOLogger ()
 import "app-backend" Types.Geofencing
 
 main :: IO ()
@@ -98,6 +107,7 @@ specs = do
       ]
 
     startServers servers = do
+      migrateDB
       prepareTestResources
       traverse_ forkIO servers
       -- Wait for servers to start up and migrations to run
@@ -106,3 +116,20 @@ specs = do
     cleanupServers _ = do
       releaseTestResources
       signalProcess sigINT =<< getProcessID
+
+    migrateDB = do
+      (appBackendCfg :: AppBackend.AppCfg) <- readDhallConfigDefault "app-backend"
+      migrateIfNeeded (appBackendCfg.migrationPath) (appBackendCfg.dbCfg) True
+        >>= handleLeft exitDBMigrationFailure "Couldn't migrate app-backend database: "
+
+      (transportCfg :: TransporterBackend.AppCfg) <- readDhallConfigDefault "beckn-transport"
+      migrateIfNeeded (transportCfg.migrationPath) (transportCfg.dbCfg) True
+        >>= handleLeft exitDBMigrationFailure "Couldn't migrate beckn-transporter database: "
+
+      (gatewayCfg :: Gateway.AppCfg) <- readDhallConfigDefault "beckn-gateway"
+      migrateIfNeeded (gatewayCfg.migrationPath) (gatewayCfg.dbCfg) True
+        >>= handleLeft exitDBMigrationFailure "Couldn't migrate beckn-gateway database: "
+
+      (fmdCfg :: FmdWrapper.AppCfg) <- readDhallConfigDefault "fmd-wrapper"
+      migrateIfNeeded (fmdCfg.migrationPath) (fmdCfg.dbCfg) True
+        >>= handleLeft exitDBMigrationFailure "Couldn't migrate fmd-wrapper database: "
