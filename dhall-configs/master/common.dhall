@@ -28,6 +28,7 @@ let credRegistry =
   -- Mobility
   -- BAP
   , globalCommon.mkCredential "19" "api.sandbox.beckn.juspay.in/latest/bap/cab/v1" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
+  , globalCommon.mkCredential "29" "bap.stayhalo.in" "6KPy1uXandCNV7kyhTDqMznPU9dM+mitQZTKT1xWVPo="
   -- BPP
   , globalCommon.mkCredential "12" "api.sandbox.beckn.juspay.in/latest/bpp/cab/v1/565db72a-04d4-4211-90ae-c956461397b2" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
   , globalCommon.mkCredential "13" "api.sandbox.beckn.juspay.in/latest/bpp/cab/v1/a45f243f-9915-4842-b78b-6d718844a48d" "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
