@@ -8,6 +8,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Types.API.Ride as API
 import Types.Error
 import qualified Types.Storage.Person as SPerson
+import Types.Storage.Ride
 import qualified Types.Storage.Ride as SRide
 import Utils.Common
 
@@ -15,5 +16,8 @@ getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler API.GetDriverL
 getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   baseUrl <- xProviderUri <$> ask
   ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
+  when
+    (ride.status == COMPLETED || ride.status == CANCELLED)
+    $ throwError $ RideInvalidStatus "Cannot track this ride"
   res <- ExternalAPI.location baseUrl (getId ride.bppRideId)
   return res.currPoint
