@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+
 module ExternalAPI.Flow where
 
 import qualified Beckn.Types.Core.Migration.API.Search as MigAPI
@@ -16,6 +18,7 @@ import qualified ExternalAPI.Types as API
 import GHC.Records.Extra
 import Servant.Client
 import Types.API.Location
+import Types.Error
 import Types.Metrics (CoreMetrics)
 import Utils.Common
 
@@ -69,6 +72,8 @@ location ::
 location url req = do
   -- TODO: fix authentication
   callOwnAPI Nothing Nothing url (API.location req) "location"
+    `catchOwnAPI` throwError . \case
+      "RIDE_INVALID_STATUS" -> RideInvalidStatus "Cannot track this ride"
 
 cancel ::
   ( MonadFlow m,
