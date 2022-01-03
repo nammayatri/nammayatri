@@ -31,7 +31,5 @@ buildTaxiContext action txnId bapId bapUri bppId bppUri = do
         message_id = msgId,
         timestamp = currTime,
         country = "IND",
-        city = "Kochi",
-        key = Nothing,
-        ttl = Nothing
+        city = "Kochi"
       }

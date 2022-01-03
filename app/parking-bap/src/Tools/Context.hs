@@ -31,9 +31,7 @@ buildContext action txnId bapUri bppUri = do
         bpp_uri = bppUri,
         transaction_id = txnId,
         message_id = message_id,
-        timestamp = timestamp,
-        key = Nothing,
-        ttl = Nothing
+        timestamp = timestamp
       }
 
 validateContext :: (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) => Context.Action -> Context.Context -> m ()

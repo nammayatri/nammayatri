@@ -46,9 +46,7 @@ triggerStatusUpdate _ bookingId = withFlowHandlerAPI $ do
             bpp_uri = Nothing,
             transaction_id = txnId,
             message_id = msgId,
-            timestamp = currTime,
-            key = Nothing,
-            ttl = Nothing
+            timestamp = currTime
           }
     makeStatusMessage bppOrderId =
       Status.StatusMessage

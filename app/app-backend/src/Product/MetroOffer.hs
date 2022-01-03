@@ -62,8 +62,6 @@ buildContextMetro action txnId bapId bapUri = do
         Mig.bpp_id = Nothing,
         Mig.bpp_uri = Nothing,
         Mig.transaction_id = txnId,
-        Mig.key = Nothing,
-        Mig.ttl = Nothing,
         ..
       }
 

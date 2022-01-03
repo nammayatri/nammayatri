@@ -2,7 +2,6 @@ module Beckn.Types.Core.Migration.Context where
 
 import Beckn.Types.App
 import Beckn.Types.Core.Migration.Domain (Domain)
-import Beckn.Types.Time (Iso8601Time)
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Aeson
@@ -23,9 +22,7 @@ data Context = Context
     bpp_uri :: Maybe BaseUrl,
     transaction_id :: Text,
     message_id :: Text,
-    timestamp :: UTCTime,
-    key :: Maybe Text,
-    ttl :: Maybe Iso8601Time
+    timestamp :: UTCTime
   }
   deriving (Generic, FromJSON, Show, ToSchema)
 
@@ -46,9 +43,7 @@ instance Example Context where
         message_id = idExample,
         timestamp = example,
         country = "IND",
-        city = "Kochi",
-        ttl = Nothing,
-        key = Nothing
+        city = "Kochi"
       }
 
 data Action

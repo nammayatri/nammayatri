@@ -39,9 +39,7 @@ buildContext act tid = do
         bpp_uri = Nothing,
         transaction_id = tid,
         message_id = tid, -- FIXME
-        timestamp = now,
-        key = Nothing,
-        ttl = Nothing
+        timestamp = now
       }
 
 buildFMDSearchReq :: Context -> BecknReq SearchIntent
