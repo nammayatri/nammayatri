@@ -1,8 +1,8 @@
 module Fixtures.SearchRequest (defaultSearchRequest) where
 
 import Beckn.Types.Id
-import Servant.Client
 import qualified Fixtures.Time as Fixtures
+import Servant.Client
 import qualified Types.Storage.SearchRequest as SearchRequest
 
 defaultSearchRequest :: SearchRequest.SearchRequest
