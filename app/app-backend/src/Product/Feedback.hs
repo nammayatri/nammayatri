@@ -3,6 +3,7 @@ module Product.Feedback where
 import qualified App.Types as App
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.Core.ReqTypes as Common
+import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import qualified Beckn.Types.Core.Taxi.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Logging
@@ -31,6 +32,6 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  context <- buildTaxiContext txnId bapIDs.cabs bapURIs.cabs (Just organization.shortId.getShortId) (Just bppURI)
+  context <- buildTaxiContext Context.RATING txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
   void $ ExternalAPI.feedback bppURI (Common.BecknReq context (Rating.RatingMessage bppRideBookingId.getId ratingValue))
   return Success

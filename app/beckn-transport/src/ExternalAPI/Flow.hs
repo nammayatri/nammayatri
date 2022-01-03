@@ -60,7 +60,7 @@ callBAP ::
     CoreMetrics m
   ) =>
   Beckn.IsBecknAPI api req res =>
-  Text ->
+  Common.Action ->
   Proxy api ->
   Org.Organization ->
   Id SearchRequest ->
@@ -77,8 +77,8 @@ callBAP action api transporter searchRequestId reqConstr content = do
       authKey = getHttpManagerKey bppShortId
       txnId = searchRequest.transactionId
   bppUri <- makeBppUrl (transporter.id)
-  context <- buildTaxiContext txnId bapOrg.shortId.getShortId bapCallbackUrl (Just transporter.shortId.getShortId) (Just bppUri)
-  Beckn.callBecknAPI (Just authKey) Nothing action api bapCallbackUrl $ reqConstr context content
+  context <- buildTaxiContext action txnId bapOrg.shortId.getShortId bapCallbackUrl (Just transporter.shortId.getShortId) (Just bppUri)
+  Beckn.callBecknAPI (Just authKey) Nothing (show action) api bapCallbackUrl $ reqConstr context content
 
 callOnUpdate ::
   ( DBFlow m r,
@@ -90,7 +90,7 @@ callOnUpdate ::
   OnUpdate.OnUpdateMessage ->
   m ()
 callOnUpdate transporter searchRequestId =
-  void . callBAP "on_update" API.onUpdateAPI transporter searchRequestId BecknReq
+  void . callBAP Common.ON_UPDATE API.onUpdateAPI transporter searchRequestId BecknReq
 
 makeBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

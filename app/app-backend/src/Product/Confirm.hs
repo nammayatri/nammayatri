@@ -4,6 +4,7 @@ import App.Types
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import qualified Beckn.Types.Core.ReqTypes as Common
+import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import qualified Beckn.Types.Core.Taxi.Confirm.Req as ReqConfirm
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
@@ -33,7 +34,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
-  context <- buildTaxiContext (getId searchRequestId) bapIDs.cabs bapURIs.cabs (Just organization.shortId.getShortId) (Just bppURI)
+  context <- buildTaxiContext Context.CONFIRM (getId searchRequestId) bapIDs.cabs bapURIs.cabs Nothing Nothing
   let order =
         ReqConfirm.Order
           { items = [ReqConfirm.OrderItem {id = quote.bppQuoteId.getId}]

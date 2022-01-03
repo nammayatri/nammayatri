@@ -3,11 +3,13 @@ module Beckn.Types.Core.Migration.Context where
 import Beckn.Types.App
 import Beckn.Types.Core.Migration.Domain (Domain)
 import Beckn.Types.Time (Iso8601Time)
+import Beckn.Utils.Example
 import Beckn.Utils.JSON
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
+import Servant.Client (parseBaseUrl)
 
 data Context = Context
   { domain :: Domain,
@@ -29,6 +31,25 @@ data Context = Context
 
 instance ToJSON Context where
   toJSON = genericToJSON $ defaultOptions {omitNothingFields = True}
+
+instance Example Context where
+  example =
+    Context
+      { domain = example,
+        action = example,
+        core_version = "0.9.3",
+        bap_id = "API.DOMAIN",
+        bap_uri = fromJust $ parseBaseUrl "https://api.domain.com/",
+        bpp_id = Just "API.DOMAIN",
+        bpp_uri = parseBaseUrl "https://api.domain.com/",
+        transaction_id = idExample,
+        message_id = idExample,
+        timestamp = example,
+        country = "IND",
+        city = "Kochi",
+        ttl = Nothing,
+        key = Nothing
+      }
 
 data Action
   = SEARCH
@@ -58,6 +79,9 @@ instance FromJSON Action where
 
 instance ToJSON Action where
   toJSON = genericToJSON constructorsToLowerOptions
+
+instance Example Action where
+  example = SEARCH
 
 mapToCbAction :: Action -> Maybe Action
 mapToCbAction = \case

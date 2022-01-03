@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Migration.Domain (Domain (..)) where
 
+import Beckn.Utils.Example
 import Beckn.Utils.JSON (constructorsWithHyphensUntagged)
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
@@ -36,3 +37,6 @@ instance FromJSON Domain where
   parseJSON (String "nic2004:63031") = pure PARKING
   parseJSON (String domain) = pure $ UNKNOWN_DOMAIN domain
   parseJSON e = typeMismatch "Core Domain" e
+
+instance Example Domain where
+  example = MOBILITY
