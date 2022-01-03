@@ -24,7 +24,6 @@ import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
 import qualified Product.FareCalculator.Flow as Fare
 import qualified Product.Location as Loc
-import Servant.Client (showBaseUrl)
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Products as SProduct
 import qualified Storage.Queries.Quote as Quote
@@ -127,7 +126,7 @@ mkSearchRequest req uuid now validity startTime fromLocation toLocation transpor
       fromLocationId = fromLocation.id,
       toLocationId = toLocation.id,
       bapId = bapId,
-      bapUri = T.pack $ showBaseUrl bapUri,
+      bapUri = bapUri,
       createdAt = now
     }
 

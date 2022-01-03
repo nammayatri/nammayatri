@@ -18,6 +18,7 @@ import Servant
 import Types.App
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.SearchReqLocation as Loc
+import Servant.Client.Core (BaseUrl)
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
@@ -50,7 +51,7 @@ data SearchRequestT f = SearchRequest
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     bapId :: B.C f Text,
-    bapUri :: B.C f Text,
+    bapUri :: B.C f BaseUrl,
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)

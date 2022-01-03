@@ -69,16 +69,14 @@ callBAP ::
   m res
 callBAP action api transporter searchRequestId reqConstr content = do
   searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestNotFound
-  bapOrg <-
-    Org.findOrganizationByShortId (ShortId searchRequest.bapId)
-      >>= fromMaybeM OrgNotFound
-  bapCallbackUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
+  let bapId = searchRequest.bapId
+      bapUri = searchRequest.bapUri
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
       txnId = searchRequest.transactionId
   bppUri <- makeBppUrl (transporter.id)
-  context <- buildTaxiContext action txnId bapOrg.shortId.getShortId bapCallbackUrl (Just transporter.shortId.getShortId) (Just bppUri)
-  Beckn.callBecknAPI (Just authKey) Nothing (show action) api bapCallbackUrl $ reqConstr context content
+  context <- buildTaxiContext action txnId bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  Beckn.callBecknAPI (Just authKey) Nothing (show action) api bapUri $ reqConstr context content
 
 callOnUpdate ::
   ( DBFlow m r,

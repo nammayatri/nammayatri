@@ -1,10 +1,9 @@
 module Fixtures.SearchRequest (defaultSearchRequest) where
 
 import Beckn.Types.Id
-import EulerHS.Prelude
+import Servant.Client
 import qualified Fixtures.Time as Fixtures
 import qualified Types.Storage.SearchRequest as SearchRequest
-import qualified Types.Storage.Vehicle as Veh
 
 defaultSearchRequest :: SearchRequest.SearchRequest
 defaultSearchRequest =
@@ -18,6 +17,6 @@ defaultSearchRequest =
       fromLocationId = "",
       toLocationId = "",
       bapId = "",
-      bapUri = "",
+      bapUri = BaseUrl {baseUrlScheme = Http, baseUrlHost = "localhost", baseUrlPort = 8013, baseUrlPath = ""},
       createdAt = Fixtures.defaultTime
     }
