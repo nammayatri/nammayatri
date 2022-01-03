@@ -25,13 +25,14 @@ findByBookingId bookingId =
 create :: PaymentTransaction -> SqlDB ()
 create = create'
 
-updateStatus :: Id PaymentTransaction -> PaymentStatus -> SqlDB ()
-updateStatus paymentTransactionId newStatus = do
+updateTxnDetails :: Id PaymentTransaction -> Text -> PaymentStatus -> SqlDB ()
+updateTxnDetails paymentTransactionId paymentGatewayTxnStatus newStatus = do
   now <- getCurrentTime
   update' $ \tbl -> do
     set
       tbl
       [ PaymentTransactionStatus =. val newStatus,
+        PaymentTransactionPaymentGatewayTxnStatus =. val paymentGatewayTxnStatus,
         PaymentTransactionUpdatedAt =. val now
       ]
     where_ $ tbl ^. PaymentTransactionId ==. val (getId paymentTransactionId)

@@ -47,7 +47,7 @@ handleOnStatus msg = do
   paymentDetails <- PaymentTransactionDB.findByBookingId booking.id >>= fromMaybeM PaymentDetailsNotFound
   runTransaction $ do
     QBooking.updateStatus booking $ convertBookingStatus bppOrderStatus
-    PaymentTransactionDB.updateStatus paymentDetails.id $ convertPaymentStatus (bppPaymentStatus, bppPaymentGatewayTxnStatus)
+    PaymentTransactionDB.updateTxnDetails paymentDetails.id (show bppPaymentGatewayTxnStatus) $ convertPaymentStatus (bppPaymentStatus, bppPaymentGatewayTxnStatus)
   where
     convertBookingStatus = \case
       Just ACTIVE -> BookingStatus.CONFIRMED
