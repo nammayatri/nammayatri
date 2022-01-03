@@ -28,7 +28,7 @@ instance ToJSON PaymentGatewayTransactionStatus where
   toJSON = genericToJSON constructorsToLowerOptions
 
 data PaymentParams = PaymentParams
-  { amount :: Int,
+  { amount :: Text,
     currency :: Text,
     transaction_status :: PaymentGatewayTransactionStatus,
     transaction_id :: Text
