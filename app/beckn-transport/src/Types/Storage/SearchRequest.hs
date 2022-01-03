@@ -15,10 +15,10 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
+import Servant.Client.Core (BaseUrl)
 import Types.App
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.SearchReqLocation as Loc
-import Servant.Client.Core (BaseUrl)
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
