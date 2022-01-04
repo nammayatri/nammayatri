@@ -8,7 +8,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.Common.Context as Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
-import Beckn.Utils.Callback (WithBecknCallback, withBecknCallback)
+import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
@@ -39,20 +39,20 @@ getGatewayUrl =
 withCallback ::
   HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
   Org.Organization ->
-  WithBecknCallback api callback_success m
+  WithBecknCallbackMig api callback_success m
 withCallback = withCallback' identity
 
 withCallback' ::
   (m () -> m ()) ->
   HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
   Org.Organization ->
-  WithBecknCallback api callback_success m
+  WithBecknCallbackMig api callback_success m
 withCallback' doWithCallback transporter action api context cbUrl f = do
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
   bppUri <- makeBppUrl (transporter.id)
   let context' = context & #bpp_uri ?~ bppUri
-  withBecknCallback doWithCallback (Just authKey) action api context' cbUrl f
+  withBecknCallbackMig doWithCallback (Just authKey) action api context' cbUrl f
 
 callBAP ::
   ( DBFlow m r,

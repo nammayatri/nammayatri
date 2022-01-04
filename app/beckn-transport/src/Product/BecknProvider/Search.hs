@@ -6,6 +6,7 @@ import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.Migration.Context
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
@@ -57,7 +58,7 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _
     callbackUrl <- ExternalAPI.getGatewayUrl
     if not transporter.enabled
       then
-        ExternalAPI.withCallback' withRetry transporter "search" OnSearch.onSearchAPI context callbackUrl $
+        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $
           throwError AgencyDisabled
       else do
         searchMetricsMVar <- Metrics.startSearchMetrics transporterId
@@ -77,7 +78,7 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _
           Loc.create fromLocation
           Loc.create toLocation
           QSearchRequest.create searchRequest
-        ExternalAPI.withCallback' withRetry transporter "search" OnSearch.onSearchAPI context callbackUrl $
+        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $
           onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
 
 buildStartSearchReqLoc :: MonadFlow m => Search.Location -> UTCTime -> m Location.SearchReqLocation
