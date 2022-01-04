@@ -6,11 +6,11 @@ import App.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common hiding (id)
+import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Control.Lens ((?~))
 import qualified Core.API.Search as Search
-import Core.API.Types (BecknReq (BecknReq))
 import qualified Core.Context as Context
 import qualified Core.Gps as Gps
 import qualified Core.Search.Intent as Intent

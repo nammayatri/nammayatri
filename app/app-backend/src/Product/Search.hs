@@ -8,12 +8,11 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Migration.API.Search as Core9
-import qualified Beckn.Types.Core.Migration.API.Types as Core9
 import qualified Beckn.Types.Core.Migration.Context as Core9
 import qualified Beckn.Types.Core.Migration.Gps as Mig
 import qualified Beckn.Types.Core.Migration.Intent as Mig
 import qualified Beckn.Types.Core.Migration.Location as Mig
-import qualified Beckn.Types.Core.ReqTypes as Common
+import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.Common.Context as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
@@ -67,11 +66,11 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     fork "search cabs" $ do
       context <- buildTaxiContext Core9.SEARCH txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
       let intent = mkIntent req now distance
-      void $ ExternalAPI.search (Common.BecknReq context $ Search.SearchMessage intent)
+      void $ ExternalAPI.search (BecknReq context $ Search.SearchMessage intent)
     fork "search metro" $ do
       contextMig <- buildContextMetro Core9.SEARCH txnId bapURIs.metro Nothing
       intentMig <- mkIntentMig req
-      ExternalAPI.searchMetro (Core9.BecknReq contextMig $ Core9.SearchIntent intentMig)
+      ExternalAPI.searchMetro (BecknReq contextMig $ Core9.SearchIntent intentMig)
   return . API.SearchRes $ searchRequest.id
   where
     validateServiceability = do

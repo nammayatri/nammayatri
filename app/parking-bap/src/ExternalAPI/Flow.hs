@@ -2,13 +2,13 @@ module ExternalAPI.Flow where
 
 import Beckn.Prelude
 import Beckn.Types.App
+import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import qualified Core.API.Confirm as Confirm
 import qualified Core.API.Search as Search
 import qualified Core.API.Status as Status
-import Core.API.Types (BecknReq)
 import qualified Core.Confirm as Confirm
 import qualified Core.Status as Status
 import qualified Data.Text as T

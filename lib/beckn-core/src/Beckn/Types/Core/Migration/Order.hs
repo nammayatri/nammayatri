@@ -46,3 +46,8 @@ instance Example Order where
         created_at = Nothing,
         updated_at = Nothing
       }
+
+newtype OrderObject = OrderObject
+  { order :: Order
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)

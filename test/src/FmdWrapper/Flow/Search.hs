@@ -1,6 +1,7 @@
 module FmdWrapper.Flow.Search where
 
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Example
 import Common
 import Control.Lens ((?~))
@@ -17,7 +18,6 @@ import Servant (Header, type (:>))
 import Servant.Client
 import Test.Hspec hiding (context, example)
 import qualified "fmd-wrapper" Types.Beckn.API.Search as SearchAPI
-import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.Category (Category (..))
 import "fmd-wrapper" Types.Beckn.Context (Action (..), Context (..))
 import qualified "fmd-wrapper" Types.Beckn.Descriptor as Descriptor
@@ -29,7 +29,7 @@ import Utils
 numberOfDunzoCategores :: Int
 numberOfDunzoCategores = 6
 
-runSearch :: ClientEnv -> Text -> API.BecknReq SearchAPI.SearchIntent -> IO (Either ClientError AckResponse)
+runSearch :: ClientEnv -> Text -> BecknReq SearchAPI.SearchIntent -> IO (Either ClientError AckResponse)
 runSearch clientEnv orgId searchReq = do
   now <- getPOSIXTime
   let signature = decodeUtf8 $ signRequest searchReq now orgId (orgId <> "-key")
@@ -83,7 +83,7 @@ verifyDunzoCatalog onSearchCatalog = do
     stringNumbers = map show numbers
     numbers = [1 ..] :: [Int]
 
-processResults :: Text -> CallbackData -> IO [API.BecknCallbackReq SearchAPI.OnSearchCatalog]
+processResults :: Text -> CallbackData -> IO [BecknCallbackReq SearchAPI.OnSearchCatalog]
 processResults transactionId callbackData = do
   callbackResults <- readMVar (onSearchCb callbackData)
   let apiKeys = map apiKey callbackResults
@@ -120,7 +120,7 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
     waitForCallback
     searchResults <- processResults transactionId callbackData
 
-    let errorResults = filter isLeft $ map API.contents searchResults
+    let errorResults = filter isLeft $ map contents searchResults
     case errorResults of
       [Left err] -> check err
       _ -> expectationFailure "Exactly one error result expected."
@@ -143,7 +143,7 @@ successfulSearch clientEnv callbackData =
 
     let dunzoResults = filter isDunzoResult searchResults
 
-    case rights (map API.contents dunzoResults) of
+    case rights (map contents dunzoResults) of
       [message] ->
         verifyDunzoCatalog message
       _ -> expectationFailure "Expected one search result from Dunzo."

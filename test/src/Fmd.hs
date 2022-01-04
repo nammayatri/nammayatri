@@ -1,5 +1,6 @@
 module Fmd where
 
+import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Example
 import Beckn.Utils.Servant.BaseUrl (showBaseUrlText)
 import Data.Time
@@ -7,7 +8,6 @@ import EulerHS.Prelude
 import FmdWrapper.Common (fmdTestAppBaseUrl)
 import Servant.Client
 import "fmd-wrapper" Types.Beckn.API.Search
-import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.Context
 import qualified "fmd-wrapper" Types.Beckn.Domain as Domain
 
@@ -44,9 +44,9 @@ buildContext act tid = do
         ttl = Nothing
       }
 
-buildFMDSearchReq :: Context -> API.BecknReq SearchIntent
+buildFMDSearchReq :: Context -> BecknReq SearchIntent
 buildFMDSearchReq context =
-  API.BecknReq
+  BecknReq
     { context,
       message = SearchIntent example
     }

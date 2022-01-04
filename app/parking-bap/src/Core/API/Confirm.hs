@@ -2,7 +2,7 @@ module Core.API.Confirm where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Ack (AckResponse)
-import Core.API.Types (BecknReq)
+import Beckn.Types.Core.ReqTypes
 import Core.Confirm (ConfirmMessage)
 import Servant (JSON, Post, ReqBody, (:>))
 

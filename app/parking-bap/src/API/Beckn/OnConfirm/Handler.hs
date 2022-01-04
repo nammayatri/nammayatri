@@ -4,10 +4,10 @@ import qualified API.Beckn.OnConfirm.Types as OnConfirm
 import App.Types
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
-import Core.API.Types (BecknCallbackReq)
 import qualified Core.Context as Context
 import qualified Core.OnConfirm as OnConfirm
 import qualified Domain.Booking as DBooking

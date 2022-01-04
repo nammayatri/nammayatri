@@ -5,6 +5,7 @@ module FmdWrapper.Flow.Confirm where
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.Migration.Address (Address (..))
 import Beckn.Types.Core.Migration.Billing ()
+import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Example (example)
 import Common (signRequest, verifyError)
 import Control.Lens.Prism (_Just)
@@ -20,21 +21,20 @@ import Servant (Header, (:>))
 import Servant.Client (ClientEnv, ClientError, client, mkClientEnv)
 import Test.Hspec hiding (example)
 import qualified "fmd-wrapper" Types.Beckn.API.Confirm as ConfirmAPI
-import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.Contact (Contact (..))
 import "fmd-wrapper" Types.Beckn.Context (Action (..))
 import "fmd-wrapper" Types.Beckn.Fulfillment (Fulfillment (..), FulfillmentDetails (..))
 import "fmd-wrapper" Types.Beckn.ItemQuantity (emptyItemQuantity)
 import "fmd-wrapper" Types.Beckn.Location (Location (..))
-import "fmd-wrapper" Types.Beckn.Order (Order (..), OrderItem (..))
+import "fmd-wrapper" Types.Beckn.Order
 import "fmd-wrapper" Types.Beckn.Payment (Params (..), Payment (..))
 import "fmd-wrapper" Types.Beckn.Person (Person (..))
 import "fmd-wrapper" Types.Beckn.Quotation (Quotation (..))
 import Utils (runClient)
 
-confirmOrder :: API.OrderObject
+confirmOrder :: OrderObject
 confirmOrder =
-  API.OrderObject $
+  OrderObject $
     Order
       { id = Nothing,
         state = Nothing,
@@ -153,7 +153,7 @@ confirmOrder =
         updated_at = Nothing
       }
 
-runConfirm :: ClientEnv -> Text -> API.BecknReq API.OrderObject -> IO (Either ClientError AckResponse)
+runConfirm :: ClientEnv -> Text -> BecknReq OrderObject -> IO (Either ClientError AckResponse)
 runConfirm clientEnv orgId confirmReq = do
   now <- getPOSIXTime
   let signature = decodeUtf8 $ signRequest confirmReq now orgId (orgId <> "-key")
@@ -164,7 +164,7 @@ successfulConfirm :: ClientEnv -> IO ()
 successfulConfirm clientEnv =
   withNewUUID $ \transactionId -> do
     ctx <- buildContext CONFIRM transactionId
-    let confirmReq = API.BecknReq ctx confirmOrder
+    let confirmReq = BecknReq ctx confirmOrder
     response <- runConfirm clientEnv "fmd-test-app" confirmReq
     assertAck response
 
@@ -173,7 +173,7 @@ confirmWithoutPaymentTransactionId clientEnv =
   withNewUUID $ \transactionId -> do
     ctx <- buildContext CONFIRM transactionId
     let orderWithoutTrnsxnId = confirmOrder & #order . #payment . #params . _Just . #transaction_id .~ Nothing
-    let confirmReq = API.BecknReq ctx orderWithoutTrnsxnId
+    let confirmReq = BecknReq ctx orderWithoutTrnsxnId
     response <- runConfirm clientEnv "fmd-test-app" confirmReq
     verifyError 400 "TXN_ID_NOT_PRESENT" response
 

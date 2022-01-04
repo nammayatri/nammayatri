@@ -2,12 +2,12 @@ module Beckn.Types.Core.Migration.API.Init where
 
 import Beckn.Types.Common (IdObject)
 import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.Migration.API.Types (BecknCallbackReq, BecknReq)
 import Beckn.Types.Core.Migration.Billing (Billing)
 import Beckn.Types.Core.Migration.Fulfillment (Fulfillment)
 import Beckn.Types.Core.Migration.ItemQuantity (Quantity)
 import Beckn.Types.Core.Migration.Payment (Payment)
 import Beckn.Types.Core.Migration.Quotation (Quotation)
+import Beckn.Types.Core.ReqTypes (BecknCallbackReq, BecknReq)
 import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 

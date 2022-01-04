@@ -4,9 +4,9 @@ import API.Parking.Booking.BookingId.TriggerStatus.Types
 import App.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess
-import Beckn.Types.Core.Migration.API.Types
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.Migration.Domain
+import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Core.Status as Status

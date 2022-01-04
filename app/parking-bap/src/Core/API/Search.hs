@@ -2,8 +2,8 @@ module Core.API.Search where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Ack (AckResponse)
+import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Example
-import Core.API.Types (BecknReq)
 import Core.Search.Intent (Intent)
 import Servant (JSON, Post, ReqBody, (:>))
 

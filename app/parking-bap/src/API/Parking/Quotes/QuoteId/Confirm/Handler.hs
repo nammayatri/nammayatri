@@ -4,7 +4,7 @@ import API.Parking.Quotes.QuoteId.Confirm.Types
 import App.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Core.Migration.API.Types (BecknReq (BecknReq))
+import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Core.Confirm as Confirm

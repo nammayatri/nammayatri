@@ -5,11 +5,11 @@ import App.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common hiding (id)
+import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
-import Core.API.Types (BecknCallbackReq)
 import qualified Core.Context as Context
 import qualified Core.DecimalValue as DecimalValue
 import qualified Core.Item as Item

@@ -3,12 +3,12 @@ module Product.MetroOffer where
 import App.Types (FlowHandler)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Beckn.Types.Core.Migration.API.Types
 import Beckn.Types.Core.Migration.Context
 import qualified Beckn.Types.Core.Migration.Context as Mig
 import Beckn.Types.Core.Migration.DecimalValue
 import qualified Beckn.Types.Core.Migration.Domain as Mig
 import Beckn.Types.Core.Migration.Gps
+import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch

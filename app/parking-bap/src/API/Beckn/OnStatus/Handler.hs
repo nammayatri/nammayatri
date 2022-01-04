@@ -5,9 +5,9 @@ import App.Types
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto hiding ((<&>))
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
-import Core.API.Types (BecknCallbackReq)
 import qualified Core.Context as Context
 import Core.OnConfirm
 import qualified Core.OnStatus as OnStatus

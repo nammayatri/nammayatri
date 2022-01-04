@@ -3,6 +3,7 @@
 module Product.Dunzo.Flow where
 
 import Beckn.Types.Common
+import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
@@ -19,10 +20,9 @@ import qualified Types.Beckn.API.Confirm as ConfirmAPI
 import qualified Types.Beckn.API.Search as SearchAPI
 import qualified Types.Beckn.API.Status as StatusAPI
 import qualified Types.Beckn.API.Track as TrackAPI
-import qualified Types.Beckn.API.Types as API
 import Types.Beckn.Context (Action (..))
 import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
-import Types.Beckn.Order (Order)
+import Types.Beckn.Order
 import Types.Common
 import Types.Error
 import Types.Metrics (CoreMetrics)
@@ -38,7 +38,7 @@ search ::
     CoreMetrics m
   ) =>
   Org.Organization ->
-  API.BecknReq SearchAPI.SearchIntent ->
+  BecknReq SearchAPI.SearchIntent ->
   m AckResponse
 search org req = do
   config@DunzoConfig {..} <- asks (.dzConfig)
@@ -58,7 +58,7 @@ confirm ::
     CoreMetrics m
   ) =>
   Org.Organization ->
-  API.BecknReq API.OrderObject ->
+  BecknReq OrderObject ->
   m AckResponse
 confirm org req = do
   dconf@DunzoConfig {..} <- asks (.dzConfig)
@@ -77,7 +77,7 @@ confirm org req = do
     let uOrder = updateOrder (Just orderId) currTime reqOrder taskStatus
     checkAndLogPriceDiff reqOrder uOrder
     createSearchRequest orderId uOrder taskStatus currTime
-    return $ API.OrderObject uOrder
+    return $ OrderObject uOrder
   where
     createSearchRequest orderId order taskStatus now = do
       let searchRequestId = Id req.context.transaction_id
@@ -129,7 +129,7 @@ track ::
     CoreMetrics m
   ) =>
   Org.Organization ->
-  API.BecknReq TrackAPI.TrackInfo ->
+  BecknReq TrackAPI.TrackInfo ->
   m AckResponse
 track org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
@@ -148,7 +148,7 @@ status ::
     CoreMetrics m
   ) =>
   Org.Organization ->
-  API.BecknReq StatusAPI.OrderId ->
+  BecknReq StatusAPI.OrderId ->
   m AckResponse
 status org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
@@ -178,7 +178,7 @@ cancel ::
     CoreMetrics m
   ) =>
   Org.Organization ->
-  API.BecknReq CancelAPI.CancellationInfo ->
+  BecknReq CancelAPI.CancellationInfo ->
   m AckResponse
 cancel org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
@@ -192,7 +192,7 @@ cancel org req = do
     callCancelAPI dzBACreds conf (TaskId taskId)
     let updatedOrder = cancelOrder order
     updateSearchRequest searchRequest.id updatedOrder searchRequest
-    return $ API.OrderObject updatedOrder
+    return $ OrderObject updatedOrder
   where
     callCancelAPI dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
       token <- fetchToken dzBACreds conf

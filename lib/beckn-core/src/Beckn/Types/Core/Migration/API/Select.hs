@@ -2,12 +2,12 @@ module Beckn.Types.Core.Migration.API.Select where
 
 import Beckn.Types.Common (IdObject)
 import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.Migration.API.Types (BecknCallbackReq, BecknReq)
 import Beckn.Types.Core.Migration.AddOn (AddOn)
 import Beckn.Types.Core.Migration.Item (Item)
 import Beckn.Types.Core.Migration.ItemQuantity (ItemQuantity)
 import Beckn.Types.Core.Migration.Offer (Offer)
 import Beckn.Types.Core.Migration.Quotation (Quotation)
+import Beckn.Types.Core.ReqTypes (BecknCallbackReq, BecknReq)
 import Beckn.Utils.JSON (uniteObjects)
 import Data.Aeson (withObject, (.:))
 import Data.Aeson.Types (parseFail)

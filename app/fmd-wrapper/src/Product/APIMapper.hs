@@ -2,6 +2,8 @@ module Product.APIMapper where
 
 import App.Types
 import Beckn.Product.Validation.Context hiding (validateContext)
+import Beckn.Types.Core.Migration.Order
+import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Types.Registry.Subscriber (Subscriber)
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -12,7 +14,6 @@ import Types.Beckn.API.Cancel (CancellationInfo)
 import Types.Beckn.API.Search (SearchIntent)
 import Types.Beckn.API.Status (OrderId)
 import Types.Beckn.API.Track (TrackInfo)
-import qualified Types.Beckn.API.Types as API
 import Types.Beckn.Context
 import qualified Types.Beckn.Domain as Domain
 import Types.Error
@@ -25,14 +26,14 @@ findOrg subscriber =
     >>= fromMaybeM OrgDoesNotExist
 
 -- TODO: add switching logic to figure out the client instance
-search :: SignatureAuthResult -> API.BecknReq SearchIntent -> FlowHandler AckResponse
+search :: SignatureAuthResult -> BecknReq SearchIntent -> FlowHandler AckResponse
 search (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext SEARCH $ req.context
     bapOrg <- findOrg subscriber
     DZ.search bapOrg req
 
-confirm :: SignatureAuthResult -> API.BecknReq API.OrderObject -> FlowHandler AckResponse
+confirm :: SignatureAuthResult -> BecknReq OrderObject -> FlowHandler AckResponse
 confirm (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     bapOrg <- findOrg subscriber
@@ -40,7 +41,7 @@ confirm (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
     validateBapUrl subscriber $ req.context
     DZ.confirm bapOrg req
 
-track :: SignatureAuthResult -> API.BecknReq TrackInfo -> FlowHandler AckResponse
+track :: SignatureAuthResult -> BecknReq TrackInfo -> FlowHandler AckResponse
 track (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     bapOrg <- findOrg subscriber
@@ -48,7 +49,7 @@ track (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
     validateBapUrl subscriber $ req.context
     DZ.track bapOrg req
 
-status :: SignatureAuthResult -> API.BecknReq OrderId -> FlowHandler AckResponse
+status :: SignatureAuthResult -> BecknReq OrderId -> FlowHandler AckResponse
 status (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     bapOrg <- findOrg subscriber
@@ -56,7 +57,7 @@ status (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
     validateBapUrl subscriber $ req.context
     DZ.status bapOrg req
 
-cancel :: SignatureAuthResult -> API.BecknReq CancellationInfo -> FlowHandler AckResponse
+cancel :: SignatureAuthResult -> BecknReq CancellationInfo -> FlowHandler AckResponse
 cancel (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     bapOrg <- findOrg subscriber

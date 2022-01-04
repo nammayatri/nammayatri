@@ -3,6 +3,7 @@
 module FmdWrapper.Common where
 
 import Beckn.Types.Core.Ack
+import Beckn.Types.Core.ReqTypes
 import Control.Lens (Setter', _Just)
 import Data.Text
 import qualified Data.UUID as UUID
@@ -12,7 +13,6 @@ import Network.Wai.Handler.Warp
 import Servant.Client
 import Test.Hspec hiding (context)
 import "fmd-wrapper" Types.Beckn.API.Search (SearchIntent)
-import "fmd-wrapper" Types.Beckn.API.Types (BecknReq)
 import "fmd-wrapper" Types.Beckn.Gps (Gps)
 
 data CallbackResult a = CallbackResult

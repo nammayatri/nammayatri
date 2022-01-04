@@ -6,6 +6,7 @@ import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.Migration.Address (Address (..))
 import Beckn.Types.Core.Migration.Billing ()
 import Beckn.Types.Core.Migration.Intent (Intent)
+import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Example (example)
 import Common (gatewayBaseUrl, signRequest)
 import Control.Concurrent.MVar (isEmptyMVar)
@@ -27,22 +28,21 @@ import Test.Hspec hiding (example)
 import qualified "fmd-wrapper" Types.Beckn.API.Cancel as CancelAPI
 import qualified "fmd-wrapper" Types.Beckn.API.Status as StatusAPI
 import qualified "fmd-wrapper" Types.Beckn.API.Track as TrackAPI
-import qualified "fmd-wrapper" Types.Beckn.API.Types as API
 import "fmd-wrapper" Types.Beckn.Catalog (Catalog)
 import "fmd-wrapper" Types.Beckn.Contact (Contact (..))
 import "fmd-wrapper" Types.Beckn.Context (Action (..), Context (..))
 import "fmd-wrapper" Types.Beckn.Fulfillment (Fulfillment (..), FulfillmentDetails (..))
 import "fmd-wrapper" Types.Beckn.ItemQuantity (emptyItemQuantity)
 import "fmd-wrapper" Types.Beckn.Location (Location (..))
-import "fmd-wrapper" Types.Beckn.Order (Order (..), OrderItem (..))
+import "fmd-wrapper" Types.Beckn.Order
 import "fmd-wrapper" Types.Beckn.Payment (Params (..), Payment (..))
 import "fmd-wrapper" Types.Beckn.Person (Person (..))
 import "fmd-wrapper" Types.Beckn.Quotation (Quotation (..))
 import Utils (runClient)
 
-mkConfirmOrderFromSearchData :: Intent -> Catalog -> API.OrderObject
+mkConfirmOrderFromSearchData :: Intent -> Catalog -> OrderObject
 mkConfirmOrderFromSearchData intent catalog =
-  API.OrderObject $
+  OrderObject $
     Order
       { id = Nothing,
         state = Nothing,
@@ -178,17 +178,17 @@ runClientCall clientEnv orgId api req = do
   let signature :: Text = decodeUtf8 $ signRequest req now orgId (orgId <> "-key")
   runClient clientEnv $ client api (Just signature) req
 
-runStatus :: ClientEnv -> Text -> API.BecknReq StatusAPI.OrderId -> IO (Either ClientError AckResponse)
+runStatus :: ClientEnv -> Text -> BecknReq StatusAPI.OrderId -> IO (Either ClientError AckResponse)
 runStatus clientEnv orgId statusReq = do
   let statusAPI = Proxy :: Proxy (Header "Authorization" Text :> StatusAPI.StatusAPI)
   runClientCall clientEnv orgId statusAPI statusReq
 
-runTrack :: ClientEnv -> Text -> API.BecknReq TrackAPI.TrackInfo -> IO (Either ClientError AckResponse)
+runTrack :: ClientEnv -> Text -> BecknReq TrackAPI.TrackInfo -> IO (Either ClientError AckResponse)
 runTrack clientEnv orgId trackReq = do
   let trackAPI = Proxy :: Proxy (Header "Authorization" Text :> TrackAPI.TrackAPI)
   runClientCall clientEnv orgId trackAPI trackReq
 
-runCancel :: ClientEnv -> Text -> API.BecknReq CancelAPI.CancellationInfo -> IO (Either ClientError AckResponse)
+runCancel :: ClientEnv -> Text -> BecknReq CancelAPI.CancellationInfo -> IO (Either ClientError AckResponse)
 runCancel clientEnv orgId cancelReq = do
   let cancelAPI = Proxy :: Proxy (Header "Authorization" Text :> CancelAPI.CancelAPI)
   runClientCall clientEnv orgId cancelAPI cancelReq
@@ -207,7 +207,7 @@ successfulFlow clientEnv callbackData = withNewUUID $ \transactionId -> do
   searchResults <- processResults transactionId callbackData
   let dunzoResults = filter isDunzoResult searchResults
 
-  let searchRes = rights (map API.contents dunzoResults)
+  let searchRes = rights (map contents dunzoResults)
   case searchRes of
     [] -> expectationFailure "Expected search result from Dunzo."
     (latestSearchCatalog : _xs) -> do
@@ -215,7 +215,7 @@ successfulFlow clientEnv callbackData = withNewUUID $ \transactionId -> do
 
       let confirmCtx = ctx {action = CONFIRM}
       let confirmReq =
-            API.BecknReq confirmCtx $
+            BecknReq confirmCtx $
               mkConfirmOrderFromSearchData searchReq.message.intent latestSearchCatalog.catalog
       let fmdClientEnv = clientEnv {baseUrl = fmdWrapperBaseUrl}
       confirmResponse <- runConfirm fmdClientEnv "fmd-test-app" confirmReq
@@ -230,15 +230,15 @@ successfulFlow clientEnv callbackData = withNewUUID $ \transactionId -> do
           case mbOrderId of
             Nothing -> expectationFailure "Expected order_id in confirm callback from BPP."
             Just orderId -> do
-              let trackReq = API.BecknReq ctx {action = TRACK} (TrackAPI.TrackInfo orderId Nothing)
+              let trackReq = BecknReq ctx {action = TRACK} (TrackAPI.TrackInfo orderId Nothing)
               trackResponse <- runTrack fmdClientEnv "fmd-test-app" trackReq
               checkResponseAndCallback trackResponse "track" callbackData.onTrackCb
 
-              let statusReq = API.BecknReq ctx {action = STATUS} (StatusAPI.OrderId orderId)
+              let statusReq = BecknReq ctx {action = STATUS} (StatusAPI.OrderId orderId)
               statusResponse <- runStatus fmdClientEnv "fmd-test-app" statusReq
               checkResponseAndCallback statusResponse "status" callbackData.onStatusCb
 
-              let cancelReq = API.BecknReq ctx {action = CANCEL} (CancelAPI.CancellationInfo orderId "Not specified." Nothing)
+              let cancelReq = BecknReq ctx {action = CANCEL} (CancelAPI.CancellationInfo orderId "Not specified." Nothing)
               cancelResponse <- runCancel fmdClientEnv "fmd-test-app" cancelReq
               checkResponseAndCallback cancelResponse "cancel" callbackData.onCancelCb
   where

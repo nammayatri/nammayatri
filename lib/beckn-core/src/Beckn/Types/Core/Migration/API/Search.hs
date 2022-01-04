@@ -1,9 +1,9 @@
 module Beckn.Types.Core.Migration.API.Search where
 
 import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.Migration.API.Types (BecknCallbackReq, BecknReq)
 import Beckn.Types.Core.Migration.Catalog (Catalog)
 import Beckn.Types.Core.Migration.Intent (Intent)
+import Beckn.Types.Core.ReqTypes (BecknCallbackReq, BecknReq)
 import Beckn.Utils.Example
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))

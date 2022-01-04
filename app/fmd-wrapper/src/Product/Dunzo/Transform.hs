@@ -5,6 +5,7 @@ module Product.Dunzo.Transform where
 import Beckn.Types.Amount
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Core.ReqTypes
 import Control.Lens (element, (?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.HashMap.Strict as HMS
@@ -15,7 +16,6 @@ import ExternalAPI.Dunzo.Types
 import Servant.Client (BaseUrl (..))
 import qualified Types.Beckn.API.Search as SearchAPI
 import qualified Types.Beckn.API.Track as TrackAPI
-import qualified Types.Beckn.API.Types as API
 import Types.Beckn.Catalog (Catalog (..))
 import Types.Beckn.Category (Category (..))
 import Types.Beckn.Contact (Contact)
@@ -25,7 +25,7 @@ import Types.Beckn.Descriptor (emptyDescriptor)
 import Types.Beckn.Gps (Gps (..))
 import Types.Beckn.Item (Item (..))
 import Types.Beckn.Location (Location)
-import Types.Beckn.Order (Order (..))
+import Types.Beckn.Order
 import Types.Beckn.Payment (Params (..), Payment (..), PaymentType (..))
 import Types.Beckn.Person (Person)
 import Types.Beckn.Price (Price (..))
@@ -42,8 +42,8 @@ dunzoServiceCategoryId = "1"
 getDzBAPCreds :: MonadFlow m => Organization -> m DzBAConfig
 getDzBAPCreds = getClientConfig
 
-mkQuoteReqFromSearch :: MonadFlow m => API.BecknReq SearchAPI.SearchIntent -> m QuoteReq
-mkQuoteReqFromSearch API.BecknReq {..} = do
+mkQuoteReqFromSearch :: MonadFlow m => BecknReq SearchAPI.SearchIntent -> m QuoteReq
+mkQuoteReqFromSearch BecknReq {..} = do
   let intent = message.intent
   let mbPickupGps = intent ^? #fulfillment . _Just . #start . _Just . #location . _Just . #gps . _Just
   let mbDropGps = intent ^? #fulfillment . _Just . #end . _Just . #location . _Just . #gps . _Just
@@ -161,10 +161,10 @@ mkSearchItem index packageContent QuoteRes {..} =
         }
     value = convertAmountToDecimalValue (Amount $ toRational estimated_price)
 
-mkOnStatusMessage :: MonadFlow m => Order -> TaskStatus -> m API.OrderObject
+mkOnStatusMessage :: MonadFlow m => Order -> TaskStatus -> m OrderObject
 mkOnStatusMessage order status = do
   now <- getCurrentTime
-  return . API.OrderObject $ updateOrder Nothing now order status
+  return . OrderObject $ updateOrder Nothing now order status
 
 updateOrder :: Maybe Text -> UTCTime -> Order -> TaskStatus -> Order
 updateOrder mbOrderId cTime order status = do

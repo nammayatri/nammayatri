@@ -2,7 +2,7 @@ module Core.API.OnStatus where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Ack (AckResponse)
-import Core.API.Types (BecknCallbackReq)
+import Beckn.Types.Core.ReqTypes
 import Core.OnStatus (OnStatusMessage)
 import Servant (JSON, Post, ReqBody, (:>))
 
