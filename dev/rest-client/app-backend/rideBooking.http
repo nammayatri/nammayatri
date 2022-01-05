@@ -1,7 +1,9 @@
+@token = {{app-token}}
+
 # @name search
 POST {{app-host}}/rideSearch
 content-type: application/json
-token: {{app-token}}
+token: {{token}}
 
 {
   "origin": {
@@ -45,7 +47,7 @@ token: {{app-token}}
 # @name quotes
 GET {{app-host}}/rideSearch/{{searchId}}/quotes
 content-type: application/json
-token: {{app-token}}
+token: {{token}}
 
 ###
 
@@ -53,7 +55,7 @@ token: {{app-token}}
 
 POST {{app-host}}/rideSearch/{{searchId}}/quotes/{{quoteId}}/confirm HTTP/1.1
 content-type: application/json
-token: {{app-token}}
+token: {{token}}
 
 ###
 
@@ -62,4 +64,4 @@ GET {{app-host}}/rideBooking/list
   &limit=50
   &onlyActive=false
 content-type: application/json
-token: {{app-token}}
+token: {{token}}

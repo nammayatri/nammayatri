@@ -1,0 +1,6 @@
+@token = {{driver-token}}
+
+GET {{transporter-host}}/driver/rideBooking/list?limit=10&offset=0&onlyActive=true
+content-type: application/json
+token: {{token}}
+

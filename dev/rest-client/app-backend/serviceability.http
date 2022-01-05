@@ -1,6 +1,8 @@
+@token = {{app-token}}
+
 POST {{app-host}}/serviceability/origin
 content-type: application/json
-token: {{app-token}}
+token: {{token}}
 
 {
   "location": {
@@ -13,7 +15,7 @@ token: {{app-token}}
 
 POST {{app-host}}/serviceability/destination
 content-type: application/json
-token: {{app-token}}
+token: {{token}}
 
 {
   "location": {

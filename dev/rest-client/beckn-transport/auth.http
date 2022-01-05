@@ -1,10 +1,10 @@
 # @name login
-POST {{app-host}}/auth
+POST {{transporter-host}}/auth
 content-type: application/json
 
 {
   "mobileCountryCode": "+91",
-  "mobileNumber": "7777777777"
+  "mobileNumber": "5555555555"
 }
 
 ###
@@ -13,7 +13,7 @@ content-type: application/json
 
 # @name verify
 
-POST {{app-host}}/auth/{{authToken}}/verify
+POST {{transporter-host}}/auth/{{authToken}}/verify
 content-type: application/json
 
 {
