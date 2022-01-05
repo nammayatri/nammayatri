@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Migration.API.Rating where
 
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.ReqTypes (BecknCallbackReq, BecknReq)
 import Beckn.Types.Core.Migration.Feedback (Feedback)
+import Beckn.Types.Core.ReqTypes (BecknCallbackReq, BecknReq)
 import Data.Aeson (withObject, (.:))
 import Data.Aeson.Types (parseFail)
 import EulerHS.Prelude hiding (id)

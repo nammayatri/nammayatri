@@ -1,8 +1,8 @@
 module Beckn.Types.Core.Migration.API.Track where
 
 import Beckn.Types.Core.Ack (AckResponse)
-import Beckn.Types.Core.ReqTypes (BecknCallbackReq, BecknReq)
 import Beckn.Types.Core.Migration.Tracking (Tracking)
+import Beckn.Types.Core.ReqTypes (BecknCallbackReq, BecknReq)
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 import Servant.Client (BaseUrl)
