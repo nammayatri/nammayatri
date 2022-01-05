@@ -64,15 +64,40 @@ cancelRide rideId rideCReason = do
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
   cancelRideTransaction rideBooking ride rideCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show rideCReason.source)
+  notifyBAPOnCancel rideBooking rideCReason
+  notifyDriverOnCancel rideBooking ride rideCReason
+
+notifyBAPOnCancel ::
+  ( DBFlow m r,
+    CoreMetrics m,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  SRB.RideBooking ->
+  SRCR.RideCancellationReason ->
+  m ()
+notifyBAPOnCancel rideBooking cancellationReason =
   fork "cancelRide - Notify BAP" $ do
     let transporterId = rideBooking.providerId
     transporter <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter rideCReason.source
+    BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter cancellationReason.source
+
+notifyDriverOnCancel ::
+  ( DBFlow m r,
+    CoreMetrics m,
+    FCMFlow m r
+  ) =>
+  SRB.RideBooking ->
+  SRide.Ride ->
+  SRCR.RideCancellationReason ->
+  m ()
+notifyDriverOnCancel rideBooking ride cancellationReason =
+  fork "cancelRide - Notify driver" $ do
     searchRequest <- SearchRequest.findById (rideBooking.requestId) >>= fromMaybeM SearchRequestNotFound
     driver <- Person.findPersonById ride.driverId >>= fromMaybeM PersonNotFound
-    Notify.notifyOnCancel searchRequest driver.id driver.deviceToken rideCReason.source
+    Notify.notifyOnCancel searchRequest driver.id driver.deviceToken cancellationReason.source
 
 cancelRideTransaction ::
   DBFlow m r =>

@@ -8,6 +8,7 @@ import Beckn.Types.Id
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
+import Product.BecknProvider.Cancel
 import qualified Product.BecknProvider.Confirm as Confirm
 import Services.Allocation.Allocation as Alloc
 import Storage.Queries.AllocationEvent (logAllocationEvent)
@@ -15,7 +16,6 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
@@ -234,12 +234,9 @@ cancelRide rideBookingId reason = do
       QRide.updateStatus ride.id SRide.CANCELLED
       QDriverInfo.updateOnRide (cast ride.driverId) False
   logTagInfo ("rideBookingId-" <> getId rideBookingId) ("Cancellation reason " <> show reason.source)
-  fork "cancelRide - Notify BAP" $ do
-    let transporterId = rideBooking.providerId
-    transporter <-
-      QOrg.findOrganizationById transporterId
-        >>= fromMaybeM OrgNotFound
-    BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter reason.source
+  notifyBAPOnCancel rideBooking reason
+  whenJust mbRide $ \ride ->
+    notifyDriverOnCancel rideBooking ride reason
 
 cleanupNotifications :: DBFlow m r => Id RideBooking -> m ()
 cleanupNotifications = QNS.cleanupNotifications

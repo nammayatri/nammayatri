@@ -12,7 +12,6 @@ import EulerHS.Prelude
 import Types.Storage.Person as Person
 import Types.Storage.RegistrationToken as RegToken
 import Types.Storage.RideBooking (RideBooking)
-import qualified Types.Storage.RideBooking as SRB
 import Types.Storage.SearchRequest as SearchRequest
 
 -- | Send FCM "cancel" notification to driver
@@ -91,88 +90,6 @@ notifyOnRegistration regToken personId =
         unwords
           [ "Welcome Yatri Partner!",
             "Click here to set up your account."
-          ]
-
-notifyTransporterOnExpiration ::
-  ( FCMFlow m r,
-    CoreMetrics m
-  ) =>
-  SearchRequest ->
-  [Person] ->
-  m ()
-notifyTransporterOnExpiration searchRequest =
-  traverse_ (\person -> FCM.notifyPerson notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken)
-  where
-    notificationData =
-      FCM.FCMAndroidData
-        { fcmNotificationType = FCM.EXPIRED_CASE,
-          fcmShowNotification = FCM.SHOW,
-          fcmEntityType = FCM.SearchRequest,
-          fcmEntityIds = show . getId $ searchRequest.id,
-          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.EXPIRED_CASE
-        }
-    title = FCMNotificationTitle $ T.pack "Ride expired!"
-    body =
-      FCMNotificationBody $
-        unwords
-          [ "The ride request for",
-            showTimeIst (SearchRequest.startTime searchRequest),
-            "has expired as the customer failed to confirm.",
-            "You can view more details in the app."
-          ]
-
-notifyCancelReqByBP ::
-  ( FCMFlow m r,
-    CoreMetrics m
-  ) =>
-  SRB.RideBooking ->
-  [Person] ->
-  m ()
-notifyCancelReqByBP rideBooking =
-  traverse_ (\person -> FCM.notifyPerson notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken)
-  where
-    notificationData =
-      FCM.FCMAndroidData
-        { fcmNotificationType = FCM.CANCELLED_PRODUCT,
-          fcmShowNotification = FCM.SHOW,
-          fcmEntityIds = show $ getId $ rideBooking.id,
-          fcmEntityType = FCM.Organization,
-          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.CANCELLED_PRODUCT
-        }
-    title = FCM.FCMNotificationTitle $ T.pack "Driver has cancelled the ride!"
-    body =
-      FCMNotificationBody $
-        unwords
-          [ "The ride scheduled for",
-            showTimeIst (rideBooking.startTime) <> ",",
-            "has been cancelled. Check the app for more details."
-          ]
-
-notifyDriverCancelledRideRequest ::
-  ( FCMFlow m r,
-    CoreMetrics m
-  ) =>
-  SRB.RideBooking ->
-  [Person] ->
-  m ()
-notifyDriverCancelledRideRequest rideBooking =
-  traverse_ (\person -> FCM.notifyPerson notificationData $ FCMNotificationRecipient person.id.getId person.deviceToken)
-  where
-    notificationData =
-      FCM.FCMAndroidData
-        { fcmNotificationType = FCM.DRIVER_UNASSIGNED,
-          fcmShowNotification = FCM.SHOW,
-          fcmEntityIds = show $ getId rideBooking.id,
-          fcmEntityType = FCM.Organization,
-          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_UNASSIGNED
-        }
-    title = FCM.FCMNotificationTitle $ T.pack "Driver has refused the ride!"
-    body =
-      FCMNotificationBody $
-        unwords
-          [ "The ride scheduled for",
-            showTimeIst (rideBooking.startTime) <> ",",
-            "has been refused by driver. Check the app for more details."
           ]
 
 notifyDriver ::
