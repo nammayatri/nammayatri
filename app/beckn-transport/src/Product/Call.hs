@@ -26,7 +26,7 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
   requestorPhone <- decrypt rideBooking.requestorMobileNumber
   driverPhone <- getDriverPhone ride
   initiateCall driverPhone requestorPhone
-  logTagInfo ("RideId:" <> getId rideId) "Call initiated from provider to customer."
+  logTagInfo ("RideId:" <> getId rideId) "Call initiated from driver to customer."
   return Ack
 
 getDriverPhone :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Text
@@ -35,4 +35,4 @@ getDriverPhone ride = do
   driver <- QPerson.findPersonById driverId >>= fromMaybeM PersonNotFound
   decMobNum <- decrypt driver.mobileNumber
   let phonenum = (<>) <$> driver.mobileCountryCode <*> decMobNum
-  phonenum & fromMaybeM (InternalError "Customer has no phone number.")
+  phonenum & fromMaybeM (InternalError "Driver has no phone number.")
