@@ -26,7 +26,7 @@ data DriverRideRes = DriverRideRes
     fromLocation :: SearchReqLocationAPIEntity,
     toLocation :: SearchReqLocationAPIEntity,
     discount :: Maybe Amount,
-    driverName :: Maybe Text,
+    driverName :: Text,
     driverNumber :: Maybe Text,
     vehicleVariant :: Variant,
     vehicleModel :: Text,

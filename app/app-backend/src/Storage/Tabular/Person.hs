@@ -26,7 +26,6 @@ mkPersist
       firstName Text Maybe
       middleName Text Maybe
       lastName Text Maybe
-      fullName Text Maybe
       role Domain.Role
       gender Domain.Gender
       identifierType Domain.IdentifierType

@@ -58,7 +58,6 @@ data PersonE e = Person
     firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
-    fullName :: Maybe Text,
     role :: Role,
     gender :: Gender,
     identifierType :: IdentifierType,

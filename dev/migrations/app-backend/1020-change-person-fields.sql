@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.person DROP COLUMN full_name;

@@ -25,7 +25,7 @@ updateProfile :: SP.Person -> API.UpdateOrgAdminProfileReq -> FlowHandler API.Up
 updateProfile admin req = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
       updAdmin =
-        admin{firstName = req.firstName <|> admin.firstName,
+        admin{firstName = fromMaybe admin.firstName req.firstName,
               middleName = req.middleName <|> admin.middleName,
               lastName = req.lastName <|> admin.lastName,
               deviceToken = req.deviceToken <|> admin.deviceToken

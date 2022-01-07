@@ -56,7 +56,7 @@ data RideAPIEntity = RideAPIEntity
   { id :: Id Ride,
     shortRideId :: ShortId Ride,
     status :: RideStatus,
-    driverName :: Maybe Text,
+    driverName :: Text,
     driverNumber :: Maybe Text,
     vehicleVariant :: DVeh.Variant,
     vehicleModel :: Text,

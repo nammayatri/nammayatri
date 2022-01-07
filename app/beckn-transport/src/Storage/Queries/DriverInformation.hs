@@ -118,7 +118,7 @@ findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
 
     filterBySearchString person (searchStr, searchStrDBHash) = do
       let likeSearchStr = (%) ++. val searchStr ++. (%)
-      ( concat_ @Text [unMaybe $ person ^. PersonFirstName, val " ", unMaybe $ person ^. PersonMiddleName, val " ", unMaybe $ person ^. PersonLastName]
+      ( concat_ @Text [person ^. PersonFirstName, val " ", unMaybe $ person ^. PersonMiddleName, val " ", unMaybe $ person ^. PersonLastName]
           `ilike` likeSearchStr
         )
         ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)

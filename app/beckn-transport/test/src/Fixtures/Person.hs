@@ -12,7 +12,6 @@ defaultDriver =
       firstName = Just "Driver",
       middleName = Nothing,
       lastName = Just "Driverson",
-      fullName = Nothing,
       role = Person.DRIVER,
       gender = Person.UNKNOWN,
       identifierType = Person.EMAIL,

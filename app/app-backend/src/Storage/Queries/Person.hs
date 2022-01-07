@@ -68,7 +68,6 @@ updateMultiple personId person = do
         PersonFirstName =. val (person.firstName),
         PersonMiddleName =. val (person.middleName),
         PersonLastName =. val (person.lastName),
-        PersonFullName =. val (person.fullName),
         PersonGender =. val (person.gender),
         PersonEmail =. val (person.email),
         PersonDescription =. val (person.description),
@@ -90,28 +89,6 @@ updateDeviceToken personId mbDeviceToken = do
       [ PersonUpdatedAt =. val now,
         PersonDeviceToken =. val mbDeviceToken
       ]
-    where_ $ tbl ^. PersonId ==. val (getId personId)
-
-update ::
-  Id Person ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Role ->
-  Maybe IdentifierType ->
-  Maybe Text ->
-  SqlDB ()
-update personId nameM emailM roleM identTypeM identM = do
-  now <- getCurrentTime
-  update' $ \tbl -> do
-    set
-      tbl
-      ( [PersonUpdatedAt =. val now]
-          <> updateWhenJust_ (\name -> PersonFullName =. val (Just name)) nameM
-          <> updateWhenJust_ (\email_ -> PersonEmail =. val (Just email_)) emailM
-          <> updateWhenJust_ (\role_ -> PersonRole =. val role_) roleM
-          <> updateWhenJust_ (\iden -> PersonIdentifier =. val (Just iden)) identM
-          <> updateWhenJust_ (\idT -> PersonIdentifierType =. val idT) identTypeM
-      )
     where_ $ tbl ^. PersonId ==. val (getId personId)
 
 setIsNewFalse :: Id Person -> SqlDB ()

@@ -97,10 +97,9 @@ data VehicleRes = VehicleRes
 
 data Driver = Driver
   { id :: Text,
-    firstName :: Maybe Text,
+    firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
-    fullName :: Maybe Text,
     rating :: Maybe Int,
     organizationId :: Maybe (Id Org.Organization)
   }

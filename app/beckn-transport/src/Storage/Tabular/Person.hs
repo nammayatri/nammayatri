@@ -24,10 +24,9 @@ mkPersist
   [defaultQQ|
     PersonT sql=person
       id Text
-      firstName Text Maybe
+      firstName Text
       middleName Text Maybe
       lastName Text Maybe
-      fullName Text Maybe
       role Domain.Role
       gender Domain.Gender
       identifierType Domain.IdentifierType

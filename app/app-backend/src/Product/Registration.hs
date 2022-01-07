@@ -64,7 +64,6 @@ makePerson req = do
         firstName = Nothing,
         middleName = Nothing,
         lastName = Nothing,
-        fullName = Nothing,
         role = SP.USER,
         gender = SP.UNKNOWN,
         identifierType = SP.MOBILENUMBER,

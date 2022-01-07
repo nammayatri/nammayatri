@@ -33,7 +33,7 @@ import EulerHS.Prelude hiding (id)
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,
-    firstName :: Maybe Text,
+    firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
@@ -54,7 +54,7 @@ newtype ListDriverRes = ListDriverRes
 
 data DriverEntityRes = DriverEntityRes
   { id :: Id Person,
-    firstName :: Maybe Text,
+    firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
@@ -86,7 +86,7 @@ validateOnboardDriverReq OnboardDriverReq {..} =
     ]
 
 data CreatePerson = CreatePerson
-  { firstName :: Maybe Text,
+  { firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Text,
@@ -97,7 +97,7 @@ data CreatePerson = CreatePerson
 validateCreatePerson :: Validate CreatePerson
 validateCreatePerson CreatePerson {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.name,
+    [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
       validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
       validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
       validateField "mobileNumber" mobileNumber P.mobileNumber,

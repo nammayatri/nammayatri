@@ -113,7 +113,6 @@ updatePersonRec personId person = do
       [ PersonFirstName =. val (person.firstName),
         PersonMiddleName =. val (person.middleName),
         PersonLastName =. val (person.lastName),
-        PersonFullName =. val (person.fullName),
         PersonRole =. val (person.role),
         PersonGender =. val (person.gender),
         PersonEmail =. val (person.email),

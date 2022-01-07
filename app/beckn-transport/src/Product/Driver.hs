@@ -204,7 +204,7 @@ updateDriver personId req = withFlowHandlerAPI $ do
   runRequestValidation DriverAPI.validateUpdateDriverReq req
   person <- QPerson.findById personId >>= fromMaybeM PersonNotFound
   let updPerson =
-        person{firstName = req.firstName <|> person.firstName,
+        person{firstName = fromMaybe person.firstName req.firstName,
                middleName = req.middleName <|> person.middleName,
                lastName = req.lastName <|> person.lastName,
                deviceToken = req.deviceToken <|> person.deviceToken
@@ -255,7 +255,6 @@ buildDriver req orgId = do
         SP.firstName = req.firstName,
         SP.middleName = req.middleName,
         SP.lastName = req.lastName,
-        SP.fullName = Nothing,
         SP.role = SP.DRIVER,
         SP.gender = SP.UNKNOWN,
         SP.email = Nothing,

@@ -57,10 +57,9 @@ instance FromHttpApiData Gender where
 
 data PersonE e = Person
   { id :: Id Person,
-    firstName :: Maybe Text,
+    firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
-    fullName :: Maybe Text,
     role :: Role,
     gender :: Gender,
     identifierType :: IdentifierType,
@@ -101,7 +100,7 @@ instance EncryptedItem' Person where
 
 data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,
-    firstName :: Maybe Text,
+    firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
@@ -125,4 +124,4 @@ getPersonNumber person = do
 
 getPersonFullName :: (EsqDBFlow m r, EncFlow m r) => Person -> m (Maybe Text)
 getPersonFullName person = do
-  return ((\fN -> fN <> maybe "" (" " <>) person.lastName) <$> person.firstName)
+  return ((\fN -> fN <> maybe "" (" " <>) person.lastName) <$> Just person.firstName)

@@ -101,7 +101,7 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
       return $ T.OrderInfo person [searchRequest]
 
 makeSearchRequestToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
-makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..} = do
+makeSearchRequestToOrder SP.Person {firstName, lastName, mobileNumber} C.SearchRequest {..} = do
   fromLocation <- Location.findById fromLocationId
   toLocation <- Location.findById toLocationId
   rideBooking <- QRB.findByRequestId id
@@ -116,7 +116,7 @@ makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..}
             endTime = Nothing,
             fromLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> fromLocation,
             toLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> toLocation,
-            travellerName = fullName,
+            travellerName = firstName <> lastName,
             travellerPhone = decMobNum,
             rideBooking = rbStatus
           }

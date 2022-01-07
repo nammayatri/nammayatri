@@ -9,7 +9,7 @@ import EulerHS.Prelude hiding (id)
 
 data OrgAdminProfileRes = OrgAdminProfileRes
   { id :: Id SP.Person,
-    firstName :: Maybe Text,
+    firstName :: Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
