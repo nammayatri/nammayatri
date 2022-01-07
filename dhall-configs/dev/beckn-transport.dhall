@@ -79,7 +79,7 @@ in
 , caseExpiry = Some +7200
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
-, exotelCfg = None common.ExotelCfg
+, exotelCfg = Some common.exotelCfg
 , migrationPath = Some (env:BECKN_TRANSPORT_MIGRATION_PATH as Text ? "dev/migrations/beckn-transport")
 , autoMigrate = True
 , coreVersion = "0.9.3"

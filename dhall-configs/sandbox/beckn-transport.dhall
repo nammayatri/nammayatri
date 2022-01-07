@@ -79,7 +79,7 @@ in
 , caseExpiry = Some +7200
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
-, exotelCfg = None common.ExotelCfg
+, exotelCfg = Some common.exotelCfg
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
