@@ -258,7 +258,7 @@ type RideBookingAPI =
              :> Get '[JSON] APISuccess
        )
     :<|> "driver"
-      :> "rideBooking"
+      :> "ride"
       :> ( "list"
              :> TokenAuth
              :> QueryParam "limit" Integer
