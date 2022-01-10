@@ -114,8 +114,8 @@ buildRideAssignedUpdatePayload ride = do
   mobileNumber <- decDriver.mobileCountryCode <> decDriver.mobileNumber & fromMaybeM (InternalError "Driver mobile number is not present.")
   firstName <- decDriver.firstName & fromMaybeM (PersonFieldNotPresent "firstName")
   let middleName = decDriver.middleName
-  lastName <- decDriver.lastName & fromMaybeM (PersonFieldNotPresent "lastName")
-  let name = firstName <> " " <> maybe "" (<> " ") middleName <> lastName
+      lastName = decDriver.lastName
+  let name = firstName <> maybe "" (" " <>) middleName <> maybe "" (" " <>) lastName
   let vehicleNumber = veh.registrationNo
   let agent =
         OnUpdate.Agent
