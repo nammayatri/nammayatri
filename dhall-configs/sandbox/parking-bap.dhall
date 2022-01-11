@@ -33,10 +33,10 @@ in
 , selfURI = "https://api.sandbox.beckn.juspay.in/bap/parking/v1"
 , httpClientOptions = common.httpClientOptions
 , authEntity =
-    { credRegistry = common.credRegistry
-    , signingKeys = common.signingKeys
-    , signatureExpiry = common.signatureExpiry
-    }
+  { signingKey = sec.signingKey
+  , uniqueKeyId = "FIXME"
+  , signatureExpiry = common.signatureExpiry
+  }
 , authServiceUrl = common.authServiceUrl
 , gatewayUrl = juspayGatewayUrl
 , hostName = "juspay.in"

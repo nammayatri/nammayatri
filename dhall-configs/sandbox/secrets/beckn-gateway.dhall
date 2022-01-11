@@ -9,4 +9,5 @@ in
 { dbUserId = "atlas"
 , dbPassword = "atlas"
 , registrySecrets = registrySecrets
+, signingKey = "xxxxxxx"
 }

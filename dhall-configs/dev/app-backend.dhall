@@ -18,7 +18,7 @@ let pgcfg =
   , schemaName = "atlas_app"
   }
 
-let esqDBCfg = 
+let esqDBCfg =
   { connectHost = postgresConfig.connectHost
   , connectPort = postgresConfig.connectPort
   , connectUser = postgresConfig.connectUser
@@ -74,11 +74,6 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
-let httpClientOptions =
-  { timeoutMs = +2000
-  , maxRetries = +3
-  }
-
 in
 
 { dbCfg = pgcfg
@@ -102,8 +97,11 @@ in
   { cabs = "http://localhost:8013/cab/v1/"
   , metro = "http://localhost:8013/metro/v1/"
   }
-, credRegistry = common.credRegistry
-, signingKeys = common.signingKeys
+, authEntity =
+  { signingKey = sec.signingKey
+  , signatureExpiry = common.signatureExpiry
+  , uniqueKeyId = "juspay-mobility-bap-1-key"
+  }
 , searchConfirmExpiry = Some +600
 , searchRequestExpiry = Some +600
 , encService = common.passetto
@@ -115,7 +113,6 @@ in
 , domainVersion = "0.9.3"
 , geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
-, signatureExpiry = common.signatureExpiry
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
@@ -123,7 +120,7 @@ in
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90
 , apiRateLimitOptions = apiRateLimitOptions
-, httpClientOptions = httpClientOptions
+, httpClientOptions = common.httpClientOptions
 , authTokenCacheExpiry = +600
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets

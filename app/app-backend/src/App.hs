@@ -50,8 +50,7 @@ runAppBackend' appCfg = do
         let shortOrgIdMetro = appCfg.bapSelfIds.metro
         managers <-
           prepareAuthManagers flowRt appEnv [shortOrgId, shortOrgIdMetro]
-            & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
-            >>= createManagers
+            & createManagers
         logInfo "Initializing DB Connections..."
         _ <- prepareDBConnections >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
         logInfo "Initializing Redis Connections..."

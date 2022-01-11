@@ -16,7 +16,6 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Credentials
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
@@ -42,8 +41,7 @@ data AppCfg = AppCfg
     xAppUri :: BaseUrl,
     hostName :: Text,
     nwAddress :: BaseUrl,
-    credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
+    authEntity :: AuthenticatingEntity',
     caseExpiry :: Maybe Seconds,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
@@ -53,7 +51,6 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
-    signatureExpiry :: Seconds,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -85,15 +82,12 @@ data AppEnv = AppEnv
     xGatewaySelector :: Text,
     xAppUri :: BaseUrl,
     nwAddress :: BaseUrl,
-    credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
     caseExpiry :: Maybe Seconds,
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     domainVersion :: Text,
-    signatureExpiry :: Seconds,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -133,6 +127,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getRegistry = credRegistry
-  getSigningKeys = signingKeys
-  getSignatureExpiry = signatureExpiry
+  getSigningKey = (.config.authEntity.signingKey)
+  getUniqueKeyId = (.config.authEntity.uniqueKeyId)
+  getSignatureExpiry = (.config.authEntity.signatureExpiry)

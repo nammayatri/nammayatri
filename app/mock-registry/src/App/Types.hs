@@ -22,7 +22,6 @@ import EulerHS.Prelude
 data AppCfg = AppCfg
   { port :: Int,
     credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
     signatureExpiry :: Seconds,
     graceTerminationPeriod :: Seconds,
     loggerConfig :: LoggerConfig
@@ -31,9 +30,6 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { config :: AppCfg,
-    credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
-    signatureExpiry :: Seconds,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv

@@ -16,7 +16,7 @@ let pgcfg =
   , schemaName = "atlas_fmd_wrapper"
   }
 
-let esqDBCfg = 
+let esqDBCfg =
   { connectHost = postgresConfig.connectHost
   , connectPort = postgresConfig.connectPort
   , connectUser = postgresConfig.connectUser
@@ -67,12 +67,14 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
 , coreVersion = "0.9.1"
 , dzConfig = dunzoConfig
-, credRegistry = common.credRegistry
-, signingKeys = common.signingKeys
-, signatureExpiry = common.signatureExpiry
+, authEntity =
+  { signingKey = sec.signingKey
+  , uniqueKeyId = "juspay-fmd-1-key"
+  , signatureExpiry = common.signatureExpiry
+  }
 , selfId = "JUSPAY.FMD.UAT.1"
 , graceTerminationPeriod = +90
-, httpClientOptions = httpClientOptions
+, httpClientOptions = common.httpClientOptions
 , hostName = "localhost"
 , nwAddress = "http://localhost:8018/v1/"
 , registryUrl = common.registryUrl

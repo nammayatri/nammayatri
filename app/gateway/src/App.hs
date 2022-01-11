@@ -56,10 +56,10 @@ runGateway configModifier = do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
         let shortOrgId = appEnv.gwId
-        authManager <-
-          handleLeft exitAuthManagerPrepFailure "Could not prepare authentication manager: " $
-            prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId
-        managers <- createManagers $ Map.singleton signatureAuthManagerKey authManager
+        managers <-
+          prepareAuthManager flowRt appEnv "Proxy-Authorization" shortOrgId
+            & Map.singleton signatureAuthManagerKey
+            & createManagers
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "

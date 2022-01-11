@@ -16,7 +16,7 @@ let pgcfg =
   , schemaName = "atlas_gateway"
   }
 
-let esqDBCfg = 
+let esqDBCfg =
   { connectHost = postgresConfig.connectHost
   , connectPort = postgresConfig.connectPort
   , connectUser = postgresConfig.connectUser
@@ -33,11 +33,6 @@ let rcfg =
   , connectMaxConnections = +50
   , connectMaxIdleTime = +30
   , connectTimeout = Some +100
-  }
-
-let httpClientOptions =
-  { timeoutMs = +2000
-  , maxRetries = +3
   }
 
 let coreVersions =
@@ -57,16 +52,18 @@ in
 , selfId = "JUSPAY.BG.1"
 , hostName = "juspay.in"
 , nwAddress = "https://api.beckn.juspay.in/gateway/v1/"
-, credRegistry = common.credRegistry
-, signingKeys = common.signingKeys
+, authEntity =
+  { signingKey = sec.signingKey
+  , uniqueKeyId = "juspay-bg-1-key"
+  , signatureExpiry = common.signatureExpiry
+  }
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , searchTimeout = None Integer
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-gateway.log"}
 , coreVersions = coreVersions
 , mobilityDomainVersion = "0.9.3"
-, signatureExpiry = common.signatureExpiry
 , graceTerminationPeriod = +90
-, httpClientOptions = httpClientOptions
+, httpClientOptions = common.httpClientOptions
 , disableSignatureAuth = False
 }

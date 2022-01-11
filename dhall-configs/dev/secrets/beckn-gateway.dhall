@@ -9,4 +9,5 @@ in
 { dbUserId = "atlas"
 , dbPassword = "atlas"
 , registrySecrets = registrySecrets
+, signingKey = "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
 }

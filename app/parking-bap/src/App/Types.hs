@@ -66,6 +66,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getRegistry = (.config.authEntity.credRegistry)
-  getSigningKeys = (.config.authEntity.signingKeys)
+  getSigningKey = (.config.authEntity.signingKey)
+  getUniqueKeyId = (.config.authEntity.uniqueKeyId)
   getSignatureExpiry = (.config.authEntity.signatureExpiry)

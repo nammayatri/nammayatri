@@ -16,7 +16,7 @@ let pgcfg =
   , schemaName = "atlas_transporter"
   }
 
-let esqDBCfg = 
+let esqDBCfg =
   { connectHost = postgresConfig.connectHost
   , connectPort = postgresConfig.connectPort
   , connectUser = postgresConfig.connectUser
@@ -54,11 +54,6 @@ let apiRateLimitOptions =
   , limitResetTimeInSec = +600
   }
 
-let httpClientOptions =
-  { timeoutMs = +2000
-  , maxRetries = +3
-  }
-
 in
 
 { dbCfg = pgcfg
@@ -74,8 +69,11 @@ in
 , xAppUri = appUri
 , hostName = "juspay.in"
 , nwAddress = "https://api.beckn.juspay.in/transport/v1/"
-, credRegistry = common.credRegistry
-, signingKeys = common.signingKeys
+, authEntity =
+  { signingKey = sec.signingKey
+  , uniqueKeyId = "juspay-mobility-bpp-1-key-prod"
+  , signatureExpiry = common.signatureExpiry
+  }
 , caseExpiry = Some +7200
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath
@@ -85,7 +83,6 @@ in
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
-, signatureExpiry = common.signatureExpiry
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
@@ -94,7 +91,7 @@ in
 , defaultRadiusOfSearch = +5000 -- meters
 , driverPositionInfoExpiry = Some +600
 , apiRateLimitOptions = apiRateLimitOptions
-, httpClientOptions = httpClientOptions
+, httpClientOptions = common.httpClientOptions
 , authTokenCacheExpiry = +600
 , minimumDriverRatesCount = +5
 , recalculateFareEnabled = True

@@ -1,16 +1,17 @@
 module Beckn.Types.Credentials where
 
+import Beckn.Prelude
+import Beckn.Types.Base64
 import Beckn.Utils.Dhall
 
-data Credential = Credential
-  { uniqueKeyId :: Text,
-    shortOrgId :: Text,
-    signPubKey :: Text
-  }
-  deriving (Generic, FromDhall)
+type PrivateKey = Base64
 
-data SigningKey = SigningKey
-  { uniqueKeyId :: Text,
-    signPrivKey :: Text
+type PublicKey = Base64
+
+data Credential = Credential
+  { shortOrgId :: Text,
+    uniqueKeyId :: Text,
+    signPubKey :: PublicKey,
+    url :: BaseUrl
   }
   deriving (Generic, FromDhall)

@@ -18,7 +18,7 @@ let pgcfg =
   , schemaName = "atlas_app"
   }
 
-let esqDBCfg = 
+let esqDBCfg =
   { connectHost = postgresConfig.connectHost
   , connectPort = postgresConfig.connectPort
   , connectUser = postgresConfig.connectUser
@@ -59,7 +59,7 @@ let sesConfig =
     , fromArn = None Text
     }
   }
-  
+
 let geofencingConfig =
 { origin = GeoRestriction.Unrestricted
 , destination = GeoRestriction.Unrestricted
@@ -102,8 +102,11 @@ in
   { cabs = "https://api.sandbox.beckn.juspay.in/bap/cab/v1/"
   , metro = "https://api.sandbox.beckn.juspay.in/bap/metro/v1/"
   }
-, credRegistry = common.credRegistry
-, signingKeys = common.signingKeys
+, authEntity =
+  { signingKey = sec.signingKey
+  , uniqueKeyId = "35"
+  , signatureExpiry = common.signatureExpiry
+  }
 , searchConfirmExpiry = Some +600
 , searchRequestExpiry = Some +600
 , encService = common.passetto
@@ -115,7 +118,6 @@ in
 , domainVersion = "0.9.3"
 , geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
-, signatureExpiry = common.signatureExpiry
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl

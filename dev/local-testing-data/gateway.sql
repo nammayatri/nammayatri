@@ -20,8 +20,8 @@ INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type,
 INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES
     ('9b59f07a-bf3a-49db-98ce-fffc71a6c2bd', 'Metro BPP', 'metro-bpp', NULL, 'APPROVED', 'PROVIDER', 'METRO', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8000', NULL, now(), now(), NULL, NULL),
     ('b4810ce6-07ed-4e3e-b2ae-50e0d214858d', 'Parking BPP', 'parking-bpp', NULL, 'APPROVED', 'PROVIDER', 'PARKING', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:9090', NULL, now(), now(), NULL, NULL);
-    
+
 INSERT INTO atlas_gateway.organization (id, name, short_id, gstin, status, type, domain, verified, enabled, location_id, description, mobile_number, mobile_country_code, from_time, to_time, api_key, callback_url, head_count, created_at, updated_at, callback_api_key, info) VALUES
     ('mobility-app                        ', 'Mobility app', 'JUSPAY.MOBILITY.APP.UAT.1', NULL, 'APPROVED', 'APP', 'MOBILITY', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8013/cab/v1', NULL, now(), now(), NULL, NULL),
     ('mobility-app-metro                  ', 'Mobility app', 'JUSPAY.MOBILITY.APP.UAT.2', NULL, 'APPROVED', 'APP', 'METRO', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8013/metro/v1', NULL, now(), now(), NULL, NULL),
-    ('mobility-app-parking                ', 'Mobility app', 'JUSPAY.MOBILITY.APP.UAT.3', NULL, 'APPROVED', 'APP', 'PARKING', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8013/parking', NULL, now(), now(), NULL, NULL);
+    ('mobility-app-parking                ', 'Mobility app', 'JUSPAY.MOBILITY.APP.UAT.3', NULL, 'APPROVED', 'APP', 'PARKING', true, true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'http://localhost:8022/parking', NULL, now(), now(), NULL, NULL);

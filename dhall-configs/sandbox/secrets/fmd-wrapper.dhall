@@ -12,4 +12,5 @@ in
 , dbPassword = "atlas"
 , payee = payee
 , registrySecrets = registrySecrets
+, signingKey = "xxxxxxx"
 }

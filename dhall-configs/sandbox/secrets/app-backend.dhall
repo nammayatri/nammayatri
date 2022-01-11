@@ -10,4 +10,5 @@ in
 , dbPassword = "atlas"
 , smsOtpHash = "xxxxxxx"
 , registrySecrets = registrySecrets
+, signingKey = "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
 }

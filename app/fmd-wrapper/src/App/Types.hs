@@ -13,7 +13,6 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client (HttpClientOptions)
@@ -40,9 +39,7 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     coreVersion :: Text,
     dzConfig :: DunzoConfig,
-    credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
-    signatureExpiry :: Seconds,
+    authEntity :: AuthenticatingEntity',
     graceTerminationPeriod :: Seconds,
     httpClientOptions :: HttpClientOptions,
     nwAddress :: BaseUrl,
@@ -61,9 +58,6 @@ data AppEnv = AppEnv
     xGatewayApiKey :: Maybe Text,
     coreVersion :: Text,
     dzConfig :: DunzoConfig,
-    credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
-    signatureExpiry :: Seconds,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
@@ -96,6 +90,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getRegistry = credRegistry
-  getSigningKeys = signingKeys
-  getSignatureExpiry = signatureExpiry
+  getSigningKey = (.config.authEntity.signingKey)
+  getUniqueKeyId = (.config.authEntity.uniqueKeyId)
+  getSignatureExpiry = (.config.authEntity.signatureExpiry)

@@ -1,18 +1,3 @@
-let mkCredential =
- \(uniqueKeyId : Text) -> \(shortOrgId : Text) -> \(signPubKey : Text) ->
-  {
-    uniqueKeyId = uniqueKeyId
-  , shortOrgId = shortOrgId
-  , signPubKey = signPubKey
-  }
-
-let mkSigningKey =
- \(uniqueKeyId : Text) -> \(signPrivKey : Text) ->
-  {
-    uniqueKeyId = uniqueKeyId
-  , signPrivKey = signPrivKey
-  }
-
 let mkShard =
  \(shardId : Integer) -> \(shortOrgId : Text) ->
   { mapKey = shardId
@@ -59,8 +44,6 @@ in { defaultPoolConfig = defaultPoolConfig
    , LogLevel = LogLevel
    , ExotelCfg = ExotelCfg
    , signatureExpiry = +600 -- in seconds
-   , mkCredential = mkCredential
-   , mkSigningKey = mkSigningKey
    , mkShard = mkShard
    , httpClientOptions = httpClientOptions
    }

@@ -3,7 +3,7 @@ module SignatureAuth
   )
 where
 
-import qualified Beckn.Utils.Registry as Registry
+import Beckn.Types.Base64
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as Base64
@@ -15,11 +15,11 @@ import Network.HTTP.Types (methodPost)
 import Test.Tasty
 import Test.Tasty.HUnit
 
-secretKey :: ByteString
-Right secretKey = Base64.decode "faGTaRPYJx8OQ7zbQOlrevtWTmqs+hAJr2tn08Dgx1U="
+secretKey :: Base64
+secretKey = "faGTaRPYJx8OQ7zbQOlrevtWTmqs+hAJr2tn08Dgx1U="
 
-publicKey :: ByteString
-Right publicKey = Base64.decode "oUvUHbL/9ZU4JT0RjcnAvgSXpXtyNTDBWRWDpnlP4N0="
+publicKey :: Base64
+publicKey = "oUvUHbL/9ZU4JT0RjcnAvgSXpXtyNTDBWRWDpnlP4N0="
 
 examplePath :: ByteString
 examplePath = "/foo?param=value&pet=dog"
@@ -151,8 +151,7 @@ verifyRequest =
 signAndVerifyWithGeneratedKeyPair :: TestTree
 signAndVerifyWithGeneratedKeyPair =
   testCase "Sign and verify a request with generated key pair" $ do
-    (privateKeyB64, publicKeyB64) <- Registry.prepareSigningKeyPair
-    let (Right privateKey, Right publicKey') = (Base64.decode privateKeyB64, Base64.decode publicKeyB64)
+    (privateKey, publicKey') <- HttpSig.generateKeyPair
     let mSig =
           HttpSig.sign privateKey exampleParams exampleBodyHash (first (CI.mk . encodeUtf8) <$> exampleHeaders)
     case mSig of

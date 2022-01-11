@@ -16,17 +16,15 @@ import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Credentials
 import Beckn.Types.SlidingWindowLimiter
+import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
-import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Flow
-import System.Environment (lookupEnv)
 import Types.Geofencing
 import Types.Metrics
 
@@ -46,8 +44,6 @@ data AppCfg = AppCfg
     hostName :: Text,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
-    credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
     searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
     encService :: (String, Word16),
@@ -59,7 +55,6 @@ data AppCfg = AppCfg
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
     geofencingConfig :: GeofencingConfig,
-    signatureExpiry :: Seconds,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -71,6 +66,7 @@ data AppCfg = AppCfg
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets,
+    authEntity :: AuthenticatingEntity',
     disableSignatureAuth :: Bool
   }
   deriving (Generic, FromDhall)
@@ -87,8 +83,6 @@ data AppEnv = AppEnv
     xProviderUri :: BaseUrl,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
-    credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
     searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
     encService :: (String, Word16),
@@ -97,7 +91,6 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     geofencingConfig :: GeofencingConfig,
-    signatureExpiry :: Seconds,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -114,16 +107,13 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
-  hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  hostname <- getPodName
   isShuttingDown <- newEmptyTMVarIO
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  return $
-    AppEnv
-      { ..
-      }
+  return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} =
@@ -136,6 +126,6 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getRegistry = credRegistry
-  getSigningKeys = signingKeys
-  getSignatureExpiry = signatureExpiry
+  getSigningKey = (.config.authEntity.signingKey)
+  getUniqueKeyId = (.config.authEntity.uniqueKeyId)
+  getSignatureExpiry = (.config.authEntity.signatureExpiry)

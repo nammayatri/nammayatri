@@ -33,10 +33,10 @@ in
 , selfURI = "http://localhost:8022/parking/v1"
 , httpClientOptions = common.httpClientOptions
 , authEntity =
-    { credRegistry = common.credRegistry
-    , signingKeys = common.signingKeys
-    , signatureExpiry = common.signatureExpiry
-    }
+  { signingKey = sec.signingKey
+  , uniqueKeyId = "juspay-mobility-bap-1-key"
+  , signatureExpiry = common.signatureExpiry
+  }
 , authServiceUrl = common.authServiceUrl
 , gatewayUrl = juspayGatewayUrl
 , hostName = "localhost"

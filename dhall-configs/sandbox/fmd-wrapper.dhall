@@ -16,7 +16,7 @@ let pgcfg =
   , schemaName = "atlas_fmd_wrapper"
   }
 
-let esqDBCfg = 
+let esqDBCfg =
   { connectHost = postgresConfig.connectHost
   , connectPort = postgresConfig.connectPort
   , connectUser = postgresConfig.connectUser
@@ -47,11 +47,6 @@ let dunzoConfig =
 
 let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
 
-let httpClientOptions =
-  { timeoutMs = +2000
-  , maxRetries = +3
-  }
-
 in
 
 { dbCfg = pgcfg
@@ -66,12 +61,14 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
 , coreVersion = "0.9.1"
 , dzConfig = dunzoConfig
-, credRegistry = common.credRegistry
-, signingKeys = common.signingKeys
-, signatureExpiry = common.signatureExpiry
+, authEntity =
+  { signingKey = sec.signingKey
+  , uniqueKeyId = "juspay-dunzo-fmd-bpp-key-sandbox"
+  , signatureExpiry = common.signatureExpiry
+  }
 , selfId = "JUSPAY.DUNZO.FMD.BPP.SANDBOX"
 , graceTerminationPeriod = +90
-, httpClientOptions = httpClientOptions
+, httpClientOptions = common.httpClientOptions
 , hostName = "localhost"
 , nwAddress = "http://localhost:8018/v1/"
 , registryUrl = common.registryUrl

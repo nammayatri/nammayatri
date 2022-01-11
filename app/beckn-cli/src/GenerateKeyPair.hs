@@ -2,13 +2,14 @@
 
 module GenerateKeyPair where
 
-import Beckn.Utils.Registry
+import Beckn.Types.Credentials
+import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 
 data GenerateKeyPairResponse = GenerateKeyPairResponse
-  { privateKey :: Text,
-    publicKey :: Text
+  { privateKey :: PrivateKey,
+    publicKey :: PublicKey
   }
   deriving stock (Show, Eq, Generic)
   deriving anyclass (ToJSON, FromJSON)
@@ -16,9 +17,4 @@ data GenerateKeyPairResponse = GenerateKeyPairResponse
 generateKeyPair :: L.Flow GenerateKeyPairResponse
 generateKeyPair = do
   L.logInfo @Text "GenerateKeyPair" "Generating random key pair."
-  (privateKeyBS, publicKeyBS) <- L.runIO prepareSigningKeyPair
-  pure $
-    GenerateKeyPairResponse
-      { privateKey = decodeUtf8 privateKeyBS,
-        publicKey = decodeUtf8 publicKeyBS
-      }
+  L.runIO HttpSig.generateKeyPair <&> uncurry GenerateKeyPairResponse

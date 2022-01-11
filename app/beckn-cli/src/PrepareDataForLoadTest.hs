@@ -8,6 +8,7 @@ module PrepareDataForLoadTest
   )
 where
 
+import Beckn.Types.Base64
 import qualified Beckn.Types.Core.ReqTypes as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import qualified Beckn.Types.Core.Taxi.Common.Context as API
@@ -42,7 +43,7 @@ prepareDataForLoadTest privateKey nmbOfReq filePath = do
       let bodyHash = S.becknSignatureHash body
       let headers = [("(created)", ""), ("(expires)", ""), ("digest", "")]
       let signatureParams = S.mkSignatureParams "JUSPAY.MOBILITY.APP.UAT.1" "juspay-mobility-bap-1-key" now 600 S.Ed25519
-      signature <- S.sign (Base64.decodeLenient privateKey) signatureParams bodyHash headers
+      signature <- S.sign (Base64 $ Base64.decodeLenient privateKey) signatureParams bodyHash headers
       pure $ RequestForLoadTest (decodeUtf8 body) (decodeUtf8 $ S.encode $ S.SignaturePayload signature signatureParams)
   L.runIO . writeFile (T.unpack filePath) . decodeUtf8 . J.encode . catMaybes $ reqs
 

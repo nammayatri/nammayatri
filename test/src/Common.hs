@@ -1,6 +1,6 @@
 module Common where
 
-import Beckn.Utils.Registry (decodeKey)
+import Beckn.Types.Base64
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.Aeson as J
 import qualified Data.ByteString as B
@@ -30,8 +30,8 @@ verifyError expectedCode expectedMessage serverResponse = do
         `shouldSatisfy` (expectedMessage `B.isInfixOf`)
     _ -> expectationFailure ("Expected " <> B.toString expectedMessage <> " error.")
 
-privateKey :: ByteString
-privateKey = fromJust $ decodeKey "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
+privateKey :: Base64
+privateKey = "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
 
 signRequest :: ToJSON req => req -> POSIXTime -> Text -> Text -> ByteString
 signRequest req now orgId keyId =

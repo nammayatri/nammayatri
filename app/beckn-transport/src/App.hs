@@ -52,10 +52,7 @@ runTransporterBackendApp' appCfg = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map (getShortId . Organization.shortId) allProviders
-        managersSettings <-
-          prepareAuthManagers flowRt appEnv allShortIds
-            & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
-        managers <- createManagers managersSettings
+        managers <- createManagers $ prepareAuthManagers flowRt appEnv allShortIds
         logInfo $ "Loaded http managers - " <> show (keys managers)
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections $ appCfg.redisCfg)

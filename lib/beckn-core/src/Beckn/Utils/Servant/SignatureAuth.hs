@@ -3,7 +3,6 @@
 
 module Beckn.Utils.Servant.SignatureAuth where
 
-import Beckn.Exit
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Types.Error
@@ -13,12 +12,10 @@ import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Types.Registry.API as RegistryAPI
 import qualified Beckn.Types.Registry.Routes as Registry
 import Beckn.Types.Registry.Subscriber (Subscriber)
-import Beckn.Utils.App
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging (HasLog)
 import Beckn.Utils.Monitoring.Prometheus.Servant (SanitizedUrl (..))
-import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Server (HasEnvEntry (..), runFlowRDelayedIO)
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import Control.Arrow
@@ -66,19 +63,17 @@ import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
 data SignatureAuth (header :: Symbol)
 
 class AuthenticatingEntity r where
-  getRegistry :: r -> [Credential]
-  getSigningKeys :: r -> [SigningKey]
+  getSigningKey :: r -> PrivateKey
+  getUniqueKeyId :: r -> Text
   getSignatureExpiry :: r -> Seconds
 
 data AuthenticatingEntity' = AuthenticatingEntity'
-  { credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
+  { signingKey :: PrivateKey,
+    uniqueKeyId :: Text,
     signatureExpiry :: Seconds
   }
   deriving (Generic, FromDhall)
 
--- | Implementation of lookup.
--- LookupMethod lookup =>
 data SignatureAuthResult = SignatureAuthResult
   { signature :: HttpSig.SignaturePayload,
     subscriber :: Subscriber
@@ -133,7 +128,7 @@ instance
 
 -- | The client implementation for SignatureAuth is a no-op, as we do not have
 -- a request that we can work with at this layer. Clients should instead use
--- `signatureAuthManager` as their `Manager` to create and add the signature.
+-- `prepareAuthManager` as their `Manager` to create and add the signature.
 -- This is a bit ugly, but it does not appear that we have much of a choice in
 -- this regard given what plumbing options Servant gives us.
 instance
@@ -153,33 +148,35 @@ instance
 signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
-signatureAuthManager ::
-  HasLog r =>
+prepareAuthManager ::
+  ( HasLog r,
+    AuthenticatingEntity r
+  ) =>
   R.FlowRuntime ->
   r ->
   Text ->
-  Seconds ->
-  Text ->
-  HttpSig.PrivateKey ->
   Text ->
   Http.ManagerSettings
-signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueKeyId =
+prepareAuthManager flowRt appEnv header subscriberId =
   Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
-    doSignature req = do
+    doSignature req = withLogTag "prepareAuthManager" do
       now <- liftIO getPOSIXTime
-      let params = HttpSig.mkSignatureParams shortOrgId uniqueKeyId now signatureExpiry HttpSig.Ed25519
-      body <- getBody $ Http.requestBody req
+      let params = HttpSig.mkSignatureParams subscriberId uniqueKeyId now signatureExpiry HttpSig.Ed25519
+      let body = getBody $ Http.requestBody req
       let bodyHash = HttpSig.becknSignatureHash body
       let headers = Http.requestHeaders req
       let signatureMsg = HttpSig.makeSignatureString params bodyHash headers
-      logTagDebug "signatureAuthManager" $ "Request body for signing: " +|| body ||+ ""
-      logTagDebug "signatureAuthManager" $ "Signature Message: " +|| signatureMsg ||+ ""
+      logDebug $ "Request body for signing: " +|| body ||+ ""
+      logDebug $ "Signature Message: " +|| signatureMsg ||+ ""
       addSignature bodyHash params headers req
         & fromMaybeM (InternalError $ "Could not add signature: " <> show params)
-    getBody (Http.RequestBodyLBS body) = pure $ BSL.toStrict body
-    getBody (Http.RequestBodyBS body) = pure body
-    getBody _ = pure "<MISSING_BODY>"
+    getBody (Http.RequestBodyLBS body) = BSL.toStrict body
+    getBody (Http.RequestBodyBS body) = body
+    getBody _ = "<MISSING_BODY>"
+    signPrivKey = getSigningKey appEnv
+    uniqueKeyId = getUniqueKeyId appEnv
+    signatureExpiry = getSignatureExpiry appEnv
 
     -- FIXME: we don't currently deal with Content-Length not being there (this is
     -- filled later, so we might need to have some special handling)
@@ -191,7 +188,7 @@ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header key uniqueK
           if isJust $ lookup ciHeader headers
             then Just req
             else do
-              signature <- HttpSig.sign key params bodyHash headers
+              signature <- HttpSig.sign signPrivKey params bodyHash headers
               let headerVal = HttpSig.encode $ HttpSig.SignaturePayload signature params
               Just $ req {Http.requestHeaders = (ciHeader, headerVal) : headers}
 
@@ -214,9 +211,7 @@ verifySignature headerName signPayload bodyHash = do
     Just subscriber -> do
       disableSignatureAuth <- askConfig (.disableSignatureAuth)
       unless disableSignatureAuth do
-        publicKey <-
-          Registry.decodeKey subscriber.signing_public_key
-            & fromMaybeM (InternalError "Couldn't decode public key from registry.")
+        let publicKey = subscriber.signing_public_key
         isVerified <- performVerification publicKey hostName
         unless isVerified $ do
           logTagError logTag "Signature is not valid."
@@ -262,27 +257,6 @@ verifySignature headerName signPayload bodyHash = do
       "Proxy-Authorization" -> "Proxy-Authenticate"
       _ -> ""
 
-prepareAuthManager ::
-  HasLog r =>
-  AuthenticatingEntity r =>
-  R.FlowRuntime ->
-  r ->
-  Text ->
-  Text ->
-  Either Text Http.ManagerSettings
-prepareAuthManager flowRt appEnv header shortOrgId = do
-  let registry = getRegistry appEnv
-  let signingKeys = getSigningKeys appEnv
-  let mCred = Registry.lookupOrg shortOrgId registry
-  let signatureExpiry = getSignatureExpiry appEnv
-  creds <- mCred & maybeToRight ("No credentials for: " <> shortOrgId)
-  let uniqueKeyId = creds.uniqueKeyId
-  let mSigningKey = Registry.lookupSigningKey uniqueKeyId signingKeys
-  encodedKey <- mSigningKey & maybeToRight ("No private key found for credential: " <> uniqueKeyId)
-  let mPrivateKey = Registry.decodeKey $ encodedKey.signPrivKey
-  privateKey <- mPrivateKey & maybeToRight ("Could not decode private key for credential: " <> uniqueKeyId)
-  pure $ signatureAuthManager flowRt appEnv shortOrgId signatureExpiry header privateKey uniqueKeyId
-
 makeManagerMap :: [String] -> [Http.ManagerSettings] -> Map String Http.ManagerSettings
 makeManagerMap managerKeys managers = Map.fromList $ zip managerKeys managers
 
@@ -291,11 +265,11 @@ prepareAuthManagers ::
   R.FlowRuntime ->
   r ->
   [Text] ->
-  Either Text (Map String Http.ManagerSettings)
+  Map String Http.ManagerSettings
 prepareAuthManagers flowRt appEnv allShortIds = do
   let managerKeys = map (\shortId -> signatureAuthManagerKey <> "-" <> T.unpack shortId) allShortIds
-  mapM (prepareAuthManager flowRt appEnv "Authorization") allShortIds
-    <&> makeManagerMap managerKeys
+  map (prepareAuthManager flowRt appEnv "Authorization") allShortIds
+    & makeManagerMap managerKeys
 
 modFlowRtWithAuthManagers ::
   ( AuthenticatingEntity r,
@@ -309,9 +283,7 @@ modFlowRtWithAuthManagers ::
   [Text] ->
   m R.FlowRuntime
 modFlowRtWithAuthManagers flowRt appEnv orgShortIds = do
-  managersSettings <-
-    prepareAuthManagers flowRt appEnv orgShortIds
-      & handleLeft exitAuthManagerPrepFailure "Could not prepare authentication managers: "
+  let managersSettings = prepareAuthManagers flowRt appEnv orgShortIds
   managers <- createManagers managersSettings
   logInfo $ "Loaded http managers - " <> show (keys managers)
   pure $ flowRt {R._httpClientManagers = managers}

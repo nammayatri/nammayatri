@@ -17,7 +17,6 @@ import qualified App.Types as App
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Types.Common
-import Beckn.Types.Credentials
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client (HttpClientOptions)
@@ -50,12 +49,9 @@ data BTMEnv = BTMEnv
   { config :: BTMCfg,
     dbCfg :: DBConfig,
     nwAddress :: BaseUrl,
-    credRegistry :: [Credential],
-    signingKeys :: [SigningKey],
     encService :: (String, Word16),
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
-    signatureExpiry :: Seconds,
     fcmUrl :: BaseUrl,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
@@ -88,6 +84,6 @@ type FlowHandler = FlowHandlerR BTMEnv
 type FlowServer api = FlowServerR BTMEnv api
 
 instance AuthenticatingEntity BTMEnv where
-  getRegistry = credRegistry
-  getSigningKeys = signingKeys
-  getSignatureExpiry = signatureExpiry
+  getSigningKey = (.config.appCfg.authEntity.signingKey)
+  getUniqueKeyId = (.config.appCfg.authEntity.uniqueKeyId)
+  getSignatureExpiry = (.config.appCfg.authEntity.signatureExpiry)

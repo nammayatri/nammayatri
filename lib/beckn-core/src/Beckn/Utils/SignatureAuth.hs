@@ -23,6 +23,8 @@ module Beckn.Utils.SignatureAuth
   )
 where
 
+import Beckn.Types.Base64
+import Beckn.Types.Credentials
 import Beckn.Types.Time (Seconds, getSeconds)
 import qualified Crypto.Error as Crypto
 import qualified Crypto.Hash as Hash
@@ -45,10 +47,6 @@ import Text.ParserCombinators.Parsec
 -- https://tools.ietf.org/id/draft-cavage-http-signatures-12.html
 
 -- | Keys are bytestrings, aliased for readability
-type PrivateKey = ByteString
-
-type PublicKey = ByteString
-
 -- | Signatures are bytestrings, aliased for readability
 type Signature = ByteString
 
@@ -235,7 +233,7 @@ makeSignatureString params bodyHash allHeaders =
 
 -- | Sign a request given the key, parameters and request headers
 sign :: PrivateKey -> SignatureParams -> Hash -> [Header] -> Maybe Signature
-sign key params bodyHash allHeaders =
+sign (Base64 key) params bodyHash allHeaders =
   let msg = makeSignatureString params bodyHash allHeaders
       sk = Ed25519.secretKey key
       pk = Ed25519.toPublic <$> sk
@@ -243,7 +241,7 @@ sign key params bodyHash allHeaders =
    in Crypto.maybeCryptoError $ BA.convert <$> signature
 
 verify :: PublicKey -> SignatureParams -> Hash -> [Header] -> Signature -> Either Crypto.CryptoError Bool
-verify key params bodyHash allHeaders signatureBs =
+verify (Base64 key) params bodyHash allHeaders signatureBs =
   let msg = makeSignatureString params bodyHash allHeaders
       pk = Ed25519.publicKey key
       signature = Ed25519.signature signatureBs
@@ -260,4 +258,4 @@ generateKeyPair :: IO (PrivateKey, PublicKey)
 generateKeyPair = do
   secretKey <- Ed25519.generateSecretKey
   let publicKey = Ed25519.toPublic secretKey
-  pure (BS.pack . BA.unpack $ secretKey, BS.pack . BA.unpack $ publicKey)
+  pure (Base64 . BS.pack . BA.unpack $ secretKey, Base64 . BS.pack . BA.unpack $ publicKey)
