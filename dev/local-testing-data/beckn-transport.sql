@@ -128,7 +128,7 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
   ('001b93df-4f7c-440f-bada-4d46c396d7d0', 'Some', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+92', '001', NULL, true, '001cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '001d2f36-a455-4625-bfb4-22807fefa1eb', NULL, now(), now());
 
 INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
-  ('001d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1233', '001df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '001b93df-4f7c-440f-bada-4d46c396d7d0', 'DRIVER', now(), now());
+  ('001d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1233', '001df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '001b93df-4f7c-440f-bada-4d46c396d7d0', 'USER', now(), now());
 
 -- Driver2
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
@@ -141,7 +141,7 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
   ('002b93df-4f7c-440f-bada-4d46c396d7d0', 'Another', 'Cool', 'Driver', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL,  '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+93', '002', NULL, true, '002cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '002d2f36-a455-4625-bfb4-22807fefa1eb', NULL, now(), now());
 
 INSERT INTO atlas_transporter.registration_token (id, auth_medium, auth_type, auth_value_hash, token, verified, auth_expiry, token_expiry, attempts, entity_id, entity_type, created_at, updated_at) values
-  ('002d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1234', '002df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '002b93df-4f7c-440f-bada-4d46c396d7d0', 'DRIVER', now(), now());
+  ('002d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1234', '002df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '002b93df-4f7c-440f-bada-4d46c396d7d0', 'USER', now(), now());
 
 INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, False, False, now(), now() from atlas_transporter.person where id ='001b93df-4f7c-440f-bada-4d46c396d7d0';
 INSERT INTO atlas_transporter.driver_information (driver_id, active, on_ride, created_at, updated_at) select id, False, False, now(), now() from atlas_transporter.person where id ='002b93df-4f7c-440f-bada-4d46c396d7d0';
