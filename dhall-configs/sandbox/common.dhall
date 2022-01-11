@@ -68,5 +68,5 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/"
    , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"
    , registryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
-   , authServiceUrl = "https://api.sandbox.beckn.juspay.in/dev/bap/"
+   , authServiceUrl = "http://beckn-app-backend-sandbox.atlas:8013"
    }
