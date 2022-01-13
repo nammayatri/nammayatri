@@ -48,7 +48,10 @@ withCallback' doWithCallback transporter action api context cbUrl f = do
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
   bppUri <- makeBppUrl (transporter.id)
-  let context' = context & #bpp_uri ?~ bppUri
+  let context' =
+        context
+          & #bpp_uri ?~ bppUri
+          & #bpp_id ?~ transporter.shortId.getShortId
   withBecknCallbackMig doWithCallback (Just authKey) action api context' cbUrl f
 
 callBAP ::

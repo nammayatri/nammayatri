@@ -27,6 +27,7 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
 import Product.MetroOffer (buildContextMetro)
 import Product.Serviceability
+import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchReqLocation as Location
@@ -35,6 +36,7 @@ import qualified Types.API.Search as API
 import Types.API.Serviceability
 import Types.Error
 import Types.Metrics (CoreMetrics)
+import Types.Storage.OnSearchEvent
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as SQuote
@@ -80,6 +82,17 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
       unlessM (rideServiceable serviceabilityReq) $
         throwError $ ProductNotServiceable "due to georestrictions"
 
+logOnSearchEvent :: DBFlow m r => OnSearch.OnSearchReq -> m ()
+logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
+  createdAt <- getCurrentTime
+  id <- generateGUID
+  bppId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing context.bpp_id")
+  let transactionId = context.transaction_id
+  let errorType = show . (._type) <$> mbErr
+  let errorCode = (.code) <$> mbErr
+  let errorMessage = (.message) =<< mbErr
+  OnSearchEvent.createFlow OnSearchEvent {..}
+
 searchCb ::
   SignatureAuthResult ->
   SignatureAuthResult ->
@@ -88,6 +101,7 @@ searchCb ::
 searchCb _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext $ req.context
   Metrics.finishSearchMetrics $ req.context.transaction_id
+  logOnSearchEvent req
   case req.contents of
     Right msg -> do
       let catalog = msg.catalog

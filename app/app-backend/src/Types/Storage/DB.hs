@@ -8,6 +8,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.CancellationReason as CancellationReason
 import qualified Types.Storage.Geometry as Geometry
 import qualified Types.Storage.Issue as Issue
+import qualified Types.Storage.OnSearchEvent as OnSearchEvent
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
@@ -30,7 +31,8 @@ data AppDb f = AppDb
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
     geometry :: f (B.TableEntity Geometry.GeometryT),
     cancellationReason :: f (B.TableEntity CancellationReason.CancellationReasonT),
-    rideCancellationReason :: f (B.TableEntity RideCancellationReason.RideCancellationReasonT)
+    rideCancellationReason :: f (B.TableEntity RideCancellationReason.RideCancellationReasonT),
+    onSearchEvent :: f (B.TableEntity OnSearchEvent.OnSearchEventT)
   }
   deriving (Generic, B.Database be)
 
@@ -49,7 +51,8 @@ appDb dbSchemaName =
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
         geometry = setSchema dbSchemaName <> Geometry.fieldEMod,
         cancellationReason = setSchema dbSchemaName <> CancellationReason.fieldEMod,
-        rideCancellationReason = setSchema dbSchemaName <> RideCancellationReason.fieldEMod
+        rideCancellationReason = setSchema dbSchemaName <> RideCancellationReason.fieldEMod,
+        onSearchEvent = setSchema dbSchemaName <> OnSearchEvent.fieldEMod
       }
   where
     setSchema schema = setEntitySchema (Just schema)
