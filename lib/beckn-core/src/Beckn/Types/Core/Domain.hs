@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Domain (Domain (..)) where
 
+import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Example
 import Beckn.Utils.JSON (replaceUnderscoresString)
 import Data.Aeson
@@ -14,7 +15,7 @@ data Domain
   | HEALTHCARE
   | METRO
   | PARKING
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Generic, Show, FromDhall)
 
 instance Example Domain where
   example = MOBILITY

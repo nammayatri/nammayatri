@@ -174,6 +174,24 @@ instance IsHTTPError PersonError where
 
 instance IsAPIError PersonError
 
+data RegistryError
+  = SubscriberNotFound
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RegistryError
+
+instance IsBaseError RegistryError where
+  toMessage = \case
+    SubscriberNotFound -> Just "Couldn't find subscriber in registry."
+
+instance IsHTTPError RegistryError where
+  toErrorCode = \case
+    SubscriberNotFound -> "SUBSCRIBER_NOT_FOUND"
+  toHttpCode = \case
+    SubscriberNotFound -> E500
+
+instance IsAPIError RegistryError
+
 data LocationError
   = LocationNotFound
   | LocationDoesNotExist

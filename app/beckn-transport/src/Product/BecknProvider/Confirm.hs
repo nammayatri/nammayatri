@@ -102,6 +102,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
             fromLocationId = searchRequest.fromLocationId,
             toLocationId = searchRequest.toLocationId,
             bapId = searchRequest.bapId,
+            bapUri = searchRequest.bapUri,
             estimatedFare = quote.estimatedFare,
             discount = quote.discount,
             estimatedTotalFare = quote.estimatedTotalFare,

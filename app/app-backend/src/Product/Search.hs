@@ -111,12 +111,13 @@ searchCbService :: SearchCbFlow m r => Common.Context -> OnSearch.Catalog -> m (
 searchCbService context catalog = do
   let searchRequestId = Id $ context.transaction_id
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
+  providerId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
   providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")
   case catalog.bpp_providers of
     [] -> throwError $ InvalidRequest "Missing bpp/providers" -- TODO: make it NonEmpty
     (provider : _) -> do
       let items = provider.items
-      quotes <- traverse (buildQuote searchRequest providerUrl provider) items
+      quotes <- traverse (buildQuote searchRequest providerId providerUrl provider) items
       DB.runSqlDBTransaction $ traverse_ QQuote.create quotes
 
 buildSearchRequest ::
@@ -156,11 +157,12 @@ buildSearchRequest userId from to distance now = do
 buildQuote ::
   MonadFlow m =>
   SearchRequest.SearchRequest ->
+  Text ->
   BaseUrl ->
   OnSearch.Provider ->
   OnSearch.Item ->
   m SQuote.Quote
-buildQuote searchRequest providerUrl provider item = do
+buildQuote searchRequest providerId providerUrl provider item = do
   now <- getCurrentTime
   uid <- generateGUID
   return
@@ -175,6 +177,7 @@ buildQuote searchRequest providerUrl provider item = do
         providerMobileNumber = provider.contacts,
         providerName = provider.name,
         providerCompletedRidesCount = provider.rides_completed,
+        providerId,
         providerUrl,
         vehicleVariant = item.vehicle_variant,
         createdAt = now

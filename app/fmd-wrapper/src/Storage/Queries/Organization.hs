@@ -48,16 +48,6 @@ listOrganizations mlimit moffset oType status_ = do
           _type `B.in_` (B.val_ <$> oType) ||. complementVal oType
         ]
 
-findByBapUrl :: DBFlow m r => BaseUrl -> m (Maybe Org.Organization)
-findByBapUrl bapUrl = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Org.Organization {..} =
-      callbackUrl ==. B.val_ (Just bapUrl)
-        &&. verified ==. B.val_ True
-        &&. enabled ==. B.val_ True
-
 findOrgByShortId :: DBFlow m r => ShortId Org.Organization -> m (Maybe Org.Organization)
 findOrgByShortId shortId_ = do
   dbTable <- getDbTable

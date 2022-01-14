@@ -34,7 +34,7 @@ search (SignatureAuthResult proxySign _) rawReq = withFlowHandlerBecknAPI do
     providers <- BP.lookup context
     when (null providers) $ throwError NoProviders
     forM_ providers $ \provider -> fork "Provider search" . withLogTag "search_req" $ do
-      providerUrl <- provider.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url") -- Already checked for existance
+      let providerUrl = provider.subscriber_url
       withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) . withRetry $
         -- TODO maybe we should explicitly call sign request here instead of using callAPIWithTrail'?
         void $

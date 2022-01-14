@@ -13,7 +13,8 @@ import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Beckn.Types.Registry
+import Beckn.Utils.Servant.SignatureAuth (AuthenticatingEntity (..), SignatureAuthResult (..))
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Traversable
@@ -55,9 +56,10 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
       Org.findOrganizationById transporterId
         >>= fromMaybeM OrgDoesNotExist
     let callbackUrl = gateway.subscriber_url
+    updContext <- updateContext context transporter
     if not transporter.enabled
       then
-        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $
+        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI updContext callbackUrl $
           throwError AgencyDisabled
       else do
         searchMetricsMVar <- Metrics.startSearchMetrics transporterId
@@ -69,16 +71,39 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
         validity <- getValidTime now startTime
         fromLocation <- buildStartSearchReqLoc pickup.location now
         toLocation <- buildStartSearchReqLoc dropOff.location now
-        let bapOrgId = Id subscriber.subscriber_id
+        let bapOrgId = subscriber.subscriber_id
         uuid <- L.generateGUID
-        let bapUri = req.context.bap_uri
+        let bapUri = subscriber.subscriber_url
         let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId bapUri
         DB.runSqlDBTransaction $ do
           Loc.create fromLocation
           Loc.create toLocation
           QSearchRequest.create searchRequest
-        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $
+        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI updContext callbackUrl $
           onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
+
+updateContext ::
+  ( AuthenticatingEntity r,
+    MonadFlow m,
+    MonadReader r m,
+    Registry m
+  ) =>
+  Context ->
+  Org.Organization ->
+  m Context
+updateContext context transporter = do
+  uniqueKeyId <- asks getUniqueKeyId
+  let regReq =
+        SimpleLookupRequest
+          { unique_key_id = uniqueKeyId,
+            subscriber_id = transporter.shortId.getShortId
+          }
+  transporterInfo <- registryLookup regReq >>= fromMaybeM SubscriberNotFound
+  return
+    context
+      { bpp_id = Just transporterInfo.subscriber_id,
+        bpp_uri = Just transporterInfo.subscriber_url
+      }
 
 buildStartSearchReqLoc :: MonadFlow m => Search.Location -> UTCTime -> m Location.SearchReqLocation
 buildStartSearchReqLoc loc now = do
@@ -111,11 +136,10 @@ mkSearchRequest ::
   Location.SearchReqLocation ->
   Location.SearchReqLocation ->
   Id Org.Organization ->
-  Id Org.Organization ->
+  Text ->
   BaseUrl ->
   SearchRequest.SearchRequest
 mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId bapUri = do
-  let bapId = getId bapOrgId
   SearchRequest.SearchRequest
     { id = Id uuid,
       transactionId = req.context.transaction_id,
@@ -125,7 +149,7 @@ mkSearchRequest req uuid now validity startTime fromLocation toLocation transpor
       requestorId = Id "", -- TODO: Fill this field with Person id.
       fromLocationId = fromLocation.id,
       toLocationId = toLocation.id,
-      bapId = bapId,
+      bapId = bapOrgId,
       bapUri = bapUri,
       createdAt = now
     }

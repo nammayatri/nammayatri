@@ -4,23 +4,37 @@ module Product.ProviderRegistry
 where
 
 import Beckn.Types.Common
+import Beckn.Types.Registry as Registry
+import qualified Beckn.Types.Registry.API as Registry
+import qualified Beckn.Types.Registry.Domain as Registry
+import qualified Beckn.Utils.Registry as Registry
 import EulerHS.Prelude
-import qualified Storage.Queries.Provider as Provider
 import qualified Types.Beckn.Context as B
 import qualified Types.Beckn.Domain as B
-import qualified Types.Storage.Organization as Org
+import Types.Metrics
 
-lookup :: DBFlow m r => B.Context -> m [Org.Organization]
+lookup ::
+  ( MonadReader r m,
+    MonadFlow m,
+    Registry m,
+    CoreMetrics m,
+    HasInConfig r c "registryUrl" BaseUrl
+  ) =>
+  B.Context ->
+  m [Registry.Subscriber]
 lookup context = do
-  providers <- case context.domain of
-    B.MOBILITY -> listDomainProviders Org.MOBILITY
-    B.FINAL_MILE_DELIVERY -> listDomainProviders Org.FINAL_MILE_DELIVERY
-    B.LOCAL_RETAIL -> listDomainProviders Org.LOCAL_RETAIL
-    B.FOOD_AND_BEVERAGE -> listDomainProviders Org.FOOD_AND_BEVERAGE
-    B.HEALTHCARE -> listDomainProviders Org.HEALTHCARE
-    B.METRO -> listDomainProviders Org.METRO
-    B.PARKING -> listDomainProviders Org.PARKING
+  case context.domain of
+    B.MOBILITY -> listDomainProviders Registry.MOBILITY
+    B.FINAL_MILE_DELIVERY -> listDomainProviders Registry.FINAL_MILE_DELIVERY
+    B.LOCAL_RETAIL -> listDomainProviders Registry.LOCAL_RETAIL
+    B.FOOD_AND_BEVERAGE -> listDomainProviders Registry.FOOD_AND_BEVERAGE
+    B.HEALTHCARE -> listDomainProviders Registry.HEALTHCARE
+    B.METRO -> listDomainProviders Registry.METRO
+    B.PARKING -> listDomainProviders Registry.PARKING
     B.UNKNOWN_DOMAIN _ -> pure []
-  pure $ filter (isJust . Org.callbackUrl) providers
   where
-    listDomainProviders = Provider.listProviders Org.PROVIDER
+    listDomainProviders domain =
+      Registry.registryFetch
+        Registry.emptyLookupRequest{_type = Just Registry.BPP,
+                                    domain = Just domain
+                                   }

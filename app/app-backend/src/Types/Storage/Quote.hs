@@ -19,6 +19,7 @@ data QuoteT f = Quote
     estimatedFare :: B.C f Amount,
     discount :: B.C f (Maybe Amount),
     estimatedTotalFare :: B.C f Amount,
+    providerId :: B.C f Text,
     providerUrl :: B.C f BaseUrl,
     providerName :: B.C f Text,
     providerMobileNumber :: B.C f Text,
@@ -67,6 +68,7 @@ fieldEMod =
           estimatedFare = "estimated_fare",
           estimatedTotalFare = "estimated_total_fare",
           vehicleVariant = "vehicle_variant",
+          providerId = "provider_id",
           providerUrl = "provider_url",
           createdAt = "created_at"
         }

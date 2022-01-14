@@ -4,7 +4,6 @@
 module Types.Storage.Organization where
 
 import Beckn.Storage.DB.Utils (fromBackendRowEnum)
-import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Utils.JSON
 import Data.Aeson
@@ -99,10 +98,8 @@ data OrganizationT f = Organization
     verified :: B.C f Bool,
     enabled :: B.C f Bool,
     apiKey :: B.C f (Maybe Text),
-    callbackUrl :: B.C f (Maybe BaseUrl),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    callbackApiKey :: B.C f (Maybe Text),
     info :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
@@ -141,7 +138,5 @@ fieldEMod =
         headCount = "head_count",
         apiKey = "api_key",
         fromTime = "from_time",
-        toTime = "to_time",
-        callbackUrl = "callback_url",
-        callbackApiKey = "callback_api_key"
+        toTime = "to_time"
       }
