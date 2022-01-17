@@ -7,4 +7,4 @@ data Billing = Billing
     name :: Text
   }
   deriving (Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)

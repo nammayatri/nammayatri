@@ -9,4 +9,4 @@ data Location = Location
     gps :: Gps,
     address :: Address
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)

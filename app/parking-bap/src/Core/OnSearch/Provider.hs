@@ -13,4 +13,4 @@ data Provider = Provider
     locations :: [Location],
     items :: Maybe [Item]
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)

@@ -1,6 +1,7 @@
 module Beckn.Types.Core.Migration.Scalar (Scalar (..), Range (..)) where
 
 import Beckn.Utils.JSON
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (max, min)
 
 data Scalar = Scalar
@@ -11,16 +12,16 @@ data Scalar = Scalar
     range :: Maybe Range,
     unit :: Text
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 data ScalarType = CONSTANT | VARIABLE
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 data Range = Range
   { min :: Int,
     max :: Int
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 instance FromJSON Scalar where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

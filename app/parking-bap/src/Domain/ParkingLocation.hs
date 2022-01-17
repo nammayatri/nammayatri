@@ -32,7 +32,7 @@ data ParkingLocationAPIEntity = ParkingLocationAPIEntity
     country :: Text,
     areaCode :: Text
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 makeParkingLocationAPIEntity :: ParkingLocation -> ParkingLocationAPIEntity
 makeParkingLocationAPIEntity ParkingLocation {..} =

@@ -15,4 +15,4 @@ data Item = Item
     matched :: Maybe Bool,
     quantity :: ItemQuantity
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

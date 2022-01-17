@@ -9,6 +9,7 @@ import Data.Function as E hiding (id)
 import Data.Functor as E
 import Data.Kind as E (Type)
 import Data.Maybe as E (fromMaybe, listToMaybe)
+import Data.OpenApi as E (ToSchema)
 import Data.Proxy as E (Proxy (..))
 import Data.Text as E (Text)
 import Data.Time.Clock as E (UTCTime)

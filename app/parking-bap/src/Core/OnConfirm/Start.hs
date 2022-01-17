@@ -10,4 +10,4 @@ data Start = Start
     contact :: Contact,
     time :: Time
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)

@@ -11,4 +11,4 @@ data Address = Address
     country :: Text,
     area_code :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

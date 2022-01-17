@@ -33,7 +33,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     availableSpaces :: Int,
     createdAt :: UTCTime
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 makeQuoteAPIEntity :: Quote -> ParkingLocation -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} parkingLocation = do

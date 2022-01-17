@@ -17,4 +17,4 @@ newtype GetQuotesRes = GetQuotesRes
   { quotes :: [DQuote.QuoteAPIEntity]
   }
   deriving stock (Generic)
-  deriving anyclass (ToJSON)
+  deriving anyclass (ToJSON, ToSchema)

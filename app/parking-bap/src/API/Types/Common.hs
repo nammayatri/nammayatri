@@ -6,4 +6,4 @@ data Gps = Gps
   { lat :: Text,
     lon :: Text
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToSchema)

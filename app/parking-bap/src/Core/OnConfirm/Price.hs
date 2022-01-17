@@ -7,4 +7,4 @@ data Price = Price
   { currency :: Text,
     value :: DecimalValue
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

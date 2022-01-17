@@ -6,4 +6,4 @@ newtype Vehicle = Vehicle
   { registration :: Text
   }
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -20,10 +20,10 @@ data PostQuoteConfirmReq = PostQuoteConfirmReq
     vehicleNumber :: Text,
     requestorName :: Text
   }
-  deriving (Generic, Show, ToJSON, FromJSON)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 newtype PostQuoteConfirmRes = PostQuoteConfirmRes
   { bookingId :: Id Booking
   }
   deriving stock (Generic, Show)
-  deriving anyclass (ToJSON)
+  deriving anyclass (ToJSON, ToSchema)

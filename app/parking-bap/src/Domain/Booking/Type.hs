@@ -9,7 +9,7 @@ import Domain.Quote (Quote)
 import Domain.Search (Person, Search)
 
 data BookingStatus = NEW | AWAITING_PAYMENT | CONFIRMED | CANCELLED
-  deriving (Generic, Show, Read, FromJSON, ToJSON)
+  deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema)
 
 data Booking = Booking
   { id :: Id Booking,

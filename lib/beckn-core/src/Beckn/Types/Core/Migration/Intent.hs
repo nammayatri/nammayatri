@@ -10,6 +10,7 @@ import Beckn.Types.Core.Migration.Tags (Tags)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Types.Core.Migration.Vehicle (Vehicle)
 import Beckn.Utils.Example
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 
 data Intent = Intent
@@ -21,7 +22,7 @@ data Intent = Intent
     item :: Maybe Item,
     tags :: Maybe Tags
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 emptyIntent :: Intent
 emptyIntent =
@@ -53,10 +54,10 @@ data ProviderInfo = ProviderInfo
     category_id :: Maybe Text,
     locations :: Maybe [IdObject]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 newtype DescriptorName = DescriptorName {name :: Text}
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data FulFillmentInfo = FulFillmentInfo
   { id :: Maybe Text,
@@ -65,7 +66,7 @@ data FulFillmentInfo = FulFillmentInfo
     tags :: Maybe Tags,
     vehicle :: Maybe Vehicle
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 emptyFulFillmentInfo :: FulFillmentInfo
 emptyFulFillmentInfo =
@@ -91,7 +92,7 @@ data LocationAndTime = LocationAndTime
   { location :: Maybe Location,
     time :: Maybe Time
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 emptyLocationAndTime :: LocationAndTime
 emptyLocationAndTime =

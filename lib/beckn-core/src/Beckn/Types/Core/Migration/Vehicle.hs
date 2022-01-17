@@ -2,6 +2,7 @@
 
 module Beckn.Types.Core.Migration.Vehicle where
 
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 data Vehicle = Vehicle
@@ -15,4 +16,4 @@ data Vehicle = Vehicle
     energy_type :: Maybe Text,
     registration :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

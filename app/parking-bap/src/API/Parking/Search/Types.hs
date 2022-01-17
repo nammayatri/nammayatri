@@ -18,10 +18,10 @@ data SearchReq = SearchReq
     fromDate :: UTCTime,
     toDate :: UTCTime
   }
-  deriving (Generic, FromJSON)
+  deriving (Generic, FromJSON, ToSchema)
 
 newtype SearchRes = SearchRes
   { searchId :: Id DSearch.Search
   }
   deriving stock (Generic)
-  deriving anyclass (ToJSON)
+  deriving anyclass (ToJSON, ToSchema)

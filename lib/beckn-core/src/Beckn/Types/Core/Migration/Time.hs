@@ -1,6 +1,7 @@
 module Beckn.Types.Core.Migration.Time where
 
 import Beckn.Types.Core.Migration.Duration (Duration)
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 
@@ -11,7 +12,7 @@ data Time = Time
     range :: Maybe Range,
     days :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Eq)
+  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)
 
 emptyTime :: Time
 emptyTime =
@@ -27,4 +28,4 @@ data Range = Range
   { start :: UTCTime,
     end :: UTCTime
   }
-  deriving (Generic, FromJSON, ToJSON, Show, Eq)
+  deriving (Generic, FromJSON, ToJSON, Show, Eq, ToSchema)

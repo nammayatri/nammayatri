@@ -13,6 +13,7 @@ import Beckn.Utils.JSON
 import Data.Aeson (Value (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (typeMismatch)
 import Data.HashMap.Strict (delete)
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, (.=))
 import Servant.Client (BaseUrl)
 
@@ -24,10 +25,10 @@ data Payment = Payment
     status :: Maybe Status,
     time :: Maybe Time
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 data TLMethod = HttpGet | HttpPost
-  deriving (Show)
+  deriving (Generic, Show, ToSchema)
 
 instance FromJSON TLMethod where
   parseJSON (String "http/get") = pure HttpGet
@@ -45,7 +46,7 @@ data Params = Params
     currency :: Text,
     additional :: HashMap Text Text
   }
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Show, ToSchema)
 
 instance FromJSON Params where
   parseJSON = withObject "Params" $ \o ->
@@ -86,10 +87,10 @@ data PaymentType
   | PRE_FULFILLMENT
   | ON_FULFILLMENT
   | POST_FULFILLMENT
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Show, ToSchema)
 
 data Status = PAID | NOT_PAID
-  deriving (Generic, Eq, Show)
+  deriving (Generic, Eq, Show, ToSchema)
 
 instance FromJSON Payment where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

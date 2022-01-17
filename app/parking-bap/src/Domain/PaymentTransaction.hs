@@ -8,7 +8,7 @@ import Beckn.Types.Id
 import Domain.Booking.Type
 
 data PaymentStatus = PENDING | FAILED | SUCCESS
-  deriving (Generic, Show, Read, FromJSON, ToJSON)
+  deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema)
 
 data PaymentTransaction = PaymentTransaction
   { id :: Id PaymentTransaction,
@@ -21,7 +21,7 @@ data PaymentTransaction = PaymentTransaction
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 data PaymentTransactionAPIEntity = PaymentTransactionAPIEntity
   { id :: Id PaymentTransaction,
@@ -32,7 +32,7 @@ data PaymentTransactionAPIEntity = PaymentTransactionAPIEntity
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 makePaymentTransactionAPIEntity :: PaymentTransaction -> PaymentTransactionAPIEntity
 makePaymentTransactionAPIEntity PaymentTransaction {..} = PaymentTransactionAPIEntity {..}

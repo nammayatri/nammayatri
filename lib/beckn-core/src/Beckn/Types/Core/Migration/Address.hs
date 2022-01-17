@@ -1,5 +1,6 @@
 module Beckn.Types.Core.Migration.Address (Address (..)) where
 
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (state)
 
 data Address = Address
@@ -14,4 +15,4 @@ data Address = Address
     country :: Maybe Text,
     area_code :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

@@ -9,6 +9,7 @@ import Beckn.Types.Core.Migration.Gps (Gps)
 import Beckn.Types.Core.Migration.Time (Time)
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 
 data Location = Location
@@ -24,7 +25,7 @@ data Location = Location
     _3dspace :: Maybe Text,
     time :: Maybe Time
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToSchema)
 
 emptyLocation :: Location
 emptyLocation =

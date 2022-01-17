@@ -7,4 +7,4 @@ newtype StartEnd = StartEnd
   { time :: Time
   }
   deriving stock (Generic)
-  deriving anyclass (ToJSON)
+  deriving anyclass (ToJSON, ToSchema)

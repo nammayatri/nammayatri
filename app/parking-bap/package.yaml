@@ -70,6 +70,8 @@ dependencies:
   - servant-client
   - persistent
   - template-haskell
+  - openapi3
+  - servant-openapi3
 
 ghc-options:
   - -Wall

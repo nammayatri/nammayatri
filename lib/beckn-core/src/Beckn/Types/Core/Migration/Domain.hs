@@ -2,9 +2,12 @@ module Beckn.Types.Core.Migration.Domain (Domain (..)) where
 
 import Beckn.Utils.Example
 import Beckn.Utils.JSON (constructorsWithHyphensUntagged)
+--(ToSchema (declareNamedSchema), NamedSchema (NamedSchema))
+
+import qualified Control.Lens as L
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
-import Data.OpenApi (ToSchema)
+import Data.OpenApi hiding (Example)
 import EulerHS.Prelude
 
 data Domain
@@ -16,7 +19,23 @@ data Domain
   | METRO
   | PARKING
   | UNKNOWN_DOMAIN Text
-  deriving (Eq, Generic, Show, ToSchema)
+  deriving (Eq, Generic, Show)
+
+instance ToSchema Domain where
+  declareNamedSchema _ = do
+    return $
+      NamedSchema (Just "Domain") $
+        mempty
+          & type_ L.?~ OpenApiString
+          & enum_
+            L.?~ [ "MOBILITY",
+                   "FINAL_MILE_DELIVERY",
+                   "LOCAL_RETAIL",
+                   "FOOD_AND_BEVERAGE",
+                   "HEALTHCARE",
+                   "METRO",
+                   "PARKING"
+                 ]
 
 instance ToJSON Domain where
   toJSON MOBILITY = String "nic2004:60221"
