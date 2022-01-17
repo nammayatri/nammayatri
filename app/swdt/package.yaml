@@ -17,6 +17,7 @@ description: Please see the README on GitHub at <https://bitbucket.org/juspay/be
 
 default-extensions:
   - DataKinds
+  - KindSignatures
   - TypeOperators
   - DeriveGeneric
   - DeriveAnyClass
@@ -29,38 +30,37 @@ default-extensions:
   - DeriveGeneric
   - DerivingStrategies
   - DuplicateRecordFields
-  # - ExplicitNamespaces
-  # - FlexibleContexts
-  # - FlexibleInstances
-  # - FunctionalDependencies
-  # - GADTs
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
   - LambdaCase
-  # - MultiParamTypeClasses
-  # - MultiWayIf
+  - MultiParamTypeClasses
+  - MultiWayIf
   - NamedFieldPuns
-  # - NoImplicitPrelude
-  # - OverloadedLabels
-  # - OverloadedStrings
-  # - PackageImports
-  # - PatternSynonyms
-  # - PolyKinds
-  # - RankNTypes
+  - NoImplicitPrelude
+  - OverloadedLabels
+  - OverloadedStrings
+  - PackageImports
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
   - RecordWildCards
-  # - ScopedTypeVariables
-  # - TupleSections
-  # - TypeApplications
-  # - TypeFamilies
-  # - TypeOperators
-  # - ViewPatterns
-  # - BlockArguments
-  # - TypeSynonymInstances
-  # - UndecidableInstances
+  - ScopedTypeVariables
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
 
 dependencies:
   - base >= 4.7 && < 5
-  # - euler-hs
-  # - record-hasfield
-  # - record-dot-preprocessor
+  - record-hasfield
+  - record-dot-preprocessor
   - aeson
   - beckn-core
   - bytestring
@@ -77,16 +77,24 @@ dependencies:
   - unordered-containers
   - servant-client
   - servant-client-core
+  - unliftio
+  - exceptions
+  - http-client
+  - case-insensitive
+  - string-conversions
+  - scientific
+  - vector
+  - extra
 
 ghc-options:
-  # - -fwrite-ide-info
-  # - -hiedir=.hie
+  - -fwrite-ide-info
+  - -hiedir=.hie
   - -Wall
-  # - -Wcompat
-  # - -Widentities
-  # - -Wunused-imports
-  # - -Werror
-  # - -fplugin=RecordDotPreprocessor
+  - -Wcompat
+  - -Widentities
+  - -Wunused-imports
+#  - -Werror
+  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

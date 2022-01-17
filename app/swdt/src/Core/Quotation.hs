@@ -2,18 +2,20 @@
 module Core.Quotation where
 
 -- import Beckn.Types.Core.Migration.Duration
-import Core.Price
+
 -- import Core.DecimalValue
+
+--        import EulerHS.Prelude
+
+import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Types.Core.Migration.Duration
 import Beckn.Utils.Example
---        import EulerHS.Prelude
+import Core.Price
 import Data.Aeson
-import Data.Text
-import GHC.Generics
 
 options :: Options
-options = defaultOptions { omitNothingFields = True }
+options = defaultOptions {omitNothingFields = True}
 
 data Quotation = Quotation
   { price :: Price,
@@ -42,7 +44,5 @@ instance Example Quotation where
         ttl = Just (Duration "How long inventory would be blocked")
       }
 
-
 example_quotation :: Quotation
 example_quotation = example
-

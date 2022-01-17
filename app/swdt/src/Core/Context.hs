@@ -1,30 +1,15 @@
--- module Core.Context (module Reexport) where
--- 
--- import Beckn.Types.Core.Migration.Context as Reexport
-
 module Core.Context where
 
--- import Beckn.Types.App
+import Beckn.Prelude
 import Beckn.Types.Core.Migration.Domain (Domain)
--- import Core.Domain (Domain)
 import Beckn.Types.Time (Iso8601Time)
--- import Core.Time (Iso8601Time)
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-
 import Data.Aeson
 import Data.Maybe (fromJust)
 import Data.OpenApi (ToSchema)
-import Data.Text
-import Data.Time (UTCTime)
-import GHC.Generics
--- import EulerHS.Prelude
--- import Servant.Client
 import Servant.Client.Core
 
-
- 
- 
 data Context = Context
   { domain :: Domain,
     country :: Text,
@@ -45,11 +30,10 @@ data Context = Context
 
 -- instance ToSchema Servant.BaseUrl where
 --   declareNamedSchema _ = do
-    -- aSchema <- declareSchema (Proxy :: Proxy Text)
-    -- return $
-    --   NamedSchema (Just "BaseUrl") aSchema
--- 
-
+-- aSchema <- declareSchema (Proxy :: Proxy Text)
+-- return $
+--   NamedSchema (Just "BaseUrl") aSchema
+--
 
 instance ToJSON Context where
   toJSON = genericToJSON $ defaultOptions {omitNothingFields = True}
@@ -72,6 +56,7 @@ instance Example Context where
         ttl = Nothing,
         key = Nothing
       }
+
 example_context :: Context
 example_context = example
 

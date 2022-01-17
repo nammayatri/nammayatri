@@ -105,6 +105,15 @@ cradle:
     - path: "app/mock-registry/server/Paths_mock_registry.hs"
       component: "mock-registry:exe:mock-registry-exe"
 
+    - path: "app/swdt/src"
+      component: "swdt:lib"
+
+    - path: "app/swdt/server/Main.hs"
+      component: "swdt:exe:swdt-exe"
+
+    - path: "app/swdt/server/Paths_swdt.hs"
+      component: "swdt:exe:swdt-exe"
+
     - path: "lib/beckn-core/src"
       component: "beckn-core:lib"
 

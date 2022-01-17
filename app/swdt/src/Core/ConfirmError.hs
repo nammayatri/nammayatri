@@ -1,9 +1,8 @@
 module Core.ConfirmError where
 
+import Beckn.Prelude
 import Beckn.Utils.JSON
 import Data.Aeson
-import Data.Text
-import GHC.Generics
 
 data ConfirmError = ConfirmError
   { _type :: Text,
