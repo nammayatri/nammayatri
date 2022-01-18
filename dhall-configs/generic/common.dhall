@@ -30,6 +30,7 @@ let loggerConfig =
   , logToFile = True
   , logToConsole = True
   , logRawSql = True
+  , prettyPrinting = False
   }
 
 let httpClientOptions =

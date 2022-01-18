@@ -128,6 +128,8 @@ dependencies:
   - unliftio-core
   - resource-pool
   - universum
+  - scientific
+  - vector
 
 ghc-options:
   - -fwrite-ide-info

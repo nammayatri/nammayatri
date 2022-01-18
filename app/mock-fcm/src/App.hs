@@ -25,7 +25,8 @@ defaultConfig =
             logToFile = True,
             logFilePath = "/tmp/mock-fcm.log",
             logToConsole = True,
-            logRawSql = True
+            logRawSql = True,
+            prettyPrinting = True
           },
       graceTerminationPeriod = 90
     }

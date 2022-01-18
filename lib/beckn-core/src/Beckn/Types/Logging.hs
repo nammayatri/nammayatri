@@ -15,6 +15,7 @@ data LoggerConfig = LoggerConfig
     logToFile :: Bool,
     logFilePath :: FilePath,
     logToConsole :: Bool,
-    logRawSql :: Bool
+    logRawSql :: Bool,
+    prettyPrinting :: Bool
   }
   deriving (Generic, FromDhall)

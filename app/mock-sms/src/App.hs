@@ -27,7 +27,8 @@ defaultConfig =
             logToFile = True,
             logFilePath = "/tmp/mock-sms.log",
             logToConsole = True,
-            logRawSql = True
+            logRawSql = True,
+            prettyPrinting = True
           },
       graceTerminationPeriod = 90
     }

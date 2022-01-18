@@ -20,7 +20,8 @@ defaultTestLoggerConfig =
       logToFile = True,
       logFilePath = "/tmp/beckn-integ-test.log",
       logToConsole = False,
-      logRawSql = True
+      logRawSql = True,
+      prettyPrinting = True
     }
 
 runClient :: (HasCallStack, MonadIO m) => ClientEnv -> ClientM a -> m (Either ClientError a)

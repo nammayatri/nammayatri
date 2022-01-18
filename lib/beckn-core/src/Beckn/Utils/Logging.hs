@@ -13,12 +13,14 @@ module Beckn.Utils.Logging
     withTransactionIdLogTag,
     withPersonIdLogTag,
     makeLogSomeException,
+    logPretty,
   )
 where
 
 import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Id
 import Beckn.Types.Logging
+import Beckn.Utils.GenericPretty (PrettyShow, textPretty)
 import EulerHS.Prelude
 import GHC.Records.Extra
 
@@ -69,3 +71,29 @@ makeLogSomeException someExc
         <> " "
         <> toErrorCode err
         <> maybe "" (": " <>) (toMessage err)
+
+renderViaShow :: (Show a) => Text -> a -> Text
+renderViaShow description val = description <> ": " <> show val
+
+renderViaPrettyShow :: (PrettyShow a) => Text -> a -> Text
+renderViaPrettyShow description val = description <> "\n" <> textPretty val
+
+logPretty ::
+  ( PrettyShow a,
+    Show a,
+    Log m,
+    MonadReader env m,
+    HasField "config" env conf,
+    HasField "loggerConfig" conf LoggerConfig
+  ) =>
+  LogLevel ->
+  Text ->
+  a ->
+  m ()
+logPretty logLevel description val = do
+  pretty <- asks (.config.loggerConfig.prettyPrinting)
+  let render =
+        if pretty
+          then renderViaPrettyShow
+          else renderViaShow
+  logOutput logLevel $ render description val
