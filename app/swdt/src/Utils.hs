@@ -1,6 +1,7 @@
 module Utils where
 
 import Beckn.Prelude
+import Beckn.Types.Core.Error
 import qualified Data.Text as T
 import Data.Time
 
@@ -9,3 +10,12 @@ import Data.Time
 -- Example: readUTCTime "2021-12-01 18:00"
 readUTCTime :: Text -> Maybe UTCTime
 readUTCTime = parseTimeM True defaultTimeLocale "%F %R" . T.unpack
+
+textToError :: Text -> Error
+textToError desc =
+  Error
+    { _type = CORE_ERROR,
+      code = "400",
+      path = Nothing,
+      message = Just desc
+    }

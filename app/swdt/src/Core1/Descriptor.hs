@@ -1,4 +1,4 @@
-module Core.Descriptor where
+module Core1.Descriptor where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.Image (Image (..))
@@ -16,5 +16,10 @@ data DescriptorDetails = DescriptorDetails
 
 newtype DescriptorId = DescriptorId
   { name :: Text
+  }
+  deriving (Generic, Show, Eq, ToSchema, ToJSON, FromJSON)
+
+newtype DescriptorCode = DescriptorCode
+  { code :: Text
   }
   deriving (Generic, Show, Eq, ToSchema, ToJSON, FromJSON)

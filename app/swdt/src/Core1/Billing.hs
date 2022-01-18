@@ -1,4 +1,4 @@
-module Core.Billing where
+module Core1.Billing where
 
 import Beckn.Prelude
 

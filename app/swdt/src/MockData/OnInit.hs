@@ -4,13 +4,11 @@ import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Types.Core.Migration.Duration
-import Core.Init.Item
-import qualified Core.Init.Order as Init
-import Core.OnInit.Order
-import Core.OnInit.Payment
-import Core.OnInit.Quotation
-import Core.Payment hiding (Params, Payment)
-import Core.Price
+import qualified Core1.Init as Init
+import Core1.Item
+import Core1.OnInit
+import Core1.Payment
+import Core1.Quotation
 import Data.Either.Extra
 import Data.Maybe
 import Data.Monoid
@@ -27,7 +25,7 @@ mockOrder ord =
       billing = ord.billing
       fulfillment = mockFulfillmentEMB
       quote =
-        Quotation
+        OnInitQuotation
           { price = priceEMB,
             breakup =
               (: []) $
@@ -35,18 +33,18 @@ mockOrder ord =
                   { title = "One Way Ticket",
                     price = priceEMB
                   },
-            ttl = Duration "duration"
+            ttl = Just $ Duration "duration"
           }
       payment = buildFakePayment priceEMB.currency priceEMB.value
    in Order {..}
 
-buildFakePayment :: Text -> DecimalValue -> Payment
+buildFakePayment :: Text -> DecimalValue -> OnInitPayment
 buildFakePayment cur val =
   Payment
     { uri = fromJust $ parseBaseUrl "https://payment.juspay.in/fake",
       tl_method = HttpGet,
       params =
-        Params
+        OnInitParams
           { currency = cur,
             amount = val
           },
@@ -59,25 +57,27 @@ buildOrderWithLogic ord = do
   let provider = ord.provider
       billing = ord.billing
       orderItems = ord.items
-  fulfillment <- maybeToEither "failed to find fulfillment" $ findFulfillment $ ord.fulfillment.id
-  let processedItemList = mapMaybe processItem orderItems
+      reqFulfillment = ord.fulfillment.id
+  fulfillment <- maybeToEither "failed to find fulfillment" $ findFulfillment reqFulfillment
+  let processedItemList = mapMaybe (processItem reqFulfillment) orderItems
   when (null processedItemList) $ Left "no valid items found"
   let (items, Sum totalPrice, breakups) = foldMap (\(x, y, z) -> ([x], Sum y, z)) processedItemList
       decimalTotalPrice = convertAmountToDecimalValue totalPrice
       quote =
-        Quotation
-          { price = Price "INR" decimalTotalPrice,
+        OnInitQuotation
+          { price = buildPriceDecimal decimalTotalPrice,
             breakup = breakups,
-            ttl = Duration "duration"
+            ttl = Just $ Duration "duration"
           }
       payment = buildFakePayment "INR" decimalTotalPrice
   pure Order {..}
 
-processItem :: Item -> Maybe (Item, Amount, [BreakupItem])
-processItem it = do
+processItem :: Text -> InitItem -> Maybe (InitItem, Amount, [BreakupItem])
+processItem reqFulfId it = do
   existingItem <- findItem it.id it.fulfillment_id
+  guard (it.fulfillment_id == reqFulfId)
   let quan = it.quantity.count :: Int
-  let oneItemPrice = existingItem.price
+      oneItemPrice = existingItem.price
   oneItemAmount <- convertDecimalValueToAmount oneItemPrice.value
   let total = oneItemAmount * fromIntegral quan
       title = existingItem.descriptor.name

@@ -1,13 +1,13 @@
-module Core.OnInit.Quotation where
+module Core1.Quotation where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.Duration
-import Core.Price
+import Core1.Price
 
-data Quotation = Quotation
+data OnInitQuotation = OnInitQuotation
   { price :: Price,
     breakup :: [BreakupItem],
-    ttl :: Duration
+    ttl :: Maybe Duration
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -16,3 +16,7 @@ data BreakupItem = BreakupItem
     price :: Price
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+type ConfirmQuotation = OnInitQuotation
+
+type OnConfirmQuotation = OnInitQuotation

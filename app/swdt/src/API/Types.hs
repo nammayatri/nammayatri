@@ -3,24 +3,23 @@ module API.Types where
 import Beckn.Prelude
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.ReqTypes
-import qualified Core.Init.Order as Init
-import qualified Core.Search.Message as Search
-import Data.Aeson
-import qualified Data.Text as T
+import Core1.Confirm
+import Core1.Init
+import Core1.Search
 import Servant
 
-type HealthCheckAPI = "health" :> Get '[JSON] T.Text
+type HealthCheckAPI = "health" :> Get '[JSON] Text
 
 type SearchAPI =
-  "search" :> ReqBody '[JSON] (BecknReq Search.Message) :> Post '[JSON] AckResponse
+  "search" :> ReqBody '[JSON] (BecknReq SearchMessage) :> Post '[JSON] AckResponse
 
 type InitAPI =
-  "init" :> ReqBody '[JSON] (BecknReq Init.InitMessage) :> Post '[JSON] AckResponse
+  "init" :> ReqBody '[JSON] (BecknReq InitMessage) :> Post '[JSON] AckResponse
 
 type ConfirmAPI =
-  "confirm" :> ReqBody '[JSON] (BecknReq Value) :> Post '[JSON] AckResponse
+  "confirm" :> ReqBody '[JSON] (BecknReq ConfirmMessage) :> Post '[JSON] AckResponse
 
-type TotalAPI = HealthCheckAPI :<|> SearchAPI :<|> InitAPI -- :<|> ConfirmAPI
+type TotalAPI = HealthCheckAPI :<|> SearchAPI :<|> InitAPI :<|> ConfirmAPI
 
 totalAPI :: Proxy TotalAPI
 totalAPI = Proxy

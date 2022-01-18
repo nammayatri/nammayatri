@@ -6,10 +6,9 @@ import Beckn.Prelude
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
 import qualified Control.Monad.Catch as C
---import Core.OnConfirm
-
-import Core.OnInit.Order
-import Core.OnSearch.Catalog
+import Core1.OnConfirm
+import Core1.OnInit
+import Core1.OnSearch
 import qualified Data.ByteString as BS
 import Network.HTTP.Client hiding (Proxy)
 import Network.HTTP.Types.Header
@@ -32,20 +31,6 @@ callGatewayOnSearchS req = do
   pure ()
 
 ----------------------------
-{-
-type OnConfirmAPI =
-  "on_confirm"
-    :> ReqBody '[JSON] (BecknCallbackReq OnConfirmMessage)
-    :> Post '[JSON] AckResponse
-
-callBapOnConfirmS :: BaseUrl -> BecknCallbackReq OnConfirmMessage -> MockM ()
-callBapOnConfirmS bapUrl req = do
-  let clientFunc = client $ Proxy @OnConfirmBapAPI
-      clientAction = clientFunc req
-  _ <- callAPI bapUrl clientAction
-  pure ()
--}
-----------------------------
 
 type OnInitAPI =
   "on_init"
@@ -55,6 +40,20 @@ type OnInitAPI =
 callBapOnInit :: BaseUrl -> BecknCallbackReq OnInitMessage -> MockM ()
 callBapOnInit bapUrl req = do
   let clientFunc = client $ Proxy @OnInitAPI
+      clientAction = clientFunc req
+  _ <- callAPI bapUrl clientAction
+  pure ()
+
+----------------------------
+
+type OnConfirmAPI =
+  "on_confirm"
+    :> ReqBody '[JSON] (BecknCallbackReq OnConfirmMessage)
+    :> Post '[JSON] AckResponse
+
+callBapOnConfirmS :: BaseUrl -> BecknCallbackReq OnConfirmMessage -> MockM ()
+callBapOnConfirmS bapUrl req = do
+  let clientFunc = client $ Proxy @OnConfirmAPI
       clientAction = clientFunc req
   _ <- callAPI bapUrl clientAction
   pure ()

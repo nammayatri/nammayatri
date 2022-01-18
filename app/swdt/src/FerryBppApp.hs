@@ -3,6 +3,7 @@ module FerryBppApp
   )
 where
 
+import API.Confirm
 import API.HealthCheck
 import API.Init
 import API.Search
@@ -18,8 +19,6 @@ import Servant
 import Types.App
 import Types.Environment
 
---import API.Confirm
-
 runMockFerryBPP :: IO ()
 runMockFerryBPP = do
   appCfg <- readDhallConfigDefault "ferry-bpp" :: IO AppCfg
@@ -31,4 +30,4 @@ runMockFerryBPP = do
     run totalAPI totalServer appEnv
 
 totalServer :: ServerT TotalAPI MockM
-totalServer = healthCheckServer :<|> searchServer :<|> initServer -- :<|> confirmServer
+totalServer = healthCheckServer :<|> searchServer :<|> initServer :<|> confirmServer

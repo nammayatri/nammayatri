@@ -3,14 +3,14 @@ module MockData.OnSearch where
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Types.Core.Migration.Gps
-import Core.Descriptor
-import Core.Location
-import Core.OnSearch.Catalog
-import Core.OnSearch.Fulfillment
-import Core.OnSearch.Item
-import Core.Price
-import Core.Provider
-import Core.Time
+import Core1.Descriptor
+import Core1.Fulfillment
+import Core1.Item
+import Core1.Location
+import Core1.OnSearch
+import Core1.Price
+import Core1.Provider
+import Core1.Time
 import Data.Maybe
 import Utils
 
@@ -53,21 +53,21 @@ mockProvider =
       items = mockItems
    in Provider {..}
 
-mockFulfillments :: [Fulfillment]
+mockFulfillments :: [OnSearchFulfillment]
 mockFulfillments = [mockFulfillmentEMB, mockFulfillmentABC]
 
-findFulfillment :: Text -> Maybe Fulfillment
+findFulfillment :: Text -> Maybe OnSearchFulfillment
 findFulfillment fulfId = find (\f -> f.id == fulfId) mockFulfillments
 
 tripIdEMB, tripIdABC :: Text
 tripIdEMB = "TRIP001_EKM_EMB"
 tripIdABC = "TRIP001_EKM_ABC"
 
-buildMockFulfillment :: Text -> Text -> Text -> Fulfillment
+buildMockFulfillment :: Text -> Text -> Text -> OnSearchFulfillment
 buildMockFulfillment tripId depart arrival =
   let id = tripId
       start =
-        FulfillmentDetails
+        FulfillmentLocationTime
           { location = LocationId depart,
             time =
               Time
@@ -76,7 +76,7 @@ buildMockFulfillment tripId depart arrival =
                 }
           }
       end =
-        FulfillmentDetails
+        FulfillmentLocationTime
           { location = LocationId arrival,
             time =
               Time
@@ -84,9 +84,9 @@ buildMockFulfillment tripId depart arrival =
                   timestamp = fromJust $ readUTCTime "2021-11-17 12:54"
                 }
           }
-   in Fulfillment {..}
+   in OnSearchFulfillment {..}
 
-mockFulfillmentEMB, mockFulfillmentABC :: Fulfillment
+mockFulfillmentEMB, mockFulfillmentABC :: OnSearchFulfillment
 mockFulfillmentEMB = buildMockFulfillment tripIdEMB locationLabelEKM locationLabelEMB
 mockFulfillmentABC = buildMockFulfillment tripIdABC locationLabelEKM locationLabelABC
 
@@ -121,31 +121,34 @@ locationEKM = buildLocation locationLabelEKM "Ernakulam" locationGpsEKM
 locationEMB = buildLocation locationLabelEMB "Embarkment" locationGpsEMB
 locationABC = buildLocation locationLabelABC "Test Station" locationGpsABC
 
-mockItems :: [Item]
+mockItems :: [OnSearchItem]
 mockItems = [itemEMB, itemABC]
 
-itemEMB, itemABC :: Item
+itemEMB, itemABC :: OnSearchItem
 itemEMB = buildItem tripIdEMB priceEMB
 itemABC = buildItem tripIdABC priceABC
 
-buildItem :: Text -> Price -> Item
+buildItem :: Text -> Price -> OnSearchItem
 buildItem tripId price =
   let id = "ONE_WAY_TICKET"
       fulfillment_id = tripId
       descriptor = DescriptorId {name = "One Way Ticket"}
    in --  quantity = Nothing
-      Item {..}
+      OnSearchItem {..}
 
-buildPrice :: Int -> Price
-buildPrice int =
+buildPrice :: (Integral a, Show a) => a -> Price
+buildPrice int = buildPriceDecimal $ DecimalValue $ show $ abs int
+
+buildPriceDecimal :: DecimalValue -> Price
+buildPriceDecimal int =
   Price
     { currency = "INR",
-      value = DecimalValue $ show int
+      value = int
     }
 
 priceEMB, priceABC :: Price
-priceEMB = buildPrice 30
-priceABC = buildPrice 40
+priceEMB = buildPrice (30 :: Int)
+priceABC = buildPrice (40 :: Int)
 
-findItem :: Text -> Text -> Maybe Item
+findItem :: Text -> Text -> Maybe OnSearchItem
 findItem itId fulfId = find (\i -> i.fulfillment_id == fulfId && i.id == itId) mockItems

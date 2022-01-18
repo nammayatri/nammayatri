@@ -1,10 +1,10 @@
-module Core.Init.Order where
+module Core1.Init where
 
 import Beckn.Prelude
-import Core.Billing
-import Core.Init.Fulfillment
-import Core.Init.Item
-import Core.Provider
+import Core1.Billing
+import Core1.Fulfillment
+import Core1.Item
+import Core1.Provider
 
 newtype InitMessage = InitMessage
   { order :: Order
@@ -13,7 +13,7 @@ newtype InitMessage = InitMessage
 
 data Order = Order
   { provider :: ProviderId,
-    items :: [Item],
+    items :: [InitItem],
     billing :: Billing,
     fulfillment :: FulfillmentId
   }

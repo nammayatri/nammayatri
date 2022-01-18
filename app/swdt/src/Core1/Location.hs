@@ -1,22 +1,18 @@
-module Core.Location where
+module Core1.Location where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.Gps
 import Beckn.Utils.JSON
-import Core.Descriptor
+import Core1.Descriptor
+
+newtype LocationGps = LocationGps {gps :: Gps}
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 data LocationDetails = LocationDetails
   { id :: Text,
     descriptor :: DescriptorId,
     gps :: Gps,
-    -- address :: Maybe Address,
     station_code :: Text
-    -- city :: Maybe City,
-    -- country :: Maybe Country,
-    -- circle :: Maybe Circle,
-    -- polygon :: Maybe Text,
-    -- _3dspace :: Maybe Text,
-    --    time :: Time
   }
   deriving (Generic, Show)
 

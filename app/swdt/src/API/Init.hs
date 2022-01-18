@@ -2,16 +2,16 @@ module API.Init where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Error
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
 import Control.Concurrent
-import Core.Init.Order
-import Core.OnInit.Order
+import Core1.Init
+import Core1.OnInit
 import ExternalAPI (callBapOnInit)
 import MockData.OnInit (buildOrderWithLogic)
 import Types.App
+import Utils
 
 initServer :: BecknReq InitMessage -> MockM AckResponse
 initServer confirmReq@(BecknReq ctx msg) = do
@@ -28,15 +28,6 @@ initServer confirmReq@(BecknReq ctx msg) = do
     ack <- callBapOnInit bapUri $ BecknCallbackReq context' callbackData
     mockLog DEBUG $ "got ack" <> show ack
   pure Ack
-
-textToError :: Text -> Error
-textToError desc =
-  Error
-    { _type = CORE_ERROR,
-      code = "400",
-      path = Nothing,
-      message = Just desc
-    }
 
 buildOnSearchContext :: Context -> MockM Context
 buildOnSearchContext ctx = do

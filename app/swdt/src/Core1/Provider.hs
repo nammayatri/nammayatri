@@ -1,17 +1,17 @@
-module Core.Provider where
+module Core1.Provider where
 
 import Beckn.Prelude
-import Core.Descriptor
-import Core.Location
-import Core.OnSearch.Fulfillment
-import Core.OnSearch.Item
+import Core1.Descriptor
+import Core1.Fulfillment
+import Core1.Item
+import Core1.Location
 
 data Provider = Provider
   { id :: Text,
     descriptor :: DescriptorId,
-    fulfillments :: [Fulfillment],
+    fulfillments :: [OnSearchFulfillment],
     locations :: [LocationDetails],
-    items :: [Item]
+    items :: [OnSearchItem]
   }
   deriving (Generic, FromJSON, Show, ToJSON)
 
