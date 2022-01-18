@@ -1,4 +1,4 @@
-module Core1.Descriptor where
+module Core.Descriptor where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.Image (Image (..))

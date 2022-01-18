@@ -6,8 +6,8 @@ import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
 import Control.Concurrent
-import Core1.Init
-import Core1.OnInit
+import Core.Init
+import Core.OnInit
 import ExternalAPI (callBapOnInit)
 import MockData.OnInit (buildOrderWithLogic)
 import Types.App

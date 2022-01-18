@@ -6,7 +6,7 @@ import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
 import Control.Concurrent
-import Core1.Search
+import Core.Search
 import ExternalAPI
 import MockData.OnSearch
 import Types.App

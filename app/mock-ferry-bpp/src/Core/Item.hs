@@ -1,8 +1,8 @@
-module Core1.Item where
+module Core.Item where
 
 import Beckn.Prelude
-import Core1.Descriptor
-import Core1.Price
+import Core.Descriptor
+import Core.Price
 
 newtype Quantity = Quantity
   { count :: Int

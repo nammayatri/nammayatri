@@ -1,9 +1,9 @@
-module Core1.OnSearch where
+module Core.OnSearch where
 
 import Beckn.Prelude hiding (exp)
 import Beckn.Utils.JSON (slashedRecordFields)
-import Core1.Descriptor
-import Core1.Provider
+import Core.Descriptor
+import Core.Provider
 
 newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog

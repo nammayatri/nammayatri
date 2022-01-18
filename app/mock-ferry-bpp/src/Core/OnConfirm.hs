@@ -1,12 +1,12 @@
-module Core1.OnConfirm where
+module Core.OnConfirm where
 
 import Beckn.Prelude
-import Core1.Billing
-import Core1.Fulfillment
-import Core1.Item
-import Core1.Payment
-import Core1.Provider
-import Core1.Quotation
+import Core.Billing
+import Core.Fulfillment
+import Core.Item
+import Core.Payment
+import Core.Provider
+import Core.Quotation
 
 newtype OnConfirmMessage = OnConfirmMessage
   { order :: Order

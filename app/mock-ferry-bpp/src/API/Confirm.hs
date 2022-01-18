@@ -6,8 +6,8 @@ import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
 import Control.Concurrent
-import Core1.Confirm
-import Core1.OnConfirm
+import Core.Confirm
+import Core.OnConfirm
 import ExternalAPI
 import MockData.OnConfirm
 import Types.App

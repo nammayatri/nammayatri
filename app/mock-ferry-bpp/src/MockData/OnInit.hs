@@ -4,11 +4,11 @@ import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Types.Core.Migration.Duration
-import qualified Core1.Init as Init
-import Core1.Item
-import Core1.OnInit
-import Core1.Payment
-import Core1.Quotation
+import qualified Core.Init as Init
+import Core.Item
+import Core.OnInit
+import Core.Payment
+import Core.Quotation
 import Data.Either.Extra
 import Data.Maybe
 import Data.Monoid

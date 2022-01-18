@@ -1,4 +1,4 @@
-module Core1.Price where
+module Core.Price where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue

@@ -3,14 +3,14 @@ module MockData.OnSearch where
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Types.Core.Migration.Gps
-import Core1.Descriptor
-import Core1.Fulfillment
-import Core1.Item
-import Core1.Location
-import Core1.OnSearch
-import Core1.Price
-import Core1.Provider
-import Core1.Time
+import Core.Descriptor
+import Core.Fulfillment
+import Core.Item
+import Core.Location
+import Core.OnSearch
+import Core.Price
+import Core.Provider
+import Core.Time
 import Data.Maybe
 import Utils
 

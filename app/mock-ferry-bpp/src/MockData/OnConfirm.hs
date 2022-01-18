@@ -1,11 +1,11 @@
 module MockData.OnConfirm where
 
 import Beckn.Prelude
-import qualified Core1.Confirm as Confirm
-import Core1.Descriptor
-import Core1.Item
-import Core1.OnConfirm
-import Core1.Payment
+import qualified Core.Confirm as Confirm
+import Core.Descriptor
+import Core.Item
+import Core.OnConfirm
+import Core.Payment
 import Data.Either.Extra
 import MockData.OnSearch
 import Servant.Client

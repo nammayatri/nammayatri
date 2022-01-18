@@ -1,12 +1,12 @@
-module Core1.Confirm where
+module Core.Confirm where
 
 import Beckn.Prelude
-import Core1.Billing
-import Core1.Fulfillment
-import Core1.Item
-import Core1.Payment
-import Core1.Provider
-import Core1.Quotation
+import Core.Billing
+import Core.Fulfillment
+import Core.Item
+import Core.Payment
+import Core.Provider
+import Core.Quotation
 
 newtype ConfirmMessage = ConfirmMessage
   { order :: Order

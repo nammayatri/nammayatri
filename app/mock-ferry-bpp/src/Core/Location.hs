@@ -1,9 +1,9 @@
-module Core1.Location where
+module Core.Location where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.Gps
 import Beckn.Utils.JSON
-import Core1.Descriptor
+import Core.Descriptor
 
 newtype LocationGps = LocationGps {gps :: Gps}
   deriving (Generic, Show, ToJSON, FromJSON)

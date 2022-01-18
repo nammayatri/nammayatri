@@ -1,8 +1,8 @@
-module Core1.Fulfillment where
+module Core.Fulfillment where
 
 import Beckn.Prelude
-import Core1.Location
-import Core1.Time
+import Core.Location
+import Core.Time
 
 data SearchFulfillment = SearchFulfillment
   { start :: FulfillmentLocation,

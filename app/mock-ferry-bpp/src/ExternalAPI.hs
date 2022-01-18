@@ -6,9 +6,9 @@ import Beckn.Prelude
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
 import qualified Control.Monad.Catch as C
-import Core1.OnConfirm
-import Core1.OnInit
-import Core1.OnSearch
+import Core.OnConfirm
+import Core.OnInit
+import Core.OnSearch
 import qualified Data.ByteString as BS
 import Network.HTTP.Client hiding (Proxy)
 import Network.HTTP.Types.Header

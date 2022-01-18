@@ -1,7 +1,7 @@
-module Core1.Search where
+module Core.Search where
 
 import Beckn.Prelude
-import Core1.Fulfillment
+import Core.Fulfillment
 
 newtype SearchMessage = SearchMessage
   { intent :: Intent

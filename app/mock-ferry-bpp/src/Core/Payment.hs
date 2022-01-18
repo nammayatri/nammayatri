@@ -1,4 +1,4 @@
-module Core1.Payment where
+module Core.Payment where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue (DecimalValue (..))

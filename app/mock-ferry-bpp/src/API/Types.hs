@@ -3,9 +3,9 @@ module API.Types where
 import Beckn.Prelude
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.ReqTypes
-import Core1.Confirm
-import Core1.Init
-import Core1.Search
+import Core.Confirm
+import Core.Init
+import Core.Search
 import Servant
 
 type HealthCheckAPI = "health" :> Get '[JSON] Text

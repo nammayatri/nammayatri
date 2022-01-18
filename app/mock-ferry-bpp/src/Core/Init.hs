@@ -1,10 +1,10 @@
-module Core1.Init where
+module Core.Init where
 
 import Beckn.Prelude
-import Core1.Billing
-import Core1.Fulfillment
-import Core1.Item
-import Core1.Provider
+import Core.Billing
+import Core.Fulfillment
+import Core.Item
+import Core.Provider
 
 newtype InitMessage = InitMessage
   { order :: Order

@@ -1,10 +1,10 @@
-module Core1.Provider where
+module Core.Provider where
 
 import Beckn.Prelude
-import Core1.Descriptor
-import Core1.Fulfillment
-import Core1.Item
-import Core1.Location
+import Core.Descriptor
+import Core.Fulfillment
+import Core.Item
+import Core.Location
 
 data Provider = Provider
   { id :: Text,

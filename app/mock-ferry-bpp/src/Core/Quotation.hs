@@ -1,8 +1,8 @@
-module Core1.Quotation where
+module Core.Quotation where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.Duration
-import Core1.Price
+import Core.Price
 
 data OnInitQuotation = OnInitQuotation
   { price :: Price,
