@@ -1,5 +1,6 @@
 module Types.Beckn.Item where
 
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 import Types.Beckn.Descriptor (Descriptor)
 import Types.Beckn.Price (Price)
@@ -10,4 +11,4 @@ data Item = Item
     price :: Price,
     category_id :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

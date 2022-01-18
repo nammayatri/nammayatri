@@ -3,8 +3,6 @@
 module Beckn.Types.Core.Migration.Domain (Domain (..)) where
 
 import Beckn.Utils.Example
---(ToSchema (declareNamedSchema), NamedSchema (NamedSchema))
-
 import Beckn.Utils.GenericPretty
 import Beckn.Utils.JSON (constructorsWithHyphensUntagged)
 import qualified Control.Lens as L

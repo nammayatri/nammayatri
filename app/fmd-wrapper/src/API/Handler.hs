@@ -4,6 +4,7 @@ import qualified API.Cancel.Handler as Cancel
 import qualified API.Confirm.Handler as Confirm
 import qualified API.Search.Handler as Search
 import qualified API.Status.Handler as Status
+import qualified API.Swagger.Handler as Swagger
 import qualified API.Track.Handler as Track
 import qualified API.Types as API
 import App.Types
@@ -12,6 +13,11 @@ import Servant
 
 handler :: FlowServer API.API
 handler =
+  mainHandler
+    :<|> Swagger.handler
+
+mainHandler :: FlowServer API.MainAPI
+mainHandler =
   pure "FMD wrapper backend is UP"
     :<|> Search.handler
     :<|> Confirm.handler

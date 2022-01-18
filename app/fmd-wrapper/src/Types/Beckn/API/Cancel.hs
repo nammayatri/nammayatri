@@ -2,6 +2,8 @@ module Types.Beckn.API.Cancel (module Types.Beckn.API.Cancel, module Reexport) w
 
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 import Types.Beckn.Descriptor as Reexport (Descriptor)
@@ -20,3 +22,6 @@ data CancellationInfo = CancellationInfo
     descriptor :: Maybe Descriptor
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema CancellationInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

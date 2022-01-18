@@ -1,6 +1,7 @@
 module Types.Beckn.Fulfillment where
 
 import Data.Aeson (withObject, (.!=), (.:))
+import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (State, id, state)
 import Types.Beckn.FulfillmentDetails (FulfillmentDetails (..))
 
@@ -10,7 +11,7 @@ data Fulfillment = Fulfillment
     start :: FulfillmentDetails,
     end :: FulfillmentDetails
   }
-  deriving (Generic, Show, ToJSON)
+  deriving (Generic, Show, ToJSON, ToSchema)
 
 instance FromJSON Fulfillment where
   parseJSON = withObject "Fulfillment" $ \o ->

@@ -80,6 +80,8 @@ dependencies:
   - record-hasfield
   - record-dot-preprocessor
   - unordered-containers
+  - openapi3
+  - servant-openapi3
 
 ghc-options:
   - -fwrite-ide-info

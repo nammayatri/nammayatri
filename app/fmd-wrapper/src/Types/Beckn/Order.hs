@@ -1,5 +1,6 @@
 module Types.Beckn.Order where
 
+import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (State, id, state)
 import Types.Beckn.Billing
@@ -19,10 +20,10 @@ data Order = Order
     payment :: Payment,
     updated_at :: UTCTime
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 newtype OrderItem = OrderItem
   { id :: Text
   }
   deriving stock (Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)

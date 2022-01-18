@@ -2,6 +2,8 @@ module Types.Beckn.API.Track (module Types.Beckn.API.Track, module Reexport) whe
 
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude
 import Servant (JSON, Post, ReqBody, (:>))
 import Servant.Client (BaseUrl)
@@ -20,3 +22,6 @@ data TrackInfo = TrackInfo
     callback_url :: Maybe BaseUrl
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+instance ToSchema TrackInfo where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

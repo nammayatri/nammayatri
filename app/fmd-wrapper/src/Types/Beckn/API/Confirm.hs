@@ -2,7 +2,9 @@ module Types.Beckn.API.Confirm (module Types.Beckn.API.Confirm, module Reexport)
 
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.Aeson (withObject, (.!=), (.:), (.:?))
+import Data.OpenApi (ToSchema (..), defaultSchemaOptions)
 import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 import Types.Beckn.Address as Reexport (Address (..))
@@ -32,7 +34,11 @@ confirmAPI = Proxy
 newtype OrderObject = OrderObject
   { order :: Order
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance ToSchema OrderObject where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 data Order = Order
   { items :: [OrderItem],
@@ -42,12 +48,18 @@ data Order = Order
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
+instance ToSchema Order where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
 data Fulfillment = Fulfillment
   { tracking :: Bool,
     start :: FulfillmentDetails,
     end :: FulfillmentDetails
   }
   deriving (Generic, Show, ToJSON)
+
+instance ToSchema Fulfillment where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 instance FromJSON Fulfillment where
   parseJSON = withObject "Fulfillment" $ \o ->
@@ -62,9 +74,15 @@ newtype Payment = Payment
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
+instance ToSchema Payment where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
 data Params = Params
   { transaction_id :: Text,
     amount :: Maybe DecimalValue,
     currency :: Text
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
+
+instance ToSchema Params where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
