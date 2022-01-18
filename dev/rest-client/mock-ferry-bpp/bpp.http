@@ -1,10 +1,10 @@
-# $swdt-bpp-host = http://localhost:9091
+# $swtd-bpp-host = http://localhost:9091
 
-GET $swdt-bpp-host/health
+GET $swtd-bpp-host/health
 
 ###
 
-POST $swdt-bpp-host/search
+POST $swtd-bpp-host/search
 content-type: application/json
 {
     "context": {
@@ -38,7 +38,7 @@ content-type: application/json
 }
 
 ###
-POST $swdt-bpp-host/init
+POST $swtd-bpp-host/init
 content-type: application/json
 {
     "context": {
@@ -78,7 +78,7 @@ content-type: application/json
 }
 
 ###
-POST $swdt-bpp-host/confirm
+POST $swtd-bpp-host/confirm
 content-type: application/json
 {
     "context": {
