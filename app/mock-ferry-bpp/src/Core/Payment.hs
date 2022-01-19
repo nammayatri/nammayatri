@@ -41,6 +41,10 @@ data OnConfirmParams = OnConfirmParams
 
 type OnConfirmPayment = Payment OnConfirmParams
 
+type OnStatusPayment = OnConfirmPayment
+
+type OnCancelPayment = OnConfirmPayment
+
 ----------------------------------------------
 
 data TLMethod = HttpGet | HttpPost
@@ -80,11 +84,8 @@ instance ToJSON Status where
 data TrStatus
   = Captured
   | Failed
-  | Payment_link_created
-  | Payment_link_expired
-  | Payment_link_issued
-  | Pefunded
-  deriving (Generic, Eq, Show, FromJSON)
-
-instance ToJSON TrStatus where
-  toJSON = genericToJSON constructorsToLowerOptions
+  | PaymentLinkCreated
+  | PaymentLinkExpired
+  | PaymentLinkIssued
+  | Refunded
+  deriving (Generic, Eq, Show, ToJSON, FromJSON)

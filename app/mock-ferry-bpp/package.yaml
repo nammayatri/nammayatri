@@ -85,6 +85,8 @@ dependencies:
   - scientific
   - vector
   - extra
+  - random
+  - hedis
 
 ghc-options:
   - -fwrite-ide-info

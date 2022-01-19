@@ -5,7 +5,6 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
-import Control.Concurrent
 import Core.Init
 import Core.OnInit
 import ExternalAPI (callBapOnInit)
@@ -21,7 +20,7 @@ initServer confirmReq@(BecknReq ctx msg) = do
 
   _ <- mockFork $ do
     mockLog DEBUG "debug message inside fork"
-    liftIO $ threadDelay $ 1000000 * 2
+    liftIO $ threadDelaySec 2
     context' <- buildOnSearchContext ctx
     let bapUri = ctx.bap_uri
         callbackData = either (Left . textToError) (Right . OnInitMessage) eithOrder

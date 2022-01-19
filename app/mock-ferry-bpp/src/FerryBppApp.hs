@@ -7,6 +7,7 @@ import API.Confirm
 import API.HealthCheck
 import API.Init
 import API.Search
+import API.Status
 import API.Types
 import Beckn.Prelude
 import Beckn.Utils.Dhall (readDhallConfigDefault)
@@ -15,6 +16,7 @@ import Network.Wai.Handler.Warp
     runSettings,
     setPort,
   )
+import Redis (withRedisConnection)
 import Servant
 import Types.App
 import Types.Environment
@@ -22,12 +24,13 @@ import Types.Environment
 runMockFerryBPP :: IO ()
 runMockFerryBPP = do
   appCfg <- readDhallConfigDefault "ferry-bpp" :: IO AppCfg
-  let port = appCfg.port
-      appEnv = buildAppEnv appCfg
-      settings =
-        defaultSettings & setPort port
-  runSettings settings $
-    run totalAPI totalServer appEnv
+  withRedisConnection $ \redisCon -> do
+    let port = appCfg.port
+        appEnv = buildAppEnv redisCon appCfg
+        settings =
+          defaultSettings & setPort port
+    runSettings settings $
+      run totalAPI totalServer appEnv
 
 totalServer :: ServerT TotalAPI MockM
-totalServer = healthCheckServer :<|> searchServer :<|> initServer :<|> confirmServer
+totalServer = healthCheckServer :<|> searchServer :<|> initServer :<|> confirmServer :<|> statusServer

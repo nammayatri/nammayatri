@@ -6,9 +6,11 @@ import Beckn.Prelude
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
 import qualified Control.Monad.Catch as C
+import Core.OnCancel
 import Core.OnConfirm
 import Core.OnInit
 import Core.OnSearch
+import Core.OnStatus
 import qualified Data.ByteString as BS
 import Network.HTTP.Client hiding (Proxy)
 import Network.HTTP.Types.Header
@@ -54,6 +56,36 @@ type OnConfirmAPI =
 callBapOnConfirmS :: BaseUrl -> BecknCallbackReq OnConfirmMessage -> MockM ()
 callBapOnConfirmS bapUrl req = do
   let clientFunc = client $ Proxy @OnConfirmAPI
+      clientAction = clientFunc req
+  _ <- callAPI bapUrl clientAction
+  pure ()
+
+----------------------------
+
+type OnStatusAPI =
+  "on_status"
+    :> ReqBody '[JSON] (BecknCallbackReq OnStatusMessage)
+    :> Post '[JSON] AckResponse
+
+callBapOnStatus :: BecknCallbackReq OnStatusMessage -> MockM ()
+callBapOnStatus req = do
+  let bapUrl = req.context.bap_uri
+      clientFunc = client $ Proxy @OnStatusAPI
+      clientAction = clientFunc req
+  _ <- callAPI bapUrl clientAction
+  pure ()
+
+----------------------------
+
+type OnCancelAPI =
+  "on_cancel"
+    :> ReqBody '[JSON] (BecknCallbackReq OnCancelMessage)
+    :> Post '[JSON] AckResponse
+
+callBapOnCancel :: BecknCallbackReq OnCancelMessage -> MockM ()
+callBapOnCancel req = do
+  let bapUrl = req.context.bap_uri
+      clientFunc = client $ Proxy @OnCancelAPI
       clientAction = clientFunc req
   _ <- callAPI bapUrl clientAction
   pure ()

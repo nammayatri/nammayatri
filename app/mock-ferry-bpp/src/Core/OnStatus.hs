@@ -1,15 +1,16 @@
-module Core.OnConfirm where
+module Core.OnStatus where
 
 import Beckn.Prelude
 import Core.Billing
 import Core.Fulfillment
 import Core.Item
+import qualified Core.OnConfirm as OnConfirm
 import Core.OrderState
 import Core.Payment
 import Core.Provider
 import Core.Quotation
 
-newtype OnConfirmMessage = OnConfirmMessage
+newtype OnStatusMessage = OnStatusMessage
   { order :: Order
   }
   deriving (Generic, Show, ToJSON, FromJSON)
@@ -18,13 +19,25 @@ data Order = Order
   { id :: Text,
     state :: State,
     provider :: ProviderId,
-    items :: [OnConfirmItem],
+    items :: [OnStatusItem],
     billing :: Billing,
-    fulfillment :: OnConfirmFulfillment,
-    quote :: OnConfirmQuotation,
-    payment :: OnConfirmPayment
+    fulfillment :: OnStatusFulfillment,
+    quote :: OnStatusQuotation,
+    payment :: OnStatusPayment
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+coerceOrder :: OnConfirm.Order -> Order
+coerceOrder order = do
+  let id = order.id
+      state = order.state
+      provider = order.provider
+      billing = order.billing
+      fulfillment = order.fulfillment
+      quote = order.quote
+      payment = order.payment
+      items = map coerceItem order.items
+  Order {..}
 
 changePaymentState :: Status -> TrStatus -> Order -> Order
 changePaymentState st trStatus ord =
@@ -34,15 +47,3 @@ changePaymentState st trStatus ord =
             params = ord.payment.params {transaction_status = trStatus}
           }
      }
-
-successfulPayment :: Order -> Order
-successfulPayment = changePaymentState PAID Captured
-
-failedTransaction :: TrStatus -> Order -> Order
-failedTransaction = changePaymentState NOT_PAID
-
-linkExpired :: Order -> Order
-linkExpired = failedTransaction PaymentLinkExpired
-
-paymentFailed :: Order -> Order
-paymentFailed = failedTransaction Failed

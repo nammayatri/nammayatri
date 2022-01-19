@@ -33,3 +33,8 @@ data OnConfirmItem = OnConfirmItem
     quantity :: Quantity
   }
   deriving (Generic, Show, ToJSON, FromJSON)
+
+type OnStatusItem = InitItem
+
+coerceItem :: OnConfirmItem -> InitItem
+coerceItem OnConfirmItem {..} = InitItem {..}

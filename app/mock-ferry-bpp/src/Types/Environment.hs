@@ -2,6 +2,7 @@ module Types.Environment where
 
 import Beckn.Prelude
 import Beckn.Utils.Dhall (FromDhall)
+import qualified Database.Redis as Redis
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -14,9 +15,10 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { selfId :: Text,
     uniqueKeyId :: Text,
-    selfUri :: BaseUrl
+    selfUri :: BaseUrl,
+    redisConnection :: Redis.Connection
   }
   deriving (Generic)
 
-buildAppEnv :: AppCfg -> AppEnv
-buildAppEnv AppCfg {..} = AppEnv {..}
+buildAppEnv :: Redis.Connection -> AppCfg -> AppEnv
+buildAppEnv redisConnection AppCfg {..} = AppEnv {..}

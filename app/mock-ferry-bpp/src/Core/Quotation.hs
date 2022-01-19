@@ -20,3 +20,5 @@ data BreakupItem = BreakupItem
 type ConfirmQuotation = OnInitQuotation
 
 type OnConfirmQuotation = OnInitQuotation
+
+type OnStatusQuotation = OnInitQuotation

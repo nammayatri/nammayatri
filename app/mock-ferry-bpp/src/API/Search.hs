@@ -5,18 +5,18 @@ import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
-import Control.Concurrent
 import Core.Search
 import ExternalAPI
 import MockData.OnSearch
 import Types.App
+import Utils
 
 searchServer :: BecknReq SearchMessage -> MockM AckResponse
 searchServer becknReq@(BecknReq ctx _) = do
   mockLog DEBUG $ "request body: " <> show becknReq
   _ <- mockFork $ do
     mockLog DEBUG "debug message inside fork"
-    liftIO $ threadDelay $ 1000000 * 2
+    liftIO $ threadDelaySec 2
     context' <- buildOnSearchContext ctx
     let callbackData = onSearchCatalog
     ack <- callGatewayOnSearchS $ BecknCallbackReq context' $ Right callbackData

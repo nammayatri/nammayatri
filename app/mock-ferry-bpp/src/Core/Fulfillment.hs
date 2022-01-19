@@ -36,3 +36,5 @@ newtype FulfillmentId = FulfillmentId
 type OnInitFulfillment = OnSearchFulfillment
 
 type OnConfirmFulfillment = OnSearchFulfillment
+
+type OnStatusFulfillment = OnSearchFulfillment
