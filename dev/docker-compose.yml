@@ -84,6 +84,20 @@ services:
       - POSTGRES_PASSWORD=atlas
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
+  mock-registry-db:
+    image: "postgis/postgis:12-3.0"
+    container_name: "atlas_registry"
+    ports:
+      - "5439:5432"
+    volumes:
+      - ./sql-seed/mock-registry-seed.sql:/docker-entrypoint-initdb.d/1-mock-registry-seed.sql:Z
+      - ./local-testing-data/mock-registry.sql:/docker-entrypoint-initdb.d/2-mock-registry-testing-data.sql:Z
+    environment:
+      - POSTGRES_DB=atlas_registry
+      - POSTGRES_USER=atlas
+      - POSTGRES_PASSWORD=atlas
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   redis:
     image: "redis:5"
     ports:

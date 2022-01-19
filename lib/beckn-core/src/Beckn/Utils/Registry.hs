@@ -1,9 +1,5 @@
 module Beckn.Utils.Registry
-  ( lookupKey,
-    lookupDomain,
-    lookupType,
-    lookupShortOrgId,
-    registryFetch,
+  ( registryFetch,
     Beckn.Utils.Registry.registryLookup,
     whitelisting,
     withSubscriberCache,
@@ -13,12 +9,10 @@ where
 import Beckn.Prelude
 import Beckn.Types.Cache
 import Beckn.Types.Common
-import Beckn.Types.Credentials
 import Beckn.Types.Error
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Types.Registry
 import qualified Beckn.Types.Registry.API as API
-import qualified Beckn.Types.Registry.Domain as Domain
 import qualified Beckn.Types.Registry.Routes as Registry
 import Beckn.Utils.Common
 import Data.Generics.Labels ()
@@ -59,18 +53,6 @@ registryFetch request = do
   registryUrl <- askConfig (.registryUrl)
   callAPI registryUrl (T.client Registry.lookupAPI request) "lookup"
     >>= fromEitherM (ExternalAPICallError (Just "REGISTRY_CALL_ERROR") registryUrl)
-
-lookupKey :: Text -> [Credential] -> [Credential]
-lookupKey uniqueKeyId = filter (\credential -> credential.uniqueKeyId == uniqueKeyId)
-
-lookupShortOrgId :: Text -> [Credential] -> [Credential]
-lookupShortOrgId shortOrgId = filter (\credential -> credential.shortOrgId == shortOrgId)
-
-lookupDomain :: Domain.Domain -> [Credential] -> [Credential]
-lookupDomain domain = filter (\credential -> credential.domain == domain)
-
-lookupType :: SubscriberType -> [Credential] -> [Credential]
-lookupType _type = filter (\credential -> credential._type == _type)
 
 whitelisting ::
   (MonadThrow m, Log m) =>

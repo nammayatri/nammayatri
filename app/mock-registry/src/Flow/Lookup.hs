@@ -2,42 +2,23 @@ module Flow.Lookup where
 
 import App.Types (FlowHandler)
 import Beckn.Prelude
-import Beckn.Types.Common (getCurrentTime)
+import Beckn.Storage.Esqueleto
+import Beckn.Types.Core.Ack
 import Beckn.Types.Registry.API (LookupRequest, LookupResponse)
-import Beckn.Types.Registry.Subscriber (Subscriber (..))
 import Beckn.Utils.Error (withFlowHandlerAPI)
-import Beckn.Utils.Registry (lookupDomain, lookupKey, lookupShortOrgId, lookupType)
-import Data.Time (addUTCTime)
+import Domain.Subscriber
+import Storage.Queries.Subscriber as Sub
 
 lookup :: LookupRequest -> FlowHandler LookupResponse
 lookup req = withFlowHandlerAPI $ do
-  creds <- asks (.config.credRegistry)
-  let filteredCreds =
-        creds
-          & maybeFilter lookupDomain req.domain
-          & maybeFilter lookupKey req.unique_key_id
-          & maybeFilter lookupType req._type
-          & maybeFilter lookupShortOrgId req.subscriber_id
-  buildSubscriber `traverse` filteredCreds
-  where
-    oneYear = 31536000 -- in seconds
-    maybeFilter filt mbArg list = maybe list (`filt` list) mbArg
-    buildSubscriber cred = do
-      now <- getCurrentTime
-      return $
-        Subscriber
-          { unique_key_id = cred.uniqueKeyId,
-            subscriber_id = cred.shortOrgId,
-            subscriber_url = cred.url,
-            _type = cred._type,
-            domain = cred.domain,
-            city = Nothing,
-            country = Nothing,
-            signing_public_key = cred.signPubKey,
-            encr_public_key = Nothing,
-            valid_from = Just $ (- oneYear) `addUTCTime` now,
-            valid_until = Just $ oneYear `addUTCTime` now,
-            status = Nothing,
-            created = Nothing,
-            updated = Nothing
-          }
+  findByAll req.unique_key_id req.subscriber_id req.domain req._type
+
+create :: Subscriber -> FlowHandler AckResponse
+create sub = withFlowHandlerAPI $ do
+  runTransaction $ Sub.create sub
+  return Ack
+
+delete :: Text -> Text -> FlowHandler AckResponse
+delete uniqueKeyId subscriberId = withFlowHandlerAPI $ do
+  runTransaction $ Sub.deleteByKey (uniqueKeyId, subscriberId)
+  return Ack

@@ -9,9 +9,9 @@ module App.Types
   )
 where
 
+import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Credentials
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, registerCoreMetricsContainer)
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
@@ -21,18 +21,21 @@ import EulerHS.Prelude
 
 data AppCfg = AppCfg
   { port :: Int,
-    credRegistry :: [Credential],
+    esqDBCfg :: EsqDBConfig,
     signatureExpiry :: Seconds,
     graceTerminationPeriod :: Seconds,
-    loggerConfig :: LoggerConfig
+    loggerConfig :: LoggerConfig,
+    autoMigrate :: Bool,
+    migrationPath :: Maybe FilePath
   }
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
   { config :: AppCfg,
-    isShuttingDown :: TMVar (),
+    isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    esqDBEnv :: EsqDBEnv
   }
   deriving (Generic)
 
@@ -42,6 +45,7 @@ buildAppEnv config@AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   hostname <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

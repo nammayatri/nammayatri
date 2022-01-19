@@ -7,6 +7,7 @@ module Beckn.Utils.Dhall
   ( module Dhall,
     readDhallConfig,
     readDhallConfigDefault,
+    customDecoder,
   )
 where
 
@@ -52,19 +53,19 @@ deriving instance FromDhall T.PostgresConfig
 deriving instance FromDhall T.RedisConfig
 
 instance FromDhall BaseUrl where
-  autoWith = parseAddr . autoWith
+  autoWith = customDecoder showBaseUrlErr parseBaseUrl . autoWith
     where
-      parseAddr :: Decoder String -> Decoder BaseUrl
-      parseAddr Decoder {..} =
-        Decoder
-          { extract = \x -> fromMonadic $ do
-              txt <- toMonadic (extract x)
-              parseBaseUrl txt
-                & either (toMonadic . extractError . showBaseUrlErr) pure,
-            ..
-          }
-
       showBaseUrlErr :: SomeException -> Text
       showBaseUrlErr e = case fromException e of
         Just (InvalidBaseUrlException msg) -> toText msg
         Nothing -> "Some unknown error: " <> show e
+
+customDecoder :: (a1 -> Text) -> (t -> Either a1 a2) -> Decoder t -> Decoder a2
+customDecoder ifErr parser Decoder {..} =
+  Decoder
+    { extract = \x -> fromMonadic do
+        txt <- toMonadic (extract x)
+        parser txt
+          & either (toMonadic . extractError . ifErr) pure,
+      ..
+    }

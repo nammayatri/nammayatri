@@ -13,7 +13,6 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Utils.Common
-import Beckn.Utils.Servant.BaseUrl (showBaseUrlText)
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
@@ -46,10 +45,10 @@ buildContextMetro ::
   (MonadTime m, MonadGuid m, MonadThrow m) =>
   Mig.Action ->
   Text ->
+  Text ->
   BaseUrl ->
-  Maybe BaseUrl ->
   m Mig.Context
-buildContextMetro action txnId bapUri bppUri = do
+buildContextMetro action txnId bapId bapUri = do
   timestamp <- getCurrentTime
   message_id <- generateGUIDText
   return
@@ -58,10 +57,10 @@ buildContextMetro action txnId bapUri bppUri = do
         Mig.country = "IND",
         Mig.city = "Kochi",
         Mig.core_version = "0.9.1",
-        Mig.bap_id = showBaseUrlText bapUri,
+        Mig.bap_id = bapId,
         Mig.bap_uri = bapUri,
-        Mig.bpp_id = show <$> bppUri,
-        Mig.bpp_uri = bppUri,
+        Mig.bpp_id = Nothing,
+        Mig.bpp_uri = Nothing,
         Mig.transaction_id = txnId,
         Mig.key = Nothing,
         Mig.ttl = Nothing,

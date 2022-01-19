@@ -18,6 +18,7 @@ description: Please see the README on GitHub at <https://bitbucket.org/juspay/be
 default-extensions:
   - NoImplicitPrelude
   - DataKinds
+  - FlexibleContexts
   - FlexibleInstances
   - MultiParamTypeClasses
   - GADTs
@@ -38,6 +39,8 @@ dependencies:
   - servant-server
   - warp
   - time
+  - text
+  - persistent
 
 ghc-options:
   - -fwrite-ide-info

@@ -22,8 +22,8 @@ data Subscriber = Subscriber
     valid_from :: Maybe UTCTime,
     valid_until :: Maybe UTCTime,
     status :: Maybe SubscriberStatus,
-    created :: Maybe UTCTime,
-    updated :: Maybe UTCTime
+    created :: UTCTime,
+    updated :: UTCTime
   }
   deriving (Show, Generic)
 
@@ -49,7 +49,7 @@ data SubscriberType
   | LREG
   | CREG
   | RREG
-  deriving (Show, Generic, Eq, ToSchema, FromJSON, ToJSON, FromDhall)
+  deriving (Show, Read, Generic, Eq, ToSchema, FromJSON, ToJSON, FromDhall)
 
 data SubscriberStatus
   = INITIATED
@@ -58,4 +58,4 @@ data SubscriberStatus
   | EXPIRED
   | UNSUBSCRIBED
   | INVALID_SSL
-  deriving (Show, Generic, FromJSON, ToJSON)
+  deriving (Show, Read, Generic, FromJSON, ToJSON)

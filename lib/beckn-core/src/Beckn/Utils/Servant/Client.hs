@@ -13,14 +13,12 @@ import Beckn.Utils.Servant.BaseUrl
 import Beckn.Utils.Time
 import qualified Data.Aeson as A
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as T
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as ET
 import GHC.Records.Extra (HasField)
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as Http
-import qualified Servant.Client as S
 import Servant.Client.Core
 
 data HttpClientOptions = HttpClientOptions
@@ -62,9 +60,6 @@ callAPI' mbManagerSelector baseUrl eulerClient desc =
       Right r -> logDebug $ "Ok response: " <> decodeUtf8 (A.encode r)
       Left err -> logDebug $ "Error occured during client call: " <> show err
     return res
-
-parseBaseUrl :: MonadThrow m => Text -> m S.BaseUrl
-parseBaseUrl = S.parseBaseUrl . T.unpack
 
 callApiExtractingApiError ::
   ( Metrics.CoreMetrics m,

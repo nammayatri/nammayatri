@@ -15,7 +15,7 @@ data Domain
   | HEALTHCARE
   | METRO
   | PARKING
-  deriving (Eq, Generic, Show, FromDhall)
+  deriving (Eq, Generic, Show, Read, FromDhall)
 
 instance Example Domain where
   example = MOBILITY
