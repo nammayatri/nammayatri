@@ -1,0 +1,92 @@
+# @name confirm
+
+@transaction_id = 61433c9c-73c2-11ec-8001-7085c22b52e7
+@action = confirm
+
+POST {{fmd-wrapper/url}}/{{action}}
+content-type: application/json
+Authorization: Signature keyId="{{fmd-bap/subscriber-id}}|{{fmd-bap/unique-key}}|ed25519",algorithm="ed25519",created=1639662887,expires=1639663487,headers="(created) (expires) digest",signature="fake"
+
+{
+  "context": {
+    "country": "IND",
+    "domain": "{{fmd/domain}}",
+    "transaction_id": "{{transaction_id}}",
+    "action": "{{action}}",
+    "message_id": "{{transaction_id}}",
+    "city": "Bangalore",
+    "bap_uri": "{{fmd-bap/beeceptor/url}}",
+    "timestamp": "2021-12-16T14:11:20.96971926Z",
+    "core_version": "0.9.1",
+    "bap_id": "{{fmd-bap/beeceptor/url}}"
+  },
+  "message": {
+    "order": {
+      "payment": {
+        "params": {
+          "amount": null,
+          "transaction_status": null,
+          "transaction_id": "transaction id",
+          "currency": "INR"
+        }
+      },
+      "items": [
+        {
+          "quantity": {},
+          "id": "2"
+        }
+      ],
+      "add_ons": [],
+      "quote": {},
+      "fulfillment": {
+        "start": {
+          "location": {
+            "address": {
+              "state": "Karnataka",
+              "country": "India",
+              "building": null,
+              "door": "#444",
+              "street": "18th Main",
+              "name": null,
+              "city": "Bangalore",
+              "area_code": "560047"
+            },
+            "gps": "12.9729391, 77.6294794"
+          },
+          "person": {},
+          "contact": {
+            "phone": "+919999999999"
+          },
+          "instructions": null
+        },
+        "tracking": false,
+        "end": {
+          "location": {
+            "address": {
+              "state": "Karnataka",
+              "country": "India",
+              "building": null,
+              "door": "#444",
+              "street": "18th Main",
+              "locality": null,
+              "name": null,
+              "city": "Bangalore",
+              "area_code": "560047"
+            },
+            "gps": "12.9354504, 77.6146828"
+          },
+          "person": {},
+          "contact": {
+            "phone": "+919999999999"
+          },
+          "instructions": null
+        }
+      },
+      "billing": {
+        "phone": "+919999999999",
+        "name": "Mr. Payeerson"
+      },
+      "offers": []
+    }
+  }
+}

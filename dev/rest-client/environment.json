@@ -5,7 +5,18 @@
             "transporter-host": "http://localhost:8014/v2",
             "app-token": "ea37f941-427a-4085-a7d0-96240f166672",
             "coordinator-token": "ea37f941-427a-4085-a7d0-96240f166672",
-            "driver-token": "001df941-427a-4085-a7d0-96240f166672"
+            "driver-token": "001df941-427a-4085-a7d0-96240f166672",
+
+            "fmd/domain": "nic2004:55204",
+            "fmd-bap/beeceptor/url": "https://fmd-test.free.beeceptor.com",
+            "fmd-bap/subscriber-id" : "fmd-test-app",
+            "fmd-bap/unique-key" : "fmd-test-app-key",
+            "fmd-wrapper/url": "http://localhost:8018/v1",
+            "gw/url": "http://localhost:8015/v1",
+            "gw/nsdl/url": "https://pilot-gateway-1.beckn.nsdl.co.in",
+            "rg/beckn-one/url": "https://beckn-one.succinct.in/subscribers",
+            "rg/nsdl/url": "https://pilot-gateway-1.beckn.nsdl.co.in",
+            "rg/url": "http://localhost:8020"
         },
         "master": {
             "app-host": "https://api.sandbox.beckn.juspay.in/latest/app/v2",

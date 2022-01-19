@@ -1,0 +1,38 @@
+POST {{rg/beckn-one/url}}/lookup
+content-type: application/json
+Accept: application/json
+
+{
+    "type": "BAP",
+    "domain": "{{fmd/domain}}"
+}
+
+###
+
+POST {{rg/beckn-one/url}}/lookup
+content-type: application/json
+Accept: application/json
+
+{
+    "domain": "{{fmd/domain}}"
+}
+
+###
+
+POST {{rg/beckn-one/url}}/lookup
+content-type: application/json
+Accept: application/json
+
+{
+    "unique_key_id": "67"
+}
+
+###
+
+POST {{rg/beckn-one/url}}/lookup
+content-type: application/json
+Accept: application/json
+
+{
+    "subscriber_id": "beckn-one.succinct.in\/local_delivery_bap"
+}

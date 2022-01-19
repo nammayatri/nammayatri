@@ -1,0 +1,33 @@
+#  Set `disableSignatureAuth = True` in both:
+# /dhall-configs/dev/beckn-gateway.dhall
+# /dhall-configs/dev/fmd-wrapper.dhall
+# 
+# Run apps:
+# cd dev; sudo docker-compose up
+# stack exec fmd-wrapper-exe
+# stack exec beckn-gateway-exe
+# stack exec mock-registry-exe
+# 
+# FIXME: Maybe we should use something locally instead of beeceptor and add it to `organization` table?
+# For callback catching with beeceptor change `callback_url` in fmd-wrapper `organization` table:
+# UPDATE atlas_fmd_wrapper.organization
+# 	SET callback_url='https://fmd-test.free.beeceptor.com'
+# 	WHERE short_id='fmd-test-app';
+# 
+# To change it back:
+# UPDATE atlas_fmd_wrapper.organization
+#   SET callback_url='http://localhost:8019/v1'
+#   WHERE short_id='fmd-test-app';
+# 
+# Use https://beeceptor.com/console/fmd-test for callbacks inspection
+
+### @name healh-checking
+GET {{fmd-wrapper/url}}
+
+### @name beeceptor-test
+POST {{fmd-bap/beeceptor/url}}
+content-type: application/json
+
+{
+  "data": "Hello Beeceptor"
+}

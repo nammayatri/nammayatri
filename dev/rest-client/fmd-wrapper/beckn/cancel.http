@@ -1,0 +1,27 @@
+# @name cancel
+@transaction_id = 61433c9c-73c2-11ec-8001-7085c22b52e7
+@order_id = ca3b0061-eaf4-4252-8687-fef4ae7e4bb1
+@action = cancel
+
+POST {{fmd-wrapper/url}}/{{action}}
+content-type: application/json
+Authorization: Signature keyId="{{fmd-bap/subscriber-id}}|{{fmd-bap/unique-key}}|ed25519",algorithm="ed25519",created=1639662887,expires=1639663487,headers="(created) (expires) digest",signature="fake"
+
+{
+  "context": {
+    "country": "IND",
+    "domain": "nic2004:55204",
+    "transaction_id": "{{transaction_id}}",
+    "action": "{{action}}",
+    "message_id": "{{transaction_id}}",
+    "city": "Bangalore",
+    "bap_uri": "{{fmd-bap/beeceptor/url}}",
+    "timestamp": "2021-12-11T17:41:28.287370462Z",
+    "core_version": "0.9.1",
+    "bap_id": "{{fmd-bap/beeceptor/url}}"
+  },
+  "message": {
+    "order_id": "{{order_id}}",
+    "cancellation_reason_id": "Not specified."
+  }
+}
