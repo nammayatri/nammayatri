@@ -1,5 +1,6 @@
 module API.Search where
 
+import API.Utils (buildOnActionContext)
 import Beckn.Prelude
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Migration.Context
@@ -17,21 +18,8 @@ searchServer becknReq@(BecknReq ctx _) = do
   _ <- mockFork $ do
     mockLog DEBUG "debug message inside fork"
     liftIO $ threadDelaySec 2
-    context' <- buildOnSearchContext ctx
+    context' <- buildOnActionContext ON_SEARCH ctx
     let callbackData = onSearchCatalog
     ack <- callGatewayOnSearchS $ BecknCallbackReq context' $ Right callbackData
     mockLog DEBUG $ "got ack" <> show ack
   pure Ack
-
-buildOnSearchContext :: Context -> MockM Context
-buildOnSearchContext ctx = do
-  now <- getCurrentTime
-  bppId <- asks (.selfId)
-  bppUri <- asks (.selfUri)
-  let ctx' =
-        ctx{action = ON_SEARCH,
-            bpp_id = Just bppId,
-            bpp_uri = Just bppUri,
-            timestamp = now
-           }
-  pure ctx'

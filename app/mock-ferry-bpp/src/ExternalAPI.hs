@@ -9,6 +9,7 @@ import qualified Control.Monad.Catch as C
 import Core.OnCancel
 import Core.OnConfirm
 import Core.OnSearch
+import Core.OnStatus
 import qualified Data.ByteString as BS
 import Data.String.Conversions
 import Network.HTTP.Client hiding (Proxy)
@@ -75,6 +76,9 @@ callBapOnCancel req = do
   _ <- callAPI bapUrl clientAction
   pure ()
 
+callBapOnCancel1 :: BecknCallbackReq OnCancelMessage -> MockM ()
+callBapOnCancel1 = callBapAPI @OnCancelAPI Proxy
+
 ----------------------------
 callAPI :: BaseUrl -> ClientM a -> MockM a
 callAPI url clientAction = do
@@ -90,6 +94,23 @@ callAPI url clientAction = do
       Left err -> C.throwM err
       Right a -> pure a
 
+--------------------
+callBapAPI ::
+  forall api a b.
+  ( Client ClientM api ~ (BecknCallbackReq a -> ClientM b),
+    HasClient ClientM api
+  ) =>
+  Proxy api ->
+  BecknCallbackReq a ->
+  MockM ()
+callBapAPI proxy req = do
+  let bapUrl = req.context.bap_uri
+      clientFunc = client proxy
+      clientAction = clientFunc req
+  _ <- callAPI bapUrl clientAction
+  pure ()
+
+--------------------
 buildFakeSignature :: Text -> Text -> BS.ByteString
 buildFakeSignature subscriberId uniqueKey =
   "Signature keyId=\""

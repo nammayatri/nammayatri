@@ -1,7 +1,7 @@
-module Core.Payment where
+module Core.Payment (module Core.Payment, module Decimal) where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.DecimalValue (DecimalValue (..))
+import Beckn.Types.Core.Migration.DecimalValue as Decimal (DecimalValue (..))
 import Beckn.Utils.JSON
 import Data.Aeson
 import Data.Aeson.Types
@@ -20,28 +20,6 @@ instance (FromJSON a) => FromJSON (Payment a) where
 
 instance (ToJSON a) => ToJSON (Payment a) where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-data ConfirmParams = ConfirmParams
-  { amount :: DecimalValue,
-    currency :: Text
-  }
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-type ConfirmPayment = Payment ConfirmParams
-
-data OnConfirmParams = OnConfirmParams
-  { transaction_id :: Text,
-    transaction_status :: TrStatus,
-    amount :: DecimalValue,
-    currency :: Text
-  }
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-type OnConfirmPayment = Payment OnConfirmParams
-
-type OnStatusPayment = OnConfirmPayment
-
-type OnCancelPayment = OnConfirmPayment
 
 ----------------------------------------------
 

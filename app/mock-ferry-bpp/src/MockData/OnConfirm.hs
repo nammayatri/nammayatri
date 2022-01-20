@@ -3,7 +3,6 @@ module MockData.OnConfirm where
 import Beckn.Prelude
 import qualified Core.Confirm as Confirm
 import Core.Descriptor
-import Core.Item
 import Core.OnConfirm
 import Core.OrderState
 import Core.Payment
@@ -18,7 +17,6 @@ buildOnConfirmMessage orderId confOrd = do
 
 buildOnConfirmOrder :: Text -> Confirm.Order -> Either Text Order
 buildOnConfirmOrder orderId confOrd = do
-  --  let id = "ORDER_1"
   let id = orderId
       state = Active
       provider = confOrd.provider
@@ -33,7 +31,7 @@ buildOnConfirmOrder orderId confOrd = do
             _type = PRE_FULFILLMENT,
             status = NOT_PAID,
             params =
-              OnConfirmParams
+              Params
                 { transaction_id = "payment_transaction_id",
                   transaction_status = PaymentLinkCreated,
                   amount = confOrd.payment.params.amount,
@@ -43,10 +41,10 @@ buildOnConfirmOrder orderId confOrd = do
       items = map addQrCode confOrd.items
   pure Order {..}
 
-addQrCode :: ConfirmItem -> OnConfirmItem
-addQrCode ConfirmItem {..} =
+addQrCode :: Confirm.Item -> Item
+addQrCode Confirm.Item {..} =
   let descriptor = DescriptorCode {code = "<QR code date>"}
-   in OnConfirmItem {..}
+   in Item {..}
 
 defaultPaymentLink :: BaseUrl
 defaultPaymentLink =

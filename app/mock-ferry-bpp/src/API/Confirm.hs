@@ -1,18 +1,20 @@
 module API.Confirm where
 
+import API.Confirm.Coerce
+import API.Utils
 import Beckn.Prelude
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
-import Core.Confirm (ConfirmMessage (..))
+import Core.Confirm
 import Core.OnCancel
-import Core.OnConfirm (OnConfirmMessage (..))
+import Core.OnConfirm
 import qualified Core.OnConfirm as OnConfirm
+import Core.OnStatus
 import Core.Payment
 import ExternalAPI
 import MockData.OnConfirm
-import MockData.OnStatus
 import Redis
 import Types.App
 import Utils
@@ -21,7 +23,7 @@ confirmServer :: BecknReq ConfirmMessage -> MockM AckResponse
 confirmServer confirmReq@(BecknReq ctx msg) = do
   mockLog INFO $ "got confirm request: " <> show confirmReq
 
-  context' <- buildOnConfirmContext ctx
+  context' <- buildOnActionContext ON_CONFIRM ctx
   orderId <- liftIO generateOrderId
   let eithOrder = buildOnConfirmOrder orderId msg.order
       callbackData = either (Left . textToError) (Right . OnConfirmMessage) eithOrder
@@ -50,30 +52,22 @@ trackPayment orderId = do
   (context, order) <- readCtxOrderWithException orderId
   let handlingWay = defineHandlingWay order.fulfillment.id
   case handlingWay of
-    Success -> do
-      let onStatusMessage = OnStatusMessage $ successfulPayment order
-          onStatusReq = BecknCallbackReq context (Right onStatusMessage)
-      _ <- editOrder OnConfirm.successfulPayment order.id
-      -- but what if we failed to change the state?
-      callBapOnStatus onStatusReq
+    Success -> transactionOk context order
     FailedPayment -> cancelTransaction Failed context order
     LinkExpired -> cancelTransaction PaymentLinkExpired context order
 
+transactionOk :: Context -> OnConfirm.Order -> MockM ()
+transactionOk context order = do
+  let onStatusMessage = OnStatusMessage $ coerceOrderStatus $ successfulPayment order
+      onStatusReq = BecknCallbackReq (context {action = ON_CANCEL}) (Right onStatusMessage)
+  _ <- editOrder OnConfirm.successfulPayment order.id
+  -- but what if we failed to change the state?
+  callBapOnStatus onStatusReq
+
 cancelTransaction :: TrStatus -> Context -> OnConfirm.Order -> MockM ()
 cancelTransaction trStatus ctx ord = do
-  let onCancelReq = BecknCallbackReq ctx (Right $ OnCancelMessage $ coerceOrder $ OnConfirm.failedTransaction trStatus ord)
+  let ctx' = ctx {action = ON_CANCEL}
+      onCancelReq = BecknCallbackReq ctx' (Right $ OnCancelMessage $ coerceOrderCancel $ OnConfirm.failedTransaction trStatus ord)
   _ <- editOrder (OnConfirm.failedTransaction trStatus) ord.id
+  -- but what if we failed to change the state?
   callBapOnCancel onCancelReq
-
-buildOnConfirmContext :: Context -> MockM Context
-buildOnConfirmContext ctx = do
-  now <- getCurrentTime
-  bppId <- asks (.selfId)
-  bppUri <- asks (.selfUri)
-  let ctx' =
-        ctx{action = ON_CONFIRM,
-            bpp_id = Just bppId,
-            bpp_uri = Just bppUri,
-            timestamp = now
-           }
-  pure ctx'

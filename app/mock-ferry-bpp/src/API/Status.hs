@@ -1,5 +1,6 @@
 module API.Status where
 
+import API.Confirm.Coerce
 import Beckn.Prelude
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
@@ -25,7 +26,7 @@ statusServer statusReq@(BecknReq ctx msg) = do
         let onStatusReq = BecknCallbackReq context' $ Left $ textToError errMsg
         callBapOnStatus onStatusReq
       Right (_, ordOC) -> do
-        let onStatusOrder = coerceOrder ordOC
+        let onStatusOrder = coerceOrderStatus ordOC
             onStatusReq = BecknCallbackReq context' $ Right $ OnStatusMessage onStatusOrder
         callBapOnStatus onStatusReq
   pure Ack

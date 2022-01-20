@@ -4,18 +4,7 @@ import Beckn.Prelude
 import Core.Location
 import Core.Time
 
-data SearchFulfillment = SearchFulfillment
-  { start :: FulfillmentLocation,
-    end :: FulfillmentLocation
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-newtype FulfillmentLocation = FulfillmentLocation
-  { location :: LocationGps
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data OnSearchFulfillment = OnSearchFulfillment
+data FullInfoFulfillment = FullInfoFulfillment
   { id :: Text,
     start :: FulfillmentLocationTime,
     end :: FulfillmentLocationTime
@@ -32,7 +21,3 @@ newtype FulfillmentId = FulfillmentId
   { id :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
-
-type OnConfirmFulfillment = OnSearchFulfillment
-
-type OnStatusFulfillment = OnSearchFulfillment

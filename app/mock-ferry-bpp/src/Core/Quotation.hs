@@ -4,7 +4,7 @@ import Beckn.Prelude
 import Beckn.Types.Core.Migration.Duration
 import Core.Price
 
-data ConfirmQuotation = ConfirmQuotation
+data Quotation = Quotation
   { price :: Price,
     breakup :: [BreakupItem],
     ttl :: Maybe Duration
@@ -16,7 +16,3 @@ data BreakupItem = BreakupItem
     price :: Price
   }
   deriving (Generic, Show, ToJSON, FromJSON)
-
-type OnConfirmQuotation = ConfirmQuotation
-
-type OnStatusQuotation = ConfirmQuotation

@@ -2,6 +2,7 @@ module Core.OnConfirm where
 
 import Beckn.Prelude
 import Core.Billing
+import Core.Descriptor
 import Core.Fulfillment
 import Core.Item
 import Core.OrderState
@@ -18,11 +19,27 @@ data Order = Order
   { id :: Text,
     state :: State,
     provider :: ProviderId,
-    items :: [OnConfirmItem],
+    items :: [Item],
     billing :: Billing,
-    fulfillment :: OnConfirmFulfillment,
-    quote :: OnConfirmQuotation,
-    payment :: OnConfirmPayment
+    fulfillment :: FullInfoFulfillment,
+    quote :: Quotation,
+    payment :: Payment Params
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+data Params = Params
+  { transaction_id :: Text,
+    transaction_status :: TrStatus,
+    amount :: DecimalValue,
+    currency :: Text
+  }
+  deriving (Generic, Eq, Show, FromJSON, ToJSON)
+
+data Item = Item
+  { id :: Text,
+    fulfillment_id :: Text,
+    descriptor :: DescriptorCode,
+    quantity :: Quantity
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -31,7 +48,7 @@ changePaymentState st trStatus ord =
   ord{payment =
         ord.payment
           { status = st,
-            params = ord.payment.params {transaction_status = trStatus}
+            params = (ord.payment.params :: Params) {transaction_status = trStatus}
           }
      }
 
