@@ -44,7 +44,7 @@ buildOnConfirmOrder orderId confOrd = do
   pure Order {..}
 
 addQrCode :: ConfirmItem -> OnConfirmItem
-addQrCode InitItem {..} =
+addQrCode ConfirmItem {..} =
   let descriptor = DescriptorCode {code = "<QR code date>"}
    in OnConfirmItem {..}
 

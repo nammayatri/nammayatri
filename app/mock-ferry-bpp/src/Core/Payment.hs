@@ -21,15 +21,13 @@ instance (FromJSON a) => FromJSON (Payment a) where
 instance (ToJSON a) => ToJSON (Payment a) where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
 
-data OnInitParams = OnInitParams
+data ConfirmParams = ConfirmParams
   { amount :: DecimalValue,
     currency :: Text
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
 
-type OnInitPayment = Payment OnInitParams
-
-type ConfirmPayment = OnInitPayment
+type ConfirmPayment = Payment ConfirmParams
 
 data OnConfirmParams = OnConfirmParams
   { transaction_id :: Text,

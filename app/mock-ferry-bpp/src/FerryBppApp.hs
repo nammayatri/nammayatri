@@ -5,7 +5,6 @@ where
 
 import API.Confirm
 import API.HealthCheck
-import API.Init
 import API.Search
 import API.Status
 import API.Types
@@ -33,4 +32,4 @@ runMockFerryBPP = do
       run totalAPI totalServer appEnv
 
 totalServer :: ServerT TotalAPI MockM
-totalServer = healthCheckServer :<|> searchServer :<|> initServer :<|> confirmServer :<|> statusServer
+totalServer = healthCheckServer :<|> searchServer :<|> confirmServer :<|> statusServer

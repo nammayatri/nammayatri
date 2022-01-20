@@ -8,7 +8,6 @@ import Beckn.Types.Core.ReqTypes
 import qualified Control.Monad.Catch as C
 import Core.OnCancel
 import Core.OnConfirm
-import Core.OnInit
 import Core.OnSearch
 import qualified Data.ByteString as BS
 import Data.String.Conversions
@@ -30,20 +29,6 @@ callGatewayOnSearchS req = do
       clientFunc = client $ Proxy @GatewayOnSearchAPI
       clientAction = clientFunc req
   _ <- callAPI gatewayUrl clientAction
-  pure ()
-
-----------------------------
-
-type OnInitAPI =
-  "on_init"
-    :> ReqBody '[JSON] (BecknCallbackReq OnInitMessage)
-    :> Post '[JSON] AckResponse
-
-callBapOnInit :: BaseUrl -> BecknCallbackReq OnInitMessage -> MockM ()
-callBapOnInit bapUrl req = do
-  let clientFunc = client $ Proxy @OnInitAPI
-      clientAction = clientFunc req
-  _ <- callAPI bapUrl clientAction
   pure ()
 
 ----------------------------

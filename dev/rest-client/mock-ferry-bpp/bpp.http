@@ -37,46 +37,6 @@ content-type: application/json
     }
 }
 
-###
-POST $swtd-bpp-host/init
-content-type: application/json
-{
-    "context": {
-        "domain": "FOOD-AND-BEVERAGE",
-        "country": "IND",
-        "city": "std:080",
-        "action": "search",
-        "core_version": "0.9.1",
-        "bap_id": "http://box.beckn.org",
-        "bap_uri": "http://localhost:10666",
-        "transaction_id": "919213b9-4a3b-42d6-8597-2ad977cf67f1",
-        "message_id": "c15d823e-c2d9-4eb9-9515-029d37ac22df",
-        "timestamp": "2021-10-27T06:44:26.114244Z"
-    },
-    "message": {
-        "order": {
-            "provider": {
-                "id": "KMRL"
-            },
-            "items": [
-                {
-                    "id": "ONE_WAY_TICKET",
-                    "fulfillment_id": "TRIP001_EKM_ABC",
-                    "quantity": {
-                        "count": 2
-                    }
-                }
-            ],
-            "billing": {
-                "name": "User Name"
-            },
-            "fulfillment": {
-                "id": "TRIP001_EKM_ABC"
-            }
-        }
-    } 
-}
-
 ### for this quote there will be a successful payment
 POST $swtd-bpp-host/confirm
 content-type: application/json

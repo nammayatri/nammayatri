@@ -17,14 +17,12 @@ data OnSearchItem = OnSearchItem
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data InitItem = InitItem
+data ConfirmItem = ConfirmItem
   { id :: Text,
     fulfillment_id :: Text,
     quantity :: Quantity
   }
   deriving (Generic, Show, ToJSON, FromJSON)
-
-type ConfirmItem = InitItem
 
 data OnConfirmItem = OnConfirmItem
   { id :: Text,
@@ -34,7 +32,7 @@ data OnConfirmItem = OnConfirmItem
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-type OnStatusItem = InitItem
+type OnStatusItem = ConfirmItem
 
-coerceItem :: OnConfirmItem -> InitItem
-coerceItem OnConfirmItem {..} = InitItem {..}
+coerceItem :: OnConfirmItem -> ConfirmItem
+coerceItem OnConfirmItem {..} = ConfirmItem {..}

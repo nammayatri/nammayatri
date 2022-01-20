@@ -19,6 +19,6 @@ data Order = Order
     billing :: Billing,
     fulfillment :: FulfillmentId,
     quote :: ConfirmQuotation,
-    payment :: OnInitPayment
+    payment :: ConfirmPayment
   }
   deriving (Generic, Show, ToJSON, FromJSON)

@@ -33,8 +33,6 @@ newtype FulfillmentId = FulfillmentId
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-type OnInitFulfillment = OnSearchFulfillment
-
 type OnConfirmFulfillment = OnSearchFulfillment
 
 type OnStatusFulfillment = OnSearchFulfillment
