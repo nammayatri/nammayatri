@@ -17,9 +17,10 @@ statusServer statusReq@(BecknReq ctx msg) = do
   mockLog INFO $ "got confirm request: " <> show statusReq
   context' <- buildOnStatusContext ctx
   let orderId = msg.order.id
-  maybeCtxOrd <- Redis.read orderId
+  eithCtxOrd <- Redis.readCtxOrderEither orderId
+
   _ <- mockFork $
-    (liftIO (threadDelaySec 2) >>) $ case maybeCtxOrd of
+    (liftIO (threadDelaySec 2) >>) $ case eithCtxOrd of
       Left errMsg -> do
         let onStatusReq = BecknCallbackReq context' $ Left $ textToError errMsg
         callBapOnStatus onStatusReq

@@ -30,7 +30,9 @@ confirmServer confirmReq@(BecknReq ctx msg) = do
     let bapUri = ctx.bap_uri
     ack <- callBapOnConfirmS bapUri $ BecknCallbackReq context' callbackData
     mockLog DEBUG $ "got ack" <> show ack
-    whenRight eithOrder $ trackPayment context'
+    whenRight eithOrder $ \onConfirmOrder -> do
+      Redis.write context' onConfirmOrder
+      trackPayment onConfirmOrder.id
 
   pure Ack
 
@@ -42,20 +44,20 @@ defineHandlingWay = \case
   "TRIP001_EKM_ABC" -> LinkExpired
   _ -> FailedPayment
 
-trackPayment :: Context -> OnConfirm.Order -> MockM ()
-trackPayment ctx ord = do
-  Redis.write ctx ord
-  liftIO $ threadDelaySec 60
-  let handlingWay = defineHandlingWay ord.fulfillment.id
+trackPayment :: Text -> MockM ()
+trackPayment orderId = do
+  liftIO $ threadDelaySec 25
+  (context, order) <- readCtxOrderWithException orderId
+  let handlingWay = defineHandlingWay order.fulfillment.id
   case handlingWay of
     Success -> do
-      let onStatusMessage = OnStatusMessage $ successfulPayment ord
-          onStatusReq = BecknCallbackReq ctx (Right onStatusMessage)
-      _ <- editOrder OnConfirm.successfulPayment ord.id
+      let onStatusMessage = OnStatusMessage $ successfulPayment order
+          onStatusReq = BecknCallbackReq context (Right onStatusMessage)
+      _ <- editOrder OnConfirm.successfulPayment order.id
       -- but what if we failed to change the state?
       callBapOnStatus onStatusReq
-    FailedPayment -> cancelTransaction Failed ctx ord
-    LinkExpired -> cancelTransaction PaymentLinkExpired ctx ord
+    FailedPayment -> cancelTransaction Failed context order
+    LinkExpired -> cancelTransaction PaymentLinkExpired context order
 
 cancelTransaction :: TrStatus -> Context -> OnConfirm.Order -> MockM ()
 cancelTransaction trStatus ctx ord = do

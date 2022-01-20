@@ -208,7 +208,7 @@ content-type: application/json
 }
 
 ###
-# $order_id = 2384518
+# $order_id = 1794518
 POST $swtd-bpp-host/status
 content-type: application/json
 {

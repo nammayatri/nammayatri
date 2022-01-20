@@ -10,8 +10,8 @@ import Core.OnCancel
 import Core.OnConfirm
 import Core.OnInit
 import Core.OnSearch
-import Core.OnStatus
 import qualified Data.ByteString as BS
+import Data.String.Conversions
 import Network.HTTP.Client hiding (Proxy)
 import Network.HTTP.Types.Header
 import Servant
@@ -108,7 +108,7 @@ callAPI url clientAction = do
 buildFakeSignature :: Text -> Text -> BS.ByteString
 buildFakeSignature subscriberId uniqueKey =
   "Signature keyId=\""
-    <> encodeUtf8 subscriberId
+    <> cs subscriberId
     <> "|"
-    <> encodeUtf8 uniqueKey
+    <> cs uniqueKey
     <> "|ed25519\",algorithm=\"ed25519\",created=1639662887,expires=1639663487,headers=\"(created) (expires) digest\",signature=\"fake\""

@@ -5,7 +5,11 @@ import Beckn.Types.Core.Error
 import Control.Concurrent
 import qualified Data.Aeson as Ae
 import qualified Data.Aeson.Types as Ae
+import Data.Bifunctor
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
+import Data.Either.Extra
+import Data.String.Conversions
 import qualified Data.Text as T
 import Data.Time
 import System.Random
@@ -15,6 +19,9 @@ import System.Random
 -- Example: readUTCTime "2021-12-01 18:00"
 readUTCTime :: Text -> Maybe UTCTime
 readUTCTime = parseTimeM True defaultTimeLocale "%F %R" . T.unpack
+
+rightToMaybe :: Either e a -> Maybe a
+rightToMaybe = either (const Nothing) Just
 
 textToError :: Text -> Error
 textToError desc =
@@ -37,5 +44,18 @@ threadDelaySec sec = threadDelay $ sec * 1000000
 encodeJSON :: (ToJSON a) => a -> BSL.ByteString
 encodeJSON = Ae.encode . toJSON
 
-decodeJSON :: (FromJSON a) => BSL.ByteString -> Maybe a
-decodeJSON bs = Ae.decode bs >>= Ae.parseMaybe parseJSON
+decodeJSON :: (FromJSON a) => BS.ByteString -> Maybe a
+decodeJSON bs = Ae.decode (BSL.fromStrict bs) >>= Ae.parseMaybe parseJSON
+
+decodingErrorMessage :: BS.ByteString -> Text
+decodingErrorMessage bs = "failed to decode JSON: " <> cs bs
+
+decodeEitherJSON :: (FromJSON a) => BS.ByteString -> Either Text a
+decodeEitherJSON bs = do
+  val <- maybeToEither (decodingErrorMessage bs) (Ae.decode (BSL.fromStrict bs))
+  first T.pack $ Ae.parseEither parseJSON val
+
+findAndDecode :: (FromJSON a) => BS.ByteString -> [(BS.ByteString, BS.ByteString)] -> Either Text a
+findAndDecode key list = maybeToEither errMsg (lookup key list) >>= decodeEitherJSON
+  where
+    errMsg = "failed to find key: " <> cs key
