@@ -61,15 +61,14 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     QSearchRequest.create searchRequest
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  fork "search" . withRetry $ do
-    fork "search cabs" $ do
-      context <- buildTaxiContext Core9.SEARCH txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
-      let intent = mkIntent req now distance
-      void $ ExternalAPI.search (BecknReq context $ Search.SearchMessage intent)
-    fork "search metro" $ do
-      contextMig <- buildContextMetro Core9.SEARCH txnId bapURIs.metro Nothing
-      intentMig <- mkIntentMig req
-      ExternalAPI.searchMetro (BecknReq contextMig $ Core9.SearchIntent intentMig)
+  fork "search cabs" . withRetry $ do
+    context <- buildTaxiContext Core9.SEARCH txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
+    let intent = mkIntent req now distance
+    void $ ExternalAPI.search (BecknReq context $ Search.SearchMessage intent)
+  fork "search metro" . withRetry $ do
+    contextMig <- buildContextMetro Core9.SEARCH txnId bapURIs.metro Nothing
+    intentMig <- mkIntentMig req
+    ExternalAPI.searchMetro (BecknReq contextMig $ Core9.SearchIntent intentMig)
   return . API.SearchRes $ searchRequest.id
   where
     validateServiceability = do
