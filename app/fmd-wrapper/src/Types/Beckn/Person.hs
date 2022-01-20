@@ -1,3 +1,10 @@
-module Types.Beckn.Person (module ReExport) where
+module Types.Beckn.Person (Person (..)) where
 
-import Beckn.Types.Core.Migration.Person as ReExport
+import EulerHS.Prelude
+import Types.Beckn.Name (Name)
+
+newtype Person = Person
+  { name :: Name
+  }
+  deriving stock (Eq, Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)

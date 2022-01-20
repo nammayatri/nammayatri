@@ -1,7 +1,6 @@
 module Fmd where
 
-import Beckn.Types.Core.ReqTypes
-import Beckn.Utils.Example
+import qualified Beckn.Types.Core.ReqTypes as API
 import Beckn.Utils.Servant.BaseUrl (showBaseUrlText)
 import Data.Time
 import EulerHS.Prelude
@@ -42,9 +41,31 @@ buildContext act tid = do
         timestamp = now
       }
 
-buildFMDSearchReq :: Context -> BecknReq SearchIntent
-buildFMDSearchReq context =
-  BecknReq
+buildFMDSearchReq :: Context -> Gps -> Gps -> API.BecknReq SearchIntent
+buildFMDSearchReq context pickupGps dropGps =
+  API.BecknReq
     { context,
-      message = SearchIntent example
+      message =
+        SearchIntent
+          { intent =
+              Intent
+                { fulfillment =
+                    FulFillmentInfo
+                      { start =
+                          LocationInfo
+                            { location =
+                                Location
+                                  { gps = pickupGps
+                                  }
+                            },
+                        end =
+                          LocationInfo
+                            { location =
+                                Location
+                                  { gps = dropGps
+                                  }
+                            }
+                      }
+                }
+          }
     }

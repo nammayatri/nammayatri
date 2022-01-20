@@ -1,3 +1,19 @@
-module Types.Beckn.API.Status (module ReExport) where
+module Types.Beckn.API.Status (module Types.Beckn.API.Status) where
 
-import Beckn.Types.Core.Migration.API.Status as ReExport
+import Beckn.Types.Core.Ack (AckResponse)
+import Beckn.Types.Core.ReqTypes (BecknReq)
+import EulerHS.Prelude
+import Servant (JSON, Post, ReqBody, (:>))
+
+type StatusAPI =
+  "status"
+    :> ReqBody '[JSON] (BecknReq OrderId)
+    :> Post '[JSON] AckResponse
+
+statusAPI :: Proxy StatusAPI
+statusAPI = Proxy
+
+newtype OrderId = OrderId
+  { order_id :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)

@@ -1,3 +1,10 @@
-module Types.Beckn.Descriptor (module ReExport) where
+module Types.Beckn.Descriptor (Descriptor (..)) where
 
-import Beckn.Types.Core.Migration.Descriptor as ReExport
+import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
+
+data Descriptor = Descriptor
+  { name :: Text,
+    code :: Text
+  }
+  deriving (Generic, Show, Eq, ToSchema, ToJSON, FromJSON)

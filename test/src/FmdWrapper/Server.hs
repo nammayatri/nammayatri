@@ -1,26 +1,25 @@
 module FmdWrapper.Server where
 
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Migration.Order
-import Beckn.Types.Core.ReqTypes
+import qualified Beckn.Types.Core.ReqTypes as API
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import Control.Concurrent.MVar (isEmptyMVar, modifyMVar_)
 import EulerHS.Prelude
 import FmdWrapper.Common
 import Runner
 import Servant
-import qualified "fmd-wrapper" Types.Beckn.API.Cancel as CancelAPI
-import qualified "fmd-wrapper" Types.Beckn.API.Confirm as ConfirmAPI
-import qualified "fmd-wrapper" Types.Beckn.API.Search as SearchAPI
-import qualified "fmd-wrapper" Types.Beckn.API.Status as StatusAPI
-import qualified "fmd-wrapper" Types.Beckn.API.Track as TrackAPI
+import qualified "fmd-wrapper" Types.Beckn.API.OnCancel as OnCancelAPI
+import qualified "fmd-wrapper" Types.Beckn.API.OnConfirm as OnConfirmAPI
+import qualified "fmd-wrapper" Types.Beckn.API.OnSearch as OnSearchAPI
+import qualified "fmd-wrapper" Types.Beckn.API.OnStatus as OnStatusAPI
+import qualified "fmd-wrapper" Types.Beckn.API.OnTrack as OnTrackAPI
 
 data CallbackData = CallbackData
-  { onSearchCb :: MVar [CallbackResult (BecknCallbackReq SearchAPI.OnSearchCatalog)],
-    onConfirmCb :: MVar (CallbackResult (BecknCallbackReq OrderObject)),
-    onStatusCb :: MVar (CallbackResult (BecknCallbackReq OrderObject)),
-    onTrackCb :: MVar (CallbackResult (BecknCallbackReq TrackAPI.OnTrackInfo)),
-    onCancelCb :: MVar (CallbackResult (BecknCallbackReq OrderObject))
+  { onSearchCb :: MVar [CallbackResult (API.BecknCallbackReq OnSearchAPI.OnSearchCatalog)],
+    onConfirmCb :: MVar (CallbackResult (API.BecknCallbackReq OnConfirmAPI.OrderObject)),
+    onStatusCb :: MVar (CallbackResult (API.BecknCallbackReq OnStatusAPI.OrderObject)),
+    onTrackCb :: MVar (CallbackResult (API.BecknCallbackReq OnTrackAPI.OnTrackInfo)),
+    onCancelCb :: MVar (CallbackResult (API.BecknCallbackReq OnCancelAPI.OrderObject))
   }
 
 withCallbackApp :: (CallbackData -> IO ()) -> IO ()
@@ -63,45 +62,45 @@ callbackServer cbData =
 
 type OnSearchAPI =
   Header "Authorization" HttpSig.SignaturePayload
-    :> SearchAPI.OnSearchAPI
+    :> OnSearchAPI.OnSearchAPI
 
-onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> BecknCallbackReq SearchAPI.OnSearchCatalog -> Handler AckResponse
+onSearch :: CallbackData -> Maybe HttpSig.SignaturePayload -> API.BecknCallbackReq OnSearchAPI.OnSearchCatalog -> Handler AckResponse
 onSearch callbackData sPayload req = do
   liftIO $ modifyMVar_ (onSearchCb callbackData) (pure . (CallbackResult (sPayload <&> (.params.keyId.subscriberId)) req :))
   pure Ack
 
 type OnConfirmAPI =
   Header "Authorization" HttpSig.SignaturePayload
-    :> ConfirmAPI.OnConfirmAPI
+    :> OnConfirmAPI.OnConfirmAPI
 
-onConfirm :: CallbackData -> Maybe HttpSig.SignaturePayload -> BecknCallbackReq OrderObject -> Handler AckResponse
+onConfirm :: CallbackData -> Maybe HttpSig.SignaturePayload -> API.BecknCallbackReq OnConfirmAPI.OrderObject -> Handler AckResponse
 onConfirm callbackData sPayload req = do
   putOrSwapMVar (callbackData.onConfirmCb) (CallbackResult (sPayload <&> (.params.keyId.subscriberId)) req)
   pure Ack
 
 type OnTrackAPI =
   Header "Authorization" HttpSig.SignaturePayload
-    :> TrackAPI.OnTrackAPI
+    :> OnTrackAPI.OnTrackAPI
 
-onTrack :: CallbackData -> Maybe HttpSig.SignaturePayload -> BecknCallbackReq TrackAPI.OnTrackInfo -> Handler AckResponse
+onTrack :: CallbackData -> Maybe HttpSig.SignaturePayload -> API.BecknCallbackReq OnTrackAPI.OnTrackInfo -> Handler AckResponse
 onTrack callbackData sPayload req = do
   putOrSwapMVar (callbackData.onTrackCb) (CallbackResult (sPayload <&> (.params.keyId.subscriberId)) req)
   pure Ack
 
 type OnStatusAPI =
   Header "Authorization" HttpSig.SignaturePayload
-    :> StatusAPI.OnStatusAPI
+    :> OnStatusAPI.OnStatusAPI
 
-onStatus :: CallbackData -> Maybe HttpSig.SignaturePayload -> BecknCallbackReq OrderObject -> Handler AckResponse
+onStatus :: CallbackData -> Maybe HttpSig.SignaturePayload -> API.BecknCallbackReq OnStatusAPI.OrderObject -> Handler AckResponse
 onStatus callbackData sPayload req = do
   putOrSwapMVar (callbackData.onStatusCb) (CallbackResult (sPayload <&> (.params.keyId.subscriberId)) req)
   pure Ack
 
 type OnCancelAPI =
   Header "Authorization" HttpSig.SignaturePayload
-    :> CancelAPI.OnCancelAPI
+    :> OnCancelAPI.OnCancelAPI
 
-onCancel :: CallbackData -> Maybe HttpSig.SignaturePayload -> BecknCallbackReq OrderObject -> Handler AckResponse
+onCancel :: CallbackData -> Maybe HttpSig.SignaturePayload -> API.BecknCallbackReq OnCancelAPI.OrderObject -> Handler AckResponse
 onCancel callbackData sPayload req = do
   putOrSwapMVar (callbackData.onCancelCb) (CallbackResult (sPayload <&> (.params.keyId.subscriberId)) req)
   pure Ack

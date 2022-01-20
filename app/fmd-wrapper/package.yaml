@@ -22,6 +22,7 @@ default-extensions:
   - DeriveAnyClass
   - DeriveFunctor
   - DeriveGeneric
+  - DerivingStrategies
   - DuplicateRecordFields
   - ExplicitNamespaces
   - FlexibleContexts
@@ -35,6 +36,7 @@ default-extensions:
   - NoImplicitPrelude
   - NumDecimals
   - OverloadedStrings
+  - OverloadedLabels
   - PackageImports
   - PatternSynonyms
   - PolyKinds
@@ -64,6 +66,8 @@ dependencies:
   - http-types
   - lens
   - mtl
+  - openapi3
+  - parsec
   - servant
   - servant-client
   - servant-server

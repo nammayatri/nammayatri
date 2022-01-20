@@ -1,3 +1,11 @@
-module Types.Beckn.Location (module ReExport) where
+module Types.Beckn.Location where
 
-import Beckn.Types.Core.Migration.Location as ReExport
+import EulerHS.Prelude
+import Types.Beckn.Address (Address)
+import Types.Beckn.Gps (Gps)
+
+data Location = Location
+  { gps :: Gps,
+    address :: Address
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)

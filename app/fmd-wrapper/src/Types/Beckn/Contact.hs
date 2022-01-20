@@ -1,3 +1,9 @@
-module Types.Beckn.Contact (module ReExport) where
+module Types.Beckn.Contact (Contact (..)) where
 
-import Beckn.Types.Core.Migration.Contact as ReExport
+import EulerHS.Prelude
+
+newtype Contact = Contact
+  { phone :: Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)

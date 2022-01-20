@@ -1,10 +1,9 @@
 module FmdWrapper.Flow.Search where
 
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.ReqTypes
+import qualified Beckn.Types.Core.ReqTypes as API
 import Beckn.Utils.Example
 import Common
-import Control.Lens ((?~))
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import ExternalAPI.Dunzo.Types
@@ -17,6 +16,7 @@ import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant (Header, type (:>))
 import Servant.Client
 import Test.Hspec hiding (context, example)
+import qualified "fmd-wrapper" Types.Beckn.API.OnSearch as OnSearchAPI
 import qualified "fmd-wrapper" Types.Beckn.API.Search as SearchAPI
 import "fmd-wrapper" Types.Beckn.Category (Category (..))
 import "fmd-wrapper" Types.Beckn.Context (Action (..), Context (..))
@@ -29,7 +29,7 @@ import Utils
 numberOfDunzoCategores :: Int
 numberOfDunzoCategores = 6
 
-runSearch :: ClientEnv -> Text -> BecknReq SearchAPI.SearchIntent -> IO (Either ClientError AckResponse)
+runSearch :: ClientEnv -> Text -> API.BecknReq SearchAPI.SearchIntent -> IO (Either ClientError AckResponse)
 runSearch clientEnv orgId searchReq = do
   now <- getPOSIXTime
   let signature = decodeUtf8 $ signRequest searchReq now orgId (orgId <> "-key")
@@ -46,44 +46,39 @@ verifyCallbackContext expectBppUri transactionId context = do
   context.message_id `shouldBe` transactionId
   context.core_version `shouldBe` "0.9.1"
 
-verifyDunzoCatalog :: SearchAPI.OnSearchCatalog -> IO ()
+verifyDunzoCatalog :: OnSearchAPI.OnSearchCatalog -> IO ()
 verifyDunzoCatalog onSearchCatalog = do
-  let catalog = SearchAPI.catalog onSearchCatalog
-  let Just [provider] = catalog.bpp_providers
-  let items_ = fromMaybe [] provider.items
-  let categories = fromMaybe [] provider.categories
+  let catalog = OnSearchAPI.catalog onSearchCatalog
+  let [provider] = catalog.bpp_providers
+  let items_ = provider.items
+  let categories = provider.categories
   case categories of
     [category] ->
       category
         `shouldBe` Category
-          (Just "1")
-          Nothing
-          ( Just
-              Descriptor.emptyDescriptor
-                { Descriptor.name = Just "Pickup and drop",
-                  Descriptor.code = Just "pickup_drop"
-                }
+          "1"
+          ( Descriptor.Descriptor
+              { name = "Pickup and drop",
+                code = "pickup_drop"
+              }
           )
-          Nothing
-          Nothing
     _ -> expectationFailure "Exactly one category expected."
   map extractCategoryData items_ `shouldBe` expectedItemsCategoryData
   forM_ items_ $ \item -> do
-    let price_ = fromJust item.price
-    price_.currency `shouldBe` Just "INR"
-    price_.estimated_value `shouldSatisfy` isJust
-    item.category_id `shouldBe` Just "1"
+    let price_ = item.price
+    price_.currency `shouldBe` "INR"
+    item.category_id `shouldBe` "1"
   where
     extractCategoryData item =
-      let descriptor = fromJust (item.descriptor)
-       in (fromJust item.id, descriptor.name, descriptor.code)
+      let descriptor = item.descriptor
+       in (item.id, descriptor.name, descriptor.code)
     expectedItemsCategoryData =
-      let catData = map (Just . content) dzPackageContentList
+      let catData = map content dzPackageContentList
        in zip3 stringNumbers catData catData
     stringNumbers = map show numbers
     numbers = [1 ..] :: [Int]
 
-processResults :: Text -> CallbackData -> IO [BecknCallbackReq SearchAPI.OnSearchCatalog]
+processResults :: Text -> CallbackData -> IO [API.BecknCallbackReq OnSearchAPI.OnSearchCatalog]
 processResults transactionId callbackData = do
   callbackResults <- readMVar (onSearchCb callbackData)
   let apiKeys = map apiKey callbackResults
@@ -109,10 +104,7 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
   withNewUUID $ \transactionId -> do
     ctx <- buildContext SEARCH transactionId
 
-    let searchReq =
-          buildFMDSearchReq ctx
-            & setIntentPickupGps ?~ pickupGps
-            & setIntentDropGps ?~ dropGps
+    let searchReq = buildFMDSearchReq ctx pickupGps dropGps
 
     gatewayResp <- runSearch clientEnv "fmd-test-app" searchReq
     assertAck gatewayResp
@@ -120,7 +112,7 @@ dunzoLocationError pickupGps dropGps check clientEnv callbackData =
     waitForCallback
     searchResults <- processResults transactionId callbackData
 
-    let errorResults = filter isLeft $ map contents searchResults
+    let errorResults = filter isLeft $ map API.contents searchResults
     case errorResults of
       [Left err] -> check err
       _ -> expectationFailure "Exactly one error result expected."
@@ -130,10 +122,7 @@ successfulSearch clientEnv callbackData =
   withNewUUID $ \transactionId -> do
     ctx <- buildContext SEARCH transactionId
 
-    let searchReq =
-          buildFMDSearchReq ctx
-            & setIntentPickupGps ?~ Fixtures.validDunzoGps1
-            & setIntentDropGps ?~ Fixtures.validDunzoGps2
+    let searchReq = buildFMDSearchReq ctx Fixtures.validDunzoGps1 Fixtures.validDunzoGps2
 
     gatewayResponse <- runSearch clientEnv "fmd-test-app" searchReq
     assertAck gatewayResponse
@@ -143,7 +132,7 @@ successfulSearch clientEnv callbackData =
 
     let dunzoResults = filter isDunzoResult searchResults
 
-    case rights (map contents dunzoResults) of
+    case rights (map API.contents dunzoResults) of
       [message] ->
         verifyDunzoCatalog message
       _ -> expectationFailure "Expected one search result from Dunzo."
@@ -180,7 +169,7 @@ dunzoDifferentCity =
 unknownSubscriber :: ClientEnv -> CallbackData -> IO ()
 unknownSubscriber clientEnv _ = do
   ctx <- buildContext SEARCH "dummy-txn-id"
-  let searchReq = buildFMDSearchReq ctx
+  let searchReq = buildFMDSearchReq ctx Fixtures.validDunzoGps1 Fixtures.validDunzoGps2
 
   gatewayResponse <- runSearch clientEnv "" searchReq
   verifyError 401 "SIGNATURE_VERIFICATION_FAILURE" gatewayResponse

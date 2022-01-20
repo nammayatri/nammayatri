@@ -1,3 +1,11 @@
-module Types.Beckn.Price (module ReExport) where
+module Types.Beckn.Price (Price (..)) where
 
-import Beckn.Types.Core.Migration.Price as ReExport
+import Data.OpenApi (ToSchema)
+import EulerHS.Prelude
+import Types.Beckn.DecimalValue (DecimalValue)
+
+data Price = Price
+  { currency :: Text,
+    estimated_value :: DecimalValue
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

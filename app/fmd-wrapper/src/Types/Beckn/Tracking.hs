@@ -1,3 +1,20 @@
-module Types.Beckn.Tracking (module ReExport) where
+module Types.Beckn.Tracking where
 
-import Beckn.Types.Core.Migration.Tracking as ReExport
+import Beckn.Utils.JSON
+import EulerHS.Prelude
+import Servant.Client (BaseUrl)
+
+data Tracking = Tracking
+  { url :: Maybe BaseUrl,
+    status :: Maybe TrackingStatus
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+data TrackingStatus = ACTIVE | INACTIVE
+  deriving (Generic, Show)
+
+instance FromJSON TrackingStatus where
+  parseJSON = genericParseJSON constructorsToLowerOptions
+
+instance ToJSON TrackingStatus where
+  toJSON = genericToJSON constructorsToLowerOptions
