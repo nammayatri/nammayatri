@@ -29,8 +29,7 @@ confirmServer confirmReq@(BecknReq ctx msg) = do
       callbackData = either (Left . textToError) (Right . OnConfirmMessage) eithOrder
   _ <- mockFork $ do
     liftIO $ threadDelaySec 2
-    let bapUri = ctx.bap_uri
-    ack <- callBapOnConfirmS bapUri $ BecknCallbackReq context' callbackData
+    ack <- callBapOnConfirm $ BecknCallbackReq context' callbackData
     mockLog DEBUG $ "got ack" <> show ack
     whenRight eithOrder $ \onConfirmOrder -> do
       Redis.write context' onConfirmOrder

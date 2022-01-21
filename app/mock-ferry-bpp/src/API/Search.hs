@@ -20,6 +20,6 @@ searchServer becknReq@(BecknReq ctx _) = do
     liftIO $ threadDelaySec 2
     context' <- buildOnActionContext ON_SEARCH ctx
     let callbackData = onSearchCatalog
-    ack <- callGatewayOnSearchS $ BecknCallbackReq context' $ Right callbackData
+    ack <- callGatewayOnSearch $ BecknCallbackReq context' $ Right callbackData
     mockLog DEBUG $ "got ack" <> show ack
   pure Ack

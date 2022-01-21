@@ -24,64 +24,66 @@ type GatewayOnSearchAPI =
     :> ReqBody '[JSON] (BecknCallbackReq OnSearchCatalog)
     :> Post '[JSON] AckResponse
 
-callGatewayOnSearchS :: BecknCallbackReq OnSearchCatalog -> MockM ()
-callGatewayOnSearchS req = do
-  let gatewayUrl = BaseUrl Http "localhost" 8015 ""
-      clientFunc = client $ Proxy @GatewayOnSearchAPI
-      clientAction = clientFunc req
-  _ <- callAPI gatewayUrl clientAction
-  pure ()
+callGatewayOnSearch :: BecknCallbackReq OnSearchCatalog -> MockM ()
+callGatewayOnSearch = callAPI @GatewayOnSearchAPI gatewayUrl
+  where
+    gatewayUrl = BaseUrl Http "localhost" 8015 ""
 
 ----------------------------
-
 type OnConfirmAPI =
   "on_confirm"
     :> ReqBody '[JSON] (BecknCallbackReq OnConfirmMessage)
     :> Post '[JSON] AckResponse
 
-callBapOnConfirmS :: BaseUrl -> BecknCallbackReq OnConfirmMessage -> MockM ()
-callBapOnConfirmS bapUrl req = do
-  let clientFunc = client $ Proxy @OnConfirmAPI
-      clientAction = clientFunc req
-  _ <- callAPI bapUrl clientAction
-  pure ()
+callBapOnConfirm :: BecknCallbackReq OnConfirmMessage -> MockM ()
+callBapOnConfirm = callBapAPI @OnConfirmAPI
 
 ----------------------------
-
 type OnStatusAPI =
   "on_status"
     :> ReqBody '[JSON] (BecknCallbackReq OnStatusMessage)
     :> Post '[JSON] AckResponse
 
 callBapOnStatus :: BecknCallbackReq OnStatusMessage -> MockM ()
-callBapOnStatus req = do
-  let bapUrl = req.context.bap_uri
-      clientFunc = client $ Proxy @OnStatusAPI
-      clientAction = clientFunc req
-  _ <- callAPI bapUrl clientAction
-  pure ()
+callBapOnStatus = callBapAPI @OnStatusAPI
 
 ----------------------------
-
 type OnCancelAPI =
   "on_cancel"
     :> ReqBody '[JSON] (BecknCallbackReq OnCancelMessage)
     :> Post '[JSON] AckResponse
 
 callBapOnCancel :: BecknCallbackReq OnCancelMessage -> MockM ()
-callBapOnCancel req = do
-  let bapUrl = req.context.bap_uri
-      clientFunc = client $ Proxy @OnCancelAPI
-      clientAction = clientFunc req
-  _ <- callAPI bapUrl clientAction
-  pure ()
-
-callBapOnCancel1 :: BecknCallbackReq OnCancelMessage -> MockM ()
-callBapOnCancel1 = callBapAPI @OnCancelAPI Proxy
+callBapOnCancel = callBapAPI @OnCancelAPI
 
 ----------------------------
-callAPI :: BaseUrl -> ClientM a -> MockM a
-callAPI url clientAction = do
+callBapAPI ::
+  forall api a b.
+  ( HasClient ClientM api,
+    Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
+  ) =>
+  BecknCallbackReq a ->
+  MockM ()
+callBapAPI req = do
+  let bapUrl = req.context.bap_uri
+  callAPI @api bapUrl req
+
+callAPI ::
+  forall api a b.
+  ( HasClient ClientM api,
+    Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
+  ) =>
+  BaseUrl ->
+  BecknCallbackReq a ->
+  MockM ()
+callAPI url req = do
+  let clientFunc = client @api Proxy
+      clientAction = clientFunc req
+  _ <- callClientM url clientAction
+  pure ()
+
+callClientM :: BaseUrl -> ClientM a -> MockM a
+callClientM url clientAction = do
   subscriberId <- asks (.selfId)
   uniqueKey <- asks (.uniqueKeyId)
   liftIO $ do
@@ -93,22 +95,6 @@ callAPI url clientAction = do
     case res of
       Left err -> C.throwM err
       Right a -> pure a
-
---------------------
-callBapAPI ::
-  forall api a b.
-  ( Client ClientM api ~ (BecknCallbackReq a -> ClientM b),
-    HasClient ClientM api
-  ) =>
-  Proxy api ->
-  BecknCallbackReq a ->
-  MockM ()
-callBapAPI proxy req = do
-  let bapUrl = req.context.bap_uri
-      clientFunc = client proxy
-      clientAction = clientFunc req
-  _ <- callAPI bapUrl clientAction
-  pure ()
 
 --------------------
 buildFakeSignature :: Text -> Text -> BS.ByteString
