@@ -1,8 +1,10 @@
-module Redis where
+module Common.Redis where
 
 import Beckn.Prelude hiding (read)
 import Beckn.Types.Core.Migration.Context
 import Beckn.Utils.Logging
+import Common.Exceptions
+import Common.Utils
 import qualified Control.Monad.Catch as C
 import Control.Monad.Trans.Except
 import Core.OnConfirm
@@ -12,9 +14,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.String.Conversions
 import Database.Redis hiding (runRedis)
 import qualified Database.Redis as Hedis
-import Exceptions
 import Types.App
-import Utils
 
 withRedisConnection :: (Connection -> IO a) -> IO a
 withRedisConnection = C.bracket connectRedis disconnect

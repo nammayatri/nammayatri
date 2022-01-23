@@ -1,4 +1,4 @@
-module Utils where
+module Common.Utils where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Error
@@ -32,14 +32,14 @@ textToError desc =
       message = Just desc
     }
 
-generateOrderId :: IO Text
-generateOrderId = show <$> randomRIO (1000000, 9999999 :: Int)
+generateOrderId :: (MonadIO m) => m Text
+generateOrderId = fmap show $ liftIO $ randomRIO (1000000, 9999999 :: Int)
 
 whenRight :: Applicative m => Either e a -> (a -> m ()) -> m ()
 whenRight eith f = either (\_ -> pure ()) f eith
 
-threadDelaySec :: Int -> IO ()
-threadDelaySec sec = threadDelay $ sec * 1000000
+threadDelaySec :: (MonadIO m) => Int -> m ()
+threadDelaySec sec = liftIO $ threadDelay $ sec * 1000000
 
 encodeJSON :: (ToJSON a) => a -> BSL.ByteString
 encodeJSON = Ae.encode . toJSON

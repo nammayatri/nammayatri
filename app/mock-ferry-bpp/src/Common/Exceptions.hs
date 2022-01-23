@@ -1,4 +1,4 @@
-module Exceptions where
+module Common.Exceptions where
 
 import Beckn.Prelude
 import qualified Control.Monad.Catch as C

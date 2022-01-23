@@ -3,6 +3,7 @@ module MockData.OnSearch where
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Types.Core.Migration.Gps
+import Common.Utils
 import Core.Descriptor
 import Core.Fulfillment
 import Core.Location
@@ -10,7 +11,6 @@ import Core.OnSearch
 import Core.Price
 import Core.Time
 import Data.Maybe
-import Utils
 
 mockBppDescriptor :: Descriptor
 mockBppDescriptor =
