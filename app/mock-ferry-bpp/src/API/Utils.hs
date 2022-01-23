@@ -2,7 +2,7 @@ module API.Utils where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.Context
-import Types.App
+import Common.App
 
 buildOnActionContext :: Action -> Context -> MockM Context
 buildOnActionContext action ctx = do

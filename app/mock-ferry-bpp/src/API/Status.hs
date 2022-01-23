@@ -7,13 +7,13 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
+import Common.App
 import qualified Common.Redis as Redis
 import Common.Utils
 import Core.OnStatus
 import Core.Status
 import Data.Bifunctor
 import ExternalAPI
-import Types.App
 
 statusServer :: BecknReq StatusMessage -> MockM AckResponse
 statusServer statusReq@(BecknReq ctx msg) = do

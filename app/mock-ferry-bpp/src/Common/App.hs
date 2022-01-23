@@ -1,14 +1,14 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Types.App where
+module Common.App where
 
 import Beckn.Prelude
 import Beckn.Types.Logging
+import Common.Environment
 import qualified Control.Monad.Catch as C
 import qualified Data.Text.IO as TIO
 import qualified Data.Time.Clock as Time
 import Servant
-import Types.Environment
 import UnliftIO.Concurrent
 
 run :: HasServer api '[] => Proxy (api :: Type) -> ServerT api MockM -> AppEnv -> Application

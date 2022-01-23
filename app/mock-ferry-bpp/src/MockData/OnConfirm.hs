@@ -23,7 +23,7 @@ buildOnConfirmOrder orderId confOrd = do
       billing = confOrd.billing
       reqFulfillment = confOrd.fulfillment.id
   fulfillment <- maybeToEither "failed to find fulfillment" $ findFulfillment reqFulfillment
-  let quote = confOrd.quote -- should check if everything is correct
+  let quote = confOrd.quote
       payment =
         Payment
           { uri = defaultPaymentLink,

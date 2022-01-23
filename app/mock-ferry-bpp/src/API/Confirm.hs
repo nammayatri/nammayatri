@@ -7,6 +7,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
+import Common.App
 import qualified Common.Redis as Redis
 import Common.Utils
 import Core.Confirm
@@ -17,7 +18,6 @@ import Core.OnStatus
 import Core.Payment
 import ExternalAPI
 import MockData.OnConfirm
-import Types.App
 
 confirmServer :: BecknReq ConfirmMessage -> MockM AckResponse
 confirmServer confirmReq@(BecknReq ctx msg) = do

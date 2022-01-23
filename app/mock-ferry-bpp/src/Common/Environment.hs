@@ -1,4 +1,4 @@
-module Types.Environment where
+module Common.Environment where
 
 import Beckn.Prelude
 import Beckn.Utils.Dhall (FromDhall)

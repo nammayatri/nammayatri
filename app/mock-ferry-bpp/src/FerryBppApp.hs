@@ -10,6 +10,8 @@ import API.Status
 import API.Types
 import Beckn.Prelude
 import Beckn.Utils.Dhall (readDhallConfigDefault)
+import Common.App
+import Common.Environment
 import Common.Redis (withRedisConnection)
 import Network.Wai.Handler.Warp
   ( defaultSettings,
@@ -17,8 +19,6 @@ import Network.Wai.Handler.Warp
     setPort,
   )
 import Servant
-import Types.App
-import Types.Environment
 
 runMockFerryBPP :: IO ()
 runMockFerryBPP = do

@@ -6,11 +6,11 @@ import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
+import Common.App
 import Common.Utils
 import Core.Search
 import ExternalAPI
 import MockData.OnSearch
-import Types.App
 
 searchServer :: BecknReq SearchMessage -> MockM AckResponse
 searchServer becknReq@(BecknReq ctx _) = do

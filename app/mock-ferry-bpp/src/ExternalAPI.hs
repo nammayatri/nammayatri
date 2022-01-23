@@ -4,6 +4,7 @@ module ExternalAPI where
 
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
+import Common.App
 import Common.ExternalAPI
 import Core.OnCancel
 import Core.OnConfirm
@@ -11,7 +12,6 @@ import Core.OnSearch
 import Core.OnStatus
 import Servant
 import Servant.Client
-import Types.App
 
 type GatewayOnSearchAPI =
   "v1"

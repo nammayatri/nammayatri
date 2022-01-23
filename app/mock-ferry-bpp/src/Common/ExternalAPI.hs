@@ -4,13 +4,13 @@ module Common.ExternalAPI where
 
 import Beckn.Prelude
 import Beckn.Types.Core.ReqTypes
+import Common.App
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.String.Conversions
 import Network.HTTP.Client hiding (Proxy)
 import Network.HTTP.Types.Header
 import Servant.Client
-import Types.App
 
 callBapAPI ::
   forall api a b.
