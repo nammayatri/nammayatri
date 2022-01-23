@@ -1,10 +1,11 @@
 module Core.Payment (module Core.Payment, module Decimal) where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue as Decimal (DecimalValue (..))
 import Beckn.Utils.JSON
 import Data.Aeson
 import Data.Aeson.Types
+import Relude
+import Servant.Client
 
 data Payment a = Payment
   { uri :: BaseUrl,

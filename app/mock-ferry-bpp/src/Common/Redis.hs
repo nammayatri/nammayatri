@@ -1,6 +1,5 @@
 module Common.Redis where
 
-import Beckn.Prelude hiding (read)
 import Beckn.Types.Core.Migration.Context
 import Beckn.Utils.Logging
 import Common.App
@@ -15,6 +14,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.String.Conversions
 import Database.Redis hiding (runRedis)
 import qualified Database.Redis as Hedis
+import Relude hiding (id, ord)
 
 withRedisConnection :: (Connection -> IO a) -> IO a
 withRedisConnection = C.bracket connectRedis disconnect

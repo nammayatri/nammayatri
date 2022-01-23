@@ -1,10 +1,10 @@
 module API.Confirm.Coerce where
 
-import Beckn.Prelude
 import qualified Core.OnCancel as OnCancel
 import qualified Core.OnConfirm as OnConfirm
 import qualified Core.OnStatus as OnStatus
 import Core.Payment
+import Relude hiding (id, state)
 
 coerceItemStatus :: OnConfirm.Item -> OnStatus.Item
 coerceItemStatus OnConfirm.Item {..} = OnStatus.Item {..}

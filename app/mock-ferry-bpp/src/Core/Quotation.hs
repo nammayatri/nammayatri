@@ -1,8 +1,9 @@
 module Core.Quotation where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Migration.Duration
 import Core.Price
+import Data.Aeson
+import Relude
 
 data Quotation = Quotation
   { price :: Price,

@@ -1,6 +1,5 @@
 module Core.OnStatus where
 
-import Beckn.Prelude
 import Core.Billing
 import Core.Fulfillment
 import Core.Item
@@ -8,6 +7,8 @@ import Core.OrderState
 import Core.Payment
 import Core.Provider
 import Core.Quotation
+import Data.Aeson
+import Relude hiding (State, id, state)
 
 newtype OnStatusMessage = OnStatusMessage
   { order :: Order

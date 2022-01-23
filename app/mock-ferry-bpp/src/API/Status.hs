@@ -1,8 +1,7 @@
 module API.Status where
 
 import API.Confirm.Coerce
-import API.Utils (buildOnActionContext)
-import Beckn.Prelude
+import API.Utils
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
@@ -12,8 +11,8 @@ import qualified Common.Redis as Redis
 import Common.Utils
 import Core.OnStatus
 import Core.Status
-import Data.Bifunctor
 import ExternalAPI
+import Relude
 
 statusServer :: BecknReq StatusMessage -> MockM AckResponse
 statusServer statusReq@(BecknReq ctx msg) = do

@@ -8,7 +8,6 @@ import API.HealthCheck
 import API.Search
 import API.Status
 import API.Types
-import Beckn.Prelude
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Common.App
 import Common.Environment
@@ -18,6 +17,7 @@ import Network.Wai.Handler.Warp
     runSettings,
     setPort,
   )
+import Relude
 import Servant
 
 runMockFerryBPP :: IO ()

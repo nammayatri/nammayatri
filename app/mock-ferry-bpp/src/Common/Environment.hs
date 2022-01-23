@@ -1,8 +1,9 @@
 module Common.Environment where
 
-import Beckn.Prelude
 import Beckn.Utils.Dhall (FromDhall)
 import qualified Database.Redis as Redis
+import Relude
+import Servant.Client
 
 data AppCfg = AppCfg
   { port :: Int,

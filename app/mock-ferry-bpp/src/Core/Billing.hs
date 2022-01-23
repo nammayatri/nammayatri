@@ -1,6 +1,7 @@
 module Core.Billing where
 
-import Beckn.Prelude
+import Data.Aeson
+import Relude
 
 newtype Billing = Billing
   { name :: Text

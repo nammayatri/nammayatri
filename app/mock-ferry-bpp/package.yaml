@@ -89,6 +89,7 @@ dependencies:
   - random
   - hedis
   - transformers
+  - relude
 
 ghc-options:
   - -fwrite-ide-info

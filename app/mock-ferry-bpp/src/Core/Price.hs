@@ -1,8 +1,9 @@
 module Core.Price where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue
+import Data.Aeson
 import Data.OpenApi (ToSchema)
+import Relude
 
 data Price = Price
   { currency :: Text,

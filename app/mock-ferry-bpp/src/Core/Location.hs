@@ -1,9 +1,10 @@
 module Core.Location where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Migration.Gps
 import Beckn.Utils.JSON
 import Core.Descriptor
+import Data.Aeson
+import Relude hiding (id)
 
 newtype LocationGps = LocationGps {gps :: Gps}
   deriving (Generic, Show, ToJSON, FromJSON)

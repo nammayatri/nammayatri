@@ -1,6 +1,8 @@
 module Core.Time where
 
-import Beckn.Prelude
+import Data.Aeson
+import Data.Time.Clock
+import Relude
 
 data Time = Time
   { label :: Text,

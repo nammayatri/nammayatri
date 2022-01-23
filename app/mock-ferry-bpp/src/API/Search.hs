@@ -1,7 +1,6 @@
 module API.Search where
 
 import API.Utils (buildOnActionContext)
-import Beckn.Prelude
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
@@ -11,6 +10,7 @@ import Common.Utils
 import Core.Search
 import ExternalAPI
 import MockData.OnSearch
+import Relude
 
 searchServer :: BecknReq SearchMessage -> MockM AckResponse
 searchServer becknReq@(BecknReq ctx _) = do

@@ -1,8 +1,9 @@
 module Core.Fulfillment where
 
-import Beckn.Prelude
 import Core.Location
 import Core.Time
+import Data.Aeson
+import Relude hiding (id)
 
 data FullInfoFulfillment = FullInfoFulfillment
   { id :: Text,

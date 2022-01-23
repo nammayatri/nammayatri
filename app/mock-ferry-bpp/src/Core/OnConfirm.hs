@@ -1,6 +1,5 @@
 module Core.OnConfirm where
 
-import Beckn.Prelude
 import Core.Billing
 import Core.Descriptor
 import Core.Fulfillment
@@ -9,6 +8,8 @@ import Core.OrderState
 import Core.Payment
 import Core.Provider
 import Core.Quotation
+import Data.Aeson
+import Relude hiding (State, id, ord, state)
 
 newtype OnConfirmMessage = OnConfirmMessage
   { order :: Order

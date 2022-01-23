@@ -1,6 +1,7 @@
 module Core.Provider where
 
-import Beckn.Prelude
+import Data.Aeson
+import Relude hiding (id)
 
 newtype ProviderId = ProviderId
   { id :: Text

@@ -1,6 +1,7 @@
 module Core.Item where
 
-import Beckn.Prelude
+import Data.Aeson
+import Relude
 
 newtype Quantity = Quantity
   { count :: Int

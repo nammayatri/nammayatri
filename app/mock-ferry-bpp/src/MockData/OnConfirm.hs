@@ -1,6 +1,5 @@
 module MockData.OnConfirm where
 
-import Beckn.Prelude
 import qualified Core.Confirm as Confirm
 import Core.Descriptor
 import Core.OnConfirm
@@ -8,6 +7,7 @@ import Core.OrderState
 import Core.Payment
 import Data.Either.Extra
 import MockData.OnSearch
+import Relude hiding (id, state)
 import Servant.Client
 
 buildOnConfirmMessage :: Text -> Confirm.Order -> Either Text OnConfirmMessage

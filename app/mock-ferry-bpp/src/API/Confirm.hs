@@ -2,7 +2,6 @@ module API.Confirm where
 
 import API.Confirm.Coerce
 import API.Utils
-import Beckn.Prelude
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
@@ -18,6 +17,7 @@ import Core.OnStatus
 import Core.Payment
 import ExternalAPI
 import MockData.OnConfirm
+import Relude
 
 confirmServer :: BecknReq ConfirmMessage -> MockM AckResponse
 confirmServer confirmReq@(BecknReq ctx msg) = do
@@ -31,7 +31,7 @@ confirmServer confirmReq@(BecknReq ctx msg) = do
     threadDelaySec 2
     ack <- callBapOnConfirm $ BecknCallbackReq context' callbackData
     mockLog DEBUG $ "got ack" <> show ack
-    whenRight eithOrder $ \onConfirmOrder -> do
+    whenRight_ eithOrder $ \onConfirmOrder -> do
       Redis.write context' onConfirmOrder
       trackPayment onConfirmOrder.id
 
@@ -64,9 +64,9 @@ transactionOk context order = do
   callBapOnStatus onStatusReq
 
 cancelTransaction :: TrStatus -> Context -> OnConfirm.Order -> MockM ()
-cancelTransaction trStatus ctx ord = do
+cancelTransaction trStatus ctx order = do
   let ctx' = ctx {action = ON_CANCEL}
-      onCancelReq = BecknCallbackReq ctx' (Right $ OnCancelMessage $ coerceOrderCancel $ OnConfirm.failedTransaction trStatus ord)
-  _ <- Redis.editOrder (OnConfirm.failedTransaction trStatus) ord.id
+      onCancelReq = BecknCallbackReq ctx' (Right $ OnCancelMessage $ coerceOrderCancel $ OnConfirm.failedTransaction trStatus order)
+  _ <- Redis.editOrder (OnConfirm.failedTransaction trStatus) order.id
   -- but what if we failed to change the state?
   callBapOnCancel onCancelReq

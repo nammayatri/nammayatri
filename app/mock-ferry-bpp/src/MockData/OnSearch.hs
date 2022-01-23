@@ -1,6 +1,5 @@
 module MockData.OnSearch where
 
-import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Types.Core.Migration.Gps
 import Common.Utils
@@ -11,6 +10,7 @@ import Core.OnSearch
 import Core.Price
 import Core.Time
 import Data.Maybe
+import Relude hiding (id, state)
 
 mockBppDescriptor :: Descriptor
 mockBppDescriptor =
@@ -131,8 +131,7 @@ buildItem tripId price =
   let id = "ONE_WAY_TICKET"
       fulfillment_id = tripId
       descriptor = DescriptorId {name = "One Way Ticket"}
-   in --  quantity = Nothing
-      Item {..}
+   in Item {..}
 
 buildPrice :: (Integral a, Show a) => a -> Price
 buildPrice int = buildPriceDecimal $ DecimalValue $ show $ abs int

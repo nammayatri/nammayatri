@@ -1,7 +1,8 @@
 module Core.Descriptor where
 
-import Beckn.Prelude
+import Data.Aeson
 import Data.OpenApi (ToSchema)
+import Relude
 
 newtype DescriptorId = DescriptorId
   { name :: Text

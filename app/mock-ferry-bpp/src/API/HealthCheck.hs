@@ -1,8 +1,8 @@
 module API.HealthCheck where
 
-import Beckn.Prelude
 import Beckn.Utils.Logging
 import Common.App
+import Relude
 
 healthCheckServer :: MockM Text
 healthCheckServer = do

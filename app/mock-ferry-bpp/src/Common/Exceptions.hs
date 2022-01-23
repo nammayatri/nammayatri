@@ -1,7 +1,7 @@
 module Common.Exceptions where
 
-import Beckn.Prelude
 import qualified Control.Monad.Catch as C
+import Relude
 
 data MockException
   = OrderNotFound Text
