@@ -1,4 +1,4 @@
-name: mock-ferry-bpp
+name: mock-public-transport-bpp
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
@@ -107,7 +107,7 @@ library:
     - -Wincomplete-uni-patterns
 
 executables:
-  mock-ferry-bpp-exe:
+  mock-public-transport-bpp-exe:
     main: Main.hs
     source-dirs: server
     ghc-options:
@@ -116,4 +116,4 @@ executables:
       - '"-with-rtsopts=-N -T"'
       - -Wincomplete-uni-patterns
     dependencies:
-      - mock-ferry-bpp
+      - mock-public-transport-bpp

@@ -105,14 +105,14 @@ cradle:
     - path: "app/mock-registry/server/Paths_mock_registry.hs"
       component: "mock-registry:exe:mock-registry-exe"
 
-    - path: "app/mock-ferry-bpp/src"
-      component: "mock-ferry-bpp:lib"
+    - path: "app/mock-public-transport-bpp/src"
+      component: "mock-public-transport-bpp:lib"
 
-    - path: "app/mock-ferry-bpp/server/Main.hs"
-      component: "mock-ferry-bpp:exe:mock-ferry-bpp-exe"
+    - path: "app/mock-public-transport-bpp/server/Main.hs"
+      component: "mock-public-transport-bpp:exe:mock-public-transport-bpp-exe"
 
-    - path: "app/mock-ferry-bpp/server/Paths_mock_ferry_bpp.hs"
-      component: "mock-ferry-bpp:exe:mock-ferry-bpp-exe"
+    - path: "app/mock-public-transport-bpp/server/Paths_mock_public_transport_bpp.hs"
+      component: "mock-public-transport-bpp:exe:mock-public-transport-bpp-exe"
 
     - path: "lib/beckn-core/src"
       component: "beckn-core:lib"

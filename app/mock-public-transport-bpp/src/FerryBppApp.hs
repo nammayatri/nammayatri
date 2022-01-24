@@ -22,7 +22,7 @@ import Servant
 
 runMockFerryBPP :: IO ()
 runMockFerryBPP = do
-  appCfg <- readDhallConfigDefault "ferry-bpp" :: IO AppCfg
+  appCfg <- readDhallConfigDefault "mock-public-transport-bpp" :: IO AppCfg
   withRedisConnection $ \redisCon -> do
     let port = appCfg.port
         appEnv = buildAppEnv redisCon appCfg

@@ -27,7 +27,7 @@ contextKey = "context"
 orderKey = "order"
 
 redisPrefix :: BS.ByteString
-redisPrefix = "mock-ferry-bpp:"
+redisPrefix = "mock-public-transport-bpp:"
 
 runRedis :: Redis a -> MockM a
 runRedis action = do
