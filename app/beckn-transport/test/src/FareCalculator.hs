@@ -1,13 +1,11 @@
 module FareCalculator where
 
 import Beckn.Types.Amount
-import Beckn.Types.App
 import Beckn.Types.Id
 import Data.Time hiding (parseTime)
 import EulerHS.Prelude
 import Product.FareCalculator.Flow
 import Product.FareCalculator.Interpreter
-import Servant.Server
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -15,7 +13,6 @@ import Types.Domain.FarePolicy
 import Types.Domain.FarePolicy.Discount
 import Types.Error
 import qualified Types.Storage.Organization as Organization
-import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
@@ -50,7 +47,7 @@ orgID = "organization_id"
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
-    { getFarePolicy = \orgId vehicleVariant -> pure $ Just defaultFarePolicy
+    { getFarePolicy = \_orgId _vehicleVariant -> pure $ Just defaultFarePolicy
     }
 
 -- Calculation tests
@@ -86,7 +83,7 @@ sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
     distance = 10000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
@@ -114,7 +111,7 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
     distance = 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
@@ -142,7 +139,7 @@ sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
     distance = 30000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
@@ -170,7 +167,7 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
     distance = 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -201,7 +198,7 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
     distance = 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.HATCHBACK,
@@ -233,7 +230,7 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
     distance = 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
@@ -265,7 +262,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
     distance = 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -297,7 +294,7 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
     distance = 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -333,7 +330,7 @@ nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for 
     distance = 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -366,7 +363,7 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
     distance = 20000.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant ->
+        { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
                 defaultFarePolicy{vehicleVariant = Vehicle.SUV,
@@ -402,7 +399,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     distance = 0.0
     handle' =
       handle
-        { getFarePolicy = \_orgId vehicleVariant -> pure Nothing
+        { getFarePolicy = \_orgId _vehicleVariant -> pure Nothing
         }
 
 fareCalculator :: TestTree

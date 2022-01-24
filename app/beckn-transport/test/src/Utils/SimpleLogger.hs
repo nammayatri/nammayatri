@@ -1,7 +1,8 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Utils.SimpleLogger where
 
 import Beckn.Types.Common
-import Beckn.Utils.Logging
 import EulerHS.Prelude
 import System.IO (hFlush)
 

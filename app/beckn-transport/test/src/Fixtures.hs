@@ -1,5 +1,6 @@
 module Fixtures (module Fixtures) where
 
+import Fixtures.BaseUrl as Fixtures
 import Fixtures.Person as Fixtures
 import Fixtures.Quote as Fixtures
 import Fixtures.Ride as Fixtures

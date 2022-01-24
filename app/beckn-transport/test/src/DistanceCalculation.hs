@@ -3,7 +3,6 @@ module DistanceCalculation where
 import Beckn.Types.MapSearch
 import EulerHS.Prelude
 import Product.Location
-import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Utils.Numeric

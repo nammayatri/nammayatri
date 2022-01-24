@@ -1,7 +1,8 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Utils.SilentLogger where
 
 import Beckn.Types.Common
-import Beckn.Utils.Logging
 import EulerHS.Prelude
 
 instance Log IO where

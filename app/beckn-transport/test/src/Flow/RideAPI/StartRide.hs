@@ -5,7 +5,6 @@ import Beckn.Types.Id
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.StartRide as StartRide
-import Servant.Server as Serv (ServerError)
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -91,7 +90,7 @@ failedStartRequestedByDriverNotAnOrderExecutor = do
   where
     handleCase =
       handle
-        { StartRide.findPersonById = \personId ->
+        { StartRide.findPersonById = \_personId ->
             pure $
               Just
                 Fixtures.defaultDriver{id = "2"
@@ -106,7 +105,7 @@ failedStartRequestedNotByDriver = do
   where
     handleCase =
       handle
-        { StartRide.findPersonById = \personId ->
+        { StartRide.findPersonById = \_personId ->
             pure $
               Just
                 Fixtures.defaultDriver{role = Person.ADMIN
@@ -121,7 +120,7 @@ failedStartWhenQuoteStatusIsWrong = do
   where
     handleCase =
       handle
-        { StartRide.findRideById = \rideId ->
+        { StartRide.findRideById = \_rideId ->
             pure $
               Just
                 ride{status = Ride.COMPLETED

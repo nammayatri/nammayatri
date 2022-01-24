@@ -3,6 +3,7 @@ module Fixtures.RideBooking where
 import Beckn.External.Encryption (Encrypted (Encrypted))
 import Beckn.Types.Id
 import EulerHS.Prelude
+import qualified Fixtures.BaseUrl as Fixtures
 import qualified Fixtures.Time as Fixtures
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.Vehicle as Veh
@@ -17,6 +18,7 @@ defaultRideBooking =
       status = SRB.CONFIRMED,
       providerId = Id "",
       bapId = "",
+      bapUri = Fixtures.defaultUrl,
       startTime = Fixtures.defaultTime,
       riderId = Id "",
       fromLocationId = Id "",

@@ -5,20 +5,14 @@ module Flow.Allocation where
 import Beckn.Types.Id
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
-import Data.Time (NominalDiffTime, UTCTime, addUTCTime)
 import qualified Data.Time as Time
-import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
-import qualified Types.API.Ride as Ride
 import qualified Types.API.RideBooking as RideBooking
 import Types.App
-import Types.Metrics
 import Types.Storage.Organization
-import Types.Storage.Person
-import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
@@ -71,7 +65,6 @@ addRequest :: RequestData -> Repository -> Id SRB.RideBooking -> IO ()
 addRequest requestData Repository {..} rideBookingId = do
   currentId <- readIORef currentIdVar
   let requestId = Id $ show currentId
-  currTime <- Time.getCurrentTime
   let request =
         RideRequest
           { requestId = requestId,
@@ -83,7 +76,6 @@ addRequest requestData Repository {..} rideBookingId = do
 
 addResponse :: Repository -> Id SRB.RideBooking -> Id Driver -> RideBooking.NotificationStatus -> IO ()
 addResponse repository@Repository {..} rideBookingId driverId status = do
-  currentTime <- Time.getCurrentTime
   let driverResponse = RideBooking.DriverResponse driverId status
   addRequest (DriverResponse driverResponse) repository rideBookingId
 
@@ -241,22 +233,21 @@ twoAllocations :: TestTree
 twoAllocations = testCase "Two allocations" $ do
   r@Repository {..} <- initRepository
 
-  currTime <- Time.getCurrentTime
   addRideBooking r rideBooking01Id
   addRideBooking r rideBooking02Id
   addRequest Allocation r rideBooking01Id
   addRequest Allocation r rideBooking02Id
 
-  process (handle r) org1 numRequestsToProcess
+  void $ process (handle r) org1 numRequestsToProcess
   addResponse r rideBooking01Id (Id "driver01") RideBooking.REJECT
   addResponse r rideBooking02Id (Id "driver05") RideBooking.REJECT
-  process (handle r) org1 numRequestsToProcess
+  void $ process (handle r) org1 numRequestsToProcess
   addResponse r rideBooking01Id (Id "driver02") RideBooking.REJECT
   addResponse r rideBooking02Id (Id "driver07") RideBooking.REJECT
-  process (handle r) org1 numRequestsToProcess
+  void $ process (handle r) org1 numRequestsToProcess
   addResponse r rideBooking01Id (Id "driver03") RideBooking.ACCEPT
   addResponse r rideBooking02Id (Id "driver08") RideBooking.ACCEPT
-  process (handle r) org1 numRequestsToProcess
+  void $ process (handle r) org1 numRequestsToProcess
 
   assignments <- readIORef assignmentsVar
   assignments @?= [(rideBooking02Id, Id "driver08"), (rideBooking01Id, Id "driver03")]
@@ -268,19 +259,18 @@ cancellationAfterAssignment :: TestTree
 cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
   r@Repository {..} <- initRepository
 
-  currTime <- Time.getCurrentTime
   addRideBooking r rideBooking01Id
   addRequest Allocation r rideBooking01Id
 
-  process (handle r) org1 numRequestsToProcess
+  void $ process (handle r) org1 numRequestsToProcess
   addResponse r rideBooking01Id (Id "driver01") RideBooking.ACCEPT
 
-  process (handle r) org1 numRequestsToProcess
+  void $ process (handle r) org1 numRequestsToProcess
   checkRideStatus r rideBooking01Id Assigned
 
   addRequest Cancellation r rideBooking01Id
 
-  process (handle r) org1 numRequestsToProcess
+  void $ process (handle r) org1 numRequestsToProcess
   checkRideStatus r rideBooking01Id Cancelled
 
 allocation :: TestTree

@@ -2,20 +2,16 @@ module Flow.RideAPI.CancelRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
-import Control.Monad.Identity
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.CancelRide as CancelRide
-import Servant.Server as Serv (ServerError)
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Types.API.Ride as RideAPI
-import Types.App
 import Types.Error
 import Types.Storage.CancellationReason
 import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Ride as Ride
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
@@ -63,7 +59,7 @@ successfulCancellationByAdmin =
     runHandler handleCase (Id "1") "1" someCancelRideReq
       `shouldReturn` APISuccess.Success
   where
-    handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just admin}
+    handleCase = handle {CancelRide.findPersonById = \_personId -> pure $ Just admin}
     admin =
       Fixtures.defaultDriver{id = Id "adminId",
                              role = Person.ADMIN
@@ -75,7 +71,7 @@ failedCancellationByAnotherDriver =
     runHandler handleCase (Id "driverNotExecutorId") "1" someCancelRideReq
       `shouldThrow` (== NotAnExecutor)
   where
-    handleCase = handle {CancelRide.findPersonById = \personId -> pure $ Just driverNotExecutor}
+    handleCase = handle {CancelRide.findPersonById = \_personId -> pure $ Just driverNotExecutor}
     driverNotExecutor = Fixtures.defaultDriver{id = Id "driverNotExecutorId"}
 
 failedCancellationWhenQuoteStatusIsWrong :: TestTree
@@ -84,5 +80,5 @@ failedCancellationWhenQuoteStatusIsWrong =
     runHandler handleCase (Id "1") "1" someCancelRideReq
       `shouldThrow` (\(QuoteInvalidStatus _) -> True)
   where
-    handleCase = handle {CancelRide.findRideById = \rideId -> pure $ Just completedPI}
+    handleCase = handle {CancelRide.findRideById = \_rideId -> pure $ Just completedPI}
     completedPI = ride{status = Ride.COMPLETED}

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Utils.GuidGenerator where
 
 import Beckn.Types.Common
