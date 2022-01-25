@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Common.App where
+module Beckn.Mock.App where
 
 import Beckn.Types.Logging
 import qualified Control.Monad.Catch as C

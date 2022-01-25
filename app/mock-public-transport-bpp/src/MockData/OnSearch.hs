@@ -1,8 +1,8 @@
 module MockData.OnSearch where
 
+import Beckn.Mock.Utils
 import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Types.Core.Migration.Gps
-import Common.Utils
 import Core.Descriptor
 import Core.Fulfillment
 import Core.Location

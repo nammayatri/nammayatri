@@ -130,6 +130,13 @@ dependencies:
   - universum
   - scientific
   - vector
+  - relude
+  - unliftio
+  - string-conversions
+  - hedis
+  - transformers
+  - extra
+  - random
 
 ghc-options:
   - -fwrite-ide-info

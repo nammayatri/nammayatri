@@ -1,9 +1,10 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Common.ExternalAPI where
+module Beckn.Mock.ExternalAPI where
 
+import Beckn.Mock.App
 import Beckn.Types.Core.ReqTypes
-import Common.App
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.String.Conversions

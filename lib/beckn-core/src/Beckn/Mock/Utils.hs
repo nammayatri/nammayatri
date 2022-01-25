@@ -1,4 +1,4 @@
-module Common.Utils where
+module Beckn.Mock.Utils where
 
 import Beckn.Types.Core.Error
 import Control.Concurrent

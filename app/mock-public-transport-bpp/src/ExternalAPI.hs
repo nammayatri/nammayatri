@@ -2,11 +2,11 @@
 
 module ExternalAPI where
 
+import Beckn.Mock.App
+import Beckn.Mock.Environment
+import Beckn.Mock.ExternalAPI
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
-import Common.App
-import Common.Environment
-import Common.ExternalAPI
 import Core.OnCancel
 import Core.OnConfirm
 import Core.OnSearch

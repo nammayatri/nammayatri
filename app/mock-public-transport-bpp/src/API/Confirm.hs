@@ -2,14 +2,13 @@ module API.Confirm where
 
 import API.Confirm.Coerce
 import API.Utils
+import Beckn.Mock.App
+import Beckn.Mock.Environment
+import Beckn.Mock.Utils
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
-import Common.App
-import Common.Environment
-import qualified Common.Redis as Redis
-import Common.Utils
 import Core.Confirm
 import Core.OnCancel
 import Core.OnConfirm
@@ -18,6 +17,7 @@ import Core.OnStatus
 import Core.Payment
 import ExternalAPI
 import MockData.OnConfirm
+import qualified Redis
 import Relude
 
 confirmServer :: BecknReq ConfirmMessage -> MockM AppEnv AckResponse
@@ -33,7 +33,7 @@ confirmServer confirmReq@(BecknReq ctx msg) = do
     ack <- callBapOnConfirm $ BecknCallbackReq context' callbackData
     mockLog DEBUG $ "got ack" <> show ack
     whenRight_ eithOrder $ \onConfirmOrder -> do
-      Redis.write context' onConfirmOrder
+      Redis.writeOrder context' onConfirmOrder
       trackPayment onConfirmOrder.id
 
   pure Ack
@@ -49,7 +49,8 @@ defineHandlingWay = \case
 trackPayment :: Text -> MockM AppEnv ()
 trackPayment orderId = do
   threadDelaySec 25
-  (context, order) <- Redis.readCtxOrderWithException orderId
+  --  (context, order) <- Redis.readCtxOrderWithException orderId
+  (context, order) <- Redis.readOrder orderId
   let handlingWay = defineHandlingWay order.fulfillment.id
   case handlingWay of
     Success -> transactionOk context order

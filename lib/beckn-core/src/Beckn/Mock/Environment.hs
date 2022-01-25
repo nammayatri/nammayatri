@@ -1,4 +1,4 @@
-module Common.Environment where
+module Beckn.Mock.Environment where
 
 import Beckn.Utils.Dhall (FromDhall)
 import qualified Database.Redis as Redis

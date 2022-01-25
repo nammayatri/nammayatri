@@ -8,10 +8,10 @@ import API.HealthCheck
 import API.Search
 import API.Status
 import API.Types
+import Beckn.Mock.App
+import Beckn.Mock.Environment
+import Beckn.Mock.Redis (withRedisConnection)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Common.App
-import Common.Environment
-import Common.Redis (withRedisConnection)
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,

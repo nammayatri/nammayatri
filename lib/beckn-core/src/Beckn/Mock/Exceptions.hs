@@ -1,4 +1,4 @@
-module Common.Exceptions where
+module Beckn.Mock.Exceptions where
 
 import qualified Control.Monad.Catch as C
 import Relude
