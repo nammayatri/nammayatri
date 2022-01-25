@@ -3,9 +3,14 @@ module App.Types where
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
+import Beckn.Types.Cache
 import Beckn.Types.Common hiding (id)
+import Beckn.Types.Flow
+import Beckn.Types.Registry
+import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
+import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Cache as C
@@ -85,7 +90,18 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer r api = FlowServerR AppEnv api
 
+type Flow = FlowR AppEnv
+
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.config.authEntity.signingKey)
   getUniqueKeyId = (.config.authEntity.uniqueKeyId)
   getSignatureExpiry = (.config.authEntity.signatureExpiry)
+
+instance Registry Flow where
+  registryLookup = caching Registry.registryLookup
+
+instance Cache Subscriber Flow where
+  type CacheKey Subscriber = SimpleLookupRequest
+  getKey = Cache.getKey "gateway:registry" . lookupRequestToRedisKey
+  setKey = Cache.setKey "gateway:registry" . lookupRequestToRedisKey
+  delKey = Cache.delKey "gateway:registry" . lookupRequestToRedisKey

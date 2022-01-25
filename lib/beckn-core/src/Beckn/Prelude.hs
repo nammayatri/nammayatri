@@ -2,6 +2,12 @@ module Beckn.Prelude (module E, module Beckn.Prelude) where
 
 import Control.Exception as E (SomeException)
 import Control.Exception.Safe as E (try)
+import Control.Monad.Catch as E
+  ( Exception (..),
+    MonadCatch (..),
+    MonadThrow (..),
+    SomeException (..),
+  )
 import Control.Monad.Reader as E
 import Data.Aeson as E (FromJSON (..), ToJSON (..), genericParseJSON, genericToJSON)
 import Data.Foldable as E
@@ -16,7 +22,8 @@ import Data.String as E (IsString (..))
 import Data.Text as E (Text)
 import Data.Time.Clock as E (UTCTime)
 import GHC.Generics as E (Generic, Generic1)
-import GHC.Records.Extra as E (HasField)
+import GHC.Records.Compat as E
+import GHC.Stack as E (HasCallStack)
 import Servant.Client as E (BaseUrl)
 import Universum.Debug as E
 import Universum.String.Conversion as E
@@ -38,3 +45,6 @@ whenM :: Monad m => m Bool -> m () -> m ()
 whenM mb thing = do
   b <- mb
   when b thing
+
+unlessM :: Monad m => m Bool -> m () -> m ()
+unlessM mb = whenM (not <$> mb)

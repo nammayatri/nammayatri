@@ -12,9 +12,14 @@ where
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
+import Beckn.Types.Cache
 import Beckn.Types.Common
+import Beckn.Types.Flow
+import Beckn.Types.Registry
+import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
+import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
@@ -70,10 +75,7 @@ buildAppEnv config@AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
-  return $
-    AppEnv
-      { ..
-      }
+  return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} =
@@ -85,7 +87,18 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
+type Flow = FlowR AppEnv
+
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.config.authEntity.signingKey)
   getUniqueKeyId = (.config.authEntity.uniqueKeyId)
   getSignatureExpiry = (.config.authEntity.signatureExpiry)
+
+instance Registry Flow where
+  registryLookup = caching Registry.registryLookup
+
+instance Cache Subscriber Flow where
+  type CacheKey Subscriber = SimpleLookupRequest
+  getKey = Cache.getKey "fmd-wrapper:registry" . lookupRequestToRedisKey
+  setKey = Cache.setKey "fmd-wrapper:registry" . lookupRequestToRedisKey
+  delKey = Cache.delKey "fmd-wrapper:registry" . lookupRequestToRedisKey

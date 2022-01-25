@@ -3,10 +3,15 @@ module App.Types where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Redis.Config (RedisConfig)
+import Beckn.Types.Cache
 import Beckn.Types.Common
+import Beckn.Types.Flow
+import Beckn.Types.Registry
 import Beckn.Utils.App (getPodName)
+import qualified Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
+import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client (HttpClientOptions (..))
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
@@ -55,7 +60,7 @@ buildAppEnv config@AppCfg {..} = do
   coreMetrics <- Metrics.registerCoreMetricsContainer
   bapMetrics <- Metrics.registerBAPMetricsContainer metricsSearchDurationTimeout
   isShuttingDown <- mkShutdown
-  pure $ AppEnv {..}
+  pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} =
@@ -65,7 +70,18 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
+type Flow = FlowR AppEnv
+
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.config.authEntity.signingKey)
   getUniqueKeyId = (.config.authEntity.uniqueKeyId)
   getSignatureExpiry = (.config.authEntity.signatureExpiry)
+
+instance Registry Flow where
+  registryLookup = caching Registry.registryLookup
+
+instance Cache Subscriber Flow where
+  type CacheKey Subscriber = SimpleLookupRequest
+  getKey = Cache.getKey "registry" . lookupRequestToRedisKey
+  setKey = Cache.setKey "registry" . lookupRequestToRedisKey
+  delKey = Cache.delKey "registry" . lookupRequestToRedisKey

@@ -18,6 +18,9 @@ data LookupRequest = LookupRequest
   }
   deriving (Show, Generic, ToSchema)
 
+emptyLookupRequest :: LookupRequest
+emptyLookupRequest = LookupRequest Nothing Nothing Nothing Nothing Nothing Nothing
+
 instance FromJSON LookupRequest where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
 

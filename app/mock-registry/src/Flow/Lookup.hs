@@ -3,18 +3,19 @@ module Flow.Lookup where
 import App.Types (FlowHandler)
 import Beckn.Prelude
 import Beckn.Types.Common (getCurrentTime)
-import Beckn.Types.Error (GenericError (InvalidRequest))
+import Beckn.Types.Error
 import Beckn.Types.Registry.API (LookupRequest, LookupResponse)
 import Beckn.Types.Registry.Subscriber (Subscriber (..))
-import Beckn.Utils.Error (fromMaybeM, withFlowHandlerAPI)
-import Beckn.Utils.Registry (lookupKey)
+import Beckn.Utils.Error
 import Data.Time (addUTCTime)
 
 lookup :: LookupRequest -> FlowHandler LookupResponse
 lookup req = withFlowHandlerAPI $ do
   creds <- asks (.config.credRegistry)
-  uniqueKeyId <- req.unique_key_id & fromMaybeM (InvalidRequest "Unique_key_id is not specified.")
-  let mCred = lookupKey uniqueKeyId creds
+  uniqueKeyId <-
+    req.unique_key_id
+      & fromMaybeM (InvalidRequest "Lookup is supported only by unique_key_id")
+  let mCred = find (\cred -> cred.uniqueKeyId == uniqueKeyId) creds
   case mCred of
     Just cred -> do
       now <- getCurrentTime

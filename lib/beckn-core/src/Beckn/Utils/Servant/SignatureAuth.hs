@@ -9,9 +9,7 @@ import Beckn.Types.Error
 import Beckn.Types.Flow
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
-import qualified Beckn.Types.Registry.API as RegistryAPI
-import qualified Beckn.Types.Registry.Routes as Registry
-import Beckn.Types.Registry.Subscriber (Subscriber)
+import Beckn.Types.Registry
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging (HasLog)
@@ -31,7 +29,6 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Data.Typeable (typeRep)
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
-import qualified EulerHS.Types as T
 import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Network.HTTP.Client as Http
@@ -44,7 +41,6 @@ import Servant
     type (:>),
   )
 import Servant.Client (HasClient (..))
-import Servant.Client.Core (ClientError)
 import qualified Servant.OpenApi as S
 import qualified Servant.OpenApi.Internal as S
 import Servant.Server.Internal.Delayed (addAuthCheck)
@@ -87,8 +83,8 @@ instance
     KnownSymbol header,
     HasLog r,
     HasInConfig r c "hostName" Text,
-    HasInConfig r c "registryUrl" BaseUrl,
     HasInConfig r c "disableSignatureAuth" Bool,
+    Registry (FlowR r),
     HasCoreMetrics r
   ) =>
   HasServer (SignatureAuth header :> api) ctx
@@ -197,8 +193,8 @@ verifySignature ::
     MonadReader r m,
     Metrics.CoreMetrics m,
     HasInConfig r c "hostName" Text,
-    HasInConfig r c "registryUrl" BaseUrl,
     HasInConfig r c "disableSignatureAuth" Bool,
+    Registry m,
     HasLog r
   ) =>
   Text ->
@@ -207,7 +203,15 @@ verifySignature ::
   m Subscriber
 verifySignature headerName signPayload bodyHash = do
   hostName <- askConfig (.hostName)
-  decodeViaRegistry signPayload >>= \case
+  logTagDebug "SignatureAuth" $ "Got Signature: " <> show signPayload
+  let uniqueKeyId = signPayload.params.keyId.uniqueKeyId
+  let subscriberId = signPayload.params.keyId.subscriberId
+      lookupRequest =
+        SimpleLookupRequest
+          { unique_key_id = uniqueKeyId,
+            subscriber_id = subscriberId
+          }
+  registryLookup lookupRequest >>= \case
     Just subscriber -> do
       disableSignatureAuth <- askConfig (.disableSignatureAuth)
       unless disableSignatureAuth do
@@ -336,50 +340,3 @@ instance
   SanitizedUrl (SignatureAuth h :> subroute)
   where
   getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)
-
-decodeViaRegistry ::
-  ( MonadReader r m,
-    MonadFlow m,
-    HasInConfig r c "registryUrl" BaseUrl,
-    Metrics.CoreMetrics m
-  ) =>
-  HttpSig.SignaturePayload ->
-  m (Maybe Subscriber)
-decodeViaRegistry signaturePayload = do
-  logTagDebug "SignatureAuth" $ "Got Signature: " <> show signaturePayload
-  registryUrl <- askConfig (.registryUrl)
-  let uniqueKeyId = signaturePayload.params.keyId.uniqueKeyId
-  let subscriberId = signaturePayload.params.keyId.subscriberId
-  getPubKeyFromRegistry registryUrl uniqueKeyId subscriberId
-  where
-    getPubKeyFromRegistry registryUrl uniqueKeyId subscriberId = do
-      subscribers <- registryLookup registryUrl uniqueKeyId subscriberId
-      case subscribers of
-        [subscriber] ->
-          pure $ Just subscriber
-        _subscriber : _subscribers ->
-          throwError $ InternalError "Multiple subscribers returned for a unique key."
-        [] -> pure Nothing
-
-registryLookup ::
-  (MonadFlow m, Metrics.CoreMetrics m) =>
-  BaseUrl ->
-  Text ->
-  Text ->
-  m [Subscriber]
-registryLookup url uniqueKeyId subscriberId = do
-  callAPI url (T.client Registry.lookupAPI request) "lookup"
-    >>= fromEitherM (registryLookupCallError url)
-  where
-    request =
-      RegistryAPI.LookupRequest
-        { unique_key_id = Just uniqueKeyId,
-          subscriber_id = Just subscriberId,
-          _type = Nothing,
-          domain = Nothing,
-          country = Nothing,
-          city = Nothing
-        }
-
-registryLookupCallError :: BaseUrl -> ClientError -> ExternalAPICallError
-registryLookupCallError = ExternalAPICallError (Just "REGISTRY_CALL_ERROR")

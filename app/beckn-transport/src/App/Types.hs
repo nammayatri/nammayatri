@@ -15,10 +15,15 @@ import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
+import Beckn.Types.Cache
 import Beckn.Types.Common
+import Beckn.Types.Flow
+import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
+import Beckn.Utils.CacheRedis as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
+import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
@@ -124,7 +129,18 @@ type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
 
+type Flow = FlowR AppEnv
+
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.config.authEntity.signingKey)
   getUniqueKeyId = (.config.authEntity.uniqueKeyId)
   getSignatureExpiry = (.config.authEntity.signatureExpiry)
+
+instance Registry Flow where
+  registryLookup = caching Registry.registryLookup
+
+instance Cache Subscriber Flow where
+  type CacheKey Subscriber = SimpleLookupRequest
+  getKey = Cache.getKey "taxi-bpp:registry" . lookupRequestToRedisKey
+  setKey = Cache.setKey "taxi-bpp:registry" . lookupRequestToRedisKey
+  delKey = Cache.delKey "taxi-bpp:registry" . lookupRequestToRedisKey
