@@ -1,5 +1,6 @@
 module Beckn.Prelude (module E, module Beckn.Prelude) where
 
+import Control.Arrow as E
 import Control.Exception as E (SomeException)
 import Control.Exception.Safe as E (try)
 import Control.Monad.Catch as E

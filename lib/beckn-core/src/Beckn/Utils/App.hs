@@ -8,6 +8,7 @@ module Beckn.Utils.App
     withModifiedEnv,
     hashBodyForSignature,
     getPodName,
+    supportProxyAuthorization,
   )
 where
 
@@ -76,7 +77,29 @@ hashBodyForSignature f req respF = do
   where
     mkRequestBody mvar = tryTakeMVar mvar <&> fromMaybe B.empty
     headers = map fst $ Wai.requestHeaders req
-    anyAuthHeaders = any (`elem` headers) ["Authorization", "Proxy-Authorization", "Signature"]
+    anyAuthHeaders =
+      any
+        (`elem` headers)
+        [ "Authorization",
+          "Proxy-Authorization",
+          "X-Gateway-Authorization",
+          "Signature"
+        ]
+
+-- TODO: remove when Proxy-Authorization becomes deprecated
+supportProxyAuthorization :: Application -> Application
+supportProxyAuthorization f =
+  f . modifyRequestHeaders \headers ->
+    case lookup "X-Gateway-Authorization" headers of
+      Nothing ->
+        -- check for proxy-auth only if there's no x-gateway-auth
+        case lookup "Proxy-Authorization" headers of
+          Just h -> ("X-Gateway-Authorization", h) : headers
+          Nothing -> headers
+      Just _ -> headers
+
+modifyRequestHeaders :: (RequestHeaders -> RequestHeaders) -> Request -> Request
+modifyRequestHeaders f req = req {Wai.requestHeaders = f (Wai.requestHeaders req)}
 
 logRequestAndResponse :: HasLog f => EnvR f -> Application -> Application
 logRequestAndResponse (EnvR flowRt appEnv) f req respF =

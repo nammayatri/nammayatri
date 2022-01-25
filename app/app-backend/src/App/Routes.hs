@@ -71,7 +71,7 @@ type MainAPI =
 
 type BecknMetroAPI =
   SignatureAuth "Authorization"
-    :> SignatureAuth "Proxy-Authorization"
+    :> SignatureAuth "X-Gateway-Authorization"
     :> Metro.OnSearch
 
 type UIAPI =
@@ -175,7 +175,7 @@ profileFlow =
 
 type BecknCabAPI =
   SignatureAuth "Authorization"
-    :> SignatureAuth "Proxy-Authorization"
+    :> SignatureAuth "X-Gateway-Authorization"
     :> API.OnSearchAPI
     :<|> SignatureAuth "Authorization"
     :> API.OnConfirmAPI

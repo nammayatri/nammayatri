@@ -29,7 +29,7 @@ function toRequest(elem, url) {
     headers: {
       "Content-Type": "application/json",
       Authorization: elem.signature,
-      "Proxy-Authorization": elem.signature,
+      "X-Gateway-Authorization": elem.signature,
     },
   };
   return ["POST", url, elem.rawRequest, params];

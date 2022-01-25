@@ -308,7 +308,7 @@ locationFlow =
 type OrgBecknAPI =
   Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
-    :> SignatureAuth "Proxy-Authorization"
+    :> SignatureAuth "X-Gateway-Authorization"
     :> API.SearchAPI
     :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"

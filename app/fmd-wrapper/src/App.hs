@@ -46,7 +46,7 @@ runFMDWrapper configModifier = do
       withLogTag "Server startup" $ do
         let shortOrgId = appCfg.selfId
         managers <-
-          prepareAuthManager flowRt appEnv "Authorization" shortOrgId
+          prepareAuthManager flowRt appEnv ["Authorization"] shortOrgId
             & Map.singleton signatureAuthManagerKey
             & createManagers
         try (prepareRedisConnections $ appCfg.redisCfg)

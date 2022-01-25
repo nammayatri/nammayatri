@@ -31,5 +31,7 @@ runService configModifier = do
     orgShortId <- askConfig (.selfId)
     modFlowRtWithAuthManagers flowRt appEnv [orgShortId]
   where
-    middleware = hashBodyForSignature
+    middleware =
+      hashBodyForSignature
+        >>> supportProxyAuthorization
     context = verifyPersonAction @(FlowR AppEnv) :. EmptyContext

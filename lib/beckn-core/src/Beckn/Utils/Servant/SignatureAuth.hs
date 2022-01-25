@@ -33,7 +33,6 @@ import GHC.Exts (fromList)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as Http
-import qualified Network.HTTP.Types as Http
 import qualified Network.Wai as Wai
 import Servant
   ( FromHttpApiData (parseHeader),
@@ -145,15 +144,14 @@ signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
 prepareAuthManager ::
-  ( HasLog r,
-    AuthenticatingEntity r
-  ) =>
+  HasLog r =>
+  AuthenticatingEntity r =>
   R.FlowRuntime ->
   r ->
-  Text ->
+  [Text] ->
   Text ->
   Http.ManagerSettings
-prepareAuthManager flowRt appEnv header subscriberId =
+prepareAuthManager flowRt appEnv signHeaders subscriberId =
   Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
     doSignature req = withLogTag "prepareAuthManager" do
@@ -165,7 +163,7 @@ prepareAuthManager flowRt appEnv header subscriberId =
       let signatureMsg = HttpSig.makeSignatureString params bodyHash headers
       logDebug $ "Request body for signing: " +|| body ||+ ""
       logDebug $ "Signature Message: " +|| signatureMsg ||+ ""
-      addSignature bodyHash params headers req
+      foldM (addSignature bodyHash params headers) req signHeaders
         & fromMaybeM (InternalError $ "Could not add signature: " <> show params)
     getBody (Http.RequestBodyLBS body) = BSL.toStrict body
     getBody (Http.RequestBodyBS body) = body
@@ -176,10 +174,9 @@ prepareAuthManager flowRt appEnv header subscriberId =
 
     -- FIXME: we don't currently deal with Content-Length not being there (this is
     -- filled later, so we might need to have some special handling)
-    addSignature :: HttpSig.Hash -> HttpSig.SignatureParams -> Http.RequestHeaders -> Http.Request -> Maybe Http.Request
-    addSignature bodyHash params headers req =
-      let ciHeader = CI.mk $ encodeUtf8 header
-       in -- We check if the header exists because `managerModifyRequest` might be
+    addSignature bodyHash params headers req signHeader =
+      let ciHeader = CI.mk $ encodeUtf8 signHeader
+       in -- We check if the signHeader exists because `managerModifyRequest` might be
           -- called multiple times, so we already added it once, let's skip right over
           if isJust $ lookup ciHeader headers
             then Just req
@@ -259,6 +256,7 @@ verifySignature headerName signPayload bodyHash = do
     getRealm = case headerName of
       "Authorization" -> "WWW-Authenticate"
       "Proxy-Authorization" -> "Proxy-Authenticate"
+      "X-Gateway-Authorization" -> "Proxy-Authenticate"
       _ -> ""
 
 makeManagerMap :: [String] -> [Http.ManagerSettings] -> Map String Http.ManagerSettings
@@ -272,7 +270,7 @@ prepareAuthManagers ::
   Map String Http.ManagerSettings
 prepareAuthManagers flowRt appEnv allShortIds = do
   let managerKeys = map (\shortId -> signatureAuthManagerKey <> "-" <> T.unpack shortId) allShortIds
-  map (prepareAuthManager flowRt appEnv "Authorization") allShortIds
+  map (prepareAuthManager flowRt appEnv ["Authorization"]) allShortIds
     & makeManagerMap managerKeys
 
 modFlowRtWithAuthManagers ::

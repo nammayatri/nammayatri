@@ -16,6 +16,7 @@ run = withModifiedEnv $ \modifiedEnv ->
     & logRequestAndResponse modifiedEnv
     & addServantInfo appAPI
     & hashBodyForSignature
+    & supportProxyAuthorization
   where
     context =
       verifyPersonAction @(FlowR AppEnv)

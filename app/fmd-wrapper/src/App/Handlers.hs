@@ -14,7 +14,7 @@ import Types.Beckn.API.Track (TrackAPI)
 type WrapperAPI =
   "v1"
     :> ( Get '[JSON] Text
-           :<|> SignatureAuth "Authorization" :> SignatureAuth "Proxy-Authorization" :> SearchAPI
+           :<|> SignatureAuth "Authorization" :> SignatureAuth "X-Gateway-Authorization" :> SearchAPI
            :<|> SignatureAuth "Authorization" :> ConfirmAPI
            :<|> SignatureAuth "Authorization" :> StatusAPI
            :<|> SignatureAuth "Authorization" :> TrackAPI

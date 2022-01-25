@@ -17,5 +17,6 @@ run = withModifiedEnv $ \modifiedEnv ->
   BU.run wrapperAPI fmdWrapperBackendServer context modifiedEnv
     & logRequestAndResponse modifiedEnv
     & hashBodyForSignature
+    & supportProxyAuthorization
   where
     context = verifyApiKey @(FlowR AppEnv) :. EmptyContext

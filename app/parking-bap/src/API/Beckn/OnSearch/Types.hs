@@ -5,10 +5,10 @@ import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Servant.SignatureAuth
 import Core.OnSearch.Catalog (Catalog)
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant
 
 type API =
-  SignatureAuth "Proxy-Authorization"
+  SignatureAuth "X-Gateway-Authorization"
     :> "on_search"
     :> ReqBody '[JSON] (BecknCallbackReq OnSearchCatalog)
     :> Post '[JSON] AckResponse
