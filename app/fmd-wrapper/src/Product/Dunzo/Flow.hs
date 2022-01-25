@@ -38,16 +38,14 @@ search ::
     CoreMetrics m
   ) =>
   Org.Organization ->
+  BaseUrl ->
   BecknReq SearchAPI.SearchIntent ->
   m AckResponse
-search org req = do
+search org cbUrl req = do
   config@DunzoConfig {..} <- asks (.dzConfig)
   quoteReq <- mkQuoteReqFromSearch req
   let context = updateBppUri (req.context) dzBPNwAddress
   dzBACreds <- getDzBAPCreds org
-  cbUrl <-
-    org.callbackUrl
-      & fromMaybeM (OrgFieldNotPresent "callback_url")
   withBecknCallbackMig withRetry authKey SEARCH SearchAPI.onSearchAPI context cbUrl $
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog

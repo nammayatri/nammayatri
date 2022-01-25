@@ -25,13 +25,13 @@ findOrg subscriber =
   Org.findOrgByShortId (ShortId subscriber.subscriber_id)
     >>= fromMaybeM OrgDoesNotExist
 
--- TODO: add switching logic to figure out the client instance
-search :: SignatureAuthResult -> BecknReq SearchIntent -> FlowHandler AckResponse
-search (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
+search :: SignatureAuthResult -> SignatureAuthResult -> BecknReq SearchIntent -> FlowHandler AckResponse
+search (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     validateContext SEARCH $ req.context
+    validateBapUrl subscriber $ req.context
     bapOrg <- findOrg subscriber
-    DZ.search bapOrg req
+    DZ.search bapOrg gateway.subscriber_url req
 
 confirm :: SignatureAuthResult -> BecknReq OrderObject -> FlowHandler AckResponse
 confirm (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
@@ -71,8 +71,6 @@ validateContext action context = do
   validateContextCommonsMig action context
 
 validateBapUrl :: MonadFlow m => Subscriber -> Context -> m ()
-validateBapUrl _subscriber _context = pure ()
-
--- Depends on registry fix
--- unless (subscriber.callback_url == Just context.bap_uri) $
---   throwError (InvalidRequest "Invalid bap URL.")
+validateBapUrl subscriber context =
+  unless (subscriber.subscriber_url == context.bap_uri) $
+    throwError (InvalidRequest "Invalid bap URL.")
