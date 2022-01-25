@@ -11,7 +11,6 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.List.NonEmpty as NE
-import Data.Time (diffUTCTime)
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import qualified Storage.Queries.DriverLocation as DrLoc

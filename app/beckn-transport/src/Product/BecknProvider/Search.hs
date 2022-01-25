@@ -16,7 +16,6 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List as List
 import qualified Data.Text as T
-import Data.Time (UTCTime, addUTCTime, diffUTCTime)
 import Data.Traversable
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)

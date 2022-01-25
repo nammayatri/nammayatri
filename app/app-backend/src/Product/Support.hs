@@ -12,7 +12,6 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Validation (runRequestValidation)
-import Data.Time (UTCTime)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length)
 import qualified Storage.Queries.Issues as Queries

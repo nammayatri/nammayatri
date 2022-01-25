@@ -11,7 +11,6 @@ import Beckn.External.Encryption (decrypt)
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
-import Data.Time (UTCTime)
 import EulerHS.Prelude
 import ExternalAPI.Flow (callOnUpdate)
 import qualified Storage.Queries.Organization as QOrg

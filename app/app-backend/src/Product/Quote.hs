@@ -2,7 +2,6 @@ module Product.Quote where
 
 import App.Types
 import Beckn.Types.Id
-import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import qualified Product.MetroOffer as Metro
 import qualified Storage.Queries.Quote as QQuote

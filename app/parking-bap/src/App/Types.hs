@@ -78,10 +78,13 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.config.authEntity.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup = caching Registry.registryLookup
+  registryLookup = Registry.withSubscriberCache Registry.registryLookup
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
   getKey = Cache.getKey "registry" . lookupRequestToRedisKey
   setKey = Cache.setKey "registry" . lookupRequestToRedisKey
   delKey = Cache.delKey "registry" . lookupRequestToRedisKey
+
+instance CacheEx Subscriber Flow where
+  setKeyEx ttl = Cache.setKeyEx "registry" ttl . lookupRequestToRedisKey

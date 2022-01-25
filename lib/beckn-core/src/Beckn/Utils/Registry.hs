@@ -1,6 +1,7 @@
 module Beckn.Utils.Registry where
 
 import Beckn.Prelude
+import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
@@ -44,3 +45,17 @@ whitelisting p = maybe (pure Nothing) \sub -> do
   unlessM (p sub.unique_key_id) . throwError . InvalidRequest $
     "Not whitelisted subscriber " <> sub.unique_key_id
   pure (Just sub)
+
+withSubscriberCache ::
+  ( MonadTime m,
+    CacheEx Subscriber m
+  ) =>
+  (CacheKey Subscriber -> m (Maybe Subscriber)) ->
+  CacheKey Subscriber ->
+  m (Maybe Subscriber)
+withSubscriberCache getData key = do
+  now <- getCurrentTime
+  caching (getTtl now) getData key
+  where
+    getTtl now Subscriber {..} =
+      nominalDiffTimeToSeconds . fromMaybe (5 * 60) $ valid_until <&> (`diffUTCTime` now)

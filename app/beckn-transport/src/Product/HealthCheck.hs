@@ -3,7 +3,6 @@ module Product.HealthCheck (healthCheck) where
 import App.BackgroundTaskManager.Types (FlowHandler)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Data.Time (diffUTCTime)
 import EulerHS.Prelude
 import Types.Error
 import Utils.Common

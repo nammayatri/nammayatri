@@ -10,7 +10,6 @@ import Control.Lens (element, (?~))
 import Control.Lens.Prism (_Just)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
-import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (State, drop)
 import ExternalAPI.Dunzo.Types
 import Servant.Client (BaseUrl (..))

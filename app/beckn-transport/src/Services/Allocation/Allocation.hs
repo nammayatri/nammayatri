@@ -6,7 +6,6 @@ import Beckn.Types.Id
 import Beckn.Utils.NonEmpty
 import Data.Generics.Labels ()
 import qualified Data.Text as T
-import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime)
 import EulerHS.Prelude
 import qualified Types.API.RideBooking as RideBooking
 import Types.App

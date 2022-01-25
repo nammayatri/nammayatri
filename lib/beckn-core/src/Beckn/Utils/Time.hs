@@ -1,13 +1,17 @@
 module Beckn.Utils.Time
   ( module Beckn.Utils.Time,
     module Beckn.Types.Time,
+    UTCTime,
+    addUTCTime,
+    diffUTCTime,
   )
 where
 
 import Beckn.Types.Time
 import Beckn.Utils.Logging
 import qualified Data.Text as T
-import Data.Time hiding (getCurrentTime)
+import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds)
+import qualified Data.Time as Time
 import EulerHS.Prelude
 import System.Clock (toNanoSecs)
 
@@ -55,3 +59,9 @@ measuringDurationToLog logLevel fname = tabs . measuringDuration $ \duration _ -
 
 millisecondsToMicroseconds :: Milliseconds -> Microseconds
 millisecondsToMicroseconds (Milliseconds mill) = Microseconds $ mill * 1000
+
+secondsToMs :: Seconds -> Microseconds
+secondsToMs (Seconds s) = Microseconds (s * 1000000)
+
+nominalDiffTimeToSeconds :: NominalDiffTime -> Seconds
+nominalDiffTimeToSeconds = round . Time.nominalDiffTimeToSeconds

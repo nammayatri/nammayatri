@@ -4,7 +4,7 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common as Common
 import Beckn.Types.Error
 import Beckn.Types.SlidingWindowLimiter
-import Beckn.Utils.Common
+import Beckn.Utils.Common hiding (nominalDiffTimeToSeconds)
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import EulerHS.Prelude hiding (id)

@@ -8,7 +8,6 @@ import qualified Beckn.Storage.Common as DB
 import Beckn.Storage.DB.Config hiding (schemaName)
 import Beckn.Types.Schema
 import Beckn.Utils.Common
-import Data.Time (UTCTime)
 import qualified Database.Beam as B
 import Database.Beam.Postgres
 import qualified Database.Beam.Query.Internal as BI

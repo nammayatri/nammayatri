@@ -5,7 +5,6 @@ import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import Data.Time (UTCTime)
 import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)

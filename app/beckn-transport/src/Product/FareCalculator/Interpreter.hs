@@ -8,7 +8,6 @@ where
 
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
-import Data.Time (UTCTime)
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Flow
   ( FareParameters (..),

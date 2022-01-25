@@ -11,7 +11,6 @@ import Data.Time
   ( LocalTime (localTimeOfDay),
     TimeOfDay (..),
     TimeZone,
-    UTCTime,
     midnight,
     minutesToTimeZone,
     utcToLocalTime,

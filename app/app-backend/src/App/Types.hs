@@ -134,7 +134,7 @@ instance AuthenticatingEntity AppEnv where
 
 instance Registry Flow where
   registryLookup =
-    caching $
+    Registry.withSubscriberCache $
       Registry.whitelisting isWhiteListed <=< Registry.registryLookup
     where
       isWhiteListed _ = pure True -- TODO: implement whitelisting
@@ -144,3 +144,6 @@ instance Cache Subscriber Flow where
   getKey = Cache.getKey "taxi-bap:registry" . lookupRequestToRedisKey
   setKey = Cache.setKey "taxi-bap:registry" . lookupRequestToRedisKey
   delKey = Cache.delKey "taxi-bap:registry" . lookupRequestToRedisKey
+
+instance CacheEx Subscriber Flow where
+  setKeyEx ttl = Cache.setKeyEx "taxi-bap:registry" ttl . lookupRequestToRedisKey

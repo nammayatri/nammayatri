@@ -4,7 +4,7 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Data.Time (NominalDiffTime, UTCTime, diffUTCTime)
+import Data.Time (NominalDiffTime)
 import EulerHS.Prelude hiding (pi)
 import qualified Product.FareCalculator.Interpreter as Fare
 import Product.Location (missingLocationUpdatesKey)
