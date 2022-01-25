@@ -7,6 +7,7 @@ import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
 import Common.App
+import Common.Environment
 import qualified Common.Redis as Redis
 import Common.Utils
 import Core.Confirm
@@ -19,7 +20,7 @@ import ExternalAPI
 import MockData.OnConfirm
 import Relude
 
-confirmServer :: BecknReq ConfirmMessage -> MockM AckResponse
+confirmServer :: BecknReq ConfirmMessage -> MockM AppEnv AckResponse
 confirmServer confirmReq@(BecknReq ctx msg) = do
   mockLog INFO $ "got confirm request: " <> show confirmReq
 
@@ -45,7 +46,7 @@ defineHandlingWay = \case
   "TRIP001_EKM_ABC" -> LinkExpired
   _ -> FailedPayment
 
-trackPayment :: Text -> MockM ()
+trackPayment :: Text -> MockM AppEnv ()
 trackPayment orderId = do
   threadDelaySec 25
   (context, order) <- Redis.readCtxOrderWithException orderId
@@ -55,7 +56,7 @@ trackPayment orderId = do
     FailedPayment -> cancelTransaction Failed context order
     LinkExpired -> cancelTransaction PaymentLinkExpired context order
 
-transactionOk :: Context -> OnConfirm.Order -> MockM ()
+transactionOk :: Context -> OnConfirm.Order -> MockM AppEnv ()
 transactionOk context order = do
   let onStatusMessage = OnStatusMessage $ coerceOrderStatus $ successfulPayment order
       onStatusReq = BecknCallbackReq (context {action = ON_CANCEL}) (Right onStatusMessage)
@@ -63,7 +64,7 @@ transactionOk context order = do
   -- but what if we failed to change the state?
   callBapOnStatus onStatusReq
 
-cancelTransaction :: TrStatus -> Context -> OnConfirm.Order -> MockM ()
+cancelTransaction :: TrStatus -> Context -> OnConfirm.Order -> MockM AppEnv ()
 cancelTransaction trStatus ctx order = do
   let ctx' = ctx {action = ON_CANCEL}
       onCancelReq = BecknCallbackReq ctx' (Right $ OnCancelMessage $ coerceOrderCancel $ OnConfirm.failedTransaction trStatus order)

@@ -31,5 +31,5 @@ runMockFerryBPP = do
     runSettings settings $
       run totalAPI totalServer appEnv
 
-totalServer :: ServerT TotalAPI MockM
+totalServer :: ServerT TotalAPI (MockM AppEnv)
 totalServer = healthCheckServer :<|> searchServer :<|> confirmServer :<|> statusServer

@@ -90,6 +90,7 @@ dependencies:
   - hedis
   - transformers
   - relude
+  - record-hasfield
 
 ghc-options:
   - -fwrite-ide-info

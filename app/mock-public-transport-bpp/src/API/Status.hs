@@ -7,6 +7,7 @@ import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
 import Common.App
+import Common.Environment
 import qualified Common.Redis as Redis
 import Common.Utils
 import Core.OnStatus
@@ -14,7 +15,7 @@ import Core.Status
 import ExternalAPI
 import Relude
 
-statusServer :: BecknReq StatusMessage -> MockM AckResponse
+statusServer :: BecknReq StatusMessage -> MockM AppEnv AckResponse
 statusServer statusReq@(BecknReq ctx msg) = do
   mockLog INFO $ "got confirm request: " <> show statusReq
   context' <- buildOnActionContext ON_STATUS ctx

@@ -7,37 +7,48 @@ import Common.App
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.String.Conversions
+import GHC.Records.Extra
 import Network.HTTP.Client hiding (Proxy)
 import Network.HTTP.Types.Header
 import Relude
 import Servant.Client
 
 callBapAPI ::
-  forall api a b.
-  ( HasClient ClientM api,
+  forall api a b e.
+  ( HasField "selfId" e Text,
+    HasField "uniqueKeyId" e Text,
+    HasClient ClientM api,
     Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
   ) =>
   BecknCallbackReq a ->
-  MockM ()
+  MockM e ()
 callBapAPI req = do
   let bapUrl = req.context.bap_uri
   callAPI @api bapUrl req
 
 callAPI ::
-  forall api a b.
-  ( HasClient ClientM api,
+  forall api a b e.
+  ( HasField "selfId" e Text,
+    HasField "uniqueKeyId" e Text,
+    HasClient ClientM api,
     Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
   ) =>
   BaseUrl ->
   BecknCallbackReq a ->
-  MockM ()
+  MockM e ()
 callAPI url req = do
   let clientFunc = client @api Proxy
       clientAction = clientFunc req
   _ <- callClientM url clientAction
   pure ()
 
-callClientM :: BaseUrl -> ClientM a -> MockM a
+callClientM ::
+  ( HasField "selfId" e Text,
+    HasField "uniqueKeyId" e Text
+  ) =>
+  BaseUrl ->
+  ClientM a ->
+  MockM e a
 callClientM url clientAction = do
   subscriberId <- asks (.selfId)
   uniqueKey <- asks (.uniqueKeyId)

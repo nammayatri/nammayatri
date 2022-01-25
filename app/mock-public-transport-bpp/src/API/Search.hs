@@ -6,13 +6,14 @@ import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Logging
 import Common.App
+import Common.Environment
 import Common.Utils
 import Core.Search
 import ExternalAPI
 import MockData.OnSearch
 import Relude
 
-searchServer :: BecknReq SearchMessage -> MockM AckResponse
+searchServer :: BecknReq SearchMessage -> MockM AppEnv AckResponse
 searchServer becknReq@(BecknReq ctx _) = do
   mockLog DEBUG $ "request body: " <> show becknReq
   _ <- mockFork $ do

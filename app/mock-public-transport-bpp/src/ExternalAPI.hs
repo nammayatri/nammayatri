@@ -5,6 +5,7 @@ module ExternalAPI where
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
 import Common.App
+import Common.Environment
 import Common.ExternalAPI
 import Core.OnCancel
 import Core.OnConfirm
@@ -19,7 +20,7 @@ type GatewayOnSearchAPI =
     :> ReqBody '[JSON] (BecknCallbackReq OnSearchCatalog)
     :> Post '[JSON] AckResponse
 
-callGatewayOnSearch :: BecknCallbackReq OnSearchCatalog -> MockM ()
+callGatewayOnSearch :: BecknCallbackReq OnSearchCatalog -> MockM AppEnv ()
 callGatewayOnSearch = callAPI @GatewayOnSearchAPI gatewayUrl
   where
     gatewayUrl = BaseUrl Http "localhost" 8015 ""
@@ -30,7 +31,7 @@ type OnConfirmAPI =
     :> ReqBody '[JSON] (BecknCallbackReq OnConfirmMessage)
     :> Post '[JSON] AckResponse
 
-callBapOnConfirm :: BecknCallbackReq OnConfirmMessage -> MockM ()
+callBapOnConfirm :: BecknCallbackReq OnConfirmMessage -> MockM AppEnv ()
 callBapOnConfirm = callBapAPI @OnConfirmAPI
 
 ----------------------------
@@ -39,7 +40,7 @@ type OnStatusAPI =
     :> ReqBody '[JSON] (BecknCallbackReq OnStatusMessage)
     :> Post '[JSON] AckResponse
 
-callBapOnStatus :: BecknCallbackReq OnStatusMessage -> MockM ()
+callBapOnStatus :: BecknCallbackReq OnStatusMessage -> MockM AppEnv ()
 callBapOnStatus = callBapAPI @OnStatusAPI
 
 ----------------------------
@@ -48,5 +49,5 @@ type OnCancelAPI =
     :> ReqBody '[JSON] (BecknCallbackReq OnCancelMessage)
     :> Post '[JSON] AckResponse
 
-callBapOnCancel :: BecknCallbackReq OnCancelMessage -> MockM ()
+callBapOnCancel :: BecknCallbackReq OnCancelMessage -> MockM AppEnv ()
 callBapOnCancel = callBapAPI @OnCancelAPI

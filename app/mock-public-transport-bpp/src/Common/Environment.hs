@@ -9,7 +9,8 @@ data AppCfg = AppCfg
   { port :: Int,
     selfId :: Text,
     uniqueKeyId :: Text,
-    selfUri :: BaseUrl
+    selfUri :: BaseUrl,
+    redisPrefix :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -17,7 +18,8 @@ data AppEnv = AppEnv
   { selfId :: Text,
     uniqueKeyId :: Text,
     selfUri :: BaseUrl,
-    redisConnection :: Redis.Connection
+    redisConnection :: Redis.Connection,
+    redisPrefix :: Text
   }
   deriving (Generic)
 
