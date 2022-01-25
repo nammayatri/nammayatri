@@ -11,10 +11,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Data.Text as T
 import Database.Persist.TH
 import qualified Domain.Booking as Domain
-import Servant.Client
 import Storage.Tabular.FerryStation (FerryStationTId)
 import Storage.Tabular.Quote (QuoteTId)
 import Storage.Tabular.Search (SearchTId)
@@ -49,14 +47,15 @@ mkPersist
       deriving Generic
     |]
 
-instance TEntityKey BookingT Domain.Booking where
+instance TEntityKey BookingT where
+  type DomainKey BookingT = Id Domain.Booking
   fromKey (BookingTKey _id) = Id _id
   toKey id = BookingTKey id.getId
 
 instance TEntity BookingT Domain.Booking where
   fromTEntity entity = do
     let BookingT {..} = entityVal entity
-    bppUrl_ <- parseBaseUrl $ T.unpack bppUrl
+    bppUrl_ <- parseBaseUrl bppUrl
     return $
       Domain.Booking
         { id = Id id,
@@ -74,7 +73,7 @@ instance TEntity BookingT Domain.Booking where
         searchId = toKey searchId,
         quoteId = toKey quoteId,
         requestorId = requestorId.getId,
-        bppUrl = T.pack $ showBaseUrl bppUrl,
+        bppUrl = showBaseUrl bppUrl,
         departureStationId = toKey departureStationId,
         arrivalStationId = toKey arrivalStationId,
         ..

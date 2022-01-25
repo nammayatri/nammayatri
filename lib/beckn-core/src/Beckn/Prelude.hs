@@ -21,11 +21,13 @@ import Data.OpenApi as E (ToSchema)
 import Data.Proxy as E (Proxy (..))
 import Data.String as E (IsString (..))
 import Data.Text as E (Text)
+import qualified Data.Text as T
 import Data.Time.Clock as E (UTCTime)
 import GHC.Generics as E (Generic, Generic1)
 import GHC.Records.Compat as E
 import GHC.Stack as E (HasCallStack)
 import Servant.Client as E (BaseUrl)
+import qualified Servant.Client as Servant
 import Universum.Debug as E
 import Universum.String.Conversion as E
 import Prelude as E hiding (error, id, log, show, undefined)
@@ -49,3 +51,9 @@ whenM mb thing = do
 
 unlessM :: Monad m => m Bool -> m () -> m ()
 unlessM mb = whenM (not <$> mb)
+
+showBaseUrl :: BaseUrl -> Text
+showBaseUrl = T.pack . Servant.showBaseUrl
+
+parseBaseUrl :: MonadThrow m => Text -> m BaseUrl
+parseBaseUrl = Servant.parseBaseUrl . T.unpack

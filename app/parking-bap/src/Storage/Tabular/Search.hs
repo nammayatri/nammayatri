@@ -28,7 +28,8 @@ mkPersist
       deriving Generic
     |]
 
-instance TEntityKey SearchT Domain.Search where
+instance TEntityKey SearchT where
+  type DomainKey SearchT = Id Domain.Search
   fromKey (SearchTKey _id) = Id _id
   toKey id = SearchTKey id.getId
 

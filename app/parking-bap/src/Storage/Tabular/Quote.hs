@@ -11,10 +11,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Data.Text as T
 import Database.Persist.TH
 import qualified Domain.Quote as Domain
-import Servant.Client
 import Storage.Tabular.ParkingLocation (ParkingLocationTId)
 import Storage.Tabular.Search (SearchTId)
 
@@ -37,14 +35,15 @@ mkPersist
       deriving Generic
     |]
 
-instance TEntityKey QuoteT Domain.Quote where
+instance TEntityKey QuoteT where
+  type DomainKey QuoteT = Id Domain.Quote
   fromKey (QuoteTKey _id) = Id _id
   toKey id = QuoteTKey id.getId
 
 instance TEntity QuoteT Domain.Quote where
   fromTEntity entity = do
     let QuoteT {..} = entityVal entity
-    bppUrl_ <- parseBaseUrl $ T.unpack bppUrl
+    bppUrl_ <- parseBaseUrl bppUrl
     return $
       Domain.Quote
         { id = Id id,
@@ -58,7 +57,7 @@ instance TEntity QuoteT Domain.Quote where
       { id = id.getId,
         searchId = toKey searchId,
         parkingLocationId = toKey parkingLocationId,
-        bppUrl = T.pack $ showBaseUrl bppUrl,
+        bppUrl = showBaseUrl bppUrl,
         ..
       }
   toTEntity a = do

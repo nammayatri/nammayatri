@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 
 module Beckn.Storage.Esqueleto.Queries
   ( module Beckn.Storage.Esqueleto.Queries,
@@ -10,7 +10,6 @@ import Beckn.Storage.Esqueleto.Class
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Esqueleto.Logger (runLoggerIO)
 import Beckn.Storage.Esqueleto.SqlDB
-import Beckn.Types.Id (Id (..))
 import Beckn.Types.Time (getCurrentTime)
 import Database.Esqueleto.Experimental as EsqExport hiding
   ( delete,
@@ -55,18 +54,18 @@ findOne' q = traverse toResult =<< lift selectOnlyOne
         [res] -> return $ Just res
         _ -> return Nothing
 
-findById :: (EsqDBFlow m r, TEntity t a, TEntityKey t a) => Id a -> m (Maybe a)
+findById :: (EsqDBFlow m r, TEntity t a, TEntityKey t) => DomainKey t -> m (Maybe a)
 findById id = runTransaction $ findById' id
 
 findById' ::
   forall t a.
   ( TEntity t a,
-    TEntityKey t a
+    TEntityKey t
   ) =>
-  Id a ->
+  DomainKey t ->
   SqlDB (Maybe a)
-findById' id = findOne' $ do
-  let key = toKey id
+findById' dkey = findOne' $ do
+  let key = toKey dkey
   res <- from $ table @t
   where_ $ res Esq.^. persistIdField Esq.==. val key
   return res
@@ -126,19 +125,21 @@ updateReturningCount' ::
   SqlDB Int64
 updateReturningCount' = lift . Esq.updateCount
 
-deleteById ::
+deleteByKey ::
+  forall t r (m :: Type -> Type).
   ( EsqDBFlow m r,
-    TEntityKey t a
+    TEntityKey t
   ) =>
-  Id a ->
+  DomainKey t ->
   m ()
-deleteById = runTransaction . deleteById'
+deleteByKey = runTransaction . deleteByKey' @t
 
-deleteById' ::
-  TEntityKey t a =>
-  Id a ->
+deleteByKey' ::
+  forall t.
+  TEntityKey t =>
+  DomainKey t ->
   SqlDB ()
-deleteById' = lift . Esq.deleteKey . toKey
+deleteByKey' = lift . Esq.deleteKey . toKey @t
 
 delete ::
   (EsqDBFlow m r) =>
@@ -201,3 +202,6 @@ upsertBy' ::
   [Update t] ->
   SqlDB a
 upsertBy' k r u = fromTEntity =<< lift (Esq.upsertBy k (toTType r) u)
+
+whenJust_ :: Maybe a -> (a -> SqlExpr (Value Bool)) -> SqlExpr (Value Bool)
+whenJust_ mbVal func = maybe (Esq.val True) func mbVal

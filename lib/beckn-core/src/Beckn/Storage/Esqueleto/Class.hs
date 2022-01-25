@@ -3,7 +3,6 @@
 module Beckn.Storage.Esqueleto.Class where
 
 import Beckn.Storage.Esqueleto.SqlDB (SqlDB)
-import Beckn.Types.Id (Id)
 import Database.Esqueleto.Experimental
 import EulerHS.Prelude hiding (Key)
 
@@ -23,12 +22,11 @@ class
   ( PersistEntity t,
     PersistEntityBackend t ~ SqlBackend
   ) =>
-  TEntityKey t a
-    | t -> a,
-      a -> t
+  TEntityKey t
   where
-  fromKey :: Key t -> Id a
-  toKey :: Id a -> Key t
+  type DomainKey t
+  fromKey :: Key t -> DomainKey t
+  toKey :: DomainKey t -> Key t
 
 class QEntity a b where
   toResult :: a -> SqlDB b
@@ -36,7 +34,7 @@ class QEntity a b where
 instance TEntity a b => QEntity (Entity a) b where
   toResult = fromTEntity
 
-instance TEntityKey a b => QEntity (Value (Key a)) (Id b) where
+instance ((b ~ DomainKey a), TEntityKey a) => QEntity (Value (Key a)) b where
   toResult = return . fromKey . unValue
 
 instance QEntity (Value a) a where

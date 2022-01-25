@@ -33,7 +33,8 @@ mkPersist
       Primary id
     |]
 
-instance TEntityKey ParkingLocationT Domain.ParkingLocation where
+instance TEntityKey ParkingLocationT where
+  type DomainKey ParkingLocationT = Id Domain.ParkingLocation
   fromKey (ParkingLocationTKey _id) = Id _id
   toKey id = ParkingLocationTKey id.getId
 

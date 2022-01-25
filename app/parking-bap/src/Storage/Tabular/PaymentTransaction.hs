@@ -11,10 +11,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Data.Text as T
 import Database.Persist.TH
 import qualified Domain.PaymentTransaction as Domain
-import Servant.Client
 import Storage.Tabular.Booking (BookingTId)
 
 derivePersistField "Domain.PaymentStatus"
@@ -36,7 +34,8 @@ mkPersist
       deriving Generic
     |]
 
-instance TEntityKey PaymentTransactionT Domain.PaymentTransaction where
+instance TEntityKey PaymentTransactionT where
+  type DomainKey PaymentTransactionT = Id Domain.PaymentTransaction
   fromKey (PaymentTransactionTKey _id) = Id _id
   toKey id = PaymentTransactionTKey id.getId
 
@@ -44,7 +43,7 @@ instance TEntity PaymentTransactionT Domain.PaymentTransaction where
   fromTEntity entity = do
     let (PaymentTransactionTKey _id) = entityKey entity
         PaymentTransactionT {..} = entityVal entity
-    paymentUrl_ <- parseBaseUrl $ T.unpack paymentUrl
+    paymentUrl_ <- parseBaseUrl paymentUrl
     return $
       Domain.PaymentTransaction
         { id = Id _id,
@@ -56,7 +55,7 @@ instance TEntity PaymentTransactionT Domain.PaymentTransaction where
     PaymentTransactionT
       { id = id.getId,
         bookingId = toKey bookingId,
-        paymentUrl = T.pack $ showBaseUrl paymentUrl,
+        paymentUrl = showBaseUrl paymentUrl,
         ..
       }
   toTEntity a = do

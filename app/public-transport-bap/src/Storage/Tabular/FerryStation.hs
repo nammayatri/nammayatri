@@ -26,7 +26,8 @@ mkPersist
       Primary id
     |]
 
-instance TEntityKey FerryStationT Domain.FerryStation where
+instance TEntityKey FerryStationT where
+  type DomainKey FerryStationT = Id Domain.FerryStation
   fromKey (FerryStationTKey _id) = Id _id
   toKey id = FerryStationTKey id.getId
 
