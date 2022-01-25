@@ -65,7 +65,6 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9997
-, xGatewaySelector = "JUSPAY.BG.1"
 , xAppUri = appUri
 , hostName = "localhost"
 , nwAddress = "http://localhost:8014/v1/"

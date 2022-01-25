@@ -65,17 +65,6 @@ findAllWithLimitOffsetByOrgIds mlimit moffset orgIds = do
         (B.val_ True)
         [organizationId `B.in_` (B.val_ <$> orgIds) ||. complementVal orgIds]
 
-findAllByOrgIds :: DBFlow m r => [Id Org.Organization] -> m [Storage.Vehicle]
-findAllByOrgIds orgIds = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate Storage.Vehicle {..} =
-      foldl
-        (&&.)
-        (B.val_ True)
-        [organizationId `B.in_` (B.val_ <$> orgIds) ||. complementVal orgIds]
-
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
   | null l = B.val_ True

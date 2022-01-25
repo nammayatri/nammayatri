@@ -3,15 +3,11 @@
 
 module Types.Storage.Quote where
 
+import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.JSON
-import Data.Aeson
-import Data.OpenApi (ToSchema)
-import Data.Time (UTCTime)
 import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.SearchRequest as SearchRequest
 
 data BPPQuote
@@ -23,7 +19,7 @@ data QuoteT f = Quote
     estimatedFare :: B.C f Amount,
     discount :: B.C f (Maybe Amount),
     estimatedTotalFare :: B.C f Amount,
-    providerId :: B.C f (Id Org.Organization),
+    providerUrl :: B.C f BaseUrl,
     providerName :: B.C f Text,
     providerMobileNumber :: B.C f Text,
     providerCompletedRidesCount :: B.C f Int,
@@ -71,7 +67,7 @@ fieldEMod =
           estimatedFare = "estimated_fare",
           estimatedTotalFare = "estimated_total_fare",
           vehicleVariant = "vehicle_variant",
-          providerId = "provider_id",
+          providerUrl = "provider_url",
           createdAt = "created_at"
         }
 

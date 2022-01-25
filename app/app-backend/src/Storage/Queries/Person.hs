@@ -7,14 +7,11 @@ import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Types.Schema
-import Beckn.Utils.Common
 import Data.Time (UTCTime)
-import Database.Beam ((&&.), (<-.), (==.), (||.))
+import Database.Beam ((&&.), (<-.), (==.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
-import Types.Storage.Organization (Organization)
-import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Storage
 
 getDbTable ::
@@ -37,23 +34,6 @@ findById personId = do
   DB.findOne dbTable predicate
   where
     predicate Storage.Person {..} = id ==. B.val_ personId
-
-findAllByOrgIds ::
-  DBFlow m r =>
-  [Storage.Role] ->
-  [Id Org.Organization] ->
-  m [Storage.Person]
-findAllByOrgIds roles orgIds = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity (predicate roles orgIds)
-  where
-    predicate pRoles pOrgIds Storage.Person {..} =
-      foldl
-        (&&.)
-        (B.val_ True)
-        [ role `B.in_` (B.val_ <$> pRoles) ||. complementVal roles,
-          organizationId `B.in_` (B.val_ . Just <$> orgIds) ||. complementVal pOrgIds
-        ]
 
 complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
 complementVal l
@@ -112,7 +92,6 @@ updateMultiple personId person = do
           fullName <-. B.val_ (sPerson.fullName),
           gender <-. B.val_ (sPerson.gender),
           email <-. B.val_ (sPerson.email),
-          organizationId <-. B.val_ (sPerson.organizationId),
           description <-. B.val_ (sPerson.description),
           role <-. B.val_ (sPerson.role),
           identifier <-. B.val_ (sPerson.identifier),
@@ -200,19 +179,6 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbDeviceToken = 
           maybe mempty (\x -> deviceToken <-. B.val_ (Just x)) mbDToken
         ]
     predicate personId_ Storage.Person {..} = id ==. B.val_ personId_
-
-findAllWithLimitOffsetBy :: DBFlow m r => Maybe Int -> Maybe Int -> [Storage.Role] -> [Id Organization] -> m [Storage.Person]
-findAllWithLimitOffsetBy mlimit moffset roles orgIds = do
-  dbTable <- getDbTable
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (predicate orgIds roles)
-  where
-    limit = toInteger $ fromMaybe 10 mlimit
-    offset = toInteger $ fromMaybe 0 moffset
-    predicate pOrgIds [] Storage.Person {..} =
-      organizationId `B.in_` (B.val_ . Just <$> pOrgIds)
-    predicate pOrgIds pRoles Storage.Person {..} =
-      organizationId `B.in_` (B.val_ . Just <$> pOrgIds) &&. role `B.in_` (B.val_ <$> pRoles)
-    orderByDesc Storage.Person {..} = B.desc_ createdAt
 
 deleteById :: DBFlow m r => Id Storage.Person -> m ()
 deleteById pid = do

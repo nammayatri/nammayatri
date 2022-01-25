@@ -12,7 +12,6 @@ import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import EulerHS.Prelude
-import Storage.Queries.Organization as Org
 import Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
 import Types.Metrics (CoreMetrics)
@@ -20,18 +19,6 @@ import Types.Storage.Organization as Org
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Auth
 import Utils.Common
-
-getGatewayUrl ::
-  ( DBFlow m r,
-    HasField "xGatewaySelector" r Text
-  ) =>
-  m BaseUrl
-getGatewayUrl =
-  asks (.xGatewaySelector)
-    >>= Org.findOrgByShortId . ShortId
-    >>= fromMaybeM OrgNotFound
-    <&> (.callbackUrl)
-    >>= fromMaybeM (OrgFieldNotPresent "callback_url")
 
 withCallback ::
   HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>

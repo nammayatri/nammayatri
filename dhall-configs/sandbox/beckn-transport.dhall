@@ -70,7 +70,6 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9999
-, xGatewaySelector = "nsdl.co.in"
 , xAppUri = appUri
 , hostName = "juspay.in"
 , nwAddress = "https://api.sandbox.beckn.juspay.in/bpp/cab/v1"

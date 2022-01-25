@@ -9,7 +9,6 @@ import qualified Types.Storage.CancellationReason as CancellationReason
 import qualified Types.Storage.Geometry as Geometry
 import qualified Types.Storage.Issue as Issue
 import qualified Types.Storage.OnSearchEvent as OnSearchEvent
-import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RegistrationToken as RegistrationToken
@@ -20,8 +19,7 @@ import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.SearchRequest as SearchRequest
 
 data AppDb f = AppDb
-  { organization :: f (B.TableEntity Organization.OrganizationT),
-    issues :: f (B.TableEntity Issue.IssueT),
+  { issues :: f (B.TableEntity Issue.IssueT),
     searchReqLocation :: f (B.TableEntity Location.SearchReqLocationT),
     person :: f (B.TableEntity Person.PersonT),
     searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT),
@@ -40,8 +38,7 @@ appDb :: Text -> B.DatabaseSettings be AppDb
 appDb dbSchemaName =
   B.defaultDbSettings
     `B.withDbModification` B.dbModification
-      { organization = setSchema dbSchemaName <> Organization.fieldEMod,
-        issues = setSchema dbSchemaName <> Issue.fieldEMod,
+      { issues = setSchema dbSchemaName <> Issue.fieldEMod,
         searchReqLocation = setSchema dbSchemaName <> Location.fieldEMod,
         person = setSchema dbSchemaName <> Person.fieldEMod,
         searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod,

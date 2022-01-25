@@ -54,8 +54,6 @@ in
 , redisCfg = rcfg
 , port = +8018
 , metricsPort = +9999
-, xGatewayUri = gwUri
-, xGatewayApiKey = Some "fmd-wrapper-key"
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}

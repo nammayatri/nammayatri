@@ -37,9 +37,6 @@ data AppCfg = AppCfg
     sesCfg :: SesConfig,
     port :: Int,
     metricsPort :: Int,
-    xGatewayUri :: BaseUrl,
-    xGatewayApiKey :: Maybe Text,
-    xGatewaySelector :: Text,
     xProviderUri :: BaseUrl,
     hostName :: Text,
     bapSelfIds :: BAPs Text,
@@ -67,7 +64,8 @@ data AppCfg = AppCfg
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets,
     authEntity :: AuthenticatingEntity',
-    disableSignatureAuth :: Bool
+    disableSignatureAuth :: Bool,
+    gatewayUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -78,8 +76,6 @@ data AppEnv = AppEnv
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     sesCfg :: SesConfig,
-    xGatewayUri :: BaseUrl,
-    xGatewaySelector :: Text,
     xProviderUri :: BaseUrl,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,

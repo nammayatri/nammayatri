@@ -7,6 +7,7 @@ import Data.Aeson as E (FromJSON (..), ToJSON (..), genericParseJSON, genericToJ
 import Data.Foldable as E
 import Data.Function as E hiding (id)
 import Data.Functor as E
+import Data.Functor.Identity as E
 import Data.Kind as E (Type)
 import Data.Maybe as E (fromMaybe, listToMaybe)
 import Data.OpenApi as E (ToSchema)

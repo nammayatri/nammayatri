@@ -48,14 +48,14 @@ search ::
   SignatureAuthResult ->
   Search.SearchReq ->
   FlowHandler AckResponse
-search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ _gateway) req =
+search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     let context = req.context
     validateContext context
     transporter <-
       Org.findOrganizationById transporterId
         >>= fromMaybeM OrgDoesNotExist
-    callbackUrl <- ExternalAPI.getGatewayUrl
+    let callbackUrl = gateway.subscriber_url
     if not transporter.enabled
       then
         ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $

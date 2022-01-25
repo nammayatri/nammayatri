@@ -65,7 +65,6 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9999
-, xGatewaySelector = "JUSPAY.BG.1"
 , xAppUri = appUri
 , hostName = "juspay.in"
 , nwAddress = "https://api.beckn.juspay.in/transport/v1/"

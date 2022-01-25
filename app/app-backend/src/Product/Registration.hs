@@ -83,7 +83,6 @@ makePerson req = do
         deviceToken = Nothing,
         udf1 = Nothing,
         udf2 = Nothing,
-        organizationId = Nothing,
         description = Nothing,
         createdAt = now,
         updatedAt = now

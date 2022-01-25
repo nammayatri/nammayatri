@@ -84,9 +84,6 @@ in
 , sesCfg = sesConfig
 , port = +8013
 , metricsPort = +9999
-, xGatewayUri = gwUri
-, xGatewayApiKey = None Text
-, xGatewaySelector = "JUSPAY.BG.1"
 , xProviderUri = providerUri
 , hostName = "localhost"
 , bapSelfIds =
@@ -123,6 +120,7 @@ in
 , httpClientOptions = common.httpClientOptions
 , authTokenCacheExpiry = +600
 , registryUrl = common.registryUrl
+, gatewayUrl = gwUri
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 }

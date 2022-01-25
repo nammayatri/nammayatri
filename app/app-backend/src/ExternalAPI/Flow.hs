@@ -6,8 +6,6 @@ import Beckn.Types.Core.Taxi.API.Cancel as API
 import Beckn.Types.Core.Taxi.API.Confirm as API
 import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
-import Beckn.Types.Error
-import Beckn.Types.Id (ShortId (..))
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
@@ -17,7 +15,6 @@ import EulerHS.Prelude
 import qualified ExternalAPI.Types as API
 import GHC.Records.Extra
 import Servant.Client
-import Storage.Queries.Organization as Org
 import Types.API.Location
 import Types.Metrics (CoreMetrics)
 import Utils.Common
@@ -29,7 +26,7 @@ data BAPs a = BAPs
   deriving (Generic, FromDhall)
 
 search ::
-  ( HasFlowEnv m r '["xGatewaySelector" ::: Text],
+  ( HasInConfig r c "gatewayUrl" BaseUrl,
     DBFlow m r,
     CoreMetrics m,
     HasBapIds r m
@@ -37,11 +34,11 @@ search ::
   API.SearchReq ->
   m API.SearchRes
 search req = do
-  url <- getSearchUrl
+  url <- askConfig (.gatewayUrl)
   callBecknAPIWithSignature "search" API.searchAPI url req
 
 searchMetro ::
-  ( HasFlowEnv m r '["xGatewaySelector" ::: Text],
+  ( HasInConfig r c "gatewayUrl" BaseUrl,
     DBFlow m r,
     CoreMetrics m,
     HasBapIds r m
@@ -49,18 +46,8 @@ searchMetro ::
   BecknReq MigAPI.SearchIntent ->
   m ()
 searchMetro req = do
-  url <- getSearchUrl
+  url <- askConfig (.gatewayUrl)
   void $ callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url req
-
-getSearchUrl ::
-  (HasFlowEnv m r '["xGatewaySelector" ::: Text], DBFlow m r) =>
-  m BaseUrl
-getSearchUrl =
-  asks (.xGatewaySelector)
-    >>= Org.findOrgByShortId . ShortId
-    >>= fromMaybeM OrgNotFound
-    <&> (.callbackUrl)
-    >>= fromMaybeM (OrgFieldNotPresent "callback_url")
 
 confirm ::
   ( MonadFlow m,

@@ -9,7 +9,6 @@ import Beckn.Types.Id
 import Beckn.Utils.Logging
 import EulerHS.Prelude hiding (product)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Types.API.Feedback as API
@@ -26,12 +25,8 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
   let txnId = getId rideBooking.requestId
   bppRideBookingId <- rideBooking.bppBookingId & fromMaybeM (RideBookingFieldNotPresent "bppBookingId")
-  organization <-
-    Organization.findOrganizationById (rideBooking.providerId)
-      >>= fromMaybeM OrgNotFound
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   context <- buildTaxiContext Context.RATING txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
-  void $ ExternalAPI.feedback bppURI (Common.BecknReq context (Rating.RatingMessage bppRideBookingId.getId ratingValue))
+  void $ ExternalAPI.feedback rideBooking.providerUrl (Common.BecknReq context (Rating.RatingMessage bppRideBookingId.getId ratingValue))
   return Success

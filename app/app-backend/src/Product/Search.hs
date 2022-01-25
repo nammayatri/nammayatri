@@ -28,7 +28,6 @@ import qualified Product.Location as Location (getDistance)
 import Product.MetroOffer (buildContextMetro)
 import Product.Serviceability
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
-import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -37,7 +36,6 @@ import Types.API.Serviceability
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import Types.Storage.OnSearchEvent
-import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as SQuote
 import qualified Types.Storage.SearchReqLocation as Location
@@ -115,14 +113,12 @@ searchCbService :: SearchCbFlow m r => Common.Context -> OnSearch.Catalog -> m (
 searchCbService context catalog = do
   let searchRequestId = Id $ context.transaction_id
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
-  bpp <-
-    Org.findOrganizationByCallbackUri context.bpp_uri Org.PROVIDER
-      >>= fromMaybeM OrgDoesNotExist
+  providerUrl <- context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_uri")
   case catalog.bpp_providers of
-    [] -> throwError $ InvalidRequest "Missing provider"
+    [] -> throwError $ InvalidRequest "Missing bpp/providers" -- TODO: make it NonEmpty
     (provider : _) -> do
       let items = provider.items
-      quotes <- traverse (buildQuote searchRequest bpp provider) items
+      quotes <- traverse (buildQuote searchRequest providerUrl provider) items
       DB.runSqlDBTransaction $ traverse_ QQuote.create quotes
 
 buildSearchRequest ::
@@ -162,11 +158,11 @@ buildSearchRequest userId from to distance now = do
 buildQuote ::
   MonadFlow m =>
   SearchRequest.SearchRequest ->
-  Org.Organization ->
+  BaseUrl ->
   OnSearch.Provider ->
   OnSearch.Item ->
   m SQuote.Quote
-buildQuote searchRequest bppOrg provider item = do
+buildQuote searchRequest providerUrl provider item = do
   now <- getCurrentTime
   uid <- generateGUID
   return
@@ -181,7 +177,7 @@ buildQuote searchRequest bppOrg provider item = do
         providerMobileNumber = provider.contacts,
         providerName = provider.name,
         providerCompletedRidesCount = provider.rides_completed,
-        providerId = bppOrg.id,
+        providerUrl,
         vehicleVariant = item.vehicle_variant,
         createdAt = now
       }

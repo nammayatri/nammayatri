@@ -18,6 +18,5 @@ run = withModifiedEnv $ \modifiedEnv ->
     & hashBodyForSignature
   where
     context =
-      verifyApiKey @(FlowR AppEnv)
-        :. verifyPersonAction @(FlowR AppEnv)
+      verifyPersonAction @(FlowR AppEnv)
         :. EmptyContext

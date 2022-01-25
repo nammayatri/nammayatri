@@ -9,25 +9,10 @@ import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import EulerHS.Prelude hiding (id)
 import Servant hiding (Context)
-import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.Error
-import qualified Types.Storage.Organization as SOrganization
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.RegistrationToken as SR
-
-type VerificationAPIKey = APIKeyAuth VerifyAPIKey
-
-data VerifyAPIKey = VerifyAPIKey
-
-instance VerificationMethod VerifyAPIKey where
-  type VerificationResult VerifyAPIKey = SOrganization.Organization
-  verificationDescription =
-    "Checks whether gateway/provider is registered.\
-    \If you don't have an API key, register the gateway/provider."
-
-verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
-verifyApiKey = VerificationAction QOrganization.verifyApiKey
 
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken

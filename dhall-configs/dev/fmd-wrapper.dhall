@@ -46,8 +46,6 @@ let dunzoConfig =
   }
 
 
-let gwUri = "http://localhost:8015/v1"
-
 let httpClientOptions =
   { timeoutMs = +10000
   , maxRetries = +3
@@ -60,8 +58,6 @@ in
 , redisCfg = rcfg
 , port = +8018
 , metricsPort = +9995
-, xGatewayUri = gwUri
-, xGatewayApiKey = Some "fmd-wrapper-key"
 , migrationPath = Some (env:FMD_WRAPPER_MIGRATION_PATH as Text ? "dev/migrations/fmd-wrapper")
 , autoMigrate = True
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}

@@ -14,7 +14,6 @@ import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RideBooking as QRideB
@@ -34,16 +33,12 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   when ((searchRequest.validTill) < lt) $
     throwError SearchRequestExpired
   quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
-  organization <-
-    OQ.findOrganizationById (quote.providerId)
-      >>= fromMaybeM OrgNotFound
   now <- getCurrentTime
   rideBooking <- buildRideBooking searchRequest quote now
   DB.runSqlDBTransaction $
     QRideB.create rideBooking
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  bppURI <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   context <- buildTaxiContext Context.CONFIRM (getId searchRequestId) bapIDs.cabs bapURIs.cabs Nothing Nothing
   person <- QPerson.findById personId >>= fromMaybeM PersonDoesNotExist
   customerMobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
@@ -59,7 +54,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
               Confirm.Fulfillment $
                 Confirm.Customer {mobile_number = customerMobileCountryCode <> customerMobileNumber}
           }
-  void $ ExternalAPI.confirm bppURI (Common.BecknReq context $ Confirm.ConfirmMessage order)
+  void $ ExternalAPI.confirm quote.providerUrl (Common.BecknReq context $ Confirm.ConfirmMessage order)
   return $ API.ConfirmRes rideBooking.id
   where
     buildRideBooking searchRequest quote now = do
@@ -71,7 +66,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
             requestId = searchRequest.id,
             quoteId = quote.id,
             status = SRB.NEW,
-            providerId = quote.providerId,
+            providerUrl = quote.providerUrl,
             providerName = quote.providerName,
             providerMobileNumber = quote.providerMobileNumber,
             startTime = searchRequest.startTime,

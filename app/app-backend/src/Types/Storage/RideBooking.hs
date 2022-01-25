@@ -19,7 +19,6 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.SearchReqLocation as Loc
@@ -59,7 +58,7 @@ data RideBookingT f = RideBooking
     requestId :: B.C f (Id SearchRequest.SearchRequest),
     quoteId :: B.C f (Id Quote.Quote),
     status :: B.C f RideBookingStatus,
-    providerId :: B.C f (Id Org.Organization),
+    providerUrl :: B.C f BaseUrl,
     providerName :: B.C f Text,
     providerMobileNumber :: B.C f Text,
     startTime :: B.C f UTCTime,
@@ -104,7 +103,7 @@ fieldEMod =
         { bppBookingId = "bpp_ride_booking_id",
           requestId = "request_id",
           quoteId = "quote_id",
-          providerId = "provider_id",
+          providerUrl = "provider_url",
           providerName = "provider_name",
           providerMobileNumber = "provider_mobile_number",
           requestorId = "requestor_id",

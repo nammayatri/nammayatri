@@ -7,7 +7,6 @@ import Beckn.Types.Id
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import Types.Storage.CancellationReason (CancellationReasonCode)
-import Types.Storage.Organization
 import Types.Storage.RideBooking (RideBooking)
 
 data RideCancellationReasonT f = RideCancellationReason

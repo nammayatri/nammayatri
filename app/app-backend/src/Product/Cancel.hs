@@ -9,7 +9,6 @@ import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import Beckn.Types.Id
 import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Storage.Queries.Organization as OQ
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideCancellationReason as QRCR
@@ -31,14 +30,10 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   unless (isRideBookingCancellable rideBooking) $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ searchRequest.id
-  organization <-
-    OQ.findOrganizationById (quote.providerId)
-      >>= fromMaybeM OrgNotFound
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  bppUrl <- organization.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
   context <- buildTaxiContext Context.CANCEL txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
-  void $ ExternalAPI.cancel bppUrl (Common.BecknReq context (ReqCancel.CancelReqMessage quote.bppQuoteId.getId ReqCancel.ByUser))
+  void $ ExternalAPI.cancel quote.providerUrl (Common.BecknReq context (ReqCancel.CancelReqMessage quote.bppQuoteId.getId ReqCancel.ByUser))
   DB.runSqlDBTransaction
     (QRCR.create $ makeRideCancelationReason rideBooking.id rideCancellationReasonAPI)
     `rethrow` \(SQLRequestError _ _) -> RideInvalidStatus "This ride is already cancelled"

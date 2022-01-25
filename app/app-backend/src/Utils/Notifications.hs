@@ -7,7 +7,6 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Data.Text as T
 import EulerHS.Prelude
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
 import Types.Metrics
 import Types.Storage.Person as Person
@@ -167,9 +166,8 @@ notifyOnRegistration regToken personId mbDeviceToken =
 
 notifyOnRideBookingCancelled :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
 notifyOnRideBookingCancelled rideBooking cancellationSource = do
-  org <- QOrg.findOrganizationById (rideBooking.providerId) >>= fromMaybeM OrgNotFound
   person <- Person.findById rideBooking.requestorId >>= fromMaybeM PersonNotFound
-  FCM.notifyPerson (notificationData $ org.name) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  FCM.notifyPerson (notificationData rideBooking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
     notificationData orgName =
       FCM.FCMAndroidData
