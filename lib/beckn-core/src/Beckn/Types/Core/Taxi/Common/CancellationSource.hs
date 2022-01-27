@@ -2,7 +2,7 @@ module Beckn.Types.Core.Taxi.Common.CancellationSource where
 
 import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Data.Aeson
-import Data.OpenApi (ToSchema)
+import Data.OpenApi
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import EulerHS.Prelude
@@ -12,26 +12,27 @@ data CancellationSource
   | ByDriver
   | ByOrganization
   | ByAllocator
-  deriving (Show, Eq, Ord, Read, Generic, ToSchema)
+  deriving (Show, Eq, Ord, Read, Generic)
+
+instance ToSchema CancellationSource where
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions cancellationSourceJSONOptions
 
 instance ToJSON CancellationSource where
-  toJSON = \case
-    ByUser -> "CANCELLED_BY_USER"
-    ByDriver -> "CANCELLED_BY_DRIVER"
-    ByOrganization -> "CANCELLED_BY_ORGANIZATION"
-    ByAllocator -> "CANCELLED_BY_ALLOCATOR"
+  toJSON = genericToJSON cancellationSourceJSONOptions
 
 instance FromJSON CancellationSource where
-  parseJSON =
-    withText
-      "CancellationReason"
-      ( \case
-          "CANCELLED_BY_USER" -> return ByUser
-          "CANCELLED_BY_DRIVER" -> return ByDriver
-          "CANCELLED_BY_ORGANIZATION" -> return ByOrganization
-          "CANCELLED_BY_ALLOCATOR" -> return ByAllocator
-          _ -> fail "CancellationReason parsing error"
-      )
+  parseJSON = genericParseJSON cancellationSourceJSONOptions
+
+cancellationSourceJSONOptions :: Options
+cancellationSourceJSONOptions =
+  defaultOptions
+    { constructorTagModifier = \case
+        "ByUser" -> "CANCELLED_BY_USER"
+        "ByDriver" -> "CANCELLED_BY_DRIVER"
+        "ByOrganization" -> "CANCELLED_BY_ORGANIZATION"
+        "ByAllocator" -> "CANCELLED_BY_ALLOCATOR"
+        _ -> error "CancellationReason parsing error"
+    }
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationSource where
   sqlValueSyntax = autoSqlValueSyntax

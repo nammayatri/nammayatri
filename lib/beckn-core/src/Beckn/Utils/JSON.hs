@@ -67,3 +67,9 @@ stripPrefixUnderscoreIfAny =
   defaultOptions
     { fieldLabelModifier = recursiveStrip
     }
+
+untaggedValue :: Options
+untaggedValue =
+  defaultOptions
+    { sumEncoding = UntaggedValue
+    }
