@@ -31,6 +31,7 @@ lookup context = do
     B.HEALTHCARE -> listDomainProviders Registry.HEALTHCARE
     B.METRO -> listDomainProviders Registry.METRO
     B.PARKING -> listDomainProviders Registry.PARKING
+    B.PUBLIC_TRANSPORT -> listDomainProviders Registry.PUBLIC_TRANSPORT
     B.UNKNOWN_DOMAIN _ -> pure []
   where
     listDomainProviders domain =

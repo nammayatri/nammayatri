@@ -4,14 +4,15 @@ module Domain.Search where
 
 import Beckn.Prelude
 import Beckn.Types.Id
-
-data Person
+import Tools.Auth
 
 data Search = Search
   { id :: Id Search,
     lat :: Double,
     lon :: Double,
     requestorId :: Id Person,
+    fromDate :: UTCTime,
+    toDate :: UTCTime,
     createdAt :: UTCTime
   }
   deriving (Generic)

@@ -15,6 +15,7 @@ data Domain
   | HEALTHCARE
   | METRO
   | PARKING
+  | PUBLIC_TRANSPORT
   deriving (Eq, Generic, Show, Read, FromDhall)
 
 instance Example Domain where

@@ -1,8 +1,12 @@
 module API.Handler where
 
+import API.Beckn.Handler as Beckn
+import API.PublicTransport.Handler as PublicTransport
 import qualified API.Types as API
 import App.Types
-import Beckn.Prelude
+import Servant
 
 handler :: FlowServer API.API
-handler = pure "Hello, world!"
+handler =
+  Beckn.handler
+    :<|> PublicTransport.handler

@@ -21,6 +21,8 @@ mkPersist
       lat Double
       lon Double
       requestorId Text
+      fromDate UTCTime
+      toDate UTCTime
       createdAt UTCTime
       Primary id
       deriving Generic

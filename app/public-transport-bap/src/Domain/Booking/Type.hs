@@ -7,7 +7,8 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import Domain.FerryStation (FerryStation)
 import Domain.Quote (Quote)
-import Domain.Search (Person, Search)
+import Domain.Search (Search)
+import Tools.Auth
 
 data BookingStatus = NEW | AWAITING_PAYMENT | CONFIRMED | CANCELLED
   deriving (Generic, Show, Read, FromJSON, ToJSON)
