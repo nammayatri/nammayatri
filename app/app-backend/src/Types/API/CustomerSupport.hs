@@ -2,11 +2,11 @@ module Types.API.CustomerSupport where
 
 import Data.OpenApi (ToSchema)
 import Data.Time
+import qualified Domain.Types.Person as P
+import Domain.Types.SearchReqLocation as L
+import Domain.Types.SearchRequest as C
 import EulerHS.Prelude hiding (id)
 import Types.API.RideBooking (RideBookingStatusRes)
-import qualified Types.Storage.Person as P
-import Types.Storage.SearchReqLocation as L
-import Types.Storage.SearchRequest as C
 
 newtype OrderResp = OrderResp {order :: OrderDetails}
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)

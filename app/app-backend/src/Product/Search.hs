@@ -4,7 +4,8 @@ module Product.Search where
 
 import App.Types
 import Beckn.Product.Validation.Context (validateContext)
-import qualified Beckn.Storage.Queries as DB
+import Beckn.Storage.Esqueleto (runTransaction)
+import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Migration.API.Search as Core9
@@ -21,6 +22,11 @@ import Beckn.Types.Id
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Control.Lens ((?~))
+import Domain.Types.OnSearchEvent
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Quote as SQuote
+import qualified Domain.Types.SearchReqLocation as Location
+import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (id, state)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.Location as Location (getDistance)
@@ -34,11 +40,6 @@ import qualified Types.API.Search as API
 import Types.API.Serviceability
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import Types.Storage.OnSearchEvent
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Quote as SQuote
-import qualified Types.Storage.SearchReqLocation as Location
-import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
@@ -55,7 +56,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
-  DB.runSqlDBTransaction $ do
+  DB.runTransaction $ do
     Location.create fromLocation
     Location.create toLocation
     QSearchRequest.create searchRequest
@@ -78,7 +79,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
       unlessM (rideServiceable serviceabilityReq) $
         throwError $ ProductNotServiceable "due to georestrictions"
 
-logOnSearchEvent :: DBFlow m r => OnSearch.OnSearchReq -> m ()
+logOnSearchEvent :: EsqDBFlow m r => OnSearch.OnSearchReq -> m ()
 logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   createdAt <- getCurrentTime
   id <- generateGUID
@@ -87,7 +88,8 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   let errorType = show . (._type) <$> mbErr
   let errorCode = (.code) <$> mbErr
   let errorMessage = (.message) =<< mbErr
-  OnSearchEvent.createFlow OnSearchEvent {..}
+  runTransaction $
+    OnSearchEvent.create $ OnSearchEvent {..}
 
 searchCb ::
   SignatureAuthResult ->
@@ -105,7 +107,7 @@ searchCb _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err
   return Ack
 
-type SearchCbFlow m r = (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], DBFlow m r)
+type SearchCbFlow m r = (HasFlowEnv m r '["searchConfirmExpiry" ::: Maybe Seconds], EsqDBFlow m r)
 
 searchCbService :: SearchCbFlow m r => Common.Context -> OnSearch.Catalog -> m ()
 searchCbService context catalog = do
@@ -118,11 +120,11 @@ searchCbService context catalog = do
     (provider : _) -> do
       let items = provider.items
       quotes <- traverse (buildQuote searchRequest providerId providerUrl provider) items
-      DB.runSqlDBTransaction $ traverse_ QQuote.create quotes
+      DB.runTransaction $ traverse_ QQuote.create quotes
 
 buildSearchRequest ::
   ( (HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),
-    DBFlow m r,
+    MonadFlow m,
     CoreMetrics m
   ) =>
   Text ->

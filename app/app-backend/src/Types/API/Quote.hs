@@ -4,10 +4,10 @@ import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList (PublicTransportQuot
 import Beckn.Utils.JSON (objectWithSingleFieldParsing)
 import Data.Char (toLower)
 import Data.OpenApi (ToSchema)
+import Domain.Types.Quote (QuoteAPIEntity)
+import Domain.Types.SearchReqLocation (SearchReqLocationAPIEntity)
 import EulerHS.Prelude hiding (id)
 import Types.API.MetroOffer
-import Types.Storage.Quote (QuoteAPIEntity)
-import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 
 data GetQuotesRes = GetQuotesRes
   { fromLocation :: SearchReqLocationAPIEntity,

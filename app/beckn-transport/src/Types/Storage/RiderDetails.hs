@@ -12,7 +12,7 @@ import EulerHS.Prelude hiding (id)
 data RiderDetailsTE e f = RiderDetails
   { id :: B.C f (Id RiderDetails),
     mobileCountryCode :: B.C f Text,
-    mobileNumber :: EncryptedHashedField e f Text,
+    mobileNumber :: BeamEncryptedHashedField e f Text,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -55,7 +55,7 @@ fieldEMod =
       (B.tableModification @_ @RiderDetailsT)
         { mobileCountryCode = "mobile_country_code",
           mobileNumber =
-            EncryptedHashed
+            BeamEncryptedHashed
               { encrypted = "mobile_number_encrypted",
                 hash = "mobile_number_hash"
               },

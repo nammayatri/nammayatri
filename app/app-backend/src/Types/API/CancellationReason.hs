@@ -1,5 +1,5 @@
 module Types.API.CancellationReason where
 
-import Types.Storage.CancellationReason (CancellationReasonAPIEntity)
+import Domain.Types.CancellationReason (CancellationReasonAPIEntity)
 
 type ListRes = [CancellationReasonAPIEntity]

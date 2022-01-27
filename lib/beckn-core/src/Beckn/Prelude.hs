@@ -18,7 +18,7 @@ import Data.Functor as E
 import Data.Functor.Identity as E
 import Data.Kind as E (Type)
 import Data.Maybe as E (fromMaybe, listToMaybe)
-import Data.OpenApi as E (ToSchema)
+import Data.OpenApi as E (ToParamSchema, ToSchema)
 import Data.Proxy as E (Proxy (..))
 import Data.String as E (IsString (..))
 import Data.Text as E (Text)

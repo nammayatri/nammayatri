@@ -1,89 +1,74 @@
 module Storage.Queries.RideBooking where
 
-import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as DB
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Schema
-import Database.Beam ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Person as SPers
-import qualified Types.Storage.Quote as Quote
-import qualified Types.Storage.RideBooking as Storage
-import qualified Types.Storage.SearchRequest as SSR
-import Utils.Common
+import Domain.Types.Person (Person)
+import Domain.Types.Quote (Quote)
+import Domain.Types.RideBooking as DRB
+import Domain.Types.SearchRequest (SearchRequest)
+import Storage.Tabular.RideBooking
+import Storage.Tabular.SearchRequest ()
 
-getDbTable ::
-  (Functor m, HasSchemaName m) =>
-  m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.RideBookingT))
-getDbTable =
-  DB.rideBooking . DB.appDb <$> getSchemaName
+create :: RideBooking -> SqlDB ()
+create = create'
 
-create :: Storage.RideBooking -> DB.SqlDB ()
-create rideBooking = do
-  dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue rideBooking)
-
-updateStatus :: Id Storage.RideBooking -> Storage.RideBookingStatus -> DB.SqlDB ()
+updateStatus :: Id RideBooking -> RideBookingStatus -> SqlDB ()
 updateStatus rbId rbStatus = do
-  dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update' dbTable (setClause rbStatus now) $ predicate rbId
-  where
-    predicate rbId_ Storage.RideBooking {..} = id ==. B.val_ rbId_
-    setClause rbStatus_ now Storage.RideBooking {..} =
-      mconcat [status <-. B.val_ rbStatus_, updatedAt <-. B.val_ now]
+  update' $ \tbl -> do
+    set
+      tbl
+      [ RideBookingUpdatedAt =. val now,
+        RideBookingStatus =. val rbStatus
+      ]
+    where_ $ tbl ^. RideBookingId ==. val (getId rbId)
 
-updateBPPBookingId :: Id Storage.RideBooking -> Id Storage.BPPRideBooking -> DB.SqlDB ()
+updateBPPBookingId :: Id RideBooking -> Id BPPRideBooking -> SqlDB ()
 updateBPPBookingId rbId bppRbId = do
-  dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update' dbTable (setClause bppRbId now) $ predicate rbId
-  where
-    predicate rbId_ Storage.RideBooking {..} = id ==. B.val_ rbId_
-    setClause bppRbId_ now Storage.RideBooking {..} =
-      mconcat [bppBookingId <-. B.val_ (Just bppRbId_), updatedAt <-. B.val_ now]
+  update' $ \tbl -> do
+    set
+      tbl
+      [ RideBookingUpdatedAt =. val now,
+        RideBookingBppBookingId =. val (Just $ getId bppRbId)
+      ]
+    where_ $ tbl ^. RideBookingId ==. val (getId rbId)
 
-findById :: DBFlow m r => Id Storage.RideBooking -> m (Maybe Storage.RideBooking)
-findById rbId = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.RideBooking {..} = id ==. B.val_ rbId
+findById :: EsqDBFlow m r => Id RideBooking -> m (Maybe RideBooking)
+findById = Esq.findById
 
-findByBPPBookingId :: DBFlow m r => Id Storage.BPPRideBooking -> m (Maybe Storage.RideBooking)
-findByBPPBookingId bppRbId = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.RideBooking {..} = bppBookingId ==. B.val_ (Just bppRbId)
+findByBPPBookingId :: EsqDBFlow m r => Id BPPRideBooking -> m (Maybe RideBooking)
+findByBPPBookingId bppRbId =
+  runTransaction . findOne' $ do
+    rideBooking <- from $ table @RideBookingT
+    where_ $ rideBooking ^. RideBookingBppBookingId ==. val (Just $ getId bppRbId)
+    return rideBooking
 
-findByQuoteId :: DBFlow m r => Id Quote.Quote -> m (Maybe Storage.RideBooking)
-findByQuoteId quoteId_ = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.RideBooking {..} = quoteId ==. B.val_ quoteId_
+findByQuoteId :: EsqDBFlow m r => Id Quote -> m (Maybe RideBooking)
+findByQuoteId quoteId_ =
+  runTransaction . findOne' $ do
+    rideBooking <- from $ table @RideBookingT
+    where_ $ rideBooking ^. RideBookingQuoteId ==. val (toKey quoteId_)
+    return rideBooking
 
-findByRequestId :: DBFlow m r => Id SSR.SearchRequest -> m (Maybe Storage.RideBooking)
-findByRequestId searchRequestId = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.RideBooking {..} = requestId ==. B.val_ searchRequestId
+findByRequestId :: EsqDBFlow m r => Id SearchRequest -> m (Maybe RideBooking)
+findByRequestId searchRequestId =
+  runTransaction . findOne' $ do
+    rideBooking <- from $ table @RideBookingT
+    where_ $ rideBooking ^. RideBookingRequestId ==. val (toKey searchRequestId)
+    return rideBooking
 
-findAllByRequestorId :: DBFlow m r => Id SPers.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.RideBooking]
-findAllByRequestorId personId mbLimit mbOffset mbOnlyActive = do
-  dbTable <- getDbTable
-  let limit = fromMaybe 10 mbLimit
-      offset = fromMaybe 0 mbOffset
-      isOnlyActive = Just True == mbOnlyActive
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) $ predicate isOnlyActive
-  where
-    orderBy Storage.RideBooking {..} = B.desc_ createdAt
-    predicate isOnlyActive Storage.RideBooking {..} =
-      riderId ==. B.val_ personId
-        &&. if isOnlyActive
-          then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
-          else B.val_ True
+findAllByRiderId :: EsqDBFlow m r => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [RideBooking]
+findAllByRiderId personId mbLimit mbOffset mbOnlyActive = do
+  let isOnlyActive = Just True == mbOnlyActive
+  runTransaction . findAll' $ do
+    rideBooking <- from $ table @RideBookingT
+    where_ $
+      rideBooking ^. RideBookingRiderId ==. val (toKey personId)
+        &&. whenTrue_ isOnlyActive (not_ (rideBooking ^. RideBookingStatus `in_` valList [DRB.COMPLETED, DRB.CANCELLED]))
+    limit $ fromIntegral $ fromMaybe 10 mbLimit
+    offset $ fromIntegral $ fromMaybe 0 mbOffset
+    orderBy [desc $ rideBooking ^. RideBookingCreatedAt]
+    return rideBooking

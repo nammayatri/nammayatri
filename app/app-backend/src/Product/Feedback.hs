@@ -7,13 +7,13 @@ import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import qualified Beckn.Types.Core.Taxi.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Logging
+import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (product)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Types.API.Feedback as API
 import Types.Error
-import qualified Types.Storage.Person as Person
 import Utils.Common
 
 feedback :: Id Person.Person -> API.FeedbackReq -> App.FlowHandler API.FeedbackRes

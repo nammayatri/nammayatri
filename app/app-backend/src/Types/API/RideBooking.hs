@@ -4,10 +4,10 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
+import Domain.Types.Ride (RideAPIEntity)
+import Domain.Types.RideBooking (RideBooking, RideBookingStatus)
+import Domain.Types.SearchReqLocation (SearchReqLocationAPIEntity)
 import EulerHS.Prelude hiding (id)
-import Types.Storage.Ride (RideAPIEntity)
-import Types.Storage.RideBooking (RideBooking, RideBookingStatus)
-import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
 
 data RideBookingStatusRes = RideBookingStatusRes
   { id :: Id RideBooking,

@@ -1,26 +1,18 @@
 module Storage.Queries.CancellationReason where
 
-import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common
-import Beckn.Types.Schema
-import Beckn.Utils.Common
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.CancellationReason as SCR
-import qualified Types.Storage.DB as DB
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto
+import Domain.Types.CancellationReason
+import Storage.Tabular.CancellationReason
 
-getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity SCR.CancellationReasonT))
-getDbTable =
-  DB.cancellationReason . DB.appDb <$> getSchemaName
-
-findAll :: DBFlow m r => SCR.CancellationStage -> m [SCR.CancellationReason]
-findAll cancStage = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate SCR.CancellationReason {..} =
-      enabled
-        B.&&. case cancStage of
-          SCR.OnSearch -> onSearch
-          SCR.OnConfirm -> onConfirm
-          SCR.OnAssign -> onAssign
+findAll :: EsqDBFlow m r => CancellationStage -> m [CancellationReason]
+findAll cancStage =
+  runTransaction . findAll' $ do
+    cancellationReason <- from $ table @CancellationReasonT
+    where_ $
+      cancellationReason ^. CancellationReasonEnabled
+        &&. case cancStage of
+          OnSearch -> cancellationReason ^. CancellationReasonOnSearch
+          OnConfirm -> cancellationReason ^. CancellationReasonOnConfirm
+          OnAssign -> cancellationReason ^. CancellationReasonOnAssign
+    return cancellationReason

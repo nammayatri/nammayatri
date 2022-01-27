@@ -14,7 +14,6 @@ import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.SesConfig (SesConfig)
 import Beckn.Sms.Config (SmsConfig)
-import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis.AppPrefixes (appBackendPrefix)
 import Beckn.Storage.Hedis.Config
@@ -42,8 +41,7 @@ import Types.Geofencing
 import Types.Metrics
 
 data AppCfg = AppCfg
-  { dbCfg :: DBConfig,
-    esqDBCfg :: EsqDBConfig,
+  { esqDBCfg :: EsqDBConfig,
     redisCfg :: T.RedisConfig,
     hedisCfg :: HedisCfg,
     smsCfg :: SmsConfig,
@@ -88,7 +86,6 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { config :: AppCfg,
-    dbCfg :: DBConfig,
     hedisEnv :: HedisEnv,
     esqDBEnv :: EsqDBEnv,
     smsCfg :: SmsConfig,

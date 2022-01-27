@@ -2,14 +2,14 @@ module Product.Ride where
 
 import App.Types
 import Beckn.Types.Id
+import qualified Domain.Types.Person as SPerson
+import Domain.Types.Ride
+import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Ride as QRide
 import qualified Types.API.Ride as API
 import Types.Error
-import qualified Types.Storage.Person as SPerson
-import Types.Storage.Ride
-import qualified Types.Storage.Ride as SRide
 import Utils.Common
 
 getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler API.GetDriverLocRes

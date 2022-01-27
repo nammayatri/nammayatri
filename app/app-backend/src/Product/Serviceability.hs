@@ -2,14 +2,14 @@ module Product.Serviceability where
 
 import App.Types
 import Beckn.Types.Id
+import Domain.Types.Person as Person
 import EulerHS.Prelude hiding (length)
 import Storage.Queries.Geometry (someGeometriesContain)
 import Types.API.Serviceability
 import Types.Geofencing
-import Types.Storage.Person as Person
 import Utils.Common
 
-rideServiceable :: (DBFlow m r, HasFlowEnv m r '["geofencingConfig" ::: GeofencingConfig]) => RideServiceabilityReq -> m Bool
+rideServiceable :: (EsqDBFlow m r, HasFlowEnv m r '["geofencingConfig" ::: GeofencingConfig]) => RideServiceabilityReq -> m Bool
 rideServiceable RideServiceabilityReq {..} = do
   geofencingConfig <- asks (.geofencingConfig)
   originServiceable <-

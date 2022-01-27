@@ -5,9 +5,13 @@ module Product.CustomerSupport where
 
 import App.Types
 import Beckn.External.Encryption (decrypt)
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Domain.Types.Person as SP
+import qualified Domain.Types.RegistrationToken as SR
+import qualified Domain.Types.SearchReqLocation as SSearchLoc
+import Domain.Types.SearchRequest as C
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Product.RideBooking (buildRideBookingStatusRes)
@@ -18,10 +22,6 @@ import qualified Storage.Queries.SearchReqLocation as Location
 import Storage.Queries.SearchRequest as SearchRequest
 import Types.API.CustomerSupport as T
 import Types.Error
-import Types.Storage.Person as SP
-import qualified Types.Storage.RegistrationToken as SR
-import qualified Types.Storage.SearchReqLocation as SSearchLoc
-import Types.Storage.SearchRequest as C
 import Utils.Common
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
@@ -31,12 +31,12 @@ login T.LoginReq {..} = withFlowHandlerAPI $ do
   token <- generateToken person
   pure $ T.LoginRes token "Logged in successfully"
 
-generateToken :: DBFlow m r => SP.Person -> m Text
+generateToken :: EsqDBFlow m r => SP.Person -> m Text
 generateToken SP.Person {..} = do
   let personId = id
   regToken <- createSupportRegToken $ getId personId
   -- Clean Old Login Session
-  DB.runSqlDBTransaction $ do
+  DB.runTransaction $ do
     RegistrationToken.deleteByPersonId personId
     RegistrationToken.create regToken
   pure $ regToken.token
@@ -45,10 +45,10 @@ logout :: Id SP.Person -> FlowHandler T.LogoutRes
 logout personId = withFlowHandlerAPI $ do
   person <- Person.findById personId >>= fromMaybeM PersonNotFound
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
-  DB.runSqlDB (RegistrationToken.deleteByPersonId person.id)
+  DB.runTransaction (RegistrationToken.deleteByPersonId person.id)
   pure $ T.LogoutRes "Logged out successfully"
 
-createSupportRegToken :: DBFlow m r => Text -> m SR.RegistrationToken
+createSupportRegToken :: MonadFlow m => Text -> m SR.RegistrationToken
 createSupportRegToken entityId = do
   rtid <- L.generateGUID
   token <- L.generateGUID
@@ -100,13 +100,13 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
           >>= fromMaybeM PersonDoesNotExist
       return $ T.OrderInfo person [searchRequest]
 
-makeSearchRequestToOrder :: (DBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
+makeSearchRequestToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
 makeSearchRequestToOrder SP.Person {fullName, mobileNumber} C.SearchRequest {..} = do
-  fromLocation <- Location.findLocationById fromLocationId
-  toLocation <- Location.findLocationById toLocationId
+  fromLocation <- Location.findById fromLocationId
+  toLocation <- Location.findById toLocationId
   rideBooking <- QRB.findByRequestId id
   rbStatus <- buildRideBookingStatusRes `mapM` rideBooking
-  decMobNum <- decrypt mobileNumber
+  decMobNum <- mapM decrypt mobileNumber
   let details =
         T.OrderDetails
           { id = getId id,

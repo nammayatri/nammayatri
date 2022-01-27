@@ -1,6 +1,10 @@
 module Mobility.SuccessFlow where
 
 import Beckn.Types.Id
+import qualified "app-backend" Domain.Types.Quote as BQuote
+import qualified "app-backend" Domain.Types.Ride as BRide
+import qualified "app-backend" Domain.Types.RideBooking as AppRB
+import qualified "app-backend" Domain.Types.RideBooking as BRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
@@ -9,12 +13,8 @@ import qualified "beckn-transport" Storage.Queries.Ride as TQRide
 import qualified "beckn-transport" Storage.Queries.RideBooking as TQRB
 import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
-import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "beckn-transport" Types.Storage.Quote as TQuote
-import qualified "app-backend" Types.Storage.Ride as BRide
 import qualified "beckn-transport" Types.Storage.Ride as TRide
-import qualified "app-backend" Types.Storage.RideBooking as AppRB
-import qualified "app-backend" Types.Storage.RideBooking as BRB
 import qualified "beckn-transport" Types.Storage.RideBooking as TRB
 import Utils
 

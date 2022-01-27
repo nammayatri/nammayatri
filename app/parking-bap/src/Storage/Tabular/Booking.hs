@@ -11,7 +11,6 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Database.Persist.TH
 import qualified Domain.Booking as Domain
 import Storage.Tabular.Quote (QuoteTId)
 import Storage.Tabular.Search (SearchTId)

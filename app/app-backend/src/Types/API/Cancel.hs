@@ -2,8 +2,8 @@ module Types.API.Cancel where
 
 import Beckn.Types.APISuccess (APISuccess)
 import Data.OpenApi (ToSchema)
+import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
 import EulerHS.Prelude
-import Types.Storage.CancellationReason (CancellationReasonCode, CancellationStage)
 
 newtype CancelReq = CancelReq
   { bookingCancellationReason :: RideBookingCancellationReasonAPIEntity

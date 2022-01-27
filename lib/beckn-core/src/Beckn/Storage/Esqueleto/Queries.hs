@@ -22,6 +22,7 @@ import Database.Esqueleto.Experimental as EsqExport hiding
     updateCount,
     upsert,
     upsertBy,
+    (<&>),
   )
 import qualified Database.Esqueleto.Experimental as Esq
 import qualified Database.Esqueleto.Internal.Internal as Esq
@@ -211,3 +212,9 @@ upsertBy' k r u = fromTEntity =<< lift (Esq.upsertBy k (toTType r) u)
 
 whenJust_ :: Maybe a -> (a -> SqlExpr (Value Bool)) -> SqlExpr (Value Bool)
 whenJust_ mbVal func = maybe (Esq.val True) func mbVal
+
+whenTrue_ :: Bool -> SqlExpr (Value Bool) -> SqlExpr (Value Bool)
+whenTrue_ bl func = bool (Esq.val True) func bl
+
+updateWhenJust_ :: (a -> SqlExpr (Entity e) -> SqlExpr Esq.Update) -> Maybe a -> [SqlExpr (Entity e) -> SqlExpr Esq.Update]
+updateWhenJust_ f = maybe [] (\value -> [f value])

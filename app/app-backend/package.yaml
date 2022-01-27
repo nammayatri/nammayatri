@@ -85,6 +85,7 @@ dependencies:
   - postgresql-simple
   - servant-openapi3
   - openapi3
+  - persistent
 
 ghc-options:
   - -fwrite-ide-info

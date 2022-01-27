@@ -8,9 +8,9 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
+import Domain.Types.Quote (Quote)
 import EulerHS.Prelude
 import Types.Issue
-import Types.Storage.Quote (Quote)
 
 data SendIssueReq = SendIssueReq
   { contactEmail :: Maybe Text,

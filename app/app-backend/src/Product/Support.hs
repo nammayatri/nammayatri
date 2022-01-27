@@ -7,17 +7,18 @@ where
 
 import qualified App.Types as App
 import qualified Beckn.SesConfig as SesConfig
+import Beckn.Storage.Esqueleto (runTransaction)
 import Beckn.Types.APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Validation (runRequestValidation)
+import qualified Domain.Types.Issue as DIssue
+import Domain.Types.Person as Person
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length)
 import qualified Storage.Queries.Issues as Queries
 import Types.API.Support as Support
-import qualified Types.Storage.Issue as SIssue
-import Types.Storage.Person as Person
 import Utils.Common
 import qualified Utils.SES as SES
 
@@ -28,16 +29,17 @@ sendIssue personId request@SendIssueReq {..} = withFlowHandlerAPI . withPersonId
   issuesConfig <- asks $ SesConfig.issuesConfig . App.sesCfg
   issueId <- L.generateGUID
   utcNow <- getCurrentTime
-  Queries.insertIssue (mkDBIssue issueId personIdTxt request utcNow)
+  runTransaction $
+    Queries.insertIssue (mkDBIssue issueId personIdTxt request utcNow)
   let mailSubject = mkMailSubject issueId (issue.reason)
   let mailBody = mkMailBody issueId personIdTxt request utcNow
   responseError <- liftIO $ SES.sendEmail issuesConfig mailSubject mailBody
   whenJust responseError $ throwError . EmailSendingError
   return Success
 
-mkDBIssue :: Text -> Text -> Support.SendIssueReq -> UTCTime -> SIssue.Issue
+mkDBIssue :: Text -> Text -> Support.SendIssueReq -> UTCTime -> DIssue.Issue
 mkDBIssue issueId customerId SendIssueReq {..} time =
-  SIssue.Issue
+  DIssue.Issue
     { id = Id issueId,
       customerId = Id customerId,
       rideBookingId = rideBookingId,

@@ -7,8 +7,8 @@ where
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
-import qualified Types.Storage.Ride as SRide
 
 data FeedbackReq = FeedbackReq
   { rideId :: Id SRide.Ride,

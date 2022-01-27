@@ -91,7 +91,7 @@ data PersonTE e f = Person
     gender :: B.C f Gender,
     identifierType :: B.C f IdentifierType,
     email :: B.C f (Maybe Text),
-    mobileNumber :: EncryptedHashedField e (B.Nullable f) Text,
+    mobileNumber :: BeamEncryptedHashedField e (B.Nullable f) Text,
     mobileCountryCode :: B.C f (Maybe Text),
     passwordHash :: B.C f (Maybe DbHash),
     identifier :: B.C f (Maybe Text),
@@ -156,7 +156,7 @@ fieldEMod =
         passwordHash = "password_hash",
         isNew = "is_new",
         mobileNumber =
-          EncryptedHashed
+          BeamEncryptedHashed
             { encrypted = "mobile_number_encrypted",
               hash = "mobile_number_hash"
             },

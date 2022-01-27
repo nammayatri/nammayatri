@@ -12,7 +12,6 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Base64
 import qualified Beckn.Types.Registry.Subscriber as Domain
-import Database.Persist.TH
 import qualified Domain.Subscriber as Domain
 
 derivePersistField "Domain.Domain"

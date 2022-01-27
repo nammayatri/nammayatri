@@ -3,7 +3,7 @@ module Product.Confirm (confirm, onConfirm) where
 import App.Types
 import Beckn.External.Encryption (decrypt)
 import Beckn.Product.Validation.Context (validateContext)
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.ReqTypes as Common
@@ -12,6 +12,10 @@ import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Quote as SQuote
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Person as QPerson
@@ -20,10 +24,6 @@ import qualified Storage.Queries.RideBooking as QRideB
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Types.API.Confirm as API
 import Types.Error
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Quote as SQuote
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 
 confirm :: Id Person.Person -> Id SearchRequest.SearchRequest -> Id SQuote.Quote -> FlowHandler API.ConfirmRes
@@ -35,13 +35,13 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
   now <- getCurrentTime
   rideBooking <- buildRideBooking searchRequest quote now
-  DB.runSqlDBTransaction $
+  DB.runTransaction $
     QRideB.create rideBooking
   bapURIs <- askConfig (.bapSelfURIs)
   bapIDs <- askConfig (.bapSelfIds)
   context <- buildTaxiContext Context.CONFIRM (getId searchRequestId) bapIDs.cabs bapURIs.cabs (Just quote.providerId) (Just quote.providerUrl)
   person <- QPerson.findById personId >>= fromMaybeM PersonDoesNotExist
-  customerMobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  customerMobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   customerMobileCountryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   let order =
         Confirm.Order
@@ -103,7 +103,7 @@ onConfirm _org req = withFlowHandlerBecknAPI $
         let bppRideBookingId = Id msg.order.id
         quote <- QQuote.findByBPPQuoteId bppQuoteId >>= fromMaybeM QuoteDoesNotExist
         rideBooking <- QRideB.findByQuoteId quote.id >>= fromMaybeM RideBookingNotFound
-        DB.runSqlDBTransaction $ do
+        DB.runTransaction $ do
           QRideB.updateBPPBookingId rideBooking.id bppRideBookingId
           QRideB.updateStatus rideBooking.id SRB.CONFIRMED
     return Ack

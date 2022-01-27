@@ -14,6 +14,13 @@ import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi (Info (..), OpenApi (..))
+import qualified Domain.Types.CallStatus as SCS
+import qualified Domain.Types.CancellationReason as SCancellationReason
+import qualified Domain.Types.Quote as Quote
+import qualified Domain.Types.RegistrationToken as SRT
+import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.SearchRequest as SSR
 import EulerHS.Prelude
 import Product.Auth (authAPI)
 import qualified Product.Call as Call
@@ -52,13 +59,6 @@ import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
 import Types.Geofencing
-import qualified Types.Storage.CallStatus as SCS
-import qualified Types.Storage.CancellationReason as SCancellationReason
-import qualified Types.Storage.Quote as Quote
-import qualified Types.Storage.RegistrationToken as SRT
-import qualified Types.Storage.Ride as SRide
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.SearchRequest as SSR
 import Utils.Auth (TokenAuth)
 
 type AppAPI =

@@ -1,11 +1,11 @@
 module Mobility.AppCancelRide where
 
+import qualified "app-backend" Domain.Types.CancellationReason as AppCR
+import qualified "app-backend" Domain.Types.RideBooking as AppRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
 import Mobility.SuccessFlow (doAnAppSearch)
-import qualified "app-backend" Types.Storage.CancellationReason as AppCR
-import qualified "app-backend" Types.Storage.RideBooking as AppRB
 import Utils
 
 spec :: Spec

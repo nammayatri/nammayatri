@@ -1,6 +1,9 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Beckn.Types.Core.Taxi.Common.CancellationSource where
 
 import Beckn.Storage.DB.Utils (fromBackendRowEnum)
+import Beckn.Storage.Esqueleto
 import Data.Aeson
 import Data.OpenApi
 import Database.Beam.Backend
@@ -14,8 +17,7 @@ data CancellationSource
   | ByAllocator
   deriving (Show, Eq, Ord, Read, Generic)
 
-instance ToSchema CancellationSource where
-  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions cancellationSourceJSONOptions
+derivePersistField "CancellationSource"
 
 instance ToJSON CancellationSource where
   toJSON = genericToJSON cancellationSourceJSONOptions
@@ -33,6 +35,9 @@ cancellationSourceJSONOptions =
         "ByAllocator" -> "CANCELLED_BY_ALLOCATOR"
         _ -> error "CancellationReason parsing error"
     }
+
+instance ToSchema CancellationSource where
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions cancellationSourceJSONOptions
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be CancellationSource where
   sqlValueSyntax = autoSqlValueSyntax

@@ -18,7 +18,7 @@ defaultDriver =
       gender = Person.UNKNOWN,
       identifierType = Person.EMAIL,
       email = Just "driverson@cool-drivers.com",
-      mobileNumber = EncryptedHashed {encrypted = Nothing, hash = Nothing},
+      mobileNumber = BeamEncryptedHashed {encrypted = Nothing, hash = Nothing},
       mobileCountryCode = Nothing,
       passwordHash = Nothing,
       identifier = Nothing,

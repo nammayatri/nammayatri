@@ -5,8 +5,8 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Data.OpenApi (ToSchema)
 import Data.Time
+import Domain.Types.SearchRequest (SearchRequest)
 import EulerHS.Prelude hiding (id)
-import Types.Storage.SearchRequest (SearchRequest)
 
 data MetroOffer = MetroOffer
   { rideSearchId :: Id SearchRequest, -- search case id now

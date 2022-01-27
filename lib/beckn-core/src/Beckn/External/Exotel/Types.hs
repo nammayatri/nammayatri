@@ -12,6 +12,7 @@
 module Beckn.External.Exotel.Types where
 
 import Beckn.Storage.DB.Utils (fromBackendRowEnum)
+import Beckn.Storage.Esqueleto (derivePersistField)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.JSON
 import Beckn.Utils.TH
@@ -139,6 +140,8 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExotelCallStatus wh
 
 instance FromBackendRow Postgres ExotelCallStatus where
   fromBackendRow = fromBackendRowEnum "ExotelCallStatus"
+
+derivePersistField "ExotelCallStatus"
 
 -- | Call direction
 data ExotelDirection

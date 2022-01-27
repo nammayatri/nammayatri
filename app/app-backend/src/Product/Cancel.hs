@@ -1,13 +1,16 @@
 module Product.Cancel (cancel) where
 
 import App.Types
-import qualified Beckn.Storage.Queries as DB
+import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.Core.ReqTypes as Common
 import qualified Beckn.Types.Core.Taxi.Cancel.Req as ReqCancel
 import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import Beckn.Types.Id
-import EulerHS.Prelude hiding (id)
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RideBooking as QRB
@@ -15,9 +18,6 @@ import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.SearchRequest as MC
 import Types.API.Cancel as API
 import Types.Error
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideBookingCancellationReason as SBCR
 import Utils.Common
 
 cancel :: Id SRB.RideBooking -> Id Person.Person -> API.CancelReq -> FlowHandler CancelRes
@@ -35,7 +35,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   context <- buildTaxiContext Context.CANCEL txnId bapIDs.cabs bapURIs.cabs (Just quote.providerId) (Just quote.providerUrl)
   void $ ExternalAPI.cancel quote.providerUrl (Common.BecknReq context (ReqCancel.CancelReqMessage quote.bppQuoteId.getId ReqCancel.ByUser))
   rideBookingCancelationReason <- buildRideBookingCancelationReason rideBooking.id bookingCancellationReasonAPI
-  DB.runSqlDBTransaction
+  DB.runTransaction
     (QBCR.create rideBookingCancelationReason)
     `rethrow` \(SQLRequestError _ _) -> RideInvalidStatus "This ride is already cancelled"
   return Success

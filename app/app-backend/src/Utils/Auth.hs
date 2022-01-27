@@ -7,12 +7,12 @@ import Beckn.Types.Id
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import Servant hiding (Context)
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.Error
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.RegistrationToken as SR
 
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken
@@ -31,7 +31,7 @@ instance VerificationMethod VerifyToken where
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyPerson :: (DBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person)
+verifyPerson :: (EsqDBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
@@ -49,16 +49,16 @@ authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
   "BAP:authTokenCacheKey:" <> regToken
 
-verifyPersonAction :: (DBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => VerificationAction VerifyToken m
+verifyPersonAction :: (EsqDBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction verifyPerson
 
-verifyToken :: DBFlow m r => RegToken -> m SR.RegistrationToken
+verifyToken :: EsqDBFlow m r => RegToken -> m SR.RegistrationToken
 verifyToken token =
   RegistrationToken.findByToken token
     >>= Utils.fromMaybeM (InvalidToken token)
     >>= validateToken
 
-validateToken :: DBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
+validateToken :: EsqDBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal updatedAt

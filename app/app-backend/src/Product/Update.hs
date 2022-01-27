@@ -2,21 +2,21 @@ module Product.Update (onUpdate) where
 
 import App.Types
 import Beckn.Product.Validation.Context (validateContext)
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import Types.Error
 import Types.Metrics (CoreMetrics)
-import qualified Types.Storage.Ride as SRide
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideBookingCancellationReason as SBCR
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -32,13 +32,13 @@ onUpdate _org req = withFlowHandlerBecknAPI $
     processEvent req.message.cabs_update_event
     return Ack
 
-processEvent :: (DBFlow m r, FCMFlow m r, CoreMetrics m) => OnUpdate.OnUpdateEvent -> m ()
+processEvent :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => OnUpdate.OnUpdateEvent -> m ()
 processEvent (OnUpdate.RideAssigned taEvent) = do
   let bppBookingId = Id taEvent.order_id
   rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM RideBookingDoesNotExist
   unless (isAssignable rideBooking) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
   ride <- buildRide rideBooking
-  DB.runSqlDBTransaction $ do
+  DB.runTransaction $ do
     QRB.updateStatus rideBooking.id SRB.TRIP_ASSIGNED
     QRide.create ride
   Notify.notifyOnRideAssigned rideBooking ride
@@ -79,7 +79,7 @@ processEvent (OnUpdate.RideStarted rsEvent) = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM RideDoesNotExist
   unless (rideBooking.status == SRB.TRIP_ASSIGNED) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
-  DB.runSqlDBTransaction $ do
+  DB.runTransaction $ do
     QRide.updateStatus ride.id SRide.INPROGRESS
   Notify.notifyOnRideStarted rideBooking ride
 processEvent (OnUpdate.RideCompleted rcEvent) = do
@@ -95,7 +95,7 @@ processEvent (OnUpdate.RideCompleted rcEvent) = do
              totalFare = Just $ realToFrac rcEvent.total_fare.value,
              chargeableDistance = Just $ realToFrac rcEvent.chargeable_distance
             }
-  DB.runSqlDBTransaction $ do
+  DB.runTransaction $ do
     QRB.updateStatus rideBooking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
   Notify.notifyOnRideCompleted rideBooking ride
@@ -109,7 +109,7 @@ processEvent (OnUpdate.RideBookingCancelled tcEvent) = do
   let searchRequestId = rideBooking.requestId
   logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
   rideBookingCancellationReason <- buildRideBookingCancellationReason rideBooking.id (mbRide <&> (.id)) cancellationSource
-  DB.runSqlDBTransaction $ do
+  DB.runTransaction $ do
     QRB.updateStatus rideBooking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
     unless (cancellationSource == OnUpdate.ByUser) $
@@ -128,7 +128,7 @@ processEvent (OnUpdate.RideBookingReallocation rbrEvent) = do
   let searchRequestId = rideBooking.requestId
   logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
   rideBookingCancellationReason <- buildRideBookingCancellationReason rideBooking.id (Just ride.id) cancellationSource
-  DB.runSqlDBTransaction $ do
+  DB.runTransaction $ do
     QRB.updateStatus rideBooking.id SRB.AWAITING_REASSIGNMENT
     QRide.updateStatus ride.id SRide.CANCELLED
     unless (cancellationSource == OnUpdate.ByUser) $
@@ -137,7 +137,7 @@ processEvent (OnUpdate.RideBookingReallocation rbrEvent) = do
   Notify.notifyOnRideBookingReallocated rideBooking cancellationSource
 
 buildRideBookingCancellationReason ::
-  (DBFlow m r, FCMFlow m r, CoreMetrics m) =>
+  MonadFlow m =>
   Id SRB.RideBooking ->
   Maybe (Id SRide.Ride) ->
   OnUpdate.CancellationSource ->

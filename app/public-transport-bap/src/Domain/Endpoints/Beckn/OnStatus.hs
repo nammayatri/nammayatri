@@ -1,7 +1,7 @@
 module Domain.Endpoints.Beckn.OnStatus where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto hiding ((<&>))
+import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DBooking

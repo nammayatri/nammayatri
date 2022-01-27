@@ -14,6 +14,7 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Domain.Types.SearchRequest (SearchRequest)
 import EulerHS.Prelude hiding (id)
 import Servant (JSON, Post, ReqBody, (:>))
 import Types.API.MetroOffer
@@ -21,7 +22,6 @@ import Types.CoreMetro.Catalog
 import Types.CoreMetro.Item
 import Types.CoreMetro.Location
 import Types.CoreMetro.Provider
-import Types.Storage.SearchRequest (SearchRequest)
 import qualified Utils.Metrics as Metrics
 
 type OnSearch =

@@ -10,7 +10,6 @@ module Storage.Tabular.ParkingLocation where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import Database.Persist.TH
 import qualified Domain.ParkingLocation as Domain
 
 mkPersist

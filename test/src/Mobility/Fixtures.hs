@@ -8,6 +8,13 @@ import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Data.Time
+import qualified "app-backend" Domain.Types.CancellationReason as AbeCRC
+import qualified "app-backend" Domain.Types.Person as TPerson
+import qualified "app-backend" Domain.Types.Quote as BQuote
+import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
+import qualified "app-backend" Domain.Types.Ride as BRide
+import qualified "app-backend" Domain.Types.RideBooking as BRB
+import qualified "app-backend" Domain.Types.SearchRequest as BSearchRequest
 import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client
@@ -22,15 +29,8 @@ import qualified "app-backend" Types.API.RideBooking as AppRideBooking
 import qualified "beckn-transport" Types.API.RideBooking as TRideBookingAPI
 import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
-import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
-import qualified "app-backend" Types.Storage.Person as TPerson
-import qualified "app-backend" Types.Storage.Quote as BQuote
-import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
-import qualified "app-backend" Types.Storage.Ride as BRide
 import qualified "beckn-transport" Types.Storage.Ride as TRide
-import qualified "app-backend" Types.Storage.RideBooking as BRB
 import qualified "beckn-transport" Types.Storage.RideBooking as TRB
-import qualified "app-backend" Types.Storage.SearchRequest as BSearchRequest
 
 address :: AppBESearch.SearchReqAddress
 address =

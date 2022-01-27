@@ -1,92 +1,47 @@
 module Storage.Queries.SearchRequest where
 
-import qualified Beckn.Storage.Common as Storage
-import Beckn.Storage.DB.Config
-import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Common
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.Schema
-import Beckn.Utils.Common
-import Database.Beam ((&&.), (==.))
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.SearchRequest as Storage
+import Domain.Types.Person (Person)
+import Domain.Types.SearchRequest
+import Storage.Tabular.SearchRequest
 
-getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Storage.SearchRequestT))
-getDbTable =
-  DB.searchRequest . DB.appDb <$> getSchemaName
-
-createFlow :: DBFlow m r => Storage.SearchRequest -> m ()
-createFlow = DB.runSqlDB . create
-
-create :: Storage.SearchRequest -> DB.SqlDB ()
-create searchRequest = do
-  dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue searchRequest)
+create :: SearchRequest -> SqlDB ()
+create = create'
 
 findAllByPersonIdLimitOffset ::
-  DBFlow m r =>
-  Id Person.Person ->
+  EsqDBFlow m r =>
+  Id Person ->
   Maybe Integer ->
   Maybe Integer ->
-  m [Storage.SearchRequest]
-findAllByPersonIdLimitOffset personId mlimit moffset = do
-  dbTable <- getDbTable
-  let limit = fromMaybe 100 mlimit
-      offset = fromMaybe 0 moffset
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
-  where
-    orderByDesc Storage.SearchRequest {..} = B.desc_ createdAt
-    predicate Storage.SearchRequest {..} =
-      foldl
-        (&&.)
-        (B.val_ True)
-        [ riderId ==. B.val_ personId
-        ]
+  m [SearchRequest]
+findAllByPersonIdLimitOffset personId mlimit moffset =
+  runTransaction . findAll' $ do
+    searchRequest <- from $ table @SearchRequestT
+    where_ $
+      searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
+    limit $ fromIntegral $ fromMaybe 100 mlimit
+    offset $ fromIntegral $ fromMaybe 0 moffset
+    orderBy [desc $ searchRequest ^. SearchRequestCreatedAt]
+    return searchRequest
 
-findById :: DBFlow m r => Id Storage.SearchRequest -> m (Maybe Storage.SearchRequest)
-findById searchRequestId = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.SearchRequest {..} = id ==. B.val_ searchRequestId
+findById :: EsqDBFlow m r => Id SearchRequest -> m (Maybe SearchRequest)
+findById = Esq.findById
 
-findByPersonId :: DBFlow m r => Id Person.Person -> Id Storage.SearchRequest -> m (Maybe Storage.SearchRequest)
-findByPersonId personId searchRequestId = do
-  dbTable <- getDbTable
-  DB.findOne dbTable (predicate personId)
-  where
-    predicate personId_ Storage.SearchRequest {..} =
-      id ==. B.val_ searchRequestId &&. riderId ==. B.val_ personId_
+findByPersonId :: EsqDBFlow m r => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
+findByPersonId personId searchRequestId =
+  runTransaction . findOne' $ do
+    searchRequest <- from $ table @SearchRequestT
+    where_ $
+      searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
+        &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
+    return searchRequest
 
-findAllByIds :: DBFlow m r => [Id Storage.SearchRequest] -> m [Storage.SearchRequest]
-findAllByIds searchRequestIds = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate Storage.SearchRequest {..} = id `B.in_` (B.val_ <$> searchRequestIds)
-
-findAllByPerson :: DBFlow m r => Id Person.Person -> m [Storage.SearchRequest]
-findAllByPerson perId = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate Storage.SearchRequest {..} = riderId ==. B.val_ perId
-
-findAllExpired :: DBFlow m r => Maybe UTCTime -> Maybe UTCTime -> m [Storage.SearchRequest]
-findAllExpired maybeFrom maybeTo = do
-  dbTable <- getDbTable
-  (now :: UTCTime) <- getCurrentTime
-  DB.findAll dbTable identity (predicate now)
-  where
-    predicate now Storage.SearchRequest {..} =
-      foldl
-        (&&.)
-        (B.val_ True)
-        ( [ validTill B.<=. B.val_ now
-          ]
-            <> maybe [] (\from -> [createdAt B.>=. B.val_ from]) maybeFrom
-            <> maybe [] (\to -> [createdAt B.<=. B.val_ to]) maybeTo
-        )
+findAllByPerson :: EsqDBFlow m r => Id Person -> m [SearchRequest]
+findAllByPerson perId =
+  runTransaction . findAll' $ do
+    searchRequest <- from $ table @SearchRequestT
+    where_ $
+      searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
+    return searchRequest

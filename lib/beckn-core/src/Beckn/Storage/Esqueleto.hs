@@ -6,6 +6,7 @@ module Beckn.Storage.Esqueleto
     module Config,
     module SqlDB,
     module Class,
+    module Reexport,
     defaultQQ,
     defaultSqlSettings,
   )
@@ -21,7 +22,7 @@ import Beckn.Storage.Esqueleto.Types as Types
 import Beckn.Utils.Text
 import qualified Data.Text as T
 import Database.Persist.Quasi.Internal
-import Database.Persist.TH
+import Database.Persist.TH as Reexport
 import EulerHS.Prelude hiding (Key)
 import Language.Haskell.TH.Quote
 

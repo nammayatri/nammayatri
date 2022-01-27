@@ -30,7 +30,7 @@ data BAPs a = BAPs
 
 search ::
   ( HasInConfig r c "gatewayUrl" BaseUrl,
-    DBFlow m r,
+    EsqDBFlow m r,
     CoreMetrics m,
     HasBapIds c r m
   ) =>
@@ -42,7 +42,7 @@ search req = do
 
 searchMetro ::
   ( HasInConfig r c "gatewayUrl" BaseUrl,
-    DBFlow m r,
+    EsqDBFlow m r,
     CoreMetrics m,
     HasBapIds c r m
   ) =>

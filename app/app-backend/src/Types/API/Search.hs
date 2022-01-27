@@ -3,8 +3,8 @@ module Types.API.Search where
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong)
 import Data.OpenApi (ToSchema)
+import Domain.Types.SearchRequest (SearchRequest)
 import EulerHS.Prelude hiding (id, state)
-import Types.Storage.SearchRequest (SearchRequest)
 
 data SearchReq = SearchReq
   { origin :: SearchReqLocation,

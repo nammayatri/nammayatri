@@ -4,7 +4,7 @@ import App.Types
 import Beckn.External.Encryption (decrypt, encrypt)
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
@@ -13,14 +13,14 @@ import Beckn.Types.Id
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified Crypto.Number.Generate as Cryptonite
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.Registration
 import Types.Error
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.RegistrationToken as SR
 import Utils.Auth (authTokenCacheKey)
 import Utils.Common
 import qualified Utils.Notifications as Notify
@@ -43,8 +43,7 @@ auth req = withFlowHandlerAPI $ do
       scfg = sessionConfig smsCfg
 
   token <- makeSession scfg entityId (show <$> useFakeOtpM)
-  DB.runSqlDBTransaction $ do
-    RegistrationToken.create token
+  DB.runTransaction (RegistrationToken.create token)
   whenNothing_ useFakeOtpM $ do
     otpSmsTemplate <- asks (.otpSmsTemplate)
     withLogTag ("personId_" <> getId person.id) $
@@ -58,7 +57,7 @@ makePerson :: EncFlow m r => AuthReq -> m SP.Person
 makePerson req = do
   pid <- BC.generateGUID
   now <- getCurrentTime
-  encMobNum <- encrypt $ Just req.mobileNumber
+  encMobNum <- encrypt req.mobileNumber
   return $
     SP.Person
       { id = pid,
@@ -71,7 +70,7 @@ makePerson req = do
         identifierType = SP.MOBILENUMBER,
         email = Nothing,
         passwordHash = Nothing,
-        mobileNumber = encMobNum,
+        mobileNumber = Just encMobNum,
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
@@ -85,7 +84,7 @@ makePerson req = do
       }
 
 makeSession ::
-  DBFlow m r =>
+  MonadFlow m =>
   SmsSessionConfig ->
   Text ->
   Maybe Text ->
@@ -132,7 +131,7 @@ verify tokenId req = withFlowHandlerAPI $ do
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
-  DB.runSqlDBTransaction $ do
+  DB.runTransaction $ do
     RegistrationToken.deleteByPersonIdExceptNew person.id tokenId
     RegistrationToken.setVerified tokenId
     Person.updateDeviceToken person.id deviceToken
@@ -149,17 +148,17 @@ verify tokenId req = withFlowHandlerAPI $ do
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
 
-getRegistrationTokenE :: DBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
+getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-createPerson :: (EncFlow m r, DBFlow m r) => AuthReq -> m SP.Person
+createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> m SP.Person
 createPerson req = do
   person <- makePerson req
-  Person.create person
+  DB.runTransaction $ Person.create person
   pure person
 
-checkPersonExists :: DBFlow m r => Text -> m SP.Person
+checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
   Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
 
@@ -170,15 +169,15 @@ resend tokenId = withFlowHandlerAPI $ do
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
   smsCfg <- smsCfg <$> ask
   otpSmsTemplate <- otpSmsTemplate <$> ask
-  mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   withLogTag ("personId_" <> entityId) $
     SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
       >>= SF.checkRegistrationSmsResult
-  _ <- RegistrationToken.updateAttempts (attempts - 1) id
+  _ <- DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: DBFlow m r => Id SP.Person -> m ()
+cleanCachedTokens :: EsqDBFlow m r => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- RegistrationToken.findAllByPersonId personId
   for_ regTokens $ \regToken -> do
@@ -188,7 +187,7 @@ cleanCachedTokens personId = do
 logout :: Id SP.Person -> FlowHandler APISuccess
 logout personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   cleanCachedTokens personId
-  DB.runSqlDBTransaction $ do
+  DB.runTransaction $ do
     Person.updateDeviceToken personId Nothing
     RegistrationToken.deleteByPersonId personId
   pure Success

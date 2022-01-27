@@ -8,6 +8,7 @@
 
 module Beckn.External.FCM.Types where
 
+import Beckn.Storage.Esqueleto (PersistField, PersistFieldSql)
 import Beckn.Types.App
 import Beckn.Types.Field ((:::))
 import Beckn.Utils.TH
@@ -31,7 +32,8 @@ data FCMNotificationRecipient = FCMNotificationRecipient
 newtype FCMRecipientToken = FCMRecipientToken
   { getFCMRecipientToken :: Text
   }
-  deriving (Show)
+  deriving stock (Show)
+  deriving newtype (PersistField, PersistFieldSql)
 
 deriveIdentifierInstances ''FCMRecipientToken
 

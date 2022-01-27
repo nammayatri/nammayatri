@@ -3,8 +3,8 @@
 module Types.Notification where
 
 import Beckn.Utils.JSON
+import Domain.Types.SearchRequest
 import EulerHS.Prelude
-import Types.Storage.SearchRequest
 
 data NotificationType
   = LEAD

@@ -16,6 +16,8 @@ module Beckn.External.Encryption
     EncryptedField,
     EncryptedHashed (..),
     EncryptedHashedField,
+    BeamEncryptedHashed (..),
+    BeamEncryptedHashedField,
     EncryptedBase64 (..),
     EncTools (..),
     HashSalt,
@@ -31,6 +33,7 @@ module Beckn.External.Encryption
   )
 where
 
+import Beckn.Storage.Esqueleto (PersistField, PersistFieldSql)
 import Beckn.Types.App
 import Beckn.Types.Field
 import Beckn.Utils.Dhall (FromDhall)
@@ -79,7 +82,7 @@ deriving newtype instance FromBackendRow Postgres (Encrypted a)
 -- operation (different encryption keys can be used each time), so
 -- matching on encrypted data does not actually give you any information.
 --
--- If you need to lookup by encrypted data, put 'EncryptedHashedField'
+-- If you need to lookup by encrypted data, put 'BeamEncryptedHashedField'
 -- into table field, and in query match against field hash, e.g.
 -- @ myfield.hash ==. val_ (evalDbHash seekedValue) @
 instance
@@ -101,6 +104,7 @@ instance
 newtype DbHash = DbHash {unDbHash :: ByteString}
   deriving stock (Show, Eq)
   deriving anyclass (HasSqlEqualityCheck Postgres)
+  deriving newtype (PersistField, PersistFieldSql)
 
 -- These json instances are necessary for Euler's ART system only
 instance ToJSON DbHash where
@@ -137,13 +141,37 @@ instance DbHashable Text where
 instance DbHashable Aeson.Value where
   evalDbHash = evalDbHash . first Aeson.encode
 
+data EncryptedHashed a = EncryptedHashed
+  { encrypted :: Encrypted a,
+    hash :: DbHash
+  }
+  deriving stock (Generic)
+
+instance
+  (ToJSON a, FromJSON a, DbHashable a) =>
+  EncryptedItem (EncryptedHashed a)
+  where
+  type Unencrypted (EncryptedHashed a) = (a, HashSalt)
+  encryptItem value = do
+    let hash = evalDbHash value
+    encrypted <- encryptItem $ fst value
+    return EncryptedHashed {..}
+  decryptItem mvalue = (,"") <$> decryptItem mvalue.encrypted
+
+-- | Mark a field as encrypted with hash or not, depending on @e@ argument.
+--
+-- The same considerations as for 'EncryptedField' apply here.
+type family EncryptedHashedField (e :: EncKind) (a :: Type) :: Type where
+  EncryptedHashedField 'AsUnencrypted a = a
+  EncryptedHashedField 'AsEncrypted a = EncryptedHashed a
+
 -- | A field which appears encrypted in database along with hash.
 --
 -- In database this occupies two columns.
 --
 -- If you need to mark a field as optional, pass @Nullable f@ as
 -- the last type argument.
-data EncryptedHashed a f = EncryptedHashed
+data BeamEncryptedHashed a f = BeamEncryptedHashed
   { encrypted :: Columnar f (Encrypted a),
     hash :: Columnar f DbHash
   }
@@ -152,47 +180,52 @@ data EncryptedHashed a f = EncryptedHashed
 
 instance
   (ToJSON a, FromJSON a, DbHashable a) =>
-  EncryptedItem (EncryptedHashed a Identity)
+  EncryptedItem (BeamEncryptedHashed a Identity)
   where
-  type Unencrypted (EncryptedHashed a Identity) = Identity (a, HashSalt)
+  type Unencrypted (BeamEncryptedHashed a Identity) = Identity (a, HashSalt)
   encryptItem (Identity value) = do
     let hash = evalDbHash value
     encrypted <- encryptItem $ fst value
-    return EncryptedHashed {..}
-  decryptItem mvalue = Identity . (,"") <$> decryptItem (encrypted mvalue)
+    return BeamEncryptedHashed {..}
+  decryptItem mvalue = Identity . (,"") <$> decryptItem mvalue.encrypted
 
 instance
   (ToJSON a, FromJSON a, DbHashable a) =>
-  EncryptedItem (EncryptedHashed a (B.Nullable Identity))
+  EncryptedItem (BeamEncryptedHashed a (B.Nullable Identity))
   where
-  type Unencrypted (EncryptedHashed a (B.Nullable Identity)) = Maybe (a, HashSalt)
+  type Unencrypted (BeamEncryptedHashed a (B.Nullable Identity)) = Maybe (a, HashSalt)
   encryptItem mvalue = do
     let hash = evalDbHash <$> mvalue
     encrypted <- encryptItem $ fst <$> mvalue
-    return EncryptedHashed {..}
-  decryptItem mvalue = fmap (,"") <$> decryptItem (encrypted mvalue)
+    return BeamEncryptedHashed {..}
+  decryptItem mvalue = fmap (,"") <$> decryptItem mvalue.encrypted
 
 class (EncryptedItem e) => EncryptedItem' e where
   type UnencryptedItem e :: Type
   toUnencrypted :: UnencryptedItem e -> HashSalt -> Unencrypted e
   fromUnencrypted :: Unencrypted e -> UnencryptedItem e
 
-instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (EncryptedHashed a Identity) where
-  type UnencryptedItem (EncryptedHashed a Identity) = a
+instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (BeamEncryptedHashed a Identity) where
+  type UnencryptedItem (BeamEncryptedHashed a Identity) = a
   toUnencrypted a salt = Identity (a, salt)
   fromUnencrypted a = fst $ runIdentity a
 
-instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (EncryptedHashed a (B.Nullable Identity)) where
-  type UnencryptedItem (EncryptedHashed a (B.Nullable Identity)) = Maybe a
+instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (BeamEncryptedHashed a (B.Nullable Identity)) where
+  type UnencryptedItem (BeamEncryptedHashed a (B.Nullable Identity)) = Maybe a
   toUnencrypted a salt = (,salt) <$> a
   fromUnencrypted a = fst <$> a
+
+instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (EncryptedHashed a) where
+  type UnencryptedItem (EncryptedHashed a) = a
+  toUnencrypted a salt = (a, salt)
+  fromUnencrypted a = fst a
 
 -- | Mark a field as encrypted with hash or not, depending on @e@ argument.
 --
 -- The same considerations as for 'EncryptedField' apply here.
-type family EncryptedHashedField (e :: EncKind) (f :: Type -> Type) (a :: Type) :: Type where
-  EncryptedHashedField 'AsUnencrypted f a = Columnar f a
-  EncryptedHashedField 'AsEncrypted f a = EncryptedHashed a f
+type family BeamEncryptedHashedField (e :: EncKind) (f :: Type -> Type) (a :: Type) :: Type where
+  BeamEncryptedHashedField 'AsUnencrypted f a = Columnar f a
+  BeamEncryptedHashedField 'AsEncrypted f a = BeamEncryptedHashed a f
 
 -- * Encryption methods
 

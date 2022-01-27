@@ -6,18 +6,18 @@ import Beckn.Types.Core.Taxi.Common.CancellationSource (CancellationSource (..))
 import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Data.Text as T
+import Domain.Types.Person as Person
+import Domain.Types.RegistrationToken as RegToken
+import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideBooking as SRB
+import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as Person
 import Types.Metrics
-import Types.Storage.Person as Person
-import Types.Storage.RegistrationToken as RegToken
-import qualified Types.Storage.Ride as SRide
-import qualified Types.Storage.RideBooking as SRB
-import Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 
 notifyOnRideAssigned ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     FCMFlow m r,
     CoreMetrics m
   ) =>
@@ -47,7 +47,7 @@ notifyOnRideAssigned rideBooking ride = do
   FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideStarted ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     FCMFlow m r,
     CoreMetrics m
   ) =>
@@ -77,7 +77,7 @@ notifyOnRideStarted rideBooking ride = do
   FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideCompleted ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     FCMFlow m r,
     CoreMetrics m
   ) =>
@@ -108,7 +108,7 @@ notifyOnRideCompleted rideBooking ride = do
 
 notifyOnExpiration ::
   ( FCMFlow m r,
-    DBFlow m r,
+    EsqDBFlow m r,
     CoreMetrics m
   ) =>
   SearchRequest ->
@@ -164,7 +164,7 @@ notifyOnRegistration regToken personId mbDeviceToken =
             ]
    in FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
 
-notifyOnRideBookingCancelled :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
+notifyOnRideBookingCancelled :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
 notifyOnRideBookingCancelled rideBooking cancellationSource = do
   person <- Person.findById rideBooking.riderId >>= fromMaybeM PersonNotFound
   FCM.notifyPerson (notificationData $ rideBooking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
@@ -208,7 +208,7 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
             "Please book again to get another ride."
           ]
 
-notifyOnRideBookingReallocated :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
+notifyOnRideBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
 notifyOnRideBookingReallocated rideBooking cancellationSource = do
   person <- Person.findById rideBooking.riderId >>= fromMaybeM PersonNotFound
   notificationData <- buildNotificationData

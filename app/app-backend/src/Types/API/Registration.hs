@@ -6,9 +6,9 @@ import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
+import Domain.Types.Person (PersonAPIEntity)
+import Domain.Types.RegistrationToken (RegistrationToken)
 import EulerHS.Prelude hiding (id)
-import Types.Storage.Person (PersonAPIEntity)
-import Types.Storage.RegistrationToken (RegistrationToken)
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,

@@ -3,28 +3,13 @@ let sec = ./secrets/app-backend.dhall
 
 let GeoRestriction = < Unrestricted | Regions: List Text>
 
-let postgresConfig =
+let esqDBCfg =
   { connectHost = "adb.primary.beckn.juspay.net"
   , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
   , connectDatabase = "atlas_app"
-  }
-
-let pgcfg =
-  { connTag = "providerDb"
-  , pgConfig = postgresConfig
-  , poolConfig = common.defaultPoolConfig
-  , schemaName = "atlas_app"
-  }
-
-let esqDBCfg =
-  { connectHost = postgresConfig.connectHost
-  , connectPort = postgresConfig.connectPort
-  , connectUser = postgresConfig.connectUser
-  , connectPassword = postgresConfig.connectPassword
-  , connectDatabase = postgresConfig.connectDatabase
-  , connectSchemaName = pgcfg.schemaName
+  , connectSchemaName = "atlas_app"
   }
 
 let rcfg =
@@ -100,8 +85,7 @@ let kafkaProducerCfg =
 
 in
 
-{ dbCfg = pgcfg
-, esqDBCfg = esqDBCfg
+{ esqDBCfg = esqDBCfg
 , redisCfg = rcfg
 , hedisCfg = hcfg
 , smsCfg = smsConfig

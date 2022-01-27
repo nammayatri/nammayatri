@@ -10,7 +10,6 @@ module Storage.Tabular.Search where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import Database.Persist.TH
 import qualified Domain.Search as Domain
 
 mkPersist

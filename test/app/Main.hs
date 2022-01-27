@@ -15,6 +15,7 @@ import qualified "beckn-transport" App.Types as TransporterBackend
 import qualified "fmd-wrapper" App.Types as FmdWrapper
 import qualified "beckn-transport" BackgroundTaskManager as TransporterBGTM
 import Beckn.Exit (exitDBMigrationFailure)
+import qualified Beckn.Storage.Esqueleto.Migration as Esq
 import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration (migrateIfNeeded)
@@ -118,7 +119,7 @@ specs = do
 
     migrateDB = do
       (appBackendCfg :: AppBackend.AppCfg) <- readDhallConfigDefault "app-backend"
-      migrateIfNeeded (appBackendCfg.migrationPath) (appBackendCfg.dbCfg) True
+      Esq.migrateIfNeeded (appBackendCfg.migrationPath) (appBackendCfg.esqDBCfg) True
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate app-backend database: "
 
       (transportCfg :: TransporterBackend.AppCfg) <- readDhallConfigDefault "beckn-transport"
