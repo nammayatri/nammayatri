@@ -3,7 +3,7 @@ module API.UI.Search.Types where
 import API.Types.Common (Gps)
 import Beckn.Prelude
 import Beckn.Types.Id
-import Domain.Search as DSearch
+import Domain.Types.Search as Domain
 import Servant
 import Tools.Auth
 
@@ -21,6 +21,6 @@ data SearchReq = SearchReq
   deriving (Generic, FromJSON, ToSchema)
 
 newtype SearchRes = SearchRes
-  { searchId :: Id DSearch.Search
+  { searchId :: Id Domain.Search
   }
   deriving (Generic, ToJSON, ToSchema)

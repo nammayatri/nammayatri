@@ -66,7 +66,7 @@ content-type: application/json
             },
             "items": [
                 {
-                    "route_code": "EKM-ABC",
+                    "route_code": "RouteCode-EKM-ABC",
                     "start_stop": "EKM",
                     "end_stop": "ABC",
                     "start_time": "2021-11-17T12:00:00.000Z",
@@ -128,7 +128,7 @@ content-type: application/json
             },
             "items": [
                 {
-                    "route_code": "EKM-EMB",
+                    "route_code": "RouteCode-EKM-EMB",
                     "start_stop": "EKM",
                     "end_stop": "EMB",
                     "start_time": "2021-11-17T12:00:00.000Z",

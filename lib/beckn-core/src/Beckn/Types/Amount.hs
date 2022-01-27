@@ -16,6 +16,7 @@ where
 
 import Beckn.Storage.Esqueleto
 import Beckn.Utils.Example
+import Beckn.Utils.GenericPretty (PrettyShow)
 import Control.Lens.Operators
 import Data.Char
 import Data.OpenApi hiding (Example, value)
@@ -38,6 +39,7 @@ import qualified Money as M
 newtype Amount = Amount Rational
   deriving (Eq, Ord, Show, Read, Generic)
   deriving newtype (Num, Real, Fractional, PersistField, PersistFieldSql)
+  deriving anyclass (PrettyShow)
 
 instance Example Amount where
   example = Amount 10

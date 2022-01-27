@@ -14,6 +14,8 @@ public-transport-bap
 EOF
 }
 
+#public-transport-bap
+
 map () { while read -r line; do $1 "$line"; done; }
 
 to_log_filename () { echo "$1.log"; }

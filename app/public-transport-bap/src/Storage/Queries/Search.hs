@@ -3,7 +3,7 @@ module Storage.Queries.Search where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import Domain.Search
+import Domain.Types.Search
 import Storage.Tabular.Search
 
 findById :: EsqDBFlow m r => Id Search -> m (Maybe Search)

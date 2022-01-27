@@ -91,6 +91,12 @@ create' ::
   SqlDB ()
 create' q = lift $ Esq.insert_ (toTType q)
 
+createIgnoreConflicts' :: (TEntity t a, AtLeastOneUniqueKey t) => a -> SqlDB ()
+createIgnoreConflicts' q = void $ lift $ Esq.insertBy (toTType q)
+
+createIgnoreConflicts :: (EsqDBFlow m r, TEntity t a, AtLeastOneUniqueKey t) => a -> m ()
+createIgnoreConflicts = runTransaction . createIgnoreConflicts'
+
 update ::
   ( EsqDBFlow m r,
     PersistEntity a,

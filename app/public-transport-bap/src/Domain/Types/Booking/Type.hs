@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Domain.Booking.Type where
+module Domain.Types.Booking.Type where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.PublicTranport (PublicTranport)
-import Domain.Quote (Quote)
-import Domain.Search (Search)
+import Domain.Types.Quote (Quote)
+import Domain.Types.Search (Search)
+import Domain.Types.TransportStation (TransportStation)
 import Tools.Auth
 
 data BookingStatus = NEW | AWAITING_PAYMENT | CONFIRMED | CANCELLED
@@ -27,8 +27,8 @@ data Booking = Booking
     fare :: Amount,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
-    departureStationId :: Id PublicTranport,
-    arrivalStationId :: Id PublicTranport,
+    departureStationId :: Id TransportStation,
+    arrivalStationId :: Id TransportStation,
     status :: BookingStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,

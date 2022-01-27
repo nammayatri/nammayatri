@@ -4,12 +4,12 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Domain.PublicTranport as DPublicTransport
-import Domain.Quote as DQuote
-import Domain.Search
-import Storage.Queries.PublicTranport as QPublicTransport
+import Domain.Types.Quote as Domain
+import Domain.Types.Search
+import Domain.Types.TransportStation as DTransportStation
 import Storage.Queries.Quote as QQuote
 import Storage.Queries.Search as QSearch
+import Storage.Queries.TransportStation as QTransportStation
 import Tools.Error
 import qualified Types.Domain.Incoming.OnSearch as DOnSearch
 
@@ -17,16 +17,16 @@ findSearchRequestExists :: EsqDBFlow m r => Id Search -> m Search
 findSearchRequestExists txnId = do
   QSearch.findById txnId >>= fromMaybeM SearchRequestDoesNotExist
 
-onSearchhandler :: EsqDBFlow m r => [DOnSearch.PublicTranport] -> [DOnSearch.Quote] -> m ()
+onSearchhandler :: EsqDBFlow m r => [DOnSearch.TransportStation] -> [DOnSearch.Quote] -> m ()
 onSearchhandler transportLocations quotes = do
   publicTransportStations <- forM transportLocations $ \publicTransportStation -> do
-    QPublicTransport.findByStationCode publicTransportStation.bppLocationId >>= maybe (createpublicTransportLocation publicTransportStation) return
+    QTransportStation.findByStationCode publicTransportStation.bppLocationId >>= maybe (createpublicTransportLocation publicTransportStation) return
   _quotes <- forM quotes $ \quote -> do
     makeQuote publicTransportStations quote
   Esq.runTransaction $ do
     traverse_ QQuote.create _quotes
 
-makeQuote :: (MonadGuid m, Log m, MonadThrow m) => [DPublicTransport.PublicTranport] -> DOnSearch.Quote -> m DQuote.Quote
+makeQuote :: (MonadGuid m, Log m, MonadThrow m) => [DTransportStation.TransportStation] -> DOnSearch.Quote -> m Domain.Quote
 makeQuote transportStations quote = do
   departureStation <-
     find (\pl -> pl.stationCode == quote.bppDepartureLocId) transportStations
@@ -36,7 +36,7 @@ makeQuote transportStations quote = do
       & fromMaybeM (InvalidRequest "Invalid arrival station code")
   quoteId <- generateGUID
   return
-    DQuote.Quote
+    Domain.Quote
       { id = quoteId,
         searchId = quote.txnId,
         bppId = quote.bppId,
@@ -47,20 +47,21 @@ makeQuote transportStations quote = do
         createdAt = quote.createdAt,
         departureStationId = departureStation.id,
         arrivalStationId = arrivalStation.id,
-        description = ""
+        description = "",
+        routeCode = quote.routeCode
       }
 
-createpublicTransportLocation :: EsqDBFlow m r => DOnSearch.PublicTranport -> m DPublicTransport.PublicTranport
+createpublicTransportLocation :: EsqDBFlow m r => DOnSearch.TransportStation -> m DTransportStation.TransportStation
 createpublicTransportLocation publicTransportLocation = do
   publicTransportStation <- makePublicTransportLocation publicTransportLocation
-  Esq.runTransaction $ QPublicTransport.create publicTransportStation
+  Esq.runTransaction $ QTransportStation.create publicTransportStation
   pure publicTransportStation
 
-makePublicTransportLocation :: MonadGuid m => DOnSearch.PublicTranport -> m DPublicTransport.PublicTranport
+makePublicTransportLocation :: MonadGuid m => DOnSearch.TransportStation -> m DTransportStation.TransportStation
 makePublicTransportLocation publicTransportLocation = do
   id <- generateGUID
   return $
-    DPublicTransport.PublicTranport
+    DTransportStation.TransportStation
       { id = Id id,
         lat = publicTransportLocation.lat,
         lon = publicTransportLocation.lon,

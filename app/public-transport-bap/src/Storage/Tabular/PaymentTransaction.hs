@@ -12,7 +12,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Database.Persist.TH
-import qualified Domain.PaymentTransaction as Domain
+import qualified Domain.Types.PaymentTransaction as Domain
 import Storage.Tabular.Booking (BookingTId)
 
 derivePersistField "Domain.PaymentStatus"
@@ -23,6 +23,7 @@ mkPersist
     PaymentTransactionT sql=payment_transaction
       id Text
       bookingId BookingTId
+      bknTxnId Text
       paymentGatewayTxnId Text
       paymentGatewayTxnStatus Text
       fare Amount

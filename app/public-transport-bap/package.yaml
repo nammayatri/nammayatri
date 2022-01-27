@@ -49,6 +49,8 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - DerivingStrategies
+  - DerivingVia
 
 dependencies:
   - aeson
@@ -61,8 +63,8 @@ dependencies:
   - time
   - servant-client
   - servant-server
-  - persistent            
-  - persistent-postgresql 
+  - persistent
+  - persistent-postgresql
   - esqueleto
   - openapi3
   - lens
@@ -70,9 +72,11 @@ dependencies:
   - prometheus-client
   - servant-openapi3
   - euler-hs
+  - relude
 
 ghc-options:
   - -Wall
+  - -Werror
   - -Wcompat
   - -Widentities
   - -Wunused-imports

@@ -12,10 +12,10 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Database.Persist.TH
-import qualified Domain.Booking as Domain
-import Storage.Tabular.PublicTranport (PublicTranportTId)
+import qualified Domain.Types.Booking as Domain
 import Storage.Tabular.Quote (QuoteTId)
 import Storage.Tabular.Search (SearchTId)
+import Storage.Tabular.TransportStation (TransportStationTId)
 
 derivePersistField "Domain.BookingStatus"
 
@@ -36,8 +36,8 @@ mkPersist
       fare Amount
       departureTime UTCTime
       arrivalTime UTCTime
-      departureStationId PublicTranportTId
-      arrivalStationId PublicTranportTId
+      departureStationId TransportStationTId
+      arrivalStationId TransportStationTId
       status Domain.BookingStatus
       ticketId Text Maybe
       ticketCreatedAt UTCTime Maybe

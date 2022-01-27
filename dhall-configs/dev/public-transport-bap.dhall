@@ -20,7 +20,7 @@ let rcfg =
   , connectTimeout = None Integer
   }
 
-let juspayGatewayUrl = "http://localhost:9090/"
+let juspayGatewayUrl = "http://localhost:8015/v1"
 
 let kafkaProducerCfg =
   { brokers = ["localhost:29092"]
@@ -32,17 +32,15 @@ in
 , port = +8023
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/public-transport-bap.log"}
 , graceTerminationPeriod = +90
-, selfId = "JUSPAY.MOBILITY.APP.UAT.4"
-, selfURI = "http://localhost:8023/public-transport/v1"
+, selfId = "JUSPAY.PUBLIC_TRANSPORT.APP.UAT.1"
+, selfURI = "http://localhost:8023/beckn"
 , authServiceUrl = common.authServiceUrl
-, coreVersion = "0.9.3"
-, domainVersion = "0.9.3"
 , authEntity =
   { signingKey = sec.signingKey
-  , uniqueKeyId = "juspay-mobility-bap-1-key-1"
+  , uniqueKeyId = "juspay-mobility-bap-1-key"
   , signatureExpiry = common.signatureExpiry
   }
-, disableSignatureAuth = True
+, disableSignatureAuth = False
 , metricsSearchDurationTimeout = +45
 , hostName = "localhost"
 , gatewayUrl = juspayGatewayUrl

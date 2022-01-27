@@ -12,13 +12,12 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Core.ACL.Types.API.OnSearch as OnSearch
 import Core.Spec.Common.Context as Context
-import Core.Spec.Common.DecimalValue as DecimalValue
 import Core.Spec.Common.Item as Item
 import qualified Core.Spec.Common.Location as Location
 import qualified Core.Spec.OnSearch.Catalog as Catalog
 import Core.Spec.OnSearch.Provider
-import qualified Domain.Quote as DQuote
-import Domain.Search as DSearch
+import qualified Domain.Types.Quote as Domain
+import Domain.Types.Search as Domain
 import Product.OnSearch as OnSearch
 import Tools.Context (validateContext)
 import qualified Tools.Metrics as Metrics
@@ -42,7 +41,7 @@ publicTransportOnSearch req = do
   return Ack
 
 searchCbService ::
-  (EsqDBFlow m r, MonadProducer BusinessEvent m, HasKafkaBE r kafkaEnvs, ToJSON DOnSearch.Quote, ToJSON DQuote.Quote) =>
+  (EsqDBFlow m r, MonadProducer BusinessEvent m, HasKafkaBE r kafkaEnvs, ToJSON DOnSearch.Quote, ToJSON Domain.Quote) =>
   BecknCallbackReq OnSearch.OnSearchCatalog ->
   Catalog.Catalog ->
   m ()
@@ -71,10 +70,10 @@ searchCbService req catalog = do
 buildQuote ::
   MonadFlow m =>
   UTCTime ->
-  Id DSearch.Search ->
+  Id Domain.Search ->
   BaseUrl ->
   Text ->
-  [DOnSearch.PublicTranport] ->
+  [DOnSearch.TransportStation] ->
   Provider ->
   Item.Item ->
   m DOnSearch.Quote
@@ -88,9 +87,7 @@ buildQuote now txnId bppUrl bppId publicTransportLocations provider item = do
   fares <-
     find (\pl -> pl.id == fareId) fareList
       & fromMaybeM (InvalidRequest "Invalid provider.fares")
-  fare <-
-    DecimalValue.convertDecimalValueToAmount fares.price.value
-      & fromMaybeM (InvalidRequest "Unable to parse price")
+  let fare = fares.price.value
   departures <-
     find (\pl -> pl.id == departureId) departureList
       & fromMaybeM (InvalidRequest "Invalid provider.departures")
@@ -114,13 +111,14 @@ buildQuote now txnId bppUrl bppId publicTransportLocations provider item = do
         createdAt = now,
         bppDepartureLocId = departureLocation.bppLocationId,
         bppArrivalLocId = arrivalLocation.bppLocationId,
-        description = ""
+        description = "",
+        routeCode = routes.route_code
       }
 
-buildPublicTransportStation :: MonadGuid m => Location.Location -> m DOnSearch.PublicTranport
+buildPublicTransportStation :: MonadGuid m => Location.Location -> m DOnSearch.TransportStation
 buildPublicTransportStation location = do
   return
-    DOnSearch.PublicTranport
+    DOnSearch.TransportStation
       { lat = location.gps.lat,
         lon = location.gps.lon,
         name = location.descriptor.name,

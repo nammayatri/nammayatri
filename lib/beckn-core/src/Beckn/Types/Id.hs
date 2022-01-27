@@ -6,6 +6,7 @@ module Beckn.Types.Id where
 import Beckn.Types.GuidLike
 import Beckn.Types.MonadGuid
 import Beckn.Utils.Example (Example (..), idExample)
+import Beckn.Utils.GenericPretty (PrettyShow)
 import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as Text
 import Database.Beam.Backend.SQL
@@ -23,7 +24,7 @@ import Servant (FromHttpApiData (parseUrlPiece), ToHttpApiData)
 newtype Id domain = Id
   {getId :: Text}
   deriving stock (Generic, Show, Eq, Ord)
-  deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema, ToParamSchema, FromField)
+  deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema, ToParamSchema, FromField, PrettyShow)
 
 cast :: Id a -> Id b
 cast = Id . getId

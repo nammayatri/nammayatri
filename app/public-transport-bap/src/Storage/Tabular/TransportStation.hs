@@ -5,18 +5,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.PublicTranport where
+module Storage.Tabular.TransportStation where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Database.Persist.TH
-import qualified Domain.PublicTranport as Domain
+import qualified Domain.Types.TransportStation as Domain
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    PublicTranportT sql=public_transport
+    TransportStationT sql=transport_station
       id Text
       name Text
       stationCode Text
@@ -26,23 +26,24 @@ mkPersist
       Primary id
     |]
 
-instance TEntityKey PublicTranportT where
-  type DomainKey PublicTranportT = Id Domain.PublicTranport
-  fromKey (PublicTranportTKey _id) = Id _id
-  toKey id = PublicTranportTKey id.getId
+instance TEntityKey TransportStationT where
+  type DomainKey TransportStationT = Id Domain.TransportStation
+  fromKey (TransportStationTKey _id) = Id _id
+  toKey id = TransportStationTKey id.getId
 
-instance TEntity PublicTranportT Domain.PublicTranport where
+instance TEntity TransportStationT Domain.TransportStation where
   fromTEntity entity = do
-    let PublicTranportT {..} = entityVal entity
+    let TransportStationT {..} = entityVal entity
     return $
-      Domain.PublicTranport
+      Domain.TransportStation
         { id = Id id,
           ..
         }
-  toTType Domain.PublicTranport {..} =
-    PublicTranportT
+
+  toTType Domain.TransportStation {..} =
+    TransportStationT
       { id = id.getId,
         ..
       }
   toTEntity a =
-    Entity (toKey a.id) $ toTType a
+    Entity (toKey (Id a.stationCode)) $ toTType a

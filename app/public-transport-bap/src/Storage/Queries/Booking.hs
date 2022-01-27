@@ -4,8 +4,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Domain.Booking
-import Domain.Quote
+import Domain.Types.Booking
+import Domain.Types.Quote
 import GHC.Int
 import Storage.Tabular.Booking
 import Tools.Auth
@@ -69,8 +69,8 @@ findAllByRequestorId personId limitInt offSetInt = do
   let limit_ :: Int64 = fromInteger limitInt
       offset_ :: Int64 = fromInteger offSetInt
   runTransaction . findAll' $ do
-    publicTransportSearch <- from $ table @BookingT
-    where_ $ publicTransportSearch ^. BookingRequestorId ==. val (getId personId)
+    transportStationSearch <- from $ table @BookingT
+    where_ $ transportStationSearch ^. BookingRequestorId ==. val (getId personId)
     limit limit_
     offset offset_
-    return publicTransportSearch
+    return transportStationSearch

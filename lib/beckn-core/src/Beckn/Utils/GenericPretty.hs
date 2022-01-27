@@ -156,6 +156,9 @@ instance PrettyShow Integer where
 instance PrettyShow Double where
   prettyShow = LStr . show
 
+instance PrettyShow Rational where
+  prettyShow = LStr . show
+
 instance PrettyShow Text.Text where
   prettyShow = LStr . show
 

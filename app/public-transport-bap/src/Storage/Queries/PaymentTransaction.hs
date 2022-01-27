@@ -4,8 +4,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Domain.Booking
-import Domain.PaymentTransaction
+import Domain.Types.Booking
+import Domain.Types.PaymentTransaction
 import Storage.Tabular.PaymentTransaction
 
 findById :: EsqDBFlow m r => Id PaymentTransaction -> m (Maybe PaymentTransaction)

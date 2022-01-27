@@ -7,7 +7,9 @@ import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
+import qualified Core.Spec.API.Confirm as Confirm
 import Core.Spec.API.Search as Search
+import Core.Spec.Confirm
 import qualified Data.Text as T
 import GHC.Records.Extra
 import qualified Types.Domain.Outgoing.Search as DSearch
@@ -25,6 +27,18 @@ search req = do
   url <- asks (.config.gatewayUrl)
   callBecknAPIWithSignature "search" Search.searchAPI url req
 
+confirm ::
+  ( MonadFlow m,
+    MonadReader r m,
+    CoreMetrics m,
+    HasInConfig r c "selfId" Text
+  ) =>
+  BaseUrl ->
+  BecknReq ConfirmMessage ->
+  m ()
+confirm bppUrl req = do
+  callBecknAPIWithSignature "confirm" Confirm.confirmAPI bppUrl req
+
 callBecknAPIWithSignature ::
   ( MonadFlow m,
     MonadReader r m,
@@ -38,7 +52,7 @@ callBecknAPIWithSignature ::
   req ->
   m ()
 callBecknAPIWithSignature a b c d = do
-  bapId <- asks (.config.selfId)
+  bapId <- askConfig (.selfId)
   void $ callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
 
 getHttpManagerKey :: Text -> String

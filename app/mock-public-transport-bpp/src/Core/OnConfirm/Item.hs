@@ -1,13 +1,14 @@
 module Core.OnConfirm.Item where
 
 import Beckn.Prelude
-import Core.OnConfirm.Descriptor
 import Core.OnConfirm.Quantity
 
 data Item = Item
-  { id :: Text,
-    fulfillment_id :: Text,
-    descriptor :: DescriptorCode,
+  { route_code :: Text,
+    start_stop :: Text,
+    end_stop :: Text,
+    start_time :: UTCTime,
+    end_time :: UTCTime,
     quantity :: Quantity
   }
   deriving (Generic, Show, ToJSON, FromJSON)

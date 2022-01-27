@@ -5,21 +5,21 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Data.Maybe (catMaybes)
-import Domain.PublicTranport as DPublicTranport
-import Domain.Quote as DQuote
-import qualified Domain.Search as DSearch
-import Storage.Queries.PublicTranport as QPublicTransport
+import qualified Domain.Types.Quote as Domain
+import qualified Domain.Types.Search as Domain
+import qualified Domain.Types.TransportStation as Domain
 import Storage.Queries.Quote as QQuote
+import Storage.Queries.TransportStation as QTransportStation
 
-getQuotesHandler :: EsqDBFlow m r => Id DSearch.Search -> m Quotes.GetQuotesRes
+getQuotesHandler :: EsqDBFlow m r => Id Domain.Search -> m Quotes.GetQuotesRes
 getQuotesHandler searchId = do
   quotes <- QQuote.findAllBySearchId searchId
-  transportStations <- QPublicTransport.findAll
+  transportStations <- QTransportStation.findAll
   let mbQuoteAPIEntities = map (mkQuote transportStations) quotes
   return $ Quotes.GetQuotesRes (catMaybes mbQuoteAPIEntities)
 
-mkQuote :: [DPublicTranport.PublicTranport] -> DQuote.Quote -> Maybe DQuote.QuoteAPIEntity
+mkQuote :: [Domain.TransportStation] -> Domain.Quote -> Maybe Domain.QuoteAPIEntity
 mkQuote transportStations quote = do
   departureStation <- find (\location -> location.id == quote.departureStationId) transportStations
   arrivalStation <- find (\location -> location.id == quote.arrivalStationId) transportStations
-  pure $ DQuote.makeQuoteAPIEntity quote departureStation arrivalStation
+  pure $ Domain.makeQuoteAPIEntity quote departureStation arrivalStation

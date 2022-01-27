@@ -26,7 +26,7 @@ confirmServer confirmReq@(BecknReq ctx msg) = do
 
   context' <- buildOnActionContext ON_CONFIRM ctx
   orderId <- generateOrderId
-  let eithOrder = buildOnConfirmOrder orderId msg.order
+  let eithOrder = makeOnConfirmOrder orderId msg.order
       callbackData = either (Left . textToError) (Right . OnConfirmMessage) eithOrder
   _ <- fork "call on_confirm" $ do
     waitMilliSec <- asks (.config.callbackWaitTimeMilliSec)
@@ -43,8 +43,8 @@ data HandlingWay = Success | FailedPayment | LinkExpired
 
 defineHandlingWay :: Text -> HandlingWay
 defineHandlingWay = \case
-  "EKM-ABC" -> Success
-  "EKM-EMB" -> LinkExpired
+  "RouteCode-EKM-ABC" -> Success
+  "RouteCode-EKM-EMB" -> LinkExpired
   _ -> FailedPayment
 
 trackPayment :: Text -> MockM AppEnv ()
@@ -53,7 +53,7 @@ trackPayment orderId = do
   logOutput INFO $ "waiting " <> show secondsToWait <> " seconds before changing payment status"
   threadDelaySec secondsToWait
   (context, order) <- Redis.readOrder orderId
-  let handlingWay = defineHandlingWay order.fulfillment.id
+  let handlingWay = maybe FailedPayment (defineHandlingWay . (.route_code)) $ listToMaybe order.items
   logOutput INFO $ "handling orderId=" <> orderId <> " with handlingWay=" <> show handlingWay
   case handlingWay of
     Success -> transactionOk context order

@@ -1,10 +1,10 @@
-module Domain.Booking.API where
+module Domain.Types.Booking.API where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
-import Domain.Booking.Type
-import Domain.PaymentTransaction
-import Domain.PublicTranport
+import Domain.Types.Booking.Type
+import Domain.Types.PaymentTransaction
+import Domain.Types.TransportStation
 
 data BookingAPIEntity = BookingAPIEntity
   { quantity :: Int,
@@ -13,8 +13,8 @@ data BookingAPIEntity = BookingAPIEntity
     fare :: Amount,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
-    departureStation :: PublicTranportAPIEntity,
-    arrivalStation :: PublicTranportAPIEntity,
+    departureStation :: TransportStationAPIEntity,
+    arrivalStation :: TransportStationAPIEntity,
     status :: BookingStatus,
     paymentTxn :: Maybe PaymentTransactionAPIEntity,
     ticketId :: Maybe Text,
@@ -24,11 +24,11 @@ data BookingAPIEntity = BookingAPIEntity
   }
   deriving (Generic, ToJSON, ToSchema)
 
-makeBookingAPIEntity :: Booking -> PublicTranport -> PublicTranport -> Maybe PaymentTransaction -> BookingAPIEntity
+makeBookingAPIEntity :: Booking -> TransportStation -> TransportStation -> Maybe PaymentTransaction -> BookingAPIEntity
 makeBookingAPIEntity Booking {..} departureStation arrivalStation mbPaymentTxn =
   BookingAPIEntity
-    { departureStation = makePublicTranportAPIEntity departureStation,
-      arrivalStation = makePublicTranportAPIEntity arrivalStation,
+    { departureStation = makeTransportStationAPIEntity departureStation,
+      arrivalStation = makeTransportStationAPIEntity arrivalStation,
       paymentTxn = makePaymentTransactionAPIEntity <$> mbPaymentTxn,
       ..
     }

@@ -3,7 +3,7 @@ module Types.Domain.Incoming.OnSearch where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.Search
+import Domain.Types.Search
 
 data Quote = Quote
   { txnId :: Id Search,
@@ -15,11 +15,12 @@ data Quote = Quote
     arrivalTime :: UTCTime,
     bppDepartureLocId :: Text,
     bppArrivalLocId :: Text,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    routeCode :: Text
   }
   deriving (Generic, ToJSON)
 
-data PublicTranport = PublicTranport
+data TransportStation = TransportStation
   { name :: Text,
     bppLocationId :: Text,
     lat :: Double,

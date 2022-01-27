@@ -5,10 +5,10 @@ import App.Types
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified Domain.Search as DSearch
+import qualified Domain.Types.Search as Domain
 import Product.Quotes as Quotes
 import Tools.Auth
 
-handler :: Id DSearch.Search -> PersonId -> FlowHandler Quotes.GetQuotesRes
+handler :: Id Domain.Search -> PersonId -> FlowHandler Quotes.GetQuotesRes
 handler searchId _personId = withFlowHandlerAPI $ do
   Quotes.getQuotesHandler searchId

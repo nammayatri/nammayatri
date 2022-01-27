@@ -1,0 +1,38 @@
+# $public-transport-bap-host = http://localhost:8023
+
+GET $public-transport-bap-host
+
+###
+POST $public-transport-bap-host/ui/search
+content-type: application/json
+token: ea37f941-427a-4085-a7d0-96240f166672
+{
+    "locationStart": {
+      "lat": "20",
+      "lon": "20"
+    },
+    "locationEnd": {
+      "lat": "20",
+      "lon": "20"
+    },
+    "fromDate": "2021-12-11T09:00:00Z",
+    "toDate": "2021-12-10T18:00:00Z"
+}
+
+###
+# $searchId = dded573b-e95e-494b-922c-a70f5d78e26a
+GET $public-transport-bap-host/ui/$searchId/quotes
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+###
+### $quoteId = ade32f2d-f847-4206-ad41-05f3e4c5c907
+# $quoteId = quote1
+POST $public-transport-bap-host/ui/quotes/$quoteId/confirm
+content-type: application/json
+token: ea37f941-427a-4085-a7d0-96240f166672
+{
+    "quantity": 1,
+    "requestorName": "Yuri"
+}
+
+#  "booking_id": "1a732847-3de2-4e2e-b6ba-ef0412a4a639"

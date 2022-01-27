@@ -4,7 +4,7 @@ import API.UI.Booking.BookingList.Types
 import App.Types
 import Beckn.Prelude
 import Beckn.Utils.Common
-import Domain.Booking
+import Domain.Types.Booking
 import Product.BookingList as BookingListHandler
 import Tools.Auth
 

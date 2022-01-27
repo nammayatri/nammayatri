@@ -8,14 +8,14 @@ import qualified Beckn.Types.Core.Migration.Domain as Domain
 import Beckn.Utils.Common
 
 buildContext ::
-  (MonadTime m, MonadGuid m, MonadReader r0 m) =>
+  (MonadTime m, MonadGuid m) =>
   Context.Action ->
   Text ->
   BaseUrl ->
   Maybe BaseUrl ->
   Text ->
   m Context.Context
-buildContext action txnId bapUri bppUri bapId = do
+buildContext action txnId bapUri bppUri selfId = do
   timestamp <- getCurrentTime
   message_id <- generateGUIDText
   return
@@ -24,8 +24,8 @@ buildContext action txnId bapUri bppUri bapId = do
         country = "IND",
         city = "Kochi",
         action = action,
-        core_version = "0.9.3-draft",
-        bap_id = bapId,
+        core_version = "0.9.3",
+        bap_id = selfId,
         bap_uri = bapUri,
         bpp_id = show <$> bppUri,
         bpp_uri = bppUri,

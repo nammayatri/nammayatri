@@ -7,6 +7,9 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import EulerHS.Prelude
 
+compareWithoutRightSpaces :: Text -> Text -> Bool
+compareWithoutRightSpaces = (==) `on` T.dropWhileEnd Char.isSpace
+
 decodeFromText :: FromJSON a => Text -> Maybe a
 decodeFromText = A.decode . BSL.fromStrict . DT.encodeUtf8
 

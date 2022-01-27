@@ -9,7 +9,7 @@ import Beckn.Types.Id
 import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Common
 import Core.ACL.Handler.Search as SearchHandler
-import Domain.Search as DSearch
+import qualified Domain.Types.Search as Domain
 import qualified Storage.Queries.Search as QSearch
 import Tools.Auth
 
@@ -45,11 +45,11 @@ buildSearchRequest ::
   Search.SearchReq ->
   UTCTime ->
   Gps.Gps ->
-  m DSearch.Search
+  m Domain.Search
 buildSearchRequest bapPersonId searchReq now gps = do
   id <- generateGUID
   return
-    DSearch.Search
+    Domain.Search
       { id = id,
         lat = gps.lat,
         lon = gps.lon,

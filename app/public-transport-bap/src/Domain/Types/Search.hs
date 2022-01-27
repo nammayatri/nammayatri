@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Domain.Search where
+module Domain.Types.Search where
 
 import Beckn.Prelude
 import Beckn.Types.Id

@@ -17,10 +17,10 @@ SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
-CREATE TABLE atlas_public_transport.public_transport (
+CREATE TABLE atlas_public_transport.transport_station (
     id character(36) NOT NULL PRIMARY KEY,
     name character varying(255) NOT NULL,
-    station_code character varying(255) NOT NULL UNIQUE,
+    station_code character varying(255) NOT NULL,
     lat double precision NOT NULL,
     lon double precision NOT NULL
 );
@@ -30,7 +30,9 @@ CREATE TABLE atlas_public_transport.search (
     lat double precision NOT NULL,
     lon double precision NOT NULL,
     requestor_id character(36) NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    from_date timestamp with time zone NOT NULL,
+    to_date timestamp with time zone NOT NULL
 );
 
 CREATE TABLE atlas_public_transport.quote (
@@ -42,9 +44,10 @@ CREATE TABLE atlas_public_transport.quote (
     fare numeric(30,2) NOT NULL,
     departure_time timestamp with time zone,
     arrival_time timestamp with time zone,
-    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.public_transport (id),
-    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.public_transport (id),
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.transport_station (id),
+    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.transport_station (id),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    route_code character varying(255) NOT NULL
 );
 
 CREATE TABLE atlas_public_transport.booking (
@@ -61,8 +64,8 @@ CREATE TABLE atlas_public_transport.booking (
     fare numeric(30,2) NOT NULL,
     departure_time timestamp with time zone,
     arrival_time timestamp with time zone,
-    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.public_transport (id),
-    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.public_transport (id),
+    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.transport_station (id),
+    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.transport_station (id),
     status character varying(255) NOT NULL,
     ticket_id character varying(255),
     ticket_created_at timestamp with time zone,
@@ -75,6 +78,7 @@ CREATE TABLE atlas_public_transport.payment_transaction (
     booking_id character(36) NOT NULL REFERENCES atlas_public_transport.booking (id) UNIQUE,
     bkn_txn_id character(36) NOT NULL,
     payment_gateway_txn_id character varying(255) NOT NULL,
+    payment_gateway_txn_status character varying(255) NOT NULL,
     fare numeric(30,2) NOT NULL,
     status character varying(255) NOT NULL,
     payment_url character varying(255) NOT NULL,

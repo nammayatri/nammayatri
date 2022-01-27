@@ -22,7 +22,7 @@ data BecknCallbackReq a = BecknCallbackReq
   { context :: Context,
     contents :: Either Error a
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, PrettyShow)
 
 instance (ToSchema a) => ToSchema (BecknCallbackReq a) where
   declareNamedSchema _ = do

@@ -12,9 +12,9 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Database.Persist.TH
-import qualified Domain.Quote as Domain
-import Storage.Tabular.PublicTranport (PublicTranportTId)
+import qualified Domain.Types.Quote as Domain
 import Storage.Tabular.Search (SearchTId)
+import Storage.Tabular.TransportStation (TransportStationTId)
 
 mkPersist
   defaultSqlSettings
@@ -28,9 +28,10 @@ mkPersist
       fare Amount
       departureTime UTCTime
       arrivalTime UTCTime
-      departureStationId PublicTranportTId
-      arrivalStationId PublicTranportTId
+      departureStationId TransportStationTId
+      arrivalStationId TransportStationTId
       createdAt UTCTime
+      routeCode Text
       Primary id
       deriving Generic
     |]

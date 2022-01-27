@@ -98,8 +98,8 @@ routeEkmAbcId = "EKM-ABC"
 routeEkmEmbId = "EKM-EMB"
 
 routeEkmAbcCode, routeEkmEmbCode :: Text
-routeEkmAbcCode = "AAA-DDD"
-routeEkmEmbCode = "BBB-CCC"
+routeEkmAbcCode = "RouteCode-EKM-ABC"
+routeEkmEmbCode = "RouteCode-EKM-EMB"
 
 buildRoute :: Text -> Text -> Text -> Text -> Route
 buildRoute code id start end = do

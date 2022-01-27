@@ -30,9 +30,7 @@ data AppCfg = AppCfg
     selfURI :: BaseUrl,
     httpClientOptions :: HttpClientOptions,
     authEntity :: AuthenticatingEntity',
-    coreVersion :: Text,
     registryUrl :: BaseUrl,
-    domainVersion :: Text,
     authServiceUrl :: BaseUrl,
     disableSignatureAuth :: Bool,
     hostName :: Text,
@@ -67,6 +65,8 @@ buildAppEnv config@AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
+  let coreVersion = "0.9.3"
+      domainVersion = "0.9.3"
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

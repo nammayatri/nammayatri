@@ -1,5 +1,8 @@
+{-# LANGUAGE DerivingVia #-}
+
 module Beckn.Types.Core.Error where
 
+import Beckn.Utils.GenericPretty (PrettyShow, Showable (Showable))
 import Beckn.Utils.JSON
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
@@ -10,7 +13,7 @@ data Error = Error
     path :: Maybe Text,
     message :: Maybe Text
   }
-  deriving (Generic, Show, Eq, ToSchema)
+  deriving (Generic, Show, Eq, ToSchema, PrettyShow)
 
 data ErrorType
   = CONTEXT_ERROR
@@ -19,7 +22,9 @@ data ErrorType
   | DOMAIN_ERROR
   | POLICY_ERROR
   | JSON_SCHEMA_ERROR
-  deriving (Generic, Show, Eq, ToSchema)
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToSchema)
+  deriving (PrettyShow) via Showable ErrorType
 
 instance FromJSON ErrorType where
   parseJSON = genericParseJSON constructorsWithHyphens
