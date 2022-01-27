@@ -7,6 +7,8 @@ UPDATE atlas_app.quote
 
 ALTER TABLE atlas_app.quote ALTER COLUMN provider_url SET NOT NULL;
 
+ALTER TABLE atlas_app.quote ALTER COLUMN provider_id TYPE varchar(255);
+
 UPDATE atlas_app.quote
   SET provider_id = org.short_id
   FROM (SELECT id, short_id FROM atlas_app.organization) as org
@@ -23,6 +25,10 @@ UPDATE atlas_app.ride_booking
 
 ALTER TABLE atlas_app.ride_booking ALTER COLUMN provider_url SET NOT NULL;
 
+
+ALTER TABLE atlas_app.ride_booking DROP CONSTRAINT ride_booking_provider_id_fkey;
+ALTER TABLE atlas_app.ride_booking ALTER COLUMN provider_id TYPE varchar(255);
+
 UPDATE atlas_app.ride_booking
   SET provider_id = quote.provider_id
   FROM (SELECT id, provider_id FROM atlas_app.quote) as quote
@@ -32,8 +38,5 @@ UPDATE atlas_app.ride_booking
 
 ALTER TABLE atlas_app.person DROP COLUMN organization_id;
 
-ALTER TABLE atlas_app.ride_booking
-   DROP CONSTRAINT ride_booking_provider_id_fkey;
-   
 -- DROP TABLE atlas_app.organization;
 -- We'll delete in the next PR
