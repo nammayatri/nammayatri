@@ -1,7 +1,6 @@
 module Redis where
 
 import Beckn.Mock.App
-import Beckn.Mock.Environment
 import Beckn.Mock.Exceptions
 import Beckn.Mock.Redis
 import Beckn.Mock.Utils
@@ -11,6 +10,7 @@ import Core.OnConfirm
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.String.Conversions
+import Environment
 import GHC.Records.Extra
 import Relude hiding (id, ord)
 

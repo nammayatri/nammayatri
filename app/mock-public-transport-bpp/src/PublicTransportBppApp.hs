@@ -1,4 +1,4 @@
-module FerryBppApp
+module PublicTransportBppApp
   ( runMockFerryBPP,
   )
 where
@@ -9,9 +9,9 @@ import API.Search
 import API.Status
 import API.Types
 import Beckn.Mock.App
-import Beckn.Mock.Environment
 import Beckn.Mock.Redis (withRedisConnection)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
+import Environment
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,

@@ -12,14 +12,14 @@ import Relude hiding (id)
 newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
 data Catalog = Catalog
   { bpp_descriptor :: Descriptor,
     bpp_providers :: [Provider]
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 instance FromJSON Catalog where
   parseJSON = genericParseJSON slashedRecordFields

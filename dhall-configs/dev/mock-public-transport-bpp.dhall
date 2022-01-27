@@ -6,4 +6,6 @@
 , uniqueKeyId = "juspay-mobility-bpp-1-key" 
 , selfUri = "http://localhost:9091/"  -- public address of a node
 , redisPrefix = "mock-public-transport-bpp"
+, statusWaitTimeSec = +25
+, callbackWaitTimeMilliSec = +500
 }

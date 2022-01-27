@@ -1,8 +1,8 @@
 module API.HealthCheck where
 
 import Beckn.Mock.App
-import Beckn.Mock.Environment
 import Beckn.Utils.Logging
+import Environment
 import Relude
 
 healthCheckServer :: MockM AppEnv Text

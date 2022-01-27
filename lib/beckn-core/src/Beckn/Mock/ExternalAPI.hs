@@ -5,6 +5,7 @@ module Beckn.Mock.ExternalAPI where
 
 import Beckn.Mock.App
 import Beckn.Types.Core.ReqTypes
+import Beckn.Utils.Logging
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
 import Data.String.Conversions
@@ -16,7 +17,8 @@ import Servant.Client
 
 callBapAPI ::
   forall api a b e.
-  ( HasField "selfId" e Text,
+  ( Show a,
+    HasField "selfId" e Text,
     HasField "uniqueKeyId" e Text,
     HasClient ClientM api,
     Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
@@ -25,11 +27,13 @@ callBapAPI ::
   MockM e ()
 callBapAPI req = do
   let bapUrl = req.context.bap_uri
+  mockLog INFO "calling BAP"
   callAPI @api bapUrl req
 
 callAPI ::
   forall api a b e.
-  ( HasField "selfId" e Text,
+  ( Show a,
+    HasField "selfId" e Text,
     HasField "uniqueKeyId" e Text,
     HasClient ClientM api,
     Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
@@ -40,6 +44,8 @@ callAPI ::
 callAPI url req = do
   let clientFunc = client @api Proxy
       clientAction = clientFunc req
+  mockLog INFO $ mconcat ["calling ", show req.context.action, "; url=", show url]
+  mockLog DEBUG $ show req
   _ <- callClientM url clientAction
   pure ()
 

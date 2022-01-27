@@ -1,8 +1,8 @@
 module API.Utils where
 
 import Beckn.Mock.App
-import Beckn.Mock.Environment
 import Beckn.Types.Core.Migration.Context
+import Environment
 import Relude
 
 buildOnActionContext :: Action -> Context -> MockM AppEnv Context
