@@ -8,7 +8,11 @@ import Core.Spec.Common.ProviderId (ProviderId (ProviderId))
 import Core.Spec.Common.Quotation
 import Core.Spec.Confirm
 import Core.Spec.Confirm.Item
+<<<<<<< HEAD
 import Domain.Endpoints.UI.QuoteConfirm
+=======
+import Domain.Confirm
+>>>>>>> Added confirm/on_confirm for public transport bap
 import Servant.Client
 
 mkConfirmMessage :: ConfirmMessageD -> Order

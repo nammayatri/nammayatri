@@ -22,7 +22,11 @@ data PaymentTransaction = PaymentTransaction
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
+<<<<<<< HEAD
   deriving (Generic, Show)
+=======
+  deriving (Generic, Show, ToSchema)
+>>>>>>> Added confirm/on_confirm for public transport bap
 
 data PaymentTransactionAPIEntity = PaymentTransactionAPIEntity
   { id :: Id PaymentTransaction,

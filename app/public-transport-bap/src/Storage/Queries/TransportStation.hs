@@ -18,6 +18,15 @@ findByStationCode stationCode =
 create :: TransportStation -> SqlDB ()
 create = create'
 
+<<<<<<< HEAD
+=======
+createIgnoreExceptions :: (EsqDBFlow m r) => TransportStation -> m ()
+createIgnoreExceptions fSt = catch (runTransaction $ create' fSt) handler
+  where
+    handler :: Monad m => SomeException -> m ()
+    handler _ = pure ()
+
+>>>>>>> Added confirm/on_confirm for public transport bap
 findAll :: EsqDBFlow m r => m [TransportStation]
 findAll =
   runTransaction . findAll' $ do
