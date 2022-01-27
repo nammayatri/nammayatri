@@ -13,8 +13,7 @@ import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
-import Beckn.Types.Registry
-import Beckn.Utils.Servant.SignatureAuth (AuthenticatingEntity (..), SignatureAuthResult (..))
+import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Traversable
@@ -56,10 +55,9 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
       Org.findOrganizationById transporterId
         >>= fromMaybeM OrgDoesNotExist
     let callbackUrl = gateway.subscriber_url
-    updContext <- updateContext context transporter
     if not transporter.enabled
       then
-        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI updContext callbackUrl $
+        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $
           throwError AgencyDisabled
       else do
         searchMetricsMVar <- Metrics.startSearchMetrics transporterId
@@ -79,31 +77,8 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
           Loc.create fromLocation
           Loc.create toLocation
           QSearchRequest.create searchRequest
-        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI updContext callbackUrl $
+        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $
           onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
-
-updateContext ::
-  ( AuthenticatingEntity r,
-    MonadFlow m,
-    MonadReader r m,
-    Registry m
-  ) =>
-  Context ->
-  Org.Organization ->
-  m Context
-updateContext context transporter = do
-  uniqueKeyId <- asks getUniqueKeyId
-  let regReq =
-        SimpleLookupRequest
-          { unique_key_id = uniqueKeyId,
-            subscriber_id = transporter.shortId.getShortId
-          }
-  transporterInfo <- registryLookup regReq >>= fromMaybeM SubscriberNotFound
-  return
-    context
-      { bpp_id = Just transporterInfo.subscriber_id,
-        bpp_uri = Just transporterInfo.subscriber_url
-      }
 
 buildStartSearchReqLoc :: MonadFlow m => Search.Location -> UTCTime -> m Location.SearchReqLocation
 buildStartSearchReqLoc loc now = do
