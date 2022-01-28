@@ -1,4 +1,4 @@
-module Core.Confirm.Vehicle where
+module Core.Vehicle where
 
 import Beckn.Prelude
 

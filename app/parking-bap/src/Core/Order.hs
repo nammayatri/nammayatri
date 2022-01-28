@@ -2,12 +2,12 @@ module Core.Order where
 
 import Beckn.Prelude
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
-import Core.OnConfirm.Billing
-import Core.OnConfirm.Fulfillment
-import Core.OnConfirm.Item
-import Core.OnConfirm.Payment
-import Core.OnConfirm.Provider
-import Core.OnConfirm.SpecQuote
+import Core.Billing
+import Core.Fulfillment
+import Core.Item
+import Core.Payment
+import Core.Provider
+import Core.SpecQuote
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 
 data OrderState = ACTIVE | CANCELLED | COMPLETE

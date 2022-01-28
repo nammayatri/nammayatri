@@ -1,4 +1,4 @@
-module Core.OnConfirm.Contact where
+module Core.Contact where
 
 import Beckn.Prelude
 

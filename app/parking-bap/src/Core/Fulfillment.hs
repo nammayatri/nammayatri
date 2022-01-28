@@ -1,12 +1,11 @@
-module Core.OnConfirm.Fulfillment where
+module Core.Fulfillment where
 
 import Beckn.Prelude
 import Beckn.Utils.JSON (stripPrefixUnderscoreIfAny)
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
-import Core.OnConfirm.End
-import Core.OnConfirm.Start
-import Core.OnConfirm.Vehicle (Vehicle)
-import Data.OpenApi (ToSchema (..), fromAesonOptions)
+import Core.End
+import Core.Start
+import Core.Vehicle (Vehicle)
+import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
 
 data Fulfillment = Fulfillment
   { _type :: Text,
@@ -18,7 +17,7 @@ data Fulfillment = Fulfillment
   deriving (Generic)
 
 instance ToSchema Fulfillment where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
 
 instance FromJSON Fulfillment where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

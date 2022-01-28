@@ -7,7 +7,10 @@ import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 newtype StatusMessage = StatusMessage
   { order :: Order
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON)
+
+instance ToSchema StatusMessage where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 newtype Order = Order
   { id :: Text

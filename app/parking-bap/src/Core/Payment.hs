@@ -1,10 +1,10 @@
-module Core.OnConfirm.Payment where
+module Core.Payment where
 
 import Beckn.Prelude
 import Beckn.Types.App ()
 import Beckn.Utils.JSON
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
-import Data.OpenApi (ToSchema (declareNamedSchema), fromAesonOptions)
+import Data.OpenApi (ToSchema (declareNamedSchema), fromAesonOptions, genericDeclareNamedSchema)
 
 data PaymentStatus = PAID | NOT_PAID deriving (Generic, Eq)
 
@@ -45,7 +45,10 @@ data PaymentParams = PaymentParams
     transaction_status :: PaymentGatewayTransactionStatus,
     transaction_id :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON)
+
+instance ToSchema PaymentParams where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
 
 data Payment = Payment
   { params :: PaymentParams,
@@ -57,7 +60,7 @@ data Payment = Payment
   deriving (Generic)
 
 instance ToSchema Payment where
-  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
 
 instance FromJSON Payment where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny

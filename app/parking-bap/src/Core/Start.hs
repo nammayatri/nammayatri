@@ -1,9 +1,9 @@
-module Core.OnConfirm.Start where
+module Core.Start where
 
 import Beckn.Prelude
-import Core.OnConfirm.Contact
-import Core.OnConfirm.StartLocation
-import Core.OnConfirm.Time
+import Core.Contact
+import Core.StartLocation
+import Core.Time
 
 data Start = Start
   { location :: StartLocation,

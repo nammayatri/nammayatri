@@ -1,6 +1,6 @@
 module API.Parking.Search.Handler where
 
-import qualified API.Parking.Search.Types as Search
+import qualified API.Parking.Search.Types as API
 import API.Types.Common (Gps)
 import App.Types
 import Beckn.Prelude
@@ -9,13 +9,8 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Control.Lens ((?~))
 import qualified Core.API.Search as Search
 import qualified Core.Context as Context
-import qualified Core.Gps as Gps
-import qualified Core.Search.Intent as Intent
-import qualified Core.Search.Location as Location
-import qualified Core.Time as Time
 import qualified Data.Text as T
 import qualified Domain.Search as DSearch
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -26,7 +21,7 @@ import Tools.Context (buildContext)
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
-handler :: PersonId -> Search.SearchReq -> FlowHandler Search.SearchRes
+handler :: PersonId -> API.SearchReq -> FlowHandler API.SearchRes
 handler personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   now <- getCurrentTime
   gps <- makeGps req.location
@@ -40,20 +35,20 @@ handler personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     context <- buildContext Context.SEARCH txnId bapURI Nothing
     let intent = mkIntent req gps
     ExternalAPI.search (BecknReq context $ Search.SearchIntent intent)
-  return . Search.SearchRes $ searchRequest.id
+  return . API.SearchRes $ searchRequest.id
 
-makeGps :: MonadFlow m => Gps -> m Gps.Gps
+makeGps :: MonadFlow m => Gps -> m Search.Gps
 makeGps location = do
   lat <- readMaybe (T.unpack location.lat) & fromMaybeM (InternalError "Unable to parse lat")
   lon <- readMaybe (T.unpack location.lon) & fromMaybeM (InternalError "Unable to parse lon")
-  pure Gps.Gps {..}
+  pure Search.Gps {..}
 
 buildSearchRequest ::
   MonadFlow m =>
   Id DSearch.Person ->
-  Search.SearchReq ->
+  API.SearchReq ->
   UTCTime ->
-  Gps.Gps ->
+  Search.Gps ->
   m DSearch.Search
 buildSearchRequest bapPersonId searchReq now gps = do
   id <- generateGUID
@@ -68,30 +63,28 @@ buildSearchRequest bapPersonId searchReq now gps = do
         createdAt = now
       }
 
-mkIntent :: Search.SearchReq -> Gps.Gps -> Intent.Intent
-mkIntent req gps = do
-  Intent.emptyIntent
-    & #fulfillment
-      ?~ ( Intent.emptyFulFillmentInfo
-             & #start
-               ?~ ( Intent.emptyLocationAndTime
-                      & #time
-                        ?~ ( Time.emptyTime
-                               & #timestamp
-                                 ?~ (req.fromDate)
-                           )
-                  )
-             & #end
-               ?~ ( Intent.emptyLocationAndTime
-                      & #location
-                        ?~ ( Location.emptyLocation
-                               & #gps
-                                 ?~ gps
-                           )
-                      & #time
-                        ?~ ( Time.emptyTime
-                               & #timestamp
-                                 ?~ (req.toDate)
-                           )
-                  )
-         )
+mkIntent :: API.SearchReq -> Search.Gps -> Search.Intent
+mkIntent req gps =
+  Search.Intent
+    { fulfillment =
+        Search.FulFillmentInfo
+          { start =
+              Search.TimeInfo
+                { time =
+                    Search.Time
+                      { timestamp = req.fromDate
+                      }
+                },
+            end =
+              Search.LocationAndTime
+                { location =
+                    Search.Location
+                      { gps = gps
+                      },
+                  time =
+                    Search.Time
+                      { timestamp = req.toDate
+                      }
+                }
+          }
+    }

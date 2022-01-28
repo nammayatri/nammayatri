@@ -1,18 +1,22 @@
 module Core.Item where
 
 import Beckn.Prelude
-import Core.OnConfirm.Price (Price)
-import Core.OnSearch.Descriptor
-import Core.OnSearch.ItemQuantity
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Core.Price
+import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 
--- 'Maybe' fields are fields, that is present in request, but we do not use it anyhow
 data Item = Item
   { id :: Text,
-    descriptor :: Descriptor,
     price :: Price,
-    category_id :: Maybe Text,
-    location_id :: Text,
-    matched :: Maybe Bool,
-    quantity :: ItemQuantity
+    quantity :: Quantity
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+newtype Quantity = Quantity
+  { count :: Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance ToSchema Quantity where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

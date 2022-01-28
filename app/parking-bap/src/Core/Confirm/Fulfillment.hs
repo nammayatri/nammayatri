@@ -3,7 +3,7 @@ module Core.Confirm.Fulfillment where
 import Beckn.Prelude
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Confirm.StartEnd
-import Core.Confirm.Vehicle
+import Core.Vehicle
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 
 data Fulfillment = Fulfillment

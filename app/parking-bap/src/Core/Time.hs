@@ -1,3 +1,9 @@
-module Core.Time (module Reexport) where
+module Core.Time where
 
-import Beckn.Types.Core.Migration.Time as Reexport
+import Beckn.Prelude
+
+newtype Time = Time
+  { timestamp :: UTCTime
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
