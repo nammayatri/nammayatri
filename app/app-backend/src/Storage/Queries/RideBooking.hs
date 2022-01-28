@@ -83,7 +83,7 @@ findAllByRequestorId personId mbLimit mbOffset mbOnlyActive = do
   where
     orderBy Storage.RideBooking {..} = B.desc_ createdAt
     predicate isOnlyActive Storage.RideBooking {..} =
-      requestorId ==. B.val_ personId
+      riderId ==. B.val_ personId
         &&. if isOnlyActive
           then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
           else B.val_ True

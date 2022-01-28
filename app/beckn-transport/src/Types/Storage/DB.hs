@@ -25,6 +25,7 @@ import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideBooking as RideB
 import qualified Types.Storage.RideCancellationReason as RideCancellationReason
 import qualified Types.Storage.RideRequest as RideRequest
+import qualified Types.Storage.RiderDetails as RiderDetails
 import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.TransporterConfig as TransporterConfig
@@ -36,6 +37,7 @@ data TransporterDb f = TransporterDb
     driverLocation :: f (B.TableEntity DriverLocation.DriverLocationT),
     vehicle :: f (B.TableEntity Vehicle.VehicleT),
     person :: f (B.TableEntity Person.PersonT),
+    riderDetails :: f (B.TableEntity RiderDetails.RiderDetailsT),
     searchRequest :: f (B.TableEntity SearchRequest.SearchRequestT),
     products :: f (B.TableEntity Product.ProductsT),
     quote :: f (B.TableEntity Quote.QuoteT),
@@ -67,6 +69,7 @@ transporterDb dbSchemaName =
         driverLocation = setSchema dbSchemaName <> DriverLocation.fieldEMod,
         vehicle = setSchema dbSchemaName <> Vehicle.fieldEMod,
         person = setSchema dbSchemaName <> Person.fieldEMod,
+        riderDetails = setSchema dbSchemaName <> RiderDetails.fieldEMod,
         searchRequest = setSchema dbSchemaName <> SearchRequest.fieldEMod,
         products = setSchema dbSchemaName <> Product.fieldEMod,
         quote = setSchema dbSchemaName <> Quote.fieldEMod,

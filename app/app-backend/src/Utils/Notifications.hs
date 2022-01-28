@@ -25,7 +25,7 @@ notifyOnRideAssigned ::
   SRide.Ride ->
   m ()
 notifyOnRideAssigned rideBooking ride = do
-  let personId = rideBooking.requestorId
+  let personId = rideBooking.riderId
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM PersonNotFound
@@ -55,7 +55,7 @@ notifyOnRideStarted ::
   SRide.Ride ->
   m ()
 notifyOnRideStarted rideBooking ride = do
-  let personId = rideBooking.requestorId
+  let personId = rideBooking.riderId
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM PersonNotFound
@@ -85,7 +85,7 @@ notifyOnRideCompleted ::
   SRide.Ride ->
   m ()
 notifyOnRideCompleted rideBooking ride = do
-  let personId = rideBooking.requestorId
+  let personId = rideBooking.riderId
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM PersonNotFound
@@ -115,7 +115,7 @@ notifyOnExpiration ::
   m ()
 notifyOnExpiration searchReq = do
   let searchRequestId = searchReq.id
-  let personId = searchReq.requestorId
+  let personId = searchReq.riderId
   person <- Person.findById personId
   case person of
     Just p -> do
@@ -166,8 +166,8 @@ notifyOnRegistration regToken personId mbDeviceToken =
 
 notifyOnRideBookingCancelled :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
 notifyOnRideBookingCancelled rideBooking cancellationSource = do
-  person <- Person.findById rideBooking.requestorId >>= fromMaybeM PersonNotFound
-  FCM.notifyPerson (notificationData rideBooking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  person <- Person.findById rideBooking.riderId >>= fromMaybeM PersonNotFound
+  FCM.notifyPerson (notificationData $ rideBooking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
     notificationData orgName =
       FCM.FCMAndroidData

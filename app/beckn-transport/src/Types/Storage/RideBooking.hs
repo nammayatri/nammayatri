@@ -1,16 +1,12 @@
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Types.Storage.RideBooking where
 
-import Beckn.External.Encryption
 import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import Beckn.Utils.JSON
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -22,9 +18,9 @@ import Database.Beam.Backend.SQL
 import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import Types.App (Person)
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Quote as Quote
+import qualified Types.Storage.RiderDetails as SRD
 import qualified Types.Storage.SearchReqLocation as Loc
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
@@ -54,7 +50,7 @@ instance ToHttpApiData RideBookingStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-data RideBookingTE e f = RideBooking
+data RideBookingT f = RideBooking
   { id :: B.C f (Id RideBooking),
     transactionId :: B.C f Text,
     requestId :: B.C f (Id SearchRequest.SearchRequest),
@@ -64,8 +60,7 @@ data RideBookingTE e f = RideBooking
     bapId :: B.C f Text,
     bapUri :: B.C f BaseUrl,
     startTime :: B.C f UTCTime,
-    requestorId :: B.C f (Id Person),
-    requestorMobileNumber :: EncryptedField e f Text,
+    riderId :: B.C f (Id SRD.RiderDetails),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     vehicleVariant :: B.C f Veh.Variant,
@@ -78,11 +73,7 @@ data RideBookingTE e f = RideBooking
   }
   deriving (Generic)
 
-type RideBookingT = RideBookingTE 'AsEncrypted
-
 type RideBooking = RideBookingT Identity
-
-type RideBookingDecrypted = RideBookingTE 'AsUnencrypted Identity
 
 type RideBookingPrimaryKey = B.PrimaryKey RideBookingT Identity
 
@@ -92,14 +83,6 @@ instance B.Table RideBookingT where
   primaryKey = RideBookingPrimaryKey . id
 
 instance B.Beamable RideBookingT
-
-instance ToJSON RideBookingDecrypted where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-instance FromJSON RideBookingDecrypted where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-deriveTableEncryption ''RideBookingTE
 
 fieldEMod ::
   B.EntityModification (B.DatabaseEntity be db) be (B.TableEntity RideBookingT)
@@ -113,8 +96,7 @@ fieldEMod =
           providerId = "provider_id",
           bapId = "bap_id",
           bapUri = "bap_uri",
-          requestorId = "requestor_id",
-          requestorMobileNumber = "requestor_mobile_number",
+          riderId = "rider_id",
           startTime = "start_time",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",

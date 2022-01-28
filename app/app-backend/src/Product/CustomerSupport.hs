@@ -94,7 +94,7 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
       (searchRequest :: C.SearchRequest) <-
         SearchRequest.findById (Id searchRequestId)
           >>= fromMaybeM SearchRequestDoesNotExist
-      let requestorId = searchRequest.requestorId
+      let requestorId = searchRequest.riderId
       person <-
         Person.findById requestorId
           >>= fromMaybeM PersonDoesNotExist

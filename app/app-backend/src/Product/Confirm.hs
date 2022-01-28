@@ -52,7 +52,12 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
               ],
             fulfillment =
               Confirm.Fulfillment $
-                Confirm.Customer {mobile_number = customerMobileCountryCode <> customerMobileNumber}
+                Confirm.Customer $
+                  Confirm.Contact $
+                    Confirm.Phone
+                      { country_code = customerMobileCountryCode,
+                        number = customerMobileNumber
+                      }
           }
   void $ ExternalAPI.confirm quote.providerUrl (Common.BecknReq context $ Confirm.ConfirmMessage order)
   return $ API.ConfirmRes rideBooking.id
@@ -71,7 +76,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
             providerName = quote.providerName,
             providerMobileNumber = quote.providerMobileNumber,
             startTime = searchRequest.startTime,
-            requestorId = searchRequest.requestorId,
+            riderId = searchRequest.riderId,
             fromLocationId = searchRequest.fromLocationId,
             toLocationId = searchRequest.toLocationId,
             estimatedFare = quote.estimatedFare,

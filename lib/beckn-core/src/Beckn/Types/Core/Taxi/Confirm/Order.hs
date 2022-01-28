@@ -34,11 +34,28 @@ instance ToSchema Fulfillment where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 newtype Customer = Customer
-  { mobile_number :: Text
+  { contact :: Contact
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema Customer where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype Contact = Contact
+  { phone :: Phone
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Contact where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+data Phone = Phone
+  { country_code :: Text,
+    number :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance ToSchema Phone where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 instance Example Order where
@@ -51,5 +68,14 @@ instance Example Order where
           ],
         fulfillment =
           Fulfillment $
-            Customer {mobile_number = "+99999999999"}
+            Customer
+              { contact =
+                  Contact
+                    { phone =
+                        Phone
+                          { country_code = "+9",
+                            number = "9999999999"
+                          }
+                    }
+              }
       }

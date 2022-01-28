@@ -20,7 +20,7 @@ data SearchRequestT f = SearchRequest
   { id :: B.C f (Id SearchRequest),
     startTime :: B.C f UTCTime,
     validTill :: B.C f UTCTime,
-    requestorId :: B.C f (Id SP.Person),
+    riderId :: B.C f (Id SP.Person),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     distance :: B.C f Double,
@@ -57,7 +57,7 @@ fieldEMod =
       B.tableModification
         { startTime = "start_time",
           validTill = "valid_till",
-          requestorId = "requestor_id",
+          riderId = "rider_id",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",
           createdAt = "created_at"

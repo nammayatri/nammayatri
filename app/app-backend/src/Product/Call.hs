@@ -32,7 +32,7 @@ initiateCallToDriver rideId personId = withFlowHandlerAPI . withPersonIdLogTag p
 getPerson :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Person
 getPerson ride = do
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
-  let personId = rideBooking.requestorId
+  let personId = rideBooking.riderId
   Person.findById personId >>= fromMaybeM PersonNotFound
 
 -- | Get person's mobile phone

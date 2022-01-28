@@ -10,6 +10,7 @@ import EulerHS.Prelude
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
+import qualified Storage.Queries.RiderDetails as QRD
 import Types.Error
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.Ride as SRide
@@ -23,7 +24,10 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
   rideBooking <-
     QRB.findById ride.bookingId
       >>= fromMaybeM RideBookingNotFound
-  requestorPhone <- decrypt rideBooking.requestorMobileNumber
+  riderDetails <-
+    QRD.findById rideBooking.riderId
+      >>= fromMaybeM RiderDetailsNotFound
+  requestorPhone <- decrypt riderDetails.mobileNumber
   driverPhone <- getDriverPhone ride
   initiateCall driverPhone requestorPhone
   logTagInfo ("RideId:" <> getId rideId) "Call initiated from driver to customer."

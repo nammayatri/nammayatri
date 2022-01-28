@@ -13,7 +13,6 @@ defaultSearchRequest =
       startTime = Fixtures.defaultTime,
       validTill = Fixtures.defaultTime,
       providerId = Id "",
-      requestorId = Id "",
       fromLocationId = "",
       toLocationId = "",
       bapId = "",

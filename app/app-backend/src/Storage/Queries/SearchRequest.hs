@@ -43,7 +43,7 @@ findAllByPersonIdLimitOffset personId mlimit moffset = do
       foldl
         (&&.)
         (B.val_ True)
-        [ requestorId ==. B.val_ personId
+        [ riderId ==. B.val_ personId
         ]
 
 findById :: DBFlow m r => Id Storage.SearchRequest -> m (Maybe Storage.SearchRequest)
@@ -59,7 +59,7 @@ findByPersonId personId searchRequestId = do
   DB.findOne dbTable (predicate personId)
   where
     predicate personId_ Storage.SearchRequest {..} =
-      id ==. B.val_ searchRequestId &&. requestorId ==. B.val_ personId_
+      id ==. B.val_ searchRequestId &&. riderId ==. B.val_ personId_
 
 findAllByIds :: DBFlow m r => [Id Storage.SearchRequest] -> m [Storage.SearchRequest]
 findAllByIds searchRequestIds = do
@@ -73,7 +73,7 @@ findAllByPerson perId = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
-    predicate Storage.SearchRequest {..} = requestorId ==. B.val_ perId
+    predicate Storage.SearchRequest {..} = riderId ==. B.val_ perId
 
 findAllExpired :: DBFlow m r => Maybe UTCTime -> Maybe UTCTime -> m [Storage.SearchRequest]
 findAllExpired maybeFrom maybeTo = do

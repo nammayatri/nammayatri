@@ -392,6 +392,28 @@ instance IsHTTPError RideError where
 
 instance IsAPIError RideError
 
+data RiderDetailsError
+  = RiderDetailsNotFound
+  | RiderDetailsDoesNotExist
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RiderDetailsError
+
+instance IsBaseError RiderDetailsError where
+  toMessage = \case
+    RiderDetailsDoesNotExist -> Just "No rider details matches passed data."
+    _ -> Nothing
+
+instance IsHTTPError RiderDetailsError where
+  toErrorCode = \case
+    RiderDetailsNotFound -> "RIDER_DETAILS_NOT_FOUND"
+    RiderDetailsDoesNotExist -> "RIDER_DETAILS_DOES_NOT_EXIST"
+  toHttpCode = \case
+    RiderDetailsNotFound -> E500
+    RiderDetailsDoesNotExist -> E400
+
+instance IsAPIError RiderDetailsError
+
 data GatewayError
   = UnsupportedGatewaySelector
   deriving (Eq, Show, IsBecknAPIError)

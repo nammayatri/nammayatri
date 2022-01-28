@@ -24,6 +24,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RideBooking as QRideBooking
 import qualified Storage.Queries.RideRequest as RideRequest
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchReqLocation as QSReqLoc
 import qualified Storage.Queries.SearchRequest as SearchRequest
 import qualified Storage.Queries.TransporterConfig as QTConf
@@ -33,6 +34,7 @@ import Types.Storage.DiscountTransaction
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideRequest as RideRequest
+import qualified Types.Storage.RiderDetails as SRD
 import qualified Types.Storage.SearchReqLocation as SSReqLoc
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.TransporterConfig as STConf
@@ -54,7 +56,9 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
       [item] -> return item
       _ -> throwError (InvalidRequest "List of confirmed items must contain exactly one item.")
     let quoteId = Id item.id
-        customerPhoneNumber = req.message.order.fulfillment.customer.mobile_number
+        phone = req.message.order.fulfillment.customer.contact.phone
+        customerMobileCountryCode = phone.country_code
+        customerPhoneNumber = phone.number
     quote <- QQuote.findById' quoteId >>= fromMaybeM QuoteDoesNotExist
     let transporterId' = quote.providerId
     transporterOrg <-
@@ -65,7 +69,8 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
     let bapOrgId = searchRequest.bapId
     unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
     now <- getCurrentTime
-    rideBooking <- encrypt =<< buildRideBooking searchRequest quote transporterOrg customerPhoneNumber now
+    (riderDetails, isNewRider) <- getRiderDetails customerMobileCountryCode customerPhoneNumber now
+    rideBooking <- buildRideBooking searchRequest quote transporterOrg riderDetails.id now
     rideRequest <-
       BP.buildRideReq
         (rideBooking.id)
@@ -74,6 +79,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         now
 
     DB.runSqlDBTransaction $ do
+      when isNewRider $ QRD.create riderDetails
       QRideBooking.create rideBooking
       RideRequest.create rideRequest
       whenJust quote.discount $ \disc ->
@@ -86,7 +92,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         searchRequest
         transporterOrg
   where
-    buildRideBooking searchRequest quote provider customerPhoneNumber now = do
+    buildRideBooking searchRequest quote provider riderId now = do
       id <- generateGUID
       return $
         SRB.RideBooking
@@ -97,8 +103,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
             status = SRB.CONFIRMED,
             providerId = provider.id,
             startTime = searchRequest.startTime,
-            requestorId = searchRequest.requestorId,
-            requestorMobileNumber = customerPhoneNumber,
+            riderId = riderId,
             fromLocationId = searchRequest.fromLocationId,
             toLocationId = searchRequest.toLocationId,
             bapId = searchRequest.bapId,
@@ -108,6 +113,23 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
             estimatedTotalFare = quote.estimatedTotalFare,
             distance = quote.distance,
             vehicleVariant = quote.vehicleVariant,
+            createdAt = now,
+            updatedAt = now
+          }
+
+getRiderDetails :: (EncFlow m r, DBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
+getRiderDetails customerMobileCountryCode customerPhoneNumber now =
+  QRD.findByMobileNumber customerPhoneNumber >>= \case
+    Nothing -> map (,True) . encrypt =<< buildRiderDetails
+    Just a -> return (a, False)
+  where
+    buildRiderDetails = do
+      id <- generateGUID
+      return $
+        SRD.RiderDetails
+          { id = id,
+            mobileCountryCode = customerMobileCountryCode,
+            mobileNumber = customerPhoneNumber,
             createdAt = now,
             updatedAt = now
           }

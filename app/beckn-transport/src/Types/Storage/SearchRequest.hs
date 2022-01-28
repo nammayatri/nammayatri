@@ -16,7 +16,6 @@ import Database.Beam.Postgres
 import EulerHS.Prelude hiding (id)
 import Servant
 import Servant.Client.Core (BaseUrl)
-import Types.App
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.SearchReqLocation as Loc
 
@@ -47,7 +46,6 @@ data SearchRequestT f = SearchRequest
     startTime :: B.C f UTCTime,
     validTill :: B.C f UTCTime,
     providerId :: B.C f (Id Org.Organization),
-    requestorId :: B.C f (Id Person),
     fromLocationId :: B.C f (Id Loc.SearchReqLocation),
     toLocationId :: B.C f (Id Loc.SearchReqLocation),
     bapId :: B.C f Text,
@@ -87,7 +85,6 @@ fieldEMod =
           startTime = "start_time",
           validTill = "valid_till",
           providerId = "provider_id",
-          requestorId = "requestor_id",
           fromLocationId = "from_location_id",
           toLocationId = "to_location_id",
           bapId = "bap_id",
