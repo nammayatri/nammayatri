@@ -9,8 +9,8 @@ let domain = < MOBILITY
               | PARKING
               >
 
-let type = < BAP 
-            | BPP 
+let type = < BAP
+            | BPP
             | BG
             | LREG
             | CREG
@@ -75,7 +75,7 @@ let credRegistry =
     , domain = domain.MOBILITY
     }
   , { shortOrgId = "another-test-cabs"
-    , uniqueKeyId = "another-test-cabs"
+    , uniqueKeyId = "juspay-mobility-bpp-1-key"
     , signPubKey = "kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E="
     , url = "http://localhost:8014/v1/e1f37274-f0aa-4bb3-93a0-2476349487b7"
     , _type = type.BPP
