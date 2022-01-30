@@ -65,7 +65,6 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9999
-, gatewayUrl = gwUri
 , xAppUri = appUri
 , hostName = "juspay.in"
 , nwAddress = "https://api.sandbox.beckn.juspay.in/latest/bpp/cab/v1"
@@ -91,7 +90,7 @@ in
 , defaultRadiusOfSearch = +5000 -- meters
 , driverPositionInfoExpiry = Some +600
 , apiRateLimitOptions = apiRateLimitOptions
-, httpClientOptions = httpClientOptions
+, httpClientOptions = common.httpClientOptions
 , authTokenCacheExpiry = +600
 , minimumDriverRatesCount = +5
 , recalculateFareEnabled = True
