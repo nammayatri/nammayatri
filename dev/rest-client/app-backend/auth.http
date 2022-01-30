@@ -17,7 +17,8 @@ POST {{app-host}}/auth/{{authToken}}/verify
 content-type: application/json
 
 {
-  "otp": "7891"
+  "otp": "7891",
+  "deviceToken": ""
 }
 
 ###
