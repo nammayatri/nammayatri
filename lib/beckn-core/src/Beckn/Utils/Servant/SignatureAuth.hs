@@ -59,7 +59,6 @@ data SignatureAuth (header :: Symbol)
 
 class AuthenticatingEntity r where
   getSigningKey :: r -> PrivateKey
-  getUniqueKeyId :: r -> Text
   getSignatureExpiry :: r -> Seconds
 
 data AuthenticatingEntity' = AuthenticatingEntity'
@@ -150,8 +149,9 @@ prepareAuthManager ::
   r ->
   [Text] ->
   Text ->
+  Text ->
   Http.ManagerSettings
-prepareAuthManager flowRt appEnv signHeaders subscriberId =
+prepareAuthManager flowRt appEnv signHeaders subscriberId uniqueKeyId =
   Http.tlsManagerSettings {Http.managerModifyRequest = runFlowR flowRt appEnv . doSignature}
   where
     doSignature req = withLogTag "prepareAuthManager" do
@@ -169,7 +169,6 @@ prepareAuthManager flowRt appEnv signHeaders subscriberId =
     getBody (Http.RequestBodyBS body) = body
     getBody _ = "<MISSING_BODY>"
     signPrivKey = getSigningKey appEnv
-    uniqueKeyId = getUniqueKeyId appEnv
     signatureExpiry = getSignatureExpiry appEnv
 
     -- FIXME: we don't currently deal with Content-Length not being there (this is
@@ -259,19 +258,17 @@ verifySignature headerName signPayload bodyHash = do
       "X-Gateway-Authorization" -> "Proxy-Authenticate"
       _ -> ""
 
-makeManagerMap :: [String] -> [Http.ManagerSettings] -> Map String Http.ManagerSettings
-makeManagerMap managerKeys managers = Map.fromList $ zip managerKeys managers
-
 prepareAuthManagers ::
   (AuthenticatingEntity r, HasLog r) =>
   R.FlowRuntime ->
   r ->
-  [Text] ->
+  [(Text, Text)] ->
   Map String Http.ManagerSettings
 prepareAuthManagers flowRt appEnv allShortIds = do
-  let managerKeys = map (\shortId -> signatureAuthManagerKey <> "-" <> T.unpack shortId) allShortIds
-  map (prepareAuthManager flowRt appEnv ["Authorization"]) allShortIds
-    & makeManagerMap managerKeys
+  flip foldMap allShortIds \(shortId, uniqueKeyId) ->
+    Map.singleton
+      (signatureAuthManagerKey <> "-" <> T.unpack shortId)
+      (prepareAuthManager flowRt appEnv ["Authorization"] shortId uniqueKeyId)
 
 modFlowRtWithAuthManagers ::
   ( AuthenticatingEntity r,
@@ -282,12 +279,12 @@ modFlowRtWithAuthManagers ::
   ) =>
   R.FlowRuntime ->
   r ->
-  [Text] ->
+  [(Text, Text)] ->
   m R.FlowRuntime
 modFlowRtWithAuthManagers flowRt appEnv orgShortIds = do
   let managersSettings = prepareAuthManagers flowRt appEnv orgShortIds
   managers <- createManagers managersSettings
-  logInfo $ "Loaded http managers - " <> show (keys managers)
+  logInfo $ "Loaded http managers - " <> show orgShortIds
   pure $ flowRt {R._httpClientManagers = managers}
 
 instance

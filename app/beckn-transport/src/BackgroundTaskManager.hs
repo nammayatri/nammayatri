@@ -7,7 +7,6 @@ import Beckn.Storage.Common
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
-import Beckn.Types.Id
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.FlowLogging as L
@@ -23,7 +22,6 @@ import Servant
 import qualified Services.Allocation.Runner as Runner
 import qualified Storage.Queries.Organization as Storage
 import System.Environment (lookupEnv)
-import qualified Types.Storage.Organization as Organization
 import Utils.Common
 import qualified Utils.Metrics as Metrics
 
@@ -49,13 +47,12 @@ runBackgroundTaskManager configModifier = do
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
-        let allShortIds = map (getShortId . Organization.shortId) allProviders
-        managers <- createManagers $ prepareAuthManagers flowRt btmEnv allShortIds
-        logInfo ("Loaded http managers - " <> show (keys managers))
+        let allShortIds = map ((.shortId.getShortId) &&& (.uniqueKeyId)) allProviders
+        flowRt' <- modFlowRtWithAuthManagers flowRt btmEnv allShortIds
         let shardMap = btmEnv.driverAllocationConfig.shards
         logInfo $ "Shard config: " <> show shardMap <> " | Shard count: " <> show (Map.size shardMap)
         logInfo $ "Starting Background Task Manager on port " <> show port
-        return $ flowRt {R._httpClientManagers = managers}
+        pure flowRt'
     let settings =
           defaultSettings
             & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)

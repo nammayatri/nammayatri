@@ -86,6 +86,7 @@ data OrganizationT f = Organization
     name :: B.C f Text,
     description :: B.C f (Maybe Text),
     shortId :: B.C f (ShortId Organization),
+    uniqueKeyId :: B.C f Text,
     mobileNumber :: B.C f (Maybe Text),
     mobileCountryCode :: B.C f (Maybe Text),
     gstin :: B.C f (Maybe Text),
@@ -108,12 +109,10 @@ type Organization = OrganizationT Identity
 
 type OrganizationPrimaryKey = B.PrimaryKey OrganizationT Identity
 
-{-# ANN module ("HLint: ignore Redundant id" :: String) #-}
-
 instance B.Table OrganizationT where
   data PrimaryKey OrganizationT f = OrganizationPrimaryKey (B.C f (Id Organization))
     deriving (Generic, B.Beamable)
-  primaryKey = OrganizationPrimaryKey . id
+  primaryKey = OrganizationPrimaryKey . (.id)
 
 deriving instance Show Organization
 
@@ -131,6 +130,7 @@ fieldEMod =
   B.modifyTableFields
     B.tableModification
       { shortId = "short_id",
+        uniqueKeyId = "unique_key_id",
         createdAt = "created_at",
         updatedAt = "updated_at",
         mobileNumber = "mobile_number",

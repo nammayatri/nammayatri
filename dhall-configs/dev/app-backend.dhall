@@ -94,11 +94,12 @@ in
   { cabs = "http://localhost:8013/cab/v1/"
   , metro = "http://localhost:8013/metro/v1/"
   }
-, authEntity =
-  { signingKey = sec.signingKey
-  , signatureExpiry = common.signatureExpiry
-  , uniqueKeyId = "juspay-mobility-bap-1-key"
+, bapSelfUniqueKeyIds =
+  { cabs = "juspay-mobility-bap-1-key"
+  , metro = "juspay-mobility-bap-1-key"
   }
+, signingKey = sec.signingKey
+, signatureExpiry = common.signatureExpiry
 , searchConfirmExpiry = Some +600
 , searchRequestExpiry = Some +600
 , encService = common.passetto

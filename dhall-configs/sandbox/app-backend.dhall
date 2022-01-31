@@ -99,11 +99,12 @@ in
   { cabs = "https://api.sandbox.beckn.juspay.in/bap/cab/v1/"
   , metro = "https://api.sandbox.beckn.juspay.in/bap/metro/v1/"
   }
-, authEntity =
-  { signingKey = sec.signingKey
-  , uniqueKeyId = "35"
-  , signatureExpiry = common.signatureExpiry
+, bapSelfUniqueKeyIds =
+  { cabs = "35"
+  , metro = "35"
   }
+, signingKey = sec.signingKey
+, signatureExpiry = common.signatureExpiry
 , searchConfirmExpiry = Some +600
 , searchRequestExpiry = Some +600
 , encService = common.passetto

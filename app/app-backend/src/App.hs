@@ -45,12 +45,6 @@ runAppBackend' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
-        logInfo "Setting up for signature auth..."
-        let shortOrgId = appCfg.bapSelfIds.cabs
-        let shortOrgIdMetro = appCfg.bapSelfIds.metro
-        managers <-
-          prepareAuthManagers flowRt appEnv [shortOrgId, shortOrgIdMetro]
-            & createManagers
         logInfo "Initializing DB Connections..."
         _ <- prepareDBConnections >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
         logInfo "Initializing Redis Connections..."
@@ -58,8 +52,16 @@ runAppBackend' appCfg = do
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
         migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+        logInfo "Setting up for signature auth..."
+        flowRt' <-
+          modFlowRtWithAuthManagers
+            flowRt
+            appEnv
+            [ (appCfg.bapSelfIds.cabs, appCfg.bapSelfUniqueKeyIds.cabs),
+              (appCfg.bapSelfIds.metro, appCfg.bapSelfUniqueKeyIds.metro)
+            ]
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
-        return $ flowRt {R._httpClientManagers = managers}
+        pure flowRt'
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
   where
     shutdownAction appEnv closeSocket = do

@@ -68,11 +68,8 @@ in
 , xAppUri = appUri
 , hostName = "juspay.in"
 , nwAddress = "https://api.beckn.juspay.in/transport/v1/"
-, authEntity =
-  { signingKey = sec.signingKey
-  , uniqueKeyId = "juspay-mobility-bpp-1-key-prod"
-  , signatureExpiry = common.signatureExpiry
-  }
+, signingKey = sec.signingKey
+, signatureExpiry = common.signatureExpiry
 , caseExpiry = Some +7200
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath

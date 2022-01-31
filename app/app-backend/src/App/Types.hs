@@ -17,6 +17,7 @@ import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
 import Beckn.Types.Cache
 import Beckn.Types.Common
+import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
@@ -46,6 +47,7 @@ data AppCfg = AppCfg
     hostName :: Text,
     bapSelfIds :: BAPs Text,
     bapSelfURIs :: BAPs BaseUrl,
+    bapSelfUniqueKeyIds :: BAPs Text,
     searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
     encService :: (String, Word16),
@@ -68,7 +70,8 @@ data AppCfg = AppCfg
     authTokenCacheExpiry :: Seconds,
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets,
-    authEntity :: AuthenticatingEntity',
+    signingKey :: PrivateKey,
+    signatureExpiry :: Seconds,
     disableSignatureAuth :: Bool,
     gatewayUrl :: BaseUrl
   }
@@ -82,8 +85,6 @@ data AppEnv = AppEnv
     otpSmsTemplate :: Text,
     sesCfg :: SesConfig,
     xProviderUri :: BaseUrl,
-    bapSelfIds :: BAPs Text,
-    bapSelfURIs :: BAPs BaseUrl,
     searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
     encService :: (String, Word16),
@@ -128,9 +129,8 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance AuthenticatingEntity AppEnv where
-  getSigningKey = (.config.authEntity.signingKey)
-  getUniqueKeyId = (.config.authEntity.uniqueKeyId)
-  getSignatureExpiry = (.config.authEntity.signatureExpiry)
+  getSigningKey = (.config.signingKey)
+  getSignatureExpiry = (.config.signatureExpiry)
 
 instance Registry Flow where
   registryLookup =

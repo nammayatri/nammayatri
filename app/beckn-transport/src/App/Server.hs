@@ -19,7 +19,6 @@ run = withModifiedEnv $ \modifiedEnv ->
     & supportProxyAuthorization
   where
     context =
-      verifyApiKey @(FlowR AppEnv)
-        :. verifyTokenAction @(FlowR AppEnv)
+      verifyTokenAction @(FlowR AppEnv)
         :. validateAdminAction @(FlowR AppEnv)
         :. EmptyContext

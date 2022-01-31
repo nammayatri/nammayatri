@@ -6,7 +6,6 @@ import Beckn.Exit
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
-import Beckn.Types.Id
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.FlowLogging as L
@@ -25,7 +24,6 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.Queries.Organization as Storage
 import System.Environment (lookupEnv)
-import qualified Types.Storage.Organization as Organization
 import Utils.Common
 
 runTransporterBackendApp :: (AppCfg -> AppCfg) -> IO ()
@@ -47,20 +45,22 @@ runTransporterBackendApp' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
+        migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
+          >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+
         logInfo "Setting up for signature auth..."
         allProviders <-
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
-        let allShortIds = map (getShortId . Organization.shortId) allProviders
-        managers <- createManagers $ prepareAuthManagers flowRt appEnv allShortIds
-        logInfo $ "Loaded http managers - " <> show (keys managers)
+        let allShortIds = map ((.shortId.getShortId) &&& (.uniqueKeyId)) allProviders
+        flowRt' <- modFlowRtWithAuthManagers flowRt appEnv allShortIds
+
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
-        migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
-          >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
+
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
-        return $ flowRt {R._httpClientManagers = managers}
+        pure flowRt'
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
   where
     shutdownAction appEnv closeSocket = do

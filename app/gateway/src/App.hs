@@ -55,9 +55,13 @@ runGateway configModifier = do
   E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
-        let shortOrgId = appEnv.gwId
         managers <-
-          prepareAuthManager flowRt appEnv ["Proxy-Authorization", "X-Gateway-Authorization"] shortOrgId
+          prepareAuthManager
+            flowRt
+            appEnv
+            ["Proxy-Authorization", "X-Gateway-Authorization"]
+            appEnv.gwId
+            appCfg.authEntity.uniqueKeyId
             & Map.singleton signatureAuthManagerKey
             & createManagers
         logInfo "Initializing Redis Connections..."

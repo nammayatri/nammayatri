@@ -91,7 +91,6 @@ type Flow = FlowR AppEnv
 
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.config.authEntity.signingKey)
-  getUniqueKeyId = (.config.authEntity.uniqueKeyId)
   getSignatureExpiry = (.config.authEntity.signatureExpiry)
 
 instance Registry Flow where

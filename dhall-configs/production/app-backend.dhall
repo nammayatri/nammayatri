@@ -99,11 +99,12 @@ in
   { cabs = "https://api.beckn.juspay.in/app/cab/v1/"
   , metro = "https://api.beckn.juspay.in/app/metro/v1/"
   }
-, authEntity =
-  { signingKey = sec.signingKey
-  , uniqueKeyId = "juspay-mobility-bap-1-key-prod"
-  , signatureExpiry = common.signatureExpiry
+, bapSelfUniqueKeyIds =
+  { cabs = "juspay-mobility-bap-1-key-prod"
+  , metro = "juspay-mobility-bap-1-key-prod"
   }
+, signingKey = sec.signingKey
+, signatureExpiry = common.signatureExpiry
 , searchConfirmExpiry = Some +600
 , searchRequestExpiry = Some +600
 , encService = common.passetto

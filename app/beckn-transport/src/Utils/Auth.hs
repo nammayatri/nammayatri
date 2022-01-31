@@ -11,26 +11,12 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.Text as T
 import EulerHS.Prelude hiding (id)
 import Servant hiding (throwError)
-import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.Error
-import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.RegistrationToken as SR
-
--- | TODO: Perform some API key verification.
-data VerifyAPIKey = VerifyAPIKey
-
-instance VerificationMethod VerifyAPIKey where
-  type VerificationResult VerifyAPIKey = Organization
-  verificationDescription =
-    "Checks whether app/gateway is registered.\
-    \If you don't have an API key, register the app/gateway."
-
-verifyApiKey :: DBFlow m r => VerificationAction VerifyAPIKey m
-verifyApiKey = VerificationAction $ Org.findOrgByApiKey >=> fromMaybeM OrgNotFound
 
 getHttpManagerKey :: Text -> String
 getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId

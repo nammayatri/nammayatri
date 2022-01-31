@@ -84,6 +84,5 @@ type FlowHandler = FlowHandlerR BTMEnv
 type FlowServer api = FlowServerR BTMEnv api
 
 instance AuthenticatingEntity BTMEnv where
-  getSigningKey = (.config.appCfg.authEntity.signingKey)
-  getUniqueKeyId = (.config.appCfg.authEntity.uniqueKeyId)
-  getSignatureExpiry = (.config.appCfg.authEntity.signatureExpiry)
+  getSigningKey = (.config.appCfg.signingKey)
+  getSignatureExpiry = (.config.appCfg.signatureExpiry)

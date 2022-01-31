@@ -73,11 +73,8 @@ in
 , xAppUri = appUri
 , hostName = "juspay.in"
 , nwAddress = "https://api.sandbox.beckn.juspay.in/bpp/cab/v1"
-, authEntity =
-  { signingKey = sec.signingKey
-  , uniqueKeyId = "FIXME"
-  , signatureExpiry = common.signatureExpiry
-  }
+, signingKey = sec.signingKey
+, signatureExpiry = common.signatureExpiry
 , caseExpiry = Some +7200
 , encService = common.passetto
 , fcmJsonPath = common.fcmJsonPath

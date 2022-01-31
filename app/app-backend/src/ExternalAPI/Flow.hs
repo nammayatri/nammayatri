@@ -29,7 +29,7 @@ search ::
   ( HasInConfig r c "gatewayUrl" BaseUrl,
     DBFlow m r,
     CoreMetrics m,
-    HasBapIds r m
+    HasBapIds c r m
   ) =>
   API.SearchReq ->
   m API.SearchRes
@@ -41,7 +41,7 @@ searchMetro ::
   ( HasInConfig r c "gatewayUrl" BaseUrl,
     DBFlow m r,
     CoreMetrics m,
-    HasBapIds r m
+    HasBapIds c r m
   ) =>
   BecknReq MigAPI.SearchIntent ->
   m ()
@@ -52,7 +52,7 @@ searchMetro req = do
 confirm ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapIds r m
+    HasBapIds c r m
   ) =>
   BaseUrl ->
   ConfirmReq ->
@@ -61,8 +61,7 @@ confirm = callBecknAPIWithSignature "confirm" API.confirmAPI
 
 location ::
   ( MonadFlow m,
-    CoreMetrics m,
-    HasBapIds r m
+    CoreMetrics m
   ) =>
   BaseUrl ->
   Text ->
@@ -74,7 +73,7 @@ location url req = do
 cancel ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapIds r m
+    HasBapIds c r m
   ) =>
   BaseUrl ->
   CancelReq ->
@@ -84,15 +83,15 @@ cancel = callBecknAPIWithSignature "cancel" API.cancelAPI
 feedback ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapIds r m
+    HasBapIds c r m
   ) =>
   BaseUrl ->
   RatingReq ->
   m RatingRes
 feedback = callBecknAPIWithSignature "feedback" API.ratingAPI
 
-type HasBapIds r m =
-  ( HasField "bapSelfIds" r (BAPs Text),
+type HasBapIds c r m =
+  ( HasInConfig r c "bapSelfIds" (BAPs Text),
     MonadReader r m
   )
 
@@ -101,7 +100,7 @@ callBecknAPIWithSignature,
     ( MonadFlow m,
       CoreMetrics m,
       IsBecknAPI api req res,
-      HasBapIds r m
+      HasBapIds c r m
     ) =>
     Text ->
     Proxy api ->
@@ -109,10 +108,10 @@ callBecknAPIWithSignature,
     req ->
     m res
 callBecknAPIWithSignature a b c d = do
-  bapId <- asks (.bapSelfIds.cabs)
+  bapId <- askConfig (.bapSelfIds.cabs)
   callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
 callBecknAPIWithSignatureMetro a b c d = do
-  bapId <- asks (.bapSelfIds.metro)
+  bapId <- askConfig (.bapSelfIds.metro)
   callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
 
 getHttpManagerKey :: Text -> String

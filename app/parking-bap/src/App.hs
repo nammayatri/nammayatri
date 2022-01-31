@@ -10,7 +10,6 @@ import Beckn.Exit
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
-import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
@@ -28,8 +27,7 @@ runService configModifier = do
       >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
     migrateIfNeeded (appCfg.migrationPath) (appCfg.esqDBCfg) (appCfg.autoMigrate)
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
-    orgShortId <- askConfig (.selfId)
-    modFlowRtWithAuthManagers flowRt appEnv [orgShortId]
+    modFlowRtWithAuthManagers flowRt appEnv [(appCfg.selfId, appCfg.authEntity.uniqueKeyId)]
   where
     middleware =
       hashBodyForSignature
