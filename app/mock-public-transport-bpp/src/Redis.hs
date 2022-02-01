@@ -1,16 +1,14 @@
 module Redis where
 
 import Beckn.Mock.App
-import Beckn.Mock.Exceptions
-import Beckn.Mock.Redis
-import Beckn.Mock.Utils
+import Beckn.Mock.Exceptions (OrderError (OrderNotFound))
+import Beckn.Types.Cache
 import Beckn.Types.Core.Migration.Context
+import qualified Beckn.Utils.CacheHedis as Hed
+import Beckn.Utils.Error.Throwing
 import Beckn.Utils.Logging
 import Core.OnConfirm
 import Data.Aeson
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import Data.String.Conversions
 import Environment
 import GHC.Records.Extra
 import Relude hiding (id, ord)
@@ -21,51 +19,31 @@ data OnConfirmContextOrder = OnConfirmContextOrder
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
-contextKey, orderKey :: BS.ByteString
-contextKey = "context"
-orderKey = "order"
+toTuple :: OnConfirmContextOrder -> (Context, Order)
+toTuple occo = (occo.context, occo.order)
 
-contextOrderToRedisHash :: OnConfirmContextOrder -> RedisHash
-contextOrderToRedisHash val =
-  let contextValue = BSL.toStrict $ encodeJSON val.context
-      orderValue = BSL.toStrict $ encodeJSON val.order
-   in [ (contextKey, contextValue),
-        (orderKey, orderValue)
-      ]
+instance Cache OnConfirmContextOrder (MockM AppEnv) where
+  type CacheKey OnConfirmContextOrder = Text
+  getKey key = getRedisPrefix >>= \pref -> Hed.getKey pref key
+  setKey key val = getRedisPrefix >>= \pref -> Hed.setKey pref key val
+  delKey key = getRedisPrefix >>= \pref -> Hed.delKey pref key
 
-contextOrderFromRedisHash :: RedisHash -> Either Text OnConfirmContextOrder
-contextOrderFromRedisHash hash = do
-  -- Either Text
-  context <- findAndDecode contextKey hash
-  order <- findAndDecode orderKey hash
-  pure $ OnConfirmContextOrder {..}
-
-instance RedisHashable OnConfirmContextOrder where
-  toRedisHash = contextOrderToRedisHash
-  fromRedisHash = contextOrderFromRedisHash
+getRedisPrefix :: MockM AppEnv Text
+getRedisPrefix = asks (.redisPrefix)
 
 writeOrder :: Context -> Order -> MockM AppEnv ()
 writeOrder ctx order = do
   let val = OnConfirmContextOrder ctx order
       id = order.id
-  write id val
-  logOutput INFO $ "inserted context and order into redis; key = " <> id
+  setKey id val
+  logOutput INFO $ "inserted context and order into cache; key = " <> id
 
 readOrder :: Text -> MockM AppEnv (Context, Order)
 readOrder orderId = do
-  eithRes <- readHashableEither orderId
-  toTuple <$> fromEitherM redisErrorToMockException eithRes
-  where
-    toTuple OnConfirmContextOrder {..} = (context, order)
+  mRes <- fmap toTuple <$> getKey orderId
+  fromMaybeM (OrderNotFound orderId) mRes
 
 editOrder :: (Order -> Order) -> Text -> MockM AppEnv ()
 editOrder func id = do
-  eithRes <- editHashable editSecond id
-  fromEitherM redisErrorToMockException eithRes
-  where
-    editSecond :: OnConfirmContextOrder -> OnConfirmContextOrder
-    editSecond ctxord = ctxord {order = func ctxord.order}
-
-redisErrorToMockException :: RedisError -> MockException
-redisErrorToMockException (NotFound msg) = OrderNotFound msg
-redisErrorToMockException (DecodeError msg) = OtherError msg
+  (context, order) <- readOrder id
+  writeOrder context $ func order

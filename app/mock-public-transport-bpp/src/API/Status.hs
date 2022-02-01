@@ -5,13 +5,11 @@ module API.Status where
 import API.Confirm.Coerce
 import API.Utils
 import Beckn.Mock.App
-import Beckn.Mock.Exceptions
 import Beckn.Mock.Utils
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
-import Beckn.Utils.Logging
 import qualified Control.Monad.Catch as C
 import Core.OnStatus
 import Core.Status
@@ -26,7 +24,7 @@ statusServer statusReq@(BecknReq ctx msg) = do
   context' <- buildOnActionContext ON_STATUS ctx
   let orderId = msg.order.id
   logOutput INFO $ "reading order with orderId=" <> orderId
-  eithCtxOrd <- C.try @(MockM AppEnv) @MockException (Redis.readOrder orderId)
+  eithCtxOrd <- C.try @(MockM AppEnv) @SomeException (Redis.readOrder orderId)
 
   _ <- fork "call on_status" $ do
     waitMilliSec <- asks (.callbackWaitTimeMilliSec)

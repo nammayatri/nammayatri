@@ -8,4 +8,4 @@ import Relude
 healthCheckServer :: MockM AppEnv Text
 healthCheckServer = do
   logOutput DEBUG "got health check request"
-  pure "Ferry BPP mock is UP!"
+  pure "Public transport BPP mock is UP!"

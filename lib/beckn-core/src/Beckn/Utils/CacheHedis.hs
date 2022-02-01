@@ -3,20 +3,10 @@
 
 module Beckn.Utils.CacheHedis where
 
---import Control.Monad.Trans.Except
-
 import Beckn.Prelude
---import Beckn.External.MyValueFirst.Types (SubmitSmsRes, submitSmsResToText)
 import Beckn.Types.Error.BaseError
 import Beckn.Types.Error.BaseError.HTTPError
---import Beckn.Types.Error.BaseError.HTTPError.FromResponse (FromResponse (fromResponse))
---import Beckn.Utils.Servant.BaseUrl
---import Network.HTTP.Types (Header, Status (statusCode))
---import Network.HTTP.Types.Header (HeaderName)
---import Servant.Client (BaseUrl, ClientError, ResponseF (responseStatusCode))
-
 import Beckn.Types.Logging
-import Beckn.Utils.Error.Hierarchy
 import Beckn.Utils.Error.Throwing
 import qualified Control.Monad.Catch as C
 import qualified Data.Aeson as Ae
@@ -32,23 +22,47 @@ newtype HedisEnv = HedisEnv
   { redisConnection :: Connection
   }
 
+withHedisEnv :: (HedisEnv -> IO a) -> IO a
+withHedisEnv = C.bracket (HedisEnv <$> connectRedis) (disconnect . redisConnection)
+
+connectRedis :: IO Connection
+connectRedis = checkedConnect defaultConnectInfo
+
 ----------------------------------------------------
 
-newtype HedisError = HedisError Reply
+newtype HedisReplyError = HedisReplyError Reply
   deriving (Show, Typeable, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''HedisError
+instanceExceptionWithParent 'HTTPException ''HedisReplyError
 
-instance IsBaseError HedisError where
+instance IsBaseError HedisReplyError where
   toMessage = \case
-    HedisError err -> Just $ show err
+    HedisReplyError err -> Just $ show err
 
-instance IsHTTPError HedisError where
+instance IsHTTPError HedisReplyError where
   toErrorCode = \case
-    HedisError _ -> "REDIS_ERROR"
+    HedisReplyError _ -> "REDIS_ERROR"
   toHttpCode _ = E500
 
-instance IsAPIError HedisError
+instance IsAPIError HedisReplyError
+
+----------------------------------------------------
+
+newtype HedisDecodeError = HedisDecodeError Text
+  deriving (Show, Typeable, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''HedisDecodeError
+
+instance IsBaseError HedisDecodeError where
+  toMessage = \case
+    HedisDecodeError err -> Just $ show err
+
+instance IsHTTPError HedisDecodeError where
+  toErrorCode = \case
+    HedisDecodeError _ -> "REDIS_DECODE_ERROR"
+  toHttpCode _ = E500
+
+instance IsAPIError HedisDecodeError
 
 ----------------------------------------------------
 
@@ -60,7 +74,7 @@ runHedis ::
 runHedis action = do
   con <- asks (.hedisEnv.redisConnection)
   eithRes <- liftIO $ Hedis.runRedis con action
-  fromEitherM HedisError eithRes
+  fromEitherM HedisReplyError eithRes
 
 ----------------------------------------------------
 
@@ -72,7 +86,9 @@ getKey ::
 getKey prefix key = do
   let prefKey = mkKey prefix key
   maybeBS <- runHedis $ get prefKey
-  pure $ Ae.decode . BSL.fromStrict =<< maybeBS
+  case maybeBS of
+    Nothing -> pure Nothing
+    Just bs -> fromMaybeM (HedisDecodeError $ cs bs) $ Ae.decode $ BSL.fromStrict bs
 
 setKey ::
   (ToJSON a, MonadHedis env m) => Text -> Text -> a -> m ()

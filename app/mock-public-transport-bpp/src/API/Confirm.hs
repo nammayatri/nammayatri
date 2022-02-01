@@ -8,7 +8,6 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
-import Beckn.Utils.Logging
 import Core.Confirm
 import Core.OnCancel
 import Core.OnConfirm
@@ -64,7 +63,7 @@ trackPayment orderId = do
 transactionOk :: Context -> OnConfirm.Order -> MockM AppEnv ()
 transactionOk context order = do
   let onStatusMessage = OnStatusMessage $ coerceOrderStatus $ successfulPayment order
-      onStatusReq = BecknCallbackReq (context {action = ON_CANCEL}) (Right onStatusMessage)
+      onStatusReq = BecknCallbackReq (context {action = ON_STATUS}) (Right onStatusMessage)
   logOutput INFO $ "editing order with orderId=" <> order.id <> "; successful payment"
   _ <- Redis.editOrder OnConfirm.successfulPayment order.id
   -- but what if we failed to change the state?

@@ -1,17 +1,24 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Beckn.Mock.Exceptions where
 
-import qualified Control.Monad.Catch as C
-import Relude
+import Beckn.Prelude
+import Beckn.Types.Error.BaseError
+import Beckn.Types.Error.BaseError.HTTPError
+import Type.Reflection
 
-data MockException
-  = OrderNotFound Text
-  | OtherError Text
-  deriving (Show)
+newtype OrderError = OrderNotFound Text
+  deriving (Show, IsBecknAPIError, Typeable)
 
-instance C.Exception MockException
+instanceExceptionWithParent 'HTTPException ''OrderError
 
-fromMaybeM :: (C.Exception e, C.MonadThrow m) => e -> Maybe a -> m a
-fromMaybeM err = maybe (C.throwM err) pure
+instance IsBaseError OrderError where
+  toMessage = \case
+    OrderNotFound orderId -> Just $ "Order not found:" <> show orderId
 
-fromEitherM :: (C.Exception err, C.MonadThrow m) => (e -> err) -> Either e a -> m a
-fromEitherM errFunc = either (C.throwM . errFunc) pure
+instance IsHTTPError OrderError where
+  toErrorCode = \case
+    OrderNotFound _ -> "ORDER_NOT_FOUND"
+  toHttpCode _ = E500
+
+instance IsAPIError OrderError

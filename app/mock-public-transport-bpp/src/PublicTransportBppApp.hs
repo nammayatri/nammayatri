@@ -9,7 +9,7 @@ import API.Search
 import API.Status
 import API.Types
 import Beckn.Mock.App
-import Beckn.Mock.Redis (withRedisConnection)
+import Beckn.Utils.CacheHedis
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Environment
 import Network.Wai.Handler.Warp
@@ -23,9 +23,9 @@ import Servant
 runMockFerryBPP :: IO ()
 runMockFerryBPP = do
   appCfg <- readDhallConfigDefault "mock-public-transport-bpp" :: IO AppCfg
-  withRedisConnection $ \redisCon -> do
+  withHedisEnv $ \hedisEnv -> do
     let port = appCfg.port
-        appEnv = buildAppEnv redisCon appCfg
+        appEnv = buildAppEnv hedisEnv appCfg
         settings =
           defaultSettings & setPort port
     runSettings settings $

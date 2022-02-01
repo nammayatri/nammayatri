@@ -1,7 +1,7 @@
 module Environment where
 
+import Beckn.Utils.CacheHedis
 import Beckn.Utils.Dhall (FromDhall)
-import qualified Database.Redis as Redis
 import Relude
 import Servant.Client
 
@@ -20,12 +20,12 @@ data AppEnv = AppEnv
   { selfId :: Text,
     uniqueKeyId :: Text,
     selfUri :: BaseUrl,
-    redisConnection :: Redis.Connection,
+    hedisEnv :: HedisEnv,
     redisPrefix :: Text,
     statusWaitTimeSec :: Int,
     callbackWaitTimeMilliSec :: Int
   }
   deriving (Generic)
 
-buildAppEnv :: Redis.Connection -> AppCfg -> AppEnv
-buildAppEnv redisConnection AppCfg {..} = AppEnv {..}
+buildAppEnv :: HedisEnv -> AppCfg -> AppEnv
+buildAppEnv hedisEnv AppCfg {..} = AppEnv {..}
