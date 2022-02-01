@@ -30,6 +30,7 @@ customAesonOptions =
         "FINAL_MILE_DELIVERY" -> "nic2004:55204"
         "METRO" -> "nic2004:60212"
         "PARKING" -> "nic2004:63031"
+        "PUBLIC_TRANSPORT" -> "nic2004:63032"
         val -> replaceUnderscoresString val, -- TODO: update remaining domains with codes
       sumEncoding = UntaggedValue
     }

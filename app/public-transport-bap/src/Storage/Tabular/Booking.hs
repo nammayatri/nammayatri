@@ -13,7 +13,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import Database.Persist.TH
 import qualified Domain.Booking as Domain
-import Storage.Tabular.FerryStation (FerryStationTId)
+import Storage.Tabular.PublicTranport (PublicTranportTId)
 import Storage.Tabular.Quote (QuoteTId)
 import Storage.Tabular.Search (SearchTId)
 
@@ -31,13 +31,13 @@ mkPersist
       quantity Int
       bppId Text
       bppUrl Text
-      ferrySupportNumber Text
+      publicTransportSupportNumber Text
       description Text
       fare Amount
       departureTime UTCTime
       arrivalTime UTCTime
-      departureStationId FerryStationTId
-      arrivalStationId FerryStationTId
+      departureStationId PublicTranportTId
+      arrivalStationId PublicTranportTId
       status Domain.BookingStatus
       ticketId Text Maybe
       ticketCreatedAt UTCTime Maybe

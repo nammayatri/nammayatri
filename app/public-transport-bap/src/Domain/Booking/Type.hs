@@ -5,7 +5,7 @@ module Domain.Booking.Type where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.FerryStation (FerryStation)
+import Domain.PublicTranport (PublicTranport)
 import Domain.Quote (Quote)
 import Domain.Search (Search)
 import Tools.Auth
@@ -22,13 +22,13 @@ data Booking = Booking
     quantity :: Int,
     bppId :: Text,
     bppUrl :: BaseUrl,
-    ferrySupportNumber :: Text,
+    publicTransportSupportNumber :: Text,
     description :: Text,
     fare :: Amount,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
-    departureStationId :: Id FerryStation,
-    arrivalStationId :: Id FerryStation,
+    departureStationId :: Id PublicTranport,
+    arrivalStationId :: Id PublicTranport,
     status :: BookingStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,

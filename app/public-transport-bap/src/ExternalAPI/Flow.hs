@@ -7,9 +7,10 @@ import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
-import qualified Core.API.Search as Search
+import Core.Spec.API.Search as Search
 import qualified Data.Text as T
 import GHC.Records.Extra
+import qualified Types.Domain.Outgoing.Search as DSearch
 
 search ::
   ( MonadFlow m,
@@ -18,7 +19,7 @@ search ::
     HasInConfig r c "selfId" Text,
     HasInConfig r c "gatewayUrl" BaseUrl
   ) =>
-  BecknReq Search.SearchIntent ->
+  BecknReq DSearch.SearchIntent ->
   m ()
 search req = do
   url <- asks (.config.gatewayUrl)

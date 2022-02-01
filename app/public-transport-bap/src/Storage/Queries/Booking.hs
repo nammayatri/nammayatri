@@ -69,8 +69,8 @@ findAllByRequestorId personId limitInt offSetInt = do
   let limit_ :: Int64 = fromInteger limitInt
       offset_ :: Int64 = fromInteger offSetInt
   runTransaction . findAll' $ do
-    parkingSearch <- from $ table @BookingT
-    where_ $ parkingSearch ^. BookingRequestorId ==. val (getId personId)
+    publicTransportSearch <- from $ table @BookingT
+    where_ $ publicTransportSearch ^. BookingRequestorId ==. val (getId personId)
     limit limit_
     offset offset_
-    return parkingSearch
+    return publicTransportSearch

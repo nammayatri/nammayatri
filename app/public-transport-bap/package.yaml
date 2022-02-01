@@ -63,17 +63,17 @@ dependencies:
   - servant-server
   - persistent            
   - persistent-postgresql 
-  - esqueleto       
+  - esqueleto
   - openapi3
   - lens
   - template-haskell
   - prometheus-client
   - servant-openapi3
+  - euler-hs
 
 ghc-options:
   - -Wall
   - -Wcompat
-    # - -Werror
   - -Widentities
   - -Wunused-imports
   - -fplugin=RecordDotPreprocessor

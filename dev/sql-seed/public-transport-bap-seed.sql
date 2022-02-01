@@ -17,7 +17,7 @@ SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
-CREATE TABLE atlas_public_transport.ferry_station (
+CREATE TABLE atlas_public_transport.public_transport (
     id character(36) NOT NULL PRIMARY KEY,
     name character varying(255) NOT NULL,
     station_code character varying(255) NOT NULL UNIQUE,
@@ -42,8 +42,8 @@ CREATE TABLE atlas_public_transport.quote (
     fare numeric(30,2) NOT NULL,
     departure_time timestamp with time zone,
     arrival_time timestamp with time zone,
-    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.ferry_station (id),
-    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.ferry_station (id),
+    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.public_transport (id),
+    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.public_transport (id),
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
@@ -56,13 +56,13 @@ CREATE TABLE atlas_public_transport.booking (
     quantity integer NOT NULL,
     bpp_id character(36) NOT NULL,
     bpp_url character varying(255) NOT NULL,
-    ferry_support_number character varying(16) NOT NULL,
+    public_transport_support_number character varying(16) NOT NULL,
     description character varying(255) NOT NULL,
     fare numeric(30,2) NOT NULL,
     departure_time timestamp with time zone,
     arrival_time timestamp with time zone,
-    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.ferry_station (id),
-    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.ferry_station (id),
+    departure_station_id character(36) NOT NULL REFERENCES atlas_public_transport.public_transport (id),
+    arrival_station_id character(36) NOT NULL REFERENCES atlas_public_transport.public_transport (id),
     status character varying(255) NOT NULL,
     ticket_id character varying(255),
     ticket_created_at timestamp with time zone,

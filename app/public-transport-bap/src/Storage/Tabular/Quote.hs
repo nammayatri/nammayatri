@@ -13,7 +13,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import Database.Persist.TH
 import qualified Domain.Quote as Domain
-import Storage.Tabular.FerryStation (FerryStationTId)
+import Storage.Tabular.PublicTranport (PublicTranportTId)
 import Storage.Tabular.Search (SearchTId)
 
 mkPersist
@@ -28,8 +28,8 @@ mkPersist
       fare Amount
       departureTime UTCTime
       arrivalTime UTCTime
-      departureStationId FerryStationTId
-      arrivalStationId FerryStationTId
+      departureStationId PublicTranportTId
+      arrivalStationId PublicTranportTId
       createdAt UTCTime
       Primary id
       deriving Generic

@@ -3,6 +3,7 @@ module App.Types where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Redis.Config
+import Beckn.Tools.Metrics.Types
 import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Flow
@@ -15,7 +16,7 @@ import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
-import Tools.Metrics.Types
+import Tools.Streaming.Kafka.Environment
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
@@ -34,7 +35,8 @@ data AppCfg = AppCfg
     domainVersion :: Text,
     authServiceUrl :: BaseUrl,
     disableSignatureAuth :: Bool,
-    hostName :: Text
+    hostName :: Text,
+    kafkaProducerCfg :: KafkaProducerCfg
   }
   deriving (Generic, FromDhall)
 
@@ -42,13 +44,16 @@ type MobileNumber = Text
 
 data AppEnv = AppEnv
   { config :: AppCfg,
+    redisCfg :: RedisConfig,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
     bapMetrics :: BAPMetricsContainer,
     coreVersion :: Text,
-    domainVersion :: Text
+    domainVersion :: Text,
+    kafkaProducerTools :: KafkaProducerTools,
+    kafkaEnvs :: BAPKafkaEnvs
   }
   deriving (Generic)
 
@@ -60,10 +65,13 @@ buildAppEnv config@AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   isShuttingDown <- mkShutdown
+  kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  kafkaEnvs <- buildBAPKafkaEnvs
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
-releaseAppEnv AppEnv {..} =
+releaseAppEnv AppEnv {..} = do
+  releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
 
 type FlowHandler = FlowHandlerR AppEnv
@@ -74,10 +82,8 @@ type Flow = FlowR AppEnv
 
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.config.authEntity.signingKey)
-  getUniqueKeyId = (.config.authEntity.uniqueKeyId)
   getSignatureExpiry = (.config.authEntity.signatureExpiry)
 
---instance Registry Flow where
 instance Registry Flow where
   registryLookup = Registry.withSubscriberCache Registry.registryLookup
 

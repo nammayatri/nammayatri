@@ -22,6 +22,10 @@ let rcfg =
 
 let juspayGatewayUrl = "http://localhost:9090/"
 
+let kafkaProducerCfg =
+  { brokers = ["localhost:29092"]
+  }
+
 in
 { esqDBCfg = esqDBCfg
 , redisCfg = rcfg
@@ -44,4 +48,5 @@ in
 , gatewayUrl = juspayGatewayUrl
 , httpClientOptions = common.httpClientOptions
 , registryUrl = common.registryUrl
+, kafkaProducerCfg = kafkaProducerCfg
 }

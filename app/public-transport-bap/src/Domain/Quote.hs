@@ -5,7 +5,7 @@ module Domain.Quote where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.FerryStation
+import Domain.PublicTranport
 import Domain.Search
 
 data Quote = Quote
@@ -17,11 +17,11 @@ data Quote = Quote
     fare :: Amount,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
-    departureStationId :: Id FerryStation,
-    arrivalStationId :: Id FerryStation,
+    departureStationId :: Id PublicTranport,
+    arrivalStationId :: Id PublicTranport,
     createdAt :: UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, ToJSON)
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
@@ -29,16 +29,16 @@ data QuoteAPIEntity = QuoteAPIEntity
     fare :: Amount,
     departureTime :: UTCTime,
     arrivalTime :: UTCTime,
-    departureStation :: FerryStationAPIEntity,
-    arrivalStation :: FerryStationAPIEntity,
+    departureStation :: PublicTranportAPIEntity,
+    arrivalStation :: PublicTranportAPIEntity,
     createdAt :: UTCTime
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
-makeQuoteAPIEntity :: Quote -> FerryStation -> FerryStation -> QuoteAPIEntity
+makeQuoteAPIEntity :: Quote -> PublicTranport -> PublicTranport -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} departureStation arrivalStation = do
-  let departureStationAPIEntity = makeFerryStationAPIEntity departureStation
-      arrivalStationAPIEntity = makeFerryStationAPIEntity arrivalStation
+  let departureStationAPIEntity = makePublicTranportAPIEntity departureStation
+      arrivalStationAPIEntity = makePublicTranportAPIEntity arrivalStation
   QuoteAPIEntity
     { departureStation = departureStationAPIEntity,
       arrivalStation = arrivalStationAPIEntity,

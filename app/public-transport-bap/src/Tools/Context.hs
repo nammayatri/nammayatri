@@ -6,16 +6,16 @@ import Beckn.Types.Common
 import qualified Beckn.Types.Core.Migration.Context as Context
 import qualified Beckn.Types.Core.Migration.Domain as Domain
 import Beckn.Utils.Common
-import Beckn.Utils.Servant.BaseUrl (showBaseUrlText)
 
 buildContext ::
-  (MonadTime m, MonadGuid m) =>
+  (MonadTime m, MonadGuid m, MonadReader r0 m) =>
   Context.Action ->
   Text ->
   BaseUrl ->
   Maybe BaseUrl ->
+  Text ->
   m Context.Context
-buildContext action txnId bapUri bppUri = do
+buildContext action txnId bapUri bppUri bapId = do
   timestamp <- getCurrentTime
   message_id <- generateGUIDText
   return
@@ -25,15 +25,13 @@ buildContext action txnId bapUri bppUri = do
         city = "Kochi",
         action = action,
         core_version = "0.9.3-draft",
-        bap_id = showBaseUrlText bapUri, -- maybe selfId?
+        bap_id = bapId,
         bap_uri = bapUri,
         bpp_id = show <$> bppUri,
         bpp_uri = bppUri,
         transaction_id = txnId,
         message_id = message_id,
-        timestamp = timestamp,
-        key = Nothing,
-        ttl = Nothing
+        timestamp = timestamp
       }
 
 validateContext :: (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) => Context.Action -> Context.Context -> m ()
