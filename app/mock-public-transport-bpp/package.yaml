@@ -99,7 +99,7 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -Wunused-imports
-#  - -Werror
+  - -Werror
   - -fplugin=RecordDotPreprocessor
 
 library:

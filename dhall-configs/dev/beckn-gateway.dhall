@@ -67,6 +67,5 @@ in
 , httpClientOptions = common.httpClientOptions
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets
---, disableSignatureAuth = False
-, disableSignatureAuth = True
+, disableSignatureAuth = False
 }
