@@ -71,10 +71,10 @@ deleteByPersonId (Id personId) = do
   where
     predicate rtid Storage.RegistrationToken {..} = entityId ==. B.val_ rtid
 
-deleteByPersonIdExceptNew :: DBFlow m r => Text -> Id Storage.RegistrationToken -> m ()
+deleteByPersonIdExceptNew :: Id SP.Person -> Id Storage.RegistrationToken -> DB.SqlDB ()
 deleteByPersonIdExceptNew personId newRT = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate personId newRT)
+  DB.delete' dbTable (predicate (getId personId) newRT)
   where
     predicate personId_ newRTId Storage.RegistrationToken {..} =
       entityId ==. B.val_ personId_

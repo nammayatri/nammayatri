@@ -37,21 +37,16 @@ auth req = withFlowHandlerAPI $ do
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
-  regToken <- case useFakeOtpM of
-    Just _ -> do
-      token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
-      QR.create token
-      return token
-    Nothing -> do
-      token <- makeSession scfg entityId SR.USER Nothing
-      QR.create token
-      otpSmsTemplate <- asks (.otpSmsTemplate)
-      withLogTag ("personId_" <> getId person.id) $
-        SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
-          >>= SF.checkRegistrationSmsResult
-      return token
-  let attempts = SR.attempts regToken
-      authId = SR.id regToken
+  token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
+  DB.runSqlDBTransaction $ do
+    QR.create token
+  whenNothing_ useFakeOtpM $ do
+    otpSmsTemplate <- asks (.otpSmsTemplate)
+    withLogTag ("personId_" <> getId person.id) $
+      SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
+        >>= SF.checkRegistrationSmsResult
+  let attempts = SR.attempts token
+      authId = SR.id token
   return $ AuthRes {attempts, authId}
 
 makeSession ::
@@ -97,9 +92,10 @@ verify tokenId req = withFlowHandlerAPI $ do
   unless (authValueHash == req.otp) $ throwError InvalidAuthData
   person <- checkPersonExists entityId
   let isNewPerson = person.isNew
-  clearOldRegToken person tokenId
   let deviceToken = Just req.deviceToken
+  cleanCachedTokens person.id
   DB.runSqlDBTransaction $ do
+    QR.deleteByPersonIdExceptNew person.id tokenId
     QR.setVerified tokenId
     QP.updateDeviceToken person.id deviceToken
     when isNewPerson $
@@ -138,20 +134,20 @@ resend tokenId = withFlowHandlerAPI $ do
   _ <- QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-clearOldRegToken :: DBFlow m r => SP.Person -> Id SR.RegistrationToken -> m ()
-clearOldRegToken person = QR.deleteByPersonIdExceptNew (getId $ person.id)
-
-logout :: Id SP.Person -> FlowHandler APISuccess
-logout personId = withFlowHandlerAPI $ do
+cleanCachedTokens :: DBFlow m r => Id SP.Person -> m ()
+cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId
-  -- We should have only one RegToken at this point, but just in case we use findAll
   for_ regTokens $ \regToken -> do
     let key = authTokenCacheKey regToken.token
     void $ Redis.deleteKeyRedis key
+
+logout :: Id SP.Person -> FlowHandler APISuccess
+logout personId = withFlowHandlerAPI $ do
+  cleanCachedTokens personId
   uperson <-
     QP.findPersonById personId
       >>= fromMaybeM PersonNotFound
   DB.runSqlDBTransaction $ do
     QP.updateDeviceToken uperson.id Nothing
-    QR.deleteByPersonId $ getId personId
+    QR.deleteByPersonId personId
   pure Success

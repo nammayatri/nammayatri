@@ -23,10 +23,10 @@ getDbTable ::
 getDbTable =
   DB.registrationToken . DB.transporterDb <$> getSchemaName
 
-create :: DBFlow m r => Storage.RegistrationToken -> m ()
+create :: Storage.RegistrationToken -> DB.SqlDB ()
 create Storage.RegistrationToken {..} = do
   dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertValue Storage.RegistrationToken {..})
+  DB.createOne' dbTable (Storage.insertValue Storage.RegistrationToken {..})
 
 findRegistrationToken :: DBFlow m r => Id Storage.RegistrationToken -> m (Maybe Storage.RegistrationToken)
 findRegistrationToken tokenId = do
@@ -66,17 +66,17 @@ updateAttempts attemps rtId = do
     setClause a n Storage.RegistrationToken {..} =
       mconcat [attempts <-. B.val_ a, updatedAt <-. B.val_ n]
 
-deleteByPersonId :: Text -> DB.SqlDB ()
-deleteByPersonId id_ = do
+deleteByPersonId :: Id SP.Person -> DB.SqlDB ()
+deleteByPersonId personId = do
   dbTable <- getDbTable
-  DB.delete' dbTable (predicate id_)
+  DB.delete' dbTable (predicate $ getId personId)
   where
-    predicate personId Storage.RegistrationToken {..} = entityId ==. B.val_ personId
+    predicate personId_ Storage.RegistrationToken {..} = entityId ==. B.val_ personId_
 
-deleteByPersonIdExceptNew :: DBFlow m r => Text -> Id Storage.RegistrationToken -> m ()
+deleteByPersonIdExceptNew :: Id SP.Person -> Id Storage.RegistrationToken -> DB.SqlDB ()
 deleteByPersonIdExceptNew personId newRT = do
   dbTable <- getDbTable
-  DB.delete dbTable (predicate personId newRT)
+  DB.delete' dbTable (predicate (getId personId) newRT)
   where
     predicate personId_ newRTId Storage.RegistrationToken {..} =
       entityId ==. B.val_ personId_
