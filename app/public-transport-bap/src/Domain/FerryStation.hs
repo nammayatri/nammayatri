@@ -20,7 +20,7 @@ data FerryStationAPIEntity = FerryStationAPIEntity
     lat :: Double,
     lon :: Double
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, ToSchema)
 
 makeFerryStationAPIEntity :: FerryStation -> FerryStationAPIEntity
 makeFerryStationAPIEntity FerryStation {..} =

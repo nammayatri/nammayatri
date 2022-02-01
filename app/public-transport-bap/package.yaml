@@ -68,6 +68,7 @@ dependencies:
   - lens
   - template-haskell
   - prometheus-client
+  - servant-openapi3
 
 ghc-options:
   - -Wall

@@ -11,7 +11,7 @@ import Domain.Search (Search)
 import Tools.Auth
 
 data BookingStatus = NEW | AWAITING_PAYMENT | CONFIRMED | CANCELLED
-  deriving (Generic, Show, Read, FromJSON, ToJSON)
+  deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema)
 
 data Booking = Booking
   { id :: Id Booking,
@@ -35,4 +35,4 @@ data Booking = Booking
     ticketId :: Maybe Text,
     ticketCreatedAt :: Maybe UTCTime
   }
-  deriving (Generic)
+  deriving (Generic, ToSchema)
