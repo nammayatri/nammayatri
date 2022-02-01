@@ -7,6 +7,7 @@ import API.Utils
 import Beckn.Mock.App
 import Beckn.Mock.Exceptions
 import Beckn.Mock.Utils
+import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
@@ -21,13 +22,13 @@ import Relude
 
 statusServer :: BecknReq StatusMessage -> MockM AppEnv AckResponse
 statusServer statusReq@(BecknReq ctx msg) = do
-  mockLog INFO $ "got confirm request: " <> show statusReq
+  logOutput INFO $ "got confirm request: " <> show statusReq
   context' <- buildOnActionContext ON_STATUS ctx
   let orderId = msg.order.id
-  mockLog INFO $ "reading order with orderId=" <> orderId
+  logOutput INFO $ "reading order with orderId=" <> orderId
   eithCtxOrd <- C.try @(MockM AppEnv) @MockException (Redis.readOrder orderId)
 
-  _ <- mockFork $ do
+  _ <- fork "call on_status" $ do
     waitMilliSec <- asks (.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
     let eithOnStatusMsg = bimap (textToError . show) (OnStatusMessage . coerceOrderStatus . snd) eithCtxOrd

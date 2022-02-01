@@ -1,12 +1,15 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Beckn.Mock.App where
 
+import Beckn.Types.Common
 import Beckn.Types.Logging
+import Beckn.Types.Time
 import qualified Control.Monad.Catch as C
-import qualified Data.Text.IO as TIO
+import Control.Monad.IO.Unlift
 import Data.Time.Clock hiding (getCurrentTime)
-import qualified Data.Time.Clock as Time
 import Relude
 import Servant
 import UnliftIO.Concurrent
@@ -16,24 +19,32 @@ run proxyApi server env = serve proxyApi $ hoistServer proxyApi f server
   where
     f :: MockM e a -> Handler a
     f action = do
-      eithRes <- liftIO . C.try $ runReaderT action env
+      eithRes <- liftIO . C.try $ runReaderT (runMockM action) env
       case eithRes of
         Left err ->
           liftIO $ print @String ("exception thrown: " <> show err) *> throwError err
         Right res -> pure res
 
-type MockM e = ReaderT e IO
-
-getCurrentTime :: MockM e UTCTime
-getCurrentTime = liftIO Time.getCurrentTime
+newtype MockM e a = MockM {runMockM :: ReaderT e IO a}
+  deriving newtype (Functor, Applicative, Monad, MonadReader e, MonadIO, MonadUnliftIO, C.MonadThrow, C.MonadCatch, C.MonadMask)
 
 renderLogString :: UTCTime -> LogLevel -> Text -> Text
 renderLogString time level str = mconcat [show time, " ", show level, "> ", str]
 
+instance MonadTime (MockM e) where
+  getCurrentTime = liftIO getCurrentTime
+
+instance Log (MockM e) where
+  logOutput = mockLog
+  withLogTag = const identity
+
 mockLog :: LogLevel -> Text -> MockM e ()
 mockLog level str = do
   time <- getCurrentTime
-  liftIO $ TIO.putStrLn $ renderLogString time level str
+  putTextLn $ renderLogString time level str
+
+instance Forkable (MockM e) where
+  fork _ = mockFork
 
 mockFork :: MockM e a -> MockM e ()
 mockFork action = void $

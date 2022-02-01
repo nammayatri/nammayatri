@@ -47,7 +47,7 @@ writeOrder ctx order = do
   let val = OnConfirmContextOrder ctx order
       id = order.id
   write id val
-  mockLog INFO $ "inserted context and order into redis; key = " <> id
+  logOutput INFO $ "inserted context and order into redis; key = " <> id
 
 readOrder :: Text -> MockM AppEnv (Context, Order)
 readOrder orderId = do

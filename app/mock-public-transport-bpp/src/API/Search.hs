@@ -3,6 +3,7 @@ module API.Search where
 import API.Utils (buildOnActionContext)
 import Beckn.Mock.App
 import Beckn.Mock.Utils
+import Beckn.Types.Common
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
@@ -15,8 +16,8 @@ import Relude
 
 searchServer :: BecknReq SearchMessage -> MockM AppEnv AckResponse
 searchServer becknReq@(BecknReq ctx _) = do
-  mockLog DEBUG $ "request body: " <> show becknReq
-  _ <- mockFork $ do
+  logOutput DEBUG $ "request body: " <> show becknReq
+  _ <- fork "call on_search" $ do
     waitMilliSec <- asks (.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
     context' <- buildOnActionContext ON_SEARCH ctx
