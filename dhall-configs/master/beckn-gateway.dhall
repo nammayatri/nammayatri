@@ -54,7 +54,7 @@ in
 , nwAddress = "https://api.sandbox.beckn.juspay.in/latest/gateway/v1/"
 , authEntity =
   { signingKey = sec.signingKey
-  , uniqueKeyId = "juspay-mobility-bap-1-key"
+  , uniqueKeyId = "22"
   , signatureExpiry = common.signatureExpiry
   }
 , migrationPath = None Text
