@@ -7,6 +7,7 @@ import Beckn.Mock.Utils
 import Beckn.Types.Core.Migration.Context
 import Beckn.Utils.Logging
 import Core.OnConfirm
+import Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.String.Conversions
@@ -18,6 +19,7 @@ data OnConfirmContextOrder = OnConfirmContextOrder
   { context :: Context,
     order :: Order
   }
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 contextKey, orderKey :: BS.ByteString
 contextKey = "context"

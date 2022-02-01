@@ -5,8 +5,6 @@
 module Beckn.Mock.App where
 
 import Beckn.Types.Common
-import Beckn.Types.Logging
-import Beckn.Types.Time
 import qualified Control.Monad.Catch as C
 import Control.Monad.IO.Unlift
 import Data.Time.Clock hiding (getCurrentTime)
