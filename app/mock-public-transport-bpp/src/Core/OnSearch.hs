@@ -40,7 +40,7 @@ data Descriptor = Descriptor
 data Provider = Provider
   { id :: Text,
     descriptor :: DescriptorId,
-    fulfillments :: [FullInfoFulfillment],
+    fulfillments :: [Fulfillment],
     locations :: [LocationDetails],
     items :: [Item]
   }

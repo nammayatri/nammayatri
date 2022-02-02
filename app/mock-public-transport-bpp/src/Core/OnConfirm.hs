@@ -22,7 +22,7 @@ data Order = Order
     provider :: ProviderId,
     items :: [Item],
     billing :: Billing,
-    fulfillment :: FullInfoFulfillment,
+    fulfillment :: Fulfillment,
     quote :: Quotation,
     payment :: Payment Params
   }

@@ -5,7 +5,7 @@ import Core.Time
 import Data.Aeson
 import Relude hiding (id)
 
-data FullInfoFulfillment = FullInfoFulfillment
+data Fulfillment = Fulfillment
   { id :: Text,
     start :: FulfillmentLocationTime,
     end :: FulfillmentLocationTime

@@ -51,17 +51,17 @@ mockProvider =
       items = mockItems
    in Provider {..}
 
-mockFulfillments :: [FullInfoFulfillment]
+mockFulfillments :: [Fulfillment]
 mockFulfillments = [mockFulfillmentEMB, mockFulfillmentABC]
 
-findFulfillment :: Text -> Maybe FullInfoFulfillment
+findFulfillment :: Text -> Maybe Fulfillment
 findFulfillment fulfId = find (\f -> f.id == fulfId) mockFulfillments
 
 tripIdEMB, tripIdABC :: Text
 tripIdEMB = "TRIP001_EKM_EMB"
 tripIdABC = "TRIP001_EKM_ABC"
 
-buildMockFulfillment :: Text -> Text -> Text -> FullInfoFulfillment
+buildMockFulfillment :: Text -> Text -> Text -> Fulfillment
 buildMockFulfillment tripId depart arrival =
   let id = tripId
       start =
@@ -82,9 +82,9 @@ buildMockFulfillment tripId depart arrival =
                   timestamp = fromJust $ readUTCTime "2021-11-17 12:54"
                 }
           }
-   in FullInfoFulfillment {..}
+   in Fulfillment {..}
 
-mockFulfillmentEMB, mockFulfillmentABC :: FullInfoFulfillment
+mockFulfillmentEMB, mockFulfillmentABC :: Fulfillment
 mockFulfillmentEMB = buildMockFulfillment tripIdEMB locationLabelEKM locationLabelEMB
 mockFulfillmentABC = buildMockFulfillment tripIdABC locationLabelEKM locationLabelABC
 
