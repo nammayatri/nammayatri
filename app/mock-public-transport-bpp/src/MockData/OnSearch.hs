@@ -1,17 +1,17 @@
 module MockData.OnSearch where
 
+import Beckn.Types.Amount
 import Beckn.Types.Core.Migration.Gps
 import Core.Descriptor
 import Core.Location
 import Core.OnSearch
-import Core.Price
-import Relude hiding (id, state)
-import Core.OnSearch.Route
-import Core.OnSearch.Fare
-import Beckn.Types.Amount
 import Core.OnSearch.Departure
-import Data.Time.Clock
+import Core.OnSearch.Fare
 import Core.OnSearch.Item
+import Core.OnSearch.Route
+import Core.Price
+import Data.Time.Clock
+import Relude hiding (id, state)
 
 mockBppDescriptor :: Descriptor
 mockBppDescriptor =
@@ -125,8 +125,8 @@ mockDepartures time = map ($ time) [departureEkmAbc1, departureEkmEmb2]
 buildDeparture :: Text -> Text -> UTCTime -> Departure
 buildDeparture id route_id start = do
   let start_time = TimeStamp start
-      hour = 60*60
-      end_time = TimeStamp $ addUTCTime hour start 
+      hour = 60 * 60
+      end_time = TimeStamp $ addUTCTime hour start
   Departure {..}
 
 departureEkmAbc1 :: UTCTime -> Departure

@@ -6,10 +6,10 @@ import Core.Descriptor
 import Core.Location
 import Core.OnSearch.Departure
 import Core.OnSearch.Fare
+import Core.OnSearch.Item
 import Core.OnSearch.Route
 import Data.Aeson
 import Relude hiding (id)
-import Core.OnSearch.Item
 
 newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog

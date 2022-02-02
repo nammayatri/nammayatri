@@ -8,4 +8,3 @@ data Item = Item
     canBook :: Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON)
-

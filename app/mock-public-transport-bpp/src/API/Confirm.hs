@@ -1,6 +1,5 @@
 module API.Confirm where
 
-import API.Confirm.Coerce
 import API.Utils
 import Beckn.Mock.App
 import Beckn.Mock.Utils
@@ -19,6 +18,7 @@ import ExternalAPI
 import MockData.OnConfirm
 import qualified Redis
 import Relude
+import qualified Core.OnConfirm.Order as OnConfirm
 
 confirmServer :: BecknReq ConfirmMessage -> MockM AppEnv AckResponse
 confirmServer confirmReq@(BecknReq ctx msg) = do
@@ -62,7 +62,7 @@ trackPayment orderId = do
 
 transactionOk :: Context -> OnConfirm.Order -> MockM AppEnv ()
 transactionOk context order = do
-  let onStatusMessage = OnStatusMessage $ coerceOrderStatus $ successfulPayment order
+  let onStatusMessage = OnStatusMessage $ successfulPayment order
       onStatusReq = BecknCallbackReq (context {action = ON_STATUS}) (Right onStatusMessage)
   logOutput INFO $ "editing order with orderId=" <> order.id <> "; successful payment"
   _ <- Redis.editOrder OnConfirm.successfulPayment order.id
@@ -72,7 +72,7 @@ transactionOk context order = do
 cancelTransaction :: TrStatus -> Context -> OnConfirm.Order -> MockM AppEnv ()
 cancelTransaction trStatus ctx order = do
   let ctx' = ctx {action = ON_CANCEL}
-      onCancelReq = BecknCallbackReq ctx' (Right $ OnCancelMessage $ coerceOrderCancel $ OnConfirm.failedTransaction trStatus order)
+      onCancelReq = BecknCallbackReq ctx' (Right $ OnCancelMessage $ OnConfirm.failedTransaction trStatus order)
   logOutput INFO $ "editing order with orderId=" <> order.id <> "; payment failed"
   _ <- Redis.editOrder (OnConfirm.failedTransaction trStatus) order.id
   -- but what if we failed to change the state?

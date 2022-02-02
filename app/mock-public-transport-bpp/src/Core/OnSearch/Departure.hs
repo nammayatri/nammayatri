@@ -14,4 +14,3 @@ newtype TimeStamp = TimeStamp
   { timestamp :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON)
-

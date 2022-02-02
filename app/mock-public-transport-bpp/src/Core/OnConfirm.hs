@@ -1,46 +1,13 @@
 module Core.OnConfirm where
 
-import Core.Billing
-import Core.Descriptor
-import Core.Fulfillment
-import Core.Item
-import Core.OrderState
-import Core.Payment
-import Core.Provider
-import Core.Quotation
 import Data.Aeson
 import Relude hiding (State, id, ord, state)
+import Core.Payment
+import Core.OnConfirm.Params
+import Core.OnConfirm.Order
 
 newtype OnConfirmMessage = OnConfirmMessage
   { order :: Order
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data Order = Order
-  { id :: Text,
-    state :: State,
-    provider :: ProviderId,
-    items :: [Item],
-    billing :: Billing,
-    fulfillment :: Fulfillment,
-    quote :: Quotation,
-    payment :: Payment Params
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data Params = Params
-  { transaction_id :: Text,
-    transaction_status :: TrStatus,
-    amount :: DecimalValue,
-    currency :: Text
-  }
-  deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-data Item = Item
-  { id :: Text,
-    fulfillment_id :: Text,
-    descriptor :: DescriptorCode,
-    quantity :: Quantity
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 

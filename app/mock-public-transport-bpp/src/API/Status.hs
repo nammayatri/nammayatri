@@ -2,7 +2,6 @@
 
 module API.Status where
 
-import API.Confirm.Coerce
 import API.Utils
 import Beckn.Mock.App
 import Beckn.Mock.Utils
@@ -29,7 +28,7 @@ statusServer statusReq@(BecknReq ctx msg) = do
   _ <- fork "call on_status" $ do
     waitMilliSec <- asks (.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
-    let eithOnStatusMsg = bimap (textToError . show) (OnStatusMessage . coerceOrderStatus . snd) eithCtxOrd
+    let eithOnStatusMsg = bimap (textToError . show) (OnStatusMessage . snd) eithCtxOrd
         onStatusReq = BecknCallbackReq context' eithOnStatusMsg
     callBapOnStatus onStatusReq
   pure Ack
