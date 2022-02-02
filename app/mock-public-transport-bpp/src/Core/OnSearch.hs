@@ -3,11 +3,13 @@ module Core.OnSearch where
 import Beckn.Types.Core.Migration.Image (Image (..))
 import Beckn.Utils.JSON (slashedRecordFields)
 import Core.Descriptor
-import Core.Fulfillment
 import Core.Location
 import Core.Price
 import Data.Aeson
 import Relude hiding (id)
+import Core.OnSearch.Fare
+import Core.OnSearch.Route
+import Core.OnSearch.Departure
 
 newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog
@@ -40,8 +42,11 @@ data Descriptor = Descriptor
 data Provider = Provider
   { id :: Text,
     descriptor :: DescriptorId,
-    fulfillments :: [Fulfillment],
+    -- categories?
     locations :: [LocationDetails],
+    routes :: [Route],
+    fares :: [Fare],
+    departures :: [Departure],
     items :: [Item]
   }
   deriving (Generic, FromJSON, Show, ToJSON)

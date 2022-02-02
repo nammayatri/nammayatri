@@ -1,8 +1,8 @@
 module Core.Search where
 
+import Beckn.Prelude
 import Core.Location
 import Data.Aeson
-import Beckn.Prelude
 
 newtype SearchMessage = SearchMessage
   { intent :: Intent

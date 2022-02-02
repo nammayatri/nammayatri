@@ -13,7 +13,7 @@ data LocationDetails = LocationDetails
   { id :: Text,
     descriptor :: DescriptorId,
     gps :: Gps,
-    station_code :: Text
+    stop_code :: Text
   }
   deriving (Generic, Show)
 
