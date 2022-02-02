@@ -73,7 +73,6 @@ in
 , xAppUri = appUri
 , hostName = "juspay.in"
 , nwAddress = "https://api.sandbox.beckn.juspay.in/latest/bpp/cab/v1"
-, authEntity =
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , caseExpiry = Some +7200

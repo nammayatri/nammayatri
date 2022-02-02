@@ -1,4 +1,5 @@
 let common = ./common.dhall
+let sec = ./secrets/public-transport-bap.dhall
 
 let esqDBCfg =
   { connectHost = "localhost"
