@@ -65,7 +65,7 @@ let geofencingConfig =
 , destination = GeoRestriction.Regions ["Kerala", "Kochi"]
 }
 
-let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
+let gwUri = "https://gateway-1.beckn.nsdl.co.in"
 
 let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v2"
 
