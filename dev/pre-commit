@@ -43,4 +43,24 @@ for MODULE in $(ls dev/migrations); do
   fi
 done
 
+DHALL_FILES=$(git diff --name-only --diff-filter=ACMR HEAD "*.dhall")
+
+if ! which dhall >& /dev/null; then
+  echo "Could not find 'dhall', is it installed?"
+  exit 1
+fi
+
+for file in $DHALL_FILES; do
+  if ! dhall --file "${file}" 1>/dev/null; then
+    BAD_DHALL_FILES+=" ${file}"
+    DHALL_FAIL="true"
+  fi
+done
+
+if [ -n "$DHALL_FAIL" ]; then
+  echo "Invalid dhall files:"
+  echo "${BAD_DHALL_FILES}"
+  exit 1
+fi
+
 exit 0
