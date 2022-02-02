@@ -1,16 +1,17 @@
 module MockData.OnSearch where
 
-import Beckn.Mock.Utils
-import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Types.Core.Migration.Gps
 import Core.Descriptor
-import Core.Fulfillment
 import Core.Location
 import Core.OnSearch
 import Core.Price
-import Core.Time
-import Data.Maybe
 import Relude hiding (id, state)
+import Core.OnSearch.Route
+import Core.OnSearch.Fare
+import Beckn.Types.Amount
+import Core.OnSearch.Departure
+import Data.Time.Clock
+import Core.OnSearch.Item
 
 mockBppDescriptor :: Descriptor
 mockBppDescriptor =
@@ -32,61 +33,26 @@ providerDescriptorId =
     { name = providerName
     }
 
-onSearchCatalog :: OnSearchCatalog
-onSearchCatalog =
+onSearchCatalog :: UTCTime -> OnSearchCatalog
+onSearchCatalog time =
   let bpp_descriptor = mockBppDescriptor
-      bpp_providers = [mockProvider]
+      bpp_providers = [mockProvider time]
       catalog = Catalog {..}
    in OnSearchCatalog {..}
 
 mockProviderId :: Text
 mockProviderId = "SWTD"
 
-mockProvider :: Provider
-mockProvider =
+mockProvider :: UTCTime -> Provider
+mockProvider time =
   let id = mockProviderId
       descriptor = providerDescriptorId
-      fulfillments = mockFulfillments
       locations = mockLocations
+      routes = mockRoutes
+      fares = mockFares
+      departures = mockDepartures time
       items = mockItems
    in Provider {..}
-
-mockFulfillments :: [Fulfillment]
-mockFulfillments = [mockFulfillmentEMB, mockFulfillmentABC]
-
-findFulfillment :: Text -> Maybe Fulfillment
-findFulfillment fulfId = find (\f -> f.id == fulfId) mockFulfillments
-
-tripIdEMB, tripIdABC :: Text
-tripIdEMB = "TRIP001_EKM_EMB"
-tripIdABC = "TRIP001_EKM_ABC"
-
-buildMockFulfillment :: Text -> Text -> Text -> Fulfillment
-buildMockFulfillment tripId depart arrival =
-  let id = tripId
-      start =
-        FulfillmentLocationTime
-          { location = LocationId depart,
-            time =
-              Time
-                { label = "Departure Time",
-                  timestamp = fromJust $ readUTCTime "2021-11-17 09:54"
-                }
-          }
-      end =
-        FulfillmentLocationTime
-          { location = LocationId arrival,
-            time =
-              Time
-                { label = "Arrival time",
-                  timestamp = fromJust $ readUTCTime "2021-11-17 12:54"
-                }
-          }
-   in Fulfillment {..}
-
-mockFulfillmentEMB, mockFulfillmentABC :: Fulfillment
-mockFulfillmentEMB = buildMockFulfillment tripIdEMB locationLabelEKM locationLabelEMB
-mockFulfillmentABC = buildMockFulfillment tripIdABC locationLabelEKM locationLabelABC
 
 locationLabelEKM, locationLabelEMB, locationLabelABC :: Text
 locationLabelEKM = "EKM"
@@ -98,7 +64,7 @@ mockLocations = [locationEKM, locationEMB, locationABC]
 
 buildLocation :: Text -> Text -> Gps -> LocationDetails
 buildLocation id name gps =
-  let station_code = id
+  let stop_code = id
       descriptor = DescriptorId {..}
    in LocationDetails {..}
 
@@ -119,33 +85,59 @@ locationEKM = buildLocation locationLabelEKM "Ernakulam" locationGpsEKM
 locationEMB = buildLocation locationLabelEMB "Embarkment" locationGpsEMB
 locationABC = buildLocation locationLabelABC "Test Station" locationGpsABC
 
+mockRoutes :: [Route]
+mockRoutes = [routeEkmAbc, routeEkmEmb]
+
+routeEkmAbc, routeEkmEmb :: Route
+routeEkmAbc = buildRoute routeEkmAbcCode routeEkmAbcId locationLabelEKM locationLabelABC
+routeEkmEmb = buildRoute routeEkmEmbCode routeEkmEmbId locationLabelEKM locationLabelEMB
+
+routeEkmAbcId, routeEkmEmbId :: Text
+routeEkmAbcId = "EKM-ABC"
+routeEkmEmbId = "EKM-EMB"
+
+routeEkmAbcCode, routeEkmEmbCode :: Text
+routeEkmAbcCode = "AAA-DDD"
+routeEkmEmbCode = "BBB-CCC"
+
+buildRoute :: Text -> Text -> Text -> Text -> Route
+buildRoute code id start end = do
+  let start_stop = start
+      end_stop = end
+      route_code = code
+  Route {..}
+
+mockFares :: [Fare]
+mockFares = [fareEkmAbc1, fareEkmEmb2]
+
+fareEkmAbc1, fareEkmEmb2 :: Fare
+fareEkmAbc1 = buildFare "1" routeEkmAbcId 60
+fareEkmEmb2 = buildFare "2" routeEkmEmbId 30
+
+buildFare :: Text -> Text -> Amount -> Fare
+buildFare id route_id amount = do
+  let price = Price "INR" amount
+  Fare {..}
+
+mockDepartures :: UTCTime -> [Departure]
+mockDepartures time = map ($ time) [departureEkmAbc1, departureEkmEmb2]
+
+buildDeparture :: Text -> Text -> UTCTime -> Departure
+buildDeparture id route_id start = do
+  let start_time = TimeStamp start
+      hour = 60*60
+      end_time = TimeStamp $ addUTCTime hour start 
+  Departure {..}
+
+departureEkmAbc1 :: UTCTime -> Departure
+departureEkmAbc1 = buildDeparture "1" routeEkmAbcId
+
+departureEkmEmb2 :: UTCTime -> Departure
+departureEkmEmb2 = buildDeparture "2" routeEkmEmbId
+
 mockItems :: [Item]
-mockItems = [itemEMB, itemABC]
+mockItems = [itemEkmAbc1, itemEkmEmb2]
 
-itemEMB, itemABC :: Item
-itemEMB = buildItem tripIdEMB priceEMB
-itemABC = buildItem tripIdABC priceABC
-
-buildItem :: Text -> Price -> Item
-buildItem tripId price =
-  let id = "ONE_WAY_TICKET"
-      fulfillment_id = tripId
-      descriptor = DescriptorId {name = "One Way Ticket"}
-   in Item {..}
-
-buildPrice :: (Integral a, Show a) => a -> Price
-buildPrice int = buildPriceDecimal $ DecimalValue $ show $ abs int
-
-buildPriceDecimal :: DecimalValue -> Price
-buildPriceDecimal int =
-  Price
-    { currency = "INR",
-      value = int
-    }
-
-priceEMB, priceABC :: Price
-priceEMB = buildPrice (30 :: Int)
-priceABC = buildPrice (40 :: Int)
-
-findItem :: Text -> Text -> Maybe Item
-findItem itId fulfId = find (\i -> i.fulfillment_id == fulfId && i.id == itId) mockItems
+itemEkmAbc1, itemEkmEmb2 :: Item
+itemEkmAbc1 = Item "1" "1" True
+itemEkmEmb2 = Item "2" "2" True

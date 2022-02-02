@@ -4,12 +4,12 @@ import Beckn.Types.Core.Migration.Image (Image (..))
 import Beckn.Utils.JSON (slashedRecordFields)
 import Core.Descriptor
 import Core.Location
-import Core.Price
-import Data.Aeson
-import Relude hiding (id)
+import Core.OnSearch.Departure
 import Core.OnSearch.Fare
 import Core.OnSearch.Route
-import Core.OnSearch.Departure
+import Data.Aeson
+import Relude hiding (id)
+import Core.OnSearch.Item
 
 newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog
@@ -50,11 +50,3 @@ data Provider = Provider
     items :: [Item]
   }
   deriving (Generic, FromJSON, Show, ToJSON)
-
-data Item = Item
-  { id :: Text,
-    fulfillment_id :: Text,
-    descriptor :: DescriptorId,
-    price :: Price
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
