@@ -25,12 +25,6 @@ content-type: application/json
                 "start": {
                     "location": {
                         "gps": "9.898056, 76.324047"
-                    },
-                    "time": {
-                        "range": {
-                            "start": "2021-11-17T12:00:00.000Z",
-                            "end": "2021-11-17T18:00:00.000Z"
-                        }
                     }
                 },
                 "end": {
