@@ -12,11 +12,11 @@ BAD_HS_FILES=""
 for file in $HS_FILES; do
   if ! ormolu -m check -o '-XTypeApplications' -o '-fplugin=RecordDotPreprocessor' "${file}"; then
     BAD_HS_FILES+=" ${file}"
-    ORMOLU_FAIL="true"
+    FAIL="true"
   fi
 done
 
-if [ -n "$ORMOLU_FAIL" ]; then
+if [ -n "$FAIL" ]; then
   ORMOLU_CMD="ormolu -m inplace -o -fplugin=RecordDotPreprocessor ${BAD_HS_FILES}"
 
   echo "Code style issues found in:"
@@ -31,15 +31,36 @@ if [ -n "$ORMOLU_FAIL" ]; then
   fi
 fi
 
-if [ -n "$ORMOLU_FAIL" ]; then
-  exit 1
+mac_os_rm_trailing_ws () {
+  BACKUP_EXTENSION=pqmc98hxvymotiyb4rz34
+  sed -i".${BACKUP_EXTENSION}" -e 's/  *$//' $1
+  find ./ -name "*.${BACKUP_EXTENSION}" -exec rm {} +
+}
+
+ALL_CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR HEAD)
+[ -n "$ALL_CHANGED_FILES" ] && FILES_WITH_TRAILING_WS=$(grep -r -l '  *$' $ALL_CHANGED_FILES)
+
+if [ -n "$FILES_WITH_TRAILING_WS" ]; then
+  echo "Trailing spaces found in:"
+  echo "$FILES_WITH_TRAILING_WS"
+
+  if [ -n "$BECKN_DISABLE_AUTOFORMAT" ]; then
+    echo "Fix them with:"
+    echo "sed -e 's/  *$//' ${FILES_WITH_TRAILING_WS}"
+  else
+    echo "Removing trailing spaces, please check and git add the changes"
+    [[ $OSTYPE == 'darwin'* ]] \
+      && mac_os_rm_trailing_ws "${FILES_WITH_TRAILING_WS}" \
+      || sed -i -e 's/  *$//' ${FILES_WITH_TRAILING_WS}
+  fi
+  FAIL="true"
 fi
 
 for MODULE in $(ls dev/migrations); do
   MIGRATION_DIR="dev/migrations/${MODULE}"
   if [ $(ls ${MIGRATION_DIR} | cut -c-4 | uniq | wc -l) != $(ls ${MIGRATION_DIR} | wc -l) ]; then
     echo "There are overlapping migration indices in ${MODULE}"
-    exit 1
+    FAIL="true"
   fi
 done
 
@@ -60,7 +81,11 @@ done
 if [ -n "$DHALL_FAIL" ]; then
   echo "Invalid dhall files:"
   echo "${BAD_DHALL_FILES}"
-  exit 1
+  FAIL="true"
 fi
 
-exit 0
+if [ -n "$FAIL" ]; then
+  exit 1
+else
+  exit 0
+fi
