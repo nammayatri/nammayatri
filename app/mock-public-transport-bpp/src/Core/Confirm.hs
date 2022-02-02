@@ -1,14 +1,14 @@
 module Core.Confirm where
 
+import Beckn.Types.Amount
+import Beckn.Types.Core.Migration.DecimalValue
 import Core.Billing
+import Core.Confirm.Item
 import Core.Payment
 import Core.Provider
 import Core.Quotation
 import Data.Aeson
 import Relude hiding (id)
-import Core.Confirm.Item
-import Beckn.Types.Amount
-import Beckn.Types.Core.Migration.DecimalValue
 
 newtype ConfirmMessage = ConfirmMessage
   { order :: Order
@@ -19,14 +19,14 @@ data Order = Order
   { provider :: ProviderId,
     items :: [Item],
     billing :: Billing,
---    fulfillment :: FulfillmentId,
+    --    fulfillment :: FulfillmentId,
     quote :: Quotation,
     payment :: Payment Params
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data Params = Params
---  { amount :: DecimalValue,
+  --  { amount :: DecimalValue,
   { amount :: Amount,
     currency :: Text
   }

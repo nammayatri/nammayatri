@@ -11,5 +11,3 @@ data Params = Params
     currency :: Text
   }
   deriving (Generic, Eq, Show, FromJSON, ToJSON)
-
-

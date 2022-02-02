@@ -1,23 +1,22 @@
 module MockData.OnConfirm where
 
+import Beckn.Types.Core.Migration.DecimalValue
 import qualified Core.Confirm as Confirm
 import qualified Core.Confirm.Item as Confirm
 import Core.Descriptor
+import Core.Fulfillment
+import Core.Location (LocationId (LocationId))
 import Core.OnConfirm
+import Core.OnConfirm.Item
+import Core.OnConfirm.Order
+import Core.OnConfirm.Params
 import Core.OrderState
 import Core.Payment
+import Core.Quantity
+import Core.Time
 import Data.Either.Extra
---import MockData.OnSearch
 import Relude hiding (id, state)
 import Servant.Client
-import Beckn.Types.Core.Migration.DecimalValue
-import Core.Fulfillment
-import Core.Location (LocationId(LocationId))
-import Core.Time
-import Core.Quantity
-import Core.OnConfirm.Item
-import Core.OnConfirm.Params
-import Core.OnConfirm.Order
 
 buildOnConfirmMessage :: Text -> Confirm.Order -> Either Text OnConfirmMessage
 buildOnConfirmMessage orderId confOrd = do
@@ -30,7 +29,6 @@ buildOnConfirmOrder orderId confOrd = do
       state = Active
       provider = confOrd.provider
       billing = confOrd.billing
---  fulfillment <- maybeToEither "failed to find fulfillment" $ findFulfillment reqFulfillment
   item <- maybe (Left "no items found") Right $ listToMaybe confOrd.items
   let quote = confOrd.quote
       payment =
@@ -54,14 +52,16 @@ buildOnConfirmOrder orderId confOrd = do
 buildOnConfirmFulfillment :: Confirm.Item -> Fulfillment
 buildOnConfirmFulfillment item = do
   let id = item.route_code
-      start = FulfillmentLocationTime
-        { location = LocationId item.start_stop,
-          time = Time "Departure time" item.start_time
-        }
-      end = FulfillmentLocationTime
-        { location = LocationId item.end_stop,
-          time = Time "Arrival time" item.end_time
-        }
+      start =
+        FulfillmentLocationTime
+          { location = LocationId item.start_stop,
+            time = Time "Departure time" item.start_time
+          }
+      end =
+        FulfillmentLocationTime
+          { location = LocationId item.end_stop,
+            time = Time "Arrival time" item.end_time
+          }
   Fulfillment {..}
 
 addQrCode :: Confirm.Item -> Item

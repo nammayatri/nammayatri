@@ -1,8 +1,8 @@
 module Core.OnConfirm.Item where
 
+import Beckn.Prelude
 import Core.Descriptor
 import Core.Quantity
-import Beckn.Prelude
 
 data Item = Item
   { id :: Text,
@@ -11,5 +11,3 @@ data Item = Item
     quantity :: Quantity
   }
   deriving (Generic, Show, ToJSON, FromJSON)
-
-

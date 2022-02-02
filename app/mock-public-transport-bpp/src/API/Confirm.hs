@@ -11,6 +11,7 @@ import Core.Confirm
 import Core.OnCancel
 import Core.OnConfirm
 import qualified Core.OnConfirm as OnConfirm
+import qualified Core.OnConfirm.Order as OnConfirm
 import Core.OnStatus
 import Core.Payment
 import Environment
@@ -18,7 +19,6 @@ import ExternalAPI
 import MockData.OnConfirm
 import qualified Redis
 import Relude
-import qualified Core.OnConfirm.Order as OnConfirm
 
 confirmServer :: BecknReq ConfirmMessage -> MockM AppEnv AckResponse
 confirmServer confirmReq@(BecknReq ctx msg) = do
@@ -43,8 +43,8 @@ data HandlingWay = Success | FailedPayment | LinkExpired
 
 defineHandlingWay :: Text -> HandlingWay
 defineHandlingWay = \case
-  "TRIP001_EKM_EMB" -> Success
-  "TRIP001_EKM_ABC" -> LinkExpired
+  "EKM-ABC" -> Success
+  "EKM-EMB" -> LinkExpired
   _ -> FailedPayment
 
 trackPayment :: Text -> MockM AppEnv ()

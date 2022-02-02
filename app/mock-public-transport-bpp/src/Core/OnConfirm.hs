@@ -1,10 +1,10 @@
 module Core.OnConfirm where
 
+import Core.OnConfirm.Order
+import Core.OnConfirm.Params
+import Core.Payment
 import Data.Aeson
 import Relude hiding (State, id, ord, state)
-import Core.Payment
-import Core.OnConfirm.Params
-import Core.OnConfirm.Order
 
 newtype OnConfirmMessage = OnConfirmMessage
   { order :: Order

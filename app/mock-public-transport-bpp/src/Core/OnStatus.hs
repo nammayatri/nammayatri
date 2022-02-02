@@ -1,8 +1,8 @@
 module Core.OnStatus where
 
+import Core.OnStatus.Order
 import Data.Aeson
 import Relude hiding (State, id, state)
-import Core.OnStatus.Order
 
 newtype OnStatusMessage = OnStatusMessage
   { order :: Order
