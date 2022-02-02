@@ -1,4 +1,4 @@
-module Core.Time where
+module Core.Common.Time where
 
 import Beckn.Prelude
 

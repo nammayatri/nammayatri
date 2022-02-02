@@ -9,12 +9,9 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
-import qualified Core.API.OnSearch as OnSearch
-import qualified Core.Context as Context
-import qualified Core.DecimalValue as DecimalValue
-import qualified Core.Location as Location
-import qualified Core.OnSearch.Catalog as Catalog
-import qualified Core.OnSearch.Item as Item
+import qualified Core.Common.Context as Context
+import qualified Core.Common.DecimalValue as DecimalValue
+import qualified Core.OnSearch as OnSearch
 import qualified Domain.ParkingLocation as DParkingLocation
 import qualified Domain.Quote as DQuote
 import qualified Domain.Search as DSearch
@@ -38,7 +35,7 @@ handler _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err
   return Ack
 
-searchCbService :: EsqDBFlow m r => BecknCallbackReq OnSearch.OnSearchCatalog -> Catalog.Catalog -> m ()
+searchCbService :: EsqDBFlow m r => BecknCallbackReq OnSearch.OnSearchCatalog -> OnSearch.Catalog -> m ()
 searchCbService req catalog = do
   let searchRequestId = Id $ req.context.transaction_id
   _searchRequest <- QSearch.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
@@ -67,7 +64,7 @@ buildQuote ::
   BaseUrl ->
   Text ->
   [DParkingLocation.ParkingLocation] ->
-  Item.Item ->
+  OnSearch.Item ->
   m DQuote.Quote
 buildQuote now searchId bppUrl bppId parkingLocations item = do
   let parkingSpaceName = item.descriptor.name
@@ -89,7 +86,7 @@ buildQuote now searchId bppUrl bppId parkingLocations item = do
         ..
       }
 
-buildParkingLocation :: MonadGuid m => UTCTime -> Location.Location -> m DParkingLocation.ParkingLocation
+buildParkingLocation :: MonadGuid m => UTCTime -> OnSearch.Location -> m DParkingLocation.ParkingLocation
 buildParkingLocation now location = do
   id <- generateGUID
   return

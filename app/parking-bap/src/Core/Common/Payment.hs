@@ -1,4 +1,4 @@
-module Core.Payment where
+module Core.Common.Payment where
 
 import Beckn.Prelude
 import Beckn.Types.App ()

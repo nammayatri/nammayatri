@@ -1,4 +1,4 @@
-module Core.Descriptor where
+module Core.Common.Descriptor where
 
 import Beckn.Prelude
 

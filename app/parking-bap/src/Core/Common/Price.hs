@@ -1,7 +1,7 @@
-module Core.Price where
+module Core.Common.Price where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
+import Core.Common.DecimalValue (DecimalValue)
 
 data Price = Price
   { currency :: Text,

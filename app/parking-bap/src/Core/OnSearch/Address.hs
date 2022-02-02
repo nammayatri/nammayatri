@@ -1,4 +1,4 @@
-module Core.Address (Address (..)) where
+module Core.OnSearch.Address (Address (..)) where
 
 import Beckn.Prelude
 

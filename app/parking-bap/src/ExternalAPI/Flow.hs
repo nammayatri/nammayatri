@@ -10,6 +10,7 @@ import qualified Core.API.Confirm as Confirm
 import qualified Core.API.Search as Search
 import qualified Core.API.Status as Status
 import qualified Core.Confirm as Confirm
+import qualified Core.Search as Search
 import qualified Core.Status as Status
 import qualified Data.Text as T
 import GHC.Records.Extra

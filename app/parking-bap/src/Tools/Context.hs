@@ -5,8 +5,8 @@ import qualified Beckn.Product.Validation.Context as Validation
 import Beckn.Types.Common
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.BaseUrl (showBaseUrlText)
-import qualified Core.Context as Context
-import qualified Core.Domain as Domain
+import qualified Core.Common.Context as Context
+import qualified Core.Common.Domain as Domain
 
 buildContext ::
   (MonadTime m, MonadGuid m) =>

@@ -1,8 +1,8 @@
-module Core.Item where
+module Core.OnConfirm.Item where
 
 import Beckn.Prelude
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
-import Core.Price
+import Core.Common.Price
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 
 data Item = Item

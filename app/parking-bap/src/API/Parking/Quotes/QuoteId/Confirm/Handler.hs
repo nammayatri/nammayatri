@@ -7,8 +7,11 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import qualified Core.Common.Billing as Billing
+import qualified Core.Common.Context as Context
+import qualified Core.Common.Time as Time
+import qualified Core.Common.Vehicle as Vehicle
 import qualified Core.Confirm as Confirm
-import qualified Core.Context as Context
 import qualified Domain.Booking as DBooking
 import qualified Domain.Quote as DQuote
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -62,12 +65,12 @@ confirm quoteId _ req = withFlowHandlerAPI $ do
             requestorName = req.requestorName
           }
     mkConfirmMessage booking = do
-      let vehicle = Confirm.Vehicle booking.vehicleNumber
-          end = Confirm.StartEnd $ Confirm.Time booking.toDate
-          start = Confirm.StartEnd $ Confirm.Time booking.fromDate
+      let vehicle = Vehicle.Vehicle booking.vehicleNumber
+          end = Confirm.StartEnd $ Time.Time booking.toDate
+          start = Confirm.StartEnd $ Time.Time booking.fromDate
           fulfillment = Confirm.Fulfillment {..}
           billing =
-            Confirm.Billing
+            Billing.Billing
               { phone = booking.requestorNumber,
                 name = booking.requestorName
               }

@@ -2,7 +2,7 @@ module Core.Confirm.Order where
 
 import Beckn.Prelude
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
-import Core.Billing
+import Core.Common.Billing
 import Core.Confirm.Fulfillment
 import Core.Confirm.Item
 import Core.Confirm.Provider

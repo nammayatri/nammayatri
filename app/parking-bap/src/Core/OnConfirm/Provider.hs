@@ -1,8 +1,8 @@
-module Core.Provider where
+module Core.OnConfirm.Provider where
 
 import Beckn.Prelude
-import Core.Descriptor
-import Core.Location
+import Core.Common.Descriptor
+import Core.OnConfirm.Location
 
 data Provider = Provider
   { id :: Text,

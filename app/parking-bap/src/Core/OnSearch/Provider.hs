@@ -2,10 +2,10 @@ module Core.OnSearch.Provider (Provider (..)) where
 
 import Beckn.Prelude hiding (exp)
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
-import Core.Descriptor
-import Core.Location (Location)
+import Core.Common.Descriptor
 import Core.OnSearch.Category (Category)
 import Core.OnSearch.Item (Item)
+import Core.OnSearch.Location (Location)
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 
 data Provider = Provider

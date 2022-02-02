@@ -8,10 +8,10 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
-import qualified Core.Context as Context
-import Core.OnConfirm
+import qualified Core.Common.Context as Context
+import qualified Core.Common.Payment as Payment
 import qualified Core.OnStatus as OnStatus
-import Core.Order (OrderState (ACTIVE, CANCELLED, COMPLETE))
+import Core.OnStatus.Order (OrderState (ACTIVE, CANCELLED, COMPLETE))
 import qualified Domain.Booking as BookingStatus
 import qualified Domain.PaymentTransaction as PaymentStatus
 import qualified Storage.Queries.Booking as QBooking
@@ -55,9 +55,9 @@ handleOnStatus msg = do
       Just CANCELLED -> BookingStatus.CANCELLED
       Nothing -> BookingStatus.AWAITING_PAYMENT
     convertPaymentStatus = \case
-      (NOT_PAID, PAYMENT_LINK_CREATED) -> PaymentStatus.PENDING
-      (NOT_PAID, PAYMENT_LINK_EXPIRED) -> PaymentStatus.FAILED
-      (NOT_PAID, _) -> PaymentStatus.PENDING
-      (PAID, CAPTURED) -> PaymentStatus.SUCCESS
-      (PAID, REFUNDED) -> PaymentStatus.FAILED
-      (PAID, _) -> PaymentStatus.PENDING
+      (Payment.NOT_PAID, Payment.PAYMENT_LINK_CREATED) -> PaymentStatus.PENDING
+      (Payment.NOT_PAID, Payment.PAYMENT_LINK_EXPIRED) -> PaymentStatus.FAILED
+      (Payment.NOT_PAID, _) -> PaymentStatus.PENDING
+      (Payment.PAID, Payment.CAPTURED) -> PaymentStatus.SUCCESS
+      (Payment.PAID, Payment.REFUNDED) -> PaymentStatus.FAILED
+      (Payment.PAID, _) -> PaymentStatus.PENDING

@@ -2,8 +2,8 @@ module Core.Search.Intent where
 
 import Beckn.Prelude
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Core.Common.Time (Time)
 import Core.Search.Location
-import Core.Time (Time)
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 
 newtype Intent = Intent

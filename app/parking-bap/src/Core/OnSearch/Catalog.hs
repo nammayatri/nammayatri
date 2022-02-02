@@ -2,7 +2,7 @@ module Core.OnSearch.Catalog (Catalog (..)) where
 
 import Beckn.Prelude hiding (exp)
 import Beckn.Utils.JSON (slashedRecordFields)
-import Core.Descriptor (Descriptor)
+import Core.Common.Descriptor (Descriptor)
 import Core.OnSearch.Provider (Provider)
 import Data.OpenApi (ToSchema (..), fromAesonOptions, genericDeclareNamedSchema)
 

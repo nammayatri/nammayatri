@@ -1,8 +1,8 @@
-module Core.Location where
+module Core.OnSearch.Location where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.Gps (Gps)
-import Core.Address (Address)
+import Core.Common.Gps (Gps)
+import Core.OnSearch.Address (Address)
 
 data Location = Location
   { id :: Text,

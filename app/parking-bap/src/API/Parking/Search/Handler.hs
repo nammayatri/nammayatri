@@ -9,8 +9,10 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified Core.API.Search as Search
-import qualified Core.Context as Context
+import qualified Core.Common.Context as Context
+import qualified Core.Common.Gps as Gps
+import qualified Core.Common.Time as Time
+import qualified Core.Search as Search
 import qualified Data.Text as T
 import qualified Domain.Search as DSearch
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -37,18 +39,18 @@ handler personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     ExternalAPI.search (BecknReq context $ Search.SearchIntent intent)
   return . API.SearchRes $ searchRequest.id
 
-makeGps :: MonadFlow m => Gps -> m Search.Gps
+makeGps :: MonadFlow m => Gps -> m Gps.Gps
 makeGps location = do
   lat <- readMaybe (T.unpack location.lat) & fromMaybeM (InternalError "Unable to parse lat")
   lon <- readMaybe (T.unpack location.lon) & fromMaybeM (InternalError "Unable to parse lon")
-  pure Search.Gps {..}
+  pure Gps.Gps {..}
 
 buildSearchRequest ::
   MonadFlow m =>
   Id DSearch.Person ->
   API.SearchReq ->
   UTCTime ->
-  Search.Gps ->
+  Gps.Gps ->
   m DSearch.Search
 buildSearchRequest bapPersonId searchReq now gps = do
   id <- generateGUID
@@ -63,7 +65,7 @@ buildSearchRequest bapPersonId searchReq now gps = do
         createdAt = now
       }
 
-mkIntent :: API.SearchReq -> Search.Gps -> Search.Intent
+mkIntent :: API.SearchReq -> Gps.Gps -> Search.Intent
 mkIntent req gps =
   Search.Intent
     { fulfillment =
@@ -71,7 +73,7 @@ mkIntent req gps =
           { start =
               Search.TimeInfo
                 { time =
-                    Search.Time
+                    Time.Time
                       { timestamp = req.fromDate
                       }
                 },
@@ -82,7 +84,7 @@ mkIntent req gps =
                       { gps = gps
                       },
                   time =
-                    Search.Time
+                    Time.Time
                       { timestamp = req.toDate
                       }
                 }

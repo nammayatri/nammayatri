@@ -8,7 +8,7 @@ import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
-import qualified Core.Context as Context
+import qualified Core.Common.Context as Context
 import qualified Core.OnConfirm as OnConfirm
 import qualified Domain.Booking as DBooking
 import Domain.PaymentTransaction (PaymentStatus (PENDING))
