@@ -1,7 +1,6 @@
-module Core.Fulfillment where
+module Core.OnConfirm.Fulfillment where
 
-import Core.Location
-import Core.Time
+import Core.OnConfirm.Time
 import Data.Aeson
 import Relude hiding (id)
 
@@ -19,6 +18,11 @@ data FulfillmentLocationTime = FulfillmentLocationTime
   deriving (Generic, Show, FromJSON, ToJSON)
 
 newtype FulfillmentId = FulfillmentId
+  { id :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+newtype LocationId = LocationId
   { id :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)

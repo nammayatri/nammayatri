@@ -1,4 +1,4 @@
-module Core.Quantity where
+module Core.OnConfirm.Quantity where
 
 import Beckn.Prelude
 

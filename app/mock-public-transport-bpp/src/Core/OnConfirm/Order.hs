@@ -2,7 +2,7 @@ module Core.OnConfirm.Order where
 
 import Beckn.Prelude
 import Core.Billing
-import Core.Fulfillment
+import Core.OnConfirm.Fulfillment
 import Core.OnConfirm.Item
 import Core.OnConfirm.Params
 import Core.OrderState

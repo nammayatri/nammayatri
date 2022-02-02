@@ -2,7 +2,7 @@ module Core.OnConfirm.Item where
 
 import Beckn.Prelude
 import Core.Descriptor
-import Core.Quantity
+import Core.OnConfirm.Quantity
 
 data Item = Item
   { id :: Text,

@@ -1,4 +1,4 @@
-module Core.Time where
+module Core.OnConfirm.Time where
 
 import Data.Aeson
 import Data.Time.Clock

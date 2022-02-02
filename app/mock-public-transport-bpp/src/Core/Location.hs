@@ -22,8 +22,3 @@ instance FromJSON LocationDetails where
 
 instance ToJSON LocationDetails where
   toJSON = genericToJSON stripPrefixUnderscoreIfAny
-
-newtype LocationId = LocationId
-  { id :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)

@@ -4,16 +4,15 @@ import Beckn.Types.Core.Migration.DecimalValue
 import qualified Core.Confirm as Confirm
 import qualified Core.Confirm.Item as Confirm
 import Core.Descriptor
-import Core.Fulfillment
-import Core.Location (LocationId (LocationId))
 import Core.OnConfirm
+import Core.OnConfirm.Fulfillment
 import Core.OnConfirm.Item
 import Core.OnConfirm.Order
 import Core.OnConfirm.Params
+import Core.OnConfirm.Quantity
+import Core.OnConfirm.Time
 import Core.OrderState
 import Core.Payment
-import Core.Quantity
-import Core.Time
 import Data.Either.Extra
 import Relude hiding (id, state)
 import Servant.Client
