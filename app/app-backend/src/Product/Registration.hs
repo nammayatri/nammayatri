@@ -142,7 +142,7 @@ verify tokenId req = withFlowHandlerAPI $ do
     Notify.notifyOnRegistration regToken person.id deviceToken
   updPerson <- Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
   decPerson <- decrypt updPerson
-  personAPIEntity <- SP.buildPersonAPIEntity decPerson
+  let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthVerifyRes token personAPIEntity
   where
     checkForExpiry authExpiry updatedAt =
