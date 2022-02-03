@@ -5,167 +5,340 @@ metadata:
   namespace: atlas
 spec:
   gateways:
-    - atlas-internal
+  - atlas-internal
   hosts:
-    - api.sandbox.beckn.juspay.in
+  - api.sandbox.beckn.juspay.in
   http:
-    - match:
-        - uri:
-            prefix: /map/otp/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: otp-api
-            port:
-              number: 8080
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /otp/
-      route:
-        - destination:
-            host: otp-api
-            port:
-              number: 8080
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /map/grphr/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: graphhopper
-            port:
-              number: 8989
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /maps/
-        - uri:
-            prefix: /info
-        - uri:
-            prefix: /i18n/
-        - uri:
-            prefix: /route
-      route:
-        - destination:
-            host: graphhopper
-            port:
-              number: 8989
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /app/support/
-        - uri:
-            prefix: /app/support
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-app-customer-support-sandbox
-            port:
-              number: 3000
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /app/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-app-backend-sandbox
-            port:
-              number: 8013
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /transport/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-transport-sandbox
-            port:
-              number: 8014
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /fmd/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-fmd-wrapper-083-sandbox
-            port:
-              number: 8018
-      timeout: 40s
-    - match:
-        - headers:
-            authorization:
-              prefix: Signature
-          uri:
-            prefix: /gateway/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-gateway-sandbox
-            port:
-              number: 8015
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /gateway/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-gateway-083-sandbox
-            port:
-              number: 8015
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /dev/app/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-app-backend-master
-            port:
-              number: 8013
-    - match:
-        - uri:
-            prefix: /dev/transport/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-transport-master
-            port:
-              number: 8014
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /dev/gateway/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-gateway-master
-            port:
-              number: 8015
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /dev/fmd/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-fmd-wrapper-master
-            port:
-              number: 8018
-      timeout: 40s
+  - match:
+    - uri:
+        prefix: /map/otp/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: otp-api
+        port:
+          number: 8080
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /otp/
+    route:
+    - destination:
+        host: otp-api
+        port:
+          number: 8080
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /map/grphr/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: graphhopper
+        port:
+          number: 8989
+    timeout: 1200s
+  - match:
+    - uri:
+        prefix: /maps/
+    - uri:
+        prefix: /info
+    - uri:
+        prefix: /i18n/
+    - uri:
+        prefix: /route
+    route:
+    - destination:
+        host: graphhopper
+        port:
+          number: 8989
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /app/support/
+    - uri:
+        prefix: /app/support
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-customer-support-sandbox
+        port:
+          number: 3000
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /bap/parking/v1/
+    rewrite:
+      uri: /beckn/
+    route:
+    - destination:
+        host: beckn-parking-bap-sandbox
+        port:
+          number: 8022
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /bap/parking/
+    rewrite:
+      uri: /parking/
+    route:
+    - destination:
+        host: beckn-parking-bap-sandbox
+        port:
+          number: 8022
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /bap/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-sandbox
+        port:
+          number: 8013
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /app/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-sandbox
+        port:
+          number: 8013
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /bpp/cab/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-sandbox
+        port:
+          number: 8014
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /transport/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-sandbox
+        port:
+          number: 8014
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /fmd/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-fmd-wrapper-083-sandbox
+        port:
+          number: 8018
+    timeout: 40s
+  - match:
+    - headers:
+        authorization:
+          prefix: Signature
+      uri:
+        prefix: /gateway/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-gateway-sandbox
+        port:
+          number: 8015
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /gateway/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-gateway-083-sandbox
+        port:
+          number: 8015
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dev/app/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-release
+        port:
+          number: 8013
+  - match:
+    - uri:
+        prefix: /dev/bap/parking/v1/
+    rewrite:
+      uri: /beckn/
+    route:
+    - destination:
+        host: beckn-parking-bap-master
+        port:
+          number: 8022
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dev/bap/parking/
+    rewrite:
+      uri: /parking/
+    route:
+    - destination:
+        host: beckn-parking-bap-master
+        port:
+          number: 8022
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dev/bap/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-release
+        port:
+          number: 8013
+  - match:
+    - uri:
+        prefix: /dev/transport/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-release
+        port:
+          number: 8014
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dev/bpp/cab/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-release
+        port:
+          number: 8014
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dev/gateway/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-gateway-release
+        port:
+          number: 8015
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dev/fmd/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-fmd-wrapper-master
+        port:
+          number: 8018
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /bpp/metro/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-kmrl
+        port:
+          number: 8000
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /latest/app/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-master
+        port:
+          number: 8013
+  - match:
+    - uri:
+        prefix: /latest/bap/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-master
+        port:
+          number: 8013
+  - match:
+    - uri:
+        prefix: /latest/transport/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-master
+        port:
+          number: 8014
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /latest/bpp/cab/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-master
+        port:
+          number: 8014
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /latest/bpp/metro/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-kmrl-master
+        port:
+          number: 8000
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /latest/gateway/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-gateway-master
+        port:
+          number: 8015
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /latest/registry/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-mock-registry-master
+        port:
+          number: 8020
+    timeout: 40s
