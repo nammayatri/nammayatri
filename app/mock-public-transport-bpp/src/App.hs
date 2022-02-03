@@ -1,4 +1,4 @@
-module PublicTransportBppApp
+module App
   ( runMockFerryBPP,
   )
 where

@@ -1,7 +1,7 @@
 module Main where
 
 import Beckn.Prelude
-import PublicTransportBppApp
+import App
 
 main :: IO ()
 main = runMockFerryBPP
