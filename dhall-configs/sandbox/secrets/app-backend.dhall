@@ -10,6 +10,6 @@ in
 , dbPassword = "atlas"
 , smsOtpHash = "xxxxxxx"
 , registrySecrets = registrySecrets
-, signingKey = "ftjLZNZ6+QG8KAcNqax3NiX6Cg1bKVVdnbygReTwpFw="
-, encHashSalt = "How wonderful it is that nobody need wait a single moment before starting to improve the world"
+, signingKey = "xxxxxxx"
+, encHashSalt = "xxxxxxx"
 }
