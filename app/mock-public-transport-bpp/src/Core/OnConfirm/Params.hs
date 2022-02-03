@@ -2,7 +2,7 @@ module Core.OnConfirm.Params where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Migration.DecimalValue
-import Core.Payment
+import Core.Common.Payment
 
 data Params = Params
   { transaction_id :: Text,

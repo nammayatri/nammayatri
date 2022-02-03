@@ -1,4 +1,4 @@
-module Core.Payment (module Core.Payment, module Decimal) where
+module Core.Common.Payment (module Core.Common.Payment, module Decimal) where
 
 import Beckn.Types.Core.Migration.DecimalValue as Decimal (DecimalValue (..))
 import Beckn.Utils.JSON

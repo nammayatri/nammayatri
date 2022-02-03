@@ -2,16 +2,17 @@ module MockData.OnSearch where
 
 import Beckn.Types.Amount
 import Beckn.Types.Core.Migration.Gps
-import Core.Descriptor
-import Core.Location
+import Core.OnSearch.LocationDetails
 import Core.OnSearch
 import Core.OnSearch.Departure
 import Core.OnSearch.Fare
 import Core.OnSearch.Item
 import Core.OnSearch.Route
-import Core.Price
+import Core.Common.Price
 import Data.Time.Clock
 import Relude hiding (id, state)
+import Core.OnSearch.Descriptor
+import Core.OnSearch.Provider
 
 mockBppDescriptor :: Descriptor
 mockBppDescriptor =

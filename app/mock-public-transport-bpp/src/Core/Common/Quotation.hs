@@ -1,7 +1,7 @@
-module Core.Quotation where
+module Core.Common.Quotation where
 
 import Beckn.Types.Core.Migration.Duration
-import Core.Price
+import Core.Common.Price
 import Data.Aeson
 import Relude
 

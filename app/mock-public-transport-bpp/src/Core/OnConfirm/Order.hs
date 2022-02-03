@@ -1,14 +1,14 @@
 module Core.OnConfirm.Order where
 
 import Beckn.Prelude
-import Core.Billing
+import Core.Common.Billing
 import Core.OnConfirm.Fulfillment
 import Core.OnConfirm.Item
 import Core.OnConfirm.Params
-import Core.OrderState
-import Core.Payment
-import Core.Provider
-import Core.Quotation
+import Core.Common.OrderState
+import Core.Common.Payment
+import Core.Common.Quotation
+import Core.Common.ProviderId
 
 data Order = Order
   { id :: Text,

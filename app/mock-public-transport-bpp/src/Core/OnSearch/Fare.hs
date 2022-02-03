@@ -1,7 +1,7 @@
 module Core.OnSearch.Fare where
 
 import Beckn.Prelude
-import Core.Price
+import Core.Common.Price
 
 data Fare = Fare
   { id :: Text,

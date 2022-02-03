@@ -13,7 +13,7 @@ import Core.OnConfirm
 import qualified Core.OnConfirm as OnConfirm
 import qualified Core.OnConfirm.Order as OnConfirm
 import Core.OnStatus
-import Core.Payment
+import Core.Common.Payment
 import Environment
 import ExternalAPI
 import MockData.OnConfirm

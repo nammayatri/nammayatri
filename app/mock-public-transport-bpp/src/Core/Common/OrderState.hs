@@ -1,9 +1,9 @@
-module Core.Billing where
+module Core.Common.OrderState where
 
 import Data.Aeson
 import Relude
 
-newtype Billing = Billing
-  { name :: Text
-  }
+data State
+  = Active
+  | CANCELLED
   deriving (Generic, ToJSON, FromJSON, Show)

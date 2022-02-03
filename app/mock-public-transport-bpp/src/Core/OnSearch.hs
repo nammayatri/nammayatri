@@ -1,15 +1,10 @@
 module Core.OnSearch where
 
-import Beckn.Types.Core.Migration.Image (Image (..))
 import Beckn.Utils.JSON (slashedRecordFields)
-import Core.Descriptor
-import Core.Location
-import Core.OnSearch.Departure
-import Core.OnSearch.Fare
-import Core.OnSearch.Item
-import Core.OnSearch.Route
 import Data.Aeson
 import Relude hiding (id)
+import Core.OnSearch.Provider
+import Core.OnSearch.Descriptor
 
 newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog
@@ -29,24 +24,4 @@ instance FromJSON Catalog where
 instance ToJSON Catalog where
   toJSON = genericToJSON slashedRecordFields
 
-data Descriptor = Descriptor
-  { name :: Text,
-    code :: Text,
-    symbol :: Text,
-    short_desc :: Text,
-    long_desc :: Text,
-    images :: [Image]
-  }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
-data Provider = Provider
-  { id :: Text,
-    descriptor :: DescriptorId,
-    -- categories?
-    locations :: [LocationDetails],
-    routes :: [Route],
-    fares :: [Fare],
-    departures :: [Departure],
-    items :: [Item]
-  }
-  deriving (Generic, FromJSON, Show, ToJSON)

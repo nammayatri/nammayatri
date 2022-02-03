@@ -2,11 +2,11 @@ module Core.Confirm where
 
 import Beckn.Types.Amount
 import Beckn.Types.Core.Migration.DecimalValue
-import Core.Billing
+import Core.Common.Billing
 import Core.Confirm.Item
-import Core.Payment
-import Core.Provider
-import Core.Quotation
+import Core.Common.Payment
+import Core.Common.ProviderId
+import Core.Common.Quotation
 import Data.Aeson
 import Relude hiding (id)
 

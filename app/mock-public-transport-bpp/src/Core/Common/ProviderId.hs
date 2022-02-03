@@ -1,4 +1,4 @@
-module Core.Provider where
+module Core.Common.ProviderId where
 
 import Data.Aeson
 import Relude hiding (id)

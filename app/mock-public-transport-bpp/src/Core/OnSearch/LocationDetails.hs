@@ -1,13 +1,9 @@
-module Core.Location where
+module Core.OnSearch.LocationDetails where
 
+import Beckn.Prelude
+import Core.OnSearch.Descriptor
 import Beckn.Types.Core.Migration.Gps
 import Beckn.Utils.JSON
-import Core.Descriptor
-import Data.Aeson
-import Relude hiding (id)
-
-newtype LocationGps = LocationGps {gps :: Gps}
-  deriving (Generic, Show, ToJSON, FromJSON)
 
 data LocationDetails = LocationDetails
   { id :: Text,
