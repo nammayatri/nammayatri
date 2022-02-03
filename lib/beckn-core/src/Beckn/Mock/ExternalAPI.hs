@@ -14,12 +14,13 @@ import Network.HTTP.Client hiding (Proxy)
 import Network.HTTP.Types.Header
 import Relude
 import Servant.Client
+import Beckn.Types.Common
 
 callBapAPI ::
-  forall api a b e.
+  forall api a b e c.
   ( Show a,
-    HasField "selfId" e Text,
-    HasField "uniqueKeyId" e Text,
+    HasInConfig e c "selfId" Text,
+    HasInConfig e c "uniqueKeyId" Text,
     HasClient ClientM api,
     Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
   ) =>
@@ -31,10 +32,10 @@ callBapAPI req = do
   callAPI @api bapUrl req
 
 callAPI ::
-  forall api a b e.
+  forall api a b e c.
   ( Show a,
-    HasField "selfId" e Text,
-    HasField "uniqueKeyId" e Text,
+    HasInConfig e c "selfId" Text,
+    HasInConfig e c "uniqueKeyId" Text,
     HasClient ClientM api,
     Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
   ) =>
@@ -50,15 +51,15 @@ callAPI url req = do
   pure ()
 
 callClientM ::
-  ( HasField "selfId" e Text,
-    HasField "uniqueKeyId" e Text
+  ( HasInConfig e c "selfId" Text,
+    HasInConfig e c "uniqueKeyId" Text
   ) =>
   BaseUrl ->
   ClientM a ->
   MockM e a
 callClientM url clientAction = do
-  subscriberId <- asks (.selfId)
-  uniqueKey <- asks (.uniqueKeyId)
+  subscriberId <- asks (.config.selfId)
+  uniqueKey <- asks (.config.uniqueKeyId)
   liftIO $ do
     let fakeSignature = buildFakeSignature subscriberId uniqueKey
         modifyRequestFunc req = pure req {requestHeaders = (hAuthorization, fakeSignature) : requestHeaders req}

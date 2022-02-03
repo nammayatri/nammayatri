@@ -9,8 +9,8 @@ import Relude
 buildOnActionContext :: Action -> Context -> MockM AppEnv Context
 buildOnActionContext action ctx = do
   now <- getCurrentTime
-  bppId <- asks (.selfId)
-  bppUri <- asks (.selfUri)
+  bppId <- asks (.config.selfId)
+  bppUri <- asks (.config.selfUri)
   let ctx' =
         ctx{action = action,
             bpp_id = Just bppId,

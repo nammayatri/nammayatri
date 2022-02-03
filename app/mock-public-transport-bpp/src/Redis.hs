@@ -29,7 +29,7 @@ instance Cache OnConfirmContextOrder (MockM AppEnv) where
   delKey key = getRedisPrefix >>= \pref -> Hed.delKey pref key
 
 getRedisPrefix :: MockM AppEnv Text
-getRedisPrefix = asks (.redisPrefix)
+getRedisPrefix = asks (.config.redisPrefix)
 
 writeOrder :: Context -> Order -> MockM AppEnv ()
 writeOrder ctx order = do

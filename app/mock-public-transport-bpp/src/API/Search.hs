@@ -17,7 +17,7 @@ searchServer :: BecknReq SearchMessage -> MockM AppEnv AckResponse
 searchServer becknReq@(BecknReq ctx req) = do
   logOutput DEBUG $ "request body: " <> show becknReq
   _ <- fork "call on_search" $ do
-    waitMilliSec <- asks (.callbackWaitTimeMilliSec)
+    waitMilliSec <- asks (.config.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
     context' <- buildOnActionContext ON_SEARCH ctx
     let callbackData = onSearchCatalog req.intent.fulfillment.start.time.range.start

@@ -17,15 +17,10 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { selfId :: Text,
-    uniqueKeyId :: Text,
-    selfUri :: BaseUrl,
-    hedisEnv :: HedisEnv,
-    redisPrefix :: Text,
-    statusWaitTimeSec :: Int,
-    callbackWaitTimeMilliSec :: Int
+  { config :: AppCfg,
+    hedisEnv :: HedisEnv
   }
   deriving (Generic)
 
 buildAppEnv :: HedisEnv -> AppCfg -> AppEnv
-buildAppEnv hedisEnv AppCfg {..} = AppEnv {..}
+buildAppEnv hedisEnv config = AppEnv {..}

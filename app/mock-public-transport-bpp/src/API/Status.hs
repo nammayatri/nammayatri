@@ -26,7 +26,7 @@ statusServer statusReq@(BecknReq ctx msg) = do
   eithCtxOrd <- C.try @(MockM AppEnv) @SomeException (Redis.readOrder orderId)
 
   _ <- fork "call on_status" $ do
-    waitMilliSec <- asks (.callbackWaitTimeMilliSec)
+    waitMilliSec <- asks (.config.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
     let eithOnStatusMsg = bimap (textToError . show) (OnStatusMessage . snd) eithCtxOrd
         onStatusReq = BecknCallbackReq context' eithOnStatusMsg
