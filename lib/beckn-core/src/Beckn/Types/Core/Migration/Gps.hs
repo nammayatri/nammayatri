@@ -11,6 +11,7 @@ import EulerHS.Prelude hiding (many, try, (<|>))
 import Text.Parsec
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as P
+import Beckn.Utils.GenericPretty (PrettyShow)
 
 -- Regular expression: ^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$
 
@@ -18,7 +19,7 @@ data Gps = Gps
   { lat :: Double,
     lon :: Double
   }
-  deriving (Generic, Show, ToSchema)
+  deriving (Generic, Show, ToSchema, PrettyShow)
 
 instance Example Gps where
   example =

@@ -1,5 +1,6 @@
 let common = ./common.dhall
 
+in
 {
   port = +9091
 -- for selfId see common.dhall, credRegistry, second arg of mkCredential

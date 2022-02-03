@@ -28,6 +28,7 @@ import qualified Data.Time as Time
 import qualified Data.Vector as V
 import Data.Void (Void, absurd)
 import GHC.Generics
+import Beckn.Types.Time
 
 enclose, encloseSq :: String -> String
 enclose s = '{' : s ++ "}"
@@ -176,6 +177,12 @@ instance PrettyShow BSL.ByteString where
 instance (PrettyShow a) => PrettyShow (Maybe a) where
   prettyShow (Just x) = prettyShow x
   prettyShow Nothing = LEmpty
+
+instance PrettyShow BaseUrl where
+  prettyShow = LStr . show
+
+instance PrettyShow Iso8601Time where
+  prettyShow = LStr . show
 
 instance (PrettyShow a, PrettyShow b) => PrettyShow (Either a b)
 

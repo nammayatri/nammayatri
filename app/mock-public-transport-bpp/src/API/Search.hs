@@ -12,10 +12,12 @@ import Environment
 import ExternalAPI
 import MockData.OnSearch
 import Relude
+import Beckn.Utils.Common (logPretty)
 
 searchServer :: BecknReq SearchMessage -> MockM AppEnv AckResponse
 searchServer becknReq@(BecknReq ctx req) = do
-  logOutput DEBUG $ "request body: " <> show becknReq
+--  logOutput DEBUG $ "request body: " <> show becknReq
+  logPretty DEBUG "request body" becknReq
   _ <- fork "call on_search" $ do
     waitMilliSec <- asks (.config.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec

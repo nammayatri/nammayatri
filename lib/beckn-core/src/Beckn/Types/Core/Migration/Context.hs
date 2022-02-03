@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingVia #-}
 module Beckn.Types.Core.Migration.Context where
 
 import Beckn.Types.App
@@ -9,6 +10,7 @@ import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
 import Servant.Client (parseBaseUrl)
+import Beckn.Utils.GenericPretty
 
 data Context = Context
   { domain :: Domain,
@@ -24,7 +26,7 @@ data Context = Context
     message_id :: Text,
     timestamp :: UTCTime
   }
-  deriving (Generic, FromJSON, Show, ToSchema)
+  deriving (Generic, FromJSON, Show, ToSchema, PrettyShow)
 
 instance ToJSON Context where
   toJSON = genericToJSON $ defaultOptions {omitNothingFields = True}
@@ -68,6 +70,7 @@ data Action
   | ON_RATING
   | ON_SUPPORT
   deriving (Generic, Show, Eq, ToSchema)
+  deriving PrettyShow via Showable Action
 
 instance FromJSON Action where
   parseJSON = genericParseJSON constructorsToLowerOptions

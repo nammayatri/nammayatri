@@ -8,12 +8,13 @@ import Data.OpenApi
 import Data.Typeable
 import EulerHS.Prelude hiding ((.=), (.~))
 import GHC.Exts (IsList (fromList))
+import Beckn.Utils.GenericPretty
 
 data BecknReq a = BecknReq
   { context :: Context,
     message :: a
   }
-  deriving (Generic, Show, FromJSON, ToJSON)
+  deriving (Generic, Show, FromJSON, ToJSON, PrettyShow)
 
 instance ToSchema a => ToSchema (BecknReq a)
 
