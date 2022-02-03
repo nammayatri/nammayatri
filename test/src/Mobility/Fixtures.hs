@@ -23,6 +23,7 @@ import qualified "beckn-transport" Types.API.RideBooking as TRideBookingAPI
 import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 import qualified "app-backend" Types.Storage.CancellationReason as AbeCRC
+import qualified "app-backend" Types.Storage.Person as TPerson
 import qualified "app-backend" Types.Storage.Quote as BQuote
 import qualified "app-backend" Types.Storage.RegistrationToken as AppSRT
 import qualified "app-backend" Types.Storage.Ride as BRide
@@ -102,7 +103,7 @@ getNotificationInfo rideBookingId = getNotif
 buildAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 buildAppCancelReq stage =
   CancelAPI.CancelReq
-    { rideCancellationReason = CancelAPI.RideCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
+    { bookingCancellationReason = CancelAPI.RideBookingCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
     }
 
 getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM QuoteAPI.GetQuotesRes
@@ -153,14 +154,20 @@ destinationServiceability regToken = destination
 appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"
 
-driverToken :: Text
-driverToken = "ca05cf3c-c88b-4a2f-8874-191659397e0d"
+driverToken1 :: Text
+driverToken1 = "ca05cf3c-c88b-4a2f-8874-drivertoken1"
+
+driverToken2 :: Text
+driverToken2 = "ca05cf3c-c88b-4a2f-8874-drivertoken2"
 
 testVehicleId :: Text
 testVehicleId = "0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94"
 
-testDriverId :: Text
-testDriverId = "6bc4bc84-2c43-425d-8853-22f47bd06691"
+testDriverId1 :: Id TPerson.Person
+testDriverId1 = Id "6bc4bc84-2c43-425d-8853-22f47driver1"
+
+testDriverId2 :: Id TPerson.Person
+testDriverId2 = Id "6bc4bc84-2c43-425d-8853-22f47driver2"
 
 appAuth :: Reg.AuthReq -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes

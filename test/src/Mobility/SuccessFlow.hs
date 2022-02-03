@@ -21,7 +21,7 @@ import Utils
 doAnAppSearch :: HasCallStack => ClientsM (Id BQuote.Quote, Id BRB.RideBooking)
 doAnAppSearch = do
   -- Driver sets online
-  void . callBPP $ setDriverOnline driverToken True
+  void . callBPP $ setDriverOnline driverToken1 True
 
   -- Do an App Search
   appSearchId <-
@@ -80,7 +80,7 @@ getBPPRide ::
   Id TRB.RideBooking ->
   ClientsM TRide.Ride
 getBPPRide rideBookingId = do
-  mbRide <- liftIO $ runTransporterFlow "" $ TQRide.findByRBId rideBookingId
+  mbRide <- liftIO $ runTransporterFlow "" $ TQRide.findActiveByRBId rideBookingId
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
@@ -99,13 +99,13 @@ spec = do
 
       rideInfo <-
         poll . callBPP $
-          getNotificationInfo tRideBooking.id driverToken
+          getNotificationInfo tRideBooking.id driverToken1
             <&> (.rideRequest)
       rideInfo.bookingId `shouldBe` tRideBooking.id
 
       -- Driver Accepts a ride
       void . callBPP $
-        rideRespond tRideBooking.id driverToken $
+        rideRespond tRideBooking.id driverToken1 $
           RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
 
       tRide <- poll $ do
@@ -114,7 +114,7 @@ spec = do
         return $ Just tRide
 
       void . callBPP $
-        rideStart driverToken tRide.id $
+        rideStart driverToken1 tRide.id $
           buildStartRideReq tRide.otp
 
       void . poll $ do
@@ -125,7 +125,7 @@ spec = do
         inprogressRide.status `shouldBe` BRide.INPROGRESS
         return $ Just ()
 
-      void . callBPP $ rideEnd driverToken tRide.id
+      void . callBPP $ rideEnd driverToken1 tRide.id
 
       completedRideId <- poll $ do
         completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
@@ -137,3 +137,5 @@ spec = do
 
       -- Leave feedback
       void . callBAP $ callAppFeedback 5 completedRideId
+
+      void . callBPP $ setDriverOnline driverToken1 False

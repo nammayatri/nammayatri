@@ -14,6 +14,7 @@ spec = do
   describe "Testing App and Transporter APIs" $ do
     it "Testing API flow for ride cancelled by App" . withBecknClients clients $ do
       (_, bRideBookingId) <- doAnAppSearch
+      void . callBPP $ setDriverOnline driverToken1 True
 
       -- cancel request initiated by App
       void . callBAP $ cancelRide bRideBookingId appRegistrationToken (buildAppCancelReq AppCR.OnConfirm)
@@ -23,3 +24,5 @@ spec = do
           <&> (.status)
           >>= (`shouldBe` AppRB.CANCELLED)
           <&> Just
+
+      void . callBPP $ setDriverOnline driverToken1 False

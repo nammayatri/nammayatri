@@ -24,7 +24,7 @@ spec = do
 
       -- Driver Rejects a ride
       void . callBPP $
-        rideRespond tRideBooking.id driverToken $
+        rideRespond tRideBooking.id driverToken1 $
           RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.REJECT
 
       void . poll $
@@ -32,3 +32,5 @@ spec = do
           <&> (.status)
           >>= (`shouldBe` AppRB.CANCELLED)
           <&> Just
+
+      void . callBPP $ setDriverOnline driverToken1 False

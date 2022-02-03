@@ -25,18 +25,24 @@ spec = do
         trb.status `shouldBe` TRB.CONFIRMED
         return $ Just trb
 
-      -- Driver Accepts a ride
+      rideInfo <-
+        poll . callBPP $
+          getNotificationInfo tRideBooking.id driverToken1
+            <&> (.rideRequest)
+      rideInfo.bookingId `shouldBe` tRideBooking.id
+
+      -- Driver1 Accepts a ride
       void . callBPP $
-        rideRespond tRideBooking.id driverToken $
+        rideRespond tRideBooking.id driverToken1 $
           RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
 
-      tRide <- poll $ do
+      tRide1 <- poll $ do
         tRide <- getBPPRide tRideBooking.id
         tRide.status `shouldBe` TRide.NEW
         return $ Just tRide
 
       void . callBPP $
-        rideCancel appRegistrationToken tRide.id $
+        rideCancel driverToken1 tRide1.id $
           RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
 
       void . poll $
@@ -44,3 +50,5 @@ spec = do
           <&> (.status)
           >>= (`shouldBe` AppRB.CANCELLED)
           <&> Just
+
+      void . callBPP $ setDriverOnline driverToken1 False
