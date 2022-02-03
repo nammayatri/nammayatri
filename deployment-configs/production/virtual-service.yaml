@@ -1,73 +1,139 @@
-apiVersion: networking.istio.io/v1alpha3
+apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: atlas-vs
   namespace: atlas
 spec:
   gateways:
-    - atlas-internal
+  - atlas-internal
   hosts:
-    - api.sandbox.beckn.juspay.in
+  - '*'
   http:
-    - match:
-        - uri:
-            prefix: /fmd/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-fmd-wrapper-083-production
-            subset: 039dad9d
-          weight: 100
-      timeout: 40s
-    - match:
-        - headers:
-            "authorization":
-              prefix: "Signature"
-          uri:
-            prefix: /gateway/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-gateway-production
-            subset: a869c485
-          weight: 100
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /gateway/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-gateway-083-production
-            subset: 039dad9d
-          weight: 100
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /app/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-app-backend-sandbox
-            subset: a869c485
-            port:
-              number: 8013
-          weight: 100
-      timeout: 40s
-    - match:
-        - uri:
-            prefix: /transport/
-      rewrite:
-        uri: /
-      route:
-        - destination:
-            host: beckn-transport-sandbox
-            subset: a869c485
-            port:
-              number: 8014
-          weight: 100
-      timeout: 40s
+  - match:
+    - uri:
+        prefix: /map/grphr/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: graphhopper
+        port:
+          number: 8989
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dunzo/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-fmd-wrapper-083-production
+        subset: 039dad9d
+      weight: 100
+    timeout: 40s
+  - match:
+    - headers:
+        authorization:
+          prefix: Signature
+      uri:
+        prefix: /gateway/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-gateway-production
+        port:
+          number: 8015
+        subset: c0f53db5
+      weight: 100
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /gateway/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-gateway-083-production
+        port:
+          number: 8015
+        subset: 039dad9d
+      weight: 100
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /app/support/
+    - uri:
+        prefix: /app/support
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-customer-support-production
+        port:
+          number: 3000
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /app/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-production
+        port:
+          number: 8013
+        subset: c0f53db5
+      weight: 100
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /transport/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-production
+        port:
+          number: 8014
+        subset: c0f53db5
+      weight: 100
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /bap/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-backend-production
+        port:
+          number: 8013
+        subset: c0f53db5
+      weight: 100
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /bpp/metro/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-kmrl
+        port:
+          number: 8000
+      weight: 100
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /bpp/cab/
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-transport-production
+        port:
+          number: 8014
+        subset: c0f53db5
+      weight: 100
+    timeout: 40s
