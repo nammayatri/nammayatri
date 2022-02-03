@@ -15,15 +15,14 @@ import Servant
 import Servant.Client
 
 type GatewayOnSearchAPI =
-  "v1"
-    :> "on_search"
+    "on_search"
     :> ReqBody '[JSON] (BecknCallbackReq OnSearchCatalog)
     :> Post '[JSON] AckResponse
 
 callGatewayOnSearch :: BecknCallbackReq OnSearchCatalog -> MockM AppEnv ()
 callGatewayOnSearch = callAPI @GatewayOnSearchAPI gatewayUrl
   where
-    gatewayUrl = BaseUrl Http "localhost" 8015 ""
+    gatewayUrl = BaseUrl Http "localhost" 8015 "v1"
 
 ----------------------------
 type OnConfirmAPI =
