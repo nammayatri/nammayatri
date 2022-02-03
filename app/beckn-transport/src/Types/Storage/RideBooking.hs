@@ -27,6 +27,7 @@ import qualified Types.Storage.Vehicle as Veh
 
 data RideBookingStatus
   = CONFIRMED
+  | AWAITING_REASSIGNMENT
   | COMPLETED
   | CANCELLED
   | TRIP_ASSIGNED
@@ -106,38 +107,3 @@ fieldEMod =
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
-
-validateStatusTransition :: RideBookingStatus -> RideBookingStatus -> Either Text ()
-validateStatusTransition oldState newState =
-  if oldState == newState
-    then allowed
-    else t oldState newState
-  where
-    forbidden =
-      Left $
-        T.pack $
-          "It is not allowed to change Product Instance status from "
-            <> show oldState
-            <> " to "
-            <> show newState
-    allowed = Right ()
-    t CONFIRMED CANCELLED = allowed
-    t CONFIRMED TRIP_ASSIGNED = allowed
-    t CONFIRMED _ = forbidden
-    t TRIP_ASSIGNED CANCELLED = allowed
-    t TRIP_ASSIGNED COMPLETED = allowed
-    t TRIP_ASSIGNED _ = forbidden
-    t CANCELLED _ = forbidden
-    t COMPLETED _ = forbidden
-
-instance FromBeckn Text RideBookingStatus where
-  fromBeckn piStatus =
-    case piStatus of
-      "CONFIRMED" -> CONFIRMED
-      "COMPLETED" -> COMPLETED
-      "CANCELLED" -> CANCELLED
-      "TRIP_ASSIGNED" -> TRIP_ASSIGNED
-      _ -> CANCELLED
-
-instance ToBeckn Text RideBookingStatus where
-  toBeckn = show

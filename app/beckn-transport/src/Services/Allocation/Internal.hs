@@ -15,6 +15,7 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.NotificationStatus as QNS
+import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
@@ -30,7 +31,7 @@ import Types.Storage.Organization
 import qualified Types.Storage.Ride as SRide
 import Types.Storage.RideBooking (RideBooking)
 import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideCancellationReason as SRCR
+import qualified Types.Storage.RideBookingCancellationReason as SBCR
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.Notifications
@@ -148,7 +149,7 @@ getCurrentNotifications ::
   Id RideBooking ->
   m [CurrentNotification]
 getCurrentNotifications rideBookingId = do
-  notificationStatuses <- QNS.findActiveNotificationByRideId rideBookingId
+  notificationStatuses <- QNS.findActiveNotificationByRBId rideBookingId
   pure $ map buildCurrentNotification notificationStatuses
   where
     buildCurrentNotification notificationStatus =
@@ -201,7 +202,7 @@ resetLastRejectionTimes driverIds = QDS.updateIdleTimesFlow $ toList driverIds
 
 getAttemptedDrivers :: DBFlow m r => Id RideBooking -> m [Id Driver]
 getAttemptedDrivers rideBookingId =
-  QNS.fetchRefusedNotificationsByRideId rideBookingId <&> map (.driverId)
+  QNS.fetchAttemptedNotificationsByRBId rideBookingId <&> map (.driverId)
 
 getDriversWithNotification :: DBFlow m r => m [Id Driver]
 getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (.driverId)
@@ -214,7 +215,7 @@ checkAvailability driverIds = do
   driversInfo <- QDriverInfo.fetchAllAvailableByIds $ toList driverIds
   pure $ map (cast . SDriverInfo.driverId) driversInfo
 
-cancelRide ::
+cancelRideBooking ::
   ( DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -222,18 +223,23 @@ cancelRide ::
     CoreMetrics m
   ) =>
   Id SRB.RideBooking ->
-  SRCR.RideCancellationReason ->
+  SBCR.RideBookingCancellationReason ->
   m ()
-cancelRide rideBookingId reason = do
+cancelRideBooking rideBookingId reason = do
   rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
-  mbRide <- QRide.findByRBId rideBookingId
+  mbRide <- QRide.findActiveByRBId rideBookingId
+  let transporterId = rideBooking.providerId
+  transporter <-
+    QOrg.findOrganizationById transporterId
+      >>= fromMaybeM OrgNotFound
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
       QDriverInfo.updateOnRide (cast ride.driverId) False
   logTagInfo ("rideBookingId-" <> getId rideBookingId) ("Cancellation reason " <> show reason.source)
-  notifyBAPOnCancel rideBooking reason
+  fork "cancelRideBooking - Notify BAP" $ do
+    BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter reason.source
   whenJust mbRide $ \ride ->
     notifyDriverOnCancel rideBooking ride reason
 
@@ -250,6 +256,7 @@ allocNotifStatusToStorageStatus = \case
   Alloc.Notified -> SNS.NOTIFIED
   Alloc.Rejected -> SNS.REJECTED
   Alloc.Ignored -> SNS.IGNORED
+  Alloc.Accepted -> SNS.ACCEPTED
 
 addAllocationRequest :: DBFlow m r => ShortId Organization -> Id RideBooking -> m ()
 addAllocationRequest shortOrgId rideBookingId = do
@@ -315,6 +322,7 @@ getRideInfo rideBookingId = do
   where
     castToRideStatus = \case
       SRB.CONFIRMED -> pure Confirmed
+      SRB.AWAITING_REASSIGNMENT -> pure AwaitingReassignment
       SRB.TRIP_ASSIGNED -> pure Assigned
       SRB.COMPLETED -> pure Completed
       SRB.CANCELLED -> pure Cancelled

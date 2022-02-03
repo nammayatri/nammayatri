@@ -36,11 +36,11 @@ ratingImpl _ _ req = withFlowHandlerBecknAPI $
     let rideBookingId = Id $ req.message.id
     rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingDoesNotExist
     ride <-
-      QRide.findByRBId rideBooking.id
+      QRide.findActiveByRBId rideBooking.id
         >>= fromMaybeM RideNotFound
     let driverId = ride.driverId
     unless (ride.status == Ride.COMPLETED) $
-      throwError $ QuoteInvalidStatus "Order is not ready for rating."
+      throwError $ RideInvalidStatus "Ride is not ready for rating."
     let ratingValue = req.message.value
     mbRating <- Rating.findByRideId ride.id
     case mbRating of

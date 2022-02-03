@@ -27,6 +27,7 @@ import qualified Types.Storage.SearchRequest as SearchRequest
 data RideBookingStatus
   = NEW
   | CONFIRMED
+  | AWAITING_REASSIGNMENT
   | COMPLETED
   | CANCELLED
   | TRIP_ASSIGNED
@@ -118,16 +119,3 @@ fieldEMod =
           createdAt = "created_at",
           updatedAt = "updated_at"
         }
-
-instance FromBeckn Text RideBookingStatus where
-  fromBeckn piStatus =
-    case piStatus of
-      "NEW" -> NEW
-      "CONFIRMED" -> CONFIRMED
-      "COMPLETED" -> COMPLETED
-      "CANCELLED" -> CANCELLED
-      "TRIP_ASSIGNED" -> TRIP_ASSIGNED
-      _ -> CANCELLED
-
-instance ToBeckn Text RideBookingStatus where
-  toBeckn = show

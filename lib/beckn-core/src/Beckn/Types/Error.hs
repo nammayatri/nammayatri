@@ -306,7 +306,6 @@ data QuoteError
   = QuoteNotFound
   | QuoteDoesNotExist
   | QuoteFieldNotPresent Text
-  | QuoteInvalidStatus Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''QuoteError
@@ -315,7 +314,6 @@ instance IsBaseError QuoteError where
   toMessage = \case
     QuoteDoesNotExist -> Just "No quote matches passed data."
     QuoteFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this quote."
-    QuoteInvalidStatus msg -> Just $ "Attempted to do some action in wrong quote status. " <> msg
     _ -> Nothing
 
 instance IsHTTPError QuoteError where
@@ -323,12 +321,10 @@ instance IsHTTPError QuoteError where
     QuoteNotFound -> "QUOTE_NOT_FOUND"
     QuoteDoesNotExist -> "QUOTE_DOES_NOT_EXIST"
     QuoteFieldNotPresent _ -> "QUOTE_FIELD_NOT_PRESENT"
-    QuoteInvalidStatus _ -> "QUOTE_INVALID_STATUS"
   toHttpCode = \case
     QuoteNotFound -> E500
     QuoteDoesNotExist -> E400
     QuoteFieldNotPresent _ -> E500
-    QuoteInvalidStatus _ -> E400
 
 instance IsAPIError QuoteError
 

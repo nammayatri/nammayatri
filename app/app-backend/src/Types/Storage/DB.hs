@@ -15,7 +15,7 @@ import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideBooking as RideB
-import qualified Types.Storage.RideCancellationReason as RideCancellationReason
+import qualified Types.Storage.RideBookingCancellationReason as RideBookingCancellationReason
 import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.SearchRequest as SearchRequest
 
@@ -30,7 +30,7 @@ data AppDb f = AppDb
     registrationToken :: f (B.TableEntity RegistrationToken.RegistrationTokenT),
     geometry :: f (B.TableEntity Geometry.GeometryT),
     cancellationReason :: f (B.TableEntity CancellationReason.CancellationReasonT),
-    rideCancellationReason :: f (B.TableEntity RideCancellationReason.RideCancellationReasonT),
+    bookingCancellationReason :: f (B.TableEntity RideBookingCancellationReason.RideBookingCancellationReasonT),
     onSearchEvent :: f (B.TableEntity OnSearchEvent.OnSearchEventT),
     callStatus :: f (B.TableEntity CallStatus.CallStatusT)
   }
@@ -50,7 +50,7 @@ appDb dbSchemaName =
         registrationToken = setSchema dbSchemaName <> RegistrationToken.fieldEMod,
         geometry = setSchema dbSchemaName <> Geometry.fieldEMod,
         cancellationReason = setSchema dbSchemaName <> CancellationReason.fieldEMod,
-        rideCancellationReason = setSchema dbSchemaName <> RideCancellationReason.fieldEMod,
+        bookingCancellationReason = setSchema dbSchemaName <> RideBookingCancellationReason.fieldEMod,
         onSearchEvent = setSchema dbSchemaName <> OnSearchEvent.fieldEMod,
         callStatus = setSchema dbSchemaName <> CallStatus.fieldEMod
       }

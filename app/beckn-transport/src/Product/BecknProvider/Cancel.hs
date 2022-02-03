@@ -18,6 +18,7 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as Quote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
+import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
@@ -25,7 +26,7 @@ import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideCancellationReason as SRCR
+import qualified Types.Storage.RideBookingCancellationReason as SBCR
 import qualified Types.Storage.RideRequest as SRideRequest
 import Utils.Common
 import qualified Utils.Notifications as Notify
@@ -57,32 +58,26 @@ cancelRide ::
     CoreMetrics m
   ) =>
   Id SRide.Ride ->
-  SRCR.RideCancellationReason ->
+  SBCR.RideBookingCancellationReason ->
   m ()
-cancelRide rideId rideCReason = do
+cancelRide rideId bookingCReason = do
   ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
-  cancelRideTransaction rideBooking ride rideCReason
-  logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show rideCReason.source)
-  notifyBAPOnCancel rideBooking rideCReason
-  notifyDriverOnCancel rideBooking ride rideCReason
-
-notifyBAPOnCancel ::
-  ( DBFlow m r,
-    CoreMetrics m,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
-  ) =>
-  SRB.RideBooking ->
-  SRCR.RideCancellationReason ->
-  m ()
-notifyBAPOnCancel rideBooking cancellationReason =
+  let transporterId = rideBooking.providerId
+  transporter <-
+    Organization.findOrganizationById transporterId
+      >>= fromMaybeM OrgNotFound
+  if isCancelledByDriver
+    then reallocateRideTransaction transporter.shortId rideBooking.id ride bookingCReason
+    else cancelRideTransaction rideBooking.id ride bookingCReason
+  logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   fork "cancelRide - Notify BAP" $ do
-    let transporterId = rideBooking.providerId
-    transporter <-
-      Organization.findOrganizationById transporterId
-        >>= fromMaybeM OrgNotFound
-    BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter cancellationReason.source
+    if isCancelledByDriver
+      then BP.sendRideBookingReallocationUpdateToBAP rideBooking ride.id transporter bookingCReason.source
+      else BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter bookingCReason.source
+  notifyDriverOnCancel rideBooking ride bookingCReason
+  where
+    isCancelledByDriver = bookingCReason.source == ReqCancel.ByDriver
 
 notifyDriverOnCancel ::
   ( DBFlow m r,
@@ -91,7 +86,7 @@ notifyDriverOnCancel ::
   ) =>
   SRB.RideBooking ->
   SRide.Ride ->
-  SRCR.RideCancellationReason ->
+  SBCR.RideBookingCancellationReason ->
   m ()
 notifyDriverOnCancel rideBooking ride cancellationReason =
   fork "cancelRide - Notify driver" $ do
@@ -101,16 +96,44 @@ notifyDriverOnCancel rideBooking ride cancellationReason =
 
 cancelRideTransaction ::
   DBFlow m r =>
-  SRB.RideBooking ->
+  Id SRB.RideBooking ->
   SRide.Ride ->
-  SRCR.RideCancellationReason ->
+  SBCR.RideBookingCancellationReason ->
   m ()
-cancelRideTransaction rideBooking ride rideCReason = DB.runSqlDBTransaction $ do
+cancelRideTransaction rideBookingId ride bookingCReason = DB.runSqlDBTransaction $ do
   updateDriverInfo ride.driverId
   QRide.updateStatus ride.id SRide.CANCELLED
-  QRB.updateStatus rideBooking.id SRB.CANCELLED
+  QRB.updateStatus rideBookingId SRB.CANCELLED
+  QBCR.create bookingCReason
   where
     updateDriverInfo personId = do
       let driverId = cast personId
       DriverInformation.updateOnRide driverId False
-      when (rideCReason.source == ReqCancel.ByDriver) $ QDriverStats.updateIdleTime driverId
+      when (bookingCReason.source == ReqCancel.ByDriver) $ QDriverStats.updateIdleTime driverId
+
+reallocateRideTransaction ::
+  DBFlow m r =>
+  ShortId Organization.Organization ->
+  Id SRB.RideBooking ->
+  SRide.Ride ->
+  SBCR.RideBookingCancellationReason ->
+  m ()
+reallocateRideTransaction orgShortId rideBookingId ride bookingCReason = do
+  now <- getCurrentTime
+  rideRequest <-
+    BP.buildRideReq
+      rideBookingId
+      orgShortId
+      SRideRequest.ALLOCATION
+      now
+  DB.runSqlDBTransaction $ do
+    QRB.updateStatus rideBookingId SRB.AWAITING_REASSIGNMENT
+    QRide.updateStatus ride.id SRide.CANCELLED
+    updateDriverInfo
+    QBCR.create bookingCReason
+    RideRequest.create rideRequest
+  where
+    updateDriverInfo = do
+      let driverId = cast ride.driverId
+      DriverInformation.updateOnRide driverId False
+      QDriverStats.updateIdleTime driverId

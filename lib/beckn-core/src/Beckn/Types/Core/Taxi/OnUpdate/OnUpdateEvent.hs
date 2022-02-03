@@ -6,6 +6,7 @@ where
 
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideBookingCancelledEvent as Reexport
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideBookingReallocationEvent as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as Reexport
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as Reexport
 import qualified Beckn.Utils.JSON as J
@@ -18,6 +19,7 @@ data OnUpdateEvent
   | RideStarted RideStartedEvent
   | RideCompleted RideCompletedEvent
   | RideBookingCancelled RideBookingCancelledEvent
+  | RideBookingReallocation RideBookingReallocationEvent
   deriving (Generic, Show)
 
 instance ToJSON OnUpdateEvent where

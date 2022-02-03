@@ -32,14 +32,14 @@ updateStatus rideBookingId_ status_ driverIds = do
       rideBookingId ==. B.val_ rId
         &&. driverId `B.in_` (B.val_ <$> ids)
 
-fetchRefusedNotificationsByRideId :: DBFlow m r => Id SRB.RideBooking -> m [NotificationStatus.NotificationStatus]
-fetchRefusedNotificationsByRideId rideBookingId_ = do
+fetchAttemptedNotificationsByRBId :: DBFlow m r => Id SRB.RideBooking -> m [NotificationStatus.NotificationStatus]
+fetchAttemptedNotificationsByRBId rideBookingId_ = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where
     predicate NotificationStatus.NotificationStatus {..} =
       rideBookingId ==. B.val_ rideBookingId_
-        &&. status `B.in_` [B.val_ NotificationStatus.REJECTED, B.val_ NotificationStatus.IGNORED]
+        &&. status `B.in_` [B.val_ NotificationStatus.REJECTED, B.val_ NotificationStatus.IGNORED, B.val_ NotificationStatus.ACCEPTED]
 
 fetchActiveNotifications :: DBFlow m r => m [NotificationStatus.NotificationStatus]
 fetchActiveNotifications = do
@@ -49,8 +49,8 @@ fetchActiveNotifications = do
     predicate NotificationStatus.NotificationStatus {..} =
       status ==. B.val_ NotificationStatus.NOTIFIED
 
-findActiveNotificationByRideId :: DBFlow m r => Id SRB.RideBooking -> m [NotificationStatus.NotificationStatus]
-findActiveNotificationByRideId rideBookingId_ = do
+findActiveNotificationByRBId :: DBFlow m r => Id SRB.RideBooking -> m [NotificationStatus.NotificationStatus]
+findActiveNotificationByRBId rideBookingId_ = do
   dbTable <- getDbTable
   DB.findAll dbTable identity predicate
   where

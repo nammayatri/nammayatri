@@ -117,9 +117,11 @@ updateMultiple rideId ride = do
           chargeableDistance <-. B.val_ (ride_.chargeableDistance)
         ]
 
-findByRBId :: DBFlow m r => Id SRB.RideBooking -> m (Maybe Storage.Ride)
-findByRBId rbId = do
+findActiveByRBId :: DBFlow m r => Id SRB.RideBooking -> m (Maybe Storage.Ride)
+findActiveByRBId rbId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
-    predicate Storage.Ride {..} = bookingId ==. B.val_ rbId
+    predicate Storage.Ride {..} =
+      bookingId ==. B.val_ rbId
+        B.&&. status B./=. B.val_ Storage.CANCELLED

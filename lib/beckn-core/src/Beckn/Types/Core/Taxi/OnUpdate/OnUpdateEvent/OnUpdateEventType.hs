@@ -8,4 +8,5 @@ data OnUpdateEventType
   | RIDE_STARTED
   | RIDE_ASSIGNED
   | RIDE_BOOKING_CANCELLED
+  | RIDE_BOOKING_REALLOCATION
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)

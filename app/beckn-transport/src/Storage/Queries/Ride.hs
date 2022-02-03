@@ -38,14 +38,14 @@ findById rideId = do
   where
     predicate Storage.Ride {..} = id ==. B.val_ rideId
 
-findByRBId :: DBFlow m r => Id SRB.RideBooking -> m (Maybe Storage.Ride)
-findByRBId rbId = do
+findActiveByRBId :: DBFlow m r => Id SRB.RideBooking -> m (Maybe Storage.Ride)
+findActiveByRBId rbId = do
   dbTable <- getDbTable
-  list <- DB.findAll dbTable (B.orderBy_ orderBy) predicate
-  return $ listToMaybe list
+  DB.findOne dbTable predicate
   where
-    orderBy Storage.Ride {..} = B.desc_ createdAt
-    predicate Storage.Ride {..} = bookingId ==. B.val_ rbId
+    predicate Storage.Ride {..} =
+      bookingId ==. B.val_ rbId
+        B.&&. status B./=. B.val_ Storage.CANCELLED
 
 findAllByVehicleId :: DBFlow m r => Id Veh.Vehicle -> m [Storage.Ride]
 findAllByVehicleId vehId = do

@@ -24,7 +24,7 @@ import qualified Types.Storage.Rating as Rating
 import qualified Types.Storage.RegistrationToken as RegistrationToken
 import qualified Types.Storage.Ride as Ride
 import qualified Types.Storage.RideBooking as RideB
-import qualified Types.Storage.RideCancellationReason as RideCancellationReason
+import qualified Types.Storage.RideBookingCancellationReason as RideBookingCancellationReason
 import qualified Types.Storage.RideRequest as RideRequest
 import qualified Types.Storage.RiderDetails as RiderDetails
 import qualified Types.Storage.SearchReqLocation as Location
@@ -57,7 +57,7 @@ data TransporterDb f = TransporterDb
     notificationStatus :: f (B.TableEntity NotificationStatus.NotificationStatusT),
     allocationEvent :: f (B.TableEntity AllocationEvent.AllocationEventT),
     cancellationReason :: f (B.TableEntity CancellationReason.CancellationReasonT),
-    rideCancellationReason :: f (B.TableEntity RideCancellationReason.RideCancellationReasonT),
+    bookingCancellationReason :: f (B.TableEntity RideBookingCancellationReason.RideBookingCancellationReasonT),
     callStatus :: f (B.TableEntity CallStatus.CallStatusT)
   }
   deriving (Generic, B.Database be)
@@ -90,7 +90,7 @@ transporterDb dbSchemaName =
         notificationStatus = setSchema dbSchemaName <> NotificationStatus.fieldEMod,
         allocationEvent = setSchema dbSchemaName <> AllocationEvent.fieldEMod,
         cancellationReason = setSchema dbSchemaName <> CancellationReason.fieldEMod,
-        rideCancellationReason = setSchema dbSchemaName <> RideCancellationReason.fieldEMod,
+        bookingCancellationReason = setSchema dbSchemaName <> RideBookingCancellationReason.fieldEMod,
         callStatus = setSchema dbSchemaName <> CallStatus.fieldEMod
       }
   where

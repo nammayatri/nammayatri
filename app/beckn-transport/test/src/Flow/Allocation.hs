@@ -16,6 +16,7 @@ import Types.Storage.Organization
 import qualified Types.Storage.RideBooking as SRB
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
+import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 
 type NotificationStatusMap = (Map (Id SRB.RideBooking, Id Driver) (NotificationStatus, UTCTime))
@@ -167,7 +168,7 @@ handle repository@Repository {..} =
       assignDriver = \rideBookingId driverId -> do
         modifyIORef assignmentsVar $ (:) (rideBookingId, driverId)
         modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Assigned) rideBookingId,
-      cancelRide = \rideBookingId _ -> modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Cancelled) rideBookingId,
+      cancelRideBooking = \rideBookingId _ -> modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Cancelled) rideBookingId,
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),
       getTopDriversByIdleTime = \count driverIds -> pure $ take count driverIds,

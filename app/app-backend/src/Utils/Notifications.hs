@@ -207,3 +207,32 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
             "was cancelled as we could not find a driver.",
             "Please book again to get another ride."
           ]
+
+notifyOnRideBookingReallocated :: (CoreMetrics m, FCMFlow m r, DBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
+notifyOnRideBookingReallocated rideBooking cancellationSource = do
+  person <- Person.findById rideBooking.riderId >>= fromMaybeM PersonNotFound
+  notificationData <- buildNotificationData
+  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  where
+    buildNotificationData = do
+      body <- buildBody
+      return $
+        FCM.FCMAndroidData
+          { fcmNotificationType = FCM.REALLOCATE_PRODUCT,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Product,
+            fcmEntityIds = show $ getId rideBooking.requestId,
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
+          }
+    title = FCMNotificationTitle $ T.pack "Ride cancelled!"
+    buildBody = do
+      FCMNotificationBody <$> getReallocationText
+    getReallocationText = case cancellationSource of
+      ByDriver ->
+        return $
+          unwords
+            [ "The driver had to cancel the ride for",
+              showTimeIst (rideBooking.startTime) <> ".",
+              "Please wait until we allocate other driver."
+            ]
+      _ -> throwError $ InternalError "Ride reallocation started when cancelled not by driver, which supposed to be impossible."

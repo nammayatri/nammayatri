@@ -149,7 +149,7 @@ buildRideBookingStatusRes rideBooking = do
   fromLocation <- QLoc.findLocationById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
   toLocation <- QLoc.findLocationById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
   let rbStatus = rideBooking.status
-  mbRide <- QRide.findByRBId rideBooking.id
+  mbRide <- QRide.findActiveByRBId rideBooking.id
   mbRideAPIEntity <- case mbRide of
     Just ride -> do
       vehicle <- QVeh.findVehicleById ride.vehicleId >>= fromMaybeM VehicleNotFound

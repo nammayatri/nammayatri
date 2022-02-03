@@ -78,7 +78,7 @@ failedCancellationWhenQuoteStatusIsWrong :: TestTree
 failedCancellationWhenQuoteStatusIsWrong =
   testCase "Fail cancellation if product instance has inappropriate ride status" $ do
     runHandler handleCase (Id "1") "1" someCancelRideReq
-      `shouldThrow` (\(QuoteInvalidStatus _) -> True)
+      `shouldThrow` (\(RideInvalidStatus _) -> True)
   where
     handleCase = handle {CancelRide.findRideById = \_rideId -> pure $ Just completedPI}
     completedPI = ride{status = Ride.COMPLETED}

@@ -31,7 +31,7 @@ buildRideBookingStatusRes rideBooking = do
   toLocation <- QLoc.findLocationById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
   let rbStatus = rideBooking.status
   mbRideAPIEntity <-
-    QRide.findByRBId rideBooking.id
+    QRide.findActiveByRBId rideBooking.id
       <&> fmap SRide.makeRideAPIEntity
 
   return $

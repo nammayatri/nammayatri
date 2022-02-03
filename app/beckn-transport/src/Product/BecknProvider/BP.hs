@@ -3,6 +3,7 @@ module Product.BecknProvider.BP
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
     sendRideBookingCanceledUpdateToBAP,
+    sendRideBookingReallocationUpdateToBAP,
     buildRideReq,
   )
 where
@@ -85,6 +86,21 @@ sendRideBookingCanceledUpdateToBAP ::
   m ()
 sendRideBookingCanceledUpdateToBAP rideBooking transporter cancellationSource = do
   let message = OnUpdate.RideBookingCancelled $ OnUpdate.RideBookingCancelledEvent rideBooking.id.getId cancellationSource
+  sendUpdateEvent transporter rideBooking.requestId message
+
+sendRideBookingReallocationUpdateToBAP ::
+  ( DBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  SRB.RideBooking ->
+  Id SRide.Ride ->
+  SOrg.Organization ->
+  OnUpdate.CancellationSource ->
+  m ()
+sendRideBookingReallocationUpdateToBAP rideBooking rideId transporter cancellationSource = do
+  let message = OnUpdate.RideBookingReallocation $ OnUpdate.RideBookingReallocationEvent rideBooking.id.getId rideId.getId cancellationSource
   sendUpdateEvent transporter rideBooking.requestId message
 
 sendUpdateEvent ::

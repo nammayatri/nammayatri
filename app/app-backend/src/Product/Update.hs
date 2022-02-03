@@ -1,4 +1,4 @@
-module Product.Update where
+module Product.Update (onUpdate) where
 
 import App.Types
 import Beckn.Product.Validation.Context (validateContext)
@@ -11,12 +11,12 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude hiding (state)
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
-import qualified Storage.Queries.RideCancellationReason as QRCR
+import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideCancellationReason as SRCR
+import qualified Types.Storage.RideBookingCancellationReason as SBCR
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -36,7 +36,7 @@ processEvent :: (DBFlow m r, FCMFlow m r, CoreMetrics m) => OnUpdate.OnUpdateEve
 processEvent (OnUpdate.RideAssigned taEvent) = do
   let bppBookingId = Id taEvent.order_id
   rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM RideBookingDoesNotExist
-  unless (rideBooking.status == SRB.CONFIRMED) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
+  unless (isAssignable rideBooking) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
   ride <- buildRide rideBooking
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.TRIP_ASSIGNED
@@ -71,6 +71,7 @@ processEvent (OnUpdate.RideAssigned taEvent) = do
             updatedAt = now,
             ..
           }
+    isAssignable rideBooking = rideBooking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT]
 processEvent (OnUpdate.RideStarted rsEvent) = do
   let bppBookingId = Id rsEvent.order_id
       bppRideId = Id rsEvent.ride_id
@@ -103,18 +104,53 @@ processEvent (OnUpdate.RideBookingCancelled tcEvent) = do
   rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM RideBookingDoesNotExist
   unless (isRideBookingCancellable rideBooking) $
     throwError (RideBookingInvalidStatus (show rideBooking.status))
-  mbRide <- QRide.findByRBId rideBooking.id
+  mbRide <- QRide.findActiveByRBId rideBooking.id
   let cancellationSource = tcEvent.cancellation_reason_id
   let searchRequestId = rideBooking.requestId
   logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
+  rideBookingCancellationReason <- buildRideBookingCancellationReason rideBooking.id (mbRide <&> (.id)) cancellationSource
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
     unless (cancellationSource == OnUpdate.ByUser) $
-      QRCR.create $ SRCR.RideCancellationReason rideBooking.id cancellationSource Nothing Nothing Nothing
+      QBCR.create rideBookingCancellationReason
   -- notify customer
   Notify.notifyOnRideBookingCancelled rideBooking cancellationSource
+  where
+    isRideBookingCancellable rideBooking =
+      rideBooking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
+processEvent (OnUpdate.RideBookingReallocation rbrEvent) = do
+  let bppRideBookingId = Id $ rbrEvent.order_id
+      bppRideId = Id rbrEvent.ride_id
+  rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM RideBookingDoesNotExist
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM RideDoesNotExist
+  let cancellationSource = rbrEvent.cancellation_reason_id
+  let searchRequestId = rideBooking.requestId
+  logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
+  rideBookingCancellationReason <- buildRideBookingCancellationReason rideBooking.id (Just ride.id) cancellationSource
+  DB.runSqlDBTransaction $ do
+    QRB.updateStatus rideBooking.id SRB.AWAITING_REASSIGNMENT
+    QRide.updateStatus ride.id SRide.CANCELLED
+    unless (cancellationSource == OnUpdate.ByUser) $
+      QBCR.create rideBookingCancellationReason
+  -- notify customer
+  Notify.notifyOnRideBookingReallocated rideBooking cancellationSource
 
-isRideBookingCancellable :: SRB.RideBooking -> Bool
-isRideBookingCancellable ride =
-  ride.status `elem` [SRB.CONFIRMED, SRB.TRIP_ASSIGNED]
+buildRideBookingCancellationReason ::
+  (DBFlow m r, FCMFlow m r, CoreMetrics m) =>
+  Id SRB.RideBooking ->
+  Maybe (Id SRide.Ride) ->
+  OnUpdate.CancellationSource ->
+  m SBCR.RideBookingCancellationReason
+buildRideBookingCancellationReason rideBookingId mbRideId cancellationSource = do
+  guid <- generateGUID
+  return
+    SBCR.RideBookingCancellationReason
+      { id = guid,
+        rideBookingId = rideBookingId,
+        rideId = mbRideId,
+        source = cancellationSource,
+        reasonCode = Nothing,
+        reasonStage = Nothing,
+        additionalInfo = Nothing
+      }

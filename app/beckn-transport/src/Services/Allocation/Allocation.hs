@@ -13,7 +13,7 @@ import Types.Storage.AllocationEvent (AllocationEventType (..))
 import qualified Types.Storage.CancellationReason as SCR
 import Types.Storage.Organization
 import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideCancellationReason as SRCR
+import qualified Types.Storage.RideBookingCancellationReason as SBCR
 import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 
@@ -39,6 +39,7 @@ data NotificationStatus
   = Notified
   | Rejected
   | Ignored
+  | Accepted
   deriving (Eq, Show)
 
 data CurrentNotification = CurrentNotification
@@ -49,6 +50,7 @@ data CurrentNotification = CurrentNotification
 
 data RideStatus
   = Confirmed
+  | AwaitingReassignment
   | Assigned
   | Completed
   | Cancelled
@@ -72,6 +74,7 @@ type MonadHandler m =
   ( MonadCatch m,
     MonadTime m,
     MonadClock m,
+    MonadGuid m,
     Log m
   )
 
@@ -101,7 +104,7 @@ data ServiceHandle m = ServiceHandle
     getTopDriversByIdleTime :: Int -> [Id Driver] -> m [Id Driver],
     checkAvailability :: NonEmpty (Id Driver) -> m [Id Driver],
     assignDriver :: Id SRB.RideBooking -> Id Driver -> m (),
-    cancelRide :: Id SRB.RideBooking -> SRCR.RideCancellationReason -> m (),
+    cancelRideBooking :: Id SRB.RideBooking -> SBCR.RideBookingCancellationReason -> m (),
     cleanupNotifications :: Id SRB.RideBooking -> m (),
     addAllocationRequest :: ShortId Organization -> Id SRB.RideBooking -> m (),
     getRideInfo :: Id SRB.RideBooking -> m RideInfo,
@@ -137,24 +140,14 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
           Allocation ->
             case rideStatus of
               Confirmed -> processAllocation handle shortOrgId rideInfo
+              AwaitingReassignment -> processAllocation handle shortOrgId rideInfo
               Cancelled -> logInfo "Ride is cancelled, allocation request skipped"
               _ ->
                 logWarning $ "Ride status is " <> show rideStatus <> ", allocation request skipped"
           DriverResponse response ->
             case rideStatus of
-              Confirmed -> do
-                currentNotifications <- getCurrentNotifications rideBookingId
-                logInfo $ "getCurrentNotifications" <> show currentNotifications
-                if response.driverId `elem` map (.driverId) currentNotifications
-                  then case response.status of
-                    RideBooking.ACCEPT -> do
-                      logInfo $ "Assigning driver" <> show response.driverId
-                      assignDriver rideBookingId response.driverId
-                      cleanupNotifications rideBookingId
-                      logDriverEvents MarkedAsAccepted rideBookingId $ singleton response.driverId
-                    RideBooking.REJECT ->
-                      processRejection handle rideBookingId response.driverId
-                  else logDriverNoLongerNotified rideBookingId response.driverId
+              Confirmed -> processDriverResponse handle response rideBookingId
+              AwaitingReassignment -> processDriverResponse handle response rideBookingId
               Assigned -> do
                 logInfo "Ride is assigned, response request skipped"
                 sendRideNotAssignedNotification rideBookingId response.driverId
@@ -177,6 +170,21 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
         metrics.incrementErrorCounter exc
         metrics.incrementFailedTaskCounter
     removeRequest requestId
+
+processDriverResponse :: MonadHandler m => ServiceHandle m -> RideBooking.DriverResponse -> Id SRB.RideBooking -> m ()
+processDriverResponse handle@ServiceHandle {..} response rideBookingId = do
+  currentNotifications <- getCurrentNotifications rideBookingId
+  logInfo $ "getCurrentNotifications" <> show currentNotifications
+  if response.driverId `elem` map (.driverId) currentNotifications
+    then case response.status of
+      RideBooking.ACCEPT -> do
+        logInfo $ "Assigning driver" <> show response.driverId
+        assignDriver rideBookingId response.driverId
+        updateNotificationStatuses rideBookingId Accepted $ singleton response.driverId
+        logDriverEvents MarkedAsAccepted rideBookingId $ singleton response.driverId
+      RideBooking.REJECT ->
+        processRejection handle rideBookingId response.driverId
+    else logDriverNoLongerNotified rideBookingId response.driverId
 
 processAllocation ::
   MonadHandler m =>
@@ -286,16 +294,22 @@ checkRideLater ServiceHandle {..} shortOrgId rideBookingId = do
 cancel :: MonadHandler m => ServiceHandle m -> Id SRB.RideBooking -> CancellationSource -> Maybe AllocatorCancellationReason -> m ()
 cancel ServiceHandle {..} rideBookingId cancellationSource mbReasonCode = do
   logInfo "Cancelling ride"
-  cancelRide rideBookingId rideCancellationReason
+  rideBookingCancellationReason <- buildRideBookingCancellationReason
+  cancelRideBooking rideBookingId rideBookingCancellationReason
   cleanupNotifications rideBookingId
   where
-    rideCancellationReason =
-      SRCR.RideCancellationReason
-        { rideBookingId = rideBookingId,
-          source = cancellationSource,
-          reasonCode = SCR.CancellationReasonCode . encodeToText <$> mbReasonCode,
-          additionalInfo = Nothing
-        }
+    buildRideBookingCancellationReason = do
+      guid <- generateGUID
+      return
+        SBCR.RideBookingCancellationReason
+          { id = guid,
+            driverId = Nothing,
+            rideBookingId = rideBookingId,
+            rideId = Nothing,
+            source = cancellationSource,
+            reasonCode = SCR.CancellationReasonCode . encodeToText <$> mbReasonCode,
+            additionalInfo = Nothing
+          }
 
 isAllocationTimeFinished :: MonadHandler m => ServiceHandle m -> UTCTime -> OrderTime -> m Bool
 isAllocationTimeFinished ServiceHandle {..} currentTime orderTime = do

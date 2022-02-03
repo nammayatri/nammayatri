@@ -67,7 +67,7 @@ findAllByOrg orgId mbLimit mbOffset mbIsOnlyActive = do
     orderBy Storage.RideBooking {..} = B.desc_ createdAt
     predicate isOnlyActive Storage.RideBooking {..} =
       providerId ==. B.val_ orgId
-        &&. B.not_ (status ==. B.val_ Storage.CONFIRMED)
+        &&. B.not_ (status `B.in_` (B.val_ <$> [Storage.CONFIRMED, Storage.AWAITING_REASSIGNMENT]))
         &&. if isOnlyActive
           then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
           else B.val_ True
