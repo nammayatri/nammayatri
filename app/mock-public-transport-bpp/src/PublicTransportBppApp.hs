@@ -19,17 +19,23 @@ import Network.Wai.Handler.Warp
   )
 import Relude
 import Servant
+import Beckn.Utils.IOLogging
+import qualified Control.Monad.Catch as C
 
 runMockFerryBPP :: IO ()
 runMockFerryBPP = do
   appCfg <- readDhallConfigDefault "mock-public-transport-bpp" :: IO AppCfg
   withHedisEnv $ \hedisEnv -> do
+   withIOLogger appCfg.loggerConfig $ \loggerEnv -> do
     let port = appCfg.port
-        appEnv = buildAppEnv hedisEnv appCfg
+        appEnv = buildAppEnv hedisEnv loggerEnv appCfg
         settings =
           defaultSettings & setPort port
     runSettings settings $
       run totalAPI totalServer appEnv
+
+withIOLogger :: LoggerConfig -> (LoggerEnv -> IO ()) -> IO ()
+withIOLogger conf = C.bracket (prepareLoggerEnv conf Nothing) releaseLoggerEnv
 
 totalServer :: ServerT TotalAPI (MockM AppEnv)
 totalServer = healthCheckServer :<|> searchServer :<|> confirmServer :<|> statusServer

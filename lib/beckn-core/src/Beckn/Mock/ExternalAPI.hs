@@ -15,6 +15,7 @@ import Network.HTTP.Types.Header
 import Relude
 import Servant.Client
 import Beckn.Types.Common
+import Beckn.Utils.IOLogging
 
 callBapAPI ::
   forall api a b e c.
@@ -22,13 +23,14 @@ callBapAPI ::
     HasInConfig e c "selfId" Text,
     HasInConfig e c "uniqueKeyId" Text,
     HasClient ClientM api,
-    Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
+    Client ClientM api ~ (BecknCallbackReq a -> ClientM b),
+    HasLog e
   ) =>
   BecknCallbackReq a ->
   MockM e ()
 callBapAPI req = do
   let bapUrl = req.context.bap_uri
-  mockLog INFO "calling BAP"
+  logOutput INFO "calling BAP"
   callAPI @api bapUrl req
 
 callAPI ::
@@ -37,7 +39,8 @@ callAPI ::
     HasInConfig e c "selfId" Text,
     HasInConfig e c "uniqueKeyId" Text,
     HasClient ClientM api,
-    Client ClientM api ~ (BecknCallbackReq a -> ClientM b)
+    Client ClientM api ~ (BecknCallbackReq a -> ClientM b),
+    HasLog e
   ) =>
   BaseUrl ->
   BecknCallbackReq a ->
@@ -45,8 +48,8 @@ callAPI ::
 callAPI url req = do
   let clientFunc = client @api Proxy
       clientAction = clientFunc req
-  mockLog INFO $ mconcat ["calling ", show req.context.action, "; url=", show url]
-  mockLog DEBUG $ show req
+  logOutput INFO $ mconcat ["calling ", show req.context.action, "; url=", show url]
+  logOutput DEBUG $ show req
   _ <- callClientM url clientAction
   pure ()
 

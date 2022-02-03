@@ -1,3 +1,5 @@
+let common = ./common.dhall
+
 {
   port = +9091
 -- for selfId see common.dhall, credRegistry, second arg of mkCredential
@@ -9,4 +11,5 @@
 , redisPrefix = "mock-public-transport-bpp"
 , statusWaitTimeSec = +25
 , callbackWaitTimeMilliSec = +500
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-parking-bpp.log"} 
 }

@@ -7,10 +7,10 @@ module Beckn.Mock.App where
 import Beckn.Types.Common
 import qualified Control.Monad.Catch as C
 import Control.Monad.IO.Unlift
-import Data.Time.Clock hiding (getCurrentTime)
 import Relude
 import Servant
 import UnliftIO.Concurrent
+import Beckn.Utils.IOLogging
 
 run :: forall e api. HasServer api '[] => Proxy (api :: Type) -> ServerT api (MockM e) -> e -> Application
 run proxyApi server env = serve proxyApi $ hoistServer proxyApi f server
@@ -26,26 +26,18 @@ run proxyApi server env = serve proxyApi $ hoistServer proxyApi f server
 newtype MockM e a = MockM {runMockM :: ReaderT e IO a}
   deriving newtype (Functor, Applicative, Monad, MonadReader e, MonadIO, MonadUnliftIO, C.MonadThrow, C.MonadCatch, C.MonadMask)
 
-renderLogString :: UTCTime -> LogLevel -> Text -> Text
-renderLogString time level str = mconcat [show time, " ", show level, "> ", str]
-
 instance MonadTime (MockM e) where
   getCurrentTime = liftIO getCurrentTime
 
-instance Log (MockM e) where
-  logOutput = mockLog
-  withLogTag = const identity
+instance (HasLog e) => Log (MockM e) where
+  logOutput = logOutputImplementation 
+  withLogTag = withLogTagImplementation
 
-mockLog :: LogLevel -> Text -> MockM e ()
-mockLog level str = do
-  time <- getCurrentTime
-  putTextLn $ renderLogString time level str
+instance (HasLog e) => Forkable (MockM e) where
+  fork = mockFork
 
-instance Forkable (MockM e) where
-  fork _ = mockFork
-
-mockFork :: MockM e a -> MockM e ()
-mockFork action = void $
+mockFork :: (HasLog e) => Text -> MockM e a -> MockM e ()
+mockFork tag action = void $ withLogTag tag $
   forkFinally action $ \case
-    Left se -> mockLog ERROR $ show se
+    Left se -> logOutput ERROR $ show se
     Right _ -> pure ()
