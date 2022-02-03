@@ -1,9 +1,8 @@
 module Core.OnSearch.LocationDetails where
 
 import Beckn.Prelude
-import Core.OnSearch.Descriptor
 import Beckn.Types.Core.Migration.Gps
-import Beckn.Utils.JSON
+import Core.OnSearch.Descriptor
 
 data LocationDetails = LocationDetails
   { id :: Text,
@@ -11,10 +10,4 @@ data LocationDetails = LocationDetails
     gps :: Gps,
     stop_code :: Text
   }
-  deriving (Generic, Show)
-
-instance FromJSON LocationDetails where
-  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
-
-instance ToJSON LocationDetails where
-  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+  deriving (Generic, Show, FromJSON, ToJSON)

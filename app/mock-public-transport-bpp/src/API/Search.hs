@@ -7,16 +7,15 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
+import Beckn.Utils.Common (logPretty)
 import Core.Search
 import Environment
 import ExternalAPI
 import MockData.OnSearch
 import Relude
-import Beckn.Utils.Common (logPretty)
 
 searchServer :: BecknReq SearchMessage -> MockM AppEnv AckResponse
 searchServer becknReq@(BecknReq ctx req) = do
---  logOutput DEBUG $ "request body: " <> show becknReq
   logPretty DEBUG "request body" becknReq
   _ <- fork "call on_search" $ do
     waitMilliSec <- asks (.config.callbackWaitTimeMilliSec)
