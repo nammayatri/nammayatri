@@ -9,4 +9,5 @@ INSERT INTO atlas_registry.subscriber (unique_key_id, subscriber_id, subscriber_
     ('juspay-fmd-1-key', 'JUSPAY.FMD.UAT.1', 'http://localhost:8018/v1', 'BPP', 'FINAL_MILE_DELIVERY', NULL, NULL, NULL, 'kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E=', NULL, NULL, NULL,  now(), now()),
     ('juspay-bg-1-key', 'JUSPAY.BG.1', 'http://localhost:8015/v1', 'BG', 'MOBILITY', NULL, NULL, NULL, 'kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E=', NULL, NULL, NULL,  now(), now()),
     ('fmd-test-app-key', 'fmd-test-app', 'http://localhost:8019/v1', 'BPP', 'FINAL_MILE_DELIVERY', NULL, NULL, NULL, 'kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E=', NULL, NULL, NULL,  now(), now()),
-    ('mobility-app-key', 'mobility-app', 'http://localhost:8013/cab/v1', 'BAP', 'MOBILITY', NULL, NULL, NULL, 'kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E=', NULL, NULL, NULL,  now(), now());
+    ('mobility-app-key', 'mobility-app', 'http://localhost:8013/cab/v1', 'BAP', 'MOBILITY', NULL, NULL, NULL, 'kCa4OlmRVfCPcvzjPPGik0Ljei5dRYuuj/2K6upaf1E=', NULL, NULL, NULL,  now(), now()),
+    ('juspay-mobility-bpp-1-key1', 'public-transport-bpp', 'http://localhost:9091', 'BPP', 'MOBILITY', NULL, NULL, NULL, 'Fhjwaka1Za+ld+7Nms7S0C675r24mZoyWVn8JbYTjSs=', NULL, NULL, NULL, now(), now());
