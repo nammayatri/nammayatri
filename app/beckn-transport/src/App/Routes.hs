@@ -52,11 +52,14 @@ import Types.Storage.Vehicle
 import Utils.Auth (AdminTokenAuth, TokenAuth)
 
 type TransportAPI =
-  "v2" :> MainAPI
-    :<|> "v1" :> OrgBecknAPI
+  MainAPI
     :<|> SwaggerAPI
 
 type MainAPI =
+  "v2" :> UIAPI
+    :<|> "v1" :> OrgBecknAPI
+
+type UIAPI =
   HealthCheckAPI
     :<|> RegistrationAPI
     :<|> OrgAdminAPI
@@ -75,8 +78,8 @@ type MainAPI =
 transporterAPI :: Proxy TransportAPI
 transporterAPI = Proxy
 
-mainServer :: FlowServer MainAPI
-mainServer =
+uiServer :: FlowServer UIAPI
+uiServer =
   pure "App is UP"
     :<|> registrationFlow
     :<|> orgAdminFlow
@@ -92,10 +95,14 @@ mainServer =
     :<|> cancellationReasonFlow
     :<|> googleMapsProxyFlow
 
+mainServer :: FlowServer MainAPI
+mainServer =
+  uiServer
+    :<|> orgBecknApiFlow
+
 transporterServer :: FlowServer TransportAPI
 transporterServer =
   mainServer
-    :<|> orgBecknApiFlow
     :<|> writeSwaggerJSONFlow
 
 ---- Registration Flow ------
