@@ -1,8 +1,8 @@
 module Core.Search.Fulfillment where
 
 import Beckn.Prelude
-import Core.Search.LocationGps
 import Beckn.Utils.GenericPretty
+import Core.Search.LocationGps
 
 data Fulfillment = Fulfillment
   { start :: StartInfo,

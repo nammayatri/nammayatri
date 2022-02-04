@@ -2,6 +2,7 @@ module Beckn.Types.Core.Migration.Gps (Gps (..)) where
 
 import Beckn.Utils.Error.Throwing (fromEitherM')
 import Beckn.Utils.Example
+import Beckn.Utils.GenericPretty (PrettyShow)
 import Control.Arrow ((>>>))
 import Data.Aeson
 import Data.Aeson.Types (parseFail)
@@ -11,7 +12,6 @@ import EulerHS.Prelude hiding (many, try, (<|>))
 import Text.Parsec
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as P
-import Beckn.Utils.GenericPretty (PrettyShow)
 
 -- Regular expression: ^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?),\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$
 

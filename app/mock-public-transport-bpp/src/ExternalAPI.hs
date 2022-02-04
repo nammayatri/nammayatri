@@ -15,7 +15,7 @@ import Servant
 import Servant.Client
 
 type GatewayOnSearchAPI =
-    "on_search"
+  "on_search"
     :> ReqBody '[JSON] (BecknCallbackReq OnSearchCatalog)
     :> Post '[JSON] AckResponse
 

@@ -1,8 +1,8 @@
 module Core.OnConfirm where
 
+import Core.Common.Payment
 import Core.OnConfirm.Order
 import Core.OnConfirm.Params
-import Core.Common.Payment
 import Data.Aeson
 import Relude hiding (State, id, ord, state)
 

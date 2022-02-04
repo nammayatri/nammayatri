@@ -1,11 +1,11 @@
 module Environment where
 
+import Beckn.Types.Logging
 import Beckn.Utils.CacheHedis
 import Beckn.Utils.Dhall (FromDhall)
+import Beckn.Utils.IOLogging
 import Relude
 import Servant.Client
-import Beckn.Types.Logging
-import Beckn.Utils.IOLogging
 
 data AppCfg = AppCfg
   { port :: Int,

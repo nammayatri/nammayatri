@@ -5,12 +5,12 @@
 module Beckn.Mock.App where
 
 import Beckn.Types.Common
+import Beckn.Utils.IOLogging
 import qualified Control.Monad.Catch as C
 import Control.Monad.IO.Unlift
 import Relude
 import Servant
 import UnliftIO.Concurrent
-import Beckn.Utils.IOLogging
 
 run :: forall e api. HasServer api '[] => Proxy (api :: Type) -> ServerT api (MockM e) -> e -> Application
 run proxyApi server env = serve proxyApi $ hoistServer proxyApi f server
@@ -30,14 +30,15 @@ instance MonadTime (MockM e) where
   getCurrentTime = liftIO getCurrentTime
 
 instance (HasLog e) => Log (MockM e) where
-  logOutput = logOutputImplementation 
+  logOutput = logOutputImplementation
   withLogTag = withLogTagImplementation
 
 instance (HasLog e) => Forkable (MockM e) where
   fork = mockFork
 
 mockFork :: (HasLog e) => Text -> MockM e a -> MockM e ()
-mockFork tag action = void $ withLogTag tag $
-  forkFinally action $ \case
-    Left se -> logOutput ERROR $ show se
-    Right _ -> pure ()
+mockFork tag action = void $
+  withLogTag tag $
+    forkFinally action $ \case
+      Left se -> logOutput ERROR $ show se
+      Right _ -> pure ()

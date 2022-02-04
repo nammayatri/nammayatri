@@ -1,10 +1,10 @@
 module Core.OnSearch where
 
 import Beckn.Utils.JSON (slashedRecordFields)
+import Core.OnSearch.Descriptor
+import Core.OnSearch.Provider
 import Data.Aeson
 import Relude hiding (id)
-import Core.OnSearch.Provider
-import Core.OnSearch.Descriptor
 
 newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog
@@ -23,5 +23,3 @@ instance FromJSON Catalog where
 
 instance ToJSON Catalog where
   toJSON = genericToJSON slashedRecordFields
-
-

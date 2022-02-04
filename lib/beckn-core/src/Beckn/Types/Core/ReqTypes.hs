@@ -2,13 +2,13 @@ module Beckn.Types.Core.ReqTypes where
 
 import Beckn.Types.Core.Error (Error)
 import Beckn.Types.Core.Taxi.Common.Context (Context)
+import Beckn.Utils.GenericPretty
 import qualified Control.Lens as L
 import Data.Aeson
 import Data.OpenApi
 import Data.Typeable
 import EulerHS.Prelude hiding ((.=), (.~))
 import GHC.Exts (IsList (fromList))
-import Beckn.Utils.GenericPretty
 
 data BecknReq a = BecknReq
   { context :: Context,

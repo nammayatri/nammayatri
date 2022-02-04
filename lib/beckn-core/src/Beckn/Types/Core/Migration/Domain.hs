@@ -1,17 +1,17 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE DerivingStrategies #-}
+
 module Beckn.Types.Core.Migration.Domain (Domain (..)) where
 
 import Beckn.Utils.Example
-import Beckn.Utils.JSON (constructorsWithHyphensUntagged)
 --(ToSchema (declareNamedSchema), NamedSchema (NamedSchema))
 
+import Beckn.Utils.GenericPretty
+import Beckn.Utils.JSON (constructorsWithHyphensUntagged)
 import qualified Control.Lens as L
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
 import Data.OpenApi hiding (Example)
 import EulerHS.Prelude
-import Beckn.Utils.GenericPretty
 
 data Domain
   = MOBILITY
@@ -23,7 +23,7 @@ data Domain
   | PARKING
   | UNKNOWN_DOMAIN Text
   deriving (Eq, Generic, Show)
-  deriving PrettyShow via Showable Domain
+  deriving (PrettyShow) via Showable Domain
 
 instance ToSchema Domain where
   declareNamedSchema _ = do

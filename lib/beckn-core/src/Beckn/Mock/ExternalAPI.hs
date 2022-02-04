@@ -4,7 +4,9 @@
 module Beckn.Mock.ExternalAPI where
 
 import Beckn.Mock.App
+import Beckn.Types.Common
 import Beckn.Types.Core.ReqTypes
+import Beckn.Utils.IOLogging
 import Beckn.Utils.Logging
 import qualified Control.Monad.Catch as C
 import qualified Data.ByteString as BS
@@ -14,8 +16,6 @@ import Network.HTTP.Client hiding (Proxy)
 import Network.HTTP.Types.Header
 import Relude
 import Servant.Client
-import Beckn.Types.Common
-import Beckn.Utils.IOLogging
 
 callBapAPI ::
   forall api a b e c.

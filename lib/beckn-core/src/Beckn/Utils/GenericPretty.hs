@@ -18,6 +18,7 @@ module Beckn.Utils.GenericPretty
 where
 
 import Beckn.Prelude
+import Beckn.Types.Time
 import Data.Aeson
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BSL
@@ -28,7 +29,6 @@ import qualified Data.Time as Time
 import qualified Data.Vector as V
 import Data.Void (Void, absurd)
 import GHC.Generics
-import Beckn.Types.Time
 
 enclose, encloseSq :: String -> String
 enclose s = '{' : s ++ "}"

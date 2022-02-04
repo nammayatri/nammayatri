@@ -1,8 +1,8 @@
 module Core.Search where
 
 import Beckn.Prelude
-import Core.Search.Fulfillment
 import Beckn.Utils.GenericPretty (PrettyShow)
+import Core.Search.Fulfillment
 
 newtype SearchMessage = SearchMessage
   { intent :: Intent
@@ -13,5 +13,3 @@ newtype Intent = Intent
   { fulfillment :: Fulfillment
   }
   deriving (Generic, FromJSON, ToJSON, Show, PrettyShow)
-
-
