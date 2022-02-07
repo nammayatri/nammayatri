@@ -1,8 +1,7 @@
-ARG NS=701342709052.dkr.ecr.ap-southeast-1.amazonaws.com
-ARG DEP_IMAGE=beckn
-ARG DEP_LABEL=master
+ARG DEP_IMAGE_PATH=beckn
+ARG DEP_LABEL=latest
 
-FROM ${NS}/${DEP_IMAGE}:${DEP_LABEL} as build
+FROM ${DEP_IMAGE_PATH}:${DEP_LABEL} as build
 COPY . /opt/build/
 
 WORKDIR /opt/build
@@ -47,7 +46,8 @@ RUN apt-get update && apt-get install -y \
   libssl-dev \
   libpq-dev \
   binutils \
-  libmysqlclient-dev
+  libmysqlclient-dev \
+  librdkafka-dev
 
 COPY --from=build /opt/build/bin .
 CMD ["/opt/app/app-backend-exe"]

@@ -56,7 +56,7 @@ build: Dockerfile
 	# Login with aws ecr to pull dependency base image
 	aws ecr get-login-password --region $(AWS_REGION) | docker login --username AWS --password-stdin $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 	rm -rf .ssh && cp -R ~/.ssh .
-	docker build -t $(IMAGE_NAME):$(VERSION) -f Dockerfile --build-arg "NS=$(NS)" --build-arg "DEP_LABEL=$(DEP_LABEL)" --build-arg "DEP_IMAGE=$(DEP_IMAGE)" --build-arg "BUILD_ARGS=$(BUILD_ARGS)" .
+	docker build -t $(IMAGE_NAME):$(VERSION) -f Dockerfile --build-arg "DEP_LABEL=$(DEP_LABEL)" --build-arg "DEP_IMAGE_PATH=$(NS)/$(DEP_IMAGE)" --build-arg "BUILD_ARGS=$(BUILD_ARGS)" .
 
 push:
 	# Login with aws ecr to push build image
@@ -83,3 +83,15 @@ run-mobility-stack: ./dev/run.sh
 new-service: ./dev/new-service.sh
 	# Create new service skeleton
 	./dev/new-service.sh
+
+build-dep-local: Dockerfile.dep
+	$(info Building $(DEP_IMAGE):latest / git-head: $(SOURCE_COMMIT))
+	rm -rf .ssh && cp -R ~/.ssh .
+	docker build -t $(DEP_IMAGE):latest -f Dockerfile.dep .
+	rm -rf .ssh
+
+build-local: Dockerfile
+	$(info Building $(IMAGE_NAME):$(VERSION) / git-head: $(SOURCE_COMMIT))
+	rm -rf .ssh && cp -R ~/.ssh .
+	docker build -t $(IMAGE_NAME):$(VERSION) -f Dockerfile . --build-arg "DEP_IMAGE_PATH=$(DEP_IMAGE)"
+	rm -rf .ssh
