@@ -140,6 +140,20 @@ spec:
   - match:
     - uri:
         prefix: /fmd/
+    - headers:
+        authorization:
+          prefix: Signature
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-fmd-wrapper-sandbox
+        port:
+          number: 8018
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /fmd
     rewrite:
       uri: /
     route:
