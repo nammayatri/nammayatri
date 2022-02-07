@@ -60,8 +60,8 @@ whitelisting ::
   Maybe Subscriber ->
   m (Maybe Subscriber)
 whitelisting p = maybe (pure Nothing) \sub -> do
-  unlessM (p sub.unique_key_id) . throwError . InvalidRequest $
-    "Not whitelisted subscriber " <> sub.unique_key_id
+  unlessM (p sub.subscriber_id) . throwError . InvalidRequest $
+    "Not whitelisted subscriber " <> sub.subscriber_id
   pure (Just sub)
 
 withSubscriberCache ::

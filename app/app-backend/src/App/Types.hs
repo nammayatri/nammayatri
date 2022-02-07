@@ -20,6 +20,7 @@ import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow
+import Beckn.Types.Id (ShortId (..))
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.App (getPodName)
@@ -32,6 +33,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Flow
+import Storage.Queries.Organization (findOrgByShortId)
 import Tools.Streaming.Kafka.Environment
 import Types.Geofencing
 import Types.Metrics
@@ -145,7 +147,7 @@ instance Registry Flow where
     Registry.withSubscriberCache $
       Registry.whitelisting isWhiteListed <=< Registry.registryLookup
     where
-      isWhiteListed _ = pure True -- TODO: implement whitelisting
+      isWhiteListed subscriberId = findOrgByShortId (ShortId subscriberId) <&> isJust
 
 instance Cache Subscriber Flow where
   type CacheKey Subscriber = SimpleLookupRequest
