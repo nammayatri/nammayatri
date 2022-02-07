@@ -1,5 +1,4 @@
 let common = ./common.dhall
-let kafka = ./kafka/beckn-transport.dhall
 let sec = ./secrets/beckn-transport.dhall
 
 let postgresConfig =
@@ -60,6 +59,10 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
+let kafkaProducerCfg =
+  { brokers = ["beta-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"]
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -103,5 +106,5 @@ in
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
-, kafkaProducerCfg = kafka.producerCfg
+, kafkaProducerCfg = kafkaProducerCfg
 }

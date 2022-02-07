@@ -1,5 +1,4 @@
 let common = ./common.dhall
-let kafka = ./kafka/app-backend.dhall
 let sec = ./secrets/app-backend.dhall
 
 let GeoRestriction = < Unrestricted | Regions : List Text>
@@ -80,6 +79,10 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
+let kafkaProducerCfg =
+  { brokers = ["localhost:29092"]
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -130,5 +133,5 @@ in
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
-, kafkaProducerCfg = kafka.producerCfg
+, kafkaProducerCfg = kafkaProducerCfg
 }

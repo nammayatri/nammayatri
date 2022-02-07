@@ -1,5 +1,4 @@
 let common = ./common.dhall
-let kafka = ./kafka/app-backend.dhall
 let sec = ./secrets/app-backend.dhall
 
 let GeoRestriction = < Unrestricted | Regions : List Text>
@@ -85,6 +84,10 @@ let encTools =
   , hashSalt = sec.encHashSalt
   }
 
+let kafkaProducerCfg =
+  { brokers = ["beta-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"]
+  }
+
 in
 
 { dbCfg = pgcfg
@@ -134,5 +137,5 @@ in
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
-, kafkaProducerCfg = kafka.producerCfg
+, kafkaProducerCfg = kafkaProducerCfg
 }
