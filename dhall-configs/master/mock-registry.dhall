@@ -2,8 +2,8 @@ let common = ./common.dhall
 let sec = ./secrets/mock-registry.dhall
 
 let esqDBCfg =
-  { connectHost = "localhost"
-  , connectPort = 5439
+  { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
+  , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
   , connectDatabase = "atlas_registry_v2"
