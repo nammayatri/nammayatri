@@ -6,7 +6,7 @@ let esqDBCfg =
   , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_mock_registry_v2"
+  , connectDatabase = "atlas_mock_registry"
   , connectSchemaName = "atlas_mock_registry"
   }
 
