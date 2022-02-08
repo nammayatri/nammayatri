@@ -9,9 +9,11 @@ import API.Search
 import API.Status
 import API.Types
 import Beckn.Mock.App
+import Beckn.Utils.App (logRequestAndResponseGeneric)
 import Beckn.Utils.CacheHedis
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.IOLogging
+import Beckn.Utils.Logging
 import qualified Control.Monad.Catch as C
 import Environment
 import Network.Wai.Handler.Warp
@@ -31,8 +33,11 @@ runMockParkingBPP = do
           appEnv = buildAppEnv hedisEnv loggerEnv appCfg
           settings =
             defaultSettings & setPort port
+          reqRespLogger :: Text -> Text -> IO ()
+          reqRespLogger tag info = runReaderT (runMockM $ withLogTag tag $ logOutput INFO info) appEnv
       runSettings settings $
-        run totalAPI totalServer appEnv
+        logRequestAndResponseGeneric reqRespLogger $
+          run totalAPI totalServer appEnv
 
 withIOLogger :: LoggerConfig -> (LoggerEnv -> IO ()) -> IO ()
 withIOLogger conf = C.bracket (prepareLoggerEnv conf Nothing) releaseLoggerEnv

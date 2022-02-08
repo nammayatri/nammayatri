@@ -6,7 +6,6 @@ import Beckn.Types.Core.Migration.DecimalValue
 import qualified Core.Common.Payment as Common
 import qualified Core.Confirm as Confirm
 import Core.OnConfirm
-import Core.OnConfirm.Location
 import qualified Core.OnConfirm.Order as OnConfirm
 import qualified Core.OnSearch.Item as OnSearch
 import MockData.OnSearch as OnSearch

@@ -9,7 +9,6 @@ import qualified Beckn.Utils.CacheHedis as Hed
 import Beckn.Utils.Error.Throwing
 import Beckn.Utils.Logging
 import Core.OnConfirm.Order
-import Data.Aeson
 import Environment
 import GHC.Records.Extra
 

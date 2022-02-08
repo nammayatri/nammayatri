@@ -2,7 +2,7 @@
 @mock-parking-bpp-host = http://localhost:9090
 
 # @name check-mock-bpp
-GET {{mock-parking-bpp-host}}/health
+GET {{mock-parking-bpp-host}}/healt
 
 ###
 
