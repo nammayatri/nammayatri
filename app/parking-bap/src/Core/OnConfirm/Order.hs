@@ -21,10 +21,10 @@ data Order = Order
     quote :: SpecQuote,
     payment :: Payment
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data OrderState = ACTIVE | CANCELLED | COMPLETE
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema OrderState where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
@@ -32,7 +32,7 @@ instance ToSchema OrderState where
 newtype OrderProviderLocation = OrderProviderLocation
   { id :: Text
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
 instance ToSchema OrderProviderLocation where
@@ -42,10 +42,10 @@ data SpecQuote = SpecQuote
   { price :: Price,
     breakup :: [Breakup]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data Breakup = Breakup
   { title :: Text,
     price :: Price
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

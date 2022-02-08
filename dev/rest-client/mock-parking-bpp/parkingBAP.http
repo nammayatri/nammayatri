@@ -1,0 +1,48 @@
+@parking-bap-host = http://localhost:8022
+
+# @name check-bap
+GET {{parking-bap-host}}
+
+###
+
+#> parseEither parseJSON (String "2021-12-01T18:00:00Z") :: Either String UTCTime
+#Right 2021-12-01 18:00:00 UTC
+#2021-12-01T18:00:00Z
+
+# @name parking-search
+POST {{parking-bap-host}}/parking/search
+content-type: application/json
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+{
+    "location": {
+      "lat": "20",
+      "lon": "20"
+    },
+    "toDate": "2021-12-10T18:00:00Z",
+    "fromDate": "2021-12-11T09:00:00Z"
+}
+
+###
+
+# @name login
+POST {{app-host}}/auth
+content-type: application/json
+
+{
+  "mobileCountryCode": "+91",
+  "mobileNumber": "7777777777"
+}
+
+###
+
+@authToken = {{login.response.body.authId}}
+
+# @name verify
+
+POST {{app-host}}/auth/{{authToken}}/verify
+content-type: application/json
+
+{
+  "otp": "7891"
+}

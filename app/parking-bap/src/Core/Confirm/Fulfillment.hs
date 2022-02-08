@@ -11,7 +11,7 @@ data Fulfillment = Fulfillment
     end :: StartEnd,
     vehicle :: Vehicle
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, Show, FromJSON)
 
 instance ToSchema Fulfillment where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
@@ -19,8 +19,8 @@ instance ToSchema Fulfillment where
 newtype StartEnd = StartEnd
   { time :: Time
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON)
 
 instance ToSchema StartEnd where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

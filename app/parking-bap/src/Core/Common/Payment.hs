@@ -6,7 +6,7 @@ import Beckn.Utils.JSON
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Data.OpenApi (ToSchema (declareNamedSchema), fromAesonOptions, genericDeclareNamedSchema)
 
-data PaymentStatus = PAID | NOT_PAID deriving (Generic, Eq)
+data PaymentStatus = PAID | NOT_PAID deriving (Generic, Eq, Show)
 
 instance ToSchema PaymentStatus where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions constructorsWithHyphens
@@ -17,7 +17,7 @@ instance FromJSON PaymentStatus where
 instance ToJSON PaymentStatus where
   toJSON = genericToJSON constructorsWithHyphens
 
-data PaymentType = PRE_FULFILLMENT | POST_FULFILLMENT | ON_ORDER deriving (Generic)
+data PaymentType = PRE_FULFILLMENT | POST_FULFILLMENT | ON_ORDER deriving (Generic, Show)
 
 instance ToSchema PaymentType where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions constructorsWithHyphens
@@ -45,7 +45,7 @@ data PaymentParams = PaymentParams
     transaction_status :: PaymentGatewayTransactionStatus,
     transaction_id :: Text
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance ToSchema PaymentParams where
   declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
@@ -57,7 +57,7 @@ data Payment = Payment
     uri :: BaseUrl,
     tl_method :: Text
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 instance ToSchema Payment where
   declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny

@@ -18,7 +18,7 @@ import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 newtype OnSearchCatalog = OnSearchCatalog
   { catalog :: Catalog
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
 instance ToSchema OnSearchCatalog where

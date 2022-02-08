@@ -15,7 +15,7 @@ data Fulfillment = Fulfillment
     end :: End,
     vehicle :: Vehicle
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 instance ToSchema Fulfillment where
   declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
@@ -31,23 +31,23 @@ data Start = Start
     contact :: Contact,
     time :: Time
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data StartLocation = StartLocation
   { id :: Text,
     descriptor :: Descriptor,
     gps :: Gps
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 newtype End = End
   { time :: Time
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data Contact = Contact
   { phone :: Text,
     email :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

@@ -10,12 +10,12 @@ data Item = Item
     price :: Price,
     quantity :: Quantity
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 newtype Quantity = Quantity
   { count :: Int
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
 instance ToSchema Quantity where

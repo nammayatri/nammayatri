@@ -14,7 +14,7 @@ data Order = Order
     billing :: Billing,
     fulfillment :: Fulfillment
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, FromJSON, Show)
 
 instance ToSchema Order where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

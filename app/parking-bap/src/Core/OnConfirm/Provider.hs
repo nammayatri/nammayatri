@@ -9,4 +9,4 @@ data Provider = Provider
     descriptor :: Descriptor,
     locations :: [Location]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

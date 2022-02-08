@@ -78,6 +78,24 @@ cradle:
     - path: "app/parking-bap/server/Paths_parking_bap.hs"
       component: "parking-bap:exe:parking-bap-exe"
 
+    - path: "app/parking-bap/src"
+      component: "parking-bap:lib"
+
+    - path: "app/parking-bap/server/Main.hs"
+      component: "parking-bap:exe:parking-bap-exe"
+
+    - path: "app/parking-bap/server/Paths_parking_bap.hs"
+      component: "parking-bap:exe:parking-bap-exe"
+
+    - path: "app/mock-parking-bpp/src"
+      component: "mock-parking-bpp:lib"
+
+    - path: "app/mock-parking-bpp/server/Main.hs"
+      component: "mock-parking-bpp:exe:mock-parking-bpp-exe"
+
+    - path: "app/mock-parking-bpp/server/Paths_mock_parking_bpp.hs"
+      component: "mock-parking-bpp:exe:mock-parking-bpp-exe"
+
     - path: "app/public-transport-bap/src"
       component: "public-transport-bap:lib"
 

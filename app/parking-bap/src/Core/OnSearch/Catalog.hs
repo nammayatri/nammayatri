@@ -10,7 +10,7 @@ data Catalog = Catalog
   { bpp_descriptor :: Descriptor,
     bpp_providers :: [Provider]
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 
 instance ToSchema Catalog where
   declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions slashedRecordFields

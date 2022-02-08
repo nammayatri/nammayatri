@@ -7,8 +7,8 @@ import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 newtype Provider = Provider
   { locations :: [Location]
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON)
 
 instance ToSchema Provider where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
@@ -16,8 +16,8 @@ instance ToSchema Provider where
 newtype Location = Location
   { id :: Text
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON)
 
 instance ToSchema Location where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

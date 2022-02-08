@@ -15,7 +15,7 @@ import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 newtype OnStatusMessage = OnStatusMessage
   { order :: Order
   }
-  deriving stock (Generic)
+  deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
 
 instance ToSchema OnStatusMessage where

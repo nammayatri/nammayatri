@@ -8,7 +8,7 @@ data Item = Item
   { id :: Text,
     quantity :: Quantity
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, Show, FromJSON)
 
 instance ToSchema Item where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
@@ -16,8 +16,8 @@ instance ToSchema Item where
 newtype Quantity = Quantity
   { count :: Int
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON)
 
 instance ToSchema Quantity where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

@@ -15,8 +15,8 @@ import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 newtype ConfirmMessage = ConfirmMessage
   { order :: Order
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON)
 
 instance ToSchema ConfirmMessage where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

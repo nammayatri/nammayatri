@@ -43,6 +43,7 @@ packages:
   - app/parking-bap
   - app/public-transport-bap
   - app/mock-public-transport-bpp
+  - app/mock-parking-bpp
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as

@@ -1,4 +1,4 @@
-module Core.OnSearch.Category (Category (..)) where
+module Core.OnSearch.Category (Category (..), CategoryDescriptor (..)) where
 
 import Beckn.Prelude
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
@@ -8,7 +8,7 @@ data Category = Category
   { id :: Maybe Text,
     descriptor :: Maybe CategoryDescriptor
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 newtype CategoryDescriptor = CategoryDescriptor
   { name :: Text

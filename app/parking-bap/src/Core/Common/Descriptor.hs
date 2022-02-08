@@ -7,4 +7,4 @@ data Descriptor = Descriptor
     short_desc :: Text,
     images :: [Text]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
