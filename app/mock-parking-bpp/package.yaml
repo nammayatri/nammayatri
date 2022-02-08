@@ -1,0 +1,92 @@
+name: mock-parking-bpp
+version: 0.1.0.0
+github: "juspay/beckn"
+license: AllRightsReserved
+author: "Juspay"
+maintainer: "Juspay"
+copyright: "2021 Juspay Technologies Private Limited"
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
+
+default-extensions:
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DerivingStrategies
+  - DuplicateRecordFields
+  - FlexibleContexts
+  - FlexibleInstances
+  - LambdaCase
+  - MultiParamTypeClasses
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - DataKinds
+  - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - TypeSynonymInstances
+  - UndecidableInstances
+  - AllowAmbiguousTypes
+
+dependencies:
+  - aeson
+  - base >= 4.7 && < 5
+  - bytestring
+  - record-dot-preprocessor
+  - record-hasfield
+  - text
+  - time
+  - servant-server
+  - servant-client
+  - servant-client-core
+  - warp
+  - wai
+  - http-client
+  - exceptions
+  - beckn-core
+  - parking-bap
+  - http-types
+  - relude
+  - unliftio
+  - random
+  - string-conversions
+  - hedis
+  - transformers
+
+ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Werror
+  - -Widentities
+  - -Wunused-imports
+  - -fplugin=RecordDotPreprocessor
+  - -fwrite-ide-info
+  - -hiedir=.hie
+
+library:
+  source-dirs: src
+  ghc-options:
+    - -Wincomplete-uni-patterns
+
+executables:
+  mock-parking-bpp-exe:
+    main: Main.hs
+    source-dirs: server
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+      - -Wincomplete-uni-patterns
+    dependencies:
+      - mock-parking-bpp
+      - beckn-core

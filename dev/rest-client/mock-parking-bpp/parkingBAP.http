@@ -1,4 +1,10 @@
 @parking-bap-host = http://localhost:8022
+@mock-parking-bpp-host = http://localhost:9090
+
+# @name check-mock-bpp
+GET {{mock-parking-bpp-host}}/health
+
+###
 
 # @name check-bap
 GET {{parking-bap-host}}
@@ -24,7 +30,37 @@ token: ea37f941-427a-4085-a7d0-96240f166672
 }
 
 ###
+@searchId = 364e4a51-0890-42f1-8880-6abddcb68744
 
+# @name get-quotes
+GET {{parking-bap-host}}/parking/{{searchId}}/quotes
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+###
+@quoteId = 32020ec3-644d-465a-b56c-1169020a89c4
+@quoteIdFail = 79d7b7f1-4495-4ae9-b9f8-ae959748c593
+
+# @name confirm-quote
+POST {{parking-bap-host}}/parking/quotes/{{quoteIdFail}}/confirm
+content-type: application/json
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+{
+    "requestorNumber": "1234",
+    "vehicleNumber": "vehnum",
+    "requestorName": "Pavsikakiy"
+}
+
+###
+@bookingId = 2f5c2034-93d5-4b1d-b0fa-e71bb0642d54
+@bookingIdFail = 06bc4a8e-036d-4c56-a267-4ec7bf694fc0
+
+# @name booking
+
+GET {{parking-bap-host}}/parking/booking/{{bookingIdFail}}
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+###
 # @name login
 POST {{app-host}}/auth
 content-type: application/json

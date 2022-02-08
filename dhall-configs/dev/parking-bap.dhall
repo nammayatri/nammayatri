@@ -30,7 +30,7 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/parking-bap.log"}
 , graceTerminationPeriod = +90
 , selfId = "JUSPAY.MOBILITY.APP.UAT.3"
-, selfURI = "http://localhost:8022/parking/v1"
+, selfURI = "http://localhost:8022/beckn"
 , httpClientOptions = common.httpClientOptions
 , authEntity =
   { signingKey = sec.signingKey
