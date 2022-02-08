@@ -4,7 +4,6 @@ module ParkingBppApp
 where
 
 import API.Confirm
-import API.HealthCheck
 import API.Search
 import API.Status
 import API.Types
@@ -43,4 +42,4 @@ withIOLogger :: LoggerConfig -> (LoggerEnv -> IO ()) -> IO ()
 withIOLogger conf = C.bracket (prepareLoggerEnv conf Nothing) releaseLoggerEnv
 
 totalServer :: ServerT TotalAPI (MockM AppEnv)
-totalServer = healthCheckServer :<|> searchServer :<|> confirmServer :<|> statusServer
+totalServer = searchServer :<|> confirmServer :<|> statusServer

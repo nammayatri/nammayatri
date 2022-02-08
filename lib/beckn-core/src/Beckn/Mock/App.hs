@@ -12,9 +12,16 @@ import Relude
 import Servant
 import UnliftIO.Concurrent
 
+type HealthCheckAPI = Get '[JSON] Text
+
+healthCheckServer :: MockM e Text
+healthCheckServer = do
+  pure "Mock is up!"
+
 run :: forall e api. HasServer api '[] => Proxy (api :: Type) -> ServerT api (MockM e) -> e -> Application
-run proxyApi server env = serve proxyApi $ hoistServer proxyApi f server
+run _ server env = serve proxyApi $ hoistServer proxyApi f (healthCheckServer :<|> server)
   where
+    proxyApi = Proxy @(HealthCheckAPI :<|> api)
     f :: MockM e a -> Handler a
     f action = do
       eithRes <- liftIO . C.try $ runReaderT (runMockM action) env

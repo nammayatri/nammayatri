@@ -4,7 +4,6 @@ module App
 where
 
 import API.Confirm
-import API.HealthCheck
 import API.Search
 import API.Status
 import API.Types
@@ -44,4 +43,4 @@ runMockPublicTransportBPP = do
         run totalAPI totalServer appEnv
 
 totalServer :: ServerT TotalAPI (MockM AppEnv)
-totalServer = healthCheckServer :<|> searchServer :<|> confirmServer :<|> statusServer
+totalServer = searchServer :<|> confirmServer :<|> statusServer

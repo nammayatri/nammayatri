@@ -8,8 +8,6 @@ import Core.Status
 import Relude
 import Servant
 
-type HealthCheckAPI = "health" :> Get '[JSON] Text
-
 type SearchAPI =
   "search" :> ReqBody '[JSON] (BecknReq SearchMessage) :> Post '[JSON] AckResponse
 
@@ -19,7 +17,7 @@ type ConfirmAPI =
 type StatusAPI =
   "status" :> ReqBody '[JSON] (BecknReq StatusMessage) :> Post '[JSON] AckResponse
 
-type TotalAPI = HealthCheckAPI :<|> SearchAPI :<|> ConfirmAPI :<|> StatusAPI
+type TotalAPI = SearchAPI :<|> ConfirmAPI :<|> StatusAPI
 
 totalAPI :: Proxy TotalAPI
 totalAPI = Proxy
