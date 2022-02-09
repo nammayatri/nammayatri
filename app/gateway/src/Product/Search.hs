@@ -16,7 +16,6 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import qualified Product.ProviderRegistry as BP
-import Storage.Queries.Organization (findByBapUrl)
 import qualified Types.API.Gateway.Search as ExternalAPI
 import Types.API.Search (OnSearchReq, SearchReq (..))
 import Types.Error
@@ -58,13 +57,11 @@ searchCb (SignatureAuthResult proxySign _subscriber) rawReq = withFlowHandlerBec
     withLogTag ("providerUrl_" <> showBaseUrlText providerUrl) do
       let gatewayOnSearchSignAuth = ET.client ExternalAPI.onSearchAPI
       let bapUri = req.context.bap_uri
-      bapOrg <- findByBapUrl bapUri >>= fromMaybeM OrgDoesNotExist
-      cbUrl <- bapOrg.callbackUrl & fromMaybeM (OrgFieldNotPresent "callback_url")
       void . withRetry $
         callBecknAPI'
           (Just signatureAuthManagerKey)
           Nothing
-          cbUrl
+          bapUri
           (gatewayOnSearchSignAuth (Just proxySign) rawReq)
           "on_search"
       return Ack
