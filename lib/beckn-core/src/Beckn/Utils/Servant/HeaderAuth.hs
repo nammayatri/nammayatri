@@ -9,7 +9,6 @@ import Beckn.Types.Flow
 import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (HasLog)
-import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.Server
 import Control.Arrow
 import Control.Lens ((?=))
@@ -33,11 +32,6 @@ import Servant.Server.Internal.DelayedIO (DelayedIO, withRequest)
 -- Normally you should define a type alias for this which fixes the
 -- verification method.
 data HeaderAuth (header :: Symbol) (verify :: Type)
-
--- | TODO: Perform some API key verification.
-type APIKeyAuth verify = HeaderAuth "X-API-Key" verify
-
-type HeaderAuthKey = Header "X-API-Key" Text
 
 -- | How token verification is performed.
 class VerificationMethod verify where
@@ -151,9 +145,3 @@ addResponse401 = execState $ do
   where
     response401Name = "Unauthorized"
     response401 = mempty & DS.description .~ "Unauthorized"
-
-instance
-  SanitizedUrl (subroute :: Type) =>
-  SanitizedUrl (APIKeyAuth v :> subroute)
-  where
-  getSanitizedUrl _ = getSanitizedUrl (Proxy :: Proxy subroute)

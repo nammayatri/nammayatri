@@ -1,7 +1,6 @@
 module Storage.Queries.Organization where
 
 import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App as App
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
@@ -14,14 +13,6 @@ import qualified Types.Storage.Organization as Org
 getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.AppDb (B.TableEntity Org.OrganizationT))
 getDbTable =
   DB.organization . DB.appDb <$> getSchemaName
-
-findOrgByApiKey :: DBFlow m r => App.APIKey -> m (Maybe Org.Organization)
-findOrgByApiKey apiKey_ = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Org.Organization {..} =
-      apiKey ==. B.val_ (Just apiKey_)
 
 listOrganizations ::
   DBFlow m r =>
