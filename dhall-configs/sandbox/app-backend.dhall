@@ -134,6 +134,7 @@ in
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
 , authTokenCacheExpiry = +600
+, registryUrl = common.registryUrl
 , gatewayUrl = juspayGatewayUrl
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
