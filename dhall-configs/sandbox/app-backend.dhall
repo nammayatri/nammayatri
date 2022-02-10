@@ -65,7 +65,8 @@ let geofencingConfig =
 , destination = GeoRestriction.Unrestricted
 }
 
-let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
+let nsdlGatewayUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
+let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/gateway/v1"
 
 let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v2"
 
@@ -129,7 +130,7 @@ in
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = httpClientOptions
 , authTokenCacheExpiry = +600
-, gatewayUrl = gwUri
+, gatewayUrl = juspayGatewayUrl
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 , encTools = encTools
