@@ -9,6 +9,15 @@ cradle:
     - path: "app/app-backend/server/Paths_app_backend.hs"
       component: "app-backend:exe:app-backend-exe"
 
+    - path: "app/search-result-aggregator/src"
+      component: "search-result-aggregator:lib"
+
+    - path: "app/search-result-aggregator/server/Main.hs"
+      component: "search-result-aggregator:exe:search-result-aggregator-exe"
+
+    - path: "app/search-result-aggregator/server/Paths_search_result_aggregator.hs"
+      component: "search-result-aggregator:exe:search-result-aggregator-exe"
+
     - path: "app/beckn-cli/src"
       component: "beckn-cli:lib"
 

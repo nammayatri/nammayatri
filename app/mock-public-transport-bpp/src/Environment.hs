@@ -1,9 +1,10 @@
 module Environment where
 
+import Beckn.Storage.Hedis
 import Beckn.Types.Logging
-import Beckn.Utils.CacheHedis
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
+import Control.Monad.Catch (bracket)
 import Relude
 import Servant.Client
 
@@ -12,7 +13,7 @@ data AppCfg = AppCfg
     selfId :: Text,
     uniqueKeyId :: Text,
     selfUri :: BaseUrl,
-    redisPrefix :: Text,
+    hedisCfg :: HedisCfg,
     statusWaitTimeSec :: Int,
     callbackWaitTimeMilliSec :: Int,
     loggerConfig :: LoggerConfig
@@ -26,5 +27,16 @@ data AppEnv = AppEnv
   }
   deriving (Generic)
 
-buildAppEnv :: HedisEnv -> LoggerEnv -> AppCfg -> AppEnv
-buildAppEnv hedisEnv loggerEnv config = AppEnv {..}
+buildAppEnv :: AppCfg -> IO AppEnv
+buildAppEnv config@AppCfg {..} = do
+  hedisEnv <- connectHedis hedisCfg
+  loggerEnv <- prepareLoggerEnv loggerConfig Nothing
+  return $ AppEnv {..}
+
+releaseAppEnv :: AppEnv -> IO ()
+releaseAppEnv AppEnv {..} = do
+  disconnectHedis hedisEnv
+  releaseLoggerEnv loggerEnv
+
+withAppEnv :: AppCfg -> (AppEnv -> IO ()) -> IO ()
+withAppEnv cfg = bracket (buildAppEnv cfg) releaseAppEnv

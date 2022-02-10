@@ -5,17 +5,17 @@ where
 
 import API.Handler
 import API.Types
-import App.Types
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config (EsqDBConfig (..))
 import Beckn.Types.Logging
-import Beckn.Utils.Servant.Server (runServerService)
+import Beckn.Utils.Servant.Server (runServer)
+import Environment
 import Servant (Context (..))
 
 runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
-  runServerService appEnv (Proxy @API) handler identity identity EmptyContext releaseAppEnv pure
+  runServer appEnv (Proxy @API) handler identity identity EmptyContext (const identity) releaseAppEnv pure
 
 defaultConfig :: AppCfg
 defaultConfig =

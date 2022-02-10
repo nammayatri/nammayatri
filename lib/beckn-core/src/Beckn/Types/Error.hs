@@ -723,6 +723,7 @@ data KafkaError
   = KafkaUnableToBuildTools Kafka.KafkaError
   | KafkaUnableToReleaseTools Kafka.KafkaError
   | KafkaUnableToProduceMessage Kafka.KafkaError
+  | KafkaUnableToConsumeMessage Kafka.KafkaError
   | KafkaUnableToParseValue
   | KafkaTopicIsEmptyString
   deriving (Show, IsBecknAPIError)
@@ -734,6 +735,7 @@ instance IsBaseError KafkaError where
     KafkaUnableToBuildTools err -> Just $ "Attemption to build Kafka tools ended with error: " <> show err
     KafkaUnableToReleaseTools err -> Just $ "Attemption to release Kafka tools ended with error: " <> show err
     KafkaUnableToProduceMessage err -> Just $ "Attemption to produce message ended with error: " <> show err
+    KafkaUnableToConsumeMessage err -> Just $ "Attemption to consume message ended with error: " <> show err
     KafkaUnableToParseValue -> Just "Unable to parse value of received message."
     KafkaTopicIsEmptyString -> Just "Kafka topic is empty string."
 
@@ -742,6 +744,7 @@ instance IsHTTPError KafkaError where
     KafkaUnableToBuildTools _ -> "KAFKA_UNABLE_TO_BUILD_TOOLS"
     KafkaUnableToReleaseTools _ -> "KAFKA_UNABLE_TO_RELEASE_TOOLS"
     KafkaUnableToProduceMessage _ -> "KAFKA_UNABLE_TO_PRODUCE_MESSAGE"
+    KafkaUnableToConsumeMessage _ -> "KAFKA_UNABLE_TO_CONSUME_MESSAGE"
     KafkaUnableToParseValue -> "KAFKA_UNABLE_TO_PARSE_VALUE"
     KafkaTopicIsEmptyString -> "KAFKA_TOPIC_IS_EMPTY_STRING"
 

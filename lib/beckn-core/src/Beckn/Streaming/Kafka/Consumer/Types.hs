@@ -1,6 +1,7 @@
 module Beckn.Streaming.Kafka.Consumer.Types
   ( KafkaConsumerCfg (..),
     KafkaConsumerTools,
+    HasKafkaConsumer,
     buildKafkaConsumerTools,
     releaseKafkaConsumerTools,
     module Reexport,
@@ -13,10 +14,16 @@ import Beckn.Types.Error
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
-import Kafka.Consumer as Consumer hiding (groupId)
+import Kafka.Consumer hiding (ConsumerGroupId, groupId)
+import qualified Kafka.Consumer as Consumer
 
-newtype KafkaConsumerCfg = KafkaConsumerCfg
-  { brokers :: KafkaBrokersList
+type HasKafkaConsumer env r = HasField "kafkaConsumerEnv" r env
+
+type ConsumerGroupId = Text
+
+data KafkaConsumerCfg = KafkaConsumerCfg
+  { brokers :: KafkaBrokersList,
+    groupId :: ConsumerGroupId
   }
   deriving (Generic, FromDhall)
 
@@ -28,6 +35,7 @@ newtype KafkaConsumerTools a = KafkaConsumerTools
 consumerProps :: KafkaConsumerCfg -> ConsumerProperties
 consumerProps kafkaConsumerCfg =
   brokersList castBrokers
+    <> Consumer.groupId (Consumer.ConsumerGroupId kafkaConsumerCfg.groupId)
     <> logLevel KafkaLogDebug
   where
     castBrokers = BrokerAddress <$> kafkaConsumerCfg.brokers

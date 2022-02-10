@@ -8,7 +8,6 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
-import Control.Concurrent (threadDelay)
 import Data.Time (diffUTCTime)
 import GHC.Records.Extra
 import Prometheus as P

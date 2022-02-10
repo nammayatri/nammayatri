@@ -15,7 +15,7 @@ import Servant
 runMockSms :: (AppCfg -> AppCfg) -> IO ()
 runMockSms configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
-  runServerService appEnv mockSmsAPI mockSmsServer identity identity EmptyContext releaseAppEnv pure
+  runServerWithHealthCheck appEnv mockSmsAPI mockSmsServer identity identity EmptyContext releaseAppEnv pure
 
 defaultConfig :: AppCfg
 defaultConfig =

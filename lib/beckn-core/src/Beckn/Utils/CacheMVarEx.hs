@@ -5,7 +5,6 @@ import Beckn.Types.Cache (CacheKey)
 import Beckn.Types.Time
 import Beckn.Utils.MVar
 import Beckn.Utils.Time
-import Control.Concurrent (threadDelay)
 import qualified Data.Map as Map
 
 data CacheMVarEx a = CacheMVarEx

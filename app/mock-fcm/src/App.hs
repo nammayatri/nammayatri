@@ -13,7 +13,7 @@ import Servant (Context (..))
 runMockFcm :: (AppCfg -> AppCfg) -> IO ()
 runMockFcm configModifier = do
   appEnv <- buildAppEnv $ configModifier defaultConfig
-  runServerService appEnv mockFcmAPI mockFcmServer identity identity EmptyContext releaseAppEnv pure
+  runServerWithHealthCheck appEnv mockFcmAPI mockFcmServer identity identity EmptyContext releaseAppEnv pure
 
 defaultConfig :: AppCfg
 defaultConfig =

@@ -13,7 +13,7 @@ import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import Beckn.Types.Flow (FlowR)
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Servant.Server (runServerService)
+import Beckn.Utils.Servant.Server (runServerWithHealthCheck)
 import Beckn.Utils.Servant.SignatureAuth (modFlowRtWithAuthManagers)
 import Servant (Context (..))
 import Tools.Auth
@@ -22,7 +22,7 @@ runService :: (AppCfg -> AppCfg) -> IO ()
 runService configModifier = do
   appCfg <- readDhallConfigDefault "parking-bap" <&> configModifier
   appEnv <- buildAppEnv appCfg
-  runServerService appEnv (Proxy @API) handler middleware identity context releaseAppEnv \flowRt -> do
+  runServerWithHealthCheck appEnv (Proxy @API) handler middleware identity context releaseAppEnv \flowRt -> do
     try (prepareRedisConnections $ appCfg.redisCfg)
       >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
     migrateIfNeeded (appCfg.migrationPath) (appCfg.esqDBCfg) (appCfg.autoMigrate)

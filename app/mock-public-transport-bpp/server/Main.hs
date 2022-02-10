@@ -4,4 +4,4 @@ import App
 import Beckn.Prelude
 
 main :: IO ()
-main = runMockFerryBPP
+main = runMockPublicTransportBPP

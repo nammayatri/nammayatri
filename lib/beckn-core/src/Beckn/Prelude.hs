@@ -1,6 +1,7 @@
 module Beckn.Prelude (module E, module Beckn.Prelude) where
 
 import Control.Arrow as E
+import Control.Concurrent as E (forkIO, threadDelay)
 import Control.Exception as E (SomeException)
 import Control.Exception.Safe as E (try)
 import Control.Monad.Catch as E
@@ -22,7 +23,7 @@ import Data.Proxy as E (Proxy (..))
 import Data.String as E (IsString (..))
 import Data.Text as E (Text)
 import qualified Data.Text as T
-import Data.Time.Clock as E (UTCTime)
+import Data.Time.Clock as E (NominalDiffTime, UTCTime)
 import GHC.Generics as E (Generic, Generic1)
 import GHC.Records.Compat as E
 import GHC.Stack as E (HasCallStack)
@@ -57,3 +58,6 @@ showBaseUrl = T.pack . Servant.showBaseUrl
 
 parseBaseUrl :: MonadThrow m => Text -> m BaseUrl
 parseBaseUrl = Servant.parseBaseUrl . T.unpack
+
+whileM :: Monad m => m Bool -> m () -> m ()
+whileM b f = whenM b $ f >> whileM b f

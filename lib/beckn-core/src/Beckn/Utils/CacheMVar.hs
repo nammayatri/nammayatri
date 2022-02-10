@@ -7,7 +7,7 @@ import Beckn.Types.Cache (CacheKey)
 import Beckn.Types.Time
 import Beckn.Utils.MVar
 import Beckn.Utils.Time
-import Control.Concurrent (ThreadId, forkIO, threadDelay)
+import Control.Concurrent (ThreadId)
 import qualified Data.Map as Map
 
 newtype CacheMVar a = CacheMVar {cache :: MVar (Map.Map (CacheKey a) a)}

@@ -2,9 +2,9 @@ module Redis where
 
 import Beckn.Mock.App
 import Beckn.Mock.Exceptions (OrderError (OrderNotFound))
+import qualified Beckn.Storage.Hedis as Hed
 import Beckn.Types.Cache
 import Beckn.Types.Core.Migration.Context
-import qualified Beckn.Utils.CacheHedis as Hed
 import Beckn.Utils.Error.Throwing
 import Beckn.Utils.Logging
 import Core.OnConfirm.Order
@@ -24,12 +24,9 @@ toTuple occo = (occo.context, occo.order)
 
 instance Cache OnConfirmContextOrder (MockM AppEnv) where
   type CacheKey OnConfirmContextOrder = Text
-  getKey key = getRedisPrefix >>= \pref -> Hed.getKey pref key
-  setKey key val = getRedisPrefix >>= \pref -> Hed.setKey pref key val
-  delKey key = getRedisPrefix >>= \pref -> Hed.delKey pref key
-
-getRedisPrefix :: MockM AppEnv Text
-getRedisPrefix = asks (.config.redisPrefix)
+  getKey key = Hed.get key
+  setKey key val = Hed.set key val
+  delKey key = Hed.del key
 
 writeOrder :: Context -> Order -> MockM AppEnv ()
 writeOrder ctx order = do

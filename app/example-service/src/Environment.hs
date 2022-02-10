@@ -1,4 +1,4 @@
-module App.Types where
+module Environment where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config

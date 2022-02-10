@@ -1,5 +1,6 @@
 module Types.API.Quote where
 
+import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList (PublicTransportQuote)
 import Beckn.Utils.JSON (objectWithSingleFieldParsing)
 import Data.Char (toLower)
 import Data.OpenApi (ToSchema)
@@ -18,6 +19,7 @@ data GetQuotesRes = GetQuotesRes
 data OfferRes
   = OnDemandCab QuoteAPIEntity
   | Metro MetroOffer
+  | PublicTransport PublicTransportQuote
   deriving (Show, Generic, ToSchema)
 
 instance ToJSON OfferRes where
