@@ -20,7 +20,7 @@ let rcfg =
   , connectTimeout = None Integer
   }
 
-let nsdlGatewayUrl = "https://gateway-1.beckn.nsdl.co.in"
+let nsdlGatewayUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/latest/gateway/v1"
 
 in
