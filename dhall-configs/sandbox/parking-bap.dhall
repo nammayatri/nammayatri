@@ -34,7 +34,7 @@ in
 , httpClientOptions = common.httpClientOptions
 , authEntity =
   { signingKey = sec.signingKey
-  , uniqueKeyId = "FIXME"
+  , uniqueKeyId = "54"
   , signatureExpiry = common.signatureExpiry
   }
 , authServiceUrl = common.authServiceUrl
