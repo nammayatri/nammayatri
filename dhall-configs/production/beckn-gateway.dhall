@@ -1,30 +1,6 @@
 let common = ./common.dhall
 let sec = ./secrets/beckn-gateway.dhall
 
-let postgresConfig =
-  { connectHost = "adb.primary.beckn.juspay.net"
-  , connectPort = 5432
-  , connectUser = sec.dbUserId
-  , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_gateway"
-  }
-
-let pgcfg =
-  { connTag = "gatewayDb"
-  , pgConfig = postgresConfig
-  , poolConfig = common.defaultPoolConfig
-  , schemaName = "atlas_gateway"
-  }
-
-let esqDBCfg =
-  { connectHost = postgresConfig.connectHost
-  , connectPort = postgresConfig.connectPort
-  , connectUser = postgresConfig.connectUser
-  , connectPassword = postgresConfig.connectPassword
-  , connectDatabase = postgresConfig.connectDatabase
-  , connectSchemaName = pgcfg.schemaName
-  }
-
 let rcfg =
   { connectHost = "cache.primary.beckn.juspay.net"
   , connectPort = 6379
@@ -44,9 +20,7 @@ let coreVersions =
 
 in
 
-{ dbCfg = pgcfg
-, esqDBCfg = esqDBCfg
-, redisCfg = rcfg
+{ redisCfg = rcfg
 , port = +8015
 , metricsPort = +9999
 , selfId = "api.beckn.juspay.in/gateway/v1"
@@ -57,8 +31,6 @@ in
   , uniqueKeyId = "7"
   , signatureExpiry = common.signatureExpiry
   }
-, migrationPath = None Text
-, autoMigrate = common.autoMigrate
 , searchTimeout = None Integer
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-gateway.log"}
 , coreVersions = coreVersions

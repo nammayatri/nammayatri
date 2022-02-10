@@ -1,7 +1,5 @@
 module App.Types where
 
-import Beckn.Storage.DB.Config (DBConfig)
-import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
 import Beckn.Types.Cache
 import Beckn.Types.Common hiding (id)
@@ -21,17 +19,13 @@ import System.Environment (lookupEnv)
 import Types.Metrics
 
 data AppCfg = AppCfg
-  { dbCfg :: DBConfig,
-    esqDBCfg :: EsqDBConfig,
-    redisCfg :: T.RedisConfig,
+  { redisCfg :: T.RedisConfig,
     port :: Int,
     metricsPort :: Int,
     selfId :: Text,
     hostName :: Text,
     nwAddress :: BaseUrl,
     authEntity :: AuthenticatingEntity',
-    migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool,
     loggerConfig :: LoggerConfig,
     searchTimeout :: Maybe Seconds,
     coreVersions :: CoreVersions,
@@ -46,8 +40,6 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { config :: AppCfg,
-    dbCfg :: DBConfig,
-    esqDBEnv :: EsqDBEnv,
     gwId :: Text,
     nwAddress :: BaseUrl,
     cache :: C.Cache Text Text,
@@ -75,7 +67,6 @@ buildAppEnv config@AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
-  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   return $
     AppEnv
       { gwId = selfId,

@@ -11,7 +11,6 @@ import qualified "mock-fcm" App as MockFcm
 import qualified "mock-registry" App as MockRegistry
 import qualified "mock-sms" App as MockSms
 import qualified "app-backend" App.Types as AppBackend
-import qualified "beckn-gateway" App.Types as Gateway
 import qualified "beckn-transport" App.Types as TransporterBackend
 import qualified "fmd-wrapper" App.Types as FmdWrapper
 import qualified "beckn-transport" BackgroundTaskManager as TransporterBGTM
@@ -125,10 +124,6 @@ specs = do
       (transportCfg :: TransporterBackend.AppCfg) <- readDhallConfigDefault "beckn-transport"
       migrateIfNeeded (transportCfg.migrationPath) (transportCfg.dbCfg) True
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate beckn-transporter database: "
-
-      (gatewayCfg :: Gateway.AppCfg) <- readDhallConfigDefault "beckn-gateway"
-      migrateIfNeeded (gatewayCfg.migrationPath) (gatewayCfg.dbCfg) True
-        >>= handleLeft exitDBMigrationFailure "Couldn't migrate beckn-gateway database: "
 
       (fmdCfg :: FmdWrapper.AppCfg) <- readDhallConfigDefault "fmd-wrapper"
       migrateIfNeeded (fmdCfg.migrationPath) (fmdCfg.dbCfg) True

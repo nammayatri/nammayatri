@@ -8,14 +8,12 @@ where
 import App.Server
 import App.Types
 import Beckn.Exit
-import Beckn.Storage.Common (prepareDBConnections)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.FlowLogging as L
-import Beckn.Utils.Migration
 import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Map.Strict as Map
@@ -49,9 +47,6 @@ runGateway configModifier = do
           & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown . shutdownAction appEnv)
           & setPort port
   let redisCfg = appCfg.redisCfg
-  let migrationPath = appCfg.migrationPath
-  let dbCfg = appCfg.dbCfg
-  let autoMigrate = appCfg.autoMigrate
   E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
@@ -67,11 +62,6 @@ runGateway configModifier = do
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
-        _ <-
-          prepareDBConnections
-            >>= handleLeft exitDBConnPrepFailure "Exception thrown: "
-        migrateIfNeeded migrationPath dbCfg autoMigrate
-          >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show port)
         return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ run (App.EnvR flowRt' appEnv)
