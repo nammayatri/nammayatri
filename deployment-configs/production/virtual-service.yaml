@@ -44,7 +44,7 @@ spec:
         host: beckn-gateway-production
         port:
           number: 8015
-        subset: c0f53db5
+        subset: $BUILD_VERSION
       weight: 100
     timeout: 40s
   - match:
@@ -83,7 +83,7 @@ spec:
         host: beckn-app-backend-production
         port:
           number: 8013
-        subset: c0f53db5
+        subset: $BUILD_VERSION
       weight: 100
     timeout: 40s
   - match:
@@ -96,7 +96,7 @@ spec:
         host: beckn-transport-production
         port:
           number: 8014
-        subset: c0f53db5
+        subset: $BUILD_VERSION
       weight: 100
     timeout: 40s
   - match:
@@ -109,7 +109,7 @@ spec:
         host: beckn-app-backend-production
         port:
           number: 8013
-        subset: c0f53db5
+        subset: $BUILD_VERSION
       weight: 100
     timeout: 40s
   - match:
@@ -134,6 +134,6 @@ spec:
         host: beckn-transport-production
         port:
           number: 8014
-        subset: c0f53db5
+        subset: $BUILD_VERSION
       weight: 100
     timeout: 40s

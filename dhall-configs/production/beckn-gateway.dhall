@@ -49,12 +49,12 @@ in
 , redisCfg = rcfg
 , port = +8015
 , metricsPort = +9999
-, selfId = "JUSPAY.BG.1"
+, selfId = "api.beckn.juspay.in/gateway/v1"
 , hostName = "juspay.in"
 , nwAddress = "https://api.beckn.juspay.in/gateway/v1/"
 , authEntity =
   { signingKey = sec.signingKey
-  , uniqueKeyId = "juspay-bg-1-key"
+  , uniqueKeyId = "7"
   , signatureExpiry = common.signatureExpiry
   }
 , migrationPath = None Text
@@ -65,5 +65,7 @@ in
 , mobilityDomainVersion = "0.9.3"
 , graceTerminationPeriod = +90
 , httpClientOptions = common.httpClientOptions
+, registryUrl = common.registryUrl
+, registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False
 }

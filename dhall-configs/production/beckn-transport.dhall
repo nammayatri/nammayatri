@@ -76,7 +76,7 @@ in
 , metricsPort = +9999
 , xAppUri = appUri
 , hostName = "juspay.in"
-, nwAddress = "https://api.beckn.juspay.in/transport/v1/"
+, nwAddress = "https://api.beckn.juspay.in/bpp/cab/v1"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , caseExpiry = Some +7200
@@ -93,7 +93,7 @@ in
 , graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
-, driverPositionInfoExpiry = Some +600
+, driverPositionInfoExpiry = Some +300
 , apiRateLimitOptions = apiRateLimitOptions
 , httpClientOptions = common.httpClientOptions
 , authTokenCacheExpiry = +600

@@ -1,7 +1,7 @@
 let common = ./common.dhall
 let sec = ./secrets/app-backend.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text>
+let GeoRestriction = < Unrestricted | Regions: List Text>
 
 let postgresConfig =
   { connectHost = "adb.primary.beckn.juspay.net"
@@ -51,23 +51,23 @@ let smsConfig =
 
 let sesConfig =
   { issuesConfig = {
-      from = "no-reply@juspay,in"
+      from = "no-reply@juspay.in"
     , to = ["support@supportyatri.freshdesk.com"]
-    , replyTo = ["support@supportyatri.freshdesk.com"]
-    , cc = ["beckn_mobility@juspay.in"]
+    , replyTo = []: List Text
+    , cc = []: List Text
     , region = "eu-west-1"
     , fromArn = Some "arn:aws:ses:eu-west-1:980691203742:identity/no-reply@juspay.in"
     }
   }
 
 let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Ernakulam", "Kochi"]
-, destination = GeoRestriction.Regions ["Kerala", "Kochi"]
+  { origin = GeoRestriction.Regions ["Ernakulam"]
+  , destination = GeoRestriction.Regions ["Kerala"]
 }
 
 let gwUri = "https://gateway-1.beckn.nsdl.co.in"
 
-let providerUri = "http://beckn-transport-${common.branchName}.atlas:8014/v2"
+let providerUri = "https://api.beckn.juspay.in/transport/v2"
 
 let apiRateLimitOptions =
   { limit = +4
@@ -101,16 +101,16 @@ in
 , xProviderUri = providerUri
 , hostName = "juspay.in"
 , bapSelfIds =
-  { cabs = "JUSPAY.MOBILITY.APP.UAT.1.PROD"
-  , metro = "JUSPAY.MOBILITY.APP.UAT.2.PROD"
+  { cabs = "api.beckn.juspay.in/bap/cab/v1"
+  , metro = "api.beckn.juspay.in/bap/metro/v1"
   }
 , bapSelfURIs =
-  { cabs = "https://api.beckn.juspay.in/app/cab/v1/"
-  , metro = "https://api.beckn.juspay.in/app/metro/v1/"
+  { cabs = "https://api.beckn.juspay.in/bap/cab/v1"
+  , metro = "https://api.beckn.juspay.in/bap/metro/v1"
   }
 , bapSelfUniqueKeyIds =
-  { cabs = "juspay-mobility-bap-1-key-prod"
-  , metro = "juspay-mobility-bap-1-key-prod"
+  { cabs = "3"
+  , metro = "4"
   }
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry

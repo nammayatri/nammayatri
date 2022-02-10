@@ -16,11 +16,11 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , smsUserName = sec.smsUserName
    , smsPassword = sec.smsPassword
    , branchName = branchName
-   , passetto = { _1 = "passetto-hs.atlas", _2 = 8012 }
+   , passetto = { _1 = "passetto-hs.passetto.svc.cluster.local", _2 = 8012 }
    , fcmJsonPath = Some "/var/local/beckn/beckn-fcm.json"
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/beckn-d4a42/messages:send/"
-   , graphhopperUrl = "http://graphhopper.atlas/"
+   , graphhopperUrl = "http://graphhopper.atlas.svc.cluster.local:8989/"
    , registryUrl = "https://gateway-1.beckn.nsdl.co.in"
    , authServiceUrl = "http://beckn-app-backend-production.atlas:8013"
    }
