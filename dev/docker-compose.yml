@@ -28,20 +28,6 @@ services:
       - POSTGRES_PASSWORD=atlas
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
       - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
-  gateway-db:
-    image: "postgis/postgis:12-3.0"
-    container_name: "atlas-gateway"
-    ports:
-      - "5435:5432"
-    volumes:
-      - ./sql-seed/gateway-backend-seed.sql:/docker-entrypoint-initdb.d/1-gateway-backend-seed.sql:Z
-      - ./local-testing-data/gateway.sql:/docker-entrypoint-initdb.d/2-gateway-testing-data.sql:Z
-    environment:
-      - POSTGRES_DB=atlas_gateway
-      - POSTGRES_USER=atlas
-      - POSTGRES_PASSWORD=atlas
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
   fmd-wrapper-db:
     image: "postgis/postgis:12-3.0"
     container_name: "atlas-fmd-wrapper"
@@ -158,7 +144,7 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 22181:2181
-  
+
   kafka:
     image: confluentinc/cp-kafka:latest
     depends_on:
@@ -172,5 +158,5 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-volumes: 
+volumes:
   prometheus-volume:
