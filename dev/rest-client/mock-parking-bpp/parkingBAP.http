@@ -1,8 +1,8 @@
 @parking-bap-host = http://localhost:8022
-@mock-parking-bpp-host = http://localhost:9090
+@mock-parking-bpp-host = http://localhost:8090
 
 # @name check-mock-bpp
-GET {{mock-parking-bpp-host}}/healt
+GET {{mock-parking-bpp-host}}
 
 ###
 
@@ -30,7 +30,7 @@ token: ea37f941-427a-4085-a7d0-96240f166672
 }
 
 ###
-@searchId = 364e4a51-0890-42f1-8880-6abddcb68744
+@searchId = 9f06b0ca-0ff1-4a16-b460-ddbcae72d54b
 
 # @name get-quotes
 GET {{parking-bap-host}}/parking/{{searchId}}/quotes

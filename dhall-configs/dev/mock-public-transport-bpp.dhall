@@ -12,12 +12,12 @@ let hcfg =
 
 in
 {
-  port = +9091
+  port = +8091
 -- for selfId see common.dhall, credRegistry, second arg of mkCredential
   , selfId = "mock-public-transport-bpp"
 -- for uniqueKeyId see common.dhall, credRegistry, first arg of mkCredential
 , uniqueKeyId = "juspay-mobility-bpp-1-key1"
-, selfUri = "http://localhost:9091/"  -- public address of a node
+, selfUri = "http://localhost:8091/"  -- public address of a node
 , hedisCfg = hcfg
 , statusWaitTimeSec = +25
 , callbackWaitTimeMilliSec = +500

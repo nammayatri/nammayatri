@@ -1,4 +1,4 @@
-# $swtd-bpp-host = http://localhost:9091
+# $swtd-bpp-host = http://localhost:8091
 
 GET $swtd-bpp-host/health
 
