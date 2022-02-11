@@ -16,6 +16,7 @@ import Beckn.SesConfig (SesConfig)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
+import Beckn.Storage.Hedis.Config
 import Beckn.Types.App
 import Beckn.Types.Cache
 import Beckn.Types.Common
@@ -43,6 +44,7 @@ data AppCfg = AppCfg
   { dbCfg :: DBConfig,
     esqDBCfg :: EsqDBConfig,
     redisCfg :: T.RedisConfig,
+    hedisCfg :: HedisCfg,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     sesCfg :: SesConfig,
@@ -86,6 +88,7 @@ data AppCfg = AppCfg
 data AppEnv = AppEnv
   { config :: AppCfg,
     dbCfg :: DBConfig,
+    hedisEnv :: HedisEnv,
     esqDBEnv :: EsqDBEnv,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
@@ -124,12 +127,14 @@ buildAppEnv config@AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
+  hedisEnv <- connectHedis hedisCfg
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseKafkaProducerTools kafkaProducerTools
   releaseLoggerEnv loggerEnv
+  disconnectHedis hedisEnv
 
 type Env = EnvR AppEnv
 

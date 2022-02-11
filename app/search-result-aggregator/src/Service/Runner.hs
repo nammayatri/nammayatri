@@ -13,7 +13,7 @@ import GHC.Conc
 run ::
   ( HasField "isShuttingDown" r (TMVar ()),
     MonadConsumer PublicTransportQuoteList m,
-    HedisFlow r m,
+    HedisFlow m r,
     MonadFlow m
   ) =>
   m ()

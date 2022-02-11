@@ -1,7 +1,7 @@
 module Product.Quote where
 
 import App.Types
-import qualified Beckn.Storage.Redis.Queries as Redis
+import Beckn.Storage.Hedis as Hedis
 import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
@@ -31,7 +31,7 @@ getQuotes searchRequestId _ = withFlowHandlerAPI $ do
         quotes = offers
       }
 
-getOffers :: DBFlow m r => SSR.SearchRequest -> m [API.OfferRes]
+getOffers :: (HedisFlow m r, DBFlow m r) => SSR.SearchRequest -> m [API.OfferRes]
 getOffers searchRequest = do
   quoteList <- QQuote.findAllByRequestId searchRequest.id
   let quotes = API.OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
@@ -47,8 +47,8 @@ getOffers searchRequest = do
     creationTime (API.Metro MetroOffer {createdAt}) = createdAt
     creationTime (API.PublicTransport PublicTransportQuote {createdAt}) = createdAt
 
-getPubTransportOffers :: MonadFlow m => Id SSR.SearchRequest -> m [PublicTransportQuote]
+getPubTransportOffers :: (HedisFlow m r, MonadFlow m) => Id SSR.SearchRequest -> m [PublicTransportQuote]
 getPubTransportOffers transactionId =
-  maybeToList <$> Redis.getKeyRedis redisKey
+  Hedis.getList redisKey
   where
-    redisKey = "app_backend:publicTransportQuoteList:" <> getId transactionId
+    redisKey = "publicTransportQuoteList:" <> getId transactionId

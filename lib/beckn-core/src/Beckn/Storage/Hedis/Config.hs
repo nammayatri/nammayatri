@@ -9,7 +9,7 @@ import Database.Redis
 import GHC.Records.Extra
 import Network.Socket (HostName)
 
-type HedisFlow env m =
+type HedisFlow m env =
   (MonadReader env m, HasField "hedisEnv" env HedisEnv, MonadIO m, C.MonadThrow m, Log m)
 
 data HedisCfg = HedisCfg

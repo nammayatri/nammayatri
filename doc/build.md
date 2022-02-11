@@ -32,6 +32,7 @@ stack exec beckn-gateway-exe
 ### Mobility
 ```
 stack exec app-backend-exe
+stack exec search-result-aggregator-exe
 stack exec beckn-transport-exe
 stack exec beckn-transport-btm-exe
 stack exec parking-bap-exe

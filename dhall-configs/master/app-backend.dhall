@@ -37,6 +37,17 @@ let rcfg =
   , connectTimeout = Some +100
   }
 
+let hcfg =
+  { connectHost = rcfg.connectHost
+  , connectPort = rcfg.connectPort
+  , connectAuth = rcfg.connectAuth
+  , connectDatabase = rcfg.connectDatabase
+  , connectMaxConnections = rcfg.connectMaxConnections
+  , connectMaxIdleTime = rcfg.connectMaxIdleTime
+  , connectTimeout = rcfg.connectTimeout
+  , hedisPrefix = "app_backend"
+  }
+
 let smsConfig =
   { sessionConfig = common.smsSessionConfig
   , credConfig = {
@@ -94,6 +105,7 @@ in
 { dbCfg = pgcfg
 , esqDBCfg = esqDBCfg
 , redisCfg = rcfg
+, hedisCfg = hcfg
 , smsCfg = smsConfig
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , sesCfg = sesConfig
