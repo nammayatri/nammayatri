@@ -23,12 +23,12 @@ toTuple occo = (occo.context, occo.order)
 
 instance Cache OnConfirmContextOrder (MockM AppEnv) where
   type CacheKey OnConfirmContextOrder = Text
-  getKey key = getRedisPrefix >>= \pref -> Hed.getKey pref key
-  setKey key val = getRedisPrefix >>= \pref -> Hed.setKey pref key val
-  delKey key = getRedisPrefix >>= \pref -> Hed.delKey pref key
+  getKey key = Hed.getKey redisPrefix key
+  setKey key val = Hed.setKey redisPrefix key val
+  delKey key = Hed.delKey redisPrefix key
 
-getRedisPrefix :: MockM AppEnv Text
-getRedisPrefix = asks (.config.redisPrefix)
+redisPrefix :: Text
+redisPrefix = "mock-parking-bpp"
 
 writeOrder :: Context -> Order -> MockM AppEnv ()
 writeOrder ctx order = do

@@ -12,7 +12,6 @@ data AppCfg = AppCfg
     selfId :: Text,
     uniqueKeyId :: Text,
     selfUri :: BaseUrl,
-    redisPrefix :: Text,
     statusWaitTimeSec :: Int,
     callbackWaitTimeMilliSec :: Int,
     loggerConfig :: LoggerConfig
