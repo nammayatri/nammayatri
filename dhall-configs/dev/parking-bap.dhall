@@ -3,10 +3,10 @@ let sec = ./secrets/parking-bap.dhall
 
 let esqDBCfg =
   { connectHost = "localhost"
-  , connectPort = 5437
+  , connectPort = 5434
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_parking"
+  , connectDatabase = "atlas_dev"
   , connectSchemaName = "atlas_parking"
   }
 

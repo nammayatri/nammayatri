@@ -1,0 +1,1 @@
+PAGER="less -S" psql -h localhost -p 5434 -d atlas_dev --username atlas

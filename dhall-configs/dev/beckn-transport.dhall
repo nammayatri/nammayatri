@@ -8,7 +8,7 @@ let postgresConfig =
   , connectPort = 5434
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_transporter"
+  , connectDatabase = "atlas_dev"
   }
 
 let pgcfg =

@@ -3,10 +3,10 @@ let sec = ./secrets/public-transport-bap.dhall
 
 let esqDBCfg =
   { connectHost = "localhost"
-  , connectPort = 5438
+  , connectPort = 5434
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_public_transport"
+  , connectDatabase = "atlas_dev"
   , connectSchemaName = "atlas_public_transport"
   }
 

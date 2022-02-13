@@ -3,10 +3,10 @@ let sec = ./secrets/mock-registry.dhall
 
 let esqDBCfg =
   { connectHost = "localhost"
-  , connectPort = 5439
+  , connectPort = 5434
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_registry"
+  , connectDatabase = "atlas_dev"
   , connectSchemaName = "atlas_registry"
   }
 

@@ -5,10 +5,10 @@ let GeoRestriction = < Unrestricted | Regions : List Text>
 
 let esqDBCfg =
   { connectHost = "localhost"
-  , connectPort = 5433
+  , connectPort = 5434
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_app"
+  , connectDatabase = "atlas_dev"
   , connectSchemaName = "atlas_app"
   }
 

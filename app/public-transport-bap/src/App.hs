@@ -27,7 +27,7 @@ runService configModifier = do
   runServerWithHealthCheck appEnv (Proxy @API) handler middleware identity context releaseAppEnv \flowRt -> do
     try (prepareRedisConnections $ appEnv.redisCfg)
       >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
-    migrateIfNeeded (appCfg.migrationPath) (appCfg.esqDBCfg) (appCfg.autoMigrate)
+    migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
     modFlowRtWithAuthManagers flowRt appEnv [(appCfg.selfId, appCfg.authEntity.uniqueKeyId)]
   where

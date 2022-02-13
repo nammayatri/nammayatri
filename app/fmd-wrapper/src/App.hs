@@ -50,7 +50,7 @@ runFMDWrapper configModifier = do
             & createManagers
         try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
-        migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
+        migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.dbCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         return $ flowRt {R._httpClientManagers = managers}

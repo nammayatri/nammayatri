@@ -14,7 +14,7 @@ runRegistryService :: (AppCfg -> AppCfg) -> IO ()
 runRegistryService configModifier = do
   appEnv <- readDhallConfigDefault "mock-registry" <&> configModifier >>= buildAppEnv
   runServerWithHealthCheck appEnv registryAPI registryFlow middleware identity EmptyContext releaseAppEnv $ \flowRt -> do
-    migrateIfNeeded (appEnv.config.migrationPath) (appEnv.config.esqDBCfg) (appEnv.config.autoMigrate)
+    migrateIfNeeded appEnv.config.migrationPath appEnv.config.autoMigrate appEnv.config.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
     return flowRt
   where

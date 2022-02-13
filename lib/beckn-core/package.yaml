@@ -75,7 +75,7 @@ dependencies:
   - kleene
   - lattices
   - postgresql-simple
-  - postgresql-simple-migration
+  - postgresql-migration
   - prometheus-client
   - prometheus-proc
   - wai-middleware-prometheus

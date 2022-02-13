@@ -3,33 +3,20 @@ module Beckn.Utils.Migration
   )
 where
 
+import Beckn.Prelude
 import Beckn.Storage.DB.Config
+import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded')
 import Beckn.Types.Common
-import Beckn.Utils.Common
+import Control.Exception.Safe
 import qualified Database.PostgreSQL.Simple as PS
-import Database.PostgreSQL.Simple.Migration
-import EulerHS.Prelude
 import qualified EulerHS.Types as T
 
-connect :: T.PostgresConfig -> IO PS.Connection
-connect T.PostgresConfig {..} = PS.connect PS.ConnectInfo {..}
+fromPgConfig :: T.PostgresConfig -> PS.ConnectInfo
+fromPgConfig T.PostgresConfig {..} = PS.ConnectInfo {..}
 
-migrateIfNeeded :: (MonadIO m, Log m) => Maybe FilePath -> DBConfig -> Bool -> m (Either String ())
-migrateIfNeeded mPath dbCfg autoMigrate =
-  case mPath of
-    Just path | autoMigrate ->
-      fmap resultToEither $ do
-        logInfo $ "Running migrations (" <> show path <> ") ..."
-        conn <- liftIO . connect $ pgConfig dbCfg
-        liftIO . PS.withTransaction conn $
-          runMigrations
-            True
-            conn
-            [ MigrationInitialization,
-              MigrationDirectory path
-            ]
-    _ ->
-      pure $ Right ()
+migrateIfNeeded :: (MonadMask m, MonadIO m, Log m) => Maybe FilePath -> Bool -> DBConfig -> m (Either String ())
+migrateIfNeeded mPath autoMigrate dbConfig =
+  migrateIfNeeded' mPath autoMigrate schemaName connectInfo
   where
-    resultToEither MigrationSuccess = Right ()
-    resultToEither (MigrationError a) = Left a
+    schemaName = encodeUtf8 dbConfig.schemaName
+    connectInfo = fromPgConfig dbConfig.pgConfig

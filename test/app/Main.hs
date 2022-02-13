@@ -116,15 +116,15 @@ specs' trees = do
 
     migrateDB = do
       (appBackendCfg :: AppBackend.AppCfg) <- readDhallConfigDefault "app-backend"
-      Esq.migrateIfNeeded (appBackendCfg.migrationPath) (appBackendCfg.esqDBCfg) True
+      Esq.migrateIfNeeded appBackendCfg.migrationPath True appBackendCfg.esqDBCfg
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate app-backend database: "
 
       (transportCfg :: TransporterBackend.AppCfg) <- readDhallConfigDefault "beckn-transport"
-      migrateIfNeeded (transportCfg.migrationPath) (transportCfg.dbCfg) True
+      migrateIfNeeded transportCfg.migrationPath True transportCfg.dbCfg
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate beckn-transporter database: "
 
       (fmdCfg :: FmdWrapper.AppCfg) <- readDhallConfigDefault "fmd-wrapper"
-      migrateIfNeeded (fmdCfg.migrationPath) (fmdCfg.dbCfg) True
+      migrateIfNeeded fmdCfg.migrationPath True fmdCfg.dbCfg
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate fmd-wrapper database: "
 
 hideLogging :: HasField "loggerConfig" cfg LoggerConfig => cfg -> cfg

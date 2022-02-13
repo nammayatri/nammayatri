@@ -118,7 +118,7 @@ extra-deps:
 
   # Other dependencies
   - hex-text-0.1.0.0@sha256:52dc2cf5ce45f7d86ea5e56e2ac57820f788c10bbb3fe83f6d57e678a426305b,1072
-  - postgresql-simple-migration-0.1.15.0@sha256:0e24e96908430f5caf9c1c1d9ca7c5c108e4e0409a255e2cbd77e8cd252dbb02,3879
+  - postgresql-migration-0.2.1.3@sha256:7378629d0790630d54b299f34cc01bf4f3288031eb2060ededf80c1449264002,4990
   - prometheus-metrics-ghc-1.0.1.1@sha256:d378a7186a967140fe0e09d325fe5e3bfd7b77a1123934b40f81fdfed2eacbdc,1233
   - prometheus-proc-0.1.3.0@sha256:84f56e9c886be777d5afd14fc57fff156137a611f0db0fe080b97fc602103c23,1058
   - random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517

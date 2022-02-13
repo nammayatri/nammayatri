@@ -1,85 +1,26 @@
 version: "3"
 services:
-  app-db:
+  db:
     image: "postgis/postgis:12-3.0"
-    container_name: "atlas-app"
-    ports:
-      - "5433:5432"
-    volumes:
-      - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/1-app-backend-seed.sql:Z
-      - ./local-testing-data/app-backend.sql:/docker-entrypoint-initdb.d/2-app-backend-testing-data.sql:Z
-    environment:
-      - POSTGRES_DB=atlas_app
-      - POSTGRES_USER=atlas
-      - POSTGRES_PASSWORD=atlas
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
-  transporter-db:
-    image: "postgis/postgis:12-3.0"
-    container_name: "atlas-transporter"
+    container_name: "atlas-dev"
     ports:
       - "5434:5432"
     volumes:
+      - ./sql-seed/app-backend-seed.sql:/docker-entrypoint-initdb.d/1-app-backend-seed.sql:Z
+      - ./local-testing-data/app-backend.sql:/docker-entrypoint-initdb.d/2-app-backend-testing-data.sql:Z
       - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/1-transporter-backend-seed.sql:Z
       - ./local-testing-data/beckn-transport.sql:/docker-entrypoint-initdb.d/2-beckn-transport-testing-data.sql:Z
-    environment:
-      - POSTGRES_DB=atlas_transporter
-      - POSTGRES_USER=atlas
-      - POSTGRES_PASSWORD=atlas
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
-  fmd-wrapper-db:
-    image: "postgis/postgis:12-3.0"
-    container_name: "atlas-fmd-wrapper"
-    ports:
-      - "5436:5432"
-    volumes:
       - ./sql-seed/fmd-wrapper-backend-seed.sql:/docker-entrypoint-initdb.d/1-fmd-wrapper-backend-seed.sql:Z
       - ./local-testing-data/fmd-wrapper.sql:/docker-entrypoint-initdb.d/2-fmd-wrapper-testing-data.sql:Z
-    environment:
-      - POSTGRES_DB=atlas_fmd_wrapper
-      - POSTGRES_USER=atlas
-      - POSTGRES_PASSWORD=atlas
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
-  parking-db:
-    image: "postgis/postgis:12-3.0"
-    container_name: "atlas_parking"
-    ports:
-      - "5437:5432"
-    volumes:
       - ./sql-seed/parking-bap-seed.sql:/docker-entrypoint-initdb.d/1-parking-bap-seed.sql:Z
       - ./local-testing-data/parking-bap.sql:/docker-entrypoint-initdb.d/2-parking-bap-testing-data.sql:Z
-    environment:
-      - POSTGRES_DB=atlas_parking
-      - POSTGRES_USER=atlas
-      - POSTGRES_PASSWORD=atlas
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
-  public-transport-db:
-    image: "postgis/postgis:12-3.0"
-    container_name: "atlas_public_transport"
-    ports:
-      - "5438:5432"
-    volumes:
       - ./sql-seed/public-transport-bap-seed.sql:/docker-entrypoint-initdb.d/1-public-transport-bap-seed.sql:Z
       - ./local-testing-data/public-transport-bap.sql:/docker-entrypoint-initdb.d/2-public-transport-bap-testing-data.sql:Z
-    environment:
-      - POSTGRES_DB=atlas_public_transport
-      - POSTGRES_USER=atlas
-      - POSTGRES_PASSWORD=atlas
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-      - POSTGRES_INITDB_ARGS=--auth=scram-sha-256
-  mock-registry-db:
-    image: "postgis/postgis:12-3.0"
-    container_name: "atlas_registry"
-    ports:
-      - "5439:5432"
-    volumes:
       - ./sql-seed/mock-registry-seed.sql:/docker-entrypoint-initdb.d/1-mock-registry-seed.sql:Z
       - ./local-testing-data/mock-registry.sql:/docker-entrypoint-initdb.d/2-mock-registry-testing-data.sql:Z
+
     environment:
-      - POSTGRES_DB=atlas_registry
+      - POSTGRES_DB=atlas_dev
       - POSTGRES_USER=atlas
       - POSTGRES_PASSWORD=atlas
       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256

@@ -3,10 +3,10 @@ let sec = ./secrets/fmd-wrapper.dhall
 
 let postgresConfig =
   { connectHost = "localhost"
-  , connectPort = 5436
+  , connectPort = 5434
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_fmd_wrapper"
+  , connectDatabase = "atlas_dev"
   }
 
 let pgcfg =

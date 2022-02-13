@@ -23,7 +23,7 @@ runPublicTransportSearchConsumer configModifier = do
       >>= handleLeftIO @SomeException exitBuildingAppEnvFailure "Couldn't build AppEnv: "
 
   runHealthCheckServerWithService appEnv identity identity EmptyContext (runService appEnv) releaseAppEnv $ \flowRt -> do
-    migrateIfNeeded (appCfg.migrationPath) (appCfg.esqDBCfg) (appCfg.autoMigrate)
+    migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
     modFlowRtWithAuthManagers flowRt appEnv [(appCfg.bapId, appCfg.authEntity.uniqueKeyId)]
   where

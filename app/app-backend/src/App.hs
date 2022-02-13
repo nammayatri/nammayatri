@@ -49,7 +49,7 @@ runAppBackend' appCfg = do
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections $ appCfg.redisCfg)
           >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
-        migrateIfNeeded (appCfg.migrationPath) (appCfg.esqDBCfg) (appCfg.autoMigrate)
+        migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
         logInfo "Setting up for signature auth..."
         flowRt' <-

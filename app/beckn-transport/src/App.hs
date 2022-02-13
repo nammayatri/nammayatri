@@ -47,7 +47,7 @@ runTransporterBackendApp' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
-        migrateIfNeeded (appCfg.migrationPath) (appCfg.dbCfg) (appCfg.autoMigrate)
+        migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.dbCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
 
         logInfo "Setting up for signature auth..."
