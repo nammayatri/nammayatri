@@ -5,5 +5,5 @@ import qualified API.Beckn.Types as Beckn
 import App.Types
 
 handler :: FlowServer Beckn.API
-handler auth =
-  OnSearch.publicTransportOnSearch auth
+handler =
+  OnSearch.publicTransportOnSearch
