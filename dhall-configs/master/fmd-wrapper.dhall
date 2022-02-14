@@ -36,8 +36,8 @@ let rcfg =
   }
 
 let dunzoConfig =
-  { dzUrl = "apis-staging.dunzo.in"
-  , dzTokenUrl = "http://d4b.dunzodev.in:9016"
+  { dzUrl = "https://apis-staging.dunzo.in/"
+  , dzTokenUrl = "https://apis-staging.dunzo.in/"
   , dzBPId = "fmd-wrapper.dunzo"
   , dzBPNwAddress = "https://api.sandbox.beckn.juspay.in/latest/fmd/v1/"
   , payee = sec.payee
@@ -61,10 +61,10 @@ in
 , dzConfig = dunzoConfig
 , authEntity =
   { signingKey = sec.signingKey
-  , uniqueKeyId = "juspay-dunzo-fmd-bpp-key-dev"
+  , uniqueKeyId = "api.sandbox.beckn.juspay.in/dev/fmd/v1"
   , signatureExpiry = common.signatureExpiry
   }
-, selfId = "JUSPAY.DUNZO.FMD.BPP.DEV"
+, selfId = "api.sandbox.beckn.juspay.in/dev/fmd/v1"
 , graceTerminationPeriod = +90
 , httpClientOptions = common.httpClientOptions
 , hostName = "localhost"
