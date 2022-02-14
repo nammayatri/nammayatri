@@ -36,18 +36,8 @@ mkPersist
       fare Amount
       departureTime UTCTime
       arrivalTime UTCTime
-<<<<<<< HEAD
       departureStationId TransportStationTId
       arrivalStationId TransportStationTId
-=======
-<<<<<<< HEAD
-      departureStationId PublicTranportTId
-      arrivalStationId PublicTranportTId
-=======
-      departureStationId TransportStationTId
-      arrivalStationId TransportStationTId
->>>>>>> Added confirm/on_confirm for public transport bap
->>>>>>> Added confirm/on_confirm for public transport bap
       status Domain.BookingStatus
       ticketId Text Maybe
       ticketCreatedAt UTCTime Maybe

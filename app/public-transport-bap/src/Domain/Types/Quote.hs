@@ -23,11 +23,7 @@ data Quote = Quote
     createdAt :: UTCTime,
     routeCode :: Text
   }
-<<<<<<< HEAD
   deriving (Generic, Show, PrettyShow, ToJSON, FromJSON)
-=======
-  deriving (Generic, Show, PrettyShow)
->>>>>>> Added confirm/on_confirm for public transport bap
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
