@@ -39,7 +39,7 @@ import qualified Types.Storage.DriverInformation as DriverInfo
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Person as SP
 import qualified Types.Storage.Vehicle as SV
-import Utils.Common (fromMaybeM, maskText, throwError, withFlowHandlerAPI)
+import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 import qualified Utils.Notifications as Notify
 
 createDriver :: SP.Person -> DriverAPI.OnboardDriverReq -> FlowHandler DriverAPI.OnboardDriverRes
@@ -131,7 +131,7 @@ buildDriverEntityRes (person, driverInfo) = do
         firstName = person.firstName,
         middleName = person.middleName,
         lastName = person.lastName,
-        maskedMobileNumber = maskText <$> decMobNum,
+        mobileNumber = decMobNum,
         rating = round <$> person.rating,
         linkedVehicle = vehAPIEntity,
         active = driverInfo.active,
@@ -201,7 +201,7 @@ updateDriver personId req = withFlowHandlerAPI $ do
               }
   DB.runSqlDB (QPerson.updatePersonRec personId updPerson)
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  driverEntity <- buildDriverEntityRes (person, driverInfo)
+  driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   org <-
     QOrganization.findOrganizationById orgId
