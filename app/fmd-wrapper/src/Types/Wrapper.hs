@@ -17,7 +17,6 @@ data DzBAConfig = DzBAConfig
 data DunzoConfig = DunzoConfig
   { dzUrl :: BaseUrl,
     dzTokenUrl :: BaseUrl,
-    dzBPId :: Text,
     dzBPNwAddress :: BaseUrl,
     payee :: Text,
     dzTestMode :: Bool,

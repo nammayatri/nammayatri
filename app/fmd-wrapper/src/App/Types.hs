@@ -45,7 +45,6 @@ data AppCfg = AppCfg
     authEntity :: AuthenticatingEntity',
     graceTerminationPeriod :: Seconds,
     httpClientOptions :: HttpClientOptions,
-    nwAddress :: BaseUrl,
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets,
     disableSignatureAuth :: Bool
@@ -62,7 +61,6 @@ data AppEnv = AppEnv
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
     httpClientOptions :: HttpClientOptions,
-    nwAddress :: BaseUrl,
     registrySecrets :: RegistrySecrets,
     loggerEnv :: LoggerEnv
   }
