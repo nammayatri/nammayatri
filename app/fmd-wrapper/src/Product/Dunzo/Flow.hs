@@ -2,12 +2,14 @@
 
 module Product.Dunzo.Flow where
 
+import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Servant.SignatureAuth as HttpSig
 import Control.Lens.Combinators hiding (Context)
+import Control.Lens.Operators ((?~))
 import EulerHS.Prelude hiding (drop)
 import qualified EulerHS.Types as ET
 import qualified ExternalAPI.Dunzo.Flow as API
@@ -25,42 +27,30 @@ import Types.Beckn.DecimalValue (convertDecimalValueToAmount)
 import Types.Beckn.Order
 import Types.Common
 import Types.Error
-import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Organization as Org
 import Types.Storage.SearchRequest as SearchRequest
 import Types.Wrapper
 import Utils.Common
 
 search ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
-    HasHttpClientOptions r c,
-    CoreMetrics m
-  ) =>
   Org.Organization ->
   BaseUrl ->
   BecknReq SearchAPI.SearchIntent ->
-  m AckResponse
+  Flow AckResponse
 search org cbUrl req = do
   config@DunzoConfig {..} <- asks (.dzConfig)
   quoteReq <- mkQuoteReqFromSearch req
-  let context = updateBppUri (req.context) dzBPNwAddress
   dzBACreds <- getDzBAPCreds org
-  withBecknCallbackMig withRetry authKey SEARCH SearchAPI.onSearchAPI context cbUrl $
+  withCallback' withRetry SEARCH SearchAPI.onSearchAPI req.context cbUrl $
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog
 
 confirm ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
-    CoreMetrics m
-  ) =>
   Org.Organization ->
   BecknReq OrderObject ->
-  m AckResponse
+  Flow AckResponse
 confirm org req = do
   dconf@DunzoConfig {..} <- asks (.dzConfig)
-  let context = updateBppUri (req.context) dzBPNwAddress
   let reqOrder = req.message.order
   whenJust reqOrder.id \_ -> throwError $ InvalidRequest "Order id must not be presented."
   whenNothing_
@@ -70,7 +60,7 @@ confirm org req = do
   orderId <- generateGUID
   currTime <- getCurrentTime
   taskReq <- mkCreateTaskReq orderId reqOrder
-  withCallback CONFIRM ConfirmAPI.onConfirmAPI context req.context.bap_uri do
+  withCallback CONFIRM ConfirmAPI.onConfirmAPI req.context req.context.bap_uri do
     taskStatus <- createTaskAPI dzBACreds dconf taskReq
     let uOrder = updateOrder (Just orderId) currTime reqOrder taskStatus
     checkAndLogPriceDiff reqOrder uOrder
@@ -122,36 +112,26 @@ confirm org req = do
         _ -> pass
 
 track ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
-    CoreMetrics m
-  ) =>
   Org.Organization ->
   BecknReq TrackAPI.TrackInfo ->
-  m AckResponse
+  Flow AckResponse
 track org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
   let orderId = req.context.transaction_id
-  let context = updateBppUri (req.context) dzBPNwAddress
   searchRequest <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   taskInfo :: TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
   let taskId = taskInfo.task_id.getTaskId
   dzBACreds <- getDzBAPCreds org
-  withCallback TRACK TrackAPI.onTrackAPI context req.context.bap_uri $
+  withCallback TRACK TrackAPI.onTrackAPI req.context req.context.bap_uri $
     getStatus dzBACreds conf (TaskId taskId) <&> mkOnTrackMessage . (.tracking_url)
 
 status ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
-    CoreMetrics m
-  ) =>
   Org.Organization ->
   BecknReq StatusAPI.OrderId ->
-  m AckResponse
+  Flow AckResponse
 status org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
-  let context = updateBppUri (req.context) dzBPNwAddress
-  let orderId = context.transaction_id
+  let orderId = req.context.transaction_id
   searchRequest <- Storage.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   taskInfo :: TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
   let taskId = taskInfo.task_id.getTaskId
@@ -159,7 +139,7 @@ status org req = do
     searchRequest.udf1 >>= decodeFromText
       & fromMaybeM (InternalError "Decode error.")
   dzBACreds <- getDzBAPCreds org
-  withCallback STATUS StatusAPI.onStatusAPI context req.context.bap_uri do
+  withCallback STATUS StatusAPI.onStatusAPI req.context req.context.bap_uri do
     taskStatus <- getStatus dzBACreds conf (TaskId taskId)
     onStatusMessage <- mkOnStatusMessage order taskStatus
     let updatedOrder = onStatusMessage.order
@@ -171,22 +151,17 @@ status org req = do
       Storage.update searchRequestId updatedSearchRequest
 
 cancel ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["dzConfig" ::: DunzoConfig],
-    CoreMetrics m
-  ) =>
   Org.Organization ->
   BecknReq CancelAPI.CancellationInfo ->
-  m AckResponse
+  Flow AckResponse
 cancel org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
-  let context = updateBppUri (req.context) dzBPNwAddress
-  searchRequest <- Storage.findById (Id context.transaction_id) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
+  searchRequest <- Storage.findById (Id req.context.transaction_id) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   taskInfo :: TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
   let taskId = taskInfo.task_id.getTaskId
   order <- searchRequest.udf1 >>= decodeFromText & fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
   dzBACreds <- getDzBAPCreds org
-  withCallback CANCEL CancelAPI.onCancelAPI context req.context.bap_uri do
+  withCallback CANCEL CancelAPI.onCancelAPI req.context req.context.bap_uri do
     callCancelAPI dzBACreds conf (TaskId taskId)
     let updatedOrder = cancelOrder order
     updateSearchRequest searchRequest.id updatedOrder searchRequest
@@ -204,36 +179,27 @@ cancel org req = do
 
 -- Helpers
 getQuote ::
-  ( MonadFlow m,
-    CoreMetrics m
-  ) =>
   DzBAConfig ->
   DunzoConfig ->
   QuoteReq ->
-  m QuoteRes
+  Flow QuoteRes
 getQuote ba@DzBAConfig {..} conf@DunzoConfig {..} quoteReq = do
   token <- fetchToken ba conf
   API.getQuote dzClientId token dzUrl quoteReq
 
 getStatus ::
-  ( MonadFlow m,
-    CoreMetrics m
-  ) =>
   DzBAConfig ->
   DunzoConfig ->
   TaskId ->
-  m TaskStatus
+  Flow TaskStatus
 getStatus dzBACreds@DzBAConfig {..} conf@DunzoConfig {..} taskId = do
   token <- fetchToken dzBACreds conf
   API.taskStatus dzClientId token dzUrl dzTestMode taskId
 
 fetchToken ::
-  ( MonadFlow m,
-    CoreMetrics m
-  ) =>
   DzBAConfig ->
   DunzoConfig ->
-  m Token
+  Flow Token
 fetchToken DzBAConfig {..} DunzoConfig {..} = do
   mToken <- Dz.getToken dzClientId
   case mToken of
@@ -243,8 +209,21 @@ fetchToken DzBAConfig {..} DunzoConfig {..} = do
       return token
     Just token -> return token
 
-withCallback :: WithBecknCallbackMig api callback_success m
-withCallback = withBecknCallbackMig identity authKey
+withCallback ::
+  WithBecknCallbackMig api callback_success Flow
+withCallback = withCallback' identity
+
+withCallback' ::
+  (Flow () -> Flow ()) ->
+  WithBecknCallbackMig api callback_success Flow
+withCallback' doWithCallback action api context cbUrl f = do
+  bppUri <- asks (.nwAddress)
+  selfId <- asks (.selfId)
+  let context' =
+        context
+          & #bpp_uri ?~ bppUri
+          & #bpp_id ?~ selfId
+  withBecknCallbackMig doWithCallback authKey action api context' cbUrl f
 
 authKey :: Maybe ET.ManagerSelector
 authKey = Just HttpSig.signatureAuthManagerKey

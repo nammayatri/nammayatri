@@ -2,6 +2,7 @@ module App.Types
   ( Env,
     FlowHandler,
     FlowServer,
+    Flow,
     AppCfg (),
     AppEnv (..),
     buildAppEnv,
@@ -12,6 +13,7 @@ where
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.App
 import Beckn.Types.Common
+import Beckn.Types.Flow
 import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, registerCoreMetricsContainer)
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
@@ -57,3 +59,5 @@ type Env = EnvR AppEnv
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
+
+type Flow = FlowR AppEnv

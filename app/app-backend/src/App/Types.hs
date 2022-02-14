@@ -2,6 +2,7 @@ module App.Types
   ( Env,
     FlowHandler,
     FlowServer,
+    Flow,
     AppCfg (),
     AppEnv (..),
     buildAppEnv,

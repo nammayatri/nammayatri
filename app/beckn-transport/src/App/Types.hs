@@ -4,6 +4,7 @@ module App.Types
     Env,
     FlowHandler,
     FlowServer,
+    Flow,
     Log (..),
     buildAppEnv,
     releaseAppEnv,

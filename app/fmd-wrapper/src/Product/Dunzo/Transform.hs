@@ -12,7 +12,6 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (State, drop)
 import ExternalAPI.Dunzo.Types
-import Servant.Client (BaseUrl (..))
 import qualified Types.Beckn.API.Search as SearchAPI
 import qualified Types.Beckn.API.Track as TrackAPI
 import Types.Beckn.Catalog (Catalog (..))
@@ -119,11 +118,11 @@ mkOnSearchCatalog res@QuoteRes {..} =
           exp = Nothing
         }
 
-updateBppUri :: Context -> BaseUrl -> Context
-updateBppUri Context {..} bpNwAddress =
+updateBppIdAndUri :: Context -> Text -> BaseUrl -> Context
+updateBppIdAndUri Context {..} bppId bpNwAddress =
   Context
     { bpp_uri = Just bpNwAddress,
-      bpp_id = Just . T.pack $ baseUrlHost bpNwAddress,
+      bpp_id = Just bppId,
       ..
     }
 

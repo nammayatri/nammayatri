@@ -67,6 +67,7 @@ in
 , graceTerminationPeriod = +90
 , httpClientOptions = common.httpClientOptions
 , hostName = "api.sandbox.beckn.juspay.in"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/fmd/v1/"
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False

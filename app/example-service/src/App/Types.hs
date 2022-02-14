@@ -3,6 +3,7 @@ module App.Types where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Common
+import Beckn.Types.Flow
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
@@ -44,3 +45,5 @@ releaseAppEnv AppEnv {..} =
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
+
+type Flow = FlowR AppEnv

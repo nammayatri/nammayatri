@@ -38,7 +38,6 @@ let rcfg =
 let dunzoConfig =
   { dzUrl = "https://apis-staging.dunzo.in/"
   , dzTokenUrl = "https://apis-staging.dunzo.in/"
-  , dzBPNwAddress = "https://api.beckn.juspay.in/fmd/v1/"
   , payee = sec.payee
   , dzTestMode = True
   , dzQuotationTTLinMin = +10
@@ -67,6 +66,7 @@ in
 , graceTerminationPeriod = +90
 , httpClientOptions = common.httpClientOptions
 , hostName = "api.beckn.juspay.in"
+, nwAddress = "https://api.beckn.juspay.in/fmd/v1/"
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False

@@ -2,6 +2,7 @@ module App.Types where
 
 import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
+import Beckn.Types.Flow
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Shutdown
@@ -42,3 +43,5 @@ releaseAppEnv AppEnv {..} =
 type FlowHandler = FlowHandlerR AppEnv
 
 type FlowServer api = FlowServerR AppEnv api
+
+type Flow = FlowR AppEnv
