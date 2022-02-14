@@ -7,16 +7,24 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Domain.Confirm
 import qualified Domain.Types.Booking as D
 import qualified Domain.Types.Quote as D
 import qualified Storage.Queries.Booking as EsqBk
 import Storage.Queries.Quote
 import Tools.Auth
 
+
 --import PublicTransportTestData
 
 --handler _ _ _ = withFlowHandlerAPI (insertTestData >> pure (QConfirmRes "1"))
+
+data ConfirmMessageD = ConfirmMessageD
+  { txnId :: Text,
+    quantity :: Int,
+    requestorName :: Text,
+    booking :: D.Booking,
+    quote :: D.Quote
+  }
 
 validateConfirmReq :: QConfirmReq -> Flow ()
 validateConfirmReq confirmReq = do

@@ -19,20 +19,12 @@ data Order = Order
   { provider :: ProviderId,
     items :: [Item],
     billing :: Billing,
-<<<<<<< HEAD
-=======
-    --    fulfillment :: FulfillmentId,
->>>>>>> Added confirm/on_confirm for public transport bap
     quote :: Quotation,
     payment :: Payment Params
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
 data Params = Params
-<<<<<<< HEAD
-=======
-  --  { amount :: DecimalValue,
->>>>>>> Added confirm/on_confirm for public transport bap
   { currency :: Text,
     amount :: Amount
   }
