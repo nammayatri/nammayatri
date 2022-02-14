@@ -13,11 +13,6 @@ import qualified Storage.Queries.Booking as EsqBk
 import Storage.Queries.Quote
 import Tools.Auth
 
-
---import PublicTransportTestData
-
---handler _ _ _ = withFlowHandlerAPI (insertTestData >> pure (QConfirmRes "1"))
-
 data ConfirmMessageD = ConfirmMessageD
   { txnId :: Text,
     quantity :: Int,
@@ -39,7 +34,6 @@ quoteConfirm personId quoteId confirmReq = do
   now <- getCurrentTime
   let booking = buildBooking now bookingId personId confirmReq quote
   _ <- Esq.runTransaction $ EsqBk.create booking
-  --  callConfirm $ makeConfirmMessageD txnId confirmReq quote booking
   pure (QConfirmRes bookingId, makeConfirmMessageD txnId confirmReq quote booking)
 
 makeConfirmMessageD :: Text -> QConfirmReq -> D.Quote -> D.Booking -> ConfirmMessageD
