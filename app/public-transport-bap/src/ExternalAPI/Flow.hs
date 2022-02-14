@@ -9,7 +9,9 @@ import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
 import qualified Core.Spec.API.Confirm as Confirm
 import Core.Spec.API.Search as Search
+import qualified Core.Spec.API.Status as Status
 import Core.Spec.Confirm
+import qualified Core.Spec.Status as Status
 import qualified Data.Text as T
 import GHC.Records.Extra
 import qualified Types.Domain.Outgoing.Search as DSearch
@@ -38,6 +40,17 @@ confirm ::
   m ()
 confirm bppUrl req = do
   callBecknAPIWithSignature "confirm" Confirm.confirmAPI bppUrl req
+
+status ::
+  ( MonadFlow m,
+    MonadReader r m,
+    CoreMetrics m,
+    HasInConfig r c "selfId" Text
+  ) =>
+  BaseUrl ->
+  BecknReq Status.StatusMessage ->
+  m ()
+status = callBecknAPIWithSignature "status" Status.statusAPI
 
 callBecknAPIWithSignature ::
   ( MonadFlow m,

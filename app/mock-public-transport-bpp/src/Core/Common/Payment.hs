@@ -59,10 +59,16 @@ instance ToJSON Status where
   toJSON = genericToJSON constructorsWithHyphens
 
 data TrStatus
-  = Captured
-  | Failed
-  | PaymentLinkCreated
-  | PaymentLinkExpired
-  | PaymentLinkIssued
-  | Refunded
-  deriving (Generic, Eq, Show, ToJSON, FromJSON)
+  = CAPTURED
+  | FAILED
+  | PAYMENT_LINK_CREATED
+  | PAYMENT_LINK_EXPIRED
+  | PAYMENT_LINK_ISSUED
+  | REFUNDED
+  deriving (Generic, Show, Eq)
+
+instance FromJSON TrStatus where
+  parseJSON = genericParseJSON constructorsToLowerOptions
+
+instance ToJSON TrStatus where
+  toJSON = genericToJSON constructorsToLowerOptions

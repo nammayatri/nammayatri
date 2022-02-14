@@ -21,13 +21,13 @@ changePaymentState st trStatus ord =
      }
 
 successfulPayment :: Order -> Order
-successfulPayment = changePaymentState PAID Captured
+successfulPayment = changePaymentState PAID CAPTURED
 
 failedTransaction :: TrStatus -> Order -> Order
 failedTransaction = changePaymentState NOT_PAID
 
 linkExpired :: Order -> Order
-linkExpired = failedTransaction PaymentLinkExpired
+linkExpired = failedTransaction PAYMENT_LINK_EXPIRED
 
 paymentFailed :: Order -> Order
-paymentFailed = failedTransaction Failed
+paymentFailed = failedTransaction FAILED

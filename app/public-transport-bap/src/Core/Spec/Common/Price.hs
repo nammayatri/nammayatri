@@ -1,11 +1,10 @@
 module Core.Spec.Common.Price where
 
+import Beckn.Prelude
 import Beckn.Types.Amount
-import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Utils.GenericPretty
+import Core.Spec.Common.DecimalValue
 import Data.Aeson
-import Data.OpenApi (ToSchema)
-import Relude
 
 data Price = Price
   { currency :: Text,

@@ -29,11 +29,10 @@ searchHandler ::
   BecknGps.Gps ->
   Text ->
   BaseUrl ->
-  Maybe BaseUrl ->
-  Text ->
   m ()
-searchHandler req gps txnId bapURI bppURI bapId = do
-  context <- buildContext Context.SEARCH txnId bapId bapURI Nothing bppURI
+searchHandler req gps txnId bapURI = do
+  bapId <- asks (.config.selfId)
+  context <- buildContext Context.SEARCH txnId bapId bapURI Nothing Nothing
   let intent = mkIntent req gps
   ExternalAPI.search (BecknReq context $ DSearch.SearchIntent intent)
 

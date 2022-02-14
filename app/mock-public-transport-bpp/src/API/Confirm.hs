@@ -57,8 +57,8 @@ trackPayment orderId = do
   logOutput INFO $ "handling orderId=" <> orderId <> " with handlingWay=" <> show handlingWay
   case handlingWay of
     Success -> transactionOk context order
-    FailedPayment -> cancelTransaction Failed context order
-    LinkExpired -> cancelTransaction PaymentLinkExpired context order
+    FailedPayment -> cancelTransaction FAILED context order
+    LinkExpired -> cancelTransaction PAYMENT_LINK_EXPIRED context order
 
 transactionOk :: Context -> OnConfirm.Order -> MockM AppEnv ()
 transactionOk context order = do

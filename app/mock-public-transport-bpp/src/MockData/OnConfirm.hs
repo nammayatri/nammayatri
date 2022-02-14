@@ -19,10 +19,10 @@ makeOnConfirmMessage orderId confOrd = do
   order <- makeOnConfirmOrder orderId confOrd
   pure OnConfirmMessage {..}
 
-makeOnConfirmOrder :: Text -> Confirm.Order -> Either Text Order
+makeOnConfirmOrder :: Text -> Confirm.Order -> Either Text Order --why do we need either here?
 makeOnConfirmOrder orderId confOrd = do
   let id = orderId
-      state = Active
+      state = ACTIVE
       provider = confOrd.provider
       billing = confOrd.billing
   let quote = confOrd.quote
@@ -35,7 +35,7 @@ makeOnConfirmOrder orderId confOrd = do
             params =
               Params
                 { transaction_id = "payment_transaction_id",
-                  transaction_status = PaymentLinkCreated,
+                  transaction_status = PAYMENT_LINK_CREATED,
                   amount = convertAmountToDecimalValue $ confOrd.payment.params.amount,
                   currency = confOrd.payment.params.currency
                 }

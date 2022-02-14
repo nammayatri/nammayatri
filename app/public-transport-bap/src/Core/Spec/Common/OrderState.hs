@@ -4,7 +4,8 @@ import Beckn.Prelude
 import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
 
 data State
-  = Active
+  = ACTIVE
+  | COMPLETE
   | CANCELLED
   deriving (Generic, ToJSON, FromJSON, Show)
   deriving anyclass (ToSchema)

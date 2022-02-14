@@ -58,3 +58,18 @@ instance IsHTTPError BookingError where
     BookingBppOrderIdNotFound -> E500
 
 instance IsAPIError BookingError
+
+data PaymentDetailsError
+  = PaymentDetailsNotFound
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PaymentDetailsError
+
+instance IsBaseError PaymentDetailsError
+
+instance IsHTTPError PaymentDetailsError where
+  toErrorCode = \case
+    PaymentDetailsNotFound -> "PAYMENT_DETAILS_NOT_FOUND"
+  toHttpCode PaymentDetailsNotFound = E400
+
+instance IsAPIError PaymentDetailsError

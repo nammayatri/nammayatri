@@ -24,7 +24,6 @@ import Types.Domain.Incoming.OnSearch as DOnSearch
 
 publicTransportOnSearch ::
   ( HasBAPMetrics m r,
-    HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
     EsqDBFlow m r,
     MonadProducer BusinessEvent m,
     HasKafkaBE r kafkaEnvs

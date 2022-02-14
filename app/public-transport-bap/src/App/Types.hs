@@ -48,8 +48,6 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
     bapMetrics :: BAPMetricsContainer,
-    coreVersion :: Text,
-    domainVersion :: Text,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs
   }
@@ -65,8 +63,6 @@ buildAppEnv config@AppCfg {..} = do
   isShuttingDown <- mkShutdown
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
-  let coreVersion = "0.9.3"
-      domainVersion = "0.9.3"
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

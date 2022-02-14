@@ -10,6 +10,7 @@ module Beckn.Utils.App
     hashBodyForSignature,
     getPodName,
     supportProxyAuthorization,
+    logRequestAndResponseGeneric,
   )
 where
 
@@ -108,10 +109,15 @@ modifyRequestHeaders :: (RequestHeaders -> RequestHeaders) -> Request -> Request
 modifyRequestHeaders f req = req {Wai.requestHeaders = f (Wai.requestHeaders req)}
 
 logRequestAndResponse :: HasLog f => EnvR f -> Application -> Application
-logRequestAndResponse (EnvR flowRt appEnv) f req respF =
-  f req loggedRespF
+logRequestAndResponse (EnvR flowRt appEnv) =
+  logRequestAndResponseGeneric logInfoIO
   where
     logInfoIO tag info = runFlowR flowRt appEnv $ logTagInfo tag info
+
+logRequestAndResponseGeneric :: (Text -> Text -> IO ()) -> Application -> Application
+logRequestAndResponseGeneric logInfoIO f req respF =
+  f req loggedRespF
+  where
     toRequestInfo Request {..} = RequestInfo {..}
     toResponseInfo resp =
       let (status, headers, _) = responseToStream resp

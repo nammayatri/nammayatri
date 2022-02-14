@@ -4,6 +4,6 @@ import Data.Aeson
 import Relude
 
 data State
-  = Active
+  = ACTIVE
   | CANCELLED
   deriving (Generic, ToJSON, FromJSON, Show)

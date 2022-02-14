@@ -2,7 +2,7 @@ module API.Types where
 
 import API.Beckn.Types as Beckn
 import qualified API.Swagger.Types as Swagger
-import API.UI.Types as PublicTransport
+import API.UI.Types as UI
 import Servant
 
 type API =
@@ -11,4 +11,4 @@ type API =
 
 type MainAPI =
   Beckn.API
-    :<|> PublicTransport.API
+    :<|> UI.API

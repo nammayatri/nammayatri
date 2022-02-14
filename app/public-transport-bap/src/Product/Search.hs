@@ -35,8 +35,7 @@ searchHandler personId req = do
   _ <- Esq.runTransaction $ QSearch.create searchRequest
   fork "search" . withRetry $ do
     bapURI <- asks (.config.selfURI)
-    bapId <- asks (.config.selfId)
-    SearchHandler.searchHandler req gps txnId bapURI Nothing bapId
+    SearchHandler.searchHandler req gps txnId bapURI
   return . Search.SearchRes $ searchRequest.id
 
 buildSearchRequest ::

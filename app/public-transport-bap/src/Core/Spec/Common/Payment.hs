@@ -1,11 +1,17 @@
 module Core.Spec.Common.Payment (module Core.Spec.Common.Payment, module Decimal) where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.DecimalValue as Decimal (DecimalValue (..))
 import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
 import Beckn.Utils.JSON
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Core.Spec.Common.DecimalValue as Decimal (DecimalValue (..))
 import Data.Aeson
 import Data.Aeson.Types
+import Data.OpenApi
+  ( ToSchema (declareNamedSchema),
+    fromAesonOptions,
+    genericDeclareNamedSchema,
+  )
 
 data Payment a = Payment
   { uri :: BaseUrl,
@@ -15,6 +21,9 @@ data Payment a = Payment
     status :: Status
   }
   deriving (Generic, Show)
+
+instance (ToSchema a) => ToSchema (Payment a) where
+  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions stripPrefixUnderscoreIfAny
 
 instance (FromJSON a) => FromJSON (Payment a) where
   parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
@@ -44,19 +53,23 @@ data PaymentType
   | ON_FULFILLMENT
   | POST_FULFILLMENT
   deriving (Generic, Eq, Show)
-  deriving anyclass (ToSchema)
   deriving (PrettyShow) via Showable PaymentType
 
 data Status = PAID | NOT_PAID
   deriving (Generic, Eq, Show)
-  deriving anyclass (ToSchema)
   deriving (PrettyShow) via Showable Status
+
+instance ToSchema PaymentType where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions constructorsWithHyphens
 
 instance FromJSON PaymentType where
   parseJSON = genericParseJSON constructorsWithHyphens
 
 instance ToJSON PaymentType where
   toJSON = genericToJSON constructorsWithHyphens
+
+instance ToSchema Status where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions constructorsWithHyphens
 
 instance FromJSON Status where
   parseJSON = genericParseJSON constructorsWithHyphens
@@ -65,11 +78,20 @@ instance ToJSON Status where
   toJSON = genericToJSON constructorsWithHyphens
 
 data TrStatus
-  = Captured
-  | Failed
-  | PaymentLinkCreated
-  | PaymentLinkExpired
-  | PaymentLinkIssued
-  | Refunded
-  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
+  = CAPTURED
+  | FAILED
+  | PAYMENT_LINK_CREATED
+  | PAYMENT_LINK_EXPIRED
+  | PAYMENT_LINK_ISSUED
+  | REFUNDED
+  deriving (Generic, Show, Eq)
   deriving (PrettyShow) via Showable TrStatus
+
+instance ToSchema TrStatus where
+  declareNamedSchema = genericDeclareUnNamedSchema $ fromAesonOptions constructorsToLowerOptions
+
+instance FromJSON TrStatus where
+  parseJSON = genericParseJSON constructorsToLowerOptions
+
+instance ToJSON TrStatus where
+  toJSON = genericToJSON constructorsToLowerOptions

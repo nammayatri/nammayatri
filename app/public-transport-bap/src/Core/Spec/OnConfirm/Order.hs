@@ -24,6 +24,4 @@ data Order = Order
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, PrettyShow)
 
-deriving instance ToSchema (Payment Params)
-
 deriving instance PrettyShow (Payment Params)

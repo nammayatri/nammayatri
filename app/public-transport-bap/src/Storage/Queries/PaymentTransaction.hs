@@ -35,3 +35,15 @@ updateStatus paymentTransactionId newStatus = do
         PaymentTransactionUpdatedAt =. val now
       ]
     where_ $ tbl ^. PaymentTransactionId ==. val (getId paymentTransactionId)
+
+updateTxnDetails :: Id PaymentTransaction -> Text -> PaymentStatus -> SqlDB ()
+updateTxnDetails paymentTransactionId paymentGatewayTxnStatus newStatus = do
+  now <- getCurrentTime
+  update' $ \tbl -> do
+    set
+      tbl
+      [ PaymentTransactionStatus =. val newStatus,
+        PaymentTransactionPaymentGatewayTxnStatus =. val paymentGatewayTxnStatus,
+        PaymentTransactionUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PaymentTransactionId ==. val (getId paymentTransactionId)
