@@ -10,7 +10,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
 import qualified Core.Common.Context as Context
 import qualified Core.OnConfirm as OnConfirm
-import qualified Domain.Booking as DBooking
+import Domain.Booking as DBooking
 import Domain.PaymentTransaction (PaymentStatus (PENDING))
 import qualified Domain.PaymentTransaction as DPaymentTransaction
 import qualified Storage.Queries.Booking as QBooking
@@ -40,11 +40,12 @@ handleOnConfirm bookingId msg = do
   booking <- QBooking.findById bookingId >>= fromMaybeM BookingDoesNotExist
   now <- getCurrentTime
   let updBooking =
-        booking{status = DBooking.AWAITING_PAYMENT,
-                bppOrderId = Just msg.order.id,
-                ticketId = Just msg.order.id,
-                ticketCreatedAt = Just now
-               }
+        booking
+          { status = DBooking.AWAITING_PAYMENT,
+            bppOrderId = Just msg.order.id,
+            ticketId = Just msg.order.id,
+            ticketCreatedAt = Just now
+          }
   paymentData <- buildPaymentData updBooking msg
   runTransaction $ do
     QBooking.updateStatusAndBppOrderId updBooking

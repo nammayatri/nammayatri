@@ -20,7 +20,6 @@ import qualified Domain.Types.Quote as Domain
 import Domain.Types.Search as Domain
 import Product.OnSearch as OnSearch
 import Tools.Context (validateContext)
-import qualified Tools.Metrics as Metrics
 import Types.Domain.Incoming.OnSearch as DOnSearch
 
 publicTransportOnSearch ::
@@ -34,7 +33,6 @@ publicTransportOnSearch ::
   m AckResponse
 publicTransportOnSearch req = do
   validateContext Context.ON_SEARCH $ req.context
-  Metrics.finishSearchMetrics $ req.context.transaction_id
   case req.contents of
     Right msg -> searchCbService req msg.catalog
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err

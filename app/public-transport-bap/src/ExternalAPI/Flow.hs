@@ -13,8 +13,6 @@ import Core.Spec.Confirm
 import qualified Data.Text as T
 import GHC.Records.Extra
 import qualified Types.Domain.Outgoing.Search as DSearch
-import qualified Core.Spec.API.Confirm as Confirm
-import Core.Spec.Confirm
 
 search ::
   ( MonadFlow m,
@@ -26,7 +24,7 @@ search ::
   BecknReq DSearch.SearchIntent ->
   m ()
 search req = do
-  url <- asks (.config.gatewayUrl)
+  url <- askConfig (.gatewayUrl)
   callBecknAPIWithSignature "search" Search.searchAPI url req
 
 confirm ::

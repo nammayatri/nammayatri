@@ -186,3 +186,11 @@ liftBinPredFun op a b x = pFun a x `op` pFun b x
 
 parenthesized :: Text -> Text
 parenthesized x = "(" <> x <> ")"
+
+newtype Exact n = Exact n
+
+instance Show n => ShowablePredicate (Exact n) where
+  pShow (Exact m) name = name <> " == " <> show m
+
+instance Eq n => Predicate n (Exact n) where
+  pFun (Exact m) = (== m)

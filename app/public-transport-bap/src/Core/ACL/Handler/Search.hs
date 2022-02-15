@@ -33,7 +33,7 @@ searchHandler ::
   Text ->
   m ()
 searchHandler req gps txnId bapURI bppURI bapId = do
-  context <- buildContext Context.SEARCH txnId bapURI bppURI bapId
+  context <- buildContext Context.SEARCH txnId bapId bapURI Nothing bppURI
   let intent = mkIntent req gps
   ExternalAPI.search (BecknReq context $ DSearch.SearchIntent intent)
 

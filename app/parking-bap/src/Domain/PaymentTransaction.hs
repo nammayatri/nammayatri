@@ -1,11 +1,11 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Domain.Types.PaymentTransaction where
+module Domain.PaymentTransaction where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.Types.Booking.Type
+import Domain.Booking.Type
 
 data PaymentStatus = PENDING | FAILED | SUCCESS
   deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema)
@@ -13,7 +13,6 @@ data PaymentStatus = PENDING | FAILED | SUCCESS
 data PaymentTransaction = PaymentTransaction
   { id :: Id PaymentTransaction,
     bookingId :: Id Booking,
-    bknTxnId :: Text,
     paymentGatewayTxnId :: Text,
     paymentGatewayTxnStatus :: Text,
     fare :: Amount,
