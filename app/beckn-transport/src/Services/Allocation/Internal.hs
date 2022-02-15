@@ -18,6 +18,7 @@ import qualified Storage.Queries.NotificationStatus as QNS
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
+import qualified Storage.Queries.RideCancellationReason as QRCR
 import qualified Storage.Queries.RideRequest as QRR
 import qualified Storage.Queries.Vehicle as QVeh
 import Types.App
@@ -228,6 +229,7 @@ cancelRide rideBookingId reason = do
   rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
   mbRide <- QRide.findByRBId rideBookingId
   DB.runSqlDBTransaction $ do
+    QRCR.create reason
     QRB.updateStatus rideBooking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED

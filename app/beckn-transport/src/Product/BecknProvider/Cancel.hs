@@ -18,6 +18,7 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as Quote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
+import qualified Storage.Queries.RideCancellationReason as QRCR
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
@@ -109,6 +110,7 @@ cancelRideTransaction rideBooking ride rideCReason = DB.runSqlDBTransaction $ do
   updateDriverInfo ride.driverId
   QRide.updateStatus ride.id SRide.CANCELLED
   QRB.updateStatus rideBooking.id SRB.CANCELLED
+  QRCR.create rideCReason
   where
     updateDriverInfo personId = do
       let driverId = cast personId
