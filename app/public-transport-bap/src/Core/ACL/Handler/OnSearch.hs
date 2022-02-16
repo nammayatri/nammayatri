@@ -3,7 +3,7 @@ module Core.ACL.Handler.OnSearch where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Streaming.Kafka.Topic.BusinessEvent.Environment
-import Beckn.Streaming.Kafka.Topic.BusinessEvent.Types
+import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Beckn.Streaming.MonadProducer
 import Beckn.Tools.Metrics.Types
 import Beckn.Types.Core.ReqTypes
@@ -18,14 +18,17 @@ import qualified Core.Spec.OnSearch.Catalog as Catalog
 import Core.Spec.OnSearch.Provider
 import qualified Domain.Types.Quote as Domain
 import Domain.Types.Search as Domain
-import Product.OnSearch as OnSearch
+import qualified Domain.Types.TransportStation as Domain
+import qualified Product.OnSearch as OnSearch
+import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Search as QSearch
 import Tools.Context (validateContext)
 import Types.Domain.Incoming.OnSearch as DOnSearch
 
 publicTransportOnSearch ::
   ( HasBAPMetrics m r,
     EsqDBFlow m r,
-    MonadProducer BusinessEvent m,
+    MonadProducer PublicTransportQuoteList m,
     HasKafkaBE r kafkaEnvs
   ) =>
   BecknCallbackReq OnSearch.OnSearchCatalog ->
@@ -38,13 +41,13 @@ publicTransportOnSearch req = do
   return Ack
 
 searchCbService ::
-  (EsqDBFlow m r, MonadProducer BusinessEvent m, HasKafkaBE r kafkaEnvs, ToJSON DOnSearch.Quote, ToJSON Domain.Quote) =>
+  (EsqDBFlow m r, MonadProducer PublicTransportQuoteList m, ToJSON DOnSearch.Quote, ToJSON Domain.Quote) =>
   BecknCallbackReq OnSearch.OnSearchCatalog ->
   Catalog.Catalog ->
   m ()
 searchCbService req catalog = do
   let txnId = Id $ req.context.transaction_id
-  _searchRequest <- OnSearch.findSearchRequestExists txnId
+  searchRequest <- QSearch.findById txnId >>= fromMaybeM SearchRequestDoesNotExist
   bppUrl <- req.context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_url")
   bppId <- req.context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
   let providers = catalog.bpp_providers
@@ -57,12 +60,23 @@ searchCbService req catalog = do
     concat <$> forM providers \provider ->
       forM provider.items (buildQuote now txnId bppUrl bppId publicTransportStations provider)
   OnSearch.onSearchhandler publicTransportStations quotes
+  quoteAggregates <- QQuote.findAllAggregatesBySearchId searchRequest.id
+  sendToKafka searchRequest.id quoteAggregates
 
--- quoteList <- PQuotes.getQuotesHandler txnId
--- sendToKafka quoteList
-
--- sendToKafka :: Quotes.GetQuotesRes -> m ()
--- sendToKafka _ = error "not implemented"
+sendToKafka :: MonadProducer PublicTransportQuoteList m => Id Domain.Search -> [(Domain.Quote, Domain.TransportStation, Domain.TransportStation)] -> m ()
+sendToKafka (Id txnId) quoteAggregate = producePublicTransportQuoteListMessage txnId $ makeKafkaPublicTransportQuote <$> quoteAggregate
+  where
+    makeKafkaPublicTransportQuote (Domain.Quote {..}, depStation, arrStation) =
+      PublicTransportQuote
+        { id = getId id,
+          departureStation = makeKafkaPublicTransportStation depStation,
+          arrivalStation = makeKafkaPublicTransportStation arrStation,
+          ..
+        }
+    makeKafkaPublicTransportStation Domain.TransportStation {..} =
+      PublicTransportStation
+        { ..
+        }
 
 buildQuote ::
   MonadFlow m =>

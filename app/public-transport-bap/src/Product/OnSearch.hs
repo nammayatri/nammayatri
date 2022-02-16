@@ -5,29 +5,23 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Domain.Types.Quote as Domain
-import Domain.Types.Search
 import Domain.Types.TransportStation as DTransportStation
 import Storage.Queries.Quote as QQuote
-import Storage.Queries.Search as QSearch
 import Storage.Queries.TransportStation as QTransportStation
 import Tools.Error
 import qualified Types.Domain.Incoming.OnSearch as DOnSearch
-
-findSearchRequestExists :: EsqDBFlow m r => Id Search -> m Search
-findSearchRequestExists txnId = do
-  QSearch.findById txnId >>= fromMaybeM SearchRequestDoesNotExist
 
 onSearchhandler :: EsqDBFlow m r => [DOnSearch.TransportStation] -> [DOnSearch.Quote] -> m ()
 onSearchhandler transportLocations quotes = do
   publicTransportStations <- forM transportLocations $ \publicTransportStation -> do
     QTransportStation.findByStationCode publicTransportStation.bppLocationId >>= maybe (createpublicTransportLocation publicTransportStation) return
   _quotes <- forM quotes $ \quote -> do
-    makeQuote publicTransportStations quote
+    buildQuote publicTransportStations quote
   Esq.runTransaction $ do
     traverse_ QQuote.create _quotes
 
-makeQuote :: (MonadGuid m, Log m, MonadThrow m) => [DTransportStation.TransportStation] -> DOnSearch.Quote -> m Domain.Quote
-makeQuote transportStations quote = do
+buildQuote :: (MonadGuid m, Log m, MonadThrow m) => [DTransportStation.TransportStation] -> DOnSearch.Quote -> m Domain.Quote
+buildQuote transportStations quote = do
   departureStation <-
     find (\pl -> pl.stationCode == quote.bppDepartureLocId) transportStations
       & fromMaybeM (InvalidRequest "Invalid departure station code")
@@ -53,12 +47,12 @@ makeQuote transportStations quote = do
 
 createpublicTransportLocation :: EsqDBFlow m r => DOnSearch.TransportStation -> m DTransportStation.TransportStation
 createpublicTransportLocation publicTransportLocation = do
-  publicTransportStation <- makePublicTransportLocation publicTransportLocation
+  publicTransportStation <- buildPublicTransportLocation publicTransportLocation
   Esq.runTransaction $ QTransportStation.create publicTransportStation
   pure publicTransportStation
 
-makePublicTransportLocation :: MonadGuid m => DOnSearch.TransportStation -> m DTransportStation.TransportStation
-makePublicTransportLocation publicTransportLocation = do
+buildPublicTransportLocation :: MonadGuid m => DOnSearch.TransportStation -> m DTransportStation.TransportStation
+buildPublicTransportLocation publicTransportLocation = do
   id <- generateGUID
   return $
     DTransportStation.TransportStation
