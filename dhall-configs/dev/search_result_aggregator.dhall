@@ -8,7 +8,6 @@ let hcfg =
   , connectMaxConnections = +50
   , connectMaxIdleTime = +30
   , connectTimeout = None Integer
-  , hedisPrefix = "app_backend"
   }
 
 let kafkaConsumerCfgs =

@@ -29,7 +29,7 @@ data AppEnv = AppEnv
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
-  hedisEnv <- connectHedis hedisCfg
+  hedisEnv <- connectHedis hedisCfg ("mock_public_transport_bpp" <>)
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   return $ AppEnv {..}
 

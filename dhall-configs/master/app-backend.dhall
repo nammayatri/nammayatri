@@ -45,7 +45,6 @@ let hcfg =
   , connectMaxConnections = rcfg.connectMaxConnections
   , connectMaxIdleTime = rcfg.connectMaxIdleTime
   , connectTimeout = rcfg.connectTimeout
-  , hedisPrefix = "app_backend"
   }
 
 let smsConfig =

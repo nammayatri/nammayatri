@@ -43,8 +43,8 @@ runHedisTransaction action = do
 
 buildKey :: HedisFlow m env => Text -> m BS.ByteString
 buildKey key = do
-  prefix <- asks (.hedisEnv.hedisPrefix)
-  return . cs $ prefix <> ":" <> key
+  keyModifier <- asks (.hedisEnv.keyModifier)
+  return . cs $ keyModifier key
 
 get ::
   (FromJSON a, HedisFlow m env) => Text -> m (Maybe a)

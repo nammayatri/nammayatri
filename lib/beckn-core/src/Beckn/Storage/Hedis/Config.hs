@@ -12,6 +12,8 @@ import Network.Socket (HostName)
 type HedisFlow m env =
   (MonadReader env m, HasField "hedisEnv" env HedisEnv, MonadIO m, C.MonadThrow m, Log m)
 
+type KeyModifierFunc = (Text -> Text)
+
 data HedisCfg = HedisCfg
   { connectHost :: HostName,
     connectPort :: Word16,
@@ -19,14 +21,13 @@ data HedisCfg = HedisCfg
     connectDatabase :: Integer,
     connectMaxConnections :: Int,
     connectMaxIdleTime :: NominalDiffTime,
-    connectTimeout :: Maybe NominalDiffTime,
-    hedisPrefix :: Text
+    connectTimeout :: Maybe NominalDiffTime
   }
   deriving (Generic, Show, FromDhall)
 
 data HedisEnv = HedisEnv
   { hedisConnection :: Connection,
-    hedisPrefix :: Text
+    keyModifier :: KeyModifierFunc
   }
   deriving (Generic)
 
@@ -39,20 +40,19 @@ defaultHedisCfg =
       connectDatabase = 0,
       connectMaxConnections = 50,
       connectMaxIdleTime = 30,
-      connectTimeout = Nothing,
-      hedisPrefix = ""
+      connectTimeout = Nothing
     }
 
-withHedisEnv :: HedisCfg -> (HedisEnv -> IO a) -> IO a
-withHedisEnv cfg = C.bracket (connectHedis cfg) disconnectHedis
+withHedisEnv :: HedisCfg -> KeyModifierFunc -> (HedisEnv -> IO a) -> IO a
+withHedisEnv cfg keyModifier = C.bracket (connectHedis cfg keyModifier) disconnectHedis
 
-connectHedis :: HedisCfg -> IO HedisEnv
-connectHedis cfg = do
+connectHedis :: HedisCfg -> KeyModifierFunc -> IO HedisEnv
+connectHedis cfg keyModifier = do
   conn <- checkedConnect connectInfo
   return $
     HedisEnv
       { hedisConnection = conn,
-        hedisPrefix = cfg.hedisPrefix
+        keyModifier = keyModifier
       }
   where
     connectInfo :: ConnectInfo

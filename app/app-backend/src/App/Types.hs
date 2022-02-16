@@ -16,6 +16,7 @@ import Beckn.SesConfig (SesConfig)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
+import Beckn.Storage.Hedis.AppPrefixes (appBackendPrefix)
 import Beckn.Storage.Hedis.Config
 import Beckn.Types.App
 import Beckn.Types.Cache
@@ -127,7 +128,7 @@ buildAppEnv config@AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs
-  hedisEnv <- connectHedis hedisCfg
+  hedisEnv <- connectHedis hedisCfg appBackendPrefix
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

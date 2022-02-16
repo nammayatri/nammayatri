@@ -8,7 +8,6 @@ let hcfg =
   , connectMaxConnections = +50
   , connectMaxIdleTime = +30
   , connectTimeout = None Integer
-  , hedisPrefix = "mock_public_transport_bpp"
   }
 
 in

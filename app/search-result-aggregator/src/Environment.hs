@@ -2,6 +2,7 @@ module Environment where
 
 import Beckn.Prelude
 import Beckn.Storage.Hedis (HedisCfg, HedisEnv, connectHedis)
+import Beckn.Storage.Hedis.AppPrefixes (appBackendPrefix)
 import Beckn.Types.Common
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
@@ -38,7 +39,7 @@ buildAppEnv config@AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
-  hedisEnv <- connectHedis hedisCfg
+  hedisEnv <- connectHedis hedisCfg appBackendPrefix
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
