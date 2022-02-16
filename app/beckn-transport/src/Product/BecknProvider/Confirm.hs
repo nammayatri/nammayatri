@@ -113,6 +113,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
             estimatedTotalFare = quote.estimatedTotalFare,
             distance = quote.distance,
             vehicleVariant = quote.vehicleVariant,
+            reallocationsCount = 0,
             createdAt = now,
             updatedAt = now
           }

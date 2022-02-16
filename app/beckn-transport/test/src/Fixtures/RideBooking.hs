@@ -27,6 +27,7 @@ defaultRideBooking =
       discount = Nothing,
       estimatedTotalFare = 0,
       distance = 0,
+      reallocationsCount = 0,
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime
     }

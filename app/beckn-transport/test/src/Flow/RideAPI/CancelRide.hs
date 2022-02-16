@@ -76,7 +76,7 @@ failedCancellationByAnotherDriver =
 
 failedCancellationWhenQuoteStatusIsWrong :: TestTree
 failedCancellationWhenQuoteStatusIsWrong =
-  testCase "Fail cancellation if product instance has inappropriate ride status" $ do
+  testCase "Fail cancellation if ride has inappropriate ride status" $ do
     runHandler handleCase (Id "1") "1" someCancelRideReq
       `shouldThrow` (\(RideInvalidStatus _) -> True)
   where

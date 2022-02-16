@@ -128,6 +128,7 @@ reallocateRideTransaction orgShortId rideBookingId ride bookingCReason = do
       now
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBookingId SRB.AWAITING_REASSIGNMENT
+    QRB.increaseReallocationsCounter rideBookingId
     QRide.updateStatus ride.id SRide.CANCELLED
     updateDriverInfo
     QBCR.create bookingCReason

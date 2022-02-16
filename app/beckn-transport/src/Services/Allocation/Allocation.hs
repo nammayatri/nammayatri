@@ -59,16 +59,18 @@ data RideStatus
 data RideInfo = RideInfo
   { rideBookingId :: Id SRB.RideBooking,
     rideStatus :: RideStatus,
-    orderTime :: OrderTime
+    orderTime :: OrderTime,
+    reallocationsCount :: Int
   }
   deriving (Generic)
 
-data AllocatorCancellationReason = AllocationTimeExpired | NoDriversInRange
+data AllocatorCancellationReason = AllocationTimeExpired | NoDriversInRange | ReallocationLimitExceed
 
 instance ToJSON AllocatorCancellationReason where
   toJSON = \case
     AllocationTimeExpired -> "ALLOCATION_TIME_EXPIRED"
     NoDriversInRange -> "NO_DRIVERS_IN_RANGE"
+    ReallocationLimitExceed -> "REALLOCATION_LIMIT_EXCEED"
 
 type MonadHandler m =
   ( MonadCatch m,
@@ -89,6 +91,7 @@ data ServiceHandle m = ServiceHandle
   { getDriverSortMode :: m SortMode,
     getConfiguredNotificationTime :: m Seconds,
     getConfiguredAllocationTime :: m Seconds,
+    getConfiguredReallocationsLimit :: m Int,
     getDriverBatchSize :: m Int,
     getRequests :: ShortId Organization -> Integer -> m [RideRequest],
     getDriverPool :: Id SRB.RideBooking -> m [Id Driver],
@@ -197,10 +200,12 @@ processAllocation handle@ServiceHandle {..} shortOrgId rideInfo = do
   let orderTime = rideInfo.orderTime
   currentTime <- getCurrentTime
   allocationTimeFinished <- isAllocationTimeFinished handle currentTime orderTime
+  allocationLimitExceed <- isReallocationLimitExceed handle rideInfo.reallocationsCount
   logInfo $ "isAllocationTimeFinished " <> show allocationTimeFinished
-  if allocationTimeFinished
+  if allocationTimeFinished || allocationLimitExceed
     then do
-      cancel handle rideBookingId ByAllocator $ Just AllocationTimeExpired
+      let cancellationReason = if allocationTimeFinished then AllocationTimeExpired else ReallocationLimitExceed
+      cancel handle rideBookingId ByAllocator $ Just cancellationReason
       logEvent AllocationTimeFinished rideBookingId
     else do
       currentNotifications <- getCurrentNotifications rideBookingId
@@ -316,6 +321,11 @@ isAllocationTimeFinished ServiceHandle {..} currentTime orderTime = do
   configuredAllocationTime <- fromIntegral <$> getConfiguredAllocationTime
   let elapsedSearchTime = diffUTCTime currentTime (orderTime.utcTime)
   pure $ elapsedSearchTime > configuredAllocationTime
+
+isReallocationLimitExceed :: MonadHandler m => ServiceHandle m -> Int -> m Bool
+isReallocationLimitExceed ServiceHandle {..} reallocationsCount = do
+  reallocationsLimit <- getConfiguredReallocationsLimit
+  pure $ reallocationsCount >= reallocationsLimit
 
 logDriverNoLongerNotified :: Log m => Id SRB.RideBooking -> Id Driver -> m ()
 logDriverNoLongerNotified rideBookingId driverId =

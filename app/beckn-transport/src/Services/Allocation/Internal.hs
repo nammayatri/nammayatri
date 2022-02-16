@@ -19,6 +19,7 @@ import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
+import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.RideRequest as QRR
 import qualified Storage.Queries.Vehicle as QVeh
 import Types.App
@@ -45,6 +46,9 @@ getConfiguredNotificationTime = asks (.driverAllocationConfig.driverNotification
 
 getConfiguredAllocationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Seconds
 getConfiguredAllocationTime = asks (.driverAllocationConfig.rideAllocationExpiry)
+
+getConfiguredReallocationsLimit :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Int
+getConfiguredReallocationsLimit = fromIntegral <$> asks (.driverAllocationConfig.reallocationsLimit)
 
 getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]) => Id RideBooking -> m [Id Driver]
 getDriverPool = Confirm.getDriverPool
@@ -234,6 +238,7 @@ cancelRideBooking rideBookingId reason = do
       >>= fromMaybeM OrgNotFound
   DB.runSqlDBTransaction $ do
     QRB.updateStatus rideBooking.id SRB.CANCELLED
+    QBCR.create reason
     whenJust mbRide $ \ride -> do
       QRide.updateStatus ride.id SRide.CANCELLED
       QDriverInfo.updateOnRide (cast ride.driverId) False
@@ -317,7 +322,8 @@ getRideInfo rideBookingId = do
     RideInfo
       { rideBookingId = rideBookingId,
         rideStatus = rideStatus,
-        orderTime = OrderTime $ rideBooking.createdAt
+        orderTime = OrderTime $ rideBooking.createdAt,
+        reallocationsCount = rideBooking.reallocationsCount
       }
   where
     castToRideStatus = \case

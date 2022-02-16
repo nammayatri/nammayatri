@@ -93,3 +93,13 @@ findAllByDriver driverId_ mbLimit mbOffset mbIsOnlyActive = do
         &&. if isOnlyActive
           then B.not_ (status ==. B.val_ SRide.COMPLETED ||. status ==. B.val_ SRide.CANCELLED)
           else B.val_ True
+
+increaseReallocationsCounter :: Id Storage.RideBooking -> DB.SqlDB ()
+increaseReallocationsCounter rbId = do
+  dbTable <- getDbTable
+  now <- getCurrentTime
+  DB.update' dbTable (setClause now) $ predicate rbId
+  where
+    predicate rbId_ Storage.RideBooking {..} = id ==. B.val_ rbId_
+    setClause now Storage.RideBooking {..} =
+      mconcat [reallocationsCount <-. B.current_ reallocationsCount + 1, updatedAt <-. B.val_ now]

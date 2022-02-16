@@ -69,6 +69,7 @@ data RideBookingT f = RideBooking
     discount :: B.C f (Maybe Amount),
     estimatedTotalFare :: B.C f Amount,
     distance :: B.C f Double,
+    reallocationsCount :: B.C f Int,
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime
   }
@@ -104,6 +105,7 @@ fieldEMod =
           vehicleVariant = "vehicle_variant",
           estimatedFare = "estimated_fare",
           estimatedTotalFare = "estimated_total_fare",
+          reallocationsCount = "reallocations_count",
           createdAt = "created_at",
           updatedAt = "updated_at"
         }

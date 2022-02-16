@@ -35,6 +35,7 @@ handle =
     { getDriverSortMode = I.getDriverSortMode,
       getConfiguredNotificationTime = I.getConfiguredNotificationTime,
       getConfiguredAllocationTime = I.getConfiguredAllocationTime,
+      getConfiguredReallocationsLimit = I.getConfiguredReallocationsLimit,
       getDriverBatchSize = I.getDriverBatchSize,
       getRequests = I.getRequests,
       getDriverPool = I.getDriverPool,

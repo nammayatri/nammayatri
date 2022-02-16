@@ -33,11 +33,17 @@ rideBooking01Id = Id "rideBooking01"
 rideBooking02Id :: Id SRB.RideBooking
 rideBooking02Id = Id "rideBooking02"
 
+rideBooking03Id :: Id SRB.RideBooking
+rideBooking03Id = Id "rideBooking03"
+
 allocationTime :: Seconds
 allocationTime = 120
 
 notificationTime :: Seconds
 notificationTime = 15
+
+reallocationsLimit :: Int
+reallocationsLimit = 3
 
 isNotified :: UTCTime -> (NotificationStatus, UTCTime) -> Bool
 isNotified currentTime (Notified, expiryTime) = expiryTime > currentTime
@@ -51,14 +57,15 @@ attemptedNotification ::
 attemptedNotification rideBookingId (id, _) (status, _) =
   id == rideBookingId && (status == Rejected || status == Ignored)
 
-addRideBooking :: Repository -> Id SRB.RideBooking -> IO ()
-addRideBooking Repository {..} rideBookingId = do
+addRideBooking :: Repository -> Id SRB.RideBooking -> Int -> IO ()
+addRideBooking Repository {..} rideBookingId reallocationsCount = do
   currTime <- Time.getCurrentTime
   let rideInfo =
         RideInfo
           { rideBookingId = rideBookingId,
             rideStatus = Confirmed,
-            orderTime = OrderTime currTime
+            orderTime = OrderTime currTime,
+            reallocationsCount = reallocationsCount
           }
   modifyIORef rideBookingsVar $ Map.insert rideBookingId rideInfo
 
@@ -121,6 +128,7 @@ handle repository@Repository {..} =
     { getDriverSortMode = pure ETA,
       getConfiguredAllocationTime = pure allocationTime,
       getConfiguredNotificationTime = pure notificationTime,
+      getConfiguredReallocationsLimit = pure reallocationsLimit,
       getDriverBatchSize = pure 5,
       getRequests = \_ numRides -> do
         rideRequests <- readIORef rideRequestsVar
@@ -234,8 +242,8 @@ twoAllocations :: TestTree
 twoAllocations = testCase "Two allocations" $ do
   r@Repository {..} <- initRepository
 
-  addRideBooking r rideBooking01Id
-  addRideBooking r rideBooking02Id
+  addRideBooking r rideBooking01Id 0
+  addRideBooking r rideBooking02Id 0
   addRequest Allocation r rideBooking01Id
   addRequest Allocation r rideBooking02Id
 
@@ -260,7 +268,7 @@ cancellationAfterAssignment :: TestTree
 cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
   r@Repository {..} <- initRepository
 
-  addRideBooking r rideBooking01Id
+  addRideBooking r rideBooking01Id 0
   addRequest Allocation r rideBooking01Id
 
   void $ process (handle r) org1 numRequestsToProcess
@@ -274,10 +282,28 @@ cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
   void $ process (handle r) org1 numRequestsToProcess
   checkRideStatus r rideBooking01Id Cancelled
 
+cancellationOnReallocationsCountExceedLimit :: TestTree
+cancellationOnReallocationsCountExceedLimit = testCase "Cancellation on reallocations count exceed limit" $ do
+  r@Repository {..} <- initRepository
+
+  addRideBooking r rideBooking01Id 2
+  addRideBooking r rideBooking02Id 3
+  addRideBooking r rideBooking03Id 22
+  addRequest Allocation r rideBooking01Id
+  addRequest Allocation r rideBooking02Id
+  addRequest Allocation r rideBooking03Id
+
+  void $ process (handle r) org1 numRequestsToProcess
+
+  checkRideStatus r rideBooking01Id Confirmed
+  checkRideStatus r rideBooking02Id Cancelled
+  checkRideStatus r rideBooking03Id Cancelled
+
 allocation :: TestTree
 allocation =
   testGroup
     "Allocation"
     [ twoAllocations,
-      cancellationAfterAssignment
+      cancellationAfterAssignment,
+      cancellationOnReallocationsCountExceedLimit
     ]

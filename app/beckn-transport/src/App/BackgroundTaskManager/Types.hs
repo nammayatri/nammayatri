@@ -43,7 +43,8 @@ data DriverAllocationConfig = DriverAllocationConfig
     driverBatchSize :: Int,
     requestsNumPerIteration :: Integer,
     processDelay :: Milliseconds,
-    shards :: Shards
+    shards :: Shards,
+    reallocationsLimit :: Integer
   }
   deriving (Generic, FromDhall)
 

@@ -22,6 +22,7 @@ let driverAllocationConfig =
   , requestsNumPerIteration = +50
   , processDelay = +1000 -- ms
   , shards = shards
+  , reallocationsLimit = +5
   }
 
 in
