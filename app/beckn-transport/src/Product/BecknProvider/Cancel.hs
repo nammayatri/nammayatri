@@ -11,6 +11,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
+import SharedLogic.DriverPool (recalculateDriverPool)
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
@@ -54,6 +55,7 @@ cancelRide ::
   ( DBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     FCMFlow m r,
     CoreMetrics m
   ) =>
@@ -68,7 +70,9 @@ cancelRide rideId bookingCReason = do
     Organization.findOrganizationById transporterId
       >>= fromMaybeM OrgNotFound
   if isCancelledByDriver
-    then reallocateRideTransaction transporter.shortId rideBooking.id ride bookingCReason
+    then do
+      void $ recalculateDriverPool rideBooking.fromLocationId rideBooking.id rideBooking.providerId rideBooking.vehicleVariant
+      reallocateRideTransaction transporter.shortId rideBooking.id ride bookingCReason
     else cancelRideTransaction rideBooking.id ride bookingCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   fork "cancelRide - Notify BAP" $ do

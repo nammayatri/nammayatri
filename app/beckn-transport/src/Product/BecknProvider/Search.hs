@@ -20,10 +20,10 @@ import Data.Traversable
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Product.BecknProvider.Confirm as Confirm
 import Product.FareCalculator
 import qualified Product.FareCalculator.Flow as Fare
 import qualified Product.Location as Loc
+import qualified SharedLogic.DriverPool as DrPool
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Products as SProduct
 import qualified Storage.Queries.Quote as Quote
@@ -143,7 +143,7 @@ onSearchCallback ::
   m OnSearch.OnSearchMessage
 onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar = do
   let transporterId = transporter.id
-  pool <- Confirm.calculateDriverPool fromLocation.id transporterId Nothing
+  pool <- DrPool.calculateDriverPool fromLocation.id transporterId Nothing
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId
       ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""

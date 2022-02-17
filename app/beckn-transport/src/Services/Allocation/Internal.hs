@@ -8,8 +8,8 @@ import Beckn.Types.Id
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import Product.BecknProvider.Cancel
-import qualified Product.BecknProvider.Confirm as Confirm
 import Services.Allocation.Allocation as Alloc
+import qualified SharedLogic.DriverPool as DrPool
 import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -51,7 +51,7 @@ getConfiguredReallocationsLimit :: HasFlowEnv m r '["driverAllocationConfig" :::
 getConfiguredReallocationsLimit = fromIntegral <$> asks (.driverAllocationConfig.reallocationsLimit)
 
 getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]) => Id RideBooking -> m [Id Driver]
-getDriverPool = Confirm.getDriverPool
+getDriverPool = DrPool.getDriverPool
 
 getDriverBatchSize :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Int
 getDriverBatchSize = asks (.driverAllocationConfig.driverBatchSize)
