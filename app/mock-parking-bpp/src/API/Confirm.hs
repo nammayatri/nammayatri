@@ -23,7 +23,7 @@ import Utils
 
 confirmServer :: BecknReq Confirm.ConfirmMessage -> MockM AppEnv AckResponse
 confirmServer confirmReq@(BecknReq ctx req) = do
-  logOutput DEBUG $ "request body: " <> show confirmReq
+  logDebug $ "request body: " <> show confirmReq
   context' <- buildOnActionContext ON_CONFIRM ctx
   orderId <- generateOrderId
   let eithOrder = buildOnConfirmOrder orderId req.order
@@ -32,7 +32,7 @@ confirmServer confirmReq@(BecknReq ctx req) = do
     threadDelayMilliSec waitMilliSec
     let eithOnConfirmCallbackData = OnConfirmMessage <$> first textToError eithOrder
     ack <- callBapOnConfirm $ BecknCallbackReq context' eithOnConfirmCallbackData
-    logOutput DEBUG $ "got ack" <> show ack
+    logDebug $ "got ack" <> show ack
     whenRight_ eithOrder $ \onConfirmOrder -> do
       Redis.writeOrder context' onConfirmOrder
       trackPayment onConfirmOrder.id
@@ -51,12 +51,12 @@ defineHandlingWay = \case
 trackPayment :: Text -> MockM AppEnv ()
 trackPayment orderId = do
   secondsToWait <- asks (.config.statusWaitTimeSec)
-  logOutput INFO $ "waiting " <> show secondsToWait <> " seconds before changing payment status"
+  logInfo $ "waiting " <> show secondsToWait <> " seconds before changing payment status"
   threadDelaySec secondsToWait
   (context, order) <- Redis.readOrder orderId
   item <- fromEitherM InvalidRequest $ validateUnique "item" order.items
   let handlingWay = defineHandlingWay item.id
-  logOutput INFO $ "handling item with id = " <> item.id <> " using a handling way: " <> show handlingWay
+  logInfo $ "handling item with id = " <> item.id <> " using a handling way: " <> show handlingWay
   case handlingWay of
     Success -> transactionOk context order
     FailedPayment -> cancelTransaction REFUNDED context order -- where is FAILED constructor?

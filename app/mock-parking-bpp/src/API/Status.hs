@@ -20,7 +20,7 @@ import Relude hiding (state)
 
 statusServer :: BecknReq StatusMessage -> MockM AppEnv AckResponse
 statusServer (BecknReq ctx msg) = do
-  logOutput INFO $ "got confirm request: " <> show msg
+  logInfo $ "got confirm request: " <> show msg
   context' <- buildOnActionContext ON_STATUS ctx
   let orderId = msg.order.id
   eithCtxOrd <- C.try @(MockM AppEnv) @SomeException (Redis.readOrder orderId)

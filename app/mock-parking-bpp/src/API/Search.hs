@@ -16,12 +16,12 @@ import Relude
 
 searchServer :: BecknReq SearchIntent -> MockM AppEnv AckResponse
 searchServer becknReq@(BecknReq ctx _) = do
-  logOutput DEBUG $ "request body: " <> show becknReq
+  logDebug $ "request body: " <> show becknReq
   _ <- fork "call on_search" $ do
     waitMilliSec <- asks (.config.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
     context' <- buildOnActionContext ON_SEARCH ctx
     let callbackData = onSearchCatalog
     _ <- callGatewayOnSearch $ BecknCallbackReq context' $ Right callbackData
-    logOutput DEBUG "got ack"
+    logDebug "got ack"
   pure Ack

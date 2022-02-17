@@ -91,6 +91,9 @@ toOnConfirmQuote quan amount = do
       breakup = replicate quan breakupItem
   SpecQuote {..}
 
+unDecimalValue :: DecimalValue -> Text
+unDecimalValue (DecimalValue x) = x
+
 buildPayment :: Amount -> Common.Payment
 buildPayment totalAmount = do
   let _type = Common.PRE_FULFILLMENT
