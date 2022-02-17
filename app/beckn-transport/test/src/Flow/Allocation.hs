@@ -55,7 +55,7 @@ attemptedNotification ::
   (NotificationStatus, UTCTime) ->
   Bool
 attemptedNotification rideBookingId (id, _) (status, _) =
-  id == rideBookingId && (status == Rejected || status == Ignored)
+  id == rideBookingId && (status == Rejected || status == Ignored || status == Accepted)
 
 addRideBooking :: Repository -> Id SRB.RideBooking -> Int -> IO ()
 addRideBooking Repository {..} rideBookingId reallocationsCount = do
@@ -177,6 +177,8 @@ handle repository@Repository {..} =
         modifyIORef assignmentsVar $ (:) (rideBookingId, driverId)
         modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Assigned) rideBookingId,
       cancelRideBooking = \rideBookingId _ -> modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Cancelled) rideBookingId,
+      cleanupNotAnsweredNotifications = \rideId ->
+        modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) (s, _) -> not (r == rideId && s == Notified)),
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),
       getTopDriversByIdleTime = \count driverIds -> pure $ take count driverIds,

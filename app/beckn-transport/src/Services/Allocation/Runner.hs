@@ -54,6 +54,7 @@ handle =
       cancelRideBooking = I.cancelRideBooking,
       addAllocationRequest = I.addAllocationRequest,
       getRideInfo = I.getRideInfo,
+      cleanupNotAnsweredNotifications = I.cleanupNotAnsweredNotifications,
       cleanupNotifications = I.cleanupNotifications,
       removeRequest = I.removeRequest,
       logEvent = I.logEvent,

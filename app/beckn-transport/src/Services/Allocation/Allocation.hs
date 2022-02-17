@@ -108,6 +108,7 @@ data ServiceHandle m = ServiceHandle
     checkAvailability :: NonEmpty (Id Driver) -> m [Id Driver],
     assignDriver :: Id SRB.RideBooking -> Id Driver -> m (),
     cancelRideBooking :: Id SRB.RideBooking -> SBCR.RideBookingCancellationReason -> m (),
+    cleanupNotAnsweredNotifications :: Id SRB.RideBooking -> m (),
     cleanupNotifications :: Id SRB.RideBooking -> m (),
     addAllocationRequest :: ShortId Organization -> Id SRB.RideBooking -> m (),
     getRideInfo :: Id SRB.RideBooking -> m RideInfo,
@@ -183,6 +184,7 @@ processDriverResponse handle@ServiceHandle {..} response rideBookingId = do
       RideBooking.ACCEPT -> do
         logInfo $ "Assigning driver" <> show response.driverId
         assignDriver rideBookingId response.driverId
+        cleanupNotAnsweredNotifications rideBookingId
         updateNotificationStatuses rideBookingId Accepted $ singleton response.driverId
         logDriverEvents MarkedAsAccepted rideBookingId $ singleton response.driverId
       RideBooking.REJECT ->

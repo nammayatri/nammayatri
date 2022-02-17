@@ -68,6 +68,15 @@ findActiveNotificationByDriverId driverId_ rideBookingId_ = do
         &&. rideBookingId ==. B.val_ rideBookingId_
         &&. status ==. B.val_ NotificationStatus.NOTIFIED
 
+cleanupNotAnsweredNotifications :: DBFlow m r => Id SRB.RideBooking -> m ()
+cleanupNotAnsweredNotifications rideBookingId_ = do
+  dbTable <- getDbTable
+  DB.delete dbTable (predicate rideBookingId_)
+  where
+    predicate rid NotificationStatus.NotificationStatus {..} =
+      rideBookingId ==. B.val_ rid
+        &&. status ==. B.val_ NotificationStatus.NOTIFIED
+
 cleanupNotifications :: DBFlow m r => Id SRB.RideBooking -> m ()
 cleanupNotifications rideBookingId_ = do
   dbTable <- getDbTable

@@ -248,6 +248,9 @@ cancelRideBooking rideBookingId reason = do
   whenJust mbRide $ \ride ->
     notifyDriverOnCancel rideBooking ride reason
 
+cleanupNotAnsweredNotifications :: DBFlow m r => Id RideBooking -> m ()
+cleanupNotAnsweredNotifications = QNS.cleanupNotAnsweredNotifications
+
 cleanupNotifications :: DBFlow m r => Id RideBooking -> m ()
 cleanupNotifications = QNS.cleanupNotifications
 
