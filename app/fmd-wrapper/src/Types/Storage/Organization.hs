@@ -100,7 +100,6 @@ data OrganizationT f = Organization
     status :: B.C f Status,
     verified :: B.C f Bool,
     enabled :: B.C f Bool,
-    apiKey :: B.C f (Maybe Text),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
     info :: B.C f (Maybe Text)
@@ -139,7 +138,6 @@ fieldEMod =
         mobileNumber = "mobile_number",
         mobileCountryCode = "mobile_country_code",
         headCount = "head_count",
-        apiKey = "api_key",
         fromTime = "from_time",
         toTime = "to_time"
       }
