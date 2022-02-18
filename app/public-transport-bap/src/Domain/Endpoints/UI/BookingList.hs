@@ -1,4 +1,4 @@
-module Product.BookingList where
+module Domain.Endpoints.UI.BookingList where
 
 import Beckn.Prelude
 import Beckn.Utils.Common
@@ -10,8 +10,10 @@ import qualified Storage.Queries.TransportStation as QTransportStation
 import Tools.Auth
 import Tools.Error
 
-bookingListHandler :: EsqDBFlow m r => PersonId -> Integer -> Integer -> m BookingListRes
-bookingListHandler personId limit offset = do
+bookingListHandler :: EsqDBFlow m r => PersonId -> Maybe Integer -> Maybe Integer -> m BookingListRes
+bookingListHandler personId mbLimit mbOffset = do
+  let limit = fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
   bList <- QBooking.findAllByRequestorId personId limit offset
   BookingListRes
     <$> traverse buildBookingListRes bList

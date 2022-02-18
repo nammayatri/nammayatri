@@ -1,4 +1,4 @@
-module Core.ACL.Types.API.OnSearch where
+module Core.Spec.OnSearch where
 
 import Beckn.Prelude
 import Core.Spec.OnSearch.Catalog

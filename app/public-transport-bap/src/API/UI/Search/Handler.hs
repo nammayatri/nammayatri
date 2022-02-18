@@ -1,15 +1,21 @@
 module API.UI.Search.Handler where
 
-import API.UI.Search.Types as Search
 import App.Types
 import Beckn.Prelude
 import Beckn.Utils.Common
-import Product.Search as Search
+import qualified Core.ACL.Search as BecknACL
+import Domain.Endpoints.UI.Search as DSearch
+import qualified ExternalAPI.Flow as ExternalAPI
 import Tools.Auth
 
-searchHandler :: PersonId -> Search.SearchReq -> FlowHandler Search.SearchRes
+searchHandler :: PersonId -> DSearch.SearchReq -> FlowHandler DSearch.SearchRes
 searchHandler personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  Search.searchHandler personId req
+  (searchRes, searchMessage) <- DSearch.search personId req
+  becknSearchReq <- BecknACL.buildSearchReq searchMessage
+  fork "search" . withRetry $ do
+    -- do we need fork here?
+    ExternalAPI.search becknSearchReq
+  pure searchRes
 
-receiveFromKafka :: PersonId -> Search.SearchReq -> m ()
+receiveFromKafka :: PersonId -> DSearch.SearchReq -> m ()
 receiveFromKafka = error "not implemented"

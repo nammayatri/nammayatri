@@ -1,4 +1,4 @@
-module Types.Domain.Outgoing.Search where
+module Core.Spec.Search where
 
 import Beckn.Prelude
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)

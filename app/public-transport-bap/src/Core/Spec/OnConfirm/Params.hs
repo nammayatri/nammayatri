@@ -1,8 +1,8 @@
 module Core.Spec.OnConfirm.Params where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.DecimalValue
 import Beckn.Utils.GenericPretty (PrettyShow)
+import Core.Spec.Common.DecimalValue
 import Core.Spec.Common.Payment
 
 data Params = Params

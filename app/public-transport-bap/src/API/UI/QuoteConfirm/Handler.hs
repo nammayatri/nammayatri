@@ -1,13 +1,12 @@
 module API.UI.QuoteConfirm.Handler where
 
-import API.UI.QuoteConfirm.Types
 import App.Types
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes (BecknReq (BecknReq))
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Core.ACL.Confirm
+import Core.Spec.Common.Context
 import Core.Spec.Confirm (ConfirmMessage (ConfirmMessage))
 import Domain.Endpoints.UI.QuoteConfirm
 import qualified Domain.Types.Quote as D

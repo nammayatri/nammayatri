@@ -1,8 +1,8 @@
 module Core.Spec.Confirm where
 
 import Beckn.Types.Amount
-import Beckn.Types.Core.Migration.DecimalValue
 import Core.Spec.Common.Billing
+import Core.Spec.Common.DecimalValue
 import Core.Spec.Common.Payment
 import Core.Spec.Common.ProviderId
 import Core.Spec.Common.Quotation

@@ -11,10 +11,10 @@ import qualified Core.Spec.API.Confirm as Confirm
 import Core.Spec.API.Search as Search
 import qualified Core.Spec.API.Status as Status
 import Core.Spec.Confirm
+import qualified Core.Spec.Search as Search
 import qualified Core.Spec.Status as Status
 import qualified Data.Text as T
 import GHC.Records.Extra
-import qualified Types.Domain.Outgoing.Search as DSearch
 
 search ::
   ( MonadFlow m,
@@ -23,7 +23,7 @@ search ::
     HasInConfig r c "selfId" Text,
     HasInConfig r c "gatewayUrl" BaseUrl
   ) =>
-  BecknReq DSearch.SearchIntent ->
+  BecknReq Search.SearchIntent ->
   m ()
 search req = do
   url <- askConfig (.gatewayUrl)

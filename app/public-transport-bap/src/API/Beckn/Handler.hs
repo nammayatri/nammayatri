@@ -9,6 +9,6 @@ import Servant
 
 handler :: FlowServer Beckn.API
 handler auth =
-  OnSearch.publicTransportOnSearch auth
+  OnSearch.handler auth
     :<|> OnConfirm.handler auth
     :<|> OnStatus.handler auth

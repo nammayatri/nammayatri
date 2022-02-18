@@ -1,8 +1,8 @@
 module Core.Spec.Search.Intent where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Migration.Gps (Gps)
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Core.Spec.Common.Gps (Gps)
 import Core.Spec.Common.Time (Time)
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 

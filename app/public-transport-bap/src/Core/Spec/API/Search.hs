@@ -3,8 +3,8 @@ module Core.Spec.API.Search where
 import Beckn.Prelude
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
+import Core.Spec.Search
 import Servant (JSON, Post, ReqBody, (:>))
-import Types.Domain.Outgoing.Search
 
 type SearchAPI =
   "search"

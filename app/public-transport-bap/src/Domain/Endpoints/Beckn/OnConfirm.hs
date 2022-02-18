@@ -1,4 +1,4 @@
-module Domain.Endpoints.OnConfirm where
+module Domain.Endpoints.Beckn.OnConfirm where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)

@@ -1,8 +1,7 @@
 module API.UI.SearchId.Quotes.Types where
 
-import Beckn.Prelude
 import Beckn.Types.Id
-import qualified Domain.Types.Quote as DQuote
+import Domain.Endpoints.UI.Quotes as DQuotes
 import qualified Domain.Types.Search as DSearch
 import Servant
 import Tools.Auth
@@ -11,9 +10,4 @@ type API =
   Capture "searchId" (Id DSearch.Search)
     :> TokenAuth
     :> "quotes"
-    :> Get '[JSON] GetQuotesRes
-
-newtype GetQuotesRes = GetQuotesRes
-  { quotes :: [DQuote.QuoteAPIEntity]
-  }
-  deriving (Generic, ToJSON, ToSchema)
+    :> Get '[JSON] DQuotes.GetQuotesRes

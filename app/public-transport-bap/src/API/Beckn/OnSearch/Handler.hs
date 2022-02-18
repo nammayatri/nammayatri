@@ -5,13 +5,22 @@ import Beckn.Prelude
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
-import qualified Core.ACL.Handler.OnSearch as OnSearchHandler
-import qualified Core.ACL.Types.API.OnSearch as OnSearch
+import qualified Core.ACL.OnSearch as BecknACL
+import qualified Core.Spec.Common.Context as Context
+import qualified Core.Spec.OnSearch as OnSearch
+import qualified Domain.Endpoints.Beckn.OnSearch as DOnSearch
+import Tools.Context (validateContext)
 
-publicTransportOnSearch ::
+handler ::
   SignatureAuthResult ->
   SignatureAuthResult ->
   BecknCallbackReq OnSearch.OnSearchCatalog ->
   FlowHandler AckResponse
-publicTransportOnSearch _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  OnSearchHandler.publicTransportOnSearch req
+handler _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+  validateContext Context.ON_SEARCH $ req.context
+  case req.contents of
+    Right msg -> do
+      domainReq <- BecknACL.buildOnSearch req msg.catalog
+      DOnSearch.handler domainReq
+    Left err -> logTagError "on_search req" $ "on_search error: " <> show err
+  return Ack

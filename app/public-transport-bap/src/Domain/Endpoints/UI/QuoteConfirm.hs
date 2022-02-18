@@ -1,48 +1,57 @@
 module Domain.Endpoints.UI.QuoteConfirm where
 
-import API.UI.QuoteConfirm.Types
-import App.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified Domain.Types.Booking as D
-import qualified Domain.Types.Quote as D
-import qualified Storage.Queries.Booking as EsqBk
-import Storage.Queries.Quote
+import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Quote as DQuote
+import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Quote as QQuote
 import Tools.Auth
+
+data QConfirmReq = QConfirmReq
+  { quantity :: Int,
+    requestorName :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+newtype QConfirmRes = QConfirmRes
+  { booking_id :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data ConfirmMessageD = ConfirmMessageD
   { txnId :: Text,
     quantity :: Int,
     requestorName :: Text,
-    booking :: D.Booking,
-    quote :: D.Quote
+    booking :: DBooking.Booking,
+    quote :: DQuote.Quote
   }
 
-validateConfirmReq :: QConfirmReq -> Flow ()
+validateConfirmReq :: EsqDBFlow m r => QConfirmReq -> m ()
 validateConfirmReq confirmReq = do
   when (confirmReq.quantity <= 0) $ throwError $ InvalidRequest "invalid quantity value"
 
-quoteConfirm :: PersonId -> Id D.Quote -> QConfirmReq -> Flow (QConfirmRes, ConfirmMessageD)
+quoteConfirm :: EsqDBFlow m r => PersonId -> Id DQuote.Quote -> QConfirmReq -> m (QConfirmRes, ConfirmMessageD)
 quoteConfirm personId quoteId confirmReq = do
   validateConfirmReq confirmReq
-  quote <- findById quoteId >>= fromMaybeM QuoteNotFound
+  quote <- QQuote.findById quoteId >>= fromMaybeM QuoteNotFound
   bookingId <- generateGUID
   let txnId = bookingId
   now <- getCurrentTime
   let booking = buildBooking now bookingId personId confirmReq quote
-  _ <- Esq.runTransaction $ EsqBk.create booking
+  _ <- Esq.runTransaction $ QBooking.create booking
   pure (QConfirmRes bookingId, makeConfirmMessageD txnId confirmReq quote booking)
 
-makeConfirmMessageD :: Text -> QConfirmReq -> D.Quote -> D.Booking -> ConfirmMessageD
+makeConfirmMessageD :: Text -> QConfirmReq -> DQuote.Quote -> DBooking.Booking -> ConfirmMessageD
 makeConfirmMessageD txnId qConfirmReq quote booking = do
   let quantity = qConfirmReq.quantity
       requestorName = qConfirmReq.requestorName
   ConfirmMessageD {..}
 
-buildBooking :: UTCTime -> Text -> PersonId -> QConfirmReq -> D.Quote -> D.Booking
+buildBooking :: UTCTime -> Text -> PersonId -> QConfirmReq -> DQuote.Quote -> DBooking.Booking
 buildBooking now bookingId personId confirmReq quote = do
   let id = Id bookingId
       searchId = quote.searchId
@@ -59,9 +68,9 @@ buildBooking now bookingId personId confirmReq quote = do
       arrivalTime = quote.arrivalTime
       departureStationId = quote.departureStationId
       arrivalStationId = quote.arrivalStationId
-      status = D.NEW
+      status = DBooking.NEW
       createdAt = now
       updatedAt = now
       ticketId = Nothing
       ticketCreatedAt = Nothing
-  D.Booking {..}
+  DBooking.Booking {..}
