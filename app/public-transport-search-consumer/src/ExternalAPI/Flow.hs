@@ -19,7 +19,7 @@ search ::
     HasInConfig r c "bapId" Text,
     HasInConfig r c "gatewayUrl" BaseUrl
   ) =>
-  BecknReq Search.SearchIntent ->
+  BecknReq Search.SearchMessage ->
   m ()
 search req = do
   url <- askConfig (.gatewayUrl)

@@ -6,10 +6,10 @@ import Beckn.Mock.App
 import Beckn.Mock.ExternalAPI
 import Beckn.Types.Core.Ack (AckResponse)
 import Beckn.Types.Core.ReqTypes
-import Core.OnCancel
-import Core.OnConfirm
-import Core.OnSearch
-import Core.OnStatus
+import "public-transport-bap" Core.Spec.OnCancel
+import "public-transport-bap" Core.Spec.OnConfirm
+import "public-transport-bap" Core.Spec.OnSearch
+import "public-transport-bap" Core.Spec.OnStatus
 import Environment
 import Servant
 import Servant.Client

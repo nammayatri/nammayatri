@@ -91,6 +91,7 @@ dependencies:
   - transformers
   - relude
   - record-hasfield
+  - public-transport-bap
 
 ghc-options:
   - -fwrite-ide-info

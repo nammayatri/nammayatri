@@ -22,7 +22,7 @@ data BookingAPIEntity = BookingAPIEntity
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 makeBookingAPIEntity :: Booking -> TransportStation -> TransportStation -> Maybe PaymentTransaction -> BookingAPIEntity
 makeBookingAPIEntity Booking {..} departureStation arrivalStation mbPaymentTxn =
@@ -36,4 +36,5 @@ makeBookingAPIEntity Booking {..} departureStation arrivalStation mbPaymentTxn =
 newtype BookingListRes = BookingListRes
   { list :: [BookingAPIEntity]
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)

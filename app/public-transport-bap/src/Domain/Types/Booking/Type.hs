@@ -5,13 +5,17 @@ module Domain.Types.Booking.Type where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import Beckn.Utils.GenericPretty
 import Domain.Types.Quote (Quote)
 import Domain.Types.Search (Search)
 import Domain.Types.TransportStation (TransportStation)
 import Tools.Auth
 
 data BookingStatus = NEW | AWAITING_PAYMENT | CONFIRMED | CANCELLED
-  deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema, Eq)
+
+instance PrettyShow BookingStatus where
+  prettyShow = prettyShow . Showable
 
 data Booking = Booking
   { id :: Id Booking,
@@ -35,4 +39,4 @@ data Booking = Booking
     ticketId :: Maybe Text,
     ticketCreatedAt :: Maybe UTCTime
   }
-  deriving (Generic, ToSchema)
+  deriving (Generic, ToSchema, Show)

@@ -1,22 +1,26 @@
 module Core.Spec.OnSearch.Provider where
 
-import Beckn.Prelude hiding (exp)
-import Core.Spec.Common.Descriptor (Descriptor)
-import Core.Spec.Common.Item (Item)
-import Core.Spec.Common.Location (Location)
-import Core.Spec.OnSearch.Category
+import Beckn.Prelude
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.OnSearch.Departure
-import Core.Spec.OnSearch.Fares
+import Core.Spec.OnSearch.Descriptor
+import Core.Spec.OnSearch.Fare
+import Core.Spec.OnSearch.Item
+import Core.Spec.OnSearch.LocationDetails
 import Core.Spec.OnSearch.Route
+import Data.OpenApi hiding (items)
 
 data Provider = Provider
-  { id :: Maybe Text,
-    descriptor :: Maybe Descriptor,
-    categories_classs :: Maybe [Category],
-    locations :: [Location],
+  { id :: Text,
+    descriptor :: DescriptorId,
+    -- categories?
+    locations :: [LocationDetails],
     routes :: [Route],
-    fares :: [Fares],
+    fares :: [Fare],
     departures :: [Departure],
     items :: [Item]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, FromJSON, Show, ToJSON)
+
+instance ToSchema Provider where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

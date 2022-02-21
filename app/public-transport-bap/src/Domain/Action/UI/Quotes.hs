@@ -3,6 +3,7 @@ module Domain.Action.UI.Quotes where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Search as DSearch
 import Storage.Queries.Quote as QQuote
@@ -10,7 +11,8 @@ import Storage.Queries.Quote as QQuote
 newtype GetQuotesRes = GetQuotesRes
   { quotes :: [DQuote.QuoteAPIEntity]
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving stock (Show, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, PrettyShow)
 
 getQuotesHandler :: EsqDBFlow m r => Id DSearch.Search -> m GetQuotesRes
 getQuotesHandler searchId = do

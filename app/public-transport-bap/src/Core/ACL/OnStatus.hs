@@ -2,7 +2,7 @@ module Core.ACL.OnStatus where
 
 import Beckn.Prelude
 import Beckn.Types.Id
-import qualified Core.Spec.Common.OrderState as OrderState
+import Core.ACL.Common.MakeStatus
 import qualified Core.Spec.Common.Payment as Payment
 import qualified Core.Spec.OnStatus as OnStatus
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
@@ -16,27 +16,9 @@ mkOnStatus msg txnId = do
       bppPaymentStatus = payment.status
       bppPaymentGatewayTxnStatus = payment.params.transaction_status
       paymentStatus = mkPaymentStatus (bppPaymentStatus, bppPaymentGatewayTxnStatus)
-      bookingStatus = mkBookingStatus bppOrderStatus
+      bookingStatus = mkBookingStatus bppPaymentStatus bppOrderStatus
       domainReq = mkDomainOnStatusReq txnId bookingStatus bppPaymentGatewayTxnStatus paymentStatus
   domainReq
-
--- Do we use DBooking.NEW and DBooking.AWAITING_PAYMENT?
-mkBookingStatus :: OrderState.State -> DBooking.BookingStatus
-mkBookingStatus = \case
-  OrderState.ACTIVE -> DBooking.CONFIRMED
-  OrderState.COMPLETE -> DBooking.CONFIRMED
-  OrderState.CANCELLED -> DBooking.CANCELLED
-
-mkPaymentStatus ::
-  (Payment.Status, Payment.TrStatus) ->
-  DPaymentTransaction.PaymentStatus
-mkPaymentStatus = \case
-  (Payment.NOT_PAID, Payment.PAYMENT_LINK_CREATED) -> DPaymentTransaction.PENDING
-  (Payment.NOT_PAID, Payment.PAYMENT_LINK_EXPIRED) -> DPaymentTransaction.FAILED
-  (Payment.NOT_PAID, _) -> DPaymentTransaction.PENDING
-  (Payment.PAID, Payment.CAPTURED) -> DPaymentTransaction.SUCCESS
-  (Payment.PAID, Payment.REFUNDED) -> DPaymentTransaction.FAILED
-  (Payment.PAID, _) -> DPaymentTransaction.PENDING
 
 mkDomainOnStatusReq ::
   Text ->

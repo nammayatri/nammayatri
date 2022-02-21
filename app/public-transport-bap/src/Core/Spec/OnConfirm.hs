@@ -1,33 +1,16 @@
-module Core.Spec.OnConfirm where
+module Core.Spec.OnConfirm (module Core.Spec.OnConfirm, module Reexport) where
 
 import Beckn.Prelude
 import Beckn.Utils.GenericPretty
-import Core.Spec.Common.Payment
-import Core.Spec.OnConfirm.Order
-import Core.Spec.OnConfirm.Params
+import Core.Spec.OnConfirm.Descriptor as Reexport
+import Core.Spec.OnConfirm.Item as Reexport
+import Core.Spec.OnConfirm.Order as Reexport
+import Core.Spec.OnConfirm.Params as Reexport
+import Core.Spec.OnConfirm.Quantity as Reexport
+import Core.Spec.OnConfirm.Time as Reexport
 
 newtype OnConfirmMessage = OnConfirmMessage
   { order :: Order
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, PrettyShow)
-
-changePaymentState :: Status -> TrStatus -> Order -> Order
-changePaymentState st trStatus ord =
-  ord{payment =
-        ord.payment
-          { status = st,
-            params = (ord.payment.params :: Params) {transaction_status = trStatus}
-          }
-     }
-
-successfulPayment :: Order -> Order
-successfulPayment = changePaymentState PAID CAPTURED
-
-failedTransaction :: TrStatus -> Order -> Order
-failedTransaction = changePaymentState NOT_PAID
-
-linkExpired :: Order -> Order
-linkExpired = failedTransaction PAYMENT_LINK_EXPIRED
-
-paymentFailed :: Order -> Order
-paymentFailed = failedTransaction FAILED
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, PrettyShow, ToSchema)

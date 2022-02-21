@@ -3,14 +3,19 @@ module Core.Spec.Common.Price where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Utils.GenericPretty
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Core.Spec.Common.DecimalValue
 import Data.Aeson
+import Data.OpenApi hiding (name, value)
 
 data Price = Price
   { currency :: Text,
     value :: Amount
   }
-  deriving (Generic, Show, ToSchema, PrettyShow)
+  deriving (Generic, Show, PrettyShow)
+
+instance ToSchema Price where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 instance FromJSON Price where
   parseJSON = withObject "price" $ \obj -> do

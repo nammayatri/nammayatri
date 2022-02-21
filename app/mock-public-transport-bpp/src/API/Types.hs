@@ -2,9 +2,9 @@ module API.Types where
 
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.ReqTypes
-import Core.Confirm
-import Core.Search
-import Core.Status
+import "public-transport-bap" Core.Spec.Confirm
+import "public-transport-bap" Core.Spec.Search
+import "public-transport-bap" Core.Spec.Status
 import Relude
 import Servant
 

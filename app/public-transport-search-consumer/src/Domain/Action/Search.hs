@@ -15,6 +15,7 @@ type SearchReq = PublicTransportSearch
 data SearchMessage = SearchMessage
   { searchId :: Id DSearch.Search,
     gps :: LatLong,
+    fromDate :: UTCTime,
     toDate :: UTCTime
   }
 
@@ -27,6 +28,7 @@ search req = do
         SearchMessage
           { searchId = searchRequest.id,
             gps = req.gps,
+            fromDate = now,
             toDate = getToDate now
           }
   return searchMessage

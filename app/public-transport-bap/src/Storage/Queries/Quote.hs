@@ -38,7 +38,7 @@ findAllAggregatesBySearchId searchId =
                      )
           `innerJoin` table @TransportStationT
             `Esq.on` ( \(quote :& _ :& arrStation) ->
-                         quote ^. QuoteDepartureStationId ==. arrStation ^. TransportStationTId
+                         quote ^. QuoteArrivalStationId ==. arrStation ^. TransportStationTId
                      )
     where_ $ quote ^. QuoteSearchId ==. val (toKey searchId)
     return (quote, depStation, arrStation)

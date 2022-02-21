@@ -5,10 +5,7 @@ import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Core.Spec.Common.Item as Item
-import qualified Core.Spec.Common.Location as Location
 import qualified Core.Spec.OnSearch as OnSearch
-import qualified Core.Spec.OnSearch.Catalog as Catalog
 import Core.Spec.OnSearch.Provider
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.Search as Domain
@@ -16,7 +13,7 @@ import Domain.Types.Search as Domain
 buildOnSearch ::
   MonadFlow m =>
   BecknCallbackReq OnSearch.OnSearchCatalog ->
-  Catalog.Catalog ->
+  OnSearch.Catalog ->
   m DOnSearch.OnSearchReq
 buildOnSearch req catalog = do
   let txnId = Id $ req.context.transaction_id
@@ -30,7 +27,8 @@ buildOnSearch req catalog = do
       forM provider.locations (pure . mkPublicTransportStation)
   quotes <- do
     concat <$> forM providers \provider ->
-      forM provider.items (buildQuote now txnId bppUrl bppId publicTransportStations provider) -- FIXME we do not need to duplicate the same data in each quote
+      forM provider.items (buildQuote now txnId bppUrl bppId publicTransportStations provider)
+  -- FIXME we do not need to duplicate the same data in each quote
   pure $ DOnSearch.OnSearchReq txnId quotes publicTransportStations
 
 buildQuote ::
@@ -41,7 +39,7 @@ buildQuote ::
   Text ->
   [DOnSearch.OnSearchStationReq] ->
   Provider ->
-  Item.Item ->
+  OnSearch.Item ->
   m DOnSearch.OnSearchQuoteReq
 buildQuote now txnId bppUrl bppId publicTransportLocations provider item = do
   let departureId = item.departure_id
@@ -81,7 +79,7 @@ buildQuote now txnId bppUrl bppId publicTransportLocations provider item = do
         routeCode = routes.route_code
       }
 
-mkPublicTransportStation :: Location.Location -> DOnSearch.OnSearchStationReq
+mkPublicTransportStation :: OnSearch.LocationDetails -> DOnSearch.OnSearchStationReq
 mkPublicTransportStation location = do
   DOnSearch.OnSearchStationReq
     { lat = location.gps.lat,

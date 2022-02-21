@@ -1,9 +1,9 @@
 module Core.Spec.OnSearch.Descriptor where
 
 import Beckn.Prelude
-import Beckn.Types.App ()
+import Beckn.Types.Core.Migration.Image (Image (..))
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
-import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
+import Data.OpenApi hiding (name)
 
 data Descriptor = Descriptor
   { name :: Text,
@@ -11,9 +11,19 @@ data Descriptor = Descriptor
     symbol :: Text,
     short_desc :: Text,
     long_desc :: Text,
-    images :: [BaseUrl]
+    images :: [Image]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 instance ToSchema Descriptor where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype DescriptorId = DescriptorId
+  { name :: Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance ToSchema DescriptorId where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

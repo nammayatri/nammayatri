@@ -21,7 +21,7 @@ data TransportStationAPIEntity = TransportStationAPIEntity
     lat :: Double,
     lon :: Double
   }
-  deriving (Generic, ToJSON, ToSchema, PrettyShow, Show)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, PrettyShow, Show)
 
 makeTransportStationAPIEntity :: TransportStation -> TransportStationAPIEntity
 makeTransportStationAPIEntity TransportStation {..} =

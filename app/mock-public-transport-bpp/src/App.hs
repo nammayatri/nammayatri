@@ -1,5 +1,5 @@
 module App
-  ( runMockPublicTransportBPP,
+  ( runMock,
   )
 where
 
@@ -20,8 +20,8 @@ import Network.Wai.Handler.Warp
 import Relude
 import Servant
 
-runMockPublicTransportBPP :: IO ()
-runMockPublicTransportBPP = do
+runMock :: IO ()
+runMock = do
   appCfg <- readDhallConfigDefault "mock-public-transport-bpp" :: IO AppCfg
   withAppEnv appCfg $ \appEnv -> do
     let port = appCfg.port

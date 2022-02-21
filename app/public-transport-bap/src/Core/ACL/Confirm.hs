@@ -1,13 +1,8 @@
 module Core.ACL.Confirm where
 
 import Beckn.Prelude
-import Core.Spec.Common.Billing
-import Core.Spec.Common.Payment
-import Core.Spec.Common.Price (rupeePrice)
-import Core.Spec.Common.ProviderId (ProviderId (ProviderId))
-import Core.Spec.Common.Quotation
+import Core.Spec.Common
 import Core.Spec.Confirm
-import Core.Spec.Confirm.Item
 import Domain.Action.UI.QuoteConfirm
 import Servant.Client
 

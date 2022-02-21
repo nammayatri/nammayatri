@@ -3,24 +3,23 @@ module API.Confirm where
 import API.Utils
 import Beckn.Mock.App
 import Beckn.Mock.Utils
+import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
-import Core.Common.Payment
-import Core.Confirm
-import Core.OnCancel
-import Core.OnConfirm
-import qualified Core.OnConfirm as OnConfirm
-import qualified Core.OnConfirm.Order as OnConfirm
-import Core.OnStatus
+import "public-transport-bap" Core.Spec.Common
+import qualified "public-transport-bap" Core.Spec.Confirm as Confirm
+import "public-transport-bap" Core.Spec.OnCancel
+import "public-transport-bap" Core.Spec.OnConfirm
+import "public-transport-bap" Core.Spec.OnStatus
 import Environment
 import ExternalAPI
 import MockData.OnConfirm
 import qualified Redis
-import Relude
+import Relude.Monad.Either
 
-confirmServer :: BecknReq ConfirmMessage -> MockM AppEnv AckResponse
+confirmServer :: BecknReq Confirm.ConfirmMessage -> MockM AppEnv AckResponse
 confirmServer confirmReq@(BecknReq ctx msg) = do
   logOutput INFO $ "got confirm request: " <> show confirmReq
 
@@ -60,20 +59,40 @@ trackPayment orderId = do
     FailedPayment -> cancelTransaction FAILED context order
     LinkExpired -> cancelTransaction PAYMENT_LINK_EXPIRED context order
 
-transactionOk :: Context -> OnConfirm.Order -> MockM AppEnv ()
+transactionOk :: Context -> Order -> MockM AppEnv ()
 transactionOk context order = do
   let onStatusMessage = OnStatusMessage $ successfulPayment order
       onStatusReq = BecknCallbackReq (context {action = ON_STATUS}) (Right onStatusMessage)
   logOutput INFO $ "editing order with orderId=" <> order.id <> "; successful payment"
-  _ <- Redis.editOrder OnConfirm.successfulPayment order.id
+  _ <- Redis.editOrder successfulPayment order.id
   -- but what if we failed to change the state?
   callBapOnStatus onStatusReq
 
-cancelTransaction :: TrStatus -> Context -> OnConfirm.Order -> MockM AppEnv ()
+cancelTransaction :: TrStatus -> Context -> Order -> MockM AppEnv ()
 cancelTransaction trStatus ctx order = do
   let ctx' = ctx {action = ON_CANCEL}
-      onCancelReq = BecknCallbackReq ctx' (Right $ OnCancelMessage $ OnConfirm.failedTransaction trStatus order)
+      onCancelReq = BecknCallbackReq ctx' (Right $ OnCancelMessage $ failedTransaction trStatus order)
   logOutput INFO $ "editing order with orderId=" <> order.id <> "; payment failed"
-  _ <- Redis.editOrder (OnConfirm.failedTransaction trStatus) order.id
+  _ <- Redis.editOrder (failedTransaction trStatus) order.id
   -- but what if we failed to change the state?
   callBapOnCancel onCancelReq
+
+------------------------------------------
+
+changePaymentState :: Status -> TrStatus -> Order -> Order
+changePaymentState st trStatus ord =
+  ord{payment =
+        ord.payment
+          { status = st,
+            params = (ord.payment.params :: Params) {transaction_status = trStatus}
+          }
+     }
+
+successfulPayment :: Order -> Order
+successfulPayment = changePaymentState PAID CAPTURED . changeBookingState ACTIVE
+
+changeBookingState :: State -> Order -> Order
+changeBookingState state' ord = ord {state = state'}
+
+failedTransaction :: TrStatus -> Order -> Order
+failedTransaction st = changePaymentState NOT_PAID st . changeBookingState CANCELLED

@@ -13,7 +13,7 @@ swagger = do
   openApi
     { _openApiInfo =
         (_openApiInfo openApi)
-          { _infoTitle = "SWTD",
+          { _infoTitle = "Public Transport",
             _infoVersion = "1.0"
           }
     }

@@ -1,21 +1,26 @@
 module Core.Spec.OnSearch.Departure where
 
 import Beckn.Prelude
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.OpenApi
 
 data Departure = Departure
   { id :: Text,
     route_id :: Text,
-    start_time :: StartTime,
-    end_time :: EndTime
+    start_time :: TimeStamp,
+    end_time :: TimeStamp
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
-newtype StartTime = StartTime
+instance ToSchema Departure where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
+
+newtype TimeStamp = TimeStamp
   { timestamp :: UTCTime
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Show, Generic)
+  deriving anyclass (FromJSON, ToJSON)
 
-newtype EndTime = EndTime
-  { timestamp :: UTCTime
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+instance ToSchema TimeStamp where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

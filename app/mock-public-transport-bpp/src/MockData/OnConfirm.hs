@@ -1,15 +1,9 @@
 module MockData.OnConfirm where
 
 import Beckn.Types.Core.Migration.DecimalValue
-import Core.Common.OrderState
-import Core.Common.Payment
-import qualified Core.Confirm as Confirm
-import qualified Core.Confirm.Item as Confirm
-import Core.OnConfirm
-import Core.OnConfirm.Item
-import Core.OnConfirm.Order
-import Core.OnConfirm.Params
-import Core.OnConfirm.Quantity
+import "public-transport-bap" Core.Spec.Common
+import qualified "public-transport-bap" Core.Spec.Confirm as Confirm
+import "public-transport-bap" Core.Spec.OnConfirm
 import Data.Either.Extra
 import Relude hiding (id, state)
 import Servant.Client

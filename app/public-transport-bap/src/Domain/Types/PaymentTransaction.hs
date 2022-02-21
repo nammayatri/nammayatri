@@ -5,10 +5,14 @@ module Domain.Types.PaymentTransaction where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import Beckn.Utils.GenericPretty
 import Domain.Types.Booking.Type
 
 data PaymentStatus = PENDING | FAILED | SUCCESS
-  deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, Read, FromJSON, ToJSON, ToSchema, Eq)
+
+instance PrettyShow PaymentStatus where
+  prettyShow = prettyShow . Showable
 
 data PaymentTransaction = PaymentTransaction
   { id :: Id PaymentTransaction,
@@ -33,7 +37,7 @@ data PaymentTransactionAPIEntity = PaymentTransactionAPIEntity
     updatedAt :: UTCTime,
     createdAt :: UTCTime
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 makePaymentTransactionAPIEntity :: PaymentTransaction -> PaymentTransactionAPIEntity
 makePaymentTransactionAPIEntity PaymentTransaction {..} = PaymentTransactionAPIEntity {..}

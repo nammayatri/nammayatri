@@ -34,7 +34,7 @@ data OnSearchQuoteReq = OnSearchQuoteReq
     createdAt :: UTCTime,
     routeCode :: Text
   }
-  deriving (Generic, ToJSON)
+  deriving (Generic, ToJSON, FromJSON, Show)
 
 data OnSearchStationReq = OnSearchStationReq
   { name :: Text,
@@ -47,14 +47,14 @@ data OnSearchStationReq = OnSearchStationReq
 handler :: (EsqDBFlow m r, MonadProducer Kafka.PublicTransportQuoteList m) => OnSearchReq -> m ()
 handler (OnSearchReq searchId quotes transportLocations) = do
   searchRequest <- QSearch.findById searchId >>= fromMaybeM SearchRequestDoesNotExist
-  quoteAggregates <- QQuote.findAllAggregatesBySearchId searchRequest.id
-  sendToKafka searchRequest.id quoteAggregates
   publicTransportStations <- forM transportLocations $ \publicTransportStation -> do
     QStation.findByStationCode publicTransportStation.bppLocationId >>= maybe (createPublicTransportLocation publicTransportStation) return
   _quotes <- forM quotes $ \quote -> do
     buildQuote publicTransportStations quote
   Esq.runTransaction $ do
     traverse_ QQuote.create _quotes
+  quoteAggregates <- QQuote.findAllAggregatesBySearchId searchRequest.id
+  sendToKafka searchRequest.id quoteAggregates
 
 sendToKafka :: MonadProducer Kafka.PublicTransportQuoteList m => Id DSearch.Search -> [(DQuote.Quote, DStation.TransportStation, DStation.TransportStation)] -> m ()
 sendToKafka (Id txnId) quoteAggregate = Kafka.producePublicTransportQuoteListMessage txnId $ makeKafkaPublicTransportQuote <$> quoteAggregate

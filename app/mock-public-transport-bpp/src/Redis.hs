@@ -7,7 +7,7 @@ import Beckn.Types.Cache
 import Beckn.Types.Core.Migration.Context
 import Beckn.Utils.Error.Throwing
 import Beckn.Utils.Logging
-import Core.OnConfirm.Order
+import "public-transport-bap" Core.Spec.OnConfirm.Order
 import Data.Aeson
 import Environment
 import GHC.Records.Extra

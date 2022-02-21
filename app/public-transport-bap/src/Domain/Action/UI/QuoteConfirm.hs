@@ -5,6 +5,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Beckn.Utils.GenericPretty
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Quote as DQuote
 import qualified Storage.Queries.Booking as QBooking
@@ -15,12 +16,13 @@ data QConfirmReq = QConfirmReq
   { quantity :: Int,
     requestorName :: Text
   }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema, PrettyShow)
 
 newtype QConfirmRes = QConfirmRes
   { booking_id :: Text
   }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+  deriving stock (Show, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema, PrettyShow)
 
 data ConfirmMessageD = ConfirmMessageD
   { txnId :: Text,

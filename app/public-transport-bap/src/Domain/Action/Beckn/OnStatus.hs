@@ -4,6 +4,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.PaymentTransaction as DPaymentTransaction
 import qualified Storage.Queries.Booking as QBooking
@@ -16,6 +17,7 @@ data OnStatusReq = OnStatusReq
     transactionStatus :: Text,
     paymentStatus :: DPaymentTransaction.PaymentStatus
   }
+  deriving (Show, Generic, PrettyShow)
 
 handler :: EsqDBFlow m r => OnStatusReq -> m ()
 handler OnStatusReq {..} = do

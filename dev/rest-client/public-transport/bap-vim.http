@@ -7,11 +7,7 @@ POST $public-transport-bap-host/ui/search
 content-type: application/json
 token: ea37f941-427a-4085-a7d0-96240f166672
 {
-    "locationStart": {
-      "lat": "20",
-      "lon": "20"
-    },
-    "locationEnd": {
+    "location": {
       "lat": "20",
       "lon": "20"
     },

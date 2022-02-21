@@ -8,7 +8,7 @@ import Beckn.Types.Core.Ack (AckResponse (..))
 import Beckn.Types.Core.Migration.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Common (logPretty)
-import Core.Search
+import "public-transport-bap" Core.Spec.Search
 import Environment
 import ExternalAPI
 import MockData.OnSearch

@@ -4,7 +4,6 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Core.Spec.Common.Payment (TrStatus)
 import qualified Domain.Types.Booking as Domain
 import qualified Domain.Types.PaymentTransaction as Domain
 import qualified Storage.Queries.Booking as QBooking
@@ -15,7 +14,9 @@ data OnConfirmMessageD = OnConfirmMessageD
   { bookingId :: Id Domain.Booking,
     ticketId :: Text,
     paymentGatewayTxnId :: Text,
-    paymentGatewayTxnStatus :: TrStatus,
+    paymentGatewayTxnStatus :: Text,
+    bookingStatus :: Domain.BookingStatus,
+    paymentStatus :: Domain.PaymentStatus,
     paymentUrl :: BaseUrl
   }
 
@@ -24,9 +25,7 @@ handleOnConfirm msg = do
   booking <- QBooking.findById msg.bookingId >>= fromMaybeM BookingDoesNotExist
   now <- getCurrentTime
   let updBooking =
-        booking{status = Domain.AWAITING_PAYMENT,
-                --                bppOrderId = Just msg.order.id,
-                --                that was present in parking, should we use it here?
+        booking{status = msg.bookingStatus,
                 ticketId = Just msg.ticketId,
                 ticketCreatedAt = Just now
                }
@@ -45,9 +44,9 @@ buildPaymentData booking msg = do
         bookingId = booking.id,
         bknTxnId = booking.bknTxnId,
         paymentGatewayTxnId = msg.paymentGatewayTxnId,
-        paymentGatewayTxnStatus = show msg.paymentGatewayTxnStatus,
+        paymentGatewayTxnStatus = msg.paymentGatewayTxnStatus,
         fare = booking.fare,
-        status = Domain.PENDING,
+        status = msg.paymentStatus,
         paymentUrl = msg.paymentUrl,
         updatedAt = now,
         createdAt = now

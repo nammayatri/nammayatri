@@ -8,7 +8,7 @@ import Servant (JSON, Post, ReqBody, (:>))
 
 type SearchAPI =
   "search"
-    :> ReqBody '[JSON] (BecknReq SearchIntent)
+    :> ReqBody '[JSON] (BecknReq SearchMessage)
     :> Post '[JSON] AckResponse
 
 searchAPI :: Proxy SearchAPI

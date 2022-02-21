@@ -1,6 +1,8 @@
 module Core.Spec.OnSearch.Route where
 
 import Beckn.Prelude
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.OpenApi hiding (items)
 
 data Route = Route
   { id :: Text,
@@ -8,4 +10,7 @@ data Route = Route
     start_stop :: Text,
     end_stop :: Text
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+instance ToSchema Route where
+  declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions

@@ -1,6 +1,8 @@
 module Core.ACL.OnConfirm where
 
+import Beckn.Prelude
 import Beckn.Types.Id
+import Core.ACL.Common.MakeStatus (mkBookingStatus, mkPaymentStatus)
 import Core.Spec.OnConfirm
 import Domain.Action.Beckn.OnConfirm
 import qualified Domain.Types.Booking as Domain
@@ -10,6 +12,13 @@ mkDomainOnConfirm bookingId msg = do
   -- it may not be so obvious why booking id is the same as transaction id
   let ticketId = msg.order.id
       paymentGatewayTxnId = msg.order.payment.params.transaction_id
-      paymentGatewayTxnStatus = msg.order.payment.params.transaction_status
+      paymentGatewayTxnStatus = show msg.order.payment.params.transaction_status
       paymentUrl = msg.order.payment.uri
+      bppOrderStatus = msg.order.state
+      payment = msg.order.payment
+      bppPaymentStatus = payment.status
+      bppPaymentGatewayTxnStatus = payment.params.transaction_status
+      paymentStatus = mkPaymentStatus (bppPaymentStatus, bppPaymentGatewayTxnStatus)
+      bookingStatus = mkBookingStatus bppPaymentStatus bppOrderStatus
+
   OnConfirmMessageD {..}

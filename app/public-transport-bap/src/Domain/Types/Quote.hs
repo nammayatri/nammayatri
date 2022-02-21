@@ -35,7 +35,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     arrivalStation :: TransportStationAPIEntity,
     createdAt :: UTCTime
   }
-  deriving (Generic, ToJSON, ToSchema, PrettyShow, Show)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, PrettyShow, Show)
 
 makeQuoteAPIEntity :: Quote -> TransportStation -> TransportStation -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} departureStation arrivalStation = do

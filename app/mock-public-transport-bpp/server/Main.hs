@@ -1,7 +1,7 @@
 module Main where
 
-import App
+import "mock-public-transport-bpp" App
 import Beckn.Prelude
 
 main :: IO ()
-main = runMockPublicTransportBPP
+main = runMock
