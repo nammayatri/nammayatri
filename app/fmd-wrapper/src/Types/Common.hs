@@ -8,7 +8,7 @@ import EulerHS.Prelude
 import Servant
 
 newtype ClientId = ClientId {getClientId :: Text}
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 deriving newtype instance ToJSON ClientId
 
@@ -19,7 +19,7 @@ deriving newtype instance ToHttpApiData ClientId
 deriving newtype instance FromHttpApiData ClientId
 
 newtype ClientSecret = ClientSecret {getClientSecret :: Text}
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 deriving newtype instance ToJSON ClientSecret
 
@@ -30,7 +30,7 @@ deriving newtype instance ToHttpApiData ClientSecret
 deriving newtype instance FromHttpApiData ClientSecret
 
 newtype Token = Token {getToken :: Text}
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 deriving newtype instance ToJSON Token
 

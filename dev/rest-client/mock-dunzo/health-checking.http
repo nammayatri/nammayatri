@@ -1,0 +1,2 @@
+# @name healh-checking
+GET {{mock-dunzo/url}}

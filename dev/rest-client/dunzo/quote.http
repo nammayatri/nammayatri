@@ -1,0 +1,80 @@
+# @name token
+GET {{dunzo/url}}/api/v1/token
+content-type: application/json
+client-id: {{dunzo/client_id}}
+client-secret: {{dunzo/secret}}
+
+###
+
+# @name successful_search
+GET {{dunzo/url}}/api/v1/quote
+  ?category_id=pickup_drop
+  &pickup_lat=12.9729391
+  &pickup_lng=77.6294794
+  &drop_lat=12.9354504
+  &drop_lng=77.6146828
+content-type: application/json
+Authorization: {{token.response.body.token}}
+client-id: {{dunzo/client_id}}
+
+###
+
+# @name unserviceable_location
+GET {{dunzo/url}}/api/v1/quote
+  ?category_id=pickup_drop
+  &pickup_lat=12.9729391
+  &pickup_lng=77.6294794
+  &drop_lat=20.5937
+  &drop_lng=78.9629
+content-type: application/json
+Authorization: {{token.response.body.token}}
+client-id: {{dunzo/client_id}}
+
+# should return error:
+# {
+#   "code": "different_city_error",
+#   "message": "Apologies, our services are limited to serviceable areas with in the city only.",
+#   "details": null
+# }
+
+### 
+
+# @name nearby_location
+GET {{dunzo/url}}/api/v1/quote
+  ?category_id=pickup_drop
+  &pickup_lat=12.9729391
+  &pickup_lng=77.6294794
+  &drop_lat=12.9729391
+  &drop_lng=77.6294794
+content-type: application/json
+Authorization: {{token.response.body.token}}
+client-id: {{dunzo/client_id}}
+
+# should return error:
+# {
+#   "code": "validation_failed",
+#   "message": "The parameters of your request were invalid.",
+#   "details": {
+#     "param": "Pickup and drop location cannot be same"
+#   }
+# }
+
+### 
+
+# @name different_city
+GET {{dunzo/url}}/api/v1/quote
+  ?category_id=pickup_drop
+  &pickup_lat=12.9729391
+  &pickup_lng=77.6294794
+  &drop_lat=13.0827
+  &drop_lng=80.2707
+content-type: application/json
+Authorization: {{token.response.body.token}}
+client-id: {{dunzo/client_id}}
+
+# should return error:
+# {
+#   "code": "different_city_error",
+#   "message": "Apologies, our services are limited to serviceable areas with in the city only.",
+#   "details": null
+# }

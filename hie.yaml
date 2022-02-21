@@ -105,6 +105,15 @@ cradle:
     - path: "app/public-transport-bap/server/Paths_public_transport_bap.hs"
       component: "public-transport-bap:exe:public-transport-bap-exe"
 
+    - path: "app/mock-dunzo/src"
+      component: "mock-dunzo:lib"
+
+    - path: "app/mock-dunzo/server/Main.hs"
+      component: "mock-dunzo:exe:mock-dunzo-exe"
+
+    - path: "app/mock-sms/server/Paths_mock_dunzo.hs"
+      component: "mock-dunzo:exe:mock-dunzo-exe"
+
     - path: "app/mock-sms/src"
       component: "mock-sms:lib"
 

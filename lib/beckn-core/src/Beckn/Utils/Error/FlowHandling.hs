@@ -35,7 +35,7 @@ withFlowHandler flow = do
   liftIO . runFlowR flowRt appEnv $ flow
 
 withFlowHandlerAPI ::
-  ( HasCoreMetrics r,
+  ( Metrics.CoreMetrics (FlowR r),
     HasField "isShuttingDown" r (TMVar ()),
     Log (FlowR r)
   ) =>

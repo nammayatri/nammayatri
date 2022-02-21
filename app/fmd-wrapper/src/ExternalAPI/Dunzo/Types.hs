@@ -15,7 +15,7 @@ import Servant.Client (BaseUrl)
 import Types.Common
 
 newtype TaskId = TaskId {getTaskId :: Text}
-  deriving (Generic, Show)
+  deriving (Generic, Show, Eq)
 
 deriving newtype instance ToJSON TaskId
 

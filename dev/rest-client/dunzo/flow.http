@@ -1,0 +1,99 @@
+# @name token
+GET {{dunzo/url}}/api/v1/token
+content-type: application/json
+client-id: {{dunzo/client_id}}
+client-secret: {{dunzo/secret}}
+
+
+###
+
+# @name quote
+GET {{dunzo/url}}/api/v1/quote
+  ?category_id=pickup_drop
+  &pickup_lat=12.9729391
+  &pickup_lng=77.6294794
+  &drop_lat=12.9354504
+  &drop_lng=77.6146828
+content-type: application/json
+Authorization: {{token.response.body.token}}
+client-id: {{dunzo/client_id}}
+
+###
+
+# @name taskCreate
+POST {{dunzo/url}}/api/v1/tasks
+  ?test=true
+content-type: application/json
+Authorization: {{token.response.body.token}}
+client-id: {{dunzo/client_id}}
+
+{
+  "special_instructions": "Order 95980442-337b-49b0-9539-2275a896a2b9",
+  "request_id": "95980442-337b-49b0-9539-2275a896a2b9",
+  "sender_details": {
+    "phone_number": "+919999999999",
+    "name": "Nothing"
+  },
+  "pickup_details": {
+    "address": {
+      "state": "Karnataka",
+      "landmark": null,
+      "pincode": "560047",
+      "street_address_2": "",
+      "country": "India",
+      "street_address_1": "18th Main",
+      "city": "Bangalore",
+      "apartment_address": "#444"
+    },
+    "lat": 12.9729391,
+    "lng": 77.6294794
+  },
+  "drop_details": {
+    "address": {
+      "state": "Karnataka",
+      "landmark": null,
+      "pincode": "560047",
+      "street_address_2": "",
+      "country": "India",
+      "street_address_1": "18th Main",
+      "city": "Bangalore",
+      "apartment_address": "#444"
+    },
+    "lat": 12.9354504,
+    "lng": 77.6146828
+  },
+  "package_content": [
+    "Clothes | Accessories"
+  ],
+  "receiver_details": {
+    "phone_number": "+919999999999",
+    "name": "Nothing"
+  }
+}
+
+###
+
+# @name taskStatus
+
+GET {{dunzo/url}}/api/v1/tasks/{{taskCreate.response.body.task_id}}/status
+  ?test=true
+content-type: application/json
+Authorization: {{token.response.body.token}}
+client-id: {{dunzo/client_id}}
+
+
+###
+
+# @name taskCancel
+
+POST {{dunzo/url}}/api/v1/tasks/{{taskCreate.response.body.task_id}}/_cancel
+  ?test=true
+content-type: application/json
+Authorization: {{token.response.body.token}}
+client-id: {{dunzo/client_id}}
+
+{
+  "cancellation_reason":"some_cancellation_reason"
+}
+
+#  NO_CONTENT

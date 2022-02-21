@@ -36,6 +36,7 @@ packages:
   - app/app-backend
   - app/search-result-aggregator
   - app/fmd-wrapper
+  - app/mock-dunzo
   - app/mock-registry
   - app/mock-sms
   - app/mock-fcm
