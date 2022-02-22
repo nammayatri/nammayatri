@@ -42,7 +42,7 @@ let smsConfig =
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
-  , useFakeSms = None Natural
+  , useFakeSms = Some 7891
   , url = "https://http.myvfirst.com"
   , sender = "JUSPAY"
   }
