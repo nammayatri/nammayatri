@@ -27,9 +27,9 @@ let smsSessionConfig =
 
 let loggerConfig =
   { level = LogLevel.DEBUG
-  , logToFile = True
+  , logToFile = False
   , logToConsole = True
-  , logRawSql = True
+  , logRawSql = False
   , prettyPrinting = False
   }
 

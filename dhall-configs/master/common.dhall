@@ -7,7 +7,7 @@ let branchName = "$DEPLOY_VARIANT"
 in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , smsSessionConfig = globalCommon.smsSessionConfig
    , autoMigrate = globalCommon.autoMigrate
-   , loggerConfig = globalCommon.loggerConfig
+   , loggerConfig = globalCommon.loggerConfig // { logRawSql = True }
    , LogLevel = globalCommon.LogLevel
    , ExotelCfg = globalCommon.ExotelCfg
    , exotelCfg = sec.exotelCfg
