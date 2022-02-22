@@ -11,7 +11,7 @@ let hcfg =
   }
 
 let kafkaConsumerCfgs =
-  { publicTransportStation = {brokers = ["localhost:29092"], groupId = "publicTransportStationGroup"}
+  { publicTransportQuotes = {brokers = ["localhost:29092"], groupId = "publicTransportQuotesGroup"}
   }
 
 in

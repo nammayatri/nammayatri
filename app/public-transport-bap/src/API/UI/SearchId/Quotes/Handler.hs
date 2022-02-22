@@ -1,11 +1,11 @@
 module API.UI.SearchId.Quotes.Handler where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Domain.Endpoints.UI.Quotes as DQuotes
+import Domain.Action.UI.Quotes as DQuotes
 import qualified Domain.Types.Search as DSearch
+import Environment
 import Tools.Auth
 
 handler :: Id DSearch.Search -> PersonId -> FlowHandler DQuotes.GetQuotesRes

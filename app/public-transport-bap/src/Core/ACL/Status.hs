@@ -4,10 +4,10 @@ import Beckn.Prelude
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Core.Context (buildContext)
 import qualified Core.Spec.Common.Context as Context
 import qualified Core.Spec.Status as Status
-import qualified Domain.Endpoints.UI.TriggerStatus as DStatus
-import Tools.Context (buildContext)
+import qualified Domain.Action.UI.TriggerStatus as DStatus
 
 buildStatusReq ::
   ( MonadFlow m,

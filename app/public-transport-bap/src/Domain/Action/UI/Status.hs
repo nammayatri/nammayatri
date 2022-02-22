@@ -1,4 +1,4 @@
-module Domain.Endpoints.UI.Status where
+module Domain.Action.UI.Status where
 
 import Beckn.Prelude
 import Beckn.Types.Id

@@ -5,7 +5,7 @@ import Beckn.Types.Id
 import qualified Core.Spec.Common.OrderState as OrderState
 import qualified Core.Spec.Common.Payment as Payment
 import qualified Core.Spec.OnStatus as OnStatus
-import qualified Domain.Endpoints.Beckn.OnStatus as DOnStatus
+import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.PaymentTransaction as DPaymentTransaction
 

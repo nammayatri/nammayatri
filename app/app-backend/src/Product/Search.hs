@@ -6,6 +6,8 @@ import App.Types
 import Beckn.Product.Validation.Context (validateContext)
 import Beckn.Storage.Esqueleto (runTransaction)
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
+import Beckn.Streaming.MonadProducer
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Migration.API.Search as Core9
@@ -70,6 +72,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     contextMig <- buildContextMetro Core9.SEARCH txnId bapIDs.metro bapURIs.metro
     intentMig <- mkIntentMig req
     ExternalAPI.searchMetro (BecknReq contextMig $ Core9.SearchIntent intentMig)
+  sendPublicTransportSearchRequest personId searchRequest.id req now
   return . API.SearchRes $ searchRequest.id
   where
     validateServiceability = do
@@ -78,6 +81,24 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
       let serviceabilityReq = RideServiceabilityReq originGps destinationGps
       unlessM (rideServiceable serviceabilityReq) $
         throwError $ ProductNotServiceable "due to georestrictions"
+
+sendPublicTransportSearchRequest ::
+  MonadProducer PublicTransportSearch m =>
+  Id Person.Person ->
+  Id SearchRequest.SearchRequest ->
+  API.SearchReq ->
+  UTCTime ->
+  m ()
+sendPublicTransportSearchRequest personId searchRequestId req now = do
+  producePublicTransportSearchMessage publicTransportSearch
+  where
+    publicTransportSearch =
+      PublicTransportSearch
+        { id = getId searchRequestId,
+          gps = req.origin.gps,
+          requestorId = getId personId,
+          createdAt = now
+        }
 
 logOnSearchEvent :: EsqDBFlow m r => OnSearch.OnSearchReq -> m ()
 logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do

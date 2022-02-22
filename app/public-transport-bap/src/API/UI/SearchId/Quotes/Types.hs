@@ -1,7 +1,7 @@
 module API.UI.SearchId.Quotes.Types where
 
 import Beckn.Types.Id
-import Domain.Endpoints.UI.Quotes as DQuotes
+import Domain.Action.UI.Quotes as DQuotes
 import qualified Domain.Types.Search as DSearch
 import Servant
 import Tools.Auth

@@ -1,4 +1,4 @@
-module Domain.Endpoints.UI.Quotes where
+module Domain.Action.UI.Quotes where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto

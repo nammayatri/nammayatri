@@ -1,15 +1,15 @@
 module API.Beckn.OnSearch.Handler where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
 import qualified Core.ACL.OnSearch as BecknACL
+import Core.Context (validateContext)
 import qualified Core.Spec.Common.Context as Context
 import qualified Core.Spec.OnSearch as OnSearch
-import qualified Domain.Endpoints.Beckn.OnSearch as DOnSearch
-import Tools.Context (validateContext)
+import qualified Domain.Action.Beckn.OnSearch as DOnSearch
+import Environment
 
 handler ::
   SignatureAuthResult ->

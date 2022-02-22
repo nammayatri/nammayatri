@@ -1,7 +1,7 @@
 module API.UI.QuoteConfirm.Types where
 
 import Beckn.Types.Id
-import qualified Domain.Endpoints.UI.QuoteConfirm as DConfirm
+import qualified Domain.Action.UI.QuoteConfirm as DConfirm
 import qualified Domain.Types.Quote as DQuote
 import Servant
 import Tools.Auth

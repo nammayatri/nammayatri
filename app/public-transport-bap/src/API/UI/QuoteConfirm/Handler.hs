@@ -1,18 +1,18 @@
 module API.UI.QuoteConfirm.Handler where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Core.ReqTypes (BecknReq (BecknReq))
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Core.ACL.Confirm
+import Core.Context
 import Core.Spec.Common.Context
 import Core.Spec.Confirm (ConfirmMessage (ConfirmMessage))
-import Domain.Endpoints.UI.QuoteConfirm
+import Domain.Action.UI.QuoteConfirm
 import qualified Domain.Types.Quote as D
+import Environment
 import qualified ExternalAPI.Flow as ExternalAPI
 import Tools.Auth (PersonId)
-import Tools.Context
 
 handler :: PersonId -> Id D.Quote -> QConfirmReq -> FlowHandler QConfirmRes
 handler personId quoteId confirmReq = withFlowHandlerAPI $ do

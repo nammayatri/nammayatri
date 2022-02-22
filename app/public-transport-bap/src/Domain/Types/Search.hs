@@ -11,8 +11,6 @@ data Search = Search
     lat :: Double,
     lon :: Double,
     requestorId :: Id Person,
-    fromDate :: UTCTime,
-    toDate :: UTCTime,
     createdAt :: UTCTime
   }
   deriving (Generic)

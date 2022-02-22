@@ -4,7 +4,7 @@ import API.Beckn.Handler as Beckn
 import qualified API.Swagger.Handler as Swagger
 import qualified API.Types as API
 import API.UI.Handler as UI
-import App.Types
+import Environment
 import Servant
 
 handler :: FlowServer API.API

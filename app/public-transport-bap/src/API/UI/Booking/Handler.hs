@@ -4,7 +4,7 @@ import API.UI.Booking.BookingId.Handler as BookingStatus
 import API.UI.Booking.BookingId.TriggerStatus.Handler as BookingTriggerStatus
 import API.UI.Booking.BookingList.Handler as BookingList
 import API.UI.Booking.Types
-import App.Types
+import Environment
 import Servant
 
 handler :: FlowServer API

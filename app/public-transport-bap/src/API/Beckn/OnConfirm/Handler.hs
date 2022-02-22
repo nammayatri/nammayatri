@@ -1,15 +1,15 @@
 module API.Beckn.OnConfirm.Handler where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult)
 import Core.ACL.OnConfirm
+import Core.Context
 import Core.Spec.API.OnConfirm
 import qualified Core.Spec.Common.Context as Context
-import Domain.Endpoints.Beckn.OnConfirm
-import Tools.Context
+import Domain.Action.Beckn.OnConfirm
+import Environment
 
 handler :: SignatureAuthResult -> FlowServer OnConfirmAPI
 handler _ onConfirmCb = withFlowHandlerAPI . withTransactionIdLogTag onConfirmCb $ do

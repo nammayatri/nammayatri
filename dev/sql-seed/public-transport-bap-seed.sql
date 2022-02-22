@@ -30,9 +30,7 @@ CREATE TABLE atlas_public_transport.search (
     lat double precision NOT NULL,
     lon double precision NOT NULL,
     requestor_id character(36) NOT NULL,
-    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    from_date timestamp with time zone NOT NULL,
-    to_date timestamp with time zone NOT NULL
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE atlas_public_transport.quote (

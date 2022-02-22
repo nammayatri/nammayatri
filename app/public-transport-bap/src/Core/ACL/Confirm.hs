@@ -8,7 +8,7 @@ import Core.Spec.Common.ProviderId (ProviderId (ProviderId))
 import Core.Spec.Common.Quotation
 import Core.Spec.Confirm
 import Core.Spec.Confirm.Item
-import Domain.Endpoints.UI.QuoteConfirm
+import Domain.Action.UI.QuoteConfirm
 import Servant.Client
 
 mkConfirmMessage :: ConfirmMessageD -> Order

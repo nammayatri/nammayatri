@@ -20,14 +20,14 @@ let rcfg =
   , connectTimeout = None Integer
   }
 
-let juspayGatewayUrl = "http://localhost:8015/v1"
-
 let kafkaProducerCfg =
   { brokers = ["localhost:29092"]
   }
 
 in
 { esqDBCfg = esqDBCfg
+, migrationPath = Some (env:PUBLIC_TRANSPORT_BAP_MIGRATION_PATH as Text ? "dev/migrations/public-transport-bap")
+, autoMigrate = True
 , redisCfg = rcfg
 , port = +8023
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/public-transport-bap.log"}
@@ -43,7 +43,6 @@ in
 , disableSignatureAuth = False
 , metricsSearchDurationTimeout = +45
 , hostName = "localhost"
-, gatewayUrl = juspayGatewayUrl
 , httpClientOptions = common.httpClientOptions
 , registryUrl = common.registryUrl
 , kafkaProducerCfg = kafkaProducerCfg

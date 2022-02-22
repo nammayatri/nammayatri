@@ -2,9 +2,9 @@ module API.Swagger.Handler where
 
 import qualified API.Swagger.Types as Swagger
 import API.Types (MainAPI)
-import App.Types
 import Beckn.Prelude
 import Data.OpenApi
+import Environment
 import Servant.OpenApi
 
 swagger :: OpenApi

@@ -18,6 +18,15 @@ cradle:
     - path: "app/search-result-aggregator/server/Paths_search_result_aggregator.hs"
       component: "search-result-aggregator:exe:search-result-aggregator-exe"
 
+    - path: "app/public-transport-search-consumer/src"
+      component: "public-transport-search-consumer:lib"
+
+    - path: "app/public-transport-search-consumer/server/Main.hs"
+      component: "public-transport-search-consumer:exe:public-transport-search-consumer-exe"
+
+    - path: "app/public-transport-search-consumer/server/Paths_public_transport_search_consumer.hs"
+      component: "public-transport-search-consumer:exe:public-transport-search-consumer-exe"
+
     - path: "app/beckn-cli/src"
       component: "beckn-cli:lib"
 

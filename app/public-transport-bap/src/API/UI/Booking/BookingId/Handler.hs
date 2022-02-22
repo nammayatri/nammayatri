@@ -1,12 +1,12 @@
 module API.UI.Booking.BookingId.Handler where
 
 import API.UI.Booking.BookingId.Types
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import qualified Domain.Endpoints.UI.Status as DStatus
+import qualified Domain.Action.UI.Status as DStatus
 import qualified Domain.Types.Booking as DBooking
+import Environment
 import Tools.Auth
 
 handler :: FlowServer API

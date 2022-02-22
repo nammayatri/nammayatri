@@ -30,8 +30,9 @@ import GHC.Stack as E (HasCallStack)
 import Servant.Client as E (BaseUrl)
 import qualified Servant.Client as Servant
 import Universum.Debug as E
+import Universum.Print as E
 import Universum.String.Conversion as E
-import Prelude as E hiding (error, id, log, show, undefined)
+import Prelude as E hiding (error, id, log, print, putStr, putStrLn, show, undefined)
 
 foldWIndex :: (Integer -> acc -> a -> acc) -> acc -> [a] -> acc
 foldWIndex f acc p = snd $ foldl' (\(i, acc') c -> (i + 1, f i acc' c)) (0, acc) p

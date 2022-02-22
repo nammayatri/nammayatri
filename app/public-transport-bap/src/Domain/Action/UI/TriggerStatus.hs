@@ -1,4 +1,4 @@
-module Domain.Endpoints.UI.TriggerStatus where
+module Domain.Action.UI.TriggerStatus where
 
 import Beckn.Prelude
 import Beckn.Types.Id

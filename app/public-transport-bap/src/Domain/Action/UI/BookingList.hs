@@ -1,4 +1,4 @@
-module Domain.Endpoints.UI.BookingList where
+module Domain.Action.UI.BookingList where
 
 import Beckn.Prelude
 import Beckn.Utils.Common

@@ -18,7 +18,7 @@ run ::
   ) =>
   m ()
 run = do
-  withLogTag "Search result aggregator" $ do
+  withLogTag "Service" $ do
     listenForMessages @PublicTransportQuoteList isRunning $ \PublicTransportQuoteList {..} ->
       Hedis.rPushExp (makeHedisKey transactionId) quoteList expirationTime
   where

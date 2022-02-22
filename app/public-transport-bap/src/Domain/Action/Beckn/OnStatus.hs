@@ -1,4 +1,4 @@
-module Domain.Endpoints.Beckn.OnStatus where
+module Domain.Action.Beckn.OnStatus where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto

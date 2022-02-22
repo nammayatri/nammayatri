@@ -1,4 +1,4 @@
-module App.Types where
+module Environment where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
@@ -20,12 +20,13 @@ import Tools.Streaming.Kafka.Environment
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool,
     redisCfg :: RedisConfig,
     port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     metricsSearchDurationTimeout :: Seconds,
-    gatewayUrl :: BaseUrl,
     selfId :: Text,
     selfURI :: BaseUrl,
     httpClientOptions :: HttpClientOptions,

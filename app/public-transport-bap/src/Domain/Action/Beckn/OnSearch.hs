@@ -1,4 +1,4 @@
-module Domain.Endpoints.Beckn.OnSearch where
+module Domain.Action.Beckn.OnSearch where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq

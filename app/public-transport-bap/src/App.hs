@@ -7,15 +7,16 @@ where
 
 import API.Handler
 import API.Types
-import App.Types
 import Beckn.Exit
 import Beckn.Prelude
+import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Beckn.Storage.Redis.Config (prepareRedisConnections)
 import Beckn.Types.Flow (FlowR)
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Servant.Server (runServerWithHealthCheck)
 import Beckn.Utils.Servant.SignatureAuth (modFlowRtWithAuthManagers)
+import Environment
 import Servant (Context (..))
 import Tools.Auth (verifyPersonAction)
 
@@ -26,6 +27,8 @@ runService configModifier = do
   runServerWithHealthCheck appEnv (Proxy @API) handler middleware identity context releaseAppEnv \flowRt -> do
     try (prepareRedisConnections $ appEnv.redisCfg)
       >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
+    migrateIfNeeded (appCfg.migrationPath) (appCfg.esqDBCfg) (appCfg.autoMigrate)
+      >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
     modFlowRtWithAuthManagers flowRt appEnv [(appCfg.selfId, appCfg.authEntity.uniqueKeyId)]
   where
     middleware =

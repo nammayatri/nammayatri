@@ -8,8 +8,8 @@ import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Shutdown
-import Tools.Kafka
 import Tools.Metrics
+import Tools.Streaming.Kafka
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -19,8 +19,6 @@ data AppCfg = AppCfg
     hedisCfg :: HedisCfg
   }
   deriving (Generic, FromDhall)
-
-type MobileNumber = Text
 
 data AppEnv = AppEnv
   { config :: AppCfg,

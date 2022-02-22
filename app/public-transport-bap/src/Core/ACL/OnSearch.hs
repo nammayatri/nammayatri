@@ -10,7 +10,7 @@ import qualified Core.Spec.Common.Location as Location
 import qualified Core.Spec.OnSearch as OnSearch
 import qualified Core.Spec.OnSearch.Catalog as Catalog
 import Core.Spec.OnSearch.Provider
-import qualified Domain.Endpoints.Beckn.OnSearch as DOnSearch
+import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.Search as Domain
 
 buildOnSearch ::

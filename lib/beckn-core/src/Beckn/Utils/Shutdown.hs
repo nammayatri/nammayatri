@@ -20,7 +20,7 @@ handleShutdown shutdown closeSocket = do
             return True
           False -> return False
       when isLocked $ do
-        putStrLn $ "Shutting down by " <> reason
+        putStrLn ("Shutting down by " <> reason :: Text)
 
 mkShutdown :: IO Shutdown
 mkShutdown = newEmptyTMVarIO

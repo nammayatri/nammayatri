@@ -12,9 +12,9 @@ import Beckn.Types.Amount
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Logging
 
-type HasKafkaPublicTransportStationConsumer env r =
+type HasKafkaPublicTransportQuotesConsumer env r =
   ( HasKafkaConsumer env r,
-    HasField "publicTransportStation" env (KafkaConsumerTools PublicTransportQuoteList)
+    HasField "publicTransportQuotes" env (KafkaConsumerTools PublicTransportQuoteList)
   )
 
 type TransactionId = Text
@@ -52,5 +52,5 @@ instance (Log (FlowR r), HasKafkaProducer r) => MonadProducer PublicTransportQuo
   type Args PublicTransportQuoteList = ()
   produceMessage () value = mapM_ ($ value) (Prod.produceMessage <$> map (,Nothing) (getTopics @PublicTransportQuoteList))
 
-instance (Log (FlowR r), HasKafkaPublicTransportStationConsumer env r) => MonadConsumer PublicTransportQuoteList (FlowR r) where
-  receiveMessage = asks (.kafkaConsumerEnv.publicTransportStation) >>= Cons.receiveMessage
+instance (Log (FlowR r), HasKafkaPublicTransportQuotesConsumer env r) => MonadConsumer PublicTransportQuoteList (FlowR r) where
+  receiveMessage = asks (.kafkaConsumerEnv.publicTransportQuotes) >>= Cons.receiveMessage

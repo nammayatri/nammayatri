@@ -2,7 +2,7 @@ module Core.ACL.OnConfirm where
 
 import Beckn.Types.Id
 import Core.Spec.OnConfirm
-import Domain.Endpoints.Beckn.OnConfirm
+import Domain.Action.Beckn.OnConfirm
 import qualified Domain.Types.Booking as Domain
 
 mkDomainOnConfirm :: Id Domain.Booking -> OnConfirmMessage -> OnConfirmMessageD

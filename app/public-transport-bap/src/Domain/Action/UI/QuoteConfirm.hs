@@ -1,4 +1,4 @@
-module Domain.Endpoints.UI.QuoteConfirm where
+module Domain.Action.UI.QuoteConfirm where
 
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq

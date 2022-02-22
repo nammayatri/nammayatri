@@ -185,7 +185,7 @@ processDriverResponse handle@ServiceHandle {..} response rideBookingId = do
         logInfo $ "Assigning driver" <> show response.driverId
         assignDriver rideBookingId response.driverId
         updateNotificationStatuses rideBookingId Accepted $ singleton response.driverId
-        cleanupNotAnsweredNotifications rideBookingId       
+        cleanupNotAnsweredNotifications rideBookingId
         logDriverEvents MarkedAsAccepted rideBookingId $ singleton response.driverId
       RideBooking.REJECT ->
         processRejection handle rideBookingId response.driverId
