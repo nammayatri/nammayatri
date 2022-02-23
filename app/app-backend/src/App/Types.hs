@@ -80,7 +80,8 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     gatewayUrl :: BaseUrl,
     encTools :: EncTools,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    exotelCallbackUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 

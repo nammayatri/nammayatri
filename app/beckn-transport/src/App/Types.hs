@@ -46,7 +46,6 @@ data AppCfg = AppCfg
     port :: Int,
     bgtmPort :: Int,
     metricsPort :: Int,
-    xAppUri :: BaseUrl,
     hostName :: Text,
     nwAddress :: BaseUrl,
     signingKey :: PrivateKey,
@@ -78,7 +77,8 @@ data AppCfg = AppCfg
     registrySecrets :: RegistrySecrets,
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    exotelCallbackUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -89,7 +89,6 @@ data AppEnv = AppEnv
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     inviteSmsTemplate :: Text,
-    xAppUri :: BaseUrl,
     nwAddress :: BaseUrl,
     caseExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,

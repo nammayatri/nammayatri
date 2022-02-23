@@ -40,10 +40,10 @@ initiateCallToDriver rideId personId =
     return $ CallAPI.CallRes callId
   where
     buildCallbackUrl = do
-      bapUrl <- askConfig (.bapSelfURIs.cabs)
+      bapUrl <- askConfig (.exotelCallbackUrl)
       return $
         bapUrl
-          { baseUrlPath = baseUrlPath bapUrl <> "ride/" <> T.unpack (getId rideId) <> "call/statusCallback"
+          { baseUrlPath = baseUrlPath bapUrl <> "/ride/" <> T.unpack (getId rideId) <> "/call/statusCallback"
           }
 
 callStatusCallback :: Id SRide.Ride -> CallAPI.CallCallbackReq -> FlowHandler CallAPI.CallCallbackRes

@@ -47,8 +47,6 @@ let smsConfig =
   , sender = "JUSPAY"
   }
 
-let appUri = "http://localhost:8013/v2"
-
 let apiRateLimitOptions =
   { limit = +4
   , limitResetTimeInSec = +600
@@ -74,7 +72,6 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9997
-, xAppUri = appUri
 , hostName = "localhost"
 , nwAddress = "http://localhost:8014/v1/"
 , signingKey = sec.signingKey
@@ -107,4 +104,5 @@ in
 , disableSignatureAuth = False
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
+, exotelCallbackUrl = "http://localhost:8014/v2/"
 }

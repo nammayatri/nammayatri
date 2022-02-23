@@ -47,8 +47,6 @@ let smsConfig =
   , sender = "JUSPAY"
   }
 
-let appUri = "http://beckn-app-backend-${common.branchName}.atlas:8013/v2"
-
 let apiRateLimitOptions =
   { limit = +4
   , limitResetTimeInSec = +600
@@ -79,7 +77,6 @@ in
 , port = +8014
 , bgtmPort = +8114
 , metricsPort = +9999
-, xAppUri = appUri
 , hostName = "juspay.in"
 , nwAddress = "https://api.sandbox.beckn.juspay.in/bpp/cab/v1"
 , signingKey = sec.signingKey
@@ -112,4 +109,5 @@ in
 , disableSignatureAuth = False
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
+, exotelCallbackUrl = "https://api.sandbox.beckn.juspay.in/bpp/cab/v2/"
 }
