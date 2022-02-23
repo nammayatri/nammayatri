@@ -1,9 +1,10 @@
 module API.TaskStatus.Handler where
 
+import qualified API.Cache as Cache
 import qualified API.Fixtures as Fixtures
 import App.Types
 import Beckn.Prelude
-import Beckn.Types.Cache
+import qualified Beckn.Types.Cache as Cache
 import Beckn.Types.Error
 import Beckn.Utils.Common
 import qualified "fmd-wrapper" ExternalAPI.Dunzo.Types as API
@@ -18,12 +19,10 @@ handler ::
   FlowHandler API.TaskStatus
 handler taskId mToken mClientId _mIsTestMode = withFlowHandlerAPI $ do
   Fixtures.verifyToken mToken mClientId
-  cachedTasks <- findInCache (\taskStatus -> taskStatus.task_id == taskId)
-  case cachedTasks of
-    [(requestId, taskStatus)] -> do
-      withCaching requestId $ updateTaskStatus taskStatus
-    [] -> throwError (InvalidRequest "Task data not found")
-    _ -> throwError (InternalError "More than one task with the same task_id found")
+  (requestId, taskStatus) <- Cache.findTaskById taskId >>= fromMaybeM (InvalidRequest "Task data not found")
+  updatedTask <- updateTaskStatus taskStatus
+  Cache.setKey requestId updatedTask
+  pure updatedTask
 
 updateTaskStatus :: MonadTime m => API.TaskStatus -> m API.CreateTaskRes
 updateTaskStatus API.TaskStatus {..} = do

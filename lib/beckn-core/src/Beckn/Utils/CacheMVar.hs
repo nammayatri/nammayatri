@@ -53,20 +53,6 @@ delKey cache key =
   asks cache
     >>= flip modifyMVar_' (Map.delete key) . (.cache)
 
-findInCache ::
-  ( MonadReader r m,
-    MonadIO m,
-    Ord (CacheKey a),
-    HasField "cache" c (MVar (Map.Map (CacheKey a) a))
-  ) =>
-  (r -> c) ->
-  (a -> Bool) ->
-  m [(CacheKey a, a)]
-findInCache cache predicate = do
-  asks cache
-    >>= (readMVar . (.cache))
-    <&> (Map.toList . Map.filter predicate)
-
 initSimpleCache :: IO (CacheMVar a)
 initSimpleCache = CacheMVar <$> newMVar Map.empty
 

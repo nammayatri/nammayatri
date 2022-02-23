@@ -5,7 +5,7 @@ import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Flow
 import Beckn.Utils.App (getPodName)
-import Beckn.Utils.CacheMVar as Cache
+import qualified Beckn.Utils.CacheMVar as Cache
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Shutdown
@@ -23,7 +23,7 @@ data AppEnv = AppEnv
   { config :: AppCfg,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
-    taskStatusCache :: Cache.CacheMVar API.TaskStatus
+    cache :: TasksCache
   }
   deriving (Generic)
 
@@ -32,7 +32,7 @@ buildAppEnv config@AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   isShuttingDown <- mkShutdown
-  taskStatusCache <- Cache.initSimpleCache
+  cache <- initCache
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -51,11 +51,27 @@ instance {-# OVERLAPPING #-} CoreMetrics Flow where
   addUrlCallRetries _ _ = pure ()
   addUrlCallRetryFailures _ = pure ()
 
-instance Cache API.TaskStatus Flow where
-  type CacheKey API.TaskStatus = Text
-  getKey = Cache.getKey (.taskStatusCache)
-  setKey = Cache.setKey (.taskStatusCache)
-  delKey = Cache.delKey (.taskStatusCache)
+type RequestId = Text
 
-findInCache :: (API.TaskStatus -> Bool) -> Flow [(Text, API.TaskStatus)]
-findInCache = Cache.findInCache (.taskStatusCache)
+data TasksCache = TasksCache
+  { taskStatusCache :: Cache.CacheMVar API.TaskStatus,
+    requestIdCache :: Cache.CacheMVar RequestId
+  }
+
+initCache :: IO TasksCache
+initCache = do
+  taskStatusCache <- Cache.initSimpleCache
+  requestIdCache <- Cache.initSimpleCache
+  pure TasksCache {..}
+
+instance Cache API.TaskStatus Flow where
+  type CacheKey API.TaskStatus = RequestId
+  getKey = Cache.getKey (.cache.taskStatusCache)
+  setKey = Cache.setKey (.cache.taskStatusCache)
+  delKey = Cache.delKey (.cache.taskStatusCache)
+
+instance Cache RequestId Flow where
+  type CacheKey RequestId = API.TaskId
+  getKey = Cache.getKey (.cache.requestIdCache)
+  setKey = Cache.setKey (.cache.requestIdCache)
+  delKey = Cache.delKey (.cache.requestIdCache)

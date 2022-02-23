@@ -1,9 +1,10 @@
 module API.CancelTask.Handler where
 
+import qualified API.Cache as Cache
 import qualified API.Fixtures as Fixtures
 import App.Types
 import Beckn.Prelude
-import Beckn.Types.Cache
+import qualified Beckn.Types.Cache as Cache
 import Beckn.Types.Error
 import Beckn.Utils.Common
 import qualified "fmd-wrapper" ExternalAPI.Dunzo.Types as API
@@ -20,12 +21,9 @@ handler ::
   FlowHandler NoContent
 handler taskId mToken mClientId _mIsTestMode _req = withFlowHandlerAPI $ do
   Fixtures.verifyToken mToken mClientId
-  cachedTasks <- findInCache (\taskStatus -> taskStatus.task_id == taskId)
-  (requestId, taskStatus) <- case cachedTasks of
-    [(requestId, taskStatus)] -> pure (requestId, taskStatus)
-    [] -> throwError (InvalidRequest "Task data not found")
-    _ -> throwError (InternalError "More than one task with the same task_id found")
-  _ <- withCaching requestId $ cancelTask taskStatus
+  (requestId, taskStatus) <- Cache.findTaskById taskId >>= fromMaybeM (InvalidRequest "Task data not found")
+  canceledTask <- cancelTask taskStatus
+  Cache.setKey requestId canceledTask
   pure NoContent
 
 cancelTask :: MonadTime m => API.TaskStatus -> m API.CreateTaskRes

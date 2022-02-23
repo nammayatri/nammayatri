@@ -3,9 +3,10 @@ module API.CreateTask.Handler where
 import qualified API.Fixtures as Fixtures
 import App.Types
 import Beckn.Prelude
-import Beckn.Types.Cache
+import qualified Beckn.Types.Cache as Cache
 import Beckn.Types.Error
 import Beckn.Utils.Common
+import ExternalAPI.Dunzo.Types (TaskStatus (task_id))
 import qualified "fmd-wrapper" ExternalAPI.Dunzo.Types as API
 import qualified Tools.Time as Time
 import qualified "fmd-wrapper" Types.Common as Common
@@ -18,10 +19,13 @@ handler ::
   FlowHandler API.CreateTaskRes
 handler mToken mClientId _mIsTestMode req = withFlowHandlerAPI $ do
   Fixtures.verifyToken mToken mClientId
-  mTaskStatus <- getKey req.request_id
+  mTaskStatus <- Cache.getKey req.request_id
   whenJust (mTaskStatus :: Maybe API.TaskStatus) $
     \_ -> throwError (InvalidRequest "Request with same request id has already been processed")
-  withCaching req.request_id buildCreateTaskRes
+  taskStatus <- buildCreateTaskRes
+  Cache.setKey req.request_id taskStatus
+  Cache.setKey taskStatus.task_id req.request_id
+  pure taskStatus
 
 buildCreateTaskRes :: (MonadGuid m, MonadTime m) => m API.CreateTaskRes
 buildCreateTaskRes = do

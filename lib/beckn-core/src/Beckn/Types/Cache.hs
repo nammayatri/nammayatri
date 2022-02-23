@@ -27,10 +27,3 @@ caching getTtl getData key =
       whenJust mbRes \res -> setKeyEx (getTtl res) key res
       pure mbRes
     res -> pure res
-
-withCaching ::
-  (Cache a m, Monad m) => CacheKey a -> m a -> m a
-withCaching key mValue = do
-  value <- mValue
-  setKey key value
-  return value
