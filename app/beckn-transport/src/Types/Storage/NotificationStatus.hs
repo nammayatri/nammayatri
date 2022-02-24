@@ -12,7 +12,7 @@ import EulerHS.Prelude hiding (id)
 import Types.App
 import qualified Types.Storage.RideBooking as SRB
 
-data AnswerStatus = NOTIFIED | REJECTED | IGNORED | ACCEPTED
+data AnswerStatus = NOTIFIED | REJECTED | IGNORED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 instance HasSqlValueSyntax be String => HasSqlValueSyntax be AnswerStatus where

@@ -39,7 +39,7 @@ fetchAttemptedNotificationsByRBId rideBookingId_ = do
   where
     predicate NotificationStatus.NotificationStatus {..} =
       rideBookingId ==. B.val_ rideBookingId_
-        &&. status `B.in_` [B.val_ NotificationStatus.REJECTED, B.val_ NotificationStatus.IGNORED, B.val_ NotificationStatus.ACCEPTED]
+        &&. status `B.in_` [B.val_ NotificationStatus.REJECTED, B.val_ NotificationStatus.IGNORED]
 
 fetchActiveNotifications :: DBFlow m r => m [NotificationStatus.NotificationStatus]
 fetchActiveNotifications = do
@@ -66,15 +66,6 @@ findActiveNotificationByDriverId driverId_ rideBookingId_ = do
     predicate NotificationStatus.NotificationStatus {..} =
       driverId ==. B.val_ driverId_
         &&. rideBookingId ==. B.val_ rideBookingId_
-        &&. status ==. B.val_ NotificationStatus.NOTIFIED
-
-cleanupNotAnsweredNotifications :: DBFlow m r => Id SRB.RideBooking -> m ()
-cleanupNotAnsweredNotifications rideBookingId_ = do
-  dbTable <- getDbTable
-  DB.delete dbTable (predicate rideBookingId_)
-  where
-    predicate rid NotificationStatus.NotificationStatus {..} =
-      rideBookingId ==. B.val_ rid
         &&. status ==. B.val_ NotificationStatus.NOTIFIED
 
 cleanupNotifications :: DBFlow m r => Id SRB.RideBooking -> m ()

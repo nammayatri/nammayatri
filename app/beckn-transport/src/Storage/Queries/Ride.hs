@@ -47,6 +47,15 @@ findActiveByRBId rbId = do
       bookingId ==. B.val_ rbId
         B.&&. status B./=. B.val_ Storage.CANCELLED
 
+findAllCancelledByRBId :: DBFlow m r => Id SRB.RideBooking -> m [Storage.Ride]
+findAllCancelledByRBId rideBookingId = do
+  dbTable <- getDbTable
+  DB.findAll dbTable identity predicate
+  where
+    predicate Storage.Ride {..} =
+      bookingId ==. B.val_ rideBookingId
+        &&. status ==. B.val_ Storage.CANCELLED
+
 findAllByVehicleId :: DBFlow m r => Id Veh.Vehicle -> m [Storage.Ride]
 findAllByVehicleId vehId = do
   dbTable <- getDbTable

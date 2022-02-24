@@ -43,11 +43,7 @@ notificationTime :: Seconds
 notificationTime = 15
 
 reallocationsLimit :: Int
-reallocationsLimit = 3
-
-isNotified :: UTCTime -> (NotificationStatus, UTCTime) -> Bool
-isNotified currentTime (Notified, expiryTime) = expiryTime > currentTime
-isNotified _ _ = False
+reallocationsLimit = 5
 
 attemptedNotification ::
   Id SRB.RideBooking ->
@@ -55,7 +51,7 @@ attemptedNotification ::
   (NotificationStatus, UTCTime) ->
   Bool
 attemptedNotification rideBookingId (id, _) (status, _) =
-  id == rideBookingId && (status == Rejected || status == Ignored || status == Accepted)
+  id == rideBookingId && (status == Rejected || status == Ignored)
 
 addRideBooking :: Repository -> Id SRB.RideBooking -> Int -> IO ()
 addRideBooking Repository {..} rideBookingId reallocationsCount = do
@@ -140,12 +136,11 @@ handle repository@Repository {..} =
         pure pool,
       sendNewRideNotifications = \_ _ -> pure (),
       getCurrentNotifications = \rideId -> do
-        currentTime <- Time.getCurrentTime
         notificationStatus <- readIORef notificationStatusVar
         let filtered =
               Map.toList $
                 Map.filterWithKey
-                  (\(id, _) notification -> id == rideId && isNotified currentTime notification)
+                  (\(id, _) (status, _) -> id == rideId && status == Notified)
                   notificationStatus
         pure $ map toCurrentNotification filtered,
       cleanupOldNotifications = do
@@ -169,16 +164,13 @@ handle repository@Repository {..} =
                 Map.keys $ Map.filterWithKey (attemptedNotification rideId) notificationStatus
         pure filtered,
       getDriversWithNotification = do
-        currentTime <- Time.getCurrentTime
         notificationStatus <- readIORef notificationStatusVar
-        let filtered = fmap snd $ Map.keys $ Map.filter (isNotified currentTime) notificationStatus
+        let filtered = fmap snd $ Map.keys $ Map.filter (\(status, _) -> status == Notified) notificationStatus
         pure filtered,
       assignDriver = \rideBookingId driverId -> do
         modifyIORef assignmentsVar $ (:) (rideBookingId, driverId)
         modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Assigned) rideBookingId,
       cancelRideBooking = \rideBookingId _ -> modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Cancelled) rideBookingId,
-      cleanupNotAnsweredNotifications = \rideId ->
-        modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) (s, _) -> not (r == rideId && s == Notified)),
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),
       getTopDriversByIdleTime = \count driverIds -> pure $ take count driverIds,
@@ -208,8 +200,11 @@ driverPool1 = [Id "driver01", Id "driver02", Id "driver03"]
 driverPool2 :: [Id Driver]
 driverPool2 = [Id "driver05", Id "driver07", Id "driver08"]
 
+driverPool3 :: [Id Driver]
+driverPool3 = [Id "driver06", Id "driver09", Id "driver10"]
+
 driverPoolPerRide :: Map (Id SRB.RideBooking) [Id Driver]
-driverPoolPerRide = Map.fromList [(rideBooking01Id, driverPool1), (rideBooking02Id, driverPool2)]
+driverPoolPerRide = Map.fromList [(rideBooking01Id, driverPool1), (rideBooking02Id, driverPool2), (rideBooking03Id, driverPool3)]
 
 data Repository = Repository
   { currentIdVar :: IORef Int,
@@ -224,7 +219,7 @@ initRepository :: IO Repository
 initRepository = do
   initCurrentId <- newIORef 1
   initDriverPool <- newIORef driverPoolPerRide
-  initRides <- newIORef Map.empty
+  initRideBookings <- newIORef Map.empty
   initRideRequest <- newIORef Map.empty
   initNotificationStatus <- newIORef Map.empty
   initAssignments <- newIORef []
@@ -233,7 +228,7 @@ initRepository = do
         Repository
           initCurrentId
           initDriverPool
-          initRides
+          initRideBookings
           initRideRequest
           initNotificationStatus
           initAssignments
@@ -289,7 +284,7 @@ cancellationOnReallocationsCountExceedLimit = testCase "Cancellation on realloca
   r@Repository {..} <- initRepository
 
   addRideBooking r rideBooking01Id 2
-  addRideBooking r rideBooking02Id 3
+  addRideBooking r rideBooking02Id 5
   addRideBooking r rideBooking03Id 22
   addRequest Allocation r rideBooking01Id
   addRequest Allocation r rideBooking02Id

@@ -1,4 +1,4 @@
-module Mobility.DriversIgnoreRide where
+module Mobility.DriversRejectRide where
 
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
 import EulerHS.Prelude
@@ -13,7 +13,7 @@ spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
-    it "Testing API flow for ride cancelled by Driver" $ withBecknClients clients do
+    it "Testing API flow for ride rejected by Driver" $ withBecknClients clients do
       (bapQuoteId, bRideBookingId) <- doAnAppSearch
 
       tRideBooking <- poll $ do

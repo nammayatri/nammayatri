@@ -248,9 +248,6 @@ cancelRideBooking rideBookingId reason = do
   whenJust mbRide $ \ride ->
     notifyDriverOnCancel rideBooking ride reason
 
-cleanupNotAnsweredNotifications :: DBFlow m r => Id RideBooking -> m ()
-cleanupNotAnsweredNotifications = QNS.cleanupNotAnsweredNotifications
-
 cleanupNotifications :: DBFlow m r => Id RideBooking -> m ()
 cleanupNotifications = QNS.cleanupNotifications
 
@@ -264,7 +261,6 @@ allocNotifStatusToStorageStatus = \case
   Alloc.Notified -> SNS.NOTIFIED
   Alloc.Rejected -> SNS.REJECTED
   Alloc.Ignored -> SNS.IGNORED
-  Alloc.Accepted -> SNS.ACCEPTED
 
 addAllocationRequest :: DBFlow m r => ShortId Organization -> Id RideBooking -> m ()
 addAllocationRequest shortOrgId rideBookingId = do

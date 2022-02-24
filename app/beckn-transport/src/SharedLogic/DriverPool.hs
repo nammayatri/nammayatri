@@ -5,6 +5,7 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRideBooking
 import qualified Storage.Queries.SearchReqLocation as QSReqLoc
 import qualified Storage.Queries.TransporterConfig as QTConf
@@ -48,8 +49,10 @@ recalculateDriverPool ::
   m [Id Driver]
 recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant = do
   driverPool <- map (.driverId) <$> calculateDriverPool pickupPoint transporterId (Just vehicleVariant)
-  Redis.setExRedis (driverPoolKey rideBookingId) (getId <$> driverPool) (60 * 10)
-  return driverPool
+  cancelledDrivers <- QRide.findAllCancelledByRBId rideBookingId <&> map (cast . (.driverId))
+  let filteredDriverPool = filter (`notElem` cancelledDrivers) driverPool
+  Redis.setExRedis (driverPoolKey rideBookingId) (getId <$> filteredDriverPool) (60 * 10)
+  return filteredDriverPool
 
 calculateDriverPool ::
   ( DBFlow m r,
