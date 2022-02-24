@@ -109,7 +109,7 @@ instance MonadMonitor (FlowR r) where
 instance MonadGuid (FlowR r) where
   generateGUIDText = FlowR L.generateGUID
 
-instance (Log (FlowR r), HasCoreMetrics r) => Forkable (FlowR r) where
+instance (Log (FlowR r), CoreMetrics (FlowR r)) => Forkable (FlowR r) where
   fork desc f = do
     FlowR $ ReaderT $ L.forkFlow desc . runReaderT (unFlowR $ handleExc f)
     where

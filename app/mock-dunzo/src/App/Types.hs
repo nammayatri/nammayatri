@@ -1,6 +1,7 @@
 module App.Types where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Hedis as Hedis
 import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Flow
@@ -15,7 +16,8 @@ import Tools.Metrics
 data AppCfg = AppCfg
   { port :: Int,
     loggerConfig :: LoggerConfig,
-    graceTerminationPeriod :: Seconds
+    graceTerminationPeriod :: Seconds,
+    hedisCfg :: Hedis.HedisCfg
   }
   deriving (Generic, FromDhall)
 
@@ -23,7 +25,7 @@ data AppEnv = AppEnv
   { config :: AppCfg,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
-    cache :: TasksCache
+    hedisEnv :: Hedis.HedisEnv
   }
   deriving (Generic)
 
@@ -32,7 +34,7 @@ buildAppEnv config@AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   isShuttingDown <- mkShutdown
-  cache <- initCache
+  hedisEnv <- Hedis.connectHedis hedisCfg ("mock-dunzo:" <>)
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
@@ -66,12 +68,12 @@ initCache = do
 
 instance Cache API.TaskStatus Flow where
   type CacheKey API.TaskStatus = RequestId
-  getKey = Cache.getKey (.cache.taskStatusCache)
-  setKey = Cache.setKey (.cache.taskStatusCache)
-  delKey = Cache.delKey (.cache.taskStatusCache)
+  getKey = Hedis.get . ("task-status" <>)
+  setKey = Hedis.set . ("task-status" <>)
+  delKey = Hedis.del . ("task-status" <>)
 
 instance Cache RequestId Flow where
   type CacheKey RequestId = API.TaskId
-  getKey = Cache.getKey (.cache.requestIdCache)
-  setKey = Cache.setKey (.cache.requestIdCache)
-  delKey = Cache.delKey (.cache.requestIdCache)
+  getKey = Hedis.get . ("request-id" <>) . API.getTaskId
+  setKey = Hedis.set . ("request-id" <>) . API.getTaskId
+  delKey = Hedis.del . ("request-id" <>) . API.getTaskId
