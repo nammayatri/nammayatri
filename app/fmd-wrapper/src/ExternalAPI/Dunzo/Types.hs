@@ -124,7 +124,7 @@ data TaskState
   | DELIVERED
   | CANCELLED
   | RUNNER_CANCELLED
-  deriving (Show, Generic)
+  deriving (Show, Generic, Eq)
 
 data TaskStatus = TaskStatus
   { task_id :: TaskId,

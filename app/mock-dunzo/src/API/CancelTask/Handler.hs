@@ -5,7 +5,6 @@ import qualified API.Fixtures as Fixtures
 import App.Types
 import Beckn.Prelude
 import qualified Beckn.Types.Cache as Cache
-import Beckn.Types.Error
 import Beckn.Utils.Common
 import qualified "fmd-wrapper" ExternalAPI.Dunzo.Types as API
 import Servant (NoContent (NoContent))
@@ -19,19 +18,22 @@ handler ::
   Maybe Bool ->
   API.CancelTaskReq ->
   FlowHandler NoContent
-handler taskId mToken mClientId _mIsTestMode _req = withFlowHandlerAPI $ do
+handler taskId mToken mClientId _mIsTestMode req = withFlowHandlerAPI $ do
   Fixtures.verifyToken mToken mClientId
-  (requestId, taskStatus) <- Cache.findTaskById taskId >>= fromMaybeM (InvalidRequest "Task data not found")
-  canceledTask <- cancelTask taskStatus
+  (requestId, taskStatus) <- Cache.findTaskById taskId
+  canceledTask <- cancelTask taskStatus req
   Cache.setKey requestId canceledTask
   pure NoContent
 
-cancelTask :: MonadTime m => API.TaskStatus -> m API.CreateTaskRes
-cancelTask API.TaskStatus {..} = do
+cancelTask :: MonadTime m => API.TaskStatus -> API.CancelTaskReq -> m API.CreateTaskRes
+cancelTask API.TaskStatus {..} (API.CancelTaskReq reason) = do
   now <- getCurrentTime
   pure
     API.TaskStatus
       { state = API.CANCELLED,
-        event_timestamp = Just $ Time.timeToInt now,
+        request_timestamp = Just $ Time.timeToInt now,
+        cancelled_by = Just "User",
+        cancellation_reason = Just reason,
+        eta = Nothing,
         ..
       }

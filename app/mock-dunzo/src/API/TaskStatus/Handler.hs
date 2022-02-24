@@ -5,7 +5,6 @@ import qualified API.Fixtures as Fixtures
 import App.Types
 import Beckn.Prelude
 import qualified Beckn.Types.Cache as Cache
-import Beckn.Types.Error
 import Beckn.Utils.Common
 import qualified "fmd-wrapper" ExternalAPI.Dunzo.Types as API
 import qualified Tools.Time as Time
@@ -19,7 +18,7 @@ handler ::
   FlowHandler API.TaskStatus
 handler taskId mToken mClientId _mIsTestMode = withFlowHandlerAPI $ do
   Fixtures.verifyToken mToken mClientId
-  (requestId, taskStatus) <- Cache.findTaskById taskId >>= fromMaybeM (InvalidRequest "Task data not found")
+  (requestId, taskStatus) <- Cache.findTaskById taskId
   updatedTask <- updateTaskStatus taskStatus
   Cache.setKey requestId updatedTask
   pure updatedTask
@@ -29,7 +28,8 @@ updateTaskStatus API.TaskStatus {..} = do
   now <- getCurrentTime
   pure
     API.TaskStatus
-      { eta = Just Fixtures.eta2,
-        event_timestamp = Just $ Time.timeToInt now,
+      { eta = if state == API.CANCELLED then Nothing else Just Fixtures.eta2,
+        request_timestamp = Just $ Time.timeToInt now,
+        estimated_price = Nothing,
         ..
       }

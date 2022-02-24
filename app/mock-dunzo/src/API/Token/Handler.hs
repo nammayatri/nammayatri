@@ -8,15 +8,12 @@ import Beckn.Utils.Common
 import qualified "fmd-wrapper" ExternalAPI.Dunzo.Types as API
 import qualified "fmd-wrapper" Types.Common as Common
 
--- FIXME: Maybe we should use more simple structure without `withFlowHandlerAPI` wrapper in mock?
 handler :: Maybe Text -> Maybe Text -> FlowHandler API.TokenRes
 handler mClientId mClientSecret = withFlowHandlerAPI $ do
-  if (Common.ClientId <$> mClientId) == Just Fixtures.clientId
-    && (Common.ClientSecret <$> mClientSecret) == Just Fixtures.clientSecret
-    then
-      pure
-        -- FIXME: Do we need to generate new token each time?
-        API.TokenRes
-          { token = Fixtures.token
-          }
-    else throwError InvalidAuthData
+  clientId <- pure (Common.ClientId <$> mClientId) >>= fromMaybeM (InvalidRequest "client-id header is not provided")
+  clientSecret <- pure (Common.ClientSecret <$> mClientSecret) >>= fromMaybeM (InvalidRequest "client-secret header is not provided")
+  unless ((clientId == Fixtures.clientId) && (clientSecret == Fixtures.clientSecret)) $ throwError InvalidAuthData
+  pure
+    API.TokenRes
+      { token = Fixtures.token
+      }

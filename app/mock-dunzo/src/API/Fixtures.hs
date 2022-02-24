@@ -8,11 +8,10 @@ import qualified "fmd-wrapper" Types.Common as Common
 
 verifyToken :: (Log m, MonadThrow m) => Maybe Common.Token -> Maybe Common.ClientId -> m ()
 verifyToken mToken mClientId = do
-  case mToken of
-    Nothing -> throwError $ TokenNotFound ""
-    Just currToken@(Common.Token txtToken) -> do
-      when (currToken /= token) $ throwError (InvalidToken txtToken)
-      when (mClientId /= Just clientId) $ throwError InvalidAuthData
+  currToken@(Common.Token txtToken) <- pure mToken >>= fromMaybeM (TokenNotFound "")
+  unless (currToken == token) $ throwError (InvalidToken txtToken)
+  currClientId <- pure mClientId >>= fromMaybeM (InvalidRequest "client-id header is not provided")
+  unless (currClientId == clientId) $ throwError InvalidAuthData
 
 clientId :: Common.ClientId
 clientId = Common.ClientId "mock-client-id"
@@ -36,3 +35,11 @@ eta2 =
     { pickup = Just 2.6,
       dropoff = 35.7
     }
+
+minLat, maxLat, minLng, maxLng, distanceCoefficient, priceCoefficient :: Double
+minLat = 12.73
+maxLat = 13.24
+minLng = 77.37
+maxLng = 77.82
+distanceCoefficient = 166.2
+priceCoefficient = 1960.2

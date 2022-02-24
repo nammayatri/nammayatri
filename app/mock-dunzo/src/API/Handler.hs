@@ -7,13 +7,11 @@ import qualified API.TaskStatus.Handler as TaskStatus
 import qualified API.Token.Handler as Token
 import qualified API.Types as API
 import App.Types
-import Beckn.Prelude
 import Servant
 
 handler :: FlowServer API.API
 handler =
-  pure "Hello, world!"
-    :<|> Token.handler
+  Token.handler
     :<|> Quote.handler
     :<|> CreateTask.handler
     :<|> TaskStatus.handler
