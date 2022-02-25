@@ -79,7 +79,7 @@ type MonadHandler m =
     Log m
   )
 
-data BTMMetricsHandle m = BTMMetricsHandle
+data AllocatorMetricsHandle m = AllocatorMetricsHandle
   { incrementTaskCounter :: m (),
     incrementFailedTaskCounter :: m (),
     putTaskDuration :: Milliseconds -> m (),
@@ -113,7 +113,7 @@ data ServiceHandle m = ServiceHandle
     removeRequest :: Id SRR.RideRequest -> m (),
     logEvent :: AllocationEventType -> Id SRB.RideBooking -> m (),
     logDriverEvents :: AllocationEventType -> Id SRB.RideBooking -> NonEmpty (Id Driver) -> m (),
-    metrics :: BTMMetricsHandle m
+    metrics :: AllocatorMetricsHandle m
   }
 
 process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer -> m Int

@@ -41,7 +41,7 @@ runAppBackend' appCfg = do
   let settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown . shutdownAction appEnv)
+          & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (releaseAppEnv appEnv))
           & setPort (appCfg.port)
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
@@ -62,7 +62,3 @@ runAppBackend' appCfg = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
     runSettings settings $ App.run (App.EnvR flowRt' appEnv)
-  where
-    shutdownAction appEnv closeSocket = do
-      releaseAppEnv appEnv
-      closeSocket

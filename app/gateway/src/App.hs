@@ -44,7 +44,7 @@ runGateway configModifier = do
       settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appCfg.graceTerminationPeriod)
-          & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown . shutdownAction appEnv)
+          & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (releaseAppEnv appEnv))
           & setPort port
   let redisCfg = appCfg.redisCfg
   E.withFlowRuntime (Just loggerRt) $ \flowRt -> do
@@ -65,7 +65,3 @@ runGateway configModifier = do
         logInfo ("Runtime created. Starting server at port " <> show port)
         return $ flowRt {R._httpClientManagers = managers}
     runSettings settings $ run (App.EnvR flowRt' appEnv)
-  where
-    shutdownAction appEnv closeSocket = do
-      releaseAppEnv appEnv
-      closeSocket

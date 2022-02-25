@@ -1,6 +1,5 @@
 module Resources where
 
-import qualified App.BackgroundTaskManager.Types as BecknTransport
 import qualified "app-backend" App.Types as BecknApp
 import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Utils.Dhall (readDhallConfig)

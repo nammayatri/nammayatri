@@ -1,15 +1,16 @@
 module Storage.Queries.DriverInformation where
 
 import Beckn.External.Encryption (getDbHash)
+import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.Storage.Common as Storage
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common
-import Database.Beam ((&&.), (<-.), (==.))
-import qualified Database.Beam as B
+import Database.Beam as B
 import EulerHS.Prelude hiding (id)
+import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
 import Types.App
 import qualified Types.Storage.DB as DB
@@ -147,3 +148,18 @@ findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
       B.lower_ (B.concat_ [unMaybe firstName, B.val_ " ", unMaybe middleName, B.val_ " ", unMaybe lastName]) `B.like_` B.lower_ likeSearchStr
         B.||. mobileNumber.hash B.==. B.val_ (Just searchStrDBHash)
     unMaybe = B.maybe_ (B.val_ "") identity
+
+-- TODO: consider placement of such mixed functions
+getDriversWithOutdatedLocations :: DBFlow m r => UTCTime -> m [(Id Person.Person, Maybe FCMRecipientToken)]
+getDriversWithOutdatedLocations before = do
+  drInfoT <- getDbTable
+  drLocT <- DrLoc.getDbTable
+  personT <- QPerson.getDbTable
+  map snd <$> DB.findAllByJoin (orderBy_ (asc_ . fst)) do
+    drInfo <- all_ drInfoT
+    guard_ drInfo.active
+    drLoc <- join_ drLocT \loc ->
+      loc.driverId ==. drInfo.driverId
+        &&. loc.updatedAt <. val_ before
+    person <- join_ personT \pers -> pers.id ==. drInfo.driverId
+    pure (drLoc.updatedAt, (person.id, person.deviceToken))

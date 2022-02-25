@@ -7,7 +7,7 @@ import Beckn.Types.Cache (CacheKey)
 import Beckn.Types.Time
 import Beckn.Utils.MVar
 import Beckn.Utils.Time
-import Control.Concurrent (ThreadId)
+import Control.Concurrent (ThreadId, forkIO)
 import qualified Data.Map as Map
 
 newtype CacheMVar a = CacheMVar {cache :: MVar (Map.Map (CacheKey a) a)}
@@ -99,7 +99,7 @@ cacheRemover cache rmQueue = forever do
       let (map snd . Map.toList -> less, eq, greater) = Map.splitLookup now queue
        in (greater, maybe less (: less) eq)
   modifyMVar_' cache (`Map.difference` Map.fromList (map (,()) toRemove))
-  liftIO . threadDelay . getMicroseconds $ secondsToMs cacheDelay
+  liftIO . threadDelay . getMicroseconds $ secondsToMcs cacheDelay
 
 cacheDelay :: Seconds
 cacheDelay = 5

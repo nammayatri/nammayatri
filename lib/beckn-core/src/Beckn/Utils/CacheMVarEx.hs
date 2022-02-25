@@ -28,7 +28,7 @@ cacheRemover cacheAccessor = forever do
       let (map snd . Map.toList -> less, eq, greater) = Map.splitLookup now queue
        in (greater, maybe less (: less) eq)
   modifyMVar_' cache (`Map.difference` Map.fromList (map (,()) toRemove))
-  liftIO . threadDelay . getMicroseconds $ secondsToMs cacheDelay
+  liftIO . threadDelay . getMicroseconds $ secondsToMcs cacheDelay
 
 cacheDelay :: Seconds
 cacheDelay = 5

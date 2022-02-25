@@ -2,10 +2,11 @@
 
 apps () {
 cat << EOF
+allocation-service
 app-backend
 beckn-gateway
 beckn-transport
-beckn-transport-btm
+driver-healthcheck
 mock-fcm
 mock-registry
 mock-sms

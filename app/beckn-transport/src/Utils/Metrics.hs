@@ -17,32 +17,32 @@ import qualified Types.Metrics as Metric
 import Types.Storage.Organization
 import Utils.Common (Forkable (fork), MonadFlow)
 
-incrementTaskCounter :: Metric.HasBTMMetrics m r => m ()
+incrementTaskCounter :: Metric.HasAllocatorMetrics m r => m ()
 incrementTaskCounter = do
   bmContainer <- asks (.btmMetrics)
   incrementTaskCounter' bmContainer
 
-incrementFailedTaskCounter :: Metric.HasBTMMetrics m r => m ()
+incrementFailedTaskCounter :: Metric.HasAllocatorMetrics m r => m ()
 incrementFailedTaskCounter = do
   bmContainer <- asks (.btmMetrics)
   incrementFailedTaskCounter' bmContainer
 
-putTaskDuration :: Metric.HasBTMMetrics m r => Milliseconds -> m ()
+putTaskDuration :: Metric.HasAllocatorMetrics m r => Milliseconds -> m ()
 putTaskDuration duration = do
   bmContainer <- asks (.btmMetrics)
   putTaskDuration' bmContainer duration
 
-incrementTaskCounter' :: L.MonadFlow m => Metric.BTMMetricsContainer -> m ()
+incrementTaskCounter' :: L.MonadFlow m => Metric.AllocatorMetricsContainer -> m ()
 incrementTaskCounter' bmContainer = do
   let taskCounter = bmContainer.taskCounter
   L.runIO $ P.incCounter taskCounter
 
-incrementFailedTaskCounter' :: L.MonadFlow m => Metric.BTMMetricsContainer -> m ()
+incrementFailedTaskCounter' :: L.MonadFlow m => Metric.AllocatorMetricsContainer -> m ()
 incrementFailedTaskCounter' bmContainer = do
   let failedTaskCounter = bmContainer.failedTaskCounter
   L.runIO $ P.incCounter failedTaskCounter
 
-putTaskDuration' :: L.MonadFlow m => Metric.BTMMetricsContainer -> Milliseconds -> m ()
+putTaskDuration' :: L.MonadFlow m => Metric.AllocatorMetricsContainer -> Milliseconds -> m ()
 putTaskDuration' bmContainer duration = do
   let taskDuration = bmContainer.taskDuration
   L.runIO $ P.observe taskDuration . (/ 1000) . fromIntegral $ duration

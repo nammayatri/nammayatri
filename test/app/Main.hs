@@ -10,18 +10,21 @@ import qualified "fmd-wrapper" App as FmdWrapper
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-registry" App as MockRegistry
 import qualified "mock-sms" App as MockSms
+import qualified "beckn-transport" App.Allocator as Allocator
+import qualified "beckn-transport" App.DriverTrackingHealthcheck as DriverHC
 import qualified "app-backend" App.Types as AppBackend
 import qualified "beckn-transport" App.Types as TransporterBackend
 import qualified "fmd-wrapper" App.Types as FmdWrapper
-import qualified "beckn-transport" BackgroundTaskManager as TransporterBGTM
 import Beckn.Exit (exitDBMigrationFailure)
 import qualified Beckn.Storage.Esqueleto.Migration as Esq
+import Beckn.Types.Logging (LoggerConfig)
 import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Migration (migrateIfNeeded)
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified FmdWrapper.Spec as FmdWrapper
+import GHC.Records.Extra (HasField)
 import qualified Mobility.Spec as Mobility
 import Resources
 import System.Environment as Env (setEnv)
@@ -37,10 +40,11 @@ main = do
   -- Set some config paths in environment...
   mapM_
     setConfigEnv
-    [ "app-backend",
-      "beckn-transport",
-      "beckn-transport-btm",
+    [ "allocation-service",
+      "app-backend",
       "beckn-gateway",
+      "beckn-transport",
+      "driver-tracking-healthcheck-service",
       "fmd-wrapper",
       "mock-registry"
     ]
@@ -75,35 +79,22 @@ specs = do
       )
   where
     allServers =
-      [ TransporterBGTM.runBackgroundTaskManager $ \cfg ->
-          cfg & #appCfg . #loggerConfig . #logToConsole .~ False
-            & #appCfg . #loggerConfig . #logRawSql .~ False
-            & #driverAllocationConfig . #driverNotificationExpiry .~ 18
-            & #driverAllocationConfig . #rideAllocationExpiry .~ 18,
-        Gateway.runGateway $ \cfg ->
-          cfg & #loggerConfig . #logToConsole .~ False
-            & #loggerConfig . #logRawSql .~ False,
+      [ Allocator.runAllocator \cfg ->
+          cfg & hideLogging
+            & #driverNotificationExpiry .~ 18
+            & #rideAllocationExpiry .~ 18,
+        DriverHC.runDriverHealthcheck hideLogging,
+        Gateway.runGateway hideLogging,
         AppBackend.runAppBackend $
           \cfg ->
-            cfg & #loggerConfig . #logToConsole .~ False
-              & #loggerConfig . #logRawSql .~ False
+            cfg & hideLogging
               & #geofencingConfig . #origin .~ Regions ["Ernakulam", "Kochi"]
               & #geofencingConfig . #destination .~ Regions ["Kerala", "Kochi"],
-        TransporterBackend.runTransporterBackendApp $ \cfg ->
-          cfg & #loggerConfig . #logToConsole .~ False
-            & #loggerConfig . #logRawSql .~ False,
-        FmdWrapper.runFMDWrapper $ \cfg ->
-          cfg & #loggerConfig . #logToConsole .~ False
-            & #loggerConfig . #logRawSql .~ False,
-        MockSms.runMockSms $
-          (#loggerConfig . #logToConsole .~ False)
-            . (#loggerConfig . #logRawSql .~ False),
-        MockFcm.runMockFcm $
-          (#loggerConfig . #logToConsole .~ False)
-            . (#loggerConfig . #logRawSql .~ False),
-        MockRegistry.runRegistryService $
-          (#loggerConfig . #logToConsole .~ False)
-            . (#loggerConfig . #logRawSql .~ False)
+        TransporterBackend.runTransporterBackendApp hideLogging,
+        FmdWrapper.runFMDWrapper hideLogging,
+        MockSms.runMockSms hideLogging,
+        MockFcm.runMockFcm hideLogging,
+        MockRegistry.runRegistryService hideLogging
       ]
 
     startServers servers = do
@@ -129,3 +120,11 @@ specs = do
       (fmdCfg :: FmdWrapper.AppCfg) <- readDhallConfigDefault "fmd-wrapper"
       migrateIfNeeded (fmdCfg.migrationPath) (fmdCfg.dbCfg) True
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate fmd-wrapper database: "
+
+hideLogging :: HasField "loggerConfig" cfg LoggerConfig => cfg -> cfg
+hideLogging cfg =
+  cfg{loggerConfig =
+        cfg.loggerConfig
+          & #logToConsole .~ False
+          & #logRawSql .~ False
+     }

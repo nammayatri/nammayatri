@@ -23,6 +23,7 @@ import Data.Aeson
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.HashMap.Strict as HMS
+import qualified Data.List.NonEmpty as NE
 import Data.Scientific
 import qualified Data.Text as Text (Text, pack, unpack)
 import qualified Data.Time as Time
@@ -187,15 +188,21 @@ instance PrettyShow BaseUrl where
 instance PrettyShow Iso8601Time where
   prettyShow = LStr . show
 
+instance (PrettyShow a, PrettyShow b) => PrettyShow (a, b)
+
 instance (PrettyShow a, PrettyShow b) => PrettyShow (Either a b)
 
 instance (PrettyShow a) => PrettyShow [a] where
   prettyShow [] = LEmpty
-  prettyShow xs =
-    LLay "{Array}" $ Layout $ foldr f [] $ zip [0 :: Int ..] xs
-    where
-      f (n, x) acc =
-        LayoutUnit (encloseSq $ show n) (prettyShow x) : acc
+  prettyShow xs = prettyShowListLike "[]" xs
+
+instance (PrettyShow a) => PrettyShow (NE.NonEmpty a) where
+  prettyShow = prettyShowListLike "NonEmpty" . NE.toList
+
+prettyShowListLike :: PrettyShow a => String -> [a] -> LayoutValue
+prettyShowListLike t = LLay (enclose t) . Layout . zipWith f [0 :: Int ..]
+  where
+    f n x = LayoutUnit (encloseSq $ show n) (prettyShow x)
 
 instance PrettyShow (IO a) where
   prettyShow _ = LStr "<IO action>"

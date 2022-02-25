@@ -92,7 +92,7 @@ runServer appEnv serverAPI serverHandler waiMiddleware waiSettings servantCtx se
   let settings =
         defaultSettings
           & setGracefulShutdownTimeout (Just $ getSeconds appEnv.config.graceTerminationPeriod)
-          & setInstallShutdownHandler (\io -> handleShutdown appEnv.isShuttingDown (shutdownAction appEnv >> io))
+          & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (shutdownAction appEnv))
           & setPort port
           & waiSettings
   let server = withModifiedEnv $ \modifiedEnv ->

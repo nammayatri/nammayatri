@@ -1,6 +1,6 @@
 module Services.Allocation.Internal where
 
-import App.BackgroundTaskManager.Types (DriverAllocationConfig)
+import App.Allocator.Environment (Flow)
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
@@ -38,25 +38,25 @@ import Utils.Common
 import Utils.Notifications
 import qualified Utils.Notifications as Notify
 
-getDriverSortMode :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m SortMode
-getDriverSortMode = asks (.driverAllocationConfig.defaultSortMode)
+getDriverSortMode :: Flow SortMode
+getDriverSortMode = askConfig (.defaultSortMode)
 
-getConfiguredNotificationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Seconds
-getConfiguredNotificationTime = asks (.driverAllocationConfig.driverNotificationExpiry)
+getConfiguredNotificationTime :: Flow Seconds
+getConfiguredNotificationTime = askConfig (.driverNotificationExpiry)
 
-getConfiguredAllocationTime :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Seconds
-getConfiguredAllocationTime = asks (.driverAllocationConfig.rideAllocationExpiry)
+getConfiguredAllocationTime :: Flow Seconds
+getConfiguredAllocationTime = askConfig (.rideAllocationExpiry)
 
-getConfiguredReallocationsLimit :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Int
-getConfiguredReallocationsLimit = fromIntegral <$> asks (.driverAllocationConfig.reallocationsLimit)
+getConfiguredReallocationsLimit :: Flow Int
+getConfiguredReallocationsLimit = askConfig (.reallocationsLimit)
 
-getDriverPool :: (DBFlow m r, HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]) => Id RideBooking -> m [Id Driver]
+getDriverPool :: Id RideBooking -> Flow [Id Driver]
 getDriverPool = DrPool.getDriverPool
 
-getDriverBatchSize :: HasFlowEnv m r '["driverAllocationConfig" ::: DriverAllocationConfig] => m Int
-getDriverBatchSize = asks (.driverAllocationConfig.driverBatchSize)
+getDriverBatchSize :: Flow Int
+getDriverBatchSize = askConfig (.driverBatchSize)
 
-getRequests :: DBFlow m r => ShortId Organization -> Integer -> m [RideRequest]
+getRequests :: ShortId Organization -> Integer -> Flow [RideRequest]
 getRequests shortOrgId numRequests = do
   allRequests <- QRR.fetchOldest shortOrgId numRequests
   let (errors, requests) =
@@ -65,15 +65,9 @@ getRequests shortOrgId numRequests = do
   pure requests
 
 assignDriver ::
-  ( DBFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    FCMFlow m r,
-    CoreMetrics m
-  ) =>
   Id RideBooking ->
   Id Driver ->
-  m ()
+  Flow ()
 assignDriver rideBookingId driverId = do
   rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingDoesNotExist
   driver <-
@@ -149,9 +143,8 @@ toRideRequest req =
           Nothing -> Left $ "Error decoding driver response: " <> show req.info
 
 getCurrentNotifications ::
-  DBFlow m r =>
   Id RideBooking ->
-  m [CurrentNotification]
+  Flow [CurrentNotification]
 getCurrentNotifications rideBookingId = do
   notificationStatuses <- QNS.findActiveNotificationByRBId rideBookingId
   pure $ map buildCurrentNotification notificationStatuses
@@ -161,17 +154,13 @@ getCurrentNotifications rideBookingId = do
         (notificationStatus.driverId)
         (notificationStatus.expiresAt)
 
-cleanupOldNotifications :: DBFlow m r => m Int
+cleanupOldNotifications :: Flow Int
 cleanupOldNotifications = QNS.cleanupOldNotifications
 
 sendNewRideNotifications ::
-  ( DBFlow m r,
-    FCMFlow m r,
-    CoreMetrics m
-  ) =>
   Id RideBooking ->
   NonEmpty (Id Driver) ->
-  m ()
+  Flow ()
 sendNewRideNotifications rideBookingId = traverse_ sendNewRideNotification
   where
     sendNewRideNotification driverId = do
@@ -182,13 +171,9 @@ sendNewRideNotifications rideBookingId = traverse_ sendNewRideNotification
       notifyDriverNewAllocation rideBooking.id person.id person.deviceToken
 
 sendRideNotAssignedNotification ::
-  ( DBFlow m r,
-    FCMFlow m r,
-    CoreMetrics m
-  ) =>
   Id RideBooking ->
   Id Driver ->
-  m ()
+  Flow ()
 sendRideNotAssignedNotification rideBookingId driverId = do
   rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
   person <-

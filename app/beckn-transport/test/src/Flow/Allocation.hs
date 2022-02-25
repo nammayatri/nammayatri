@@ -186,7 +186,7 @@ handle repository@Repository {..} =
       logEvent = \_ _ -> pure (),
       logDriverEvents = \_ _ _ -> pure (),
       metrics =
-        BTMMetricsHandle
+        AllocatorMetricsHandle
           { incrementTaskCounter = return (),
             incrementFailedTaskCounter = return (),
             putTaskDuration = \_ -> return (),

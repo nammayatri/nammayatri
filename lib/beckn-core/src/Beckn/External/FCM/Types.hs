@@ -11,6 +11,7 @@ module Beckn.External.FCM.Types where
 import Beckn.Storage.Esqueleto (PersistField, PersistFieldSql)
 import Beckn.Types.App
 import Beckn.Types.Field ((:::))
+import Beckn.Utils.GenericPretty
 import Beckn.Utils.TH
 import Beckn.Utils.Text (decodeFromText, encodeToText)
 import Control.Lens.TH
@@ -32,8 +33,7 @@ data FCMNotificationRecipient = FCMNotificationRecipient
 newtype FCMRecipientToken = FCMRecipientToken
   { getFCMRecipientToken :: Text
   }
-  deriving stock (Show)
-  deriving newtype (PersistField, PersistFieldSql)
+  deriving newtype (PersistField, PersistFieldSql, Show, PrettyShow)
 
 deriveIdentifierInstances ''FCMRecipientToken
 
@@ -72,17 +72,16 @@ deriveIdentifierInstances ''FCMNotificationIconUrl
 -- | Notification types
 data FCMNotificationType
   = REGISTRATION_APPROVED
-  | TRACKING_CALLBACK
   | EXPIRED_CASE
   | CANCELLED_PRODUCT
   | REALLOCATE_PRODUCT
   | DRIVER_ASSIGNMENT
-  | DRIVER_UNASSIGNED
   | TRIP_STARTED
   | TRIP_FINISHED
   | ALLOCATION_REQUEST
   | ALLOCATION_REQUEST_UNASSIGNED
   | ACCOUNT_DISABLED
+  | PING
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Entity types types

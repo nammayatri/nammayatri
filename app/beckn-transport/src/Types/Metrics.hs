@@ -1,10 +1,10 @@
 module Types.Metrics
-  ( HasBTMMetrics,
+  ( HasAllocatorMetrics,
     HasBPPMetrics,
-    BTMMetricsContainer (..),
+    AllocatorMetricsContainer (..),
     BPPMetricsContainer (..),
     module CoreMetrics,
-    registerBTMMetricsContainer,
+    registerAllocatorMetricsContainer,
     registerTransporterMetricsContainer,
     TransporterMetricsContainer (..),
     HasTransporterMetrics,
@@ -17,7 +17,7 @@ import EulerHS.Prelude
 import Prometheus as P
 import Utils.Common
 
-type HasBTMMetrics m r = (HasFlowEnv m r '["btmMetrics" ::: BTMMetricsContainer])
+type HasAllocatorMetrics m r = (HasFlowEnv m r '["btmMetrics" ::: AllocatorMetricsContainer])
 
 type HasBPPMetrics m r = (HasFlowEnv m r '["bppMetrics" ::: BPPMetricsContainer])
 
@@ -27,7 +27,7 @@ type TaskDurationMetric = P.Histogram
 
 type FailedTaskCounterMetric = P.Counter
 
-data BTMMetricsContainer = BTMMetricsContainer
+data AllocatorMetricsContainer = AllocatorMetricsContainer
   { taskCounter :: TaskCounterMetric,
     taskDuration :: TaskDurationMetric,
     failedTaskCounter :: FailedTaskCounterMetric
@@ -40,12 +40,12 @@ data BPPMetricsContainer = BPPMetricsContainer
     searchDuration :: SearchDurationMetric
   }
 
-registerBTMMetricsContainer :: IO BTMMetricsContainer
-registerBTMMetricsContainer = do
+registerAllocatorMetricsContainer :: IO AllocatorMetricsContainer
+registerAllocatorMetricsContainer = do
   taskCounter <- registerTaskCounter
   taskDuration <- registerTaskDurationMetric
   failedTaskCounter <- registerFailedTaskCounter
-  return $ BTMMetricsContainer {..}
+  return $ AllocatorMetricsContainer {..}
 
 registerTaskCounter :: IO TaskCounterMetric
 registerTaskCounter = P.register . P.counter $ P.Info "BTM_task_count" ""

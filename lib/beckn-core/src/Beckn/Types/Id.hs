@@ -6,7 +6,7 @@ module Beckn.Types.Id where
 import Beckn.Types.GuidLike
 import Beckn.Types.MonadGuid
 import Beckn.Utils.Example (Example (..), idExample)
-import Beckn.Utils.GenericPretty (PrettyShow)
+import Beckn.Utils.GenericPretty
 import Data.OpenApi (ToParamSchema, ToSchema)
 import qualified Data.Text as Text
 import Database.Beam.Backend.SQL

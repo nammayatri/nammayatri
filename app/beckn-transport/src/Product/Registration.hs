@@ -124,8 +124,8 @@ resend tokenId = withFlowHandlerAPI $ do
   SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
-  smsCfg <- smsCfg <$> ask
-  otpSmsTemplate <- otpSmsTemplate <$> ask
+  smsCfg <- asks (.smsCfg)
+  otpSmsTemplate <- asks (.otpSmsTemplate)
   mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   withLogTag ("personId_" <> entityId) $

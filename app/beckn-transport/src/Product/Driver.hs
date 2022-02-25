@@ -61,8 +61,8 @@ createDriver admin req = withFlowHandlerAPI $ do
   decPerson <- decrypt person
   let mobNum = personEntity.mobileNumber
       mobCounCode = personEntity.mobileCountryCode
-  smsCfg <- smsCfg <$> ask
-  inviteSmsTemplate <- inviteSmsTemplate <$> ask
+  smsCfg <- asks (.smsCfg)
+  inviteSmsTemplate <- asks (.inviteSmsTemplate)
   sendInviteSms smsCfg inviteSmsTemplate (mobCounCode <> mobNum) (org.name)
     >>= SF.checkRegistrationSmsResult
   let personAPIEntity = SP.makePersonAPIEntity decPerson

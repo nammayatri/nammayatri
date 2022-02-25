@@ -110,10 +110,10 @@ instance MonadGuid (FlowR r) where
   generateGUIDText = FlowR L.generateGUID
 
 instance (Log (FlowR r), CoreMetrics (FlowR r)) => Forkable (FlowR r) where
-  fork desc f = do
-    FlowR $ ReaderT $ L.forkFlow desc . runReaderT (unFlowR $ handleExc f)
+  fork tag f = do
+    FlowR $ ReaderT $ L.forkFlow tag . runReaderT (unFlowR $ handleExc f)
     where
       handleExc = try >=> (`whenLeft` err)
       err (e :: SomeException) = do
-        logError $ "Thread " <> show desc <> " died with error: " <> makeLogSomeException e
+        logError $ "Thread " <> show tag <> " died with error: " <> makeLogSomeException e
         incrementErrorCounter "FORKED_THREAD_ERROR" e

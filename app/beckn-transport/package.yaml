@@ -116,8 +116,19 @@ executables:
     dependencies:
       - beckn-transport
       - beckn-core
-  beckn-transport-btm-exe:
-    main: BackgroundTaskManagerMain.hs
+  allocation-service-exe:
+    main: AllocationServiceMain.hs
+    source-dirs: server
+    other-modules: []
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+    dependencies:
+      - beckn-transport
+      - beckn-core
+  driver-tracking-healthcheck-exe:
+    main: DriverTrackingHealthcheckMain.hs
     source-dirs: server
     other-modules: []
     ghc-options:

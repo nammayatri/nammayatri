@@ -12,6 +12,8 @@ module Beckn.Storage.Redis.Queries
     getKeyRedisText,
     tryLockRedis,
     unlockRedis,
+    lpush,
+    rpop,
   )
 where
 
@@ -25,7 +27,7 @@ import qualified Data.Text.Encoding as DTE
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 
-runKV :: (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) => L.KVDB a -> m a
+runKV :: forall a m. (HasCallStack, L.MonadFlow m, MonadThrow m, Log m) => L.KVDB a -> m a
 runKV = L.runKVDB "redis" >=> fromEitherM RedisError
 
 -- KV
@@ -184,3 +186,13 @@ unlockRedis key = do
 
 buildLockResourceName :: (IsString a) => Text -> a
 buildLockResourceName key = fromString $ "beckn:locker:" <> DT.unpack key
+
+lpush :: (HasCallStack, L.MonadFlow m, MonadThrow m, Log m, ToJSON a) => Text -> NonEmpty a -> m ()
+lpush key list =
+  void . runKV @Integer . L.rawRequest $
+    ["LPUSH", DTE.encodeUtf8 key] <> map (BSL.toStrict . A.encode) (toList list)
+
+rpop :: (HasCallStack, L.MonadFlow m, MonadThrow m, Log m, FromJSON a) => Text -> m (Maybe a)
+rpop key =
+  L.runKVDB "redis" (L.rawRequest ["RPOP", DTE.encodeUtf8 key])
+    <&> (join . rightToMaybe >=> A.decode . BSL.fromStrict)

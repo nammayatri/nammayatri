@@ -60,8 +60,8 @@ measuringDurationToLog logLevel fname = tabs . measuringDuration $ \duration _ -
 millisecondsToMicroseconds :: Milliseconds -> Microseconds
 millisecondsToMicroseconds (Milliseconds mill) = Microseconds $ mill * 1000
 
-secondsToMs :: Seconds -> Microseconds
-secondsToMs (Seconds s) = Microseconds (s * 1000000)
+secondsToMcs :: Seconds -> Microseconds
+secondsToMcs (Seconds s) = Microseconds (s * 1000000)
 
 nominalDiffTimeToSeconds :: NominalDiffTime -> Seconds
 nominalDiffTimeToSeconds = round . Time.nominalDiffTimeToSeconds

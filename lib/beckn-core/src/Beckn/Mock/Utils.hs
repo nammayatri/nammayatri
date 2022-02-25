@@ -21,9 +21,6 @@ import System.Random
 readUTCTime :: Text -> Maybe UTCTime
 readUTCTime = parseTimeM True defaultTimeLocale "%F %R" . T.unpack
 
-rightToMaybe :: Either e a -> Maybe a
-rightToMaybe = either (const Nothing) Just
-
 textToError :: Text -> Error
 textToError desc =
   Error

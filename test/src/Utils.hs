@@ -1,7 +1,7 @@
 module Utils where
 
-import qualified App.BackgroundTaskManager.Types as BecknTransport
 import qualified "app-backend" App.Types as BecknApp
+import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Flow
 import Beckn.Utils.Common
 import EulerHS.Prelude

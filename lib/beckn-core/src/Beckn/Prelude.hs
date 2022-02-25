@@ -1,7 +1,7 @@
 module Beckn.Prelude (module E, module Beckn.Prelude) where
 
 import Control.Arrow as E
-import Control.Concurrent as E (forkIO, threadDelay)
+import qualified Control.Concurrent as Conc
 import Control.Exception as E (SomeException)
 import Control.Exception.Safe as E (try)
 import Control.Monad.Catch as E
@@ -62,3 +62,9 @@ parseBaseUrl = Servant.parseBaseUrl . T.unpack
 
 whileM :: Monad m => m Bool -> m () -> m ()
 whileM b f = whenM b $ f >> whileM b f
+
+threadDelay :: MonadIO m => Int -> m ()
+threadDelay = liftIO . Conc.threadDelay
+
+rightToMaybe :: Either e a -> Maybe a
+rightToMaybe = either (const Nothing) Just
