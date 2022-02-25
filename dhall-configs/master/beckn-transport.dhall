@@ -73,7 +73,7 @@ in
 , bgtmPort = +8114
 , metricsPort = +9999
 , hostName = "juspay.in"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/latest/bpp/cab/v1"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/bpp/cab/v1"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , caseExpiry = Some +7200

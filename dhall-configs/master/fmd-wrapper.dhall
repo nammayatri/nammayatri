@@ -38,7 +38,6 @@ let rcfg =
 let dunzoConfig =
   { dzUrl = "https://apis-staging.dunzo.in/"
   , dzTokenUrl = "https://apis-staging.dunzo.in/"
-  , dzBPNwAddress = "https://api.sandbox.beckn.juspay.in/dev/fmd/v1/"
   , payee = sec.payee
   , dzTestMode = True
   , dzQuotationTTLinMin = +10

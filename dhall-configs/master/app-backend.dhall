@@ -98,12 +98,12 @@ in
 , hostName = "juspay.in"
 , exotelCallbackUrl = "https://api.sandbox.beckn.juspay.in/latest/bap/v2/"
 , bapSelfIds =
-  { cabs = "api.sandbox.beckn.juspay.in/latest/bap/cab/v1"
-  , metro = "api.sandbox.beckn.juspay.in/latest/bap/metro/v1"
+  { cabs = "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"
+  , metro = "api.sandbox.beckn.juspay.in/dev/bap/metro/v1"
   }
 , bapSelfURIs =
-  { cabs = "https://api.sandbox.beckn.juspay.in/latest/bap/cab/v1/"
-  , metro = "https://api.sandbox.beckn.juspay.in/latest/bap/metro/v1/"
+  { cabs = "https://api.sandbox.beckn.juspay.in/dev/bap/cab/v1/"
+  , metro = "https://api.sandbox.beckn.juspay.in/dev/bap/metro/v1/"
   }
 , bapSelfUniqueKeyIds =
   { cabs = "19"

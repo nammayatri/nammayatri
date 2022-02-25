@@ -21,7 +21,7 @@ let rcfg =
   }
 
 let nsdlGatewayUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
-let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/latest/gateway/v1"
+let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/dev/gateway/v1"
 
 in
 { esqDBCfg = esqDBCfg

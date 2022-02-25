@@ -21,6 +21,6 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/"
    , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"
-   , registryUrl = "https://api.sandbox.beckn.juspay.in/latest/registry"
+   , registryUrl = "https://api.sandbox.beckn.juspay.in/dev/registry"
    , authServiceUrl = "http://beckn-app-backend-master.atlas:8013"
    }
