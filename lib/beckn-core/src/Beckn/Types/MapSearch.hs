@@ -9,6 +9,7 @@ module Beckn.Types.MapSearch
 where
 
 import Beckn.Types.App (Value)
+import Beckn.Utils.GenericPretty (PrettyShow)
 import Control.Lens.Operators
 import Data.Geospatial
 import Data.LineString
@@ -19,7 +20,7 @@ data LatLong = LatLong
   { lat :: Double,
     lon :: Double
   }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema, PrettyShow)
 
 data TravelMode = CAR | MOTORCYCLE | BICYCLE | FOOT
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)

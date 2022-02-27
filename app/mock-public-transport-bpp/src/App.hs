@@ -7,7 +7,7 @@ import API.Confirm
 import API.Search
 import API.Status
 import API.Types
-import Beckn.Mock.App
+import Beckn.Mock.App hiding (runMock)
 import Beckn.Utils.App (logRequestAndResponseGeneric)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import Beckn.Utils.Logging

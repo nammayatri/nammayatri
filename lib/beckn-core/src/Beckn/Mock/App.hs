@@ -33,6 +33,9 @@ run _ server env = serve proxyApi $ hoistServer proxyApi f (healthCheckServer :<
 newtype MockM e a = MockM {runMockM :: ReaderT e IO a}
   deriving newtype (Functor, Applicative, Monad, MonadReader e, MonadIO, MonadUnliftIO, C.MonadThrow, C.MonadCatch, C.MonadMask)
 
+runMock :: e -> MockM e a -> IO a
+runMock env action = runReaderT (runMockM action) env
+
 instance MonadTime (MockM e) where
   getCurrentTime = liftIO getCurrentTime
 
@@ -42,6 +45,9 @@ instance (HasLog e) => Log (MockM e) where
 
 instance (HasLog e) => Forkable (MockM e) where
   fork = mockFork
+
+instance MonadGuid (MockM e) where
+  generateGUIDText = liftIO generateGUIDTextIO
 
 mockFork :: (HasLog e) => Text -> MockM e a -> MockM e ()
 mockFork tag action = void $

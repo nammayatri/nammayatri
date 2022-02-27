@@ -1,0 +1,12 @@
+###
+
+# @name getPlaceName
+GET {{transporter-host}}/googleMaps/getPlaceName?latlng=9.936007187830079,76.37624065846641
+token: {{driver-token}}
+
+###
+# @name testSnapToRoad
+GET https://roads.googleapis.com/v1/snapToRoads
+  ?interpolate=true
+  &path=-35.27801%2C149.12958%7C-35.28032%2C149.12907%7C-35.28099%2C149.12929%7C-35.28144%2C149.12984%7C-35.28194%2C149.13003%7C-35.28282%2C149.12956%7C-35.28302%2C149.12881%7C-35.28473%2C149.12836
+  &key=YOUR_API_KEY

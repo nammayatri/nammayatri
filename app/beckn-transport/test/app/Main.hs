@@ -12,13 +12,17 @@ import Flow.Allocation.TwoAllocations
 import Flow.RideAPI.CancelRide (cancelRide)
 import Flow.RideAPI.EndRide (endRideTests)
 import Flow.RideAPI.StartRide (startRide)
+import qualified LocationUpdates as LocUpd
 import Test.Tasty
 
 main :: IO ()
-main = defaultMain =<< specs
+main = do
+  LocUpd.wrapTests (specs >=> defaultMain)
 
-specs :: IO TestTree
-specs = do
+--  wrapTests $ \appEnv -> defaultMain $ locationUpdatesTree appEnv
+
+specs :: LocUpd.AppEnv -> IO TestTree
+specs appEnv = do
   let rideAPI = testGroup "Ride API" [startRide, endRideTests, cancelRide]
   let allocations =
         testGroup
@@ -36,5 +40,6 @@ specs = do
       [ fareCalculator,
         allocations,
         rideAPI,
-        distanceCalculation
+        distanceCalculation,
+        LocUpd.locationUpdatesTree appEnv
       ]

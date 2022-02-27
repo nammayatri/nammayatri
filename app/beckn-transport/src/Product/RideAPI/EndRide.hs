@@ -10,6 +10,7 @@ import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP
 import qualified Product.FareCalculator.Interpreter as Fare
 import qualified Product.RideAPI.Handlers.EndRide as Handler
+import SharedLogic.LocationUpdates
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.DriverStats as DriverStats
@@ -41,7 +42,8 @@ endRide personId rideId = withFlowHandlerAPI $ do
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
           getKeyRedis = Redis.getKeyRedis,
-          updateLocationAllowedDelay = askConfig (.updateLocationAllowedDelay) <&> fromIntegral
+          updateLocationAllowedDelay = askConfig (.updateLocationAllowedDelay) <&> fromIntegral,
+          recalcDistanceEnding = recalcDistanceBatches defaultRideInterpolationHandler True
         }
 
 endRideTransaction :: DBFlow m r => Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m ()

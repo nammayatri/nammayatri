@@ -16,6 +16,8 @@ import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
+import Beckn.Storage.Hedis.AppPrefixes (becknTransportPrefix)
+import Beckn.Storage.Hedis.Config
 import Beckn.Types.App
 import Beckn.Types.Cache
 import Beckn.Types.Common
@@ -40,6 +42,7 @@ data AppCfg = AppCfg
   { dbCfg :: DBConfig,
     esqDBCfg :: EsqDBConfig,
     redisCfg :: T.RedisConfig,
+    hcfg :: HedisCfg,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     inviteSmsTemplate :: Text,
@@ -111,13 +114,16 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
     kafkaProducerTools :: KafkaProducerTools,
-    kafkaEnvs :: BPPKafkaEnvs
+    kafkaEnvs :: BPPKafkaEnvs,
+    hedisEnv :: HedisEnv,
+    snapToRoadAPIKey :: Text
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
 buildAppEnv config@AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
+  let snapToRoadAPIKey = googleMapsKey
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   transporterMetrics <- registerTransporterMetricsContainer
@@ -126,11 +132,13 @@ buildAppEnv config@AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBPPKafkaEnvs
+  hedisEnv <- connectHedis hcfg becknTransportPrefix
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseKafkaProducerTools kafkaProducerTools
+  disconnectHedis hedisEnv
   releaseLoggerEnv loggerEnv
 
 type Env = EnvR AppEnv

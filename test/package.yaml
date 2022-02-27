@@ -89,6 +89,7 @@ dependencies:
   - hspec-expectations-lifted
   - HUnit
   - unix
+  - string-conversions
 
 ghc-options:
   - -fwrite-ide-info

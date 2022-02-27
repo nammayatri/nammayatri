@@ -11,6 +11,7 @@ mock-fcm
 mock-registry
 mock-sms
 parking-bap
+mock-parking-bpp
 public-transport-bap
 public-transport-search-consumer
 search-result-aggregator

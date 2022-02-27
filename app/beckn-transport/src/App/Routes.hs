@@ -3,7 +3,7 @@ module App.Routes where
 import App.Routes.FarePolicy
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Confirm as API

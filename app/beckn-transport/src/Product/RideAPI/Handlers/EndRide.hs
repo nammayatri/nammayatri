@@ -7,7 +7,7 @@ import Beckn.Types.Id
 import Data.Time (NominalDiffTime)
 import EulerHS.Prelude hiding (pi)
 import qualified Product.FareCalculator.Interpreter as Fare
-import Product.Location (missingLocationUpdatesKey)
+import Product.Location
 import Types.App (Driver)
 import Types.Error
 import qualified Types.Storage.DriverLocation as DrLoc
@@ -36,7 +36,8 @@ data ServiceHandle m = ServiceHandle
     putDiffMetric :: Amount -> Double -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     getKeyRedis :: Text -> m (Maybe ()),
-    updateLocationAllowedDelay :: m NominalDiffTime
+    updateLocationAllowedDelay :: m NominalDiffTime,
+    recalcDistanceEnding :: Id Person.Person -> m ()
   }
 
 endRideHandler ::
@@ -47,6 +48,9 @@ endRideHandler ::
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} requestorId rideId = do
   requestor <- findPersonById requestorId >>= fromMaybeM PersonNotFound
+
+  recalcDistanceEnding requestorId
+
   ride <- findRideById (cast rideId) >>= fromMaybeM RideDoesNotExist
   let driverId = ride.driverId
   case requestor.role of
@@ -74,12 +78,18 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
     lastLocUdateTooLongAgo = do
       now <- getCurrentTime
       allowedUpdatesDelay <- updateLocationAllowedDelay
-      findDriverLocById requestorId
-        <&> maybe True (\loc -> now `diffUTCTime` loc.updatedAt > allowedUpdatesDelay)
+      res <-
+        findDriverLocById requestorId
+          <&> maybe True (\loc -> now `diffUTCTime` loc.updatedAt > allowedUpdatesDelay)
+      logDebug $ "last update was too long ago: " <> show res
+      pure res
 
-    thereWereMissingLocUpdates =
-      getKeyRedis (missingLocationUpdatesKey rideId)
-        <&> isJust
+    thereWereMissingLocUpdates = do
+      res <-
+        getKeyRedis (missingLocationUpdatesKey rideId)
+          <&> isJust
+      logDebug $ "there were missing location updates: " <> show res
+      pure res
 
     recalculateFare rideBooking ride = do
       let transporterId = rideBooking.providerId

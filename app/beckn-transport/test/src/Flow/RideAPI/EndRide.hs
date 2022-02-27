@@ -68,7 +68,8 @@ handle =
       putDiffMetric = \_ _ -> pure (),
       findDriverLocById = \_ -> pure Nothing,
       getKeyRedis = \_ -> pure (Just ()),
-      updateLocationAllowedDelay = pure 60
+      updateLocationAllowedDelay = pure 60,
+      recalcDistanceEnding = \_ -> pure ()
     }
 
 endRide ::

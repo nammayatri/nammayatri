@@ -25,6 +25,7 @@ import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
 import qualified FmdWrapper.Spec as FmdWrapper
 import GHC.Records.Extra (HasField)
+import Mobility.Fixtures
 import qualified Mobility.Spec as Mobility
 import Resources
 import System.Environment as Env (setEnv)
@@ -62,10 +63,15 @@ main = do
     toEnvVar = T.toUpper . T.replace "-" "_"
 
 specs :: IO TestTree
-specs = do
-  mobilityTests <- Mobility.mkTestTree
-  fmdTests <- FmdWrapper.mkTestTree
+specs =
+  specs'
+    [ Mobility.mkTestTree,
+      FmdWrapper.mkTestTree
+    ]
 
+specs' :: [IO TestTree] -> IO TestTree
+specs' trees = do
+  readyTests <- sequence trees
   return $
     withResource
       (startServers allServers)
@@ -73,9 +79,7 @@ specs = do
       ( \_ ->
           testGroup
             "all"
-            [ mobilityTests,
-              fmdTests
-            ]
+            readyTests
       )
   where
     allServers =
@@ -90,7 +94,9 @@ specs = do
             cfg & hideLogging
               & #geofencingConfig . #origin .~ Regions ["Ernakulam", "Kochi"]
               & #geofencingConfig . #destination .~ Regions ["Kerala", "Kochi"],
-        TransporterBackend.runTransporterBackendApp hideLogging,
+        TransporterBackend.runTransporterBackendApp $ \cfg ->
+          cfg & hideLogging
+            & #updateLocationRefreshPeriod .~ timeBetweenLocationUpdates,
         FmdWrapper.runFMDWrapper hideLogging,
         MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
@@ -127,4 +133,5 @@ hideLogging cfg =
         cfg.loggerConfig
           & #logToConsole .~ False
           & #logRawSql .~ False
+          & #logToFile .~ True
      }

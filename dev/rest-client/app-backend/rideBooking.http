@@ -50,7 +50,7 @@ content-type: application/json
 token: {{token}}
 
 ###
-
+# @name confirm
 @quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
 
 POST {{app-host}}/rideSearch/{{searchId}}/quotes/{{quoteId}}/confirm HTTP/1.1
@@ -72,3 +72,10 @@ GET {{app-host}}/rideBooking/list
   &onlyActive=false
 content-type: application/json
 token: {{token}}
+
+###
+@bookingId = {{confirm.response.body.bookingId}}
+POST {{app-host}}/rideBooking/{{bookingId}}
+token: {{token}}
+
+###

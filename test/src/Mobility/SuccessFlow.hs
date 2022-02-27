@@ -1,6 +1,7 @@
 module Mobility.SuccessFlow where
 
 import Beckn.Types.Id
+import Beckn.Types.MapSearch
 import qualified "app-backend" Domain.Types.Quote as BQuote
 import qualified "app-backend" Domain.Types.Ride as BRide
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
@@ -8,25 +9,35 @@ import qualified "app-backend" Domain.Types.RideBooking as BRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
+import Storage.Queries.DriverLocation
 import qualified "app-backend" Storage.Queries.Quote as BQQuote
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
 import qualified "beckn-transport" Storage.Queries.RideBooking as TQRB
 import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
+import "app-backend" Types.API.Search
+import Types.Storage.Person (Person)
 import qualified "beckn-transport" Types.Storage.Quote as TQuote
 import qualified "beckn-transport" Types.Storage.Ride as TRide
 import qualified "beckn-transport" Types.Storage.RideBooking as TRB
 import Utils
 
 doAnAppSearch :: HasCallStack => ClientsM (Id BQuote.Quote, Id BRB.RideBooking)
-doAnAppSearch = do
+doAnAppSearch = doAnAppSearchByReq searchReq
+
+doAnAppSearchByReq :: HasCallStack => SearchReq -> ClientsM (Id BQuote.Quote, Id BRB.RideBooking)
+doAnAppSearchByReq searchReq' = do
   -- Driver sets online
   void . callBPP $ setDriverOnline driverToken1 True
+  -- Moves driver to the pickup point
+  preUpdate <- liftIO $ buildUpdateLocationRequest $ searchReq'.origin.gps :| []
+  void . callBPP $
+    updateLocation driverToken1 preUpdate
 
   -- Do an App Search
   appSearchId <-
     callBAP $
-      searchServices appRegistrationToken searchReq
+      searchServices appRegistrationToken searchReq'
         <&> (.searchId)
 
   -- Do a get quotes request for getting quotes to confirm ride
@@ -84,58 +95,86 @@ getBPPRide rideBookingId = do
   mbRide `shouldSatisfy` isJust
   return $ fromJust mbRide
 
+getBPPRideById ::
+  Id TRide.Ride ->
+  ClientsM TRide.Ride
+getBPPRideById rideId = do
+  mbRide <- liftIO $ runTransporterFlow "" $ TQRide.findById rideId
+  mbRide `shouldSatisfy` isJust
+  return $ fromJust mbRide
+
+getBPPDriverLocation ::
+  Id Person ->
+  ClientsM LatLong
+getBPPDriverLocation driverId = do
+  mbRes <- liftIO $ runTransporterFlow "" $ findById driverId
+  mbRes `shouldSatisfy` isJust
+  let res = fromJust mbRes
+  pure $
+    LatLong
+      { lat = res.lat,
+        lon = res.lon
+      }
+
+equalsEps :: Double -> Double -> Double -> Bool
+equalsEps eps x y = abs (x - y) < eps
+
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
-  describe "Testing App and Transporter APIs" $
-    it "Testing API flow for successful booking and completion of ride" $ withBecknClients clients do
-      (bapQuoteId, bRideBookingId) <- doAnAppSearch
+  describe "Testing App and Transporter APIs" $ do
+    it "Testing API flow for successful booking and completion of ride" $
+      successFlow clients
 
-      tRideBooking <- poll $ do
-        tQuoteId <- getBPPQuoteId bapQuoteId
-        trb <- getBPPRideBooking tQuoteId
-        trb.status `shouldBe` TRB.CONFIRMED
-        return $ Just trb
+successFlow :: ClientEnvs -> IO ()
+successFlow clients = withBecknClients clients $ do
+  (bapQuoteId, bRideBookingId) <- doAnAppSearch
 
-      rideInfo <-
-        poll . callBPP $
-          getNotificationInfo tRideBooking.id driverToken1
-            <&> (.rideRequest)
-      rideInfo.bookingId `shouldBe` tRideBooking.id
+  tRideBooking <- poll $ do
+    tQuoteId <- getBPPQuoteId bapQuoteId
+    trb <- getBPPRideBooking tQuoteId
+    trb.status `shouldBe` TRB.CONFIRMED
+    return $ Just trb
 
-      -- Driver Accepts a ride
-      void . callBPP $
-        rideRespond tRideBooking.id driverToken1 $
-          RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
+  rideInfo <-
+    poll . callBPP $
+      getNotificationInfo tRideBooking.id driverToken1
+        <&> (.rideRequest)
+  rideInfo.bookingId `shouldBe` tRideBooking.id
 
-      tRide <- poll $ do
-        tRide <- getBPPRide tRideBooking.id
-        tRide.status `shouldBe` TRide.NEW
-        return $ Just tRide
+  -- Driver Accepts a ride
+  void . callBPP $
+    rideRespond tRideBooking.id driverToken1 $
+      RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
 
-      void . callBPP $
-        rideStart driverToken1 tRide.id $
-          buildStartRideReq tRide.otp
+  tRide <- poll $ do
+    tRide <- getBPPRide tRideBooking.id
+    tRide.status `shouldBe` TRide.NEW
+    return $ Just tRide
 
-      void . poll $ do
-        inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
-        inprogressRBStatusResult.ride `shouldSatisfy` isJust
-        inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
-        let Just inprogressRide = inprogressRBStatusResult.ride
-        inprogressRide.status `shouldBe` BRide.INPROGRESS
-        return $ Just ()
+  void . callBPP $
+    rideStart driverToken1 tRide.id $
+      buildStartRideReq tRide.otp
 
-      void . callBPP $ rideEnd driverToken1 tRide.id
+  void . poll $ do
+    inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+    inprogressRBStatusResult.ride `shouldSatisfy` isJust
+    inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
+    let Just inprogressRide = inprogressRBStatusResult.ride
+    inprogressRide.status `shouldBe` BRide.INPROGRESS
+    return $ Just ()
 
-      completedRideId <- poll $ do
-        completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
-        completedRBStatusResult.ride `shouldSatisfy` isJust
-        completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
-        let Just completedRide = completedRBStatusResult.ride
-        completedRide.status `shouldBe` BRide.COMPLETED
-        return $ Just completedRide.id
+  void . callBPP $ rideEnd driverToken1 tRide.id
 
-      -- Leave feedback
-      void . callBAP $ callAppFeedback 5 completedRideId
+  completedRideId <- poll $ do
+    completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+    completedRBStatusResult.ride `shouldSatisfy` isJust
+    completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
+    let Just completedRide = completedRBStatusResult.ride
+    completedRide.status `shouldBe` BRide.COMPLETED
+    return $ Just completedRide.id
 
-      void . callBPP $ setDriverOnline driverToken1 False
+  -- Leave feedback
+  void . callBAP $ callAppFeedback 5 completedRideId
+
+  void . callBPP $ setDriverOnline driverToken1 False

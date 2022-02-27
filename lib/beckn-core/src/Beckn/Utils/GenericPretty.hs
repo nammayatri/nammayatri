@@ -194,7 +194,7 @@ instance (PrettyShow a, PrettyShow b) => PrettyShow (Either a b)
 
 instance (PrettyShow a) => PrettyShow [a] where
   prettyShow [] = LEmpty
-  prettyShow xs = prettyShowListLike "[]" xs
+  prettyShow xs = prettyShowListLike "List" xs
 
 instance (PrettyShow a) => PrettyShow (NE.NonEmpty a) where
   prettyShow = prettyShowListLike "NonEmpty" . NE.toList

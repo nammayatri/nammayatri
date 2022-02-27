@@ -2,6 +2,7 @@ module Types.API.Location where
 
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.GenericPretty (PrettyShow)
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import EulerHS.Prelude
@@ -14,7 +15,7 @@ data Waypoint = Waypoint
     ts :: UTCTime, -- timestamp
     acc :: Maybe Double -- accuracy, optional for now
   }
-  deriving (Generic, ToJSON, Show, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, Show, FromJSON, ToSchema, PrettyShow)
 
 type UpdateLocationRes = APISuccess
 

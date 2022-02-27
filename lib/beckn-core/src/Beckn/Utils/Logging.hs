@@ -15,6 +15,7 @@ module Beckn.Utils.Logging
     withPersonIdLogTag,
     makeLogSomeException,
     logPretty,
+    HasPrettyLogger,
   )
 where
 
@@ -83,13 +84,17 @@ renderViaShow description val = description <> ": " <> show val
 renderViaPrettyShow :: (PrettyShow a) => Text -> a -> Text
 renderViaPrettyShow description val = description <> "\n" <> textPretty val
 
-logPretty ::
-  ( PrettyShow a,
-    Show a,
-    Log m,
+type HasPrettyLogger m env conf =
+  ( Log m,
     MonadReader env m,
     HasField "config" env conf,
     HasField "loggerConfig" conf LoggerConfig
+  )
+
+logPretty ::
+  ( PrettyShow a,
+    Show a,
+    HasPrettyLogger m env conf
   ) =>
   LogLevel ->
   Text ->

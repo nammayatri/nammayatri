@@ -4,6 +4,7 @@ import qualified "app-backend" App.Types as BecknApp
 import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Flow
 import Beckn.Utils.Common
+import Data.String.Conversions
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import HSpec
@@ -37,14 +38,15 @@ runClient' clientEnv x = do
 --
 -- The first argument describes attempted delays prior to running an action,
 -- in mcs.
-pollWith :: (HasCallStack, MonadIO m, MonadCatch m) => [Int] -> m (Maybe a) -> m a
-pollWith allDelays action = withFrozenCallStack $ go allDelays
+pollWithDescription :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> [Int] -> m (Maybe a) -> m a
+pollWithDescription description allDelays action = withFrozenCallStack $ go allDelays
   where
     go [] =
       expectationFailure $
         "poll: failed to get an expected entry after "
           <> show (fromIntegral (sum allDelays) / 1e6 :: Float)
-          <> " seconds"
+          <> " seconds;\ndescription: "
+          <> cs description
     go (delay : remDelays) = do
       let printLastError err = do
             when (null remDelays) $ print ("Last error: " <> show err :: Text)
@@ -60,7 +62,10 @@ expBackoff startDelay maxDelay =
 --
 -- Optimized for requesting a server for a result of async action.
 poll :: (HasCallStack, MonadIO m, MonadCatch m) => m (Maybe a) -> m a
-poll = pollWith (expBackoff 0.1e6 10e6)
+poll = pollDesc ""
+
+pollDesc :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> m (Maybe a) -> m a
+pollDesc description = pollWithDescription description (expBackoff 0.1e6 10e6)
 
 runFlow :: (MonadIO m, Log (FlowR env)) => Text -> env -> FlowR env a -> m a
 runFlow tag appEnv flow = do

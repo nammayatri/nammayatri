@@ -1,0 +1,180 @@
+@token = {{app-token}}
+
+###
+
+# @name setActive
+POST {{transporter-host}}/driver/setActivity?active=true
+content-type: application/json
+token: {{driver-token}}
+
+###
+
+# @name searchRoute1
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{token}}
+
+{
+  "origin": {
+    "address": {
+        "street": "Edapally Metro Station",
+        "state": "Kerala",
+        "door": "",
+        "country": "India",
+        "city": "Kochi",
+        "building": " ",
+        "areaCode": "",
+        "area": "Edappally"
+    },
+    "gps": {
+        "lon": 76.308364,
+        "lat": 10.025263
+    }
+  },
+  "destination": {
+    "address": {
+            "street": "Ambattukavu",
+            "state": "Kerala",
+            "door": "",
+            "country": "India",
+            "city": "Aluva",
+            "building": "Ambattukavu metro station",
+            "areaCode": "",
+            "area": "Choornikkara"
+        },
+    "gps": {
+        "lon": 76.3388894,
+        "lat": 10.0792806
+    }
+  }
+}
+
+###
+###
+
+# @name searchRoute2
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{app-token}}
+#Palarivattom - Edappally Rd, Opp.St.George Church, Ponekkara, Edappally, Ernakulam, Kerala 682024, India
+#Manimala Cross Road, Ponekkara, Edappally, Ernakulam, Kerala 682024, India
+
+{
+  "origin": {
+    "address": {
+        "street": "",
+        "state": "Kerala",
+        "door": "",
+        "country": "India",
+        "city": "Kochi",
+        "building": " ",
+        "areaCode": "",
+        "area": "Edappally"
+    },
+    
+    "gps": {
+        "lat": 10.021737163149579, 
+        "lon": 76.30619847435514
+    }
+  },
+  "destination": {
+    "address": {
+            "street": "",
+            "state": "Kerala",
+            "door": "",
+            "country": "India",
+            "city": "Kochi",
+            "building": "",
+            "areaCode": "",
+            "area": "Edapally"
+        },
+    "gps": {
+        "lat": 10.023880128960258, 
+        "lon": 76.30264171106143
+    }
+  }
+}
+###
+
+@searchId = {{searchRoute2.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/quotes
+content-type: application/json
+token: {{token}}
+
+###
+# @name confirm
+@quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
+
+POST {{app-host}}/rideSearch/{{searchId}}/quotes/{{quoteId}}/confirm HTTP/1.1
+content-type: application/json
+token: {{token}}
+
+###
+@bookingId = {{confirm.response.body.bookingId}}
+POST {{app-host}}/rideBooking/{{bookingId}}
+token: {{token}}
+
+###
+
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{token}}
+
+###
+
+@bppBookingId = 7d0ed719-ccdd-43a4-933e-95a1c34898d9
+# this was taken from the database
+
+# @name notif-info
+GET {{transporter-host}}/driver/ride/{{bppBookingId}}/notification
+token: {{driver-token}}
+
+###
+
+# @name accept
+
+POST {{transporter-host}}/driver/ride/{{bppBookingId}}/notification/respond
+token: {{driver-token}}
+content-type: application/json
+
+{
+    "response": "ACCEPT"
+}
+
+###
+# @name list2
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{token}}
+
+###
+# @name driverList
+GET {{transporter-host}}/driver/ride/list?limit=100&offset=0
+token: {{driver-token}}
+
+###
+@rideId = {{driverList.response.body.list[0].ride.id}}
+@otp = {{list2.response.body.list[0].ride.rideOtp}}
+
+# @name startRide
+POST {{transporter-host}}/driver/ride/{{rideId}}/start
+token: {{driver-token}}
+content-type: application/json
+
+{
+    "rideOtp": "{{otp}}"
+}
+
+###
+
+# @name rideEnd
+POST {{transporter-host}}/driver/ride/{{rideId}}/end
+token: {{driver-token}}

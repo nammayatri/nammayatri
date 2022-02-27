@@ -77,8 +77,6 @@ dependencies:
   - time
   - stm
   - random-strings
-  - tasty
-  - tasty-hunit
   - postgresql-simple
   - resource-pool
   - uuid
@@ -87,6 +85,7 @@ dependencies:
   - record-dot-preprocessor
   - servant-openapi3
   - openapi3
+  - string-conversions
 
 ghc-options:
   - -fwrite-ide-info
@@ -148,6 +147,11 @@ tests:
     dependencies:
       - beckn-transport
       - beckn-core
+      - tasty
+      - tasty-hunit
+      - tasty-hspec
+      - QuickCheck
+      - tasty-quickcheck
     ghc-options:
       - -Wall
-      # - -Werror # turn it on in BKN-1069
+      - -Werror

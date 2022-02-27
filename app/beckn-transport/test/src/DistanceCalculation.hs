@@ -2,7 +2,7 @@ module DistanceCalculation where
 
 import Beckn.Types.MapSearch
 import EulerHS.Prelude
-import Product.Location
+import SharedLogic.CalculateDistance
 import Test.Tasty
 import Test.Tasty.HUnit
 import Utils.Numeric

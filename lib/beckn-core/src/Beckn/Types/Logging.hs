@@ -19,3 +19,14 @@ data LoggerConfig = LoggerConfig
     prettyPrinting :: Bool
   }
   deriving (Generic, FromDhall)
+
+defaultLoggerConfig :: LoggerConfig
+defaultLoggerConfig =
+  LoggerConfig
+    { level = DEBUG,
+      logFilePath = "/tmp/default",
+      logToFile = False,
+      logToConsole = False,
+      logRawSql = False,
+      prettyPrinting = False
+    }

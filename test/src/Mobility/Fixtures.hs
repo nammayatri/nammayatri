@@ -7,6 +7,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import Beckn.Types.Time (Seconds)
 import Data.Time
 import qualified "app-backend" Domain.Types.CancellationReason as AbeCRC
 import qualified "app-backend" Domain.Types.Person as TPerson
@@ -22,6 +23,7 @@ import qualified Types.API.Cancel as CancelAPI
 import qualified Types.API.Confirm as ConfirmAPI
 import qualified "beckn-transport" Types.API.Driver as DriverAPI
 import qualified "app-backend" Types.API.Feedback as AppFeedback
+import "beckn-transport" Types.API.Location
 import qualified Types.API.Quote as QuoteAPI
 import qualified "app-backend" Types.API.Registration as Reg
 import qualified "beckn-transport" Types.API.Ride as RideAPI
@@ -31,6 +33,9 @@ import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 import qualified "beckn-transport" Types.Storage.Ride as TRide
 import qualified "beckn-transport" Types.Storage.RideBooking as TRB
+
+timeBetweenLocationUpdates :: Seconds
+timeBetweenLocationUpdates = 1
 
 address :: AppBESearch.SearchReqAddress
 address =
@@ -45,10 +50,26 @@ address =
       state = Just "Karnataka"
     }
 
+defaultAddress :: AppBESearch.SearchReqAddress
+defaultAddress =
+  AppBESearch.SearchReqAddress
+    { door = Nothing,
+      building = Nothing,
+      street = Nothing,
+      area = Just "Edappally",
+      city = Just "Kochi",
+      country = Just "India",
+      areaCode = Just "",
+      state = Just "Kerala"
+    }
+
+origin1 :: LatLong
+origin1 = LatLong 10.0739 76.2733
+
 searchReq :: AppBESearch.SearchReq
 searchReq =
   AppBESearch.SearchReq
-    { origin = AppBESearch.SearchReqLocation address $ LatLong 10.0739 76.2733,
+    { origin = AppBESearch.SearchReqLocation address origin1,
       destination = AppBESearch.SearchReqLocation address $ LatLong 10.5449 76.4356
     }
 
@@ -148,8 +169,19 @@ destinationServiceability regToken = destination
   where
     _ :<|> destination = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
--- buildOrgRideReq :: TQuote.ProductInstanceStatus -> TCase.CaseType -> ClientM TbePI.ProductInstanceList
--- buildOrgRideReq status csType = listOrgRides appRegistrationToken [status] [csType] (Just 50) Nothing
+updateLocation :: RegToken -> NonEmpty Waypoint -> ClientM APISuccess
+(_ :<|> updateLocation) = client (Proxy @LocationAPI)
+
+buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty Waypoint)
+buildUpdateLocationRequest pts = do
+  now <- getCurrentTime
+  pure $
+    flip fmap pts $ \ll ->
+      Waypoint
+        { pt = ll,
+          ts = now,
+          acc = Nothing
+        }
 
 appRegistrationToken :: Text
 appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"

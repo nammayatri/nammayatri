@@ -9,12 +9,14 @@ module Beckn.Utils.IOLogging
     withLogTagImplementation,
     logOutputIO,
     appendLogTag,
+    withLoggerEnv,
   )
 where
 
 import Beckn.Prelude
 import Beckn.Types.Logging
 import Beckn.Types.Time
+import qualified Control.Monad.Catch as C
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import System.Log.FastLogger
@@ -33,6 +35,9 @@ data LoggerEnv = LoggerEnv
     fileLogger :: Maybe Logger,
     consoleLogger :: Maybe Logger
   }
+
+withLoggerEnv :: LoggerConfig -> Maybe Text -> (LoggerEnv -> IO a) -> IO a
+withLoggerEnv loggerConfig hostName = C.bracket (prepareLoggerEnv loggerConfig hostName) releaseLoggerEnv
 
 prepareLoggerEnv :: LoggerConfig -> Maybe Text -> IO LoggerEnv
 prepareLoggerEnv loggerConfig hostName = do

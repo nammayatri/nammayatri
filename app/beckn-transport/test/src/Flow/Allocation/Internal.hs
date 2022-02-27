@@ -186,7 +186,6 @@ handle repository@Repository {..} =
         pure filtered,
       getDriversWithNotification = do
         notificationStatus <- readIORef notificationStatusVar
-        currentTime <- Time.getCurrentTime
         let filtered = fmap snd $ Map.keys $ Map.filter (\(status, _) -> status == Notified) notificationStatus
         pure filtered,
       assignDriver = \rideBookingId driverId -> do

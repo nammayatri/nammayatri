@@ -159,7 +159,6 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
 
   distance <-
     MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
-
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
