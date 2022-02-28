@@ -41,13 +41,13 @@ spec:
           image: 701342709052.dkr.ecr.ap-southeast-1.amazonaws.com/beckn-uat:$BUILD_VERSION
           name: beckn-transport-$DEPLOY_VARIANT
           ports:
-            - containerPort: 8114
+            - containerPort: 8115
               name: transport-http
           livenessProbe:
             failureThreshold: 3
             httpGet:
               path: /
-              port: 8114
+              port: 8115
             initialDelaySeconds: 30
             periodSeconds: 20
             successThreshold: 1
@@ -56,7 +56,7 @@ spec:
             failureThreshold: 2
             httpGet:
               path: /
-              port: 8114
+              port: 8115
             initialDelaySeconds: 30
             periodSeconds: 12
             successThreshold: 1
@@ -123,8 +123,11 @@ metadata:
     app: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
 spec:
   ports:
-    - port: 8114
-      targetPort: 8114
+    - port: 8115
+      targetPort: 8115
       name: transport-http
+    - port: 9997
+      targetPort: 9997
+      name: http-prom
   selector:
     app: beckn-transport-driver-tracking-healthcheck-service-$DEPLOY_VARIANT
