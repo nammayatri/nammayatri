@@ -12,7 +12,7 @@ let hcfg =
   }
 
 let kafkaConsumerCfgs =
-  { publicTransportQuotes = {brokers = ["localhost:29092"], groupId = "publicTransportQuotesGroup"}
+  { publicTransportQuotes = {brokers = ["beta-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"], groupId = "publicTransportQuotesGroup"}
   }
 
 in

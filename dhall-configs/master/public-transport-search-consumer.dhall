@@ -1,10 +1,10 @@
 let common = ./common.dhall
 let main = ./public-transport-bap.dhall
 
-let juspayGatewayUrl = "http://localhost:8015/v1"  --FIXME
+let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/dev/gateway/v1/"
 
 let kafkaConsumerCfgs =
-  { publicTransportSearch = {brokers = ["localhost:29092"], groupId = "publicTransportSearchGroup"}  --FIXME
+  { publicTransportSearch = {brokers = ["beta-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"], groupId = "publicTransportSearchGroup"}
   }
 
 in

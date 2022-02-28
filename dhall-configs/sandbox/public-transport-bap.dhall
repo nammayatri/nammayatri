@@ -2,8 +2,8 @@ let common = ./common.dhall
 let sec = ./secrets/public-transport-bap.dhall
 
 let esqDBCfg =
-  { connectHost = "localhost"  --FIXME
-  , connectPort = 5438
+  { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
+  , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
   , connectDatabase = "atlas_public_transport"
@@ -11,17 +11,17 @@ let esqDBCfg =
   }
 
 let rcfg =
-  { connectHost = "localhost"  --FIXME
+  { connectHost = "ec-redis-beta.bfw4iw.ng.0001.apse1.cache.amazonaws.com"
   , connectPort = 6379
   , connectAuth = None Text
-  , connectDatabase = +0
+  , connectDatabase = +2
   , connectMaxConnections = +50
   , connectMaxIdleTime = +30
   , connectTimeout = None Integer
   }
 
 let kafkaProducerCfg =
-  { brokers = ["localhost:29092"]  --FIXME
+  { brokers = ["beta-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"]
   }
 
 in
@@ -32,17 +32,17 @@ in
 , port = +8023
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/public-transport-bap.log"}
 , graceTerminationPeriod = +90
-, selfId = "JUSPAY.PUBLIC_TRANSPORT.APP.UAT.1"  --FIXME
-, selfURI = "http://localhost:8023/beckn"  --FIXME
+, selfId = "api.sandbox.beckn.juspay.in/bap/public-transport/v1"
+, selfURI = "https://api.sandbox.beckn.juspay.in/bap/public-transport/v1"
 , authServiceUrl = common.authServiceUrl
 , authEntity =
   { signingKey = sec.signingKey
-  , uniqueKeyId = "juspay-mobility-bap-1-key"  --FIXME
+  , uniqueKeyId = "50"  --FIXME
   , signatureExpiry = common.signatureExpiry
   }
 , disableSignatureAuth = False
 , metricsSearchDurationTimeout = +45
-, hostName = "localhost"  --FIXME
+, hostName = "juspay.in"
 , httpClientOptions = common.httpClientOptions
 , registryUrl = common.registryUrl
 , kafkaProducerCfg = kafkaProducerCfg
