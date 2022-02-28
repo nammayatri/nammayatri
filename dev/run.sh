@@ -6,12 +6,15 @@ allocation-service
 app-backend
 beckn-gateway
 beckn-transport
-driver-healthcheck
+driver-tracking-healthcheck
 mock-fcm
 mock-registry
 mock-sms
 parking-bap
 public-transport-bap
+public-transport-search-consumer
+search-result-aggregator
+mock-public-transport-bpp
 EOF
 }
 

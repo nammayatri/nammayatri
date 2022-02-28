@@ -66,7 +66,7 @@ push:
 
 run-svc: ./dev/docker-compose.yml
 	# Setup and run DB, redis and passetto instances in docker containers
-	docker-compose -f ./dev/docker-compose.yml up -d
+	docker-compose -f ./dev/docker-compose.yml up -d --remove-orphans
 
 run-monitoring: ./dev/docker-compose.yml
 	# Run monitoring stack - Prometheus and grafana in docker containers
@@ -74,7 +74,7 @@ run-monitoring: ./dev/docker-compose.yml
 
 stop-all-containers: ./dev/docker-compose.yml
 	# Stop all docker containers
-	docker-compose -f ./dev/docker-compose.yml down
+	docker-compose -f ./dev/docker-compose.yml down --remove-orphans
 
 run-mobility-stack: ./dev/run.sh
 	# Run all binaries needed for mobility network
