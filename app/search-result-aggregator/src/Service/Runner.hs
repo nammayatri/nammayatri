@@ -7,6 +7,7 @@ import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Beckn.Streaming.MonadConsumer
 import Beckn.Types.App (MonadFlow)
 import Beckn.Types.Logging
+import Beckn.Utils.Logging (withTransactionIdLogTag')
 import Control.Concurrent.STM.TMVar
 import GHC.Conc
 
@@ -20,7 +21,8 @@ run ::
 run = do
   withLogTag "Service" $ do
     listenForMessages @PublicTransportQuoteList isRunning $ \PublicTransportQuoteList {..} ->
-      Hedis.rPushExp (makeHedisKey transactionId) quoteList expirationTime
+      withTransactionIdLogTag' transactionId $
+        Hedis.rPushExp (makeHedisKey transactionId) quoteList expirationTime
   where
     makeHedisKey transactionId = "publicTransportQuoteList:" <> transactionId
     expirationTime = 600

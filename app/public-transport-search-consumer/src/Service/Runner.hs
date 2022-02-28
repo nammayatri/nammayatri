@@ -26,7 +26,7 @@ run ::
   ) =>
   m ()
 run = withLogTag "Service" $
-  listenForMessages @PublicTransportSearch isRunning $ \searchReq -> do
+  listenForMessages @PublicTransportSearch isRunning $ \searchReq -> withTransactionIdLogTag' searchReq.id $ do
     searchMessage <- DSearch.search searchReq
     becknSearchReq <- BecknACL.buildSearchReq searchMessage
     fork "search" . withRetry $ do

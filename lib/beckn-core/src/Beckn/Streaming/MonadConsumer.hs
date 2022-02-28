@@ -1,4 +1,6 @@
 module Beckn.Streaming.MonadConsumer where
 
+import Beckn.Prelude
+
 class MonadConsumer a m where
-  receiveMessage :: m a
+  receiveMessage :: m (Maybe a)

@@ -21,7 +21,7 @@ data SearchMessage = SearchMessage
 search :: EsqDBFlow m r => SearchReq -> m SearchMessage
 search req = do
   now <- getCurrentTime
-  searchRequest <- buildSearchRequest req now
+  let searchRequest = makeSearchRequest now
   _ <- Esq.runTransaction $ QSearch.create searchRequest
   let searchMessage =
         SearchMessage
@@ -32,19 +32,11 @@ search req = do
   return searchMessage
   where
     getToDate = addUTCTime 7200 -- 2 hours
-
-buildSearchRequest ::
-  MonadFlow m =>
-  SearchReq ->
-  UTCTime ->
-  m DSearch.Search
-buildSearchRequest searchReq now = do
-  id <- generateGUID
-  return
-    DSearch.Search
-      { id = id,
-        lat = searchReq.gps.lat,
-        lon = searchReq.gps.lon,
-        requestorId = Id searchReq.requestorId,
-        createdAt = now
-      }
+    makeSearchRequest now =
+      DSearch.Search
+        { id = Id req.id,
+          lat = req.gps.lat,
+          lon = req.gps.lon,
+          requestorId = Id req.requestorId,
+          createdAt = now
+        }

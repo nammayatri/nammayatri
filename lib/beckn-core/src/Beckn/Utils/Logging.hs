@@ -11,6 +11,7 @@ module Beckn.Utils.Logging
     logWarning,
     logError,
     withTransactionIdLogTag,
+    withTransactionIdLogTag',
     withPersonIdLogTag,
     makeLogSomeException,
     logPretty,
@@ -57,7 +58,11 @@ withPersonIdLogTag personId = do
 
 withTransactionIdLogTag :: (HasField "context" b c, HasField "transaction_id" c Text, Log m) => b -> m a -> m a
 withTransactionIdLogTag req =
-  withLogTag ("txnId-" <> req.context.transaction_id)
+  withTransactionIdLogTag' req.context.transaction_id
+
+withTransactionIdLogTag' :: Log m => Text -> m a -> m a
+withTransactionIdLogTag' txnId =
+  withLogTag ("txnId-" <> txnId)
 
 makeLogSomeException :: SomeException -> Text
 makeLogSomeException someExc
