@@ -35,8 +35,8 @@ runDriverHealthcheck configModifier = do
       _ <-
         try (prepareRedisConnections config.redisCfg >> prepareDBConnections)
           >>= handleLeft @SomeException exitConnCheckFailure "Connections check failed. Exception thrown: "
-      logInfo "Setting up for signature auth..."
-      pure flowRt
+      managers <- createManagers mempty -- default manager is created
+      pure $ flowRt {R._httpClientManagers = managers}
 
     let settings =
           defaultSettings

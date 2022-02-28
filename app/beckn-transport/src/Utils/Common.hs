@@ -31,3 +31,8 @@ service name f =
     f `catch` \e -> do
       log ERROR $ makeLogSomeException e
       threadDelay 1000000
+
+withRandomId :: (MonadGuid m, Log m) => m b -> m b
+withRandomId f = do
+  id <- generateGUID
+  withLogTag id f

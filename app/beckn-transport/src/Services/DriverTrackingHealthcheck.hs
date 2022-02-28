@@ -6,7 +6,6 @@ import Beckn.Prelude
 import Beckn.Storage.Redis.Queries (lpush, rpop, tryLockRedis, unlockRedis)
 import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
-import Beckn.Types.Id
 import Data.Either
 import Data.List.NonEmpty (nonEmpty)
 import qualified Product.HealthCheck as HC
@@ -35,7 +34,7 @@ driverTrackingHealthcheckService = withLogTag "driverTrackingHealthcheckService"
   driverDevicePingService
 
 driverLastLocationUpdateCheckService :: Flow ()
-driverLastLocationUpdateCheckService = service "driverLastLocationUpdateCheckService" do
+driverLastLocationUpdateCheckService = service "driverLastLocationUpdateCheckService" $ withRandomId do
   delay <- askConfig (.driverAllowedDelay)
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
@@ -58,11 +57,9 @@ redisKey = "beckn:driver-tracking-healthcheck:drivers-to-ping"
 
 driverDevicePingService :: Flow ()
 driverDevicePingService = service "driverDevicePingService" do
-  rpop redisKey >>= flip whenJust \case
-    (Id driverId, Nothing) ->
-      log ERROR $ "Driver " <> driverId <> " is active, but has no device token"
-    (driverId, token) -> do
-      notifyDriver PING "You were inactive" "Please check the app" driverId token
-      log DEBUG $ "Pinged " <> driverId.getId
+  rpop redisKey >>= flip whenJust \(driverId, token) ->
+    withLogTag driverId.getId do
+      log INFO "Ping driver"
+      notifyDriver PING "You were inactive" "Please check the app" driverId (Just token)
   askConfig (.notificationMinDelay)
     >>= threadDelay . (.getMicroseconds)

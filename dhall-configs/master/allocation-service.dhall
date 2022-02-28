@@ -28,7 +28,7 @@ let shards =
           "api.sandbox.beckn.juspay.in/dev/bpp/cab/v1/092ef105-6fe6-4eab-9c6f-e8a57b51e1af"
       ]
 
-in  { appCfg
+in  { appCfg = appCfg
     , metricsPort = +9999
     , reallocationsLimit = +5
     , defaultSortMode = SortMode.ETA
