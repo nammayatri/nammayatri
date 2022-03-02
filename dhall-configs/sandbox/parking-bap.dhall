@@ -2,7 +2,7 @@ let common = ./common.dhall
 let sec = ./secrets/parking-bap.dhall
 
 let esqDBCfg =
-  { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
+  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
   , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
@@ -11,7 +11,7 @@ let esqDBCfg =
   }
 
 let rcfg =
-  { connectHost = "ec-redis-beta.bfw4iw.ng.0001.apse1.cache.amazonaws.com"
+  { connectHost = "beckn-redis-001-001.zkt6uh.0001.aps1.cache.amazonaws.com"
   , connectPort = 6379
   , connectAuth = None Text
   , connectDatabase = +0

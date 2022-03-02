@@ -37,7 +37,7 @@ in  { appCfg = appCfg
     , driverBatchSize = +5
     , requestsNumPerIteration = +50
     , processDelay = +1000
-    , shards
+    , shards = shards
     , healthcheckPort = appCfg.bgtmPort
     , httpClientOptions = appCfg.httpClientOptions
     , dbCfg = appCfg.dbCfg

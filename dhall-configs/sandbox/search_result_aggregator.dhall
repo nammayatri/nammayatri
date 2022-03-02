@@ -2,7 +2,7 @@ let common = ./common.dhall
 
 
 let hcfg =
-  { connectHost = "ec-redis-beta.bfw4iw.ng.0001.apse1.cache.amazonaws.com"
+  { connectHost = "beckn-redis-001-001.zkt6uh.0001.aps1.cache.amazonaws.com"
   , connectPort = 6379
   , connectAuth = None Text
   , connectDatabase = +2
@@ -12,7 +12,7 @@ let hcfg =
   }
 
 let kafkaConsumerCfgs =
-  { publicTransportQuotes = {brokers = ["beta-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"], groupId = "publicTransportQuotesGroup"}
+  { publicTransportQuotes = {brokers = ["alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"], groupId = "publicTransportQuotesGroup"}
   }
 
 in

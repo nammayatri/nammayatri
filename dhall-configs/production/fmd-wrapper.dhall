@@ -43,7 +43,7 @@ let dunzoConfig =
   , dzQuotationTTLinMin = +10
   }
 
-let gwUri = "http://beckn-gateway-${common.branchName}.atlas:8015/v1"
+let gwUri = "https://api.beckn.juspay.in/gateway/v1"
 
 in
 

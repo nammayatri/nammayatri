@@ -2,7 +2,7 @@ let common = ./common.dhall
 let sec = ./secrets/mock-registry.dhall
 
 let esqDBCfg =
-  { connectHost = "beckn-sandbox-v2.cyijte0yeu00.ap-southeast-1.rds.amazonaws.com"
+  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
   , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword

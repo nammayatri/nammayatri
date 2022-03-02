@@ -4,7 +4,7 @@ let appCfg = ./beckn-transport.dhall
 
 in  { driverAllowedDelay = +300
     , notificationMinDelay = +50000
-    , metricsPort = +9997
+    , metricsPort = +9994
     , healthcheckPort = +8115
     , loggerConfig = appCfg.loggerConfig
               //  { logFilePath = "/tmp/driver-tracking-healthcheck.log" }

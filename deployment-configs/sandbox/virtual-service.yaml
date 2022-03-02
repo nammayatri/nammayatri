@@ -9,6 +9,7 @@ spec:
   hosts:
   - api.sandbox.beckn.juspay.in
   http:
+  # - Shared services
   - match:
     - uri:
         prefix: /map/otp/
@@ -55,6 +56,8 @@ spec:
         port:
           number: 8989
     timeout: 40s
+
+  # - Sandbox version routes
   - match:
     - uri:
         prefix: /app/support/
@@ -170,6 +173,8 @@ spec:
         port:
           number: 8015
     timeout: 40s
+
+  # - Release version routes
   - match:
     - uri:
         prefix: /release/app/
@@ -180,28 +185,6 @@ spec:
         host: beckn-app-backend-release
         port:
           number: 8013
-  - match:
-    - uri:
-        prefix: /dev/bap/parking/v1/
-    rewrite:
-      uri: /beckn/
-    route:
-    - destination:
-        host: beckn-parking-bap-master
-        port:
-          number: 8022
-    timeout: 40s
-  - match:
-    - uri:
-        prefix: /dev/bap/parking/
-    rewrite:
-      uri: /parking/
-    route:
-    - destination:
-        host: beckn-parking-bap-master
-        port:
-          number: 8022
-    timeout: 40s
   - match:
     - uri:
         prefix: /release/bap/
@@ -245,6 +228,8 @@ spec:
         port:
           number: 8015
     timeout: 40s
+
+  # - Master version routes
   - match:
     - uri:
         prefix: /dev/fmd/
@@ -266,6 +251,39 @@ spec:
         host: beckn-kmrl
         port:
           number: 8000
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dev/app/support
+    rewrite:
+      uri: /
+    route:
+    - destination:
+        host: beckn-app-customer-support-master
+        port:
+          number: 3000
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dev/bap/parking/v1/
+    rewrite:
+      uri: /beckn/
+    route:
+    - destination:
+        host: beckn-parking-bap-master
+        port:
+          number: 8022
+    timeout: 40s
+  - match:
+    - uri:
+        prefix: /dev/bap/parking/
+    rewrite:
+      uri: /parking/
+    route:
+    - destination:
+        host: beckn-parking-bap-master
+        port:
+          number: 8022
     timeout: 40s
   - match:
     - uri:

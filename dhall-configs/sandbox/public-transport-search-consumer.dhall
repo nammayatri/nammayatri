@@ -4,7 +4,7 @@ let main = ./public-transport-bap.dhall
 let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/gateway/v1/"
 
 let kafkaConsumerCfgs =
-  { publicTransportSearch = {brokers = ["beta-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"], groupId = "publicTransportSearchGroup"}
+  { publicTransportSearch = {brokers = ["alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"], groupId = "publicTransportSearchGroup"}
   }
 
 in
