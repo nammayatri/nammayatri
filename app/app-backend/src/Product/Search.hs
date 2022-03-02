@@ -72,7 +72,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     contextMig <- buildContextMetro Core9.SEARCH txnId bapIDs.metro bapURIs.metro
     intentMig <- mkIntentMig req
     ExternalAPI.searchMetro (BecknReq contextMig $ Core9.SearchIntent intentMig)
-  sendPublicTransportSearchRequest personId searchRequest.id req now
+  fork "search public-transport" $ sendPublicTransportSearchRequest personId searchRequest.id req now
   return . API.SearchRes $ searchRequest.id
   where
     validateServiceability = do
