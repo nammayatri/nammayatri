@@ -28,6 +28,7 @@ import qualified Types.Storage.RideBooking as SRB
 import Types.Storage.RideRequest
 import qualified Types.Storage.RideRequest as SRideRequest
 import qualified Types.Storage.SearchReqLocation as SLoc
+import qualified Types.Storage.Vehicle as SV
 import Utils.Common
 
 rideBookingStatus :: Id SRB.RideBooking -> Id SP.Person -> FlowHandler API.RideBookingStatusRes
@@ -142,12 +143,17 @@ buildRideBookingStatusRes rideBooking = do
   mbRide <- QRide.findActiveByRBId rideBooking.id
   mbRideAPIEntity <- case mbRide of
     Just ride -> do
-      vehicle <- QVeh.findVehicleById ride.vehicleId >>= fromMaybeM VehicleNotFound
-      driver <- QP.findPersonById ride.driverId >>= fromMaybeM PersonNotFound
-      decDriver <- decrypt driver
+      now <- getCurrentTime
+      vehicleM <- QVeh.findVehicleById ride.vehicleId
+      let vehicle = fromMaybe (vehicleDefault now) vehicleM
+      driver <- QP.findPersonById ride.driverId
+      decDriver <- case driver of
+        Just encDriver ->
+          decrypt encDriver
+        Nothing ->
+          return $ driverDefault now
       return . Just $ SRide.makeRideAPIEntity ride decDriver vehicle
     Nothing -> return Nothing
-
   return $
     API.RideBookingStatusRes
       { id = rideBooking.id,
@@ -161,3 +167,46 @@ buildRideBookingStatusRes rideBooking = do
         createdAt = rideBooking.createdAt,
         updatedAt = rideBooking.updatedAt
       }
+  where
+    driverDefault now =
+      SP.Person
+        { id = Id "[Driver deleted]",
+          firstName = Nothing,
+          middleName = Nothing,
+          lastName = Nothing,
+          fullName = Nothing,
+          role = SP.DRIVER,
+          gender = SP.FEMALE,
+          identifierType = SP.EMAIL,
+          email = Nothing,
+          mobileNumber = Nothing,
+          mobileCountryCode = Nothing,
+          passwordHash = Nothing,
+          identifier = Nothing,
+          rating = Nothing,
+          isNew = False,
+          udf1 = Nothing,
+          udf2 = Nothing,
+          organizationId = Nothing,
+          deviceToken = Nothing,
+          description = Nothing,
+          createdAt = now,
+          updatedAt = now
+        }
+    vehicleDefault now =
+      SV.Vehicle
+        { id = Id "[Vehicle deleted]",
+          organizationId = Id "N/A",
+          variant = SV.SEDAN,
+          model = "N/A",
+          color = "N/A",
+          registrationNo = "N/A",
+          capacity = Nothing,
+          category = Nothing,
+          make = Nothing,
+          size = Nothing,
+          energyType = Nothing,
+          registrationCategory = Nothing,
+          createdAt = now,
+          updatedAt = now
+        }
