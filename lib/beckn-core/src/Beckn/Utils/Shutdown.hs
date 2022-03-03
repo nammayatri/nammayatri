@@ -37,7 +37,7 @@ untilShutdown ::
   ) =>
   m () ->
   m ()
-untilShutdown f = do
-  f
-  isRunning <- liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)
-  when isRunning (untilShutdown f)
+untilShutdown =
+  whileM isRunning
+  where
+    isRunning = liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)

@@ -1,4 +1,4 @@
-module Services.DriverTrackingHealthcheck (driverTrackingHealthcheckService) where
+module Services.DriverTrackingHealthcheck where
 
 import App.DriverTrackingHealthcheck.Environment (AppEnv)
 import Beckn.External.FCM.Types (FCMNotificationType (..))
@@ -16,10 +16,9 @@ import Utils.Notifications (notifyDriver)
 type Flow = FlowR AppEnv
 
 -- TODO: move this function somewhere
-withLock :: Text -> Flow () -> Flow ()
-withLock serviceName f = do
-  _ <- getLock
-  HC.iAmAlive serviceName
+withLock :: Flow () -> Flow ()
+withLock f = do
+  getLock
   f `catch` (log ERROR . makeLogSomeException)
   unlockRedis lockKey
   where
@@ -36,8 +35,9 @@ driverTrackingHealthcheckService = withLogTag "driverTrackingHealthcheckService"
 driverLastLocationUpdateCheckService :: Flow ()
 driverLastLocationUpdateCheckService = service "driverLastLocationUpdateCheckService" $ withRandomId do
   delay <- askConfig (.driverAllowedDelay)
-  withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
+  withLock $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
+    HC.iAmAlive serviceName
     DrInfo.getDriversWithOutdatedLocations (negate (fromIntegral delay) `addUTCTime` now)
       <&> map \case
         (driverId, Nothing) -> Left driverId
@@ -52,11 +52,15 @@ driverLastLocationUpdateCheckService = service "driverLastLocationUpdateCheckSer
           Nothing -> log INFO "No drivers to ping"
   threadDelay (secondsToMcs delay).getMicroseconds
 
+serviceName :: Text
+serviceName = "driver-tracking-healthcheck"
+
 redisKey :: Text
 redisKey = "beckn:driver-tracking-healthcheck:drivers-to-ping"
 
 driverDevicePingService :: Flow ()
 driverDevicePingService = service "driverDevicePingService" do
+  HC.iAmAlive serviceName
   rpop redisKey >>= flip whenJust \(driverId, token) ->
     withLogTag driverId.getId do
       log INFO "Ping driver"
