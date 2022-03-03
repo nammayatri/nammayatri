@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Flow.Allocation.Reassignment where
 
 import Beckn.Types.Id

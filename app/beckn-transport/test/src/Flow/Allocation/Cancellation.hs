@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Flow.Allocation.Cancellation where
 
 import Beckn.Types.Id

@@ -88,7 +88,7 @@ addDriverPool Repository {..} dP = do
 addDriverInPool :: Repository -> Id SRB.RideBooking -> Id Driver -> IO ()
 addDriverInPool Repository {..} rideId driverId = do
   driversPool <- readIORef driverPoolVar
-  let newDriversPool = Map.adjust ((:) driverId) rideId driversPool
+  let newDriversPool = Map.adjust (driverId :) rideId driversPool
   writeIORef driverPoolVar newDriversPool
 
 checkRideStatus :: Repository -> Id SRB.RideBooking -> RideStatus -> IO ()
@@ -187,7 +187,7 @@ handle repository@Repository {..} =
       getDriversWithNotification = do
         notificationStatus <- readIORef notificationStatusVar
         currentTime <- Time.getCurrentTime
-        let filtered = fmap snd $ Map.keys $ Map.filter (isNotified currentTime) notificationStatus
+        let filtered = fmap snd $ Map.keys $ Map.filter (\(status, _) -> status == Notified) notificationStatus
         pure filtered,
       assignDriver = \rideBookingId driverId -> do
         modifyIORef assignmentsVar $ (:) (rideBookingId, driverId)
@@ -196,7 +196,7 @@ handle repository@Repository {..} =
       cancelRideBooking = \rideBookingId _ -> do
         modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Cancelled) rideBookingId
         assignments <- readIORef assignmentsVar
-        let driversForRideBookingId = foldl (\acc x -> if fst x == rideBookingId then (snd x) : acc else acc) [] assignments
+        let driversForRideBookingId = map snd $ filter (\(rbId, _) -> rideBookingId == rbId) assignments
         modifyIORef onRideVar $ filter (`notElem` driversForRideBookingId),
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),

@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Flow.Allocation.AllocationTimeFinished where
 
 import Beckn.Types.Id

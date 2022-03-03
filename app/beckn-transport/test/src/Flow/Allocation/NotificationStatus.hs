@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Flow.Allocation.NotificationStatus where
 
 import Beckn.Types.Id

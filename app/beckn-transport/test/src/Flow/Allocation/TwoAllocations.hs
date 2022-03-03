@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Flow.Allocation.TwoAllocations where
 
 import Beckn.Types.Id

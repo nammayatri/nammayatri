@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-
 module Flow.Allocation.OnePoolTwoRide where
 
 import Beckn.Types.Id
