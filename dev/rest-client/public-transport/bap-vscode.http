@@ -8,8 +8,6 @@ GET {{public-transport-bap-host}}
 
 ###
 
-
-
 @token = {{app-token}}
 
 # @name search
@@ -63,7 +61,7 @@ token: {{token}}
 
 ###
 # @quoteId = {{quotes.response.body.quotes[0].publicTransport.id}}
-@quoteId = {{quotes.response.body.quotes[1].publicTransport.id}}
+@quoteId = {{quotes.response.body.quotes[0].publicTransport.id}}
 
 # @name confirm
 POST {{public-transport-bap-host}}/ui/quotes/{{quoteId}}/confirm

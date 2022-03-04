@@ -40,7 +40,7 @@ parkingItemId9 :: Text
 parkingItemId9 = "9"
 
 mockItem9 :: Item
-mockItem9 = makeMockItem "Four wheeler parking (luxury)" parkingItemId9 20 parkingLocationId parkingPlacesAvailable9
+mockItem9 = makeMockItem parkingItemId9 "Four wheeler parking (luxury)" 20 parkingLocationId parkingPlacesAvailable9
 
 parkingPlacesAvailable9 :: Int
 parkingPlacesAvailable9 = 2

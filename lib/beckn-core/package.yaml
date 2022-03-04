@@ -120,9 +120,9 @@ dependencies:
   - record-dot-preprocessor
   - openapi3
   - fast-logger
-  - persistent           
-  - persistent-postgresql 
-  - esqueleto           
+  - persistent
+  - persistent-postgresql
+  - esqueleto
   - monad-logger
   - resourcet
   - unliftio-core
@@ -138,6 +138,7 @@ dependencies:
   - extra
   - random
   - hw-kafka-client
+  - fmt
 
 ghc-options:
   - -fwrite-ide-info

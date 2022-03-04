@@ -1,24 +1,17 @@
-@parking-bap-host = http://localhost:8022
-@mock-parking-bpp-host = http://localhost:8090
 
 # @name check-mock-bpp
 GET {{mock-parking-bpp-host}}
 
 ###
-
 # @name check-bap
 GET {{parking-bap-host}}
 
 ###
 
-#> parseEither parseJSON (String "2021-12-01T18:00:00Z") :: Either String UTCTime
-#Right 2021-12-01 18:00:00 UTC
-#2021-12-01T18:00:00Z
-
-# @name parking-search
+# @name search
 POST {{parking-bap-host}}/parking/search
 content-type: application/json
-token: ea37f941-427a-4085-a7d0-96240f166672
+token: {{app-token}}
 
 {
     "location": {
@@ -30,20 +23,20 @@ token: ea37f941-427a-4085-a7d0-96240f166672
 }
 
 ###
-@searchId = 9f06b0ca-0ff1-4a16-b460-ddbcae72d54b
+@searchId = {{search.response.body.searchId}}
 
-# @name get-quotes
+# @name quotes
 GET {{parking-bap-host}}/parking/{{searchId}}/quotes
-token: ea37f941-427a-4085-a7d0-96240f166672
+token: {{app-token}}
 
 ###
-@quoteId = 32020ec3-644d-465a-b56c-1169020a89c4
-@quoteIdFail = 79d7b7f1-4495-4ae9-b9f8-ae959748c593
+@quoteId = {{quotes.response.body.quotes[0].id}}
+@quoteIdFail = {{quotes.response.body.quotes[1].id}}
 
-# @name confirm-quote
+# @name confirm
 POST {{parking-bap-host}}/parking/quotes/{{quoteIdFail}}/confirm
 content-type: application/json
-token: ea37f941-427a-4085-a7d0-96240f166672
+token: {{app-token}}
 
 {
     "requestorNumber": "1234",
@@ -52,33 +45,10 @@ token: ea37f941-427a-4085-a7d0-96240f166672
 }
 
 ###
-@bookingId = 2f5c2034-93d5-4b1d-b0fa-e71bb0642d54
-@bookingIdFail = 06bc4a8e-036d-4c56-a267-4ec7bf694fc0
+@bookingId = {{confirm.response.body.bookingId}}
 
 # @name booking
 
-GET {{parking-bap-host}}/parking/booking/{{bookingIdFail}}
-token: ea37f941-427a-4085-a7d0-96240f166672
+GET {{parking-bap-host}}/parking/booking/{{bookingId}}
+token: {{app-token}}
 
-###
-# @name login
-POST {{app-host}}/auth
-content-type: application/json
-
-{
-  "mobileCountryCode": "+91",
-  "mobileNumber": "7777777777"
-}
-
-###
-
-@authToken = {{login.response.body.authId}}
-
-# @name verify
-
-POST {{app-host}}/auth/{{authToken}}/verify
-content-type: application/json
-
-{
-  "otp": "7891"
-}

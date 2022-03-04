@@ -1,4 +1,5 @@
 let common = ./common.dhall
+let sec = ./secrets/public-transport-bap.dhall
 
 let hcfg =
   { connectHost = "localhost"
@@ -14,10 +15,16 @@ in
 {
   port = +8090
 , selfId = "mock-parking-bpp"
-, uniqueKeyId = "juspay-parking-bpp-1-key" 
+, uniqueKeyId = "juspay-parking-bpp-1-key"
 , selfUri = "http://localhost:8090/"
 , hedisCfg = hcfg
 , statusWaitTimeSec = +25
 , callbackWaitTimeMilliSec = +500
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-parking-bpp.log"} 
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-parking-bpp.log"}
+, authEntity =
+  { signingKey = sec.signingKey
+  , uniqueKeyId = "juspay-mobility-bpp-1-key1"
+  , signatureExpiry = common.signatureExpiry
+  }
+
 }

@@ -7,6 +7,8 @@
             "app-host": "http://localhost:8013/v2",
             "transporter-host": "http://localhost:8014/v2",
             "public-transport-bap-host": "http://localhost:8023",
+            "parking-bap-host": "http://localhost:8022",
+            "mock-parking-bpp-host": "http://localhost:8090",
             "mock-public-transport-bpp-host": "http://localhost:8091",
             "app-token": "ea37f941-427a-4085-a7d0-96240f166672",
             "coordinator-token": "ea37f941-427a-4085-a7d0-96240f166672",

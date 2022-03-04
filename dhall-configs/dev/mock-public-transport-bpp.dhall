@@ -1,4 +1,5 @@
 let common = ./common.dhall
+let sec = ./secrets/public-transport-bap.dhall
 
 let hcfg =
   { connectHost = "localhost"
@@ -13,13 +14,16 @@ let hcfg =
 in
 {
   port = +8091
--- for selfId see common.dhall, credRegistry, second arg of mkCredential
-  , selfId = "mock-public-transport-bpp"
--- for uniqueKeyId see common.dhall, credRegistry, first arg of mkCredential
+, selfId = "mock-public-transport-bpp"
 , uniqueKeyId = "juspay-mobility-bpp-1-key1"
 , selfUri = "http://localhost:8091/"  -- public address of a node
 , hedisCfg = hcfg
 , statusWaitTimeSec = +25
 , callbackWaitTimeMilliSec = +500
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-parking-bpp.log"}
+, authEntity =
+  { signingKey = sec.signingKey
+  , uniqueKeyId = "juspay-mobility-bpp-1-key1"
+  , signatureExpiry = common.signatureExpiry
+  }
 }
