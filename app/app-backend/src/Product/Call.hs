@@ -13,6 +13,7 @@ import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import Data.Semigroup
+import Data.Text
 import qualified Data.Text as T
 import Domain.Types.CallStatus
 import Domain.Types.Person as Person
@@ -34,16 +35,17 @@ initiateCallToDriver rideId personId =
     (customerPhone, providerPhone) <- getCustomerAndDriverPhones rideId
     callbackUrl <- buildCallbackUrl
     callId <- generateGUID
-    let attachments = ExotelAttachments {callId = getId callId, rideId = getId rideId}
+    let attachments = ExotelAttachments {callId = getId callId, rideId = strip (getId rideId)}
     initiateCall customerPhone providerPhone callbackUrl attachments
     logTagInfo ("RideId: " <> getId rideId) "Call initiated from customer to driver."
     return $ CallAPI.CallRes callId
   where
     buildCallbackUrl = do
       bapUrl <- askConfig (.exotelCallbackUrl)
+      let id = T.unpack (strip (getId rideId))
       return $
         bapUrl
-          { baseUrlPath = baseUrlPath bapUrl <> "/ride/" <> T.unpack (getId rideId) <> "/call/statusCallback"
+          { baseUrlPath = baseUrlPath bapUrl <> "/ride/" <> id <> "/call/statusCallback"
           }
 
 callStatusCallback :: Id SRide.Ride -> CallAPI.CallCallbackReq -> FlowHandler CallAPI.CallCallbackRes
