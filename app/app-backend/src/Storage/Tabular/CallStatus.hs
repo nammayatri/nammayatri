@@ -22,6 +22,8 @@ mkPersist
       exotelCallSid Text
       rideId RideTId
       status ExotelCallStatus
+      recordingUrl Text
+      conversationDuration Int
       createdAt UTCTime
       Primary id
       deriving Generic

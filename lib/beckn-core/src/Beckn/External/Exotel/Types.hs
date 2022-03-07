@@ -20,6 +20,7 @@ import Control.Lens.TH
 import Data.Aeson (encode)
 import Data.Aeson.Casing
 import Data.Aeson.TH
+import Data.Aeson.Types
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Database.Beam.Backend
@@ -114,6 +115,7 @@ instance ToForm ExotelRequest where
       ("CallerId", toQueryParam callerId),
       ("StatusCallback", T.pack $ showBaseUrl statusCallbackUrl),
       ("StatusCallbackEvents[0]", "terminal"),
+      ("StatusCallbackContentType", "application/json"),
       ("CustomField", decodeUtf8 $ encode customField)
     ]
 
@@ -152,7 +154,7 @@ data ExotelDirection
     OUTBOUND_DIAL
   | -- All other Outbound calls (API, campaign etc.)
     OUTBOUND_API
-  deriving (Show, Eq, Read, Generic)
+  deriving (Show, Eq, Read, Generic, ToSchema)
 
 $(deriveJSON constructorsWithHyphensToLowerOptions ''ExotelDirection)
 
@@ -215,13 +217,67 @@ $(deriveFromJSON (aesonPrefix pascalCase) ''ExotelResponse)
 data ExotelCallCallback = ExotelCallCallback
   { -- string; an alpha-numeric unique identifier of the call
     callSid :: Text,
+    eventType :: Text,
+    dateCreated :: Text,
+    dateUpdated :: Text,
     -- The phone number that was attempted to be called first.
     from :: Text,
     -- Your customer's phone number as set in the API request. This number will be connected after `From`.
     to :: Text,
     -- Overall call status, which could be one of: 'completed', 'failed', 'busy' or 'no-answer'
     status :: ExotelCallStatus,
+    phoneNumberSid :: Text,
+    startTime :: Text,
+    endTime :: Text,
+    direction :: ExotelDirection,
+    recordingUrl :: Text,
+    conversationDuration :: Int,
+    legs :: [ExotelLeg],
     -- 	The value that was passed in the CustomField (attachments here) parameter of the API (if set during the request) will be populated here.
     customField :: ExotelAttachments
   }
-  deriving (Generic, Show, FromJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, ToSchema)
+
+data ExotelLeg = ExotelLeg
+  { onCallDuration :: Int,
+    status :: ExotelCallStatus
+  }
+  deriving (Generic, Eq, Show, ToJSON, ToSchema)
+
+instance FromJSON ExotelCallCallback where
+  parseJSON v =
+    withObject
+      "ExotelCallCallback"
+      ( \obj -> do
+          callSid <- obj .: "CallSid"
+          eventType <- obj .: "EventType"
+          dateCreated <- obj .: "DateCreated"
+          dateUpdated <- obj .: "DateUpdated"
+          from <- obj .: "From"
+          to <- obj .: "To"
+          status <- obj .: "Status"
+          phoneNumberSid <- obj .: "PhoneNumberSid"
+          startTime <- obj .: "StartTime"
+          endTime <- obj .: "EndTime"
+          direction <- obj .: "Direction"
+          recordingUrl <- obj .: "RecordingUrl"
+          conversationDuration <- obj .: "ConversationDuration"
+          customField <- obj .: "CustomField" >>= withText "CustomField" (parseCustomField v)
+          legs <- obj .: "Legs"
+
+          return (ExotelCallCallback {..})
+      )
+      v
+
+parseCustomField :: Value -> Text -> Parser ExotelAttachments
+parseCustomField v txt = do
+  case decodeJSON txt of
+    Just exoAttch -> return exoAttch
+    Nothing -> typeMismatch "CustomField" v
+
+instance FromJSON ExotelLeg where
+  parseJSON = withObject "ExotelLeg" $ \obj -> do
+    onCallDuration <- obj .: "OnCallDuration"
+    status <- obj .: "Status"
+
+    return (ExotelLeg {..})

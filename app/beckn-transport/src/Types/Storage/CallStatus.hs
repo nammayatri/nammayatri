@@ -13,6 +13,8 @@ data CallStatusT f = CallStatus
     exotelCallSid :: B.C f Text,
     rideId :: B.C f (Id Ride),
     status :: B.C f ExotelCallStatus,
+    recordingUrl :: B.C f Text,
+    conversationDuration :: B.C f Int,
     createdAt :: B.C f UTCTime
   }
   deriving (Generic, B.Beamable)

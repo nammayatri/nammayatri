@@ -64,6 +64,8 @@ callStatusCallback _ req = withFlowHandlerAPI $ do
             exotelCallSid = req.callSid,
             rideId = rideId,
             status = req.status,
+            conversationDuration = req.conversationDuration,
+            recordingUrl = req.recordingUrl,
             createdAt = now
           }
 

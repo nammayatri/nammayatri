@@ -12,6 +12,8 @@ data CallStatus = CallStatus
     exotelCallSid :: Text,
     rideId :: Id Ride,
     status :: ExotelCallStatus,
+    recordingUrl :: Text,
+    conversationDuration :: Int,
     createdAt :: UTCTime
   }
   deriving (Generic)
