@@ -6,6 +6,7 @@ import Beckn.External.Exotel.Flow (initiateCall)
 import Beckn.External.Exotel.Types
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
+import Data.Text
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Servant.Client (BaseUrl (..))
@@ -36,16 +37,17 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
   driverPhone <- getDriverPhone ride
   callbackUrl <- buildCallbackUrl
   callId <- generateGUID
-  let attachments = ExotelAttachments {callId = getId callId, rideId = getId rideId}
+  let attachments = ExotelAttachments {callId = getId callId, rideId = strip (getId rideId)}
   initiateCall requestorPhone driverPhone callbackUrl attachments
   logTagInfo ("RideId:" <> getId rideId) "Call initiated from driver to customer."
   return $ CallAPI.CallRes callId
   where
     buildCallbackUrl = do
       bapUrl <- askConfig (.exotelCallbackUrl)
+      let rideid = T.unpack (strip (getId rideId))
       return $
         bapUrl
-          { baseUrlPath = baseUrlPath bapUrl <> "/driver/ride/" <> T.unpack (getId rideId) <> "/call/statusCallback"
+          { baseUrlPath = baseUrlPath bapUrl <> "/driver/ride/" <> rideid <> "/call/statusCallback"
           }
 
 callStatusCallback :: Id SRide.Ride -> CallAPI.CallCallbackReq -> FlowHandler CallAPI.CallCallbackRes

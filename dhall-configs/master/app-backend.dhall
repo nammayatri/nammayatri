@@ -96,7 +96,7 @@ in
 , metricsPort = +9999
 , xProviderUri = providerUri
 , hostName = "juspay.in"
-, exotelCallbackUrl = "https://api.sandbox.beckn.juspay.in/latest/bap/v2/"
+, exotelCallbackUrl = "https://api.sandbox.beckn.juspay.in/dev/bap/v2/"
 , bapSelfIds =
   { cabs = "api.sandbox.beckn.juspay.in/dev/bap/cab/v1"
   , metro = "api.sandbox.beckn.juspay.in/dev/bap/metro/v1"

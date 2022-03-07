@@ -21,6 +21,7 @@ import Data.Aeson (encode)
 import Data.Aeson.Casing
 import Data.Aeson.TH
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import Database.Beam.Backend
 import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
@@ -111,8 +112,8 @@ instance ToForm ExotelRequest where
     [ ("From", toQueryParam from),
       ("To", toQueryParam to),
       ("CallerId", toQueryParam callerId),
-      ("StatusCallback", decodeUtf8 $ encode statusCallbackUrl),
-      ("StatusCallbackEvents", "terminal"),
+      ("StatusCallback", T.pack $ showBaseUrl statusCallbackUrl),
+      ("StatusCallbackEvents[0]", "terminal"),
       ("CustomField", decodeUtf8 $ encode customField)
     ]
 
