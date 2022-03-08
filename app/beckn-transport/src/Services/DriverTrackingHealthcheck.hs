@@ -64,6 +64,6 @@ driverDevicePingService = service "driverDevicePingService" do
   rpop redisKey >>= flip whenJust \(driverId, token) ->
     withLogTag driverId.getId do
       log INFO "Ping driver"
-      notifyDriver PING "You were inactive" "Please check the app" driverId (Just token)
+      notifyDriver TRIGGER_SERVICE "You were inactive" "Please check the app" driverId (Just token)
   askConfig (.notificationMinDelay)
     >>= threadDelay . (.getMicroseconds)

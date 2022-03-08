@@ -108,7 +108,7 @@ notifyDriver notificationType notificationTitle message driverId =
     notificationData =
       FCM.FCMAndroidData
         { fcmNotificationType = notificationType,
-          fcmShowNotification = FCM.SHOW,
+          fcmShowNotification = FCM.DO_NOT_SHOW,
           fcmEntityIds = show . getId $ driverId,
           fcmEntityType = FCM.Person,
           fcmNotificationJSON = FCM.createAndroidNotification title body notificationType

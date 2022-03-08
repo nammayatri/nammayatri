@@ -81,7 +81,7 @@ data FCMNotificationType
   | ALLOCATION_REQUEST
   | ALLOCATION_REQUEST_UNASSIGNED
   | ACCOUNT_DISABLED
-  | PING
+  | TRIGGER_SERVICE
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Entity types types
