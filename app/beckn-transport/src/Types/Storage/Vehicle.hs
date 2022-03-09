@@ -17,7 +17,6 @@ import Database.PostgreSQL.Simple.FromField (FromField (..))
 import EulerHS.Prelude hiding (id)
 import Servant.API
 import qualified Types.Storage.Organization as Org
-import Utils.Common
 import Utils.PostgreSQLSimple (fromFieldRead)
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
@@ -160,16 +159,15 @@ data VehicleAPIEntity = VehicleAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-buildVehicleAPIEntity :: MonadFlow m => Vehicle -> m VehicleAPIEntity
-buildVehicleAPIEntity veh = do
-  return
-    VehicleAPIEntity
-      { id = veh.id,
-        variant = veh.variant,
-        model = veh.model,
-        color = veh.color,
-        registrationNo = veh.registrationNo,
-        category = veh.category,
-        capacity = veh.capacity,
-        createdAt = veh.createdAt
-      }
+makeVehicleAPIEntity :: Vehicle -> VehicleAPIEntity
+makeVehicleAPIEntity veh =
+  VehicleAPIEntity
+    { id = veh.id,
+      variant = veh.variant,
+      model = veh.model,
+      color = veh.color,
+      registrationNo = veh.registrationNo,
+      category = veh.category,
+      capacity = veh.capacity,
+      createdAt = veh.createdAt
+    }

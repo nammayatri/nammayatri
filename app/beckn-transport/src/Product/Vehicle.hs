@@ -23,7 +23,7 @@ createVehicle admin req = withFlowHandlerAPI $ do
   validateVehicle
   vehicle <- API.createVehicle req orgId
   QV.createFlow vehicle
-  CreateVehicleRes <$> SV.buildVehicleAPIEntity vehicle
+  return $ CreateVehicleRes $ SV.makeVehicleAPIEntity vehicle
   where
     validateVehicle = do
       mVehicle <- QV.findByRegistrationNo $ req.registrationNo
@@ -53,7 +53,7 @@ updateVehicle admin vehicleId req = withFlowHandlerAPI $ do
                 category = req.category <|> vehicle.category
                }
   QV.updateVehicleRec updatedVehicle
-  SV.buildVehicleAPIEntity vehicle
+  return $ SV.makeVehicleAPIEntity vehicle
 
 deleteVehicle :: SP.Person -> Id SV.Vehicle -> FlowHandler DeleteVehicleRes
 deleteVehicle admin vehicleId = withFlowHandlerAPI $ do
@@ -77,7 +77,7 @@ getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
       QV.findByAnyOf registrationNoM vehicleIdM
         >>= fromMaybeM VehicleDoesNotExist
   hasAccess user vehicle
-  CreateVehicleRes <$> SV.buildVehicleAPIEntity vehicle
+  return $ CreateVehicleRes $ SV.makeVehicleAPIEntity vehicle
   where
     hasAccess user vehicle =
       when (user.organizationId /= Just (vehicle.organizationId)) $
@@ -94,10 +94,9 @@ buildVehicleRes personList vehicle = do
               person.udf1 == Just (getId $ vehicle.id)
           )
           personList
-  vehAPIEntity <- SV.buildVehicleAPIEntity vehicle
   return
     VehicleRes
-      { vehicle = vehAPIEntity,
+      { vehicle = SV.makeVehicleAPIEntity vehicle,
         driver = mkDriverObj <$> mdriver
       }
 

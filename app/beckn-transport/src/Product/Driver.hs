@@ -125,9 +125,10 @@ listDriver admin mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
 
 buildDriverEntityRes :: (DBFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverAPI.DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
-  vehicle <- traverse QVehicle.findVehicleById (Id <$> person.udf1) >>= fromMaybeM VehicleNotFound . join
+  vehicleM <- case person.udf1 of
+    Nothing -> return Nothing
+    Just udf -> QVehicle.findVehicleById $ Id udf
   decMobNum <- decrypt person.mobileNumber
-  vehAPIEntity <- SV.buildVehicleAPIEntity vehicle
   return $
     DriverAPI.DriverEntityRes
       { id = person.id,
@@ -136,7 +137,7 @@ buildDriverEntityRes (person, driverInfo) = do
         lastName = person.lastName,
         mobileNumber = decMobNum,
         rating = round <$> person.rating,
-        linkedVehicle = vehAPIEntity,
+        linkedVehicle = SV.makeVehicleAPIEntity <$> vehicleM,
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
