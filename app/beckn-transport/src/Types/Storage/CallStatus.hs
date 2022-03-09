@@ -40,6 +40,8 @@ fieldEMod =
       B.tableModification
         { exotelCallSid = "exotel_call_sid",
           rideId = "ride_id",
+          recordingUrl = "recording_url",
+          conversationDuration = "conversation_duration",
           createdAt = "created_at"
         }
 
