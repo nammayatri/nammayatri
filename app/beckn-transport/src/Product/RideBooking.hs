@@ -134,16 +134,6 @@ setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
         <> " "
         <> show response
 
-listDriverRides ::
-  Id SP.Person ->
-  Maybe Integer ->
-  Maybe Integer ->
-  Maybe Bool ->
-  FlowHandler API.RideBookingListRes
-listDriverRides driverId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
-  rbList <- QRB.findAllByDriver driverId mbLimit mbOffset mbOnlyActive
-  API.RideBookingListRes <$> traverse buildRideBookingStatusRes rbList
-
 buildRideBookingStatusRes :: (DBFlow m r, EncFlow m r) => SRB.RideBooking -> m API.RideBookingStatusRes
 buildRideBookingStatusRes rideBooking = do
   fromLocation <- QLoc.findLocationById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound

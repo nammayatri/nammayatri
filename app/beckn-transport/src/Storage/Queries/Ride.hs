@@ -6,7 +6,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Schema
 import Beckn.Utils.Common (identity)
-import Database.Beam ((&&.), (<-.), (==.))
+import Database.Beam ((&&.), (<-.), (==.), (||.))
 import qualified Database.Beam as B
 import EulerHS.Prelude hiding (id)
 import qualified Types.Storage.DB as DB
@@ -63,12 +63,34 @@ findAllByVehicleId vehId = do
   where
     predicate Storage.Ride {..} = vehicleId ==. B.val_ vehId
 
-findAllByDriverId :: DBFlow m r => Id Pers.Person -> m [Storage.Ride]
-findAllByDriverId driverId_ = do
+findAllByDriverId ::
+  DBFlow m r =>
+  Id Pers.Person ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe Bool ->
+  m [(Storage.Ride, SRB.RideBooking)]
+findAllByDriverId driverId_ mbLimit mbOffset mbOnlyActive = do
   dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
+  rbTable <- getRBTable
+  let limit = fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
+      isOnlyActive = Just True == mbOnlyActive
+  DB.findAllByJoin (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) $
+    query dbTable rbTable isOnlyActive
   where
-    predicate Storage.Ride {..} = driverId ==. B.val_ driverId_
+    orderBy (Storage.Ride {..}, _rideBooking) = B.desc_ createdAt
+    query dbTable rbTable isOnlyActive = do
+      ride <- B.all_ dbTable
+      rideBooking <- B.join_ rbTable $ \row ->
+        row.id ==. ride.bookingId
+      B.guard_ $ predicate ride isOnlyActive
+      pure (ride, rideBooking)
+    predicate Storage.Ride {..} isOnlyActive =
+      driverId ==. B.val_ driverId_
+        &&. if isOnlyActive
+          then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
+          else B.val_ True
 
 getInProgressByDriverId :: DBFlow m r => Id Pers.Person -> m (Maybe Storage.Ride)
 getInProgressByDriverId driverId' = do

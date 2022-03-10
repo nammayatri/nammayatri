@@ -134,7 +134,7 @@ data RideAPIEntity = RideAPIEntity
     vehicleNumber :: Text,
     computedFare :: Maybe Amount,
     computedTotalFare :: Maybe Amount,
-    actualRideDistance :: Maybe Double,
+    actualRideDistance :: Double,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -154,7 +154,7 @@ makeRideAPIEntity ride driver vehicle =
       vehicleModel = vehicle.model,
       computedFare = ride.fare,
       computedTotalFare = ride.totalFare,
-      actualRideDistance = Just ride.traveledDistance,
+      actualRideDistance = ride.traveledDistance,
       createdAt = ride.createdAt,
       updatedAt = ride.updatedAt
     }

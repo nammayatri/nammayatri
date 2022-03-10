@@ -23,6 +23,7 @@ import qualified Product.Driver as Driver
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Registration as Registration
+import qualified Product.Ride as Ride
 import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
 import qualified Product.RideAPI.EndRide as RideAPI.EndRide
 import qualified Product.RideAPI.StartRide as RideAPI.StartRide
@@ -266,23 +267,16 @@ type RideBookingAPI =
              :> Get '[JSON] APISuccess
        )
     :<|> "driver"
-      :> "ride"
-      :> ( "list"
-             :> TokenAuth
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
-             :> QueryParam "onlyActive" Bool
-             :> Get '[JSON] RideBookingAPI.RideBookingListRes
-             :<|> Capture "bookingId" (Id SRB.RideBooking)
-               :> "notification"
-               :> ( "respond"
-                      :> TokenAuth
-                      :> ReqBody '[JSON] RideBookingAPI.SetDriverAcceptanceReq
-                      :> Post '[JSON] RideBookingAPI.SetDriverAcceptanceRes
-                      :<|> TokenAuth
-                      :> Get '[JSON] RideBookingAPI.GetRideInfoRes
-                  )
-         )
+    :> "rideBooking"
+    :> Capture "bookingId" (Id SRB.RideBooking)
+    :> "notification"
+    :> "respond"
+    :> ( TokenAuth
+           :> ReqBody '[JSON] RideBookingAPI.SetDriverAcceptanceReq
+           :> Post '[JSON] RideBookingAPI.SetDriverAcceptanceRes
+           :<|> TokenAuth
+           :> Get '[JSON] RideBookingAPI.GetRideInfoRes
+       )
 
 rideBookingFlow :: FlowServer RideBookingAPI
 rideBookingFlow =
@@ -290,11 +284,9 @@ rideBookingFlow =
       :<|> RideBooking.rideBookingList
       :<|> RideBooking.rideBookingCancel
   )
-    :<|> ( RideBooking.listDriverRides
-             :<|> ( \rideBookingId ->
-                      RideBooking.setDriverAcceptance rideBookingId
-                        :<|> RideBooking.getRideInfo rideBookingId
-                  )
+    :<|> ( \rideBookingId ->
+             RideBooking.setDriverAcceptance rideBookingId
+               :<|> RideBooking.getRideInfo rideBookingId
          )
 
 -- Location update and get for tracking is as follows
@@ -369,11 +361,17 @@ routeApiFlow = Location.getRoutes
 
 type RideAPI =
   "driver" :> "ride"
-    :> ( TokenAuth
-           :> Capture "rideId" (Id SRide.Ride)
-           :> "start"
-           :> ReqBody '[JSON] RideAPI.StartRideReq
-           :> Post '[JSON] APISuccess
+    :> ( "list"
+           :> TokenAuth
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
+           :> QueryParam "onlyActive" Bool
+           :> Get '[JSON] RideAPI.DriverRideListRes
+           :<|> TokenAuth
+             :> Capture "rideId" (Id SRide.Ride)
+             :> "start"
+             :> ReqBody '[JSON] RideAPI.StartRideReq
+             :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "rideId" (Id SRide.Ride)
              :> "end"
@@ -387,7 +385,8 @@ type RideAPI =
 
 rideFlow :: FlowServer RideAPI
 rideFlow =
-  RideAPI.StartRide.startRide
+  Ride.listDriverRides
+    :<|> RideAPI.StartRide.startRide
     :<|> RideAPI.EndRide.endRide
     :<|> RideAPI.CancelRide.cancelRide
 

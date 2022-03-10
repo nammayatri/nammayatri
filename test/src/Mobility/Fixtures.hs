@@ -72,7 +72,7 @@ cancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> ClientM APISuccess
 rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
-rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRoutes.RideAPI)
+_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRoutes.RideAPI)
 
 getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
 setDriverOnline :: Text -> Bool -> ClientM APISuccess
@@ -91,13 +91,13 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
 rideRespond :: Id TRB.RideBooking -> Text -> TRideBookingAPI.SetDriverAcceptanceReq -> ClientM TRideBookingAPI.SetDriverAcceptanceRes
 rideRespond rideBookingId = rideResp
   where
-    _ :<|> (_ :<|> driver_rb_path) = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
     rideResp :<|> _ = driver_rb_path rideBookingId
 
 getNotificationInfo :: Id TRB.RideBooking -> Text -> ClientM TRideBookingAPI.GetRideInfoRes
 getNotificationInfo rideBookingId = getNotif
   where
-    _ :<|> (_ :<|> driver_rb_path) = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
     _ :<|> getNotif = driver_rb_path rideBookingId
 
 buildAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
