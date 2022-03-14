@@ -12,7 +12,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.SearchRequest as MC
@@ -24,16 +23,18 @@ cancel :: Id SRB.RideBooking -> Id Person.Person -> API.CancelReq -> FlowHandler
 cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let bookingCancellationReasonAPI = req.bookingCancellationReason
   rideBooking <- QRB.findById bookingId >>= fromMaybeM RideBookingDoesNotExist
-  let quoteId = rideBooking.quoteId
-  quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist -- TODO: Handle usecase where multiple productinstances exists for one product
-  searchRequest <- MC.findByPersonId personId (quote.requestId) >>= fromMaybeM SearchRequestNotFound
+  searchRequest <- MC.findByPersonId personId (rideBooking.requestId) >>= fromMaybeM SearchRequestNotFound
   unless (isRideBookingCancellable rideBooking) $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ searchRequest.id
   bapURIs <- askConfig (.bapSelfURIs)
   bapIDs <- askConfig (.bapSelfIds)
-  context <- buildTaxiContext Context.CANCEL txnId bapIDs.cabs bapURIs.cabs (Just quote.providerId) (Just quote.providerUrl)
-  void $ ExternalAPI.cancel quote.providerUrl (Common.BecknReq context (ReqCancel.CancelReqMessage quote.bppQuoteId.getId ReqCancel.ByUser))
+  context <- buildTaxiContext Context.CANCEL txnId bapIDs.cabs bapURIs.cabs (Just rideBooking.providerId) (Just rideBooking.providerUrl)
+
+  when (rideBooking.status == SRB.NEW) $ throwError (RideBookingInvalidStatus "NEW")
+  bppOrderId <- fromMaybeM (RideBookingFieldNotPresent "bppBookingId") rideBooking.bppBookingId
+  void $ ExternalAPI.cancel rideBooking.providerUrl (Common.BecknReq context (ReqCancel.CancelReqMessage bppOrderId.getId ReqCancel.ByUser))
+
   rideBookingCancelationReason <- buildRideBookingCancelationReason rideBooking.id bookingCancellationReasonAPI
   DB.runTransaction
     (QBCR.create rideBookingCancelationReason)

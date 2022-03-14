@@ -16,7 +16,6 @@ import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Quote as Quote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
@@ -41,12 +40,11 @@ cancel transporterId _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req.context
     validateContext context
-    let quoteId = req.message.order_id
+    let bookingId = req.message.order_id
     transporterOrg <-
       Organization.findOrganizationById transporterId
         >>= fromMaybeM OrgNotFound
-    quote <- Quote.findById (Id quoteId) >>= fromMaybeM QuoteDoesNotExist
-    rideBooking <- QRB.findByQuoteId (quote.id) >>= fromMaybeM RideNotFound
+    rideBooking <- QRB.findById (Id bookingId) >>= fromMaybeM RideBookingDoesNotExist
     now <- getCurrentTime
     RideRequest.createFlow =<< BP.buildRideReq (rideBooking.id) (transporterOrg.shortId) SRideRequest.CANCELLATION now
     return Ack
