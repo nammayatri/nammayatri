@@ -270,8 +270,8 @@ type RideBookingAPI =
     :> "rideBooking"
     :> Capture "bookingId" (Id SRB.RideBooking)
     :> "notification"
-    :> "respond"
-    :> ( TokenAuth
+    :> ( "respond"
+           :> TokenAuth
            :> ReqBody '[JSON] RideBookingAPI.SetDriverAcceptanceReq
            :> Post '[JSON] RideBookingAPI.SetDriverAcceptanceRes
            :<|> TokenAuth
