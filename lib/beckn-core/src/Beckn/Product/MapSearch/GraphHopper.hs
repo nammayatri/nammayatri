@@ -7,10 +7,10 @@ where
 
 import Beckn.External.Graphhopper.Flow as Grphr
 import Beckn.External.Graphhopper.Types as Grphr
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import qualified Beckn.Types.MapSearch as MapSearch
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common hiding (id)
 import Data.Either.Combinators (mapBoth)
 import Data.Geospatial hiding (bbox)

@@ -2,9 +2,9 @@ module Beckn.External.GoogleMaps.Client where
 
 import qualified Beckn.External.GoogleMaps.API as API
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Common
 import Beckn.Types.Error
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import EulerHS.Prelude
 import Servant.Client.Core (ClientError)

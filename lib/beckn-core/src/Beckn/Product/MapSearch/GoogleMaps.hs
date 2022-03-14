@@ -9,10 +9,10 @@ where
 import qualified Beckn.External.GoogleMaps.Client as GoogleMaps
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import qualified Beckn.Types.MapSearch as MapSearch
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common hiding (id)
 import GHC.Float
 

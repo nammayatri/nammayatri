@@ -1,9 +1,9 @@
 module ExternalAPI.Flow where
 
 import Beckn.Prelude
+import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.App
 import Beckn.Types.Core.ReqTypes
-import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Utils.Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)

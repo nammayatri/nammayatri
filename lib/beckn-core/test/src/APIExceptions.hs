@@ -5,9 +5,9 @@
 
 module APIExceptions (httpExceptionTests) where
 
+import Beckn.Tools.Metrics.CoreMetrics
+import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Monitoring.Prometheus.Metrics
-import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Error.FlowHandling
 import Control.Arrow (left)
 import qualified Data.Aeson as A

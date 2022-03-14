@@ -5,9 +5,9 @@ where
 
 import App.Routes (gatewayAPI, gatewayServer)
 import App.Types
+import Beckn.Tools.Metrics.Init
 import Beckn.Types.App
 import Beckn.Utils.App
-import Beckn.Utils.Monitoring.Prometheus.Metrics (addServantInfo)
 import qualified Beckn.Utils.Servant.Server as BU
 import EulerHS.Prelude
 import Servant

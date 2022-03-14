@@ -15,7 +15,7 @@ import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client (HttpClientOptions (..))
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
-import qualified Tools.Metrics.Types as Metrics
+import qualified Tools.Metrics as Metrics
 
 data AppCfg = AppCfg
   { port :: Int,

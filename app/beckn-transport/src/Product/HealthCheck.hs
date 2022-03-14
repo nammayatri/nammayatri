@@ -5,8 +5,8 @@ import Beckn.Types.Common
 import Beckn.Utils.IOLogging (LoggerEnv)
 import EulerHS.Prelude
 import Servant (Get, JSON)
+import Tools.Metrics (CoreMetricsContainer)
 import Types.Error
-import Types.Metrics (CoreMetricsContainer)
 import Utils.Common
 
 type HealthCheckAPI = Get '[JSON] Text

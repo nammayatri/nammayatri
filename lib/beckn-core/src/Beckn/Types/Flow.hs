@@ -4,14 +4,13 @@
 
 module Beckn.Types.Flow (FlowR, runFlowR) where
 
+import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.Forkable
 import Beckn.Types.Logging
 import Beckn.Types.MonadGuid
-import Beckn.Types.Monitoring.Prometheus.Metrics
 import Beckn.Types.Time
 import qualified Beckn.Utils.IOLogging as IOLogging
 import Beckn.Utils.Logging
-import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified EulerHS.Interpreters as I
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
@@ -97,11 +96,11 @@ instance MonadTime (FlowR r) where
 instance MonadClock (FlowR r) where
   getClockTime = liftIO getClockTime
 
-instance HasCoreMetrics r => CoreMetrics (FlowR r) where
-  addRequestLatency = Metrics.addRequestLatency
-  incrementErrorCounter = Metrics.incrementErrorCounter
-  addUrlCallRetries = Metrics.addUrlCallRetries
-  addUrlCallRetryFailures = Metrics.addUrlCallFailures
+instance Metrics.HasCoreMetrics r => Metrics.CoreMetrics (FlowR r) where
+  addRequestLatency = Metrics.addRequestLatencyImplementation
+  incrementErrorCounter = Metrics.incrementErrorCounterImplementation
+  addUrlCallRetries = Metrics.addUrlCallRetriesImplementation
+  addUrlCallRetryFailures = Metrics.addUrlCallFailuresImplementation
 
 instance MonadMonitor (FlowR r) where
   doIO = liftIO
@@ -109,11 +108,11 @@ instance MonadMonitor (FlowR r) where
 instance MonadGuid (FlowR r) where
   generateGUIDText = FlowR L.generateGUID
 
-instance (Log (FlowR r), CoreMetrics (FlowR r)) => Forkable (FlowR r) where
+instance (Log (FlowR r), Metrics.CoreMetrics (FlowR r)) => Forkable (FlowR r) where
   fork tag f = do
     FlowR $ ReaderT $ L.forkFlow tag . runReaderT (unFlowR $ handleExc f)
     where
       handleExc = try >=> (`whenLeft` err)
       err (e :: SomeException) = do
         logError $ "Thread " <> show tag <> " died with error: " <> makeLogSomeException e
-        incrementErrorCounter "FORKED_THREAD_ERROR" e
+        Metrics.incrementErrorCounter "FORKED_THREAD_ERROR" e

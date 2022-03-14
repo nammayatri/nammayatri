@@ -1,9 +1,9 @@
 module Beckn.External.Exotel.Flow where
 
 import Beckn.External.Exotel.Types
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Common
 import Beckn.Types.Error
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import Data.Maybe
 import qualified Data.Text as T

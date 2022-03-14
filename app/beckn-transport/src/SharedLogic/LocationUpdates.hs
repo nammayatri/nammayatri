@@ -14,7 +14,6 @@ where
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Storage.Hedis.Queries
 import qualified Beckn.Storage.Queries as DB
-import qualified Beckn.Tools.Metrics.Types as Metrics
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Beckn.Types.MapSearch
@@ -24,6 +23,7 @@ import GHC.Records.Extra
 import Product.Services.GoogleMaps.SnapToRoad (PointsList (PointsList), callSnapToRoadAPI, snappedLocationtoLatLong)
 import SharedLogic.CalculateDistance
 import qualified Storage.Queries.Ride as QRide
+import Tools.Metrics as Metrics
 import qualified Types.Storage.Person as Person
 
 data RideInterpolationHandler m = RideInterpolationHandler

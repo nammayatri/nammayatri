@@ -3,7 +3,6 @@
 module Product.Services.GoogleMaps.SnapToRoad where
 
 import Beckn.Prelude
-import qualified Beckn.Tools.Metrics.Types as Metrics
 import Beckn.Types.App (MandatoryQueryParam, MonadFlow)
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.MapSearch
@@ -12,6 +11,7 @@ import qualified Data.Text as T
 import EulerHS.Types as Euler
 import Servant
 import Servant.Client
+import Tools.Metrics as Metrics
 
 snapToRoadUrl :: BaseUrl
 snapToRoadUrl =

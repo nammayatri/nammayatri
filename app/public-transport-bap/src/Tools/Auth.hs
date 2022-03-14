@@ -2,10 +2,10 @@ module Tools.Auth where
 
 import Beckn.InternalAPI.Auth.Client
 import Beckn.Prelude
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import Servant hiding (Context)

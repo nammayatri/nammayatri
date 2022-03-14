@@ -25,8 +25,8 @@ import qualified Storage.Queries.RideBooking as QRideBooking
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as SearchRequest
+import Tools.Metrics
 import Types.Error
-import Types.Metrics
 import Types.Storage.DiscountTransaction
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.RideBooking as SRB

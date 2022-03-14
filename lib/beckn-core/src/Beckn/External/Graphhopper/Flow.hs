@@ -1,8 +1,8 @@
 module Beckn.External.Graphhopper.Flow where
 
 import qualified Beckn.External.Graphhopper.Types as GrphrSearch
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Common
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET

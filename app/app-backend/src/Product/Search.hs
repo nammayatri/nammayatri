@@ -42,11 +42,11 @@ import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Tools.Metrics (CoreMetrics)
+import qualified Tools.Metrics as Metrics
 import qualified Types.API.Search as API
 import Types.Error
-import Types.Metrics (CoreMetrics)
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 
 search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
 search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do

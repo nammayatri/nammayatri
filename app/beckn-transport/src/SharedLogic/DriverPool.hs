@@ -4,7 +4,6 @@ import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Redis.Queries as Redis
-import Beckn.Tools.Metrics.Types
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as GoogleMaps
@@ -14,6 +13,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRideBooking
 import qualified Storage.Queries.SearchReqLocation as QSReqLoc
 import qualified Storage.Queries.TransporterConfig as QTConf
+import Tools.Metrics
 import Types.App (Driver)
 import Types.Error
 import qualified Types.Storage.Organization as SOrg

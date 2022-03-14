@@ -8,14 +8,14 @@ module Beckn.Utils.Error.FlowHandling
   )
 where
 
+import Beckn.Tools.Metrics.CoreMetrics (HasCoreMetrics)
+import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Error as Err
 import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Flow
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
-import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Error.BaseError.HTTPError.APIError (toAPIError)
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (toBecknAPIError)
 import Beckn.Utils.Logging

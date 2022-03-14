@@ -5,6 +5,7 @@ import App.Allocator.Environment
 import Beckn.Exit
 import Beckn.Storage.Common
 import Beckn.Storage.Redis.Config
+import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
@@ -22,7 +23,6 @@ import Servant
 import qualified Services.Allocation.Runner as Allocator
 import qualified Storage.Queries.Organization as Storage
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 
 runAllocator :: (AppCfg -> AppCfg) -> IO ()
 runAllocator configModifier = do

@@ -7,10 +7,10 @@ module Beckn.Utils.Registry
 where
 
 import Beckn.Prelude
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Error
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Types.Registry
 import qualified Beckn.Types.Registry.API as API
 import qualified Beckn.Types.Registry.Routes as Registry

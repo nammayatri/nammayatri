@@ -6,8 +6,8 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Dunzo.Types
 import Servant (Capture, Get, Header, JSON, NoContent, Post, QueryParam, ReqBody, (:>))
+import Tools.Metrics (CoreMetrics)
 import Types.Common
-import Types.Metrics (CoreMetrics)
 
 type GetTokenAPI =
   "api" :> "v1" :> "token"

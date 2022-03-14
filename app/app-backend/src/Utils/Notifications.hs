@@ -13,7 +13,7 @@ import qualified Domain.Types.RideBooking as SRB
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as Person
-import Types.Metrics
+import Tools.Metrics
 import Utils.Common
 
 notifyOnRideAssigned ::

@@ -3,10 +3,10 @@
 
 module Beckn.Utils.Servant.HeaderAuth where
 
+import Beckn.Tools.Metrics.CoreMetrics (HasCoreMetrics)
 import Beckn.Types.App
 import Beckn.Types.Error
 import Beckn.Types.Flow
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (HasLog)
 import Beckn.Utils.Servant.Server

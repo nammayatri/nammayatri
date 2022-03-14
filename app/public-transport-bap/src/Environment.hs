@@ -3,7 +3,6 @@ module Environment where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Redis.Config
-import Beckn.Tools.Metrics.Types
 import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Flow
@@ -16,6 +15,7 @@ import qualified Beckn.Utils.Registry as Registry
 import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
+import Tools.Metrics.Types
 import Tools.Streaming.Kafka.Environment
 
 data AppCfg = AppCfg
@@ -48,7 +48,6 @@ data AppEnv = AppEnv
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
-    bapMetrics :: BAPMetricsContainer,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs
   }
@@ -60,7 +59,6 @@ buildAppEnv config@AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
-  bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   isShuttingDown <- mkShutdown
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   kafkaEnvs <- buildBAPKafkaEnvs

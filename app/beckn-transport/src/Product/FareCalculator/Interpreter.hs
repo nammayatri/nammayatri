@@ -15,7 +15,7 @@ import Product.FareCalculator.Flow
     doCalculateFare,
   )
 import qualified Storage.Queries.FarePolicy as FarePolicyS
-import Types.Metrics (CoreMetrics)
+import Tools.Metrics (CoreMetrics)
 import Types.Storage.Organization (Organization)
 import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common

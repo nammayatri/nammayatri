@@ -16,7 +16,7 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import System.Environment (lookupEnv)
-import Types.Metrics
+import Tools.Metrics
 
 data AppCfg = AppCfg
   { redisCfg :: T.RedisConfig,

@@ -15,8 +15,8 @@ import EulerHS.Prelude hiding (state)
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
+import Tools.Metrics (CoreMetrics)
 import Types.Error
-import Types.Metrics (CoreMetrics)
 import Utils.Common
 import qualified Utils.Notifications as Notify
 

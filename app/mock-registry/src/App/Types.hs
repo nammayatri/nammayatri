@@ -11,10 +11,10 @@ module App.Types
 where
 
 import Beckn.Storage.Esqueleto.Config
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetricsContainer, registerCoreMetricsContainer)
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Flow
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, registerCoreMetricsContainer)
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging

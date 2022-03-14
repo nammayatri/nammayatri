@@ -3,12 +3,12 @@
 
 module Beckn.Utils.Servant.SignatureAuth where
 
+import Beckn.Tools.Metrics.CoreMetrics (HasCoreMetrics)
+import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.Common
 import Beckn.Types.Credentials
 import Beckn.Types.Error
 import Beckn.Types.Flow
-import Beckn.Types.Monitoring.Prometheus.Metrics (HasCoreMetrics)
-import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Types.Registry
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (FromDhall)

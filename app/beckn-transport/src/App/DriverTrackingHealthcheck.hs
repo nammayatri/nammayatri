@@ -5,6 +5,7 @@ import App.DriverTrackingHealthcheck.Environment
 import Beckn.Exit
 import Beckn.Storage.Common
 import Beckn.Storage.Redis.Config
+import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
@@ -20,7 +21,6 @@ import Product.HealthCheck
 import Servant
 import qualified Services.DriverTrackingHealthcheck as Service
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 
 runDriverHealthcheck :: (AppCfg -> AppCfg) -> IO ()
 runDriverHealthcheck configModifier = do

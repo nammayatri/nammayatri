@@ -22,9 +22,9 @@ import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.RideRequest as QRR
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Metrics (CoreMetrics)
 import Types.App
 import Types.Error
-import Types.Metrics (CoreMetrics)
 import Types.Storage.AllocationEvent (AllocationEventType)
 import qualified Types.Storage.DriverInformation as SDriverInfo
 import qualified Types.Storage.NotificationStatus as SNS

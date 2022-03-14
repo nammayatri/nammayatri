@@ -9,7 +9,7 @@ import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import Domain.Search (Person)
 import Servant hiding (Context)
-import Tools.Metrics.Types (CoreMetrics)
+import Tools.Metrics (CoreMetrics)
 
 -- | Performs simple token verification.
 type TokenAuth = HeaderAuth "token" VerifyToken

@@ -13,8 +13,8 @@ import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import EulerHS.Prelude
 import Storage.Queries.SearchRequest as SearchRequest
+import Tools.Metrics (CoreMetrics)
 import Types.Error
-import Types.Metrics (CoreMetrics)
 import Types.Storage.Organization as Org
 import Types.Storage.SearchRequest as SearchRequest
 import Utils.Auth

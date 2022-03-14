@@ -1,4 +1,4 @@
-module Beckn.Types.Monitoring.Prometheus.Metrics
+module Beckn.Tools.Metrics.CoreMetrics.Types
   ( HasCoreMetrics,
     CoreMetrics (..),
     CoreMetricsContainer (..),

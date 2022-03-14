@@ -17,8 +17,8 @@ import ExternalAPI.Flow (callOnUpdate)
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Vehicle as Vehicle
+import Tools.Metrics (CoreMetrics)
 import Types.Error
-import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Organization as SOrg
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB

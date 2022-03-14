@@ -1,45 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Beckn.Utils.Monitoring.Prometheus.Metrics where
+module Beckn.Tools.Metrics.CoreMetrics
+  ( module Beckn.Tools.Metrics.CoreMetrics,
+    module Reexport,
+  )
+where
 
+import Beckn.Tools.Metrics.CoreMetrics.Types as Reexport
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Error.BaseError.HTTPError (BaseException (..), HTTPException (..), IsBaseError (toMessage), IsHTTPError (toErrorCode, toHttpCode), IsHTTPException)
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetricsContainer, HasCoreMetrics)
 import Beckn.Types.Time (Milliseconds, getMilliseconds)
-import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.BaseUrl
 import Data.Text as DT
 import qualified EulerHS.Language as L
 import EulerHS.Prelude as E
 import GHC.Records.Extra
-import Network.Wai (Application, Request (..))
-import Network.Wai.Handler.Warp as W
-import Network.Wai.Middleware.Prometheus
 import Prometheus as P
-import Prometheus.Metric.GHC (ghcMetrics)
-import Prometheus.Metric.Proc
 import Servant.Client (BaseUrl, ClientError (..), ResponseF (..))
 
-serve :: Int -> IO ()
-serve port = do
-  _ <- register ghcMetrics
-  _ <- register procMetrics
-  putStrLn @String $ "Prometheus server started at port " <> show port
-  _ <- forkIO $ W.run port metricsApp
-  return ()
-
-addServantInfo ::
-  SanitizedUrl a =>
-  Proxy a ->
-  Application ->
-  Application
-addServantInfo proxy app request respond =
-  let mpath = getSanitizedUrl proxy request
-      fullpath = DT.intercalate "/" (pathInfo request)
-   in instrumentHandlerValue (\_ -> "/" <> fromMaybe fullpath mpath) app request respond
-
-incrementErrorCounter ::
+incrementErrorCounterImplementation ::
   ( HasCoreMetrics r,
     L.MonadFlow m,
     MonadReader r m
@@ -47,11 +27,11 @@ incrementErrorCounter ::
   Text ->
   SomeException ->
   m ()
-incrementErrorCounter errorContext err = do
+incrementErrorCounterImplementation errorContext err = do
   cmContainer <- asks (.coreMetrics)
-  incrementErrorCounter' cmContainer errorContext err
+  incrementErrorCounterImplementation' cmContainer errorContext err
 
-addUrlCallRetries ::
+addUrlCallRetriesImplementation ::
   ( HasCoreMetrics r,
     L.MonadFlow m,
     MonadReader r m
@@ -59,22 +39,22 @@ addUrlCallRetries ::
   BaseUrl ->
   Int ->
   m ()
-addUrlCallRetries url retryCount = do
+addUrlCallRetriesImplementation url retryCount = do
   cmContainer <- asks (.coreMetrics)
-  addUrlCallRetries' cmContainer url retryCount
+  addUrlCallRetriesImplementation' cmContainer url retryCount
 
-addUrlCallFailures ::
+addUrlCallFailuresImplementation ::
   ( HasCoreMetrics r,
     L.MonadFlow m,
     MonadReader r m
   ) =>
   BaseUrl ->
   m ()
-addUrlCallFailures url = do
+addUrlCallFailuresImplementation url = do
   cmContainer <- asks (.coreMetrics)
-  addUrlCallFailures' cmContainer url
+  addUrlCallFailuresImplementation' cmContainer url
 
-addRequestLatency ::
+addRequestLatencyImplementation ::
   ( HasCoreMetrics r,
     L.MonadFlow m,
     MonadReader r m
@@ -84,11 +64,11 @@ addRequestLatency ::
   Milliseconds ->
   Either ClientError a ->
   m ()
-addRequestLatency host serviceName dur status = do
+addRequestLatencyImplementation host serviceName dur status = do
   cmContainer <- asks (.coreMetrics)
-  addRequestLatency' cmContainer host serviceName dur status
+  addRequestLatencyImplementation' cmContainer host serviceName dur status
 
-addRequestLatency' ::
+addRequestLatencyImplementation' ::
   L.MonadFlow m =>
   CoreMetricsContainer ->
   Text ->
@@ -96,7 +76,7 @@ addRequestLatency' ::
   Milliseconds ->
   Either ClientError a ->
   m ()
-addRequestLatency' cmContainer host serviceName dur status = do
+addRequestLatencyImplementation' cmContainer host serviceName dur status = do
   let requestLatencyMetric = cmContainer.requestLatency
   L.runIO $
     P.withLabel
@@ -113,8 +93,8 @@ addRequestLatency' cmContainer host serviceName dur status = do
         Left (UnsupportedContentType _ (Response code _ _ _)) -> show code
         Left (ConnectionError _) -> "Connection error"
 
-incrementErrorCounter' :: L.MonadFlow m => CoreMetricsContainer -> Text -> SomeException -> m ()
-incrementErrorCounter' cmContainers errorContext exc
+incrementErrorCounterImplementation' :: L.MonadFlow m => CoreMetricsContainer -> Text -> SomeException -> m ()
+incrementErrorCounterImplementation' cmContainers errorContext exc
   | Just (HTTPException err) <- fromException exc = incCounter' err
   | Just (BaseException err) <- fromException exc = incCounter' . InternalError . fromMaybe (show err) $ toMessage err
   | otherwise = incCounter' . InternalError $ show exc
@@ -129,8 +109,8 @@ incrementErrorCounter' cmContainers errorContext exc
           (show $ toHttpCode err, errorContext, toErrorCode err)
           P.incCounter
 
-addUrlCallRetries' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> Int -> m ()
-addUrlCallRetries' cmContainers url retryCount = do
+addUrlCallRetriesImplementation' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> Int -> m ()
+addUrlCallRetriesImplementation' cmContainers url retryCount = do
   let urlCallRetriesMetric = cmContainers.urlCallRetries
   L.runIO $
     P.withLabel
@@ -138,8 +118,8 @@ addUrlCallRetries' cmContainers url retryCount = do
       (showBaseUrlText url, show retryCount)
       P.incCounter
 
-addUrlCallFailures' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> m ()
-addUrlCallFailures' cmContainers url = do
+addUrlCallFailuresImplementation' :: L.MonadFlow m => CoreMetricsContainer -> BaseUrl -> m ()
+addUrlCallFailuresImplementation' cmContainers url = do
   let urlCallRetriesMetric = cmContainers.urlCallRetryFailures
   L.runIO $
     P.withLabel

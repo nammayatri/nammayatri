@@ -3,9 +3,9 @@ module Beckn.External.MyValueFirst.Flow where
 import qualified Beckn.External.MyValueFirst.API as API
 import Beckn.External.MyValueFirst.Types (SubmitSms (..), SubmitSmsRes (..))
 import Beckn.Sms.Config (SmsConfig (..))
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Common
 import Beckn.Types.Error
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import qualified Data.Text as T
 import EulerHS.Prelude

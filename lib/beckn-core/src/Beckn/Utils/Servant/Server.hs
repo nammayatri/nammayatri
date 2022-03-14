@@ -3,6 +3,7 @@
 module Beckn.Utils.Servant.Server where
 
 import Beckn.Prelude (identity)
+import qualified Beckn.Tools.Metrics.Init as Metrics
 import Beckn.Types.App (EnvR (..), FlowHandlerR, FlowServerR)
 import Beckn.Types.Flow
 import Beckn.Types.Time
@@ -10,7 +11,6 @@ import Beckn.Utils.App
 import qualified Beckn.Utils.FlowLogging as L
 import Beckn.Utils.IOLogging (LoggerEnv)
 import Beckn.Utils.Logging
-import qualified Beckn.Utils.Monitoring.Prometheus.Metrics as Metrics
 import qualified Beckn.Utils.Monitoring.Prometheus.Servant as Metrics
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as E

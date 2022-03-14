@@ -8,7 +8,7 @@ import Beckn.Utils.App (getPodName)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
-import Types.Metrics
+import Tools.Metrics
 
 data AppEnv = AppEnv
   { config :: AppCfg,

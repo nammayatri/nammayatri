@@ -1,18 +1,16 @@
-module Utils.Metrics
-  ( module Utils.Metrics,
-    module CoreMetrics,
+module Beckn.Tools.Metrics.BAPMetrics
+  ( module Beckn.Tools.Metrics.BAPMetrics,
+    module Reexport,
   )
 where
 
+import Beckn.Prelude
 import qualified Beckn.Storage.Redis.Queries as Redis
+import Beckn.Tools.Metrics.BAPMetrics.Types as Reexport
 import Beckn.Types.Common
-import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
-import Data.Time (UTCTime, diffUTCTime)
-import qualified EulerHS.Language as L
-import EulerHS.Prelude
+import Data.Time (diffUTCTime)
 import GHC.Records.Extra
 import Prometheus as P
-import Types.Metrics (BAPMetricsContainer, HasBAPMetrics)
 
 startSearchMetrics :: HasBAPMetrics m r => Text -> m ()
 startSearchMetrics txnId = do
@@ -29,13 +27,13 @@ incrementSearchRequestCount = do
   bmContainer <- asks (.bapMetrics)
   incrementCaseCount' bmContainer
 
-incrementCaseCount' :: L.MonadFlow m => BAPMetricsContainer -> m ()
+incrementCaseCount' :: MonadIO m => BAPMetricsContainer -> m ()
 incrementCaseCount' bmContainer = do
   let searchRequestCounter = bmContainer.searchRequestCounter
-  L.runIO $ P.incCounter searchRequestCounter
+  liftIO $ P.incCounter searchRequestCounter --is it correct that Euler.runIO = liftIO?
 
-putSearchDuration :: L.MonadFlow m => P.Histogram -> Double -> m ()
-putSearchDuration searchDurationHistogram duration = L.runIO $ P.observe searchDurationHistogram duration
+putSearchDuration :: MonadIO m => P.Histogram -> Double -> m ()
+putSearchDuration searchDurationHistogram duration = liftIO $ P.observe searchDurationHistogram duration
 
 searchDurationKey :: Text -> Text
 searchDurationKey txnId = "beckn:" <> txnId <> ":on_search:received"

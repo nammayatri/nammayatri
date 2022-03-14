@@ -1,66 +1,35 @@
-module Utils.Metrics
-  ( module Utils.Metrics,
-    module CoreMetrics,
+module Tools.Metrics.TransporterBPPMetrics
+  ( module Tools.Metrics.TransporterBPPMetrics,
+    module Reexport,
   )
 where
 
 import Beckn.Types.Amount
 import Beckn.Types.Common (Milliseconds, getSeconds)
 import Beckn.Types.Id
-import Beckn.Utils.Monitoring.Prometheus.Metrics as CoreMetrics
 import Beckn.Utils.Time (getClockTimeInMs)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records.Extra
 import Prometheus as P
-import qualified Types.Metrics as Metric
+import Tools.Metrics.TransporterBPPMetrics.Types as Reexport
 import Types.Storage.Organization
 import Utils.Common (Forkable (fork), MonadFlow)
 
-incrementTaskCounter :: Metric.HasAllocatorMetrics m r => m ()
-incrementTaskCounter = do
-  bmContainer <- asks (.btmMetrics)
-  incrementTaskCounter' bmContainer
-
-incrementFailedTaskCounter :: Metric.HasAllocatorMetrics m r => m ()
-incrementFailedTaskCounter = do
-  bmContainer <- asks (.btmMetrics)
-  incrementFailedTaskCounter' bmContainer
-
-putTaskDuration :: Metric.HasAllocatorMetrics m r => Milliseconds -> m ()
-putTaskDuration duration = do
-  bmContainer <- asks (.btmMetrics)
-  putTaskDuration' bmContainer duration
-
-incrementTaskCounter' :: L.MonadFlow m => Metric.AllocatorMetricsContainer -> m ()
-incrementTaskCounter' bmContainer = do
-  let taskCounter = bmContainer.taskCounter
-  L.runIO $ P.incCounter taskCounter
-
-incrementFailedTaskCounter' :: L.MonadFlow m => Metric.AllocatorMetricsContainer -> m ()
-incrementFailedTaskCounter' bmContainer = do
-  let failedTaskCounter = bmContainer.failedTaskCounter
-  L.runIO $ P.incCounter failedTaskCounter
-
-putTaskDuration' :: L.MonadFlow m => Metric.AllocatorMetricsContainer -> Milliseconds -> m ()
-putTaskDuration' bmContainer duration = do
-  let taskDuration = bmContainer.taskDuration
-  L.runIO $ P.observe taskDuration . (/ 1000) . fromIntegral $ duration
-
-putFareAndDistanceDeviations :: (MonadMonitor m, Metric.HasTransporterMetrics m r) => Amount -> Double -> m ()
+putFareAndDistanceDeviations :: (MonadMonitor m, HasTransporterMetrics m r) => Amount -> Double -> m ()
 putFareAndDistanceDeviations fareDiff distanceDiff = do
-  Metric.TransporterMetricsContainer {..} <- asks (.transporterMetrics)
+  TransporterMetricsContainer {..} <- asks (.transporterMetrics)
   P.observe realFareDeviation $ amountToDouble fareDiff
   P.observe realDistanceDeviation distanceDiff
 
 type SearchMetricsMVar = MVar Milliseconds
 
-startSearchMetrics :: Metric.HasBPPMetrics m r => Id Organization -> m SearchMetricsMVar
+startSearchMetrics :: HasBPPMetrics m r => Id Organization -> m SearchMetricsMVar
 startSearchMetrics transporterId = do
   bmContainer <- asks (.bppMetrics)
   startSearchMetrics' transporterId bmContainer
 
-finishSearchMetrics :: Metric.HasBPPMetrics m r => Id Organization -> SearchMetricsMVar -> m ()
+finishSearchMetrics :: HasBPPMetrics m r => Id Organization -> SearchMetricsMVar -> m ()
 finishSearchMetrics transporterId searchMetricsMVar = do
   bmContainer <- asks (.bppMetrics)
   finishSearchMetrics' transporterId bmContainer searchMetricsMVar
@@ -73,7 +42,7 @@ putSearchDuration transporterId searchDurationHistogram duration =
       (show transporterId)
       (`P.observe` duration)
 
-startSearchMetrics' :: MonadFlow m => Id Organization -> Metric.BPPMetricsContainer -> m SearchMetricsMVar
+startSearchMetrics' :: MonadFlow m => Id Organization -> BPPMetricsContainer -> m SearchMetricsMVar
 startSearchMetrics' transporterId bmContainer = do
   let (_, failureCounter) = bmContainer.searchDuration
       searchDurationTimeout = getSeconds bmContainer.searchDurationTimeout
@@ -88,7 +57,7 @@ startSearchMetrics' transporterId bmContainer = do
 finishSearchMetrics' ::
   MonadFlow m =>
   Id Organization ->
-  Metric.BPPMetricsContainer ->
+  BPPMetricsContainer ->
   SearchMetricsMVar ->
   m ()
 finishSearchMetrics' transporterId bmContainer searchMetricsMVar = do

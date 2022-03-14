@@ -14,7 +14,7 @@ import qualified Core.Search as Search
 import qualified Core.Status as Status
 import qualified Data.Text as T
 import GHC.Records.Extra
-import Tools.Metrics.Types (CoreMetrics)
+import Tools.Metrics (CoreMetrics)
 
 search ::
   ( MonadFlow m,

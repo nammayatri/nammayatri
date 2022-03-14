@@ -3,4 +3,4 @@ module Tools.Metrics
   )
 where
 
-import Beckn.Types.Monitoring.Prometheus.Metrics as Reexport
+import Beckn.Tools.Metrics.CoreMetrics as Reexport

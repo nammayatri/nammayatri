@@ -11,11 +11,11 @@ import qualified Data.Map as Map
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
+import qualified Tools.Metrics as Metrics
+import qualified Tools.Metrics as TMetrics
 import Types.Error
-import qualified Types.Metrics as TMetrics
 import Types.Storage.Organization
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 
 handle :: Allocation.ServiceHandle Flow
 handle =

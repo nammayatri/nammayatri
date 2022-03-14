@@ -34,8 +34,9 @@ import qualified Storage.Queries.Quote as Quote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchReqLocation as Loc
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Tools.Metrics (CoreMetrics, HasBPPMetrics)
+import qualified Tools.Metrics as Metrics
 import Types.Error
-import Types.Metrics (CoreMetrics, HasBPPMetrics)
 import qualified Types.Storage.Organization as Org
 import qualified Types.Storage.Quote as Quote
 import qualified Types.Storage.Ride as Ride
@@ -43,7 +44,6 @@ import qualified Types.Storage.SearchReqLocation as Location
 import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
 import Utils.Common
-import qualified Utils.Metrics as Metrics
 
 search ::
   Id Org.Organization ->

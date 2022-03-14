@@ -10,8 +10,8 @@ import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
+import Tools.Metrics
 import Tools.Streaming.Kafka.Environment
-import Types.Metrics
 
 type Flow = FlowR AppEnv
 

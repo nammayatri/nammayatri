@@ -3,9 +3,9 @@
 
 module Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError where
 
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Common
 import Beckn.Types.Error.BaseError.HTTPError
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Servant.Client
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET

@@ -22,8 +22,8 @@ import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.SearchRequest as SearchRequest
+import Tools.Metrics (CoreMetrics)
 import Types.Error
-import Types.Metrics (CoreMetrics)
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.Ride as SRide
 import qualified Types.Storage.RideBooking as SRB

@@ -37,8 +37,8 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import ExternalAPI.Flow
 import Storage.Queries.Organization (findOrgByShortId)
+import Tools.Metrics
 import Tools.Streaming.Kafka.Environment
-import Types.Metrics
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,

@@ -20,8 +20,8 @@ import SharedLogic.LocationUpdates
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
+import Tools.Metrics
 import Types.API.Location as Location
-import Types.Metrics
 import Types.Storage.DriverLocation (DriverLocation)
 import qualified Types.Storage.Person as Person
 import qualified Types.Storage.Ride as SRide

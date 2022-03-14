@@ -1,13 +1,11 @@
-module Tools.Metrics.Types
+module Beckn.Tools.Metrics.BAPMetrics.Types
   ( HasBAPMetrics,
     BAPMetricsContainer (..),
-    module CoreMetrics,
     registerBAPMetricsContainer,
   )
 where
 
 import Beckn.Prelude
-import Beckn.Types.Monitoring.Prometheus.Metrics as CoreMetrics
 import Beckn.Utils.Common
 import Prometheus as P
 

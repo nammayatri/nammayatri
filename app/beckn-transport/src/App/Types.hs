@@ -36,8 +36,8 @@ import qualified Data.Text as T
 import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import System.Environment (lookupEnv)
+import Tools.Metrics
 import Tools.Streaming.Kafka.Environment
-import Types.Metrics
 
 data AppCfg = AppCfg
   { dbCfg :: DBConfig,

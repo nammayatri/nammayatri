@@ -1,11 +1,11 @@
 module Beckn.Utils.Servant.Client where
 
+import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.Common
 import Beckn.Types.Error (ExternalAPICallError (..))
 import Beckn.Types.Error.BaseError.HTTPError
 import Beckn.Types.Error.BaseError.HTTPError.CallAPIError
 import Beckn.Types.Error.BaseError.HTTPError.FromResponse
-import qualified Beckn.Types.Monitoring.Prometheus.Metrics as Metrics
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.Throwing
 import Beckn.Utils.Logging

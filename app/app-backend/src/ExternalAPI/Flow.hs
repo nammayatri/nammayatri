@@ -17,9 +17,9 @@ import EulerHS.Prelude
 import qualified ExternalAPI.Types as API
 import GHC.Records.Extra
 import Servant.Client
+import Tools.Metrics (CoreMetrics)
 import Types.API.Location
 import Types.Error
-import Types.Metrics (CoreMetrics)
 import Utils.Common
 
 data BAPs a = BAPs

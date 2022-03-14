@@ -18,8 +18,8 @@ module Beckn.External.FCM.Flow where
 
 import Beckn.External.FCM.Types
 import qualified Beckn.Storage.Redis.Queries as Redis
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.Common
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common
 import qualified Beckn.Utils.JWT as JWT
 import Control.Exception (IOException)

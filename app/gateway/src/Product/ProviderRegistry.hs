@@ -9,9 +9,9 @@ import qualified Beckn.Types.Registry.API as Registry
 import qualified Beckn.Types.Registry.Domain as Registry
 import qualified Beckn.Utils.Registry as Registry
 import EulerHS.Prelude
+import Tools.Metrics
 import qualified Types.Beckn.Context as B
 import qualified Types.Beckn.Domain as B
-import Types.Metrics
 
 lookup ::
   ( MonadReader r m,

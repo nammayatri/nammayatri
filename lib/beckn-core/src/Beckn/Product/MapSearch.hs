@@ -3,8 +3,8 @@ module Beckn.Product.MapSearch where
 import Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
+import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Beckn.Types.MapSearch as MapSearch
-import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common hiding (id)
 
 getDistance ::

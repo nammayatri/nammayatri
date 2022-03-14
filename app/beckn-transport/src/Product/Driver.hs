@@ -31,9 +31,9 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
+import Tools.Metrics
 import qualified Types.API.Driver as DriverAPI
 import Types.Error
-import Types.Metrics
 import Types.Storage.DriverInformation (DriverInformation, DriverInformationT (createdAt))
 import qualified Types.Storage.DriverInformation as DriverInfo
 import qualified Types.Storage.Organization as Org
