@@ -171,7 +171,7 @@ buildRideBookingStatusRes rideBooking = do
     driverDefault now =
       SP.Person
         { id = Id "[Driver deleted]",
-          firstName = Nothing,
+          firstName = Just "[Driver deleted]",
           middleName = Nothing,
           lastName = Nothing,
           fullName = Nothing,
@@ -179,7 +179,7 @@ buildRideBookingStatusRes rideBooking = do
           gender = SP.FEMALE,
           identifierType = SP.EMAIL,
           email = Nothing,
-          mobileNumber = Nothing,
+          mobileNumber = Just "N/A",
           mobileCountryCode = Nothing,
           passwordHash = Nothing,
           identifier = Nothing,
