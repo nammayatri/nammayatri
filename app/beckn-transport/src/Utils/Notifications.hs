@@ -102,13 +102,40 @@ notifyDriver ::
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriver notificationType notificationTitle message driverId =
+notifyDriver = sendNotificationToDriver FCM.SHOW
+
+-- Send notification to device, i.e. notifications that should not be shown to the user,
+-- but contains payload used by the app
+notifyDevice ::
+  ( FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  FCM.FCMNotificationType ->
+  Text ->
+  Text ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyDevice = sendNotificationToDriver FCM.DO_NOT_SHOW
+
+sendNotificationToDriver ::
+  ( FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  FCM.FCMShowNotification ->
+  FCM.FCMNotificationType ->
+  Text ->
+  Text ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+sendNotificationToDriver displayOption notificationType notificationTitle message driverId =
   FCM.notifyPerson notificationData . FCMNotificationRecipient driverId.getId
   where
     notificationData =
       FCM.FCMAndroidData
         { fcmNotificationType = notificationType,
-          fcmShowNotification = FCM.DO_NOT_SHOW,
+          fcmShowNotification = displayOption,
           fcmEntityIds = show . getId $ driverId,
           fcmEntityType = FCM.Person,
           fcmNotificationJSON = FCM.createAndroidNotification title body notificationType
