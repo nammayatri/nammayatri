@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-15.15
+resolver: lts-16.31
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -38,10 +38,18 @@ packages:
   - app/gateway
   - app/beckn-transport
   - app/app-backend
+  - app/search-result-aggregator
   - app/fmd-wrapper
+  - app/mock-dunzo
+  - app/mock-registry
+  - app/mock-sms
+  - app/mock-fcm
   - app/example-service
   - app/parking-bap
   - app/public-transport-bap
+  - app/public-transport-search-consumer
+  - app/mock-public-transport-bpp
+  - app/mock-parking-bpp
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -94,7 +102,7 @@ extra-deps:
   - named-0.3.0.1@sha256:2975d50c9c5d88095026ffc1303d2d9be52e5f588a8f8bcb7003a04b79f10a06,2312
 
   # Needed for Persistent
-  - esqueleto-3.4.2.1@sha256:e18968c929569663744520173180340a9a803fea49e45b7f9c5ec379f509555b,5984
+  - esqueleto-3.5.2.0@sha256:8519980763ccbfa4b89bc3382b4861971dee06092b6f911c9714d70ff5c598b6,4858
   - persistent-2.13.0.1@sha256:08a79866b9f19710109d7d7feee6b33087065041b3ffdb123380d723aa17b666,6232
   - persistent-postgresql-2.13.0.0@sha256:52be384aa24859142549ed1eddaf84c4623de2bb522502d5aaa238364a22a7aa,3557
   - lift-type-0.1.0.1@sha256:6e38e49bf086fd2203346417d96ad2e6c300d8d8f41d222780abdccc7a4e451b,1106
@@ -110,28 +118,30 @@ extra-deps:
   # Needed for beam-mysql
   - tcp-streams-1.0.1.1@sha256:35e9ecfa515797052f8c3c01834d2daebd5e93f3152c7fc98b32652bf6f0c052,2329
   - wire-streams-0.1.1.0@sha256:08816c7fa53b20f52e5c465252c106d9de8e6d9580ec0b6d9f000a34c7bcefc8,2130
+  - mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
 
   # Other dependencies
-
   - hex-text-0.1.0.0@sha256:52dc2cf5ce45f7d86ea5e56e2ac57820f788c10bbb3fe83f6d57e678a426305b,1072
   - postgresql-simple-migration-0.1.15.0@sha256:0e24e96908430f5caf9c1c1d9ca7c5c108e4e0409a255e2cbd77e8cd252dbb02,3879
   - prometheus-metrics-ghc-1.0.1.1@sha256:d378a7186a967140fe0e09d325fe5e3bfd7b77a1123934b40f81fdfed2eacbdc,1233
   - prometheus-proc-0.1.3.0@sha256:84f56e9c886be777d5afd14fc57fff156137a611f0db0fe080b97fc602103c23,1058
   - random-strings-0.1.1.0@sha256:935a7a23dab45411960df77636a29b44ce42b89eeb15f2b1e809d771491fa677,2517
   - servant-multipart-0.12@sha256:aa81dd0478270ade4a21b75611d5bc9cce8107df2e89c37b9964a3421629825d,2761
-  - time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1,928
   - wai-middleware-prometheus-1.0.0@sha256:1625792914fb2139f005685be8ce519111451cfb854816e430fbf54af46238b4,1314
   - unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269
-  - mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
-  - record-dot-preprocessor-0.2.7@sha256:bf7e83b2a01675577f81536fc3246e3b54e9d2dd28bb645599813dc5c486fbee,2440
+  - record-dot-preprocessor-0.2.14@sha256:00967231260e798d9125437db6e1cf04b3b232a9c0193a629563c0e6752c8e7c,2538
   - kleene-0.1@sha256:751db2ef4fea28a1abc42e0cd18d82d900bbb33d1b4e86f72271426c501ba7af,2424
   - servant-openapi3-2.0.1.2@sha256:7beb612b56d01536bc97c745fd0c064f483198199619b1856a5a3f0a3a0f6431,4886
   - openapi3-3.1.0@sha256:815236a5d92cc8b3bc3cbcbba5503bd39035ccaf517d21cd02f74795b9747ae5,4824
   - hw-kafka-client-4.0.3@sha256:20e3614454d5afd2a6acfc0709b9bf00bd6ee9a9bc646c2e2e4ccec1d16831a1,4861
-
+  - constraints-0.11.2@sha256:d173efdf7a5d5515075635c686420211dccd9f85bc091a579ecc18b3f138a5fe,2324
+  - some-1.0.1@sha256:26e5bab7276f48b25ea8660d3fd1166c0f20fd497dac879a40f408e23211f93e,2055
+  
   # Needed for gcc11 support in Kafka
   - c2hs-0.28.8@sha256:980c1a91c93e492d5412e904f2500b2ace34a421e8509529b6d98d89c51f9a2e,9208
   - language-c-0.9.0.1@sha256:7a1c57e8f9c29e94bcd5c748d99e4479a73bd8560cc0affd838f3b2d1bbc0384,4893
+
+  
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
