@@ -47,7 +47,12 @@ createDriver admin req = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   runRequestValidation DriverAPI.validateOnboardDriverReq req
   let personEntity = req.person
-  validateVehicle req.vehicle
+  duplicateCheck
+    (QVehicle.findByRegistrationNo req.vehicle.registrationNo)
+    "Vehicle with this registration number already exists."
+  duplicateCheck
+    (QPerson.findByMobileNumber personEntity.mobileCountryCode personEntity.mobileNumber)
+    "Person with this mobile number already exists"
   person <- buildDriver req.person orgId
   vehicle <- buildVehicle req.vehicle orgId
   DB.runSqlDBTransaction $ do
@@ -68,9 +73,7 @@ createDriver admin req = withFlowHandlerAPI $ do
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ DriverAPI.OnboardDriverRes personAPIEntity
   where
-    validateVehicle preq =
-      whenM (isJust <$> QVehicle.findByRegistrationNo preq.registrationNo) $
-        throwError $ InvalidRequest "Vehicle with this registration number already exists."
+    duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
 
 createDriverDetails :: Id SP.Person -> DB.SqlDB ()
 createDriverDetails personId = do
