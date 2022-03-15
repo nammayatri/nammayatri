@@ -132,6 +132,8 @@ onSearchCallback ::
   ( DBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
+    HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl],
+    HasFlowEnv m r '["googleMapsKey" ::: Text],
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>
@@ -156,9 +158,7 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
   -- we take nearest one and calculate fare and make PI for him
 
   distance <-
-    map Loc.locationToLatLong [fromLocation, toLocation]
-      & MapSearch.getDistanceMb (Just MapSearch.CAR)
-      >>= fromMaybeM CantCalculateDistance
+    MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
 
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do

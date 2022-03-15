@@ -1,7 +1,7 @@
 module Product.Location where
 
 import App.Types
-import qualified Beckn.Product.MapSearch as MapSearch
+import qualified Beckn.Product.MapSearch.GraphHopper as MapSearch
 import qualified Beckn.Storage.Queries as DB
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
@@ -110,16 +110,6 @@ getRoute' = MapSearch.getRouteMb (Just MapSearch.CAR)
 
 getRoutes :: Id Person.Person -> Location.Request -> FlowHandler Location.Response
 getRoutes _ = withFlowHandlerAPI . MapSearch.getRoutes
-
-calculateDistance ::
-  ( CoreMetrics m,
-    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
-  ) =>
-  LatLong ->
-  LatLong ->
-  m (Maybe Double)
-calculateDistance sourceLoc destinationLoc = do
-  MapSearch.getDistanceMb (Just MapSearch.CAR) [sourceLoc, destinationLoc]
 
 distanceBetweenInMeters :: LatLong -> LatLong -> Double
 distanceBetweenInMeters (LatLong lat1 lon1) (LatLong lat2 lon2) =

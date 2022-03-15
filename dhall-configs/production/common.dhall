@@ -18,6 +18,7 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , branchName = branchName
    , passetto = { _1 = "passetto-hs.passetto.svc.cluster.local", _2 = 8012 }
    , fcmJsonPath = Some "/var/local/beckn/beckn-fcm.json"
+   , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/beckn-d4a42/messages:send/"
    , graphhopperUrl = "http://graphhopper.atlas.svc.cluster.local:8989/"

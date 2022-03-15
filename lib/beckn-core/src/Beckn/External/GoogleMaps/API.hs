@@ -1,7 +1,7 @@
 module Beckn.External.GoogleMaps.API where
 
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import Beckn.Types.App (MandatoryQueryParam)
+import Beckn.Utils.Common
 import EulerHS.Prelude
 import EulerHS.Types (EulerClient, client)
 import Servant
@@ -24,6 +24,16 @@ type GoogleMapsAPI =
       :> MandatoryQueryParam "latlng" Text -- Parameters order is important.
       :> MandatoryQueryParam "key" Text
       :> Get '[JSON] GoogleMaps.GetPlaceNameResp
+    :<|> DistanceMatrixAPI
+
+type DistanceMatrixAPI =
+  "distancematrix" :> "json"
+    :> MandatoryQueryParam "origins" [GoogleMaps.Place]
+    :> MandatoryQueryParam "destinations" [GoogleMaps.Place]
+    :> MandatoryQueryParam "key" Text
+    :> QueryParam "departure_time" GoogleMaps.DepartureTime
+    :> QueryParam "mode" GoogleMaps.Mode
+    :> Post '[JSON] GoogleMaps.DistanceMatrixResp
 
 googleMapsAPI :: Proxy GoogleMapsAPI
 googleMapsAPI = Proxy
@@ -31,4 +41,11 @@ googleMapsAPI = Proxy
 autoComplete :: Text -> Text -> Text -> Integer -> Text -> Text -> EulerClient GoogleMaps.SearchLocationResp
 placeDetails :: Text -> Text -> Text -> EulerClient GoogleMaps.PlaceDetailsResp
 getPlaceName :: Text -> Text -> EulerClient GoogleMaps.GetPlaceNameResp
-autoComplete :<|> placeDetails :<|> getPlaceName = client googleMapsAPI
+distanceMatrix ::
+  [GoogleMaps.Place] ->
+  [GoogleMaps.Place] ->
+  Text ->
+  Maybe GoogleMaps.DepartureTime ->
+  Maybe GoogleMaps.Mode ->
+  EulerClient GoogleMaps.DistanceMatrixResp
+autoComplete :<|> placeDetails :<|> getPlaceName :<|> distanceMatrix = client googleMapsAPI

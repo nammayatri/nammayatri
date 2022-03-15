@@ -1,7 +1,13 @@
+{-# LANGUAGE DerivingStrategies #-}
+
 module Beckn.External.GoogleMaps.Types where
 
+import Data.Double.Conversion.Text (toFixed)
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
+import Data.Time.Clock
 import EulerHS.Prelude
+import Servant
 
 data SearchLocationResp = SearchLocationResp
   { status :: Text,
@@ -24,18 +30,26 @@ data PlaceDetailsResp = PlaceDetailsResp
 newtype PlaceDetailsResult = PlaceDetailsResult
   { geometry :: Geometry
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype Geometry = Geometry
   { location :: LocationS
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LocationS = LocationS
   { lat :: Double,
     lng :: Double
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+instance ToHttpApiData LocationS where
+  toUrlPiece (LocationS lat' lng') =
+    T.concat [toFixed precision lat', ",", toFixed precision lng']
+    where
+      precision = 6 -- Precision beyond 6 decimal places is ignored.
 
 data GetPlaceNameResp = GetPlaceNameResp
   { status :: Text,
@@ -46,4 +60,52 @@ data GetPlaceNameResp = GetPlaceNameResp
 newtype ResultsResp = ResultsResp
   { formatted_address :: Text
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DistanceMatrixResp = DistanceMatrixResp
+  { destination_addresses :: [Text],
+    origin_addresses :: [Text],
+    rows :: [DistanceMatrixRow],
+    status :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+newtype DistanceMatrixRow = DistanceMatrixRow {elements :: [DistanceMatrixElement]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+data DistanceMatrixElement = DistanceMatrixElement
+  { distance :: Maybe TextValue,
+    duration :: Maybe TextValue,
+    duration_in_traffic :: Maybe TextValue,
+    status :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+data TextValue = TextValue
+  { text :: Text,
+    value :: Int
+  }
+  deriving (Generic, ToJSON, FromJSON)
+
+data Place = Location LocationS | Address Text
+
+instance ToHttpApiData Place where
+  toUrlPiece (Location location) = toUrlPiece location
+  toUrlPiece (Address address) = address
+
+instance ToHttpApiData [Place] where
+  toUrlPiece latLongList = T.intercalate "|" $ toUrlPiece <$> latLongList
+
+data Mode = DRIVING | WALKING | BICYCLING | TRANSIT
+  deriving (Show)
+
+instance ToHttpApiData Mode where
+  toUrlPiece = T.toLower . show
+
+data DepartureTime = Now | FutureTime UTCTime
+
+instance ToHttpApiData DepartureTime where
+  toUrlPiece Now = "now"
+  toUrlPiece (FutureTime time) = show time

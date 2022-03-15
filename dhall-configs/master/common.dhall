@@ -18,6 +18,7 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , branchName = branchName
    , passetto = { _1 = "passetto-hs.atlas", _2 = 8012 }
    , fcmJsonPath = Some "/var/local/beckn/jp-beckn-dev-4fbd238801a3.json"
+   , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/"
    , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"

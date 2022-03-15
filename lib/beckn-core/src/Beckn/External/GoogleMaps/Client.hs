@@ -50,6 +50,21 @@ getPlaceName url latLng apiKey = do
   callAPI url (API.getPlaceName latLng apiKey) "getPlaceName"
     >>= checkGoogleMapsError url
 
+distanceMatrix ::
+  ( CoreMetrics m,
+    MonadFlow m
+  ) =>
+  BaseUrl ->
+  [GoogleMaps.Place] ->
+  [GoogleMaps.Place] ->
+  Text ->
+  Maybe GoogleMaps.DepartureTime ->
+  Maybe GoogleMaps.Mode ->
+  m GoogleMaps.DistanceMatrixResp
+distanceMatrix url origins destinations key departureTime mode = do
+  callAPI url (API.distanceMatrix origins destinations key departureTime mode) "distanceMatrix"
+    >>= checkGoogleMapsError url
+
 checkGoogleMapsError :: (MonadThrow m, Log m, HasField "status" a Text) => BaseUrl -> Either ClientError a -> m a
 checkGoogleMapsError url res =
   fromEitherM (googleMapsError url) res >>= validateResponseStatus

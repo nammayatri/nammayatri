@@ -115,7 +115,7 @@ in
 , domainVersion = "0.9.3"
 , geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
-, googleMapsUrl = "https://maps.googleapis.com/maps/api/"
+, googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
 , graphhopperUrl = common.graphhopperUrl

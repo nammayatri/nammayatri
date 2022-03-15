@@ -12,5 +12,5 @@ in
 { smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
 , exotelCfg = exotelCfg
-, googleMapsKey = ""
+, googleMapsKey = "mock-key"
 }

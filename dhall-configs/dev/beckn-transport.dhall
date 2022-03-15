@@ -84,7 +84,7 @@ in
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
-, googleMapsUrl = "https://maps.googleapis.com/maps/api/"
+, googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
 , graphhopperUrl = common.graphhopperUrl

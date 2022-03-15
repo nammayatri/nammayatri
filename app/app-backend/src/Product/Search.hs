@@ -3,6 +3,7 @@
 module Product.Search where
 
 import App.Types
+import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Product.Validation.Context (validateContext)
 import Beckn.Storage.Esqueleto (runTransaction)
 import qualified Beckn.Storage.Esqueleto as DB
@@ -21,6 +22,7 @@ import qualified Beckn.Types.Core.Taxi.Common.Context as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import Beckn.Types.Id
+import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Logging
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Control.Lens ((?~))
@@ -31,7 +33,6 @@ import qualified Domain.Types.SearchReqLocation as Location
 import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (id, state)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Product.Location as Location (getDistance)
 import Product.MetroOffer (buildContextMetro)
 import Product.Serviceability
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
@@ -51,9 +52,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   fromLocation <- buildSearchReqLoc req.origin
   toLocation <- buildSearchReqLoc req.destination
   now <- getCurrentTime
-  distance <-
-    Location.getDistance req.origin.gps req.destination.gps
-      >>= fromMaybeM (InternalError "Unable to count distance.")
+  distance <- MapSearch.getDistance (Just MapSearch.CAR) req.origin.gps req.destination.gps
   searchRequest <- buildSearchRequest (getId personId) fromLocation toLocation distance now
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
@@ -66,7 +65,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   bapIDs <- askConfig (.bapSelfIds)
   fork "search cabs" . withRetry $ do
     context <- buildTaxiContext Core9.SEARCH txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
-    let intent = mkIntent req now distance
+    let intent = mkIntent req now
     void $ ExternalAPI.search (BecknReq context $ Search.SearchMessage intent)
   fork "search metro" . withRetry $ do
     contextMig <- buildContextMetro Core9.SEARCH txnId bapIDs.metro bapURIs.metro
@@ -206,8 +205,8 @@ buildQuote searchRequest providerId providerUrl provider item = do
         createdAt = now
       }
 
-mkIntent :: API.SearchReq -> UTCTime -> Double -> Search.Intent
-mkIntent req startTime distance = do
+mkIntent :: API.SearchReq -> UTCTime -> Search.Intent
+mkIntent req startTime = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation req.origin,
@@ -219,8 +218,7 @@ mkIntent req startTime distance = do
           }
       fulfillment =
         Search.FulFillmentInfo
-          { distance = realToFrac distance,
-            start = startLocation,
+          { start = startLocation,
             end = endLocation
           }
   Search.Intent

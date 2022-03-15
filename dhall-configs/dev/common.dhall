@@ -20,6 +20,7 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , smsPassword = sec.smsPassword
    , passetto = { _1 = "localhost", _2 = 8021 }
    , fcmJsonPath = Some "dummy-fcm.json"
+   , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
    , googleMapsKey = sec.googleMapsKey
    , fcmUrl = "http://localhost:4545/"
    , graphhopperUrl = "https://api.sandbox.beckn.juspay.in/map/grphr/"

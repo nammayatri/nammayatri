@@ -27,8 +27,7 @@ instance Example Intent where
       }
 
 data FulFillmentInfo = FulFillmentInfo
-  { distance :: DecimalValue,
-    start :: StartInfo,
+  { start :: StartInfo,
     end :: StopInfo
   }
   deriving (Generic, FromJSON, ToJSON, Show)
@@ -39,7 +38,6 @@ instance ToSchema FulFillmentInfo where
 instance Example FulFillmentInfo where
   example =
     FulFillmentInfo
-      { distance = 12,
-        start = example,
+      { start = example,
         end = example
       }

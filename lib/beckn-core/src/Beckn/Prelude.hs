@@ -12,6 +12,7 @@ import Control.Monad.Catch as E
   )
 import Control.Monad.Reader as E
 import Data.Aeson as E (FromJSON (..), ToJSON (..), genericParseJSON, genericToJSON)
+import Data.Fixed
 import Data.Foldable as E
 import Data.Function as E hiding (id)
 import Data.Functor as E
@@ -23,6 +24,7 @@ import Data.Proxy as E (Proxy (..))
 import Data.String as E (IsString (..))
 import Data.Text as E (Text)
 import qualified Data.Text as T
+import Data.Time.Clock (secondsToNominalDiffTime)
 import Data.Time.Clock as E (NominalDiffTime, UTCTime)
 import GHC.Generics as E (Generic, Generic1)
 import GHC.Records.Compat as E
@@ -68,3 +70,6 @@ threadDelay = liftIO . Conc.threadDelay
 
 rightToMaybe :: Either e a -> Maybe a
 rightToMaybe = either (const Nothing) Just
+
+intToNominalDiffTime :: Int -> NominalDiffTime
+intToNominalDiffTime = secondsToNominalDiffTime . MkFixed . (* 1000000000000) . toInteger
