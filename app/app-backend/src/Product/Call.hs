@@ -36,8 +36,10 @@ initiateCallToDriver rideId personId =
     callbackUrl <- buildCallbackUrl
     callId <- generateGUID
     let attachments = ExotelAttachments {callId = getId callId, rideId = strip (getId rideId)}
-    initiateCall customerPhone providerPhone callbackUrl attachments
+    exotelResponse <- initiateCall customerPhone providerPhone callbackUrl attachments
     logTagInfo ("RideId: " <> getId rideId) "Call initiated from customer to driver."
+    callStatus <- buildCallStatus rideId callId exotelResponse
+    runTransaction $ QCallStatus.create callStatus
     return $ CallAPI.CallRes callId
   where
     buildCallbackUrl = do
@@ -48,26 +50,25 @@ initiateCallToDriver rideId personId =
           { baseUrlPath = baseUrlPath bapUrl <> "/ride/" <> id <> "/call/statusCallback"
           }
 
-callStatusCallback :: Id SRide.Ride -> CallAPI.CallCallbackReq -> FlowHandler CallAPI.CallCallbackRes
-callStatusCallback _ req = withFlowHandlerAPI $ do
-  callStatus <- buildCallStatus
-  runTransaction $ QCallStatus.create callStatus
-  return Ack
-  where
-    buildCallStatus = do
+    buildCallStatus id callId exotelResponse = do
       now <- getCurrentTime
-      let callId = Id req.customField.callId
-          rideId = Id req.customField.rideId
       return $
         CallStatus
           { id = callId,
-            exotelCallSid = req.callSid,
-            rideId = rideId,
-            status = req.status,
-            conversationDuration = req.conversationDuration,
-            recordingUrl = req.recordingUrl,
+            exotelCallSid = exotelResponse.exoCall.exoSid.getExotelCallSID,
+            rideId = id,
+            status = exotelResponse.exoCall.exoStatus,
+            conversationDuration = 0,
+            recordingUrl = Nothing,
             createdAt = now
           }
+
+callStatusCallback :: Id SRide.Ride -> CallAPI.CallCallbackReq -> FlowHandler CallAPI.CallCallbackRes
+callStatusCallback _ req = withFlowHandlerAPI $ do
+  let callId = Id req.customField.callId
+  _ <- QCallStatus.findById callId >>= fromMaybeM CallStatusDoesNotExist
+  runTransaction $ QCallStatus.updateCallStatus callId req
+  return Ack
 
 getCallStatus :: Id SRide.Ride -> Id CallStatus -> Id Person -> FlowHandler CallAPI.GetCallStatusRes
 getCallStatus _ callStatusId _ = withFlowHandlerAPI $ do

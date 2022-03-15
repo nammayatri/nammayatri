@@ -10,7 +10,7 @@ data CallStatus = CallStatus
     exotelCallSid :: Text,
     rideId :: Id Ride,
     status :: ExotelCallStatus,
-    recordingUrl :: BaseUrl,
+    recordingUrl :: Maybe Text,
     conversationDuration :: Int,
     createdAt :: UTCTime
   }

@@ -43,7 +43,7 @@ initiateCall ::
   T.Text ->
   BaseUrl ->
   ExotelAttachments ->
-  m ()
+  m ExotelResponse
 initiateCall from to callbackUrl attachments = do
   withLogTag "Exotel" $ do
     ExotelCfg {..} <- asks (.exotelCfg) >>= fromMaybeM ExotelNotConfigured
@@ -57,7 +57,7 @@ initiateCall from to callbackUrl attachments = do
       (callExotel authData exoRequest)
       "initiateCall"
   where
-    callExotel authData exoRequest = void $ ET.client exotelConnectAPI authData exoRequest
+    callExotel authData exoRequest = ET.client exotelConnectAPI authData exoRequest
 
 callExotelAPI :: CallAPI env a
 callExotelAPI =

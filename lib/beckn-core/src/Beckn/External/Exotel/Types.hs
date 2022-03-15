@@ -198,21 +198,23 @@ data ExotelResponseBody = ExotelResponseBody
     -- Link to the call recording
     exoRecordingUrl :: Maybe BaseUrl
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 $(makeLenses ''ExotelResponseBody)
 
 $(deriveFromJSON (aesonPrefix pascalCase) ''ExotelResponseBody)
+$(deriveToJSON (aesonPrefix pascalCase) ''ExotelResponseBody)
 
 -- | Exotel response on success
 newtype ExotelResponse = ExotelResponse
   { exoCall :: ExotelResponseBody
   }
-  deriving (Eq, Show)
+  deriving (Eq, Show, Generic)
 
 $(makeLenses ''ExotelResponse)
 
 $(deriveFromJSON (aesonPrefix pascalCase) ''ExotelResponse)
+$(deriveToJSON (aesonPrefix pascalCase) ''ExotelResponse)
 
 data ExotelCallCallback = ExotelCallCallback
   { -- string; an alpha-numeric unique identifier of the call

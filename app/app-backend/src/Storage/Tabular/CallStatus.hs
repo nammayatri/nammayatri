@@ -22,7 +22,7 @@ mkPersist
       exotelCallSid Text
       rideId RideTId
       status ExotelCallStatus
-      recordingUrl Text
+      recordingUrl Text Maybe
       conversationDuration Int
       createdAt UTCTime
       Primary id
@@ -37,19 +37,16 @@ instance TEntityKey CallStatusT where
 instance TEntity CallStatusT Domain.CallStatus where
   fromTEntity entity = do
     let CallStatusT {..} = entityVal entity
-    rUrl <- parseBaseUrl recordingUrl
     return $
       Domain.CallStatus
         { id = Id id,
           rideId = fromKey rideId,
-          recordingUrl = rUrl,
           ..
         }
   toTType Domain.CallStatus {..} =
     CallStatusT
       { id = getId id,
         rideId = toKey rideId,
-        recordingUrl = showBaseUrl recordingUrl,
         ..
       }
   toTEntity a =

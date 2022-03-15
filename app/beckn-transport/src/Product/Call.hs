@@ -4,7 +4,7 @@ import App.Types
 import Beckn.External.Encryption (decrypt)
 import Beckn.External.Exotel.Flow (initiateCall)
 import Beckn.External.Exotel.Types
-import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Esqueleto (runTransaction)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Data.Text
@@ -39,8 +39,11 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
   callbackUrl <- buildCallbackUrl
   callId <- generateGUID
   let attachments = ExotelAttachments {callId = getId callId, rideId = strip (getId rideId)}
-  initiateCall requestorPhone driverPhone callbackUrl attachments
+  exotelResponse <- initiateCall requestorPhone driverPhone callbackUrl attachments
   logTagInfo ("RideId:" <> getId rideId) "Call initiated from driver to customer."
+  let rId = strip (getId rideId)
+  callStatus <- buildCallStatus (Id rId) callId exotelResponse
+  runTransaction $ QCallStatus.create callStatus
   return $ CallAPI.CallRes callId
   where
     buildCallbackUrl = do
@@ -51,26 +54,25 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
           { baseUrlPath = baseUrlPath bapUrl <> "/driver/ride/" <> rideid <> "/call/statusCallback"
           }
 
-callStatusCallback :: Id SRide.Ride -> CallAPI.CallCallbackReq -> FlowHandler CallAPI.CallCallbackRes
-callStatusCallback _ req = withFlowHandlerAPI $ do
-  callStatus <- buildCallStatus
-  Esq.runTransaction $ QCallStatus.create callStatus
-  return Ack
-  where
-    buildCallStatus = do
+    buildCallStatus rideid callId exoResponse = do
       now <- getCurrentTime
-      let callId = Id req.customField.callId
-          rideId = Id req.customField.rideId
       return $
         SCS.CallStatus
           { id = callId,
-            exotelCallSid = req.callSid,
-            rideId = rideId,
-            status = req.status,
-            recordingUrl = req.recordingUrl,
-            conversationDuration = req.conversationDuration,
+            exotelCallSid = exoResponse.exoCall.exoSid.getExotelCallSID,
+            rideId = rideid,
+            status = exoResponse.exoCall.exoStatus,
+            conversationDuration = 0,
+            recordingUrl = Nothing,
             createdAt = now
           }
+
+callStatusCallback :: Id SRide.Ride -> CallAPI.CallCallbackReq -> FlowHandler CallAPI.CallCallbackRes
+callStatusCallback _ req = withFlowHandlerAPI $ do
+  let callId = Id req.customField.callId
+  _ <- QCallStatus.findById callId >>= fromMaybeM CallStatusDoesNotExist
+  runTransaction $ QCallStatus.updateCallStatus callId req
+  return Ack
 
 getCallStatus :: Id SRide.Ride -> Id SCS.CallStatus -> Id SP.Person -> FlowHandler CallAPI.GetCallStatusRes
 getCallStatus _ callStatusId _ = withFlowHandlerAPI $ do
