@@ -57,3 +57,11 @@ findActiveByRBId rbId =
       ride ^. RideBookingId ==. val (toKey rbId)
         &&. ride ^. RideStatus !=. val CANCELLED
     return ride
+
+findAllByRBId :: EsqDBFlow m r => Id RideBooking -> m [Ride]
+findAllByRBId rideBookingId =
+  findAll $ do
+    ride <- from $ table @RideT
+    where_ $ ride ^. RideBookingId ==. val (toKey rideBookingId)
+    orderBy [desc $ ride ^. RideCreatedAt]
+    return ride

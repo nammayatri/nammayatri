@@ -19,7 +19,7 @@ data RideBookingStatusRes = RideBookingStatusRes
     estimatedTotalFare :: Amount,
     toLocation :: Maybe SearchReqLocationAPIEntity,
     fromLocation :: SearchReqLocationAPIEntity,
-    ride :: Maybe RideAPIEntity,
+    rideList :: [RideAPIEntity],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

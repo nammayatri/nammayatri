@@ -84,9 +84,9 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
 
   void . pollDesc "ride changes its status to INPROGRESS" $ do
     inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
-    inprogressRBStatusResult.ride `shouldSatisfy` isJust
+    inprogressRBStatusResult.rideList `shouldSatisfy` not . null
     inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
-    let Just inprogressRide = inprogressRBStatusResult.ride
+    let [inprogressRide] = inprogressRBStatusResult.rideList
     inprogressRide.status `shouldBe` BRide.INPROGRESS
     return $ Just ()
   ----
@@ -101,9 +101,9 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
 
   completedRideId <- pollDesc "ride should be completed" $ do
     completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
-    completedRBStatusResult.ride `shouldSatisfy` isJust
+    completedRBStatusResult.rideList `shouldSatisfy` not . null
     completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
-    let Just completedRide = completedRBStatusResult.ride
+    let [completedRide] = completedRBStatusResult.rideList
     completedRide.status `shouldBe` BRide.COMPLETED
     return $ Just completedRide.id
 

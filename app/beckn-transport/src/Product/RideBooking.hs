@@ -15,6 +15,7 @@ import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.SearchReqLocation as SLoc
 import qualified Domain.Types.Vehicle as SV
+import qualified Domain.Types.Vehicle as SVeh
 import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP (buildRideReq)
 import qualified Product.Location as Location
@@ -27,7 +28,6 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.SearchReqLocation as QLoc
-import qualified Storage.Queries.Vehicle as QVeh
 import qualified Types.API.RideBooking as API
 import Types.Error
 import Utils.Common
@@ -141,20 +141,8 @@ buildRideBookingStatusRes rideBooking = do
   fromLocation <- QLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
   toLocation <- getDropLocation rideBooking.rideBookingDetails
   let rbStatus = rideBooking.status
-  mbRide <- QRide.findActiveByRBId rideBooking.id
-  mbRideAPIEntity <- case mbRide of
-    Just ride -> do
-      now <- getCurrentTime
-      vehicleM <- QVeh.findById ride.vehicleId
-      let vehicle = fromMaybe (vehicleDefault now) vehicleM
-      driver <- QP.findById ride.driverId
-      decDriver <- case driver of
-        Just encDriver ->
-          decrypt encDriver
-        Nothing ->
-          return $ driverDefault now
-      return . Just $ SRide.makeRideAPIEntity ride decDriver vehicle
-    Nothing -> return Nothing
+  now <- getCurrentTime
+  rideAPIEntityList <- mapM (buildRideAPIEntity now) =<< QRide.findAllRideAPIEntityDataByRBId rideBooking.id
   return $
     API.RideBookingStatusRes
       { id = rideBooking.id,
@@ -164,11 +152,17 @@ buildRideBookingStatusRes rideBooking = do
         estimatedTotalFare = rideBooking.estimatedTotalFare,
         toLocation = SLoc.makeSearchReqLocationAPIEntity <$> toLocation,
         fromLocation = SLoc.makeSearchReqLocationAPIEntity fromLocation,
-        ride = mbRideAPIEntity,
+        rideList = rideAPIEntityList,
         createdAt = rideBooking.createdAt,
         updatedAt = rideBooking.updatedAt
       }
   where
+    buildRideAPIEntity :: (EsqDBFlow m r, EncFlow m r) => UTCTime -> (SRide.Ride, Maybe SVeh.Vehicle, Maybe SP.Person) -> m SRide.RideAPIEntity
+    buildRideAPIEntity now (ride, mbVehicle, mbDriver) = do
+      let vehicle = fromMaybe (vehicleDefault now) mbVehicle
+      decDriver <- maybe (return $ driverDefault now) decrypt mbDriver
+      return $ SRide.makeRideAPIEntity ride decDriver vehicle
+
     driverDefault now =
       SP.Person
         { id = Id "[Driver deleted]",

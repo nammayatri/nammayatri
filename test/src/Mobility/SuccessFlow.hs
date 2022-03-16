@@ -159,9 +159,9 @@ successFlow clients = withBecknClients clients $ do
 
   void . poll $ do
     inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
-    inprogressRBStatusResult.ride `shouldSatisfy` isJust
+    inprogressRBStatusResult.rideList `shouldSatisfy` not . null
     inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
-    let Just inprogressRide = inprogressRBStatusResult.ride
+    let [inprogressRide] = inprogressRBStatusResult.rideList
     inprogressRide.status `shouldBe` BRide.INPROGRESS
     return $ Just ()
 
@@ -169,9 +169,9 @@ successFlow clients = withBecknClients clients $ do
 
   completedRideId <- poll $ do
     completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
-    completedRBStatusResult.ride `shouldSatisfy` isJust
+    completedRBStatusResult.rideList `shouldSatisfy` not . null
     completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
-    let Just completedRide = completedRBStatusResult.ride
+    let [completedRide] = completedRBStatusResult.rideList
     completedRide.status `shouldBe` BRide.COMPLETED
     return $ Just completedRide.id
 

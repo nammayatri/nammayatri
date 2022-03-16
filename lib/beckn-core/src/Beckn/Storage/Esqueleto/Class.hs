@@ -41,6 +41,9 @@ instance ((b ~ DomainKey a), TEntityKey a) => QEntity (Value (Key a)) b where
 instance QEntity (Value a) a where
   toResult = return . unValue
 
+instance QEntity a b => QEntity (Maybe a) (Maybe b) where
+  toResult a = toResult `mapM` a
+
 instance
   ( QEntity a1 b1,
     QEntity a2 b2

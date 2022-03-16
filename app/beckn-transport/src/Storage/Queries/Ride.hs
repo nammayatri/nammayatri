@@ -8,8 +8,10 @@ import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.RideBooking as Booking
 import Domain.Types.Vehicle
+import Storage.Tabular.Person as Person
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideBooking as Booking
+import Storage.Tabular.Vehicle as Vehicle
 import Utils.Common
 
 create :: Ride -> SqlDB ()
@@ -69,6 +71,25 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = do
     limit limitVal
     offset offsetVal
     return (ride, rideBooking)
+
+findAllRideAPIEntityDataByRBId :: Transactionable m => Id RideBooking -> m [(Ride, Maybe Vehicle, Maybe Person)]
+findAllRideAPIEntityDataByRBId rbId =
+  findAll $ do
+    (ride :& mbVehicle :& mbPerson) <-
+      from $
+        table @RideT
+          `leftJoin` table @VehicleT
+            `Esq.on` ( \(ride :& mbVehicle) ->
+                         just (ride ^. Ride.RideVehicleId) ==. mbVehicle ?. Vehicle.VehicleTId
+                     )
+          `leftJoin` table @PersonT
+            `Esq.on` ( \(ride :& _ :& mbPerson) ->
+                         just (ride ^. Ride.RideDriverId) ==. (mbPerson ?. Person.PersonTId)
+                     )
+    where_ $
+      ride ^. Ride.RideBookingId ==. val (toKey rbId)
+    orderBy [desc $ ride ^. RideCreatedAt]
+    return (ride, mbVehicle, mbPerson)
 
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId driverId =
