@@ -1,4 +1,4 @@
-module Types.Geofencing where
+module Beckn.Types.Geofencing where
 
 import Beckn.Utils.Dhall
 import EulerHS.Prelude

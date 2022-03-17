@@ -5,6 +5,7 @@ module Product.Search where
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Product.Validation.Context (validateContext)
+import Beckn.Serviceability
 import Beckn.Storage.Esqueleto (runTransaction)
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Streaming.Kafka.Topic.PublicTransportSearch
@@ -34,13 +35,12 @@ import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (id, state)
 import qualified ExternalAPI.Flow as ExternalAPI
 import Product.MetroOffer (buildContextMetro)
-import Product.Serviceability
+import Storage.Queries.Geometry
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Types.API.Search as API
-import Types.API.Serviceability
 import Types.Error
 import Types.Metrics (CoreMetrics)
 import Utils.Common
@@ -75,11 +75,8 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   return . API.SearchRes $ searchRequest.id
   where
     validateServiceability = do
-      let originGps = req.origin.gps
-      let destinationGps = req.destination.gps
-      let serviceabilityReq = RideServiceabilityReq originGps destinationGps
-      unlessM (rideServiceable serviceabilityReq) $
-        throwError $ ProductNotServiceable "due to georestrictions"
+      unlessM (rideServiceable someGeometriesContain req.origin.gps req.destination.gps) $
+        throwError RideNotServiceable
 
 sendPublicTransportSearchRequest ::
   MonadProducer PublicTransportSearch m =>

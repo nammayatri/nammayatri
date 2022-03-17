@@ -22,6 +22,7 @@ import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow
+import Beckn.Types.Geofencing
 import Beckn.Types.Id (ShortId (..))
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
@@ -37,7 +38,6 @@ import qualified EulerHS.Types as T
 import ExternalAPI.Flow
 import Storage.Queries.Organization (findOrgByShortId)
 import Tools.Streaming.Kafka.Environment
-import Types.Geofencing
 import Types.Metrics
 
 data AppCfg = AppCfg

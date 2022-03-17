@@ -23,6 +23,7 @@ import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow
+import Beckn.Types.Geofencing
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
 import Beckn.Utils.CacheRedis as Cache
@@ -61,6 +62,7 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
+    geofencingConfig :: GeofencingConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
@@ -98,6 +100,7 @@ data AppEnv = AppEnv
     exotelCfg :: Maybe ExotelCfg,
     coreVersion :: Text,
     domainVersion :: Text,
+    geofencingConfig :: GeofencingConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     fcmUrl :: BaseUrl,

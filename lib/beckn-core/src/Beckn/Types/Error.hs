@@ -764,3 +764,18 @@ instance IsHTTPError CallStatusError where
   toHttpCode CallStatusDoesNotExist = E400
 
 instance IsAPIError CallStatusError
+
+data ServiceabilityError
+  = RideNotServiceable
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''ServiceabilityError
+
+instance IsBaseError ServiceabilityError where
+  toMessage RideNotServiceable = Just "Requested ride is not serviceable due to georestrictions."
+
+instance IsHTTPError ServiceabilityError where
+  toErrorCode RideNotServiceable = "RIDE_NOT_SERVICEABLE"
+  toHttpCode RideNotServiceable = E400
+
+instance IsAPIError ServiceabilityError

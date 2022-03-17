@@ -56,8 +56,8 @@ let sesConfig =
   }
 
 let geofencingConfig =
-{ origin = GeoRestriction.Unrestricted
-, destination = GeoRestriction.Unrestricted
+{ origin = GeoRestriction.Regions ["Ernakulam"]
+, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
 }
 
 let nsdlGatewayUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"

@@ -3,6 +3,7 @@ module Product.BecknProvider.Search (search) where
 import App.Types
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Product.Validation.Context
+import Beckn.Serviceability
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
@@ -24,6 +25,7 @@ import Product.FareCalculator
 import qualified Product.FareCalculator.Flow as Fare
 import qualified Product.Location as Loc
 import qualified SharedLogic.DriverPool as DrPool
+import Storage.Queries.Geometry
 import qualified Storage.Queries.Organization as Org
 import qualified Storage.Queries.Products as SProduct
 import qualified Storage.Queries.Quote as Quote
@@ -40,6 +42,7 @@ import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
 import Utils.Common
 import qualified Utils.Metrics as Metrics
+import Product.Location
 
 search ::
   Id Org.Organization ->
@@ -55,30 +58,37 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
       Org.findOrganizationById transporterId
         >>= fromMaybeM OrgDoesNotExist
     let callbackUrl = gateway.subscriber_url
-    if not transporter.enabled
-      then
-        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $
-          throwError AgencyDisabled
-      else do
-        searchMetricsMVar <- Metrics.startSearchMetrics transporterId
-        let intent = req.message.intent
-        now <- getCurrentTime
-        let pickup = intent.fulfillment.start
-        let dropOff = intent.fulfillment.end
-        let startTime = pickup.time.timestamp
-        validity <- getValidTime now startTime
-        fromLocation <- buildStartSearchReqLoc pickup.location now
-        toLocation <- buildStartSearchReqLoc dropOff.location now
-        let bapOrgId = subscriber.subscriber_id
-        uuid <- L.generateGUID
-        let bapUri = subscriber.subscriber_url
-        let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId bapUri
-        DB.runSqlDBTransaction $ do
-          Loc.create fromLocation
-          Loc.create toLocation
-          QSearchRequest.create searchRequest
-        ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $
-          onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
+    let intent = req.message.intent
+    let pickup = intent.fulfillment.start
+    let dropOff = intent.fulfillment.end
+
+    let pickupLatLong = locationToLatLong pickup.location.gps
+    let dropoffLatLong = locationToLatLong dropOff.location.gps
+
+    ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+      unless transporter.enabled $
+        throwError AgencyDisabled
+
+      unlessM (rideServiceable someGeometriesContain pickupLatLong dropoffLatLong) $
+        throwError RideNotServiceable
+
+      searchMetricsMVar <- Metrics.startSearchMetrics transporterId
+
+      now <- getCurrentTime
+      let startTime = pickup.time.timestamp
+      validity <- getValidTime now startTime
+      fromLocation <- buildStartSearchReqLoc pickup.location now
+      toLocation <- buildStartSearchReqLoc dropOff.location now
+      let bapOrgId = subscriber.subscriber_id
+      uuid <- L.generateGUID
+      let bapUri = subscriber.subscriber_url
+      let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId bapUri
+      DB.runSqlDBTransaction $ do
+        Loc.create fromLocation
+        Loc.create toLocation
+        QSearchRequest.create searchRequest
+
+      onSearchCallback searchRequest transporter fromLocation toLocation searchMetricsMVar
 
 buildStartSearchReqLoc :: MonadFlow m => Search.Location -> UTCTime -> m Location.SearchReqLocation
 buildStartSearchReqLoc loc now = do

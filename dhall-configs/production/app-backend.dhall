@@ -56,8 +56,8 @@ let sesConfig =
   }
 
 let geofencingConfig =
-  { origin = GeoRestriction.Regions ["Ernakulam"]
-  , destination = GeoRestriction.Regions ["Kerala"]
+{ origin = GeoRestriction.Regions ["Ernakulam"]
+, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
 }
 
 let gwUri = "https://gateway-1.beckn.nsdl.co.in"

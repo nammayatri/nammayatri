@@ -32,7 +32,7 @@ import System.Environment as Env (setEnv)
 import System.Posix
 import Test.Tasty
 import TestSilentIOLogger ()
-import "app-backend" Types.Geofencing
+import Beckn.Types.Geofencing
 
 main :: IO ()
 main = do

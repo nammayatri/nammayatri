@@ -1,6 +1,8 @@
 let common = ./common.dhall
 let sec = ./secrets/beckn-transport.dhall
 
+let GeoRestriction = < Unrestricted | Regions : List Text>
+
 let postgresConfig =
   { connectHost = "adb.primary.beckn.juspay.net"
   , connectPort = 5432
@@ -47,6 +49,11 @@ let smsConfig =
   , sender = "JUSPAY"
   }
 
+let geofencingConfig =
+{ origin = GeoRestriction.Regions ["Ernakulam"]
+, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
+}
+
 let apiRateLimitOptions =
   { limit = +4
   , limitResetTimeInSec = +600
@@ -84,6 +91,7 @@ in
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
+, geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey

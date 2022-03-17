@@ -57,8 +57,8 @@ let sesConfig =
 
 
 let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Ernakulam", "Kochi"]
-, destination = GeoRestriction.Regions ["Kerala", "Kochi"]
+{ origin = GeoRestriction.Regions ["Ernakulam"]
+, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
 }
 
 let gwUri = "https://api.sandbox.beckn.juspay.in/dev/gateway/v1"

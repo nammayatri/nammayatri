@@ -64,7 +64,7 @@ nonServiceableSearchRequest appClientEnv = do
           & #destination . #gps .~ karnatakaLocation
 
   result <- runClient appClientEnv (searchServices appRegistrationToken updatedSearchReq)
-  verifyError 400 "PRODUCT_NOT_SERVICEABLE" result
+  verifyError 400 "RIDE_NOT_SERVICEABLE" result
 
 spec :: Spec
 spec = do

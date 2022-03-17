@@ -1,0 +1,1 @@
+DELETE FROM atlas_app.geometry where region = 'Kochi'

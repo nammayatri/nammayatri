@@ -11,6 +11,7 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
+import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi (Info (..), OpenApi (..))
@@ -58,7 +59,6 @@ import qualified Types.API.RideBooking as RideBookingAPI
 import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
-import Types.Geofencing
 import Utils.Auth (TokenAuth)
 
 type AppAPI =
