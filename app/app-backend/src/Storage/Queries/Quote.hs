@@ -20,6 +20,13 @@ findByBPPQuoteId bppQuoteId_ =
     where_ $ quote ^. QuoteBppQuoteId ==. val (getId bppQuoteId_)
     return quote
 
+findByTxnIdAndBppIdAndQuoteId :: EsqDBFlow m r => Id SearchRequest -> Text -> Id BPPQuote -> m (Maybe Quote)
+findByTxnIdAndBppIdAndQuoteId txnId bppId quoteId =
+  runTransaction . findOne' $ do
+    quote <- from $ table @QuoteT
+    where_ $ quote ^. QuoteRequestId ==. val (toKey txnId) &&. quote ^. QuoteProviderId ==. val bppId &&. quote ^. QuoteBppQuoteId ==. val (getId quoteId)
+    return quote
+
 findAllByRequestId :: EsqDBFlow m r => Id SearchRequest -> m [Quote]
 findAllByRequestId searchRequestId =
   runTransaction . findAll' $ do

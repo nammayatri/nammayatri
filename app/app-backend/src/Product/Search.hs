@@ -29,8 +29,10 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Control.Lens ((?~))
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.Person as Person
+import Domain.Types.Quote (Quote)
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.SearchReqLocation as Location
+import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (id, state)
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -137,7 +139,13 @@ searchCbService context catalog = do
     (provider : _) -> do
       let items = provider.items
       quotes <- traverse (buildQuote searchRequest providerId providerUrl provider) items
+      whenJustM (duplicateCheck quotes searchRequest.id providerId) (\_ -> throwError $ InvalidRequest "Duplicate OnSearch request")
       DB.runTransaction $ traverse_ QQuote.create quotes
+  where
+    duplicateCheck :: EsqDBFlow m r => [Quote] -> Id SearchRequest -> Text -> m (Maybe Quote)
+    duplicateCheck [] _ _ = return Nothing
+    duplicateCheck (quote_ : _) txnId_ bppId_ =
+      QQuote.findByTxnIdAndBppIdAndQuoteId txnId_ bppId_ quote_.bppQuoteId
 
 buildSearchRequest ::
   ( (HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),

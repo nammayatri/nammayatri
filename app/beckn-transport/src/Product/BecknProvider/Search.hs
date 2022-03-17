@@ -72,6 +72,10 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
       unlessM (rideServiceable someGeometriesContain pickupLatLong dropoffLatLong) $
         throwError RideNotServiceable
 
+      whenJustM
+        (QSearchRequest.findByTxnIdAndBapIdAndBppId context.transaction_id context.bap_id transporterId)
+        (\_ -> throwError $ InvalidRequest "Duplicate Search request")
+
       searchMetricsMVar <- Metrics.startSearchMetrics transporterId
 
       now <- getCurrentTime

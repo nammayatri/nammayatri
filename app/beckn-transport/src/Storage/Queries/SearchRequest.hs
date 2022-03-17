@@ -40,14 +40,15 @@ findById searchRequestId = do
   where
     predicate Storage.SearchRequest {..} = id ==. B.val_ searchRequestId
 
-findByTxnIdAndProviderId :: DBFlow m r => Text -> Id Organization -> m (Maybe Storage.SearchRequest)
-findByTxnIdAndProviderId txnId orgId = do
+findByTxnIdAndBapIdAndBppId :: DBFlow m r => Text -> Text -> Id Organization -> m (Maybe Storage.SearchRequest)
+findByTxnIdAndBapIdAndBppId txnId bapId_ orgId = do
   dbTable <- getDbTable
   DB.findOne dbTable predicate
   where
     predicate Storage.SearchRequest {..} =
       transactionId ==. B.val_ txnId
         &&. providerId ==. B.val_ orgId
+        &&. bapId ==. B.val_ bapId_
 
 findAllNotExpiredByOrgId ::
   DBFlow m r =>
