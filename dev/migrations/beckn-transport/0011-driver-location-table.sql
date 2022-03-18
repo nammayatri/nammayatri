@@ -13,8 +13,6 @@ CREATE TABLE atlas_transporter.driver_location (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-ALTER TABLE atlas_transporter.driver_location OWNER TO atlas;
-
 INSERT INTO atlas_transporter.driver_location (
     SELECT T2.id, T1.lat, T1.long, T1.point, T1.created_at, T1.updated_at FROM atlas_transporter.location AS T1
     INNER JOIN atlas_transporter.person AS T2

@@ -17,6 +17,9 @@ SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
+CREATE USER atlas_public_transport_user WITH PASSWORD 'atlas';
+ALTER SCHEMA atlas_public_transport OWNER TO atlas_public_transport_user;
+
 CREATE TABLE atlas_public_transport.transport_station (
     id character(36) NOT NULL PRIMARY KEY,
     name character varying(255) NOT NULL,
@@ -25,6 +28,8 @@ CREATE TABLE atlas_public_transport.transport_station (
     lon double precision NOT NULL
 );
 
+ALTER TABLE atlas_public_transport.transport_station OWNER TO atlas_public_transport_user;
+
 CREATE TABLE atlas_public_transport.search (
     id character(36) NOT NULL PRIMARY KEY,
     lat double precision NOT NULL,
@@ -32,6 +37,8 @@ CREATE TABLE atlas_public_transport.search (
     requestor_id character(36) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE atlas_public_transport.search OWNER TO atlas_public_transport_user;
 
 CREATE TABLE atlas_public_transport.quote (
     id character(36) NOT NULL PRIMARY KEY,
@@ -47,6 +54,8 @@ CREATE TABLE atlas_public_transport.quote (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     route_code character varying(255) NOT NULL
 );
+
+ALTER TABLE atlas_public_transport.quote OWNER TO atlas_public_transport_user;
 
 CREATE TABLE atlas_public_transport.booking (
     id character(36) NOT NULL PRIMARY KEY,
@@ -71,6 +80,8 @@ CREATE TABLE atlas_public_transport.booking (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+ALTER TABLE atlas_public_transport.booking OWNER TO atlas_public_transport_user;
+
 CREATE TABLE atlas_public_transport.payment_transaction (
     id character(36) NOT NULL PRIMARY KEY,
     booking_id character(36) NOT NULL REFERENCES atlas_public_transport.booking (id) UNIQUE,
@@ -83,3 +94,5 @@ CREATE TABLE atlas_public_transport.payment_transaction (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE atlas_public_transport.payment_transaction OWNER TO atlas_public_transport_user;

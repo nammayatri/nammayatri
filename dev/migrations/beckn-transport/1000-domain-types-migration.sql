@@ -15,8 +15,6 @@ ALTER TABLE atlas_transporter.search_request DROP COLUMN parent_case_id;
 
 CREATE TABLE atlas_transporter.ride AS SELECT * FROM atlas_transporter.product_instance where type = 'RIDEORDER'; 
 
-ALTER TABLE atlas_transporter.ride OWNER TO atlas;
-
 ALTER TABLE atlas_transporter.ride RENAME COLUMN parent_id TO product_instance_id; 
 
 ALTER TABLE ONLY atlas_transporter.ride

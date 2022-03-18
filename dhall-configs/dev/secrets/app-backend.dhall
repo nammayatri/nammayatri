@@ -6,7 +6,7 @@ let registrySecrets =
 
 in
 
-{ dbUserId = "atlas"
+{ dbUserId = "atlas_app_user"
 , dbPassword = "atlas"
 , smsOtpHash = "xxxxxxx"
 , registrySecrets = registrySecrets

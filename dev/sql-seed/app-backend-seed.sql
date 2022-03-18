@@ -22,8 +22,8 @@ SET row_security = off;
 
 CREATE SCHEMA atlas_app;
 
-
-ALTER SCHEMA atlas_app OWNER TO atlas;
+CREATE USER atlas_app_user WITH PASSWORD 'atlas';
+ALTER SCHEMA atlas_app OWNER TO atlas_app_user;
 
 SET default_tablespace = '';
 
@@ -62,8 +62,7 @@ CREATE TABLE atlas_app.case (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-
-ALTER TABLE atlas_app.case OWNER TO atlas;
+ALTER TABLE atlas_app.case OWNER TO atlas_app_user;
 
 --
 -- Name: product_instance; Type: TABLE; Schema: atlas_app; Owner: atlas
@@ -99,8 +98,7 @@ CREATE TABLE atlas_app.product_instance (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-
-ALTER TABLE atlas_app.product_instance OWNER TO atlas;
+ALTER TABLE atlas_app.product_instance OWNER TO atlas_app_user;
 
 --
 -- Name: comment; Type: TABLE; Schema: atlas_app; Owner: atlas
@@ -119,8 +117,7 @@ CREATE TABLE atlas_app.comment (
 );
 
 
-ALTER TABLE atlas_app.comment OWNER TO atlas;
-
+ALTER TABLE atlas_app.comment OWNER TO atlas_app_user;
 --
 -- Name: document; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
@@ -137,9 +134,7 @@ CREATE TABLE atlas_app.document (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-
-ALTER TABLE atlas_app.document OWNER TO atlas;
-
+ALTER TABLE atlas_app.document OWNER TO atlas_app_user;
 --
 -- Name: entity_document; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
@@ -161,8 +156,7 @@ CREATE TABLE atlas_app.entity_document (
 );
 
 
-ALTER TABLE atlas_app.entity_document OWNER TO atlas;
-
+ALTER TABLE atlas_app.entity_document OWNER TO atlas_app_user;
 --
 -- Name: entity_tag; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
@@ -180,8 +174,7 @@ CREATE TABLE atlas_app.entity_tag (
 );
 
 
-ALTER TABLE atlas_app.entity_tag OWNER TO atlas;
-
+ALTER TABLE atlas_app.entity_tag OWNER TO atlas_app_user;
 --
 -- Name: location; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
@@ -206,8 +199,7 @@ CREATE TABLE atlas_app.location (
 );
 
 
-ALTER TABLE atlas_app.location OWNER TO atlas;
-
+ALTER TABLE atlas_app.location OWNER TO atlas_app_user;
 --
 -- Name: organization; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
@@ -237,9 +229,7 @@ CREATE TABLE atlas_app.organization (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-
-ALTER TABLE atlas_app.organization OWNER TO atlas;
-
+ALTER TABLE atlas_app.organization OWNER TO atlas_app_user;
 --
 -- Name: person; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
@@ -273,8 +263,7 @@ CREATE TABLE atlas_app.person (
 );
 
 
-ALTER TABLE atlas_app.person OWNER TO atlas;
-
+ALTER TABLE atlas_app.person OWNER TO atlas_app_user;
 --
 -- Name: product; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
@@ -300,9 +289,7 @@ CREATE TABLE atlas_app.product (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-
-ALTER TABLE atlas_app.product OWNER TO atlas;
-
+ALTER TABLE atlas_app.product OWNER TO atlas_app_user;
 --
 -- Name: registration_token; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
@@ -325,8 +312,7 @@ CREATE TABLE atlas_app.registration_token (
 );
 
 
-ALTER TABLE atlas_app.registration_token OWNER TO atlas;
-
+ALTER TABLE atlas_app.registration_token OWNER TO atlas_app_user;
 --
 -- Name: tag; Type: TABLE; Schema: atlas_app; Owner: atlas
 --
@@ -342,9 +328,7 @@ CREATE TABLE atlas_app.tag (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-
-ALTER TABLE atlas_app.tag OWNER TO atlas;
-
+ALTER TABLE atlas_app.tag OWNER TO atlas_app_user;
 --
 -- Name: case idx_16386_primary; Type: CONSTRAINT; Schema: atlas_app; Owner: atlas
 --
@@ -651,5 +635,4 @@ CREATE TABLE atlas_app.issues (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-
-ALTER TABLE atlas_app.issues OWNER TO atlas;
+ALTER TABLE atlas_app.issues OWNER TO atlas_app_user;

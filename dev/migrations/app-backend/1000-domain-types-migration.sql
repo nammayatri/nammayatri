@@ -15,8 +15,6 @@ CREATE TABLE atlas_app.ride AS SELECT * FROM atlas_app.product_instance WHERE ty
 
 ALTER TABLE atlas_app.ride RENAME COLUMN parent_id TO product_instance_id;
 
-ALTER TABLE atlas_app.ride OWNER TO atlas;
-
 ALTER TABLE ONLY atlas_app.ride
     ADD CONSTRAINT idx_16395_primary PRIMARY KEY (id);
 

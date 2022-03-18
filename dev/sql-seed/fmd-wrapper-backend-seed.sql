@@ -32,12 +32,15 @@ SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
+CREATE USER atlas_fmd_wrapper_user WITH PASSWORD 'atlas';
+ALTER SCHEMA atlas_fmd_wrapper OWNER TO atlas_fmd_wrapper_user;
+
 --
 -- TOC entry 203 (class 1259 OID 16386)
 -- Name: case; Type: TABLE; Schema: atlas_fmd_wrapper; Owner: atlas
 --
 
-CREATE TABLE atlas_fmd_wrapper."case" (
+CREATE TABLE atlas_fmd_wrapper.case (
     id character(36) NOT NULL,
     name character varying(255),
     description character varying(1024),
@@ -67,8 +70,7 @@ CREATE TABLE atlas_fmd_wrapper."case" (
 );
 
 
-ALTER TABLE atlas_fmd_wrapper."case" OWNER TO atlas;
-
+ALTER TABLE atlas_fmd_wrapper.case OWNER TO atlas_fmd_wrapper_user;
 --
 -- TOC entry 206 (class 1259 OID 16410)
 -- Name: organization; Type: TABLE; Schema: atlas_fmd_wrapper; Owner: atlas
@@ -99,9 +101,7 @@ CREATE TABLE atlas_fmd_wrapper.organization (
     info text
 );
 
-
-ALTER TABLE atlas_fmd_wrapper.organization OWNER TO atlas;
-
+ALTER TABLE atlas_fmd_wrapper.organization OWNER TO atlas_fmd_wrapper_user;
 --
 -- TOC entry 2852 (class 2606 OID 16468)
 -- Name: organization idx_16410_primary; Type: CONSTRAINT; Schema: atlas_fmd_wrapper; Owner: atlas

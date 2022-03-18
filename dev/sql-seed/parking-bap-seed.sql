@@ -17,6 +17,9 @@ SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
+CREATE USER atlas_parking_user WITH PASSWORD 'atlas';
+ALTER SCHEMA atlas_parking OWNER TO atlas_parking_user;
+
 CREATE TABLE atlas_parking.parking_location (
     id character(36) NOT NULL PRIMARY KEY,
     id_from_bpp character(36) NOT NULL,
@@ -32,6 +35,8 @@ CREATE TABLE atlas_parking.parking_location (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+ALTER TABLE atlas_parking.parking_location OWNER TO atlas_parking_user;
+
 CREATE TABLE atlas_parking.search (
     id character(36) NOT NULL PRIMARY KEY,
     lat double precision NOT NULL,
@@ -41,6 +46,8 @@ CREATE TABLE atlas_parking.search (
     to_date timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE atlas_parking.search OWNER TO atlas_parking_user;
 
 CREATE TABLE atlas_parking.quote (
     id character(36) NOT NULL PRIMARY KEY,
@@ -54,6 +61,8 @@ CREATE TABLE atlas_parking.quote (
     available_spaces integer NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE atlas_parking.quote OWNER TO atlas_parking_user;
 
 CREATE TABLE atlas_parking.booking (
     id character(36) NOT NULL PRIMARY KEY,
@@ -78,6 +87,9 @@ CREATE TABLE atlas_parking.booking (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+ALTER TABLE atlas_parking.booking OWNER TO atlas_parking_user;
+
+
 CREATE TABLE atlas_parking.payment_transaction (
     id character(36) NOT NULL PRIMARY KEY,
     booking_id character(36) NOT NULL REFERENCES atlas_parking.booking (id) UNIQUE,
@@ -89,3 +101,5 @@ CREATE TABLE atlas_parking.payment_transaction (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE atlas_parking.payment_transaction OWNER TO atlas_parking_user;

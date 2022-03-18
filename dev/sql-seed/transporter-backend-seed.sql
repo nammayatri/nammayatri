@@ -29,6 +29,9 @@ SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
+CREATE USER atlas_transporter_user WITH PASSWORD 'atlas';
+ALTER SCHEMA atlas_transporter OWNER TO atlas_transporter_user;
+
 --
 -- Name: case; Type: TABLE; Schema: atlas_transporter; Owner: atlas
 --
@@ -62,10 +65,7 @@ CREATE TABLE atlas_transporter.case (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-
-ALTER TABLE atlas_transporter.case OWNER TO atlas;
-
---
+ALTER TABLE atlas_transporter.case OWNER TO atlas_transporter_user;
 -- Name: product_instance; Type: TABLE; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -100,9 +100,8 @@ CREATE TABLE atlas_transporter.product_instance (
 );
 
 
-ALTER TABLE atlas_transporter.product_instance OWNER TO atlas;
+ALTER TABLE atlas_transporter.product_instance OWNER TO atlas_transporter_user;
 
---
 -- Name: location; Type: TABLE; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -126,9 +125,7 @@ CREATE TABLE atlas_transporter.location (
 
 CREATE INDEX location_idx ON atlas_transporter.location USING gist (point);
 
-ALTER TABLE atlas_transporter.location OWNER TO atlas;
-
---
+ALTER TABLE atlas_transporter.location OWNER TO atlas_transporter_user;
 -- Name: organization; Type: TABLE; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -158,9 +155,8 @@ CREATE TABLE atlas_transporter.organization (
 );
 
 
-ALTER TABLE atlas_transporter.organization OWNER TO atlas;
+ALTER TABLE atlas_transporter.organization OWNER TO atlas_transporter_user;
 
---
 -- Name: person; Type: TABLE; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -193,9 +189,8 @@ CREATE TABLE atlas_transporter.person (
 );
 
 
-ALTER TABLE atlas_transporter.person OWNER TO atlas;
+ALTER TABLE atlas_transporter.person OWNER TO atlas_transporter_user;
 
---
 -- Name: product; Type: TABLE; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -221,9 +216,8 @@ CREATE TABLE atlas_transporter.product (
 );
 
 
-ALTER TABLE atlas_transporter.product OWNER TO atlas;
+ALTER TABLE atlas_transporter.product OWNER TO atlas_transporter_user;
 
---
 -- Name: registration_token; Type: TABLE; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -245,9 +239,8 @@ CREATE TABLE atlas_transporter.registration_token (
 );
 
 
-ALTER TABLE atlas_transporter.registration_token OWNER TO atlas;
+ALTER TABLE atlas_transporter.registration_token OWNER TO atlas_transporter_user;
 
---
 -- Name: vehicle; Type: TABLE; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -269,9 +262,8 @@ CREATE TABLE atlas_transporter.vehicle (
 );
 
 
-ALTER TABLE atlas_transporter.vehicle OWNER TO atlas;
+ALTER TABLE atlas_transporter.vehicle OWNER TO atlas_transporter_user;
 
---
 -- Name: vehicle; Type: TABLE; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -286,9 +278,8 @@ CREATE TABLE atlas_transporter.inventory (
 );
 
 
-ALTER TABLE atlas_transporter.inventory OWNER TO atlas;
+ALTER TABLE atlas_transporter.inventory OWNER TO atlas_transporter_user;
 
---
 -- Name: case idx_16386_primary; Type: CONSTRAINT; Schema: atlas_transporter; Owner: atlas
 --
 
@@ -530,6 +521,8 @@ CREATE TABLE atlas_transporter.driver_stats (
     idle_since timestamp with time zone
 );
 
+ALTER TABLE atlas_transporter.driver_stats OWNER TO atlas_transporter_user;
+
 CREATE TABLE atlas_transporter.transporter_config (
     id character(36) PRIMARY KEY NOT NULL,
     transporter_id character(36) NOT NULL,
@@ -540,6 +533,8 @@ CREATE TABLE atlas_transporter.transporter_config (
     UNIQUE (transporter_id, key)
 );
 
+ALTER TABLE atlas_transporter.transporter_config OWNER TO atlas_transporter_user;
+
 CREATE TABLE atlas_transporter.driver_information (
     driver_id character(36) PRIMARY KEY NOT NULL REFERENCES atlas_transporter.person (id) on delete cascade,
     active boolean DEFAULT false NOT NULL,
@@ -547,6 +542,8 @@ CREATE TABLE atlas_transporter.driver_information (
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+ALTER TABLE atlas_transporter.driver_information OWNER TO atlas_transporter_user;
 
 CREATE TABLE atlas_transporter.fare_policy (
     id character(36) NOT NULL,
@@ -562,7 +559,7 @@ CREATE TABLE atlas_transporter.fare_policy (
     updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
-ALTER TABLE atlas_transporter.fare_policy OWNER TO atlas;
+ALTER TABLE atlas_transporter.fare_policy OWNER TO atlas_transporter_user;
 
 CREATE TABLE atlas_transporter.ride_request (
     id character(36) PRIMARY KEY NOT NULL,
@@ -572,6 +569,8 @@ CREATE TABLE atlas_transporter.ride_request (
     type character varying(20) NOT NULL
 );
 
+ALTER TABLE atlas_transporter.ride_request OWNER TO atlas_transporter_user;
+
 CREATE TABLE atlas_transporter.notification_status (
     id character(36) PRIMARY KEY NOT NULL,
     ride_id character(36) NOT NULL REFERENCES atlas_transporter.product_instance (id) on delete cascade,
@@ -580,6 +579,8 @@ CREATE TABLE atlas_transporter.notification_status (
     expires_at timestamp with time zone NOT NULL
 );
 
+ALTER TABLE atlas_transporter.notification_status OWNER TO atlas_transporter_user;
+
 CREATE TABLE atlas_transporter.allocation_event (
     id character(36) PRIMARY KEY NOT NULL,
     ride_id character(36) NOT NULL,
@@ -587,3 +588,5 @@ CREATE TABLE atlas_transporter.allocation_event (
     event_type character varying(22) NOT NULL,
     timestamp timestamp with time zone NOT NULL
 );
+
+ALTER TABLE atlas_transporter.allocation_event OWNER TO atlas_transporter_user;

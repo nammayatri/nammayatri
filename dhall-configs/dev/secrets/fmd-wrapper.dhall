@@ -8,7 +8,7 @@ let registrySecrets =
 
 in
 
-{ dbUserId = "atlas"
+{ dbUserId = "atlas_fmd_wrapper_user"
 , dbPassword = "atlas"
 , payee = payee
 , registrySecrets = registrySecrets
