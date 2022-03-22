@@ -6,8 +6,8 @@ import qualified Beckn.External.Exotel.Types as Call
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.CallStatus as SCS
 import EulerHS.Prelude
-import qualified Types.Storage.CallStatus as SCS
 
 newtype CallRes = CallRes
   { callId :: Id SCS.CallStatus

@@ -2,7 +2,7 @@ module App.DriverTrackingHealthcheck.Environment where
 
 import App.DriverTrackingHealthcheck.Config
 import Beckn.External.Encryption (EncTools)
-import Beckn.Storage.DB.Config (DBConfig)
+import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Common
 import Beckn.Utils.App (getPodName)
 import Beckn.Utils.IOLogging
@@ -12,7 +12,7 @@ import Tools.Metrics
 
 data AppEnv = AppEnv
   { config :: AppCfg,
-    dbCfg :: DBConfig,
+    esqDBEnv :: EsqDBEnv,
     fcmJsonPath :: Maybe Text,
     fcmUrl :: BaseUrl,
     nwAddress :: BaseUrl,
@@ -29,6 +29,7 @@ buildAppEnv config@AppCfg {..} = do
   hostname <- getPodName
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
+  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

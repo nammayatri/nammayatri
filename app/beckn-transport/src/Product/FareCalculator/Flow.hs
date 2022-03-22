@@ -15,12 +15,13 @@ import Data.Time
     minutesToTimeZone,
     utcToLocalTime,
   )
+import Domain.Types.FarePolicy (FarePolicy)
+import Domain.Types.FarePolicy.PerExtraKmRate (PerExtraKmRate (..))
+import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.SearchReqLocation as Location
+import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude
-import Types.Domain.FarePolicy (FarePolicy, PerExtraKmRate (..))
 import Types.Error
-import qualified Types.Storage.Organization as Organization
-import qualified Types.Storage.SearchReqLocation as Location
-import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
 newtype PickupLocation = PickupLocation {getPickupLocation :: Location.SearchReqLocation}

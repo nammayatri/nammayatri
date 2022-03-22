@@ -6,16 +6,15 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Booking
 import Domain.Quote
-import GHC.Int
 import Storage.Tabular.Booking
 import Tools.Auth
 
-findById :: EsqDBFlow m r => Id Booking -> m (Maybe Booking)
+findById :: Transactionable m => Id Booking -> m (Maybe Booking)
 findById = Esq.findById
 
-findByQuoteId :: EsqDBFlow m r => Id Quote -> m (Maybe Booking)
+findByQuoteId :: Transactionable m => Id Quote -> m (Maybe Booking)
 findByQuoteId quoteId =
-  runTransaction . findOne' $ do
+  Esq.findOne $ do
     booking <- from $ table @BookingT
     where_ $ booking ^. BookingQuoteId ==. val (toKey quoteId)
     return booking
@@ -61,18 +60,18 @@ updateStatus booking newStatus = do
       ]
     where_ $ tbl ^. BookingId ==. val (getId booking.id)
 
-findByBppOrderId :: EsqDBFlow m r => Text -> m (Maybe Booking)
+findByBppOrderId :: Transactionable m => Text -> m (Maybe Booking)
 findByBppOrderId bppOrderId =
-  runTransaction . findOne' $ do
+  Esq.findOne $ do
     parkingSearch <- from $ table @BookingT
     where_ $ parkingSearch ^. BookingBppOrderId ==. val (Just bppOrderId)
     return parkingSearch
 
-findAllByRequestorId :: EsqDBFlow m r => PersonId -> Integer -> Integer -> m [Booking]
+findAllByRequestorId :: Transactionable m => PersonId -> Integer -> Integer -> m [Booking]
 findAllByRequestorId personId limitInt offSetInt = do
   let limit_ :: Int64 = fromInteger limitInt
       offset_ :: Int64 = fromInteger offSetInt
-  runTransaction . findAll' $ do
+  Esq.findAll $ do
     parkingSearch <- from $ table @BookingT
     where_ $ parkingSearch ^. BookingRequestorId ==. val (getId personId)
     limit limit_

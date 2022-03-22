@@ -11,12 +11,12 @@ import Storage.Tabular.RegistrationToken
 create :: RegistrationToken -> SqlDB ()
 create = create'
 
-findById :: EsqDBFlow m r => Id RegistrationToken -> m (Maybe RegistrationToken)
+findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById = Esq.findById
 
-findByToken :: EsqDBFlow m r => Text -> m (Maybe RegistrationToken)
+findByToken :: Transactionable m => Text -> m (Maybe RegistrationToken)
 findByToken token_ =
-  runTransaction . findOne' $ do
+  findOne $ do
     registrationToken <- from $ table @RegistrationTokenT
     where_ $ registrationToken ^. RegistrationTokenToken ==. val token_
     return registrationToken
@@ -57,9 +57,9 @@ deleteByPersonIdExceptNew (Id personId) newRT = do
       (registrationToken ^. RegistrationTokenEntityId ==. val personId)
         &&. not_ (registrationToken ^. RegistrationTokenId ==. val (getId newRT))
 
-findAllByPersonId :: EsqDBFlow m r => Id Person -> m [RegistrationToken]
+findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
 findAllByPersonId (Id personId) =
-  runTransaction . findAll' $ do
+  findAll $ do
     registrationToken <- from $ table @RegistrationTokenT
     where_ $ registrationToken ^. RegistrationTokenEntityId ==. val personId
     return registrationToken

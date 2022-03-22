@@ -10,26 +10,26 @@ import Storage.Tabular.Quote
 create :: Quote -> SqlDB ()
 create = create'
 
-findById :: EsqDBFlow m r => Id Quote -> m (Maybe Quote)
+findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById = Esq.findById
 
-findByBPPQuoteId :: EsqDBFlow m r => Id BPPQuote -> m (Maybe Quote)
+findByBPPQuoteId :: Transactionable m => Id BPPQuote -> m (Maybe Quote)
 findByBPPQuoteId bppQuoteId_ =
-  runTransaction . findOne' $ do
+  Esq.findOne $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteBppQuoteId ==. val (getId bppQuoteId_)
     return quote
 
-findByTxnIdAndBppIdAndQuoteId :: EsqDBFlow m r => Id SearchRequest -> Text -> Id BPPQuote -> m (Maybe Quote)
+findByTxnIdAndBppIdAndQuoteId :: Transactionable m => Id SearchRequest -> Text -> Id BPPQuote -> m (Maybe Quote)
 findByTxnIdAndBppIdAndQuoteId txnId bppId quoteId =
-  runTransaction . findOne' $ do
+  Esq.findOne $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteRequestId ==. val (toKey txnId) &&. quote ^. QuoteProviderId ==. val bppId &&. quote ^. QuoteBppQuoteId ==. val (getId quoteId)
     return quote
 
-findAllByRequestId :: EsqDBFlow m r => Id SearchRequest -> m [Quote]
+findAllByRequestId :: Transactionable m => Id SearchRequest -> m [Quote]
 findAllByRequestId searchRequestId =
-  runTransaction . findAll' $ do
+  Esq.findAll $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteRequestId ==. val (toKey searchRequestId)
     return quote

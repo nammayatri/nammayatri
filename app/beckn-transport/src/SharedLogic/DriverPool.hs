@@ -7,6 +7,11 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as GoogleMaps
+import qualified Domain.Types.Organization as SOrg
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.SearchReqLocation as SSReqLoc
+import qualified Domain.Types.TransporterConfig as STConf
+import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -16,11 +21,6 @@ import qualified Storage.Queries.TransporterConfig as QTConf
 import Tools.Metrics
 import Types.App (Driver)
 import Types.Error
-import qualified Types.Storage.Organization as SOrg
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.SearchReqLocation as SSReqLoc
-import qualified Types.Storage.TransporterConfig as STConf
-import qualified Types.Storage.Vehicle as SV
 import Utils.Common
 
 driverPoolKey :: Id SRB.RideBooking -> Text
@@ -28,7 +28,7 @@ driverPoolKey = ("beckn:driverpool:" <>) . getId
 
 getDriverPool ::
   ( CoreMetrics m,
-    DBFlow m r,
+    EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasGoogleMaps m r c
   ) =>
@@ -46,7 +46,7 @@ getDriverPool rideBookingId =
       map (.driverId) <$> calculateDriverPool pickupPoint orgId (Just vehicleVariant)
 
 recalculateDriverPool ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
     HasGoogleMaps m r c
@@ -64,7 +64,7 @@ recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant = d
   return filteredDriverPool
 
 calculateDriverPool ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
     HasGoogleMaps m r c
@@ -74,7 +74,7 @@ calculateDriverPool ::
   Maybe SV.Variant ->
   m [QP.DriverPoolResult]
 calculateDriverPool locId orgId variant = do
-  pickupLoc <- QSReqLoc.findLocationById locId >>= fromMaybeM LocationNotFound
+  pickupLoc <- QSReqLoc.findById locId >>= fromMaybeM LocationNotFound
   let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
   radius <- getRadius
   approxDriverPool <-
@@ -98,7 +98,7 @@ calculateDriverPool locId orgId variant = do
         $ conf.value
 
 filterOutDriversWithDistanceAboveThreshold ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     CoreMetrics m,
     HasGoogleMaps m r c
   ) =>

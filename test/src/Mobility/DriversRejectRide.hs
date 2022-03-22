@@ -1,12 +1,12 @@
 module Mobility.DriversRejectRide where
 
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
+import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
 import Mobility.SuccessFlow
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
-import qualified "beckn-transport" Types.Storage.RideBooking as TRB
 import Utils
 
 spec :: Spec

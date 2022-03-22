@@ -13,12 +13,12 @@ import Beckn.Types.MonadGuid
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging
 import qualified Data.List.NonEmpty as NE
+import qualified Domain.Types.Person as Person
 import SharedLogic.LocationUpdates
 import Test.QuickCheck
 import Test.QuickCheck.Monadic
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (testProperty)
-import qualified Types.Storage.Person as Person
 
 locationUpdatesTree :: AppEnv -> TestTree
 locationUpdatesTree appEnv =

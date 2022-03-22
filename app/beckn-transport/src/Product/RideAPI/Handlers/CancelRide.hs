@@ -4,19 +4,19 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Cancel
 import Beckn.Types.Id
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import EulerHS.Prelude
 import Types.API.Ride (CancelRideReq (..))
 import Types.Error
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Ride as SRide
-import qualified Types.Storage.RideBookingCancellationReason as SBCR
 import Utils.Common
 
 type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id SRide.Ride -> m (Maybe SRide.Ride),
-    findPersonById :: Id Person.Person -> m (Maybe Person.Person),
+    findById :: Id Person.Person -> m (Maybe Person.Person),
     cancelRide :: Id SRide.Ride -> SBCR.RideBookingCancellationReason -> m ()
   }
 
@@ -25,7 +25,7 @@ cancelRideHandler ServiceHandle {..} personId rideId req = do
   ride <- findRideById rideId >>= fromMaybeM RideDoesNotExist
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"
   authPerson <-
-    findPersonById personId
+    findById personId
       >>= fromMaybeM PersonNotFound
   rideCancelationReason <- case authPerson.role of
     Person.ADMIN -> do

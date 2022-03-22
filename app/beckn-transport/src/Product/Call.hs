@@ -4,10 +4,14 @@ import App.Types
 import Beckn.External.Encryption (decrypt)
 import Beckn.External.Exotel.Flow (initiateCall)
 import Beckn.External.Exotel.Types
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
 import Data.Text
 import qualified Data.Text as T
+import qualified Domain.Types.CallStatus as SCS
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import Servant.Client (BaseUrl (..))
 import qualified Storage.Queries.CallStatus as QCallStatus
@@ -17,9 +21,6 @@ import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Types.API.Call as CallAPI
 import Types.Error
-import qualified Types.Storage.CallStatus as SCS
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Ride as SRide
 import Utils.Common
 
 initiateCallToCustomer :: Id SRide.Ride -> Id SP.Person -> FlowHandler CallAPI.CallRes
@@ -53,7 +54,7 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
 callStatusCallback :: Id SRide.Ride -> CallAPI.CallCallbackReq -> FlowHandler CallAPI.CallCallbackRes
 callStatusCallback _ req = withFlowHandlerAPI $ do
   callStatus <- buildCallStatus
-  QCallStatus.create callStatus
+  Esq.runTransaction $ QCallStatus.create callStatus
   return Ack
   where
     buildCallStatus = do
@@ -75,10 +76,10 @@ getCallStatus :: Id SRide.Ride -> Id SCS.CallStatus -> Id SP.Person -> FlowHandl
 getCallStatus _ callStatusId _ = withFlowHandlerAPI $ do
   QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
 
-getDriverPhone :: (DBFlow m r, EncFlow m r) => SRide.Ride -> m Text
+getDriverPhone :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Text
 getDriverPhone ride = do
   let driverId = ride.driverId
-  driver <- QPerson.findPersonById driverId >>= fromMaybeM PersonNotFound
-  decMobNum <- decrypt driver.mobileNumber
+  driver <- QPerson.findById driverId >>= fromMaybeM PersonNotFound
+  decMobNum <- mapM decrypt driver.mobileNumber
   let phonenum = (<>) <$> driver.mobileCountryCode <*> decMobNum
   phonenum & fromMaybeM (InternalError "Driver has no phone number.")

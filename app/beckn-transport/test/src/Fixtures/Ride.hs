@@ -1,9 +1,9 @@
 module Fixtures.Ride where
 
 import Beckn.Types.Id
+import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
-import qualified Types.Storage.Ride as Ride
 
 defaultRide :: Ride.Ride
 defaultRide =

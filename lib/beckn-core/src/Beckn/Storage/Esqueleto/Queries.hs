@@ -6,16 +6,19 @@ module Beckn.Storage.Esqueleto.Queries
   )
 where
 
+import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Class
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Esqueleto.Logger (runLoggerIO)
 import Beckn.Storage.Esqueleto.SqlDB
-import Beckn.Types.Time (getCurrentTime)
+import Beckn.Storage.Esqueleto.Transactionable
 import Database.Esqueleto.Experimental as EsqExport hiding
   ( delete,
     deleteCount,
     deleteKey,
     insert,
+    insertSelect,
+    insertSelectCount,
+    repsert,
     select,
     selectOne,
     update,
@@ -27,27 +30,9 @@ import Database.Esqueleto.Experimental as EsqExport hiding
 import qualified Database.Esqueleto.Experimental as Esq
 import qualified Database.Esqueleto.Internal.Internal as Esq
 import Database.Persist.Postgresql
-import EulerHS.Prelude hiding (Key, id)
 
-runTransaction ::
-  (EsqDBFlow m r) =>
-  SqlDB a ->
-  m a
-runTransaction run = do
-  logEnv <- asks (.loggerEnv)
-  dbEnv <- asks (.esqDBEnv)
-  now <- getCurrentTime
-  let sqlDBEnv =
-        SqlDBEnv
-          { currentTime = now
-          }
-  liftIO . runLoggerIO logEnv $ runSqlPool (runReaderT run sqlDBEnv) dbEnv.connPool
-
-findOne :: (EsqDBFlow m r, Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> m (Maybe a)
-findOne q = runTransaction $ findOne' q
-
-findOne' :: (Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> SqlDB (Maybe a)
-findOne' q = traverse toResult =<< lift selectOnlyOne
+findOne :: (Transactionable m, Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> m (Maybe a)
+findOne q = runTransaction $ traverse toResult =<< lift selectOnlyOne
   where
     selectOnlyOne = do
       list <- Esq.select q
@@ -55,27 +40,15 @@ findOne' q = traverse toResult =<< lift selectOnlyOne
         [res] -> return $ Just res
         _ -> return Nothing
 
-findById :: (EsqDBFlow m r, TEntity t a, TEntityKey t) => DomainKey t -> m (Maybe a)
-findById id = runTransaction $ findById' id
-
-findById' ::
-  forall t a.
-  ( TEntity t a,
-    TEntityKey t
-  ) =>
-  DomainKey t ->
-  SqlDB (Maybe a)
-findById' dkey = findOne' $ do
+findById :: forall t a m. (Transactionable m, TEntity t a, TEntityKey t) => DomainKey t -> m (Maybe a)
+findById dkey = runTransaction . findOne $ do
   let key = toKey dkey
   res <- from $ table @t
   where_ $ res Esq.^. persistIdField Esq.==. val key
   return res
 
-findAll :: (EsqDBFlow m r, Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> m [a]
-findAll q = runTransaction $ findAll' q
-
-findAll' :: (Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> SqlDB [a]
-findAll' q = traverse toResult =<< lift (Esq.select q)
+findAll :: (Transactionable m, Esq.SqlSelect b t, QEntity t a) => Esq.SqlQuery b -> m [a]
+findAll q = runTransaction $ traverse toResult =<< lift (Esq.select q)
 
 create ::
   ( EsqDBFlow m r,
@@ -92,11 +65,26 @@ create' ::
   SqlDB ()
 create' q = lift $ Esq.insert_ (toTType q)
 
-createIgnoreConflicts' :: (TEntity t a, AtLeastOneUniqueKey t) => a -> SqlDB ()
-createIgnoreConflicts' q = void $ lift $ Esq.insertBy (toTType q)
+createMany ::
+  ( EsqDBFlow m r,
+    TEntity t a
+  ) =>
+  [a] ->
+  m ()
+createMany = runTransaction . createMany'
+
+createMany' ::
+  ( TEntity t a
+  ) =>
+  [a] ->
+  SqlDB ()
+createMany' q = lift $ Esq.insertMany_ (toTType <$> q)
 
 createIgnoreConflicts :: (EsqDBFlow m r, TEntity t a, AtLeastOneUniqueKey t) => a -> m ()
 createIgnoreConflicts = runTransaction . createIgnoreConflicts'
+
+createIgnoreConflicts' :: (TEntity t a, AtLeastOneUniqueKey t) => a -> SqlDB ()
+createIgnoreConflicts' q = void $ lift $ Esq.insertBy (toTType q)
 
 update ::
   ( EsqDBFlow m r,
@@ -170,14 +158,33 @@ deleteReturningCount' ::
   SqlDB Int64
 deleteReturningCount' = lift . Esq.deleteCount
 
+repsert ::
+  ( EsqDBFlow m r,
+    TEntity t a,
+    TEntityKey t
+  ) =>
+  DomainKey t ->
+  a ->
+  m ()
+repsert r = runTransaction . repsert' r
+
+repsert' ::
+  ( TEntity t a,
+    TEntityKey t
+  ) =>
+  DomainKey t ->
+  a ->
+  SqlDB ()
+repsert' k v = lift (Esq.repsert (toKey k) (toTType v))
+
 upsert ::
   ( EsqDBFlow m r,
     OnlyOneUniqueKey t,
     TEntity t a
   ) =>
   a ->
-  [Update t] ->
-  m a
+  [SqlExpr (Entity t) -> SqlExpr Esq.Update] ->
+  m ()
 upsert r = runTransaction . upsert' r
 
 upsert' ::
@@ -185,30 +192,75 @@ upsert' ::
     TEntity t a
   ) =>
   a ->
-  [Update t] ->
-  SqlDB a
-upsert' r u = fromTEntity =<< lift (Esq.upsert (toTType r) u)
+  [SqlExpr (Entity t) -> SqlExpr Esq.Update] ->
+  SqlDB ()
+upsert' r u = do
+  let uniqueKey = onlyUniqueP $ toTType r
+  upsertBy' uniqueKey r u
 
 upsertBy ::
   ( EsqDBFlow m r,
-    OnlyOneUniqueKey t,
     TEntity t a
   ) =>
   Unique t ->
   a ->
-  [Update t] ->
-  m a
+  [SqlExpr (Entity t) -> SqlExpr Esq.Update] ->
+  m ()
 upsertBy k r = runTransaction . upsertBy' k r
 
 upsertBy' ::
-  ( OnlyOneUniqueKey t,
-    TEntity t a
+  ( TEntity t a
   ) =>
   Unique t ->
   a ->
-  [Update t] ->
-  SqlDB a
-upsertBy' k r u = fromTEntity =<< lift (Esq.upsertBy k (toTType r) u)
+  [SqlExpr (Entity t) -> SqlExpr Esq.Update] ->
+  SqlDB ()
+upsertBy' k r u = do
+  mbEntity <- lift $ getBy k
+  case mbEntity of
+    Nothing -> create' r
+    Just ent -> update' $ \tbl -> do
+      Esq.set
+        tbl
+        u
+      where_ $ tbl Esq.^. persistIdField Esq.==. val (entityKey ent)
+
+insertSelect ::
+  ( EsqDBFlow m r,
+    TEntity t a,
+    PersistEntity t
+  ) =>
+  SqlQuery (SqlExpr (Esq.Insertion t)) ->
+  m ()
+insertSelect = runTransaction . insertSelect'
+
+insertSelect' ::
+  ( TEntity t a,
+    PersistEntity t
+  ) =>
+  SqlQuery (SqlExpr (Esq.Insertion t)) ->
+  SqlDB ()
+insertSelect' = lift . Esq.insertSelect
+
+insertSelectCount ::
+  ( EsqDBFlow m r,
+    TEntity t a,
+    PersistEntity t
+  ) =>
+  SqlQuery (SqlExpr (Esq.Insertion t)) ->
+  m Int64
+insertSelectCount = runTransaction . insertSelectCount'
+
+insertSelectCount' ::
+  ( TEntity t a,
+    PersistEntity t
+  ) =>
+  SqlQuery (SqlExpr (Esq.Insertion t)) ->
+  SqlDB Int64
+insertSelectCount' = lift . Esq.insertSelectCount
+
+(<#>) :: SqlExpr (Esq.Insertion (a -> b)) -> SqlExpr (Value a) -> SqlExpr (Esq.Insertion b)
+(<#>) = (Esq.<&>)
 
 whenJust_ :: Maybe a -> (a -> SqlExpr (Value Bool)) -> SqlExpr (Value Bool)
 whenJust_ mbVal func = maybe (Esq.val True) func mbVal
@@ -218,3 +270,16 @@ whenTrue_ bl func = bool (Esq.val True) func bl
 
 updateWhenJust_ :: (a -> SqlExpr (Entity e) -> SqlExpr Esq.Update) -> Maybe a -> [SqlExpr (Entity e) -> SqlExpr Esq.Update]
 updateWhenJust_ f = maybe [] (\value -> [f value])
+
+maybe_ ::
+  forall a b.
+  (PersistField a, PersistField b) =>
+  SqlExpr (Value b) ->
+  (SqlExpr (Value a) -> SqlExpr (Value b)) ->
+  SqlExpr (Value (Maybe a)) ->
+  SqlExpr (Value b)
+maybe_ def f mbVal =
+  case_
+    [when_ (isNothing mbVal) then_ def]
+    ( else_ $ f $ Esq.veryUnsafeCoerceSqlExprValue mbVal
+    )

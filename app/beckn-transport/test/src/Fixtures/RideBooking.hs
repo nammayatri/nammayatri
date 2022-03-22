@@ -1,11 +1,11 @@
 module Fixtures.RideBooking where
 
 import Beckn.Types.Id
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude
 import qualified Fixtures.BaseUrl as Fixtures
 import qualified Fixtures.Time as Fixtures
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.Vehicle as Veh
 
 defaultRideBooking :: SRB.RideBooking
 defaultRideBooking =

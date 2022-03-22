@@ -1,146 +1,98 @@
 module Storage.Queries.Vehicle where
 
-import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as DB
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.Schema
-import Database.Beam ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.Vehicle as Storage
+import Domain.Types.Organization
+import Domain.Types.Vehicle
+import Storage.Tabular.Vehicle
 import Utils.Common
 
-getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.VehicleT))
-getDbTable =
-  DB.vehicle . DB.transporterDb <$> getSchemaName
+create :: Vehicle -> SqlDB ()
+create = Esq.create'
 
-createFlow :: DBFlow m r => Storage.Vehicle -> m ()
-createFlow =
-  DB.runSqlDB . create
-
-create :: Storage.Vehicle -> DB.SqlDB ()
-create Storage.Vehicle {..} = do
-  dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue Storage.Vehicle {..})
-
-findVehicleById ::
-  DBFlow m r =>
-  Id Storage.Vehicle ->
-  m (Maybe Storage.Vehicle)
-findVehicleById vid = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Vehicle {..} = id ==. B.val_ vid
+findById ::
+  Transactionable m =>
+  Id Vehicle ->
+  m (Maybe Vehicle)
+findById = Esq.findById
 
 findByIdAndOrgId ::
-  DBFlow m r =>
-  Id Storage.Vehicle ->
-  Id Org.Organization ->
-  m (Maybe Storage.Vehicle)
-findByIdAndOrgId vid orgId = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Vehicle {..} = id ==. B.val_ vid &&. organizationId ==. B.val_ orgId
+  Transactionable m =>
+  Id Vehicle ->
+  Id Organization ->
+  m (Maybe Vehicle)
+findByIdAndOrgId vid orgId =
+  Esq.findOne $ do
+    vehicle <- from $ table @VehicleT
+    where_ $
+      vehicle ^. VehicleTId ==. val (toKey vid)
+        &&. vehicle ^. VehicleOrganizationId ==. val (toKey orgId)
+    return vehicle
 
-findAllWithLimitOffsetByOrgIds ::
-  DBFlow m r =>
-  Maybe Integer ->
-  Maybe Integer ->
-  [Id Org.Organization] ->
-  m [Storage.Vehicle]
-findAllWithLimitOffsetByOrgIds mlimit moffset orgIds = do
-  dbTable <- getDbTable
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
-  where
-    orderByDesc Storage.Vehicle {..} = B.desc_ createdAt
-    limit = fromMaybe 100 mlimit
-    offset = fromMaybe 0 moffset
-    predicate Storage.Vehicle {..} =
-      foldl
-        (&&.)
-        (B.val_ True)
-        [organizationId `B.in_` (B.val_ <$> orgIds) ||. complementVal orgIds]
-
-complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
-complementVal l
-  | null l = B.val_ True
-  | otherwise = B.val_ False
-
-updateVehicleRec :: DBFlow m r => Storage.Vehicle -> m ()
+updateVehicleRec :: Vehicle -> SqlDB ()
 updateVehicleRec vehicle = do
-  dbTable <- getDbTable
-  DB.update dbTable (setClause vehicle) (predicate $ vehicle.id)
-  where
-    setClause pVehicle Storage.Vehicle {..} =
-      mconcat
-        [ capacity <-. B.val_ pVehicle.capacity,
-          category <-. B.val_ pVehicle.category,
-          make <-. B.val_ pVehicle.make,
-          model <-. B.val_ pVehicle.model,
-          size <-. B.val_ pVehicle.size,
-          variant <-. B.val_ pVehicle.variant,
-          color <-. B.val_ pVehicle.color,
-          energyType <-. B.val_ pVehicle.energyType,
-          registrationCategory <-. B.val_ pVehicle.registrationCategory,
-          updatedAt <-. B.val_ pVehicle.updatedAt
-        ]
-    predicate vid Storage.Vehicle {..} = id ==. B.val_ vid
+  now <- getCurrentTime
+  Esq.update' $ \tbl -> do
+    set
+      tbl
+      [ VehicleCapacity =. val vehicle.capacity,
+        VehicleCategory =. val vehicle.category,
+        VehicleMake =. val vehicle.make,
+        VehicleModel =. val vehicle.model,
+        VehicleSize =. val vehicle.size,
+        VehicleVariant =. val vehicle.variant,
+        VehicleColor =. val vehicle.color,
+        VehicleEnergyType =. val vehicle.energyType,
+        VehicleRegistrationCategory =. val vehicle.registrationCategory,
+        VehicleUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.id)
 
-deleteById :: Id Storage.Vehicle -> DB.SqlDB ()
-deleteById vehId = do
-  dbTable <- getDbTable
-  DB.delete' dbTable (predicate vehId)
-  where
-    predicate vid Storage.Vehicle {..} = id ==. B.val_ vid
+deleteById :: Id Vehicle -> SqlDB ()
+deleteById = Esq.deleteByKey' @VehicleT
 
-findByAnyOf :: DBFlow m r => Maybe Text -> Maybe (Id Storage.Vehicle) -> m (Maybe Storage.Vehicle)
-findByAnyOf registrationNoM vehicleIdM = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Vehicle {..} =
-      (B.val_ (isNothing vehicleIdM) ||. id ==. B.val_ (fromMaybe "DONT_MATCH" vehicleIdM))
-        &&. (B.val_ (isNothing registrationNoM) ||. registrationNo ==. B.val_ (fromMaybe "DONT_MATCH" registrationNoM))
+findByAnyOf :: Transactionable m => Maybe Text -> Maybe (Id Vehicle) -> m (Maybe Vehicle)
+findByAnyOf registrationNoM vehicleIdM =
+  Esq.findOne $ do
+    vehicle <- from $ table @VehicleT
+    where_ $
+      whenJust_ vehicleIdM (\vehicleId -> vehicle ^. VehicleTId ==. val (toKey vehicleId))
+        &&. whenJust_ registrationNoM (\regNum -> vehicle ^. VehicleRegistrationNo ==. val regNum)
+    return vehicle
 
 findAllByVariantCatOrgId ::
-  DBFlow m r =>
-  Maybe Storage.Variant ->
-  Maybe Storage.Category ->
-  Maybe Storage.EnergyType ->
+  Transactionable m =>
+  Maybe Variant ->
+  Maybe Category ->
+  Maybe EnergyType ->
   Maybe Text ->
   Integer ->
   Integer ->
-  Id Org.Organization ->
-  m [Storage.Vehicle]
-findAllByVariantCatOrgId variantM categoryM energyTypeM mbRegNum limit offset orgId = do
-  dbTable <- getDbTable
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) predicate
-  where
-    orderByDesc Storage.Vehicle {..} = B.desc_ createdAt
-    predicate Storage.Vehicle {..} =
-      organizationId ==. B.val_ orgId
-        &&. maybe (B.val_ True) (\variant_ -> B.val_ variant_ ==. variant) variantM
-        &&. (B.val_ (isNothing categoryM) ||. category ==. B.val_ categoryM)
-        &&. (B.val_ (isNothing energyTypeM) ||. energyType ==. B.val_ energyTypeM)
-        &&. maybe (B.val_ True) (\regNum -> registrationNo `B.like_` B.val_ ("%" <> regNum <> "%")) mbRegNum
-
-findByIds :: DBFlow m r => [Id Storage.Vehicle] -> m [Storage.Vehicle]
-findByIds ids = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate Storage.Vehicle {..} = B.in_ id (B.val_ <$> ids)
+  Id Organization ->
+  m [Vehicle]
+findAllByVariantCatOrgId variantM categoryM energyTypeM mbRegNum limit' offset' orgId = do
+  let limitVal = fromIntegral limit'
+      offsetVal = fromIntegral offset'
+  Esq.findAll $ do
+    vehicle <- from $ table @VehicleT
+    where_ $
+      vehicle ^. VehicleOrganizationId ==. val (toKey orgId)
+        &&. whenJust_ variantM (\variant -> vehicle ^. VehicleVariant ==. val variant)
+        &&. whenJust_ categoryM (\category -> vehicle ^. VehicleCategory ==. val (Just category))
+        &&. whenJust_ energyTypeM (\energyType -> vehicle ^. VehicleEnergyType ==. val (Just energyType))
+        &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo ==. val regNum)
+    orderBy [desc $ vehicle ^. VehicleCreatedAt]
+    limit limitVal
+    offset offsetVal
+    return vehicle
 
 findByRegistrationNo ::
-  DBFlow m r =>
+  Transactionable m =>
   Text ->
-  m (Maybe Storage.Vehicle)
-findByRegistrationNo registrationNo_ = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Vehicle {..} = registrationNo ==. B.val_ registrationNo_
+  m (Maybe Vehicle)
+findByRegistrationNo registrationNo =
+  Esq.findOne $ do
+    vehicle <- from $ table @VehicleT
+    where_ $ vehicle ^. VehicleRegistrationNo ==. val registrationNo
+    return vehicle

@@ -11,20 +11,20 @@ module SharedLogic.LocationUpdates
   )
 where
 
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Hedis (HedisFlow)
 import Beckn.Storage.Hedis.Queries
-import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Beckn.Types.MapSearch
 import Beckn.Utils.Logging
+import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import Product.Services.GoogleMaps.SnapToRoad (PointsList (PointsList), callSnapToRoadAPI, snappedLocationtoLatLong)
 import SharedLogic.CalculateDistance
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics as Metrics
-import qualified Types.Storage.Person as Person
 
 data RideInterpolationHandler m = RideInterpolationHandler
   { batchSize :: Integer,
@@ -94,7 +94,7 @@ defaultRideInterpolationHandler ::
     MonadFlow m,
     MonadReader env m,
     HasField "snapToRoadAPIKey" env Text,
-    DBFlow m env
+    EsqDBFlow m env
   ) =>
   RideInterpolationHandler m
 defaultRideInterpolationHandler =
@@ -105,7 +105,7 @@ defaultRideInterpolationHandler =
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
       interpolatePoints = callSnapToRoad,
-      updateDistance = \driverId dist -> DB.runSqlDBTransaction $ QRide.updateDistance driverId dist
+      updateDistance = \driverId dist -> Esq.runTransaction $ QRide.updateDistance driverId dist
     }
 
 makeWaypointsRedisKey :: Id Person.Person -> Text

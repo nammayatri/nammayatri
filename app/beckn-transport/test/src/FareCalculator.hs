@@ -3,17 +3,18 @@ module FareCalculator where
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Data.Time hiding (parseTime)
+import Domain.Types.FarePolicy
+import Domain.Types.FarePolicy.Discount
+import Domain.Types.FarePolicy.PerExtraKmRate
+import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude
 import Product.FareCalculator.Flow
 import Product.FareCalculator.Interpreter
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
-import Types.Domain.FarePolicy
-import Types.Domain.FarePolicy.Discount
 import Types.Error
-import qualified Types.Storage.Organization as Organization
-import qualified Types.Storage.Vehicle as Vehicle
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 import Utils.Time
@@ -32,7 +33,9 @@ defaultFarePolicy =
       discountList = [],
       nightShiftStart = Just midnight,
       nightShiftEnd = Just midnight,
-      nightShiftRate = Just 1.0
+      nightShiftRate = Just 1.0,
+      createdAt = mockTime 0,
+      updatedAt = mockTime 0
     }
 
 mkDiscount :: Vehicle.Variant -> UTCTime -> UTCTime -> Rational -> Bool -> Discount

@@ -7,9 +7,9 @@ import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Organization as Org
+import Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.Organization as Org
-import Types.Storage.Vehicle as SV
 
 -- Create Person request and response
 data CreateVehicleReq = CreateVehicleReq
@@ -37,7 +37,7 @@ validateCreateVehicleReq CreateVehicleReq {..} =
       validateField "make" make . InMaybe $ NotEmpty `And` P.name
     ]
 
-createVehicle :: DBFlow m r => CreateVehicleReq -> Id Org.Organization -> m SV.Vehicle
+createVehicle :: MonadFlow m => CreateVehicleReq -> Id Org.Organization -> m SV.Vehicle
 createVehicle req orgId = do
   vid <- BC.generateGUID
   now <- getCurrentTime

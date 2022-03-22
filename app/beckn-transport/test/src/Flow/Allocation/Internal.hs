@@ -6,14 +6,14 @@ import Beckn.Types.Id
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Time as Time
+import Domain.Types.Organization
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude hiding (id)
 import Services.Allocation.Allocation
 import Test.Tasty.HUnit
 import qualified Types.API.RideBooking as RideBooking
 import Types.App
-import Types.Storage.Organization
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()

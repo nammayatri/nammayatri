@@ -2,9 +2,19 @@ module Product.RideBooking where
 
 import App.Types
 import Beckn.External.Encryption (decrypt)
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Domain.Types.AllocationEvent
+import qualified Domain.Types.AllocationEvent as AllocationEvent
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideBooking as SRB
+import Domain.Types.RideRequest
+import qualified Domain.Types.RideRequest as SRideRequest
+import qualified Domain.Types.SearchReqLocation as SLoc
+import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP (buildRideReq)
 import qualified Product.Location as Location
@@ -20,15 +30,6 @@ import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Types.API.RideBooking as API
 import Types.Error
-import Types.Storage.AllocationEvent
-import qualified Types.Storage.AllocationEvent as AllocationEvent
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Ride as SRide
-import qualified Types.Storage.RideBooking as SRB
-import Types.Storage.RideRequest
-import qualified Types.Storage.RideRequest as SRideRequest
-import qualified Types.Storage.SearchReqLocation as SLoc
-import qualified Types.Storage.Vehicle as SV
 import Utils.Common
 
 rideBookingStatus :: Id SRB.RideBooking -> Id SP.Person -> FlowHandler API.RideBookingStatusRes
@@ -49,10 +50,11 @@ rideBookingCancel ::
 rideBookingCancel rideBookingId admin = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   org <-
-    QOrg.findOrganizationById orgId
+    QOrg.findById orgId
       >>= fromMaybeM OrgNotFound
   now <- getCurrentTime
-  RideRequest.createFlow =<< buildRideReq rideBookingId (org.shortId) SRideRequest.CANCELLATION now
+  rideReq <- buildRideReq rideBookingId (org.shortId) SRideRequest.CANCELLATION now
+  Esq.runTransaction $ RideRequest.create rideReq
   return Success
 
 getRideInfo :: Id SRB.RideBooking -> Id SP.Person -> FlowHandler API.GetRideInfoRes
@@ -63,17 +65,17 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
     Just notification -> do
       let notificationExpiryTime = notification.expiresAt
       rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
-      driver <- QP.findPersonById personId >>= fromMaybeM PersonNotFound
+      driver <- QP.findById personId >>= fromMaybeM PersonNotFound
       driverLocation <-
         QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
       let driverLatLong = Location.locationToLatLong driverLocation
       fromLocation <-
-        QLoc.findLocationById rideBooking.fromLocationId
+        QLoc.findById rideBooking.fromLocationId
           >>= fromMaybeM LocationNotFound
       let fromLatLong = Location.locationToLatLong fromLocation
       toLocation <-
-        QLoc.findLocationById rideBooking.toLocationId
+        QLoc.findById rideBooking.toLocationId
           >>= fromMaybeM LocationNotFound
       mbRoute <- Location.getRoute' [driverLatLong, fromLatLong]
       return $
@@ -105,7 +107,7 @@ setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
     QRB.findById rideBookingId
       >>= fromMaybeM RideBookingDoesNotExist
   transporterOrg <-
-    QOrg.findOrganizationById rideBooking.providerId
+    QOrg.findById rideBooking.providerId
       >>= fromMaybeM OrgDoesNotExist
   guid <- generateGUID
   let driverResponse =
@@ -119,11 +121,12 @@ setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
             _type = DRIVER_RESPONSE,
             info = Just $ encodeToText driverResponse
           }
-  RideRequest.createFlow rideRequest
-  AllocationEvent.logAllocationEvent
-    (responseToEventType response)
-    rideBookingId
-    (Just driverId)
+  Esq.runTransaction $ do
+    RideRequest.create rideRequest
+    AllocationEvent.logAllocationEvent
+      (responseToEventType response)
+      rideBookingId
+      (Just driverId)
   pure Success
   where
     response = req.response
@@ -135,18 +138,18 @@ setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
         <> " "
         <> show response
 
-buildRideBookingStatusRes :: (DBFlow m r, EncFlow m r) => SRB.RideBooking -> m API.RideBookingStatusRes
+buildRideBookingStatusRes :: (EsqDBFlow m r, EncFlow m r) => SRB.RideBooking -> m API.RideBookingStatusRes
 buildRideBookingStatusRes rideBooking = do
-  fromLocation <- QLoc.findLocationById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- QLoc.findLocationById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
+  fromLocation <- QLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
+  toLocation <- QLoc.findById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
   let rbStatus = rideBooking.status
   mbRide <- QRide.findActiveByRBId rideBooking.id
   mbRideAPIEntity <- case mbRide of
     Just ride -> do
       now <- getCurrentTime
-      vehicleM <- QVeh.findVehicleById ride.vehicleId
+      vehicleM <- QVeh.findById ride.vehicleId
       let vehicle = fromMaybe (vehicleDefault now) vehicleM
-      driver <- QP.findPersonById ride.driverId
+      driver <- QP.findById ride.driverId
       decDriver <- case driver of
         Just encDriver ->
           decrypt encDriver

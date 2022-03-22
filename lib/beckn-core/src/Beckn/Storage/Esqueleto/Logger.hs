@@ -4,6 +4,7 @@
 module Beckn.Storage.Esqueleto.Logger (LoggerIO (..), runLoggerIO) where
 
 import Beckn.Types.Logging as BLogging (Log (..), LogLevel (..))
+import Beckn.Types.MonadGuid
 import Beckn.Types.Time (MonadTime (..))
 import Beckn.Utils.IOLogging (LoggerEnv, appendLogTag, logOutputIO)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -14,6 +15,8 @@ import Control.Monad.Logger as CMLogger
     ToLogStr (toLogStr),
     fromLogStr,
   )
+import qualified Data.UUID as UUID
+import qualified Data.UUID.V4 as UUID
 import EulerHS.Prelude hiding (Key)
 
 --TODO: Remove this when we remove EulerHS
@@ -56,3 +59,6 @@ instance Log LoggerIO where
   withLogTag tag (LoggerIO logger) = LoggerIO $ local modifyEnv logger
     where
       modifyEnv logEnv = appendLogTag tag logEnv
+
+instance MonadGuid LoggerIO where
+  generateGUIDText = liftIO (UUID.toText <$> UUID.nextRandom)

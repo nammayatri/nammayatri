@@ -1,165 +1,131 @@
 module Storage.Queries.DriverInformation where
 
-import Beckn.External.Encryption (getDbHash)
+import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
-import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as DB
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Types.Schema
-import Beckn.Utils.Common
-import Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.DriverLocation as DrLoc
-import qualified Storage.Queries.Person as QPerson
-import Types.App
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.DriverInformation as DriverInformation
-import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.Person as Person
+import Control.Applicative (liftA2)
+import Domain.Types.DriverInformation
+import Domain.Types.Organization (Organization)
+import Domain.Types.Person as Person
+import Storage.Tabular.DriverInformation
+import Storage.Tabular.DriverLocation
+import Storage.Tabular.Person
+import Types.App (Driver)
 
-getDbTable :: (HasSchemaName m, Functor m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity DriverInformation.DriverInformationT))
-getDbTable = DB.driverInformation . DB.transporterDb <$> getSchemaName
+create :: DriverInformation -> SqlDB ()
+create = Esq.create'
 
-create :: DriverInformation.DriverInformation -> DB.SqlDB ()
-create DriverInformation.DriverInformation {..} = do
-  dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue DriverInformation.DriverInformation {..})
+findById :: Transactionable m => Id Driver -> m (Maybe DriverInformation)
+findById = Esq.findById . cast
 
-findById :: DBFlow m r => Id Driver -> m (Maybe DriverInformation.DriverInformation)
-findById driverId_ = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
+fetchAllAvailableByIds :: Transactionable m => [Id Driver] -> m [DriverInformation]
+fetchAllAvailableByIds driversIds = Esq.findAll $ do
+  driverInformation <- from $ table @DriverInformationT
+  where_ $
+    driverInformation ^. DriverInformationDriverId `in_` valList personsKeys
+      &&. driverInformation ^. DriverInformationActive
+      &&. not_ (driverInformation ^. DriverInformationOnRide)
+  return driverInformation
   where
-    personId_ = cast driverId_
-    predicate DriverInformation.DriverInformation {..} = driverId ==. B.val_ personId_
+    personsKeys = toKey . cast <$> driversIds
 
-complementVal :: (Container t, B.SqlValable p, B.HaskellLiteralForQExpr p ~ Bool) => t -> p
-complementVal l
-  | null l = B.val_ True
-  | otherwise = B.val_ False
-
-fetchAllAvailableByIds :: DBFlow m r => [Id Driver] -> m [DriverInformation.DriverInformation]
-fetchAllAvailableByIds driversIds = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    personsIds = cast <$> driversIds
-    predicate DriverInformation.DriverInformation {..} =
-      foldr
-        (&&.)
-        (B.val_ True)
-        [ driverId `B.in_` (B.val_ <$> personsIds),
-          active ==. B.val_ True,
-          onRide ==. B.val_ False
-        ]
-
-updateActivity :: Id Driver -> Bool -> DB.SqlDB ()
-updateActivity driverId_ isActive = do
-  dbTable <- getDbTable
+updateActivity :: Id Driver -> Bool -> SqlDB ()
+updateActivity driverId isActive = do
   now <- getCurrentTime
-  DB.update' dbTable (setClause isActive now) (predicate personId_)
-  where
-    personId_ = cast driverId_
-    setClause activityValue now DriverInformation.DriverInformation {..} =
-      mconcat
-        [ active <-. B.val_ activityValue,
-          updatedAt <-. B.val_ now
-        ]
-    predicate id DriverInformation.DriverInformation {..} = driverId ==. B.val_ id
+  update' $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationActive =. val isActive,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-updateEnabledState :: Id Driver -> Bool -> DB.SqlDB ()
-updateEnabledState driverId_ isEnabled = do
-  dbTable <- getDbTable
+updateEnabledState :: Id Driver -> Bool -> SqlDB ()
+updateEnabledState driverId isEnabled = do
   now <- getCurrentTime
-  DB.update' dbTable (setClause isEnabled now) (predicate personId_)
-  where
-    personId_ = cast driverId_
-    setClause enabledValue now DriverInformation.DriverInformation {..} =
-      mconcat
-        [ enabled <-. B.val_ enabledValue,
-          updatedAt <-. B.val_ now
-        ]
-    predicate id DriverInformation.DriverInformation {..} = driverId ==. B.val_ id
-
-updateOnRideFlow :: DBFlow m r => Id Driver -> Bool -> m ()
-updateOnRideFlow driverId onRide =
-  DB.runSqlDB (updateOnRide driverId onRide)
+  update' $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationEnabled =. val isEnabled,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updateOnRide ::
   Id Driver ->
   Bool ->
-  DB.SqlDB ()
-updateOnRide driverId_ onRide_ = do
-  dbTable <- getDbTable
-  now <- asks DB.currentTime
-  DB.update' dbTable (setClause onRide_ now) (predicate personId_)
-  where
-    personId_ = cast driverId_
-    setClause onR now' DriverInformation.DriverInformation {..} =
-      mconcat
-        [ onRide <-. B.val_ onR,
-          updatedAt <-. B.val_ now'
-        ]
-    predicate id DriverInformation.DriverInformation {..} = driverId ==. B.val_ id
+  SqlDB ()
+updateOnRide driverId onRide = do
+  now <- getCurrentTime
+  update' $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationOnRide =. val onRide,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
-deleteById :: Id Driver -> DB.SqlDB ()
-deleteById driverId_ = do
-  dbTable <- getDbTable
-  DB.delete' dbTable (predicate personId_)
-  where
-    personId_ = cast driverId_
-    predicate pid DriverInformation.DriverInformation {..} = driverId ==. B.val_ pid
+deleteById :: Id Driver -> SqlDB ()
+deleteById = Esq.deleteByKey' @DriverInformationT . cast
 
 findAllWithLimitOffsetByOrgId ::
-  (DBFlow m r, EncFlow m r) =>
+  ( Transactionable m,
+    EncFlow m r
+  ) =>
   Maybe Text ->
   Maybe Integer ->
   Maybe Integer ->
-  Id Org.Organization ->
-  m [(Person.Person, DriverInformation.DriverInformation)]
+  Id Organization ->
+  m [(Person, DriverInformation)]
 findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
-  personDbTable <- QPerson.getDbTable
-  driverInfoDbTable <- getDbTable
   mbSearchStrDBHash <- getDbHash `traverse` mbSearchString
-  DB.findAllByJoin (B.limit_ limit . B.offset_ offset . B.orderBy_ orderByDesc) (joinQuery personDbTable driverInfoDbTable mbSearchStrDBHash)
+  findAll $ do
+    (person :& driverInformation) <-
+      from $
+        table @PersonT
+          `innerJoin` table @DriverInformationT
+            `Esq.on` ( \(person :& driverInformation) ->
+                         driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
+                     )
+    where_ $
+      person ^. PersonRole ==. val Person.DRIVER
+        &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)
+        &&. Esq.whenJust_ (liftA2 (,) mbSearchString mbSearchStrDBHash) (filterBySearchString person)
+    orderBy [desc $ driverInformation ^. DriverInformationCreatedAt]
+    limit limitVal
+    offset offsetVal
+    return (person, driverInformation)
   where
-    orderByDesc (Person.Person {..}, _) = B.desc_ createdAt
-    limit = fromMaybe 100 mbLimit
-    offset = fromMaybe 0 mbOffset
-    joinQuery personDbTable driverInfoDbTable mbSearchStrDBHash = do
-      person <- B.all_ personDbTable
-      driverInfo <- B.join_ driverInfoDbTable $ \row -> do
-        row.driverId B.==. person.id
-      B.guard_ $ predicate mbSearchStrDBHash person
-      return (person, driverInfo)
+    limitVal = maybe 100 fromIntegral mbLimit
+    offsetVal = maybe 0 fromIntegral mbOffset
 
-    predicate mbSearchStrDBHash p@Person.Person {..} =
-      foldl
-        (&&.)
-        (B.val_ True)
-        [ role B.==. B.val_ Person.DRIVER,
-          organizationId B.==. B.val_ (Just orgId),
-          maybe (B.val_ True) (filterBySearchString p) $ liftA2 (,) mbSearchString mbSearchStrDBHash
-        ]
-
-    filterBySearchString Person.Person {..} (searchStr, searchStrDBHash) = do
-      let likeSearchStr = B.concat_ [B.val_ "%", B.val_ searchStr, B.val_ "%"]
-      B.lower_ (B.concat_ [unMaybe firstName, B.val_ " ", unMaybe middleName, B.val_ " ", unMaybe lastName]) `B.like_` B.lower_ likeSearchStr
-        B.||. mobileNumber.hash B.==. B.val_ (Just searchStrDBHash)
-    unMaybe = B.maybe_ (B.val_ "") identity
+    filterBySearchString person (searchStr, searchStrDBHash) = do
+      let likeSearchStr = (%) ++. val searchStr ++. (%)
+      ( concat_ @Text [unMaybe $ person ^. PersonFirstName, val " ", unMaybe $ person ^. PersonMiddleName, val " ", unMaybe $ person ^. PersonLastName]
+          `ilike` likeSearchStr
+        )
+        ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
+    unMaybe = maybe_ (val "") identity
 
 -- TODO: consider placement of such mixed functions
-getDriversWithOutdatedLocations :: DBFlow m r => UTCTime -> m [(Id Person.Person, Maybe FCMRecipientToken)]
+getDriversWithOutdatedLocations :: Transactionable m => UTCTime -> m [(Id Person, Maybe FCMRecipientToken)]
 getDriversWithOutdatedLocations before = do
-  drInfoT <- getDbTable
-  drLocT <- DrLoc.getDbTable
-  personT <- QPerson.getDbTable
-  map snd <$> DB.findAllByJoin (orderBy_ (asc_ . fst)) do
-    drInfo <- all_ drInfoT
-    guard_ drInfo.active
-    drLoc <- join_ drLocT \loc ->
-      loc.driverId ==. drInfo.driverId
-        &&. loc.updatedAt <. val_ before
-    person <- join_ personT \pers -> pers.id ==. drInfo.driverId
-    pure (drLoc.updatedAt, (person.id, person.deviceToken))
+  findAll $ do
+    (driverInformation :& _ :& person) <-
+      from $
+        table @DriverInformationT
+          `innerJoin` table @DriverLocationT
+            `Esq.on` ( \(driverInformation :& drLoc) ->
+                         driverInformation ^. DriverInformationDriverId ==. drLoc ^. DriverLocationDriverId
+                           &&. drLoc ^. DriverLocationUpdatedAt <. val before
+                     )
+          `innerJoin` table @PersonT
+            `Esq.on` ( \(driverInformation :& _ :& person) ->
+                         driverInformation ^. DriverInformationDriverId ==. person ^. PersonTId
+                     )
+    where_ $ driverInformation ^. DriverInformationActive
+    orderBy [asc $ driverInformation ^. DriverInformationUpdatedAt]
+    pure (person ^. PersonTId, person ^. PersonDeviceToken)

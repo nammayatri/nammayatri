@@ -6,15 +6,15 @@ import Beckn.Types.Id
 import Beckn.Utils.NonEmpty
 import Data.Generics.Labels ()
 import qualified Data.Text as T
+import Domain.Types.AllocationEvent (AllocationEventType (..))
+import qualified Domain.Types.CancellationReason as SCR
+import Domain.Types.Organization
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.RideBookingCancellationReason as SBCR
+import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude
 import qualified Types.API.RideBooking as RideBooking
 import Types.App
-import Types.Storage.AllocationEvent (AllocationEventType (..))
-import qualified Types.Storage.CancellationReason as SCR
-import Types.Storage.Organization
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideBookingCancellationReason as SBCR
-import qualified Types.Storage.RideRequest as SRR
 import Utils.Common
 
 newtype OrderTime = OrderTime

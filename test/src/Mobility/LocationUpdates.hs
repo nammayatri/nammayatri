@@ -4,7 +4,9 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import qualified Data.List.NonEmpty as NE
 import qualified "app-backend" Domain.Types.Ride as BRide
+import qualified "beckn-transport" Domain.Types.Ride as TRide
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
+import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
@@ -12,8 +14,6 @@ import Mobility.Fixtures.Routes
 import Mobility.SuccessFlow
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import qualified "app-backend" Types.API.Search as AppBackend
-import qualified "beckn-transport" Types.Storage.Ride as TRide
-import qualified "beckn-transport" Types.Storage.RideBooking as TRB
 import Utils
 
 -- these tests pass only when the real google maps api key is supplied
@@ -58,7 +58,7 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
     rideRespond tRideBooking.id driverToken1 $
       RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
 
-  tRide <- pollDesc ("ride with id=" <> tRideBooking.id.getId <> "should exist and should have status=NEW") $ do
+  tRide <- pollDesc ("ride with id=" <> tRideBooking.id.getId <> " should exist and should have status=NEW") $ do
     tRide <- getBPPRide tRideBooking.id
     tRide.status `shouldBe` TRide.NEW
     return $ Just tRide

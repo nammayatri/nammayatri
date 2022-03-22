@@ -1,15 +1,15 @@
 module Mobility.DriverCancelRide where
 
+import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
+import qualified "beckn-transport" Domain.Types.Ride as TRide
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
+import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
 import Mobility.SuccessFlow
 import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
-import qualified "beckn-transport" Types.Storage.CancellationReason as SCR
-import qualified "beckn-transport" Types.Storage.Ride as TRide
-import qualified "beckn-transport" Types.Storage.RideBooking as TRB
 import Utils
 
 spec :: Spec

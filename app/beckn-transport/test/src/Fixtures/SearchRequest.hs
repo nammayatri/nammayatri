@@ -1,9 +1,9 @@
 module Fixtures.SearchRequest (defaultSearchRequest) where
 
 import Beckn.Types.Id
+import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Fixtures.Time as Fixtures
 import Servant.Client
-import qualified Types.Storage.SearchRequest as SearchRequest
 
 defaultSearchRequest :: SearchRequest.SearchRequest
 defaultSearchRequest =

@@ -2,10 +2,10 @@ module App.Routes.FarePolicy.Discount where
 
 import App.Types
 import Beckn.Types.Id (Id)
+import Domain.Types.FarePolicy.Discount (Discount)
 import Product.FarePolicy.Discount
 import Servant
 import Types.API.FarePolicy.Discount
-import Types.Domain.FarePolicy.Discount (Discount)
 import Utils.Auth
 
 type FPDiscountAPI =

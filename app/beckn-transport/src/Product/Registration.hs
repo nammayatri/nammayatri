@@ -4,21 +4,21 @@ import App.Types
 import Beckn.External.Encryption
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess
 import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation (runRequestValidation)
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
 import Types.Error
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.RegistrationToken as SR
 import Utils.Auth (authTokenCacheKey)
 import Utils.Common
 import qualified Utils.Notifications as Notify
@@ -38,7 +38,7 @@ auth req = withFlowHandlerAPI $ do
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
-  DB.runSqlDBTransaction $ do
+  Esq.runTransaction $ do
     QR.create token
   whenNothing_ useFakeOtpM $ do
     otpSmsTemplate <- asks (.otpSmsTemplate)
@@ -94,7 +94,7 @@ verify tokenId req = withFlowHandlerAPI $ do
   let isNewPerson = person.isNew
   let deviceToken = Just req.deviceToken
   cleanCachedTokens person.id
-  DB.runSqlDBTransaction $ do
+  Esq.runTransaction $ do
     QR.deleteByPersonIdExceptNew person.id tokenId
     QR.setVerified tokenId
     QP.updateDeviceToken person.id deviceToken
@@ -102,7 +102,7 @@ verify tokenId req = withFlowHandlerAPI $ do
       QP.setIsNewFalse person.id
   when isNewPerson $
     Notify.notifyOnRegistration regToken person.id deviceToken
-  updPers <- QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
+  updPers <- QP.findById (Id entityId) >>= fromMaybeM PersonNotFound
   decPerson <- decrypt updPers
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthVerifyRes token personAPIEntity
@@ -111,13 +111,13 @@ verify tokenId req = withFlowHandlerAPI $ do
       whenM (isExpired (realToFrac (authExpiry * 60)) updatedAt) $
         throwError TokenExpired
 
-checkRegistrationTokenExists :: DBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
+checkRegistrationTokenExists :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.RegistrationToken
 checkRegistrationTokenExists tokenId =
-  QR.findRegistrationToken tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
+  QR.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-checkPersonExists :: DBFlow m r => Text -> m SP.Person
+checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
-  QP.findPersonById (Id entityId) >>= fromMaybeM PersonNotFound
+  QP.findById (Id entityId) >>= fromMaybeM PersonNotFound
 
 resend :: Id SR.RegistrationToken -> FlowHandler ResendAuthRes
 resend tokenId = withFlowHandlerAPI $ do
@@ -126,15 +126,15 @@ resend tokenId = withFlowHandlerAPI $ do
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
   smsCfg <- asks (.smsCfg)
   otpSmsTemplate <- asks (.otpSmsTemplate)
-  mobileNumber <- decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
+  mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   withLogTag ("personId_" <> entityId) $
     SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
       >>= SF.checkRegistrationSmsResult
-  _ <- QR.updateAttempts (attempts - 1) id
+  Esq.runTransaction $ QR.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
-cleanCachedTokens :: DBFlow m r => Id SP.Person -> m ()
+cleanCachedTokens :: EsqDBFlow m r => Id SP.Person -> m ()
 cleanCachedTokens personId = do
   regTokens <- QR.findAllByPersonId personId
   for_ regTokens $ \regToken -> do
@@ -145,9 +145,9 @@ logout :: Id SP.Person -> FlowHandler APISuccess
 logout personId = withFlowHandlerAPI $ do
   cleanCachedTokens personId
   uperson <-
-    QP.findPersonById personId
+    QP.findById personId
       >>= fromMaybeM PersonNotFound
-  DB.runSqlDBTransaction $ do
+  Esq.runTransaction $ do
     QP.updateDeviceToken uperson.id Nothing
     QR.deleteByPersonId personId
   pure Success

@@ -25,7 +25,7 @@ in  { appCfg = appCfg
     , shards
     , healthcheckPort = appCfg.bgtmPort
     , httpClientOptions = appCfg.httpClientOptions
-    , dbCfg = appCfg.dbCfg
+    , esqDBCfg = appCfg.esqDBCfg
     , googleMapsUrl = appCfg.googleMapsUrl
     , googleMapsKey = appCfg.googleMapsKey
     , redisCfg = appCfg.redisCfg

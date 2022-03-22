@@ -2,11 +2,16 @@ module Product.BecknProvider.Rating where
 
 import App.Types
 import Beckn.Product.Validation.Context
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Domain.Types.Organization (Organization)
+import qualified Domain.Types.Person as SP
+import Domain.Types.Rating as Rating
+import qualified Domain.Types.Ride as Ride
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
@@ -14,13 +19,6 @@ import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import Types.Error
-import Types.Storage.Organization (Organization)
-import qualified Types.Storage.Person as SP
-import Types.Storage.Rating as Rating
-  ( Rating,
-    RatingT (..),
-  )
-import qualified Types.Storage.Ride as Ride
 import Utils.Common
 
 ratingImpl ::
@@ -48,16 +46,16 @@ ratingImpl _ _ req = withFlowHandlerBecknAPI $
         logTagInfo "FeedbackAPI" $
           "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
         newRating <- mkRating ride.id driverId ratingValue
-        Rating.create newRating
+        Esq.runTransaction $ Rating.create newRating
       Just rating -> do
         logTagInfo "FeedbackAPI" $
           "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-        Rating.updateRatingValue rating.id driverId ratingValue
+        Esq.runTransaction $ Rating.updateRatingValue rating.id driverId ratingValue
     calculateAverageRating driverId
     return Ack
 
 calculateAverageRating ::
-  (DBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
+  (EsqDBFlow m r, EncFlow m r, HasFlowEnv m r '["minimumDriverRatesCount" ::: Int]) =>
   Id SP.Person ->
   m ()
 calculateAverageRating personId = do
@@ -71,7 +69,7 @@ calculateAverageRating personId = do
   when (ratingCount >= minimumDriverRatesCount) $ do
     let newAverage = ratingsSum / fromIntegral ratingCount
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
-    QP.updateAverageRating personId newAverage
+    Esq.runTransaction $ QP.updateAverageRating personId newAverage
 
 mkRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> m Rating.Rating
 mkRating rideId driverId ratingValue = do

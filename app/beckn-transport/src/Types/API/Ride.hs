@@ -1,14 +1,12 @@
 module Types.API.Ride where
 
+import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Data.OpenApi (ToSchema)
-import Data.Time (UTCTime)
-import EulerHS.Prelude hiding (id)
-import Types.Storage.CancellationReason
-import Types.Storage.Ride
-import Types.Storage.SearchReqLocation (SearchReqLocationAPIEntity)
-import Types.Storage.Vehicle
+import Domain.Types.CancellationReason (CancellationReasonCode)
+import Domain.Types.Ride
+import Domain.Types.SearchReqLocation
+import Domain.Types.Vehicle
 
 newtype StartRideReq = StartRideReq
   { rideOtp :: Text

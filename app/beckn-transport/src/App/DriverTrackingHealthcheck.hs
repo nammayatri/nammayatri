@@ -3,7 +3,6 @@ module App.DriverTrackingHealthcheck where
 import App.DriverTrackingHealthcheck.Config
 import App.DriverTrackingHealthcheck.Environment
 import Beckn.Exit
-import Beckn.Storage.Common
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
@@ -33,7 +32,7 @@ runDriverHealthcheck configModifier = do
   R.withFlowRuntime (Just loggerRt) \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv do
       _ <-
-        try (prepareRedisConnections config.redisCfg >> prepareDBConnections)
+        try (prepareRedisConnections config.redisCfg)
           >>= handleLeft @SomeException exitConnCheckFailure "Connections check failed. Exception thrown: "
       managers <- createManagers mempty -- default manager is created
       pure $ flowRt {R._httpClientManagers = managers}

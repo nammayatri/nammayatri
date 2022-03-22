@@ -8,12 +8,12 @@ import Beckn.Types.Amount
 import Beckn.Types.Common (Milliseconds, getSeconds)
 import Beckn.Types.Id
 import Beckn.Utils.Time (getClockTimeInMs)
+import Domain.Types.Organization
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import GHC.Records.Extra
 import Prometheus as P
 import Tools.Metrics.TransporterBPPMetrics.Types as Reexport
-import Types.Storage.Organization
 import Utils.Common (Forkable (fork), MonadFlow)
 
 putFareAndDistanceDeviations :: (MonadMonitor m, HasTransporterMetrics m r) => Amount -> Double -> m ()

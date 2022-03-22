@@ -1,105 +1,84 @@
 module Storage.Queries.RideBooking where
 
-import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as DB
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.Schema
-import Database.Beam ((&&.), (<-.), (==.), (||.))
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.Person as SPers
-import qualified Types.Storage.Quote as Quote
-import qualified Types.Storage.Ride as SRide
-import qualified Types.Storage.RideBooking as Storage
+import Domain.Types.Organization
+import Domain.Types.Person
+import Domain.Types.Quote
+import Domain.Types.RideBooking as Booking
+import Storage.Tabular.Ride as Ride
+import Storage.Tabular.RideBooking as Booking
 import Utils.Common
 
-getDbTable ::
-  (Functor m, HasSchemaName m) =>
-  m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RideBookingT))
-getDbTable =
-  DB.rideBooking . DB.transporterDb <$> getSchemaName
+create :: RideBooking -> SqlDB ()
+create = Esq.create'
 
-getRideTable ::
-  (Functor m, HasSchemaName m) =>
-  m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity SRide.RideT))
-getRideTable =
-  DB.ride . DB.transporterDb <$> getSchemaName
-
-create :: Storage.RideBooking -> DB.SqlDB ()
-create rideBooking = do
-  dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue rideBooking)
-
-updateStatus :: Id Storage.RideBooking -> Storage.RideBookingStatus -> DB.SqlDB ()
+updateStatus :: Id RideBooking -> RideBookingStatus -> SqlDB ()
 updateStatus rbId rbStatus = do
-  dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update' dbTable (setClause rbStatus now) $ predicate rbId
-  where
-    predicate rbId_ Storage.RideBooking {..} = id ==. B.val_ rbId_
-    setClause rbStatus_ now Storage.RideBooking {..} =
-      mconcat [status <-. B.val_ rbStatus_, updatedAt <-. B.val_ now]
+  Esq.update' $ \tbl -> do
+    set
+      tbl
+      [ RideBookingStatus =. val rbStatus,
+        RideBookingUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideBookingTId ==. val (toKey rbId)
 
-findById :: DBFlow m r => Id Storage.RideBooking -> m (Maybe Storage.RideBooking)
-findById rbId = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.RideBooking {..} = id ==. B.val_ rbId
+findById :: Transactionable m => Id RideBooking -> m (Maybe RideBooking)
+findById = Esq.findById
 
-findByQuoteId :: DBFlow m r => Id Quote.Quote -> m (Maybe Storage.RideBooking)
-findByQuoteId quoteId_ = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.RideBooking {..} = quoteId ==. B.val_ quoteId_
+findByQuoteId :: Transactionable m => Id Quote -> m (Maybe RideBooking)
+findByQuoteId quoteId =
+  Esq.findOne $ do
+    rideBooking <- from $ table @RideBookingT
+    where_ $ rideBooking ^. RideBookingQuoteId ==. val (toKey quoteId)
+    return rideBooking
 
-findAllByOrg :: DBFlow m r => Id Org.Organization -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.RideBooking]
+findAllByOrg :: Transactionable m => Id Organization -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [RideBooking]
 findAllByOrg orgId mbLimit mbOffset mbIsOnlyActive = do
-  dbTable <- getDbTable
-  let limit = fromMaybe 10 mbLimit
-      offset = fromMaybe 0 mbOffset
+  let limitVal = fromIntegral $ fromMaybe 10 mbLimit
+      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbIsOnlyActive
-  DB.findAll dbTable (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) $ predicate isOnlyActive
-  where
-    orderBy Storage.RideBooking {..} = B.desc_ createdAt
-    predicate isOnlyActive Storage.RideBooking {..} =
-      providerId ==. B.val_ orgId
-        &&. B.not_ (status `B.in_` (B.val_ <$> [Storage.CONFIRMED, Storage.AWAITING_REASSIGNMENT]))
-        &&. if isOnlyActive
-          then B.not_ (status ==. B.val_ Storage.COMPLETED ||. status ==. B.val_ Storage.CANCELLED)
-          else B.val_ True
+  findAll $ do
+    rideBooking <- from $ table @RideBookingT
+    where_ $
+      rideBooking ^. RideBookingProviderId ==. val (toKey orgId)
+        &&. not_ (rideBooking ^. RideBookingStatus `in_` valList [Booking.CONFIRMED, Booking.AWAITING_REASSIGNMENT])
+        &&. whenTrue_ isOnlyActive (not_ $ rideBooking ^. RideBookingStatus `in_` valList [Booking.COMPLETED, Booking.CANCELLED])
+    orderBy [desc $ rideBooking ^. RideBookingCreatedAt]
+    limit limitVal
+    offset offsetVal
+    return rideBooking
 
-findAllByDriver :: DBFlow m r => Id SPers.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Storage.RideBooking]
-findAllByDriver driverId_ mbLimit mbOffset mbIsOnlyActive = do
-  dbTable <- getDbTable
-  rideTable <- getRideTable
-  let limit = fromMaybe 10 mbLimit
-      offset = fromMaybe 0 mbOffset
+findAllByDriver :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [RideBooking]
+findAllByDriver driverId mbLimit mbOffset mbIsOnlyActive = do
+  let limitVal = fromIntegral $ fromMaybe 10 mbLimit
+      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbIsOnlyActive
-  DB.findAllByJoin (B.limit_ limit . B.offset_ offset . B.orderBy_ orderBy) $ query dbTable rideTable isOnlyActive
-  where
-    orderBy Storage.RideBooking {..} = B.desc_ createdAt
-    query dbTable rideTable isOnlyActive = do
-      rideBooking <- B.all_ dbTable
-      ride <- B.join_ rideTable $ \row ->
-        row.bookingId ==. rideBooking.id
-      B.guard_ $ predicate ride isOnlyActive
-      return rideBooking
-    predicate SRide.Ride {..} isOnlyActive =
-      driverId ==. B.val_ driverId_
-        &&. if isOnlyActive
-          then B.not_ (status ==. B.val_ SRide.COMPLETED ||. status ==. B.val_ SRide.CANCELLED)
-          else B.val_ True
+  findAll $ do
+    (rideBooking :& ride) <-
+      from $
+        table @RideBookingT
+          `innerJoin` table @RideT
+            `Esq.on` ( \(rideBooking :& ride) ->
+                         ride ^. Ride.RideBookingId ==. rideBooking ^. Booking.RideBookingTId
+                     )
+    where_ $
+      ride ^. RideDriverId ==. val (toKey driverId)
+        &&. whenTrue_ isOnlyActive (not_ $ rideBooking ^. RideBookingStatus `in_` valList [Booking.COMPLETED, Booking.CANCELLED])
+    orderBy [desc $ rideBooking ^. RideBookingCreatedAt]
+    limit limitVal
+    offset offsetVal
+    return rideBooking
 
-increaseReallocationsCounter :: Id Storage.RideBooking -> DB.SqlDB ()
+increaseReallocationsCounter :: Id RideBooking -> SqlDB ()
 increaseReallocationsCounter rbId = do
-  dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update' dbTable (setClause now) $ predicate rbId
-  where
-    predicate rbId_ Storage.RideBooking {..} = id ==. B.val_ rbId_
-    setClause now Storage.RideBooking {..} =
-      mconcat [reallocationsCount <-. B.current_ reallocationsCount + 1, updatedAt <-. B.val_ now]
+  Esq.update' $ \tbl -> do
+    set
+      tbl
+      [ RideBookingReallocationsCount +=. val 1,
+        RideBookingUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideBookingTId ==. val (toKey rbId)

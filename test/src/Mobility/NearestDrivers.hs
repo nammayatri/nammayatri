@@ -1,15 +1,15 @@
 module Mobility.NearestDrivers (spec) where
 
 import qualified "beckn-transport" App.Types as BecknTransport
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import Domain.Types.Vehicle
 import EulerHS.Prelude
 import qualified "beckn-transport" Storage.Queries.DriverInformation as Q
 import qualified "beckn-transport" Storage.Queries.Person as Q
 import Test.Hspec
-import Types.Storage.Vehicle
 import Utils
 
 spec :: Spec
@@ -62,7 +62,7 @@ otherDriver :: Text
 otherDriver = "003093df-4f7c-440f-bada-other_driver"
 
 setDriversActive :: Bool -> FlowR BecknTransport.AppEnv ()
-setDriversActive isActive = DB.runSqlDBTransaction $ do
+setDriversActive isActive = Esq.runTransaction $ do
   Q.updateActivity (Id furthestDriver) isActive
   Q.updateActivity (Id closestDriver) isActive
   Q.updateActivity (Id otherDriver) isActive

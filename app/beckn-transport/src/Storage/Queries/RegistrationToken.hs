@@ -1,91 +1,65 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Storage.Queries.RegistrationToken where
 
-import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.App
-import Beckn.Types.Common
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.Schema
-import Database.Beam ((<-.), (==.))
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import Types.Error
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.RegistrationToken as Storage
+import Domain.Types.Person
+import Domain.Types.RegistrationToken
+import Storage.Tabular.RegistrationToken
 import Utils.Common
 
-getDbTable ::
-  (Functor m, HasSchemaName m) =>
-  m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.RegistrationTokenT))
-getDbTable =
-  DB.registrationToken . DB.transporterDb <$> getSchemaName
+create :: RegistrationToken -> SqlDB ()
+create = Esq.create'
 
-create :: Storage.RegistrationToken -> DB.SqlDB ()
-create Storage.RegistrationToken {..} = do
-  dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue Storage.RegistrationToken {..})
+findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
+findById = Esq.findById
 
-findRegistrationToken :: DBFlow m r => Id Storage.RegistrationToken -> m (Maybe Storage.RegistrationToken)
-findRegistrationToken tokenId = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.RegistrationToken {..} = id ==. B.val_ tokenId
-
-setVerified :: Id Storage.RegistrationToken -> DB.SqlDB ()
+setVerified :: Id RegistrationToken -> SqlDB ()
 setVerified rtId = do
-  dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update' dbTable (setClause now) (predicate rtId)
-  where
-    setClause currTime Storage.RegistrationToken {..} =
-      mconcat
-        [ updatedAt <-. B.val_ currTime,
-          verified <-. B.val_ True
-        ]
-    predicate rtid Storage.RegistrationToken {..} = id ==. B.val_ rtid
+  update' $ \tbl -> do
+    set
+      tbl
+      [ RegistrationTokenVerified =. val True,
+        RegistrationTokenUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
 
-findRegistrationTokenByToken :: DBFlow m r => RegToken -> m (Maybe Storage.RegistrationToken)
-findRegistrationTokenByToken regToken = do
-  dbTable <- getDbTable
-  DB.findOne dbTable (predicate regToken)
-  where
-    predicate token_ Storage.RegistrationToken {..} = token ==. B.val_ token_
+findByToken :: Transactionable m => RegToken -> m (Maybe RegistrationToken)
+findByToken token =
+  findOne $ do
+    regToken <- from $ table @RegistrationTokenT
+    where_ $ regToken ^. RegistrationTokenToken ==. val token
+    return regToken
 
-updateAttempts :: DBFlow m r => Int -> Id Storage.RegistrationToken -> m Storage.RegistrationToken
+updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
 updateAttempts attemps rtId = do
-  dbTable <- getDbTable
   now <- getCurrentTime
-  DB.update dbTable (setClause attemps now) (predicate rtId)
-  findRegistrationToken rtId >>= fromMaybeM (TokenNotFound $ getId rtId)
-  where
-    predicate i Storage.RegistrationToken {..} = id ==. B.val_ i
-    setClause a n Storage.RegistrationToken {..} =
-      mconcat [attempts <-. B.val_ a, updatedAt <-. B.val_ n]
+  update' $ \tbl -> do
+    set
+      tbl
+      [ RegistrationTokenAttempts =. val attemps,
+        RegistrationTokenUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RegistrationTokenTId ==. val (toKey rtId)
 
-deleteByPersonId :: Id SP.Person -> DB.SqlDB ()
-deleteByPersonId personId = do
-  dbTable <- getDbTable
-  DB.delete' dbTable (predicate $ getId personId)
-  where
-    predicate personId_ Storage.RegistrationToken {..} = entityId ==. B.val_ personId_
+deleteByPersonId :: Id Person -> SqlDB ()
+deleteByPersonId personId =
+  Esq.delete' $ do
+    regToken <- from $ table @RegistrationTokenT
+    where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
 
-deleteByPersonIdExceptNew :: Id SP.Person -> Id Storage.RegistrationToken -> DB.SqlDB ()
-deleteByPersonIdExceptNew personId newRT = do
-  dbTable <- getDbTable
-  DB.delete' dbTable (predicate (getId personId) newRT)
-  where
-    predicate personId_ newRTId Storage.RegistrationToken {..} =
-      entityId ==. B.val_ personId_
-        B.&&. B.not_ (id B.==. B.val_ newRTId)
+deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
+deleteByPersonIdExceptNew personId newRT =
+  Esq.delete' $ do
+    regToken <- from $ table @RegistrationTokenT
+    where_ $
+      regToken ^. RegistrationTokenEntityId ==. val (getId personId)
+        &&. not_ (regToken ^. RegistrationTokenTId ==. val (toKey newRT))
 
-findAllByPersonId :: DBFlow m r => Id SP.Person -> m [Storage.RegistrationToken]
-findAllByPersonId personId = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity (predicate $ getId personId)
-  where
-    predicate persId Storage.RegistrationToken {..} =
-      entityId ==. B.val_ persId
+findAllByPersonId :: Transactionable m => Id Person -> m [RegistrationToken]
+findAllByPersonId personId =
+  findAll $ do
+    regToken <- from $ table @RegistrationTokenT
+    where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
+    return regToken

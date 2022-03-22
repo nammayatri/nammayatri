@@ -1,18 +1,8 @@
 module Storage.Queries.DiscountTransaction where
 
-import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Schema
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.DiscountTransaction as Storage
+import Beckn.Storage.Esqueleto as Esq
+import Domain.Types.DiscountTransaction
+import Storage.Tabular.DiscountTransaction ()
 
-getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.DiscountTransactionT))
-getDbTable =
-  DB.discountTransaction . DB.transporterDb <$> getSchemaName
-
-create :: Storage.DiscountTransaction -> DB.SqlDB ()
-create discTrans = do
-  dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue discTrans)
+create :: DiscountTransaction -> SqlDB ()
+create = Esq.create'

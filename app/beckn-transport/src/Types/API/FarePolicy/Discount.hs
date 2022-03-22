@@ -14,8 +14,8 @@ import Beckn.Types.Predicate
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
+import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.Vehicle as Veh
 
 data CreateFarePolicyDiscountReq = CreateFarePolicyDiscountReq
   { vehicleVariant :: Veh.Variant,

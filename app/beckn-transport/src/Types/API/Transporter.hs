@@ -4,8 +4,8 @@ import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
+import qualified Domain.Types.Organization as SO
 import EulerHS.Prelude hiding (id, state)
-import qualified Types.Storage.Organization as SO
 
 newtype TransporterRec = TransporterRec
   { organization :: SO.OrganizationAPIEntity

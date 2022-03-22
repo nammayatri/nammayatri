@@ -1,44 +1,48 @@
-module Storage.Queries.FarePolicy.PerExtraKmRate where
+module Storage.Queries.FarePolicy.PerExtraKmRate
+  ( Storage.Queries.FarePolicy.PerExtraKmRate.findAll,
+    deleteAll,
+  )
+where
 
-import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as DB
-import Beckn.Types.Id (Id)
-import Beckn.Types.Schema
-import Database.Beam
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.FarePolicy.PerExtraKmRate as Storage
-import qualified Types.Storage.Organization as Organization
-import qualified Types.Storage.Vehicle as Vehicle
-
-getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.FarePolicyPerExtraKmRateT))
-getDbTable =
-  DB.farePolicyExtraKmRate . DB.transporterDb <$> getSchemaName
-
-create :: Storage.FarePolicyPerExtraKmRate -> DB.SqlDB ()
-create Storage.FarePolicyPerExtraKmRate {..} = do
-  dbTable <- getDbTable
-  DB.createOne' dbTable (Storage.insertValue Storage.FarePolicyPerExtraKmRate {..})
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Id
+import Domain.Types.FarePolicy.PerExtraKmRate
+import Domain.Types.Organization (Organization)
+import Domain.Types.Vehicle as Vehicle
+import Storage.Tabular.FarePolicy.PerExtraKmRate
+import Types.Error (FarePolicyError (NoPerExtraKmRate))
+import Utils.Common
 
 findAll ::
-  Id Organization.Organization ->
+  ( Transactionable m,
+    Monad m,
+    MonadThrow m,
+    Log m
+  ) =>
+  Id Organization ->
   Vehicle.Variant ->
-  DB.SqlDB [Storage.FarePolicyPerExtraKmRate]
-findAll orgId vehicleVariant_ = do
-  dbTable <- getDbTable
-  DB.findAll' dbTable (B.orderBy_ orderBy) predicate
-  where
-    orderBy Storage.FarePolicyPerExtraKmRate {..} = B.asc_ distanceRangeStart
-    predicate Storage.FarePolicyPerExtraKmRate {..} =
-      organizationId ==. B.val_ orgId
-        &&. vehicleVariant ==. B.val_ vehicleVariant_
+  m (NonEmpty PerExtraKmRate)
+findAll orgId vehicleVariant = do
+  rez <- Esq.findAll $ do
+    perExtraKmRate <- from $ table @PerExtraKmRateT
+    where_ $
+      perExtraKmRate ^. PerExtraKmRateOrganizationId ==. val (toKey orgId)
+        &&. perExtraKmRate ^. PerExtraKmRateVehicleVariant ==. val vehicleVariant
+    orderBy [asc $ perExtraKmRate ^. PerExtraKmRateDistanceRangeStart]
+    return perExtraKmRate
+  noneEmptyRez <- case rez of
+    e : es -> pure $ e :| es
+    [] -> throwError NoPerExtraKmRate
+  return (getDomainPart <$> noneEmptyRez)
 
-deleteAll :: Id Organization.Organization -> Vehicle.Variant -> DB.SqlDB ()
-deleteAll orgId var = do
-  dbTable <- getDbTable
-  DB.delete' dbTable $ predicate orgId var
-  where
-    predicate orgId_ var_ Storage.FarePolicyPerExtraKmRate {..} =
-      organizationId ==. B.val_ orgId_
-        &&. vehicleVariant ==. B.val_ var_
+deleteAll :: Id Organization -> Vehicle.Variant -> SqlDB ()
+deleteAll orgId var =
+  delete' $ do
+    perExtraKmRate <- from $ table @PerExtraKmRateT
+    where_ $
+      perExtraKmRate ^. PerExtraKmRateOrganizationId ==. val (toKey orgId)
+        &&. perExtraKmRate ^. PerExtraKmRateVehicleVariant ==. val var
+
+getDomainPart :: FullPerExtraKmRate -> PerExtraKmRate
+getDomainPart (_, _, _, domain) = domain

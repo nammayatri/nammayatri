@@ -17,12 +17,17 @@ import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config (SmsConfig)
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Validation
+import Domain.Types.DriverInformation (DriverInformation)
+import qualified Domain.Types.DriverInformation as DriverInfo
+import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import qualified Product.Registration as Registration
@@ -34,11 +39,6 @@ import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Metrics
 import qualified Types.API.Driver as DriverAPI
 import Types.Error
-import Types.Storage.DriverInformation (DriverInformation, DriverInformationT (createdAt))
-import qualified Types.Storage.DriverInformation as DriverInfo
-import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Vehicle as SV
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 import qualified Utils.Notifications as Notify
 
@@ -55,13 +55,13 @@ createDriver admin req = withFlowHandlerAPI $ do
     "Person with this mobile number already exists"
   person <- buildDriver req.person orgId
   vehicle <- buildVehicle req.vehicle orgId
-  DB.runSqlDBTransaction $ do
+  Esq.runTransaction $ do
     QPerson.create person
     createDriverDetails (person.id)
     QVehicle.create vehicle
     QPerson.updateVehicle person.id $ Just vehicle.id
   org <-
-    QOrganization.findOrganizationById orgId
+    QOrganization.findById orgId
       >>= fromMaybeM OrgNotFound
   decPerson <- decrypt person
   let mobNum = personEntity.mobileNumber
@@ -75,7 +75,7 @@ createDriver admin req = withFlowHandlerAPI $ do
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
 
-createDriverDetails :: Id SP.Person -> DB.SqlDB ()
+createDriverDetails :: Id SP.Person -> Esq.SqlDB ()
 createDriverDetails personId = do
   now <- getCurrentTime
   let driverInfo =
@@ -96,23 +96,23 @@ getInformation :: Id SP.Person -> App.FlowHandler DriverAPI.DriverInformationRes
 getInformation personId = withFlowHandlerAPI $ do
   _ <- Registration.checkPersonExists $ getId personId
   let driverId = cast personId
-  person <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
+  person <- QPerson.findById personId >>= fromMaybeM PersonNotFound
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   organization <-
-    QOrganization.findOrganizationById orgId
+    QOrganization.findById orgId
       >>= fromMaybeM OrgNotFound
   pure $ makeDriverInformationRes driverEntity organization
 
 setActivity :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
 setActivity personId isActive = withFlowHandlerAPI $ do
-  _ <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
+  _ <- QPerson.findById personId >>= fromMaybeM PersonNotFound
   let driverId = cast personId
   when isActive $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
     unless driverInfo.enabled $ throwError DriverAccountDisabled
-  DB.runSqlDBTransaction $
+  Esq.runTransaction $
     QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
 
@@ -123,12 +123,12 @@ listDriver admin mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
   respPersonList <- traverse buildDriverEntityRes personList
   return $ DriverAPI.ListDriverRes respPersonList
 
-buildDriverEntityRes :: (DBFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverAPI.DriverEntityRes
+buildDriverEntityRes :: (EsqDBFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverAPI.DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
   vehicleM <- case person.udf1 of
     Nothing -> return Nothing
-    Just udf -> QVehicle.findVehicleById $ Id udf
-  decMobNum <- decrypt person.mobileNumber
+    Just udf -> QVehicle.findById $ Id udf
+  decMobNum <- mapM decrypt person.mobileNumber
   return $
     DriverAPI.DriverEntityRes
       { id = person.id,
@@ -148,10 +148,10 @@ linkVehicle :: SP.Person -> Id SP.Person -> Id SV.Vehicle -> FlowHandler DriverA
 linkVehicle admin personId vehicleId = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   person <-
-    QPerson.findPersonById personId
+    QPerson.findById personId
       >>= fromMaybeM PersonDoesNotExist
   vehicle <-
-    QVehicle.findVehicleById vehicleId
+    QVehicle.findById vehicleId
       >>= fromMaybeM VehicleDoesNotExist
   unless
     ( person.organizationId == Just orgId
@@ -160,17 +160,17 @@ linkVehicle admin personId vehicleId = withFlowHandlerAPI $ do
     (throwError Unauthorized)
   prevPerson <- QPerson.findByVehicleId vehicleId
   whenJust prevPerson $ \_ -> throwError VehicleAlreadyLinked
-  QPerson.updateVehicleFlow personId $ Just vehicleId
+  Esq.runTransaction $ QPerson.updateVehicle personId $ Just vehicleId
   return APISuccess.Success
 
 changeDriverEnableState :: SP.Person -> Id SP.Person -> Bool -> FlowHandler APISuccess
 changeDriverEnableState admin personId isEnabled = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   person <-
-    QPerson.findPersonById personId
+    QPerson.findById personId
       >>= fromMaybeM PersonDoesNotExist
   unless (person.organizationId == Just orgId) $ throwError Unauthorized
-  DB.runSqlDBTransaction $ do
+  Esq.runTransaction $ do
     QDriverInformation.updateEnabledState driverId isEnabled
     unless isEnabled $ QDriverInformation.updateActivity driverId False
   unless isEnabled $
@@ -185,10 +185,10 @@ deleteDriver :: SP.Person -> Id SP.Person -> FlowHandler APISuccess
 deleteDriver admin driverId = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   driver <-
-    QPerson.findPersonById driverId
+    QPerson.findById driverId
       >>= fromMaybeM PersonDoesNotExist
   unless (driver.organizationId == Just orgId || driver.role == SP.DRIVER) $ throwError Unauthorized
-  DB.runSqlDBTransaction $ do
+  Esq.runTransaction $ do
     whenJust driver.udf1 $ QVehicle.deleteById . Id
     QPerson.deleteById driverId
   return Success
@@ -196,24 +196,24 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
 updateDriver :: Id SP.Person -> DriverAPI.UpdateDriverReq -> FlowHandler DriverAPI.UpdateDriverRes
 updateDriver personId req = withFlowHandlerAPI $ do
   runRequestValidation DriverAPI.validateUpdateDriverReq req
-  person <- QPerson.findPersonById personId >>= fromMaybeM PersonNotFound
+  person <- QPerson.findById personId >>= fromMaybeM PersonNotFound
   let updPerson =
         person{firstName = req.firstName <|> person.firstName,
                middleName = req.middleName <|> person.middleName,
                lastName = req.lastName <|> person.lastName,
                deviceToken = req.deviceToken <|> person.deviceToken
               }
-  DB.runSqlDB (QPerson.updatePersonRec personId updPerson)
+  Esq.runTransaction $ QPerson.updatePersonRec personId updPerson
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   org <-
-    QOrganization.findOrganizationById orgId
+    QOrganization.findById orgId
       >>= fromMaybeM OrgNotFound
   return $ makeDriverInformationRes driverEntity org
 
 sendInviteSms ::
-  ( DBFlow m r,
+  ( MonadFlow m,
     CoreMetrics m
   ) =>
   SmsConfig ->
@@ -235,11 +235,11 @@ sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
         SMS.text = SF.constructInviteSms orgName inviteTemplate
       }
 
-buildDriver :: (DBFlow m r, EncFlow m r) => DriverAPI.CreatePerson -> Id Org.Organization -> m SP.Person
+buildDriver :: (EncFlow m r) => DriverAPI.CreatePerson -> Id Org.Organization -> m SP.Person
 buildDriver req orgId = do
   pid <- generateGUID
   now <- getCurrentTime
-  mobileNumber <- encrypt (Just req.mobileNumber)
+  mobileNumber <- Just <$> encrypt req.mobileNumber
   return
     SP.Person
       { -- only these below will be updated in the person table. if you want to add something extra please add in queries also
@@ -267,7 +267,7 @@ buildDriver req orgId = do
         SP.updatedAt = now
       }
 
-buildVehicle :: DBFlow m r => DriverAPI.CreateVehicle -> Id Org.Organization -> m SV.Vehicle
+buildVehicle :: MonadFlow m => DriverAPI.CreateVehicle -> Id Org.Organization -> m SV.Vehicle
 buildVehicle req orgId = do
   vid <- generateGUID
   now <- getCurrentTime

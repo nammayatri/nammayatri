@@ -1,13 +1,13 @@
 module Storage.Queries.CancellationReason where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto
+import Beckn.Storage.Esqueleto as Esq
 import Domain.Types.CancellationReason
 import Storage.Tabular.CancellationReason
 
-findAll :: EsqDBFlow m r => CancellationStage -> m [CancellationReason]
+findAll :: Transactionable m => CancellationStage -> m [CancellationReason]
 findAll cancStage =
-  runTransaction . findAll' $ do
+  Esq.findAll $ do
     cancellationReason <- from $ table @CancellationReasonT
     where_ $
       cancellationReason ^. CancellationReasonEnabled

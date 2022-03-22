@@ -36,34 +36,34 @@ updateBPPBookingId rbId bppRbId = do
       ]
     where_ $ tbl ^. RideBookingId ==. val (getId rbId)
 
-findById :: EsqDBFlow m r => Id RideBooking -> m (Maybe RideBooking)
+findById :: Transactionable m => Id RideBooking -> m (Maybe RideBooking)
 findById = Esq.findById
 
-findByBPPBookingId :: EsqDBFlow m r => Id BPPRideBooking -> m (Maybe RideBooking)
+findByBPPBookingId :: Transactionable m => Id BPPRideBooking -> m (Maybe RideBooking)
 findByBPPBookingId bppRbId =
-  runTransaction . findOne' $ do
+  findOne $ do
     rideBooking <- from $ table @RideBookingT
     where_ $ rideBooking ^. RideBookingBppBookingId ==. val (Just $ getId bppRbId)
     return rideBooking
 
-findByQuoteId :: EsqDBFlow m r => Id Quote -> m (Maybe RideBooking)
+findByQuoteId :: Transactionable m => Id Quote -> m (Maybe RideBooking)
 findByQuoteId quoteId_ =
-  runTransaction . findOne' $ do
+  findOne $ do
     rideBooking <- from $ table @RideBookingT
     where_ $ rideBooking ^. RideBookingQuoteId ==. val (toKey quoteId_)
     return rideBooking
 
-findByRequestId :: EsqDBFlow m r => Id SearchRequest -> m (Maybe RideBooking)
+findByRequestId :: Transactionable m => Id SearchRequest -> m (Maybe RideBooking)
 findByRequestId searchRequestId =
-  runTransaction . findOne' $ do
+  findOne $ do
     rideBooking <- from $ table @RideBookingT
     where_ $ rideBooking ^. RideBookingRequestId ==. val (toKey searchRequestId)
     return rideBooking
 
-findAllByRiderId :: EsqDBFlow m r => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [RideBooking]
+findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [RideBooking]
 findAllByRiderId personId mbLimit mbOffset mbOnlyActive = do
   let isOnlyActive = Just True == mbOnlyActive
-  runTransaction . findAll' $ do
+  findAll $ do
     rideBooking <- from $ table @RideBookingT
     where_ $
       rideBooking ^. RideBookingRiderId ==. val (toKey personId)

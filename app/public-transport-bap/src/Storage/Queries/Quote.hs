@@ -9,9 +9,9 @@ import Domain.Types.TransportStation
 import Storage.Tabular.Quote
 import Storage.Tabular.TransportStation
 
-findById :: EsqDBFlow m r => Id Quote -> m (Maybe Quote)
+findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById quoteId =
-  runTransaction . findOne' $ do
+  Esq.findOne $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteId ==. val (getId quoteId)
     return quote
@@ -19,16 +19,16 @@ findById quoteId =
 create :: Quote -> SqlDB ()
 create = create'
 
-findAllBySearchId :: EsqDBFlow m r => Id Search -> m [Quote]
+findAllBySearchId :: Transactionable m => Id Search -> m [Quote]
 findAllBySearchId searchId =
-  runTransaction . findAll' $ do
+  Esq.findAll $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteSearchId ==. val (toKey searchId)
     return quote
 
-findAllAggregatesBySearchId :: EsqDBFlow m r => Id Search -> m [(Quote, TransportStation, TransportStation)]
+findAllAggregatesBySearchId :: Transactionable m => Id Search -> m [(Quote, TransportStation, TransportStation)]
 findAllAggregatesBySearchId searchId =
-  runTransaction . findAll' $ do
+  findAll $ do
     (quote :& depStation :& arrStation) <-
       from $
         table @QuoteT

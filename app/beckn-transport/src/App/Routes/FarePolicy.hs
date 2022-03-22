@@ -3,6 +3,7 @@ module App.Routes.FarePolicy where
 import App.Routes.FarePolicy.Discount
 import App.Types
 import Beckn.Types.Id (Id)
+import Domain.Types.FarePolicy (FarePolicy)
 import Product.FarePolicy (listFarePolicies, updateFarePolicy)
 import Servant
 import Types.API.FarePolicy
@@ -10,7 +11,6 @@ import Types.API.FarePolicy
     UpdateFarePolicyReq,
     UpdateFarePolicyRes,
   )
-import Types.Domain.FarePolicy (FarePolicy)
 import Utils.Auth
 
 type FarePolicyAPI =

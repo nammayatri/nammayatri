@@ -3,18 +3,18 @@ module App.Allocator.Config where
 import qualified App.Types as App
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
-import Beckn.Storage.DB.Config (DBConfig)
+import Beckn.Storage.Esqueleto.Config (EsqDBConfig)
 import Beckn.Utils.Dhall (FromDhall)
 import EulerHS.Prelude
 import EulerHS.Types (RedisConfig)
-import Tools.Streaming.Kafka.Environment
+import Tools.Streaming.Kafka
 import Types.App (SortMode)
 import Types.Shard
 import Utils.Common
 
 data AppCfg = AppCfg
   { appCfg :: App.AppCfg,
-    dbCfg :: DBConfig,
+    esqDBCfg :: EsqDBConfig,
     redisCfg :: RedisConfig,
     metricsPort :: Int,
     healthcheckPort :: Int,

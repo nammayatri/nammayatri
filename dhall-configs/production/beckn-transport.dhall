@@ -11,20 +11,13 @@ let postgresConfig =
   , connectDatabase = "atlas_transporter"
   }
 
-let pgcfg =
-  { connTag = "transporterDb"
-  , pgConfig = postgresConfig
-  , poolConfig = common.defaultPoolConfig
-  , schemaName = "atlas_transporter"
-  }
-
 let esqDBCfg =
   { connectHost = postgresConfig.connectHost
   , connectPort = postgresConfig.connectPort
   , connectUser = postgresConfig.connectUser
   , connectPassword = postgresConfig.connectPassword
   , connectDatabase = postgresConfig.connectDatabase
-  , connectSchemaName = pgcfg.schemaName
+  , connectSchemaName = "atlas_transporter"
   }
 
 let rcfg =
@@ -70,8 +63,7 @@ let kafkaProducerCfg =
 
 in
 
-{ dbCfg = pgcfg
-, esqDBCfg = esqDBCfg
+{ esqDBCfg = esqDBCfg
 , redisCfg = rcfg
 , hcfg = rcfg
 , smsCfg = smsConfig

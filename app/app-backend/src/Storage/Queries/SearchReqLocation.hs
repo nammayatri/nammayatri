@@ -10,7 +10,7 @@ create :: SearchReqLocation -> SqlDB ()
 create = create'
 
 findById ::
-  EsqDBFlow m r =>
+  Transactionable m =>
   Id SearchReqLocation ->
   m (Maybe SearchReqLocation)
 findById = Esq.findById

@@ -11,13 +11,13 @@ create :: SearchRequest -> SqlDB ()
 create = create'
 
 findAllByPersonIdLimitOffset ::
-  EsqDBFlow m r =>
+  Transactionable m =>
   Id Person ->
   Maybe Integer ->
   Maybe Integer ->
   m [SearchRequest]
 findAllByPersonIdLimitOffset personId mlimit moffset =
-  runTransaction . findAll' $ do
+  Esq.findAll $ do
     searchRequest <- from $ table @SearchRequestT
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
@@ -26,21 +26,21 @@ findAllByPersonIdLimitOffset personId mlimit moffset =
     orderBy [desc $ searchRequest ^. SearchRequestCreatedAt]
     return searchRequest
 
-findById :: EsqDBFlow m r => Id SearchRequest -> m (Maybe SearchRequest)
+findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 findById = Esq.findById
 
-findByPersonId :: EsqDBFlow m r => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
+findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
 findByPersonId personId searchRequestId =
-  runTransaction . findOne' $ do
+  Esq.findOne $ do
     searchRequest <- from $ table @SearchRequestT
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
         &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
     return searchRequest
 
-findAllByPerson :: EsqDBFlow m r => Id Person -> m [SearchRequest]
+findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
 findAllByPerson perId =
-  runTransaction . findAll' $ do
+  Esq.findAll $ do
     searchRequest <- from $ table @SearchRequestT
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)

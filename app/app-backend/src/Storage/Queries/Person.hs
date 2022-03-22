@@ -13,19 +13,19 @@ create :: Person -> SqlDB ()
 create = create'
 
 findById ::
-  EsqDBFlow m r =>
+  Transactionable m =>
   Id Person ->
   m (Maybe Person)
 findById = Esq.findById
 
 findByEmailAndPassword ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (Transactionable m, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Person)
 findByEmailAndPassword email_ password = do
   passwordDbHash <- getDbHash password
-  runTransaction . findOne' $ do
+  findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonEmail ==. val (Just email_)
@@ -33,14 +33,14 @@ findByEmailAndPassword email_ password = do
     return person
 
 findByRoleAndMobileNumber ::
-  (EsqDBFlow m r, EncFlow m r) =>
+  (Transactionable m, EncFlow m r) =>
   Role ->
   Text ->
   Text ->
   m (Maybe Person)
 findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
   mobileNumberDbHash <- getDbHash mobileNumber_
-  runTransaction . findOne' $ do
+  findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonRole ==. val role_
@@ -48,10 +48,10 @@ findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
     return person
 
-findByRoleAndMobileNumberWithoutCC :: (EsqDBFlow m r, EncFlow m r) => Role -> Text -> m (Maybe Person)
+findByRoleAndMobileNumberWithoutCC :: (Transactionable m, EncFlow m r) => Role -> Text -> m (Maybe Person)
 findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
   mobileNumberDbHash <- getDbHash mobileNumber_
-  runTransaction . findOne' $ do
+  findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonRole ==. val role_

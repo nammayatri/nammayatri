@@ -1,85 +1,74 @@
 module Storage.Queries.NotificationStatus where
 
-import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as DB
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.Schema
-import Beckn.Utils.Common
-import Database.Beam ((&&.), (<-.), (==.))
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
+import Domain.Types.NotificationStatus as NotificationStatus
+import Domain.Types.RideBooking
+import Storage.Tabular.NotificationStatus
 import Types.App
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.NotificationStatus as NotificationStatus
-import qualified Types.Storage.RideBooking as SRB
+import Utils.Common
 
-getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity NotificationStatus.NotificationStatusT))
-getDbTable =
-  DB.notificationStatus . DB.transporterDb <$> getSchemaName
+createMany :: [NotificationStatus] -> SqlDB ()
+createMany = createMany'
 
-createMany :: DBFlow m r => [NotificationStatus.NotificationStatus] -> m ()
-createMany notificationStatus = do
-  dbTable <- getDbTable
-  DB.create dbTable $ Storage.insertValues notificationStatus
+updateStatus :: Id RideBooking -> AnswerStatus -> [Id Driver] -> SqlDB ()
+updateStatus rideBookingId status driverIds =
+  update' $ \tbl -> do
+    set
+      tbl
+      [ NotificationStatusStatus =. val status
+      ]
+    where_ $
+      tbl ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId)
+        &&. tbl ^. NotificationStatusDriverId `in_` valList (toKey . cast <$> driverIds)
 
-updateStatus :: DBFlow m r => Id SRB.RideBooking -> NotificationStatus.AnswerStatus -> [Id Driver] -> m ()
-updateStatus rideBookingId_ status_ driverIds = do
-  dbTable <- getDbTable
-  DB.update dbTable (setClause status_) (predicate rideBookingId_ driverIds)
-  where
-    setClause s NotificationStatus.NotificationStatus {..} = status <-. B.val_ s
-    predicate rId ids NotificationStatus.NotificationStatus {..} =
-      rideBookingId ==. B.val_ rId
-        &&. driverId `B.in_` (B.val_ <$> ids)
+fetchAttemptedNotificationsByRBId :: Transactionable m => Id RideBooking -> m [NotificationStatus]
+fetchAttemptedNotificationsByRBId rideBookingId =
+  Esq.findAll $ do
+    notificationStatus <- from $ table @NotificationStatusT
+    where_ $
+      notificationStatus ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId)
+        &&. notificationStatus ^. NotificationStatusStatus `in_` valList [NotificationStatus.REJECTED, NotificationStatus.IGNORED]
+    return notificationStatus
 
-fetchAttemptedNotificationsByRBId :: DBFlow m r => Id SRB.RideBooking -> m [NotificationStatus.NotificationStatus]
-fetchAttemptedNotificationsByRBId rideBookingId_ = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate NotificationStatus.NotificationStatus {..} =
-      rideBookingId ==. B.val_ rideBookingId_
-        &&. status `B.in_` [B.val_ NotificationStatus.REJECTED, B.val_ NotificationStatus.IGNORED]
+fetchActiveNotifications :: Transactionable m => m [NotificationStatus]
+fetchActiveNotifications =
+  Esq.findAll $ do
+    notificationStatus <- from $ table @NotificationStatusT
+    where_ $
+      notificationStatus ^. NotificationStatusStatus ==. val NotificationStatus.NOTIFIED
+    return notificationStatus
 
-fetchActiveNotifications :: DBFlow m r => m [NotificationStatus.NotificationStatus]
-fetchActiveNotifications = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate NotificationStatus.NotificationStatus {..} =
-      status ==. B.val_ NotificationStatus.NOTIFIED
+findActiveNotificationByRBId :: Transactionable m => Id RideBooking -> m [NotificationStatus.NotificationStatus]
+findActiveNotificationByRBId rideBookingId =
+  Esq.findAll $ do
+    notificationStatus <- from $ table @NotificationStatusT
+    where_ $
+      notificationStatus ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId)
+        &&. notificationStatus ^. NotificationStatusStatus ==. val NotificationStatus.NOTIFIED
+    return notificationStatus
 
-findActiveNotificationByRBId :: DBFlow m r => Id SRB.RideBooking -> m [NotificationStatus.NotificationStatus]
-findActiveNotificationByRBId rideBookingId_ = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity predicate
-  where
-    predicate NotificationStatus.NotificationStatus {..} =
-      rideBookingId ==. B.val_ rideBookingId_
-        &&. status ==. B.val_ NotificationStatus.NOTIFIED
+findActiveNotificationByDriverId :: Transactionable m => Id Driver -> Id RideBooking -> m (Maybe NotificationStatus)
+findActiveNotificationByDriverId driverId rideBookingId =
+  Esq.findOne $ do
+    notificationStatus <- from $ table @NotificationStatusT
+    where_ $
+      notificationStatus ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId)
+        &&. notificationStatus ^. NotificationStatusStatus ==. val NotificationStatus.NOTIFIED
+        &&. notificationStatus ^. NotificationStatusDriverId ==. val (toKey $ cast driverId)
+    return notificationStatus
 
-findActiveNotificationByDriverId :: DBFlow m r => Id Driver -> Id SRB.RideBooking -> m (Maybe NotificationStatus.NotificationStatus)
-findActiveNotificationByDriverId driverId_ rideBookingId_ = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate NotificationStatus.NotificationStatus {..} =
-      driverId ==. B.val_ driverId_
-        &&. rideBookingId ==. B.val_ rideBookingId_
-        &&. status ==. B.val_ NotificationStatus.NOTIFIED
+cleanupNotifications :: Id RideBooking -> SqlDB ()
+cleanupNotifications rideBookingId =
+  Esq.delete' $ do
+    notificationStatus <- from $ table @NotificationStatusT
+    where_ (notificationStatus ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId))
 
-cleanupNotifications :: DBFlow m r => Id SRB.RideBooking -> m ()
-cleanupNotifications rideBookingId_ = do
-  dbTable <- getDbTable
-  DB.delete dbTable (predicate rideBookingId_)
-  where
-    predicate rid NotificationStatus.NotificationStatus {..} = rideBookingId ==. B.val_ rid
-
-cleanupOldNotifications :: DBFlow m r => m Int
+cleanupOldNotifications :: SqlDB Int
 cleanupOldNotifications = do
-  dbTable <- getDbTable
   compareTime <- getCurrentTime <&> addUTCTime (-300) -- We only remove very old notifications (older than 5 minutes) as a fail-safe
-  rows <- DB.deleteReturning dbTable (predicate compareTime)
-  return $ length rows
-  where
-    predicate compareTime NotificationStatus.NotificationStatus {..} = expiresAt B.<=. B.val_ compareTime
+  res <- Esq.deleteReturningCount' $ do
+    notificationStatus <- from $ table @NotificationStatusT
+    where_ (notificationStatus ^. NotificationStatusExpiresAt ==. val compareTime)
+  return $ fromIntegral res

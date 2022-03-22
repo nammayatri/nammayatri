@@ -2,13 +2,13 @@ module Flow.Allocation.OnePoolTwoRide where
 
 import Beckn.Types.Id
 import qualified Data.Map as Map
+import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude hiding (id)
 import Flow.Allocation.Internal
 import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Types.API.RideBooking as RideBooking
-import qualified Types.Storage.RideBooking as SRB
 
 rideBooking01Id :: Id SRB.RideBooking
 rideBooking01Id = Id "rideBooking01"

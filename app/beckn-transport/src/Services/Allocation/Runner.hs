@@ -8,13 +8,13 @@ import qualified Beckn.Utils.Logging as Log
 import Beckn.Utils.Shutdown
 import Control.Monad.Catch (Handler (..), catches)
 import qualified Data.Map as Map
+import Domain.Types.Organization
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Metrics as TMetrics
 import Types.Error
-import Types.Storage.Organization
 import Utils.Common
 
 handle :: Allocation.ServiceHandle Flow

@@ -14,7 +14,9 @@ import qualified "app-backend" Domain.Types.Person as TPerson
 import qualified "app-backend" Domain.Types.Quote as BQuote
 import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
 import qualified "app-backend" Domain.Types.Ride as BRide
+import qualified "beckn-transport" Domain.Types.Ride as TRide
 import qualified "app-backend" Domain.Types.RideBooking as BRB
+import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import qualified "app-backend" Domain.Types.SearchRequest as BSearchRequest
 import EulerHS.Prelude
 import Servant hiding (Context)
@@ -31,8 +33,6 @@ import qualified "app-backend" Types.API.RideBooking as AppRideBooking
 import qualified "beckn-transport" Types.API.RideBooking as TRideBookingAPI
 import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
-import qualified "beckn-transport" Types.Storage.Ride as TRide
-import qualified "beckn-transport" Types.Storage.RideBooking as TRB
 
 timeBetweenLocationUpdates :: Seconds
 timeBetweenLocationUpdates = 1

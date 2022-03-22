@@ -2,10 +2,14 @@ module Mobility.SuccessFlow where
 
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import "beckn-transport" Domain.Types.Person as TPerson
 import qualified "app-backend" Domain.Types.Quote as BQuote
+import qualified "beckn-transport" Domain.Types.Quote as TQuote
 import qualified "app-backend" Domain.Types.Ride as BRide
+import qualified "beckn-transport" Domain.Types.Ride as TRide
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
 import qualified "app-backend" Domain.Types.RideBooking as BRB
+import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
@@ -16,10 +20,6 @@ import qualified "beckn-transport" Storage.Queries.RideBooking as TQRB
 import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import "app-backend" Types.API.Search
-import Types.Storage.Person (Person)
-import qualified "beckn-transport" Types.Storage.Quote as TQuote
-import qualified "beckn-transport" Types.Storage.Ride as TRide
-import qualified "beckn-transport" Types.Storage.RideBooking as TRB
 import Utils
 
 doAnAppSearch :: HasCallStack => ClientsM (Id BQuote.Quote, Id BRB.RideBooking)
@@ -104,7 +104,7 @@ getBPPRideById rideId = do
   return $ fromJust mbRide
 
 getBPPDriverLocation ::
-  Id Person ->
+  Id TPerson.Person ->
   ClientsM LatLong
 getBPPDriverLocation driverId = do
   mbRes <- liftIO $ runTransporterFlow "" $ findById driverId

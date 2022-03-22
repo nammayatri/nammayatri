@@ -9,22 +9,22 @@ import Domain.Search
 import Storage.Tabular.ParkingLocation
 import Storage.Tabular.Quote
 
-findById :: EsqDBFlow m r => Id Quote -> m (Maybe Quote)
+findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById = Esq.findById
 
 create :: Quote -> SqlDB ()
 create = create'
 
-findAllBySearchId :: EsqDBFlow m r => Id Search -> m [Quote]
+findAllBySearchId :: Transactionable m => Id Search -> m [Quote]
 findAllBySearchId searchId =
-  runTransaction . findAll' $ do
+  Esq.findAll $ do
     quote <- from $ table @QuoteT
     where_ $ quote ^. QuoteSearchId ==. val (toKey searchId)
     return quote
 
-findAllAggregatesBySearchId :: EsqDBFlow m r => Id Search -> m [(Quote, ParkingLocation)]
+findAllAggregatesBySearchId :: Transactionable m => Id Search -> m [(Quote, ParkingLocation)]
 findAllAggregatesBySearchId searchId =
-  runTransaction . findAll' $ do
+  findAll $ do
     (quote :& location) <-
       from $
         table @QuoteT

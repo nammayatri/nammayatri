@@ -4,8 +4,8 @@ import App.Types (FlowHandler)
 import qualified Beckn.External.GoogleMaps.Client as ClientGoogleMaps
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.Id
+import qualified Domain.Types.Person as SP
 import EulerHS.Prelude
-import qualified Types.Storage.Person as SP
 import Utils.Common (askConfig, withFlowHandlerAPI)
 
 autoComplete :: Id SP.Person -> Text -> Text -> Integer -> Text -> FlowHandler GoogleMaps.SearchLocationResp

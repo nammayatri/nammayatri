@@ -25,11 +25,11 @@ import Beckn.Utils.Validation
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import Data.Time
+import qualified Domain.Types.Organization as Organization
+import Domain.Types.Person (Person, PersonAPIEntity)
+import Domain.Types.Vehicle (VehicleAPIEntity)
+import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.Organization as Organization
-import Types.Storage.Person (Person, PersonAPIEntity)
-import Types.Storage.Vehicle (VehicleAPIEntity)
-import qualified Types.Storage.Vehicle as Veh
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id Person,

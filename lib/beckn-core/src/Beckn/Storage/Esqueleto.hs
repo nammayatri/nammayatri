@@ -7,6 +7,7 @@ module Beckn.Storage.Esqueleto
     module SqlDB,
     module Class,
     module Reexport,
+    module Transactionable,
     defaultQQ,
     defaultSqlSettings,
   )
@@ -18,6 +19,7 @@ import Beckn.Storage.Esqueleto.Functions as Functions
 import Beckn.Storage.Esqueleto.Logger as Logger (LoggerIO)
 import Beckn.Storage.Esqueleto.Queries as Queries
 import Beckn.Storage.Esqueleto.SqlDB as SqlDB
+import Beckn.Storage.Esqueleto.Transactionable as Transactionable
 import Beckn.Storage.Esqueleto.Types as Types
 import Beckn.Utils.Text
 import qualified Data.Text as T

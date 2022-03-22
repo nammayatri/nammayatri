@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FunctionalDependencies #-}
 
 module Beckn.Storage.Esqueleto.Class where

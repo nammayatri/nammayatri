@@ -9,5 +9,5 @@ import Storage.Tabular.CallStatus ()
 create :: CallStatus -> SqlDB ()
 create = create'
 
-findById :: EsqDBFlow m r => Id CallStatus -> m (Maybe CallStatus)
+findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
 findById = Esq.findById

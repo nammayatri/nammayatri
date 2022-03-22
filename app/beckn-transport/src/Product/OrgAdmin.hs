@@ -2,21 +2,21 @@ module Product.OrgAdmin where
 
 import App.Types
 import Beckn.External.Encryption (decrypt)
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import Data.Maybe
+import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Types.API.OrgAdmin as API
 import Types.Error
-import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.Person as SP
 import Utils.Common
 
 getProfile :: SP.Person -> FlowHandler API.OrgAdminProfileRes
 getProfile admin = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
-  org <- QOrg.findOrganizationById orgId >>= fromMaybeM OrgNotFound
+  org <- QOrg.findById orgId >>= fromMaybeM OrgNotFound
   decAdmin <- decrypt admin
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
@@ -30,9 +30,9 @@ updateProfile admin req = withFlowHandlerAPI $ do
               lastName = req.lastName <|> admin.lastName,
               deviceToken = req.deviceToken <|> admin.deviceToken
              }
-  DB.runSqlDBTransaction $
+  Esq.runTransaction $
     QPerson.updatePersonRec updAdmin.id updAdmin
-  org <- QOrg.findOrganizationById orgId >>= fromMaybeM OrgNotFound
+  org <- QOrg.findById orgId >>= fromMaybeM OrgNotFound
   decUpdAdmin <- decrypt updAdmin
   let personAPIEntity = SP.makePersonAPIEntity decUpdAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)

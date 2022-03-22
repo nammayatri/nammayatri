@@ -1,11 +1,14 @@
 module Product.RideAPI.EndRide where
 
 import App.Types (FlowHandler)
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP
 import qualified Product.FareCalculator.Interpreter as Fare
@@ -20,9 +23,6 @@ import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Metrics (putFareAndDistanceDeviations)
 import Types.App (Driver)
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Ride as Ride
-import qualified Types.Storage.RideBooking as SRB
 import Utils.Common (withFlowHandlerAPI)
 
 endRide :: Id SP.Person -> Id Ride.Ride -> FlowHandler APISuccess.APISuccess
@@ -31,7 +31,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
   where
     handle =
       Handler.ServiceHandle
-        { findPersonById = Person.findPersonById,
+        { findById = Person.findById,
           findRideBookingById = QRB.findById,
           findRideById = QRide.findById,
           findSearchRequestById = QSearchRequest.findById,
@@ -46,8 +46,8 @@ endRide personId rideId = withFlowHandlerAPI $ do
           recalcDistanceEnding = recalcDistanceBatches defaultRideInterpolationHandler True
         }
 
-endRideTransaction :: DBFlow m r => Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m ()
-endRideTransaction rideBookingId ride driverId = DB.runSqlDBTransaction $ do
+endRideTransaction :: EsqDBFlow m r => Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m ()
+endRideTransaction rideBookingId ride driverId = Esq.runTransaction $ do
   QRide.updateAll ride.id ride
   QRide.updateStatus ride.id Ride.COMPLETED
   QRB.updateStatus rideBookingId SRB.COMPLETED

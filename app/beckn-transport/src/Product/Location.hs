@@ -3,7 +3,7 @@ module Product.Location where
 import App.Types
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GraphHopper as MapSearch
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
@@ -12,9 +12,11 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Logging
-import Data.List.NonEmpty (NonEmpty ((:|)))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
+import Domain.Types.DriverLocation (DriverLocation)
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
 import SharedLogic.LocationUpdates
 import qualified Storage.Queries.DriverLocation as DrLoc
@@ -22,9 +24,6 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics
 import Types.API.Location as Location
-import Types.Storage.DriverLocation (DriverLocation)
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Ride as SRide
 import Utils.Common hiding (id)
 
 data Handler m = Handler
@@ -51,10 +50,10 @@ updateLocation personId waypoints = withFlowHandlerAPI $ do
         Handler
           { refreshPeriod,
             allowedDelay,
-            findPersonById = Person.findPersonById,
+            findPersonById = Person.findById,
             findDriverLocationById = DrLoc.findById,
             upsertDriverLocation = \driverId point timestamp ->
-              DB.runSqlDBTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
+              Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
             getInProgressByDriverId = QRide.getInProgressByDriverId,
             missingUpdatesForThisRide = \rideId -> isJust <$> Redis.getKeyRedis @() (missingLocationUpdatesKey rideId),
             ignoreUpdatesForThisRide = \rideId -> Redis.setExRedis (missingLocationUpdatesKey rideId) () (60 * 60 * 24),
@@ -65,7 +64,7 @@ updateLocationHandler :: Handler Flow -> Id Person.Person -> UpdateLocationReq -
 updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocationUpdate" $ do
   logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
   driver <-
-    findPersonById driverId
+    Person.findById driverId
       >>= fromMaybeM PersonNotFound
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
   mbOldLoc <- findDriverLocationById driver.id
@@ -134,7 +133,7 @@ getLocation rideId = withFlowHandlerAPI $ do
       _ -> throwError $ RideInvalidStatus "Cannot track this ride"
   driver <-
     ride.driverId
-      & Person.findPersonById
+      & Person.findById
       >>= fromMaybeM PersonNotFound
   currLocation <-
     DrLoc.findById driver.id

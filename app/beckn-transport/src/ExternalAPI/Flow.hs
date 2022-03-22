@@ -11,12 +11,12 @@ import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
+import Domain.Types.Organization as Org
+import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import Storage.Queries.SearchRequest as SearchRequest
 import Tools.Metrics (CoreMetrics)
 import Types.Error
-import Types.Storage.Organization as Org
-import Types.Storage.SearchRequest as SearchRequest
 import Utils.Auth
 import Utils.Common
 
@@ -42,7 +42,7 @@ withCallback' doWithCallback transporter action api context cbUrl f = do
   withBecknCallbackMig doWithCallback (Just authKey) action api context' cbUrl f
 
 callBAP ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -66,7 +66,7 @@ callBAP action api transporter searchRequestId reqConstr content = do
   Beckn.callBecknAPI (Just authKey) Nothing (show action) api bapUri $ reqConstr context content
 
 callOnUpdate ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>

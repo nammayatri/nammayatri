@@ -4,16 +4,16 @@ import App.Types
 import Beckn.External.Encryption (decrypt)
 import Beckn.Prelude
 import Beckn.Types.Id
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.SearchReqLocation as SLoc
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Types.API.Ride as API
 import Types.Error
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Ride as SRide
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.SearchReqLocation as SLoc
 import Utils.Common
 
 listDriverRides ::
@@ -28,10 +28,10 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 
 buildDriverRideRes :: (SRide.Ride, SRB.RideBooking) -> Flow API.DriverRideRes
 buildDriverRideRes (ride, rideBooking) = do
-  fromLocation <- QLoc.findLocationById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- QLoc.findLocationById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
-  vehicle <- QVeh.findVehicleById ride.vehicleId >>= fromMaybeM VehicleNotFound
-  driver <- QP.findPersonById ride.driverId >>= fromMaybeM PersonNotFound
+  fromLocation <- QLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
+  toLocation <- QLoc.findById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
+  vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM VehicleNotFound
+  driver <- QP.findById ride.driverId >>= fromMaybeM PersonNotFound
   decDriver <- decrypt driver
   pure
     API.DriverRideRes

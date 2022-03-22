@@ -120,7 +120,7 @@ specs' trees = do
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate app-backend database: "
 
       (transportCfg :: TransporterBackend.AppCfg) <- readDhallConfigDefault "beckn-transport"
-      migrateIfNeeded transportCfg.migrationPath True transportCfg.dbCfg
+      Esq.migrateIfNeeded transportCfg.migrationPath True transportCfg.esqDBCfg
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate beckn-transporter database: "
 
       (fmdCfg :: FmdWrapper.AppCfg) <- readDhallConfigDefault "fmd-wrapper"

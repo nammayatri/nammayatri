@@ -1,10 +1,10 @@
 module Fixtures.Quote where
 
 import Beckn.Types.Id
+import qualified Domain.Types.Quote as Quote
+import qualified Domain.Types.Vehicle as Veh
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
-import qualified Types.Storage.Quote as Quote
-import qualified Types.Storage.Vehicle as Veh
 
 defaultQuote :: Quote.Quote
 defaultQuote =

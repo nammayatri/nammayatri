@@ -1,51 +1,29 @@
 module Storage.Queries.Products where
 
-import qualified Beckn.Storage.Common as Storage
-import qualified Beckn.Storage.Queries as DB
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.Schema
-import Beckn.Utils.Common
-import Database.Beam ((==.))
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.DB as DB
-import qualified Types.Storage.Products as Storage
+import Domain.Types.Products
+import Storage.Tabular.Products
 
-getDbTable :: (Functor m, HasSchemaName m) => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity Storage.ProductsT))
-getDbTable =
-  DB.products . DB.transporterDb <$> getSchemaName
+create :: Products -> SqlDB ()
+create = create'
 
-create :: DBFlow m r => Storage.Products -> m ()
-create Storage.Products {..} = do
-  dbTable <- getDbTable
-  DB.createOne dbTable (Storage.insertValue Storage.Products {..})
+findAllById :: Transactionable m => [Id Products] -> m [Products]
+findAllById ids =
+  Esq.findAll $ do
+    products <- from $ table @ProductsT
+    where_ $
+      products ^. ProductsTId `in_` valList (toKey <$> ids)
+    return products
 
-findAllById :: DBFlow m r => [Id Storage.Products] -> m [Storage.Products]
-findAllById ids = do
-  dbTable <- getDbTable
-  DB.findAll dbTable identity (predicate ids)
-  where
-    predicate pids Storage.Products {..} =
-      B.in_ id (B.val_ <$> pids)
+findById :: Transactionable m => Id Products -> m (Maybe Products)
+findById = Esq.findById
 
-findById :: DBFlow m r => Id Storage.Products -> m (Maybe Storage.Products)
-findById pid = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Products {..} = id ==. B.val_ pid
-
-findById' :: DBFlow m r => Id Storage.Products -> m (Maybe Storage.Products)
-findById' pid = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Products {..} = id ==. B.val_ pid
-
-findByName :: DBFlow m r => Text -> m (Maybe Storage.Products)
-findByName name_ = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate Storage.Products {..} =
-      name ==. B.val_ name_
+findByName :: Transactionable m => Text -> m (Maybe Products)
+findByName name =
+  Esq.findOne $ do
+    products <- from $ table @ProductsT
+    where_ $
+      products ^. ProductsName ==. val name
+    return products

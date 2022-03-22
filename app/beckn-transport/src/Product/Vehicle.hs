@@ -1,18 +1,18 @@
 module Product.Vehicle where
 
 import App.Types
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.Validation (runRequestValidation)
+import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Types.API.Vehicle as API
 import Types.Error
-import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.Vehicle as SV
 import Utils.Common
 import qualified Utils.Defaults as Default
 
@@ -22,8 +22,8 @@ createVehicle admin req = withFlowHandlerAPI $ do
   runRequestValidation validateCreateVehicleReq req
   validateVehicle
   vehicle <- API.createVehicle req orgId
-  QV.createFlow vehicle
-  return $ CreateVehicleRes $ SV.makeVehicleAPIEntity vehicle
+  Esq.runTransaction $ QV.create vehicle
+  return . CreateVehicleRes $ SV.makeVehicleAPIEntity vehicle
   where
     validateVehicle = do
       mVehicle <- QV.findByRegistrationNo $ req.registrationNo
@@ -52,24 +52,24 @@ updateVehicle admin vehicleId req = withFlowHandlerAPI $ do
                 color = fromMaybe vehicle.color req.color,
                 category = req.category <|> vehicle.category
                }
-  QV.updateVehicleRec updatedVehicle
+  Esq.runTransaction $ QV.updateVehicleRec updatedVehicle
   return $ SV.makeVehicleAPIEntity vehicle
 
 deleteVehicle :: SP.Person -> Id SV.Vehicle -> FlowHandler DeleteVehicleRes
 deleteVehicle admin vehicleId = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   vehicle <-
-    QV.findVehicleById vehicleId
+    QV.findById vehicleId
       >>= fromMaybeM VehicleDoesNotExist
   unless (vehicle.organizationId == orgId) $ throwError Unauthorized
-  DB.runSqlDBTransaction $
+  Esq.runTransaction $
     QV.deleteById vehicleId
   return Success
 
 getVehicle :: Id SP.Person -> Maybe Text -> Maybe (Id SV.Vehicle) -> FlowHandler CreateVehicleRes
 getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
   user <-
-    QP.findPersonById personId
+    QP.findById personId
       >>= fromMaybeM PersonNotFound
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."
@@ -77,7 +77,7 @@ getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
       QV.findByAnyOf registrationNoM vehicleIdM
         >>= fromMaybeM VehicleDoesNotExist
   hasAccess user vehicle
-  return $ CreateVehicleRes $ SV.makeVehicleAPIEntity vehicle
+  return . CreateVehicleRes $ SV.makeVehicleAPIEntity vehicle
   where
     hasAccess user vehicle =
       when (user.organizationId /= Just (vehicle.organizationId)) $

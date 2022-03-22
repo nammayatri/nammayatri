@@ -14,7 +14,6 @@ where
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Sms.Config (SmsConfig)
-import Beckn.Storage.DB.Config (DBConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis.AppPrefixes (becknTransportPrefix)
 import Beckn.Storage.Hedis.Config
@@ -37,11 +36,10 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as T
 import System.Environment (lookupEnv)
 import Tools.Metrics
-import Tools.Streaming.Kafka.Environment
+import Tools.Streaming.Kafka
 
 data AppCfg = AppCfg
-  { dbCfg :: DBConfig,
-    esqDBCfg :: EsqDBConfig,
+  { esqDBCfg :: EsqDBConfig,
     redisCfg :: T.RedisConfig,
     hcfg :: HedisCfg,
     smsCfg :: SmsConfig,
@@ -89,7 +87,6 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { config :: AppCfg,
-    dbCfg :: DBConfig,
     esqDBEnv :: EsqDBEnv,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,

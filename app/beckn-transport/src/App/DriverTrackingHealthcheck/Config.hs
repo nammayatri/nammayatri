@@ -1,7 +1,7 @@
 module App.DriverTrackingHealthcheck.Config where
 
 import Beckn.External.Encryption (EncTools)
-import Beckn.Storage.DB.Config (DBConfig)
+import Beckn.Storage.Esqueleto.Config (EsqDBConfig)
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
@@ -15,7 +15,7 @@ data AppCfg = AppCfg
     httpClientOptions :: HttpClientOptions,
     graceTerminationPeriod :: Seconds,
     redisCfg :: RedisConfig,
-    dbCfg :: DBConfig,
+    esqDBCfg :: EsqDBConfig,
     nwAddress :: BaseUrl,
     fcmJsonPath :: Maybe Text,
     fcmUrl :: BaseUrl,

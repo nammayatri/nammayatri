@@ -3,9 +3,9 @@ module Types.API.OrgAdmin where
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
+import Domain.Types.Organization (OrganizationAPIEntity)
+import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
-import Types.Storage.Organization (OrganizationAPIEntity)
-import qualified Types.Storage.Person as SP
 
 data OrgAdminProfileRes = OrgAdminProfileRes
   { id :: Id SP.Person,

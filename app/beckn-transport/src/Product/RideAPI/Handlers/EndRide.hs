@@ -5,22 +5,22 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time (NominalDiffTime)
+import qualified Domain.Types.DriverLocation as DrLoc
+import Domain.Types.Organization (Organization)
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.SearchRequest as SSearchRequest
+import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (pi)
 import qualified Product.FareCalculator.Interpreter as Fare
 import Product.Location
 import Types.App (Driver)
 import Types.Error
-import qualified Types.Storage.DriverLocation as DrLoc
-import Types.Storage.Organization (Organization)
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Ride as Ride
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.SearchRequest as SSearchRequest
-import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle
-  { findPersonById :: Id Person.Person -> m (Maybe Person.Person),
+  { findById :: Id Person.Person -> m (Maybe Person.Person),
     findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     endRideTransaction :: Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m (),
@@ -47,7 +47,7 @@ endRideHandler ::
   Id Ride.Ride ->
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} requestorId rideId = do
-  requestor <- findPersonById requestorId >>= fromMaybeM PersonNotFound
+  requestor <- findById requestorId >>= fromMaybeM PersonNotFound
 
   recalcDistanceEnding requestorId
 

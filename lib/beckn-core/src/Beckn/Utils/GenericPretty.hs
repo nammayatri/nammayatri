@@ -215,7 +215,7 @@ instance PrettyShow Value where
   prettyShow (Array arr') = prettyShow arr'
   prettyShow (String txt) = prettyShow txt
   prettyShow (Number num) = prettyShow num
-  prettyShow (Bool bool) = prettyShow bool
+  prettyShow (Bool bool') = prettyShow bool'
   prettyShow Null = LEmpty
 
 instance PrettyShow Object where

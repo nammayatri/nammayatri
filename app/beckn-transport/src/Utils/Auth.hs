@@ -9,14 +9,14 @@ import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import Beckn.Utils.Servant.SignatureAuth
 import Data.Text as T
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Person as SP
+import qualified Domain.Types.RegistrationToken as SR
 import EulerHS.Prelude hiding (id)
 import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.Error
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Person as SP
-import qualified Types.Storage.RegistrationToken as SR
 
 getHttpManagerKey :: Text -> String
 getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId
@@ -44,7 +44,7 @@ instance VerificationMethod VerifyToken where
     "Checks whether token is registered.\
     \If you don't have a token, use registration endpoints."
 
-verifyTokenAction :: (DBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => VerificationAction VerifyToken m
+verifyTokenAction :: (EsqDBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => VerificationAction VerifyToken m
 verifyTokenAction = VerificationAction verifyPerson
 
 -- | Verifies admin's token.
@@ -65,21 +65,21 @@ verifyAdmin user = do
     Just _ -> return user
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
-verifyToken :: DBFlow m r => RegToken -> m SR.RegistrationToken
+verifyToken :: EsqDBFlow m r => RegToken -> m SR.RegistrationToken
 verifyToken regToken = do
-  QR.findRegistrationTokenByToken regToken
+  QR.findByToken regToken
     >>= Utils.fromMaybeM (InvalidToken regToken)
     >>= validateToken
 
-validateAdmin :: (DBFlow m r, EncFlow m r) => RegToken -> m Person.Person
+validateAdmin :: (EsqDBFlow m r, EncFlow m r) => RegToken -> m Person.Person
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- verifyToken regToken
   user <-
-    QP.findPersonById (Id entityId)
+    QP.findById (Id entityId)
       >>= fromMaybeM PersonNotFound
   verifyAdmin user
 
-verifyPerson :: (DBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person)
+verifyPerson :: (EsqDBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
@@ -97,10 +97,10 @@ authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
   "BPP:authTokenCacheKey:" <> regToken
 
-validateAdminAction :: (DBFlow m r, EncFlow m r) => VerificationAction AdminVerifyToken m
+validateAdminAction :: (EsqDBFlow m r, EncFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin
 
-validateToken :: DBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
+validateToken :: EsqDBFlow m r => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal updatedAt

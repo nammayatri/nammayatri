@@ -1,25 +1,17 @@
 module Storage.Queries.TransporterConfig where
 
-import Beckn.Storage.DB.Config
-import qualified Beckn.Storage.Queries as DB
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Types.Schema
-import Database.Beam ((&&.), (==.))
-import qualified Database.Beam as B
-import EulerHS.Prelude hiding (id)
-import qualified Types.Storage.DB as DB
-import Types.Storage.Organization (Organization)
-import qualified Types.Storage.TransporterConfig as TransporterConfig
+import Domain.Types.Organization
+import Domain.Types.TransporterConfig
+import Storage.Tabular.TransporterConfig
 
-getDbTable :: DBFlow m r => m (B.DatabaseEntity be DB.TransporterDb (B.TableEntity TransporterConfig.TransporterConfigT))
-getDbTable =
-  DB.transporterConfig . DB.transporterDb <$> getSchemaName
-
-findValueByOrgIdAndKey :: DBFlow m r => Id Organization -> TransporterConfig.ConfigKey -> m (Maybe TransporterConfig.TransporterConfig)
-findValueByOrgIdAndKey orgId key_ = do
-  dbTable <- getDbTable
-  DB.findOne dbTable predicate
-  where
-    predicate TransporterConfig.TransporterConfig {..} =
-      transporterId ==. B.val_ orgId
-        &&. key ==. B.val_ key_
+findValueByOrgIdAndKey :: Transactionable m => Id Organization -> ConfigKey -> m (Maybe TransporterConfig)
+findValueByOrgIdAndKey orgId key_ =
+  Esq.findOne $ do
+    config <- from $ table @TransporterConfigT
+    where_ $
+      config ^. TransporterConfigTransporterId ==. val (toKey orgId)
+        &&. config ^. TransporterConfigConfigKey ==. val key_
+    return config

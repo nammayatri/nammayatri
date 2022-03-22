@@ -2,6 +2,9 @@ module Flow.RideAPI.CancelRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
+import Domain.Types.CancellationReason
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures
 import qualified Product.RideAPI.Handlers.CancelRide as CancelRide
@@ -10,9 +13,6 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import qualified Types.API.Ride as RideAPI
 import Types.Error
-import Types.Storage.CancellationReason
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Ride as Ride
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 
@@ -20,7 +20,7 @@ handle :: CancelRide.ServiceHandle IO
 handle =
   CancelRide.ServiceHandle
     { findRideById = \_rideId -> pure $ Just ride,
-      findPersonById = \_personid -> pure $ Just Fixtures.defaultDriver,
+      findById = \_personid -> pure $ Just Fixtures.defaultDriver,
       cancelRide = \_rideReq _requestedByAdmin -> pure ()
     }
 
@@ -59,7 +59,7 @@ successfulCancellationByAdmin =
     runHandler handleCase (Id "1") "1" someCancelRideReq
       `shouldReturn` APISuccess.Success
   where
-    handleCase = handle {CancelRide.findPersonById = \_personId -> pure $ Just admin}
+    handleCase = handle {CancelRide.findById = \_personId -> pure $ Just admin}
     admin =
       Fixtures.defaultDriver{id = Id "adminId",
                              role = Person.ADMIN
@@ -71,7 +71,7 @@ failedCancellationByAnotherDriver =
     runHandler handleCase (Id "driverNotExecutorId") "1" someCancelRideReq
       `shouldThrow` (== NotAnExecutor)
   where
-    handleCase = handle {CancelRide.findPersonById = \_personId -> pure $ Just driverNotExecutor}
+    handleCase = handle {CancelRide.findById = \_personId -> pure $ Just driverNotExecutor}
     driverNotExecutor = Fixtures.defaultDriver{id = Id "driverNotExecutorId"}
 
 failedCancellationWhenQuoteStatusIsWrong :: TestTree

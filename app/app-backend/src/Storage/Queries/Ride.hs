@@ -25,12 +25,12 @@ updateStatus rideId status_ = do
       ]
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-findById :: EsqDBFlow m r => Id Ride -> m (Maybe Ride)
+findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById = Esq.findById
 
-findByBPPRideId :: EsqDBFlow m r => Id BPPRide -> m (Maybe Ride)
+findByBPPRideId :: Transactionable m => Id BPPRide -> m (Maybe Ride)
 findByBPPRideId bppRideId_ =
-  runTransaction . findOne' $ do
+  findOne $ do
     ride <- from $ table @RideT
     where_ $ ride ^. RideBppRideId ==. val (getId bppRideId_)
     return ride
@@ -49,9 +49,9 @@ updateMultiple rideId ride = do
       ]
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-findActiveByRBId :: EsqDBFlow m r => Id RideBooking -> m (Maybe Ride)
+findActiveByRBId :: Transactionable m => Id RideBooking -> m (Maybe Ride)
 findActiveByRBId rbId =
-  runTransaction . findOne' $ do
+  findOne $ do
     ride <- from $ table @RideT
     where_ $
       ride ^. RideBookingId ==. val (toKey rbId)

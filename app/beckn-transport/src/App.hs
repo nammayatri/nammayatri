@@ -3,6 +3,7 @@ module App where
 import qualified App.Server as App
 import App.Types
 import Beckn.Exit
+import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
@@ -10,7 +11,6 @@ import Beckn.Types.Flow
 import Beckn.Utils.App
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Beckn.Utils.FlowLogging as L
-import Beckn.Utils.Migration
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
@@ -47,7 +47,7 @@ runTransporterBackendApp' appCfg = do
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     flowRt' <- runFlowR flowRt appEnv $ do
       withLogTag "Server startup" $ do
-        migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.dbCfg
+        migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
           >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "
 
         logInfo "Setting up for signature auth..."

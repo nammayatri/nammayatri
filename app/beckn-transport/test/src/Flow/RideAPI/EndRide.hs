@@ -2,6 +2,10 @@ module Flow.RideAPI.EndRide (endRideTests) where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
+import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Fixtures
 import Product.FareCalculator.Flow
@@ -10,10 +14,6 @@ import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.Error
-import qualified Types.Storage.Person as Person
-import qualified Types.Storage.Ride as Ride
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common (throwError)
 import Utils.SilentLogger ()
 
@@ -38,7 +38,7 @@ endRideTests =
 handle :: Handle.ServiceHandle IO
 handle =
   Handle.ServiceHandle
-    { findPersonById = \case
+    { findById = \case
         Id "1" -> pure $ Just Fixtures.defaultDriver
         Id "2" -> pure . Just $ Fixtures.defaultDriver{id = "2"}
         Id "admin" -> pure $ Just Fixtures.defaultAdmin

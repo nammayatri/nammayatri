@@ -196,7 +196,7 @@ data ExotelResponseBody = ExotelResponseBody
     -- Uri is the path of the CallSid
     exoUri :: Text,
     -- Link to the call recording
-    exoRecordingUrl :: Maybe Text
+    exoRecordingUrl :: Maybe BaseUrl
   }
   deriving (Eq, Show)
 
@@ -230,7 +230,7 @@ data ExotelCallCallback = ExotelCallCallback
     startTime :: Text,
     endTime :: Text,
     direction :: ExotelDirection,
-    recordingUrl :: Text,
+    recordingUrl :: BaseUrl,
     conversationDuration :: Int,
     legs :: [ExotelLeg],
     -- 	The value that was passed in the CustomField (attachments here) parameter of the API (if set during the request) will be populated here.

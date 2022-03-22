@@ -2,7 +2,7 @@ module App.Allocator.Environment where
 
 import App.Allocator.Config
 import Beckn.External.Encryption (EncTools)
-import Beckn.Storage.DB.Config (DBConfig)
+import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
 import Beckn.Utils.App (getPodName)
@@ -11,13 +11,13 @@ import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
 import Tools.Metrics
-import Tools.Streaming.Kafka.Environment
+import Tools.Streaming.Kafka
 
 type Flow = FlowR AppEnv
 
 data AppEnv = AppEnv
   { config :: AppCfg,
-    dbCfg :: DBConfig,
+    esqDBEnv :: EsqDBEnv,
     encTools :: EncTools,
     fcmJsonPath :: Maybe Text,
     fcmUrl :: BaseUrl,
@@ -40,6 +40,7 @@ buildAppEnv config@AppCfg {..} = do
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
+  esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   pure AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

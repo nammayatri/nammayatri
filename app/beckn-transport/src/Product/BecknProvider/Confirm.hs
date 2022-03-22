@@ -4,7 +4,7 @@ import App.Types
 import Beckn.External.Encryption (encrypt)
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Product.Validation.Context
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
@@ -14,6 +14,12 @@ import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
+import Domain.Types.DiscountTransaction
+import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.RideRequest as RideRequest
+import qualified Domain.Types.RiderDetails as SRD
+import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.BecknProvider.BP as BP
@@ -27,12 +33,6 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as SearchRequest
 import Tools.Metrics
 import Types.Error
-import Types.Storage.DiscountTransaction
-import qualified Types.Storage.Organization as Organization
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideRequest as RideRequest
-import qualified Types.Storage.RiderDetails as SRD
-import qualified Types.Storage.SearchRequest as SearchRequest
 import Utils.Common
 
 confirm ::
@@ -53,10 +53,10 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         phone = req.message.order.fulfillment.customer.contact.phone
         customerMobileCountryCode = phone.country_code
         customerPhoneNumber = phone.number
-    quote <- QQuote.findById' quoteId >>= fromMaybeM QuoteDoesNotExist
+    quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
     let transporterId' = quote.providerId
     transporterOrg <-
-      Organization.findOrganizationById transporterId'
+      Organization.findById transporterId'
         >>= fromMaybeM OrgNotFound
     unless (transporterId' == transporterId) $ throwError AccessDenied
     searchRequest <- SearchRequest.findById quote.requestId >>= fromMaybeM SearchRequestNotFound
@@ -72,7 +72,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         RideRequest.ALLOCATION
         now
 
-    DB.runSqlDBTransaction $ do
+    Esq.runTransaction $ do
       when isNewRider $ QRD.create riderDetails
       QRideBooking.create rideBooking
       RideRequest.create rideRequest
@@ -112,7 +112,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
             updatedAt = now
           }
 
-getRiderDetails :: (EncFlow m r, DBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
+getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =
   QRD.findByMobileNumber customerPhoneNumber >>= \case
     Nothing -> map (,True) . encrypt =<< buildRiderDetails
@@ -130,7 +130,7 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
           }
 
 onConfirmCallback ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     CoreMetrics m,
     EncFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],

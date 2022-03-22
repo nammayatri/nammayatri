@@ -8,11 +8,11 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Data.Text as T
+import Domain.Types.Person as Person
+import Domain.Types.RegistrationToken as RegToken
+import Domain.Types.RideBooking (RideBooking)
+import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
-import Types.Storage.Person as Person
-import Types.Storage.RegistrationToken as RegToken
-import Types.Storage.RideBooking (RideBooking)
-import Types.Storage.SearchRequest as SearchRequest
 
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::

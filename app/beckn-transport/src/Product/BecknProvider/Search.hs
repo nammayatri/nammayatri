@@ -5,7 +5,7 @@ import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Product.Validation.Context
 import Beckn.Serviceability
-import qualified Beckn.Storage.Queries as DB
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import Beckn.Types.Core.Migration.Context
@@ -19,6 +19,12 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List as List
 import qualified Data.Text as T
 import Data.Traversable
+import qualified Domain.Types.Organization as Org
+import qualified Domain.Types.Quote as Quote
+import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.SearchReqLocation as Location
+import qualified Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.Vehicle as Veh
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (state)
 import qualified ExternalAPI.Flow as ExternalAPI
@@ -37,12 +43,6 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 import qualified Tools.Metrics as Metrics
 import Types.Error
-import qualified Types.Storage.Organization as Org
-import qualified Types.Storage.Quote as Quote
-import qualified Types.Storage.Ride as Ride
-import qualified Types.Storage.SearchReqLocation as Location
-import qualified Types.Storage.SearchRequest as SearchRequest
-import qualified Types.Storage.Vehicle as Veh
 import Utils.Common
 
 search ::
@@ -56,7 +56,7 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
     let context = req.context
     validateContext context
     transporter <-
-      Org.findOrganizationById transporterId
+      Org.findById transporterId
         >>= fromMaybeM OrgDoesNotExist
     let callbackUrl = gateway.subscriber_url
     let intent = req.message.intent
@@ -88,7 +88,7 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
       uuid <- L.generateGUID
       let bapUri = subscriber.subscriber_url
       let searchRequest = mkSearchRequest req uuid now validity startTime fromLocation toLocation transporterId bapOrgId bapUri
-      DB.runSqlDBTransaction $ do
+      Esq.runTransaction $ do
         Loc.create fromLocation
         Loc.create toLocation
         QSearchRequest.create searchRequest
@@ -144,7 +144,7 @@ mkSearchRequest req uuid now validity startTime fromLocation toLocation transpor
     }
 
 onSearchCallback ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
     HasGoogleMaps m r c,
@@ -177,16 +177,16 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
-      mkQuote searchRequest fareParams transporterId distance poolResult.distanceToDriver poolResult.variant
+      buildQuote searchRequest fareParams transporterId distance poolResult.distanceToDriver poolResult.variant
 
-  DB.runSqlDBTransaction $
+  Esq.runTransaction $
     for_ listOfQuotes Quote.create
 
   mkOnSearchMessage listOfQuotes transporter
     <* Metrics.finishSearchMetrics transporterId searchMetricsMVar
 
-mkQuote ::
-  DBFlow m r =>
+buildQuote ::
+  EsqDBFlow m r =>
   SearchRequest.SearchRequest ->
   Fare.FareParameters ->
   Id Org.Organization ->
@@ -194,7 +194,7 @@ mkQuote ::
   Double ->
   Veh.Variant ->
   m Quote.Quote
-mkQuote productSearchRequest fareParams transporterId distance nearestDriverDist vehicleVariant = do
+buildQuote productSearchRequest fareParams transporterId distance nearestDriverDist vehicleVariant = do
   quoteId <- Id <$> L.generateGUID
   now <- getCurrentTime
   let estimatedFare = fareSum fareParams
@@ -215,7 +215,7 @@ mkQuote productSearchRequest fareParams transporterId distance nearestDriverDist
       }
 
 mkOnSearchMessage ::
-  DBFlow m r =>
+  EsqDBFlow m r =>
   [Quote.Quote] ->
   Org.Organization ->
   m OnSearch.OnSearchMessage
@@ -223,7 +223,7 @@ mkOnSearchMessage quotes transporterOrg = do
   provider <- buildProvider transporterOrg quotes
   return . OnSearch.OnSearchMessage $ OnSearch.Catalog [provider]
 
-buildProvider :: DBFlow m r => Org.Organization -> [Quote.Quote] -> m OnSearch.Provider
+buildProvider :: EsqDBFlow m r => Org.Organization -> [Quote.Quote] -> m OnSearch.Provider
 buildProvider org quotes = do
   count <- QRide.getCountByStatus (org.id)
   let items = map mkItem quotes

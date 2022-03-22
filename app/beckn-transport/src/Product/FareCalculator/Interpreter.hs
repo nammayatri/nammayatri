@@ -8,6 +8,8 @@ where
 
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
+import Domain.Types.Organization (Organization)
+import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Flow
   ( FareParameters (..),
@@ -16,12 +18,10 @@ import Product.FareCalculator.Flow
   )
 import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Tools.Metrics (CoreMetrics)
-import Types.Storage.Organization (Organization)
-import qualified Types.Storage.Vehicle as Vehicle
 import Utils.Common
 
 calculateFare ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
     CoreMetrics m
   ) =>
@@ -45,7 +45,7 @@ calculateFare orgId vehicleVariant distance startTime = do
   pure fareParams
 
 serviceHandle ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
     CoreMetrics m
   ) =>

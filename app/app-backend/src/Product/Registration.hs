@@ -174,7 +174,7 @@ resend tokenId = withFlowHandlerAPI $ do
   withLogTag ("personId_" <> entityId) $
     SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
       >>= SF.checkRegistrationSmsResult
-  _ <- DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
+  DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 
 cleanCachedTokens :: EsqDBFlow m r => Id SP.Person -> m ()

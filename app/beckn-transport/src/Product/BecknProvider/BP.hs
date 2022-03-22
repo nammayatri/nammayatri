@@ -12,6 +12,11 @@ import Beckn.External.Encryption (decrypt)
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
+import qualified Domain.Types.Organization as SOrg
+import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.RideRequest as SRideRequest
+import qualified Domain.Types.SearchRequest as SSR
 import EulerHS.Prelude
 import ExternalAPI.Flow (callOnUpdate)
 import qualified Storage.Queries.Organization as QOrg
@@ -19,15 +24,10 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Vehicle as Vehicle
 import Tools.Metrics (CoreMetrics)
 import Types.Error
-import qualified Types.Storage.Organization as SOrg
-import qualified Types.Storage.Ride as SRide
-import qualified Types.Storage.RideBooking as SRB
-import qualified Types.Storage.RideRequest as SRideRequest
-import qualified Types.Storage.SearchRequest as SSR
 import Utils.Common
 
 sendRideAssignedUpdateToBAP ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -37,13 +37,13 @@ sendRideAssignedUpdateToBAP ::
   m ()
 sendRideAssignedUpdateToBAP rideBooking ride = do
   transporter <-
-    QOrg.findOrganizationById rideBooking.providerId
+    QOrg.findById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
   buildRideAssignedUpdatePayload ride
     >>= sendUpdateEvent transporter rideBooking.requestId
 
 sendRideStartedUpdateToBAP ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -53,13 +53,13 @@ sendRideStartedUpdateToBAP ::
   m ()
 sendRideStartedUpdateToBAP rideBooking ride = do
   transporter <-
-    QOrg.findOrganizationById rideBooking.providerId
+    QOrg.findById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
-  buildRideStartedUpdatePayload ride
-    >>= sendUpdateEvent transporter rideBooking.requestId
+  makeRideStartedUpdatePayload ride
+    & sendUpdateEvent transporter rideBooking.requestId
 
 sendRideCompletedUpdateToBAP ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -69,13 +69,13 @@ sendRideCompletedUpdateToBAP ::
   m ()
 sendRideCompletedUpdateToBAP rideBooking ride = do
   transporter <-
-    QOrg.findOrganizationById rideBooking.providerId
+    QOrg.findById rideBooking.providerId
       >>= fromMaybeM OrgNotFound
   buildRideCompletedUpdatePayload ride
     >>= sendUpdateEvent transporter rideBooking.requestId
 
 sendRideBookingCanceledUpdateToBAP ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -89,7 +89,7 @@ sendRideBookingCanceledUpdateToBAP rideBooking transporter cancellationSource = 
   sendUpdateEvent transporter rideBooking.requestId message
 
 sendRideBookingReallocationUpdateToBAP ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -104,7 +104,7 @@ sendRideBookingReallocationUpdateToBAP rideBooking rideId transporter cancellati
   sendUpdateEvent transporter rideBooking.requestId message
 
 sendUpdateEvent ::
-  ( DBFlow m r,
+  ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
@@ -117,15 +117,15 @@ sendUpdateEvent transporter requestId =
   void . callOnUpdate transporter requestId . OnUpdate.OnUpdateMessage
 
 buildRideAssignedUpdatePayload ::
-  (DBFlow m r, EncFlow m r) =>
+  (EsqDBFlow m r, EncFlow m r) =>
   SRide.Ride ->
   m OnUpdate.OnUpdateEvent
 buildRideAssignedUpdatePayload ride = do
   driver <-
-    Person.findPersonById ride.driverId
+    Person.findById ride.driverId
       >>= fromMaybeM PersonNotFound
   decDriver <- decrypt driver
-  veh <- Vehicle.findVehicleById ride.vehicleId >>= fromMaybeM VehicleNotFound
+  veh <- Vehicle.findById ride.vehicleId >>= fromMaybeM VehicleNotFound
   mobileNumber <- decDriver.mobileCountryCode <> decDriver.mobileNumber & fromMaybeM (InternalError "Driver mobile number is not present.")
   firstName <- decDriver.firstName & fromMaybeM (PersonFieldNotPresent "firstName")
   let middleName = decDriver.middleName
@@ -155,21 +155,19 @@ buildRideAssignedUpdatePayload ride = do
           ..
         }
 
-buildRideStartedUpdatePayload ::
-  (DBFlow m r, EncFlow m r) =>
+makeRideStartedUpdatePayload ::
   SRide.Ride ->
-  m OnUpdate.OnUpdateEvent
-buildRideStartedUpdatePayload ride = do
-  return $
-    OnUpdate.RideStarted
-      OnUpdate.RideStartedEvent
-        { order_id = ride.bookingId.getId,
-          ride_id = ride.id.getId,
-          ..
-        }
+  OnUpdate.OnUpdateEvent
+makeRideStartedUpdatePayload ride = do
+  OnUpdate.RideStarted
+    OnUpdate.RideStartedEvent
+      { order_id = ride.bookingId.getId,
+        ride_id = ride.id.getId,
+        ..
+      }
 
 buildRideCompletedUpdatePayload ::
-  (DBFlow m r, EncFlow m r) =>
+  MonadFlow m =>
   SRide.Ride ->
   m OnUpdate.OnUpdateEvent
 buildRideCompletedUpdatePayload ride = do
