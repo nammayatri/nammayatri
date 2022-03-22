@@ -15,7 +15,7 @@ import qualified Service.Runner as Runner
 
 runSearchResultAggregator :: (AppCfg -> AppCfg) -> IO ()
 runSearchResultAggregator configModifier = do
-  appCfg <- configModifier <$> readDhallConfigDefault "search_result_aggregator"
+  appCfg <- configModifier <$> readDhallConfigDefault "search-result-aggregator"
   appEnv <-
     try (buildAppEnv appCfg)
       >>= handleLeftIO @SomeException exitBuildingAppEnvFailure "Couldn't build AppEnv: "

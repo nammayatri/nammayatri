@@ -7,7 +7,7 @@ import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Beckn.Streaming.MonadConsumer
 import Beckn.Types.App (MonadFlow)
 import Beckn.Types.Logging
-import Beckn.Utils.Logging (withTransactionIdLogTag')
+import Beckn.Utils.Logging
 import Control.Concurrent.STM.TMVar
 import GHC.Conc
 

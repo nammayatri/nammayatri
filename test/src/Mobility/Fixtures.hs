@@ -26,7 +26,6 @@ import qualified Types.API.Confirm as ConfirmAPI
 import qualified "beckn-transport" Types.API.Driver as DriverAPI
 import qualified "app-backend" Types.API.Feedback as AppFeedback
 import "beckn-transport" Types.API.Location
-import qualified Types.API.Quote as QuoteAPI
 import qualified "app-backend" Types.API.Registration as Reg
 import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "app-backend" Types.API.RideBooking as AppRideBooking
@@ -36,19 +35,6 @@ import qualified "app-backend" Types.API.Serviceability as AppServ
 
 timeBetweenLocationUpdates :: Seconds
 timeBetweenLocationUpdates = 1
-
-address :: AppBESearch.SearchReqAddress
-address =
-  AppBESearch.SearchReqAddress
-    { door = Just "#817",
-      building = Just "Juspay Apartments",
-      street = Just "27th Main",
-      area = Just "8th Block Koramangala",
-      city = Just "Bangalore",
-      country = Just "India",
-      areaCode = Just "560047",
-      state = Just "Karnataka"
-    }
 
 defaultAddress :: AppBESearch.SearchReqAddress
 defaultAddress =
@@ -63,16 +49,6 @@ defaultAddress =
       state = Just "Kerala"
     }
 
-origin1 :: LatLong
-origin1 = LatLong 10.0739 76.2733
-
-searchReq :: AppBESearch.SearchReq
-searchReq =
-  AppBESearch.SearchReq
-    { origin = AppBESearch.SearchReqLocation address origin1,
-      destination = AppBESearch.SearchReqLocation address $ LatLong 10.5449 76.4356
-    }
-
 bapTransporterName :: Text
 bapTransporterName = "[A] Transporter #1"
 
@@ -80,12 +56,6 @@ getFutureTime :: IO UTCTime
 getFutureTime =
   -- Generate a time 2 hours in to the future else booking will fail
   addUTCTime 7200 <$> getCurrentTime
-
-searchServices ::
-  Text ->
-  AppBESearch.SearchReq ->
-  ClientM AppBESearch.SearchRes
-searchServices = client (Proxy :: Proxy AbeRoutes.SearchAPI)
 
 cancelRide :: Id BRB.RideBooking -> Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
 cancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
@@ -126,9 +96,6 @@ buildAppCancelReq stage =
   CancelAPI.CancelReq
     { bookingCancellationReason = CancelAPI.RideBookingCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
     }
-
-getQuotes :: Id BSearchRequest.SearchRequest -> Text -> ClientM QuoteAPI.GetQuotesRes
-getQuotes = client (Proxy :: Proxy AbeRoutes.QuoteAPI)
 
 appConfirmRide :: Text -> Id BSearchRequest.SearchRequest -> Id BQuote.Quote -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
@@ -230,15 +197,6 @@ initiateAuth = appAuth mkAuthReq
 
 verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
 verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq
-
-getAppBaseUrl :: BaseUrl
-getAppBaseUrl =
-  BaseUrl
-    { baseUrlScheme = Http,
-      baseUrlHost = "localhost",
-      baseUrlPort = 8013,
-      baseUrlPath = "/v2"
-    }
 
 getTransporterBaseUrl :: BaseUrl
 getTransporterBaseUrl =

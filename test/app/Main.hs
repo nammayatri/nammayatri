@@ -9,8 +9,12 @@ import qualified "beckn-transport" App as TransporterBackend
 import qualified "fmd-wrapper" App as FmdWrapper
 import qualified "mock-dunzo" App as MockDunzo
 import qualified "mock-fcm" App as MockFcm
+import qualified "mock-public-transport-bpp" App as MockPublicTransportBpp
 import qualified "mock-registry" App as MockRegistry
 import qualified "mock-sms" App as MockSms
+import qualified "public-transport-bap" App as PublicTransport
+import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
+import qualified "search-result-aggregator" App as SearchResultAggregator
 import qualified "beckn-transport" App.Allocator as Allocator
 import qualified "beckn-transport" App.DriverTrackingHealthcheck as DriverHC
 import qualified "app-backend" App.Types as AppBackend
@@ -29,6 +33,8 @@ import qualified FmdWrapper.Spec as FmdWrapper
 import GHC.Records.Extra (HasField)
 import Mobility.Fixtures
 import qualified Mobility.Spec as Mobility
+import PublicTransport.Common
+import qualified PublicTransport.Spec as PublicTransport
 import Resources
 import System.Environment as Env (setEnv)
 import System.Posix
@@ -49,7 +55,11 @@ main = do
       "driver-tracking-healthcheck-service",
       "fmd-wrapper",
       "mock-registry",
-      "mock-dunzo"
+      "mock-dunzo",
+      "public-transport-bap",
+      "mock-public-transport-bpp",
+      "public-transport-search-consumer",
+      "search-result-aggregator"
     ]
   -- ... and run
   defaultMain =<< specs
@@ -67,9 +77,7 @@ main = do
 specs :: IO TestTree
 specs =
   specs'
-    [ Mobility.mkTestTree,
-      FmdWrapper.mkTestTree
-    ]
+    [Mobility.mkTestTree, FmdWrapper.mkTestTree, PublicTransport.mkTestTree]
 
 specs' :: [IO TestTree] -> IO TestTree
 specs' trees = do
@@ -103,7 +111,18 @@ specs' trees = do
         MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
         MockRegistry.runRegistryService hideLogging,
-        MockDunzo.runService hideLogging
+        MockDunzo.runService hideLogging,
+        PublicTransport.runService $ \cfg ->
+          cfg & hideLogging,
+        MockPublicTransportBpp.runMock $ \cfg ->
+          cfg & #statusWaitTimeSec .~ mockWaitTimeSeconds
+            & hideLogging,
+        PublicTransportSearchConsumer.runPublicTransportSearchConsumer $ \cfg ->
+          cfg & hideLogging
+            & #kafkaConsumerCfgs . #publicTransportSearch . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
+        SearchResultAggregator.runSearchResultAggregator $ \cfg ->
+          cfg & hideLogging
+            & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds
       ]
 
     startServers servers = do

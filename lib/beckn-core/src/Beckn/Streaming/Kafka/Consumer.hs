@@ -16,7 +16,8 @@ import Kafka.Consumer as KafkaCons
 
 receiveMessage :: (MonadIO m, Log m, MonadThrow m, FromJSON a) => KafkaConsumerTools a -> m (Maybe a)
 receiveMessage kafkaConsumerTools = withLogTag "KafkaConsumer" $ do
-  etrMsg <- pollMessage kafkaConsumerTools.consumer (Timeout 10000)
+  let timeout = kafkaConsumerTools.kafkaConsumerCfg.timeoutMilliseconds
+  etrMsg <- pollMessage kafkaConsumerTools.consumer (Timeout timeout)
   case etrMsg of
     Left err -> handleResponseError err
     Right res -> do

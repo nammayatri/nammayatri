@@ -1,22 +1,23 @@
 let common = ./common.dhall
 
-
 let hcfg =
-  { connectHost = "cache.primary.beckn.juspay.net"
+  { connectHost = "localhost"
   , connectPort = 6379
   , connectAuth = None Text
-  , connectDatabase = +1
+  , connectDatabase = +0
   , connectMaxConnections = +50
   , connectMaxIdleTime = +30
-  , connectTimeout = Some +100
+  , connectTimeout = None Integer
   }
 
 let kafkaConsumerCfgs =
-  { publicTransportQuotes = {brokers = ["localhost:29092"], groupId = "publicTransportQuotesGroup"}
+  { publicTransportQuotes = { brokers = ["localhost:29092"],
+                              groupId = "publicTransportQuotesGroup",
+                              timeoutMilliseconds = +10000 }
   }
 
 in
-{ port = +8024
+{ port = +8025
 , graceTerminationPeriod = +90
 , hedisCfg = hcfg
 , kafkaConsumerCfgs = kafkaConsumerCfgs

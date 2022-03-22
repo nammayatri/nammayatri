@@ -3,7 +3,7 @@ module FmdWrapper.Flow.Search where
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.ReqTypes as API
 import Beckn.Utils.Example
-import Common
+import Common hiding (searchReq)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import EulerHS.Prelude
 import ExternalAPI.Dunzo.Types

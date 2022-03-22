@@ -2,7 +2,7 @@ let common = ./common.dhall
 
 
 let hcfg =
-  { connectHost = "beckn-redis-001-001.zkt6uh.0001.aps1.cache.amazonaws.com"
+  { connectHost = "cache.primary.beckn.juspay.net"
   , connectPort = 6379
   , connectAuth = None Text
   , connectDatabase = +1
@@ -12,11 +12,13 @@ let hcfg =
   }
 
 let kafkaConsumerCfgs =
-  { publicTransportQuotes = {brokers = ["alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"], groupId = "publicTransportQuotesGroup"}
+  { publicTransportQuotes = { brokers = ["localhost:29092"],
+                              groupId = "publicTransportQuotesGroup",
+                              timeoutMilliseconds = +10000}
   }
 
 in
-{ port = +8024
+{ port = +8025
 , graceTerminationPeriod = +90
 , hedisCfg = hcfg
 , kafkaConsumerCfgs = kafkaConsumerCfgs

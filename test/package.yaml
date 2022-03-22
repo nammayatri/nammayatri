@@ -91,6 +91,10 @@ dependencies:
   - unix
   - string-conversions
   - mock-dunzo
+  - public-transport-bap
+  - mock-public-transport-bpp
+  - search-result-aggregator
+  - public-transport-search-consumer
 
 ghc-options:
   - -fwrite-ide-info

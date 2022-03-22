@@ -4,7 +4,9 @@ let main = ./public-transport-bap.dhall
 let juspayGatewayUrl = "http://localhost:8015/v1"
 
 let kafkaConsumerCfgs =
-  { publicTransportSearch = {brokers = ["localhost:29092"], groupId = "publicTransportSearchGroup"}
+  { publicTransportSearch = { brokers = ["localhost:29092"],
+                              groupId = "publicTransportSearchGroup",
+                              timeoutMilliseconds = +10000}
   }
 
 in

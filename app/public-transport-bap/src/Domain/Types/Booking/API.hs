@@ -2,12 +2,14 @@ module Domain.Types.Booking.API where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
+import Beckn.Types.Id
 import Domain.Types.Booking.Type
 import Domain.Types.PaymentTransaction
 import Domain.Types.TransportStation
 
 data BookingAPIEntity = BookingAPIEntity
-  { quantity :: Int,
+  { id :: Id Booking,
+    quantity :: Int,
     publicTransportSupportNumber :: Text,
     description :: Text,
     fare :: Amount,

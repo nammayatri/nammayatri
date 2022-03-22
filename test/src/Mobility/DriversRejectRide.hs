@@ -1,5 +1,6 @@
 module Mobility.DriversRejectRide where
 
+import Common (getAppBaseUrl)
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
 import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude

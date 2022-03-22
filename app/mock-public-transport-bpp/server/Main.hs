@@ -4,4 +4,4 @@ import "mock-public-transport-bpp" App
 import Beckn.Prelude
 
 main :: IO ()
-main = runMock
+main = runMock identity

@@ -1,5 +1,6 @@
 module Mobility.AppCancelRide where
 
+import Common (getAppBaseUrl)
 import qualified "app-backend" Domain.Types.CancellationReason as AppCR
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
 import EulerHS.Prelude

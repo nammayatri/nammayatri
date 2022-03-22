@@ -2,6 +2,7 @@ module Mobility.LocationUpdates where
 
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Common (getAppBaseUrl)
 import qualified Data.List.NonEmpty as NE
 import qualified "app-backend" Domain.Types.Ride as BRide
 import qualified "beckn-transport" Domain.Types.Ride as TRide

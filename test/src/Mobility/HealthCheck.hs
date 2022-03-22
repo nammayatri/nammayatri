@@ -1,5 +1,6 @@
 module Mobility.HealthCheck where
 
+import Common (getAppBaseUrl)
 import Data.Text.Encoding as DT
 import EulerHS.Prelude
 import Mobility.Fixtures

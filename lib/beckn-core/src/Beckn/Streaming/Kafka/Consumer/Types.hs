@@ -23,12 +23,14 @@ type ConsumerGroupId = Text
 
 data KafkaConsumerCfg = KafkaConsumerCfg
   { brokers :: KafkaBrokersList,
-    groupId :: ConsumerGroupId
+    groupId :: ConsumerGroupId,
+    timeoutMilliseconds :: Int
   }
   deriving (Generic, FromDhall)
 
-newtype KafkaConsumerTools a = KafkaConsumerTools
-  { consumer :: Consumer.KafkaConsumer
+data KafkaConsumerTools a = KafkaConsumerTools
+  { kafkaConsumerCfg :: KafkaConsumerCfg,
+    consumer :: Consumer.KafkaConsumer
   }
   deriving (Generic)
 
@@ -52,6 +54,7 @@ buildKafkaConsumerTools kafkaConsumerCfg = do
   consumer <-
     newConsumer (consumerProps kafkaConsumerCfg) (consumerSub $ getTopics @a)
       >>= either (throwM . KafkaUnableToBuildTools) return
+
   return $ KafkaConsumerTools {..}
 
 releaseKafkaConsumerTools :: KafkaConsumerTools a -> IO ()

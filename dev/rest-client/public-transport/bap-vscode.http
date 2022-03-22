@@ -60,7 +60,6 @@ content-type: application/json
 token: {{token}}
 
 ###
-# @quoteId = {{quotes.response.body.quotes[0].publicTransport.id}}
 @quoteId = {{quotes.response.body.quotes[0].publicTransport.id}}
 
 # @name confirm

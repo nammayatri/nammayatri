@@ -7,7 +7,9 @@ import Beckn.Utils.Common
 import Data.String.Conversions
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
+import GHC.IO (unsafePerformIO)
 import HSpec
+import Network.HTTP.Client (Manager)
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Resources (appBackendEnv, transporterAppEnv)
@@ -36,7 +38,7 @@ runClient' clientEnv x = do
 
 -- | Invoke an action until getting 'Just'.
 --
--- The first argument describes attempted delays prior to running an action,
+-- The second argument describes attempted delays prior to running an action,
 -- in mcs.
 pollWithDescription :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> [Int] -> m (Maybe a) -> m a
 pollWithDescription description allDelays action = withFrozenCallStack $ go allDelays
@@ -99,12 +101,15 @@ callBPP client = asks (.bpp) >>= (`runClient'` client)
 
 mkMobilityClients :: BaseUrl -> BaseUrl -> IO ClientEnvs
 mkMobilityClients bapUrl bppUrl = do
-  appManager <- Client.newManager tlsManagerSettings
   pure $
     ClientEnvs
-      { bap = mkClientEnv appManager bapUrl,
-        bpp = mkClientEnv appManager bppUrl
+      { bap = mkClientEnv defaultManager bapUrl,
+        bpp = mkClientEnv defaultManager bppUrl
       }
+
+{-# NOINLINE defaultManager #-}
+defaultManager :: Manager
+defaultManager = unsafePerformIO $ Client.newManager tlsManagerSettings
 
 runAppFlow :: Text -> FlowR BecknApp.AppEnv a -> IO a
 runAppFlow tag = runFlow tag appBackendEnv

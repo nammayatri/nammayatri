@@ -20,9 +20,9 @@ import Network.Wai.Handler.Warp
 import Relude
 import Servant
 
-runMock :: IO ()
-runMock = do
-  appCfg <- readDhallConfigDefault "mock-public-transport-bpp" :: IO AppCfg
+runMock :: (AppCfg -> AppCfg) -> IO ()
+runMock cfgModifier = do
+  appCfg <- cfgModifier <$> readDhallConfigDefault "mock-public-transport-bpp" :: IO AppCfg
   withAppEnv appCfg $ \appEnv -> do
     let port = appCfg.port
         settings =

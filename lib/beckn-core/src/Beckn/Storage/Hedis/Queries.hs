@@ -67,6 +67,7 @@ del key = runWithPrefix_ key $ \prefKey -> Hedis.del [prefKey]
 rPushExp :: (HedisFlow m env, ToJSON a) => Text -> [a] -> ExpirationTime -> m ()
 rPushExp key list ex = do
   prefKey <- buildKey key
+  withLogTag "Redis" $ logDebug $ "working with key : " <> cs prefKey
   unless (null list) $
     void . runHedisTransaction $ do
       void . Hedis.rpush prefKey $ map (BSL.toStrict . Ae.encode) list

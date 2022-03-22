@@ -19,8 +19,7 @@ healthCheckApp = client (Proxy :: Proxy HealthCheckAPI)
 spec :: Spec
 spec = do
   appManager <- runIO $ Client.newManager tlsManagerSettings
-  let gatewayClientEnv = mkClientEnv appManager gatewayBaseUrl
-      fmdClientEnv = mkClientEnv appManager fmdWrapperBaseUrl
+  let fmdClientEnv = mkClientEnv appManager fmdWrapperBaseUrl
   describe "Testing FMD APIs" $
     it "Testing health check API" $
       hspec $

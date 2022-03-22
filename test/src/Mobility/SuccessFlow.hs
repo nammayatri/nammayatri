@@ -3,6 +3,7 @@ module Mobility.SuccessFlow where
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import "beckn-transport" Domain.Types.Person as TPerson
+import Common
 import qualified "app-backend" Domain.Types.Quote as BQuote
 import qualified "beckn-transport" Domain.Types.Quote as TQuote
 import qualified "app-backend" Domain.Types.Ride as BRide
@@ -54,7 +55,7 @@ doAnAppSearchByReq searchReq' = do
   let bapQuoteId = quoteAPIEntity.id
 
   -- check if calculated price is greater than 0
-  quoteAPIEntity.estimatedFare `shouldSatisfy` (> 100) -- should at least be more than 100
+  quoteAPIEntity.estimatedFare `shouldSatisfy` (> 100)
 
   -- Confirm ride from app backend
   confirmResult <-

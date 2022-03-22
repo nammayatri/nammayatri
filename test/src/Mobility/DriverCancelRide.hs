@@ -2,6 +2,7 @@ module Mobility.DriverCancelRide where
 
 import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
 import qualified "beckn-transport" Domain.Types.Ride as TRide
+import Common (getAppBaseUrl)
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
 import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude

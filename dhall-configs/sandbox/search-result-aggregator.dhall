@@ -12,11 +12,13 @@ let hcfg =
   }
 
 let kafkaConsumerCfgs =
-  { publicTransportQuotes = {brokers = ["alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"], groupId = "publicTransportQuotesGroup"}
+  { publicTransportQuotes = { brokers = ["alpha-c1-kafka-bootstrap.strimzi.svc.cluster.local:9092"],
+                              groupId = "publicTransportQuotesGroup",
+                              timeoutMilliseconds = +10000 }
   }
 
 in
-{ port = +8024
+{ port = +8025
 , graceTerminationPeriod = +90
 , hedisCfg = hcfg
 , kafkaConsumerCfgs = kafkaConsumerCfgs
