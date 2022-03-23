@@ -238,7 +238,9 @@ updateAverageRating personId newAverageRating = do
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
     distanceToDriver :: Double,
-    variant :: Vehicle.Variant
+    variant :: Vehicle.Variant,
+    lat :: Double,
+    lon :: Double
   }
   deriving (Generic, FromRow)
 
@@ -257,7 +259,9 @@ getNearestDrivers LatLong {..} radius orgId variant = do
           SELECT
             person.id AS id,
             driver_location.point <-> public.ST_SetSRID(ST_Point(?, ?)::geography, 4326) AS dist,
-            vehicle.variant AS vehicle_variant
+            vehicle.variant AS vehicle_variant,
+            driver_location.lat AS lat,
+            driver_location.lon AS lon
           FROM atlas_transporter.person
           JOIN atlas_transporter.driver_location
             ON person.id = driver_location.driver_id
@@ -272,7 +276,7 @@ getNearestDrivers LatLong {..} radius orgId variant = do
             AND COALESCE(vehicle.variant = ?, true)
             AND (? OR driver_location.updated_at + interval '? seconds' >= now())
         )
-        SELECT id, dist, vehicle_variant
+        SELECT id, dist, vehicle_variant, lat, lon
         FROM a
         WHERE dist < ?
         ORDER BY dist ASC

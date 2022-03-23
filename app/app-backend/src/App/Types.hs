@@ -100,8 +100,6 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     geofencingConfig :: GeofencingConfig,
-    googleMapsUrl :: BaseUrl,
-    googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
     apiRateLimitOptions :: APIRateLimitOptions,

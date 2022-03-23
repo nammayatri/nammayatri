@@ -1,8 +1,13 @@
 module SharedLogic.DriverPool (calculateDriverPool, recalculateDriverPool, getDriverPool) where
 
+import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Redis.Queries as Redis
+import Beckn.Tools.Metrics.Types
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
+import qualified Beckn.Types.MapSearch as GoogleMaps
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -22,8 +27,10 @@ driverPoolKey :: Id SRB.RideBooking -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
 getDriverPool ::
-  ( DBFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
+  ( CoreMetrics m,
+    DBFlow m r,
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasGoogleMaps m r c
   ) =>
   Id SRB.RideBooking ->
   m [Id Driver]
@@ -40,7 +47,9 @@ getDriverPool rideBookingId =
 
 recalculateDriverPool ::
   ( DBFlow m r,
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    CoreMetrics m,
+    HasGoogleMaps m r c
   ) =>
   Id SSReqLoc.SearchReqLocation ->
   Id SRB.RideBooking ->
@@ -56,23 +65,26 @@ recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant = d
 
 calculateDriverPool ::
   ( DBFlow m r,
-    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    CoreMetrics m,
+    HasGoogleMaps m r c
   ) =>
   Id SSReqLoc.SearchReqLocation ->
   Id SOrg.Organization ->
   Maybe SV.Variant ->
   m [QP.DriverPoolResult]
 calculateDriverPool locId orgId variant = do
-  location <- QSReqLoc.findLocationById locId >>= fromMaybeM LocationNotFound
-  let lat = location.lat
-      long = location.lon
+  pickupLoc <- QSReqLoc.findLocationById locId >>= fromMaybeM LocationNotFound
+  let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
   radius <- getRadius
-  measuringDurationToLog INFO "calculateDriverPool" $
-    QP.getNearestDrivers
-      (LatLong lat long)
-      radius
-      orgId
-      variant
+  approxDriverPool <-
+    measuringDurationToLog INFO "calculateDriverPool" $
+      QP.getNearestDrivers
+        pickupLatLong
+        radius
+        orgId
+        variant
+  filterOutDriversWithDistanceAboveThreshold radius pickupLatLong approxDriverPool
   where
     getRadius =
       QTConf.findValueByOrgIdAndKey orgId (STConf.ConfigKey "radius")
@@ -84,3 +96,39 @@ calculateDriverPool locId orgId variant = do
         . readMaybe
         . toString
         $ conf.value
+
+filterOutDriversWithDistanceAboveThreshold ::
+  ( DBFlow m r,
+    CoreMetrics m,
+    HasGoogleMaps m r c
+  ) =>
+  Integer ->
+  LatLong ->
+  [QP.DriverPoolResult] ->
+  m [QP.DriverPoolResult]
+filterOutDriversWithDistanceAboveThreshold threshold pickupLatLong driverPoolResults = do
+  getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) originLatLongList [pickupLatLong] Nothing
+  return $ filter (filterFunc getDistanceResults) driverPoolResults
+  where
+    originLatLongList =
+      map (\dpRes -> LatLong dpRes.lat dpRes.lon) driverPoolResults
+    filterFunc getDistanceResults dpRes = do
+      let threshold' = fromIntegral threshold
+      let mbGdRes = findGetDistanceResult getDistanceResults dpRes
+      case mbGdRes of
+        Nothing -> False
+        Just gdRes -> gdRes.info.distance <= threshold'
+
+findGetDistanceResult ::
+  [GoogleMaps.GetDistanceResult] ->
+  QP.DriverPoolResult ->
+  Maybe GoogleMaps.GetDistanceResult
+findGetDistanceResult getDistanceResults driverPoolResult =
+  find filterFunc getDistanceResults
+  where
+    filterFunc gdRes = do
+      case gdRes.origin of
+        GoogleMaps.Location origin ->
+          origin.lat == driverPoolResult.lat
+            && origin.lng == driverPoolResult.lon
+        _ -> False

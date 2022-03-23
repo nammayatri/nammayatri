@@ -2,6 +2,7 @@ module Product.BecknProvider.Confirm (confirm) where
 
 import App.Types
 import Beckn.External.Encryption (encrypt)
+import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Amount (Amount)
@@ -25,6 +26,7 @@ import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as SearchRequest
 import Types.Error
+import Types.Metrics
 import Types.Storage.DiscountTransaction
 import qualified Types.Storage.Organization as Organization
 import qualified Types.Storage.RideBooking as SRB
@@ -129,8 +131,10 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
 
 onConfirmCallback ::
   ( DBFlow m r,
+    CoreMetrics m,
     EncFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds]
+    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasGoogleMaps m r c
   ) =>
   SRB.RideBooking ->
   SearchRequest.SearchRequest ->

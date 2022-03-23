@@ -1,3 +1,4 @@
+let topSecret = ./top-secret.dhall
 let globalCommon = ../../generic/common.dhall
 
 let exotelCfg =
@@ -12,5 +13,5 @@ in
 { smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
 , exotelCfg = exotelCfg
-, googleMapsKey = "mock-key"
+, googleMapsKey = topSecret.googleMapsKey
 }

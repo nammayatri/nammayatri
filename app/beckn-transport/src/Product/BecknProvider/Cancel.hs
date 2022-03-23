@@ -1,6 +1,7 @@
 module Product.BecknProvider.Cancel where
 
 import App.Types (FlowHandler)
+import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Queries as DB
 import Beckn.Types.Common
@@ -54,6 +55,7 @@ cancelRide ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasGoogleMaps m r c,
     FCMFlow m r,
     CoreMetrics m
   ) =>

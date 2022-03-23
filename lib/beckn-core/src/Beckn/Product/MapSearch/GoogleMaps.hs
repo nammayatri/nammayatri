@@ -1,6 +1,8 @@
 module Beckn.Product.MapSearch.GoogleMaps
-  ( getDistance,
-    getDurationAndDistance,
+  ( GetDistanceResult (..),
+    GetDistanceResultInfo (..),
+    getDistance,
+    getDistances,
   )
 where
 
@@ -14,76 +16,59 @@ import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common hiding (id)
 import GHC.Float
 
-getDistance ::
-  ( CoreMetrics m,
-    HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl],
-    HasFlowEnv m r '["googleMapsKey" ::: Text]
-  ) =>
-  Maybe MapSearch.TravelMode ->
-  MapSearch.LatLong ->
-  MapSearch.LatLong ->
-  m Double
-getDistance travelMode origin destination = do
-  googleMapsUrl <- asks (.googleMapsUrl)
-  key <- asks (.googleMapsKey)
-  GoogleMaps.distanceMatrix googleMapsUrl origins destinations key Nothing mode
-    >>= parseDistanceMatrixElement
-    >>= parseDistance
-  where
-    origins = [latLongToPlace origin]
-    destinations = [latLongToPlace destination]
-    mode = mapToMode <$> travelMode
+data GetDistanceResult = GetDistanceResult
+  { origin :: GoogleMaps.Place,
+    destination :: GoogleMaps.Place,
+    info :: GetDistanceResultInfo
+  }
+  deriving (Generic)
 
--- Caution: This request is using traffic information (durationInTraffic) and billed at a higher rate.
-getDurationAndDistance ::
-  ( CoreMetrics m,
-    HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl],
-    HasFlowEnv m r '["googleMapsKey" ::: Text]
+data GetDistanceResultInfo = GetDistanceResultInfo
+  { distance :: Double,
+    duration :: NominalDiffTime,
+    duration_in_traffic :: NominalDiffTime,
+    status :: Text
+  }
+  deriving (Generic)
+
+getDistance ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    GoogleMaps.HasGoogleMaps m r c
   ) =>
   Maybe MapSearch.TravelMode ->
   MapSearch.LatLong ->
   MapSearch.LatLong ->
   Maybe UTCTime ->
-  m (Double, NominalDiffTime)
-getDurationAndDistance travelMode origin destination utcDepartureTime = do
-  googleMapsUrl <- asks (.googleMapsUrl)
-  key <- asks (.googleMapsKey)
+  m GetDistanceResult
+getDistance travelMode origin destination utcDepartureTime =
+  getDistances travelMode [origin] [destination] utcDepartureTime >>= \case
+    [] -> throwError (InternalError "Empty GoogleMaps.getDistance result.")
+    [a] -> return a
+    _ -> throwError (InternalError "Exactly one GoogleMaps.getDistance result expected.")
+
+getDistances ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    GoogleMaps.HasGoogleMaps m r c
+  ) =>
+  Maybe MapSearch.TravelMode ->
+  [MapSearch.LatLong] ->
+  [MapSearch.LatLong] ->
+  Maybe UTCTime ->
+  m [GetDistanceResult]
+getDistances travelMode origins destinations utcDepartureTime = do
+  googleMapsUrl <- askConfig (.googleMapsUrl)
+  key <- askConfig (.googleMapsKey)
   let departureTime = case utcDepartureTime of
         Nothing -> Just GoogleMaps.Now
         Just time -> Just $ GoogleMaps.FutureTime time
-  distanceMatrixElement <-
-    GoogleMaps.distanceMatrix googleMapsUrl origins destinations key departureTime mode
-      >>= parseDistanceMatrixElement
-  distance <- parseDistance distanceMatrixElement
-  durationInTraffic <- parseDurationInTraffic distanceMatrixElement
-  pure (distance, durationInTraffic)
+  GoogleMaps.distanceMatrix googleMapsUrl originPlaces destinationPlaces key departureTime mode
+    >>= parseDistanceMatrixResp originPlaces destinationPlaces
   where
-    origins = [latLongToPlace origin]
-    destinations = [latLongToPlace destination]
+    originPlaces = latLongToPlace <$> origins
+    destinationPlaces = latLongToPlace <$> destinations
     mode = mapToMode <$> travelMode
-
-parseDistanceMatrixElement :: (MonadThrow m, Log m) => GoogleMaps.DistanceMatrixResp -> m GoogleMaps.DistanceMatrixElement
-parseDistanceMatrixElement distanceMatrixResp = do
-  distanceMatrixRow <-
-    (listToMaybe distanceMatrixResp.rows)
-      & fromMaybeM (InternalError "No rows in distance matrix API response")
-  (listToMaybe distanceMatrixRow.elements)
-    & fromMaybeM (InternalError "No elements in distance matrix API response")
-    >>= GoogleMaps.validateResponseStatus
-
-parseDistance :: (MonadThrow m, Log m) => GoogleMaps.DistanceMatrixElement -> m Double
-parseDistance distanceMatrixElement = do
-  distance <-
-    distanceMatrixElement.distance
-      & fromMaybeM (InternalError "No distance value provided in distance matrix API response")
-  pure $ int2Double distance.value / 1000
-
-parseDurationInTraffic :: (MonadThrow m, Log m) => GoogleMaps.DistanceMatrixElement -> m NominalDiffTime
-parseDurationInTraffic distanceMatrixElement = do
-  durationInTraffic <-
-    distanceMatrixElement.duration_in_traffic
-      & fromMaybeM (InternalError "No duration_in_traffic value provided in distance matrix API response")
-  pure $ intToNominalDiffTime durationInTraffic.value
 
 latLongToPlace :: MapSearch.LatLong -> GoogleMaps.Place
 latLongToPlace MapSearch.LatLong {..} =
@@ -94,3 +79,49 @@ mapToMode MapSearch.CAR = GoogleMaps.DRIVING
 mapToMode MapSearch.MOTORCYCLE = GoogleMaps.DRIVING
 mapToMode MapSearch.BICYCLE = GoogleMaps.BICYCLING
 mapToMode MapSearch.FOOT = GoogleMaps.WALKING
+
+parseDistanceMatrixResp ::
+  (MonadThrow m, MonadIO m, Log m) =>
+  [GoogleMaps.Place] ->
+  [GoogleMaps.Place] ->
+  GoogleMaps.DistanceMatrixResp ->
+  m [GetDistanceResult]
+parseDistanceMatrixResp origins destinations distanceMatrixResp = do
+  mapM buildGetDistanceResult origDestAndElemList
+  where
+    origDestAndElemList = do
+      (orig, row) <- zip origins distanceMatrixResp.rows
+      (dest, element) <- zip destinations row.elements
+      return (orig, dest, element)
+
+    buildGetDistanceResultInfo element = do
+      void $ GoogleMaps.validateResponseStatus element
+      distance <- parseDistances element
+      duration <- parseDuration element
+      durationInTraffic <- parseDurationInTraffic element
+      return $ GetDistanceResultInfo distance duration durationInTraffic element.status
+
+    buildGetDistanceResult (orig, dest, element) = do
+      info <- buildGetDistanceResultInfo element
+      return $ GetDistanceResult orig dest info
+
+parseDistances :: (MonadThrow m, Log m) => GoogleMaps.DistanceMatrixElement -> m Double
+parseDistances distanceMatrixElement = do
+  distance <-
+    distanceMatrixElement.distance
+      & fromMaybeM (InternalError "No distance value provided in distance matrix API response")
+  pure $ int2Double distance.value / 1000
+
+parseDuration :: (MonadThrow m, Log m) => GoogleMaps.DistanceMatrixElement -> m NominalDiffTime
+parseDuration distanceMatrixElement = do
+  durationInTraffic <-
+    distanceMatrixElement.duration
+      & fromMaybeM (InternalError "No duration value provided in distance matrix API response")
+  pure $ intToNominalDiffTime durationInTraffic.value
+
+parseDurationInTraffic :: (MonadThrow m, Log m) => GoogleMaps.DistanceMatrixElement -> m NominalDiffTime
+parseDurationInTraffic distanceMatrixElement = do
+  durationInTraffic <-
+    distanceMatrixElement.duration_in_traffic
+      & fromMaybeM (InternalError "No duration_in_traffic value provided in distance matrix API response")
+  pure $ intToNominalDiffTime durationInTraffic.value

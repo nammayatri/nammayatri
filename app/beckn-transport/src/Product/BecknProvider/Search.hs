@@ -1,6 +1,7 @@
 module Product.BecknProvider.Search (search) where
 
 import App.Types
+import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch as MapSearch
 import Beckn.Product.Validation.Context
 import Beckn.Serviceability
@@ -146,8 +147,7 @@ onSearchCallback ::
   ( DBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
-    HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl],
-    HasFlowEnv m r '["googleMapsKey" ::: Text],
+    HasGoogleMaps m r c,
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>
@@ -172,7 +172,8 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
   -- we take nearest one and calculate fare and make PI for him
 
   distance <-
-    MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
+    (.info.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
+
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime

@@ -1,5 +1,6 @@
 module Beckn.Product.MapSearch where
 
+import Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -7,39 +8,52 @@ import Beckn.Types.Monitoring.Prometheus.Metrics (CoreMetrics)
 import Beckn.Utils.Common hiding (id)
 
 getDistance ::
-  ( CoreMetrics m,
-    HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl],
-    HasFlowEnv m r '["googleMapsKey" ::: Text]
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasGoogleMaps m r c
   ) =>
   Maybe MapSearch.TravelMode ->
   MapSearch.LatLong ->
   MapSearch.LatLong ->
-  m Double
+  m GoogleMaps.GetDistanceResult
 getDistance travelMode origin destination = do
-  key <- asks (.googleMapsKey)
+  key <- askConfig (.googleMapsKey)
   case key of
-    "mock-key" -> pure mockDistance
-    _ -> GoogleMaps.getDistance travelMode origin destination
+    "mock-key" -> pure $ makeMockGetDistanceResult origin destination
+    _ -> GoogleMaps.getDistance travelMode origin destination Nothing
 
-getDurationAndDistance ::
-  ( CoreMetrics m,
-    HasFlowEnv m r '["googleMapsUrl" ::: BaseUrl],
-    HasFlowEnv m r '["googleMapsKey" ::: Text]
+getDistances ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasGoogleMaps m r c
   ) =>
   Maybe MapSearch.TravelMode ->
-  MapSearch.LatLong ->
-  MapSearch.LatLong ->
-  Maybe UTCTime ->
-  m (Double, NominalDiffTime)
-getDurationAndDistance travelMode origin destination utcDepartureTime = do
-  key <- asks (.googleMapsKey)
+  [MapSearch.LatLong] ->
+  [MapSearch.LatLong] ->
+  m [GoogleMaps.GetDistanceResult]
+getDistances travelMode origins destinations = do
+  key <- askConfig (.googleMapsKey)
   case key of
-    "mock-key" -> pure (mockDistance, mockDuration)
-    _ -> GoogleMaps.getDurationAndDistance travelMode origin destination utcDepartureTime
+    "mock-key" -> pure $ makeMockGetDistanceResult <$> origins <*> destinations
+    _ -> GoogleMaps.getDistances travelMode origins destinations Nothing
 
 -- FIXME Should we use some calculation here?
-mockDistance :: Double
-mockDistance = 9.446
 
-mockDuration :: NominalDiffTime
-mockDuration = intToNominalDiffTime 648
+makeMockGetDistanceResult ::
+  MapSearch.LatLong ->
+  MapSearch.LatLong ->
+  GoogleMaps.GetDistanceResult
+makeMockGetDistanceResult origin dest =
+  GoogleMaps.GetDistanceResult
+    { origin = GoogleMaps.Location $ LocationS origin.lat origin.lon,
+      destination = GoogleMaps.Location $ LocationS dest.lat dest.lon,
+      info =
+        GoogleMaps.GetDistanceResultInfo
+          { distance = 9.446,
+            duration = mockDuration,
+            duration_in_traffic = mockDuration,
+            status = "OK"
+          }
+    }
+  where
+    mockDuration = intToNominalDiffTime 648

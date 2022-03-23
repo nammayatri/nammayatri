@@ -24,6 +24,8 @@ data AppCfg = AppCfg
     defaultSortMode :: SortMode,
     driverBatchSize :: Int,
     reallocationsLimit :: Int,
+    googleMapsUrl :: BaseUrl,
+    googleMapsKey :: Text,
     requestsNumPerIteration :: Integer,
     processDelay :: Milliseconds,
     shards :: Shards,

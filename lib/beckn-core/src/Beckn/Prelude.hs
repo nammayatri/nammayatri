@@ -24,7 +24,7 @@ import Data.Proxy as E (Proxy (..))
 import Data.String as E (IsString (..))
 import Data.Text as E (Text)
 import qualified Data.Text as T
-import Data.Time.Clock (secondsToNominalDiffTime)
+import Data.Time
 import Data.Time.Clock as E (NominalDiffTime, UTCTime)
 import GHC.Generics as E (Generic, Generic1)
 import GHC.Records.Compat as E

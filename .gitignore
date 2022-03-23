@@ -27,6 +27,7 @@ cabal.project.local~
 .HTF/
 .ghc.environment.*
 *.log
+dhall-configs/dev/secrets/top-secret.dhall
 
 # load test files
 .dev/load-test/*.json
