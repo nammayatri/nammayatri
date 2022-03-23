@@ -23,6 +23,7 @@ import EulerHS.Prelude hiding (state)
 import qualified ExternalAPI.Flow as ExternalAPI
 import Product.FareCalculator
 import qualified Product.FareCalculator.Flow as Fare
+import Product.Location
 import qualified Product.Location as Loc
 import qualified SharedLogic.DriverPool as DrPool
 import Storage.Queries.Geometry
@@ -42,7 +43,6 @@ import qualified Types.Storage.SearchRequest as SearchRequest
 import qualified Types.Storage.Vehicle as Veh
 import Utils.Common
 import qualified Utils.Metrics as Metrics
-import Product.Location
 
 search ::
   Id Org.Organization ->

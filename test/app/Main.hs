@@ -17,6 +17,7 @@ import qualified "beckn-transport" App.Types as TransporterBackend
 import qualified "fmd-wrapper" App.Types as FmdWrapper
 import Beckn.Exit (exitDBMigrationFailure)
 import qualified Beckn.Storage.Esqueleto.Migration as Esq
+import Beckn.Types.Geofencing
 import Beckn.Types.Logging (LoggerConfig)
 import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
@@ -32,7 +33,6 @@ import System.Environment as Env (setEnv)
 import System.Posix
 import Test.Tasty
 import TestSilentIOLogger ()
-import Beckn.Types.Geofencing
 
 main :: IO ()
 main = do
