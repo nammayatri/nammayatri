@@ -6,7 +6,7 @@ module Domain.Types.Person where
 import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Types.Id
-import Beckn.Utils.Common (maskText)
+import Beckn.Utils.Common (maskText, EsqDBFlow)
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
@@ -117,3 +117,13 @@ makePersonAPIEntity Person {..} =
       maskedDeviceToken = FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken) <$> deviceToken,
       ..
     }
+
+getPersonNumber :: (EsqDBFlow m r, EncFlow m r) => Person -> m (Maybe Text)
+getPersonNumber person = do
+  decMobileNumber <- mapM decrypt person.mobileNumber
+  return $ person.mobileCountryCode <> decMobileNumber
+
+getPersonFullName :: (EsqDBFlow m r, EncFlow m r)  => Person -> m (Maybe Text)
+getPersonFullName person = do
+  return ((\fN -> fN <> maybe "" (" " <>) person.lastName) <$> person.firstName)
+

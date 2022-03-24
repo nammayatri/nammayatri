@@ -82,6 +82,5 @@ getDriverPhone :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Text
 getDriverPhone ride = do
   let driverId = ride.driverId
   driver <- QPerson.findById driverId >>= fromMaybeM PersonNotFound
-  decMobNum <- mapM decrypt driver.mobileNumber
-  let phonenum = (<>) <$> driver.mobileCountryCode <*> decMobNum
+  phonenum <- SP.getPersonNumber driver
   phonenum & fromMaybeM (InternalError "Driver has no phone number.")

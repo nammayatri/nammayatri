@@ -1,7 +1,6 @@
 module Product.Ride where
 
 import App.Types
-import Beckn.External.Encryption (decrypt)
 import Beckn.Prelude
 import Beckn.Types.Id
 import qualified Domain.Types.Person as SP
@@ -32,7 +31,7 @@ buildDriverRideRes (ride, rideBooking) = do
   toLocation <- QLoc.findById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
   vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM VehicleNotFound
   driver <- QP.findById ride.driverId >>= fromMaybeM PersonNotFound
-  decDriver <- decrypt driver
+  driverNumber <- SP.getPersonNumber driver
   pure
     API.DriverRideRes
       { id = ride.id,
@@ -44,7 +43,7 @@ buildDriverRideRes (ride, rideBooking) = do
         estimatedTotalFare = rideBooking.estimatedTotalFare,
         discount = rideBooking.discount,
         driverName = driver.firstName,
-        driverNumber = decDriver.mobileCountryCode <> decDriver.mobileNumber,
+        driverNumber = driverNumber,
         vehicleNumber = vehicle.registrationNo,
         vehicleColor = vehicle.color,
         vehicleVariant = vehicle.variant,

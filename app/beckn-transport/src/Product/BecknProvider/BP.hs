@@ -8,11 +8,11 @@ module Product.BecknProvider.BP
   )
 where
 
-import Beckn.External.Encryption (decrypt)
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import qualified Domain.Types.Organization as SOrg
+import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideRequest as SRideRequest
@@ -124,14 +124,9 @@ buildRideAssignedUpdatePayload ride = do
   driver <-
     Person.findById ride.driverId
       >>= fromMaybeM PersonNotFound
-  decDriver <- decrypt driver
   veh <- Vehicle.findById ride.vehicleId >>= fromMaybeM VehicleNotFound
-  mobileNumber <- decDriver.mobileCountryCode <> decDriver.mobileNumber & fromMaybeM (InternalError "Driver mobile number is not present.")
-  firstName <- decDriver.firstName & fromMaybeM (PersonFieldNotPresent "firstName")
-  let middleName = decDriver.middleName
-      lastName = decDriver.lastName
-  let name = firstName <> maybe "" (" " <>) middleName <> maybe "" (" " <>) lastName
-  let vehicleNumber = veh.registrationNo
+  mobileNumber <- (SP.getPersonNumber driver) >>= fromMaybeM (InternalError "Driver mobile number is not present.")
+  name <- (SP.getPersonFullName driver) >>= fromMaybeM (PersonFieldNotPresent "firstName")
   let agent =
         OnUpdate.Agent
           { name = name,
@@ -144,7 +139,7 @@ buildRideAssignedUpdatePayload ride = do
           { model = veh.model,
             variant = show veh.variant,
             color = veh.color,
-            registration = vehicleNumber
+            registration = veh.registrationNo
           }
   return $
     OnUpdate.RideAssigned
