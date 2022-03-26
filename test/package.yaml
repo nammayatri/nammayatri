@@ -90,6 +90,7 @@ dependencies:
   - HUnit
   - unix
   - string-conversions
+  - mock-dunzo
 
 ghc-options:
   - -fwrite-ide-info

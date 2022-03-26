@@ -41,6 +41,7 @@ let dunzoConfig =
   , payee = sec.payee
   , dzTestMode = True
   , dzQuotationTTLinMin = +10
+  , dzCredsId = None Text
   }
 
 let gwUri = "https://api.beckn.juspay.in/gateway/v1"

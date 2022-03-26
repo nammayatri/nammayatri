@@ -54,9 +54,7 @@ Authorization: Signature keyId="{{fmd-bap/subscriber-id}}|{{fmd-bap/unique-key}}
             "gps": "12.9729391, 77.6294794"
           },
           "person": {
-            "name": {
-              "getName": "John"
-            }
+            "name": "John"
           },
           "contact": {
             "phone": "+919999999999"
@@ -80,9 +78,7 @@ Authorization: Signature keyId="{{fmd-bap/subscriber-id}}|{{fmd-bap/unique-key}}
             "gps": "12.9354504, 77.6146828"
           },
           "person": {
-            "name": {
-              "getName": "John"
-            }
+            "name": "John"
           },
           "contact": {
             "phone": "+919999999999"

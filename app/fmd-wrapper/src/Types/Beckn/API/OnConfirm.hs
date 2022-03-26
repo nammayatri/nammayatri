@@ -14,8 +14,7 @@ import Types.Beckn.DecimalValue as Reexport
   )
 import Types.Beckn.Fulfillment as Reexport (Fulfillment (..))
 import Types.Beckn.Location as Reexport (Location (..))
-import Types.Beckn.Name as Reexport (Name (..))
-import Types.Beckn.Order as Reexport (OrderItem (..))
+import Types.Beckn.Order as Reexport (OrderItem (..), Status (..))
 import Types.Beckn.Payment as Reexport (Params (..), Payment (..), PaymentType (..))
 import Types.Beckn.Person as Reexport (Person (..))
 
@@ -34,7 +33,7 @@ newtype OrderObject = OrderObject
 
 data Order = Order
   { id :: Text,
-    state :: Text,
+    state :: Status,
     items :: [OrderItem],
     billing :: Billing,
     fulfillment :: Fulfillment,

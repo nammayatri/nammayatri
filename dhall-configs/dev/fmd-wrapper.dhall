@@ -41,8 +41,17 @@ let dunzoConfig =
   , payee = sec.payee
   , dzTestMode = True
   , dzQuotationTTLinMin = +10
+  , dzCredsId = None Text
   }
 
+let mockDunzoConfig =
+  { dzUrl = "http://localhost:8026/"
+  , dzTokenUrl = "http://localhost:8026/"
+  , payee = sec.payee
+  , dzTestMode = True
+  , dzQuotationTTLinMin = +10
+  , dzCredsId = Some "00000000-0000-0000-0000-000000000000"
+  }
 
 let httpClientOptions =
   { timeoutMs = +10000
@@ -60,7 +69,7 @@ in
 , autoMigrate = True
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
 , coreVersion = "0.9.1"
-, dzConfig = dunzoConfig
+, dzConfig = mockDunzoConfig
 , authEntity =
   { signingKey = sec.signingKey
   , uniqueKeyId = "juspay-fmd-1-key"

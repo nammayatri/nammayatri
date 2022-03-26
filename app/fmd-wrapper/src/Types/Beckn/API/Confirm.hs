@@ -18,7 +18,6 @@ import Types.Beckn.DecimalValue as Reexport
 import Types.Beckn.FulfillmentDetails as Reexport (DescriptorInfo (..), FulfillmentDetails (..))
 import Types.Beckn.Gps as Reexport (Gps (..))
 import Types.Beckn.Location as Reexport (Location (..))
-import Types.Beckn.Name as Reexport (Name (..))
 import Types.Beckn.Order (OrderItem)
 import Types.Beckn.Order as Reexport (OrderItem (..))
 import Types.Beckn.Person as Reexport (Person (..))

@@ -1,13 +1,14 @@
 module API.CreateTask.Handler where
 
+import qualified API.Error as Error
 import qualified API.Fixtures as Fixtures
 import App.Types
 import Beckn.Prelude
 import qualified Beckn.Types.Cache as Cache
-import Beckn.Types.Error
-import Beckn.Utils.Common
+import Beckn.Utils.Common hiding (withFlowHandlerAPI)
 import ExternalAPI.Dunzo.Types (TaskStatus (task_id))
 import qualified "fmd-wrapper" ExternalAPI.Dunzo.Types as API
+import Tools.FlowHandling
 import qualified Tools.Time as Time
 import qualified "fmd-wrapper" Types.Common as Common
 
@@ -21,7 +22,7 @@ handler mToken mClientId _mIsTestMode req = withFlowHandlerAPI $ do
   Fixtures.verifyToken mToken mClientId
   mTaskStatus <- Cache.getKey req.request_id
   whenJust (mTaskStatus :: Maybe API.TaskStatus) $
-    \_ -> throwError (InvalidRequest "Request with same request id has already been processed")
+    \taskStatus -> throwError (Error.duplicateRequest taskStatus.task_id)
   taskStatus <- buildCreateTaskRes
   Cache.setKey req.request_id taskStatus
   Cache.setKey taskStatus.task_id req.request_id

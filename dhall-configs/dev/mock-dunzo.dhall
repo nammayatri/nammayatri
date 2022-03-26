@@ -11,7 +11,7 @@ let hcfg =
   }
 
 in
-{ port = +8024
+{ port = +8026
 , graceTerminationPeriod = +90
 , hedisCfg = hcfg
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/mock-dunzo.log"}

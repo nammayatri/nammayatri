@@ -2,8 +2,8 @@
 
 GET {{mock-dunzo/url}}/api/v1/token
 content-type: application/json
-client-id: mock-client-id
-client-secret: mock-client-secret
+client-id: {{mock-dunzo/client_id}}
+client-secret: {{mock-dunzo/secret}}
 
 ###
 

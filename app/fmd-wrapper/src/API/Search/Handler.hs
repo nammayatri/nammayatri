@@ -7,13 +7,14 @@ import Beckn.Types.Amount (Amount (Amount))
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
-import EulerHS.Prelude
+import qualified Domain.DunzoCreds as DDunzoCreds
+import qualified Domain.Organization as DOrg
+import EulerHS.Prelude hiding (id)
 import qualified ExternalAPI.Dunzo.Flow as DzAPI
 import qualified ExternalAPI.Dunzo.Types as Dz
 import qualified Types.Beckn.API.OnSearch as OnSearch
 import Types.Beckn.Context
 import Types.Error
-import qualified Types.Storage.Organization as SOrg
 import Types.Wrapper
 import Utils.Callback
 import Utils.Common
@@ -27,27 +28,26 @@ handler (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
     search bapOrg gateway.subscriber_url req
 
 search ::
-  SOrg.Organization ->
+  DOrg.Organization ->
   BaseUrl ->
   BecknReq Search.SearchIntent ->
   Flow AckResponse
 search org cbUrl req = do
   config@DunzoConfig {..} <- asks (.dzConfig)
   let quoteReq = mkQuoteReqFromSearch req
-  dzBACreds <- getDzBAPCreds org
-
+  dzBACreds <- getCreds org.dunzoCredsId
   withCallback' withRetry SEARCH OnSearch.onSearchAPI req.context cbUrl $
     getQuote dzBACreds config quoteReq
       <&> mkOnSearchCatalog
 
 getQuote ::
-  DzBAConfig ->
+  DDunzoCreds.DunzoCreds ->
   DunzoConfig ->
   Dz.QuoteReq ->
   Flow Dz.QuoteRes
-getQuote ba@DzBAConfig {..} conf@DunzoConfig {..} quoteReq = do
+getQuote ba@DDunzoCreds.DunzoCreds {..} conf@DunzoConfig {..} quoteReq = do
   token <- fetchToken ba conf
-  DzAPI.getQuote dzClientId token dzUrl quoteReq
+  DzAPI.getQuote clientId token dzUrl quoteReq
 
 dunzoServiceCategoryId :: Text
 dunzoServiceCategoryId = "1"

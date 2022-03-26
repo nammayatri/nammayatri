@@ -43,6 +43,7 @@ default-extensions:
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
+  - StandaloneDeriving
   - TupleSections
   - TypeApplications
   - TypeFamilies
@@ -68,6 +69,7 @@ dependencies:
   - mtl
   - openapi3
   - parsec
+  - persistent
   - servant
   - servant-client
   - servant-server

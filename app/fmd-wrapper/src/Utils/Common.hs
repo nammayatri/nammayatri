@@ -5,16 +5,9 @@ module Utils.Common
 where
 
 import Beckn.Types.Common
-import Beckn.Types.Error
 import Beckn.Utils.Common as CoreCommon
 import EulerHS.Prelude
 import Types.Error
-import Types.Storage.Organization (Organization)
-
-getClientConfig :: (MonadThrow m, Log m, FromJSON a) => Organization -> m a
-getClientConfig org =
-  let mconfig = org.info >>= decodeFromText
-   in fromMaybeM (InternalError "Client config decode error.") mconfig
 
 fromMaybeErr :: (MonadThrow m, Log m) => Text -> Maybe ErrorCode -> Maybe a -> m a
 fromMaybeErr msg errCode =

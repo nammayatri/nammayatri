@@ -5,6 +5,8 @@ module Beckn.Utils.Error.FlowHandling
     apiHandler,
     becknApiHandler,
     someExceptionToBecknApiError,
+    handleIfUp,
+    throwServantError,
   )
 where
 

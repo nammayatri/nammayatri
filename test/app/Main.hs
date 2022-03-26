@@ -7,6 +7,7 @@ import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
 import qualified "fmd-wrapper" App as FmdWrapper
+import qualified "mock-dunzo" App as MockDunzo
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-registry" App as MockRegistry
 import qualified "mock-sms" App as MockSms
@@ -47,7 +48,8 @@ main = do
       "beckn-transport",
       "driver-tracking-healthcheck-service",
       "fmd-wrapper",
-      "mock-registry"
+      "mock-registry",
+      "mock-dunzo"
     ]
   -- ... and run
   defaultMain =<< specs
@@ -100,7 +102,8 @@ specs' trees = do
         FmdWrapper.runFMDWrapper hideLogging,
         MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
-        MockRegistry.runRegistryService hideLogging
+        MockRegistry.runRegistryService hideLogging,
+        MockDunzo.runService hideLogging
       ]
 
     startServers servers = do

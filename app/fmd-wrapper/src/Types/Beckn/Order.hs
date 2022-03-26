@@ -13,7 +13,7 @@ newtype OrderObject = OrderObject
   deriving (Generic, Show, FromJSON, ToJSON)
 
 data Order = Order
-  { state :: Text,
+  { state :: Status,
     items :: [OrderItem],
     billing :: Billing,
     fulfillment :: Fulfillment,
@@ -27,3 +27,6 @@ newtype OrderItem = OrderItem
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data Status = ACTIVE | COMPLETED | CANCELLED
+  deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)

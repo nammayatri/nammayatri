@@ -6,13 +6,13 @@ import App.Types
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import qualified Domain.Organization as DOrg
 import EulerHS.Prelude hiding (id, state)
 import qualified ExternalAPI.Dunzo.Types as Dz
-import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Storage.Queries.Delivery as QDelivery
 import qualified Types.Beckn.API.OnTrack as OnTrack
 import Types.Beckn.Context
 import Types.Error
-import qualified Types.Storage.Organization as SOrg
 import Types.Wrapper
 import Utils.Callback
 import Utils.Common
@@ -26,16 +26,15 @@ handler (SignatureAuthResult _ subscriber) req = withFlowHandlerBecknAPI $
     track bapOrg req
 
 track ::
-  SOrg.Organization ->
+  DOrg.Organization ->
   BecknReq Track.TrackInfo ->
   Flow AckResponse
 track org req = do
   conf@DunzoConfig {..} <- asks (.dzConfig)
   let orderId = req.context.transaction_id
-  searchRequest <- QSearchRequest.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003)
-  taskInfo :: Dz.TaskStatus <- searchRequest.udf2 >>= decodeFromText & fromMaybeM (InternalError "Decoding TaskStatus error.")
-  let taskId = taskInfo.task_id.getTaskId
-  dzBACreds <- getDzBAPCreds org
+  delivery <- QDelivery.findById (Id orderId) >>= fromMaybeErr "ORDER_NOT_FOUND" (Just CORE003) -- FIXME fix error messages and codes
+  let taskId = delivery.deliveryServiceOrderId
+  dzBACreds <- getCreds org.dunzoCredsId
   withCallback TRACK OnTrack.onTrackAPI req.context req.context.bap_uri $
     getStatus dzBACreds conf (Dz.TaskId taskId) <&> mkOnTrackMessage . (.tracking_url)
 

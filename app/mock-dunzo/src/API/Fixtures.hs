@@ -14,10 +14,10 @@ verifyToken mToken mClientId = do
   unless (currClientId == clientId) $ throwError InvalidAuthData
 
 clientId :: Common.ClientId
-clientId = Common.ClientId "mock-client-id"
+clientId = Common.ClientId "00000000-0000-0000-0000-000000000000"
 
 clientSecret :: Common.ClientSecret
-clientSecret = Common.ClientSecret "mock-client-secret"
+clientSecret = Common.ClientSecret "00000000-0000-0000-0000-000000000000"
 
 token :: Common.Token
 token = Common.Token "mock-token"
