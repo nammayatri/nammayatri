@@ -41,7 +41,7 @@ initiateCallToDriver rideId personId =
     return $ CallAPI.CallRes callId
   where
     buildCallbackUrl = do
-      bapUrl <- askConfig (.exotelCallbackUrl)
+      bapUrl <- asks (.exotelCallbackUrl)
       let id = T.unpack (strip (getId rideId))
       return $
         bapUrl

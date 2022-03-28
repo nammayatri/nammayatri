@@ -44,8 +44,8 @@ updateLocation personId waypoints = withFlowHandlerAPI $ do
   updateLocationHandler handler personId waypoints
   where
     constructHandler = do
-      refreshPeriod <- fromIntegral <$> askConfig (.updateLocationRefreshPeriod)
-      allowedDelay <- fromIntegral <$> askConfig (.updateLocationAllowedDelay)
+      refreshPeriod <- fromIntegral <$> asks (.updateLocationRefreshPeriod)
+      allowedDelay <- fromIntegral <$> asks (.updateLocationAllowedDelay)
       pure $
         Handler
           { refreshPeriod,

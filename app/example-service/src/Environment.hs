@@ -21,7 +21,9 @@ data AppCfg = AppCfg
 type MobileNumber = Text
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
+  { port :: Int,
+    loggerConfig :: LoggerConfig,
+    graceTerminationPeriod :: Seconds,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
@@ -30,7 +32,7 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

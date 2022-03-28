@@ -27,7 +27,7 @@ data HttpClientOptions = HttpClientOptions
   }
   deriving (Generic, FromDhall)
 
-type HasHttpClientOptions r c = HasInConfig r c "httpClientOptions" HttpClientOptions
+type HasHttpClientOptions r c = HasField "httpClientOptions" r HttpClientOptions
 
 type CallAPI' m res res' =
   ( HasCallStack,
@@ -99,7 +99,7 @@ createManagers ::
   Map String Http.ManagerSettings ->
   m (Map String Http.Manager)
 createManagers managerSettings = do
-  timeout <- askConfig (.httpClientOptions.timeoutMs)
+  timeout <- asks (.httpClientOptions.timeoutMs)
   liftIO $ managersFromManagersSettings timeout managerSettings
 
 managersFromManagersSettings ::
@@ -150,7 +150,7 @@ withRetry ::
   m a ->
   m a
 withRetry action = do
-  maxRetries <- askConfig (.httpClientOptions.maxRetries)
+  maxRetries <- asks (.httpClientOptions.maxRetries)
   catchConnectionErrors action $ \err -> do
     if maxRetries > 0
       then retryAction err 1 maxRetries action

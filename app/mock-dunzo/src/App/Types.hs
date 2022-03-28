@@ -22,7 +22,9 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
+  { port :: Int,
+    loggerConfig :: LoggerConfig,
+    graceTerminationPeriod :: Seconds,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     hedisEnv :: Hedis.HedisEnv
@@ -30,7 +32,7 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   isShuttingDown <- mkShutdown

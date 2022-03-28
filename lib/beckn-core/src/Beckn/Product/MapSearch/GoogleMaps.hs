@@ -58,8 +58,8 @@ getDistances ::
   Maybe UTCTime ->
   m [GetDistanceResult]
 getDistances travelMode origins destinations utcDepartureTime = do
-  googleMapsUrl <- askConfig (.googleMapsUrl)
-  key <- askConfig (.googleMapsKey)
+  googleMapsUrl <- asks (.googleMapsUrl)
+  key <- asks (.googleMapsKey)
   let departureTime = case utcDepartureTime of
         Nothing -> Just GoogleMaps.Now
         Just time -> Just $ GoogleMaps.FutureTime time

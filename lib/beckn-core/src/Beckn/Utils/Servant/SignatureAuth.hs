@@ -80,8 +80,8 @@ instance
     HasEnvEntry r ctx,
     KnownSymbol header,
     HasLog r,
-    HasInConfig r c "hostName" Text,
-    HasInConfig r c "disableSignatureAuth" Bool,
+    HasField "hostName" r Text,
+    HasField "disableSignatureAuth" r Bool,
     Registry (FlowR r),
     HasCoreMetrics r
   ) =>
@@ -188,8 +188,8 @@ verifySignature ::
   ( MonadFlow m,
     MonadReader r m,
     Metrics.CoreMetrics m,
-    HasInConfig r c "hostName" Text,
-    HasInConfig r c "disableSignatureAuth" Bool,
+    HasField "hostName" r Text,
+    HasField "disableSignatureAuth" r Bool,
     Registry m,
     HasLog r
   ) =>
@@ -198,7 +198,7 @@ verifySignature ::
   HttpSig.Hash ->
   m Subscriber
 verifySignature headerName signPayload bodyHash = do
-  hostName <- askConfig (.hostName)
+  hostName <- asks (.hostName)
   logTagDebug "SignatureAuth" $ "Got Signature: " <> show signPayload
   let uniqueKeyId = signPayload.params.keyId.uniqueKeyId
   let subscriberId = signPayload.params.keyId.subscriberId
@@ -209,7 +209,7 @@ verifySignature headerName signPayload bodyHash = do
           }
   registryLookup lookupRequest >>= \case
     Just subscriber -> do
-      disableSignatureAuth <- askConfig (.disableSignatureAuth)
+      disableSignatureAuth <- asks (.disableSignatureAuth)
       unless disableSignatureAuth do
         let publicKey = subscriber.signing_public_key
         isVerified <- performVerification publicKey hostName

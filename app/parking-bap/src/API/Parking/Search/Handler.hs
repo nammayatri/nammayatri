@@ -33,7 +33,7 @@ handler personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   Metrics.startSearchMetrics txnId
   _ <- Esq.runTransaction $ QSearch.create searchRequest
   fork "search" . withRetry $ do
-    bapURI <- asks (.config.selfURI)
+    bapURI <- asks (.selfURI)
     context <- buildContext Context.SEARCH txnId bapURI Nothing
     let intent = mkIntent req gps
     ExternalAPI.search (BecknReq context $ Search.SearchIntent intent)

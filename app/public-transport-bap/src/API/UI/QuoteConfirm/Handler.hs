@@ -22,8 +22,8 @@ handler personId quoteId confirmReq = withFlowHandlerAPI $ do
 
 callConfirm :: ConfirmMessageD -> Flow ()
 callConfirm msg = do
-  selfUrl <- askConfig (.selfURI)
-  selfId <- askConfig (.selfId)
+  selfUrl <- asks (.selfURI)
+  selfId <- asks (.selfId)
   context <- buildContext CONFIRM msg.txnId selfId selfUrl Nothing Nothing
   let confirmOrder = mkConfirmMessage msg
   ExternalAPI.confirm msg.booking.bppUrl (BecknReq context $ ConfirmMessage confirmOrder)

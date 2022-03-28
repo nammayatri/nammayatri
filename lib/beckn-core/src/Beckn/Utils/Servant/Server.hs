@@ -64,13 +64,12 @@ runFlowRDelayedIO env f =
     >>= either delayedFailFatal pure
 
 runServer ::
-  forall env config (api :: Type) ctx.
-  ( HasField "config" env config,
-    HasField "graceTerminationPeriod" config Seconds,
+  forall env (api :: Type) ctx.
+  ( HasField "graceTerminationPeriod" env Seconds,
     HasField "isShuttingDown" env Shutdown,
-    HasField "loggerConfig" config L.LoggerConfig,
+    HasField "loggerConfig" env L.LoggerConfig,
     HasField "loggerEnv" env LoggerEnv,
-    HasField "port" config Port,
+    HasField "port" env Port,
     Metrics.SanitizedUrl api,
     HasContextEntry (ctx .++ '[ErrorFormatters]) ErrorFormatters,
     HasServer api (EnvR env ': ctx)
@@ -86,12 +85,12 @@ runServer ::
   (E.FlowRuntime -> FlowR env E.FlowRuntime) ->
   IO ()
 runServer appEnv serverAPI serverHandler waiMiddleware waiSettings servantCtx serverStartAction shutdownAction initialize = do
-  let port = appEnv.config.port
+  let port = appEnv.port
   hostname <- getPodName
-  let loggerRt = L.getEulerLoggerRuntime hostname $ appEnv.config.loggerConfig
+  let loggerRt = L.getEulerLoggerRuntime hostname $ appEnv.loggerConfig
   let settings =
         defaultSettings
-          & setGracefulShutdownTimeout (Just $ getSeconds appEnv.config.graceTerminationPeriod)
+          & setGracefulShutdownTimeout (Just $ getSeconds appEnv.graceTerminationPeriod)
           & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (shutdownAction appEnv))
           & setPort port
           & waiSettings
@@ -112,13 +111,12 @@ healthCheck :: FlowServerR env HealthCheckAPI
 healthCheck = pure "App is UP"
 
 runHealthCheckServerWithService ::
-  forall env config ctx.
-  ( HasField "config" env config,
-    HasField "graceTerminationPeriod" config Seconds,
+  forall env ctx.
+  ( HasField "graceTerminationPeriod" env Seconds,
     HasField "isShuttingDown" env Shutdown,
-    HasField "loggerConfig" config L.LoggerConfig,
+    HasField "loggerConfig" env L.LoggerConfig,
     HasField "loggerEnv" env LoggerEnv,
-    HasField "port" config Port,
+    HasField "port" env Port,
     HasContextEntry (ctx .++ '[ErrorFormatters]) ErrorFormatters
   ) =>
   env ->
@@ -137,13 +135,12 @@ runHealthCheckServerWithService appEnv waiMiddleware waiSettings servantCtx serv
       service flowRt
 
 runServerWithHealthCheck ::
-  forall env config (api :: Type) ctx.
-  ( HasField "config" env config,
-    HasField "graceTerminationPeriod" config Seconds,
+  forall env (api :: Type) ctx.
+  ( HasField "graceTerminationPeriod" env Seconds,
     HasField "isShuttingDown" env Shutdown,
-    HasField "loggerConfig" config L.LoggerConfig,
+    HasField "loggerConfig" env L.LoggerConfig,
     HasField "loggerEnv" env LoggerEnv,
-    HasField "port" config Port,
+    HasField "port" env Port,
     Metrics.SanitizedUrl api,
     HasContextEntry (ctx .++ '[ErrorFormatters]) ErrorFormatters,
     HasServer api (EnvR env ': ctx)

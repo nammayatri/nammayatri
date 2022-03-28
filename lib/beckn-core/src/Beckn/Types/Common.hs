@@ -56,14 +56,3 @@ newtype Kilometers = Kilometers
   }
   deriving newtype (Show, Num, FromDhall, FromJSON, ToJSON, Fractional, Real, Ord, Eq, Enum)
   deriving stock (Generic)
-
-type HasInConfig env config field t =
-  ( HasField "config" env config,
-    HasField field config t
-  )
-
-askConfig ::
-  (MonadReader r m, HasField "config" r c) =>
-  (c -> a) ->
-  m a
-askConfig f = asks (f . (.config))

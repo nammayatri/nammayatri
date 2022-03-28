@@ -88,12 +88,12 @@ recalcDistanceBatchStep RideInterpolationHandler {..} driverId = do
 -------------------------------------------------------------------------
 defaultRideInterpolationHandler ::
   ( HedisFlow m env,
-    HasPrettyLogger m env conf,
+    HasPrettyLogger m env,
     HasCallStack,
     Metrics.CoreMetrics m,
     MonadFlow m,
     MonadReader env m,
-    HasField "snapToRoadAPIKey" env Text,
+    HasField "googleMapsKey" env Text,
     EsqDBFlow m env
   ) =>
   RideInterpolationHandler m
@@ -133,7 +133,7 @@ callSnapToRoad ::
     Metrics.CoreMetrics m,
     MonadFlow m,
     MonadReader r m,
-    HasField "snapToRoadAPIKey" r Text
+    HasField "googleMapsKey" r Text
   ) =>
   [LatLong] ->
   m [LatLong]

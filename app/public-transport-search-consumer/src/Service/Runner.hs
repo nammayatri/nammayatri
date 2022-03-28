@@ -15,9 +15,9 @@ import Tools.Metrics
 
 run ::
   ( HasField "isShuttingDown" r (TMVar ()),
-    HasInConfig r c "bapId" Text,
-    HasInConfig r c "bapURI" BaseUrl,
-    HasInConfig r c "gatewayUrl" BaseUrl,
+    HasField "bapId" r Text,
+    HasField "bapURI" r BaseUrl,
+    HasField "gatewayUrl" r BaseUrl,
     CoreMetrics m,
     HasHttpClientOptions r c,
     MonadConsumer PublicTransportSearch m,

@@ -27,8 +27,8 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
   unless (isRideBookingCancellable rideBooking) $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
   let txnId = getId $ searchRequest.id
-  bapURIs <- askConfig (.bapSelfURIs)
-  bapIDs <- askConfig (.bapSelfIds)
+  bapURIs <- asks (.bapSelfURIs)
+  bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.CANCEL txnId bapIDs.cabs bapURIs.cabs (Just rideBooking.providerId) (Just rideBooking.providerUrl)
 
   when (rideBooking.status == SRB.NEW) $ throwError (RideBookingInvalidStatus "NEW")

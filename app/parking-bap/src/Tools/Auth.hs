@@ -3,7 +3,6 @@ module Tools.Auth where
 import Beckn.InternalAPI.Auth.Client
 import Beckn.Prelude
 import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
@@ -31,11 +30,11 @@ instance VerificationMethod VerifyToken where
     \If you don't have a token, use registration endpoints."
 
 verifyPersonAction ::
-  forall m r c.
+  forall m r.
   ( MonadReader r m,
     MonadFlow m,
     CoreMetrics m,
-    HasInConfig r c "authServiceUrl" BaseUrl
+    HasField "authServiceUrl" r BaseUrl
   ) =>
   VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction (fmap Id . auth)

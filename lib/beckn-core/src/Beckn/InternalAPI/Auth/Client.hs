@@ -15,7 +15,7 @@ authAPI :: Text -> E.EulerClient PersonId
 authAPI = E.client (Proxy @API)
 
 auth ::
-  ( HasInConfig r c "authServiceUrl" BaseUrl,
+  ( HasField "authServiceUrl" r BaseUrl,
     CoreMetrics m,
     MonadFlow m,
     MonadReader r m
@@ -23,7 +23,7 @@ auth ::
   Text ->
   m PersonId
 auth token = do
-  url <- askConfig (.authServiceUrl)
+  url <- asks (.authServiceUrl)
   callOwnAPI Nothing (Just "AUTH_FAILED") url (authAPI token) "auth"
     `catchOwnAPI` throwError . \case
       "INVALID_TOKEN" -> InvalidToken token

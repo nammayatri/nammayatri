@@ -20,7 +20,9 @@ data AppCfg = AppCfg
 type MobileNumber = Text
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
+  { port :: Int,
+    loggerConfig :: LoggerConfig,
+    graceTerminationPeriod :: Seconds,
     notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage]),
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv
@@ -28,7 +30,7 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   hostname <- getPodName
   notificationsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

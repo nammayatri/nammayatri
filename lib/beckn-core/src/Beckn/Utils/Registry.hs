@@ -19,10 +19,8 @@ import Data.Generics.Labels ()
 import qualified EulerHS.Types as T
 
 registryLookup ::
-  ( MonadReader r m,
-    MonadFlow m,
-    CoreMetrics m,
-    HasInConfig r c "registryUrl" BaseUrl
+  ( CoreMetrics m,
+    HasFlowEnv m r '["registryUrl" ::: BaseUrl]
   ) =>
   SimpleLookupRequest ->
   m (Maybe Subscriber)
@@ -45,12 +43,12 @@ registryFetch ::
   ( MonadReader r m,
     MonadFlow m,
     CoreMetrics m,
-    HasInConfig r c "registryUrl" BaseUrl
+    HasField "registryUrl" r BaseUrl
   ) =>
   API.LookupRequest ->
   m [Subscriber]
 registryFetch request = do
-  registryUrl <- askConfig (.registryUrl)
+  registryUrl <- asks (.registryUrl)
   callAPI registryUrl (T.client Registry.lookupAPI request) "lookup"
     >>= fromEitherM (ExternalAPICallError (Just "REGISTRY_CALL_ERROR") registryUrl)
 

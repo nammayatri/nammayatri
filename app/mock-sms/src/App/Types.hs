@@ -21,7 +21,9 @@ data AppCfg = AppCfg
 type MobileNumber = Text
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
+  { port :: Int,
+    loggerConfig :: LoggerConfig,
+    graceTerminationPeriod :: Seconds,
     smsMap :: MVar (Map.Map MobileNumber [Text]),
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv
@@ -29,7 +31,7 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   smsMap <- newMVar Map.empty
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

@@ -3,12 +3,11 @@
 module Beckn.External.GoogleMaps.Types where
 
 import Beckn.Prelude
-import Beckn.Types.Common (HasInConfig)
 import Data.Double.Conversion.Text (toFixed)
 import qualified Data.Text as T
 import Servant
 
-type HasGoogleMaps m r c = (MonadReader r m, HasInConfig r c "googleMapsUrl" BaseUrl, HasInConfig r c "googleMapsKey" Text)
+type HasGoogleMaps m r c = (MonadReader r m, HasField "googleMapsUrl" r BaseUrl, HasField "googleMapsKey" r Text)
 
 data SearchLocationResp = SearchLocationResp
   { status :: Text,

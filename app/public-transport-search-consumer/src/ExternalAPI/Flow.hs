@@ -16,13 +16,13 @@ search ::
   ( MonadFlow m,
     MonadReader r m,
     CoreMetrics m,
-    HasInConfig r c "bapId" Text,
-    HasInConfig r c "gatewayUrl" BaseUrl
+    HasField "bapId" r Text,
+    HasField "gatewayUrl" r BaseUrl
   ) =>
   BecknReq Search.SearchMessage ->
   m ()
 search req = do
-  url <- askConfig (.gatewayUrl)
+  url <- asks (.gatewayUrl)
   callBecknAPIWithSignature "search" Search.searchAPI url req
 
 callBecknAPIWithSignature ::
@@ -30,7 +30,7 @@ callBecknAPIWithSignature ::
     MonadReader r m,
     CoreMetrics m,
     IsBecknAPI api req res,
-    HasInConfig r c "bapId" Text
+    HasField "bapId" r Text
   ) =>
   Text ->
   Proxy api ->
@@ -38,7 +38,7 @@ callBecknAPIWithSignature ::
   req ->
   m ()
 callBecknAPIWithSignature a b c d = do
-  bapId <- askConfig (.bapId)
+  bapId <- asks (.bapId)
   void $ callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
 
 getHttpManagerKey :: Text -> String

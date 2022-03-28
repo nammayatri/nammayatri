@@ -33,7 +33,12 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
+  { port :: Int,
+    signatureExpiry :: Seconds,
+    graceTerminationPeriod :: Seconds,
+    loggerConfig :: LoggerConfig,
+    autoMigrate :: Bool,
+    migrationPath :: Maybe FilePath,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv,
@@ -42,7 +47,7 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   coreMetrics <- registerCoreMetricsContainer
   hostname <- getPodName

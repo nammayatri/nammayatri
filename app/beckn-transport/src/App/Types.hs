@@ -86,41 +86,64 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
-    esqDBEnv :: EsqDBEnv,
+  { esqDBCfg :: EsqDBConfig,
+    redisCfg :: T.RedisConfig,
+    hcfg :: HedisCfg,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     inviteSmsTemplate :: Text,
+    port :: Int,
+    bgtmPort :: Int,
+    metricsPort :: Int,
+    hostName :: Text,
     nwAddress :: BaseUrl,
+    signingKey :: PrivateKey,
+    signatureExpiry :: Seconds,
     caseExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool,
     coreVersion :: Text,
     domainVersion :: Text,
+    loggerConfig :: LoggerConfig,
+    geofencingConfig :: GeofencingConfig,
+    googleMapsUrl :: BaseUrl,
+    googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
+    graceTerminationPeriod :: Seconds,
+    defaultRadiusOfSearch :: Meters,
+    driverPositionInfoExpiry :: Maybe Seconds,
+    apiRateLimitOptions :: APIRateLimitOptions,
+    httpClientOptions :: HttpClientOptions,
+    authTokenCacheExpiry :: Seconds,
+    minimumDriverRatesCount :: Int,
+    recalculateFareEnabled :: Bool,
+    updateLocationRefreshPeriod :: Seconds,
+    updateLocationAllowedDelay :: Seconds,
+    metricsSearchDurationTimeout :: Seconds,
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets,
+    disableSignatureAuth :: Bool,
+    encTools :: EncTools,
+    kafkaProducerCfg :: KafkaProducerCfg,
+    exotelCallbackUrl :: BaseUrl,
+    esqDBEnv :: EsqDBEnv,
     isShuttingDown :: TMVar (),
     bppMetrics :: BPPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
     transporterMetrics :: TransporterMetricsContainer,
-    apiRateLimitOptions :: APIRateLimitOptions,
-    defaultRadiusOfSearch :: Meters,
-    driverPositionInfoExpiry :: Maybe Seconds,
-    authTokenCacheExpiry :: Seconds,
-    minimumDriverRatesCount :: Int,
     loggerEnv :: LoggerEnv,
-    encTools :: EncTools,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BPPKafkaEnvs,
-    hedisEnv :: HedisEnv,
-    snapToRoadAPIKey :: Text
+    hedisEnv :: HedisEnv
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
-  let snapToRoadAPIKey = googleMapsKey
   bppMetrics <- registerBPPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   transporterMetrics <- registerTransporterMetricsContainer
@@ -147,8 +170,8 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance AuthenticatingEntity AppEnv where
-  getSigningKey = (.config.signingKey)
-  getSignatureExpiry = (.config.signatureExpiry)
+  getSigningKey = (.signingKey)
+  getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
   registryLookup = Registry.withSubscriberCache Registry.registryLookup

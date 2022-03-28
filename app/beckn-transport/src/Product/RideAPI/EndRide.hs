@@ -38,11 +38,11 @@ endRide personId rideId = withFlowHandlerAPI $ do
           notifyCompleteToBAP = sendRideCompletedUpdateToBAP,
           endRideTransaction,
           calculateFare = Fare.calculateFare,
-          recalculateFareEnabled = askConfig (.recalculateFareEnabled),
+          recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
           getKeyRedis = Redis.getKeyRedis,
-          updateLocationAllowedDelay = askConfig (.updateLocationAllowedDelay) <&> fromIntegral,
+          updateLocationAllowedDelay = asks (.updateLocationAllowedDelay) <&> fromIntegral,
           recalcDistanceEnding = recalcDistanceBatches defaultRideInterpolationHandler True
         }
 

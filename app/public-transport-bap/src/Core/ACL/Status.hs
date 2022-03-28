@@ -12,14 +12,14 @@ import qualified Domain.Action.UI.TriggerStatus as DStatus
 buildStatusReq ::
   ( MonadFlow m,
     MonadReader r m,
-    HasInConfig r c "selfURI" BaseUrl,
-    HasInConfig r c "selfId" Text
+    HasField "selfURI" r BaseUrl,
+    HasField "selfId" r Text
   ) =>
   DStatus.StatusRes ->
   m (BecknReq Status.StatusMessage)
 buildStatusReq DStatus.StatusRes {..} = do
-  bapId <- asks (.config.selfId)
-  bapUri <- asks (.config.selfURI)
+  bapId <- asks (.selfId)
+  bapUri <- asks (.selfURI)
   context <- buildContext Context.STATUS (getId bookingId) bapId bapUri (Just bppId) (Just bppUrl)
   pure $ BecknReq context statusMessage
   where

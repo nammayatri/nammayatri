@@ -86,36 +86,56 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
-    hedisEnv :: HedisEnv,
-    esqDBEnv :: EsqDBEnv,
+  { redisCfg :: T.RedisConfig,
     smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     sesCfg :: SesConfig,
+    port :: Int,
+    metricsPort :: Int,
     xProviderUri :: BaseUrl,
+    hostName :: Text,
+    bapSelfIds :: BAPs Text,
+    bapSelfURIs :: BAPs BaseUrl,
+    bapSelfUniqueKeyIds :: BAPs Text,
     searchConfirmExpiry :: Maybe Seconds,
     searchRequestExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool,
     coreVersion :: Text,
     domainVersion :: Text,
+    loggerConfig :: LoggerConfig,
     geofencingConfig :: GeofencingConfig,
+    googleMapsUrl :: BaseUrl,
+    googleMapsKey :: Text,
     fcmUrl :: BaseUrl,
     graphhopperUrl :: BaseUrl,
+    graceTerminationPeriod :: Seconds,
     apiRateLimitOptions :: APIRateLimitOptions,
+    httpClientOptions :: HttpClientOptions,
+    authTokenCacheExpiry :: Seconds,
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets,
+    signingKey :: PrivateKey,
+    signatureExpiry :: Seconds,
+    disableSignatureAuth :: Bool,
+    gatewayUrl :: BaseUrl,
+    encTools :: EncTools,
+    exotelCallbackUrl :: BaseUrl,
+    hedisEnv :: HedisEnv,
+    esqDBEnv :: EsqDBEnv,
     isShuttingDown :: TMVar (),
     bapMetrics :: BAPMetricsContainer,
     coreMetrics :: CoreMetricsContainer,
-    authTokenCacheExpiry :: Seconds,
     loggerEnv :: LoggerEnv,
-    encTools :: EncTools,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BAPKafkaEnvs
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   hostname <- getPodName
   isShuttingDown <- newEmptyTMVarIO
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
@@ -142,8 +162,8 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance AuthenticatingEntity AppEnv where
-  getSigningKey = (.config.signingKey)
-  getSignatureExpiry = (.config.signatureExpiry)
+  getSigningKey = (.signingKey)
+  getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
   registryLookup =

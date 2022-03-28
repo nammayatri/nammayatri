@@ -57,7 +57,7 @@ handle =
 
 getOrganizationLock :: Flow (ShortId Organization)
 getOrganizationLock = do
-  shardMap <- askConfig (.shards)
+  shardMap <- asks (.shards)
   let numShards = Map.size shardMap
   shardCounter <- Redis.incrementKeyRedis "beckn:allocation:shardCounter"
   let shardId = fromIntegral $ abs $ shardCounter `rem` fromIntegral numShards
@@ -80,12 +80,12 @@ run = do
     now <- getCurrentTime
     Redis.setKeyRedis "beckn:allocation:service" now
     ((), processTime) <- measureDuration $ do
-      requestsNum <- askConfig (.requestsNumPerIteration)
+      requestsNum <- asks (.requestsNumPerIteration)
       eres <- try $ Allocation.process handle shortOrgId requestsNum
       whenLeft eres $ Log.logError . show @_ @SomeException
       Redis.unlockRedis $ "beckn:allocation:lock_" <> getShortId shortOrgId
     -- If process handling took less than processDelay we delay for remain to processDelay time
-    processDelay <- askConfig (.processDelay)
+    processDelay <- asks (.processDelay)
     liftIO . threadDelay . max 0 . getMicroseconds $ millisecondsToMicroseconds (processDelay - processTime)
   where
     runnerHandler =

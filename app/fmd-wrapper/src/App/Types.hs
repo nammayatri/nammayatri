@@ -54,23 +54,34 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
-    dbCfg :: DBConfig,
-    esqDBEnv :: EsqDBEnv,
+  { dbCfg :: DBConfig,
+    esqDBCfg :: EsqDBConfig,
+    redisCfg :: T.RedisConfig,
+    port :: Int,
+    metricsPort :: Int,
+    hostName :: Text,
     selfId :: Text,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool,
+    loggerConfig :: LoggerConfig,
     coreVersion :: Text,
     dzConfig :: DunzoConfig,
-    isShuttingDown :: TMVar (),
-    coreMetrics :: CoreMetricsContainer,
+    authEntity :: AuthenticatingEntity',
+    graceTerminationPeriod :: Seconds,
     httpClientOptions :: HttpClientOptions,
     nwAddress :: BaseUrl,
+    registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets,
+    disableSignatureAuth :: Bool,
+    esqDBEnv :: EsqDBEnv,
+    isShuttingDown :: TMVar (),
+    coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   isShuttingDown <- newEmptyTMVarIO
   coreMetrics <- registerCoreMetricsContainer
@@ -91,8 +102,8 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance AuthenticatingEntity AppEnv where
-  getSigningKey = (.config.authEntity.signingKey)
-  getSignatureExpiry = (.config.authEntity.signatureExpiry)
+  getSigningKey = (.authEntity.signingKey)
+  getSignatureExpiry = (.authEntity.signatureExpiry)
 
 instance Registry Flow where
   registryLookup = Registry.withSubscriberCache Registry.registryLookup

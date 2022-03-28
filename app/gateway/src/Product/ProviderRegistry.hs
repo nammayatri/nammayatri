@@ -18,7 +18,7 @@ lookup ::
     MonadFlow m,
     Registry m,
     CoreMetrics m,
-    HasInConfig r c "registryUrl" BaseUrl
+    HasField "registryUrl" r BaseUrl
   ) =>
   B.Context ->
   m [Registry.Subscriber]

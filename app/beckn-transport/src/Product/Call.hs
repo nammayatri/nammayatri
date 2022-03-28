@@ -44,7 +44,7 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
   return $ CallAPI.CallRes callId
   where
     buildCallbackUrl = do
-      bapUrl <- askConfig (.exotelCallbackUrl)
+      bapUrl <- asks (.exotelCallbackUrl)
       let rideid = T.unpack (strip (getId rideId))
       return $
         bapUrl

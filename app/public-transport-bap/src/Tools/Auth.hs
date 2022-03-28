@@ -4,8 +4,8 @@ import Beckn.InternalAPI.Auth.Client
 import Beckn.Prelude
 import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Beckn.Types.App
-import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
 import Servant hiding (Context)
@@ -33,11 +33,9 @@ instance VerificationMethod VerifyToken where
     \If you don't have a token, use registration endpoints."
 
 verifyPersonAction ::
-  forall m r c.
-  ( MonadReader r m,
-    MonadFlow m,
-    CoreMetrics m,
-    HasInConfig r c "authServiceUrl" BaseUrl
+  forall m r.
+  ( CoreMetrics m,
+    HasFlowEnv m r '["authServiceUrl" ::: BaseUrl]
   ) =>
   VerificationAction VerifyToken m
 verifyPersonAction = VerificationAction (fmap Id . auth)

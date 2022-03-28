@@ -28,7 +28,7 @@ confirmServer confirmReq@(BecknReq ctx msg) = do
   let eithOrder = makeOnConfirmOrder orderId msg.order
       callbackData = either (Left . textToError) (Right . OnConfirmMessage) eithOrder
   _ <- fork "call on_confirm" $ do
-    waitMilliSec <- asks (.config.callbackWaitTimeMilliSec)
+    waitMilliSec <- asks (.callbackWaitTimeMilliSec)
     threadDelayMilliSec waitMilliSec
     callBapOnConfirm $ BecknCallbackReq context' callbackData
     whenRight_ eithOrder $ \onConfirmOrder -> do
@@ -48,7 +48,7 @@ defineHandlingWay = \case
 
 trackPayment :: Text -> MockM AppEnv ()
 trackPayment orderId = do
-  secondsToWait <- asks (.config.statusWaitTimeSec)
+  secondsToWait <- asks (.statusWaitTimeSec)
   logOutput INFO $ "waiting " <> show secondsToWait <> " seconds before changing payment status"
   threadDelaySec secondsToWait
   (context, order) <- Redis.readOrder orderId

@@ -29,7 +29,7 @@ data BAPs a = BAPs
   deriving (Generic, FromDhall)
 
 search ::
-  ( HasInConfig r c "gatewayUrl" BaseUrl,
+  ( HasField "gatewayUrl" r BaseUrl,
     EsqDBFlow m r,
     CoreMetrics m,
     HasBapIds c r m
@@ -37,11 +37,11 @@ search ::
   API.SearchReq ->
   m API.SearchRes
 search req = do
-  url <- askConfig (.gatewayUrl)
+  url <- asks (.gatewayUrl)
   callBecknAPIWithSignature "search" API.searchAPI url req
 
 searchMetro ::
-  ( HasInConfig r c "gatewayUrl" BaseUrl,
+  ( HasField "gatewayUrl" r BaseUrl,
     EsqDBFlow m r,
     CoreMetrics m,
     HasBapIds c r m
@@ -49,7 +49,7 @@ searchMetro ::
   BecknReq MigAPI.SearchIntent ->
   m ()
 searchMetro req = do
-  url <- askConfig (.gatewayUrl)
+  url <- asks (.gatewayUrl)
   void $ callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url req
 
 confirm ::
@@ -96,7 +96,7 @@ feedback ::
 feedback = callBecknAPIWithSignature "feedback" API.ratingAPI
 
 type HasBapIds c r m =
-  ( HasInConfig r c "bapSelfIds" (BAPs Text),
+  ( HasField "bapSelfIds" r (BAPs Text),
     MonadReader r m
   )
 
@@ -113,10 +113,10 @@ callBecknAPIWithSignature,
     req ->
     m res
 callBecknAPIWithSignature a b c d = do
-  bapId <- askConfig (.bapSelfIds.cabs)
+  bapId <- asks (.bapSelfIds.cabs)
   callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
 callBecknAPIWithSignatureMetro a b c d = do
-  bapId <- askConfig (.bapSelfIds.metro)
+  bapId <- asks (.bapSelfIds.metro)
   callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
 
 getHttpManagerKey :: Text -> String

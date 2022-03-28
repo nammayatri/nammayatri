@@ -30,7 +30,17 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
+  { migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool,
+    port :: Int,
+    bapId :: Text,
+    bapURI :: BaseUrl,
+    gatewayUrl :: BaseUrl,
+    httpClientOptions :: HttpClientOptions,
+    authEntity :: AuthenticatingEntity',
+    authServiceUrl :: BaseUrl,
+    loggerConfig :: LoggerConfig,
+    graceTerminationPeriod :: Seconds,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
@@ -40,7 +50,7 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   coreMetrics <- registerCoreMetricsContainer
@@ -59,5 +69,5 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 instance AuthenticatingEntity AppEnv where
-  getSigningKey = (.config.authEntity.signingKey)
-  getSignatureExpiry = (.config.authEntity.signatureExpiry)
+  getSigningKey = (.authEntity.signingKey)
+  getSignatureExpiry = (.authEntity.signatureExpiry)

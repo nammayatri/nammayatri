@@ -63,8 +63,8 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
     Location.create fromLocation
     Location.create toLocation
     QSearchRequest.create searchRequest
-  bapURIs <- askConfig (.bapSelfURIs)
-  bapIDs <- askConfig (.bapSelfIds)
+  bapURIs <- asks (.bapSelfURIs)
+  bapIDs <- asks (.bapSelfIds)
   fork "search cabs" . withRetry $ do
     context <- buildTaxiContext Core9.SEARCH txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
     let intent = mkIntent req now

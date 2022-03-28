@@ -31,8 +31,8 @@ triggerStatusUpdate _ bookingId = withFlowHandlerAPI $ do
     buildParkingContext action txnId = do
       currTime <- getCurrentTime
       msgId <- generateGUIDText
-      bapId <- asks (.config.selfId)
-      bapUri <- asks (.config.selfURI)
+      bapId <- asks (.selfId)
+      bapUri <- asks (.selfURI)
       return $
         Context
           { domain = PARKING,

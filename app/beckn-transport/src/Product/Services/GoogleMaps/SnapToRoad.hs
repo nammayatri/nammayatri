@@ -76,13 +76,13 @@ callSnapToRoadAPI ::
     Metrics.CoreMetrics m,
     MonadFlow m,
     MonadReader r m,
-    HasField "snapToRoadAPIKey" r Text
+    HasField "googleMapsKey" r Text
   ) =>
   Bool ->
   PointsList ->
   m SnapToRoadResponse
 callSnapToRoadAPI interpolate pointsList = do
-  apiKey <- asks (.snapToRoadAPIKey)
+  apiKey <- asks (.googleMapsKey)
   if apiKey == fakeApiKey
     then pure $ makeFakeResponse pointsList
     else do

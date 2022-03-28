@@ -41,19 +41,33 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
+  { port :: Int,
+    redisCfg :: RedisConfig,
+    loggerConfig :: LoggerConfig,
+    graceTerminationPeriod :: Seconds,
+    selfId :: Text,
+    selfURI :: BaseUrl,
+    httpClientOptions :: HttpClientOptions,
+    authEntity :: AuthenticatingEntity',
+    authServiceUrl :: BaseUrl,
+    gatewayUrl :: BaseUrl,
+    coreVersion :: Text,
+    domainVersion :: Text,
+    hostName :: Text,
+    registryUrl :: BaseUrl,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool,
+    disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     coreMetrics :: Metrics.CoreMetricsContainer,
-    bapMetrics :: Metrics.BAPMetricsContainer,
-    coreVersion :: Text, -- FIXME this two fields are duplicated with AppCfg fields for context validation
-    domainVersion :: Text -- FIXME this two fields are duplicated with AppCfg fields for context validation
+    bapMetrics :: Metrics.BAPMetricsContainer
   }
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
@@ -73,8 +87,8 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance AuthenticatingEntity AppEnv where
-  getSigningKey = (.config.authEntity.signingKey)
-  getSignatureExpiry = (.config.authEntity.signatureExpiry)
+  getSigningKey = (.authEntity.signingKey)
+  getSignatureExpiry = (.authEntity.signatureExpiry)
 
 instance Registry Flow where
   registryLookup = Registry.withSubscriberCache Registry.registryLookup

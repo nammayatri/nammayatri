@@ -25,10 +25,10 @@ import Relude
 import Servant.Client
 
 callBapAPI ::
-  forall api a b e c.
+  forall api a b e.
   ( Show a,
-    HasInConfig e c "selfId" Text,
-    HasInConfig e c "uniqueKeyId" Text,
+    HasField "selfId" e Text,
+    HasField "uniqueKeyId" e Text,
     HasClient ClientM api,
     Client ClientM api ~ (BecknCallbackReq a -> ClientM b),
     HasLog e,
@@ -42,10 +42,10 @@ callBapAPI req = do
   callAPI @api bapUrl req
 
 callAPI ::
-  forall api a b e c.
+  forall api a b e.
   ( Show a,
-    HasInConfig e c "selfId" Text,
-    HasInConfig e c "uniqueKeyId" Text,
+    HasField "selfId" e Text,
+    HasField "uniqueKeyId" e Text,
     HasClient ClientM api,
     Client ClientM api ~ (BecknCallbackReq a -> ClientM b),
     HasLog e,
@@ -63,8 +63,8 @@ callAPI url req = do
   pure ()
 
 callClientM ::
-  ( HasInConfig e c "selfId" Text,
-    HasInConfig e c "uniqueKeyId" Text,
+  ( HasField "selfId" e Text,
+    HasField "uniqueKeyId" e Text,
     HasField "authManager" e Manager
   ) =>
   BaseUrl ->

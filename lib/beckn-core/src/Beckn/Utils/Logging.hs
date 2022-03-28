@@ -84,24 +84,23 @@ renderViaShow description val = description <> ": " <> show val
 renderViaPrettyShow :: (PrettyShow a) => Text -> a -> Text
 renderViaPrettyShow description val = description <> "\n" <> textPretty val
 
-type HasPrettyLogger m env conf =
+type HasPrettyLogger m env =
   ( Log m,
     MonadReader env m,
-    HasField "config" env conf,
-    HasField "loggerConfig" conf LoggerConfig
+    HasField "loggerConfig" env LoggerConfig
   )
 
 logPretty ::
   ( PrettyShow a,
     Show a,
-    HasPrettyLogger m env conf
+    HasPrettyLogger m env
   ) =>
   LogLevel ->
   Text ->
   a ->
   m ()
 logPretty logLevel description val = do
-  pretty <- asks (.config.loggerConfig.prettyPrinting)
+  pretty <- asks (.loggerConfig.prettyPrinting)
   let render =
         if pretty
           then renderViaPrettyShow

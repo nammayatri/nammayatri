@@ -17,7 +17,7 @@ getDistance ::
   MapSearch.LatLong ->
   m GoogleMaps.GetDistanceResult
 getDistance travelMode origin destination = do
-  key <- askConfig (.googleMapsKey)
+  key <- asks (.googleMapsKey)
   case key of
     "mock-key" -> pure $ makeMockGetDistanceResult origin destination
     _ -> GoogleMaps.getDistance travelMode origin destination Nothing
@@ -32,7 +32,7 @@ getDistances ::
   [MapSearch.LatLong] ->
   m [GoogleMaps.GetDistanceResult]
 getDistances travelMode origins destinations = do
-  key <- askConfig (.googleMapsKey)
+  key <- asks (.googleMapsKey)
   case key of
     "mock-key" -> pure $ makeMockGetDistanceResult <$> origins <*> destinations
     _ -> GoogleMaps.getDistances travelMode origins destinations Nothing

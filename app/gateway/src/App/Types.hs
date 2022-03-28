@@ -38,16 +38,27 @@ data AppCfg = AppCfg
   }
   deriving (Generic, FromDhall)
 
+--FIXME check whether we use all these fields
 data AppEnv = AppEnv
-  { config :: AppCfg,
-    gwId :: Text,
+  { redisCfg :: T.RedisConfig,
+    port :: Int,
+    metricsPort :: Int,
+    selfId :: Text,
+    hostName :: Text,
     nwAddress :: BaseUrl,
-    cache :: C.Cache Text Text,
+    authEntity :: AuthenticatingEntity',
+    searchTimeout :: Maybe Seconds,
     coreVersions :: CoreVersions,
     mobilityDomainVersion :: Text,
+    graceTerminationPeriod :: Seconds,
+    httpClientOptions :: HttpClientOptions,
+    registryUrl :: BaseUrl,
+    registrySecrets :: RegistrySecrets,
+    disableSignatureAuth :: Bool,
+    gwId :: Text, --why do we need to duplicate selfId?
+    cache :: C.Cache Text Text,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,
-    registrySecrets :: RegistrySecrets,
     loggerEnv :: LoggerEnv
   }
   deriving (Generic)
@@ -61,7 +72,7 @@ data CoreVersions = CoreVersions
   deriving (Generic, FromDhall)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   cache <- C.newCache Nothing
   isShuttingDown <- newEmptyTMVarIO
@@ -84,8 +95,8 @@ type FlowServer r api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance AuthenticatingEntity AppEnv where
-  getSigningKey = (.config.authEntity.signingKey)
-  getSignatureExpiry = (.config.authEntity.signatureExpiry)
+  getSigningKey = (.authEntity.signingKey)
+  getSignatureExpiry = (.authEntity.signatureExpiry)
 
 instance Registry Flow where
   registryLookup = Registry.withSubscriberCache Registry.registryLookup

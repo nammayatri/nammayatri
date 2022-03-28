@@ -42,8 +42,21 @@ data AppCfg = AppCfg
 type MobileNumber = Text
 
 data AppEnv = AppEnv
-  { config :: AppCfg,
+  { migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool,
     redisCfg :: RedisConfig,
+    port :: Int,
+    loggerConfig :: LoggerConfig,
+    graceTerminationPeriod :: Seconds,
+    metricsSearchDurationTimeout :: Seconds,
+    selfId :: Text,
+    selfURI :: BaseUrl,
+    httpClientOptions :: HttpClientOptions,
+    authEntity :: AuthenticatingEntity',
+    registryUrl :: BaseUrl,
+    authServiceUrl :: BaseUrl,
+    disableSignatureAuth :: Bool,
+    hostName :: Text,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
@@ -54,7 +67,7 @@ data AppEnv = AppEnv
   deriving (Generic)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv config@AppCfg {..} = do
+buildAppEnv AppCfg {..} = do
   podName <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig podName
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
@@ -76,8 +89,8 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance AuthenticatingEntity AppEnv where
-  getSigningKey = (.config.authEntity.signingKey)
-  getSignatureExpiry = (.config.authEntity.signatureExpiry)
+  getSigningKey = (.authEntity.signingKey)
+  getSignatureExpiry = (.authEntity.signatureExpiry)
 
 instance Registry Flow where
   registryLookup = Registry.withSubscriberCache Registry.registryLookup

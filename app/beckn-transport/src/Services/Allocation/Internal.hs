@@ -39,22 +39,22 @@ import Utils.Notifications
 import qualified Utils.Notifications as Notify
 
 getDriverSortMode :: Flow SortMode
-getDriverSortMode = askConfig (.defaultSortMode)
+getDriverSortMode = asks (.defaultSortMode)
 
 getConfiguredNotificationTime :: Flow Seconds
-getConfiguredNotificationTime = askConfig (.driverNotificationExpiry)
+getConfiguredNotificationTime = asks (.driverNotificationExpiry)
 
 getConfiguredAllocationTime :: Flow Seconds
-getConfiguredAllocationTime = askConfig (.rideAllocationExpiry)
+getConfiguredAllocationTime = asks (.rideAllocationExpiry)
 
 getConfiguredReallocationsLimit :: Flow Int
-getConfiguredReallocationsLimit = askConfig (.reallocationsLimit)
+getConfiguredReallocationsLimit = asks (.reallocationsLimit)
 
 getDriverPool :: Id RideBooking -> Flow [Id Driver]
 getDriverPool = DrPool.getDriverPool
 
 getDriverBatchSize :: Flow Int
-getDriverBatchSize = askConfig (.driverBatchSize)
+getDriverBatchSize = asks (.driverBatchSize)
 
 getRequests :: ShortId Organization -> Integer -> Flow [RideRequest]
 getRequests shortOrgId numRequests = do

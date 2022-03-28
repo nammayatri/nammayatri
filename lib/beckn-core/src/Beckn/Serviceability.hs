@@ -2,18 +2,17 @@ module Beckn.Serviceability where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Types.Common
 import Beckn.Types.Geofencing
 import Beckn.Types.MapSearch
 
 rideServiceable ::
-  (EsqDBFlow m r, HasInConfig r c "geofencingConfig" GeofencingConfig) =>
+  (EsqDBFlow m r, HasField "geofencingConfig" r GeofencingConfig) =>
   (LatLong -> [Text] -> m Bool) ->
   LatLong ->
   LatLong ->
   m Bool
 rideServiceable someGeometriesContain origin destination = do
-  geofencingConfig <- askConfig (.geofencingConfig)
+  geofencingConfig <- asks (.geofencingConfig)
   originServiceable <-
     case geofencingConfig.origin of
       Unrestricted -> pure True

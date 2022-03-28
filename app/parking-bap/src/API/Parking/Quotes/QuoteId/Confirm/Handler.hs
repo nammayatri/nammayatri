@@ -32,7 +32,7 @@ confirm quoteId _ req = withFlowHandlerAPI $ do
   booking <- buildBooking search quote
   _ <- Esq.runTransaction $ QBooking.create booking
   let txnId = booking.id.getId
-  bapURI <- asks (.config.selfURI)
+  bapURI <- asks (.selfURI)
   context <- buildContext Context.CONFIRM txnId bapURI (Just booking.bppUrl)
   ExternalAPI.confirm booking.bppUrl (BecknReq context $ mkConfirmMessage booking)
   return $ PostQuoteConfirmRes booking.id
