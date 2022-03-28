@@ -26,7 +26,7 @@ data AppCfg = AppCfg
     port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    metricsSearchDurationTimeout :: Seconds,
+    metricsSearchDurationTimeout :: Seconds, -- we don't use it
     selfId :: Text,
     selfURI :: BaseUrl,
     httpClientOptions :: HttpClientOptions,
@@ -42,13 +42,9 @@ data AppCfg = AppCfg
 type MobileNumber = Text
 
 data AppEnv = AppEnv
-  { migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool,
-    redisCfg :: RedisConfig,
-    port :: Int,
+  { port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    metricsSearchDurationTimeout :: Seconds,
     selfId :: Text,
     selfURI :: BaseUrl,
     httpClientOptions :: HttpClientOptions,

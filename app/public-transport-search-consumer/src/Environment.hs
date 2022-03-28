@@ -30,9 +30,7 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool,
-    port :: Int,
+  { port :: Int,
     bapId :: Text,
     bapURI :: BaseUrl,
     gatewayUrl :: BaseUrl,

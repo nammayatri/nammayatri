@@ -12,7 +12,6 @@ import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
-import EulerHS.Types (RedisConfig)
 import Tools.Metrics
 import Tools.Streaming.Kafka
 import Types.App (SortMode)
@@ -23,10 +22,6 @@ type Flow = FlowR AppEnv
 
 data AppEnv = AppEnv
   { appCfg :: App.AppCfg, --should we flatten it too?
-    esqDBCfg :: EsqDBConfig,
-    redisCfg :: RedisConfig,
-    metricsPort :: Int,
-    healthcheckPort :: Int,
     httpClientOptions :: HttpClientOptions,
     driverNotificationExpiry :: Seconds,
     rideAllocationExpiry :: Seconds,

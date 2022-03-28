@@ -9,16 +9,12 @@ import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
-import EulerHS.Types (RedisConfig)
 import Tools.Metrics
 
 data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
-    metricsPort :: Int,
-    healthcheckPort :: Int,
     httpClientOptions :: HttpClientOptions,
     graceTerminationPeriod :: Seconds,
-    redisCfg :: RedisConfig,
     nwAddress :: BaseUrl,
     fcmJsonPath :: Maybe Text,
     fcmUrl :: BaseUrl,

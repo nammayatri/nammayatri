@@ -37,8 +37,6 @@ data AppEnv = AppEnv
     signatureExpiry :: Seconds,
     graceTerminationPeriod :: Seconds,
     loggerConfig :: LoggerConfig,
-    autoMigrate :: Bool,
-    migrationPath :: Maybe FilePath,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,
     loggerEnv :: LoggerEnv,

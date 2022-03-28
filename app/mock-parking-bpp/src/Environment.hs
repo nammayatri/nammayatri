@@ -25,8 +25,7 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { port :: Int,
-    selfId :: Text,
+  { selfId :: Text,
     uniqueKeyId :: Text,
     selfUri :: BaseUrl,
     statusWaitTimeSec :: Int,

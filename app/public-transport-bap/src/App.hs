@@ -25,7 +25,7 @@ runService configModifier = do
   appCfg <- readDhallConfigDefault "public-transport-bap" <&> configModifier
   appEnv <- buildAppEnv appCfg
   runServerWithHealthCheck appEnv (Proxy @API) handler middleware identity context releaseAppEnv \flowRt -> do
-    try (prepareRedisConnections $ appEnv.redisCfg)
+    try (prepareRedisConnections $ appCfg.redisCfg)
       >>= handleLeft @SomeException exitRedisConnPrepFailure "Exception thrown: "
     migrateIfNeeded appCfg.migrationPath appCfg.autoMigrate appCfg.esqDBCfg
       >>= handleLeft exitDBMigrationFailure "Couldn't migrate database: "

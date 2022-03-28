@@ -55,14 +55,8 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { dbCfg :: DBConfig,
-    esqDBCfg :: EsqDBConfig,
-    redisCfg :: T.RedisConfig,
-    port :: Int,
-    metricsPort :: Int,
     hostName :: Text,
     selfId :: Text,
-    migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool,
     loggerConfig :: LoggerConfig,
     coreVersion :: Text,
     dzConfig :: DunzoConfig,

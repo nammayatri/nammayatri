@@ -26,12 +26,8 @@ locationUpdatesTree appEnv =
 
 -------------------------------------------------
 --------------------run types--------------------
-newtype AppCfg = AppCfg
-  { loggerConfig :: LoggerConfig
-  }
-
 data AppEnv = AppEnv
-  { config :: AppCfg,
+  { loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
     hedisEnv :: HedisEnv
   }
@@ -45,8 +41,7 @@ wrapTests func = do
   withHedisEnv defaultHedisCfg ("locationUpdatesTest:" <>) $ \hedisEnv -> do
     let loggerConfig = defaultLoggerConfig {logToFile = True, prettyPrinting = True}
     withLoggerEnv loggerConfig Nothing $ \loggerEnv -> do
-      let config = AppCfg loggerConfig
-      let appEnv = AppEnv config loggerEnv hedisEnv
+      let appEnv = AppEnv loggerConfig loggerEnv hedisEnv
       func appEnv
 
 incrDistance :: Id Person.Person -> Double -> TestM Double

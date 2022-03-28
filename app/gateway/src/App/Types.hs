@@ -38,24 +38,19 @@ data AppCfg = AppCfg
   }
   deriving (Generic, FromDhall)
 
---FIXME check whether we use all these fields
 data AppEnv = AppEnv
   { redisCfg :: T.RedisConfig,
-    port :: Int,
-    metricsPort :: Int,
-    selfId :: Text,
     hostName :: Text,
     nwAddress :: BaseUrl,
     authEntity :: AuthenticatingEntity',
     searchTimeout :: Maybe Seconds,
     coreVersions :: CoreVersions,
     mobilityDomainVersion :: Text,
-    graceTerminationPeriod :: Seconds,
     httpClientOptions :: HttpClientOptions,
     registryUrl :: BaseUrl,
     registrySecrets :: RegistrySecrets,
     disableSignatureAuth :: Bool,
-    gwId :: Text, --why do we need to duplicate selfId?
+    gwId :: Text, -- why we can't use selfId?
     cache :: C.Cache Text Text,
     isShuttingDown :: TMVar (),
     coreMetrics :: CoreMetricsContainer,

@@ -42,7 +42,6 @@ data AppCfg = AppCfg
 
 data AppEnv = AppEnv
   { port :: Int,
-    redisCfg :: RedisConfig,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     selfId :: Text,
@@ -55,8 +54,6 @@ data AppEnv = AppEnv
     domainVersion :: Text,
     hostName :: Text,
     registryUrl :: BaseUrl,
-    migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool,
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,

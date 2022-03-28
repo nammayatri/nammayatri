@@ -86,15 +86,10 @@ data AppCfg = AppCfg
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
-  { esqDBCfg :: EsqDBConfig,
-    redisCfg :: T.RedisConfig,
-    hcfg :: HedisCfg,
-    smsCfg :: SmsConfig,
+  { smsCfg :: SmsConfig,
     otpSmsTemplate :: Text,
     inviteSmsTemplate :: Text,
-    port :: Int,
     bgtmPort :: Int,
-    metricsPort :: Int,
     hostName :: Text,
     nwAddress :: BaseUrl,
     signingKey :: PrivateKey,
@@ -102,8 +97,6 @@ data AppEnv = AppEnv
     caseExpiry :: Maybe Seconds,
     fcmJsonPath :: Maybe Text,
     exotelCfg :: Maybe ExotelCfg,
-    migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool,
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
