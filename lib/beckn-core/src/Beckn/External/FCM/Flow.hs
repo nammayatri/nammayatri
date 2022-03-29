@@ -34,18 +34,19 @@ import Servant
 -- | Create FCM message
 -- Note that data should be formed as key-value pairs list
 -- recipientId::FCMToken is an app's registration token
-createMessage :: FCMAndroidData -> FCMRecipientToken -> FCMMessage
-createMessage msgData recipientId =
+createMessage :: FCMAndroidData -> FCMRecipientToken -> Maybe FCMAndroidMessagePriority -> FCMMessage
+createMessage msgData recipientId priority =
   def{fcmToken = Just recipientId,
       fcmAndroid = Just androidCfg
      }
   where
-    androidCfg = createAndroidConfig msgData
+    androidCfg = createAndroidConfig msgData priority
 
 -- | Android Notification details
-createAndroidConfig :: FCMAndroidData -> FCMAndroidConfig
-createAndroidConfig cfgData =
-  def{fcmdData = Just cfgData
+createAndroidConfig :: FCMAndroidData -> Maybe FCMAndroidMessagePriority -> FCMAndroidConfig
+createAndroidConfig cfgData priority =
+  def{fcmdData = Just cfgData,
+      fcmdPriority = priority
      }
 
 createAndroidNotification :: FCMNotificationTitle -> FCMNotificationBody -> FCMNotificationType -> FCMAndroidNotification
@@ -78,13 +79,23 @@ notifyPerson ::
   FCMAndroidData ->
   FCMNotificationRecipient ->
   m ()
-notifyPerson msgData recipient = do
+notifyPerson = notifyPersonWithPriority Nothing
+
+notifyPersonWithPriority ::
+  ( CoreMetrics m,
+    FCMFlow m r
+  ) =>
+  Maybe FCMAndroidMessagePriority ->
+  FCMAndroidData ->
+  FCMNotificationRecipient ->
+  m ()
+notifyPersonWithPriority priority msgData recipient = do
   let tokenNotFound = "device token of a person " <> recipient.id <> " not found"
   case recipient.token of
     Nothing -> do
       logTagInfo "FCM" tokenNotFound
       pure ()
-    Just token -> sendMessage (FCMRequest (createMessage msgData token)) recipient.id
+    Just token -> sendMessage (FCMRequest (createMessage msgData token priority)) recipient.id
 
 -- | Google API interface
 type FCMSendMessageAPI =

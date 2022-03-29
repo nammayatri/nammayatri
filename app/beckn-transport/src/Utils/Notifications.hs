@@ -102,7 +102,7 @@ notifyDriver ::
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriver = sendNotificationToDriver FCM.SHOW
+notifyDriver = sendNotificationToDriver FCM.SHOW Nothing
 
 -- Send notification to device, i.e. notifications that should not be shown to the user,
 -- but contains payload used by the app
@@ -116,21 +116,22 @@ notifyDevice ::
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDevice = sendNotificationToDriver FCM.DO_NOT_SHOW
+notifyDevice = sendNotificationToDriver FCM.DO_NOT_SHOW (Just FCM.HIGH)
 
 sendNotificationToDriver ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
   FCM.FCMShowNotification ->
+  Maybe FCM.FCMAndroidMessagePriority ->
   FCM.FCMNotificationType ->
   Text ->
   Text ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-sendNotificationToDriver displayOption notificationType notificationTitle message driverId =
-  FCM.notifyPerson notificationData . FCMNotificationRecipient driverId.getId
+sendNotificationToDriver displayOption priority notificationType notificationTitle message driverId =
+  FCM.notifyPersonWithPriority priority notificationData . FCMNotificationRecipient driverId.getId
   where
     notificationData =
       FCM.FCMAndroidData
