@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.Person where
 
 import Beckn.External.Encryption
@@ -201,7 +203,7 @@ getNearestDrivers ::
   Id Organization ->
   Maybe Vehicle.Variant ->
   m [DriverPoolResult]
-getNearestDrivers LatLong {..} radius orgId variant = do
+getNearestDrivers LatLong {..} radius orgId mbVariant = do
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   now <- getCurrentTime
   res <- Esq.findAll $ do
@@ -226,7 +228,15 @@ getNearestDrivers LatLong {..} radius orgId variant = do
           &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)
           &&. driverInfo ^. DriverInformationActive
           &&. not_ (driverInfo ^. DriverInformationOnRide)
-          &&. coalesceDefault [just (just (vehicle ^. VehicleVariant) ==. val variant)] (val True)
+          &&. ( isNothing (val mbVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbVariant -- when mbVariant = Nothing, we use all variants, is it correct?
+                  ||. ( case mbVariant of
+                          Just SEDAN ->
+                            driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True
+                              &&. vehicle ^. VehicleVariant ==. val SUV
+                          Just HATCHBACK -> driverInfo ^. DriverInformationCanDowngradeToHatchBack ==. val True
+                          _ -> val False
+                      )
+              )
           &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
                   ||. (location ^. DriverLocationUpdatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
               )

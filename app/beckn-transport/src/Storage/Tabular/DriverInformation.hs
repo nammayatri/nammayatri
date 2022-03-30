@@ -24,6 +24,8 @@ mkPersist
       enabled Bool
       createdAt UTCTime
       updatedAt UTCTime
+      canDowngradeToSedan Bool
+      canDowngradeToHatchBack Bool
       Primary driverId
       deriving Generic
     |]

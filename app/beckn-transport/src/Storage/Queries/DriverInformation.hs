@@ -67,6 +67,18 @@ updateOnRide driverId onRide = do
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+updateDowngradingOptions :: Id Driver -> Bool -> Bool -> SqlDB ()
+updateDowngradingOptions driverId canDowngradeToSedan canDowngradeToHatchBack = do
+  now <- getCurrentTime
+  update' $ \tbl -> do
+    set
+      tbl
+      [ DriverInformationCanDowngradeToSedan =. val canDowngradeToSedan,
+        DriverInformationCanDowngradeToHatchBack =. val canDowngradeToHatchBack,
+        DriverInformationUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
+
 deleteById :: Id Driver -> SqlDB ()
 deleteById = Esq.deleteByKey' @DriverInformationT . cast
 

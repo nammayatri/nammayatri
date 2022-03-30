@@ -85,7 +85,9 @@ createDriverDetails personId = do
             onRide = False,
             enabled = True,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            canDowngradeToSedan = False,
+            canDowngradeToHatchBack = False
           }
   QDriverStats.createInitialDriverStats driverId
   QDriverInformation.create driverInfo
@@ -203,7 +205,9 @@ updateDriver personId req = withFlowHandlerAPI $ do
                lastName = req.lastName <|> person.lastName,
                deviceToken = req.deviceToken <|> person.deviceToken
               }
-  Esq.runTransaction $ QPerson.updatePersonRec personId updPerson
+  Esq.runTransaction $ do
+    QPerson.updatePersonRec personId updPerson
+    QDriverInformation.updateDowngradingOptions (cast personId) req.canDowngradeToSedan req.canDowngradeToHatchBack
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
