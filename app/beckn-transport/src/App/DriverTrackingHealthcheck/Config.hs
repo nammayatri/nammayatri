@@ -7,6 +7,7 @@ import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import EulerHS.Prelude
 import EulerHS.Types (RedisConfig)
+import Beckn.Sms.Config (SmsConfig)
 
 data AppCfg = AppCfg
   { loggerConfig :: LoggerConfig,
@@ -21,6 +22,9 @@ data AppCfg = AppCfg
     fcmUrl :: BaseUrl,
     encTools :: EncTools,
     driverAllowedDelay :: Seconds,
-    notificationMinDelay :: Microseconds
+    notificationMinDelay :: Microseconds,
+    driverInactiveDelay :: Seconds,
+    smsCfg :: SmsConfig,
+    driverInactiveSmsTemplate :: Text
   }
   deriving (Generic, FromDhall)

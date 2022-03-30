@@ -10,6 +10,7 @@ import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
 import Tools.Metrics
+import Beckn.Sms.Config (SmsConfig)
 
 data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
@@ -21,6 +22,9 @@ data AppEnv = AppEnv
     encTools :: EncTools,
     driverAllowedDelay :: Seconds,
     notificationMinDelay :: Microseconds,
+    driverInactiveDelay :: Seconds,
+    smsCfg :: SmsConfig,
+    driverInactiveSmsTemplate :: Text,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: Shutdown,
     coreMetrics :: CoreMetricsContainer,

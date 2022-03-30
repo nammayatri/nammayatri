@@ -1,7 +1,6 @@
 module Storage.Queries.DriverInformation where
 
 import Beckn.External.Encryption
-import Beckn.External.FCM.Types (FCMRecipientToken)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
@@ -110,9 +109,8 @@ findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
         ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
     unMaybe = maybe_ (val "") identity
 
--- TODO: consider placement of such mixed functions
-getDriversWithOutdatedLocations :: Transactionable m => UTCTime -> m [(Id Person, Maybe FCMRecipientToken)]
-getDriversWithOutdatedLocations before = do
+getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m=> UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive before = do
   findAll $ do
     (driverInformation :& _ :& person) <-
       from $
@@ -128,4 +126,4 @@ getDriversWithOutdatedLocations before = do
                      )
     where_ $ driverInformation ^. DriverInformationActive
     orderBy [asc $ driverInformation ^. DriverInformationUpdatedAt]
-    pure (person ^. PersonTId, person ^. PersonDeviceToken)
+    pure person

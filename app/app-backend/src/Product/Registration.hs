@@ -48,7 +48,7 @@ auth req = withFlowHandlerAPI $ do
     otpSmsTemplate <- asks (.otpSmsTemplate)
     withLogTag ("personId_" <> getId person.id) $
       SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) (SR.authValueHash token)
-        >>= SF.checkRegistrationSmsResult
+        >>= SF.checkSmsResult
   let attempts = SR.attempts token
       authId = SR.id token
   return $ AuthRes {attempts, authId}
@@ -173,7 +173,7 @@ resend tokenId = withFlowHandlerAPI $ do
   countryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   withLogTag ("personId_" <> entityId) $
     SF.sendOTP smsCfg otpSmsTemplate (countryCode <> mobileNumber) authValueHash
-      >>= SF.checkRegistrationSmsResult
+      >>= SF.checkSmsResult
   DB.runTransaction $ RegistrationToken.updateAttempts (attempts - 1) id
   return $ AuthRes tokenId (attempts - 1)
 

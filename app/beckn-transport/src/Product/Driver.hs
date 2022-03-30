@@ -69,7 +69,7 @@ createDriver admin req = withFlowHandlerAPI $ do
   smsCfg <- asks (.smsCfg)
   inviteSmsTemplate <- asks (.inviteSmsTemplate)
   sendInviteSms smsCfg inviteSmsTemplate (mobCounCode <> mobNum) (org.name)
-    >>= SF.checkRegistrationSmsResult
+    >>= SF.checkSmsResult
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ DriverAPI.OnboardDriverRes personAPIEntity
   where

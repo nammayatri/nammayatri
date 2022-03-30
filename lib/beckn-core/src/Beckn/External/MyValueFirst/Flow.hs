@@ -59,8 +59,30 @@ sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
         text = constructOtpSms otpCode otpHash otpSmsTemplate
       }
 
-checkRegistrationSmsResult :: (Log m, MonadThrow m) => SubmitSmsRes -> m ()
-checkRegistrationSmsResult =
+
+sendSms ::
+  ( CoreMetrics m,
+    MonadFlow m
+  ) =>
+  SmsConfig ->
+  Text ->
+  Text ->
+  m SubmitSmsRes
+sendSms smsCfg smsTemplate phoneNumber = do
+  let smsCred = smsCfg.credConfig
+      url = smsCfg.url
+  submitSms
+    url
+    SubmitSms
+      { username = smsCred.username,
+        password = smsCred.password,
+        from = smsCfg.sender,
+        to = phoneNumber,
+        text = smsTemplate
+      }
+
+checkSmsResult :: (Log m, MonadThrow m) => SubmitSmsRes -> m ()
+checkSmsResult =
   \case
     Sent -> pure ()
     BadNumber -> throwError SMSInvalidNumber
