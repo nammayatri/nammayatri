@@ -233,7 +233,7 @@ getNearestDrivers LatLong {..} radius orgId mbVariant = do
                           Just SEDAN ->
                             driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True
                               &&. vehicle ^. VehicleVariant ==. val SUV
-                          Just HATCHBACK -> driverInfo ^. DriverInformationCanDowngradeToHatchBack ==. val True
+                          Just HATCHBACK -> driverInfo ^. DriverInformationCanDowngradeToHatchback ==. val True
                           _ -> val False
                       )
               )

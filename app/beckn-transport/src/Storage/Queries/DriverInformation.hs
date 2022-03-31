@@ -68,13 +68,13 @@ updateOnRide driverId onRide = do
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 updateDowngradingOptions :: Id Driver -> Bool -> Bool -> SqlDB ()
-updateDowngradingOptions driverId canDowngradeToSedan canDowngradeToHatchBack = do
+updateDowngradingOptions driverId canDowngradeToSedan canDowngradeToHatchback = do
   now <- getCurrentTime
   update' $ \tbl -> do
     set
       tbl
       [ DriverInformationCanDowngradeToSedan =. val canDowngradeToSedan,
-        DriverInformationCanDowngradeToHatchBack =. val canDowngradeToHatchBack,
+        DriverInformationCanDowngradeToHatchback =. val canDowngradeToHatchback,
         DriverInformationUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)

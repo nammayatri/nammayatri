@@ -130,7 +130,7 @@ data UpdateDriverReq = UpdateDriverReq
     lastName :: Maybe Text,
     deviceToken :: Maybe FCMRecipientToken,
     canDowngradeToSedan :: Bool,
-    canDowngradeToHatchBack :: Bool
+    canDowngradeToHatchback :: Bool
     -- vehicleOptions :: [Veh.Variant] -- maybe this would be better?
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

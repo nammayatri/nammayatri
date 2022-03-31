@@ -13,6 +13,6 @@ data DriverInformation = DriverInformation
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     canDowngradeToSedan :: Bool,
-    canDowngradeToHatchBack :: Bool
+    canDowngradeToHatchback :: Bool
   }
   deriving (Generic)
