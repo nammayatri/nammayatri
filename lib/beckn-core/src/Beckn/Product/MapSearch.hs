@@ -28,13 +28,13 @@ getDistances ::
     HasGoogleMaps m r c
   ) =>
   Maybe MapSearch.TravelMode ->
-  [MapSearch.LatLong] ->
-  [MapSearch.LatLong] ->
+  NonEmpty MapSearch.LatLong ->
+  NonEmpty MapSearch.LatLong ->
   m [GoogleMaps.GetDistanceResult]
 getDistances travelMode origins destinations = do
   key <- asks (.googleMapsKey)
   case key of
-    "mock-key" -> pure $ makeMockGetDistanceResult <$> origins <*> destinations
+    "mock-key" -> pure $ makeMockGetDistanceResult <$> toList origins <*> toList destinations
     _ -> GoogleMaps.getDistances travelMode origins destinations Nothing
 
 -- FIXME Should we use some calculation here?

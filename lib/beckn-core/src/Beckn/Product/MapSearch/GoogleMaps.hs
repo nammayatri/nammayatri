@@ -42,7 +42,7 @@ getDistance ::
   Maybe UTCTime ->
   m GetDistanceResult
 getDistance travelMode origin destination utcDepartureTime =
-  getDistances travelMode [origin] [destination] utcDepartureTime >>= \case
+  getDistances travelMode (origin :| []) (destination :| []) utcDepartureTime >>= \case
     [] -> throwError (InternalError "Empty GoogleMaps.getDistance result.")
     [a] -> return a
     _ -> throwError (InternalError "Exactly one GoogleMaps.getDistance result expected.")
@@ -53,8 +53,8 @@ getDistances ::
     GoogleMaps.HasGoogleMaps m r c
   ) =>
   Maybe MapSearch.TravelMode ->
-  [MapSearch.LatLong] ->
-  [MapSearch.LatLong] ->
+  NonEmpty MapSearch.LatLong ->
+  NonEmpty MapSearch.LatLong ->
   Maybe UTCTime ->
   m [GetDistanceResult]
 getDistances travelMode origins destinations utcDepartureTime = do
@@ -66,8 +66,8 @@ getDistances travelMode origins destinations utcDepartureTime = do
   GoogleMaps.distanceMatrix googleMapsUrl originPlaces destinationPlaces key departureTime mode
     >>= parseDistanceMatrixResp originPlaces destinationPlaces
   where
-    originPlaces = latLongToPlace <$> origins
-    destinationPlaces = latLongToPlace <$> destinations
+    originPlaces = latLongToPlace <$> toList origins
+    destinationPlaces = latLongToPlace <$> toList destinations
     mode = mapToMode <$> travelMode
 
 latLongToPlace :: MapSearch.LatLong -> GoogleMaps.Place

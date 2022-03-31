@@ -7,6 +7,7 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as GoogleMaps
+import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.SearchReqLocation as SSReqLoc
@@ -84,7 +85,9 @@ calculateDriverPool locId orgId variant = do
         radius
         orgId
         variant
-  filterOutDriversWithDistanceAboveThreshold radius pickupLatLong approxDriverPool
+  case approxDriverPool of
+    [] -> pure []
+    (a : pprox) -> filterOutDriversWithDistanceAboveThreshold radius pickupLatLong (a :| pprox)
   where
     getRadius =
       QTConf.findValueByOrgIdAndKey orgId (STConf.ConfigKey "radius")
@@ -104,11 +107,11 @@ filterOutDriversWithDistanceAboveThreshold ::
   ) =>
   Integer ->
   LatLong ->
-  [QP.DriverPoolResult] ->
+  NonEmpty QP.DriverPoolResult ->
   m [QP.DriverPoolResult]
 filterOutDriversWithDistanceAboveThreshold threshold pickupLatLong driverPoolResults = do
-  getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) originLatLongList [pickupLatLong] Nothing
-  return $ filter (filterFunc getDistanceResults) driverPoolResults
+  getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) originLatLongList (pickupLatLong :| []) Nothing
+  return $ NE.filter (filterFunc getDistanceResults) driverPoolResults
   where
     originLatLongList =
       map (\dpRes -> LatLong dpRes.lat dpRes.lon) driverPoolResults
