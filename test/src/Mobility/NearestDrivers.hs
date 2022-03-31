@@ -21,6 +21,9 @@ spec = do
       it "Test ordering" testOrder
       it "Test radius filtration" testInRadius
       it "Test outside radius filtration" testNotInRadius
+      it "Test downgrading driver with SUV ride request" testDowngradingDriverWithSUV
+      it "Test downgrading driver with sedan ride request" testDowngradingDriverWithSedan
+      it "Test downgrading driver with hatchback ride request" testDowngradingDriverWithHatchback
 
 testOrder :: IO ()
 testOrder = do
@@ -32,7 +35,7 @@ testOrder = do
 testInRadius :: IO ()
 testInRadius = do
   res <-
-    runTransporterFlow "Test readius filtration" $
+    runTransporterFlow "Test radius filtration" $
       Q.getNearestDrivers pickupPoint 800 org1 (Just SUV) <&> getIds
   res `shouldBe` [closestDriver]
 
@@ -42,6 +45,27 @@ testNotInRadius = do
     runTransporterFlow "Test outside radius filtration" $
       Q.getNearestDrivers pickupPoint 0 org1 (Just SUV) <&> getIds
   res `shouldBe` []
+
+testDowngradingDriverWithSUV :: IO ()
+testDowngradingDriverWithSUV = do
+  res <-
+    runTransporterFlow "Test downgrading driver with SUV ride request" $
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just SUV) <&> getIds
+  res `shouldBe` [closestDriver, furthestDriver, suvDriver]
+
+testDowngradingDriverWithSedan :: IO ()
+testDowngradingDriverWithSedan = do
+  res <-
+    runTransporterFlow "Test downgrading driver with sedan ride request" $
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just SEDAN) <&> getIds
+  res `shouldBe` [suvDriver, sedanDriver]
+
+testDowngradingDriverWithHatchback :: IO ()
+testDowngradingDriverWithHatchback = do
+  res <-
+    runTransporterFlow "Test downgrading driver with hatchback ride request" $
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) <&> getIds
+  res `shouldBe` [suvDriver, sedanDriver, hatchbackDriver]
 
 getIds :: [Q.DriverPoolResult] -> [Text]
 getIds = map (getId . (.driverId))
@@ -61,8 +85,17 @@ closestDriver = "002093df-4f7c-440f-ba-closest_driver"
 otherDriver :: Text
 otherDriver = "003093df-4f7c-440f-bada-other_driver"
 
+-- distance to next drivers is more than 5000
+suvDriver :: Text
+suvDriver = "003093df-4f7c-440f-bada-4-suv_driver"
+
+sedanDriver :: Text
+sedanDriver = "003093df-4f7c-440f-bada-sedan_driver"
+
+hatchbackDriver :: Text
+hatchbackDriver = "003093df-4f7c-440f--hatchback_driver"
+
 setDriversActive :: Bool -> FlowR BecknTransport.AppEnv ()
 setDriversActive isActive = Esq.runTransaction $ do
-  Q.updateActivity (Id furthestDriver) isActive
-  Q.updateActivity (Id closestDriver) isActive
-  Q.updateActivity (Id otherDriver) isActive
+  let drivers = [furthestDriver, closestDriver, otherDriver, suvDriver, sedanDriver, hatchbackDriver]
+  forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive)

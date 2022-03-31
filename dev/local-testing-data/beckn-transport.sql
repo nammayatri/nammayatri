@@ -32,7 +32,7 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
   ('6bc4bc84-2c43-425d-8853-22f47driver2', 'Bob', 'aka', 'Dhinesh', NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, '0.1.0|0|iP3CepsEe8Qmw1xbLR5HJFSESfdvU2tWtNWrdCZWtwp4msTfh1BDkc95/yytpllMp61Q8mpiS+KDde+Plw==', '\xa0a56e902b973e6cf231520c2acbda9b44947dd3a88fb0daacd23d68082c6362', '+94', NULL, NULL, false, '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'INACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', NULL, '3b2af603-c6a3-404e-9859-27608driver2', NULL, now(), now());
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
-  ('3b2af603-c6a3-404e-9859-276085fc6e65', 'Thomas', 'aka', NULL, NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, NULL, '+91', NULL, NULL, false, 'f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', 'VEHICLE', 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, '0202b94d-dbf0-4e95-bbf9-25cafc888173', NULL, now(), now());
+  ('3b2af603-c6a3-404e-9859-276085fc6e65', 'Thomas', 'aka', NULL, NULL, 'DRIVER', 'MALE', 'MOBILENUMBER', NULL, NULL, NULL, '+91', NULL, NULL, false, 'f1b84838-5cb5-4eb1-8f4b-0dd0c4a2-suv', 'VEHICLE', 'INACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', NULL, '0202b94d-dbf0-4e95-bbf9-25cafc888173', NULL, now(), now());
 
 -- Phone number: 9999999999
 INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, full_name, role, gender, identifier_type, email, mobile_number_encrypted, mobile_number_hash, mobile_country_code, identifier, rating, verified, udf1, udf2, status, organization_id, device_token, location_id, description, created_at, updated_at) VALUES
@@ -45,7 +45,10 @@ INSERT INTO atlas_transporter.person (id, first_name, middle_name, last_name, fu
 INSERT INTO atlas_transporter.person (id, role, gender, verified, status, organization_id, location_id, udf1, udf2, identifier_type) VALUES
   ('001093df-4f7c-440f-b-furthest_driver', 'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'furthest_driver', '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'MOBILENUMBER'),
   ('002093df-4f7c-440f-ba-closest_driver',  'DRIVER', 'MALE',   true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'closest_driver',  '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'MOBILENUMBER'),
-  ('003093df-4f7c-440f-bada-other_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'other_driver',    '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'MOBILENUMBER');
+  ('003093df-4f7c-440f-bada-other_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'other_driver',    '0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', 'VEHICLE', 'MOBILENUMBER'),
+  ('003093df-4f7c-440f-bada-4-suv_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'suv_driver',    'f1b84838-5cb5-4eb1-8f4b-0dd0c4a2-suv', 'VEHICLE', 'MOBILENUMBER'),
+  ('003093df-4f7c-440f-bada-sedan_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'sedan_driver',    'f1b84838-5cb5-4eb1-8f4b-0dd0c4-sedan', 'VEHICLE', 'MOBILENUMBER'),
+  ('003093df-4f7c-440f--hatchback_driver',    'DRIVER', 'FEMALE', true, 'ACTIVE', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'hatchback_driver',    'f1b84838-5cb5-4eb1-8f4b-0d-hatchback', 'VEHICLE', 'MOBILENUMBER');
 
 --
 -- Data for Name: product; Type: TABLE DATA; Schema: atlas_transporter; Owner: atlas
@@ -80,7 +83,9 @@ INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size
   ('0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, 'Model1', NULL, 'SUV', 'Black', NULL, '4810', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', now(), now());
 
 INSERT INTO atlas_transporter.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
-  ('f1b84838-5cb5-4eb1-8f4b-0dd0c4a2943b', NULL, NULL, NULL, 'Model2', NULL, 'SUV', 'Black', NULL, '5613', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', now(), now());
+  ('f1b84838-5cb5-4eb1-8f4b-0dd0c4a2-suv', NULL, NULL, NULL, 'Model2', NULL, 'SUV', 'Black', NULL, '5613', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', now(), now()),
+  ('f1b84838-5cb5-4eb1-8f4b-0dd0c4-sedan', NULL, NULL, NULL, 'Model2', NULL, 'SEDAN', 'Black', NULL, '5614', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', now(), now()),
+  ('f1b84838-5cb5-4eb1-8f4b-0d-hatchback', NULL, NULL, NULL, 'Model2', NULL, 'HATCHBACK', 'Black', NULL, '5615', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', now(), now());
 
 --
 -- PostgreSQL database dump complete
@@ -93,7 +98,10 @@ INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VAL
                                                                                          -- lon        lat
   ('furthest_driver', 'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.593360, 13.005432), 4326)),
   ('closest_driver',  'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.601921, 12.995477), 4326)),
-  ('other_driver',    'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.601922, 12.995478), 4326));
+  ('other_driver',    'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.601922, 12.995478), 4326)),
+  ('suv_driver', 'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.593360, 13.055433), 4326)),
+  ('sedan_driver', 'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.593360, 13.056433), 4326)),
+  ('hatchback_driver', 'POINT', 77.593360, 13.005432, public.ST_SetSRID(public.ST_Point(77.593360, 13.057433), 4326));
 
 INSERT INTO atlas_transporter.location (id, location_type, long, lat, point) VALUES
   ('0202b94d-dbf0-4e95-bbf9-25cafc888173', 'POINT', 76.2733, 10.0739, public.ST_SetSRID(public.ST_Point(76.2733, 10.0739), 4326));
