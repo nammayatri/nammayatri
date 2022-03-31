@@ -79,6 +79,9 @@ updateDowngradingOptions driverId canDowngradeToSedan canDowngradeToHatchback = 
       ]
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
+resetDowngradingOptions :: Id Driver -> SqlDB ()
+resetDowngradingOptions driverId = updateDowngradingOptions driverId False False
+
 deleteById :: Id Driver -> SqlDB ()
 deleteById = Esq.deleteByKey' @DriverInformationT . cast
 

@@ -162,7 +162,9 @@ linkVehicle admin personId vehicleId = withFlowHandlerAPI $ do
     (throwError Unauthorized)
   prevPerson <- QPerson.findByVehicleId vehicleId
   whenJust prevPerson $ \_ -> throwError VehicleAlreadyLinked
-  Esq.runTransaction $ QPerson.updateVehicle personId $ Just vehicleId
+  Esq.runTransaction $ do
+    QPerson.updateVehicle personId $ Just vehicleId
+    QDriverInformation.resetDowngradingOptions (cast personId)
   return APISuccess.Success
 
 changeDriverEnableState :: SP.Person -> Id SP.Person -> Bool -> FlowHandler APISuccess
