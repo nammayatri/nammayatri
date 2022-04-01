@@ -1,0 +1,46 @@
+@token = {{driver-token}}
+@driverId = 001b93df-4f7c-440f-bada-4d46c396d7d0
+
+# @name updateProfile
+
+POST {{transporter-host}}/driver/profile
+content-type: application/json
+token: {{token}}
+
+{
+    "canDowngradeToSedan" : true,
+    "canDowngradeToHatchback" : false
+}
+
+###
+
+# @name createVehicle
+
+POST {{transporter-host}}/org/vehicle/
+content-type: application/json
+token: {{coordinator-token}}
+
+  {
+    "variant" : "SUV",
+    "model" : "Model",
+    "color" : "White",
+    "registrationNo" : "5616"
+  }
+
+###
+@vehicleId = {{createVehicle.response.body.vehicle.id}}
+
+# @name linkVehicle
+#  when we link vehicle, downgrade settings should reset
+
+POST {{transporter-host}}/org/driver/{{driverId}}/vehicle/{{vehicleId}}/link
+content-type: application/json
+token: {{coordinator-token}}
+
+###
+
+# @name profile
+
+GET {{transporter-host}}/driver/profile
+content-type: application/json
+token: {{token}}

@@ -26,6 +26,7 @@ data CreateVehicleReq = CreateVehicleReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
+-- why model can't contain digits?
 validateCreateVehicleReq :: Validate CreateVehicleReq
 validateCreateVehicleReq CreateVehicleReq {..} =
   sequenceA_

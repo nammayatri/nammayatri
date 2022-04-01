@@ -42,6 +42,8 @@ data DriverInformationRes = DriverInformationRes
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
+    canDowngradeToSedan :: Bool,
+    canDowngradeToHatchback :: Bool,
     organization :: Organization.OrganizationAPIEntity
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -61,6 +63,8 @@ data DriverEntityRes = DriverEntityRes
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
+    canDowngradeToSedan :: Bool,
+    canDowngradeToHatchback :: Bool,
     registeredAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -129,9 +133,8 @@ data UpdateDriverReq = UpdateDriverReq
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     deviceToken :: Maybe FCMRecipientToken,
-    canDowngradeToSedan :: Bool,
-    canDowngradeToHatchback :: Bool
-    -- vehicleOptions :: [Veh.Variant] -- maybe this would be better?
+    canDowngradeToSedan :: Bool, -- Maybe?
+    canDowngradeToHatchback :: Bool -- Maybe?
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

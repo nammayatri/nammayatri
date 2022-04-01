@@ -143,7 +143,9 @@ buildDriverEntityRes (person, driverInfo) = do
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
-        registeredAt = person.createdAt
+        registeredAt = person.createdAt,
+        canDowngradeToSedan = driverInfo.canDowngradeToSedan,
+        canDowngradeToHatchback = driverInfo.canDowngradeToHatchback
       }
 
 linkVehicle :: SP.Person -> Id SP.Person -> Id SV.Vehicle -> FlowHandler DriverAPI.LinkVehicleRes
