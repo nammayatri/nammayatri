@@ -40,6 +40,8 @@ findOne q = runTransaction $ traverse toResult =<< lift selectOnlyOne
         [res] -> return $ Just res
         _ -> return Nothing
 
+-- FIXME more than one result should cause an exception, it's not Nothing
+
 findById :: forall t a m. (Transactionable m, TEntity t a, TEntityKey t) => DomainKey t -> m (Maybe a)
 findById dkey = runTransaction . findOne $ do
   let key = toKey dkey
