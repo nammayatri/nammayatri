@@ -125,8 +125,8 @@ buildRideAssignedUpdatePayload ride = do
     Person.findById ride.driverId
       >>= fromMaybeM PersonNotFound
   veh <- Vehicle.findById ride.vehicleId >>= fromMaybeM VehicleNotFound
-  mobileNumber <- (SP.getPersonNumber driver) >>= fromMaybeM (InternalError "Driver mobile number is not present.")
-  name <- (SP.getPersonFullName driver) >>= fromMaybeM (PersonFieldNotPresent "firstName")
+  mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
+  name <- SP.getPersonFullName driver >>= fromMaybeM (PersonFieldNotPresent "firstName")
   let agent =
         OnUpdate.Agent
           { name = name,
