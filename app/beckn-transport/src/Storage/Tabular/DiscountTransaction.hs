@@ -20,11 +20,11 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     DiscountTransactionT sql=discount_transaction
-      rideBookingid RideBookingTId
+      rideBookingId RideBookingTId sql=ride_booking_id
       organizationId OrganizationTId
       discount Amount
       createdAt UTCTime
-      Primary rideBookingid
+      Primary rideBookingId
       deriving Generic
     |]
 
@@ -38,15 +38,15 @@ instance TEntity DiscountTransactionT Domain.DiscountTransaction where
     let DiscountTransactionT {..} = entityVal entity
     return $
       Domain.DiscountTransaction
-        { rideBookingid = fromKey rideBookingid,
+        { rideBookingId = fromKey rideBookingId,
           organizationId = fromKey organizationId,
           ..
         }
   toTType Domain.DiscountTransaction {..} =
     DiscountTransactionT
-      { rideBookingid = toKey rideBookingid,
+      { rideBookingId = toKey rideBookingId,
         organizationId = toKey organizationId,
         ..
       }
   toTEntity a =
-    Entity (toKey a.rideBookingid) $ toTType a
+    Entity (toKey a.rideBookingId) $ toTType a

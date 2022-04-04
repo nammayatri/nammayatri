@@ -10,7 +10,7 @@ import qualified Domain.Types.RideBooking as DRB
 import EulerHS.Prelude hiding (id)
 
 data DiscountTransaction = DiscountTransaction
-  { rideBookingid :: Id DRB.RideBooking,
+  { rideBookingId :: Id DRB.RideBooking,
     organizationId :: Id DOrg.Organization,
     discount :: Amount,
     createdAt :: UTCTime

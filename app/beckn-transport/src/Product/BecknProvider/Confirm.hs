@@ -159,7 +159,7 @@ onConfirmCallback rideBooking searchRequest transporterOrg = do
 mkDiscountTransaction :: SRB.RideBooking -> Amount -> UTCTime -> DiscountTransaction
 mkDiscountTransaction rideBooking discount currTime =
   DiscountTransaction
-    { rideBookingid = rideBooking.id,
+    { rideBookingId = rideBooking.id,
       organizationId = rideBooking.providerId,
       discount = discount,
       createdAt = currTime
