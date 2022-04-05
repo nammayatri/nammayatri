@@ -1,13 +1,13 @@
 module App.DriverTrackingHealthcheck.Config where
 
 import Beckn.External.Encryption (EncTools)
+import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config (EsqDBConfig)
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import EulerHS.Prelude
 import EulerHS.Types (RedisConfig)
-import Beckn.Sms.Config (SmsConfig)
 
 data AppCfg = AppCfg
   { loggerConfig :: LoggerConfig,

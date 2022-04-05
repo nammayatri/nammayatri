@@ -59,7 +59,6 @@ sendOTP smsCfg otpSmsTemplate phoneNumber otpCode = do
         text = constructOtpSms otpCode otpHash otpSmsTemplate
       }
 
-
 sendSms ::
   ( CoreMetrics m,
     MonadFlow m

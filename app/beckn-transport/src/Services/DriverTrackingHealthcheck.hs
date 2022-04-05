@@ -1,26 +1,27 @@
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
+
 module Services.DriverTrackingHealthcheck where
 
 import App.DriverTrackingHealthcheck.Environment (AppEnv)
+import Beckn.External.Encryption (decrypt)
+import Beckn.External.FCM.Types (FCMNotificationType (TRIGGER_SERVICE))
+import qualified Beckn.External.FCM.Types as FCM
+import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Redis.Queries (lpush, rpop, tryLockRedis, unlockRedis)
 import Beckn.Types.Common
+import Beckn.Types.Error (PersonError (PersonFieldNotPresent))
 import Beckn.Types.Flow (FlowR)
+import Beckn.Types.Id (Id, cast)
 import Data.Either
 import Data.List.NonEmpty (nonEmpty)
+import qualified Domain.Types.Person as SP
 import qualified Product.HealthCheck as HC
 import qualified Storage.Queries.DriverInformation as DrInfo
-import Utils.Common
-import qualified Beckn.Storage.Esqueleto as Esq
-import Utils.Notifications (notifyDevice)
-import Beckn.Types.Error (PersonError(PersonFieldNotPresent))
-import qualified Domain.Types.Person as SP
-import Beckn.External.FCM.Types (FCMNotificationType(TRIGGER_SERVICE))
-import Beckn.External.Encryption (decrypt)
-import Beckn.Types.Id (cast, Id)
-import qualified Beckn.External.MyValueFirst.Flow as SF
-import qualified Beckn.External.FCM.Types as FCM
 import Types.App (Driver)
+import Utils.Common
+import Utils.Notifications (notifyDevice)
 
 type Flow = FlowR AppEnv
 
@@ -51,8 +52,8 @@ driverLastLocationUpdateCheckService = service "driverLastLocationUpdateCheckSer
     drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
     let driverDetails = map fetchPersonIdAndMobileNumber drivers
     flip map driverDetails \case
-        (driverId, Nothing) -> Left driverId
-        (driverId, Just token) -> Right (driverId, token)
+      (driverId, Nothing) -> Left driverId
+      (driverId, Just token) -> Right (driverId, token)
       & partitionEithers
       & \(noTokenIds, driversToPing) -> do
         unless (null noTokenIds) $ logPretty ERROR "Active drivers with no token" noTokenIds
@@ -82,7 +83,6 @@ driverDevicePingService = service "driverDevicePingService" do
   asks (.notificationMinDelay)
     >>= threadDelay . (.getMicroseconds)
 
-
 driverMakingInactiveService :: Flow ()
 driverMakingInactiveService = service "driverMakingInactiveService" $ withRandomId do
   delay <- asks (.driverInactiveDelay)
@@ -91,16 +91,16 @@ driverMakingInactiveService = service "driverMakingInactiveService" $ withRandom
     HC.iAmAlive serviceName
     drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
     logPretty INFO ("Drivers to make inactive: " <> show (length drivers)) ((.id) <$> drivers)
-    mapM_ fetchPersonIdAndMobileNumber drivers 
+    mapM_ fetchPersonIdAndMobileNumber drivers
   threadDelay (secondsToMcs delay).getMicroseconds
   where
-    fetchPersonIdAndMobileNumber :: SP.Person -> Flow () 
+    fetchPersonIdAndMobileNumber :: SP.Person -> Flow ()
     fetchPersonIdAndMobileNumber driver = withLogTag ("driverId_" <> driver.id.getId) do
       mobileNumber' <- mapM decrypt driver.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
       countryCode <- driver.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
       log INFO "Make driver inactive"
       Esq.runTransaction $
-          DrInfo.updateActivity (cast driver.id) False
+        DrInfo.updateActivity (cast driver.id) False
 
       smsCfg <- asks (.smsCfg)
       driverInactiveSmsTemplate <- asks (.driverInactiveSmsTemplate)

@@ -2,6 +2,7 @@ module App.DriverTrackingHealthcheck.Environment where
 
 import App.DriverTrackingHealthcheck.Config
 import Beckn.External.Encryption (EncTools)
+import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Common
 import Beckn.Utils.App (getPodName)
@@ -10,7 +11,6 @@ import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
 import Tools.Metrics
-import Beckn.Sms.Config (SmsConfig)
 
 data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,

@@ -109,7 +109,7 @@ findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId = do
         ||. person ^. PersonMobileNumberHash ==. val (Just searchStrDBHash)
     unMaybe = maybe_ (val "") identity
 
-getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m=> UTCTime -> m [Person]
+getDriversWithOutdatedLocationsToMakeInactive :: Transactionable m => UTCTime -> m [Person]
 getDriversWithOutdatedLocationsToMakeInactive before = do
   findAll $ do
     (driverInformation :& _ :& person) <-
