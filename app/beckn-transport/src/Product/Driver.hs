@@ -18,6 +18,7 @@ import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
@@ -35,10 +36,12 @@ import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Metrics
 import qualified Types.API.Driver as DriverAPI
 import Types.Error
+import Utils.Auth (authTokenCacheKey)
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
 import qualified Utils.Notifications as Notify
 
@@ -194,10 +197,17 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
     QPerson.findById driverId
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   unless (driver.organizationId == Just orgId || driver.role == SP.DRIVER) $ throwError Unauthorized
+  clearDriverSession driverId
   Esq.runTransaction $ do
     whenJust driver.udf1 $ QVehicle.deleteById . Id
     QPerson.deleteById driverId
   return Success
+  where
+    clearDriverSession personId = do
+      regTokens <- QR.findAllByPersonId personId
+      for_ regTokens $ \regToken -> do
+        void $ Redis.deleteKeyRedis $ authTokenCacheKey regToken.token
+      Esq.runTransaction $ QR.deleteByPersonId personId
 
 updateDriver :: Id SP.Person -> DriverAPI.UpdateDriverReq -> FlowHandler DriverAPI.UpdateDriverRes
 updateDriver personId req = withFlowHandlerAPI $ do
