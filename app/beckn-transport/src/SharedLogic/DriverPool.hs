@@ -120,7 +120,7 @@ filterOutDriversWithDistanceAboveThreshold threshold pickupLatLong driverPoolRes
       let mbGdRes = findGetDistanceResult getDistanceResults dpRes
       case mbGdRes of
         Nothing -> False
-        Just gdRes -> gdRes.info.distance <= threshold'
+        Just gdRes -> (gdRes.info.distance * 1000) <= threshold'
 
 findGetDistanceResult ::
   [GoogleMaps.GetDistanceResult] ->
