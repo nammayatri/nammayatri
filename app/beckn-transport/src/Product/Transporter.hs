@@ -26,6 +26,7 @@ updateTransporter admin orgId req = withFlowHandlerAPI $ do
             SO.enabled = fromMaybe (org.enabled) (req.enabled)
            }
   Esq.runTransaction $ QO.updateOrganizationRec updOrg
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateTransporter : ") (show updOrg)
   return $ SO.makeOrganizationAPIEntity updOrg
 
 getTransporter :: Id SP.Person -> FlowHandler TransporterRec

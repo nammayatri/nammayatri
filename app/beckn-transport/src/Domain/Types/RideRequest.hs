@@ -19,4 +19,4 @@ data RideRequest = RideRequest
     _type :: RideRequestType,
     info :: Maybe Text
   }
-  deriving (Generic)
+  deriving (Generic, Show)

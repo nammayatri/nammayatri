@@ -42,7 +42,7 @@ import Tools.Metrics
 import qualified Types.API.Driver as DriverAPI
 import Types.Error
 import Utils.Auth (authTokenCacheKey)
-import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
+import Utils.Common (fromMaybeM, logTagInfo, throwError, withFlowHandlerAPI)
 import qualified Utils.Notifications as Notify
 
 createDriver :: SP.Person -> DriverAPI.OnboardDriverReq -> FlowHandler DriverAPI.OnboardDriverRes
@@ -63,6 +63,7 @@ createDriver admin req = withFlowHandlerAPI $ do
     createDriverDetails (person.id)
     QVehicle.create vehicle
     QPerson.updateVehicle person.id $ Just vehicle.id
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show (person.id, vehicle.id))
   org <-
     QOrganization.findById orgId
       >>= fromMaybeM (OrgNotFound orgId.getId)
@@ -184,6 +185,7 @@ changeDriverEnableState admin personId isEnabled = withFlowHandlerAPI $ do
     unless isEnabled $ QDriverInformation.updateActivity driverId False
   unless isEnabled $
     Notify.notifyDriver FCM.ACCOUNT_DISABLED notificationTitle notificationMessage person.id person.deviceToken
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> changeDriverEnableState : ") (show (driverId, isEnabled))
   return Success
   where
     driverId = cast personId
@@ -202,6 +204,7 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
     QR.deleteByPersonId personId
     whenJust driver.udf1 $ QVehicle.deleteById . Id
     QPerson.deleteById driverId
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
   where
     clearDriverSession personId = do

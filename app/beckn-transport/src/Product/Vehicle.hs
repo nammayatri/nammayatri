@@ -23,6 +23,7 @@ createVehicle admin req = withFlowHandlerAPI $ do
   validateVehicle
   vehicle <- API.createVehicle req orgId
   Esq.runTransaction $ QV.create vehicle
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createVehicle : ") (show vehicle)
   return . CreateVehicleRes $ SV.makeVehicleAPIEntity vehicle
   where
     validateVehicle = do
@@ -53,6 +54,7 @@ updateVehicle admin vehicleId req = withFlowHandlerAPI $ do
                 category = req.category <|> vehicle.category
                }
   Esq.runTransaction $ QV.updateVehicleRec updatedVehicle
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity vehicle
 
 deleteVehicle :: SP.Person -> Id SV.Vehicle -> FlowHandler DeleteVehicleRes

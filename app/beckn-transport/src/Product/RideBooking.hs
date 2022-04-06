@@ -55,6 +55,7 @@ rideBookingCancel rideBookingId admin = withFlowHandlerAPI $ do
   now <- getCurrentTime
   rideReq <- buildRideReq rideBookingId (org.shortId) SRideRequest.CANCELLATION now
   Esq.runTransaction $ RideRequest.create rideReq
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> rideBookingCancel : ") (show rideReq)
   return Success
 
 getRideInfo :: Id SRB.RideBooking -> Id SP.Person -> FlowHandler API.GetRideInfoRes
