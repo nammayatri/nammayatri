@@ -16,7 +16,7 @@ data StatusRes = StatusRes
 
 triggerStatusUpdate :: EsqDBFlow m r => Id DBooking.Booking -> m StatusRes
 triggerStatusUpdate bookingId = do
-  booking <- QBooking.findById bookingId >>= fromMaybeM BookingDoesNotExist
+  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   ticketId <- booking.ticketId & fromMaybeM BookingBppOrderIdNotFound
   pure
     StatusRes

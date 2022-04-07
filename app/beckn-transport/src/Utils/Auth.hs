@@ -76,7 +76,7 @@ validateAdmin regToken = do
   SR.RegistrationToken {..} <- verifyToken regToken
   user <-
     QP.findById (Id entityId)
-      >>= fromMaybeM PersonNotFound
+      >>= fromMaybeM (PersonNotFound entityId)
   verifyAdmin user
 
 verifyPerson :: (EsqDBFlow m r, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person)

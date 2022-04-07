@@ -22,15 +22,15 @@ data ServiceHandle m = ServiceHandle
 startRideHandler :: (MonadThrow m, Log m) => ServiceHandle m -> Id Person.Person -> Id SRide.Ride -> Text -> m APISuccess.APISuccess
 startRideHandler ServiceHandle {..} requestorId rideId otp = do
   rateLimitStartRide requestorId rideId
-  requestor <- findById requestorId >>= fromMaybeM PersonNotFound
-  ride <- findRideById rideId >>= fromMaybeM RideDoesNotExist
+  requestor <- findById requestorId >>= fromMaybeM (PersonNotFound requestorId.getId)
+  ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   case requestor.role of
     Person.DRIVER -> do
       let rideDriver = ride.driverId
       unless (rideDriver == requestorId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
-  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM RideBookingNotFound
+  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
   let inAppOtp = ride.otp
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)

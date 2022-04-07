@@ -57,7 +57,7 @@ instance TEntity QuoteT Domain.Quote where
             { distanceToNearestDriver = distanceToNearestDriver'
             }
       Nothing -> do
-        rentalQuote <- QRentalQuote.findByQuoteId (Id id) >>= fromMaybeM QuoteDoesNotExist
+        rentalQuote <- QRentalQuote.findByQuoteId (Id id) >>= fromMaybeM (QuoteDoesNotExist id)
         quoteTermsEntities <- QQuoteTerms.findAllByQuoteId (Id id)
         let quoteTerms = Domain.mkQuoteTerms <$> quoteTermsEntities
         pure . Domain.RentalDetails $

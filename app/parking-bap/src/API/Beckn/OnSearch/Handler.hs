@@ -38,7 +38,7 @@ handler _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
 searchCbService :: EsqDBFlow m r => BecknCallbackReq OnSearch.OnSearchCatalog -> OnSearch.Catalog -> m ()
 searchCbService req catalog = do
   let searchRequestId = Id $ req.context.transaction_id
-  _searchRequest <- QSearch.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
+  _searchRequest <- QSearch.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   bppUrl <- req.context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_url")
   bppId <- req.context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
   let providers = catalog.bpp_providers

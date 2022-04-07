@@ -44,8 +44,8 @@ cancel transporterId _ req = withFlowHandlerBecknAPI $
     let bookingId = req.message.order_id
     transporterOrg <-
       Organization.findById transporterId
-        >>= fromMaybeM OrgNotFound
-    rideBooking <- QRB.findById (Id bookingId) >>= fromMaybeM RideBookingDoesNotExist
+        >>= fromMaybeM (OrgNotFound transporterId.getId)
+    rideBooking <- QRB.findById (Id bookingId) >>= fromMaybeM (RideBookingDoesNotExist bookingId)
     now <- getCurrentTime
     rideReq <- BP.buildRideReq (rideBooking.id) (transporterOrg.shortId) SRideRequest.CANCELLATION now
     Esq.runTransaction $ RideRequest.create rideReq
@@ -64,12 +64,12 @@ cancelRide ::
   SBCR.RideBookingCancellationReason ->
   m ()
 cancelRide rideId bookingCReason = do
-  ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
-  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
   let transporterId = rideBooking.providerId
   transporter <-
     Organization.findById transporterId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound transporterId.getId)
   if isCancelledByDriver
     then do
       void $ recalculateDriverPool rideBooking.fromLocationId rideBooking.id rideBooking.providerId rideBooking.vehicleVariant
@@ -95,8 +95,8 @@ notifyDriverOnCancel ::
   m ()
 notifyDriverOnCancel rideBooking ride cancellationReason =
   fork "cancelRide - Notify driver" $ do
-    searchRequest <- SearchRequest.findById (rideBooking.requestId) >>= fromMaybeM SearchRequestNotFound
-    driver <- Person.findById ride.driverId >>= fromMaybeM PersonNotFound
+    searchRequest <- SearchRequest.findById (rideBooking.requestId) >>= fromMaybeM (SearchRequestNotFound rideBooking.requestId.getId)
+    driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
     Notify.notifyOnCancel searchRequest driver.id driver.deviceToken cancellationReason.source
 
 cancelRideTransaction ::

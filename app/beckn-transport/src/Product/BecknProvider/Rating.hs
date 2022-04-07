@@ -32,10 +32,10 @@ ratingImpl _ _ req = withFlowHandlerBecknAPI $
     let context = req.context
     validateContext context
     let rideBookingId = Id $ req.message.id
-    rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingDoesNotExist
+    rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
     ride <-
       QRide.findActiveByRBId rideBooking.id
-        >>= fromMaybeM RideNotFound
+        >>= fromMaybeM (RideNotFound rideBooking.id.getId)
     let driverId = ride.driverId
     unless (ride.status == Ride.COMPLETED) $
       throwError $ RideInvalidStatus "Ride is not ready for rating."

@@ -11,7 +11,7 @@ import Tools.Error
 
 status :: EsqDBFlow m r => Id DBooking.Booking -> m DBooking.BookingAPIEntity
 status bookingId = do
-  booking <- QBooking.findById bookingId >>= fromMaybeM BookingDoesNotExist
+  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   departureStation <- QTransportStation.findById booking.departureStationId >>= fromMaybeM TransportStationNotFound
   arrivalStation <- QTransportStation.findById booking.arrivalStationId >>= fromMaybeM TransportStationNotFound
   paymentTrans <- QPT.findByBookingId bookingId

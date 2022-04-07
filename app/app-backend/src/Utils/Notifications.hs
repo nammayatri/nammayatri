@@ -28,7 +28,7 @@ notifyOnRideAssigned rideBooking ride = do
   let personId = rideBooking.riderId
       rideId = ride.id
       driverName = ride.driverName
-  person <- Person.findById personId >>= fromMaybeM PersonNotFound
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let notificationData =
         FCM.FCMData
           { fcmNotificationType = FCM.DRIVER_ASSIGNMENT,
@@ -58,7 +58,7 @@ notifyOnRideStarted rideBooking ride = do
   let personId = rideBooking.riderId
       rideId = ride.id
       driverName = ride.driverName
-  person <- Person.findById personId >>= fromMaybeM PersonNotFound
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let notificationData =
         FCM.FCMData
           { fcmNotificationType = FCM.TRIP_STARTED,
@@ -88,7 +88,7 @@ notifyOnRideCompleted rideBooking ride = do
   let personId = rideBooking.riderId
       rideId = ride.id
       driverName = ride.driverName
-  person <- Person.findById personId >>= fromMaybeM PersonNotFound
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let notificationData =
         FCM.FCMData
           { fcmNotificationType = FCM.TRIP_FINISHED,
@@ -166,7 +166,7 @@ notifyOnRegistration regToken personId mbDeviceToken =
 
 notifyOnRideBookingCancelled :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
 notifyOnRideBookingCancelled rideBooking cancellationSource = do
-  person <- Person.findById rideBooking.riderId >>= fromMaybeM PersonNotFound
+  person <- Person.findById rideBooking.riderId >>= fromMaybeM (PersonNotFound rideBooking.riderId.getId)
   FCM.notifyPerson (notificationData $ rideBooking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
     notificationData orgName =
@@ -210,7 +210,7 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
 
 notifyOnRideBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
 notifyOnRideBookingReallocated rideBooking cancellationSource = do
-  person <- Person.findById rideBooking.riderId >>= fromMaybeM PersonNotFound
+  person <- Person.findById rideBooking.riderId >>= fromMaybeM (PersonNotFound rideBooking.riderId.getId)
   notificationData <- buildNotificationData
   FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where

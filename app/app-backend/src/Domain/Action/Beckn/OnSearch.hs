@@ -61,7 +61,7 @@ searchCbService ::
   DOnSearchReq ->
   Flow ()
 searchCbService DOnSearchReq {..} = do
-  _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM SearchRequestDoesNotExist
+  _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   now <- getCurrentTime
   quotes <- traverse (buildQuote requestId providerInfo now) quotesInfo
   whenM (duplicateCheckCond (quotes <&> (.bppQuoteId)) requestId providerInfo.providerId) $

@@ -23,7 +23,7 @@ import Utils.Context
 findOrg :: EsqDBFlow m r => Subscriber -> m DOrg.Organization
 findOrg subscriber =
   QOrg.findOrgByShortId (ShortId subscriber.subscriber_id)
-    >>= fromMaybeM OrgDoesNotExist
+    >>= fromMaybeM (OrgDoesNotExist subscriber.subscriber_id)
 
 getStatus ::
   DDunzoCreds.DunzoCreds ->

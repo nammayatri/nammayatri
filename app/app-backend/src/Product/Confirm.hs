@@ -29,10 +29,10 @@ import Utils.Common
 confirm :: Id Person.Person -> Id SearchRequest.SearchRequest -> Id SQuote.Quote -> FlowHandler API.ConfirmRes
 confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   lt <- getCurrentTime
-  searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
+  searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   when ((searchRequest.validTill) < lt) $
     throwError SearchRequestExpired
-  quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
+  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
   rideBooking <- buildRideBooking searchRequest quote now
   DB.runTransaction $
@@ -40,7 +40,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.CONFIRM (getId searchRequestId) bapIDs.cabs bapURIs.cabs (Just quote.providerId) (Just quote.providerUrl)
-  person <- QPerson.findById personId >>= fromMaybeM PersonDoesNotExist
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   customerMobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   customerMobileCountryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   let order =
@@ -101,8 +101,8 @@ onConfirm _org req = withFlowHandlerBecknAPI $
       Right msg -> do
         bppQuoteId <- (Id . (.id) <$> listToMaybe msg.order.items) & fromMaybeM (InternalError "Empty items list.")
         let bppRideBookingId = Id msg.order.id
-        quote <- QQuote.findByBPPQuoteId bppQuoteId >>= fromMaybeM QuoteDoesNotExist
-        rideBooking <- QRideB.findByQuoteId quote.id >>= fromMaybeM RideBookingNotFound
+        quote <- QQuote.findByBPPQuoteId bppQuoteId >>= fromMaybeM (QuoteDoesNotExist bppQuoteId.getId)
+        rideBooking <- QRideB.findByQuoteId quote.id >>= fromMaybeM (RideBookingNotFound quote.id.getId)
         DB.runTransaction $ do
           QRideB.updateBPPBookingId rideBooking.id bppRideBookingId
           QRideB.updateStatus rideBooking.id SRB.CONFIRMED

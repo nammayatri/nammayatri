@@ -66,7 +66,7 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
   logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
   driver <-
     Person.findById driverId
-      >>= fromMaybeM PersonNotFound
+      >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
   mbOldLoc <- findDriverLocationById driver.id
   let currPoint = NE.last waypoints
@@ -126,7 +126,7 @@ getLocation :: Id SRide.Ride -> FlowHandler GetLocationRes
 getLocation rideId = withFlowHandlerAPI $ do
   ride <-
     QRide.findById rideId
-      >>= fromMaybeM RideDoesNotExist
+      >>= fromMaybeM (RideDoesNotExist rideId.getId)
   status <-
     case ride.status of
       SRide.NEW -> pure PreRide
@@ -135,7 +135,7 @@ getLocation rideId = withFlowHandlerAPI $ do
   driver <-
     ride.driverId
       & Person.findById
-      >>= fromMaybeM PersonNotFound
+      >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   currLocation <-
     DrLoc.findById driver.id
       >>= fromMaybeM LocationNotFound

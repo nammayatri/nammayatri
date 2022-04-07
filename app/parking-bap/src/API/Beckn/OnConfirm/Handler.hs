@@ -37,7 +37,7 @@ onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
 
 handleOnConfirm :: EsqDBFlow m r => Id DBooking.Booking -> OnConfirm.OnConfirmMessage -> m ()
 handleOnConfirm bookingId msg = do
-  booking <- QBooking.findById bookingId >>= fromMaybeM BookingDoesNotExist
+  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   now <- getCurrentTime
   let updBooking =
         booking

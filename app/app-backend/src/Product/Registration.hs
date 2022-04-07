@@ -138,7 +138,7 @@ verify tokenId req = withFlowHandlerAPI $ do
       Person.setIsNewFalse person.id
   when isNewPerson $
     Notify.notifyOnRegistration regToken person.id deviceToken
-  updPerson <- Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
+  updPerson <- Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
   decPerson <- decrypt updPerson
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthVerifyRes token personAPIEntity
@@ -159,7 +159,7 @@ createPerson req = do
 
 checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
-  Person.findById (Id entityId) >>= fromMaybeM PersonDoesNotExist
+  Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
 
 resend :: Id SR.RegistrationToken -> FlowHandler ResendAuthRes
 resend tokenId = withFlowHandlerAPI $ do

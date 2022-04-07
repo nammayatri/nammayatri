@@ -27,13 +27,13 @@ initiateCallToCustomer :: Id SRide.Ride -> Id SP.Person -> FlowHandler CallAPI.C
 initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
   ride <-
     QRide.findById rideId
-      >>= fromMaybeM RideDoesNotExist
+      >>= fromMaybeM (RideDoesNotExist rideId.getId)
   rideBooking <-
     QRB.findById ride.bookingId
-      >>= fromMaybeM RideBookingNotFound
+      >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
   riderDetails <-
     QRD.findById rideBooking.riderId
-      >>= fromMaybeM RiderDetailsNotFound
+      >>= fromMaybeM (RiderDetailsNotFound rideBooking.riderId.getId)
   requestorPhone <- decrypt riderDetails.mobileNumber
   driverPhone <- getDriverPhone ride
   callbackUrl <- buildCallbackUrl
@@ -81,6 +81,6 @@ getCallStatus _ callStatusId _ = withFlowHandlerAPI $ do
 getDriverPhone :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Text
 getDriverPhone ride = do
   let driverId = ride.driverId
-  driver <- QPerson.findById driverId >>= fromMaybeM PersonNotFound
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   phonenum <- SP.getPersonNumber driver
   phonenum & fromMaybeM (InternalError "Driver has no phone number.")

@@ -34,7 +34,7 @@ import Utils.Common
 
 rideBookingStatus :: Id SRB.RideBooking -> Id SP.Person -> FlowHandler API.RideBookingStatusRes
 rideBookingStatus rideBookingId _ = withFlowHandlerAPI $ do
-  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingDoesNotExist
+  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
   buildRideBookingStatusRes rideBooking
 
 rideBookingList :: SP.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> FlowHandler API.RideBookingListRes
@@ -51,7 +51,7 @@ rideBookingCancel rideBookingId admin = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   org <-
     QOrg.findById orgId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound orgId.getId)
   now <- getCurrentTime
   rideReq <- buildRideReq rideBookingId (org.shortId) SRideRequest.CANCELLATION now
   Esq.runTransaction $ RideRequest.create rideReq
@@ -64,8 +64,8 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
     Nothing -> return $ API.GetRideInfoRes Nothing
     Just notification -> do
       let notificationExpiryTime = notification.expiresAt
-      rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
-      driver <- QP.findById personId >>= fromMaybeM PersonNotFound
+      rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingNotFound rideBookingId.getId)
+      driver <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       driverLocation <-
         QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
@@ -103,10 +103,10 @@ setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
   logTagInfo "setDriverAcceptance" logMessage
   rideBooking <-
     QRB.findById rideBookingId
-      >>= fromMaybeM RideBookingDoesNotExist
+      >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
   transporterOrg <-
     QOrg.findById rideBooking.providerId
-      >>= fromMaybeM OrgDoesNotExist
+      >>= fromMaybeM (OrgDoesNotExist rideBooking.providerId.getId)
   guid <- generateGUID
   let driverResponse =
         API.DriverResponse {driverId = driverId, status = req.response}

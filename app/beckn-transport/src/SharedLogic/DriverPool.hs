@@ -40,7 +40,7 @@ getDriverPool rideBookingId =
     >>= maybe calcDriverPool (pure . map Id)
   where
     calcDriverPool = do
-      rideBooking <- QRideBooking.findById rideBookingId >>= fromMaybeM RideBookingDoesNotExist
+      rideBooking <- QRideBooking.findById rideBookingId >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
       let vehicleVariant = rideBooking.vehicleVariant
           pickupPoint = rideBooking.fromLocationId
           orgId = rideBooking.providerId

@@ -43,8 +43,8 @@ handleOnStatus msg = do
       bppOrderStatus = msg.order.state
       bppPaymentStatus = payment.status
       bppPaymentGatewayTxnStatus = payment.params.transaction_status
-  booking <- QBooking.findByBppOrderId orderId >>= fromMaybeM BookingNotFound
-  paymentDetails <- PaymentTransactionDB.findByBookingId booking.id >>= fromMaybeM PaymentDetailsNotFound
+  booking <- QBooking.findByBppOrderId orderId >>= fromMaybeM (BookingNotFound orderId)
+  paymentDetails <- PaymentTransactionDB.findByBookingId booking.id >>= fromMaybeM (PaymentDetailsNotFound booking.id.getId)
   runTransaction $ do
     QBooking.updateStatus booking $ convertBookingStatus bppOrderStatus
     PaymentTransactionDB.updateTxnDetails paymentDetails.id (show bppPaymentGatewayTxnStatus) $ convertPaymentStatus (bppPaymentStatus, bppPaymentGatewayTxnStatus)

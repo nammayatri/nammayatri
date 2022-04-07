@@ -21,8 +21,8 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   let ratingValue = request.rating
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let rideId = request.rideId
-  ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
-  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
   let txnId = getId rideBooking.requestId
   bppRideBookingId <- rideBooking.bppBookingId & fromMaybeM (RideBookingFieldNotPresent "bppBookingId")
   bapURIs <- asks (.bapSelfURIs)

@@ -39,7 +39,7 @@ validateConfirmReq confirmReq = do
 quoteConfirm :: EsqDBFlow m r => PersonId -> Id DQuote.Quote -> QConfirmReq -> m (QConfirmRes, ConfirmMessageD)
 quoteConfirm personId quoteId confirmReq = do
   validateConfirmReq confirmReq
-  quote <- QQuote.findById quoteId >>= fromMaybeM QuoteNotFound
+  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
   bookingId <- generateGUID
   let txnId = bookingId
   now <- getCurrentTime

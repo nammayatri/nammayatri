@@ -42,7 +42,7 @@ handle =
         Id "1" -> pure $ Just Fixtures.defaultDriver
         Id "2" -> pure . Just $ Fixtures.defaultDriver{id = "2"}
         Id "admin" -> pure $ Just Fixtures.defaultAdmin
-        _ -> throwError PersonDoesNotExist,
+        _ -> throwError (PersonDoesNotExist ""),
       findRideBookingById = \rbId -> pure $ case rbId of
         Id "rideBooking" -> Just rideBooking
         _ -> Nothing,
@@ -53,7 +53,7 @@ handle =
       findSearchRequestById = \searchRequestId ->
         if searchRequestId == "search"
           then pure $ Just searchRequest
-          else throwError SearchRequestNotFound,
+          else throwError (SearchRequestNotFound searchRequestId.getId),
       notifyCompleteToBAP = \_ _ -> pure (),
       endRideTransaction = \_ _ _ -> pure (),
       calculateFare = \_ _ _ _ ->
@@ -124,9 +124,9 @@ failedEndWhenRideStatusIsWrong =
 failedEndNonexistentRide :: TestTree
 failedEndNonexistentRide =
   testCase "A ride does not even exist" $
-    endRide "1" "nonexistent_ride" `shouldThrow` (== RideDoesNotExist)
+    endRide "1" "nonexistent_ride" `shouldThrow` (== RideDoesNotExist "")
 
 failedEndNonexistentDriver :: TestTree
 failedEndNonexistentDriver =
   testCase "A driver does not even exist" $
-    endRide "nonexistent_driver" "ride" `shouldThrow` (== PersonDoesNotExist)
+    endRide "nonexistent_driver" "ride" `shouldThrow` (== PersonDoesNotExist "")

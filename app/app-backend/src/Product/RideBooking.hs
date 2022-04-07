@@ -16,7 +16,7 @@ import Utils.Common
 
 rideBookingStatus :: Id SRB.RideBooking -> Id Person.Person -> FlowHandler API.RideBookingStatusRes
 rideBookingStatus rideBookingId personId = withFlowHandlerAPI $ do
-  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingDoesNotExist
+  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
   unless (rideBooking.riderId == personId) $ throwError AccessDenied
   buildRideBookingStatusRes rideBooking
 

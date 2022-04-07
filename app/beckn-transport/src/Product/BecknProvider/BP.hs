@@ -38,7 +38,7 @@ sendRideAssignedUpdateToBAP ::
 sendRideAssignedUpdateToBAP rideBooking ride = do
   transporter <-
     QOrg.findById rideBooking.providerId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
   buildRideAssignedUpdatePayload ride
     >>= sendUpdateEvent transporter rideBooking.requestId
 
@@ -54,7 +54,7 @@ sendRideStartedUpdateToBAP ::
 sendRideStartedUpdateToBAP rideBooking ride = do
   transporter <-
     QOrg.findById rideBooking.providerId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
   makeRideStartedUpdatePayload ride
     & sendUpdateEvent transporter rideBooking.requestId
 
@@ -70,7 +70,7 @@ sendRideCompletedUpdateToBAP ::
 sendRideCompletedUpdateToBAP rideBooking ride = do
   transporter <-
     QOrg.findById rideBooking.providerId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
   buildRideCompletedUpdatePayload ride
     >>= sendUpdateEvent transporter rideBooking.requestId
 
@@ -123,8 +123,8 @@ buildRideAssignedUpdatePayload ::
 buildRideAssignedUpdatePayload ride = do
   driver <-
     Person.findById ride.driverId
-      >>= fromMaybeM PersonNotFound
-  veh <- Vehicle.findById ride.vehicleId >>= fromMaybeM VehicleNotFound
+      >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  veh <- Vehicle.findById ride.vehicleId >>= fromMaybeM (VehicleNotFound ride.vehicleId.getId)
   mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
   name <- SP.getPersonFullName driver >>= fromMaybeM (PersonFieldNotPresent "firstName")
   let agent =

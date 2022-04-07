@@ -35,7 +35,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
 processEvent :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => OnUpdate.OnUpdateEvent -> m ()
 processEvent (OnUpdate.RideAssigned taEvent) = do
   let bppBookingId = Id taEvent.order_id
-  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM RideBookingDoesNotExist
+  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist bppBookingId.getId)
   unless (isAssignable rideBooking) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
   ride <- buildRide rideBooking
   DB.runTransaction $ do
@@ -75,8 +75,8 @@ processEvent (OnUpdate.RideAssigned taEvent) = do
 processEvent (OnUpdate.RideStarted rsEvent) = do
   let bppBookingId = Id rsEvent.order_id
       bppRideId = Id rsEvent.ride_id
-  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM RideBookingDoesNotExist
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM RideDoesNotExist
+  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist bppBookingId.getId)
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist bppRideId.getId)
   unless (rideBooking.status == SRB.TRIP_ASSIGNED) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
   DB.runTransaction $ do
@@ -85,8 +85,8 @@ processEvent (OnUpdate.RideStarted rsEvent) = do
 processEvent (OnUpdate.RideCompleted rcEvent) = do
   let bppBookingId = Id rcEvent.order_id
       bppRideId = Id rcEvent.ride_id
-  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM RideBookingDoesNotExist
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM RideDoesNotExist
+  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist bppBookingId.getId)
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist bppRideId.getId)
   unless (rideBooking.status == SRB.TRIP_ASSIGNED) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
   unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   let updRide =
@@ -101,7 +101,7 @@ processEvent (OnUpdate.RideCompleted rcEvent) = do
   Notify.notifyOnRideCompleted rideBooking ride
 processEvent (OnUpdate.RideBookingCancelled tcEvent) = do
   let bppRideBookingId = Id $ tcEvent.order_id
-  rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM RideBookingDoesNotExist
+  rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM (RideBookingDoesNotExist bppRideBookingId.getId)
   unless (isRideBookingCancellable rideBooking) $
     throwError (RideBookingInvalidStatus (show rideBooking.status))
   mbRide <- QRide.findActiveByRBId rideBooking.id
@@ -122,8 +122,8 @@ processEvent (OnUpdate.RideBookingCancelled tcEvent) = do
 processEvent (OnUpdate.RideBookingReallocation rbrEvent) = do
   let bppRideBookingId = Id $ rbrEvent.order_id
       bppRideId = Id rbrEvent.ride_id
-  rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM RideBookingDoesNotExist
-  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM RideDoesNotExist
+  rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM (RideBookingDoesNotExist bppRideBookingId.getId)
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist bppRideId.getId)
   let cancellationSource = rbrEvent.cancellation_reason_id
   let searchRequestId = rideBooking.requestId
   logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)

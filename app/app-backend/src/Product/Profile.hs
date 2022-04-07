@@ -15,7 +15,7 @@ import Utils.Common (fromMaybeM, withFlowHandlerAPI)
 
 getPersonDetails :: Id Person.Person -> FlowHandler Profile.ProfileRes
 getPersonDetails personId = withFlowHandlerAPI $ do
-  person <- QPerson.findById personId >>= fromMaybeM PersonNotFound
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   decPerson <- decrypt person
   return $ Person.makePersonAPIEntity decPerson
 

@@ -62,7 +62,7 @@ createDriver admin req = withFlowHandlerAPI $ do
     QPerson.updateVehicle person.id $ Just vehicle.id
   org <-
     QOrganization.findById orgId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound orgId.getId)
   decPerson <- decrypt person
   let mobNum = personEntity.mobileNumber
       mobCounCode = personEntity.mobileCountryCode
@@ -98,18 +98,18 @@ getInformation :: Id SP.Person -> App.FlowHandler DriverAPI.DriverInformationRes
 getInformation personId = withFlowHandlerAPI $ do
   _ <- Registration.checkPersonExists $ getId personId
   let driverId = cast personId
-  person <- QPerson.findById personId >>= fromMaybeM PersonNotFound
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (person, driverInfo)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   organization <-
     QOrganization.findById orgId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound orgId.getId)
   pure $ makeDriverInformationRes driverEntity organization
 
 setActivity :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
 setActivity personId isActive = withFlowHandlerAPI $ do
-  _ <- QPerson.findById personId >>= fromMaybeM PersonNotFound
+  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   when isActive $ do
     driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -153,10 +153,10 @@ linkVehicle admin personId vehicleId = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   person <-
     QPerson.findById personId
-      >>= fromMaybeM PersonDoesNotExist
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
   vehicle <-
     QVehicle.findById vehicleId
-      >>= fromMaybeM VehicleDoesNotExist
+      >>= fromMaybeM (VehicleDoesNotExist vehicleId.getId)
   unless
     ( person.organizationId == Just orgId
         && vehicle.organizationId == orgId
@@ -174,7 +174,7 @@ changeDriverEnableState admin personId isEnabled = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   person <-
     QPerson.findById personId
-      >>= fromMaybeM PersonDoesNotExist
+      >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (person.organizationId == Just orgId) $ throwError Unauthorized
   Esq.runTransaction $ do
     QDriverInformation.updateEnabledState driverId isEnabled
@@ -192,7 +192,7 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   driver <-
     QPerson.findById driverId
-      >>= fromMaybeM PersonDoesNotExist
+      >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   unless (driver.organizationId == Just orgId || driver.role == SP.DRIVER) $ throwError Unauthorized
   Esq.runTransaction $ do
     whenJust driver.udf1 $ QVehicle.deleteById . Id
@@ -202,7 +202,7 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
 updateDriver :: Id SP.Person -> DriverAPI.UpdateDriverReq -> FlowHandler DriverAPI.UpdateDriverRes
 updateDriver personId req = withFlowHandlerAPI $ do
   runRequestValidation DriverAPI.validateUpdateDriverReq req
-  person <- QPerson.findById personId >>= fromMaybeM PersonNotFound
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let updPerson =
         person{firstName = fromMaybe person.firstName req.firstName,
                middleName = req.middleName <|> person.middleName,
@@ -210,7 +210,7 @@ updateDriver personId req = withFlowHandlerAPI $ do
                deviceToken = req.deviceToken <|> person.deviceToken
               }
 
-  mbVehicle <- forM person.udf1 $ \vehicleId -> QVehicle.findById (Id vehicleId) >>= fromMaybeM VehicleNotFound
+  mbVehicle <- forM person.udf1 $ \vehicleId -> QVehicle.findById (Id vehicleId) >>= fromMaybeM (VehicleNotFound vehicleId)
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let wantToDowngrade = req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True
   case mbVehicle of
@@ -231,7 +231,7 @@ updateDriver personId req = withFlowHandlerAPI $ do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   org <-
     QOrganization.findById orgId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound orgId.getId)
   return $ makeDriverInformationRes driverEntity org
 
 sendInviteSms ::

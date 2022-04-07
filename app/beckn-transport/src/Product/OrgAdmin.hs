@@ -16,7 +16,7 @@ import Utils.Common
 getProfile :: SP.Person -> FlowHandler API.OrgAdminProfileRes
 getProfile admin = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
-  org <- QOrg.findById orgId >>= fromMaybeM OrgNotFound
+  org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
   decAdmin <- decrypt admin
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
@@ -32,7 +32,7 @@ updateProfile admin req = withFlowHandlerAPI $ do
              }
   Esq.runTransaction $
     QPerson.updatePersonRec updAdmin.id updAdmin
-  org <- QOrg.findById orgId >>= fromMaybeM OrgNotFound
+  org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
   decUpdAdmin <- decrypt updAdmin
   let personAPIEntity = SP.makePersonAPIEntity decUpdAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)

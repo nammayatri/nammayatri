@@ -24,8 +24,8 @@ import Utils.Common
 cancel :: Id SRB.RideBooking -> Id Person.Person -> API.CancelReq -> FlowHandler CancelRes
 cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let bookingCancellationReasonAPI = req.bookingCancellationReason
-  rideBooking <- QRB.findById bookingId >>= fromMaybeM RideBookingDoesNotExist
-  searchRequest <- MC.findByPersonId personId (rideBooking.requestId) >>= fromMaybeM SearchRequestNotFound
+  rideBooking <- QRB.findById bookingId >>= fromMaybeM (RideBookingDoesNotExist bookingId.getId)
+  searchRequest <- MC.findByPersonId personId (rideBooking.requestId) >>= fromMaybeM (SearchRequestNotFound rideBooking.requestId.getId)
   canCancelRideBooking <- isRideBookingCancellable rideBooking
   unless canCancelRideBooking $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
@@ -62,6 +62,6 @@ isRideBookingCancellable :: EsqDBFlow m r => SRB.RideBooking -> m Bool
 isRideBookingCancellable rideBooking
   | rideBooking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT] = pure True
   | rideBooking.status == SRB.TRIP_ASSIGNED = do
-    ride <- QR.findActiveByRBId rideBooking.id >>= fromMaybeM RideDoesNotExist
+    ride <- QR.findActiveByRBId rideBooking.id >>= fromMaybeM (RideDoesNotExist rideBooking.id.getId)
     pure (ride.status == Ride.NEW)
   | otherwise = pure False

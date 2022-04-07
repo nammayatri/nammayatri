@@ -52,7 +52,7 @@ instance TEntity QuoteT Domain.Quote where
     quoteDetails <- case fareProductType of
       Domain.RENTAL -> return Domain.RentalDetails
       Domain.ONE_WAY -> do
-        oneWayQuoteEntity <- QOneWayQuote.findByQuoteId (Id id) >>= fromMaybeM QuoteDoesNotExist
+        oneWayQuoteEntity <- QOneWayQuote.findByQuoteId (Id id) >>= fromMaybeM (QuoteDoesNotExist id)
         return . Domain.OneWayDetails $
           Domain.OneWayQuoteDetails
             { distance = oneWayQuoteEntity.distance,

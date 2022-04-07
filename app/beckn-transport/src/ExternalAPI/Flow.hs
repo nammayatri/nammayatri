@@ -55,7 +55,7 @@ callBAP ::
   content ->
   m res
 callBAP action api transporter searchRequestId reqConstr content = do
-  searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM SearchRequestNotFound
+  searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
   let bapId = searchRequest.bapId
       bapUri = searchRequest.bapUri
   let bppShortId = getShortId $ transporter.shortId

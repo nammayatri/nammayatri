@@ -47,18 +47,18 @@ endRideHandler ::
   Id Ride.Ride ->
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} requestorId rideId = do
-  requestor <- findById requestorId >>= fromMaybeM PersonNotFound
+  requestor <- findById requestorId >>= fromMaybeM (PersonNotFound requestorId.getId)
 
   recalcDistanceEnding requestorId
 
-  ride <- findRideById (cast rideId) >>= fromMaybeM RideDoesNotExist
+  ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
   case requestor.role of
     Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
   unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM RideBookingNotFound
+  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   (chargeableDistance, fare, totalFare) <- recalculateFare rideBooking ride

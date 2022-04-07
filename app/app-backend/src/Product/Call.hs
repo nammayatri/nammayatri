@@ -76,9 +76,9 @@ getCallStatus _ callStatusId _ = withFlowHandlerAPI $ do
 
 getPerson :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Person
 getPerson ride = do
-  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM RideBookingNotFound
+  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
   let personId = rideBooking.riderId
-  Person.findById personId >>= fromMaybeM PersonNotFound
+  Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
 -- | Get person's mobile phone
 getPersonPhone :: EncFlow m r => Person -> m Text
@@ -92,7 +92,7 @@ getCustomerAndDriverPhones :: (EncFlow m r, EsqDBFlow m r) => Id SRide.Ride -> m
 getCustomerAndDriverPhones rideId = do
   ride <-
     QRide.findById rideId
-      >>= fromMaybeM RideDoesNotExist
+      >>= fromMaybeM (RideDoesNotExist rideId.getId)
   person <- getPerson ride
   customerPhone <- getPersonPhone person
   return (customerPhone, ride.driverMobileNumber)

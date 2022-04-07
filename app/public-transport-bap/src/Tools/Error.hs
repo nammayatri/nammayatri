@@ -1,5 +1,8 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# HLINT ignore "Use newtype instead of data" #-}
+{-# OPTIONS_GHC -Wno-missing-signatures #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Tools.Error
   ( module Tools.Error,
@@ -27,8 +30,8 @@ instance IsHTTPError TransportStationError where
 instance IsAPIError TransportStationError
 
 data BookingError
-  = BookingNotFound
-  | BookingDoesNotExist
+  = BookingNotFound Text
+  | BookingDoesNotExist Text
   | BookingFieldNotPresent Text
   | BookingInvalidStatus Text
   | BookingBppOrderIdNotFound
@@ -38,21 +41,22 @@ instanceExceptionWithParent 'HTTPException ''BookingError
 
 instance IsBaseError BookingError where
   toMessage = \case
-    BookingDoesNotExist -> Just "No booking matches passed data."
+    BookingNotFound bookingId -> Just $ "Booking with bookingId \"" <> show bookingId <> "\" not found. "
+    BookingDoesNotExist bookingId -> Just $ "No booking matches passed data with id \"" <> show bookingId <> "\" not exist. "
     BookingFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this booking."
     BookingInvalidStatus msg -> Just $ "Attempted to do some action in wrong booking status. " <> msg
     _ -> Nothing
 
 instance IsHTTPError BookingError where
   toErrorCode = \case
-    BookingNotFound -> "BOOKING_NOT_FOUND"
-    BookingDoesNotExist -> "BOOKING_DOES_NOT_EXIST"
+    BookingNotFound _ -> "BOOKING_NOT_FOUND"
+    BookingDoesNotExist _ -> "BOOKING_DOES_NOT_EXIST"
     BookingFieldNotPresent _ -> "BOOKING_FIELD_NOT_PRESENT"
     BookingInvalidStatus _ -> "BOOKING_INVALID_STATUS"
     BookingBppOrderIdNotFound -> "BOOKING_BPP_ORDER_ID_NOT_FOUND"
   toHttpCode = \case
-    BookingNotFound -> E500
-    BookingDoesNotExist -> E400
+    BookingNotFound _ -> E500
+    BookingDoesNotExist _ -> E400
     BookingFieldNotPresent _ -> E500
     BookingInvalidStatus _ -> E400
     BookingBppOrderIdNotFound -> E500
@@ -60,16 +64,21 @@ instance IsHTTPError BookingError where
 instance IsAPIError BookingError
 
 data PaymentDetailsError
-  = PaymentDetailsNotFound
+  = PaymentDetailsNotFound Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''PaymentDetailsError
 
 instance IsBaseError PaymentDetailsError
 
+toMessage = \case
+  PaymentDetailsNotFound paymentId -> Just $ ("Booking with bookingId \"" :: [Char]) <> show paymentId <> "\" not found. "
+
 instance IsHTTPError PaymentDetailsError where
   toErrorCode = \case
-    PaymentDetailsNotFound -> "PAYMENT_DETAILS_NOT_FOUND"
-  toHttpCode PaymentDetailsNotFound = E400
+    PaymentDetailsNotFound _ -> "PAYMENT_DETAILS_NOT_FOUND"
+
+toHttpCode = \case
+  PaymentDetailsNotFound _ -> E400
 
 instance IsAPIError PaymentDetailsError

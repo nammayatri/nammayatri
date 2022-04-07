@@ -21,7 +21,7 @@ handler = triggerStatusUpdate
 
 triggerStatusUpdate :: PersonId -> Id DBooking.Booking -> FlowHandler APISuccess
 triggerStatusUpdate _ bookingId = withFlowHandlerAPI $ do
-  booking <- QBooking.findById bookingId >>= fromMaybeM BookingDoesNotExist
+  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   bppOrderId <- booking.bppOrderId & fromMaybeM BookingBppOrderIdNotFound
   let url = booking.bppUrl
   context <- buildParkingContext STATUS (getId bookingId)

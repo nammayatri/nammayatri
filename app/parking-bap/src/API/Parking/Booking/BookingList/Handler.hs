@@ -25,6 +25,6 @@ bookingList personId mbLimit mbOffset = withFlowHandlerAPI $ do
 
 buildBookingListRes :: EsqDBFlow m r => Booking -> m Booking.BookingAPIEntity
 buildBookingListRes booking = do
-  location <- QPLocation.findById (Id booking.parkingSpaceLocationId) >>= fromMaybeM ParkingLocationNotFound
+  location <- QPLocation.findById (Id booking.parkingSpaceLocationId) >>= fromMaybeM (ParkingLocationNotFound booking.parkingSpaceLocationId)
   paymentTrans <- QPT.findByBookingId booking.id
   return $ Booking.makeBookingAPIEntity booking location paymentTrans

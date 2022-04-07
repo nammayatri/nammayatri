@@ -21,8 +21,8 @@ data OnStatusReq = OnStatusReq
 
 handler :: EsqDBFlow m r => OnStatusReq -> m ()
 handler OnStatusReq {..} = do
-  booking <- QBooking.findById bookingId >>= fromMaybeM BookingNotFound
-  paymentDetails <- QPaymentTransaction.findByBookingId booking.id >>= fromMaybeM PaymentDetailsNotFound
+  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingNotFound bookingId.getId)
+  paymentDetails <- QPaymentTransaction.findByBookingId booking.id >>= fromMaybeM (PaymentDetailsNotFound booking.id.getId)
   runTransaction $ do
     QBooking.updateStatus booking bookingStatus
     QPaymentTransaction.updateTxnDetails paymentDetails.id transactionStatus paymentStatus

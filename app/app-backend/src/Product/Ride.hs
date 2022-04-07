@@ -15,7 +15,7 @@ import Utils.Common
 getDriverLoc :: Id SRide.Ride -> Id SPerson.Person -> FlowHandler API.GetDriverLocRes
 getDriverLoc rideId personId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   baseUrl <- xProviderUri <$> ask
-  ride <- QRide.findById rideId >>= fromMaybeM RideDoesNotExist
+  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   when
     (ride.status == COMPLETED || ride.status == CANCELLED)
     $ throwError $ RideInvalidStatus "Cannot track this ride"

@@ -26,7 +26,7 @@ import Utils.Common
 
 login :: T.LoginReq -> FlowHandler T.LoginRes
 login T.LoginReq {..} = withFlowHandlerAPI $ do
-  person <- Person.findByEmailAndPassword email password >>= fromMaybeM PersonNotFound
+  person <- Person.findByEmailAndPassword email password >>= fromMaybeM (PersonNotFound email)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
   token <- generateToken person
   pure $ T.LoginRes token "Logged in successfully"
@@ -43,7 +43,7 @@ generateToken SP.Person {..} = do
 
 logout :: Id SP.Person -> FlowHandler T.LogoutRes
 logout personId = withFlowHandlerAPI $ do
-  person <- Person.findById personId >>= fromMaybeM PersonNotFound
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (person.role == SP.CUSTOMER_SUPPORT) $ throwError Unauthorized
   DB.runTransaction (RegistrationToken.deleteByPersonId person.id)
   pure $ T.LogoutRes "Logged out successfully"
@@ -73,7 +73,7 @@ createSupportRegToken entityId = do
 
 listOrder :: Id SP.Person -> Maybe Text -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler [T.OrderResp]
 listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
-  supportP <- Person.findById personId >>= fromMaybeM PersonNotFound
+  supportP <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
     throwError AccessDenied
   T.OrderInfo {person, searchRequests} <- case (mRequestId, mMobile) of
@@ -86,18 +86,18 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
       person <-
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
-          >>= fromMaybeM PersonDoesNotExist
+          >>= fromMaybeM (PersonDoesNotExist number)
       searchRequests <-
         SearchRequest.findAllByPersonIdLimitOffset (person.id) (Just limit) moffset
       return $ T.OrderInfo person searchRequests
     getByRequestId searchRequestId = do
       (searchRequest :: C.SearchRequest) <-
         SearchRequest.findById (Id searchRequestId)
-          >>= fromMaybeM SearchRequestDoesNotExist
+          >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId)
       let requestorId = searchRequest.riderId
       person <-
         Person.findById requestorId
-          >>= fromMaybeM PersonDoesNotExist
+          >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
       return $ T.OrderInfo person [searchRequest]
 
 makeSearchRequestToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp

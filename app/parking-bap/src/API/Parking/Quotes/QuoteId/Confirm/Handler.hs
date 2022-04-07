@@ -27,8 +27,8 @@ handler = confirm
 
 confirm :: Id DQuote.Quote -> PersonId -> PostQuoteConfirmReq -> FlowHandler PostQuoteConfirmRes
 confirm quoteId _ req = withFlowHandlerAPI $ do
-  quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
-  search <- QSearch.findById quote.searchId >>= fromMaybeM SearchNotFound
+  quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
+  search <- QSearch.findById quote.searchId >>= fromMaybeM (SearchNotFound quote.searchId.getId)
   booking <- buildBooking search quote
   _ <- Esq.runTransaction $ QBooking.create booking
   let txnId = booking.id.getId

@@ -31,8 +31,8 @@ buildDriverRideRes (ride, rideBooking) = do
   fromLocation <- QLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
   toLocation <- RideBooking.getDropLocation rideBooking.rideBookingDetails
 
-  vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM VehicleNotFound
-  driver <- QP.findById ride.driverId >>= fromMaybeM PersonNotFound
+  vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM (VehicleNotFound ride.vehicleId.getId)
+  driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverNumber <- SP.getPersonNumber driver
   pure
     API.DriverRideRes

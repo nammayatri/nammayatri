@@ -22,7 +22,7 @@ data OnConfirmMessageD = OnConfirmMessageD
 
 handleOnConfirm :: EsqDBFlow m r => OnConfirmMessageD -> m ()
 handleOnConfirm msg = do
-  booking <- QBooking.findById msg.bookingId >>= fromMaybeM BookingDoesNotExist
+  booking <- QBooking.findById msg.bookingId >>= fromMaybeM (BookingDoesNotExist msg.bookingId.getId)
   now <- getCurrentTime
   let updBooking =
         booking{status = msg.bookingStatus,

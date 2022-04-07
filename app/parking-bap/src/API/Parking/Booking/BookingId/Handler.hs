@@ -17,7 +17,7 @@ handler = status
 
 status :: PersonId -> Id DBooking.Booking -> FlowHandler DBooking.BookingAPIEntity
 status _ bookingId = withFlowHandlerAPI $ do
-  booking <- QBooking.findById bookingId >>= fromMaybeM BookingDoesNotExist
-  location <- QPLocation.findById (Id booking.parkingSpaceLocationId) >>= fromMaybeM ParkingLocationNotFound
+  booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  location <- QPLocation.findById (Id booking.parkingSpaceLocationId) >>= fromMaybeM (ParkingLocationNotFound booking.parkingSpaceLocationId)
   paymentTrans <- QPT.findByBookingId bookingId
   return $ DBooking.makeBookingAPIEntity booking location paymentTrans

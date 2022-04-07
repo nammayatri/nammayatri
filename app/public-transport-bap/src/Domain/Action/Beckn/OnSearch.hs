@@ -46,7 +46,7 @@ data OnSearchStationReq = OnSearchStationReq
 
 handler :: (EsqDBFlow m r, MonadProducer Kafka.PublicTransportQuoteList m) => OnSearchReq -> m ()
 handler (OnSearchReq searchId quotes transportLocations) = do
-  searchRequest <- QSearch.findById searchId >>= fromMaybeM SearchRequestDoesNotExist
+  searchRequest <- QSearch.findById searchId >>= fromMaybeM (SearchRequestDoesNotExist searchId.getId)
   publicTransportStations <- forM transportLocations $ \publicTransportStation -> do
     QStation.findByStationCode publicTransportStation.bppLocationId >>= maybe (createPublicTransportLocation publicTransportStation) return
   _quotes <- forM quotes $ \quote -> do

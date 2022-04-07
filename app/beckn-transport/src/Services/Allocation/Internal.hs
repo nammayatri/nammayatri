@@ -69,10 +69,10 @@ assignDriver ::
   Id Driver ->
   Flow ()
 assignDriver rideBookingId driverId = do
-  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingDoesNotExist
+  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
   driver <-
     QP.findById (cast driverId)
-      >>= fromMaybeM PersonDoesNotExist
+      >>= fromMaybeM (PersonDoesNotExist driverId.getId)
   ride <- buildRide rideBooking driver
   Esq.runTransaction $ do
     QDI.updateOnRide (cast driver.id) True
@@ -80,7 +80,7 @@ assignDriver rideBookingId driverId = do
     QRide.create ride
 
   fork "assignDriver - Notify BAP" $ do
-    uRideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
+    uRideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingNotFound rideBookingId.getId)
     BP.sendRideAssignedUpdateToBAP uRideBooking ride
     Notify.notifyDriver notificationType notificationTitle (message uRideBooking) driver.id driver.deviceToken
   where
@@ -99,7 +99,7 @@ assignDriver rideBookingId driverId = do
           <&> Id
       vehicle <-
         QVeh.findById vehicleId
-          >>= fromMaybeM VehicleNotFound
+          >>= fromMaybeM (VehicleNotFound vehicleId.getId)
       guid <- generateGUID
       shortId <- generateShortId
       otp <- generateOTPCode
@@ -164,10 +164,10 @@ sendNewRideNotifications ::
 sendNewRideNotifications rideBookingId = traverse_ sendNewRideNotification
   where
     sendNewRideNotification driverId = do
-      rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
+      rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingNotFound rideBookingId.getId)
       person <-
         QP.findById (cast driverId)
-          >>= fromMaybeM PersonNotFound
+          >>= fromMaybeM (PersonNotFound driverId.getId)
       notifyDriverNewAllocation rideBooking.id person.id person.deviceToken
 
 sendRideNotAssignedNotification ::
@@ -175,10 +175,10 @@ sendRideNotAssignedNotification ::
   Id Driver ->
   Flow ()
 sendRideNotAssignedNotification rideBookingId driverId = do
-  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
+  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingNotFound rideBookingId.getId)
   person <-
     QP.findById (cast driverId)
-      >>= fromMaybeM PersonNotFound
+      >>= fromMaybeM (PersonNotFound driverId.getId)
   notifyRideNotAssigned rideBooking.id person.id person.deviceToken
 
 updateNotificationStatuses :: EsqDBFlow m r => Id RideBooking -> NotificationStatus -> NonEmpty (Id Driver) -> m ()
@@ -215,12 +215,12 @@ cancelRideBooking ::
   SBCR.RideBookingCancellationReason ->
   m ()
 cancelRideBooking rideBookingId reason = do
-  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
+  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingNotFound rideBookingId.getId)
   mbRide <- QRide.findActiveByRBId rideBookingId
   let transporterId = rideBooking.providerId
   transporter <-
     QOrg.findById transporterId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound transporterId.getId)
   Esq.runTransaction $ do
     QRB.updateStatus rideBooking.id SRB.CANCELLED
     QBCR.create reason
@@ -300,7 +300,7 @@ logDriverEvents eventType rideBookingId driverList = Esq.runTransaction $ traver
 -- TODO: We don't need RideInfo anymore, we can just use RideBooking directly. Remove this.
 getRideInfo :: EsqDBFlow m r => Id RideBooking -> m RideInfo
 getRideInfo rideBookingId = do
-  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM RideBookingNotFound
+  rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingNotFound rideBookingId.getId)
   rideStatus <- castToRideStatus $ rideBooking.status
   pure
     RideInfo

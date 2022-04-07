@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
 module Beckn.Types.Error where
 
@@ -118,8 +119,8 @@ instance IsHTTPError AuthPIError where
 instance IsAPIError AuthPIError
 
 data VehicleError
-  = VehicleNotFound
-  | VehicleDoesNotExist
+  = VehicleNotFound Text
+  | VehicleDoesNotExist Text
   | VehicleFieldNotPresent Text
   | VehicleAlreadyLinked
   deriving (Eq, Show, IsBecknAPIError)
@@ -128,26 +129,28 @@ instanceExceptionWithParent 'HTTPException ''VehicleError
 
 instance IsBaseError VehicleError where
   toMessage = \case
+    VehicleNotFound vehicleId -> Just $ "Vehicle with vehicleId \"" <> show vehicleId <> "\" not found."
+    VehicleDoesNotExist vehicleId -> Just $ "Vehicle with vehicleId \"" <> show vehicleId <> "\" not exist."
     VehicleFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this vehicle."
     _ -> Nothing
 
 instance IsHTTPError VehicleError where
   toErrorCode = \case
-    VehicleNotFound -> "VEHICLE_NOT_FOUND"
-    VehicleDoesNotExist -> "VEHICLE_DOES_NOT_EXIST"
+    VehicleNotFound _ -> "VEHICLE_NOT_FOUND"
+    VehicleDoesNotExist _ -> "VEHICLE_DOES_NOT_EXIST"
     VehicleFieldNotPresent _ -> "VEHICLE_FIELD_NOT_PRESENT"
     VehicleAlreadyLinked -> "VEHICLE_ALREADY_LINKED"
   toHttpCode = \case
-    VehicleNotFound -> E500
-    VehicleDoesNotExist -> E400
+    VehicleNotFound _ -> E500
+    VehicleDoesNotExist _ -> E400
     VehicleFieldNotPresent _ -> E500
     VehicleAlreadyLinked -> E400
 
 instance IsAPIError VehicleError
 
 data PersonError
-  = PersonNotFound
-  | PersonDoesNotExist
+  = PersonNotFound Text
+  | PersonDoesNotExist Text
   | PersonFieldNotPresent Text
   | PersonOrgExists
   deriving (Eq, Show, IsBecknAPIError)
@@ -156,20 +159,20 @@ instanceExceptionWithParent 'HTTPException ''PersonError
 
 instance IsBaseError PersonError where
   toMessage = \case
+    PersonNotFound personId -> Just $ "Person with personId \"" <> show personId <> "\" not found."
+    PersonDoesNotExist personId -> Just $ "No person matches passed data \"" <> show personId <> "\" not exist."
     PersonFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this person."
-    PersonDoesNotExist -> Just "No person matches passed data."
     PersonOrgExists -> Just "Person is already registered in the organization."
-    _ -> Nothing
 
 instance IsHTTPError PersonError where
   toErrorCode = \case
-    PersonNotFound -> "PERSON_NOT_FOUND"
-    PersonDoesNotExist -> "PERSON_DOES_NOT_EXIST"
+    PersonNotFound _ -> "PERSON_NOT_FOUND"
+    PersonDoesNotExist _ -> "PERSON_DOES_NOT_EXIST"
     PersonFieldNotPresent _ -> "PERSON_FIELD_NOT_PRESENT"
     PersonOrgExists -> "PERSON_ORG_ALREADY_EXISTS"
   toHttpCode = \case
-    PersonNotFound -> E500
-    PersonDoesNotExist -> E400
+    PersonNotFound _ -> E500
+    PersonDoesNotExist _ -> E400
     PersonFieldNotPresent _ -> E500
     PersonOrgExists -> E400
 
@@ -205,7 +208,6 @@ instance IsBaseError LocationError where
   toMessage = \case
     LocationDoesNotExist -> Just "No location matches passed data."
     LocationFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this location."
-    _ -> Nothing
 
 instance IsHTTPError LocationError where
   toErrorCode = \case
@@ -242,8 +244,8 @@ instance IsHTTPError GenericError where
 instance IsAPIError GenericError
 
 data OrganizationError
-  = OrgNotFound
-  | OrgDoesNotExist
+  = OrgNotFound Text
+  | OrgDoesNotExist Text
   | OrgFieldNotPresent Text
   | OrgMobilePhoneUsed
   deriving (Eq, Show, IsBecknAPIError)
@@ -252,26 +254,27 @@ instanceExceptionWithParent 'HTTPException ''OrganizationError
 
 instance IsBaseError OrganizationError where
   toMessage = \case
-    OrgDoesNotExist -> Just "No organization matches passed data."
+    OrgNotFound orgId -> Just $ "Organization with orgId \"" <> show orgId <> "\" not found."
+    OrgDoesNotExist orgId -> Just $ "No organization matches passed data \"" <> show orgId <> "\" not exist."
     OrgFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this organization."
     OrgMobilePhoneUsed -> Just "Mobile phone already used by another organization."
-    _ -> Nothing
 
 instance IsHTTPError OrganizationError where
   toErrorCode = \case
-    OrgNotFound -> "ORGANIZATION_NOT_FOUND"
-    OrgDoesNotExist -> "ORGANIZATION_DOES_NOT_EXIST"
+    OrgNotFound _ -> "ORGANIZATION_NOT_FOUND"
+    OrgDoesNotExist _ -> "ORGANIZATION_DOES_NOT_EXIST"
     OrgFieldNotPresent _ -> "ORGANIZATION_FIELD_NOT_PRESENT"
     OrgMobilePhoneUsed -> "ORGANIZATION_MOBILE_PHONE_USED"
-  toHttpCode OrgDoesNotExist = E400
-  toHttpCode OrgMobilePhoneUsed = E400
-  toHttpCode _ = E500
+  toHttpCode = \case
+    OrgDoesNotExist _ -> E400
+    OrgMobilePhoneUsed -> E400
+    _ -> E500
 
 instance IsAPIError OrganizationError
 
 data SearchRequestError
-  = SearchRequestNotFound
-  | SearchRequestDoesNotExist
+  = SearchRequestNotFound Text
+  | SearchRequestDoesNotExist Text
   | SearchRequestExpired
   | SearchRequestInvalidStatus Text
   | SearchRequestFieldNotPresent Text
@@ -281,21 +284,22 @@ instanceExceptionWithParent 'HTTPException ''SearchRequestError
 
 instance IsBaseError SearchRequestError where
   toMessage = \case
-    SearchRequestDoesNotExist -> Just "No case matches passed data."
+    SearchRequestNotFound searchId -> Just $ "Search with searchId \"" <> show searchId <> "\"not found. "
+    SearchRequestDoesNotExist searchId -> Just $ "No case matches passed data \"<>" <> show searchId <> "\" not exist"
     SearchRequestFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this case."
     SearchRequestInvalidStatus msg -> Just $ "Attempted to do some action in wrong case status. " <> msg
     _ -> Nothing
 
 instance IsHTTPError SearchRequestError where
   toErrorCode = \case
-    SearchRequestNotFound -> "SEARCH_REQUEST_NOT_FOUND"
-    SearchRequestDoesNotExist -> "SEARCH_REQUEST_DOES_NOT_EXIST"
+    SearchRequestNotFound _ -> "SEARCH_REQUEST_NOT_FOUND"
+    SearchRequestDoesNotExist _ -> "SEARCH_REQUEST_DOES_NOT_EXIST"
     SearchRequestExpired -> "SEARCH_REQUEST_EXPIRED"
     SearchRequestFieldNotPresent _ -> "SEARCH_REQUEST_FIELD_NOT_PRESENT"
     SearchRequestInvalidStatus _ -> "SEARCH_REQUEST_INVALID_STATUS"
   toHttpCode = \case
-    SearchRequestNotFound -> E500
-    SearchRequestDoesNotExist -> E400
+    SearchRequestNotFound _ -> E500
+    SearchRequestDoesNotExist _ -> E400
     SearchRequestExpired -> E400
     SearchRequestFieldNotPresent _ -> E500
     SearchRequestInvalidStatus _ -> E400
@@ -303,8 +307,8 @@ instance IsHTTPError SearchRequestError where
 instance IsAPIError SearchRequestError
 
 data QuoteError
-  = QuoteNotFound
-  | QuoteDoesNotExist
+  = QuoteNotFound Text
+  | QuoteDoesNotExist Text
   | QuoteFieldNotPresent Text
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -312,25 +316,25 @@ instanceExceptionWithParent 'HTTPException ''QuoteError
 
 instance IsBaseError QuoteError where
   toMessage = \case
-    QuoteDoesNotExist -> Just "No quote matches passed data."
+    QuoteNotFound quoteId -> Just $ "Quote with quoteId \"" <> show quoteId <> "\" not found. "
+    QuoteDoesNotExist quoteId -> Just $ "No quote matches passed data \"" <> show quoteId <> "\" not exist. "
     QuoteFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this quote."
-    _ -> Nothing
 
 instance IsHTTPError QuoteError where
   toErrorCode = \case
-    QuoteNotFound -> "QUOTE_NOT_FOUND"
-    QuoteDoesNotExist -> "QUOTE_DOES_NOT_EXIST"
+    QuoteNotFound _ -> "QUOTE_NOT_FOUND"
+    QuoteDoesNotExist _ -> "QUOTE_DOES_NOT_EXIST"
     QuoteFieldNotPresent _ -> "QUOTE_FIELD_NOT_PRESENT"
   toHttpCode = \case
-    QuoteNotFound -> E500
-    QuoteDoesNotExist -> E400
+    QuoteNotFound _ -> E500
+    QuoteDoesNotExist _ -> E400
     QuoteFieldNotPresent _ -> E500
 
 instance IsAPIError QuoteError
 
 data RideBookingError
-  = RideBookingNotFound
-  | RideBookingDoesNotExist
+  = RideBookingNotFound Text
+  | RideBookingDoesNotExist Text
   | RideBookingFieldNotPresent Text
   | RideBookingInvalidStatus Text
   deriving (Eq, Show, IsBecknAPIError)
@@ -339,28 +343,28 @@ instanceExceptionWithParent 'HTTPException ''RideBookingError
 
 instance IsBaseError RideBookingError where
   toMessage = \case
-    RideBookingDoesNotExist -> Just "No ride booking matches passed data."
+    RideBookingNotFound bookingId -> Just $ "RideBooking with bookingId \"" <> show bookingId <> "\" not found. "
+    RideBookingDoesNotExist bookingId -> Just $ "No ride booking matches passed data \"" <> show bookingId <> "\" not exist. "
     RideBookingFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this ride booking."
     RideBookingInvalidStatus msg -> Just $ "Attempted to do some action in wrong ride booking status. " <> msg
-    _ -> Nothing
 
 instance IsHTTPError RideBookingError where
   toErrorCode = \case
-    RideBookingNotFound -> "RIDE_BOOKING_NOT_FOUND"
-    RideBookingDoesNotExist -> "RIDE_BOOKING_DOES_NOT_EXIST"
+    RideBookingNotFound _ -> "RIDE_BOOKING_NOT_FOUND"
+    RideBookingDoesNotExist _ -> "RIDE_BOOKING_DOES_NOT_EXIST"
     RideBookingFieldNotPresent _ -> "RIDE_BOOKING_FIELD_NOT_PRESENT"
     RideBookingInvalidStatus _ -> "RIDE_BOOKING_INVALID_STATUS"
   toHttpCode = \case
-    RideBookingNotFound -> E500
-    RideBookingDoesNotExist -> E400
+    RideBookingNotFound _ -> E500
+    RideBookingDoesNotExist _ -> E400
     RideBookingFieldNotPresent _ -> E500
     RideBookingInvalidStatus _ -> E400
 
 instance IsAPIError RideBookingError
 
 data RideError
-  = RideNotFound
-  | RideDoesNotExist
+  = RideNotFound Text
+  | RideDoesNotExist Text
   | RideFieldNotPresent Text
   | RideInvalidStatus Text
   deriving (Eq, Show, IsBecknAPIError)
@@ -369,45 +373,45 @@ instanceExceptionWithParent 'HTTPException ''RideError
 
 instance IsBaseError RideError where
   toMessage = \case
-    RideDoesNotExist -> Just "No ride matches passed data."
+    RideNotFound rideId -> Just $ "Ride with rideId \"" <> show rideId <> "\"not found. "
+    RideDoesNotExist rideId -> Just $ "No ride matches passed data \"" <> show rideId <> "\" not exist. "
     RideFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this ride."
     RideInvalidStatus msg -> Just $ "Attempted to do some action in wrong ride status. " <> msg
-    _ -> Nothing
 
 instance IsHTTPError RideError where
   toErrorCode = \case
-    RideNotFound -> "RIDE_NOT_FOUND"
-    RideDoesNotExist -> "RIDE_DOES_NOT_EXIST"
+    RideNotFound _ -> "RIDE_NOT_FOUND"
+    RideDoesNotExist _ -> "RIDE_DOES_NOT_EXIST"
     RideFieldNotPresent _ -> "RIDE_FIELD_NOT_PRESENT"
     RideInvalidStatus _ -> "RIDE_INVALID_STATUS"
 
   toHttpCode = \case
-    RideNotFound -> E500
-    RideDoesNotExist -> E400
+    RideNotFound _ -> E500
+    RideDoesNotExist _ -> E400
     RideFieldNotPresent _ -> E500
     RideInvalidStatus _ -> E400
 
 instance IsAPIError RideError
 
 data RiderDetailsError
-  = RiderDetailsNotFound
-  | RiderDetailsDoesNotExist
+  = RiderDetailsNotFound Text
+  | RiderDetailsDoesNotExist Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''RiderDetailsError
 
 instance IsBaseError RiderDetailsError where
   toMessage = \case
-    RiderDetailsDoesNotExist -> Just "No rider details matches passed data."
-    _ -> Nothing
+    RiderDetailsNotFound rideDetailId -> Just $ "RideDetails with rideDetailsId \"" <> show rideDetailId <> "\" not found. "
+    RiderDetailsDoesNotExist rideDetailId -> Just $ "No rider details matches passed data \"" <> show rideDetailId <> "\" not exist. "
 
 instance IsHTTPError RiderDetailsError where
   toErrorCode = \case
-    RiderDetailsNotFound -> "RIDER_DETAILS_NOT_FOUND"
-    RiderDetailsDoesNotExist -> "RIDER_DETAILS_DOES_NOT_EXIST"
+    RiderDetailsNotFound _ -> "RIDER_DETAILS_NOT_FOUND"
+    RiderDetailsDoesNotExist _ -> "RIDER_DETAILS_DOES_NOT_EXIST"
   toHttpCode = \case
-    RiderDetailsNotFound -> E500
-    RiderDetailsDoesNotExist -> E400
+    RiderDetailsNotFound _ -> E500
+    RiderDetailsDoesNotExist _ -> E400
 
 instance IsAPIError RiderDetailsError
 

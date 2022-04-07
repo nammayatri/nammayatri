@@ -19,7 +19,7 @@ updateTransporter admin orgId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdateTransporterReq req
   org <-
     QO.findById orgId
-      >>= fromMaybeM OrgDoesNotExist
+      >>= fromMaybeM (OrgDoesNotExist orgId.getId)
   let updOrg =
         org{SO.name = fromMaybe (org.name) (req.name),
             SO.description = (req.description) <|> (org.description),
@@ -32,7 +32,7 @@ getTransporter :: Id SP.Person -> FlowHandler TransporterRec
 getTransporter personId = withFlowHandlerAPI $ do
   person <-
     QP.findById personId
-      >>= fromMaybeM PersonNotFound
+      >>= fromMaybeM (PersonNotFound personId.getId)
   case person.organizationId of
-    Just orgId -> TransporterRec . SO.makeOrganizationAPIEntity <$> (QO.findById orgId >>= fromMaybeM OrgNotFound)
+    Just orgId -> TransporterRec . SO.makeOrganizationAPIEntity <$> (QO.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId))
     Nothing -> throwError (PersonFieldNotPresent "organization_id")

@@ -32,7 +32,7 @@ auth req = withFlowHandlerAPI $ do
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
-  person <- QP.findByMobileNumber countryCode mobileNumber >>= fromMaybeM PersonDoesNotExist
+  person <- QP.findByMobileNumber countryCode mobileNumber >>= fromMaybeM (PersonDoesNotExist mobileNumber)
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
@@ -102,7 +102,7 @@ verify tokenId req = withFlowHandlerAPI $ do
       QP.setIsNewFalse person.id
   when isNewPerson $
     Notify.notifyOnRegistration regToken person.id deviceToken
-  updPers <- QP.findById (Id entityId) >>= fromMaybeM PersonNotFound
+  updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthVerifyRes token personAPIEntity
@@ -117,7 +117,7 @@ checkRegistrationTokenExists tokenId =
 
 checkPersonExists :: EsqDBFlow m r => Text -> m SP.Person
 checkPersonExists entityId =
-  QP.findById (Id entityId) >>= fromMaybeM PersonNotFound
+  QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
 
 resend :: Id SR.RegistrationToken -> FlowHandler ResendAuthRes
 resend tokenId = withFlowHandlerAPI $ do
@@ -146,7 +146,7 @@ logout personId = withFlowHandlerAPI $ do
   cleanCachedTokens personId
   uperson <-
     QP.findById personId
-      >>= fromMaybeM PersonNotFound
+      >>= fromMaybeM (PersonNotFound personId.getId)
   Esq.runTransaction $ do
     QP.updateDeviceToken uperson.id Nothing
     QR.deleteByPersonId personId

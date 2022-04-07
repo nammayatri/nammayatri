@@ -54,13 +54,13 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         phone = req.message.order.fulfillment.customer.contact.phone
         customerMobileCountryCode = phone.country_code
         customerPhoneNumber = phone.number
-    quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
+    quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
     let transporterId' = quote.providerId
     transporterOrg <-
       Organization.findById transporterId'
-        >>= fromMaybeM OrgNotFound
+        >>= fromMaybeM (OrgNotFound transporterId.getId)
     unless (transporterId' == transporterId) $ throwError AccessDenied
-    searchRequest <- SearchRequest.findById quote.requestId >>= fromMaybeM SearchRequestNotFound
+    searchRequest <- SearchRequest.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
     let bapOrgId = searchRequest.bapId
     unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
     now <- getCurrentTime

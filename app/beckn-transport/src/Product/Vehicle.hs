@@ -45,7 +45,7 @@ updateVehicle :: SP.Person -> Id SV.Vehicle -> UpdateVehicleReq -> FlowHandler U
 updateVehicle admin vehicleId req = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   runRequestValidation validateUpdateVehicleReq req
-  vehicle <- QV.findByIdAndOrgId vehicleId orgId >>= fromMaybeM VehicleDoesNotExist
+  vehicle <- QV.findByIdAndOrgId vehicleId orgId >>= fromMaybeM (VehicleDoesNotExist vehicleId.getId)
   let updatedVehicle =
         vehicle{variant = fromMaybe vehicle.variant req.variant,
                 model = fromMaybe vehicle.model req.model,
@@ -60,7 +60,7 @@ deleteVehicle admin vehicleId = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   vehicle <-
     QV.findById vehicleId
-      >>= fromMaybeM VehicleDoesNotExist
+      >>= fromMaybeM (VehicleDoesNotExist vehicleId.getId)
   unless (vehicle.organizationId == orgId) $ throwError Unauthorized
   Esq.runTransaction $
     QV.deleteById vehicleId
@@ -70,12 +70,12 @@ getVehicle :: Id SP.Person -> Maybe Text -> Maybe (Id SV.Vehicle) -> FlowHandler
 getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
   user <-
     QP.findById personId
-      >>= fromMaybeM PersonNotFound
+      >>= fromMaybeM (PersonNotFound personId.getId)
   vehicle <- case (registrationNoM, vehicleIdM) of
     (Nothing, Nothing) -> throwError $ InvalidRequest "You should pass registration number and vehicle id."
     _ ->
       QV.findByAnyOf registrationNoM vehicleIdM
-        >>= fromMaybeM VehicleDoesNotExist
+        >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   hasAccess user vehicle
   return . CreateVehicleRes $ SV.makeVehicleAPIEntity vehicle
   where

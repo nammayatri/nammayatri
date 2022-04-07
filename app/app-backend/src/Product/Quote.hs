@@ -21,7 +21,7 @@ import Utils.Common
 
 getQuotes :: Id SSR.SearchRequest -> Id Person.Person -> FlowHandler API.GetQuotesRes
 getQuotes searchRequestId _ = withFlowHandlerAPI $ do
-  searchRequest <- QSR.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
+  searchRequest <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   fromLocation <- Location.findById searchRequest.fromLocationId >>= fromMaybeM LocationNotFound
   mbToLocation <- forM (searchRequest.toLocationId) (Location.findById >=> fromMaybeM LocationNotFound)
   offers <- getOffers searchRequest
