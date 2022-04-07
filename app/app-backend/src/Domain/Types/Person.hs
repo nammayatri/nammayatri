@@ -68,8 +68,6 @@ data PersonE e = Person
     identifier :: Maybe Text,
     rating :: Maybe Text,
     isNew :: Bool,
-    udf1 :: Maybe Text,
-    udf2 :: Maybe Text,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
     createdAt :: UTCTime,

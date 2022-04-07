@@ -11,7 +11,6 @@ defaultRide =
     { id = Id "1",
       bookingId = Id "1",
       driverId = Id "1",
-      vehicleId = Id "1",
       otp = "1234",
       trackingUrl = "",
       shortId = "",

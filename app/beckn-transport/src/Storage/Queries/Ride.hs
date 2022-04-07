@@ -39,13 +39,6 @@ findAllCancelledByRBId rideBookingId =
         &&. ride ^. RideStatus ==. val Ride.CANCELLED
     return ride
 
-findAllByVehicleId :: Transactionable m => Id Vehicle -> m [Ride]
-findAllByVehicleId vehId =
-  findAll $ do
-    ride <- from $ table @RideT
-    where_ $ ride ^. RideVehicleId ==. val (toKey vehId)
-    return ride
-
 findAllByDriverId ::
   Transactionable m =>
   Id Person ->
@@ -85,11 +78,11 @@ findAllRideAPIEntityDataByRBId rbId =
         table @RideT
           `leftJoin` table @VehicleT
             `Esq.on` ( \(ride :& mbVehicle) ->
-                         just (ride ^. Ride.RideVehicleId) ==. mbVehicle ?. Vehicle.VehicleTId
+                         just (ride ^. Ride.RideDriverId) ==. mbVehicle ?. Vehicle.VehicleDriverId
                      )
           `leftJoin` table @PersonT
             `Esq.on` ( \(ride :& _ :& mbPerson) ->
-                         just (ride ^. Ride.RideDriverId) ==. (mbPerson ?. Person.PersonTId)
+                         just (ride ^. Ride.RideDriverId) ==. mbPerson ?. Person.PersonTId
                      )
     where_ $
       ride ^. Ride.RideBookingId ==. val (toKey rbId)

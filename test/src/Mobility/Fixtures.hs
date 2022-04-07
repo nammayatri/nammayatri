@@ -60,7 +60,6 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
     :<|> _
     :<|> _
     :<|> _
-    :<|> _
   )
   :<|> ( setDriverOnline
            :<|> _

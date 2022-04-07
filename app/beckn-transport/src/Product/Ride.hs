@@ -32,7 +32,7 @@ buildDriverRideRes (ride, rideBooking) = do
     SRB.OneWayDetails details -> QBLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound . Just
     SRB.RentalDetails _ -> pure Nothing
 
-  vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM (VehicleNotFound ride.vehicleId.getId)
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverNumber <- SP.getPersonNumber driver
   pure

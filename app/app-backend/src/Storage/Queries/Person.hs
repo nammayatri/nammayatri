@@ -74,9 +74,7 @@ updateMultiple personId person = do
         PersonRole =. val (person.role),
         PersonIdentifier =. val (person.identifier),
         PersonRating =. val (person.rating),
-        PersonDeviceToken =. val (person.deviceToken),
-        PersonUdf1 =. val (person.udf1),
-        PersonUdf2 =. val (person.udf2)
+        PersonDeviceToken =. val (person.deviceToken)
       ]
     where_ $ tbl ^. PersonId ==. val (getId personId)
 

@@ -9,7 +9,6 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import Domain.Types.Person (Person)
 import qualified Domain.Types.Person as DPers
 import qualified Domain.Types.RideBooking as DRB
 import qualified Domain.Types.Vehicle as DVeh
@@ -39,8 +38,7 @@ data Ride = Ride
     bookingId :: Id DRB.RideBooking,
     shortId :: ShortId Ride,
     status :: RideStatus,
-    driverId :: Id Person,
-    vehicleId :: Id DVeh.Vehicle,
+    driverId :: Id DPers.Person,
     otp :: Text,
     trackingUrl :: Text,
     fare :: Maybe Amount,

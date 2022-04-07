@@ -130,8 +130,6 @@ updatePersonRec personId person = do
         PersonIdentifier =. val (person.identifier),
         PersonRating =. val (person.rating),
         PersonDeviceToken =. val (person.deviceToken),
-        PersonUdf1 =. val (person.udf1),
-        PersonUdf2 =. val (person.udf2),
         PersonOrganizationId =. val (toKey <$> person.organizationId),
         PersonDescription =. val (person.description),
         PersonUpdatedAt =. val now
@@ -162,29 +160,6 @@ setIsNewFalse personId = do
 
 deleteById :: Id Person -> SqlDB ()
 deleteById = Esq.deleteByKey @PersonT
-
-updateVehicle :: Id Person -> Maybe (Id Vehicle) -> SqlDB ()
-updateVehicle personId mbVehicleId = do
-  let (mEntityId, mEntityType) = case mbVehicleId of
-        Just vehicleId -> (Just (getId vehicleId), Just "VEHICLE")
-        Nothing -> (Nothing, Nothing)
-  now <- getCurrentTime
-  Esq.update $ \tbl -> do
-    set
-      tbl
-      [ PersonUdf1 =. val mEntityId,
-        PersonUdf2 =. val mEntityType,
-        PersonUpdatedAt =. val now
-      ]
-    where_ $ tbl ^. PersonTId ==. val (toKey personId)
-
-findByVehicleId :: Transactionable m => Id Vehicle -> m (Maybe Person)
-findByVehicleId (Id vehicleId) =
-  findOne $ do
-    person <- from $ table @PersonT
-    where_ $
-      person ^. PersonUdf1 ==. val (Just vehicleId)
-    return person
 
 updateAverageRating :: Id Person -> Double -> SqlDB ()
 updateAverageRating personId newAverageRating = do
@@ -236,7 +211,7 @@ getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
                      )
             `innerJoin` table @VehicleT
             `Esq.on` ( \(person :& _ :& _ :& vehicle) ->
-                         (person ^. PersonUdf1) ==. just (castString $ vehicle ^. VehicleId)
+                         person ^. PersonTId ==. vehicle ^. VehicleDriverId
                      )
       where_ $
         person ^. PersonRole ==. val Person.DRIVER

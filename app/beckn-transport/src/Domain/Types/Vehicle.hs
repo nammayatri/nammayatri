@@ -10,6 +10,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Person as DPers
 import EulerHS.Prelude hiding (id)
 import Servant.API
 
@@ -59,7 +60,7 @@ instance FromHttpApiData RegistrationCategory where
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
 data Vehicle = Vehicle
-  { id :: Id Vehicle,
+  { driverId :: Id DPers.Person,
     organizationId :: Id DOrg.Organization,
     variant :: Variant,
     model :: Text,
@@ -77,7 +78,7 @@ data Vehicle = Vehicle
   deriving (Generic, Show, Eq)
 
 data VehicleAPIEntity = VehicleAPIEntity
-  { id :: Id Vehicle,
+  { driverId :: Id DPers.Person,
     variant :: Variant,
     model :: Text,
     color :: Text,
@@ -89,14 +90,4 @@ data VehicleAPIEntity = VehicleAPIEntity
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 makeVehicleAPIEntity :: Vehicle -> VehicleAPIEntity
-makeVehicleAPIEntity veh =
-  VehicleAPIEntity
-    { id = veh.id,
-      variant = veh.variant,
-      model = veh.model,
-      color = veh.color,
-      registrationNo = veh.registrationNo,
-      category = veh.category,
-      capacity = veh.capacity,
-      createdAt = veh.createdAt
-    }
+makeVehicleAPIEntity Vehicle {..} = VehicleAPIEntity {..}

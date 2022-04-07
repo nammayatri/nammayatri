@@ -4,6 +4,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.Organization
+import Domain.Types.Person
 import Domain.Types.Vehicle
 import Storage.Tabular.Vehicle
 import Utils.Common
@@ -13,13 +14,13 @@ create = Esq.create
 
 findById ::
   Transactionable m =>
-  Id Vehicle ->
+  Id Person ->
   m (Maybe Vehicle)
 findById = Esq.findById
 
 findByIdAndOrgId ::
   Transactionable m =>
-  Id Vehicle ->
+  Id Person ->
   Id Organization ->
   m (Maybe Vehicle)
 findByIdAndOrgId vid orgId =
@@ -44,15 +45,16 @@ updateVehicleRec vehicle = do
         VehicleVariant =. val vehicle.variant,
         VehicleColor =. val vehicle.color,
         VehicleEnergyType =. val vehicle.energyType,
+        VehicleRegistrationNo =. val vehicle.registrationNo,
         VehicleRegistrationCategory =. val vehicle.registrationCategory,
         VehicleUpdatedAt =. val now
       ]
-    where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.id)
+    where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.driverId)
 
-deleteById :: Id Vehicle -> SqlDB ()
+deleteById :: Id Person -> SqlDB ()
 deleteById = Esq.deleteByKey @VehicleT
 
-findByAnyOf :: Transactionable m => Maybe Text -> Maybe (Id Vehicle) -> m (Maybe Vehicle)
+findByAnyOf :: Transactionable m => Maybe Text -> Maybe (Id Person) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM =
   Esq.findOne $ do
     vehicle <- from $ table @VehicleT

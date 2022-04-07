@@ -72,17 +72,17 @@ testDowngradingDriverWithHatchback = do
 
 testIsRental :: IO ()
 testIsRental = do
-  runTransporterFlow "suvDriver is Rental" $ setSuvDriverRental True
   res <-
-    runTransporterFlow "Test isRental" $
+    runTransporterFlow "Test isRental" $ do
+      setSuvDriverRental True
       Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL <&> getIds
   res `shouldBe` [suvDriver]
 
 testNotRental :: IO ()
 testNotRental = do
-  runTransporterFlow "suvDriver not Rental" $ setSuvDriverRental False
   res <-
-    runTransporterFlow "Test notRental" $
+    runTransporterFlow "Test notRental" $ do
+      setSuvDriverRental False
       Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL <&> getIds
   res `shouldBe` []
 

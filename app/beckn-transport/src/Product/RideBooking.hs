@@ -209,8 +209,6 @@ buildRideBookingStatusRes rideBooking = do
           identifier = Nothing,
           rating = Nothing,
           isNew = False,
-          udf1 = Nothing,
-          udf2 = Nothing,
           organizationId = Nothing,
           deviceToken = Nothing,
           description = Nothing,
@@ -219,7 +217,7 @@ buildRideBookingStatusRes rideBooking = do
         }
     vehicleDefault now =
       SV.Vehicle
-        { id = Id "[Vehicle deleted]",
+        { driverId = Id "[Vehicle deleted]",
           organizationId = Id "N/A",
           variant = SV.SEDAN,
           model = "N/A",

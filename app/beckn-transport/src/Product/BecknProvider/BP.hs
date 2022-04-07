@@ -40,7 +40,7 @@ sendRideAssignedUpdateToBAP rideBooking ride = do
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM (VehicleNotFound ride.vehicleId.getId)
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
   void $ callOnUpdate transporter rideBooking rideAssignedMsg

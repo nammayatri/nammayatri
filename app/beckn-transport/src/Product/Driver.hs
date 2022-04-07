@@ -3,7 +3,6 @@ module Product.Driver
     setActivity,
     setRental,
     listDriver,
-    linkVehicle,
     changeDriverEnableState,
     createDriver,
     deleteDriver,
@@ -58,13 +57,12 @@ createDriver admin req = withFlowHandlerAPI $ do
     (QPerson.findByMobileNumber personEntity.mobileCountryCode personEntity.mobileNumber)
     "Person with this mobile number already exists"
   person <- buildDriver req.person orgId
-  vehicle <- buildVehicle req.vehicle orgId
+  vehicle <- buildVehicle req.vehicle person.id orgId
   Esq.runTransaction $ do
     QPerson.create person
     createDriverDetails (person.id)
     QVehicle.create vehicle
-    QPerson.updateVehicle person.id $ Just vehicle.id
-  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show (person.id, vehicle.id))
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createDriver : ") (show person.id)
   org <-
     QOrganization.findById orgId
       >>= fromMaybeM (OrgNotFound orgId.getId)
@@ -141,9 +139,7 @@ listDriver admin mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
 
 buildDriverEntityRes :: (EsqDBFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverAPI.DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
-  vehicleM <- case person.udf1 of
-    Nothing -> return Nothing
-    Just udf -> QVehicle.findById $ Id udf
+  vehicle <- QVehicle.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
   decMobNum <- mapM decrypt person.mobileNumber
   return $
     DriverAPI.DriverEntityRes
@@ -153,7 +149,7 @@ buildDriverEntityRes (person, driverInfo) = do
         lastName = person.lastName,
         mobileNumber = decMobNum,
         rating = round <$> person.rating,
-        linkedVehicle = SV.makeVehicleAPIEntity <$> vehicleM,
+        linkedVehicle = SV.makeVehicleAPIEntity vehicle,
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
@@ -162,27 +158,6 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToSedan = driverInfo.canDowngradeToSedan,
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback
       }
-
-linkVehicle :: SP.Person -> Id SP.Person -> Id SV.Vehicle -> FlowHandler DriverAPI.LinkVehicleRes
-linkVehicle admin personId vehicleId = withFlowHandlerAPI $ do
-  let Just orgId = admin.organizationId
-  person <-
-    QPerson.findById personId
-      >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  vehicle <-
-    QVehicle.findById vehicleId
-      >>= fromMaybeM (VehicleDoesNotExist vehicleId.getId)
-  unless
-    ( person.organizationId == Just orgId
-        && vehicle.organizationId == orgId
-    )
-    (throwError Unauthorized)
-  prevPerson <- QPerson.findByVehicleId vehicleId
-  whenJust prevPerson $ \_ -> throwError VehicleAlreadyLinked
-  Esq.runTransaction $ do
-    QPerson.updateVehicle personId $ Just vehicleId
-    QDriverInformation.resetDowngradingOptions (cast personId)
-  return APISuccess.Success
 
 changeDriverEnableState :: SP.Person -> Id SP.Person -> Bool -> FlowHandler APISuccess
 changeDriverEnableState admin personId isEnabled = withFlowHandlerAPI $ do
@@ -213,7 +188,7 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
   clearDriverSession driverId
   Esq.runTransaction $ do
     QR.deleteByPersonId driverId
-    whenJust driver.udf1 $ QVehicle.deleteById . Id
+    QVehicle.deleteById driverId
     QPerson.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
   return Success
@@ -233,17 +208,13 @@ updateDriver personId req = withFlowHandlerAPI $ do
                lastName = req.lastName <|> person.lastName,
                deviceToken = req.deviceToken <|> person.deviceToken
               }
-
-  mbVehicle <- forM person.udf1 $ \vehicleId -> QVehicle.findById (Id vehicleId) >>= fromMaybeM (VehicleNotFound vehicleId)
+  vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let wantToDowngrade = req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True
-  case mbVehicle of
-    Nothing -> when wantToDowngrade $ throwError $ InvalidRequest "Driver without vehicle can't downgrade"
-    Just vehicle -> do
-      when (vehicle.variant == SV.SEDAN && req.canDowngradeToSedan == Just True) $
-        throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
-      when (vehicle.variant == SV.HATCHBACK && wantToDowngrade) $
-        throwError $ InvalidRequest "Driver with hatchback can't downgrade"
+  when (vehicle.variant == SV.SEDAN && req.canDowngradeToSedan == Just True) $
+    throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
+  when (vehicle.variant == SV.HATCHBACK && wantToDowngrade) $
+    throwError $ InvalidRequest "Driver with hatchback can't downgrade"
   let updDriverInfo =
         driverInfo{canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan,
                    canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
@@ -304,22 +275,18 @@ buildDriver req orgId = do
         SP.isNew = True,
         SP.rating = Nothing,
         SP.deviceToken = Nothing,
-        SP.udf1 = Nothing,
-        SP.udf2 = Nothing,
         SP.organizationId = Just orgId,
         SP.description = Nothing,
         SP.createdAt = now,
         SP.updatedAt = now
       }
 
-buildVehicle :: MonadFlow m => DriverAPI.CreateVehicle -> Id Org.Organization -> m SV.Vehicle
-buildVehicle req orgId = do
-  vid <- generateGUID
+buildVehicle :: MonadFlow m => DriverAPI.CreateVehicle -> Id SP.Person -> Id Org.Organization -> m SV.Vehicle
+buildVehicle req personId orgId = do
   now <- getCurrentTime
   return $
     SV.Vehicle
-      { -- only these below will be updated in the vehicle table. if you want to add something extra please add in queries also
-        SV.id = vid,
+      { SV.driverId = personId,
         SV.capacity = Just req.capacity,
         SV.category = Just req.category,
         SV.make = Nothing,

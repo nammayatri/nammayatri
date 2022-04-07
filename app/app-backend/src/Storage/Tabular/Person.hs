@@ -37,8 +37,6 @@ mkPersist
       identifier Text Maybe
       rating Text Maybe
       isNew Bool
-      udf1 Text Maybe
-      udf2 Text Maybe
       deviceToken FCMRecipientToken Maybe
       description Text Maybe
       createdAt UTCTime

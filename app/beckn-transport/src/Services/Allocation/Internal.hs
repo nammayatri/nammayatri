@@ -31,7 +31,6 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.RideRequest as QRR
-import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Metrics (CoreMetrics)
 import Types.App
 import Types.Error
@@ -74,7 +73,7 @@ assignDriver rideBookingId driverId = do
   driver <-
     QP.findById (cast driverId)
       >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  ride <- buildRide rideBooking driver
+  ride <- buildRide rideBooking
   Esq.runTransaction $ do
     QDI.updateOnRide (cast driver.id) True
     QRB.updateStatus rideBookingId SRB.TRIP_ASSIGNED
@@ -93,14 +92,7 @@ assignDriver rideBookingId driverId = do
           showTimeIst ride.startTime <> ".",
           "Check the app for more details."
         ]
-    buildRide rideBooking driver = do
-      vehicleId <-
-        driver.udf1
-          & fromMaybeM (PersonFieldNotPresent "udf1 - vehicle")
-          <&> Id
-      vehicle <-
-        QVeh.findById vehicleId
-          >>= fromMaybeM (VehicleNotFound vehicleId.getId)
+    buildRide rideBooking = do
       guid <- generateGUID
       shortId <- generateShortId
       otp <- generateOTPCode
@@ -111,8 +103,7 @@ assignDriver rideBookingId driverId = do
             bookingId = rideBooking.id,
             shortId = shortId,
             status = SRide.NEW,
-            driverId = driver.id,
-            vehicleId = vehicle.id,
+            driverId = cast driverId,
             otp = otp,
             trackingUrl = "UNKNOWN", -- TODO: Fill this field
             fare = Nothing,

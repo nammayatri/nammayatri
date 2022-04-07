@@ -70,8 +70,6 @@ data PersonE e = Person
     identifier :: Maybe Text,
     rating :: Maybe Double,
     isNew :: Bool,
-    udf1 :: Maybe Text,
-    udf2 :: Maybe Text,
     organizationId :: Maybe (Id DOrg.Organization),
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
