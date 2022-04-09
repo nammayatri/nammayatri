@@ -209,11 +209,25 @@ updateDriver personId req = withFlowHandlerAPI $ do
                lastName = req.lastName <|> person.lastName,
                deviceToken = req.deviceToken <|> person.deviceToken
               }
+
+  mbVehicle <- forM person.udf1 $ \vehicleId -> QVehicle.findById (Id vehicleId) >>= fromMaybeM VehicleNotFound
+  driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
+  let wantToDowngrade = req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True
+  case mbVehicle of
+    Nothing -> when wantToDowngrade $ throwError $ InvalidRequest "Driver without vehicle can't downgrade"
+    Just vehicle -> do
+      when (vehicle.variant == SV.SEDAN && req.canDowngradeToSedan == Just True) $
+        throwError $ InvalidRequest "Driver with sedan can't downgrade to sedan"
+      when (vehicle.variant == SV.HATCHBACK && wantToDowngrade) $
+        throwError $ InvalidRequest "Driver with hatchback can't downgrade"
+  let updDriverInfo =
+        driverInfo{canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan,
+                   canDowngradeToHatchback = fromMaybe driverInfo.canDowngradeToHatchback req.canDowngradeToHatchback
+                  }
   Esq.runTransaction $ do
     QPerson.updatePersonRec personId updPerson
-    QDriverInformation.updateDowngradingOptions (cast personId) req.canDowngradeToSedan req.canDowngradeToHatchback
-  driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
-  driverEntity <- buildDriverEntityRes (updPerson, driverInfo)
+    QDriverInformation.updateDowngradingOptions (cast person.id) updDriverInfo.canDowngradeToSedan updDriverInfo.canDowngradeToHatchback
+  driverEntity <- buildDriverEntityRes (updPerson, updDriverInfo)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   org <-
     QOrganization.findById orgId

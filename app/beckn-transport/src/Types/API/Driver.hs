@@ -133,8 +133,8 @@ data UpdateDriverReq = UpdateDriverReq
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     deviceToken :: Maybe FCMRecipientToken,
-    canDowngradeToSedan :: Bool, -- Maybe?
-    canDowngradeToHatchback :: Bool -- Maybe?
+    canDowngradeToSedan :: Maybe Bool,
+    canDowngradeToHatchback :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
