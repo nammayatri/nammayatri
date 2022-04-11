@@ -9,7 +9,7 @@ defaultDriver :: Person.Person
 defaultDriver =
   Person.Person
     { id = Id "1",
-      firstName = Just "Driver",
+      firstName = "Driver",
       middleName = Nothing,
       lastName = Just "Driverson",
       role = Person.DRIVER,
@@ -35,7 +35,7 @@ defaultAdmin :: Person.Person
 defaultAdmin =
   defaultDriver
     { Person.id = Id "admin",
-      Person.firstName = Just "Admin",
+      Person.firstName = "Admin",
       Person.lastName = Just "Adminson",
       Person.role = Person.ADMIN,
       Person.email = Just "adminson@cool-admins.com"
