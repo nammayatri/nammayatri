@@ -6,13 +6,292 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.0.0] - 17-03-2022
+
+### Added
+
+#1348: added real signatures to mocks
+
+#1337: [BKN-593]Unit Test Allocation Service
+
+#1318: [BKN-1167] Add driver tracking healthcheck service
+
+#1256: [BKN-1079] simple mock for dunzo
+
+#1330: [BKN-1180] PublicTransportSearchConsumer App
+
+#1326: [BKN-1155] Reallocation features
+
+#1246: add swagger to fmd
+
+#1203: [BKN-1036] Domain specific types for FMD-wrapper
+
+#1235: [BKN-1017] mock parking bpp
+
+#1307: [BKN-1158] Search result aggregator
+
+#1269: [BKN-1117] public transport status api
+
+#1294: [BKN-1116] public transport confirm
+
+#1311: Added requests for Dunzo
+
+#1281: Add Beckn EPs in transporter swagger
+
+#1181: [BKN-981] Add organization whitelisting in taxi BAP
+
+#1000: [BKN-923] Reallocate rides if cancelled by driver
+
+#770: [BKN-712] Implement Exotel status callbacks
+
+#1015: [BKN-908] Integrate kafka
+
+#1243: [BKN-1119] mock public transport bpp
+
+### Changed
+
+#1345: [BKN-1188]Return ride list with-deleted entries
+
+#1357: Changed driver ride list API to return rides rather than ride bookings
+
+#1352: BKN-1193 modified driver health check notification
+
+#1350: [BKN-712]: Changed the StatusCallbackEvents
+
+#1344: move public transport message generation into fork
+
+#1328: Refactor/public transport
+
+#1327: [BKN-1160]: Removed API key from organization table
+
+#1335: [BKN-1183] Change contains of driver pool on reallocation
+
+#1297: BKN-1115 ACL v2
+
+#1211: [BKN-1089]: Throwing 400 Error when Ride not longer trackable
+
+#1293: Updated registry requests
+
+#1285: Update Dockerfile with librdkafka-dev and Makefile to run docker builds locally
+
+#970: [BKN-861] Add stage to BAP cancellation reason table
+
+### Fixed
+
+#1364: [BKN-1205] fix notification visibility
+
+#1365: fix: added temp default values for deleted driver and vehicles
+
+#1362: fix: driver ride notification route
+
+#1336: [BKN-1164] Cancel rides by ride booking id rather than quote id
+
+#1349: [BKN-712]:Removed the extra Space in url
+
+#1340: [BKN-1189] Fix Kafka log messages
+
+#1334: [BKN-712]: Fixed exotel callback url
+
+#1332: [BKN-1155] Fixed bug in allocation service
+
+#1323: [BKN-1169] public transport acl fixes
+
+#1316: Fixed bpp id in context
+
+#1317: fix: return unmasked driver number for coordinator driver list API, get driver profile and update driver profile APIs
+
+#1288: Fixed build with gcc11
+
+### Removed
+
+#1258: [BKN-1131] Remove beam from BAP Taxi
+
+#1298: Removed DB-related code from gateway
+
+#1291: Removed DB from gateway
+
+#1219: Removed key and ttl fields from Context
+
+## [11.0.0] - 16-02-2022
+
+### Fixed
+
+#1317: fix: return unmasked driver number for coordinator driver list API, get driver profile and update driver profile APIs
+
+#1319: fix: persist cancellation reason at transporter
+
+#1211: [BKN-1089]: Handled 400 error for Invalid Ride track
+
+## [10.0.0] - 10-02-2022
+
+### Added
+
+#1250: [BKN-1122] Rider details table
+
+#1126: [BKN-1011] Add proxy auth to FMD search
+
+#1249: Add expiration time to caching interface
+
+#1177: [BKN-981] Add registry and caching interfaces
+
+#1129: Add subscriber_url to mock-registry lookup result
+
+#1231: [BKN-1076] Add swagger to pinpark
+
+#1237: [BKN-1106] Search/on_search events logging in taxi-bap
+
+#1210: [BKN-1091] Add storage types to pub transport bap
+
+#1202: [BKN-1087] Boilerplate for public-transport-bap
+
+#1227: Enabled Exotel in transporter
+
+#1033: [BKN-942] Share customer phone with bpp
+
+#1222: Added driver notification when a ride is cancelled by customer
+
+#1182: Added Kochi region
+
+#1185: [BKN-1063] & [BKN-1064] : Added requestor name in quote confirm API
+
+#1190: [BKN-1066] Add location info in notificationData API
+
+#1155: [BKN-1022] Save location from Search
+
+#1175: BKN-1050: Store payment details
+
+#1159: Added REST Client requests for auth and ride booking
+
+#1110: Added fare policy for sedan and hatchback
+
+#1115: Added vehicle variant to the quote API type
+
+#1147: add body-hash middleware to parking-bap
+
+#1132: [BKN-993] Add auth EP to mobility bap
+
+#1125: [BKN-996] Parking confirm and booking status EPs
+
+#1117: [BKN-995] Search flow for pinpark
+
+#1116: [BKN-993] Add token auth to parking BAP
+
+#1087: [33] Add discount and estimatedTotalFare to BPP RideBookingStatusRes
+
+#1086: [32] Added city name as required by NSDL gateway
+
+#1084: [30] Add registry support to gateway
+
+#1065: [BKN-918] [15] Initial metro support at BAP
+
+#1064: [BKN-933] [14] registry integration for Mobility
+
+#1063: [BKN-902] [13] Implement discounts
+
+#1061: [BKN-841] [11] on_subscribe API implementation
+
+#1060: [10] Add unique check for perExtraKmRateList
+
+#1053: [BKN-896] [4] Offers per vehicle type
+
+#1040: [BKN-904, BKN-964] [1] Chargable distance
+
+#1103: [BKN-994] Pinpark storage
+
+#1101: [BKN-993] Add pinpark BAP skeleton
+
+### Changed
+
+#1025: [BKN-920] Move encoding salt to secrets
+
+#1268: [BKN-1139] Unique keys per agency in taxi bpp
+
+#1151: [BKN-1037] Replace Proxy-Authorization -> X-Gateway-Authorization
+
+#1225: [BKN-1098]: Changed the Driver ride list api as per documentation
+
+#971: [BKN-868] Update error counter for all errors
+
+#1229: [BKN-1112] Last name should be optional
+
+#1195: [BKN-1074] Restore removed address at BPP
+
+#1199: replaced read with readMaybe
+
+#1164: [BKN-1045] Return computedPrice in listRideBookings EP
+
+#1201: Update driver info on customer cancellation
+
+#1192: Made variant, model, color fields required
+
+#1191: [BKN-1024] Desc sort for listRB API
+
+#1173: [BKN 990] Fallback to estimates on missing location updates
+
+#1178: [BKN-1042] Updated on_confirm location type to conform to network
+
+policy
+#1160: Changed the BookingID method to Post and getBookigDetail issue
+
+#1150: [BKN-1016] Filter out CONFIRMED rides from listRides EP
+
+#1118: 0.9.3 mobility spec migration
+
+#1085: [BKN-970] [31] Show future schedule
+
+#1078: [BKN-959] [25] gateway proxy raw body
+
+#1077: [23] Use unique_key_id for subscriber lookup
+
+#1067: [BKN-918] [17] Split search in BAP
+
+#1043: [BKN-893] [2] Update fare policy
+
+#920: Change data model
+
+#967: [BKN-853] API V2 BPP
+
+#968: [BKN-854] API V2 BAP
+
+### Removed
+
+#1271: revert making `maskedDeviceToken` non-maybe type in response of APIs
+
+#1262: [BKN-965] Remove redundant registry call
+
+#1239: [BKN-965] Remove callback url from org table
+
+#1176: [BKN-981] Remove organization from taxi BAP
+
+#1111: Removed api_key and callback_api_key values
+
+#1144: [BKN-1034] delete unused fmd endpoints
+
+#1143: Remove on_cancel and on_confirm
+
+#1080: [27] Removed on_subscribe APIs
+
+#1062: [BKN-929] [12] Remove auth from lookup API
+
+### Fixed
+
+#1146: Improve esqueleto
+
+#1252: app-backend: fix search retries
+
+#1214: parking-bap: fix Amount type in PaymentParams
+
+#1095: [BKN-946] Cancellation race condition in BAP
+
+#1140: [BKN-1031] Return 401 in parking BAP on auth fail
+
 ## [9.0.0] - 25-11-2021
 
 ### Changed
 
 - #1106: [BKN 990] Fallback to estimates on missing location updates. Fix DB lookup
 
-- #1097: [BKN-990] Fallback to estimates on missing location updates 
+- #1097: [BKN-990] Fallback to estimates on missing location updates
 
 ## [8.0.0] - 15-11-2021
 
@@ -24,7 +303,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - #1004: [WIP][BKN-918] Metro BPP support at app-backend
 
-- #1007: [BKN-933] Registry integration for Mobility 
+- #1007: [BKN-933] Registry integration for Mobility
 
 ### Changed
 
@@ -74,7 +353,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- #982: [BKN-841] onSubscribe API implementation 
+- #982: [BKN-841] onSubscribe API implementation
 
 - #993: [BKN-902] Implement discounts
 
@@ -121,7 +400,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- #965: [BKN-858] remove role from login request in Mobility 
+- #965: [BKN-858] remove role from login request in Mobility
 
 - #969: [BKN-870] Remove Status and Track EPs
 
@@ -319,7 +598,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - #870: new json domain values implementation
 
-- #867: filling bpp_id in FMD 
+- #867: filling bpp_id in FMD
 
 ### Fixed
 
@@ -395,7 +674,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - #821: [BKN-746] Remove encryption from Person type signature
 
-- #824: [BKN-750]/Deleted Delhivery Code From FMD 
+- #824: [BKN-750]/Deleted Delhivery Code From FMD
 
 - #833: [BKN-699, BKN-706] Remove models layer and remove fromMaybeM from queries
 
@@ -419,9 +698,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 21-06-2021
 
-- Go-live production release 
+- Go-live production release
 
-[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/release-version-7..v9.0.0
+[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v12.0.0
+[12.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v12.0.0
+[11.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v11.0.0
+[10.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v10.0.0
 [9.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v9.0.0
 [8.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v8.0.0
 [7.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v7.0.0
