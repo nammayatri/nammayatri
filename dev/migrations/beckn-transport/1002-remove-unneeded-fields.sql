@@ -1,1 +1,0 @@
-ALTER TABLE atlas_transporter.search_request DROP COLUMN vehicle_variant;
