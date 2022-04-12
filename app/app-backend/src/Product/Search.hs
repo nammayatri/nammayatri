@@ -77,7 +77,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   return . API.SearchRes $ searchRequest.id
   where
     validateServiceability = do
-      unlessM (rideServiceable someGeometriesContain req.origin.gps req.destination.gps) $
+      unlessM (rideServiceable someGeometriesContain req.origin.gps (Just req.destination.gps)) $
         throwError RideNotServiceable
 
 sendPublicTransportSearchRequest ::
@@ -190,23 +190,27 @@ buildQuote ::
   OnSearch.Item ->
   m SQuote.Quote
 buildQuote searchRequest providerId providerUrl provider item = do
+  oneWayItem <- case item of
+    OnSearch.OneWay oneWayItem -> pure oneWayItem
+    _ -> throwError $ InternalError "Rentals is not implemented for bap"
+
   now <- getCurrentTime
   uid <- generateGUID
   return
     SQuote.Quote
       { id = uid,
-        bppQuoteId = Id item.id,
+        bppQuoteId = Id oneWayItem.id,
         requestId = searchRequest.id,
-        estimatedFare = realToFrac item.estimated_price.value,
-        estimatedTotalFare = realToFrac item.discounted_price.value,
-        discount = realToFrac <$> (item.discount <&> (.value)),
-        distanceToNearestDriver = realToFrac item.nearest_driver_distance,
+        estimatedFare = realToFrac oneWayItem.estimated_price.value,
+        estimatedTotalFare = realToFrac oneWayItem.discounted_price.value,
+        discount = realToFrac <$> (oneWayItem.discount <&> (.value)),
+        distanceToNearestDriver = realToFrac oneWayItem.nearest_driver_distance,
         providerMobileNumber = provider.contacts,
         providerName = provider.name,
         providerCompletedRidesCount = provider.rides_completed,
         providerId,
         providerUrl,
-        vehicleVariant = item.vehicle_variant,
+        vehicleVariant = oneWayItem.vehicle_variant,
         createdAt = now
       }
 
@@ -224,7 +228,7 @@ mkIntent req startTime = do
       fulfillment =
         Search.FulFillmentInfo
           { start = startLocation,
-            end = endLocation
+            end = Just endLocation
           }
   Search.Intent
     { ..

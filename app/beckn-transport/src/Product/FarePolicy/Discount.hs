@@ -6,6 +6,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified Domain.Types.FarePolicy.Discount as DFPDiscount
+import qualified Domain.Types.FarePolicy.FareProduct as DFProduct
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude
@@ -33,6 +34,7 @@ createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
           { id = uuid,
             vehicleVariant = req.vehicleVariant,
             organizationId = orgId,
+            fareProductType = DFProduct.ONE_WAY,
             fromDate = req.fromDate,
             toDate = req.toDate,
             discount = toRational req.discount,

@@ -48,14 +48,36 @@ data RideBooking = RideBooking
     startTime :: UTCTime,
     riderId :: Id DRD.RiderDetails,
     fromLocationId :: Id DLoc.SearchReqLocation,
-    toLocationId :: Id DLoc.SearchReqLocation,
     vehicleVariant :: DVeh.Variant,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    distance :: Double,
     reallocationsCount :: Int,
+    rideBookingType :: RideBookingType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic)
+
+data RideBookingType = OneWayTrip OneWayTripData | RentalPackage
+
+data OneWayTripData = OneWayTripData
+  { toLocationId :: Id DLoc.SearchReqLocation,
+    estimatedDistance :: Double
+  }
+
+-- FIXME do we need to handle wrong variants, when for example toLocationId is Just, estimatedDistance = Nothing?
+mkRideBookingType :: Maybe (Id DLoc.SearchReqLocation) -> Maybe Double -> RideBookingType
+mkRideBookingType mbDropLocation mbEstimatedDistance = do
+  let mbTuple = (,) <$> mbDropLocation <*> mbEstimatedDistance
+  maybe RentalPackage (\(toLocationId, estimatedDistance) -> OneWayTrip $ OneWayTripData {..}) mbTuple
+
+getDropLocationId :: RideBookingType -> Maybe (Id DLoc.SearchReqLocation)
+getDropLocationId rideBookingType = case rideBookingType of
+  RentalPackage -> Nothing
+  OneWayTrip oneWayTripData -> Just oneWayTripData.toLocationId
+
+getEstimatedDistance :: RideBookingType -> Maybe Double
+getEstimatedDistance rideBookingType = case rideBookingType of
+  RentalPackage -> Nothing
+  OneWayTrip oneWayTripData -> Just oneWayTripData.estimatedDistance

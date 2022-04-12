@@ -17,8 +17,6 @@ data Quote = Quote
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
     providerId :: Id DOrg.Organization,
-    distance :: Double,
-    distanceToNearestDriver :: Double,
     vehicleVariant :: DVeh.Variant,
     createdAt :: UTCTime
   }

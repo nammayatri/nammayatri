@@ -21,13 +21,12 @@ defaultRideBooking =
       startTime = Fixtures.defaultTime,
       riderId = Id "",
       fromLocationId = Id "",
-      toLocationId = Id "",
       vehicleVariant = Veh.SUV,
       estimatedFare = 0,
       discount = Nothing,
       estimatedTotalFare = 0,
-      distance = 0,
       reallocationsCount = 0,
+      rideBookingType = SRB.mkRideBookingType (Just $ Id "") (Just 0),
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime
     }

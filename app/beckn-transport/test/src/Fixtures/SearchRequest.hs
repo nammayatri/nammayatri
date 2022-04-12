@@ -2,6 +2,7 @@ module Fixtures.SearchRequest (defaultSearchRequest) where
 
 import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as SearchRequest
+import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
 import Servant.Client
 
@@ -14,7 +15,7 @@ defaultSearchRequest =
       validTill = Fixtures.defaultTime,
       providerId = Id "",
       fromLocationId = "",
-      toLocationId = "",
+      toLocationId = Just "",
       bapId = "",
       bapUri = BaseUrl {baseUrlScheme = Http, baseUrlHost = "localhost", baseUrlPort = 8013, baseUrlPath = ""},
       createdAt = Fixtures.defaultTime

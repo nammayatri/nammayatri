@@ -24,7 +24,7 @@ data DriverRideRes = DriverRideRes
     shortRideId :: ShortId Ride,
     status :: RideStatus,
     fromLocation :: SearchReqLocationAPIEntity,
-    toLocation :: SearchReqLocationAPIEntity,
+    toLocation :: Maybe SearchReqLocationAPIEntity,
     discount :: Maybe Amount,
     driverName :: Text,
     driverNumber :: Maybe Text,

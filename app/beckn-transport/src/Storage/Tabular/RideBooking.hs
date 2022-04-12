@@ -13,6 +13,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.RideBooking as Domain
 import qualified Domain.Types.Vehicle as Veh
+import Storage.Tabular.FarePolicy.FareProduct ()
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Quote (QuoteTId)
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
@@ -37,12 +38,12 @@ mkPersist
       startTime UTCTime
       riderId RiderDetailsTId
       fromLocationId SearchReqLocationTId
-      toLocationId SearchReqLocationTId
+      toLocationId SearchReqLocationTId Maybe
       vehicleVariant Veh.Variant
       estimatedFare Amount
       discount Amount Maybe
       estimatedTotalFare Amount
-      distance Double
+      estimatedDistance Double Maybe
       reallocationsCount Int
       createdAt UTCTime
       updatedAt UTCTime
@@ -66,19 +67,20 @@ instance TEntity RideBookingT Domain.RideBooking where
           quoteId = fromKey quoteId,
           riderId = fromKey riderId,
           fromLocationId = fromKey fromLocationId,
-          toLocationId = fromKey toLocationId,
           providerId = fromKey providerId,
           bapUri = pUrl,
+          rideBookingType = Domain.mkRideBookingType (fromKey <$> toLocationId) estimatedDistance,
           ..
         }
-  toTType Domain.RideBooking {..} =
+  toTType Domain.RideBooking {..} = do
     RideBookingT
       { id = getId id,
         requestId = toKey requestId,
         quoteId = toKey quoteId,
         riderId = toKey riderId,
         fromLocationId = toKey fromLocationId,
-        toLocationId = toKey toLocationId,
+        toLocationId = toKey <$> Domain.getDropLocationId rideBookingType,
+        estimatedDistance = Domain.getEstimatedDistance rideBookingType,
         providerId = toKey providerId,
         bapUri = showBaseUrl bapUri,
         ..

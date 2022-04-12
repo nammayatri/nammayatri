@@ -6,6 +6,7 @@ import Beckn.Types.Id
 import Data.Time hiding (parseTime)
 import Domain.Types.FarePolicy
 import Domain.Types.FarePolicy.Discount
+import Domain.Types.FarePolicy.FareProduct
 import Domain.Types.FarePolicy.PerExtraKmRate
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle as Vehicle
@@ -40,7 +41,7 @@ defaultFarePolicy =
     }
 
 mkDiscount :: Vehicle.Variant -> UTCTime -> UTCTime -> Rational -> Bool -> Discount
-mkDiscount vehVar from to disc isOn = Discount (Id "") vehVar (Id "") from to disc isOn (mockTime 11) (mockTime 11)
+mkDiscount vehVar from to disc isOn = Discount (Id "") vehVar (Id "") ONE_WAY from to disc isOn (mockTime 11) (mockTime 11)
 
 mockTime :: Int -> UTCTime
 mockTime hour = parseTime ("2018-12-06T" <> (if hour <= 9 then "0" else "") <> show hour <> ":00:00.000Z")
@@ -51,7 +52,8 @@ orgID = "organization_id"
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
-    { getFarePolicy = \_orgId _vehicleVariant -> pure $ Just defaultFarePolicy
+    { getFarePolicy = \_orgId _vehicleVariant -> pure $ Just defaultFarePolicy,
+      getRentalFarePolicy = \_orgId _vehicleVariant -> pure Nothing
     }
 
 -- Calculation tests

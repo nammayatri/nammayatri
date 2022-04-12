@@ -26,9 +26,11 @@ instance Example Intent where
       { fulfillment = example
       }
 
+-- If end = Nothing, then bpp sends quotes only for RENTAL
+-- If end is Just, then bpp sends quotes both for RENTAL and ONE_WAY
 data FulFillmentInfo = FulFillmentInfo
   { start :: StartInfo,
-    end :: StopInfo
+    end :: Maybe StopInfo
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 

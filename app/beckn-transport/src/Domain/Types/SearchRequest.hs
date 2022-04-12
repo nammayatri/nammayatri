@@ -34,7 +34,7 @@ data SearchRequest = SearchRequest
     validTill :: UTCTime,
     providerId :: Id DOrg.Organization,
     fromLocationId :: Id DLoc.SearchReqLocation,
-    toLocationId :: Id DLoc.SearchReqLocation,
+    toLocationId :: Maybe (Id DLoc.SearchReqLocation),
     bapId :: Text,
     bapUri :: BaseUrl,
     createdAt :: UTCTime

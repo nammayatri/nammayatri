@@ -9,9 +9,9 @@ rideServiceable ::
   (EsqDBFlow m r, HasField "geofencingConfig" r GeofencingConfig) =>
   (LatLong -> [Text] -> m Bool) ->
   LatLong ->
-  LatLong ->
+  Maybe LatLong ->
   m Bool
-rideServiceable someGeometriesContain origin destination = do
+rideServiceable someGeometriesContain origin mbDestination = do
   geofencingConfig <- asks (.geofencingConfig)
   originServiceable <-
     case geofencingConfig.origin of
@@ -20,5 +20,6 @@ rideServiceable someGeometriesContain origin destination = do
   destinationServiceable <-
     case geofencingConfig.destination of
       Unrestricted -> pure True
-      Regions regions -> someGeometriesContain destination regions
+      Regions regions -> do
+        maybe (pure True) (`someGeometriesContain` regions) mbDestination
   pure $ originServiceable && destinationServiceable

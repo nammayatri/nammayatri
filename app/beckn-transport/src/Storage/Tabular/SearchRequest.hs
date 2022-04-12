@@ -26,7 +26,7 @@ mkPersist
       validTill UTCTime
       providerId OrganizationTId
       fromLocationId SearchReqLocationTId
-      toLocationId SearchReqLocationTId
+      toLocationId SearchReqLocationTId Maybe
       bapId Text
       bapUri Text
       createdAt UTCTime
@@ -48,7 +48,7 @@ instance TEntity SearchRequestT Domain.SearchRequest where
         { id = Id id,
           providerId = fromKey providerId,
           fromLocationId = fromKey fromLocationId,
-          toLocationId = fromKey toLocationId,
+          toLocationId = fromKey <$> toLocationId,
           bapUri = pUrl,
           ..
         }
@@ -57,7 +57,7 @@ instance TEntity SearchRequestT Domain.SearchRequest where
       { id = getId id,
         providerId = toKey providerId,
         fromLocationId = toKey fromLocationId,
-        toLocationId = toKey toLocationId,
+        toLocationId = toKey <$> toLocationId,
         bapUri = showBaseUrl bapUri,
         ..
       }

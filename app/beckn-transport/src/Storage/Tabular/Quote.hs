@@ -29,8 +29,6 @@ mkPersist
       discount Amount Maybe
       estimatedTotalFare Amount
       providerId OrganizationTId
-      distance Double
-      distanceToNearestDriver Double
       vehicleVariant Vehicle.Variant
       createdAt UTCTime
       Primary id

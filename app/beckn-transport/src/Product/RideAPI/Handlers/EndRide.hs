@@ -94,7 +94,11 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
     recalculateFare rideBooking ride = do
       let transporterId = rideBooking.providerId
           vehicleVariant = rideBooking.vehicleVariant
-          oldDistance = rideBooking.distance
+
+          -- FIXME fix logic for Rental case
+          actualDistance = ride.traveledDistance
+          oldDistance = fromMaybe actualDistance (SRB.getEstimatedDistance rideBooking.rideBookingType)
+
           estimatedFare = rideBooking.estimatedFare
       shouldRecalculateFare <- recalculateFareEnabled
       missingLocationUpdates <-
@@ -103,7 +107,6 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           <*> thereWereMissingLocUpdates
       if shouldRecalculateFare && not missingLocationUpdates
         then do
-          let actualDistance = ride.traveledDistance
           fareParams <- calculateFare transporterId vehicleVariant (Meter actualDistance) rideBooking.startTime
           let updatedFare = Fare.fareSum fareParams
               totalFare = Fare.fareSumWithDiscount fareParams

@@ -17,7 +17,7 @@ data RideBookingStatusRes = RideBookingStatusRes
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    toLocation :: SearchReqLocationAPIEntity,
+    toLocation :: Maybe SearchReqLocationAPIEntity,
     fromLocation :: SearchReqLocationAPIEntity,
     ride :: Maybe RideAPIEntity,
     createdAt :: UTCTime,
@@ -38,7 +38,7 @@ newtype GetRideInfoRes = GetRideInfoRes
 data RideInfo = RideInfo
   { bookingId :: Id RideBooking,
     pickupLoc :: SearchReqLocationAPIEntity,
-    dropLoc :: SearchReqLocationAPIEntity,
+    dropLoc :: Maybe SearchReqLocationAPIEntity,
     etaForPickupLoc :: Maybe Integer,
     distanceToPickupLoc :: Maybe Double,
     notificationExpiryTime :: UTCTime,

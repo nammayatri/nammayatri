@@ -15,9 +15,7 @@ defaultQuote =
       estimatedFare = 0,
       estimatedTotalFare = 0,
       discount = Nothing,
-      distance = 0,
       providerId = "",
-      distanceToNearestDriver = 0,
       vehicleVariant = Veh.SUV,
       createdAt = Fixtures.defaultTime
     }
