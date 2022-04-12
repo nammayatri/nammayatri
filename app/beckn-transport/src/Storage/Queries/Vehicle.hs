@@ -61,17 +61,15 @@ findByAnyOf registrationNoM vehicleIdM =
         &&. whenJust_ registrationNoM (\regNum -> vehicle ^. VehicleRegistrationNo ==. val regNum)
     return vehicle
 
-findAllByVariantCatOrgId ::
+findAllByVariantRegNumOrgId ::
   Transactionable m =>
   Maybe Variant ->
-  Maybe Category ->
-  Maybe EnergyType ->
   Maybe Text ->
   Integer ->
   Integer ->
   Id Organization ->
   m [Vehicle]
-findAllByVariantCatOrgId variantM categoryM energyTypeM mbRegNum limit' offset' orgId = do
+findAllByVariantRegNumOrgId variantM mbRegNum limit' offset' orgId = do
   let limitVal = fromIntegral limit'
       offsetVal = fromIntegral offset'
   Esq.findAll $ do
@@ -79,9 +77,7 @@ findAllByVariantCatOrgId variantM categoryM energyTypeM mbRegNum limit' offset' 
     where_ $
       vehicle ^. VehicleOrganizationId ==. val (toKey orgId)
         &&. whenJust_ variantM (\variant -> vehicle ^. VehicleVariant ==. val variant)
-        &&. whenJust_ categoryM (\category -> vehicle ^. VehicleCategory ==. val (Just category))
-        &&. whenJust_ energyTypeM (\energyType -> vehicle ^. VehicleEnergyType ==. val (Just energyType))
-        &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo ==. val regNum)
+        &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo `ilike` ((%) ++. val regNum ++. (%)))
     orderBy [desc $ vehicle ^. VehicleCreatedAt]
     limit limitVal
     offset offsetVal

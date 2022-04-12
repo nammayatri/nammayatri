@@ -207,8 +207,6 @@ type VehicleAPI =
            :<|> "list"
              :> AdminTokenAuth
              :> QueryParam "variant" Variant
-             :> QueryParam "category" Category
-             :> QueryParam "energyType" EnergyType
              :> QueryParam "registrationNo" Text
              :> QueryParam "limit" Int
              :> QueryParam "offset" Int
