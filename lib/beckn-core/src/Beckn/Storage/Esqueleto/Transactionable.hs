@@ -4,7 +4,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Esqueleto.Logger
 import Beckn.Storage.Esqueleto.SqlDB
-import Beckn.Types.Time (getCurrentTime)
+import Beckn.Types.Time (MonadTime, getCurrentTime)
+import Beckn.Utils.IOLogging
 import Database.Esqueleto.Experimental (SqlBackend, runSqlPool)
 
 class Transactionable m where
@@ -13,11 +14,13 @@ class Transactionable m where
 instance {-# OVERLAPPING #-} Transactionable (ReaderT SqlDBEnv (ReaderT SqlBackend LoggerIO)) where
   runTransaction = identity
 
-instance {-# INCOHERENT #-} EsqDBFlow m r => Transactionable m where
+type HasEsqEnv r m = (MonadReader r m, HasLog r, HasField "esqDBEnv" r EsqDBEnv, MonadTime m, MonadIO m)
+
+instance {-# INCOHERENT #-} HasEsqEnv r m => Transactionable m where
   runTransaction = runTransactionImpl
 
 runTransactionImpl ::
-  (EsqDBFlow m r) =>
+  (HasEsqEnv r m) =>
   SqlDB a ->
   m a
 runTransactionImpl run = do

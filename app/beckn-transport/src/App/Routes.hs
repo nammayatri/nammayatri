@@ -3,6 +3,8 @@ module App.Routes where
 import App.Routes.FarePolicy
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import Beckn.Scheduler.App
+import Beckn.Scheduler.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
@@ -10,6 +12,7 @@ import qualified Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi
 import qualified Domain.Types.CallStatus as SCS
@@ -58,7 +61,12 @@ type TransportAPI =
 
 type MainAPI =
   "v2" :> UIAPI
-    :<|> "v1" :> OrgBecknAPI
+    :<|> "v1"
+    :> OrgBecknAPI
+    :<|> "v2"
+    :> "test"
+    :> ReqBody '[JSON] Text
+    :> Get '[JSON] Text
 
 type UIAPI =
   HealthCheckAPI
@@ -100,6 +108,26 @@ mainServer :: FlowServer MainAPI
 mainServer =
   uiServer
     :<|> orgBecknApiFlow
+    :<|> testServer
+
+-- TODO: remove this
+makeTestJobEntry :: Text -> JobEntry
+makeTestJobEntry jType =
+  JobEntry
+    { jobType = jType,
+      jobData = "testData",
+      maxErrors = 5,
+      maximumDelay = Nothing
+    }
+
+-- TODO: remove this
+testServer :: Text -> FlowHandler Text
+testServer jobType = withFlowHandlerAPI $ do
+  case jobType of
+    "type1" -> void $ createJobIn 20 $ makeTestJobEntry jobType
+    "type2" -> void $ createJobIn 3 $ makeTestJobEntry jobType
+    _ -> logWarning "unknown job type"
+  pure "hello"
 
 transporterServer :: FlowServer TransportAPI
 transporterServer =

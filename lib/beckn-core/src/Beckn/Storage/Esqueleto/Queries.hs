@@ -89,7 +89,7 @@ createIgnoreConflicts' :: (TEntity t a, AtLeastOneUniqueKey t) => a -> SqlDB ()
 createIgnoreConflicts' q = void $ lift $ Esq.insertBy (toTType q)
 
 update ::
-  ( EsqDBFlow m r,
+  ( Transactionable m,
     PersistEntity a,
     BackendCompatible SqlBackend (PersistEntityBackend a)
   ) =>

@@ -39,6 +39,9 @@ runMock env action = runReaderT (runMockM action) env
 instance MonadTime (MockM e) where
   getCurrentTime = liftIO getCurrentTime
 
+instance MonadClock (MockM e) where
+  getClockTime = liftIO getClockTime
+
 instance (HasLog e) => Log (MockM e) where
   logOutput = logOutputImplementation
   withLogTag = withLogTagImplementation

@@ -232,6 +232,9 @@ instance PrettyShow Scientific where
 instance PrettyShow UTCTime where
   prettyShow = prettyShow . Showable
 
+instance PrettyShow NominalDiffTime where
+  prettyShow = prettyShow . Showable
+
 class GPrettyShow f where
   gprettyShow :: OptionsL -> f a -> LayoutValue
 

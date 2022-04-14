@@ -61,6 +61,11 @@ set ::
 set key val = runWithPrefix_ key $ \prefKey ->
   Hedis.set prefKey $ BSL.toStrict $ Ae.encode val
 
+setNx ::
+  (ToJSON a, HedisFlow m env) => Text -> a -> m Bool
+setNx key val = runWithPrefix key $ \prefKey ->
+  Hedis.setnx prefKey $ BSL.toStrict $ Ae.encode val
+
 del :: (HedisFlow m env) => Text -> m ()
 del key = runWithPrefix_ key $ \prefKey -> Hedis.del [prefKey]
 
@@ -100,3 +105,7 @@ getList key = lRange key 0 (-1)
 incrByFloat :: (HedisFlow m env) => Text -> Double -> m Double
 incrByFloat key toAdd = runWithPrefix key $ \prefKey ->
   Hedis.incrbyfloat prefKey toAdd
+
+expire :: (HedisFlow m env) => Text -> ExpirationTime -> m ()
+expire key expirationTime = runWithPrefix_ key $ \prefKey ->
+  Hedis.expire prefKey expirationTime

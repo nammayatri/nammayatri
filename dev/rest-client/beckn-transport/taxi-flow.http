@@ -2,6 +2,15 @@
 
 ###
 
+# @name test
+
+GET {{transporter-host}}/test
+token: {{driver-token}}
+content-type: application/json
+
+"type2"
+
+###
 # @name setActive
 POST {{transporter-host}}/driver/setActivity?active=true
 content-type: application/json
@@ -71,9 +80,9 @@ token: {{app-token}}
         "areaCode": "",
         "area": "Edappally"
     },
-    
+
     "gps": {
-        "lat": 10.021737163149579, 
+        "lat": 10.021737163149579,
         "lon": 76.30619847435514
     }
   },
@@ -89,7 +98,7 @@ token: {{app-token}}
             "area": "Edapally"
         },
     "gps": {
-        "lat": 10.023880128960258, 
+        "lat": 10.023880128960258,
         "lon": 76.30264171106143
     }
   }

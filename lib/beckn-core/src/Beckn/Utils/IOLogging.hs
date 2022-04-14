@@ -1,7 +1,7 @@
 module Beckn.Utils.IOLogging
   ( LoggerConfig (..),
     Logger,
-    LoggerEnv,
+    LoggerEnv (..),
     HasLog,
     prepareLoggerEnv,
     releaseLoggerEnv,
@@ -33,7 +33,8 @@ data LoggerEnv = LoggerEnv
     hostName :: Maybe Text,
     tags :: [Text],
     fileLogger :: Maybe Logger,
-    consoleLogger :: Maybe Logger
+    consoleLogger :: Maybe Logger,
+    logRawSql :: Bool
   }
 
 withLoggerEnv :: LoggerConfig -> Maybe Text -> (LoggerEnv -> IO a) -> IO a
@@ -54,6 +55,7 @@ prepareLoggerEnv loggerConfig hostName = do
   return $
     LoggerEnv
       { level = loggerConfig.level,
+        logRawSql = loggerConfig.logRawSql,
         tags = [],
         ..
       }

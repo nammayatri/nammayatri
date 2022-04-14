@@ -17,6 +17,7 @@ public-transport-bap
 public-transport-search-consumer
 search-result-aggregator
 mock-public-transport-bpp
+transporter-job-scheduler
 EOF
 }
 
