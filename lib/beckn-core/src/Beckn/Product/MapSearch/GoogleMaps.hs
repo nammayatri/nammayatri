@@ -60,15 +60,21 @@ getDistances ::
 getDistances travelMode origins destinations utcDepartureTime = do
   googleMapsUrl <- asks (.googleMapsUrl)
   key <- asks (.googleMapsKey)
+  originPlaces <- map latLongToPlace <$> capListAsPerGoogleLimits "origins" origins
+  destinationPlaces <- map latLongToPlace <$> capListAsPerGoogleLimits "destinations" destinations
   let departureTime = case utcDepartureTime of
         Nothing -> Just GoogleMaps.Now
         Just time -> Just $ GoogleMaps.FutureTime time
   GoogleMaps.distanceMatrix googleMapsUrl originPlaces destinationPlaces key departureTime mode
     >>= parseDistanceMatrixResp originPlaces destinationPlaces
   where
-    originPlaces = latLongToPlace <$> toList origins
-    destinationPlaces = latLongToPlace <$> toList destinations
     mode = mapToMode <$> travelMode
+
+    -- Constraints on Distance matrix API: https://developers.google.com/maps/documentation/distance-matrix/usage-and-billing#other-usage-limits
+    capListAsPerGoogleLimits listName inputList = do
+      when (length inputList > 25) $
+        logWarning ("Capping " <> listName <> " to maximum 25 elements as per Distance matrix API limits")
+      return $ take 25 $ toList inputList
 
 latLongToPlace :: MapSearch.LatLong -> GoogleMaps.Place
 latLongToPlace MapSearch.LatLong {..} =
