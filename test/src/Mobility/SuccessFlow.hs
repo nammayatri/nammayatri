@@ -2,8 +2,8 @@ module Mobility.SuccessFlow where
 
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
-import "beckn-transport" Domain.Types.Person as TPerson
 import Common
+import "beckn-transport" Domain.Types.Person as TPerson
 import qualified "app-backend" Domain.Types.Quote as BQuote
 import qualified "beckn-transport" Domain.Types.Quote as TQuote
 import qualified "app-backend" Domain.Types.Ride as BRide
