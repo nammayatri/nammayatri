@@ -6,6 +6,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.1.0] - 19-04-2022
+
+### Added
+
+#1358: [BKN-1113] New driver pool calculation algorithm
+
+#1373: [BKN-1196] De-dup search requests and on-search quotes
+
+#1347: Feature/BKN-1184/integrate snap to roads API
+
+#1338: [BKN-1185] implement google distance matrix api
+
+#1369: [BKN-1144] Added dup check while creating driver.
+
+### Changed
+
+#1366: [BKN-1206] Refactor Metrics
+
+#1374: Update Stack LTS in dockerfile
+
+#1370: Upgraded GHC version
+
+### Fixed
+
+#1355: [BKN-1202]return driver information with deleted vehicle
+
+### Removed
+
+#1384: [BKN-1211] removed config field from AppEnv
+
+#1381: [BKN-1132] Remove beam from beckn-transport
+
+#1375: Updated Ernakulam district in BPP
+
+#1372: Added geofencing to BPP
+
 ## [12.0.0] - 17-03-2022
 
 ### Added
@@ -700,7 +736,8 @@ policy
 
 - Go-live production release
 
-[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v12.0.0
+[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v12.1.0
+[12.1.0]: https://bitbucket.org/juspay/beckn/commits/tag/v12.1.0
 [12.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v12.0.0
 [11.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v11.0.0
 [10.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v10.0.0
