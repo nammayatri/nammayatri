@@ -18,9 +18,6 @@ import Beckn.Utils.Dhall (FromDhall)
 import Control.Lens.Operators
 import Data.Aeson as Aeson (Value)
 import Data.OpenApi
-import Database.Beam.Backend
-import Database.Beam.Postgres
-import Database.Beam.Query
 import qualified EulerHS.Language as L
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
@@ -66,15 +63,6 @@ type RegToken = Text
 
 -- FIXME: remove this
 type AuthHeader = Header' '[Required, Strict] "token" RegToken
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be Servant.BaseUrl where
-  sqlValueSyntax = sqlValueSyntax . Servant.showBaseUrl
-
-instance FromBackendRow Postgres Servant.BaseUrl where
-  fromBackendRow =
-    either (fail . show) pure . Servant.parseBaseUrl =<< fromBackendRow
-
-instance HasSqlEqualityCheck Postgres Servant.BaseUrl
 
 instance ToSchema Servant.BaseUrl where
   declareNamedSchema _ = do

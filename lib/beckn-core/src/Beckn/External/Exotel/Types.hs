@@ -11,7 +11,6 @@
 
 module Beckn.External.Exotel.Types where
 
-import Beckn.Storage.DB.Utils (fromBackendRowEnum)
 import Beckn.Storage.Esqueleto (derivePersistField)
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.JSON
@@ -23,8 +22,6 @@ import Data.Aeson.TH
 import Data.Aeson.Types
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
-import Database.Beam.Backend
-import Database.Beam.Postgres (Postgres)
 import EulerHS.Prelude
 import Servant.Client
 import Web.FormUrlEncoded (ToForm, toForm)
@@ -137,12 +134,6 @@ data ExotelCallStatus
   deriving (Show, Eq, Read, Generic, ToSchema)
 
 $(deriveJSON constructorsWithHyphensToLowerOptions ''ExotelCallStatus)
-
-instance HasSqlValueSyntax be String => HasSqlValueSyntax be ExotelCallStatus where
-  sqlValueSyntax = autoSqlValueSyntax
-
-instance FromBackendRow Postgres ExotelCallStatus where
-  fromBackendRow = fromBackendRowEnum "ExotelCallStatus"
 
 derivePersistField "ExotelCallStatus"
 

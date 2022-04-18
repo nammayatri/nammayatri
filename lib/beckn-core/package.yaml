@@ -53,8 +53,6 @@ dependencies:
   - aeson
   - aeson-casing
   - base >= 4.7 && < 5
-  - beam-core
-  - beam-postgres
   - binary
   - bytestring
   - clock

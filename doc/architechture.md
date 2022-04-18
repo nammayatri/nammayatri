@@ -20,7 +20,6 @@ As well as mtl-style classes we use handle/service pattern in our business logic
 There might arise a question what should one choose to implement some "module": mtl-style typeclass or handle pattern? For common generic things (like logging, accessing time, or some generic metrics) we use typeclasses, for business logic we use handle pattern. For some tasks it is enough to have some `HasField` constraint on an environment to make it work in different apps.
 
 ## Queries layer
-Queries layer is the DB access layer. It is fairly primitive, consisting of DB types and access functions. All reading (SQL's `SELECT`) queries should return `Maybe` value that would be unwrapped somewhere in Product layer. All writing queries (SQL's `INSERT`, `UPDATE` and  `DELETE`) should be written in `SqlDB` monad and run with `runSqlDBTransaction` function. As you can guess from the name it is needed to support transactions.
+Queries layer is the DB access layer. It is fairly primitive, consisting of DB types and access functions. All reading (SQL's `SELECT`) queries should return `Maybe` value that would be unwrapped somewhere in Product layer. All writing queries (SQL's `INSERT`, `UPDATE` and  `DELETE`) should be written in `SqlDB` monad and run with `runTransaction` function. As you can guess from the name it is needed to support transactions.
 
-Under the hood we use [Beam](https://bitbucket.org/juspay/euler-hs/src/master) as a DB adapter. There's also one [postgresql-simple](https://hackage.haskell.org/package/postgresql-simple) query and there are plans to move to [Esqueleto](https://hackage.haskell.org/package/esqueleto) + [Persistent](https://hackage.haskell.org/package/persistent)
-
+Under the hood we use [Esqueleto](https://hackage.haskell.org/package/esqueleto) + [Persistent](https://hackage.haskell.org/package/persistent) as a DB adapter. There's also one [postgresql-simple](https://hackage.haskell.org/package/postgresql-simple) query.

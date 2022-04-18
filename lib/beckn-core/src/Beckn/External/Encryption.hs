@@ -2,7 +2,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -13,11 +12,8 @@ module Beckn.External.Encryption
     EncKind (..),
     Encrypted (..),
     EncFlow,
-    EncryptedField,
     EncryptedHashed (..),
     EncryptedHashedField,
-    BeamEncryptedHashed (..),
-    BeamEncryptedHashedField,
     EncryptedBase64 (..),
     EncTools (..),
     HashSalt,
@@ -42,12 +38,7 @@ import Crypto.Hash.Algorithms (SHA256)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as LBS
-import Database.Beam as B (Beamable, Columnar, HasSqlEqualityCheck (..), Nullable)
-import Database.Beam.Backend (FromBackendRow (..), HasSqlValueSyntax (..))
-import Database.Beam.Postgres (Postgres)
-import Database.Beam.Postgres.Syntax (PgValueSyntax)
 import EulerHS.Prelude
-import GHC.TypeLits (ErrorMessage (..), TypeError)
 import Passetto.Client (EncryptedBase64 (..), EncryptedItem (..), PassettoContext, cliDecrypt, cliEncrypt, genericDecryptItem, genericEncryptItem, mkDefPassettoContext, throwLeft)
 import Passetto.Client.EncryptedItem (Encrypted (..))
 import Text.Hex (decodeHex, encodeHex)
@@ -56,41 +47,12 @@ import Text.Hex (decodeHex, encodeHex)
 
 -- | Specifies whether field is encrypted or not.
 --
--- Beam table schemas which have some fields encrypted are assumed to be
+-- Esqueleto table schemas which have some fields encrypted are assumed to be
 -- polymorphic over type of this kind; it then should be included into
 -- 'EncryptedField' to affect a particular field.
 data EncKind
   = AsEncrypted
   | AsUnencrypted
-
--- | Mark a field as encrypted or not, depending on @e@ argument.
---
--- This always relies on 'ToJSON' and 'FromJSON' instances to serialize the value
--- under the hood. If this does not suit you, use some other type family.
-type family EncryptedField (e :: EncKind) (f :: Type -> Type) (a :: Type) :: Type where
-  EncryptedField 'AsUnencrypted f a = Columnar f a
-  EncryptedField 'AsEncrypted f a = Columnar f (Encrypted a)
-
--- | 'Encrypted' always corresponds to a textual SQL type.
--- Adjust the size to be @4/3@ times greater than JSON encoded plaintext value
--- (because of base64 encoding) + few extra bytes as reserve.
-deriving newtype instance HasSqlValueSyntax PgValueSyntax (Encrypted a)
-
-deriving newtype instance FromBackendRow Postgres (Encrypted a)
-
--- | This instance is prohibited because encryption is not a deterministic
--- operation (different encryption keys can be used each time), so
--- matching on encrypted data does not actually give you any information.
---
--- If you need to lookup by encrypted data, put 'BeamEncryptedHashedField'
--- into table field, and in query match against field hash, e.g.
--- @ myfield.hash ==. val_ (evalDbHash seekedValue) @
-instance
-  TypeError
-    ( 'Text "Matching on encrypted data is not allowed"
-        ':$$: 'Text "Match on hash instead"
-    ) =>
-  HasSqlEqualityCheck Postgres (Encrypted a)
 
 -- ** Encrypted and hashed fields
 
@@ -103,7 +65,6 @@ instance
 -- revised later.
 newtype DbHash = DbHash {unDbHash :: ByteString}
   deriving stock (Show, Eq)
-  deriving anyclass (HasSqlEqualityCheck Postgres)
   deriving newtype (PersistField, PersistFieldSql)
 
 -- These json instances are necessary for Euler's ART system only
@@ -112,11 +73,6 @@ instance ToJSON DbHash where
 
 instance FromJSON DbHash where
   parseJSON = maybe (fail "Bad hex") (pure . DbHash) . decodeHex <=< parseJSON
-
--- | Corresponds to @bytea@ type in database.
-deriving newtype instance HasSqlValueSyntax PgValueSyntax DbHash
-
-deriving newtype instance FromBackendRow Postgres DbHash
 
 type HashAlgo = SHA256
 
@@ -165,67 +121,15 @@ type family EncryptedHashedField (e :: EncKind) (a :: Type) :: Type where
   EncryptedHashedField 'AsUnencrypted a = a
   EncryptedHashedField 'AsEncrypted a = EncryptedHashed a
 
--- | A field which appears encrypted in database along with hash.
---
--- In database this occupies two columns.
---
--- If you need to mark a field as optional, pass @Nullable f@ as
--- the last type argument.
-data BeamEncryptedHashed a f = BeamEncryptedHashed
-  { encrypted :: Columnar f (Encrypted a),
-    hash :: Columnar f DbHash
-  }
-  deriving stock (Generic)
-  deriving anyclass (Beamable)
-
-instance
-  (ToJSON a, FromJSON a, DbHashable a) =>
-  EncryptedItem (BeamEncryptedHashed a Identity)
-  where
-  type Unencrypted (BeamEncryptedHashed a Identity) = Identity (a, HashSalt)
-  encryptItem (Identity value) = do
-    let hash = evalDbHash value
-    encrypted <- encryptItem $ fst value
-    return BeamEncryptedHashed {..}
-  decryptItem mvalue = Identity . (,"") <$> decryptItem mvalue.encrypted
-
-instance
-  (ToJSON a, FromJSON a, DbHashable a) =>
-  EncryptedItem (BeamEncryptedHashed a (B.Nullable Identity))
-  where
-  type Unencrypted (BeamEncryptedHashed a (B.Nullable Identity)) = Maybe (a, HashSalt)
-  encryptItem mvalue = do
-    let hash = evalDbHash <$> mvalue
-    encrypted <- encryptItem $ fst <$> mvalue
-    return BeamEncryptedHashed {..}
-  decryptItem mvalue = fmap (,"") <$> decryptItem mvalue.encrypted
-
 class (EncryptedItem e) => EncryptedItem' e where
   type UnencryptedItem e :: Type
   toUnencrypted :: UnencryptedItem e -> HashSalt -> Unencrypted e
   fromUnencrypted :: Unencrypted e -> UnencryptedItem e
 
-instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (BeamEncryptedHashed a Identity) where
-  type UnencryptedItem (BeamEncryptedHashed a Identity) = a
-  toUnencrypted a salt = Identity (a, salt)
-  fromUnencrypted a = fst $ runIdentity a
-
-instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (BeamEncryptedHashed a (B.Nullable Identity)) where
-  type UnencryptedItem (BeamEncryptedHashed a (B.Nullable Identity)) = Maybe a
-  toUnencrypted a salt = (,salt) <$> a
-  fromUnencrypted a = fst <$> a
-
 instance (ToJSON a, FromJSON a, DbHashable a) => EncryptedItem' (EncryptedHashed a) where
   type UnencryptedItem (EncryptedHashed a) = a
   toUnencrypted a salt = (a, salt)
   fromUnencrypted a = fst a
-
--- | Mark a field as encrypted with hash or not, depending on @e@ argument.
---
--- The same considerations as for 'EncryptedField' apply here.
-type family BeamEncryptedHashedField (e :: EncKind) (f :: Type -> Type) (a :: Type) :: Type where
-  BeamEncryptedHashedField 'AsUnencrypted f a = Columnar f a
-  BeamEncryptedHashedField 'AsEncrypted f a = BeamEncryptedHashed a f
 
 -- * Encryption methods
 

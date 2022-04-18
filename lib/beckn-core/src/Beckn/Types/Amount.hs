@@ -23,8 +23,6 @@ import Data.OpenApi hiding (Example, value)
 import Data.Proxy
 import qualified Data.Ratio as R
 import qualified Data.Text as T
-import Database.Beam.Backend.SQL
-import Database.Beam.Postgres
 import EulerHS.Prelude
 import qualified Money as M
 
@@ -144,9 +142,3 @@ instance ToSchema Amount where
               <> message
               <> " String format is used to prevent loss of precision."
           & format ?~ "[-]?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?"
-
-instance HasSqlValueSyntax be Text => HasSqlValueSyntax be Amount where
-  sqlValueSyntax = sqlValueSyntax . amountToString
-
-instance FromBackendRow Postgres Amount where
-  fromBackendRow = Amount <$> fromBackendRow

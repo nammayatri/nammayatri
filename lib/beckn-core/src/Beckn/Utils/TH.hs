@@ -7,10 +7,6 @@
 module Beckn.Utils.TH where
 
 import Data.OpenApi (ToSchema)
-import Database.Beam.Backend.SQL (FromBackendRow, HasSqlValueSyntax)
-import Database.Beam.Postgres as Posgres
-import Database.Beam.Postgres.Syntax (PgValueSyntax)
-import Database.Beam.Query (HasSqlEqualityCheck)
 import EulerHS.Prelude
 import qualified Language.Haskell.TH as TH
 import Servant (FromHttpApiData, ToHttpApiData)
@@ -27,12 +23,6 @@ deriveIdentifierInstances name = do
     deriving newtype instance ToJSON $tyQ
 
     deriving newtype instance FromJSON $tyQ
-
-    deriving newtype instance HasSqlValueSyntax PgValueSyntax $tyQ
-
-    deriving newtype instance FromBackendRow Postgres $tyQ
-
-    deriving newtype instance HasSqlEqualityCheck Postgres $tyQ
 
     deriving newtype instance ToHttpApiData $tyQ
 

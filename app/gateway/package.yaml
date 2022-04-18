@@ -72,8 +72,6 @@ library:
     - -Wincomplete-uni-patterns
   dependencies:
     - aeson
-    - beam-core
-    - beam-postgres
     - beckn-core
     - bytestring
     - cache
