@@ -27,7 +27,7 @@ calculateFare ::
   ) =>
   Id Organization ->
   Vehicle.Variant ->
-  Double ->
+  Meter ->
   UTCTime ->
   m FareParameters
 calculateFare orgId vehicleVariant distance startTime = do

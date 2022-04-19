@@ -49,7 +49,7 @@ makeMockGetDistanceResult origin dest =
       destination = GoogleMaps.Location $ LocationS dest.lat dest.lon,
       info =
         GoogleMaps.GetDistanceResultInfo
-          { distance = 9.446,
+          { distance = Meter 9446,
             duration = mockDuration,
             duration_in_traffic = mockDuration,
             status = "OK"

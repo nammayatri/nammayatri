@@ -177,7 +177,7 @@ onSearchCallback searchRequest transporter fromLocation toLocation searchMetrics
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
-      buildQuote searchRequest fareParams transporterId distance poolResult.distanceToDriver poolResult.variant
+      buildQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant
 
   Esq.runTransaction $
     for_ listOfQuotes Quote.create

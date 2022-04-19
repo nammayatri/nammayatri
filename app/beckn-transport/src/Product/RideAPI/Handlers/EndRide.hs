@@ -29,7 +29,7 @@ data ServiceHandle m = ServiceHandle
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
-      Double ->
+      Meter ->
       UTCTime ->
       m Fare.FareParameters,
     recalculateFareEnabled :: m Bool,
@@ -104,7 +104,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       if shouldRecalculateFare && not missingLocationUpdates
         then do
           let actualDistance = ride.traveledDistance
-          fareParams <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime
+          fareParams <- calculateFare transporterId vehicleVariant (Meter actualDistance) rideBooking.startTime
           let updatedFare = Fare.fareSum fareParams
               totalFare = Fare.fareSumWithDiscount fareParams
           let distanceDiff = actualDistance - oldDistance

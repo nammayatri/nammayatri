@@ -54,7 +54,7 @@ search personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   fromLocation <- buildSearchReqLoc req.origin
   toLocation <- buildSearchReqLoc req.destination
   now <- getCurrentTime
-  distance <- (.info.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.origin.gps req.destination.gps
+  distance <- (\res -> getDistanceInMeter res.info.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.origin.gps req.destination.gps
   searchRequest <- buildSearchRequest (getId personId) fromLocation toLocation distance now
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)

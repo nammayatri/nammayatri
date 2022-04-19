@@ -24,7 +24,7 @@ data GetDistanceResult = GetDistanceResult
   deriving (Generic)
 
 data GetDistanceResultInfo = GetDistanceResultInfo
-  { distance :: Double,
+  { distance :: Meter,
     duration :: NominalDiffTime,
     duration_in_traffic :: NominalDiffTime,
     status :: Text
@@ -111,12 +111,12 @@ parseDistanceMatrixResp origins destinations distanceMatrixResp = do
       info <- buildGetDistanceResultInfo element
       return $ GetDistanceResult orig dest info
 
-parseDistances :: (MonadThrow m, Log m) => GoogleMaps.DistanceMatrixElement -> m Double
+parseDistances :: (MonadThrow m, Log m) => GoogleMaps.DistanceMatrixElement -> m Meter
 parseDistances distanceMatrixElement = do
   distance <-
     distanceMatrixElement.distance
       & fromMaybeM (InternalError "No distance value provided in distance matrix API response")
-  pure $ int2Double distance.value / 1000
+  pure $ Meter $ int2Double distance.value
 
 parseDuration :: (MonadThrow m, Log m) => GoogleMaps.DistanceMatrixElement -> m NominalDiffTime
 parseDuration distanceMatrixElement = do

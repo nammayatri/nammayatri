@@ -32,8 +32,6 @@ newtype DropLocation = DropLocation {getDropLocation :: Location.SearchReqLocati
 
 type TripStartTime = UTCTime
 
-type DistanceInM = Double
-
 type MonadHandler m = (MonadThrow m, Log m)
 
 newtype ServiceHandle m = ServiceHandle
@@ -53,7 +51,7 @@ doCalculateFare ::
   ServiceHandle m ->
   Id Organization.Organization ->
   Vehicle.Variant ->
-  DistanceInM ->
+  Meter ->
   TripStartTime ->
   m FareParameters
 doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
@@ -75,12 +73,12 @@ calculateBaseFare farePolicy = do
 calculateDistanceFare ::
   MonadHandler m =>
   FarePolicy ->
-  DistanceInM ->
+  Meter ->
   m Amount
 calculateDistanceFare farePolicy distance = do
   let sortedPerExtraKmRateList = NonEmpty.sortBy (compare `on` (.distanceRangeStart)) farePolicy.perExtraKmRateList -- sort it again just in case
   let baseDistance = (.distanceRangeStart) $ NonEmpty.head sortedPerExtraKmRateList
-      extraDistance = toRational distance - baseDistance
+      extraDistance = toRational (getDistanceInMeter distance) - baseDistance
   if extraDistance <= 0
     then return $ Amount 0
     else do

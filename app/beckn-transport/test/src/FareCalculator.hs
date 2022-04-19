@@ -1,6 +1,7 @@
 module FareCalculator where
 
 import Beckn.Types.Amount
+import Beckn.Types.App
 import Beckn.Types.Id
 import Data.Time hiding (parseTime)
 import Domain.Types.FarePolicy
@@ -68,7 +69,7 @@ hatchback20km = testCase "Calculate fare for 20km for Hatchback" $ do
   totalFare @?= Amount 300.0
   where
     startTime = mockTime 2
-    distance = 20000.0
+    distance = Meter 20000.0
 
 sedan10km :: TestTree
 sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
@@ -83,7 +84,7 @@ sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
   totalFare @?= Amount 250.0
   where
     startTime = mockTime 2
-    distance = 10000.0
+    distance = Meter 10000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -111,7 +112,7 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
   totalFare @?= Amount 475.0
   where
     startTime = mockTime 2
-    distance = 20000.0
+    distance = Meter 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -139,7 +140,7 @@ sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
   totalFare @?= Amount 775.0
   where
     startTime = mockTime 2
-    distance = 30000.0
+    distance = Meter 30000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -167,7 +168,7 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
   totalFare @?= Amount 320.0
   where
     startTime = mockTime 2
-    distance = 20000.0
+    distance = Meter 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -198,7 +199,7 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
   totalFare @?= Amount 331.1
   where
     startTime = mockTime 21
-    distance = 20000.0
+    distance = Meter 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -230,7 +231,7 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
   totalFare @?= Amount 357.5
   where
     startTime = mockTime 21
-    distance = 20000.0
+    distance = Meter 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -262,7 +263,7 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
   totalFare @?= Amount 451.0
   where
     startTime = mockTime 21
-    distance = 20000.0
+    distance = Meter 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -294,7 +295,7 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
   totalFare @?= Amount 401.0
   where
     startTime = mockTime 21
-    distance = 20000.0
+    distance = Meter 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -330,7 +331,7 @@ nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for 
   totalFare @?= Amount 451.0
   where
     startTime = mockTime 21
-    distance = 20000.0
+    distance = Meter 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -363,7 +364,7 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
   totalFare @?= Amount 351.0
   where
     startTime = mockTime 21
-    distance = 20000.0
+    distance = Meter 20000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->
@@ -399,7 +400,7 @@ failOnMissingFareConfig = testCase "Fail on missing FarePolicy" $ do
     `shouldThrow` (== NoFarePolicy)
   where
     startTime = mockTime 21
-    distance = 0.0
+    distance = Meter 0.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant -> pure Nothing
