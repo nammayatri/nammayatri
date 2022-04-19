@@ -16,7 +16,7 @@ instance {-# OVERLAPPING #-} Transactionable (ReaderT SqlDBEnv (ReaderT SqlBacke
 
 type HasEsqEnv r m = (MonadReader r m, HasLog r, HasField "esqDBEnv" r EsqDBEnv, MonadTime m, MonadIO m)
 
-instance {-# INCOHERENT #-} HasEsqEnv r m => Transactionable m where
+instance {-# INCOHERENT #-} (HasEsqEnv r m) => Transactionable m where
   runTransaction = runTransactionImpl
 
 runTransactionImpl ::

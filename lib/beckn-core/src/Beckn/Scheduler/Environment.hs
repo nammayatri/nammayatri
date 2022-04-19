@@ -5,7 +5,7 @@ module Beckn.Scheduler.Environment where
 
 import Beckn.Mock.App
 import Beckn.Prelude
-import Beckn.Scheduler.Types (ExecutionResult, Job)
+import Beckn.Scheduler.Types
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis (HedisCfg, HedisEnv)
 import Beckn.Types.Common
@@ -26,26 +26,29 @@ data SchedulerConfig = SchedulerConfig
   }
   deriving (Generic, FromDhall)
 
+-- this datatype's purpose is to share some resources between the scheduler and the handler function
 data SchedulerResources = SchedulerResources
   { esqDBEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
-    loggerEnv :: LoggerEnv
+    loggerEnv :: LoggerEnv,
+    loggerConfig :: LoggerConfig
   }
 
-data SchedulerEnv = SchedulerEnv
+data SchedulerEnv t = SchedulerEnv
   { esqDBEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
+    loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
-    handlerFunc :: Job -> IO ExecutionResult,
-    errorCatchers :: Job -> [C.Handler IO ExecutionResult],
+    handlerFunc :: Job t Text -> IO ExecutionResult,
+    errorCatchers :: Job t Text -> [C.Handler IO ExecutionResult],
     loopIntervalSec :: Int,
     expirationTime :: Integer,
     waitBeforeRetry :: Int
   }
 
-newtype SchedulerM a = SchedulerM {unSchedulerM :: MockM SchedulerEnv a}
-  deriving newtype (Functor, Applicative, Monad, MonadReader SchedulerEnv, MonadIO)
+newtype SchedulerM t a = SchedulerM {unSchedulerM :: MockM (SchedulerEnv t) a}
+  deriving newtype (Functor, Applicative, Monad, MonadReader (SchedulerEnv t), MonadIO)
   deriving newtype (MonadThrow, MonadCatch, MonadClock, MonadTime, MonadGuid, Log, Forkable, MonadUnliftIO)
 
-runSchedulerM :: SchedulerEnv -> SchedulerM a -> IO a
+runSchedulerM :: SchedulerEnv t -> SchedulerM t a -> IO a
 runSchedulerM env action = runMock env $ unSchedulerM action

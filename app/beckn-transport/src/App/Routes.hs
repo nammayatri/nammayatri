@@ -1,10 +1,10 @@
 module App.Routes where
 
 import App.Routes.FarePolicy
+import App.SchedulerExample (createBananasCountingJob, createTimePrinterJob)
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import Beckn.Scheduler.App
-import Beckn.Scheduler.Types
+import Beckn.Scheduler
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
@@ -111,7 +111,7 @@ mainServer =
     :<|> testServer
 
 -- TODO: remove this
-makeTestJobEntry :: Text -> JobEntry
+makeTestJobEntry :: Text -> JobEntryText
 makeTestJobEntry jType =
   JobEntry
     { jobType = jType,
@@ -124,10 +124,10 @@ makeTestJobEntry jType =
 testServer :: Text -> FlowHandler Text
 testServer jobType = withFlowHandlerAPI $ do
   case jobType of
-    "type1" -> void $ createJobIn 20 $ makeTestJobEntry jobType
-    "type2" -> void $ createJobIn 3 $ makeTestJobEntry jobType
+    "type1" -> void $ createBananasCountingJob 7
+    "type2" -> void $ createTimePrinterJob 7
     _ -> logWarning "unknown job type"
-  pure "hello"
+  pure "OK"
 
 transporterServer :: FlowServer TransportAPI
 transporterServer =

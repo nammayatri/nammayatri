@@ -4,7 +4,7 @@ import Beckn.Storage.Esqueleto.Logger (runLoggerIO)
 import Beckn.Types.App (HasFlowEnv)
 import Beckn.Types.Field ((:::))
 import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging (HasLog, LoggerEnv)
+import Beckn.Utils.IOLogging
 import Data.Pool (Pool)
 import Database.Persist.Postgresql
 import Database.PostgreSQL.Simple (execute_)
@@ -30,7 +30,11 @@ prepareEsqDBEnv :: EsqDBConfig -> LoggerEnv -> IO EsqDBEnv
 prepareEsqDBEnv cfg logEnv = do
   let connStr = makeConnString cfg
       modifyConnString = encodeUtf8 cfg.connectSchemaName
-  pool <- liftIO . runLoggerIO logEnv $ createPostgresqlPoolModified (modifyConn modifyConnString) connStr 10
+  let checkedLogEnv =
+        if logEnv.logRawSql
+          then logEnv
+          else logEnv {fileLogger = Nothing, consoleLogger = Nothing}
+  pool <- liftIO . runLoggerIO checkedLogEnv $ createPostgresqlPoolModified (modifyConn modifyConnString) connStr 10
   return $ EsqDBEnv pool
   where
     makeConnString dbConfig =

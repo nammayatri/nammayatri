@@ -1,6 +1,6 @@
 module Main where
 
-import App.Scheduler
+import App.SchedulerExample
 import Beckn.Prelude
 
 main :: IO ()

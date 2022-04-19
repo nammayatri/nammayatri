@@ -1,31 +1,41 @@
-module Beckn.Scheduler.App where
+module Beckn.Scheduler.App
+  ( runScheduler,
+    createJob,
+    createJobIn,
+  )
+where
 
 import Beckn.Mock.Utils (threadDelaySec)
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
+import Beckn.Scheduler.Error
+import Beckn.Scheduler.Serialization
 import Beckn.Scheduler.Storage.Queries
 import qualified Beckn.Scheduler.Storage.Queries as Q
 import Beckn.Scheduler.Types
 import Beckn.Storage.Esqueleto
 import Beckn.Storage.Esqueleto.Config (prepareEsqDBEnv)
+import qualified Beckn.Storage.Esqueleto.Queries as Esq
 import qualified Beckn.Storage.Esqueleto.Transactionable as Esq
 import Beckn.Storage.Hedis (connectHedis)
 import qualified Beckn.Storage.Hedis.Queries as Hedis
-import Beckn.Types.Common (MonadGuid (generateGUIDText), MonadTime (getCurrentTime))
+import Beckn.Types.Common
+import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Id
 import Beckn.Utils.App (getPodName)
-import Beckn.Utils.Common (addUTCTime, diffUTCTime)
+import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import UnliftIO.Concurrent (forkIO)
 
 runScheduler ::
-  forall m.
+  forall m t.
+  JobTypeSerializable t =>
   C.MonadThrow m =>
   SchedulerConfig ->
-  (forall a. SchedulerResources -> m a -> IO a) ->
-  (Job -> [C.Handler m ExecutionResult]) ->
-  (Job -> m ExecutionResult) ->
+  (forall q. SchedulerResources -> m q -> IO q) ->
+  (Job t Text -> [C.Handler m ExecutionResult]) ->
+  (Job t Text -> m ExecutionResult) ->
   IO ()
 runScheduler SchedulerConfig {..} runMonad errorCatchersM handlerFuncM = do
   hostname <- getPodName
@@ -33,7 +43,7 @@ runScheduler SchedulerConfig {..} runMonad errorCatchersM handlerFuncM = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   let schedulerResources = SchedulerResources {..}
-      transformFunc :: forall b. m b -> IO b
+      transformFunc :: forall q. m q -> IO q
       transformFunc = runMonad schedulerResources
       handlerFunc = transformFunc . handlerFuncM
       errorCatchers = map (transformHandler transformFunc) . errorCatchersM
@@ -43,7 +53,7 @@ runScheduler SchedulerConfig {..} runMonad errorCatchersM handlerFuncM = do
 transformHandler :: (forall a. m a -> n a) -> C.Handler m b -> C.Handler n b
 transformHandler trans (C.Handler actionM) = C.Handler $ trans . actionM
 
-runner :: SchedulerM ()
+runner :: (JobTypeSerializable t) => SchedulerM t ()
 runner = do
   before <- getCurrentTime
   runnerIteration
@@ -53,41 +63,62 @@ runner = do
   threadDelaySec (loopIntervalSec - diff)
   runner
 
-runnerIteration :: SchedulerM ()
+runnerIteration :: (JobTypeSerializable t) => SchedulerM t ()
 runnerIteration = do
   readyTasks <- getReadyTasks
-  availableReadyTasks <- filterM attemptTaskLock readyTasks
-  takenTasksUpdatedInfo <- getTasksById $ map (.id) availableReadyTasks
-  mapM_ (forkIO . executeTask) takenTasksUpdatedInfo
+  availableReadyTasksIds <- filterM attemptTaskLock $ map (.id) readyTasks
+  takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
+  let withLogTag' job = withLogTag ("JobId=" <> job.id.getId)
+  mapM_ (\job -> forkIO $ withLogTag' job $ executeTask job) takenTasksUpdatedInfo
 
-attemptTaskLock :: Job -> SchedulerM Bool
-attemptTaskLock job = do
+attemptTaskLock :: Id (Job a b) -> SchedulerM t Bool
+attemptTaskLock jobId = do
   expirationTime <- asks (.expirationTime)
-  successfulSet <- Hedis.setNx job.id.getId ()
+  successfulSet <- Hedis.setNx jobId.getId ()
   if successfulSet
     then do
-      Hedis.expire job.id.getId expirationTime
+      Hedis.expire jobId.getId expirationTime
       pure True
     else pure False
 
-executeTask :: Job -> SchedulerM ()
-executeTask job = do
-  handlerFn <- asks (.handlerFunc)
-  catchers <- asks (.errorCatchers)
-  result <- liftIO $ handlerFn job `C.catches` (catchers job ++ [resultCatcher, defaultCatcher])
-  case result of
-    Completed -> markAsComplete job.id
-    Terminate -> markAsTerminated job.id
-    ReSchedule reScheduledTime -> reSchedule job.id reScheduledTime
-    Retry ->
-      let newErrorsCount = job.currErrors + 1
-       in if newErrorsCount >= job.maxErrors
-            then updateErrorCountAndTerminate job.id newErrorsCount
-            else do
-              updateFailureCount job.id newErrorsCount
-              waitBeforeRetry <- asks (.waitBeforeRetry)
-              threadDelaySec waitBeforeRetry
-              executeTask job {currErrors = newErrorsCount}
+executeTask :: forall t. (JobTypeSerializable t) => JobText -> SchedulerM t ()
+executeTask rawJob = do
+  let eithTypeDecodedJob = decodeJob @t @Text rawJob
+  case eithTypeDecodedJob of
+    Left err -> do
+      logError $ "failed to execute job: type decode failure: " <> show err
+      logPretty ERROR "failed job" rawJob
+      markAsTerminated rawJob.id
+    Right decJob -> executeTypeDecodedJob decJob
+  where
+    executeTypeDecodedJob :: Job t Text -> SchedulerM t ()
+    executeTypeDecodedJob job = do
+      handlerFn <- asks (.handlerFunc)
+      catchers <- asks (.errorCatchers)
+
+      result <- liftIO $ handlerFn job `C.catches` (catchers job ++ [resultCatcher, defaultCatcher])
+      case result of
+        Completed -> do
+          logInfo $ "job successfully completed on try " <> show (job.currErrors + 1)
+          markAsComplete job.id
+        Terminate -> do
+          logInfo $ "job terminated on try " <> show (job.currErrors + 1)
+          markAsTerminated job.id
+        ReSchedule reScheduledTime -> do
+          logInfo $ "job rescheduled on time = " <> show reScheduledTime
+          reSchedule job.id reScheduledTime
+        Retry ->
+          let newErrorsCount = job.currErrors + 1
+           in if newErrorsCount >= job.maxErrors
+                then do
+                  logError $ "retries amount exceeded, job failed after try " <> show newErrorsCount
+                  updateErrorCountAndTerminate job.id newErrorsCount
+                else do
+                  logInfo $ "try " <> show newErrorsCount <> " was not successful, trying again"
+                  updateFailureCount job.id newErrorsCount
+                  waitBeforeRetry <- asks (.waitBeforeRetry)
+                  threadDelaySec waitBeforeRetry
+                  executeTypeDecodedJob job {currErrors = newErrorsCount}
 
 resultCatcher :: C.Handler IO ExecutionResult
 resultCatcher = C.Handler pure
@@ -97,20 +128,60 @@ defaultCatcher = C.Handler $ const @_ @SomeException $ pure Retry
 
 -- api
 
-createJobIn :: (HasEsqEnv r m, MonadGuid m) => NominalDiffTime -> JobEntry -> m (Id Job)
+createJobIn ::
+  ( HasEsqEnv r m,
+    MonadGuid m,
+    MonadCatch m,
+    JobTypeSerializable a,
+    JobDataSerializable b,
+    Show a,
+    Show b
+  ) =>
+  NominalDiffTime ->
+  JobEntry a b ->
+  m (Either JobDecodeError (Id (Job a b)))
 createJobIn diff jobEntry = do
   now <- getCurrentTime
   let scheduledAt = addUTCTime diff now
   createJob scheduledAt jobEntry
 
-createJob :: (HasEsqEnv r m, MonadGuid m) => UTCTime -> JobEntry -> m (Id Job)
+createJob ::
+  forall a b r m.
+  ( HasEsqEnv r m,
+    MonadGuid m,
+    MonadCatch m,
+    JobTypeSerializable a,
+    JobDataSerializable b,
+    Show a,
+    Show b
+  ) =>
+  UTCTime ->
+  JobEntry a b ->
+  m (Either JobDecodeError (Id (Job a b)))
 createJob scheduledAt jobEntry = do
   now <- getCurrentTime
   id <- Id <$> generateGUIDText
-  Esq.runTransaction $ Q.create $ job id now
-  pure id
+  let job = makeJob id now
+      jobText = encodeJob job
+  eithUnit <- C.try $
+    Esq.runTransaction $ do
+      Q.create jobText
+      mbFetchedJob <- Esq.findById jobText.id
+      fetchedJob <- fromMaybeM (InternalError "Failed to insert job") mbFetchedJob
+      case decodeJob @a @b fetchedJob of
+        Left err -> do
+          logError $ "failed to decode job:" <> show fetchedJob
+          throwError err
+        Right decodedJob ->
+          unless (typeAndDataAreEqual job decodedJob) $
+            logWarning $ "database representations of the inserted and the fetched jobs are not equal: " <> show job <> " : " <> show decodedJob
+      void $ fromEitherM identity $ decodeJob @a @b fetchedJob
+  either (pure . Left) (\_ -> pure $ Right job.id) eithUnit
   where
-    job id currentTime =
+    --  pure $ cast id
+
+    typeAndDataAreEqual job1 job2 = job1.jobData == job2.jobData && job1.jobType == job2.jobType
+    makeJob id currentTime =
       Job
         { id = id,
           jobType = jobEntry.jobType,

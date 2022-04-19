@@ -3,24 +3,27 @@ module Beckn.Scheduler.Storage.Queries where
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
 import Beckn.Scheduler.Storage.Tabular
-import Beckn.Scheduler.Types (Job, JobStatus (COMPLETED, PENDING, TERMINATED))
+import Beckn.Scheduler.Types (Job, JobStatus (COMPLETED, PENDING, TERMINATED), JobText)
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common (MonadTime (getCurrentTime))
 import Beckn.Types.Id
 
-create :: Job -> SqlDB ()
+create :: JobText -> SqlDB ()
 create = create'
 
-findAll :: SchedulerM [Job]
+findAll :: SchedulerM t [JobText]
 findAll = Esq.findAll $ from $ table @JobT
 
-getTasksById :: [Id Job] -> SchedulerM [Job]
+findById :: Id JobText -> SchedulerM t (Maybe JobText)
+findById = Esq.findById
+
+getTasksById :: [Id JobText] -> SchedulerM t [JobText]
 getTasksById ids = Esq.findAll $ do
   job <- from $ table @JobT
   where_ $ job ^. JobId `in_` valList (map (.getId) ids)
   pure job
 
-getReadyTasks :: SchedulerM [Job]
+getReadyTasks :: SchedulerM t [JobText]
 getReadyTasks = do
   now <- getCurrentTime
   Esq.findAll $ do
@@ -29,28 +32,28 @@ getReadyTasks = do
     orderBy [asc $ job ^. JobScheduledAt]
     pure job
 
-updateStatus :: JobStatus -> Id Job -> SchedulerM ()
+updateStatus :: JobStatus -> Id (Job a b) -> SchedulerM t ()
 updateStatus newStatus jobId = Esq.update $ \job -> do
   set job [JobStatus =. val newStatus]
   where_ $ job ^. JobId ==. val jobId.getId
 
-markAsComplete :: Id Job -> SchedulerM ()
+markAsComplete :: Id (Job a b) -> SchedulerM t ()
 markAsComplete = updateStatus COMPLETED
 
-markAsTerminated :: Id Job -> SchedulerM ()
+markAsTerminated :: Id (Job a b) -> SchedulerM t ()
 markAsTerminated = updateStatus TERMINATED
 
-updateErrorCountAndTerminate :: Id Job -> Int -> SchedulerM ()
+updateErrorCountAndTerminate :: Id (Job a b) -> Int -> SchedulerM t ()
 updateErrorCountAndTerminate jobId fCount = Esq.update $ \job -> do
   set job [JobStatus =. val TERMINATED, JobCurrErrors =. val fCount]
   where_ $ job ^. JobId ==. val jobId.getId
 
-reSchedule :: Id Job -> UTCTime -> SchedulerM ()
+reSchedule :: Id (Job a b) -> UTCTime -> SchedulerM t ()
 reSchedule jobId newScheduleTime = Esq.update $ \job -> do
   set job [JobScheduledAt =. val newScheduleTime]
   where_ $ job ^. JobId ==. val jobId.getId
 
-updateFailureCount :: Id Job -> Int -> SchedulerM ()
+updateFailureCount :: Id (Job a b) -> Int -> SchedulerM t ()
 updateFailureCount jobId newCountValue = Esq.update $ \job -> do
   set job [JobCurrErrors =. val newCountValue]
   where_ $ job ^. JobId ==. val jobId.getId

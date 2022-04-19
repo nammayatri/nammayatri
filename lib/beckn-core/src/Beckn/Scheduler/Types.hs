@@ -7,19 +7,21 @@ import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
 
 -- Job initializer
-data JobEntry = JobEntry
-  { jobType :: Text,
-    jobData :: Text,
+data JobEntry t d = JobEntry
+  { jobType :: t,
+    jobData :: d,
     maxErrors :: Int,
     maximumDelay :: Maybe Int
   }
   deriving (Show, Generic, PrettyShow)
 
+type JobEntryText = JobEntry Text Text
+
 -- Main datatype
-data Job = Job
-  { id :: Id Job,
-    jobType :: Text, -- user defined
-    jobData :: Text, -- user defined
+data Job t d = Job
+  { id :: Id (Job t d),
+    jobType :: t, -- user defined
+    jobData :: d, -- user defined
     scheduledAt :: UTCTime,
     maximumDelay :: Maybe Int,
     createdAt :: UTCTime,
@@ -28,10 +30,15 @@ data Job = Job
     currErrors :: Int,
     status :: JobStatus
   }
-  deriving (Show, Generic, ToJSON, FromJSON, PrettyShow)
+  deriving (Eq, Show, Generic, PrettyShow)
+
+setJobData :: d2 -> Job t d1 -> Job t d2
+setJobData data2_ Job {..} = Job {id = cast id, jobData = data2_, ..}
+
+type JobText = Job Text Text
 
 data JobStatus = PENDING | COMPLETED | TERMINATED
-  deriving (Show, Read, Generic, ToJSON, FromJSON)
+  deriving (Show, Eq, Read, Generic)
   deriving (PrettyShow) via Showable JobStatus
 
 data ExecutionResult = Completed | Terminate | Retry | ReSchedule UTCTime

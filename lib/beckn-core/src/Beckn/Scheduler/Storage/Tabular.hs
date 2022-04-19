@@ -33,11 +33,11 @@ mkPersist
     |]
 
 instance TEntityKey JobT where
-  type DomainKey JobT = Id ST.Job
+  type DomainKey JobT = Id (ST.Job Text Text)
   fromKey (JobTKey _id) = Id _id
   toKey (Id id) = JobTKey id
 
-instance TEntity JobT ST.Job where
+instance TEntity JobT ST.JobText where
   fromTEntity jobEntity = do
     let JobT {..} = entityVal jobEntity
     pure $

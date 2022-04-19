@@ -2,10 +2,10 @@ let becknTransport = ./beckn-transport.dhall
 
 in
 {
-loggerConfig = becknTransport.loggerConfig ,
+loggerConfig = becknTransport.loggerConfig // { logRawSql = False } ,
 esqDBCfg = becknTransport.esqDBCfg,
 hedisCfg = becknTransport.hcfg,
-hedisPrefix = "beckn-transport-scheduler:",
+hedisPrefix = "beckn-transport-scheduler",
 port = +8050,
 loopIntervalSec = +5,
 expirationTime = +60,
