@@ -1,0 +1,17 @@
+POST https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send
+Authorization: Bearer ya29.c.b0AXv0zTPx9XRuCfUyWAaaLd2FQrtuJ7vA1ljnkb_T27cvKzSkWtW-C0nTmlyhdohWDi7kDCDOiiggmO7XHKMnMLMwhYMGEnWvuYXZoE4d4R6qFtB_NAY_XXCff8Knho5LdG9fTTKkTe1fk6YVTcWfPHYiYJ-AbxlLNlEh3Fowut3rda1ZBys0cCdEKL1zI8Kb9eCzJzcgwcZIgeYw2Xz0oQoB8OQYNnU
+
+{
+    "message": {
+        "token": "ephGwwE1T86ZMg4OPZh4Be:APA91bG_BcPyqQz0GcLf2lqbSirVoQGZuNYa8IuZVANBPZb-9gaI2T7v0FT4oYQnKxsYcu6Y_IuteuF02TdukKhQiRonXOJ8T-hbFf4w5MBla2CjGWTyugXrZOmDcKn_onKNQHbqK1Sz",
+        "android": {
+            "data": {
+                "entity_type": "Product",
+                "notification_json": "{\"title\":\"New allocation request.\",\"body\":\"New ride request! Check the app for more details.\",\"icon\":\"https:\\api.sandbox.beckn.juspay.in/static/images/ride-success.png\",\"sound\":\"notify_sound.mp3\",\"tag\":\"ALLOCATION_REQUEST\",\"channel_id\":\"RINGING_ALERT\"}",
+                "entity_ids": "66dc7f4e-6553-49c0-a0ab-c5b8aca87533",
+                "notification_type": "ALLOCATION_REQUEST",
+                "show_notification": "true"
+            }
+        }
+    }
+}
