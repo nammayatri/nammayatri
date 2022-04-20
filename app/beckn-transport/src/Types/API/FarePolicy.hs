@@ -16,7 +16,7 @@ import Domain.Types.FarePolicy.PerExtraKmRate (PerExtraKmRateAPIEntity, validate
 import EulerHS.Prelude hiding (id)
 
 newtype ListFarePolicyRes = ListFarePolicyRes
-  { farePolicies :: [FarePolicyAPIEntity]
+  { oneWayFarePolicies :: [FarePolicyAPIEntity]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

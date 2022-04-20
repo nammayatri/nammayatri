@@ -21,10 +21,8 @@ mkPersist
     FareProductT sql=fare_product
       id Text
       organizationId TOrg.OrganizationTId
-      enabled Bool
       productType Domain.FareProductType sql=type
       createdAt UTCTime
-      updatedAt UTCTime
       Primary id
       deriving Generic
     |]

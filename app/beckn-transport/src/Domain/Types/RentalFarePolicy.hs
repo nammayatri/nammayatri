@@ -18,3 +18,18 @@ data RentalFarePolicy = RentalFarePolicy
     driverAllowanceForDay :: Maybe Amount
   }
   deriving (Generic, Show, Eq)
+
+data RentalFarePolicyAPIEntity = RentalFarePolicyAPIEntity
+  { id :: Id RentalFarePolicy,
+    vehicleVariant :: Vehicle.Variant,
+    baseFare :: Amount,
+    baseDistance :: Double, -- Distance
+    baseDurationHr :: Int,
+    extraKmFare :: Amount,
+    extraMinuteFare :: Amount,
+    driverAllowanceForDay :: Maybe Amount
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+makeRentalFarePolicyAPIEntity :: RentalFarePolicy -> RentalFarePolicyAPIEntity
+makeRentalFarePolicyAPIEntity RentalFarePolicy {..} = RentalFarePolicyAPIEntity {..}

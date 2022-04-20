@@ -29,6 +29,7 @@ mkPersist
       extraKmFare Amount
       extraMinuteFare Amount
       driverAllowanceForDay Amount Maybe
+      deleted Bool
       Primary id
       deriving Generic
     |]
@@ -51,6 +52,7 @@ instance TEntity RentalFarePolicyT Domain.RentalFarePolicy where
     RentalFarePolicyT
       { id = getId id,
         organizationId = toKey organizationId,
+        deleted = False,
         ..
       }
   toTEntity a =

@@ -19,7 +19,7 @@ import qualified Utils.Notifications as Notify
 
 createFarePolicyDiscount :: SP.Person -> CreateFarePolicyDiscountReq -> FlowHandler CreateFarePolicyDiscountRes
 createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
-  let Just orgId = admin.organizationId
+  orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   runRequestValidation validateCreateFarePolicyDiscountReq req
   discounts <- QDisc.findAll orgId req.vehicleVariant
   when (req.enabled && any (.enabled) discounts) $ throwError FPDiscountAlreadyEnabled
@@ -52,7 +52,7 @@ createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
 
 updateFarePolicyDiscount :: SP.Person -> Id DFPDiscount.Discount -> UpdateFarePolicyDiscountReq -> FlowHandler UpdateFarePolicyDiscountRes
 updateFarePolicyDiscount admin discId req = withFlowHandlerAPI $ do
-  let Just orgId = admin.organizationId
+  orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   runRequestValidation validateUpdateFarePolicyDiscountReq req
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.organizationId == orgId) $ throwError AccessDenied
@@ -74,7 +74,7 @@ updateFarePolicyDiscount admin discId req = withFlowHandlerAPI $ do
 
 deleteFarePolicyDiscount :: SP.Person -> Id DFPDiscount.Discount -> FlowHandler UpdateFarePolicyDiscountRes
 deleteFarePolicyDiscount admin discId = withFlowHandlerAPI $ do
-  let Just orgId = admin.organizationId
+  orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.organizationId == orgId) $ throwError AccessDenied
   cooridinators <- QP.findAdminsByOrgId orgId

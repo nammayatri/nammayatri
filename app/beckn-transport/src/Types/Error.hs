@@ -3,7 +3,7 @@
 
 module Types.Error (module Types.Error) where
 
-import Beckn.Types.Error as Types.Error
+import Beckn.Types.Error as Types.Error hiding (PersonError)
 import Beckn.Types.Error.BaseError.HTTPError
 import EulerHS.Prelude
 

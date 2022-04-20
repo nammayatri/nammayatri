@@ -5,7 +5,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Utils.Validation (runRequestValidation)
-import Domain.Types.FarePolicy (makeFarePolicyAPIEntity)
+import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.FarePolicy.PerExtraKmRate as DPerExtraKmRate
 import qualified Domain.Types.Person as SP
@@ -14,14 +14,17 @@ import qualified Storage.Queries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
 import Types.API.FarePolicy
 import Types.Error
-import Utils.Common (fromMaybeM, logTagInfo, throwError, withFlowHandlerAPI)
+import Utils.Common
 import qualified Utils.Notifications as Notify
 
 listFarePolicies :: SP.Person -> FlowHandler ListFarePolicyRes
 listFarePolicies person = withFlowHandlerAPI $ do
-  let Just orgId = person.organizationId
-  farePolicies <- SFarePolicy.findFarePoliciesByOrgId orgId
-  pure $ ListFarePolicyRes $ makeFarePolicyAPIEntity <$> farePolicies
+  orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
+  oneWayFarePolicies <- SFarePolicy.findFarePoliciesByOrgId orgId
+  pure $
+    ListFarePolicyRes
+      { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies
+      }
 
 updateFarePolicy :: SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> FlowHandler UpdateFarePolicyRes
 updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
@@ -37,10 +40,10 @@ updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
                    nightShiftRate = toRational <$> req.nightShiftRate
                   }
   let Just orgId = admin.organizationId
-  cooridinators <- QP.findAdminsByOrgId orgId
+  coordinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $
     SFarePolicy.updateFarePolicy updatedFarePolicy
-  let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
+  let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) coordinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyFarePolicyChange cooridinator.id cooridinator.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateFarePolicy : ") (show updatedFarePolicy)

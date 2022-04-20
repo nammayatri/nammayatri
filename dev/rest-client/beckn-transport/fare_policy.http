@@ -1,0 +1,58 @@
+
+@adminToken = ea37f941-427a-4085-a7d0-96240f166672
+
+###
+# @name profile
+GET {{transporter-host}}/orgAdmin/profile
+token: {{adminToken}}
+
+###
+# @name fareProducts
+GET {{transporter-host}}/org/fareProduct
+token: {{adminToken}}
+
+###
+@enable = true
+#@enable = false
+#@fpType = "ONE_WAY"
+@fpType = "RENTAL"
+
+
+# @name enableFareProduct
+
+POST {{transporter-host}}/org/fareProduct
+token: {{adminToken}}
+content-type: application/json
+
+{
+    "enabled": {{enable}},
+    "fareProductType": {{fpType}}
+}
+
+###
+# @name rentalFarePolicies
+GET {{transporter-host}}/org/farePolicy/rentals
+token: {{adminToken}}
+
+###
+# @name createRentalFarePolicy
+POST {{transporter-host}}/org/farePolicy/rentals
+token: {{adminToken}}
+content-type: application/json
+
+{
+    "createList": [
+    {
+    "vehicleVariant": "SUV",
+    "baseFare": 600,
+    "baseDistance": 20,
+    "baseDurationHr": 2,
+    "extraKmFare": 35,
+    "extraMinuteFare": 28,
+    "driverAllowanceForDay": 400
+    }
+    ]
+}
+
+###
+@createdRentalFP = {{rentalFarePolicies.response.body.rentalFarePolicies[0].id}}

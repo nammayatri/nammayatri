@@ -6,21 +6,18 @@ CREATE TABLE atlas_transporter.search_request_bak_1022 AS TABLE atlas_transporte
 CREATE TABLE atlas_transporter.fare_product (
     id character(36) NOT NULL PRIMARY KEY,
     organization_id character(36) NOT NULL REFERENCES atlas_transporter.organization (id),
-    enabled boolean NOT NULL,
     type character varying(255) NOT NULL,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+    UNIQUE (organization_id, type)
 );
 
-INSERT INTO atlas_transporter.fare_product (id, organization_id, enabled, type, created_at, updated_at)
+INSERT INTO atlas_transporter.fare_product (id, organization_id, type, created_at)
     SELECT
         md5(random()::text || clock_timestamp()::text)::uuid,
         T1.id,
-        true,
         'ONE_WAY',
-        now (),
-		now ()
-    FROM atlas_transporter.organization AS T1;
+        now ()
+    FROM atlas_transporter.organization AS T1 WHERE T1.type = 'PROVIDER' AND T1.domain = 'MOBILITY';
 
 CREATE TABLE atlas_transporter.rental_fare_policy (
     id character(36) NOT NULL PRIMARY KEY,
@@ -31,7 +28,8 @@ CREATE TABLE atlas_transporter.rental_fare_policy (
     base_duration_hr integer NOT NULL,
     extra_km_fare double precision NOT NULL,
     extra_minute_fare double precision NOT NULL,
-    driver_allowance_for_day double precision
+    driver_allowance_for_day double precision,
+    deleted boolean NOT NULL
 );
 
 ALTER TABLE atlas_transporter.fare_policy_discount ADD COLUMN fare_product_type character varying(255) NOT NULL DEFAULT 'ONE_WAY';
@@ -60,11 +58,6 @@ ALTER TABLE atlas_transporter.ride_booking ALTER COLUMN to_location_id DROP NOT 
 ALTER TABLE atlas_transporter.search_request ALTER COLUMN to_location_id DROP NOT NULL;
 
 -- for testing purpose
-
-INSERT INTO atlas_transporter.fare_product (id, organization_id, enabled, type, created_at, updated_at) VALUES
-    ('ada7f588-cbfe-4dea-a1d0-7ae2fe7ef289', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', true, 'RENTAL', now (), now ()),
-    ('ada7f588-cbfe-4dea-a1d0-7ae2fe7ef290', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', true, 'RENTAL', now (), now ());
-
-INSERT INTO atlas_transporter.rental_fare_policy (id, organization_id, vehicle_variant, base_fare, base_distance, base_duration_hr, extra_km_fare, extra_minute_fare, driver_allowance_for_day) VALUES
-    ('1391f193-561e-4f2e-910b-bbe3dbd257be', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'SUV', '19.0', '100.0', '3', '0.3', '0.29', '5'),
-    ('1391f193-561e-4f2e-910b-bbe3dbd257br', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'SUV', '19.0', '100.0', '3', '0.3', '0.29', '5');
+INSERT INTO atlas_transporter.rental_fare_policy (id, organization_id, vehicle_variant, base_fare, base_distance, base_duration_hr, extra_km_fare, extra_minute_fare, driver_allowance_for_day, deleted) VALUES
+    ('1391f193-561e-4f2e-910b-bbe3dbd257be', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'SUV', '19.0', '100.0', '3', '0.3', '0.29', '5', false),
+    ('1391f193-561e-4f2e-910b-bbe3dbd257br', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'SUV', '19.0', '100.0', '3', '0.3', '0.29', '5', false);
