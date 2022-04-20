@@ -8,7 +8,7 @@ GET {{transporter-host}}/test
 token: {{driver-token}}
 content-type: application/json
 
-"type1"
+"type2"
 
 ###
 # @name setActive

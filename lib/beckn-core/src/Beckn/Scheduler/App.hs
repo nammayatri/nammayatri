@@ -2,6 +2,7 @@ module Beckn.Scheduler.App
   ( runScheduler,
     createJob,
     createJobIn,
+    emptyCatchers,
   )
 where
 
@@ -9,6 +10,7 @@ import Beckn.Mock.Utils (threadDelaySec)
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
 import Beckn.Scheduler.Error
+import Beckn.Scheduler.JobHandler
 import Beckn.Scheduler.Serialization
 import Beckn.Scheduler.Storage.Queries
 import qualified Beckn.Scheduler.Storage.Queries as Q
@@ -26,18 +28,18 @@ import Beckn.Utils.App (getPodName)
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
+import qualified Data.Map as Map
 import UnliftIO.Concurrent (forkIO)
 
 runScheduler ::
-  forall m t.
+  forall t m.
   JobTypeSerializable t =>
   C.MonadThrow m =>
   SchedulerConfig ->
   (forall q. SchedulerResources -> m q -> IO q) ->
-  (Job t Text -> [C.Handler m ExecutionResult]) ->
-  (Job t Text -> m ExecutionResult) ->
+  JobHandlerList m t ->
   IO ()
-runScheduler SchedulerConfig {..} runMonad errorCatchersM handlerFuncM = do
+runScheduler SchedulerConfig {..} runMonad handlersList = do
   hostname <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
@@ -45,13 +47,9 @@ runScheduler SchedulerConfig {..} runMonad errorCatchersM handlerFuncM = do
   let schedulerResources = SchedulerResources {..}
       transformFunc :: forall q. m q -> IO q
       transformFunc = runMonad schedulerResources
-      handlerFunc = transformFunc . handlerFuncM
-      errorCatchers = map (transformHandler transformFunc) . errorCatchersM
+      handlersMap = Map.fromList $ map (second $ transformJobHandler transformFunc) handlersList
   let schedulerEnv = SchedulerEnv {..}
   runSchedulerM schedulerEnv runner
-
-transformHandler :: (forall a. m a -> n a) -> C.Handler m b -> C.Handler n b
-transformHandler trans (C.Handler actionM) = C.Handler $ trans . actionM
 
 runner :: (JobTypeSerializable t) => SchedulerM t ()
 runner = do
@@ -81,22 +79,38 @@ attemptTaskLock jobId = do
       pure True
     else pure False
 
+failJob :: JobText -> Text -> SchedulerM t ()
+failJob jobText description = do
+  logError $ "failed to execute job: " <> description
+  logPretty ERROR "failed job" jobText
+  markAsTerminated jobText.id
+
+withJobDataDecoded :: forall d t m. (JobDataSerializable d, Log m, Monad m) => Job t Text -> (Job t d -> m ExecutionResult) -> m ExecutionResult
+withJobDataDecoded txtDataJob action =
+  maybe errHandler successHandler $ jobDataFromText @d txtDataJob.jobData
+  where
+    errHandler = do
+      logError $ "failed to decode job data: " <> txtDataJob.jobData
+      pure Terminate
+    successHandler jobData_ = action $ setJobData jobData_ txtDataJob
+
 executeTask :: forall t. (JobTypeSerializable t) => JobText -> SchedulerM t ()
 executeTask rawJob = do
   let eithTypeDecodedJob = decodeJob @t @Text rawJob
   case eithTypeDecodedJob of
-    Left err -> do
-      logError $ "failed to execute job: type decode failure: " <> show err
-      logPretty ERROR "failed job" rawJob
-      markAsTerminated rawJob.id
-    Right decJob -> executeTypeDecodedJob decJob
+    Left err -> failJob rawJob $ "type decode failure: " <> show err
+    Right decJob -> do
+      hMap <- asks (.handlersMap)
+      let decJobType = decJob.jobType
+      case Map.lookup decJobType hMap of
+        Nothing -> failJob rawJob $ "no handler function for the job type = " <> show decJobType
+        Just jH -> executeTypeDecodedJob jH decJob
   where
-    executeTypeDecodedJob :: Job t Text -> SchedulerM t ()
-    executeTypeDecodedJob job = do
-      handlerFn <- asks (.handlerFunc)
-      catchers <- asks (.errorCatchers)
-
-      result <- liftIO $ handlerFn job `C.catches` (catchers job ++ [resultCatcher, defaultCatcher])
+    executeTypeDecodedJob :: JobHandler IO t -> Job t Text -> SchedulerM t ()
+    executeTypeDecodedJob jH@(JobHandler handlerFunc_ errorCatchers_) job = do
+      result <- withJobDataDecoded job $ \decJob -> do
+        let totalErrorCatchers = errorCatchers_ decJob ++ [resultCatcher, defaultCatcher]
+        liftIO $ handlerFunc_ decJob `C.catches` totalErrorCatchers
       case result of
         Completed -> do
           logInfo $ "job successfully completed on try " <> show (job.currErrors + 1)
@@ -118,13 +132,16 @@ executeTask rawJob = do
                   updateFailureCount job.id newErrorsCount
                   waitBeforeRetry <- asks (.waitBeforeRetry)
                   threadDelaySec waitBeforeRetry
-                  executeTypeDecodedJob job {currErrors = newErrorsCount}
+                  executeTypeDecodedJob jH job {currErrors = newErrorsCount}
 
 resultCatcher :: C.Handler IO ExecutionResult
 resultCatcher = C.Handler pure
 
 defaultCatcher :: C.Handler IO ExecutionResult
 defaultCatcher = C.Handler $ const @_ @SomeException $ pure Retry
+
+emptyCatchers :: Job t d -> [C.Handler m b]
+emptyCatchers = const []
 
 -- api
 
@@ -178,8 +195,6 @@ createJob scheduledAt jobEntry = do
       void $ fromEitherM identity $ decodeJob @a @b fetchedJob
   either (pure . Left) (\_ -> pure $ Right job.id) eithUnit
   where
-    --  pure $ cast id
-
     typeAndDataAreEqual job1 job2 = job1.jobData == job2.jobData && job1.jobType == job2.jobType
     makeJob id currentTime =
       Job

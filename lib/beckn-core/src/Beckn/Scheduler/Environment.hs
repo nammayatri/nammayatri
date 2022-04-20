@@ -5,14 +5,14 @@ module Beckn.Scheduler.Environment where
 
 import Beckn.Mock.App
 import Beckn.Prelude
-import Beckn.Scheduler.Types
+import Beckn.Scheduler.JobHandler
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis (HedisCfg, HedisEnv)
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging (LoggerEnv)
-import qualified Control.Monad.Catch as C
 import Control.Monad.IO.Unlift (MonadUnliftIO)
+import Data.Map (Map)
 
 data SchedulerConfig = SchedulerConfig
   { loggerConfig :: LoggerConfig,
@@ -39,8 +39,9 @@ data SchedulerEnv t = SchedulerEnv
     hedisEnv :: HedisEnv,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
-    handlerFunc :: Job t Text -> IO ExecutionResult,
-    errorCatchers :: Job t Text -> [C.Handler IO ExecutionResult],
+    --    handlerFunc :: Job t Text -> IO ExecutionResult,
+    --    errorCatchers :: Job t Text -> [C.Handler IO ExecutionResult],
+    handlersMap :: Map t (JobHandler IO t),
     loopIntervalSec :: Int,
     expirationTime :: Integer,
     waitBeforeRetry :: Int

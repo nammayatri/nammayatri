@@ -19,10 +19,18 @@ import System.Random
 runTransporterScheduler :: (SchedulerConfig -> SchedulerConfig) -> IO ()
 runTransporterScheduler configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "beckn-transport-scheduler"
-  runScheduler appCfg runMock (const []) handlerFuncTransporter
+  runScheduler appCfg runMock schedulerHandlersList
+
+schedulerHandlersList :: JobHandlerList SchedulerT JobType
+schedulerHandlersList =
+  [ (PrintBananasCount, JobHandler bananasCounterHandler emptyCatchers),
+    (PrintCurrentTimeWithErrorProbability, JobHandler timePrinterHandler emptyCatchers)
+  ]
+
+-----------------
 
 data JobType = PrintBananasCount | PrintCurrentTimeWithErrorProbability
-  deriving stock (Generic, Show, Eq)
+  deriving stock (Generic, Show, Eq, Ord)
   deriving anyclass (FromJSON, ToJSON)
   deriving (JobTypeSerializable) via JSONable JobType
   deriving (PrettyShow) via Showable JobType
@@ -34,17 +42,6 @@ data BananasCount = BananasCount
   deriving stock (Generic, Show, Eq)
   deriving anyclass (FromJSON, ToJSON, PrettyShow)
   deriving (JobDataSerializable) via JSONable BananasCount
-
-withJobDataDecoded :: forall d t m. (JobDataSerializable d, Log m, Monad m) => Job t Text -> (Job t d -> m ExecutionResult) -> m ExecutionResult
-withJobDataDecoded txtDataJob action =
-  maybe errHandler successHandler $ jobDataFromText @d txtDataJob.jobData
-  where
-    errHandler = do
-      logError $ "failed to decode job data: " <> txtDataJob.jobData
-      pure Terminate
-    successHandler jobData_ = action $ setJobData jobData_ txtDataJob
-
-type TransporterJob = Job JobType Text
 
 type SchedulerT = MockM SchedulerResources
 
@@ -83,11 +80,6 @@ createTimePrinterJob = createTestJob buildJob
             maxErrors = 5,
             maximumDelay = Nothing
           }
-
-handlerFuncTransporter :: TransporterJob -> SchedulerT ExecutionResult
-handlerFuncTransporter job = case job.jobType of
-  PrintBananasCount -> withJobDataDecoded job bananasCounterHandler
-  PrintCurrentTimeWithErrorProbability -> withJobDataDecoded job timePrinterHandler
 
 bananasCounterHandler :: Job JobType BananasCount -> SchedulerT ExecutionResult
 bananasCounterHandler job = do

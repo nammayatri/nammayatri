@@ -9,7 +9,7 @@ import Beckn.Scheduler.Types
 import Beckn.Types.Id
 import Beckn.Utils.Common (decodeFromText, encodeToText)
 
-class Eq a => JobTypeSerializable a where
+class (Eq a, Ord a, Show a) => JobTypeSerializable a where
   jobTypeToText :: a -> Text
   jobTypeFromText :: Text -> Maybe a
 
@@ -28,9 +28,9 @@ instance JobDataSerializable Text where
 deriving via JSONable () instance JobDataSerializable ()
 
 newtype JSONable a = JSONable a
-  deriving (Eq)
+  deriving (Eq, Ord, Show)
 
-instance (Eq a, FromJSON a, ToJSON a) => JobTypeSerializable (JSONable a) where
+instance (Eq a, Ord a, Show a, FromJSON a, ToJSON a) => JobTypeSerializable (JSONable a) where
   jobTypeToText (JSONable x) = encodeToText x
   jobTypeFromText text = JSONable <$> decodeFromText text
 
