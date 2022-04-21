@@ -1,10 +1,9 @@
 module App.Routes where
 
 import App.Routes.FarePolicy
-import App.SchedulerExample (createBananasCountingJob, createTimePrinterJob)
+import App.SchedulerExample (createBananasCountingJob, createFakeJob, createIncorrectDataJob, createTimePrinterJob)
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import Beckn.Scheduler
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
@@ -111,21 +110,13 @@ mainServer =
     :<|> testServer
 
 -- TODO: remove this
-makeTestJobEntry :: Text -> JobEntryText
-makeTestJobEntry jType =
-  JobEntry
-    { jobType = jType,
-      jobData = "testData",
-      maxErrors = 5,
-      maximumDelay = Nothing
-    }
-
--- TODO: remove this
 testServer :: Text -> FlowHandler Text
 testServer jobType = withFlowHandlerAPI $ do
   case jobType of
-    "type1" -> void $ createBananasCountingJob 7
-    "type2" -> void $ createTimePrinterJob 7
+    "bananas" -> void $ createBananasCountingJob 7
+    "failing_time" -> void $ createTimePrinterJob 7
+    "incorrect_data" -> void $ createIncorrectDataJob 7
+    "fake_job" -> void $ createFakeJob 7
     _ -> logWarning "unknown job type"
   pure "OK"
 

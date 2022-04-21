@@ -9,7 +9,6 @@ where
 import Beckn.Mock.Utils (threadDelaySec)
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
-import Beckn.Scheduler.Error
 import Beckn.Scheduler.JobHandler
 import Beckn.Scheduler.Serialization
 import Beckn.Scheduler.Storage.Queries
@@ -156,7 +155,7 @@ createJobIn ::
   ) =>
   NominalDiffTime ->
   JobEntry a b ->
-  m (Either JobDecodeError (Id (Job a b)))
+  m (Id (Job a b))
 createJobIn diff jobEntry = do
   now <- getCurrentTime
   let scheduledAt = addUTCTime diff now
@@ -174,26 +173,24 @@ createJob ::
   ) =>
   UTCTime ->
   JobEntry a b ->
-  m (Either JobDecodeError (Id (Job a b)))
+  m (Id (Job a b))
 createJob scheduledAt jobEntry = do
   now <- getCurrentTime
   id <- Id <$> generateGUIDText
   let job = makeJob id now
       jobText = encodeJob job
-  eithUnit <- C.try $
-    Esq.runTransaction $ do
-      Q.create jobText
-      mbFetchedJob <- Esq.findById jobText.id
-      fetchedJob <- fromMaybeM (InternalError "Failed to insert job") mbFetchedJob
-      case decodeJob @a @b fetchedJob of
-        Left err -> do
-          logError $ "failed to decode job:" <> show fetchedJob
-          throwError err
-        Right decodedJob ->
-          unless (typeAndDataAreEqual job decodedJob) $
-            logWarning $ "database representations of the inserted and the fetched jobs are not equal: " <> show job <> " : " <> show decodedJob
-      void $ fromEitherM identity $ decodeJob @a @b fetchedJob
-  either (pure . Left) (\_ -> pure $ Right job.id) eithUnit
+  Esq.runTransaction $ do
+    Q.create jobText
+    mbFetchedJob <- Esq.findById jobText.id
+    fetchedJob <- fromMaybeM (InternalError "Failed to insert job") mbFetchedJob
+    case decodeJob @a @b fetchedJob of
+      Left err -> do
+        logError $ "failed to decode job:" <> show fetchedJob
+        throwError err
+      Right decodedJob ->
+        unless (typeAndDataAreEqual job decodedJob) $
+          logWarning $ "database representations of the inserted and the fetched jobs are not equal: " <> show job <> " : " <> show decodedJob
+  pure job.id
   where
     typeAndDataAreEqual job1 job2 = job1.jobData == job2.jobData && job1.jobType == job2.jobType
     makeJob id currentTime =

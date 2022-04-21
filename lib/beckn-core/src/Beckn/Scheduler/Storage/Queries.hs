@@ -33,9 +33,11 @@ getReadyTasks = do
     pure job
 
 updateStatus :: JobStatus -> Id (Job a b) -> SchedulerM t ()
-updateStatus newStatus jobId = Esq.update $ \job -> do
-  set job [JobStatus =. val newStatus]
-  where_ $ job ^. JobId ==. val jobId.getId
+updateStatus newStatus jobId = do
+  now <- getCurrentTime
+  Esq.update $ \job -> do
+    set job [JobStatus =. val newStatus, JobUpdatedAt =. val now]
+    where_ $ job ^. JobId ==. val jobId.getId
 
 markAsComplete :: Id (Job a b) -> SchedulerM t ()
 markAsComplete = updateStatus COMPLETED
@@ -44,16 +46,22 @@ markAsTerminated :: Id (Job a b) -> SchedulerM t ()
 markAsTerminated = updateStatus TERMINATED
 
 updateErrorCountAndTerminate :: Id (Job a b) -> Int -> SchedulerM t ()
-updateErrorCountAndTerminate jobId fCount = Esq.update $ \job -> do
-  set job [JobStatus =. val TERMINATED, JobCurrErrors =. val fCount]
-  where_ $ job ^. JobId ==. val jobId.getId
+updateErrorCountAndTerminate jobId fCount = do
+  now <- getCurrentTime
+  Esq.update $ \job -> do
+    set job [JobStatus =. val TERMINATED, JobCurrErrors =. val fCount, JobUpdatedAt =. val now]
+    where_ $ job ^. JobId ==. val jobId.getId
 
 reSchedule :: Id (Job a b) -> UTCTime -> SchedulerM t ()
-reSchedule jobId newScheduleTime = Esq.update $ \job -> do
-  set job [JobScheduledAt =. val newScheduleTime]
-  where_ $ job ^. JobId ==. val jobId.getId
+reSchedule jobId newScheduleTime = do
+  now <- getCurrentTime
+  Esq.update $ \job -> do
+    set job [JobScheduledAt =. val newScheduleTime, JobUpdatedAt =. val now]
+    where_ $ job ^. JobId ==. val jobId.getId
 
 updateFailureCount :: Id (Job a b) -> Int -> SchedulerM t ()
-updateFailureCount jobId newCountValue = Esq.update $ \job -> do
-  set job [JobCurrErrors =. val newCountValue]
-  where_ $ job ^. JobId ==. val jobId.getId
+updateFailureCount jobId newCountValue = do
+  now <- getCurrentTime
+  Esq.update $ \job -> do
+    set job [JobCurrErrors =. val newCountValue, JobUpdatedAt =. val now]
+    where_ $ job ^. JobId ==. val jobId.getId

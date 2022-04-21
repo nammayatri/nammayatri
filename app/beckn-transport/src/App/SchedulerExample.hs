@@ -3,7 +3,7 @@
 module App.SchedulerExample where
 
 -- FIXME: This entire module is just for example
--- Remove it when real usage of the scheduler library appears.
+-- TODO: move it to the integration tests when real usage of the scheduler library appears.
 
 import App.Types (Flow)
 import Beckn.Mock.App (MockM, runMock)
@@ -24,17 +24,33 @@ runTransporterScheduler configModifier = do
 schedulerHandlersList :: JobHandlerList SchedulerT JobType
 schedulerHandlersList =
   [ (PrintBananasCount, JobHandler bananasCounterHandler emptyCatchers),
-    (PrintCurrentTimeWithErrorProbability, JobHandler timePrinterHandler emptyCatchers)
+    (PrintCurrentTimeWithErrorProbability, JobHandler timePrinterHandler emptyCatchers),
+    (IncorrectDataJobType, JobHandler incorrectDataJobHandler emptyCatchers)
   ]
 
 -----------------
+type SchedulerT = MockM SchedulerResources
 
-data JobType = PrintBananasCount | PrintCurrentTimeWithErrorProbability
+makeTestJobEntry :: JobType -> d -> JobEntry JobType d
+makeTestJobEntry jType jData =
+  JobEntry
+    { jobType = jType,
+      jobData = jData,
+      maxErrors = 5,
+      maximumDelay = Nothing
+    }
+
+data JobType
+  = PrintBananasCount
+  | PrintCurrentTimeWithErrorProbability
+  | IncorrectDataJobType
+  | FakeJobType
   deriving stock (Generic, Show, Eq, Ord)
   deriving anyclass (FromJSON, ToJSON)
   deriving (JobTypeSerializable) via JSONable JobType
   deriving (PrettyShow) via Showable JobType
 
+-----------------
 data BananasCount = BananasCount
   { count :: Int,
     createdAt :: UTCTime
@@ -43,49 +59,27 @@ data BananasCount = BananasCount
   deriving anyclass (FromJSON, ToJSON, PrettyShow)
   deriving (JobDataSerializable) via JSONable BananasCount
 
-type SchedulerT = MockM SchedulerResources
-
-createTestJob :: (Show a, JobDataSerializable a) => Flow (JobEntry JobType a) -> NominalDiffTime -> Flow (Id (Job JobType a))
-createTestJob buildJob scheduleIn = do
-  job <- buildJob
-  eithRes <- createJobIn scheduleIn job
-  fromEitherM identity eithRes
-
 createBananasCountingJob :: NominalDiffTime -> Flow (Id (Job JobType BananasCount))
-createBananasCountingJob = createTestJob buildJob
+createBananasCountingJob scheduleIn = do
+  now <- getCurrentTime
+  bCount <- liftIO $ randomRIO (1, 10 :: Int)
+  createJobIn scheduleIn $ makeTestJobEntry PrintBananasCount $ makeJobData now bCount
   where
-    buildJob = do
-      now <- getCurrentTime
-      bCount <- liftIO $ randomRIO (1, 10 :: Int)
-      pure $
-        JobEntry
-          { jobType = PrintBananasCount,
-            jobData =
-              BananasCount
-                { createdAt = now,
-                  count = bCount
-                },
-            maxErrors = 5,
-            maximumDelay = Nothing
-          }
-
-createTimePrinterJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
-createTimePrinterJob = createTestJob buildJob
-  where
-    buildJob = do
-      pure $
-        JobEntry
-          { jobType = PrintCurrentTimeWithErrorProbability,
-            jobData = (),
-            maxErrors = 5,
-            maximumDelay = Nothing
-          }
+    makeJobData now_ bCount_ =
+      BananasCount
+        { createdAt = now_,
+          count = bCount_
+        }
 
 bananasCounterHandler :: Job JobType BananasCount -> SchedulerT ExecutionResult
 bananasCounterHandler job = do
   logInfo "job of type 1 is being executed: printing job data"
   logPretty INFO "job data" job.jobData
   pure Completed
+
+-----------------
+createTimePrinterJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
+createTimePrinterJob = flip createJobIn $ makeTestJobEntry PrintCurrentTimeWithErrorProbability ()
 
 timePrinterHandler :: Job JobType () -> SchedulerT ExecutionResult
 timePrinterHandler _ = do
@@ -97,3 +91,32 @@ timePrinterHandler _ = do
       now <- getCurrentTime
       logInfo $ "current time: " <> show now
       pure Completed
+
+-----------------
+createFakeJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
+createFakeJob = flip createJobIn $ makeTestJobEntry FakeJobType ()
+
+-----------------
+data IncorrectlySerializable = IncSer
+  { foo :: Int,
+    bar :: Text
+  }
+  deriving stock (Generic, Show, Eq)
+  deriving anyclass (ToJSON, PrettyShow)
+  deriving (FromJSON) via JSONfail IncorrectlySerializable
+  deriving (JobDataSerializable) via JSONable IncorrectlySerializable
+
+newtype JSONfail a = JSONfail a
+
+instance FromJSON (JSONfail a) where
+  parseJSON _ = fail "fake fail"
+
+createIncorrectDataJob :: NominalDiffTime -> Flow (Id (Job JobType IncorrectlySerializable))
+createIncorrectDataJob = flip createJobIn $ makeTestJobEntry IncorrectDataJobType val
+  where
+    val = IncSer 2 "quux"
+
+incorrectDataJobHandler :: Job JobType IncorrectlySerializable -> SchedulerT ExecutionResult
+incorrectDataJobHandler _ = do
+  logError "you shouldn't get here"
+  pure Completed

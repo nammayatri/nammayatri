@@ -1,14 +1,5 @@
 @token = {{app-token}}
 
-###
-
-# @name test
-
-GET {{transporter-host}}/test
-token: {{driver-token}}
-content-type: application/json
-
-"type2"
 
 ###
 # @name setActive

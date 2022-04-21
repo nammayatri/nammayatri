@@ -1,0 +1,31 @@
+###
+# @name test
+GET {{transporter-host}}/test
+token: {{driver-token}}
+content-type: application/json
+
+"bananas"
+
+###
+# @name test
+GET {{transporter-host}}/test
+token: {{driver-token}}
+content-type: application/json
+
+"failing_time"
+
+###
+# @name test
+GET {{transporter-host}}/test
+token: {{driver-token}}
+content-type: application/json
+
+"incorrect_data"
+
+###
+# @name test
+GET {{transporter-host}}/test
+token: {{driver-token}}
+content-type: application/json
+
+"fake_job"
