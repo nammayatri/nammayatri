@@ -77,7 +77,7 @@ findAllByVariantRegNumOrgId variantM mbRegNum limit' offset' orgId = do
     where_ $
       vehicle ^. VehicleOrganizationId ==. val (toKey orgId)
         &&. whenJust_ variantM (\variant -> vehicle ^. VehicleVariant ==. val variant)
-        &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo `ilike` ((%) ++. val regNum ++. (%)))
+        &&. whenJust_ mbRegNum (\regNum -> vehicle ^. VehicleRegistrationNo `ilike` (%) ++. val regNum ++. (%))
     orderBy [desc $ vehicle ^. VehicleCreatedAt]
     limit limitVal
     offset offsetVal
