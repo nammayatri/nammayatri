@@ -352,10 +352,10 @@ type RouteAPI =
   "route"
     :> TokenAuth
     :> ReqBody '[JSON] Location.Request
-    :> Post '[JSON] Location.Response
+    :> Post '[JSON] GoogleMaps.DirectionsResp
 
 routeApiFlow :: FlowServer RouteAPI
-routeApiFlow = Location.getRoutes
+routeApiFlow = Location.getRoute
 
 type RideAPI =
   "driver" :> "ride"

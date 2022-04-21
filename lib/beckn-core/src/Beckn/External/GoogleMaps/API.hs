@@ -25,6 +25,7 @@ type GoogleMapsAPI =
       :> MandatoryQueryParam "key" Text
       :> Get '[JSON] GoogleMaps.GetPlaceNameResp
     :<|> DistanceMatrixAPI
+    :<|> DirectionsAPI
 
 type DistanceMatrixAPI =
   "distancematrix" :> "json"
@@ -34,6 +35,16 @@ type DistanceMatrixAPI =
     :> QueryParam "departure_time" GoogleMaps.DepartureTime
     :> QueryParam "mode" GoogleMaps.Mode
     :> Post '[JSON] GoogleMaps.DistanceMatrixResp
+
+type DirectionsAPI =
+  "directions" :> "json"
+    :> MandatoryQueryParam "origin" GoogleMaps.Place
+    :> MandatoryQueryParam "destination" GoogleMaps.Place
+    :> MandatoryQueryParam "key" Text
+    :> QueryParam "alternatives" Bool
+    :> QueryParam "mode" GoogleMaps.Mode
+    :> QueryParam "waypoints" [GoogleMaps.Place]
+    :> Get '[JSON] GoogleMaps.DirectionsResp
 
 googleMapsAPI :: Proxy GoogleMapsAPI
 googleMapsAPI = Proxy
@@ -48,4 +59,12 @@ distanceMatrix ::
   Maybe GoogleMaps.DepartureTime ->
   Maybe GoogleMaps.Mode ->
   EulerClient GoogleMaps.DistanceMatrixResp
-autoComplete :<|> placeDetails :<|> getPlaceName :<|> distanceMatrix = client googleMapsAPI
+directions ::
+  GoogleMaps.Place ->
+  GoogleMaps.Place ->
+  Text ->
+  Maybe Bool ->
+  Maybe GoogleMaps.Mode ->
+  Maybe [GoogleMaps.Place] ->
+  EulerClient GoogleMaps.DirectionsResp
+autoComplete :<|> placeDetails :<|> getPlaceName :<|> distanceMatrix :<|> directions = client googleMapsAPI

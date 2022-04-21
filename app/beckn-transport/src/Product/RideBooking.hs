@@ -75,7 +75,7 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
           >>= fromMaybeM LocationNotFound
       let fromLatLong = Location.locationToLatLong fromLocation
       toLocation <- getDropLocation rideBooking.rideBookingDetails
-      mbRoute <- Location.getRoute' [driverLatLong, fromLatLong]
+      mbDistanceDuration <- Location.getDistanceDuration [driverLatLong, fromLatLong]
       return $
         API.GetRideInfoRes $
           Just $
@@ -83,8 +83,8 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
               { bookingId = rideBooking.id,
                 pickupLoc = SLoc.makeSearchReqLocationAPIEntity fromLocation,
                 dropLoc = SLoc.makeSearchReqLocationAPIEntity <$> toLocation,
-                etaForPickupLoc = (`div` 60) . (.durationInS) <$> mbRoute,
-                distanceToPickupLoc = (.distanceInM) <$> mbRoute,
+                etaForPickupLoc = (`div` 60) <$> snd mbDistanceDuration,
+                distanceToPickupLoc = fst mbDistanceDuration,
                 notificationExpiryTime = notificationExpiryTime,
                 estimatedFare = rideBooking.estimatedFare,
                 discount = rideBooking.discount,

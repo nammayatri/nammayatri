@@ -1,8 +1,9 @@
 module Product.Location where
 
 import App.Types
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
-import qualified Beckn.Product.MapSearch.GraphHopper as MapSearch
+import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
@@ -147,23 +148,51 @@ locationToLatLong :: (HasField "lat" a Double, HasField "lon" a Double) => a -> 
 locationToLatLong loc =
   MapSearch.LatLong loc.lat loc.lon
 
-getRoute' ::
-  ( CoreMetrics m,
-    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+getRoute :: Id Person.Person -> Location.Request -> FlowHandler GoogleMaps.DirectionsResp
+getRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleMaps.getRoutes
+
+getDistanceDuration ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    GoogleMaps.HasGoogleMaps m r c
   ) =>
   [MapSearch.LatLong] ->
-  m (Maybe MapSearch.Route)
-getRoute' = MapSearch.getRouteMb (Just MapSearch.CAR)
-
-getRoutes :: Id Person.Person -> Location.Request -> FlowHandler Location.Response
-getRoutes _ = withFlowHandlerAPI . MapSearch.getRoutes
+  m (Maybe Double, Maybe Integer)
+getDistanceDuration fromTo = do
+  let rec =
+        MapSearch.Request
+          { waypoints = fromTo,
+            mode = Just CAR,
+            calcPoints = True
+          }
+  routes <- GoogleMaps.getRoutes rec
+  case routes.routes of
+    [] -> return (Nothing, Nothing)
+    (x : _) ->
+      case x.legs of
+        [] -> return (Nothing, Nothing)
+        (y : _) -> do
+          let dist :: Double = fromIntegral y.distance.value
+              dur :: Integer = fromIntegral y.duration.value
+          return (Just dist, Just dur)
 
 calculateDistance ::
-  ( CoreMetrics m,
-    HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+  ( MonadFlow m,
+    CoreMetrics m,
+    GoogleMaps.HasGoogleMaps m r c
   ) =>
   LatLong ->
   LatLong ->
   m (Maybe Double)
-calculateDistance sourceLoc destinationLoc = do
-  MapSearch.getDistanceMb (Just MapSearch.CAR) [sourceLoc, destinationLoc]
+calculateDistance sourceLoc destinationLoc =
+  getDistanceDuration [sourceLoc, destinationLoc] <&> fst
+
+-- calculateDistance ::
+--   ( CoreMetrics m,
+--     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
+--   ) =>
+--   LatLong ->
+--   LatLong ->
+--   m (Maybe Double)
+-- calculateDistance sourceLoc destinationLoc = do
+--   MapSearch.getDistanceMb (Just MapSearch.CAR) [sourceLoc, destinationLoc]

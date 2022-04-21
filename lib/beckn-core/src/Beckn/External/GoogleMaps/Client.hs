@@ -65,6 +65,21 @@ distanceMatrix url origins destinations key departureTime mode = do
   callAPI url (API.distanceMatrix origins destinations key departureTime mode) "distanceMatrix"
     >>= checkGoogleMapsError url
 
+directions ::
+  ( CoreMetrics m,
+    MonadFlow m
+  ) =>
+  BaseUrl ->
+  GoogleMaps.Place ->
+  GoogleMaps.Place ->
+  Text ->
+  Maybe GoogleMaps.Mode ->
+  Maybe [GoogleMaps.Place] ->
+  m GoogleMaps.DirectionsResp
+directions url origin destination key mode waypoints = do
+  callAPI url (API.directions origin destination key (Just True) mode waypoints) "directionsAPI"
+    >>= checkGoogleMapsError url
+
 checkGoogleMapsError :: (MonadThrow m, Log m, HasField "status" a Text) => BaseUrl -> Either ClientError a -> m a
 checkGoogleMapsError url res =
   fromEitherM (googleMapsError url) res >>= validateResponseStatus

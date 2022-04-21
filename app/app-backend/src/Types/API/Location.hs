@@ -1,5 +1,6 @@
 module Types.API.Location where
 
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import qualified Beckn.Types.MapSearch as MapSearch
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
@@ -18,4 +19,4 @@ data GetLocationRes = GetLocationRes
 
 type Request = MapSearch.Request
 
-type Response = MapSearch.Response
+type Response = GoogleMaps.DirectionsResp

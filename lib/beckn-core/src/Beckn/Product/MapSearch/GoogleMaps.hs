@@ -3,6 +3,7 @@ module Beckn.Product.MapSearch.GoogleMaps
     GetDistanceResultInfo (..),
     getDistance,
     getDistances,
+    getRoutes,
   )
 where
 
@@ -75,6 +76,28 @@ getDistances travelMode origins destinations utcDepartureTime = do
       when (length inputList > 25) $
         logWarning ("Capping " <> listName <> " to maximum 25 elements as per Distance matrix API limits")
       return $ take 25 $ toList inputList
+getRoutes ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    GoogleMaps.HasGoogleMaps m r c
+  ) =>
+  MapSearch.Request ->
+  m GoogleMaps.DirectionsResp
+getRoutes req = do
+  googleMapsUrl <- asks (.googleMapsUrl)
+  key <- asks (.googleMapsKey)
+  origin <- (getOrigin req.waypoints) & fromMaybeM (InternalError "No origin value")
+  destination <- (getDistination req.waypoints) & fromMaybeM (InternalError "No  destination value")
+  let waypoints = getWayPoints req.waypoints
+      mode = mapToMode <$> req.mode
+  GoogleMaps.directions googleMapsUrl origin destination key mode waypoints
+  where
+    getOrigin (x : _) = Just (latLongToPlace x)
+    getOrigin _ = Nothing
+    getDistination (x : xs) = Just (latLongToPlace $ last (x : xs))
+    getDistination _ = Nothing
+    getWayPoints (_ : x : xs) = Just (map latLongToPlace $ tail (x : xs))
+    getWayPoints _ = Nothing
 
 latLongToPlace :: MapSearch.LatLong -> GoogleMaps.Place
 latLongToPlace MapSearch.LatLong {..} =
