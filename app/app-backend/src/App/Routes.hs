@@ -37,6 +37,7 @@ import qualified Product.Quote as Quote
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
 import qualified Product.RideBooking as RideBooking
+import qualified Product.SavedLocations as SavedLocations
 import qualified Product.Search as Search
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
@@ -56,6 +57,7 @@ import qualified Types.API.Quote as QuoteAPI
 import Types.API.Registration
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.RideBooking as RideBookingAPI
+import qualified Types.API.SavedLocations as SavedLocationsAPI
 import qualified Types.API.Search as Search
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
@@ -94,6 +96,7 @@ type UIAPI =
     :<|> CustomerSupportAPI
     :<|> GoogleMapsProxyAPI
     :<|> CancellationReasonAPI
+    :<|> SavedLocationAPI
 
 appAPI :: Proxy AppAPI
 appAPI = Proxy
@@ -129,6 +132,7 @@ uiAPI =
     :<|> customerSupportFlow
     :<|> googleMapsProxyFlow
     :<|> cancellationReasonFlow
+    :<|> savedLocationFlow
 
 becknMetroAPI :: FlowServer BecknMetroAPI
 becknMetroAPI =
@@ -418,3 +422,22 @@ swagger = do
 
 writeSwaggerJSONFlow :: FlowServer SwaggerAPI
 writeSwaggerJSONFlow = return swagger
+
+type SavedLocationAPI =
+  "savedLocation"
+    :> ( TokenAuth
+           :> ReqBody '[JSON] SavedLocationsAPI.SavedReqLocationAPIEntity
+           :> Post '[JSON] APISuccess
+           :<|> TokenAuth
+             :> "list"
+             :> Get '[JSON] SavedLocationsAPI.SavedLocationsListRes
+           :<|> TokenAuth
+             :> Capture "tag" Text
+             :> Delete '[JSON] APISuccess
+       )
+
+savedLocationFlow :: FlowServer SavedLocationAPI
+savedLocationFlow =
+  SavedLocations.createSavedLocationEntity
+    :<|> SavedLocations.getSavedLocations
+    :<|> SavedLocations.deleteSavedLocation
