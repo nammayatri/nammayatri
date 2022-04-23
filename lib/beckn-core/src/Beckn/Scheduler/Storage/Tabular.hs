@@ -22,7 +22,6 @@ mkPersist
       jobType Text
       jobData Text
       scheduledAt UTCTime
-      maximumDelay Int Maybe
       createdAt UTCTime
       updatedAt UTCTime
       maxErrors Int

@@ -2,6 +2,7 @@ module Beckn.Scheduler.Storage.Queries where
 
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
+import Beckn.Scheduler.Serialization
 import Beckn.Scheduler.Storage.Tabular
 import Beckn.Scheduler.Types (Job, JobStatus (COMPLETED, PENDING, TERMINATED), JobText)
 import Beckn.Storage.Esqueleto as Esq
@@ -23,12 +24,15 @@ getTasksById ids = Esq.findAll $ do
   where_ $ job ^. JobId `in_` valList (map (.getId) ids)
   pure job
 
-getReadyTasks :: SchedulerM t [JobText]
-getReadyTasks = do
+getReadyTasks :: (JobTypeSerializable t) => Maybe t -> SchedulerM t [JobText]
+getReadyTasks mbType = do
   now <- getCurrentTime
   Esq.findAll $ do
     job <- from $ table @JobT
-    where_ $ job ^. JobStatus ==. val PENDING &&. job ^. JobScheduledAt <=. val now
+    where_ $
+      job ^. JobStatus ==. val PENDING
+        &&. job ^. JobScheduledAt <=. val now
+        &&. maybe (val True) (\jobType -> job ^. JobJobType ==. val (jobTypeToText jobType)) mbType
     orderBy [asc $ job ^. JobScheduledAt]
     pure job
 

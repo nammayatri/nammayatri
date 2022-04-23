@@ -14,7 +14,7 @@ import Beckn.Utils.IOLogging (LoggerEnv)
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Data.Map (Map)
 
-data SchedulerConfig = SchedulerConfig
+data SchedulerConfig t = SchedulerConfig
   { loggerConfig :: LoggerConfig,
     esqDBCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
@@ -22,7 +22,8 @@ data SchedulerConfig = SchedulerConfig
     port :: Int,
     loopIntervalSec :: Int,
     expirationTime :: Integer,
-    waitBeforeRetry :: Int
+    waitBeforeRetry :: Int,
+    jobType :: Maybe t
   }
   deriving (Generic, FromDhall)
 
@@ -39,12 +40,11 @@ data SchedulerEnv t = SchedulerEnv
     hedisEnv :: HedisEnv,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
-    --    handlerFunc :: Job t Text -> IO ExecutionResult,
-    --    errorCatchers :: Job t Text -> [C.Handler IO ExecutionResult],
     handlersMap :: Map t (JobHandler IO t),
     loopIntervalSec :: Int,
     expirationTime :: Integer,
-    waitBeforeRetry :: Int
+    waitBeforeRetry :: Int,
+    jobType :: Maybe t
   }
 
 newtype SchedulerM t a = SchedulerM {unSchedulerM :: MockM (SchedulerEnv t) a}

@@ -12,11 +12,11 @@ import Beckn.Scheduler
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.Dhall (readDhallConfigDefault)
+import Beckn.Utils.Dhall (FromDhall, readDhallConfigDefault)
 import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
 import System.Random
 
-runTransporterScheduler :: (SchedulerConfig -> SchedulerConfig) -> IO ()
+runTransporterScheduler :: (SchedulerConfig JobType -> SchedulerConfig JobType) -> IO ()
 runTransporterScheduler configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "beckn-transport-scheduler"
   runScheduler appCfg runMock schedulerHandlersList
@@ -36,8 +36,7 @@ makeTestJobEntry jType jData =
   JobEntry
     { jobType = jType,
       jobData = jData,
-      maxErrors = 5,
-      maximumDelay = Nothing
+      maxErrors = 5
     }
 
 data JobType
@@ -46,7 +45,7 @@ data JobType
   | IncorrectDataJobType
   | FakeJobType
   deriving stock (Generic, Show, Eq, Ord)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, FromDhall)
   deriving (JobTypeSerializable) via JSONable JobType
   deriving (PrettyShow) via Showable JobType
 

@@ -10,8 +10,7 @@ import Beckn.Utils.GenericPretty
 data JobEntry t d = JobEntry
   { jobType :: t,
     jobData :: d,
-    maxErrors :: Int,
-    maximumDelay :: Maybe Int
+    maxErrors :: Int
   }
   deriving (Show, Generic, PrettyShow)
 
@@ -23,7 +22,6 @@ data Job t d = Job
     jobType :: t, -- user defined
     jobData :: d, -- user defined
     scheduledAt :: UTCTime,
-    maximumDelay :: Maybe Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     maxErrors :: Int,

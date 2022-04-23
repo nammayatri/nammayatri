@@ -34,7 +34,7 @@ runScheduler ::
   forall t m.
   JobTypeSerializable t =>
   C.MonadThrow m =>
-  SchedulerConfig ->
+  SchedulerConfig t ->
   (forall q. SchedulerResources -> m q -> IO q) ->
   JobHandlerList m t ->
   IO ()
@@ -62,7 +62,8 @@ runner = do
 
 runnerIteration :: (JobTypeSerializable t) => SchedulerM t ()
 runnerIteration = do
-  readyTasks <- getReadyTasks
+  jobType <- asks (.jobType)
+  readyTasks <- getReadyTasks jobType
   availableReadyTasksIds <- filterM attemptTaskLock $ map (.id) readyTasks
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
   let withLogTag' job = withLogTag ("JobId=" <> job.id.getId)
@@ -199,7 +200,6 @@ createJob scheduledAt jobEntry = do
           jobType = jobEntry.jobType,
           jobData = jobEntry.jobData,
           scheduledAt = scheduledAt,
-          maximumDelay = jobEntry.maximumDelay,
           maxErrors = jobEntry.maxErrors,
           createdAt = currentTime,
           updatedAt = currentTime,
