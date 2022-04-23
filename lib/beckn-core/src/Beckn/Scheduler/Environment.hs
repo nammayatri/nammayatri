@@ -6,6 +6,7 @@ module Beckn.Scheduler.Environment where
 import Beckn.Mock.App
 import Beckn.Prelude
 import Beckn.Scheduler.JobHandler
+import Beckn.Scheduler.Metrics (SchedulerMetrics)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis (HedisCfg, HedisEnv)
 import Beckn.Types.Common
@@ -19,6 +20,7 @@ data SchedulerConfig t = SchedulerConfig
   { loggerConfig :: LoggerConfig,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
+    metricsPort :: Int,
     esqDBCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisPrefix :: Text,
@@ -43,6 +45,7 @@ data SchedulerEnv t = SchedulerEnv
     hedisEnv :: HedisEnv,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
+    metrics :: SchedulerMetrics,
     handlersMap :: Map t (JobHandler IO t),
     loopIntervalSec :: Int,
     expirationTime :: Integer,

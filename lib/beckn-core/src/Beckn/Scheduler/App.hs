@@ -13,6 +13,7 @@ import Beckn.Mock.Utils (threadDelaySec)
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
 import Beckn.Scheduler.JobHandler
+import Beckn.Scheduler.Metrics
 import Beckn.Scheduler.Serialization
 import Beckn.Scheduler.Storage.Queries
 import qualified Beckn.Scheduler.Storage.Queries as Q
@@ -24,6 +25,7 @@ import qualified Beckn.Storage.Esqueleto.Queries as Esq
 import qualified Beckn.Storage.Esqueleto.Transactionable as Esq
 import Beckn.Storage.Hedis (connectHedis)
 import qualified Beckn.Storage.Hedis.Queries as Hedis
+import qualified Beckn.Tools.Metrics.Init as Metrics
 import Beckn.Types.Common
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Id
@@ -47,6 +49,7 @@ runScheduler SchedulerConfig {..} runMonad handlersList = do
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
+  metrics <- setupSchedulerMetrics
   let schedulerResources = SchedulerResources {..}
       transformFunc :: forall q. m q -> IO q
       transformFunc = runMonad schedulerResources
@@ -57,7 +60,7 @@ runScheduler SchedulerConfig {..} runMonad handlersList = do
       runMigrations = do
         eithRes <- migrateIfNeeded migrationPath autoMigrate esqDBCfg
         handleLeft exitDBMigrationFailure "Couldn't migrate database: " eithRes
-
+  Metrics.serve metricsPort
   runSchedulerM schedulerEnv $ do
     runMigrations
     runner
@@ -83,8 +86,16 @@ runnerIteration = do
   forM_ takenTasksUpdatedInfo $ \job ->
     forkIO $
       withLogTag' job $ do
-        executeTask job
+        measuringDuration registerDuration $ executeTask job
         releaseLock job.id
+
+registerDuration :: Milliseconds -> () -> SchedulerM t ()
+registerDuration millis _ = do
+  let durSecDouble = millisToSecondsDouble millis
+  observeJobExecDuration durSecDouble
+  logInfo $ "job execution took " <> show (realToFrac @_ @NominalDiffTime durSecDouble)
+
+-- TODO: refactor the prometheus metrics to measure data that we really need
 
 attemptTaskLock :: Id (Job a b) -> SchedulerM t Bool
 attemptTaskLock jobId = do

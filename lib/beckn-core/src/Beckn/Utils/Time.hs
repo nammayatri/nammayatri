@@ -65,3 +65,9 @@ secondsToMcs (Seconds s) = Microseconds (s * 1000000)
 
 nominalDiffTimeToSeconds :: NominalDiffTime -> Seconds
 nominalDiffTimeToSeconds = round . Time.nominalDiffTimeToSeconds
+
+millisToSecondsDouble :: Milliseconds -> Double
+millisToSecondsDouble (Milliseconds ms) = fromIntegral ms / 1000
+
+millisToNominalDiffTime :: Milliseconds -> NominalDiffTime
+millisToNominalDiffTime = realToFrac @Double @NominalDiffTime . millisToSecondsDouble
