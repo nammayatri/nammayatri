@@ -6,6 +6,8 @@ in
 {
 loggerConfig = becknTransport.loggerConfig // { logRawSql = False } ,
 esqDBCfg = becknTransport.esqDBCfg,
+migrationPath = Some (env:BECKN_TRANSPORT_SCHEDULER_MIGRATION_PATH as Text ? "dev/migrations/scheduler"),
+autoMigrate = True,
 hedisCfg = becknTransport.hcfg,
 hedisPrefix = "beckn-transport-scheduler",
 port = +8050,

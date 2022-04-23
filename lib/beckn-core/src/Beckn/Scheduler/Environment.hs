@@ -11,11 +11,14 @@ import Beckn.Storage.Hedis (HedisCfg, HedisEnv)
 import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging (LoggerEnv)
+import qualified Control.Monad.Catch as C
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Data.Map (Map)
 
 data SchedulerConfig t = SchedulerConfig
   { loggerConfig :: LoggerConfig,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool,
     esqDBCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisPrefix :: Text,
@@ -49,7 +52,7 @@ data SchedulerEnv t = SchedulerEnv
 
 newtype SchedulerM t a = SchedulerM {unSchedulerM :: MockM (SchedulerEnv t) a}
   deriving newtype (Functor, Applicative, Monad, MonadReader (SchedulerEnv t), MonadIO)
-  deriving newtype (MonadThrow, MonadCatch, MonadClock, MonadTime, MonadGuid, Log, Forkable, MonadUnliftIO)
+  deriving newtype (C.MonadThrow, C.MonadCatch, C.MonadMask, MonadClock, MonadTime, MonadGuid, Log, Forkable, MonadUnliftIO)
 
 runSchedulerM :: SchedulerEnv t -> SchedulerM t a -> IO a
 runSchedulerM env action = runMock env $ unSchedulerM action

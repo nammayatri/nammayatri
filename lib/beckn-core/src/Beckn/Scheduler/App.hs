@@ -8,6 +8,7 @@ module Beckn.Scheduler.App
   )
 where
 
+import Beckn.Exit (exitDBMigrationFailure)
 import Beckn.Mock.Utils (threadDelaySec)
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
@@ -18,6 +19,7 @@ import qualified Beckn.Scheduler.Storage.Queries as Q
 import Beckn.Scheduler.Types
 import Beckn.Storage.Esqueleto
 import Beckn.Storage.Esqueleto.Config (prepareEsqDBEnv)
+import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
 import qualified Beckn.Storage.Esqueleto.Queries as Esq
 import qualified Beckn.Storage.Esqueleto.Transactionable as Esq
 import Beckn.Storage.Hedis (connectHedis)
@@ -25,7 +27,7 @@ import qualified Beckn.Storage.Hedis.Queries as Hedis
 import Beckn.Types.Common
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Id
-import Beckn.Utils.App (getPodName)
+import Beckn.Utils.App (getPodName, handleLeft)
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
@@ -49,8 +51,16 @@ runScheduler SchedulerConfig {..} runMonad handlersList = do
       transformFunc :: forall q. m q -> IO q
       transformFunc = runMonad schedulerResources
       handlersMap = Map.fromList $ map (second $ transformJobHandler transformFunc) handlersList
+
   let schedulerEnv = SchedulerEnv {..}
-  runSchedulerM schedulerEnv runner
+  let runMigrations :: SchedulerM t ()
+      runMigrations = do
+        eithRes <- migrateIfNeeded migrationPath autoMigrate esqDBCfg
+        handleLeft exitDBMigrationFailure "Couldn't migrate database: " eithRes
+
+  runSchedulerM schedulerEnv $ do
+    runMigrations
+    runner
 
 runner :: (JobTypeSerializable t) => SchedulerM t ()
 runner = do
