@@ -18,9 +18,14 @@ type ExpirationTime = Integer
 runHedis ::
   HedisFlow m env => Redis (Either Reply a) -> m a
 runHedis action = do
-  con <- asks (.hedisEnv.hedisConnection)
-  eithRes <- liftIO $ Hedis.runRedis con action
+  eithRes <- runHedisEither action
   fromEitherM (HedisReplyError . show) eithRes
+
+runHedisEither ::
+  HedisFlow m env => Redis (Either Reply a) -> m (Either Reply a)
+runHedisEither action = do
+  con <- asks (.hedisEnv.hedisConnection)
+  liftIO $ Hedis.runRedis con action
 
 runHedisTransaction ::
   HedisFlow m env => RedisTx (Queued a) -> m a
@@ -38,6 +43,12 @@ buildKey :: HedisFlow m env => Text -> m BS.ByteString
 buildKey key = do
   keyModifier <- asks (.hedisEnv.keyModifier)
   return . cs $ keyModifier key
+
+runWithPrefixEither :: (HedisFlow m env) => Text -> (BS.ByteString -> Redis (Either Reply a)) -> m (Either Reply a)
+runWithPrefixEither key action = do
+  prefKey <- buildKey key
+  withLogTag "Redis" $ logDebug $ "working with key : " <> cs prefKey
+  runHedisEither $ action prefKey
 
 runWithPrefix :: (HedisFlow m env) => Text -> (BS.ByteString -> Redis (Either Reply a)) -> m a
 runWithPrefix key action = do
@@ -109,3 +120,12 @@ incrByFloat key toAdd = runWithPrefix key $ \prefKey ->
 expire :: (HedisFlow m env) => Text -> ExpirationTime -> m ()
 expire key expirationTime = runWithPrefix_ key $ \prefKey ->
   Hedis.expire prefKey expirationTime
+
+setNxExpire :: (ToJSON a, HedisFlow m env) => Text -> ExpirationTime -> a -> m Bool
+setNxExpire key expirationTime val = do
+  eithRes <- runWithPrefixEither key $ \prefKey ->
+    Hedis.setOpts prefKey (cs $ Ae.encode val) $
+      Hedis.SetOpts (Just expirationTime) Nothing (Just Hedis.Nx)
+  pure $ case eithRes of
+    Right Hedis.Ok -> True
+    _ -> False

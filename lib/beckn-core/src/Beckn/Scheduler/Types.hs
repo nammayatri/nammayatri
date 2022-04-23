@@ -7,6 +7,8 @@ import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
 
 -- Job initializer
+-- (here one can think of discarding outdated jobs,
+-- using maximumDelay :: (Maybe Int) field)
 data JobEntry t d = JobEntry
   { jobType :: t,
     jobData :: d,
@@ -19,8 +21,8 @@ type JobEntryText = JobEntry Text Text
 -- Main datatype
 data Job t d = Job
   { id :: Id (Job t d),
-    jobType :: t, -- user defined
-    jobData :: d, -- user defined
+    jobType :: t, -- user defined, one per server
+    jobData :: d, -- user defined, one per job handler
     scheduledAt :: UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,

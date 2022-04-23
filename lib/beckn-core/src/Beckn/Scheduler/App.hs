@@ -1,6 +1,8 @@
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+
 module Beckn.Scheduler.App
   ( runScheduler,
-    createJob,
+    createJobByTime,
     createJobIn,
     emptyCatchers,
   )
@@ -67,7 +69,8 @@ runnerIteration = do
   availableReadyTasksIds <- filterM attemptTaskLock $ map (.id) readyTasks
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
   let withLogTag' job = withLogTag ("JobId=" <> job.id.getId)
-  mapM_ (\job -> forkIO $ withLogTag' job $ executeTask job) takenTasksUpdatedInfo
+  forM_ takenTasksUpdatedInfo $ \job ->
+    forkIO $ withLogTag' job $ executeTask job
 
 attemptTaskLock :: Id (Job a b) -> SchedulerM t Bool
 attemptTaskLock jobId = do
@@ -78,6 +81,11 @@ attemptTaskLock jobId = do
       Hedis.expire jobId.getId expirationTime
       pure True
     else pure False
+
+attemptTaskLockAtomic :: Id (Job a b) -> SchedulerM t Bool
+attemptTaskLockAtomic jobId = do
+  expirationTime <- asks (.expirationTime)
+  Hedis.setNxExpire jobId.getId expirationTime ()
 
 failJob :: JobText -> Text -> SchedulerM t ()
 failJob jobText description = do
@@ -145,21 +153,41 @@ emptyCatchers = const []
 
 -- api
 
-createJobIn ::
+type SchedulingConstraints m r t d =
   ( HasEsqEnv r m,
     MonadGuid m,
     MonadCatch m,
-    JobTypeSerializable a,
-    JobDataSerializable b,
-    Show a,
-    Show b
-  ) =>
+    Log m,
+    JobTypeSerializable t,
+    JobDataSerializable d,
+    Show t,
+    Show d
+  )
+
+createJobIn ::
+  SchedulingConstraints m r t d =>
   NominalDiffTime ->
-  JobEntry a b ->
-  m (Id (Job a b))
+  JobEntry t d ->
+  m (Id (Job t d))
 createJobIn diff jobEntry = do
   now <- getCurrentTime
+  when (diff < 0) $ throwError $ InternalError "job can only be scheduled for now or for future"
   let scheduledAt = addUTCTime diff now
+  createJob scheduledAt jobEntry
+
+createJobByTime ::
+  SchedulingConstraints m r t d =>
+  UTCTime ->
+  JobEntry t d ->
+  m (Id (Job t d))
+createJobByTime scheduledAt jobEntry = do
+  now <- getCurrentTime
+  when (scheduledAt <= now) $
+    throwError $
+      InternalError
+        "job can only be scheduled for the future\
+        \ using createJobByTime, for scheduling for\
+        \ now use createJobIn function instead"
   createJob scheduledAt jobEntry
 
 createJob ::
@@ -170,12 +198,14 @@ createJob ::
     JobTypeSerializable a,
     JobDataSerializable b,
     Show a,
-    Show b
+    Show b,
+    Log m
   ) =>
   UTCTime ->
   JobEntry a b ->
   m (Id (Job a b))
 createJob scheduledAt jobEntry = do
+  when (jobEntry.maxErrors <= 0) $ throwError $ InternalError "maximum errors should be positive"
   now <- getCurrentTime
   id <- Id <$> generateGUIDText
   let job = makeJob id now
