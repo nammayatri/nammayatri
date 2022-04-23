@@ -65,7 +65,8 @@ runScheduler SchedulerConfig {..} runMonad handlersList = do
 runner :: (JobTypeSerializable t) => SchedulerM t ()
 runner = do
   before <- getCurrentTime
-  runnerIteration
+  let errorLogger e = logError $ "error occured: " <> show e
+  runnerIteration `C.catchAll` errorLogger
   after <- getCurrentTime
   let diff = floor $ abs $ diffUTCTime after before
   loopIntervalSec <- asks (.loopIntervalSec)
@@ -76,11 +77,14 @@ runnerIteration :: (JobTypeSerializable t) => SchedulerM t ()
 runnerIteration = do
   jobType <- asks (.jobType)
   readyTasks <- getReadyTasks jobType
-  availableReadyTasksIds <- filterM attemptTaskLock $ map (.id) readyTasks
+  availableReadyTasksIds <- filterM attemptTaskLockAtomic $ map (.id) readyTasks
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
   let withLogTag' job = withLogTag ("JobId=" <> job.id.getId)
   forM_ takenTasksUpdatedInfo $ \job ->
-    forkIO $ withLogTag' job $ executeTask job
+    forkIO $
+      withLogTag' job $ do
+        executeTask job
+        releaseLock job.id
 
 attemptTaskLock :: Id (Job a b) -> SchedulerM t Bool
 attemptTaskLock jobId = do
@@ -96,6 +100,9 @@ attemptTaskLockAtomic :: Id (Job a b) -> SchedulerM t Bool
 attemptTaskLockAtomic jobId = do
   expirationTime <- asks (.expirationTime)
   Hedis.setNxExpire jobId.getId expirationTime ()
+
+releaseLock :: Id (Job a b) -> SchedulerM t ()
+releaseLock jobId = Hedis.del jobId.getId
 
 failJob :: JobText -> Text -> SchedulerM t ()
 failJob jobText description = do
@@ -125,7 +132,7 @@ executeTask rawJob = do
         Just jH -> executeTypeDecodedJob jH decJob
   where
     executeTypeDecodedJob :: JobHandler IO t -> Job t Text -> SchedulerM t ()
-    executeTypeDecodedJob jH@(JobHandler handlerFunc_ errorCatchers_) job = do
+    executeTypeDecodedJob (JobHandler handlerFunc_ errorCatchers_) job = do
       result <- withJobDataDecoded job $ \decJob -> do
         let totalErrorCatchers = errorCatchers_ decJob ++ [resultCatcher, defaultCatcher]
         liftIO $ handlerFunc_ decJob `C.catches` totalErrorCatchers
@@ -147,10 +154,10 @@ executeTask rawJob = do
                   updateErrorCountAndTerminate job.id newErrorsCount
                 else do
                   logInfo $ "try " <> show newErrorsCount <> " was not successful, trying again"
-                  updateFailureCount job.id newErrorsCount
                   waitBeforeRetry <- asks (.waitBeforeRetry)
-                  threadDelaySec waitBeforeRetry
-                  executeTypeDecodedJob jH job {currErrors = newErrorsCount}
+                  now <- getCurrentTime
+                  reScheduleOnError job.id newErrorsCount $
+                    fromIntegral waitBeforeRetry `addUTCTime` now
 
 resultCatcher :: C.Handler IO ExecutionResult
 resultCatcher = C.Handler pure

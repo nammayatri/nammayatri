@@ -69,3 +69,15 @@ updateFailureCount jobId newCountValue = do
   Esq.update $ \job -> do
     set job [JobCurrErrors =. val newCountValue, JobUpdatedAt =. val now]
     where_ $ job ^. JobId ==. val jobId.getId
+
+reScheduleOnError :: Id (Job a b) -> Int -> UTCTime -> SchedulerM t ()
+reScheduleOnError jobId newCountValue newScheduleTime = do
+  now <- getCurrentTime
+  Esq.update $ \job -> do
+    set
+      job
+      [ JobScheduledAt =. val newScheduleTime,
+        JobUpdatedAt =. val now,
+        JobCurrErrors =. val newCountValue
+      ]
+    where_ $ job ^. JobId ==. val jobId.getId
