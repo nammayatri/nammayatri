@@ -3,7 +3,9 @@
 module Beckn.Scheduler.Types where
 
 import Beckn.Prelude
+import Beckn.Scheduler.Error
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.GenericPretty
 
 -- Job initializer
@@ -35,12 +37,37 @@ data Job t d = Job
 setJobData :: d2 -> Job t d1 -> Job t d2
 setJobData data2_ Job {..} = Job {id = cast id, jobData = data2_, ..}
 
+type JobTypeConstraints a = (Eq a, Ord a, Show a, FromJSON a, ToJSON a)
+
+type JobDataConstraints a = (Eq a, Show a, FromJSON a, ToJSON a)
+
+encodeJob :: (JobTypeConstraints a, JobDataConstraints b) => Job a b -> JobText
+encodeJob Job {..} =
+  Job
+    { id = cast id,
+      jobType = encodeToText jobType,
+      jobData = encodeToText jobData,
+      ..
+    }
+
+decodeJob :: forall a b. (JobTypeConstraints a, JobDataConstraints b) => JobText -> Either JobDecodeError (Job a b)
+decodeJob Job {..} = do
+  jobType_ <- maybe (Left $ InvalidJobType jobType) Right $ decodeFromText jobType
+  jobData_ <- maybe (Left $ InvalidJobData jobData) Right $ decodeFromText jobData
+  pure
+    Job
+      { id = cast id,
+        jobType = jobType_,
+        jobData = jobData_,
+        ..
+      }
+
 type JobText = Job Text Text
 
-data JobStatus = PENDING | COMPLETED | TERMINATED
+data JobStatus = Pending | Completed | Terminated
   deriving (Show, Eq, Read, Generic)
   deriving (PrettyShow) via Showable JobStatus
 
-data ExecutionResult = Completed | Terminate | Retry | ReSchedule UTCTime
+data ExecutionResult = Complete | Terminate | Retry | ReSchedule UTCTime
   deriving (Show, Generic, Exception)
   deriving (PrettyShow) via Showable ExecutionResult

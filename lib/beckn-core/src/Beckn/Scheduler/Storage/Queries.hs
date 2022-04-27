@@ -2,12 +2,12 @@ module Beckn.Scheduler.Storage.Queries where
 
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
-import Beckn.Scheduler.Serialization
 import Beckn.Scheduler.Storage.Tabular
-import Beckn.Scheduler.Types (Job, JobStatus (COMPLETED, PENDING, TERMINATED), JobText)
+import Beckn.Scheduler.Types
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common (MonadTime (getCurrentTime))
 import Beckn.Types.Id
+import Beckn.Utils.Common (encodeToText)
 
 create :: JobText -> SqlDB ()
 create = create'
@@ -24,15 +24,15 @@ getTasksById ids = Esq.findAll $ do
   where_ $ job ^. JobId `in_` valList (map (.getId) ids)
   pure job
 
-getReadyTasks :: (JobTypeSerializable t) => Maybe t -> SchedulerM t [JobText]
+getReadyTasks :: (JobTypeConstraints t) => Maybe t -> SchedulerM t [JobText]
 getReadyTasks mbType = do
   now <- getCurrentTime
   Esq.findAll $ do
     job <- from $ table @JobT
     where_ $
-      job ^. JobStatus ==. val PENDING
+      job ^. JobStatus ==. val Pending
         &&. job ^. JobScheduledAt <=. val now
-        &&. maybe (val True) (\jobType -> job ^. JobJobType ==. val (jobTypeToText jobType)) mbType
+        &&. maybe (val True) (\jobType -> job ^. JobJobType ==. val (encodeToText jobType)) mbType
     orderBy [asc $ job ^. JobScheduledAt]
     pure job
 
@@ -44,16 +44,16 @@ updateStatus newStatus jobId = do
     where_ $ job ^. JobId ==. val jobId.getId
 
 markAsComplete :: Id (Job a b) -> SchedulerM t ()
-markAsComplete = updateStatus COMPLETED
+markAsComplete = updateStatus Completed
 
 markAsTerminated :: Id (Job a b) -> SchedulerM t ()
-markAsTerminated = updateStatus TERMINATED
+markAsTerminated = updateStatus Terminated
 
 updateErrorCountAndTerminate :: Id (Job a b) -> Int -> SchedulerM t ()
 updateErrorCountAndTerminate jobId fCount = do
   now <- getCurrentTime
   Esq.update $ \job -> do
-    set job [JobStatus =. val TERMINATED, JobCurrErrors =. val fCount, JobUpdatedAt =. val now]
+    set job [JobStatus =. val Terminated, JobCurrErrors =. val fCount, JobUpdatedAt =. val now]
     where_ $ job ^. JobId ==. val jobId.getId
 
 reSchedule :: Id (Job a b) -> UTCTime -> SchedulerM t ()

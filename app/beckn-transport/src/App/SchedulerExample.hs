@@ -23,13 +23,13 @@ runTransporterScheduler configModifier = do
 
 schedulerHandlersList :: JobHandlerList SchedulerT JobType
 schedulerHandlersList =
-  [ (PrintBananasCount, JobHandler bananasCounterHandler emptyCatchers),
-    (PrintCurrentTimeWithErrorProbability, JobHandler timePrinterHandler emptyCatchers),
-    (IncorrectDataJobType, JobHandler incorrectDataJobHandler emptyCatchers)
+  [ (PrintBananasCount, JobHandler bananasCounterHandler),
+    (PrintCurrentTimeWithErrorProbability, JobHandler timePrinterHandler),
+    (IncorrectDataJobType, JobHandler incorrectDataJobHandler)
   ]
 
 -----------------
-type SchedulerT = MockM SchedulerResources
+type SchedulerT = MockM LoggerResources
 
 makeTestJobEntry :: JobType -> d -> JobEntry JobType d
 makeTestJobEntry jType jData =
@@ -46,7 +46,6 @@ data JobType
   | FakeJobType
   deriving stock (Generic, Show, Eq, Ord)
   deriving anyclass (FromJSON, ToJSON, FromDhall)
-  deriving (JobTypeSerializable) via JSONable JobType
   deriving (PrettyShow) via Showable JobType
 
 -----------------
@@ -56,7 +55,6 @@ data BananasCount = BananasCount
   }
   deriving stock (Generic, Show, Eq)
   deriving anyclass (FromJSON, ToJSON, PrettyShow)
-  deriving (JobDataSerializable) via JSONable BananasCount
 
 createBananasCountingJob :: NominalDiffTime -> Flow (Id (Job JobType BananasCount))
 createBananasCountingJob scheduleIn = do
@@ -103,7 +101,6 @@ data IncorrectlySerializable = IncSer
   deriving stock (Generic, Show, Eq)
   deriving anyclass (ToJSON, PrettyShow)
   deriving (FromJSON) via JSONfail IncorrectlySerializable
-  deriving (JobDataSerializable) via JSONable IncorrectlySerializable
 
 newtype JSONfail a = JSONfail a
 

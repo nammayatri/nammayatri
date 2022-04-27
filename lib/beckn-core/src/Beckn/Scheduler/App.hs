@@ -2,9 +2,9 @@
 
 module Beckn.Scheduler.App
   ( runScheduler,
+    runSchedulerIO,
     createJobByTime,
     createJobIn,
-    emptyCatchers,
   )
 where
 
@@ -14,7 +14,6 @@ import Beckn.Prelude
 import Beckn.Scheduler.Environment
 import Beckn.Scheduler.JobHandler
 import Beckn.Scheduler.Metrics
-import Beckn.Scheduler.Serialization
 import Beckn.Scheduler.Storage.Queries
 import qualified Beckn.Scheduler.Storage.Queries as Q
 import Beckn.Scheduler.Types
@@ -38,22 +37,30 @@ import UnliftIO.Concurrent (forkIO)
 
 runScheduler ::
   forall t m.
-  JobTypeSerializable t =>
-  C.MonadThrow m =>
+  JobTypeConstraints t =>
   SchedulerConfig t ->
-  (forall q. SchedulerResources -> m q -> IO q) ->
+  (forall q. LoggerResources -> m q -> IO q) ->
   JobHandlerList m t ->
   IO ()
-runScheduler SchedulerConfig {..} runMonad handlersList = do
+runScheduler config transformFunc hList = runSchedulerIO config handlersListFunc
+  where
+    handlersListFunc loggerResources =
+      map (second $ transformJobHandler $ transformFunc loggerResources) hList
+
+runSchedulerIO ::
+  forall t.
+  JobTypeConstraints t =>
+  SchedulerConfig t ->
+  (LoggerResources -> JobHandlerList IO t) ->
+  IO ()
+runSchedulerIO SchedulerConfig {..} handlersList = do
   hostname <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   metrics <- setupSchedulerMetrics
-  let schedulerResources = SchedulerResources {..}
-      transformFunc :: forall q. m q -> IO q
-      transformFunc = runMonad schedulerResources
-      handlersMap = Map.fromList $ map (second $ transformJobHandler transformFunc) handlersList
+  let schedulerResources = LoggerResources {..}
+      handlersMap = Map.fromList $ handlersList schedulerResources
 
   let schedulerEnv = SchedulerEnv {..}
   let runMigrations :: SchedulerM t ()
@@ -65,7 +72,7 @@ runScheduler SchedulerConfig {..} runMonad handlersList = do
     runMigrations
     runner
 
-runner :: (JobTypeSerializable t) => SchedulerM t ()
+runner :: (JobTypeConstraints t) => SchedulerM t ()
 runner = do
   before <- getCurrentTime
   let errorLogger e = logError $ "error occured: " <> show e
@@ -76,7 +83,7 @@ runner = do
   threadDelaySec (loopIntervalSec - diff)
   runner
 
-runnerIteration :: (JobTypeSerializable t) => SchedulerM t ()
+runnerIteration :: (JobTypeConstraints t) => SchedulerM t ()
 runnerIteration = do
   jobType <- asks (.jobType)
   readyTasks <- getReadyTasks jobType
@@ -89,7 +96,7 @@ runnerIteration = do
         measuringDuration registerDuration $ executeTask job
         releaseLock job.id
 
-registerDuration :: Milliseconds -> () -> SchedulerM t ()
+registerDuration :: Milliseconds -> a -> SchedulerM t ()
 registerDuration millis _ = do
   let durSecDouble = millisToSecondsDouble millis
   observeJobExecDuration durSecDouble
@@ -121,16 +128,16 @@ failJob jobText description = do
   logPretty ERROR "failed job" jobText
   markAsTerminated jobText.id
 
-withJobDataDecoded :: forall d t m. (JobDataSerializable d, Log m, Monad m) => Job t Text -> (Job t d -> m ExecutionResult) -> m ExecutionResult
+withJobDataDecoded :: forall d t m. (JobDataConstraints d, Log m, Monad m) => Job t Text -> (Job t d -> m ExecutionResult) -> m ExecutionResult
 withJobDataDecoded txtDataJob action =
-  maybe errHandler successHandler $ jobDataFromText @d txtDataJob.jobData
+  maybe errHandler successHandler $ decodeFromText @d txtDataJob.jobData
   where
     errHandler = do
       logError $ "failed to decode job data: " <> txtDataJob.jobData
       pure Terminate
     successHandler jobData_ = action $ setJobData jobData_ txtDataJob
 
-executeTask :: forall t. (JobTypeSerializable t) => JobText -> SchedulerM t ()
+executeTask :: forall t. (JobTypeConstraints t) => JobText -> SchedulerM t ()
 executeTask rawJob = do
   let eithTypeDecodedJob = decodeJob @t @Text rawJob
   case eithTypeDecodedJob of
@@ -143,12 +150,11 @@ executeTask rawJob = do
         Just jH -> executeTypeDecodedJob jH decJob
   where
     executeTypeDecodedJob :: JobHandler IO t -> Job t Text -> SchedulerM t ()
-    executeTypeDecodedJob (JobHandler handlerFunc_ errorCatchers_) job = do
+    executeTypeDecodedJob (JobHandler handlerFunc_) job = do
       result <- withJobDataDecoded job $ \decJob -> do
-        let totalErrorCatchers = errorCatchers_ decJob ++ [resultCatcher, defaultCatcher]
-        liftIO $ handlerFunc_ decJob `C.catches` totalErrorCatchers
+        liftIO $ handlerFunc_ decJob `C.catchAll` defaultCatcher
       case result of
-        Completed -> do
+        Complete -> do
           logInfo $ "job successfully completed on try " <> show (job.currErrors + 1)
           markAsComplete job.id
         Terminate -> do
@@ -170,14 +176,8 @@ executeTask rawJob = do
                   reScheduleOnError job.id newErrorsCount $
                     fromIntegral waitBeforeRetry `addUTCTime` now
 
-resultCatcher :: C.Handler IO ExecutionResult
-resultCatcher = C.Handler pure
-
-defaultCatcher :: C.Handler IO ExecutionResult
-defaultCatcher = C.Handler $ const @_ @SomeException $ pure Retry
-
-emptyCatchers :: Job t d -> [C.Handler m b]
-emptyCatchers = const []
+defaultCatcher :: SomeException -> IO ExecutionResult
+defaultCatcher _ = pure Retry
 
 -- api
 
@@ -186,8 +186,8 @@ type SchedulingConstraints m r t d =
     MonadGuid m,
     MonadCatch m,
     Log m,
-    JobTypeSerializable t,
-    JobDataSerializable d,
+    JobTypeConstraints t,
+    JobDataConstraints d,
     Show t,
     Show d
   )
@@ -223,8 +223,8 @@ createJob ::
   ( HasEsqEnv r m,
     MonadGuid m,
     MonadCatch m,
-    JobTypeSerializable a,
-    JobDataSerializable b,
+    JobTypeConstraints a,
+    JobDataConstraints b,
     Show a,
     Show b,
     Log m

@@ -33,10 +33,8 @@ data SchedulerConfig t = SchedulerConfig
   deriving (Generic, FromDhall)
 
 -- this datatype's purpose is to share some resources between the scheduler and the handler function
-data SchedulerResources = SchedulerResources
-  { esqDBEnv :: EsqDBEnv,
-    hedisEnv :: HedisEnv,
-    loggerEnv :: LoggerEnv,
+data LoggerResources = LoggerResources
+  { loggerEnv :: LoggerEnv,
     loggerConfig :: LoggerConfig
   }
 
