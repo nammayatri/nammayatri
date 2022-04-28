@@ -82,6 +82,8 @@ data FCMNotificationType
   | ALLOCATION_REQUEST_UNASSIGNED
   | ACCOUNT_DISABLED
   | TRIGGER_SERVICE
+  | FARE_POLICY_CHANGED
+  | DISCOUNT_CHANGED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON)
 
 -- | Entity types types

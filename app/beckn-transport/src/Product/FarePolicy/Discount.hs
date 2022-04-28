@@ -11,9 +11,11 @@ import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude
 import qualified Storage.Queries.FarePolicy.Discount as QDisc
+import qualified Storage.Queries.Person as QP
 import Types.API.FarePolicy.Discount
 import Types.Error
 import Utils.Common (GuidLike (generateGUID), MonadFlow, MonadTime (getCurrentTime), fromMaybeM, throwError, withFlowHandlerAPI)
+import qualified Utils.Notifications as Notify
 
 createFarePolicyDiscount :: SP.Person -> CreateFarePolicyDiscountReq -> FlowHandler CreateFarePolicyDiscountRes
 createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
@@ -22,7 +24,11 @@ createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
   discounts <- QDisc.findAll orgId req.vehicleVariant
   when (req.enabled && any (.enabled) discounts) $ throwError FPDiscountAlreadyEnabled
   disc <- buildDiscount orgId
+  cooridinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $ QDisc.create disc
+  let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
+  for_ otherCoordinators $ \cooridinator -> do
+    Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
   pure Success
   where
     buildDiscount :: MonadFlow m => Id Org.Organization -> m DFPDiscount.Discount
@@ -57,7 +63,11 @@ updateFarePolicyDiscount admin discId req = withFlowHandlerAPI $ do
                  discount = toRational req.discount,
                  enabled = req.enabled
                 }
+  cooridinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $ QDisc.update discId updatedFarePolicy
+  let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
+  for_ otherCoordinators $ \cooridinator -> do
+    Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
   pure Success
 
 deleteFarePolicyDiscount :: SP.Person -> Id DFPDiscount.Discount -> FlowHandler UpdateFarePolicyDiscountRes
@@ -65,5 +75,9 @@ deleteFarePolicyDiscount admin discId = withFlowHandlerAPI $ do
   let Just orgId = admin.organizationId
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.organizationId == orgId) $ throwError AccessDenied
+  cooridinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $ QDisc.deleteById discId
+  let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
+  for_ otherCoordinators $ \cooridinator -> do
+    Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
   pure Success

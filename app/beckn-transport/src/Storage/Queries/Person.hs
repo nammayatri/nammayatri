@@ -56,6 +56,15 @@ findAllByOrgId roles orgId =
         &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)
     return person
 
+findAdminsByOrgId :: Transactionable m => Id Organization -> m [Person]
+findAdminsByOrgId orgId =
+  Esq.findAll $ do
+    person <- from $ table @PersonT
+    where_ $
+      person ^. PersonOrganizationId ==. val (Just (toKey orgId))
+        &&. person ^. PersonRole ==. val Person.ADMIN
+    return person
+
 findByMobileNumber ::
   (Transactionable m, EncFlow m r) =>
   Text ->

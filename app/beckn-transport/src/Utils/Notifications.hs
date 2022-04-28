@@ -198,3 +198,53 @@ notifyRideNotAssigned rideBookingId personId =
           fcmEntityIds = getId rideBookingId,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST_UNASSIGNED
         }
+
+notifyFarePolicyChange ::
+  ( FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  Id coordinatorId ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyFarePolicyChange coordinatorId =
+  FCM.notifyPerson notificationData . FCMNotificationRecipient coordinatorId.getId
+  where
+    title = FCM.FCMNotificationTitle "Fare policy changed."
+    body =
+      FCM.FCMNotificationBody $
+        unwords
+          [ "Fare has been updated."
+          ]
+    notificationData =
+      FCM.FCMAndroidData
+        { fcmNotificationType = FCM.FARE_POLICY_CHANGED,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = getId coordinatorId,
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.FARE_POLICY_CHANGED
+        }
+
+notifyDiscountChange ::
+  ( FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  Id coordinatorId ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyDiscountChange coordinatorId =
+  FCM.notifyPerson notificationData . FCMNotificationRecipient coordinatorId.getId
+  where
+    title = FCM.FCMNotificationTitle "Discount updated."
+    body =
+      FCM.FCMNotificationBody $
+        unwords
+          [ "Discount has been changed."
+          ]
+    notificationData =
+      FCM.FCMAndroidData
+        { fcmNotificationType = FCM.DISCOUNT_CHANGED,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = getId coordinatorId,
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DISCOUNT_CHANGED
+        }

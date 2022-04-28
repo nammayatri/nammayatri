@@ -11,9 +11,11 @@ import qualified Domain.Types.FarePolicy.PerExtraKmRate as DPerExtraKmRate
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude
 import qualified Storage.Queries.FarePolicy as SFarePolicy
+import qualified Storage.Queries.Person as QP
 import Types.API.FarePolicy
 import Types.Error
 import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
+import qualified Utils.Notifications as Notify
 
 listFarePolicies :: SP.Person -> FlowHandler ListFarePolicyRes
 listFarePolicies person = withFlowHandlerAPI $ do
@@ -34,6 +36,11 @@ updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
                    nightShiftEnd = req.nightShiftEnd,
                    nightShiftRate = toRational <$> req.nightShiftRate
                   }
+  let Just orgId = admin.organizationId
+  cooridinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $
     SFarePolicy.updateFarePolicy updatedFarePolicy
+  let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
+  for_ otherCoordinators $ \cooridinator -> do
+    Notify.notifyFarePolicyChange cooridinator.id cooridinator.deviceToken
   pure Success
