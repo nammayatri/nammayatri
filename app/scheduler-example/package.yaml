@@ -1,10 +1,10 @@
-name: beckn-transport
+name: scheduler-example
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
 author: "Juspay"
 maintainer: "Juspay"
-copyright: "2020 Juspay Technologies Private Limited"
+copyright: "2021 Juspay Technologies Private Limited"
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -33,7 +33,9 @@ default-extensions:
   - MultiWayIf
   - NamedFieldPuns
   - NoImplicitPrelude
+  - OverloadedLabels
   - OverloadedStrings
+  - PackageImports
   - PatternSynonyms
   - PolyKinds
   - RankNTypes
@@ -47,63 +49,40 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
-  - StandaloneDeriving
 
 dependencies:
   - aeson
   - base >= 4.7 && < 5
-  - generic-lens
+  - beckn-core
   - bytestring
-  - cryptonite
-  - containers
-  - euler-hs
-  - exceptions
-  - hspec
-  - http-api-data
-  - http-client
-  - http-types
-  - lens
-  - mtl
-  - servant
-  - servant-client
-  - servant-client-core
-  - servant-server
-  - text
-  - wai
-  - wai-extra
-  - warp
-  - time
-  - stm
-  - random-strings
-  - postgresql-simple
-  - resource-pool
-  - uuid
-  - prometheus-client
-  - record-hasfield
   - record-dot-preprocessor
-  - servant-openapi3
-  - openapi3
-  - string-conversions
+  - record-hasfield
+  - text
+  - time
+  - servant-server
+  - persistent
+  - persistent-postgresql
+  - esqueleto
+  - template-haskell
   - random
 
 ghc-options:
+  - -Wall
+  - -Wcompat
+  - -Werror
+  - -Widentities
+  - -Wunused-imports
+  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src
   ghc-options:
-    - -Wall
-    - -Wcompat
-    - -Widentities
-    - -fhide-source-paths
-    - -Werror
-  dependencies:
-    - beckn-core
+    - -Wincomplete-uni-patterns
 
 executables:
-  beckn-transport-exe:
+  scheduler-example-app-exe:
     main: Main.hs
     source-dirs: server
     other-modules: []
@@ -111,46 +90,20 @@ executables:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
+      - -Wincomplete-uni-patterns
     dependencies:
-      - beckn-transport
+      - scheduler-example
       - beckn-core
-  allocation-service-exe:
-    main: AllocationServiceMain.hs
+  scheduler-example-scheduler-exe:
+    main: Scheduler.hs
     source-dirs: server
     other-modules: []
     ghc-options:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
+      - -Wincomplete-uni-patterns
     dependencies:
-      - beckn-transport
-      - beckn-core
-  driver-tracking-healthcheck-exe:
-    main: DriverTrackingHealthcheckMain.hs
-    source-dirs: server
-    other-modules: []
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - '"-with-rtsopts=-N -T"'
-    dependencies:
-      - beckn-transport
+      - scheduler-example
       - beckn-core
 
-tests:
-  beckn-transport-tests:
-    main: Main.hs
-    source-dirs:
-      - test/app
-      - test/src
-    dependencies:
-      - beckn-transport
-      - beckn-core
-      - tasty
-      - tasty-hunit
-      - tasty-hspec
-      - QuickCheck
-      - tasty-quickcheck
-    ghc-options:
-      - -Wall
-      - -Werror

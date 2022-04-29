@@ -2,7 +2,6 @@
 
 module Beckn.Scheduler.App
   ( runScheduler,
-    runSchedulerIO,
     createJobByTime,
     createJobIn,
   )
@@ -36,31 +35,18 @@ import qualified Data.Map as Map
 import UnliftIO.Concurrent (forkIO)
 
 runScheduler ::
-  forall t m.
-  JobTypeConstraints t =>
-  SchedulerConfig t ->
-  (forall q. LoggerResources -> m q -> IO q) ->
-  JobHandlerList m t ->
-  IO ()
-runScheduler config transformFunc hList = runSchedulerIO config handlersListFunc
-  where
-    handlersListFunc loggerResources =
-      map (second $ transformJobHandler $ transformFunc loggerResources) hList
-
-runSchedulerIO ::
   forall t.
   JobTypeConstraints t =>
   SchedulerConfig t ->
-  (LoggerResources -> JobHandlerList IO t) ->
+  JobHandlerList t ->
   IO ()
-runSchedulerIO SchedulerConfig {..} handlersList = do
+runScheduler SchedulerConfig {..} handlersList = do
   hostname <- getPodName
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   metrics <- setupSchedulerMetrics
-  let schedulerResources = LoggerResources {..}
-      handlersMap = Map.fromList $ handlersList schedulerResources
+  let handlersMap = Map.fromList handlersList
 
   let schedulerEnv = SchedulerEnv {..}
   let runMigrations :: SchedulerM t ()
@@ -149,7 +135,7 @@ executeTask rawJob = do
         Nothing -> failJob rawJob $ "no handler function for the job type = " <> show decJobType
         Just jH -> executeTypeDecodedJob jH decJob
   where
-    executeTypeDecodedJob :: JobHandler IO t -> Job t Text -> SchedulerM t ()
+    executeTypeDecodedJob :: JobHandler t -> Job t Text -> SchedulerM t ()
     executeTypeDecodedJob (JobHandler handlerFunc_) job = do
       result <- withJobDataDecoded job $ \decJob -> do
         liftIO $ handlerFunc_ decJob `C.catchAll` defaultCatcher
@@ -262,5 +248,5 @@ createJob scheduledAt jobEntry = do
           createdAt = currentTime,
           updatedAt = currentTime,
           currErrors = 0,
-          status = PENDING
+          status = Pending
         }

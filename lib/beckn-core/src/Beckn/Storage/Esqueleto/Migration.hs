@@ -13,6 +13,7 @@ import Data.ByteString
 import qualified Data.Text as T
 import qualified Database.PostgreSQL.Simple as PS
 import Database.PostgreSQL.Simple.Migration
+import Database.PostgreSQL.Simple.Types (Query (Query))
 
 fromEsqDBConfig :: EsqDBConfig -> PS.ConnectInfo
 fromEsqDBConfig EsqDBConfig {..} =
@@ -39,7 +40,10 @@ migrateIfNeeded' mPath autoMigrate schemaName connectInfo =
         bracket
           (liftIO (PS.connect connectInfo))
           (liftIO . PS.close)
-          (migrate path)
+          ( \conn -> do
+              _ <- liftIO $ PS.execute_ conn $ "SET search_path TO " <> Query schemaName
+              migrate path conn
+          )
     _ ->
       pure $ Right ()
   where

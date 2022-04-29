@@ -164,3 +164,14 @@ cradle:
 
     - path: "test/app"
       component: "beckn-test:test:beckn-integ-test"
+
+    - path: "app/scheduler-example/src"
+      component: "scheduler-example:lib"
+
+    - path: "app/scheduler-example/server/Main.hs"
+      component: "scheduler-example:exe:scheduler-example-exe"
+
+    - path: "app/scheduler-example/server/Paths_scheduler_example.hs"
+      component: "scheduler-example:exe:scheduler-example-exe"
+
+

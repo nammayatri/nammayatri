@@ -1,11 +1,10 @@
 {-# LANGUAGE DerivingVia #-}
 
-module App.SchedulerExample where
+module App.Scheduler where
 
 -- FIXME: This entire module is just for example
 -- TODO: move it to the integration tests when real usage of the scheduler library appears.
 
-import App.Types (Flow)
 import Beckn.Mock.App (MockM, runMock)
 import Beckn.Prelude
 import Beckn.Scheduler
@@ -14,21 +13,32 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Dhall (FromDhall, readDhallConfigDefault)
 import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
+import Beckn.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
+import Environment (Flow)
 import System.Random
 
-runTransporterScheduler :: (SchedulerConfig JobType -> SchedulerConfig JobType) -> IO ()
-runTransporterScheduler configModifier = do
-  appCfg <- configModifier <$> readDhallConfigDefault "beckn-transport-scheduler"
-  runScheduler appCfg runMock schedulerHandlersList
+runExampleScheduler :: (SchedulerConfig JobType -> SchedulerConfig JobType) -> IO ()
+runExampleScheduler configModifier = do
+  appCfg <- configModifier <$> readDhallConfigDefault "scheduler-example-scheduler"
+  let loggerConfig = appCfg.loggerConfig
+  loggerEnv <- prepareLoggerEnv loggerConfig Nothing
+  let loggerRes = LoggerResources {..}
+  runScheduler appCfg $ schedulerHandlerList loggerRes
 
-schedulerHandlersList :: JobHandlerList SchedulerT JobType
-schedulerHandlersList =
-  [ (PrintBananasCount, JobHandler bananasCounterHandler),
-    (PrintCurrentTimeWithErrorProbability, JobHandler timePrinterHandler),
-    (IncorrectDataJobType, JobHandler incorrectDataJobHandler)
+schedulerHandlerList :: LoggerResources -> JobHandlerList JobType
+schedulerHandlerList loggerRes =
+  [ (PrintBananasCount, JobHandler $ runMock loggerRes . bananasCounterHandler),
+    (PrintCurrentTimeWithErrorProbability, JobHandler $ runMock loggerRes . timePrinterHandler),
+    (IncorrectDataJobType, JobHandler $ runMock loggerRes . incorrectDataJobHandler)
   ]
 
 -----------------
+
+data LoggerResources = LoggerResources
+  { loggerEnv :: LoggerEnv,
+    loggerConfig :: LoggerConfig
+  }
+
 type SchedulerT = MockM LoggerResources
 
 makeTestJobEntry :: JobType -> d -> JobEntry JobType d
@@ -72,7 +82,7 @@ bananasCounterHandler :: Job JobType BananasCount -> SchedulerT ExecutionResult
 bananasCounterHandler job = do
   logInfo "job of type 1 is being executed: printing job data"
   logPretty INFO "job data" job.jobData
-  pure Completed
+  pure Complete
 
 -----------------
 createTimePrinterJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
@@ -87,7 +97,7 @@ timePrinterHandler _ = do
     else do
       now <- getCurrentTime
       logInfo $ "current time: " <> show now
-      pure Completed
+      pure Complete
 
 -----------------
 createFakeJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
@@ -115,4 +125,4 @@ createIncorrectDataJob = flip createJobIn $ makeTestJobEntry IncorrectDataJobTyp
 incorrectDataJobHandler :: Job JobType IncorrectlySerializable -> SchedulerT ExecutionResult
 incorrectDataJobHandler _ = do
   logError "you shouldn't get here"
-  pure Completed
+  pure Complete

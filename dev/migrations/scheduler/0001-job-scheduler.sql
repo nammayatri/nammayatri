@@ -1,4 +1,4 @@
-CREATE TABLE atlas_transporter.job (
+CREATE TABLE job (
   id character varying(255) PRIMARY KEY,
   job_type character varying(255) NOT NULL,
   job_data text NOT NULL,

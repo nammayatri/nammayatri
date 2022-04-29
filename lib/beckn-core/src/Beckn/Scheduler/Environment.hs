@@ -32,19 +32,13 @@ data SchedulerConfig t = SchedulerConfig
   }
   deriving (Generic, FromDhall)
 
--- this datatype's purpose is to share some resources between the scheduler and the handler function
-data LoggerResources = LoggerResources
-  { loggerEnv :: LoggerEnv,
-    loggerConfig :: LoggerConfig
-  }
-
 data SchedulerEnv t = SchedulerEnv
   { esqDBEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
     metrics :: SchedulerMetrics,
-    handlersMap :: Map t (JobHandler IO t),
+    handlersMap :: Map t (JobHandler t),
     loopIntervalSec :: Int,
     expirationTime :: Integer,
     waitBeforeRetry :: Int,

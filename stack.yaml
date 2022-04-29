@@ -46,6 +46,7 @@ packages:
   - app/public-transport-search-consumer
   - app/mock-public-transport-bpp
   - app/mock-parking-bpp
+  - app/scheduler-example
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -132,12 +133,12 @@ extra-deps:
   - hw-kafka-client-4.0.3@sha256:20e3614454d5afd2a6acfc0709b9bf00bd6ee9a9bc646c2e2e4ccec1d16831a1,4861
   - constraints-0.11.2@sha256:d173efdf7a5d5515075635c686420211dccd9f85bc091a579ecc18b3f138a5fe,2324
   - some-1.0.1@sha256:26e5bab7276f48b25ea8660d3fd1166c0f20fd497dac879a40f408e23211f93e,2055
-  
+
   # Needed for gcc11 support in Kafka
   - c2hs-0.28.8@sha256:980c1a91c93e492d5412e904f2500b2ace34a421e8509529b6d98d89c51f9a2e,9208
   - language-c-0.9.0.1@sha256:7a1c57e8f9c29e94bcd5c748d99e4479a73bd8560cc0affd838f3b2d1bbc0384,4893
 
-  
+
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

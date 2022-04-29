@@ -23,6 +23,7 @@ services:
       - ./local-testing-data/public-transport-bap.sql:/docker-entrypoint-initdb.d/2-public-transport-bap-testing-data.sql:Z
       - ./sql-seed/mock-registry-seed.sql:/docker-entrypoint-initdb.d/1-mock-registry-seed.sql:Z
       - ./local-testing-data/mock-registry.sql:/docker-entrypoint-initdb.d/2-mock-registry-testing-data.sql:Z
+      - ./sql-seed/scheduler-example-seed.sql:/docker-entrypoint-initdb.d/1-scheduler-example-seed.sql:Z
 
     environment:
       - POSTGRES_DB=atlas_dev

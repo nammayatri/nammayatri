@@ -1,6 +1,11 @@
+@scheduler-example-server = http://localhost:8050
+
+###
+GET {{scheduler-example-server}}
+
 ###
 # @name test
-GET {{transporter-host}}/test
+GET {{scheduler-example-server}}/job
 token: {{driver-token}}
 content-type: application/json
 

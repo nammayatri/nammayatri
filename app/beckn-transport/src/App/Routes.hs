@@ -1,7 +1,6 @@
 module App.Routes where
 
 import App.Routes.FarePolicy
-import App.SchedulerExample (createBananasCountingJob, createFakeJob, createIncorrectDataJob, createTimePrinterJob)
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.APISuccess
@@ -11,7 +10,6 @@ import qualified Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Id
-import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi
 import qualified Domain.Types.CallStatus as SCS
@@ -62,10 +60,6 @@ type MainAPI =
   "v2" :> UIAPI
     :<|> "v1"
     :> OrgBecknAPI
-    :<|> "v2"
-    :> "test"
-    :> ReqBody '[JSON] Text
-    :> Get '[JSON] Text
 
 type UIAPI =
   HealthCheckAPI
@@ -107,18 +101,6 @@ mainServer :: FlowServer MainAPI
 mainServer =
   uiServer
     :<|> orgBecknApiFlow
-    :<|> testServer
-
--- TODO: remove this
-testServer :: Text -> FlowHandler Text
-testServer jobType = withFlowHandlerAPI $ do
-  case jobType of
-    "bananas" -> void $ createBananasCountingJob 7
-    "failing_time" -> void $ createTimePrinterJob 7
-    "incorrect_data" -> void $ createIncorrectDataJob 7
-    "fake_job" -> void $ createFakeJob 7
-    _ -> logWarning "unknown job type"
-  pure "OK"
 
 transporterServer :: FlowServer TransportAPI
 transporterServer =
