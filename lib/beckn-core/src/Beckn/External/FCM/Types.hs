@@ -323,9 +323,95 @@ instance Default FCMAndroidConfig where
      in FCMAndroidConfig z z z z z z z
 
 -- | Apple Push Notification Service specific options
+data FCMAlert = FCMAlert
+  { fcmTitle :: !(Maybe Text),
+    fcmBody :: !(Maybe Text)
+  }
+  deriving (Eq, Show)
+
+$(makeLenses ''FCMAlert)
+
+instance ToJSON FCMAlert where
+  toJSON FCMAlert {..} =
+    object
+      [ "title" .= fcmTitle,
+        "body" .= fcmBody
+      ]
+
+instance FromJSON FCMAlert where
+  parseJSON = withObject "FCMAlert" \o ->
+    FCMAlert
+      <$> o .: "title"
+      <*> o .: "body"
+
+instance Default FCMAlert where
+  def = FCMAlert Nothing Nothing
+
+-----------------------------------------
+
+data FCMaps = FCMaps
+  { fcmAlert :: !(Maybe FCMAlert),
+    fcmData :: !(Maybe FCMAndroidData),
+    fcmCategory :: !(Maybe FCMNotificationType)
+  }
+  deriving (Eq, Show)
+
+$(makeLenses ''FCMaps)
+
+instance ToJSON FCMaps where
+  toJSON FCMaps {..} =
+    object
+      [ "alert" .= fcmAlert,
+        "data" .= fcmData,
+        "category" .= fcmCategory
+      ]
+
+instance FromJSON FCMaps where
+  parseJSON = withObject "FCMaps" \o ->
+    FCMaps
+      <$> o .: "alert"
+      <*> o .: "data"
+      <*> o .: "category"
+
+instance Default FCMaps where
+  def = FCMaps Nothing Nothing Nothing
+
+newtype FCMApnPayload = FCMApnPayload
+  { fcmAps :: Maybe FCMaps
+  }
+  deriving (Eq, Show)
+
+$(makeLenses ''FCMApnPayload)
+
+$(deriveJSON (aesonPrefix snakeCase) {omitNothingFields = True} ''FCMApnPayload)
+
+instance Default FCMApnPayload where
+  def = FCMApnPayload Nothing
+
+newtype FCMApnHeaders = FCMApnHeaders
+  { fcmApnsPriority :: Maybe Text
+  }
+  deriving (Eq, Show)
+
+$(makeLenses ''FCMApnHeaders)
+
+instance ToJSON FCMApnHeaders where
+  toJSON FCMApnHeaders {..} =
+    object
+      [ "apns-priority" .= fcmApnsPriority
+      ]
+
+instance FromJSON FCMApnHeaders where
+  parseJSON = withObject "FCMApnHeaders" \o ->
+    FCMApnHeaders
+      <$> o .: "apns-priority"
+
+instance Default FCMApnHeaders where
+  def = FCMApnHeaders Nothing
+
 data FCMApnsConfig = FCMApnsConfig
-  { fcmaHeaders :: !(Maybe FCMHeaders),
-    fcmaPayload :: !(Maybe Value),
+  { fcmaHeaders :: !(Maybe FCMApnHeaders),
+    fcmaPayload :: !(Maybe FCMApnPayload),
     fcmaOptions :: !(Maybe FCMApnsOptions)
   }
   deriving (Eq, Show)

@@ -34,7 +34,7 @@ notifyOnRideAssigned rideBooking ride = do
           { fcmNotificationType = FCM.DRIVER_ASSIGNMENT,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
-            fcmEntityIds = show $ getId rideId,
+            fcmEntityIds = getId rideId,
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ASSIGNMENT
           }
       title = FCMNotificationTitle $ T.pack "Driver assigned!"
@@ -64,7 +64,7 @@ notifyOnRideStarted rideBooking ride = do
           { fcmNotificationType = FCM.TRIP_STARTED,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
-            fcmEntityIds = show $ getId rideId,
+            fcmEntityIds = getId rideId,
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_STARTED
           }
       title = FCMNotificationTitle $ T.pack "Trip started!"
@@ -94,7 +94,7 @@ notifyOnRideCompleted rideBooking ride = do
           { fcmNotificationType = FCM.TRIP_FINISHED,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
-            fcmEntityIds = show $ getId rideId,
+            fcmEntityIds = getId rideId,
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_FINISHED
           }
       title = FCMNotificationTitle $ T.pack "Trip finished!"
@@ -124,7 +124,7 @@ notifyOnExpiration searchReq = do
               { fcmNotificationType = FCM.EXPIRED_CASE,
                 fcmShowNotification = FCM.SHOW,
                 fcmEntityType = FCM.SearchRequest,
-                fcmEntityIds = show $ getId searchRequestId,
+                fcmEntityIds = getId searchRequestId,
                 fcmNotificationJSON = FCM.createAndroidNotification title body FCM.EXPIRED_CASE
               }
           title = FCMNotificationTitle $ T.pack "Ride expired!"
@@ -152,7 +152,7 @@ notifyOnRegistration regToken personId mbDeviceToken =
           { fcmNotificationType = FCM.REGISTRATION_APPROVED,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Organization,
-            fcmEntityIds = show tokenId,
+            fcmEntityIds = getId tokenId,
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED
           }
       title = FCMNotificationTitle $ T.pack "Registration Completed!"
@@ -174,7 +174,7 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = show $ getId rideBooking.requestId,
+          fcmEntityIds = getId rideBooking.requestId,
           fcmNotificationJSON = FCM.createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -221,7 +221,7 @@ notifyOnRideBookingReallocated rideBooking cancellationSource = do
           { fcmNotificationType = FCM.REALLOCATE_PRODUCT,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
-            fcmEntityIds = show $ getId rideBooking.requestId,
+            fcmEntityIds = getId rideBooking.requestId,
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
           }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"

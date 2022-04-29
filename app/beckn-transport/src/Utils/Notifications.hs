@@ -34,7 +34,7 @@ notifyOnCancel searchRequest personId mbDeviceToken cancellationSource = do
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = show $ getId searchRequestId,
+          fcmEntityIds = getId searchRequestId,
           fcmNotificationJSON = FCM.createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -81,7 +81,7 @@ notifyOnRegistration regToken personId =
         { fcmNotificationType = FCM.REGISTRATION_APPROVED,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Organization,
-          fcmEntityIds = show tokenId,
+          fcmEntityIds = getId tokenId,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED
         }
     title = FCMNotificationTitle $ T.pack "Registration Completed!"
@@ -137,7 +137,7 @@ sendNotificationToDriver displayOption priority notificationType notificationTit
       FCM.FCMAndroidData
         { fcmNotificationType = notificationType,
           fcmShowNotification = displayOption,
-          fcmEntityIds = show . getId $ driverId,
+          fcmEntityIds = getId driverId,
           fcmEntityType = FCM.Person,
           fcmNotificationJSON = FCM.createAndroidNotification title body notificationType
         }
