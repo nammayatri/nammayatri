@@ -34,6 +34,9 @@ data Job t d = Job
   }
   deriving (Eq, Show, Generic, PrettyShow)
 
+setJobType :: t2 -> Job t1 d -> Job t2 d
+setJobType type2_ Job {..} = Job {id = cast id, jobType = type2_, ..}
+
 setJobData :: d2 -> Job t d1 -> Job t d2
 setJobData data2_ Job {..} = Job {id = cast id, jobData = data2_, ..}
 

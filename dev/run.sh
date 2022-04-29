@@ -17,11 +17,10 @@ public-transport-bap
 public-transport-search-consumer
 search-result-aggregator
 mock-public-transport-bpp
-transporter-job-scheduler
+scheduler-example-app
+scheduler-example-scheduler
 EOF
 }
-
-#public-transport-bap
 
 map () { while read -r line; do $1 "$line"; done; }
 

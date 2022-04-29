@@ -58,8 +58,7 @@ type TransportAPI =
 
 type MainAPI =
   "v2" :> UIAPI
-    :<|> "v1"
-    :> OrgBecknAPI
+    :<|> "v1" :> OrgBecknAPI
 
 type UIAPI =
   HealthCheckAPI

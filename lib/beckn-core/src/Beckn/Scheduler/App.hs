@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-
 module Beckn.Scheduler.App
   ( runScheduler,
     createJobByTime,
@@ -18,7 +16,7 @@ import qualified Beckn.Scheduler.Storage.Queries as Q
 import Beckn.Scheduler.Types
 import Beckn.Storage.Esqueleto
 import Beckn.Storage.Esqueleto.Config (prepareEsqDBEnv)
-import Beckn.Storage.Esqueleto.Migration (migrateIfNeeded)
+import Beckn.Storage.Esqueleto.Migration
 import qualified Beckn.Storage.Esqueleto.Queries as Esq
 import qualified Beckn.Storage.Esqueleto.Transactionable as Esq
 import Beckn.Storage.Hedis (connectHedis)
@@ -51,7 +49,7 @@ runScheduler SchedulerConfig {..} handlersList = do
   let schedulerEnv = SchedulerEnv {..}
   let runMigrations :: SchedulerM t ()
       runMigrations = do
-        eithRes <- migrateIfNeeded migrationPath autoMigrate esqDBCfg
+        eithRes <- migrateIfNeededWithinSchema migrationPath autoMigrate esqDBCfg
         handleLeft exitDBMigrationFailure "Couldn't migrate database: " eithRes
   Metrics.serve metricsPort
   runSchedulerM schedulerEnv $ do
@@ -90,16 +88,6 @@ registerDuration millis _ = do
 
 -- TODO: refactor the prometheus metrics to measure data that we really need
 
-attemptTaskLock :: Id (Job a b) -> SchedulerM t Bool
-attemptTaskLock jobId = do
-  expirationTime <- asks (.expirationTime)
-  successfulSet <- Hedis.setNx jobId.getId ()
-  if successfulSet
-    then do
-      Hedis.expire jobId.getId expirationTime
-      pure True
-    else pure False
-
 attemptTaskLockAtomic :: Id (Job a b) -> SchedulerM t Bool
 attemptTaskLockAtomic jobId = do
   expirationTime <- asks (.expirationTime)
@@ -125,15 +113,14 @@ withJobDataDecoded txtDataJob action =
 
 executeTask :: forall t. (JobTypeConstraints t) => JobText -> SchedulerM t ()
 executeTask rawJob = do
-  let eithTypeDecodedJob = decodeJob @t @Text rawJob
-  case eithTypeDecodedJob of
-    Left err -> failJob rawJob $ "type decode failure: " <> show err
-    Right decJob -> do
+  let eithDecodedType = decodeFromText @t rawJob.jobType
+  case eithDecodedType of
+    Nothing -> failJob rawJob $ "type decode failure: " <> rawJob.jobType
+    Just decJobType -> do
       hMap <- asks (.handlersMap)
-      let decJobType = decJob.jobType
       case Map.lookup decJobType hMap of
         Nothing -> failJob rawJob $ "no handler function for the job type = " <> show decJobType
-        Just jH -> executeTypeDecodedJob jH decJob
+        Just jH -> executeTypeDecodedJob jH $ setJobType decJobType rawJob
   where
     executeTypeDecodedJob :: JobHandler t -> Job t Text -> SchedulerM t ()
     executeTypeDecodedJob (JobHandler handlerFunc_) job = do

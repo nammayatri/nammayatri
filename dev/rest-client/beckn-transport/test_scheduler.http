@@ -13,7 +13,7 @@ content-type: application/json
 
 ###
 # @name test
-GET {{transporter-host}}/test
+GET {{scheduler-example-server}}/job
 token: {{driver-token}}
 content-type: application/json
 
@@ -21,7 +21,7 @@ content-type: application/json
 
 ###
 # @name test
-GET {{transporter-host}}/test
+GET {{scheduler-example-server}}/job
 token: {{driver-token}}
 content-type: application/json
 
@@ -29,7 +29,7 @@ content-type: application/json
 
 ###
 # @name test
-GET {{transporter-host}}/test
+GET {{scheduler-example-server}}/job
 token: {{driver-token}}
 content-type: application/json
 
