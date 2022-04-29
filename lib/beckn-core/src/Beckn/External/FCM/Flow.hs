@@ -35,7 +35,7 @@ import Servant
 -- | Create FCM message
 -- Note that data should be formed as key-value pairs list
 -- recipientId::FCMToken is an app's registration token
-createMessage :: FCMAndroidData -> FCMRecipientToken -> Maybe FCMAndroidMessagePriority -> FCMMessage
+createMessage :: FCMData -> FCMRecipientToken -> Maybe FCMAndroidMessagePriority -> FCMMessage
 createMessage msgData recipientId priority =
   def{fcmToken = Just recipientId,
       fcmAndroid = Just androidCfg,
@@ -46,13 +46,13 @@ createMessage msgData recipientId priority =
     apnsCfg = createApnsConfig msgData
 
 -- | Android Notification details
-createAndroidConfig :: FCMAndroidData -> Maybe FCMAndroidMessagePriority -> FCMAndroidConfig
+createAndroidConfig :: FCMData -> Maybe FCMAndroidMessagePriority -> FCMAndroidConfig
 createAndroidConfig cfgData priority =
   def{fcmdData = Just cfgData,
       fcmdPriority = priority
      }
 
-createApnsConfig :: FCMAndroidData -> FCMApnsConfig
+createApnsConfig :: FCMData -> FCMApnsConfig
 createApnsConfig androidFcmData =
   def{fcmaPayload = Just apnsPayload,
       fcmaHeaders =
@@ -64,7 +64,7 @@ createApnsConfig androidFcmData =
   where
     apnsPayload = createApnsPayload androidFcmData
 
-createApnsPayload :: FCMAndroidData -> FCMApnPayload
+createApnsPayload :: FCMData -> FCMApnPayload
 createApnsPayload androidData =
   def {fcmAps = Just fcmAps}
   where
@@ -112,7 +112,7 @@ notifyPerson ::
   ( CoreMetrics m,
     FCMFlow m r
   ) =>
-  FCMAndroidData ->
+  FCMData ->
   FCMNotificationRecipient ->
   m ()
 notifyPerson = notifyPersonWithPriority Nothing
@@ -122,7 +122,7 @@ notifyPersonWithPriority ::
     FCMFlow m r
   ) =>
   Maybe FCMAndroidMessagePriority ->
-  FCMAndroidData ->
+  FCMData ->
   FCMNotificationRecipient ->
   m ()
 notifyPersonWithPriority priority msgData recipient = do

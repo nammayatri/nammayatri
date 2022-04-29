@@ -268,7 +268,7 @@ instance Default FCMAndroidNotification where
           }
 
 -- | FCM payload
-data FCMAndroidData = FCMAndroidData
+data FCMData = FCMData
   { fcmNotificationType :: FCMNotificationType,
     fcmShowNotification :: FCMShowNotification,
     fcmEntityType :: FCMEntityType,
@@ -277,10 +277,10 @@ data FCMAndroidData = FCMAndroidData
   }
   deriving (Eq, Show)
 
-$(makeLenses ''FCMAndroidData)
+$(makeLenses ''FCMData)
 
-instance ToJSON FCMAndroidData where
-  toJSON FCMAndroidData {..} =
+instance ToJSON FCMData where
+  toJSON FCMData {..} =
     object
       [ "notification_type" .= fcmNotificationType,
         "show_notification" .= fcmShowNotification,
@@ -289,9 +289,9 @@ instance ToJSON FCMAndroidData where
         "notification_json" .= encodeToText fcmNotificationJSON
       ]
 
-instance FromJSON FCMAndroidData where
-  parseJSON = withObject "FCMAndroidData" \o ->
-    FCMAndroidData
+instance FromJSON FCMData where
+  parseJSON = withObject "FCMData" \o ->
+    FCMData
       <$> o .: "notification_type"
       <*> o .: "show_notification"
       <*> o .: "entity_type"
@@ -307,7 +307,7 @@ data FCMAndroidConfig = FCMAndroidConfig
     fcmdPriority :: !(Maybe FCMAndroidMessagePriority),
     fcmdTtl :: !(Maybe Text),
     fcmdRestrictedPackageName :: !(Maybe Text),
-    fcmdData :: !(Maybe FCMAndroidData),
+    fcmdData :: !(Maybe FCMData),
     fcmdOptions :: !(Maybe FCMAndroidOptions),
     fcmdDirectBootOk :: !(Maybe Bool)
   }
@@ -351,7 +351,7 @@ instance Default FCMAlert where
 
 data FCMaps = FCMaps
   { fcmAlert :: !(Maybe FCMAlert),
-    fcmData :: !(Maybe FCMAndroidData),
+    fcmData :: !(Maybe FCMData),
     fcmCategory :: !(Maybe FCMNotificationType)
   }
   deriving (Eq, Show)
@@ -426,7 +426,7 @@ instance Default FCMApnsConfig where
 -- | Webpush protocol specific options
 data FCMWebpushConfig = FCMWebpushConfig
   { fcmwHeaders :: !(Maybe FCMHeaders),
-    fcmwData :: !(Maybe FCMAndroidData),
+    fcmwData :: !(Maybe FCMData),
     fcmwNotification :: !(Maybe Value),
     fcmwOptions :: !(Maybe FCMWebpushOptions)
   }

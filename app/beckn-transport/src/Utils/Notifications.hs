@@ -30,7 +30,7 @@ notifyOnCancel searchRequest personId mbDeviceToken cancellationSource = do
   where
     searchRequestId = SearchRequest.id searchRequest
     notificationData cancellationText =
-      FCM.FCMAndroidData
+      FCM.FCMData
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
@@ -77,7 +77,7 @@ notifyOnRegistration regToken personId =
   where
     tokenId = RegToken.id regToken
     notificationData =
-      FCM.FCMAndroidData
+      FCM.FCMData
         { fcmNotificationType = FCM.REGISTRATION_APPROVED,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Organization,
@@ -134,7 +134,7 @@ sendNotificationToDriver displayOption priority notificationType notificationTit
   FCM.notifyPersonWithPriority priority notificationData . FCMNotificationRecipient driverId.getId
   where
     notificationData =
-      FCM.FCMAndroidData
+      FCM.FCMData
         { fcmNotificationType = notificationType,
           fcmShowNotification = displayOption,
           fcmEntityIds = getId driverId,
@@ -164,7 +164,7 @@ notifyDriverNewAllocation rideBookingId personId =
             "Check the app for more details."
           ]
     notificationData =
-      FCM.FCMAndroidData
+      FCM.FCMData
         { fcmNotificationType = FCM.ALLOCATION_REQUEST,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
@@ -191,7 +191,7 @@ notifyRideNotAssigned rideBookingId personId =
             "Please wait for another request."
           ]
     notificationData =
-      FCM.FCMAndroidData
+      FCM.FCMData
         { fcmNotificationType = FCM.ALLOCATION_REQUEST_UNASSIGNED,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,

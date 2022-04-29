@@ -30,7 +30,7 @@ notifyOnRideAssigned rideBooking ride = do
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM PersonNotFound
   let notificationData =
-        FCM.FCMAndroidData
+        FCM.FCMData
           { fcmNotificationType = FCM.DRIVER_ASSIGNMENT,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
@@ -60,7 +60,7 @@ notifyOnRideStarted rideBooking ride = do
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM PersonNotFound
   let notificationData =
-        FCM.FCMAndroidData
+        FCM.FCMData
           { fcmNotificationType = FCM.TRIP_STARTED,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
@@ -90,7 +90,7 @@ notifyOnRideCompleted rideBooking ride = do
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM PersonNotFound
   let notificationData =
-        FCM.FCMAndroidData
+        FCM.FCMData
           { fcmNotificationType = FCM.TRIP_FINISHED,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
@@ -120,7 +120,7 @@ notifyOnExpiration searchReq = do
   case person of
     Just p -> do
       let notificationData =
-            FCM.FCMAndroidData
+            FCM.FCMData
               { fcmNotificationType = FCM.EXPIRED_CASE,
                 fcmShowNotification = FCM.SHOW,
                 fcmEntityType = FCM.SearchRequest,
@@ -148,7 +148,7 @@ notifyOnRegistration ::
 notifyOnRegistration regToken personId mbDeviceToken =
   let tokenId = RegToken.id regToken
       notificationData =
-        FCM.FCMAndroidData
+        FCM.FCMData
           { fcmNotificationType = FCM.REGISTRATION_APPROVED,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Organization,
@@ -170,7 +170,7 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
   FCM.notifyPerson (notificationData $ rideBooking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
     notificationData orgName =
-      FCM.FCMAndroidData
+      FCM.FCMData
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
@@ -217,7 +217,7 @@ notifyOnRideBookingReallocated rideBooking cancellationSource = do
     buildNotificationData = do
       body <- buildBody
       return $
-        FCM.FCMAndroidData
+        FCM.FCMData
           { fcmNotificationType = FCM.REALLOCATE_PRODUCT,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
