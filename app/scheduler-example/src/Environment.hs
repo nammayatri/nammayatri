@@ -18,8 +18,6 @@ data AppCfg = AppCfg
   }
   deriving (Generic, FromDhall)
 
-type MobileNumber = Text
-
 data AppEnv = AppEnv
   { port :: Int,
     loggerConfig :: LoggerConfig,

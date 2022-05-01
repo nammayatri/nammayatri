@@ -28,7 +28,8 @@ data SchedulerConfig t = SchedulerConfig
     loopIntervalSec :: Int,
     expirationTime :: Integer,
     waitBeforeRetry :: Int,
-    jobType :: Maybe t
+    jobType :: Maybe t,
+    tasksPerIteration :: Int
   }
   deriving (Generic, FromDhall)
 
@@ -42,7 +43,8 @@ data SchedulerEnv t = SchedulerEnv
     loopIntervalSec :: Int,
     expirationTime :: Integer,
     waitBeforeRetry :: Int,
-    jobType :: Maybe t
+    jobType :: Maybe t,
+    tasksPerIteration :: Int
   }
 
 newtype SchedulerM t a = SchedulerM {unSchedulerM :: MockM (SchedulerEnv t) a}

@@ -30,6 +30,9 @@ import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import qualified Data.Map as Map
+import EulerHS.Prelude (exitFailure)
+import System.IO (stderr)
+import System.Posix (stdError)
 import UnliftIO.Concurrent (forkIO)
 
 runScheduler ::
@@ -51,6 +54,10 @@ runScheduler SchedulerConfig {..} handlersList = do
       runMigrations = do
         eithRes <- migrateIfNeededWithinSchema migrationPath autoMigrate esqDBCfg
         handleLeft exitDBMigrationFailure "Couldn't migrate database: " eithRes
+  when (tasksPerIteration <= 0) $ do
+    hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
+    exitFailure
+
   Metrics.serve metricsPort
   runSchedulerM schedulerEnv $ do
     runMigrations
@@ -71,7 +78,8 @@ runnerIteration :: (JobTypeConstraints t) => SchedulerM t ()
 runnerIteration = do
   jobType <- asks (.jobType)
   readyTasks <- getReadyTasks jobType
-  availableReadyTasksIds <- filterM attemptTaskLockAtomic $ map (.id) readyTasks
+  tasksPerIteration <- asks (.tasksPerIteration)
+  availableReadyTasksIds <- pickTasks tasksPerIteration $ map (.id) readyTasks
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
   let withLogTag' job = withLogTag ("JobId=" <> job.id.getId)
   forM_ takenTasksUpdatedInfo $ \job ->
@@ -79,6 +87,14 @@ runnerIteration = do
       withLogTag' job $ do
         measuringDuration registerDuration $ executeTask job
         releaseLock job.id
+  where
+    pickTasks :: Int -> [Id JobText] -> SchedulerM t [Id JobText]
+    pickTasks _ [] = pure []
+    pickTasks 0 _ = pure []
+    pickTasks tasksRemain (x : xs) = do
+      gainedLock <- attemptTaskLockAtomic x
+      let tasksRemain' = tasksRemain - (if gainedLock then 1 else 0)
+      pickTasks tasksRemain' xs
 
 registerDuration :: Milliseconds -> a -> SchedulerM t ()
 registerDuration millis _ = do
@@ -150,7 +166,7 @@ executeTask rawJob = do
                     fromIntegral waitBeforeRetry `addUTCTime` now
 
 defaultCatcher :: SomeException -> IO ExecutionResult
-defaultCatcher _ = pure Retry
+defaultCatcher _ = pure Terminate
 
 -- api
 

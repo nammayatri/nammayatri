@@ -1,3 +1,3 @@
-# Example Service
+# Scheduler example
 
-This directory contains example (template) of a service for faster service creation.
+This directory contains an example applications that uses the scheduler library.
