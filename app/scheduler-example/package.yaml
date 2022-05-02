@@ -65,6 +65,7 @@ dependencies:
   - esqueleto
   - template-haskell
   - random
+  - exceptions
 
 ghc-options:
   - -Wall

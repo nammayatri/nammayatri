@@ -14,6 +14,7 @@ import Beckn.Utils.Common
 import Beckn.Utils.Dhall (FromDhall, readDhallConfigDefault)
 import Beckn.Utils.GenericPretty (PrettyShow, Showable (..))
 import Beckn.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
+import qualified Control.Monad.Catch as C
 import Environment (Flow)
 import System.Random
 
@@ -134,7 +135,7 @@ createTestTerminationJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
 createTestTerminationJob = flip createJobIn $ makeTestJobEntry TestTermination ()
 
 testTerminationHandler :: Job JobType () -> SchedulerT ExecutionResult
-testTerminationHandler _ = do
+testTerminationHandler _ = flip C.catchAll (\_ -> pure Retry) $ do
   logDebug "before pause"
   threadDelaySec 10
   logDebug "after pause"

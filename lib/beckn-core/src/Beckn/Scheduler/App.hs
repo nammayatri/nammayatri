@@ -5,7 +5,6 @@ module Beckn.Scheduler.App
   )
 where
 
-import Beckn.Exit (exitDBMigrationFailure)
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
 import Beckn.Scheduler.JobHandler
@@ -15,7 +14,6 @@ import qualified Beckn.Scheduler.Storage.Queries as Q
 import Beckn.Scheduler.Types
 import Beckn.Storage.Esqueleto
 import Beckn.Storage.Esqueleto.Config (prepareEsqDBEnv)
-import Beckn.Storage.Esqueleto.Migration
 import qualified Beckn.Storage.Esqueleto.Queries as Esq
 import qualified Beckn.Storage.Esqueleto.Transactionable as Esq
 import Beckn.Storage.Hedis (connectHedis)
@@ -24,7 +22,7 @@ import qualified Beckn.Tools.Metrics.Init as Metrics
 import Beckn.Types.Common
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Id
-import Beckn.Utils.App (getPodName, handleLeft)
+import Beckn.Utils.App
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (prepareLoggerEnv)
 import Beckn.Utils.Servant.Server
@@ -52,18 +50,12 @@ runScheduler SchedulerConfig {..} handlersList = do
   let handlersMap = Map.fromList handlersList
 
   let schedulerEnv = SchedulerEnv {..}
-  let runMigrations :: SchedulerM t ()
-      runMigrations = do
-        eithRes <- migrateIfNeededWithinSchema migrationPath autoMigrate esqDBCfg
-        handleLeft exitDBMigrationFailure "Couldn't migrate database: " eithRes
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
     exitFailure
 
   Metrics.serve metricsPort
-  let serverStartAction = do
-        runMigrations
-        runner
+  let serverStartAction = runner
   withAsync (runSchedulerM schedulerEnv serverStartAction) $ \schedulerAction ->
     runServerGeneric
       schedulerEnv
@@ -75,6 +67,9 @@ runScheduler SchedulerConfig {..} handlersList = do
       (const identity)
       (\_ -> cancel schedulerAction)
       runSchedulerM
+
+-- TODO: explore what is going on here
+-- To which thread do signals come?
 
 runner :: (JobTypeConstraints t) => SchedulerM t ()
 runner = do
@@ -132,8 +127,9 @@ runnerIteration = do
     pickTasks 0 _ = pure []
     pickTasks tasksRemain (x : xs) = do
       gainedLock <- attemptTaskLockAtomic x
-      let tasksRemain' = if gainedLock then tasksRemain - 1 else tasksRemain
-      (x :) <$> pickTasks tasksRemain' xs
+      if gainedLock
+        then (x :) <$> pickTasks (tasksRemain - 1) xs
+        else pickTasks tasksRemain xs
 
 withAsyncList :: MonadUnliftIO m => [m a] -> ([Async a] -> m b) -> m b
 withAsyncList actions func =

@@ -16,7 +16,7 @@ fromPgConfig T.PostgresConfig {..} = PS.ConnectInfo {..}
 
 migrateIfNeeded :: (MonadMask m, MonadIO m, Log m) => Maybe FilePath -> Bool -> DBConfig -> m (Either String ())
 migrateIfNeeded mPath autoMigrate dbConfig =
-  migrateIfNeeded' mPath (const $ pure ()) autoMigrate schemaName connectInfo
+  migrateIfNeeded' mPath autoMigrate schemaName connectInfo
   where
     schemaName = encodeUtf8 dbConfig.schemaName
     connectInfo = fromPgConfig dbConfig.pgConfig

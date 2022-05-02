@@ -22,7 +22,7 @@ import EulerHS.Prelude hiding (Key)
 --TODO: Remove this when we remove EulerHS
 newtype LoggerIO a = LoggerIO (ReaderT LoggerEnv IO a)
   deriving stock (Generic)
-  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadThrow)
+  deriving newtype (Functor, Applicative, Monad, MonadIO, MonadUnliftIO, MonadThrow, MonadCatch, MonadMask)
 
 instance MonadTime LoggerIO where
   getCurrentTime = liftIO getCurrentTime

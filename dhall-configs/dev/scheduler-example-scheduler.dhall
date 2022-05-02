@@ -35,8 +35,6 @@ in
 {
 loggerConfig = common.loggerConfig // { logRawSql = False, logFilePath = "/tmp/scheduler-example-scheduler.log", prettyPrinting = True } ,
 esqDBCfg = esqDBCfg,
-migrationPath = Some (env:BECKN_TRANSPORT_SCHEDULER_MIGRATION_PATH as Text ? "dev/migrations/scheduler"),
-autoMigrate = True,
 metricsPort = +8052,
 hedisCfg = rcfg,
 hedisPrefix = "example-scheduler",

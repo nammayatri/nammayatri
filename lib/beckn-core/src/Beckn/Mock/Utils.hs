@@ -1,7 +1,6 @@
 module Beckn.Mock.Utils (module Beckn.Mock.Utils, maybeToEither) where
 
 import Beckn.Types.Core.Error
-import Control.Concurrent
 import Data.Aeson hiding (Error)
 import qualified Data.Aeson as Ae
 import qualified Data.Aeson.Types as Ae

@@ -146,7 +146,7 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
-    # - -Werror
+  - -Werror
   - -fplugin=RecordDotPreprocessor
 
 library:

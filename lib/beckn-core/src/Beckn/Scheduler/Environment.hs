@@ -19,8 +19,6 @@ import Data.Map (Map)
 
 data SchedulerConfig t = SchedulerConfig
   { loggerConfig :: LoggerConfig,
-    migrationPath :: Maybe FilePath,
-    autoMigrate :: Bool,
     metricsPort :: Int,
     esqDBCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,

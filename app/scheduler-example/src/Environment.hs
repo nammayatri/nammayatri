@@ -14,7 +14,9 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     port :: Int,
     loggerConfig :: LoggerConfig,
-    graceTerminationPeriod :: Seconds
+    graceTerminationPeriod :: Seconds,
+    migrationPath :: Maybe FilePath,
+    autoMigrate :: Bool
   }
   deriving (Generic, FromDhall)
 

@@ -1,6 +1,5 @@
 module Beckn.Storage.Esqueleto.Migration
   ( migrateIfNeeded,
-    migrateIfNeededWithinSchema,
     migrateIfNeeded',
   )
 where
@@ -14,7 +13,7 @@ import Data.ByteString
 import qualified Data.Text as T
 import qualified Database.PostgreSQL.Simple as PS
 import Database.PostgreSQL.Simple.Migration
-import Database.PostgreSQL.Simple.Types
+import Database.PostgreSQL.Simple.Types (Query (Query))
 
 fromEsqDBConfig :: EsqDBConfig -> PS.ConnectInfo
 fromEsqDBConfig EsqDBConfig {..} =
@@ -28,28 +27,13 @@ fromEsqDBConfig EsqDBConfig {..} =
 
 migrateIfNeeded :: (MonadMask m, MonadIO m, Log m) => Maybe FilePath -> Bool -> EsqDBConfig -> m (Either String ())
 migrateIfNeeded mPath autoMigrate esqDbConfig =
-  migrateIfNeeded' mPath (const $ pure ()) autoMigrate schemaName connectInfo
+  migrateIfNeeded' mPath autoMigrate schemaName connectInfo
   where
     schemaName = encodeUtf8 esqDbConfig.connectSchemaName
     connectInfo = fromEsqDBConfig esqDbConfig
 
-migrateIfNeededWithinSchema :: (MonadMask m, MonadIO m, Log m) => Maybe FilePath -> Bool -> EsqDBConfig -> m (Either String ())
-migrateIfNeededWithinSchema mPath autoMigrate esqDbConfig =
-  migrateIfNeeded' mPath setDefaultSchema autoMigrate schemaName connectInfo
-  where
-    schemaName = encodeUtf8 esqDbConfig.connectSchemaName
-    connectInfo = fromEsqDBConfig esqDbConfig
-    setDefaultSchema conn = void $ PS.execute_ conn $ "SET search_path TO " <> Query schemaName
-
-migrateIfNeeded' ::
-  (MonadMask m, MonadIO m, Log m) =>
-  Maybe FilePath ->
-  (PS.Connection -> IO ()) ->
-  Bool ->
-  ByteString ->
-  PS.ConnectInfo ->
-  m (Either String ())
-migrateIfNeeded' mPath preMigration autoMigrate schemaName connectInfo =
+migrateIfNeeded' :: (MonadMask m, MonadIO m, Log m) => Maybe FilePath -> Bool -> ByteString -> PS.ConnectInfo -> m (Either String ())
+migrateIfNeeded' mPath autoMigrate schemaName connectInfo =
   case mPath of
     Just path
       | autoMigrate ->
@@ -57,7 +41,7 @@ migrateIfNeeded' mPath preMigration autoMigrate schemaName connectInfo =
           (liftIO (PS.connect connectInfo))
           (liftIO . PS.close)
           ( \conn -> do
-              liftIO $ preMigration conn
+              _ <- liftIO $ PS.execute_ conn $ "SET search_path TO " <> Query schemaName
               migrate path conn
           )
     _ ->
