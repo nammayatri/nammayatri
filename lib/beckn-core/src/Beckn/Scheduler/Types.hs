@@ -67,7 +67,7 @@ decodeJob Job {..} = do
 
 type JobText = Job Text Text
 
-data JobStatus = Pending | Completed | Terminated
+data JobStatus = Pending | Completed | Failed
   deriving (Show, Eq, Read, Generic)
   deriving (PrettyShow) via Showable JobStatus
 

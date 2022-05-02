@@ -36,12 +36,6 @@ generateOrderId = fmap show $ liftIO $ randomRIO (1000000, 9999999 :: Int)
 whenRight :: Applicative m => Either e a -> (a -> m ()) -> m ()
 whenRight eith f = either (\_ -> pure ()) f eith
 
-threadDelayMilliSec :: (MonadIO m) => Int -> m ()
-threadDelayMilliSec milli = liftIO $ threadDelay $ milli * 1000
-
-threadDelaySec :: (MonadIO m) => Int -> m ()
-threadDelaySec sec = liftIO $ threadDelay $ sec * 1000000
-
 encodeJSON :: (ToJSON a) => a -> BSL.ByteString
 encodeJSON = Ae.encode . toJSON
 

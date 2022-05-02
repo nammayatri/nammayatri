@@ -33,6 +33,8 @@ run _ server env = serve proxyApi $ hoistServer proxyApi f (healthCheckServer :<
 newtype MockM e a = MockM {runMockM :: ReaderT e IO a}
   deriving newtype (Functor, Applicative, Monad, MonadReader e, MonadIO, MonadUnliftIO, C.MonadThrow, C.MonadCatch, C.MonadMask)
 
+-- TODO: think about renaming this type and moving it to the common core
+
 runMock :: e -> MockM e a -> IO a
 runMock env action = runReaderT (runMockM action) env
 

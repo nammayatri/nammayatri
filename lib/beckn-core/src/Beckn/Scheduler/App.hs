@@ -6,7 +6,6 @@ module Beckn.Scheduler.App
 where
 
 import Beckn.Exit (exitDBMigrationFailure)
-import Beckn.Mock.Utils (threadDelaySec)
 import Beckn.Prelude
 import Beckn.Scheduler.Environment
 import Beckn.Scheduler.JobHandler
@@ -116,7 +115,7 @@ runnerIteration = do
         logInfo "terminating gracefully"
         errorLogger e
         termPeriod <- asks (.graceTerminationPeriod)
-        restore (threadDelaySec $ getSeconds termPeriod) `C.catchAll` \e' ->
+        restore (threadDelaySec termPeriod) `C.catchAll` \e' ->
           logInfo "terminating immediately" >> errorLogger e'
         putMVar termMVar ()
         throwIO e
@@ -153,16 +152,26 @@ attemptTaskLockAtomic jobId = do
   expirationTime <- asks (.expirationTime)
   Hedis.setNxExpire jobId.getId expirationTime ()
 
+-- TODO: refactor this function so that there was no duplication with the `tryLockRedis` function
+
 releaseLock :: Id (Job a b) -> SchedulerM t ()
 releaseLock jobId = Hedis.del jobId.getId
+
+-- TODO: think about more robust style of working with redis locks
+-- see https://redis.io/docs/reference/patterns/distributed-locks/
 
 logFailJob :: JobText -> Text -> SchedulerM t ()
 logFailJob jobText description = do
   logError $ "failed to execute job: " <> description
   logPretty ERROR "failed job" jobText
-  markAsTerminated jobText.id
+  markAsFailed jobText.id
 
-withJobDataDecoded :: forall d t m. (JobDataConstraints d, Log m, Monad m) => Job t Text -> (Job t d -> m ExecutionResult) -> m ExecutionResult
+withJobDataDecoded ::
+  forall d t m.
+  (JobDataConstraints d, Log m, Monad m) =>
+  Job t Text ->
+  (Job t d -> m ExecutionResult) ->
+  m ExecutionResult
 withJobDataDecoded txtDataJob action =
   maybe errHandler successHandler $ decodeFromText @d txtDataJob.jobData
   where
@@ -184,7 +193,7 @@ executeTask rawJob = do
       hMap <- asks (.handlersMap)
       case Map.lookup decJobType hMap of
         Nothing -> do
-          let description = "no handler function for the job type = " <> show decJobType
+          let description = "no handler function found for the job type = " <> show decJobType
           logFailJob rawJob description
           pure $ Terminate description
         Just (JobHandler handlerFunc_) -> do
@@ -199,7 +208,7 @@ registerExecutionResult job result =
       markAsComplete job.id
     Terminate description -> do
       logInfo $ "job terminated on try " <> show (job.currErrors + 1) <> "; reason: " <> description
-      markAsTerminated job.id
+      markAsFailed job.id
     ReSchedule reScheduledTime -> do
       logInfo $ "job rescheduled on time = " <> show reScheduledTime
       reSchedule job.id reScheduledTime
@@ -208,7 +217,7 @@ registerExecutionResult job result =
        in if newErrorsCount >= job.maxErrors
             then do
               logError $ "retries amount exceeded, job failed after try " <> show newErrorsCount
-              updateErrorCountAndTerminate job.id newErrorsCount
+              updateErrorCountAndFail job.id newErrorsCount
             else do
               logInfo $ "try " <> show newErrorsCount <> " was not successful, trying again"
               waitBeforeRetry <- asks (.waitBeforeRetry)

@@ -46,14 +46,14 @@ updateStatus newStatus jobId = do
 markAsComplete :: Id (Job a b) -> SchedulerM t ()
 markAsComplete = updateStatus Completed
 
-markAsTerminated :: Id (Job a b) -> SchedulerM t ()
-markAsTerminated = updateStatus Terminated
+markAsFailed :: Id (Job a b) -> SchedulerM t ()
+markAsFailed = updateStatus Failed
 
-updateErrorCountAndTerminate :: Id (Job a b) -> Int -> SchedulerM t ()
-updateErrorCountAndTerminate jobId fCount = do
+updateErrorCountAndFail :: Id (Job a b) -> Int -> SchedulerM t ()
+updateErrorCountAndFail jobId fCount = do
   now <- getCurrentTime
   Esq.update $ \job -> do
-    set job [JobStatus =. val Terminated, JobCurrErrors =. val fCount, JobUpdatedAt =. val now]
+    set job [JobStatus =. val Failed, JobCurrErrors =. val fCount, JobUpdatedAt =. val now]
     where_ $ job ^. JobId ==. val jobId.getId
 
 reSchedule :: Id (Job a b) -> UTCTime -> SchedulerM t ()

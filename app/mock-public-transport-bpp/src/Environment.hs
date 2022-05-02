@@ -2,14 +2,13 @@ module Environment where
 
 import Beckn.Mock.ExternalAPI
 import Beckn.Storage.Hedis
-import Beckn.Types.Logging
+import Beckn.Types.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth hiding (prepareAuthManager)
 import Control.Monad.Catch (bracket)
 import Network.HTTP.Client (Manager, newManager)
 import Relude
-import Servant.Client
 
 data AppCfg = AppCfg
   { port :: Int,
@@ -17,8 +16,8 @@ data AppCfg = AppCfg
     uniqueKeyId :: Text,
     selfUri :: BaseUrl,
     hedisCfg :: HedisCfg,
-    statusWaitTimeSec :: Int,
-    callbackWaitTimeMilliSec :: Int,
+    statusWaitTimeSec :: Seconds,
+    callbackWaitTimeMilliSec :: Milliseconds,
     loggerConfig :: LoggerConfig,
     authEntity :: AuthenticatingEntity'
   }
@@ -28,8 +27,8 @@ data AppEnv = AppEnv
   { selfId :: Text,
     uniqueKeyId :: Text,
     selfUri :: BaseUrl,
-    statusWaitTimeSec :: Int,
-    callbackWaitTimeMilliSec :: Int,
+    statusWaitTimeSec :: Seconds,
+    callbackWaitTimeMilliSec :: Milliseconds,
     loggerConfig :: LoggerConfig,
     authEntity :: AuthenticatingEntity',
     hedisEnv :: HedisEnv,

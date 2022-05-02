@@ -71,3 +71,9 @@ millisToSecondsDouble (Milliseconds ms) = fromIntegral ms / 1000
 
 millisToNominalDiffTime :: Milliseconds -> NominalDiffTime
 millisToNominalDiffTime = realToFrac @Double @NominalDiffTime . millisToSecondsDouble
+
+threadDelayMilliSec :: (MonadIO m) => Milliseconds -> m ()
+threadDelayMilliSec milli = liftIO $ threadDelay $ milli.getMilliseconds * 1000
+
+threadDelaySec :: (MonadIO m) => Seconds -> m ()
+threadDelaySec sec = liftIO $ threadDelay $ sec.getSeconds * 1000000

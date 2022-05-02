@@ -6,7 +6,6 @@ module App.Scheduler where
 -- TODO: move it to the integration tests when real usage of the scheduler library appears.
 
 import Beckn.Mock.App (MockM, runMock)
-import Beckn.Mock.Utils (threadDelaySec)
 import Beckn.Prelude
 import Beckn.Scheduler
 import Beckn.Types.Error (GenericError (InternalError))
