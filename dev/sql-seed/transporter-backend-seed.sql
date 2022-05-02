@@ -412,7 +412,7 @@ created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 enabled boolean NOT NULL
 ,CONSTRAINT  driver_information_pkey PRIMARY KEY (driver_id)
-,CONSTRAINT  driver_information_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_transporter.person(id) ON DELETE CASCADE
+,CONSTRAINT  driver_information_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_transporter.person(id)
 );
 ALTER TABLE atlas_transporter.driver_information OWNER TO atlas_transporter_user;
 
@@ -430,7 +430,7 @@ point public.geography(Point,4326) NOT NULL,
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  driver_location_pkey PRIMARY KEY (driver_id)
-,CONSTRAINT  driver_location_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_transporter.person(id) ON DELETE CASCADE
+,CONSTRAINT  driver_location_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_transporter.person(id)
 );
 ALTER TABLE atlas_transporter.driver_location OWNER TO atlas_transporter_user;
 
@@ -444,7 +444,7 @@ CREATE TABLE atlas_transporter.driver_stats (
 driver_id character(36) NOT NULL,
 idle_since timestamp with time zone
 ,CONSTRAINT  driver_stats_pkey PRIMARY KEY (driver_id)
-,CONSTRAINT  driver_stats_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_transporter.person(id) ON DELETE CASCADE
+,CONSTRAINT  driver_stats_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_transporter.person(id)
 );
 ALTER TABLE atlas_transporter.driver_stats OWNER TO atlas_transporter_user;
 
@@ -464,7 +464,7 @@ night_shift_end time without time zone,
 night_shift_rate double precision,
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-,CONSTRAINT  fare_policy_org_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_transporter.organization(id) ON DELETE CASCADE
+,CONSTRAINT  fare_policy_org_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_transporter.organization(id)
 );
 ALTER TABLE atlas_transporter.fare_policy OWNER TO atlas_transporter_user;
 
@@ -485,7 +485,7 @@ updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 from_date timestamp with time zone NOT NULL,
 to_date timestamp with time zone NOT NULL
 ,CONSTRAINT  fare_policy_discount_pkey PRIMARY KEY (id)
-,CONSTRAINT  fare_policy_discount_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_transporter.organization(id) ON DELETE CASCADE
+,CONSTRAINT  fare_policy_discount_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_transporter.organization(id)
 );
 ALTER TABLE atlas_transporter.fare_policy_discount OWNER TO atlas_transporter_user;
 
@@ -503,7 +503,7 @@ distance_range_start double precision NOT NULL,
 fare double precision NOT NULL
 ,CONSTRAINT  fare_policy_extra_km_rate_unique_extra_distance_range_start UNIQUE (vehicle_variant, organization_id, distance_range_start)
 ,CONSTRAINT  fare_policy_per_extra_km_rate_pkey PRIMARY KEY (id)
-,CONSTRAINT  fare_policy_per_extra_km_rate_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_transporter.organization(id) ON DELETE CASCADE
+,CONSTRAINT  fare_policy_per_extra_km_rate_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_transporter.organization(id)
 );
 ALTER TABLE atlas_transporter.fare_policy_per_extra_km_rate OWNER TO atlas_transporter_user;
 
@@ -519,8 +519,8 @@ organization_id character(36) NOT NULL,
 discount double precision NOT NULL,
 created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  discount_transaction_pkey PRIMARY KEY (ride_booking_id)
-,CONSTRAINT  discount_transaction_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_transporter.organization(id) ON DELETE CASCADE
-,CONSTRAINT  discount_transaction_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id) ON DELETE CASCADE
+,CONSTRAINT  discount_transaction_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_transporter.organization(id)
+,CONSTRAINT  discount_transaction_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id)
 );
 ALTER TABLE atlas_transporter.discount_transaction OWNER TO atlas_transporter_user;
 
@@ -536,7 +536,7 @@ source character varying(255) NOT NULL,
 reason_code character varying(255),
 additional_info character varying(255)
 ,CONSTRAINT  ride_cancellation_reason_pkey PRIMARY KEY (ride_booking_id)
-,CONSTRAINT  ride_cancellation_reason_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id) ON DELETE CASCADE
+,CONSTRAINT  ride_cancellation_reason_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id)
 );
 ALTER TABLE atlas_transporter.ride_cancellation_reason OWNER TO atlas_transporter_user;
 
@@ -554,7 +554,7 @@ created_at timestamp with time zone NOT NULL,
 type character varying(20) NOT NULL,
 info text
 ,CONSTRAINT  ride_request_pkey PRIMARY KEY (id)
-,CONSTRAINT  ride_request_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id) ON DELETE CASCADE
+,CONSTRAINT  ride_request_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id)
 );
 ALTER TABLE atlas_transporter.ride_request OWNER TO atlas_transporter_user;
 CREATE INDEX ride_request_ride_id_idx ON atlas_transporter.ride_request USING btree (ride_booking_id);
@@ -572,8 +572,8 @@ driver_id character(36) NOT NULL,
 status character varying(20) NOT NULL,
 expires_at timestamp with time zone NOT NULL
 ,CONSTRAINT  notification_status_pkey PRIMARY KEY (id)
-,CONSTRAINT  notification_status_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_transporter.person(id) ON DELETE CASCADE
-,CONSTRAINT  notification_status_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id) ON DELETE CASCADE
+,CONSTRAINT  notification_status_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_transporter.person(id)
+,CONSTRAINT  notification_status_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id)
 );
 ALTER TABLE atlas_transporter.notification_status OWNER TO atlas_transporter_user;
 CREATE INDEX notification_status_driver_id_idx ON atlas_transporter.notification_status USING btree (driver_id);
@@ -592,7 +592,7 @@ driver_id character(36),
 event_type character varying(22) NOT NULL,
 "timestamp" timestamp with time zone NOT NULL
 ,CONSTRAINT  allocation_event_pkey PRIMARY KEY (id)
-,CONSTRAINT  allocation_event_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id) ON DELETE CASCADE
+,CONSTRAINT  allocation_event_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_transporter.ride_booking(id)
 );
 ALTER TABLE atlas_transporter.allocation_event OWNER TO atlas_transporter_user;
 

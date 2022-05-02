@@ -425,7 +425,7 @@ source character varying(255) NOT NULL,
 reason_code character varying(255),
 additional_info character varying(255)
 ,CONSTRAINT  ride_cancellation_reason_pkey PRIMARY KEY (ride_booking_id)
-,CONSTRAINT  ride_cancellation_reason_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_app.ride_booking(id) ON DELETE CASCADE
+,CONSTRAINT  ride_cancellation_reason_ride_booking_id_fkey FOREIGN KEY (ride_booking_id) REFERENCES atlas_app.ride_booking(id)
 );
 ALTER TABLE atlas_app.ride_cancellation_reason OWNER TO atlas_app_user;
 
