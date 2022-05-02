@@ -70,12 +70,12 @@ data DirectionsResp = DirectionsResp
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data Route = Route
-  { bounds :: Bouds,
+  { bounds :: Bounds,
     legs :: [Leg]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data Bouds = Bounds
+data Bounds = Bounds
   { northeast :: LocationS,
     southwest :: LocationS
   }

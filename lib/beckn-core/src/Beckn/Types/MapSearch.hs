@@ -53,7 +53,7 @@ instance ToSchema GeospatialGeometry where
             ?~ "https://datatracker.ietf.org/doc/html/rfc7946#section-2"
 
 data Request = Request
-  { waypoints :: [LatLong],
+  { waypoints :: NonEmpty LatLong,
     mode :: Maybe TravelMode, -- Defaults to CAR
     calcPoints :: Bool -- True (default) if points needs to be calculated
   }

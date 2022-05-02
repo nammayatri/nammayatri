@@ -156,15 +156,10 @@ getDistanceDuration ::
     CoreMetrics m,
     GoogleMaps.HasGoogleMaps m r c
   ) =>
-  [MapSearch.LatLong] ->
+  MapSearch.LatLong ->
+  MapSearch.LatLong ->
   m (Maybe Double, Maybe Integer)
-getDistanceDuration fromTo = do
-  let rec =
-        MapSearch.Request
-          { waypoints = fromTo,
-            mode = Just CAR,
-            calcPoints = True
-          }
+getDistanceDuration from to = do
   routes <- GoogleMaps.getRoutes rec
   case routes.routes of
     [] -> return (Nothing, Nothing)
@@ -172,9 +167,16 @@ getDistanceDuration fromTo = do
       case x.legs of
         [] -> return (Nothing, Nothing)
         (y : _) -> do
-          let dist :: Double = fromIntegral y.distance.value
-              dur :: Integer = fromIntegral y.duration.value
-          return (Just dist, Just dur)
+          let distanceMetr :: Double = fromIntegral y.distance.value
+              durationInSec :: Integer = fromIntegral y.duration.value
+          return (Just distanceMetr, Just durationInSec)
+  where
+    rec =
+      MapSearch.Request
+        { waypoints = from :| [to],
+          mode = Just CAR,
+          calcPoints = True
+        }
 
 calculateDistance ::
   ( MonadFlow m,
@@ -185,14 +187,4 @@ calculateDistance ::
   LatLong ->
   m (Maybe Double)
 calculateDistance sourceLoc destinationLoc =
-  getDistanceDuration [sourceLoc, destinationLoc] <&> fst
-
--- calculateDistance ::
---   ( CoreMetrics m,
---     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl]
---   ) =>
---   LatLong ->
---   LatLong ->
---   m (Maybe Double)
--- calculateDistance sourceLoc destinationLoc = do
---   MapSearch.getDistanceMb (Just MapSearch.CAR) [sourceLoc, destinationLoc]
+  getDistanceDuration sourceLoc destinationLoc <&> fst

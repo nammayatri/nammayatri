@@ -75,7 +75,7 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
           >>= fromMaybeM LocationNotFound
       let fromLatLong = Location.locationToLatLong fromLocation
       toLocation <- getDropLocation rideBooking.rideBookingDetails
-      mbDistanceDuration <- Location.getDistanceDuration [driverLatLong, fromLatLong]
+      mbDistanceDuration <- Location.getDistanceDuration driverLatLong fromLatLong
       return $
         API.GetRideInfoRes $
           Just $
