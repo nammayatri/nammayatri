@@ -71,6 +71,6 @@ data JobStatus = Pending | Completed | Terminated
   deriving (Show, Eq, Read, Generic)
   deriving (PrettyShow) via Showable JobStatus
 
-data ExecutionResult = Complete | Terminate | Retry | ReSchedule UTCTime
+data ExecutionResult = Complete | Terminate Text | Retry | ReSchedule UTCTime
   deriving (Show, Generic, Exception)
   deriving (PrettyShow) via Showable ExecutionResult

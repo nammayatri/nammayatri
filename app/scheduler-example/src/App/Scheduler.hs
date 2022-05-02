@@ -6,6 +6,7 @@ module App.Scheduler where
 -- TODO: move it to the integration tests when real usage of the scheduler library appears.
 
 import Beckn.Mock.App (MockM, runMock)
+import Beckn.Mock.Utils (threadDelaySec)
 import Beckn.Prelude
 import Beckn.Scheduler
 import Beckn.Types.Error (GenericError (InternalError))
@@ -29,7 +30,8 @@ schedulerHandlerList :: LoggerResources -> JobHandlerList JobType
 schedulerHandlerList loggerRes =
   [ (PrintBananasCount, JobHandler $ runMock loggerRes . bananasCounterHandler),
     (PrintCurrentTimeWithErrorProbability, JobHandler $ runMock loggerRes . timePrinterHandler),
-    (IncorrectDataJobType, JobHandler $ runMock loggerRes . incorrectDataJobHandler)
+    (IncorrectDataJobType, JobHandler $ runMock loggerRes . incorrectDataJobHandler),
+    (TestTermination, JobHandler $ runMock loggerRes . testTerminationHandler)
   ]
 
 -----------------
@@ -54,6 +56,7 @@ data JobType
   | PrintCurrentTimeWithErrorProbability
   | IncorrectDataJobType
   | FakeJobType
+  | TestTermination
   deriving stock (Generic, Show, Eq, Ord)
   deriving anyclass (FromJSON, ToJSON, FromDhall)
   deriving (PrettyShow) via Showable JobType
@@ -125,4 +128,15 @@ createIncorrectDataJob = flip createJobIn $ makeTestJobEntry IncorrectDataJobTyp
 incorrectDataJobHandler :: Job JobType IncorrectlySerializable -> SchedulerT ExecutionResult
 incorrectDataJobHandler _ = do
   logError "you shouldn't get here"
+  pure Complete
+
+-----------------
+createTestTerminationJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
+createTestTerminationJob = flip createJobIn $ makeTestJobEntry TestTermination ()
+
+testTerminationHandler :: Job JobType () -> SchedulerT ExecutionResult
+testTerminationHandler _ = do
+  logDebug "before pause"
+  threadDelaySec 10
+  logDebug "after pause"
   pure Complete

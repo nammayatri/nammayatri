@@ -28,12 +28,14 @@ import Beckn.Types.Id
 import Beckn.Utils.App (getPodName, handleLeft)
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (prepareLoggerEnv)
+import Beckn.Utils.Servant.Server
+import Beckn.Utils.Shutdown
 import qualified Control.Monad.Catch as C
+import Control.Monad.Trans.Cont
 import qualified Data.Map as Map
-import EulerHS.Prelude (exitFailure)
-import System.IO (stderr)
-import System.Posix (stdError)
-import UnliftIO.Concurrent (forkIO)
+import Servant (Context (EmptyContext))
+import System.Exit
+import UnliftIO
 
 runScheduler ::
   forall t.
@@ -47,6 +49,7 @@ runScheduler SchedulerConfig {..} handlersList = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   hedisEnv <- connectHedis hedisCfg (\k -> hedisPrefix <> ":" <> k)
   metrics <- setupSchedulerMetrics
+  isShuttingDown <- mkShutdown
   let handlersMap = Map.fromList handlersList
 
   let schedulerEnv = SchedulerEnv {..}
@@ -59,20 +62,33 @@ runScheduler SchedulerConfig {..} handlersList = do
     exitFailure
 
   Metrics.serve metricsPort
-  runSchedulerM schedulerEnv $ do
-    runMigrations
-    runner
+  let serverStartAction = do
+        runMigrations
+        runner
+  withAsync (runSchedulerM schedulerEnv serverStartAction) $ \schedulerAction ->
+    runServerGeneric
+      schedulerEnv
+      (Proxy @HealthCheckAPI)
+      healthCheck
+      identity
+      identity
+      EmptyContext
+      (const identity)
+      (\_ -> cancel schedulerAction)
+      runSchedulerM
 
 runner :: (JobTypeConstraints t) => SchedulerM t ()
 runner = do
   before <- getCurrentTime
-  let errorLogger e = logError $ "error occured: " <> show e
-  runnerIteration `C.catchAll` errorLogger
+  runnerIteration
   after <- getCurrentTime
   let diff = floor $ abs $ diffUTCTime after before
   loopIntervalSec <- asks (.loopIntervalSec)
   threadDelaySec (loopIntervalSec - diff)
   runner
+
+errorLogger :: (Log m, Show a) => a -> m ()
+errorLogger e = logError $ "error occured: " <> show e
 
 runnerIteration :: (JobTypeConstraints t) => SchedulerM t ()
 runnerIteration = do
@@ -81,20 +97,48 @@ runnerIteration = do
   tasksPerIteration <- asks (.tasksPerIteration)
   availableReadyTasksIds <- pickTasks tasksPerIteration $ map (.id) readyTasks
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
-  let withLogTag' job = withLogTag ("JobId=" <> job.id.getId)
-  forM_ takenTasksUpdatedInfo $ \job ->
-    forkIO $
-      withLogTag' job $ do
-        measuringDuration registerDuration $ executeTask job
-        releaseLock job.id
+  terminationMVar <- newEmptyMVar
+  let inspectTermination = modifyMVarMasked_ terminationMVar pure
+      waitAll :: MonadUnliftIO m => [Async a] -> m ()
+      waitAll = mapConcurrently_ waitCatch
+  flip withAsync (waitEitherTerminationOrExecEnd terminationMVar) $
+    withAsyncList (map runTask takenTasksUpdatedInfo) $ \asyncList -> do
+      res <- race (waitAll asyncList) inspectTermination
+      case res of
+        Left _ -> pure ()
+        Right _ -> do
+          mapM_ cancel asyncList
+          waitAll asyncList
   where
+    waitEitherTerminationOrExecEnd :: MVar () -> Async () -> SchedulerM t ()
+    waitEitherTerminationOrExecEnd termMVar exec =
+      void (waitCatch exec) `C.catchAll` \e -> mask $ \restore -> do
+        logInfo "terminating gracefully"
+        errorLogger e
+        termPeriod <- asks (.graceTerminationPeriod)
+        restore (threadDelaySec $ getSeconds termPeriod) `C.catchAll` \e' ->
+          logInfo "terminating immediately" >> errorLogger e'
+        putMVar termMVar ()
+        throwIO e
+
+    withLogTag' job = withLogTag ("JobId=" <> job.id.getId)
+
+    runTask job = mask $ \restore -> withLogTag' job $ do
+      res <- measuringDuration registerDuration $ restore (executeTask job) `C.catchAll` defaultCatcher
+      registerExecutionResult job res
+      releaseLock job.id
+
     pickTasks :: Int -> [Id JobText] -> SchedulerM t [Id JobText]
     pickTasks _ [] = pure []
     pickTasks 0 _ = pure []
     pickTasks tasksRemain (x : xs) = do
       gainedLock <- attemptTaskLockAtomic x
-      let tasksRemain' = tasksRemain - (if gainedLock then 1 else 0)
-      pickTasks tasksRemain' xs
+      let tasksRemain' = if gainedLock then tasksRemain - 1 else tasksRemain
+      (x :) <$> pickTasks tasksRemain' xs
+
+withAsyncList :: MonadUnliftIO m => [m a] -> ([Async a] -> m b) -> m b
+withAsyncList actions func =
+  flip runCont func $ traverse (cont . withAsync) actions
 
 registerDuration :: Milliseconds -> a -> SchedulerM t ()
 registerDuration millis _ = do
@@ -112,8 +156,8 @@ attemptTaskLockAtomic jobId = do
 releaseLock :: Id (Job a b) -> SchedulerM t ()
 releaseLock jobId = Hedis.del jobId.getId
 
-failJob :: JobText -> Text -> SchedulerM t ()
-failJob jobText description = do
+logFailJob :: JobText -> Text -> SchedulerM t ()
+logFailJob jobText description = do
   logError $ "failed to execute job: " <> description
   logPretty ERROR "failed job" jobText
   markAsTerminated jobText.id
@@ -123,50 +167,60 @@ withJobDataDecoded txtDataJob action =
   maybe errHandler successHandler $ decodeFromText @d txtDataJob.jobData
   where
     errHandler = do
-      logError $ "failed to decode job data: " <> txtDataJob.jobData
-      pure Terminate
+      let description = "failed to decode job data: " <> txtDataJob.jobData
+      logError description
+      pure $ Terminate description
     successHandler jobData_ = action $ setJobData jobData_ txtDataJob
 
-executeTask :: forall t. (JobTypeConstraints t) => JobText -> SchedulerM t ()
+executeTask :: forall t. (JobTypeConstraints t) => JobText -> SchedulerM t ExecutionResult
 executeTask rawJob = do
   let eithDecodedType = decodeFromText @t rawJob.jobType
   case eithDecodedType of
-    Nothing -> failJob rawJob $ "type decode failure: " <> rawJob.jobType
+    Nothing -> do
+      let description = "type decode failure: " <> rawJob.jobType
+      logFailJob rawJob description
+      pure $ Terminate description
     Just decJobType -> do
       hMap <- asks (.handlersMap)
       case Map.lookup decJobType hMap of
-        Nothing -> failJob rawJob $ "no handler function for the job type = " <> show decJobType
-        Just jH -> executeTypeDecodedJob jH $ setJobType decJobType rawJob
-  where
-    executeTypeDecodedJob :: JobHandler t -> Job t Text -> SchedulerM t ()
-    executeTypeDecodedJob (JobHandler handlerFunc_) job = do
-      result <- withJobDataDecoded job $ \decJob -> do
-        liftIO $ handlerFunc_ decJob `C.catchAll` defaultCatcher
-      case result of
-        Complete -> do
-          logInfo $ "job successfully completed on try " <> show (job.currErrors + 1)
-          markAsComplete job.id
-        Terminate -> do
-          logInfo $ "job terminated on try " <> show (job.currErrors + 1)
-          markAsTerminated job.id
-        ReSchedule reScheduledTime -> do
-          logInfo $ "job rescheduled on time = " <> show reScheduledTime
-          reSchedule job.id reScheduledTime
-        Retry ->
-          let newErrorsCount = job.currErrors + 1
-           in if newErrorsCount >= job.maxErrors
-                then do
-                  logError $ "retries amount exceeded, job failed after try " <> show newErrorsCount
-                  updateErrorCountAndTerminate job.id newErrorsCount
-                else do
-                  logInfo $ "try " <> show newErrorsCount <> " was not successful, trying again"
-                  waitBeforeRetry <- asks (.waitBeforeRetry)
-                  now <- getCurrentTime
-                  reScheduleOnError job.id newErrorsCount $
-                    fromIntegral waitBeforeRetry `addUTCTime` now
+        Nothing -> do
+          let description = "no handler function for the job type = " <> show decJobType
+          logFailJob rawJob description
+          pure $ Terminate description
+        Just (JobHandler handlerFunc_) -> do
+          let job = setJobType decJobType rawJob
+          withJobDataDecoded job $ liftIO . handlerFunc_
 
-defaultCatcher :: SomeException -> IO ExecutionResult
-defaultCatcher _ = pure Terminate
+registerExecutionResult :: Job t0 Text -> ExecutionResult -> SchedulerM t ()
+registerExecutionResult job result =
+  case result of
+    Complete -> do
+      logInfo $ "job successfully completed on try " <> show (job.currErrors + 1)
+      markAsComplete job.id
+    Terminate description -> do
+      logInfo $ "job terminated on try " <> show (job.currErrors + 1) <> "; reason: " <> description
+      markAsTerminated job.id
+    ReSchedule reScheduledTime -> do
+      logInfo $ "job rescheduled on time = " <> show reScheduledTime
+      reSchedule job.id reScheduledTime
+    Retry ->
+      let newErrorsCount = job.currErrors + 1
+       in if newErrorsCount >= job.maxErrors
+            then do
+              logError $ "retries amount exceeded, job failed after try " <> show newErrorsCount
+              updateErrorCountAndTerminate job.id newErrorsCount
+            else do
+              logInfo $ "try " <> show newErrorsCount <> " was not successful, trying again"
+              waitBeforeRetry <- asks (.waitBeforeRetry)
+              now <- getCurrentTime
+              reScheduleOnError job.id newErrorsCount $
+                fromIntegral waitBeforeRetry `addUTCTime` now
+
+defaultCatcher :: C.MonadThrow m => SomeException -> m ExecutionResult
+defaultCatcher _ = pure defaultResult
+
+defaultResult :: ExecutionResult
+defaultResult = Terminate "uncaught exception"
 
 -- api
 
@@ -253,3 +307,14 @@ createJob scheduledAt jobEntry = do
           currErrors = 0,
           status = Pending
         }
+
+{-
+  forM_ takenTasksUpdatedInfo $ \job ->
+      forkIO $
+        withLogTag' job $ do
+          measuringDuration registerDuration $ do
+            eithRes <- race inspectTermination (executeTask job)
+            let res = either (const defaultResult) identity eithRes
+            registerExecutionResult job res
+          releaseLock job.id
+-}

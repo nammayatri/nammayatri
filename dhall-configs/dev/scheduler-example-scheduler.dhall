@@ -1,7 +1,7 @@
 let common = ../generic/common.dhall
 let sec = ./secrets/beckn-transport.dhall
 
-let JobType = < PrintBananasCount | PrintCurrentTimeWithErrorProbability | IncorrectDataJobType | FakeJobType >
+let JobType = < PrintBananasCount | PrintCurrentTimeWithErrorProbability | IncorrectDataJobType | FakeJobType | TestTermination >
 
 let postgresConfig =
   { connectHost = "localhost"
@@ -37,13 +37,15 @@ loggerConfig = common.loggerConfig // { logRawSql = False, logFilePath = "/tmp/s
 esqDBCfg = esqDBCfg,
 migrationPath = Some (env:BECKN_TRANSPORT_SCHEDULER_MIGRATION_PATH as Text ? "dev/migrations/scheduler"),
 autoMigrate = True,
-metricsPort = +8051,
+metricsPort = +8052,
 hedisCfg = rcfg,
 hedisPrefix = "example-scheduler",
-port = +8050,
+port = +8051,
 loopIntervalSec = +5,
-expirationTime = +60,
+expirationTime = +600,
 waitBeforeRetry = +1,
 --jobType = Some JobType.PrintBananasCount
-jobType = None JobType
+jobType = None JobType,
+tasksPerIteration = +20,
+graceTerminationPeriod = +10
 }

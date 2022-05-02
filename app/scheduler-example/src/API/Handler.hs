@@ -21,5 +21,6 @@ createJobHandler jobType = withFlowHandlerAPI $ do
     "failing_time" -> void $ createTimePrinterJob 7
     "incorrect_data" -> void $ createIncorrectDataJob 7
     "fake_job" -> void $ createFakeJob 7
+    "test_termination" -> void $ createTestTerminationJob 5
     _ -> logWarning "unknown job type"
   pure Success

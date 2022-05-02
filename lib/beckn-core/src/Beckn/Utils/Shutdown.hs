@@ -39,5 +39,11 @@ untilShutdown ::
   m ()
 untilShutdown =
   whileM isRunning
-  where
-    isRunning = liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)
+
+isRunning ::
+  ( MonadIO m,
+    MonadReader r m,
+    HasField "isShuttingDown" r Shutdown
+  ) =>
+  m Bool
+isRunning = liftIO . atomically . isEmptyTMVar =<< asks (.isShuttingDown)

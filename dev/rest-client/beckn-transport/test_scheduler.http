@@ -34,3 +34,11 @@ token: {{driver-token}}
 content-type: application/json
 
 "fake_job"
+
+###
+# @name test
+GET {{scheduler-example-server}}/job
+token: {{driver-token}}
+content-type: application/json
+
+"test_termination"

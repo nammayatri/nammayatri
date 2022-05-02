@@ -11,6 +11,7 @@ module Beckn.Utils.App
     getPodName,
     supportProxyAuthorization,
     logRequestAndResponseGeneric,
+    withModifiedEnvGeneric,
   )
 where
 
@@ -147,6 +148,24 @@ withModifiedEnv f env = \req resp -> do
           updLogEnv = appendLogTag requestId appEnv.loggerEnv
       env{appEnv = appEnv{loggerEnv = updLogEnv},
           flowRuntime = L.updateLoggerContext (L.appendLogContext requestId) $ flowRuntime env
+         }
+    getRequestId headers = do
+      let value = lookup "x-request-id" headers
+      case value of
+        Just val -> pure ("requestId-" <> decodeUtf8 val)
+        Nothing -> pure "randomRequestId-" <> show <$> nextRandom
+
+withModifiedEnvGeneric :: HasLog env => (env -> Application) -> env -> Application
+withModifiedEnvGeneric f env = \req resp -> do
+  requestId <- getRequestId $ Wai.requestHeaders req
+  let modifiedEnv = modifyEnv requestId
+  let app = f modifiedEnv
+  app req resp
+  where
+    modifyEnv requestId = do
+      let appEnv = env
+          updLogEnv = appendLogTag requestId appEnv.loggerEnv
+      env{loggerEnv = updLogEnv
          }
     getRequestId headers = do
       let value = lookup "x-request-id" headers

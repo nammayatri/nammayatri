@@ -10,8 +10,9 @@ import Beckn.Scheduler.Metrics (SchedulerMetrics)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis (HedisCfg, HedisEnv)
 import Beckn.Types.Common
+import Beckn.Utils.App (Shutdown)
 import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.IOLogging (LoggerEnv)
+import Beckn.Utils.IOLogging (LoggerEnv, releaseLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Data.Map (Map)
@@ -29,7 +30,8 @@ data SchedulerConfig t = SchedulerConfig
     expirationTime :: Integer,
     waitBeforeRetry :: Int,
     jobType :: Maybe t,
-    tasksPerIteration :: Int
+    tasksPerIteration :: Int,
+    graceTerminationPeriod :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -44,8 +46,15 @@ data SchedulerEnv t = SchedulerEnv
     expirationTime :: Integer,
     waitBeforeRetry :: Int,
     jobType :: Maybe t,
-    tasksPerIteration :: Int
+    tasksPerIteration :: Int,
+    graceTerminationPeriod :: Seconds,
+    port :: Int,
+    isShuttingDown :: Shutdown
   }
+
+releaseSchedulerEnv :: SchedulerEnv t -> IO ()
+releaseSchedulerEnv SchedulerEnv {..} = do
+  releaseLoggerEnv loggerEnv
 
 newtype SchedulerM t a = SchedulerM {unSchedulerM :: MockM (SchedulerEnv t) a}
   deriving newtype (Functor, Applicative, Monad, MonadReader (SchedulerEnv t), MonadIO)

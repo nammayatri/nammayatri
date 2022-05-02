@@ -9,7 +9,7 @@ import Beckn.Types.Flow
 import Beckn.Types.Time
 import Beckn.Utils.App
 import qualified Beckn.Utils.FlowLogging as L
-import Beckn.Utils.IOLogging (LoggerEnv)
+import Beckn.Utils.IOLogging
 import Beckn.Utils.Logging
 import qualified Beckn.Utils.Monitoring.Prometheus.Servant as Metrics
 import EulerHS.Prelude
@@ -53,6 +53,30 @@ run apis server ctx env =
     f :: FlowHandlerR r m -> Handler m
     f r = do
       eResult <- liftIO . try $ runReaderT r env
+      case eResult of
+        Left err ->
+          print @String ("exception thrown: " <> show err) *> throwError err
+        Right res -> pure res
+
+runGeneric ::
+  forall api env m ctx.
+  ( HasContextEntry (env ': (ctx .++ '[ErrorFormatters])) ErrorFormatters,
+    HasServer api (env ': ctx),
+    MonadReader env m
+  ) =>
+  Proxy (api :: Type) ->
+  ServerT api m ->
+  Context ctx ->
+  env ->
+  (forall b. env -> m b -> IO b) ->
+  Application
+runGeneric apis server ctx env runMonad =
+  serveWithContext apis (env :. ctx) $
+    hoistServerWithContext apis (Proxy @(env ': ctx)) f server
+  where
+    f :: m a -> Handler a
+    f action = do
+      eResult <- liftIO . try $ runMonad env action
       case eResult of
         Left err ->
           print @String ("exception thrown: " <> show err) *> throwError err
@@ -105,9 +129,47 @@ runServer appEnv serverAPI serverHandler waiMiddleware waiSettings servantCtx se
         initialize flowRt <* logInfo ("Runtime created. Starting server at port " <> show port)
     serverStartAction flowRt' $ runSettings settings $ server (EnvR flowRt' appEnv)
 
+runServerGeneric ::
+  forall m env (api :: Type) ctx.
+  ( MonadReader env m,
+    HasField "graceTerminationPeriod" env Seconds,
+    HasField "isShuttingDown" env Shutdown,
+    HasField "loggerConfig" env L.LoggerConfig,
+    HasField "loggerEnv" env LoggerEnv,
+    HasField "port" env Port,
+    Metrics.SanitizedUrl api,
+    HasContextEntry (env ': (ctx .++ '[ErrorFormatters])) ErrorFormatters,
+    HasServer api (env ': ctx)
+  ) =>
+  env ->
+  Proxy api ->
+  ServerT api m ->
+  (Application -> Application) ->
+  (Settings -> Settings) ->
+  Context ctx ->
+  (env -> IO () -> IO ()) ->
+  (env -> IO ()) ->
+  (forall q. env -> m q -> IO q) ->
+  IO ()
+runServerGeneric appEnv serverAPI serverHandler waiMiddleware waiSettings servantCtx serverStartAction shutdownAction runMonad = do
+  let port = appEnv.port
+  let settings =
+        defaultSettings
+          & setGracefulShutdownTimeout (Just $ getSeconds appEnv.graceTerminationPeriod)
+          & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (shutdownAction appEnv))
+          & setPort port
+          & waiSettings
+  let server = withModifiedEnvGeneric $ \modifiedEnv ->
+        let loggerFunc = \tag info -> logOutputIO (appendLogTag tag $ modifiedEnv.loggerEnv) INFO info
+         in runGeneric serverAPI serverHandler servantCtx modifiedEnv runMonad
+              & logRequestAndResponseGeneric loggerFunc
+              & Metrics.addServantInfo serverAPI
+              & waiMiddleware
+  serverStartAction appEnv $ runSettings settings $ server appEnv
+
 type HealthCheckAPI = Get '[JSON] Text
 
-healthCheck :: FlowServerR env HealthCheckAPI
+healthCheck :: (Monad m) => ServerT HealthCheckAPI m
 healthCheck = pure "App is UP"
 
 runHealthCheckServerWithService ::
