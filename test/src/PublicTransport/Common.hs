@@ -1,6 +1,7 @@
 module PublicTransport.Common where
 
 import Beckn.Prelude
+import Beckn.Types.Time
 import Beckn.Utils.Dhall (readDhallConfig)
 import qualified "mock-public-transport-bpp" Environment as Bpp
 import qualified "public-transport-bap" Environment as Bap
@@ -41,7 +42,7 @@ mockPublicTransportBppClientEnv = mkClientEnv defaultManager mockBppUrl
 callMockPublicTransportBpp :: (Show a) => ClientM a -> IO a
 callMockPublicTransportBpp = runClient' mockPublicTransportBppClientEnv
 
-mockWaitTimeSeconds :: Int
+mockWaitTimeSeconds :: Seconds
 mockWaitTimeSeconds = 2
 
 {-# NOINLINE publicTransportBapEnv #-}

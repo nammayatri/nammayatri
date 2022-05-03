@@ -4,6 +4,7 @@ import Beckn.Prelude hiding (Proxy)
 import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id
+import Beckn.Utils.Time (threadDelaySec)
 import Common
 import Data.Maybe (isJust, mapMaybe)
 import qualified Data.Text as T
@@ -52,7 +53,7 @@ testConfirm shouldSucceed quote = do
   booking2 <- callPublicTransportBap (bookingClientM userToken bookingId)
   booking2.id.getId `shouldBe` bookingId.getId
   assertBookingAwaitingPayment booking2
-  threadDelay $ (mockWaitTimeSeconds + 1) * 1000000
+  threadDelaySec $ mockWaitTimeSeconds + 1
   booking3 <- callPublicTransportBap $ bookingClientM userToken bookingId
   if shouldSucceed
     then assertSuccessfulBooking booking3
