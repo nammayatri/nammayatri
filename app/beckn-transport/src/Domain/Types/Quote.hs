@@ -36,12 +36,12 @@ getDistance = \case
   RentalDetails -> Nothing
   OneWayDetails oneWayDetails -> Just oneWayDetails.distance
 
-isOneWay :: Quote -> Bool
-isOneWay (OneWay _) = True
+isOneWay :: QuoteDetails -> Bool
+isOneWay (OneWayDetails _) = True
 isOneWay _ = False
 
-isRental :: Quote -> Bool
-isRental (Rental _) = True
+isRental :: QuoteDetails -> Bool
+isRental RentalDetails = True
 isRental _ = False
 
 getFareProductType :: QuoteDetails -> DFareProduct.FareProductType

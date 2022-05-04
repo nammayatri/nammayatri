@@ -98,7 +98,7 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
-      # - -Werror
+    - -Werror
   dependencies:
     - beckn-core
 

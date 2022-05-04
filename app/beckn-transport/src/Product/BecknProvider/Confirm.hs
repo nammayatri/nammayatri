@@ -8,6 +8,7 @@ import Beckn.Types.Core.Taxi.Common.Context (Action (CONFIRM))
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Core.ACL.Confirm as ACL
+import qualified Core.ACL.OnConfirm as ACL
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Organization as Organization
 import EulerHS.Prelude hiding (id)
@@ -28,12 +29,4 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
     let callbackUrl = context.bap_uri
     ExternalAPI.withCallback' withRetry transporter CONFIRM OnConfirm.onConfirmAPI context callbackUrl $ do
       dOnConfirmReq <- DConfirm.handler transporter dConfirmReq
-
-      pure dOnConfirmReq
-
---      pure $ ACL.mkOnSearchMessage dOnSearchReq
---    ExternalAPI.withCallback transporterOrg CONFIRM OnConfirm.onConfirmAPI (req.context) bapCallbackUrl $
---      onConfirmCallback
---        rideBooking
---        searchRequest
---        transporterOrg
+      pure $ ACL.makeOnConfirmReq dOnConfirmReq

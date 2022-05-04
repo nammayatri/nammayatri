@@ -38,18 +38,6 @@ schedulerHandlerList env =
 data JobType = AllocateRental
   deriving (Generic, FromDhall, Eq, Ord, Show, FromJSON, ToJSON)
 
-{-
--- FIXME: use real scheduler for this
-scheduleRentalRideRequest :: (EsqDBFlow m r) => UTCTime -> RideRequest.RideRequest -> m ()
-scheduleRentalRideRequest scheduledAt rideReq = fork "FIXME" $ do
-  now <- getCurrentTime
-  let diff = diffUTCTime scheduledAt now
-      diffSec = floor diff
-      millisPerSecond = 1000000
-  liftIO $ threadDelay (millisPerSecond * diffSec)
-  Esq.runTransaction $ RideRequest.create rideReq
--}
-
 data HandlerEnv = HandlerEnv
   { loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,

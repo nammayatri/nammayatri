@@ -7,7 +7,6 @@ import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Scheduler
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount (Amount)
-import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import qualified Data.Text as T
 import Domain.Types.DiscountTransaction
@@ -41,7 +40,11 @@ data DConfirmReq = DConfirmReq
     mobileCountryCode :: Text
   }
 
-type DOnConfirmReq = OnConfirm.OnConfirmMessage
+data DOnConfirmReq = DOnConfirmReq
+  { rideBookingId :: Id SRB.RideBooking,
+    quoteId :: Id DQuote.Quote,
+    estimatedTotalFare :: Amount
+  }
 
 handler ::
   DOrg.Organization -> DConfirmReq -> Flow DOnConfirmReq
@@ -50,7 +53,7 @@ handler transporter req = do
       customerMobileCountryCode = req.mobileCountryCode
       customerPhoneNumber = req.phone
   quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
-  let oneWayB = DQuote.isOneWay quote
+  let oneWayB = DQuote.isOneWay quote.quoteDetails
   let transporterId' = quote.providerId
   transporterOrg <-
     Organization.findById transporterId'
@@ -98,23 +101,19 @@ handler transporter req = do
           reallocationsCount = 0
           createdAt = now
           updatedAt = now
-      case quote of
-        DQuote.OneWay oneWayQuote -> do
+          status = SRB.SCHEDULED
+      let quoteDetails = quote.quoteDetails
+      rideBookingDetails <- case quoteDetails of
+        DQuote.OneWayDetails oneWayQuote -> do
           toLocationId <- searchRequest.toLocationId & fromMaybeM (InternalError "ONE_WAY SearchRequest does not have toLocationId")
           return $
-            SRB.OneWay
-              SRB.OneWayRideBooking
+            SRB.OneWayDetails
+              SRB.OneWayRideBookingDetails
                 { estimatedDistance = oneWayQuote.distance,
-                  status = SRB.CONFIRMED,
                   ..
                 }
-        DQuote.Rental _ ->
-          return $
-            SRB.Rental
-              SRB.RentalRideBooking
-                { status = SRB.SCHEDULED,
-                  ..
-                }
+        DQuote.RentalDetails -> pure SRB.RentalDetails
+      pure SRB.RideBooking {..}
 
 findTransporter :: Id DOrg.Organization -> Flow DOrg.Organization
 findTransporter transporterId = do
@@ -124,8 +123,7 @@ findTransporter transporterId = do
 
 createScheduleRentalRideRequestJob :: (EsqDBFlow m r) => UTCTime -> RideRequest.RideRequest -> m ()
 createScheduleRentalRideRequestJob scheduledAt rideBooking =
-  --  void $ createJobByTime scheduledAt jobEntry
-  void $ createJobIn 15 jobEntry
+  void $ createJobByTime scheduledAt jobEntry
   where
     jobEntry =
       JobEntry
@@ -161,7 +159,7 @@ onConfirmCallback ::
   SRB.RideBooking ->
   SearchRequest.SearchRequest ->
   Organization.Organization ->
-  m OnConfirm.OnConfirmMessage
+  m DOnConfirmReq
 onConfirmCallback rideBooking searchRequest transporterOrg = do
   let transporterId = transporterOrg.id
   let rideBookingId = rideBooking.id
@@ -169,14 +167,12 @@ onConfirmCallback rideBooking searchRequest transporterOrg = do
   let vehicleVariant = rideBooking.vehicleVariant
   driverPool <- recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant
   logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId rideBookingId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  return $ OnConfirm.OnConfirmMessage order
-  where
-    order =
-      OnConfirm.Order
-        { id = rideBooking.id.getId,
-          items = [OnConfirm.OrderItem $ rideBooking.quoteId.getId],
-          estimated_total_fare = OnConfirm.Price $ realToFrac rideBooking.estimatedTotalFare
-        }
+  pure $
+    DOnConfirmReq
+      { rideBookingId = rideBooking.id,
+        quoteId = rideBooking.quoteId,
+        estimatedTotalFare = rideBooking.estimatedTotalFare
+      }
 
 mkDiscountTransaction :: SRB.RideBooking -> Amount -> UTCTime -> DiscountTransaction
 mkDiscountTransaction rideBooking discount currTime =
