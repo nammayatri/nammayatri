@@ -5,45 +5,43 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.OneWayQuote where
+module Storage.Tabular.Quote.OneWayQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.OneWayQuote as Domain
-import Storage.Tabular.Quote (QuoteTId)
+import qualified Domain.Types.Quote as Domain
+import qualified Domain.Types.Quote.OneWayQuote as Domain
 
+-- FIXME quoteId should be QuoteTId, but I made it Text to avoid cyclic dependencies
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     OneWayQuoteT sql=one_way_quote
-      id Text
-      quoteId QuoteTId
+      quoteId Text
       distance Double
       distanceToNearestDriver Double
-      Primary id
+      Primary quoteId
       deriving Generic
     |]
 
 instance TEntityKey OneWayQuoteT where
-  type DomainKey OneWayQuoteT = Id Domain.OneWayQuote
+  type DomainKey OneWayQuoteT = Id Domain.Quote
   fromKey (OneWayQuoteTKey _id) = Id _id
   toKey (Id id) = OneWayQuoteTKey id
 
-instance TEntity OneWayQuoteT Domain.OneWayQuote where
+instance TEntity OneWayQuoteT Domain.OneWayQuoteEntity where
   fromTEntity entity = do
     let OneWayQuoteT {..} = entityVal entity
     return $
-      Domain.OneWayQuote
-        { id = Id id,
-          quoteId = fromKey quoteId,
+      Domain.OneWayQuoteEntity
+        { quoteId = Id quoteId,
           ..
         }
-  toTType Domain.OneWayQuote {..} =
+  toTType Domain.OneWayQuoteEntity {..} =
     OneWayQuoteT
-      { id = getId id,
-        quoteId = toKey quoteId,
+      { quoteId = getId quoteId,
         ..
       }
   toTEntity a =
-    Entity (toKey a.id) $ toTType a
+    Entity (toKey a.quoteId) $ toTType a

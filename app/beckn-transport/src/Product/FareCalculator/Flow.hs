@@ -18,7 +18,6 @@ import Data.Time
 import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.FarePolicy.PerExtraKmRate (PerExtraKmRate (..))
 import qualified Domain.Types.Organization as Organization
-import Domain.Types.RentalFarePolicy (RentalFarePolicy)
 import qualified Domain.Types.SearchReqLocation as Location
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude
@@ -35,9 +34,8 @@ type TripStartTime = UTCTime
 
 type MonadHandler m = (MonadThrow m, Log m)
 
-data ServiceHandle m = ServiceHandle
-  { getFarePolicy :: Id Organization.Organization -> Vehicle.Variant -> m (Maybe FarePolicy),
-    getRentalFarePolicy :: Id Organization.Organization -> Vehicle.Variant -> m (Maybe RentalFarePolicy)
+newtype ServiceHandle m = ServiceHandle
+  { getFarePolicy :: Id Organization.Organization -> Vehicle.Variant -> m (Maybe FarePolicy)
   }
 
 data FareParameters = FareParameters
@@ -130,32 +128,3 @@ isTimeWithinBounds startTime endTime time =
       let midnightBeforeTimeleap = TimeOfDay 23 59 60
       (startTime < time && time < midnightBeforeTimeleap) || (midnight <= time && time < endTime)
     else startTime < time && time < endTime
-
--- move it to separate module
-data RentalFareParameters = RentalFareParameters
-  { baseFare :: Amount,
-    extraDistanceFare :: Maybe Amount, -- FIXME use 0.0 instead of Nothing?
-    extraDurationFare :: Maybe Amount,
-    forNextDaysFare :: Maybe Amount,
-    discount :: Maybe Amount
-  }
-  deriving stock (Show, Eq)
-
--- FIXME Fix Nothing fields in case when we have actual distance and duration
--- FIXME Fix discount calculation. Now RentalFarePolicy unlike FarePolicy has no discount
-doCalculateRentalFare ::
-  MonadHandler m =>
-  ServiceHandle m ->
-  Id Organization.Organization ->
-  Vehicle.Variant ->
-  m RentalFareParameters
-doCalculateRentalFare ServiceHandle {..} orgId vehicleVariant = do
-  rentalFarePolicy <- getRentalFarePolicy orgId vehicleVariant >>= fromMaybeM NoFarePolicy
-  baseFare <- calculateBaseRentalFare rentalFarePolicy
-  pure $ RentalFareParameters baseFare Nothing Nothing Nothing Nothing
-
-calculateBaseRentalFare ::
-  MonadHandler m =>
-  RentalFarePolicy ->
-  m Amount
-calculateBaseRentalFare = pure . (.baseFare)

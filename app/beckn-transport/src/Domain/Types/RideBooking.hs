@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Domain.Types.RideBooking where
 
 import Beckn.Types.Amount
@@ -9,6 +11,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RiderDetails as DRD
@@ -16,6 +19,7 @@ import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
+import GHC.Records.Extra
 import Servant.API
 
 data RideBookingStatus
@@ -36,7 +40,7 @@ instance ToHttpApiData RideBookingStatus where
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-data RideBooking = RideBooking
+data OneWayRideBooking = OneWayRideBooking
   { id :: Id RideBooking,
     transactionId :: Text,
     requestId :: Id DSR.SearchRequest,
@@ -53,31 +57,53 @@ data RideBooking = RideBooking
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
     reallocationsCount :: Int,
-    rideBookingType :: RideBookingType,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
+    toLocationId :: Id DLoc.SearchReqLocation,
+    estimatedDistance :: Double
+  }
+  deriving (Generic)
+
+data RentalRideBooking = RentalRideBooking
+  { id :: Id RideBooking,
+    transactionId :: Text,
+    requestId :: Id DSR.SearchRequest,
+    quoteId :: Id DQuote.Quote,
+    status :: RideBookingStatus,
+    providerId :: Id DOrg.Organization,
+    bapId :: Text,
+    bapUri :: BaseUrl,
+    startTime :: UTCTime,
+    riderId :: Id DRD.RiderDetails,
+    fromLocationId :: Id DLoc.SearchReqLocation,
+    vehicleVariant :: DVeh.Variant,
+    estimatedFare :: Amount,
+    discount :: Maybe Amount,
+    estimatedTotalFare :: Amount,
+    reallocationsCount :: Int,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic)
 
-data RideBookingType = OneWayTrip OneWayTripData | RentalPackage
+data RideBooking = OneWay OneWayRideBooking | Rental RentalRideBooking
 
-data OneWayTripData = OneWayTripData
-  { toLocationId :: Id DLoc.SearchReqLocation,
-    estimatedDistance :: Double
-  }
+getDropLocationId :: RideBooking -> Maybe (Id DLoc.SearchReqLocation)
+getDropLocationId (OneWay rideBooking) = Just rideBooking.toLocationId
+getDropLocationId (Rental _) = Nothing
 
--- FIXME do we need to handle wrong variants, when for example toLocationId is Just, estimatedDistance = Nothing?
-mkRideBookingType :: Maybe (Id DLoc.SearchReqLocation) -> Maybe Double -> RideBookingType
-mkRideBookingType mbDropLocation mbEstimatedDistance = do
-  let mbTuple = (,) <$> mbDropLocation <*> mbEstimatedDistance
-  maybe RentalPackage (\(toLocationId, estimatedDistance) -> OneWayTrip $ OneWayTripData {..}) mbTuple
+getEstimatedDistance :: RideBooking -> Maybe Double
+getEstimatedDistance (OneWay rideBooking) = Just rideBooking.estimatedDistance
+getEstimatedDistance (Rental _) = Nothing
 
-getDropLocationId :: RideBookingType -> Maybe (Id DLoc.SearchReqLocation)
-getDropLocationId rideBookingType = case rideBookingType of
-  RentalPackage -> Nothing
-  OneWayTrip oneWayTripData -> Just oneWayTripData.toLocationId
+getFareProductType :: RideBooking -> DFareProduct.FareProductType
+getFareProductType (OneWay _) = DFareProduct.ONE_WAY
+getFareProductType (Rental _) = DFareProduct.RENTAL
 
-getEstimatedDistance :: RideBookingType -> Maybe Double
-getEstimatedDistance rideBookingType = case rideBookingType of
-  RentalPackage -> Nothing
-  OneWayTrip oneWayTripData -> Just oneWayTripData.estimatedDistance
+instance (HasField x OneWayRideBooking a, HasField x RentalRideBooking a) => HasField x RideBooking a where
+  hasField (OneWay rideBooking) = do
+    let setter newField = OneWay $ fst (hasField @x rideBooking) newField
+    (setter, snd (hasField @x rideBooking))
+  hasField (Rental rideBooking) = do
+    let setter newField = Rental $ fst (hasField @x rideBooking) newField
+    (setter, snd (hasField @x rideBooking))

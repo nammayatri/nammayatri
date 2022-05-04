@@ -12,7 +12,7 @@ import EulerHS.Prelude hiding (exp, id)
 data Provider = Provider
   { id :: Text,
     name :: Text,
-    items :: [Item],
+    items :: [Item], --FIXME this should be list of only RentalItems or only OneWay items
     contacts :: Text,
     rides_inprogress :: Int,
     rides_completed :: Int,

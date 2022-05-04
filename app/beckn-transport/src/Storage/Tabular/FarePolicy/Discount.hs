@@ -11,7 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.Discount as Domain
-import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Storage.Tabular.Organization as TOrg
 import Storage.Tabular.Vehicle ()

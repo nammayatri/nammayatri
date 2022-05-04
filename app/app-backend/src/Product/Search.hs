@@ -190,27 +190,28 @@ buildQuote ::
   OnSearch.Item ->
   m SQuote.Quote
 buildQuote searchRequest providerId providerUrl provider item = do
-  oneWayItem <- case item of
-    OnSearch.OneWay oneWayItem -> pure oneWayItem
-    _ -> throwError $ InternalError "Rentals is not implemented for bap"
+  unless (item.category_id == "ONE_WAY") $ throwError $ InternalError "Only ONE_WAY is implemented for bap"
+
+  --FIXME remove this
+  let nearest_driver_distance' = fromMaybe 0.0 item.nearest_driver_distance
 
   now <- getCurrentTime
   uid <- generateGUID
   return
     SQuote.Quote
       { id = uid,
-        bppQuoteId = Id oneWayItem.id,
+        bppQuoteId = Id item.id,
         requestId = searchRequest.id,
-        estimatedFare = realToFrac oneWayItem.estimated_price.value,
-        estimatedTotalFare = realToFrac oneWayItem.discounted_price.value,
-        discount = realToFrac <$> (oneWayItem.discount <&> (.value)),
-        distanceToNearestDriver = realToFrac oneWayItem.nearest_driver_distance,
+        estimatedFare = realToFrac item.estimated_price.value,
+        estimatedTotalFare = realToFrac item.discounted_price.value,
+        discount = realToFrac <$> (item.discount <&> (.value)),
+        distanceToNearestDriver = realToFrac nearest_driver_distance',
         providerMobileNumber = provider.contacts,
         providerName = provider.name,
         providerCompletedRidesCount = provider.rides_completed,
         providerId,
         providerUrl,
-        vehicleVariant = oneWayItem.vehicle_variant,
+        vehicleVariant = item.vehicle_variant,
         createdAt = now
       }
 

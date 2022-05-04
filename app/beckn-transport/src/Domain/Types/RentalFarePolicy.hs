@@ -13,7 +13,7 @@ data RentalFarePolicy = RentalFarePolicy
     baseFare :: Amount,
     baseDistance :: Double, -- Distance
     baseDurationHr :: Int,
-    extraKMFare :: Amount,
+    extraKmFare :: Amount,
     extraMinuteFare :: Amount,
     driverAllowanceForDay :: Maybe Amount
   }

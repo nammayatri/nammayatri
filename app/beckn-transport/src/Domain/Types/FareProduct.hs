@@ -1,4 +1,4 @@
-module Domain.Types.FarePolicy.FareProduct where
+module Domain.Types.FareProduct where
 
 import Beckn.Types.Id (Id)
 import Data.Time (UTCTime)

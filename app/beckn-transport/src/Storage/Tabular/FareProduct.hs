@@ -5,12 +5,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FarePolicy.FareProduct where
+module Storage.Tabular.FareProduct where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.FarePolicy.FareProduct as Domain
+import qualified Domain.Types.FareProduct as Domain
 import qualified Storage.Tabular.Organization as TOrg
 
 derivePersistField "Domain.FareProductType"
@@ -22,7 +22,7 @@ mkPersist
       id Text
       organizationId TOrg.OrganizationTId
       enabled Bool
-      productType Domain.FareProductType
+      productType Domain.FareProductType sql=type
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

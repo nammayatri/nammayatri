@@ -5,9 +5,9 @@ module Storage.Queries.FarePolicy.FareProduct where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Domain.Types.FarePolicy.FareProduct
+import Domain.Types.FareProduct
 import Domain.Types.Organization (Organization)
-import Storage.Tabular.FarePolicy.FareProduct
+import Storage.Tabular.FareProduct
 
 findEnabledByOrgId ::
   Transactionable m =>

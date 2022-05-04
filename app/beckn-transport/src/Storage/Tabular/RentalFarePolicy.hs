@@ -26,7 +26,7 @@ mkPersist
       baseFare Amount
       baseDistance Double
       baseDurationHr Int
-      extraKMFare Amount
+      extraKmFare Amount
       extraMinuteFare Amount
       driverAllowanceForDay Amount Maybe
       Primary id

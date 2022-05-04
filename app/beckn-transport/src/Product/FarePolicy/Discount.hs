@@ -6,7 +6,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified Domain.Types.FarePolicy.Discount as DFPDiscount
-import qualified Domain.Types.FarePolicy.FareProduct as DFProduct
+import qualified Domain.Types.FareProduct as DFProduct
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude

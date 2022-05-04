@@ -74,7 +74,7 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
         QLoc.findById rideBooking.fromLocationId
           >>= fromMaybeM LocationNotFound
       let fromLatLong = Location.locationToLatLong fromLocation
-      toLocation <- getDropLocation rideBooking.rideBookingType
+      toLocation <- getDropLocation rideBooking
       mbRoute <- Location.getRoute' [driverLatLong, fromLatLong]
       return $
         API.GetRideInfoRes $
@@ -139,7 +139,7 @@ setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
 buildRideBookingStatusRes :: (EsqDBFlow m r, EncFlow m r) => SRB.RideBooking -> m API.RideBookingStatusRes
 buildRideBookingStatusRes rideBooking = do
   fromLocation <- QLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- getDropLocation rideBooking.rideBookingType
+  toLocation <- getDropLocation rideBooking
   let rbStatus = rideBooking.status
   mbRide <- QRide.findActiveByRBId rideBooking.id
   mbRideAPIEntity <- case mbRide of
@@ -211,7 +211,7 @@ buildRideBookingStatusRes rideBooking = do
           updatedAt = now
         }
 
-getDropLocation :: EsqDBFlow m r => SRB.RideBookingType -> m (Maybe SLoc.SearchReqLocation)
-getDropLocation rideBookingType = do
-  let mbToLocationId = SRB.getDropLocationId rideBookingType
+getDropLocation :: EsqDBFlow m r => SRB.RideBooking -> m (Maybe SLoc.SearchReqLocation)
+getDropLocation rideBooking = do
+  let mbToLocationId = SRB.getDropLocationId rideBooking
   forM mbToLocationId $ QLoc.findById >=> fromMaybeM LocationNotFound

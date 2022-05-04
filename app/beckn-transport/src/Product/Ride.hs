@@ -29,7 +29,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 buildDriverRideRes :: (SRide.Ride, SRB.RideBooking) -> Flow API.DriverRideRes
 buildDriverRideRes (ride, rideBooking) = do
   fromLocation <- QLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- RideBooking.getDropLocation rideBooking.rideBookingType
+  toLocation <- RideBooking.getDropLocation rideBooking
 
   vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM VehicleNotFound
   driver <- QP.findById ride.driverId >>= fromMaybeM PersonNotFound

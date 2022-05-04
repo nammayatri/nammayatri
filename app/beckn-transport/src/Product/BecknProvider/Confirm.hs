@@ -16,6 +16,7 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.Text as T
 import Domain.Types.DiscountTransaction
 import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RiderDetails as SRD
@@ -25,7 +26,6 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Product.BecknProvider.BP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
-import qualified Storage.Queries.OneWayQuote as QOneWayQuote
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RideBooking as QRideBooking
@@ -55,8 +55,6 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         customerMobileCountryCode = phone.country_code
         customerPhoneNumber = phone.number
     quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
-    -- FIXME fix logic for rental case
-    oneWayQuote <- QOneWayQuote.findByQuoteId quoteId >>= fromMaybeM QuoteDoesNotExist
     let transporterId' = quote.providerId
     transporterOrg <-
       Organization.findById transporterId'
@@ -67,7 +65,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
     unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
     now <- getCurrentTime
     (riderDetails, isNewRider) <- getRiderDetails customerMobileCountryCode customerPhoneNumber now
-    rideBooking <- buildRideBooking searchRequest quote oneWayQuote.distance transporterOrg riderDetails.id now
+    rideBooking <- buildRideBooking searchRequest quote transporterOrg riderDetails.id now
     rideRequest <-
       BP.buildRideReq
         (rideBooking.id)
@@ -89,30 +87,35 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         searchRequest
         transporterOrg
   where
-    buildRideBooking searchRequest quote distance provider riderId now = do
-      id <- generateGUID
-      return $
-        SRB.RideBooking
-          { id = Id id,
-            transactionId = searchRequest.transactionId,
-            requestId = searchRequest.id,
-            quoteId = quote.id,
-            status = SRB.CONFIRMED,
-            providerId = provider.id,
-            startTime = searchRequest.startTime,
-            riderId = riderId,
-            fromLocationId = searchRequest.fromLocationId,
-            bapId = searchRequest.bapId,
-            bapUri = searchRequest.bapUri,
-            estimatedFare = quote.estimatedFare,
-            discount = quote.discount,
-            estimatedTotalFare = quote.estimatedTotalFare,
-            vehicleVariant = quote.vehicleVariant,
-            reallocationsCount = 0,
-            rideBookingType = SRB.mkRideBookingType searchRequest.toLocationId (Just distance),
-            createdAt = now,
-            updatedAt = now
-          }
+    buildRideBooking searchRequest quote provider riderId now = do
+      uid <- generateGUID
+      let id = Id uid
+          transactionId = searchRequest.transactionId
+          requestId = searchRequest.id
+          quoteId = quote.id
+          status = SRB.CONFIRMED
+          providerId = provider.id
+          startTime = searchRequest.startTime
+          fromLocationId = searchRequest.fromLocationId
+          bapId = searchRequest.bapId
+          bapUri = searchRequest.bapUri
+          estimatedFare = quote.estimatedFare
+          discount = quote.discount
+          estimatedTotalFare = quote.estimatedTotalFare
+          vehicleVariant = quote.vehicleVariant
+          reallocationsCount = 0
+          createdAt = now
+          updatedAt = now
+      case quote of
+        DQuote.OneWay oneWayQuote -> do
+          toLocationId <- searchRequest.toLocationId & fromMaybeM (InternalError "ONE_WAY SearchRequest does not have toLocationId")
+          return $
+            SRB.OneWay
+              SRB.OneWayRideBooking
+                { estimatedDistance = oneWayQuote.distance,
+                  ..
+                }
+        DQuote.Rental _ -> return $ SRB.Rental SRB.RentalRideBooking {..}
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =

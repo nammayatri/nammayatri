@@ -6,8 +6,8 @@ import Beckn.Types.Id
 import Data.Time hiding (parseTime)
 import Domain.Types.FarePolicy
 import Domain.Types.FarePolicy.Discount
-import Domain.Types.FarePolicy.FareProduct
 import Domain.Types.FarePolicy.PerExtraKmRate
+import Domain.Types.FareProduct
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude
@@ -52,8 +52,7 @@ orgID = "organization_id"
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
-    { getFarePolicy = \_orgId _vehicleVariant -> pure $ Just defaultFarePolicy,
-      getRentalFarePolicy = \_orgId _vehicleVariant -> pure Nothing
+    { getFarePolicy = \_orgId _vehicleVariant -> pure $ Just defaultFarePolicy
     }
 
 -- Calculation tests
