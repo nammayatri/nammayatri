@@ -98,7 +98,7 @@ library:
     - -Wcompat
     - -Widentities
     - -fhide-source-paths
-    - -Werror
+      # - -Werror
   dependencies:
     - beckn-core
 
@@ -136,6 +136,18 @@ executables:
     dependencies:
       - beckn-transport
       - beckn-core
+  transporter-scheduler-exe:
+    main: DriverTrackingHealthcheckMain.hs
+    source-dirs: server
+    other-modules: []
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - '"-with-rtsopts=-N -T"'
+    dependencies:
+      - beckn-transport
+      - beckn-core
+
 
 tests:
   beckn-transport-tests:

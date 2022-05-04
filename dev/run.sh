@@ -16,7 +16,7 @@ mock-parking-bpp
 public-transport-bap
 public-transport-search-consumer
 search-result-aggregator
-mock-public-transport-bpp
+transporter-scheduler
 scheduler-example-app
 scheduler-example-scheduler
 EOF

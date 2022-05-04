@@ -48,7 +48,8 @@ data CurrentNotification = CurrentNotification
   deriving (Show)
 
 data RideStatus
-  = Confirmed
+  = Scheduled
+  | Confirmed
   | AwaitingReassignment
   | Assigned
   | Completed
@@ -113,7 +114,9 @@ data ServiceHandle m = ServiceHandle
     removeRequest :: Id SRR.RideRequest -> m (),
     logEvent :: AllocationEventType -> Id SRB.RideBooking -> m (),
     logDriverEvents :: AllocationEventType -> Id SRB.RideBooking -> NonEmpty (Id Driver) -> m (),
-    metrics :: AllocatorMetricsHandle m
+    metrics :: AllocatorMetricsHandle m,
+    findRideBookingById :: Id SRB.RideBooking -> m SRB.RideBooking,
+    updateRideBookingStatus :: SRB.RideBookingStatus -> Id SRB.RideBooking -> m ()
   }
 
 process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer -> m Int
@@ -134,6 +137,9 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
     let requestId = rideRequest.requestId
     let rideBookingId = rideRequest.rideBookingId
     rideInfo <- getRideInfo rideBookingId
+    rideBooking <- findRideBookingById rideBookingId
+    when (rideBooking.status == SRB.SCHEDULED) $
+      updateRideBookingStatus SRB.CONFIRMED rideBookingId
     let rideStatus = rideInfo.rideStatus
     eres <- try $
       withLogTag ("RideRequest_" <> rideBookingId.getId) $ do

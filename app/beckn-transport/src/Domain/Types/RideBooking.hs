@@ -24,6 +24,7 @@ data RideBookingStatus
   | COMPLETED
   | CANCELLED
   | TRIP_ASSIGNED
+  | SCHEDULED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance FromHttpApiData RideBookingStatus where

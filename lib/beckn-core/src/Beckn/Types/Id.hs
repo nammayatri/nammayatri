@@ -38,7 +38,7 @@ newtype ShortId domain = ShortId
   { getShortId :: Text
   }
   deriving stock (Generic, Show, Eq)
-  deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema)
+  deriving newtype (ToJSON, FromJSON, ToHttpApiData, ToSchema, PrettyShow)
 
 instance FromDhall (ShortId a) where
   autoWith _ = ShortId <$> strictText

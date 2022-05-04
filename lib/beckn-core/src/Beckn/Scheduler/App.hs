@@ -289,7 +289,7 @@ createJob scheduledAt jobEntry = do
   Esq.runTransaction $ do
     Q.create jobText
     mbFetchedJob <- Esq.findById jobText.id
-    fetchedJob <- fromMaybeM (InternalError "Failed to insert job") mbFetchedJob
+    fetchedJob <- fromMaybeM (InternalError $ "Failed to insert job: " <> show jobText) mbFetchedJob
     case decodeJob @a @b fetchedJob of
       Left err -> do
         logError $ "failed to decode job:" <> show fetchedJob
@@ -312,14 +312,3 @@ createJob scheduledAt jobEntry = do
           currErrors = 0,
           status = Pending
         }
-
-{-
-  forM_ takenTasksUpdatedInfo $ \job ->
-      forkIO $
-        withLogTag' job $ do
-          measuringDuration registerDuration $ do
-            eithRes <- race inspectTermination (executeTask job)
-            let res = either (const defaultResult) identity eithRes
-            registerExecutionResult job res
-          releaseLock job.id
--}

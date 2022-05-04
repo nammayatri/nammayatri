@@ -45,6 +45,9 @@ cradle:
     - path: "app/beckn-transport/server/Main.hs"
       component: "beckn-transport:exe:beckn-transport-exe"
 
+    - path: "app/beckn-transport/server/Main.hs"
+      component: "beckn-transport:exe:transporter-scheduler-exe"
+
     - path: "app/beckn-transport/test/app"
       component: "beckn-transport:test:beckn-transport-tests"
 

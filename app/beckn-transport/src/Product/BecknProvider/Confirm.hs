@@ -1,9 +1,11 @@
 module Product.BecknProvider.Confirm (confirm) where
 
+import App.Scheduler
 import App.Types
 import Beckn.External.Encryption (encrypt)
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Product.Validation.Context
+import Beckn.Scheduler
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Core.Ack
@@ -72,11 +74,13 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         (transporterOrg.shortId)
         RideRequest.ALLOCATION
         now
-
+    unless oneWayB $ do
+      let scheduledTime = addUTCTime (negate $ 60 * 60) rideBooking.startTime
+      createScheduleRentalRideRequestJob scheduledTime rideRequest
     Esq.runTransaction $ do
       when isNewRider $ QRD.create riderDetails
       QRideBooking.create rideBooking
-      RideRequest.create rideRequest
+      when oneWayB $ RideRequest.create rideRequest
       whenJust quote.discount $ \disc ->
         QDiscTransaction.create $ mkDiscountTransaction rideBooking disc now
 
@@ -88,29 +92,52 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         transporterOrg
   where
     buildRideBooking searchRequest quote provider riderId now = do
-      id <- generateGUID
-      return $
-        SRB.RideBooking
-          { id = Id id,
-            transactionId = searchRequest.transactionId,
-            requestId = searchRequest.id,
-            quoteId = quote.id,
-            status = SRB.CONFIRMED,
-            providerId = provider.id,
-            startTime = searchRequest.startTime,
-            riderId = riderId,
-            fromLocationId = searchRequest.fromLocationId,
-            bapId = searchRequest.bapId,
-            bapUri = searchRequest.bapUri,
-            estimatedFare = quote.estimatedFare,
-            discount = quote.discount,
-            estimatedTotalFare = quote.estimatedTotalFare,
-            vehicleVariant = quote.vehicleVariant,
-            reallocationsCount = 0,
-            rideBookingDetails = SRB.mkRideBookingDetails searchRequest.toLocationId (DQuote.getDistance quote.quoteDetails),
-            createdAt = now,
-            updatedAt = now
-          }
+      uid <- generateGUID
+      let id = Id uid
+          transactionId = searchRequest.transactionId
+          requestId = searchRequest.id
+          quoteId = quote.id
+          providerId = provider.id
+          startTime = searchRequest.startTime
+          fromLocationId = searchRequest.fromLocationId
+          bapId = searchRequest.bapId
+          bapUri = searchRequest.bapUri
+          estimatedFare = quote.estimatedFare
+          discount = quote.discount
+          estimatedTotalFare = quote.estimatedTotalFare
+          vehicleVariant = quote.vehicleVariant
+          reallocationsCount = 0
+          createdAt = now
+          updatedAt = now
+      case quote of
+        DQuote.OneWay oneWayQuote -> do
+          toLocationId <- searchRequest.toLocationId & fromMaybeM (InternalError "ONE_WAY SearchRequest does not have toLocationId")
+          return $
+            SRB.OneWay
+              SRB.OneWayRideBooking
+                { estimatedDistance = oneWayQuote.distance,
+                  status = SRB.CONFIRMED,
+                  ..
+                }
+        DQuote.Rental _ ->
+          return $
+            SRB.Rental
+              SRB.RentalRideBooking
+                { status = SRB.SCHEDULED,
+                  ..
+                }
+
+createScheduleRentalRideRequestJob :: (EsqDBFlow m r) => UTCTime -> RideRequest.RideRequest -> m ()
+createScheduleRentalRideRequestJob scheduledAt rideBooking =
+  --  void $ createJobByTime scheduledAt jobEntry
+  void $ createJobIn 15 jobEntry
+  where
+    jobEntry =
+      JobEntry
+        { jobType = AllocateRental,
+          jobData = rideBooking,
+          maxErrors = 5
+        }
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =

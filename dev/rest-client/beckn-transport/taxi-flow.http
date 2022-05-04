@@ -1,5 +1,8 @@
 @token = {{app-token}}
 
+###
+# activate rentals: insert into fare_product values (md5(random()::text), '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', true, 'RENTAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
 
 ###
 # @name setActive
@@ -94,9 +97,40 @@ token: {{app-token}}
     }
   }
 }
+
 ###
 
-@searchId = {{searchRoute2.response.body.searchId}}
+# @name rentalSearch
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{app-token}}
+#Palarivattom - Edappally Rd, Opp.St.George Church, Ponekkara, Edappally, Ernakulam, Kerala 682024, India
+#Manimala Cross Road, Ponekkara, Edappally, Ernakulam, Kerala 682024, India
+
+{
+  "origin": {
+    "address": {
+        "street": "",
+        "state": "Kerala",
+        "door": "",
+        "country": "India",
+        "city": "Kochi",
+        "building": " ",
+        "areaCode": "",
+        "area": "Edappally"
+    },
+
+    "gps": {
+        "lat": 10.021737163149579,
+        "lon": 76.30619847435514
+    },
+    "destination": null
+  }
+}
+###
+
+#@searchId = {{searchRoute2.response.body.searchId}}
+@searchId = {{rentalSearch.response.body.searchId}}
 
 # @name quotes
 GET {{app-host}}/rideSearch/{{searchId}}/quotes

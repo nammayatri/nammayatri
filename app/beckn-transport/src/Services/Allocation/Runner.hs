@@ -20,7 +20,9 @@ import Utils.Common
 handle :: Allocation.ServiceHandle Flow
 handle =
   Allocation.ServiceHandle
-    { getDriverSortMode = I.getDriverSortMode,
+    { findRideBookingById = I.findRideBookingById,
+      updateRideBookingStatus = I.updateRideBookingStatus,
+      getDriverSortMode = I.getDriverSortMode,
       getConfiguredNotificationTime = I.getConfiguredNotificationTime,
       getConfiguredAllocationTime = I.getConfiguredAllocationTime,
       getConfiguredReallocationsLimit = I.getConfiguredReallocationsLimit,
