@@ -24,6 +24,8 @@ buildSearchReq subscriber req = do
   let mbDropOff = intent.fulfillment.end
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
+  unless (subscriber.subscriber_url == context.bap_uri) $
+    throwError (InvalidRequest "Invalid bap_uri") -- is it correct?
   pure
     DSearch.DSearchReq
       { transactionId = context.transaction_id,
