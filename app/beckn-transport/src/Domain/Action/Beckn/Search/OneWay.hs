@@ -72,7 +72,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
       buildQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant now
 
   Esq.runTransaction $
-    for_ listOfQuotes QQuote.createOneWayQuote
+    for_ (map fst listOfQuotes) QQuote.create
   pure $ mkQuoteInfo <$> listOfQuotes
 
 buildQuote ::
@@ -84,26 +84,34 @@ buildQuote ::
   Double ->
   DVeh.Variant ->
   UTCTime ->
-  m DQuote.OneWayQuote
+  m (DQuote.Quote, DQuote.OneWayQuoteDetails)
 buildQuote productSearchRequest fareParams transporterId distance nearestDriverDist vehicleVariant now = do
   quoteId <- Id <$> generateGUID
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount
       estimatedTotalFare = fareSumWithDiscount fareParams
   products <- QProduct.findByName (show vehicleVariant) >>= fromMaybeM ProductsNotFound
-  pure
-    DQuote.OneWayQuote
-      { id = quoteId,
-        requestId = productSearchRequest.id,
-        productId = products.id,
-        providerId = transporterId,
-        createdAt = now,
-        distanceToNearestDriver = nearestDriverDist,
-        ..
-      }
+  let oneWayQuoteDetails =
+        DQuote.OneWayQuoteDetails
+          { distance = distance,
+            distanceToNearestDriver = nearestDriverDist
+          }
 
-mkQuoteInfo :: DQuote.OneWayQuote -> QuoteInfo
-mkQuoteInfo DQuote.OneWayQuote {..} =
+  let quote =
+        DQuote.Quote
+          { id = quoteId,
+            requestId = productSearchRequest.id,
+            productId = products.id,
+            providerId = transporterId,
+            createdAt = now,
+            quoteDetails = DQuote.OneWayDetails oneWayQuoteDetails,
+            ..
+          }
+  pure (quote, oneWayQuoteDetails)
+
+-- FIXME we should use tuple here because we don't have specific OneWayQuote type
+mkQuoteInfo :: (DQuote.Quote, DQuote.OneWayQuoteDetails) -> QuoteInfo
+mkQuoteInfo (DQuote.Quote {..}, DQuote.OneWayQuoteDetails {..}) =
   QuoteInfo
     { quoteId = id,
       fareProductType = DFareProduct.ONE_WAY,

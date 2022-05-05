@@ -9,14 +9,10 @@ import Domain.Types.Quote.OneWayQuote
 import Domain.Types.SearchRequest
 import Storage.Tabular.Quote
 
-createRentalQuote :: RentalQuote -> SqlDB ()
-createRentalQuote rentalQuote = do
-  create' (Rental rentalQuote)
-
-createOneWayQuote :: OneWayQuote -> SqlDB ()
-createOneWayQuote oneWayQuote = do
-  create' (OneWay oneWayQuote)
-  create' (mkOneWayQuoteEntity oneWayQuote)
+create :: Quote -> SqlDB ()
+create quote = do
+  create' quote
+  whenJust (mkOneWayQuote quote) create'
 
 findAllByProductIds :: Transactionable m => Integer -> Integer -> [Id Products] -> m [Quote]
 findAllByProductIds limit_ offset_ ids = do

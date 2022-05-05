@@ -5,16 +5,19 @@ import qualified Domain.Types.Quote as DQuote
 import EulerHS.Prelude hiding (id)
 
 -- Not used in business logic, only for Tabular
-data OneWayQuoteEntity = OneWayQuoteEntity
+data OneWayQuote = OneWayQuote
   { quoteId :: Id DQuote.Quote,
     distance :: Double,
     distanceToNearestDriver :: Double
   }
   deriving (Generic, Show, Eq)
 
-mkOneWayQuoteEntity :: DQuote.OneWayQuote -> OneWayQuoteEntity
-mkOneWayQuoteEntity DQuote.OneWayQuote {..} =
-  OneWayQuoteEntity
-    { quoteId = id,
-      ..
-    }
+mkOneWayQuote :: DQuote.Quote -> Maybe OneWayQuote
+mkOneWayQuote DQuote.Quote {..} = case quoteDetails of
+  DQuote.RentalDetails -> Nothing
+  DQuote.OneWayDetails DQuote.OneWayQuoteDetails {..} ->
+    Just
+      OneWayQuote
+        { quoteId = id,
+          ..
+        }

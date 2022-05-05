@@ -107,7 +107,7 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
             estimatedTotalFare = quote.estimatedTotalFare,
             vehicleVariant = quote.vehicleVariant,
             reallocationsCount = 0,
-            rideBookingDetails = SRB.mkRideBookingDetails searchRequest.toLocationId (DQuote.getDistance quote),
+            rideBookingDetails = SRB.mkRideBookingDetails searchRequest.toLocationId (DQuote.getDistance quote.quoteDetails),
             createdAt = now,
             updatedAt = now
           }

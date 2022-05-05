@@ -59,9 +59,9 @@ data RideBooking = RideBooking
   }
   deriving (Generic)
 
-data RideBookingDetails = OneWay OneWayDetails | Rental
+data RideBookingDetails = OneWayDetails OneWayRideBookingDetails | RentalDetails
 
-data OneWayDetails = OneWayDetails
+data OneWayRideBookingDetails = OneWayRideBookingDetails
   { toLocationId :: Id DLoc.SearchReqLocation,
     estimatedDistance :: Double
   }
@@ -70,14 +70,14 @@ data OneWayDetails = OneWayDetails
 mkRideBookingDetails :: Maybe (Id DLoc.SearchReqLocation) -> Maybe Double -> RideBookingDetails
 mkRideBookingDetails mbDropLocation mbEstimatedDistance = do
   let mbTuple = (,) <$> mbDropLocation <*> mbEstimatedDistance
-  maybe Rental (\(toLocationId, estimatedDistance) -> OneWay $ OneWayDetails {..}) mbTuple
+  maybe RentalDetails (\(toLocationId, estimatedDistance) -> OneWayDetails $ OneWayRideBookingDetails {..}) mbTuple
 
 getDropLocationId :: RideBookingDetails -> Maybe (Id DLoc.SearchReqLocation)
 getDropLocationId rideBookingDetails = case rideBookingDetails of
-  Rental -> Nothing
-  OneWay oneWayDetails -> Just oneWayDetails.toLocationId
+  RentalDetails -> Nothing
+  OneWayDetails oneWayDetails -> Just oneWayDetails.toLocationId
 
 getEstimatedDistance :: RideBookingDetails -> Maybe Double
 getEstimatedDistance rideBookingDetails = case rideBookingDetails of
-  Rental -> Nothing
-  OneWay oneWayDetails -> Just oneWayDetails.estimatedDistance
+  RentalDetails -> Nothing
+  OneWayDetails oneWayDetails -> Just oneWayDetails.estimatedDistance

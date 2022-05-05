@@ -26,7 +26,7 @@ defaultRideBooking =
       discount = Nothing,
       estimatedTotalFare = 0,
       reallocationsCount = 0,
-      rideBookingType = SRB.mkRideBookingType (Just $ Id "") (Just 0),
+      rideBookingDetails = SRB.mkRideBookingDetails (Just $ Id "") (Just 0),
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime
     }

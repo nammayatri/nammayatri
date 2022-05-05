@@ -9,7 +9,7 @@ import Domain.Types.Quote
 import Domain.Types.Quote.OneWayQuote
 import Storage.Tabular.Quote.OneWayQuote
 
-findByQuoteId :: Transactionable m => Id Quote -> m (Maybe OneWayQuoteEntity)
+findByQuoteId :: Transactionable m => Id Quote -> m (Maybe OneWayQuote)
 findByQuoteId quoteId =
   findOne $ do
     oneWayQuote <- from $ table @OneWayQuoteT

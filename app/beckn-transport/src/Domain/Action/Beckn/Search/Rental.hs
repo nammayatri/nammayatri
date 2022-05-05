@@ -54,7 +54,7 @@ onSearchCallback searchRequestId transporterId now = do
   let (listOfQuotes, quotesInfo) = unzip listOfTuples
 
   Esq.runTransaction $
-    for_ listOfQuotes QQuote.createRentalQuote
+    for_ listOfQuotes QQuote.create
 
   pure quotesInfo
 
@@ -63,7 +63,7 @@ buildQuote ::
   Id DSearchRequest.SearchRequest ->
   UTCTime ->
   DRentalFarePolicy.RentalFarePolicy ->
-  m DQuote.RentalQuote
+  m DQuote.Quote
 buildQuote searchRequestId now DRentalFarePolicy.RentalFarePolicy {..} = do
   quoteId <- Id <$> generateGUID
   let estimatedFare = baseFare
@@ -74,16 +74,17 @@ buildQuote searchRequestId now DRentalFarePolicy.RentalFarePolicy {..} = do
     QProduct.findByName (show vehicleVariant)
       >>= fromMaybeM ProductsNotFound
   pure $
-    DQuote.RentalQuote
+    DQuote.Quote
       { id = quoteId,
         requestId = searchRequestId,
         productId = products.id,
         providerId = organizationId,
         createdAt = now,
+        quoteDetails = DQuote.RentalDetails,
         ..
       }
 
-mkQuoteInfo :: DQuote.RentalQuote -> DRentalFarePolicy.RentalFarePolicy -> QuoteInfo
+mkQuoteInfo :: DQuote.Quote -> DRentalFarePolicy.RentalFarePolicy -> QuoteInfo
 mkQuoteInfo quote rentalFarePolicy@DRentalFarePolicy.RentalFarePolicy {..} = do
   QuoteInfo
     { quoteId = quote.id,

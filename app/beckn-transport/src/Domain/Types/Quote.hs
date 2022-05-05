@@ -12,7 +12,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import GHC.Records.Extra
 
-data OneWayQuote = OneWayQuote
+data Quote = Quote
   { id :: Id Quote,
     requestId :: Id DSR.SearchRequest,
     productId :: Id Products, -- do we need this field?
@@ -22,32 +22,17 @@ data OneWayQuote = OneWayQuote
     providerId :: Id DOrg.Organization,
     vehicleVariant :: DVeh.Variant,
     createdAt :: UTCTime,
-    distance :: Double,
+    quoteDetails :: QuoteDetails
+  }
+
+data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails
+
+data OneWayQuoteDetails = OneWayQuoteDetails
+  { distance :: Double,
     distanceToNearestDriver :: Double
   }
 
-data RentalQuote = RentalQuote
-  { id :: Id Quote,
-    requestId :: Id DSR.SearchRequest,
-    productId :: Id Products, -- do we need this field?
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
-    providerId :: Id DOrg.Organization,
-    vehicleVariant :: DVeh.Variant,
-    createdAt :: UTCTime
-  }
-
-data Quote = OneWay OneWayQuote | Rental RentalQuote
-
-getDistance :: Quote -> Maybe Double
-getDistance (OneWay quote) = Just quote.distance
-getDistance (Rental _) = Nothing
-
-instance (HasField x OneWayQuote a, HasField x RentalQuote a) => HasField x Quote a where
-  hasField (OneWay quote) = do
-    let setter newField = OneWay $ fst (hasField @x quote) newField
-    (setter, snd (hasField @x quote))
-  hasField (Rental quote) = do
-    let setter newField = Rental $ fst (hasField @x quote) newField
-    (setter, snd (hasField @x quote))
+getDistance :: QuoteDetails -> Maybe Double
+getDistance quoteDetails = case quoteDetails of
+  RentalDetails -> Nothing
+  OneWayDetails oneWayDetails -> Just oneWayDetails.distance

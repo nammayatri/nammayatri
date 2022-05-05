@@ -49,30 +49,26 @@ instance TEntityKey QuoteT where
 instance TEntity QuoteT Domain.Quote where
   fromTEntity entity = do
     let QuoteT {..} = entityVal entity
-    case fareProductType of
-      Domain.RENTAL -> do
-        return . Domain.Rental $
-          Domain.RentalQuote
-            { id = Id id,
-              requestId = fromKey requestId,
-              productId = fromKey productId,
-              providerId = fromKey providerId,
-              ..
-            }
+    quoteDetails <- case fareProductType of
+      Domain.RENTAL -> return Domain.RentalDetails
       Domain.ONE_WAY -> do
         oneWayQuoteEntity <- QOneWayQuote.findByQuoteId (Id id) >>= fromMaybeM QuoteDoesNotExist
-        return . Domain.OneWay $
-          Domain.OneWayQuote
-            { id = Id id,
-              requestId = fromKey requestId,
-              productId = fromKey productId,
-              providerId = fromKey providerId,
-              distance = oneWayQuoteEntity.distance,
+        return . Domain.OneWayDetails $
+          Domain.OneWayQuoteDetails
+            { distance = oneWayQuoteEntity.distance,
               distanceToNearestDriver = oneWayQuoteEntity.distance,
               ..
             }
+    pure
+      Domain.Quote
+        { id = Id id,
+          requestId = fromKey requestId,
+          productId = fromKey productId,
+          providerId = fromKey providerId,
+          ..
+        }
 
-  toTType (Domain.OneWay Domain.OneWayQuote {..}) =
+  toTType Domain.Quote {..} =
     QuoteT
       { id = getId id,
         fareProductType = Domain.ONE_WAY,
@@ -81,17 +77,6 @@ instance TEntity QuoteT Domain.Quote where
         providerId = toKey providerId,
         ..
       }
-  toTType (Domain.Rental Domain.RentalQuote {..}) =
-    QuoteT
-      { id = getId id,
-        fareProductType = Domain.RENTAL,
-        requestId = toKey requestId,
-        productId = toKey productId,
-        providerId = toKey providerId,
-        ..
-      }
 
-  toTEntity a@(Domain.Rental rentalQuote) =
-    Entity (toKey rentalQuote.id) $ toTType a
-  toTEntity a@(Domain.OneWay oneWayQuote) =
-    Entity (toKey oneWayQuote.id) $ toTType a
+  toTEntity quote =
+    Entity (toKey quote.id) $ toTType quote

@@ -30,15 +30,15 @@ instance TEntityKey OneWayQuoteT where
   fromKey (OneWayQuoteTKey _id) = Id _id
   toKey (Id id) = OneWayQuoteTKey id
 
-instance TEntity OneWayQuoteT Domain.OneWayQuoteEntity where
+instance TEntity OneWayQuoteT Domain.OneWayQuote where
   fromTEntity entity = do
     let OneWayQuoteT {..} = entityVal entity
     return $
-      Domain.OneWayQuoteEntity
+      Domain.OneWayQuote
         { quoteId = Id quoteId,
           ..
         }
-  toTType Domain.OneWayQuoteEntity {..} =
+  toTType Domain.OneWayQuote {..} =
     OneWayQuoteT
       { quoteId = getId quoteId,
         ..
