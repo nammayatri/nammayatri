@@ -88,34 +88,29 @@ confirm transporterId (SignatureAuthResult _ subscriber) req = withFlowHandlerBe
         transporterOrg
   where
     buildRideBooking searchRequest quote provider riderId now = do
-      uid <- generateGUID
-      let id = Id uid
-          transactionId = searchRequest.transactionId
-          requestId = searchRequest.id
-          quoteId = quote.id
-          status = SRB.CONFIRMED
-          providerId = provider.id
-          startTime = searchRequest.startTime
-          fromLocationId = searchRequest.fromLocationId
-          bapId = searchRequest.bapId
-          bapUri = searchRequest.bapUri
-          estimatedFare = quote.estimatedFare
-          discount = quote.discount
-          estimatedTotalFare = quote.estimatedTotalFare
-          vehicleVariant = quote.vehicleVariant
-          reallocationsCount = 0
-          createdAt = now
-          updatedAt = now
-      case quote of
-        DQuote.OneWay oneWayQuote -> do
-          toLocationId <- searchRequest.toLocationId & fromMaybeM (InternalError "ONE_WAY SearchRequest does not have toLocationId")
-          return $
-            SRB.OneWay
-              SRB.OneWayRideBooking
-                { estimatedDistance = oneWayQuote.distance,
-                  ..
-                }
-        DQuote.Rental _ -> return $ SRB.Rental SRB.RentalRideBooking {..}
+      id <- generateGUID
+      return $
+        SRB.RideBooking
+          { id = Id id,
+            transactionId = searchRequest.transactionId,
+            requestId = searchRequest.id,
+            quoteId = quote.id,
+            status = SRB.CONFIRMED,
+            providerId = provider.id,
+            startTime = searchRequest.startTime,
+            riderId = riderId,
+            fromLocationId = searchRequest.fromLocationId,
+            bapId = searchRequest.bapId,
+            bapUri = searchRequest.bapUri,
+            estimatedFare = quote.estimatedFare,
+            discount = quote.discount,
+            estimatedTotalFare = quote.estimatedTotalFare,
+            vehicleVariant = quote.vehicleVariant,
+            reallocationsCount = 0,
+            rideBookingDetails = SRB.mkRideBookingDetails searchRequest.toLocationId (DQuote.getDistance quote),
+            createdAt = now,
+            updatedAt = now
+          }
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =

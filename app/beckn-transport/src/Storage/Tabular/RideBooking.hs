@@ -11,7 +11,6 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.RideBooking as Domain
 import qualified Domain.Types.Vehicle as Veh
 import Storage.Tabular.FareProduct ()
@@ -21,8 +20,6 @@ import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.SearchReqLocation (SearchReqLocationTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
-import Types.Error
-import Utils.Common hiding (id)
 
 derivePersistField "Domain.RideBookingStatus"
 
@@ -31,7 +28,6 @@ mkPersist
   [defaultQQ|
     RideBookingT sql=ride_booking
       id Text
-      fareProductType Domain.FareProductType
       transactionId Text
       requestId SearchRequestTId
       quoteId QuoteTId
@@ -64,59 +60,27 @@ instance TEntity RideBookingT Domain.RideBooking where
   fromTEntity entity = do
     let RideBookingT {..} = entityVal entity
     pUrl <- parseBaseUrl bapUri
-    case fareProductType of
-      Domain.RENTAL -> do
-        return . Domain.Rental $
-          Domain.RentalRideBooking
-            { id = Id id,
-              requestId = fromKey requestId,
-              quoteId = fromKey quoteId,
-              riderId = fromKey riderId,
-              fromLocationId = fromKey fromLocationId,
-              providerId = fromKey providerId,
-              bapUri = pUrl,
-              ..
-            }
-      Domain.ONE_WAY -> do
-        toLocationId' <- toLocationId & fromMaybeM (InternalError "ONE_WAY Quote does not have toLocationId")
-        estimatedDistance' <- estimatedDistance & fromMaybeM (InternalError "ONE_WAY Quote does not have estimatedDistance")
-        return . Domain.OneWay $
-          Domain.OneWayRideBooking
-            { id = Id id,
-              requestId = fromKey requestId,
-              quoteId = fromKey quoteId,
-              riderId = fromKey riderId,
-              fromLocationId = fromKey fromLocationId,
-              providerId = fromKey providerId,
-              bapUri = pUrl,
-              toLocationId = fromKey toLocationId',
-              estimatedDistance = estimatedDistance',
-              ..
-            }
-  toTType rideBooking@(Domain.OneWay Domain.OneWayRideBooking {..}) = do
+    return $
+      Domain.RideBooking
+        { id = Id id,
+          requestId = fromKey requestId,
+          quoteId = fromKey quoteId,
+          riderId = fromKey riderId,
+          fromLocationId = fromKey fromLocationId,
+          providerId = fromKey providerId,
+          bapUri = pUrl,
+          rideBookingDetails = Domain.mkRideBookingDetails (fromKey <$> toLocationId) estimatedDistance,
+          ..
+        }
+  toTType Domain.RideBooking {..} = do
     RideBookingT
       { id = getId id,
-        fareProductType = Domain.ONE_WAY,
         requestId = toKey requestId,
         quoteId = toKey quoteId,
         riderId = toKey riderId,
         fromLocationId = toKey fromLocationId,
-        toLocationId = toKey <$> Domain.getDropLocationId rideBooking,
-        estimatedDistance = Domain.getEstimatedDistance rideBooking,
-        providerId = toKey providerId,
-        bapUri = showBaseUrl bapUri,
-        ..
-      }
-  toTType rideBooking@(Domain.Rental Domain.RentalRideBooking {..}) = do
-    RideBookingT
-      { id = getId id,
-        fareProductType = Domain.RENTAL,
-        requestId = toKey requestId,
-        quoteId = toKey quoteId,
-        riderId = toKey riderId,
-        fromLocationId = toKey fromLocationId,
-        toLocationId = toKey <$> Domain.getDropLocationId rideBooking,
-        estimatedDistance = Domain.getEstimatedDistance rideBooking,
+        toLocationId = toKey <$> Domain.getDropLocationId rideBookingDetails,
+        estimatedDistance = Domain.getEstimatedDistance rideBookingDetails,
         providerId = toKey providerId,
         bapUri = showBaseUrl bapUri,
         ..

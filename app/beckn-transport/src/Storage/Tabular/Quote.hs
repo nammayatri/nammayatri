@@ -68,7 +68,7 @@ instance TEntity QuoteT Domain.Quote where
               productId = fromKey productId,
               providerId = fromKey providerId,
               distance = oneWayQuoteEntity.distance,
-              distanceToNearestDriver = oneWayQuoteEntity.distanceToNearestDriver,
+              distanceToNearestDriver = oneWayQuoteEntity.distance,
               ..
             }
 
