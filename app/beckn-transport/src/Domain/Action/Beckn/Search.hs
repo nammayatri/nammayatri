@@ -85,13 +85,13 @@ handler transporter req@DSearchReq {..} = do
   quotesInfo <-
     case mbToLocation of
       Nothing -> do
-        unless isRentalProduct $
-          throwError (InvalidRequest "Rental packages is not available for this organization. Provide a valid destination for one way trip search")
-        Rental <$> Rental.onSearchCallback searchRequest.id transporter.id now
+        if isRentalProduct
+          then Rental <$> Rental.onSearchCallback searchRequest.id transporter.id now
+          else pure $ Rental []
       Just toLocation -> do
-        unless isOneWayProduct $
-          throwError (InvalidRequest "One way trip is not available for this organization. Remove destination for rental packages search")
-        OneWay <$> OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation
+        if isOneWayProduct
+          then OneWay <$> OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation
+          else pure $ OneWay []
   buildOnSearchReq transporter quotesInfo
     <* Metrics.finishSearchMetrics transporter.id searchMetricsMVar
 

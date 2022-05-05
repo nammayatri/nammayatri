@@ -66,14 +66,15 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   distance <-
     (.info.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
 
-  listOfQuotes <-
+  listOfQuotesAndDistances <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
-      buildQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant now
+      quote <- buildQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant now
+      pure (quote, poolResult.distanceToDriver)
 
   Esq.runTransaction $
-    for_ (map fst listOfQuotes) QQuote.create
-  pure $ mkQuoteInfo <$> listOfQuotes
+    for_ (map fst listOfQuotesAndDistances) QQuote.create
+  pure $ uncurry mkQuoteInfo <$> listOfQuotesAndDistances
 
 buildQuote ::
   EsqDBFlow m r =>
@@ -84,34 +85,27 @@ buildQuote ::
   Double ->
   DVeh.Variant ->
   UTCTime ->
-  m (DQuote.Quote, DQuote.OneWayQuoteDetails)
-buildQuote productSearchRequest fareParams transporterId distance nearestDriverDist vehicleVariant now = do
+  m DQuote.Quote
+buildQuote productSearchRequest fareParams transporterId distance distanceToNearestDriver vehicleVariant now = do
   quoteId <- Id <$> generateGUID
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount
       estimatedTotalFare = fareSumWithDiscount fareParams
   products <- QProduct.findByName (show vehicleVariant) >>= fromMaybeM ProductsNotFound
-  let oneWayQuoteDetails =
-        DQuote.OneWayQuoteDetails
-          { distance = distance,
-            distanceToNearestDriver = nearestDriverDist
-          }
+  let oneWayQuoteDetails = DQuote.OneWayQuoteDetails {..}
+  pure
+    DQuote.Quote
+      { id = quoteId,
+        requestId = productSearchRequest.id,
+        productId = products.id,
+        providerId = transporterId,
+        createdAt = now,
+        quoteDetails = DQuote.OneWayDetails oneWayQuoteDetails,
+        ..
+      }
 
-  let quote =
-        DQuote.Quote
-          { id = quoteId,
-            requestId = productSearchRequest.id,
-            productId = products.id,
-            providerId = transporterId,
-            createdAt = now,
-            quoteDetails = DQuote.OneWayDetails oneWayQuoteDetails,
-            ..
-          }
-  pure (quote, oneWayQuoteDetails)
-
--- FIXME we should use tuple here because we don't have specific OneWayQuote type
-mkQuoteInfo :: (DQuote.Quote, DQuote.OneWayQuoteDetails) -> QuoteInfo
-mkQuoteInfo (DQuote.Quote {..}, DQuote.OneWayQuoteDetails {..}) =
+mkQuoteInfo :: DQuote.Quote -> Double -> QuoteInfo
+mkQuoteInfo DQuote.Quote {..} distanceToNearestDriver =
   QuoteInfo
     { quoteId = id,
       fareProductType = DFareProduct.ONE_WAY,
