@@ -57,7 +57,7 @@ cancelRide ::
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    HasGoogleMaps m r c,
+    HasGoogleMaps m r,
     FCMFlow m r,
     CoreMetrics m
   ) =>

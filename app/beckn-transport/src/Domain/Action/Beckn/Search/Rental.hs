@@ -21,7 +21,7 @@ onSearchCallback ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasFlowEnv m r '["graphhopperUrl" ::: BaseUrl],
-    HasGoogleMaps m r c,
+    HasGoogleMaps m r,
     HasBPPMetrics m r,
     CoreMetrics m
   ) =>

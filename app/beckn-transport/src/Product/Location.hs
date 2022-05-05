@@ -154,7 +154,7 @@ getRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleMap
 getDistanceDuration ::
   ( MonadFlow m,
     CoreMetrics m,
-    GoogleMaps.HasGoogleMaps m r c
+    GoogleMaps.HasGoogleMaps m r
   ) =>
   MapSearch.LatLong ->
   MapSearch.LatLong ->
@@ -181,7 +181,7 @@ getDistanceDuration from to = do
 calculateDistance ::
   ( MonadFlow m,
     CoreMetrics m,
-    GoogleMaps.HasGoogleMaps m r c
+    GoogleMaps.HasGoogleMaps m r
   ) =>
   LatLong ->
   LatLong ->

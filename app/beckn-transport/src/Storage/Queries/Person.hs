@@ -5,6 +5,7 @@ module Storage.Queries.Person where
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import Beckn.Prelude
+import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
@@ -204,6 +205,9 @@ data DriverPoolResult = DriverPoolResult
     lon :: Double
   }
   deriving (Generic)
+
+instance GoogleMaps.HasCoordinates DriverPoolResult where
+  getCoordinates dpRes = LatLong dpRes.lat dpRes.lon
 
 getNearestDrivers ::
   (Transactionable m, HasFlowEnv m r '["driverPositionInfoExpiry" ::: Maybe Seconds]) =>

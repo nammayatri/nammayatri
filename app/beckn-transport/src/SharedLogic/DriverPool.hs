@@ -1,13 +1,11 @@
 module SharedLogic.DriverPool (calculateDriverPool, recalculateDriverPool, getDriverPool) where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
-import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as GoogleMaps
-import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.FareProduct as SFP
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.RideBooking as SRB
@@ -32,7 +30,7 @@ getDriverPool ::
   ( CoreMetrics m,
     EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    HasGoogleMaps m r c
+    HasGoogleMaps m r
   ) =>
   Id SRB.RideBooking ->
   m [Id Driver]
@@ -52,7 +50,7 @@ recalculateDriverPool ::
   ( EsqDBFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
-    HasGoogleMaps m r c
+    HasGoogleMaps m r
   ) =>
   Id SSReqLoc.SearchReqLocation ->
   Id SRB.RideBooking ->
@@ -71,7 +69,7 @@ calculateDriverPool ::
   ( EsqDBFlow m r,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
-    HasGoogleMaps m r c
+    HasGoogleMaps m r
   ) =>
   Id SSReqLoc.SearchReqLocation ->
   Id SOrg.Organization ->
@@ -108,35 +106,15 @@ calculateDriverPool locId orgId variant fareProductType = do
 filterOutDriversWithDistanceAboveThreshold ::
   ( EsqDBFlow m r,
     CoreMetrics m,
-    HasGoogleMaps m r c
+    HasGoogleMaps m r
   ) =>
   Integer ->
   LatLong ->
   NonEmpty QP.DriverPoolResult ->
   m [QP.DriverPoolResult]
 filterOutDriversWithDistanceAboveThreshold threshold pickupLatLong driverPoolResults = do
-  getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) originLatLongList (pickupLatLong :| []) Nothing
-  return $ NE.filter (filterFunc getDistanceResults) driverPoolResults
+  getDistanceResults <- GoogleMaps.getDistancesGeneral (Just GoogleMaps.CAR) driverPoolResults (pickupLatLong :| []) zipFunc Nothing
+  pure $ map fst $ filter (filterFunc . snd) getDistanceResults
   where
-    originLatLongList =
-      map (\dpRes -> LatLong dpRes.lat dpRes.lon) driverPoolResults
-    filterFunc getDistanceResults dpRes = do
-      let threshold' = fromIntegral threshold
-      let mbGdRes = findGetDistanceResult getDistanceResults dpRes
-      case mbGdRes of
-        Nothing -> False
-        Just gdRes -> (getDistanceInMeter gdRes.info.distance) <= threshold'
-
-findGetDistanceResult ::
-  [GoogleMaps.GetDistanceResult] ->
-  QP.DriverPoolResult ->
-  Maybe GoogleMaps.GetDistanceResult
-findGetDistanceResult getDistanceResults driverPoolResult =
-  find filterFunc getDistanceResults
-  where
-    filterFunc gdRes = do
-      case gdRes.origin of
-        GoogleMaps.Location origin ->
-          origin.lat == driverPoolResult.lat
-            && origin.lng == driverPoolResult.lon
-        _ -> False
+    zipFunc dpRes _ estDist = (dpRes, estDist.distance)
+    filterFunc estDist = getDistanceInMeter estDist <= fromIntegral threshold
