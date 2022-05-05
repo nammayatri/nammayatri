@@ -37,15 +37,13 @@ CREATE TABLE atlas_transporter.rental_fare_policy (
 ALTER TABLE atlas_transporter.fare_policy_discount ADD COLUMN fare_product_type character varying(255) NOT NULL DEFAULT 'ONE_WAY';
 
 CREATE TABLE atlas_transporter.one_way_quote (
-    id character(36) NOT NULL PRIMARY KEY,
-    quote_id character(36) NOT NULL REFERENCES atlas_transporter.quote (id),
+    quote_id character(36) NOT NULL PRIMARY KEY REFERENCES atlas_transporter.quote (id),
     distance double precision NOT NULL,
     distance_to_nearest_driver double precision NOT NULL
 );
 
-INSERT INTO atlas_transporter.one_way_quote (id, quote_id, distance, distance_to_nearest_driver)
+INSERT INTO atlas_transporter.one_way_quote (quote_id, distance, distance_to_nearest_driver)
     SELECT
-        md5(random()::text || clock_timestamp()::text)::uuid,
         T1.id,
         T1.distance,
         T1.distance_to_nearest_driver
@@ -53,9 +51,10 @@ INSERT INTO atlas_transporter.one_way_quote (id, quote_id, distance, distance_to
 
 ALTER TABLE atlas_transporter.quote DROP COLUMN distance;
 ALTER TABLE atlas_transporter.quote DROP COLUMN distance_to_nearest_driver;
+ALTER TABLE atlas_transporter.quote ADD COLUMN fare_product_type character varying(255) NOT NULL DEFAULT 'ONE_WAY';
 
-ALTER TABLE atlas_transporter.ride_booking ADD COLUMN fare_product_type character varying(255) NOT NULL DEFAULT 'ONE_WAY';
 ALTER TABLE atlas_transporter.ride_booking RENAME COLUMN distance TO estimated_distance;
 ALTER TABLE atlas_transporter.ride_booking ALTER COLUMN estimated_distance DROP NOT NULL;
+ALTER TABLE atlas_transporter.ride_booking ALTER COLUMN to_location_id DROP NOT NULL;
 
 ALTER TABLE atlas_transporter.search_request ALTER COLUMN to_location_id DROP NOT NULL;

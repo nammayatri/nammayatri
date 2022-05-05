@@ -69,14 +69,14 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   listOfQuotesAndDistances <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
-      quote <- buildQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant now
+      quote <- buildOneWayQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant now
       pure (quote, poolResult.distanceToDriver)
 
   Esq.runTransaction $
     for_ (map fst listOfQuotesAndDistances) QQuote.create
   pure $ uncurry mkQuoteInfo <$> listOfQuotesAndDistances
 
-buildQuote ::
+buildOneWayQuote ::
   EsqDBFlow m r =>
   DSearchRequest.SearchRequest ->
   Fare.FareParameters ->
@@ -86,7 +86,7 @@ buildQuote ::
   DVeh.Variant ->
   UTCTime ->
   m DQuote.Quote
-buildQuote productSearchRequest fareParams transporterId distance distanceToNearestDriver vehicleVariant now = do
+buildOneWayQuote productSearchRequest fareParams transporterId distance distanceToNearestDriver vehicleVariant now = do
   quoteId <- Id <$> generateGUID
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount

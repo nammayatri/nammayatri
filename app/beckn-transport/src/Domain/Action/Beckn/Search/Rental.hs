@@ -48,7 +48,7 @@ onSearchCallback searchRequestId transporterId now = do
   rentalFarePolicies <- QRentalFarePolicy.findRentalFarePoliciesByOrg transporterId
 
   listOfTuples <- forM rentalFarePolicies $ \rentalFarePolicy -> do
-    quote <- buildQuote searchRequestId now rentalFarePolicy
+    quote <- buildRentalQuote searchRequestId now rentalFarePolicy
     let quoteInfo = mkQuoteInfo quote rentalFarePolicy
     pure (quote, quoteInfo)
   let (listOfQuotes, quotesInfo) = unzip listOfTuples
@@ -58,13 +58,13 @@ onSearchCallback searchRequestId transporterId now = do
 
   pure quotesInfo
 
-buildQuote ::
+buildRentalQuote ::
   EsqDBFlow m r =>
   Id DSearchRequest.SearchRequest ->
   UTCTime ->
   DRentalFarePolicy.RentalFarePolicy ->
   m DQuote.Quote
-buildQuote searchRequestId now DRentalFarePolicy.RentalFarePolicy {..} = do
+buildRentalQuote searchRequestId now DRentalFarePolicy.RentalFarePolicy {..} = do
   quoteId <- Id <$> generateGUID
   let estimatedFare = baseFare
       discount = Nothing -- FIXME we don't have discount in RentalFarePolicy now

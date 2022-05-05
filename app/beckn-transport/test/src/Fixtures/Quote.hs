@@ -7,7 +7,12 @@ import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
 
 defaultQuote :: Quote.Quote
-defaultQuote =
+defaultQuote = do
+  let quoteDetails =
+        Quote.OneWayQuoteDetails
+          { distance = 0,
+            distanceToNearestDriver = 0
+          }
   Quote.Quote
     { id = Id "1",
       requestId = Id "1",
@@ -17,5 +22,6 @@ defaultQuote =
       discount = Nothing,
       providerId = "",
       vehicleVariant = Veh.SUV,
-      createdAt = Fixtures.defaultTime
+      createdAt = Fixtures.defaultTime,
+      quoteDetails = Quote.OneWayDetails quoteDetails
     }
