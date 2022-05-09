@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Domain.Types.Quote where
 
 import Beckn.Types.Amount
