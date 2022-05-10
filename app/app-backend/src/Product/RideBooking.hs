@@ -22,7 +22,7 @@ rideBookingStatus rideBookingId personId = withFlowHandlerAPI $ do
 
 rideBookingList :: Id Person.Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> FlowHandler API.RideBookingListRes
 rideBookingList personId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
-  rbList <- QRB.findAllByRiderId personId mbLimit mbOffset mbOnlyActive
+  rbList <- QRB.findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive
   API.RideBookingListRes <$> traverse buildRideBookingStatusRes rbList
 
 buildRideBookingStatusRes :: EsqDBFlow m r => SRB.RideBooking -> m API.RideBookingStatusRes
