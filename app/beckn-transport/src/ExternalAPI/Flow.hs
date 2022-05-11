@@ -2,7 +2,7 @@
 
 module ExternalAPI.Flow where
 
-import qualified Beckn.Types.Core.Context as Common
+import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes (BecknReq (..))
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
@@ -41,30 +41,6 @@ withCallback' doWithCallback transporter action api context cbUrl f = do
           & #bpp_id ?~ transporter.shortId.getShortId
   withBecknCallbackMig doWithCallback (Just authKey) action api context' cbUrl f
 
-callBAP ::
-  ( EsqDBFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
-  ) =>
-  Beckn.IsBecknAPI api req res =>
-  Common.Action ->
-  Proxy api ->
-  Org.Organization ->
-  Id SearchRequest ->
-  (Common.Context -> content -> req) ->
-  content ->
-  m res
-callBAP action api transporter searchRequestId reqConstr content = do
-  searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
-  let bapId = searchRequest.bapId
-      bapUri = searchRequest.bapUri
-  let bppShortId = getShortId $ transporter.shortId
-      authKey = getHttpManagerKey bppShortId
-      txnId = searchRequest.transactionId
-  bppUri <- makeBppUrl (transporter.id)
-  context <- buildTaxiContext action txnId bapId bapUri (Just bppShortId) (Just bppUri)
-  Beckn.callBecknAPI (Just authKey) Nothing (show action) api bapUri $ reqConstr context content
-
 callOnUpdate ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -74,8 +50,16 @@ callOnUpdate ::
   Id SearchRequest ->
   OnUpdate.OnUpdateMessage ->
   m ()
-callOnUpdate transporter searchRequestId =
-  void . callBAP Common.ON_UPDATE API.onUpdateAPI transporter searchRequestId BecknReq
+callOnUpdate transporter searchRequestId content = do
+  searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
+  let bapId = searchRequest.bapId
+      bapUri = searchRequest.bapUri
+  let bppShortId = getShortId $ transporter.shortId
+      authKey = getHttpManagerKey bppShortId
+  bppUri <- makeBppUrl (transporter.id)
+  msgId <- generateGUID
+  context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri $ BecknReq context content
 
 makeBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

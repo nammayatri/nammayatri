@@ -103,7 +103,7 @@ handler transporter req = do
     buildRideBooking searchRequest quote provider riderId now = do
       uid <- generateGUID
       let id = Id uid
-          transactionId = searchRequest.transactionId
+          messageId = searchRequest.messageId
           requestId = searchRequest.id
           quoteId = quote.id
           providerId = provider.id

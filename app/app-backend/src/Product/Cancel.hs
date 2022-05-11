@@ -16,7 +16,6 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
-import qualified Storage.Queries.SearchRequest as MC
 import Types.API.Cancel as API
 import Types.Error
 import Utils.Common
@@ -25,14 +24,13 @@ cancel :: Id SRB.RideBooking -> Id Person.Person -> API.CancelReq -> FlowHandler
 cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   let bookingCancellationReasonAPI = req.bookingCancellationReason
   rideBooking <- QRB.findById bookingId >>= fromMaybeM (RideBookingDoesNotExist bookingId.getId)
-  searchRequest <- MC.findByPersonId personId (rideBooking.requestId) >>= fromMaybeM (SearchRequestNotFound rideBooking.requestId.getId)
   canCancelRideBooking <- isRideBookingCancellable rideBooking
   unless canCancelRideBooking $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
-  let txnId = getId $ searchRequest.id
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.CANCEL txnId bapIDs.cabs bapURIs.cabs (Just rideBooking.providerId) (Just rideBooking.providerUrl)
+  msgId <- generateGUID
+  context <- buildTaxiContext Context.CANCEL msgId Nothing bapIDs.cabs bapURIs.cabs (Just rideBooking.providerId) (Just rideBooking.providerUrl)
 
   when (rideBooking.status == SRB.NEW) $ throwError (RideBookingInvalidStatus "NEW")
   bppOrderId <- fromMaybeM (RideBookingFieldNotPresent "bppBookingId") rideBooking.bppBookingId

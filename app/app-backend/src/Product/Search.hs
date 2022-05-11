@@ -16,7 +16,6 @@ import qualified Domain.Types.Person as Person
 import EulerHS.Prelude hiding (id, state)
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Types.API.Search as API
-import Types.Error
 import Utils.Common
 
 search :: Id Person.Person -> API.SearchReq -> FlowHandler API.SearchRes
@@ -38,6 +37,5 @@ searchCb ::
   FlowHandler AckResponse
 searchCb _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
-  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
-  DOnSearch.searchCb transactionId mbDOnSearchReq
+  DOnSearch.searchCb req.context.message_id mbDOnSearchReq
   pure Ack

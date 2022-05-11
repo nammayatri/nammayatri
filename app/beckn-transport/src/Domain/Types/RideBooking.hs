@@ -40,7 +40,7 @@ instance ToHttpApiData RideBookingStatus where
 
 data RideBooking = RideBooking
   { id :: Id RideBooking,
-    transactionId :: Text,
+    messageId :: Text,
     requestId :: Id DSR.SearchRequest,
     quoteId :: Id DQuote.Quote,
     status :: RideBookingStatus,

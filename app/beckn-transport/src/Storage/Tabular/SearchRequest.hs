@@ -21,7 +21,7 @@ mkPersist
   [defaultQQ|
     SearchRequestT sql=search_request
       id Text
-      transactionId Text
+      messageId Text
       startTime UTCTime
       validTill UTCTime
       providerId OrganizationTId

@@ -27,7 +27,7 @@ import Types.Error
 import Utils.Common
 
 data DSearchReq = DSearchReq
-  { transactionId :: Text,
+  { messageId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
     pickupLocation :: DLoc.SearchReqLocationAPIEntity,
@@ -57,7 +57,7 @@ handler transporter req@DSearchReq {..} = do
   unlessM (rideServiceable QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
     throwError RideNotServiceable
   whenJustM
-    (QSearchRequest.findByTxnIdAndBapIdAndBppId transactionId bapId transporter.id)
+    (QSearchRequest.findByMsgIdAndBapIdAndBppId messageId bapId transporter.id)
     (\_ -> throwError $ InvalidRequest "Duplicate Search request")
 
   searchMetricsMVar <- Metrics.startSearchMetrics transporter.id
@@ -129,7 +129,7 @@ buildSearchRequest DSearchReq {..} transporterId now validity fromLocationId mbT
   pure
     DSearchRequest.SearchRequest
       { id = Id uuid,
-        transactionId = transactionId,
+        messageId = messageId,
         startTime = pickupTime,
         validTill = validity,
         providerId = transporterId,

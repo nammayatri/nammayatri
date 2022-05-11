@@ -39,7 +39,9 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
     QRideB.create rideBooking
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.CONFIRM (getId searchRequestId) bapIDs.cabs bapURIs.cabs (Just quote.providerId) (Just quote.providerUrl)
+  msgId <- generateGUID
+  txnId <- generateGUID
+  context <- buildTaxiContext Context.CONFIRM msgId (Just txnId) bapIDs.cabs bapURIs.cabs (Just quote.providerId) (Just quote.providerUrl)
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   customerMobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   customerMobileCountryCode <- person.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")

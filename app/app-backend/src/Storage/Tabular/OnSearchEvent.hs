@@ -18,7 +18,7 @@ mkPersist
     OnSearchEventT sql=on_search_event
       id Text
       bppId Text
-      transactionId Text
+      messageId Text
       errorCode Text Maybe
       errorType Text Maybe
       errorMessage Text Maybe

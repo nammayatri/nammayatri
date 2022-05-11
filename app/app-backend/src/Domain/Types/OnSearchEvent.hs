@@ -8,7 +8,7 @@ import Beckn.Types.Id
 data OnSearchEvent = OnSearchEvent
   { id :: Id OnSearchEvent,
     bppId :: Text,
-    transactionId :: Text,
+    messageId :: Text,
     errorCode :: Maybe Text,
     errorType :: Maybe Text,
     errorMessage :: Maybe Text,

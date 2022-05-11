@@ -29,7 +29,7 @@ instance FromHttpApiData SearchRequestStatus where
 
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,
-    transactionId :: Text,
+    messageId :: Text,
     startTime :: UTCTime,
     validTill :: UTCTime,
     providerId :: Id DOrg.Organization,

@@ -16,7 +16,7 @@ defaultRideBooking = do
           }
   SRB.RideBooking
     { id = Id "1",
-      transactionId = "",
+      messageId = "",
       requestId = Id "1",
       quoteId = "1",
       status = SRB.CONFIRMED,

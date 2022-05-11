@@ -23,10 +23,10 @@ feedback personId request = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   let rideId = request.rideId
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
-  let txnId = getId rideBooking.requestId
   bppRideBookingId <- rideBooking.bppBookingId & fromMaybeM (RideBookingFieldNotPresent "bppBookingId")
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.RATING txnId bapIDs.cabs bapURIs.cabs (Just rideBooking.providerId) (Just rideBooking.providerUrl)
+  msgId <- generateGUID
+  context <- buildTaxiContext Context.RATING msgId Nothing bapIDs.cabs bapURIs.cabs (Just rideBooking.providerId) (Just rideBooking.providerUrl)
   void $ ExternalAPI.feedback rideBooking.providerUrl (Common.BecknReq context (Rating.RatingMessage bppRideBookingId.getId ratingValue))
   return Success

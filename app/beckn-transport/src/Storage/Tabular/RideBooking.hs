@@ -31,7 +31,7 @@ mkPersist
   [defaultQQ|
     RideBookingT sql=ride_booking
       id Text
-      transactionId Text
+      messageId Text
       requestId SearchRequestTId
       quoteId QuoteTId
       status Domain.RideBookingStatus

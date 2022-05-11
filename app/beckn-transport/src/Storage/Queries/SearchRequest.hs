@@ -13,21 +13,12 @@ create = Esq.create'
 findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 findById = Esq.findById
 
-findByTxnIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Organization -> m (Maybe SearchRequest)
-findByTxnIdAndBapIdAndBppId txnId bapId orgId =
+findByMsgIdAndBapIdAndBppId :: Transactionable m => Text -> Text -> Id Organization -> m (Maybe SearchRequest)
+findByMsgIdAndBapIdAndBppId txnId bapId orgId =
   Esq.findOne $ do
     search <- from $ table @SearchRequestT
     where_ $
-      search ^. SearchRequestTransactionId ==. val txnId
+      search ^. SearchRequestMessageId ==. val txnId
         &&. search ^. SearchRequestProviderId ==. val (toKey orgId)
         &&. search ^. SearchRequestBapId ==. val bapId
-    return search
-
-findByTxnIdAndProviderId :: Transactionable m => Text -> Id Organization -> m (Maybe SearchRequest)
-findByTxnIdAndProviderId txnId orgId =
-  Esq.findOne $ do
-    search <- from $ table @SearchRequestT
-    where_ $
-      search ^. SearchRequestTransactionId ==. val txnId
-        &&. search ^. SearchRequestProviderId ==. val (toKey orgId)
     return search
