@@ -1,1 +1,0 @@
-ALTER TABLE atlas_fmd_wrapper.organization DROP COLUMN api_key;

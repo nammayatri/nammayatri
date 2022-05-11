@@ -1,15 +1,13 @@
 # Project structure
 ## Modules
-### `app-backend` 
+### `app-backend`
 Frontend facing APIs (BAP), has more end-user specific implementations.
-### `beckn-transport` 
+### `beckn-transport`
 Beckn provider (BPP), implementing mobility spec. This module contains two executables:
  * `beckn-transport-exe`:  BPP server
  * `beckn-transport-btm-exe`:  background task manager. This component runs the allocation service responsible for allocating rides to drivers.
-### `beckn-gateway` 
+### `beckn-gateway`
 Beckn gateway (BG)
-### `fmd-wrapper` 
-Beckn provider (BPP) for Dunzo
 
 ### `beckn-core`
 Common library where the API types, unified data models will be there

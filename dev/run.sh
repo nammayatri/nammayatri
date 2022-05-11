@@ -10,7 +10,6 @@ driver-tracking-healthcheck
 mock-fcm
 mock-registry
 mock-sms
-fmd-wrapper
 parking-bap
 mock-parking-bpp
 public-transport-bap

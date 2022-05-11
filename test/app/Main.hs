@@ -6,8 +6,6 @@ module Main where
 import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
-import qualified "fmd-wrapper" App as FmdWrapper
-import qualified "mock-dunzo" App as MockDunzo
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-public-transport-bpp" App as MockPublicTransportBpp
 import qualified "mock-registry" App as MockRegistry
@@ -19,17 +17,14 @@ import qualified "beckn-transport" App.Allocator as Allocator
 import qualified "beckn-transport" App.DriverTrackingHealthcheck as DriverHC
 import qualified "app-backend" App.Types as AppBackend
 import qualified "beckn-transport" App.Types as TransporterBackend
-import qualified "fmd-wrapper" App.Types as FmdWrapper
 import Beckn.Exit (exitDBMigrationFailure)
 import qualified Beckn.Storage.Esqueleto.Migration as Esq
 import Beckn.Types.Geofencing
 import Beckn.Types.Logging (LoggerConfig)
 import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
-import Beckn.Utils.Migration (migrateIfNeeded)
 import qualified Data.Text as T (replace, toUpper, unpack)
 import EulerHS.Prelude
-import qualified FmdWrapper.Spec as FmdWrapper
 import GHC.Records.Extra (HasField)
 import Mobility.Fixtures
 import qualified Mobility.Spec as Mobility
@@ -53,9 +48,7 @@ main = do
       "beckn-gateway",
       "beckn-transport",
       "driver-tracking-healthcheck-service",
-      "fmd-wrapper",
       "mock-registry",
-      "mock-dunzo",
       "public-transport-bap",
       "mock-public-transport-bpp",
       "public-transport-search-consumer",
@@ -77,7 +70,7 @@ main = do
 specs :: IO TestTree
 specs =
   specs'
-    [Mobility.mkTestTree, FmdWrapper.mkTestTree, PublicTransport.mkTestTree]
+    [Mobility.mkTestTree, PublicTransport.mkTestTree]
 
 specs' :: [IO TestTree] -> IO TestTree
 specs' trees = do
@@ -107,11 +100,9 @@ specs' trees = do
         TransporterBackend.runTransporterBackendApp $ \cfg ->
           cfg & hideLogging
             & #updateLocationRefreshPeriod .~ timeBetweenLocationUpdates,
-        FmdWrapper.runFMDWrapper hideLogging,
         MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
         MockRegistry.runRegistryService hideLogging,
-        MockDunzo.runService hideLogging,
         PublicTransport.runService $ \cfg ->
           cfg & hideLogging,
         MockPublicTransportBpp.runMock $ \cfg ->
@@ -144,10 +135,6 @@ specs' trees = do
       (transportCfg :: TransporterBackend.AppCfg) <- readDhallConfigDefault "beckn-transport"
       Esq.migrateIfNeeded transportCfg.migrationPath True transportCfg.esqDBCfg
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate beckn-transporter database: "
-
-      (fmdCfg :: FmdWrapper.AppCfg) <- readDhallConfigDefault "fmd-wrapper"
-      migrateIfNeeded fmdCfg.migrationPath True fmdCfg.dbCfg
-        >>= handleLeft exitDBMigrationFailure "Couldn't migrate fmd-wrapper database: "
 
 hideLogging :: HasField "loggerConfig" cfg LoggerConfig => cfg -> cfg
 hideLogging cfg =

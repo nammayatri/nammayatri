@@ -138,31 +138,6 @@ spec:
           number: 8014
     timeout: 40s
   - match:
-    - uri:
-        prefix: /fmd/
-    - headers:
-        authorization:
-          prefix: Signature
-    rewrite:
-      uri: /
-    route:
-    - destination:
-        host: beckn-fmd-wrapper-sandbox
-        port:
-          number: 8018
-    timeout: 40s
-  - match:
-    - uri:
-        prefix: /fmd
-    rewrite:
-      uri: /
-    route:
-    - destination:
-        host: beckn-fmd-wrapper-083-sandbox
-        port:
-          number: 8018
-    timeout: 40s
-  - match:
     - headers:
         authorization:
           prefix: Signature
@@ -244,17 +219,6 @@ spec:
     timeout: 40s
 
   # - Master version routes
-  - match:
-    - uri:
-        prefix: /dev/fmd/
-    rewrite:
-      uri: /
-    route:
-    - destination:
-        host: beckn-fmd-wrapper-master
-        port:
-          number: 8018
-    timeout: 40s
   - match:
     - uri:
         prefix: /bpp/metro/

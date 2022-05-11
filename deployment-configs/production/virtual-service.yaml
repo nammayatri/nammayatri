@@ -21,17 +21,6 @@ spec:
           number: 8989
     timeout: 40s
   - match:
-    - uri:
-        prefix: /dunzo/
-    rewrite:
-      uri: /
-    route:
-    - destination:
-        host: beckn-fmd-wrapper-083-production
-        subset: 039dad9d
-      weight: 100
-    timeout: 40s
-  - match:
     - headers:
         authorization:
           prefix: Signature

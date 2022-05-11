@@ -1,21 +1,6 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: beckn-fmd-wrapper-083-production-destinations
-  namespace: atlas
-spec:
-  host: beckn-fmd-wrapper-083-production
-  trafficPolicy:
-    loadBalancer:
-      simple: LEAST_CONN
-  subsets:
-    - name: 820789c5
-      labels:
-        version: 820789c5
----
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
   name: beckn-gateway-083-production-destinations
   namespace: atlas
 spec:

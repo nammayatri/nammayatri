@@ -56,7 +56,6 @@ dependencies:
   - app-backend
   - beckn-transport
   - beckn-gateway
-  - fmd-wrapper
   - beckn-core
   - mock-registry
   - aeson
@@ -90,7 +89,6 @@ dependencies:
   - HUnit
   - unix
   - string-conversions
-  - mock-dunzo
   - public-transport-bap
   - mock-public-transport-bpp
   - search-result-aggregator
