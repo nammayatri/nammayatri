@@ -216,7 +216,7 @@ notifyFarePolicyChange coordinatorId =
           [ "Fare has been updated."
           ]
     notificationData =
-      FCM.FCMAndroidData
+      FCM.FCMData
         { fcmNotificationType = FCM.FARE_POLICY_CHANGED,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
@@ -241,7 +241,7 @@ notifyDiscountChange coordinatorId =
           [ "Discount has been changed."
           ]
     notificationData =
-      FCM.FCMAndroidData
+      FCM.FCMData
         { fcmNotificationType = FCM.DISCOUNT_CHANGED,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
