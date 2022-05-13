@@ -90,6 +90,7 @@ runnerIteration = do
   readyTasks <- getReadyTasks jobType
   tasksPerIteration <- asks (.tasksPerIteration)
   availableReadyTasksIds <- pickTasks tasksPerIteration $ map (.id) readyTasks
+  logPretty DEBUG "available tasks" availableReadyTasksIds
   takenTasksUpdatedInfo <- getTasksById availableReadyTasksIds
   terminationMVar <- newEmptyMVar
   let inspectTermination = modifyMVarMasked_ terminationMVar pure

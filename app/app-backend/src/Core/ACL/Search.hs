@@ -23,7 +23,7 @@ buildRentalSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
   DRentalSearch.DSearchReq ->
   m (BecknReq Search.SearchMessage)
-buildRentalSearchReq DRentalSearch.DSearchReq {..} = buildSearchReq origin Nothing searchId now
+buildRentalSearchReq DRentalSearch.DSearchReq {..} = buildSearchReq origin Nothing searchId startTime
 
 buildSearchReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
@@ -32,12 +32,12 @@ buildSearchReq ::
   Id DSearchReq.SearchRequest ->
   UTCTime ->
   m (BecknReq Search.SearchMessage)
-buildSearchReq origin mbDestination searchId now = do
+buildSearchReq origin mbDestination searchId startTime = do
   let txnId = getId searchId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SEARCH txnId bapIDs.cabs bapURIs.cabs Nothing Nothing
-  let intent = mkIntent origin mbDestination now
+  let intent = mkIntent origin mbDestination startTime
   pure $ BecknReq context $ Search.SearchMessage intent
 
 mkIntent ::
@@ -45,11 +45,11 @@ mkIntent ::
   Maybe API.SearchReqLocation ->
   UTCTime ->
   Search.Intent
-mkIntent origin mbDestination now = do
+mkIntent origin mbDestination startTime = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin,
-            time = Search.Time now
+            time = Search.Time startTime
           }
       mkStopInfo destination =
         Search.StopInfo

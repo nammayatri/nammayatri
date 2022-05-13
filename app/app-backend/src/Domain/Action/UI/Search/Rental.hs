@@ -20,7 +20,7 @@ import Utils.Common
 data DSearchReq = DSearchReq
   { origin :: API.SearchReqLocation,
     searchId :: Id DSearchReq.SearchRequest,
-    now :: UTCTime
+    startTime :: UTCTime
   }
 
 search :: Id Person.Person -> API.SearchReq -> Flow (API.SearchRes, DSearchReq)
@@ -39,7 +39,7 @@ search personId req = do
         DSearchReq
           { origin = req.origin,
             searchId = searchRequest.id,
-            now = now
+            startTime = req.startTime
           }
   return (API.SearchRes $ searchRequest.id, dSearchReq)
   where

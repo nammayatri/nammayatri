@@ -81,7 +81,8 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
-    exotelCallbackUrl :: BaseUrl
+    exotelCallbackUrl :: BaseUrl,
+    schedulingReserveTime :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -130,7 +131,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     kafkaProducerTools :: KafkaProducerTools,
     kafkaEnvs :: BPPKafkaEnvs,
-    hedisEnv :: HedisEnv
+    hedisEnv :: HedisEnv,
+    schedulingReserveTime :: Seconds
   }
   deriving (Generic)
 

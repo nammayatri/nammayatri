@@ -62,7 +62,9 @@ ALTER TABLE atlas_transporter.search_request ALTER COLUMN to_location_id DROP NO
 -- for testing purpose
 
 INSERT INTO atlas_transporter.fare_product (id, organization_id, enabled, type, created_at, updated_at) VALUES
-    ('ada7f588-cbfe-4dea-a1d0-7ae2fe7ef289', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', true, 'RENTAL', now (), now ());
+    ('ada7f588-cbfe-4dea-a1d0-7ae2fe7ef289', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', true, 'RENTAL', now (), now ()),
+    ('ada7f588-cbfe-4dea-a1d0-7ae2fe7ef290', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', true, 'RENTAL', now (), now ());
 
 INSERT INTO atlas_transporter.rental_fare_policy (id, organization_id, vehicle_variant, base_fare, base_distance, base_duration_hr, extra_km_fare, extra_minute_fare, driver_allowance_for_day) VALUES
-    ('1391f193-561e-4f2e-910b-bbe3dbd257be', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'SUV', '19.0', '100.0', '3', '0.3', '0.29', '5');
+    ('1391f193-561e-4f2e-910b-bbe3dbd257be', 'e1f37274-f0aa-4bb3-93a0-2476349487b7', 'SUV', '19.0', '100.0', '3', '0.3', '0.29', '5'),
+    ('1391f193-561e-4f2e-910b-bbe3dbd257br', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 'SUV', '19.0', '100.0', '3', '0.3', '0.29', '5');

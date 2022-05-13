@@ -116,7 +116,7 @@ data ServiceHandle m = ServiceHandle
     logDriverEvents :: AllocationEventType -> Id SRB.RideBooking -> NonEmpty (Id Driver) -> m (),
     metrics :: AllocatorMetricsHandle m,
     findRideBookingById :: Id SRB.RideBooking -> m SRB.RideBooking,
-    updateRideBookingStatus :: SRB.RideBookingStatus -> Id SRB.RideBooking -> m ()
+    updateRideBookingStatusToConfirmed :: Id SRB.RideBooking -> m ()
   }
 
 process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer -> m Int
@@ -137,9 +137,9 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
     let requestId = rideRequest.requestId
     let rideBookingId = rideRequest.rideBookingId
     rideInfo <- getRideInfo rideBookingId
-    rideBooking <- findRideBookingById rideBookingId
-    when (rideBooking.status == SRB.SCHEDULED) $
-      updateRideBookingStatus SRB.CONFIRMED rideBookingId
+    when (rideInfo.rideStatus == Scheduled) $
+      updateRideBookingStatusToConfirmed rideBookingId
+
     let rideStatus = rideInfo.rideStatus
     eres <- try $
       withLogTag ("RideRequest_" <> rideBookingId.getId) $ do
@@ -147,6 +147,7 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
         case rideRequest.requestData of
           Allocation ->
             case rideStatus of
+              Scheduled -> processAllocation handle shortOrgId rideInfo
               Confirmed -> processAllocation handle shortOrgId rideInfo
               AwaitingReassignment -> processAllocation handle shortOrgId rideInfo
               Cancelled -> logInfo "Ride is cancelled, allocation request skipped"

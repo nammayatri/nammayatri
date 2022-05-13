@@ -22,7 +22,6 @@ import qualified Product.BecknProvider.BP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.Organization as Organization
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RideBooking as QRideBooking
 import qualified Storage.Queries.RideRequest as RideRequest
@@ -36,8 +35,8 @@ data DConfirmReq = DConfirmReq
   { quoteId :: Id DQuote.Quote,
     bapUri :: BaseUrl,
     bapId :: Text,
-    phone :: Text,
-    mobileCountryCode :: Text
+    customerPhoneNumber :: Text,
+    customerMobileCountryCode :: Text
   }
 
 data DOnConfirmReq = DOnConfirmReq
@@ -49,21 +48,17 @@ data DOnConfirmReq = DOnConfirmReq
 handler ::
   DOrg.Organization -> DConfirmReq -> Flow DOnConfirmReq
 handler transporter req = do
-  let quoteId = req.quoteId
-      customerMobileCountryCode = req.mobileCountryCode
-      customerPhoneNumber = req.phone
-  quote <- QQuote.findById quoteId >>= fromMaybeM QuoteDoesNotExist
-  let oneWayB = DQuote.isOneWay quote.quoteDetails
-  let transporterId' = quote.providerId
+  quote <- QQuote.findById req.quoteId >>= fromMaybeM QuoteDoesNotExist
+  let quoteTransporterId = quote.providerId
   transporterOrg <-
-    Organization.findById transporterId'
+    Organization.findById quoteTransporterId
       >>= fromMaybeM OrgNotFound
-  unless (transporterId' == transporter.id) $ throwError AccessDenied
+  unless (quoteTransporterId == transporter.id) $ throwError AccessDenied
   searchRequest <- SearchRequest.findById quote.requestId >>= fromMaybeM SearchRequestNotFound
   let bapOrgId = searchRequest.bapId
   unless (req.bapId == bapOrgId) $ throwError AccessDenied
   now <- getCurrentTime
-  (riderDetails, isNewRider) <- getRiderDetails customerMobileCountryCode customerPhoneNumber now
+  (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   rideBooking <- buildRideBooking searchRequest quote transporterOrg riderDetails.id now
   rideRequest <-
     BP.buildRideReq
@@ -71,17 +66,32 @@ handler transporter req = do
       (transporterOrg.shortId)
       RideRequest.ALLOCATION
       now
-  unless oneWayB $ do
-    let scheduledTime = addUTCTime (negate $ 60 * 60) rideBooking.startTime
-    createScheduleRentalRideRequestJob scheduledTime rideRequest
-  Esq.runTransaction $ do
-    when isNewRider $ QRD.create riderDetails
-    QRideBooking.create rideBooking
-    when oneWayB $ RideRequest.create rideRequest
-    whenJust quote.discount $ \disc ->
-      QDiscTransaction.create $ mkDiscountTransaction rideBooking disc now
+  let transaction additionalDBSaves = Esq.runTransaction $ do
+        when isNewRider $ QRD.create riderDetails
+        QRideBooking.create rideBooking
+        whenJust quote.discount $ \disc ->
+          QDiscTransaction.create $ mkDiscountTransaction rideBooking disc now
+        additionalDBSaves
 
-  onConfirmCallback rideBooking searchRequest transporterOrg
+      handleRideBookingType (DQuote.OneWayDetails _) =
+        transaction $ RideRequest.create rideRequest
+      handleRideBookingType DQuote.RentalDetails = do
+        transaction $ pure ()
+        let secondsPerMinute = 60
+        schedulingReserveTime <- secondsToNominalDiffTime <$> asks (.schedulingReserveTime)
+        let scheduledTime = addUTCTime (negate schedulingReserveTime) rideBooking.startTime
+            schedulingDelay = 0 * secondsPerMinute
+            minimalSchedulingTime = addUTCTime (schedulingReserveTime + schedulingDelay) now
+        if diffUTCTime scheduledTime now < schedulingDelay
+          then
+            throwError $
+              InvalidRequest $
+                "minimum starting time is " <> show minimalSchedulingTime
+          else createScheduleRentalRideRequestJob scheduledTime rideRequest
+
+  handleRideBookingType quote.quoteDetails
+
+  onConfirmCallback rideBooking searchRequest transporterOrg.id
   where
     buildRideBooking searchRequest quote provider riderId now = do
       uid <- generateGUID
@@ -106,7 +116,7 @@ handler transporter req = do
       rideBookingDetails <- case quoteDetails of
         DQuote.OneWayDetails oneWayQuote -> do
           toLocationId <- searchRequest.toLocationId & fromMaybeM (InternalError "ONE_WAY SearchRequest does not have toLocationId")
-          return $
+          pure $
             SRB.OneWayDetails
               SRB.OneWayRideBookingDetails
                 { estimatedDistance = oneWayQuote.distance,
@@ -115,20 +125,16 @@ handler transporter req = do
         DQuote.RentalDetails -> pure SRB.RentalDetails
       pure SRB.RideBooking {..}
 
-findTransporter :: Id DOrg.Organization -> Flow DOrg.Organization
-findTransporter transporterId = do
-  transporter <- QOrg.findById transporterId >>= fromMaybeM OrgDoesNotExist
-  unless transporter.enabled $ throwError AgencyDisabled
-  pure transporter
-
 createScheduleRentalRideRequestJob :: (EsqDBFlow m r) => UTCTime -> RideRequest.RideRequest -> m ()
-createScheduleRentalRideRequestJob scheduledAt rideBooking =
+createScheduleRentalRideRequestJob scheduledAt rideRequest =
   void $ createJobByTime scheduledAt jobEntry
   where
+    --  void $ createJobIn 0 jobEntry -- for debugging purposes
+
     jobEntry =
       JobEntry
         { jobType = AllocateRental,
-          jobData = rideBooking,
+          jobData = rideRequest,
           maxErrors = 5
         }
 
@@ -158,15 +164,12 @@ onConfirmCallback ::
   ) =>
   SRB.RideBooking ->
   SearchRequest.SearchRequest ->
-  Organization.Organization ->
+  Id Organization.Organization ->
   m DOnConfirmReq
-onConfirmCallback rideBooking searchRequest transporterOrg = do
-  let transporterId = transporterOrg.id
-  let rideBookingId = rideBooking.id
+onConfirmCallback rideBooking searchRequest transporterOrgId = do
   let pickupPoint = searchRequest.fromLocationId
-  let vehicleVariant = rideBooking.vehicleVariant
-  driverPool <- recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant
-  logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| getId rideBookingId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
+  driverPool <- recalculateDriverPool pickupPoint rideBooking.id transporterOrgId rideBooking.vehicleVariant
+  logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| rideBooking.id.getId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
   pure $
     DOnConfirmReq
       { rideBookingId = rideBooking.id,

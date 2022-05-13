@@ -1,10 +1,10 @@
 module Types.API.RentalSearch (SearchReq (..), module Search) where
 
-import Data.OpenApi (ToSchema)
-import EulerHS.Prelude
+import Beckn.Prelude
 import Types.API.Search as Search hiding (SearchReq (..))
 
-newtype SearchReq = SearchReq
-  { origin :: Search.SearchReqLocation
+data SearchReq = SearchReq
+  { origin :: Search.SearchReqLocation,
+    startTime :: UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

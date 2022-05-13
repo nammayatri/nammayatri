@@ -9,6 +9,7 @@ import Beckn.Utils.Shutdown
 import Control.Monad.Catch (Handler (..), catches)
 import qualified Data.Map as Map
 import Domain.Types.Organization
+import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude
 import qualified Services.Allocation.Allocation as Allocation
 import qualified Services.Allocation.Internal as I
@@ -21,7 +22,7 @@ handle :: Allocation.ServiceHandle Flow
 handle =
   Allocation.ServiceHandle
     { findRideBookingById = I.findRideBookingById,
-      updateRideBookingStatus = I.updateRideBookingStatus,
+      updateRideBookingStatusToConfirmed = I.updateRideBookingStatus SRB.CONFIRMED,
       getDriverSortMode = I.getDriverSortMode,
       getConfiguredNotificationTime = I.getConfiguredNotificationTime,
       getConfiguredAllocationTime = I.getConfiguredAllocationTime,

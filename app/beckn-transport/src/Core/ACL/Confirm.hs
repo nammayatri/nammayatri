@@ -31,8 +31,8 @@ buildConfirmReq subscriber req = do
   pure $
     DConfirmReq
       { quoteId = Id item.id,
-        mobileCountryCode = phone.country_code,
-        phone = phone.number,
+        customerMobileCountryCode = phone.country_code,
+        customerPhoneNumber = phone.number,
         bapUri = req.context.bap_uri,
         bapId = req.context.bap_id
       }

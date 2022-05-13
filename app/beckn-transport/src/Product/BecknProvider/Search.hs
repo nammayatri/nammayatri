@@ -13,6 +13,7 @@ import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Organization as Org
 import EulerHS.Prelude hiding (state)
 import qualified ExternalAPI.Flow as ExternalAPI
+import qualified SharedLogic.Transporter as Shared
 import Utils.Common
 
 search ::
@@ -24,7 +25,7 @@ search ::
 search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     dSearchReq <- ACL.buildSearchReq subscriber req
-    transporter <- DSearch.findTransporter transporterId
+    transporter <- Shared.findTransporter transporterId
     let context = req.context
     let callbackUrl = gateway.subscriber_url
     ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $ do

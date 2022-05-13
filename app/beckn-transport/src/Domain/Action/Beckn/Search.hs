@@ -18,7 +18,6 @@ import EulerHS.Prelude hiding (id, state)
 import Product.Location
 import qualified Storage.Queries.FarePolicy.FareProduct as QFareProduct
 import qualified Storage.Queries.Geometry as QGeometry
-import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -51,12 +50,6 @@ data TransporterInfo = TransporterInfo
     ridesCompleted :: Int,
     ridesConfirmed :: Int
   }
-
-findTransporter :: Id DOrg.Organization -> Flow DOrg.Organization
-findTransporter transporterId = do
-  transporter <- QOrg.findById transporterId >>= fromMaybeM (OrgDoesNotExist transporterId.getId)
-  unless transporter.enabled $ throwError AgencyDisabled
-  pure transporter
 
 handler :: DOrg.Organization -> DSearchReq -> Flow DOnSearchReq
 handler transporter req@DSearchReq {..} = do

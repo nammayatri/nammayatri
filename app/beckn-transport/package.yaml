@@ -137,7 +137,7 @@ executables:
       - beckn-transport
       - beckn-core
   transporter-scheduler-exe:
-    main: DriverTrackingHealthcheckMain.hs
+    main: Scheduler.hs
     source-dirs: server
     other-modules: []
     ghc-options:

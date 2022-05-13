@@ -1,11 +1,37 @@
 @token = {{app-token}}
 
+###
+# @name setActive
+POST {{transporter-host}}/driver/setActivity?active=true
+content-type: application/json
+token: {{driver-token}}
+
+###
+# @name updateInitial
+POST {{transporter-host}}/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.308364,
+            "lat": 10.025263
+        },
+        "ts": "{{baseTime}}:01.114244Z"
+    }
+]
+
+###
+@baseTime = 2022-05-15T14:59
+
 # @name search
 POST {{app-host}}/rentalSearch
 content-type: application/json
 token: {{token}}
 
 {
+  "startTime": "{{baseTime}}:01.114244Z",
   "origin": {
     "address": {
         "street": "Edapally Metro Station",
@@ -30,5 +56,81 @@ token: {{token}}
 
 # @name quotes
 GET {{app-host}}/rideSearch/{{searchId}}/quotes
+content-type: application/json
+token: {{token}}
+
+###
+# @name confirm
+@quoteId = {{quotes.response.body.quotes[1].onDemandCab.id}}
+
+POST {{app-host}}/rideSearch/{{searchId}}/quotes/{{quoteId}}/confirm HTTP/1.1
+content-type: application/json
+token: {{token}}
+
+###
+@bookingId = {{confirm.response.body.bookingId}}
+POST {{app-host}}/rideBooking/{{bookingId}}
+token: {{token}}
+
+###
+
+@bppBookingId = 88e814a5-706b-47db-9952-db32a0d4f283
+# this was taken from the database
+
+# @name notif-info
+GET {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification
+token: {{driver-token}}
+
+###
+
+# @name accept
+
+POST {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification/respond
+token: {{driver-token}}
+content-type: application/json
+
+{
+    "response": "ACCEPT"
+}
+
+###
+# @name list2
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{token}}
+
+###
+# @name driverList
+GET {{transporter-host}}/driver/ride/list?limit=100&offset=0
+token: {{driver-token}}
+
+###
+@rideId = {{driverList.response.body.list[0].id}}
+@otp = {{list2.response.body.list[0].ride.rideOtp}}
+
+# @name startRide
+POST {{transporter-host}}/driver/ride/{{rideId}}/start
+token: {{driver-token}}
+content-type: application/json
+
+{
+    "rideOtp": "{{otp}}"
+}
+
+###
+
+# @name rideEnd
+POST {{transporter-host}}/driver/ride/{{rideId}}/end
+token: {{driver-token}}
+
+###
+# @name list3
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
 content-type: application/json
 token: {{token}}

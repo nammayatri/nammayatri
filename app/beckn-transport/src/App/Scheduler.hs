@@ -35,7 +35,7 @@ schedulerHandlerList env =
   [ (AllocateRental, JobHandler $ \x -> runMock env $ allocateRentalRide x)
   ]
 
-data JobType = AllocateRental
+data JobType = AllocateRental | FakeType
   deriving (Generic, FromDhall, Eq, Ord, Show, FromJSON, ToJSON)
 
 data HandlerEnv = HandlerEnv

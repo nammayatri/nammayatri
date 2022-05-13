@@ -1,10 +1,6 @@
 @token = {{app-token}}
 
 ###
-# activate rentals: insert into fare_product values (md5(random()::text), '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', true, 'RENTAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
-
-
-###
 # @name setActive
 POST {{transporter-host}}/driver/setActivity?active=true
 content-type: application/json
@@ -129,8 +125,8 @@ token: {{app-token}}
 }
 ###
 
-#@searchId = {{searchRoute2.response.body.searchId}}
-@searchId = {{rentalSearch.response.body.searchId}}
+@searchId = {{searchRoute1.response.body.searchId}}
+#@searchId = {{rentalSearch.response.body.searchId}}
 
 # @name quotes
 GET {{app-host}}/rideSearch/{{searchId}}/quotes
@@ -161,18 +157,18 @@ token: {{token}}
 
 ###
 
-@bppBookingId = 7d0ed719-ccdd-43a4-933e-95a1c34898d9
+@bppBookingId = c5ca14d1-7f81-4056-b473-40554e73bf2c
 # this was taken from the database
 
 # @name notif-info
-GET {{transporter-host}}/driver/ride/{{bppBookingId}}/notification
+GET {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification
 token: {{driver-token}}
 
 ###
 
 # @name accept
 
-POST {{transporter-host}}/driver/ride/{{bppBookingId}}/notification/respond
+POST {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification/respond
 token: {{driver-token}}
 content-type: application/json
 
@@ -195,7 +191,7 @@ GET {{transporter-host}}/driver/ride/list?limit=100&offset=0
 token: {{driver-token}}
 
 ###
-@rideId = {{driverList.response.body.list[0].ride.id}}
+@rideId = {{driverList.response.body.list[0].id}}
 @otp = {{list2.response.body.list[0].ride.rideOtp}}
 
 # @name startRide

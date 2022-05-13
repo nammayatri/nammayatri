@@ -63,6 +63,12 @@ millisecondsToMicroseconds (Milliseconds mill) = Microseconds $ mill * 1000
 secondsToMcs :: Seconds -> Microseconds
 secondsToMcs (Seconds s) = Microseconds (s * 1000000)
 
+secondsToMillis :: Seconds -> Milliseconds
+secondsToMillis (Seconds s) = Milliseconds (s * 1000)
+
+secondsToNominalDiffTime :: Seconds -> NominalDiffTime
+secondsToNominalDiffTime = millisToNominalDiffTime . secondsToMillis
+
 nominalDiffTimeToSeconds :: NominalDiffTime -> Seconds
 nominalDiffTimeToSeconds = round . Time.nominalDiffTimeToSeconds
 
