@@ -29,13 +29,10 @@ resolver: lts-16.31
 #   - auto-update
 #   - wai
 packages:
-  - lib/beckn-core
   - app/beckn-cli
-  - app/gateway
   - app/beckn-transport
   - app/app-backend
   - app/search-result-aggregator
-  - app/mock-registry
   - app/mock-sms
   - app/mock-fcm
   - app/example-service
@@ -59,6 +56,18 @@ packages:
 # extra-deps: []
 
 extra-deps:
+  - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
+    commit: 50a1642665a8b068996a57347ffd9316aa11f3de
+    subdirs:
+      - app/gateway
+  - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
+    commit: f8f04f109252ea9eb120bd3cb6f74d2ffcc99a87
+    subdirs:
+      - app/mock-registry
+  - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
+    commit: 0ef755de4f401171a1de34c888d8fa10d5cdb4a2
+    subdirs:
+      - lib/beckn-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs
     commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
     subdirs:
