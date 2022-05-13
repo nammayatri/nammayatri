@@ -102,8 +102,8 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
 
 makeSearchRequestToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
 makeSearchRequestToOrder SP.Person {firstName, lastName, mobileNumber} C.SearchRequest {..} = do
-  fromLocation <- Location.findById fromLocationId
-  toLocation <- Location.findById toLocationId
+  fromLocation <- Location.findById fromLocationId -- shouldn't we throw an error when findById returns Nothing?
+  toLocation <- forM toLocationId (Location.findById >=> fromMaybeM LocationNotFound)
   rideBooking <- QRB.findByRequestId id
   rbStatus <- buildRideBookingStatusRes `mapM` rideBooking
   decMobNum <- mapM decrypt mobileNumber

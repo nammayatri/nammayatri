@@ -11,6 +11,7 @@ import qualified Domain.Types.SearchRequest as SSR
 import EulerHS.Prelude hiding (id)
 import qualified Product.MetroOffer as Metro
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.Quote as QRentalQuote
 import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.SearchRequest as QSR
 import Types.API.MetroOffer (MetroOffer (..))
@@ -22,25 +23,35 @@ getQuotes :: Id SSR.SearchRequest -> Id Person.Person -> FlowHandler API.GetQuot
 getQuotes searchRequestId _ = withFlowHandlerAPI $ do
   searchRequest <- QSR.findById searchRequestId >>= fromMaybeM SearchRequestDoesNotExist
   fromLocation <- Location.findById searchRequest.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- Location.findById searchRequest.toLocationId >>= fromMaybeM LocationNotFound
+  mbToLocation <- forM (searchRequest.toLocationId) (Location.findById >=> fromMaybeM LocationNotFound)
   offers <- getOffers searchRequest
   return $
     API.GetQuotesRes
       { fromLocation = Location.makeSearchReqLocationAPIEntity fromLocation,
-        toLocation = Location.makeSearchReqLocationAPIEntity toLocation,
+        toLocation = Location.makeSearchReqLocationAPIEntity <$> mbToLocation,
         quotes = offers
       }
 
 getOffers :: (HedisFlow m r, EsqDBFlow m r) => SSR.SearchRequest -> m [API.OfferRes]
 getOffers searchRequest = do
-  quoteList <- QQuote.findAllByRequestId searchRequest.id
-  let quotes = API.OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
-  metroOffers <- map API.Metro <$> Metro.getMetroOffers searchRequest.id
-  publicTransportOffers <- map API.PublicTransport <$> getPubTransportOffers searchRequest.id
-  return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
+  -- ONE_WAY and RENTAL cases
+  case searchRequest.toLocationId of
+    Just _ -> do
+      quoteList <- QQuote.findAllByRequestId searchRequest.id
+      let quotes = API.OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList
+      metroOffers <- map API.Metro <$> Metro.getMetroOffers searchRequest.id
+      publicTransportOffers <- map API.PublicTransport <$> getPubTransportOffers searchRequest.id
+      return . sortBy (compare `on` creationTime) $ quotes <> metroOffers <> publicTransportOffers
+    Nothing -> do
+      quoteList <- QRentalQuote.findAllByRequestId searchRequest.id
+      let quotes = API.OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByEstimatedFare quoteList
+      return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
-      let sortFunc = compare `on` (.distanceToNearestDriver)
+      let sortFunc = compare `on` (SQuote.getDistanceToNearestDriver . (.quoteDetails))
+      sortBy sortFunc quoteList
+    sortByEstimatedFare quoteList = do
+      let sortFunc = compare `on` (.estimatedFare)
       sortBy sortFunc quoteList
     creationTime :: API.OfferRes -> UTCTime
     creationTime (API.OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt

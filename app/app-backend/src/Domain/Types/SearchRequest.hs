@@ -16,8 +16,8 @@ data SearchRequest = SearchRequest
     validTill :: UTCTime,
     riderId :: Id DP.Person,
     fromLocationId :: Id DLoc.SearchReqLocation,
-    toLocationId :: Id DLoc.SearchReqLocation,
-    distance :: Double,
+    toLocationId :: Maybe (Id DLoc.SearchReqLocation),
+    distance :: Maybe Double,
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

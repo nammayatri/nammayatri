@@ -37,6 +37,7 @@ data DSearchReq = DSearchReq
 
 data DOnSearchReq = DOnSearchReq
   { transporterInfo :: TransporterInfo,
+    fareProductType :: DFareProduct.FareProductType,
     quotesInfo :: QuotesInfo
   }
 
@@ -82,18 +83,22 @@ handler transporter req@DSearchReq {..} = do
   fareProducts <- QFareProduct.findEnabledByOrgId transporter.id
   let isRentalProduct = any (\fareProduct -> fareProduct._type == DFareProduct.RENTAL) fareProducts
   let isOneWayProduct = any (\fareProduct -> fareProduct._type == DFareProduct.ONE_WAY) fareProducts
-  quotesInfo <-
+  onSearchReq <-
     case mbToLocation of
       Nothing -> do
-        if isRentalProduct
-          then Rental <$> Rental.onSearchCallback searchRequest.id transporter.id now
-          else pure $ Rental []
+        quotesInfo <-
+          if isRentalProduct
+            then Rental <$> Rental.onSearchCallback searchRequest.id transporter.id now
+            else pure $ Rental []
+        buildOnSearchReq transporter quotesInfo DFareProduct.RENTAL
       Just toLocation -> do
-        if isOneWayProduct
-          then OneWay <$> OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation
-          else pure $ OneWay []
-  buildOnSearchReq transporter quotesInfo
-    <* Metrics.finishSearchMetrics transporter.id searchMetricsMVar
+        quotesInfo <-
+          if isOneWayProduct
+            then OneWay <$> OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation
+            else pure $ OneWay []
+        buildOnSearchReq transporter quotesInfo DFareProduct.ONE_WAY
+  Metrics.finishSearchMetrics transporter.id searchMetricsMVar
+  pure onSearchReq
 
 buildSearchReqLoc ::
   MonadGuid m =>
@@ -147,8 +152,9 @@ buildOnSearchReq ::
   EsqDBFlow m r =>
   DOrg.Organization ->
   QuotesInfo ->
+  DFareProduct.FareProductType ->
   m DOnSearchReq
-buildOnSearchReq org quotesInfo = do
+buildOnSearchReq org quotesInfo fareProductType = do
   count <- QRide.getCountByStatus org.id
   let transporterInfo =
         TransporterInfo
@@ -159,4 +165,4 @@ buildOnSearchReq org quotesInfo = do
             ridesCompleted = fromMaybe 0 $ List.lookup DRide.COMPLETED count,
             ridesConfirmed = fromMaybe 0 $ List.lookup DRide.NEW count
           }
-  pure $ DOnSearchReq {transporterInfo, quotesInfo}
+  pure $ DOnSearchReq {transporterInfo, fareProductType, quotesInfo}

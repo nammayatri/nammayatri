@@ -12,7 +12,6 @@ import EulerHS.Prelude hiding (id)
 -- TODO Fix OnSearch Catalog according to spec. We don't have actual Catalog design now
 data Item = Item
   { id :: Text,
-    category_id :: Text, -- ONE_WAY or RENTAL
     vehicle_variant :: Text,
     estimated_price :: Price,
     discount :: Maybe Price,

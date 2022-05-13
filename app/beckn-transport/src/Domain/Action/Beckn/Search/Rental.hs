@@ -6,7 +6,6 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Traversable
-import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalFarePolicy as DRentalFarePolicy
@@ -22,7 +21,6 @@ import Utils.Common
 
 data QuoteInfo = QuoteInfo
   { quoteId :: Id DQuote.Quote,
-    fareProductType :: DFareProduct.FareProductType,
     vehicleVariant :: DVeh.Variant,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
@@ -88,7 +86,6 @@ mkQuoteInfo :: DQuote.Quote -> DRentalFarePolicy.RentalFarePolicy -> QuoteInfo
 mkQuoteInfo quote rentalFarePolicy@DRentalFarePolicy.RentalFarePolicy {..} = do
   QuoteInfo
     { quoteId = quote.id,
-      fareProductType = DFareProduct.RENTAL,
       vehicleVariant = quote.vehicleVariant,
       estimatedFare = quote.estimatedFare,
       discount = quote.discount,

@@ -35,6 +35,7 @@ import qualified Product.MetroOffer as Metro
 import qualified Product.Profile as Profile
 import qualified Product.Quote as Quote
 import qualified Product.Registration as Registration
+import qualified Product.RentalSearch as RentalSearch
 import qualified Product.Ride as Ride
 import qualified Product.RideBooking as RideBooking
 import qualified Product.SavedLocations as SavedLocations
@@ -55,6 +56,7 @@ import qualified Types.API.Location as Location
 import qualified Types.API.Profile as Profile
 import qualified Types.API.Quote as QuoteAPI
 import Types.API.Registration
+import qualified Types.API.RentalSearch as RentalSearch
 import qualified Types.API.Ride as RideAPI
 import qualified Types.API.RideBooking as RideBookingAPI
 import qualified Types.API.SavedLocations as SavedLocationsAPI
@@ -83,6 +85,7 @@ type UIAPI =
     :<|> RegistrationAPI
     :<|> ProfileAPI
     :<|> SearchAPI
+    :<|> RentalSearchAPI
     :<|> QuoteAPI
     :<|> ConfirmAPI
     :<|> RideBookingAPI
@@ -119,6 +122,7 @@ uiAPI =
     :<|> registrationFlow
     :<|> profileFlow
     :<|> searchFlow
+    :<|> rentalSearchFlow
     :<|> quoteFlow
     :<|> confirmFlow
     :<|> rideBookingFlow
@@ -194,6 +198,12 @@ type SearchAPI =
     :> ReqBody '[JSON] Search.SearchReq
     :> Post '[JSON] Search.SearchRes
 
+type RentalSearchAPI =
+  "rentalSearch"
+    :> TokenAuth
+    :> ReqBody '[JSON] RentalSearch.SearchReq
+    :> Post '[JSON] Search.SearchRes
+
 becknCabApi :: FlowServer BecknCabAPI
 becknCabApi =
   Search.searchCb
@@ -203,6 +213,10 @@ becknCabApi =
 searchFlow :: FlowServer SearchAPI
 searchFlow =
   Search.search
+
+rentalSearchFlow :: FlowServer RentalSearchAPI
+rentalSearchFlow =
+  RentalSearch.search
 
 type QuoteAPI =
   "rideSearch"

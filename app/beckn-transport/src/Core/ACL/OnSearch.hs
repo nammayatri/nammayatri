@@ -17,6 +17,7 @@ mkOnSearchMessage DSearch.DOnSearchReq {..} = do
         OnSearch.Provider
           { id = transporterInfo.shortId.getShortId,
             name = transporterInfo.name,
+            category_id = show fareProductType,
             items = items,
             contacts = transporterInfo.contacts,
             rides_inprogress = transporterInfo.ridesInProgress,
@@ -29,7 +30,6 @@ mkOneWayItem :: DOneWaySearch.QuoteInfo -> OnSearch.Item
 mkOneWayItem DOneWaySearch.QuoteInfo {..} =
   OnSearch.Item
     { id = quoteId.getId,
-      category_id = show fareProductType,
       vehicle_variant = show vehicleVariant,
       estimated_price = OnSearch.Price $ realToFrac estimatedFare,
       discount = OnSearch.Price . realToFrac <$> discount,
@@ -44,7 +44,6 @@ mkRentalItem :: DRentalSearch.QuoteInfo -> OnSearch.Item
 mkRentalItem DRentalSearch.QuoteInfo {..} =
   OnSearch.Item
     { id = quoteId.getId,
-      category_id = show fareProductType,
       vehicle_variant = show vehicleVariant,
       estimated_price = OnSearch.Price $ realToFrac estimatedFare,
       discount = OnSearch.Price . realToFrac <$> discount,

@@ -28,7 +28,7 @@ rideBookingList personId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 buildRideBookingStatusRes :: EsqDBFlow m r => SRB.RideBooking -> m API.RideBookingStatusRes
 buildRideBookingStatusRes rideBooking = do
   fromLocation <- QLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- QLoc.findById rideBooking.toLocationId >>= fromMaybeM LocationNotFound
+  mbToLocation <- forM rideBooking.toLocationId (QLoc.findById >=> fromMaybeM LocationNotFound)
   let rbStatus = rideBooking.status
   mbRideAPIEntity <-
     QRide.findActiveByRBId rideBooking.id
@@ -43,7 +43,7 @@ buildRideBookingStatusRes rideBooking = do
         estimatedFare = rideBooking.estimatedFare,
         discount = rideBooking.discount,
         estimatedTotalFare = rideBooking.estimatedTotalFare,
-        toLocation = SLoc.makeSearchReqLocationAPIEntity toLocation,
+        toLocation = SLoc.makeSearchReqLocationAPIEntity <$> mbToLocation,
         fromLocation = SLoc.makeSearchReqLocationAPIEntity fromLocation,
         ride = mbRideAPIEntity,
         createdAt = rideBooking.createdAt,

@@ -11,7 +11,7 @@ import Types.API.MetroOffer
 
 data GetQuotesRes = GetQuotesRes
   { fromLocation :: SearchReqLocationAPIEntity,
-    toLocation :: SearchReqLocationAPIEntity,
+    toLocation :: Maybe SearchReqLocationAPIEntity,
     quotes :: [OfferRes]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

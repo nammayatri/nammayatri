@@ -23,8 +23,8 @@ mkPersist
       validTill UTCTime
       riderId SP.PersonTId
       fromLocationId SLoc.SearchReqLocationTId
-      toLocationId SLoc.SearchReqLocationTId
-      distance Double
+      toLocationId SLoc.SearchReqLocationTId Maybe
+      distance Double Maybe
       createdAt UTCTime
       Primary id
       deriving Generic
@@ -43,7 +43,7 @@ instance TEntity SearchRequestT Domain.SearchRequest where
         { id = Id id,
           riderId = fromKey riderId,
           fromLocationId = fromKey fromLocationId,
-          toLocationId = fromKey toLocationId,
+          toLocationId = fromKey <$> toLocationId,
           ..
         }
   toTType Domain.SearchRequest {..} =
@@ -51,7 +51,7 @@ instance TEntity SearchRequestT Domain.SearchRequest where
       { id = getId id,
         riderId = toKey riderId,
         fromLocationId = toKey fromLocationId,
-        toLocationId = toKey toLocationId,
+        toLocationId = toKey <$> toLocationId,
         ..
       }
   toTEntity a =

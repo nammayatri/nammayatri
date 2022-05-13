@@ -9,7 +9,6 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.Text as T
 import Data.Traversable
-import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchReqLocation as DLoc
@@ -28,7 +27,6 @@ import Utils.Common
 
 data QuoteInfo = QuoteInfo
   { quoteId :: Id DQuote.Quote,
-    fareProductType :: DFareProduct.FareProductType,
     vehicleVariant :: DVeh.Variant,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
@@ -108,6 +106,5 @@ mkQuoteInfo :: DQuote.Quote -> Double -> QuoteInfo
 mkQuoteInfo DQuote.Quote {..} distanceToNearestDriver =
   QuoteInfo
     { quoteId = id,
-      fareProductType = DFareProduct.ONE_WAY,
       ..
     }

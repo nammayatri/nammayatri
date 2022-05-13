@@ -12,7 +12,12 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as Domain
+import qualified Domain.Types.Quote.QuoteTerms as Domain
+import qualified Storage.Queries.Quote.QuoteTerms as QQuoteTerms
+import qualified Storage.Queries.Quote.RentalQuote as QRentalQuote
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
+import Types.Error
+import Utils.Common hiding (id)
 
 mkPersist
   defaultSqlSettings
@@ -29,7 +34,7 @@ mkPersist
       providerName Text
       providerMobileNumber Text
       providerCompletedRidesCount Int
-      distanceToNearestDriver Double
+      distanceToNearestDriver Double Maybe
       vehicleVariant Text
       createdAt UTCTime
       Primary id
@@ -45,6 +50,23 @@ instance TEntity QuoteT Domain.Quote where
   fromTEntity entity = do
     let QuoteT {..} = entityVal entity
     pUrl <- parseBaseUrl providerUrl
+    quoteDetails <- case distanceToNearestDriver of
+      Just distanceToNearestDriver' ->
+        pure . Domain.OneWayDetails $
+          Domain.OneWayQuoteDetails
+            { distanceToNearestDriver = distanceToNearestDriver'
+            }
+      Nothing -> do
+        rentalQuote <- QRentalQuote.findByQuoteId (Id id) >>= fromMaybeM QuoteDoesNotExist
+        quoteTermsEntities <- QQuoteTerms.findAllByQuoteId (Id id)
+        let quoteTerms = Domain.mkQuoteTerms <$> quoteTermsEntities
+        pure . Domain.RentalDetails $
+          Domain.RentalQuoteDetails
+            { baseDistance = rentalQuote.baseDistance,
+              baseDurationHr = rentalQuote.baseDurationHr,
+              quoteTerms = quoteTerms
+            }
+
     return $
       Domain.Quote
         { id = Id id,
@@ -53,13 +75,15 @@ instance TEntity QuoteT Domain.Quote where
           providerUrl = pUrl,
           ..
         }
-  toTType Domain.Quote {..} =
+  toTType Domain.Quote {..} = do
     QuoteT
       { id = getId id,
         bppQuoteId = getId bppQuoteId,
         requestId = toKey requestId,
         providerUrl = showBaseUrl providerUrl,
+        distanceToNearestDriver = Domain.getDistanceToNearestDriver quoteDetails,
         ..
       }
+
   toTEntity a =
     Entity (toKey a.id) $ toTType a

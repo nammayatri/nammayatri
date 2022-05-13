@@ -3,6 +3,7 @@ module Domain.Types.Quote where
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Data.Time
+import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Organization as DOrg
 import Domain.Types.Products (Products)
 import qualified Domain.Types.SearchRequest as DSR
@@ -31,6 +32,11 @@ data OneWayQuoteDetails = OneWayQuoteDetails
   }
 
 getDistance :: QuoteDetails -> Maybe Double
-getDistance quoteDetails = case quoteDetails of
+getDistance = \case
   RentalDetails -> Nothing
   OneWayDetails oneWayDetails -> Just oneWayDetails.distance
+
+getFareProductType :: QuoteDetails -> DFareProduct.FareProductType
+getFareProductType = \case
+  OneWayDetails _ -> DFareProduct.ONE_WAY
+  RentalDetails -> DFareProduct.RENTAL

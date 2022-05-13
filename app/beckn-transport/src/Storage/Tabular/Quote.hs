@@ -71,7 +71,7 @@ instance TEntity QuoteT Domain.Quote where
   toTType Domain.Quote {..} =
     QuoteT
       { id = getId id,
-        fareProductType = Domain.ONE_WAY,
+        fareProductType = Domain.getFareProductType quoteDetails,
         requestId = toKey requestId,
         productId = toKey productId,
         providerId = toKey providerId,

@@ -1,14 +1,21 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.Quote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.Quote
+import Domain.Types.Quote.QuoteTerms
+import Domain.Types.Quote.RentalQuote
 import Domain.Types.SearchRequest
 import Storage.Tabular.Quote
 
 create :: Quote -> SqlDB ()
-create = create'
+create quote = do
+  create' quote
+  traverse_ create' (mkQuoteTermsEntities quote)
+  whenJust (mkRentalQuote quote) create'
 
 findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById = Esq.findById

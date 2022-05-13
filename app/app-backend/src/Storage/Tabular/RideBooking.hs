@@ -35,11 +35,11 @@ mkPersist
       startTime UTCTime
       riderId SPerson.PersonTId
       fromLocationId SLoc.SearchReqLocationTId
-      toLocationId SLoc.SearchReqLocationTId
+      toLocationId SLoc.SearchReqLocationTId Maybe
       estimatedFare Amount
       discount Amount Maybe
       estimatedTotalFare Amount
-      distance Double
+      distance Double Maybe
       vehicleVariant Text
       createdAt UTCTime
       updatedAt UTCTime
@@ -64,7 +64,7 @@ instance TEntity RideBookingT Domain.RideBooking where
           quoteId = fromKey quoteId,
           riderId = fromKey riderId,
           fromLocationId = fromKey fromLocationId,
-          toLocationId = fromKey toLocationId,
+          toLocationId = fromKey <$> toLocationId,
           providerUrl = pUrl,
           ..
         }
@@ -76,7 +76,7 @@ instance TEntity RideBookingT Domain.RideBooking where
         quoteId = toKey quoteId,
         riderId = toKey riderId,
         fromLocationId = toKey fromLocationId,
-        toLocationId = toKey toLocationId,
+        toLocationId = toKey <$> toLocationId,
         providerUrl = showBaseUrl providerUrl,
         ..
       }

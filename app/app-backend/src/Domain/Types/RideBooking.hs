@@ -49,11 +49,11 @@ data RideBooking = RideBooking
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
     fromLocationId :: Id DLoc.SearchReqLocation,
-    toLocationId :: Id DLoc.SearchReqLocation,
+    toLocationId :: Maybe (Id DLoc.SearchReqLocation),
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    distance :: Double,
+    distance :: Maybe Double,
     vehicleVariant :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

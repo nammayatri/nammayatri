@@ -1,0 +1,34 @@
+@token = {{app-token}}
+
+# @name search
+POST {{app-host}}/rentalSearch
+content-type: application/json
+token: {{token}}
+
+{
+  "origin": {
+    "address": {
+        "street": "Edapally Metro Station",
+        "state": "Kerala",
+        "door": "",
+        "country": "India",
+        "city": "Kochi",
+        "building": " ",
+        "areaCode": "",
+        "area": "Edappally"
+    },
+    "gps": {
+        "lon": 76.308364,
+        "lat": 10.025263
+    }
+  }
+}
+
+###
+
+@searchId = {{search.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/quotes
+content-type: application/json
+token: {{token}}
