@@ -33,7 +33,6 @@ data ServiceHandle m = ServiceHandle
       m Fare.FareParameters,
     putDiffMetric :: Amount -> HighPrecMeters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
-    getKeyRedis :: Text -> m (Maybe ()),
     addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m ()
   }
 

@@ -1,6 +1,5 @@
 module API.UI.Ride
   ( module Reexport,
-    StartRideReq (..),
     API,
     handler,
   )
@@ -20,8 +19,10 @@ import qualified Domain.Action.UI.Ride as DRide
 import Domain.Action.UI.Ride.CancelRide as Reexport (CancelRideReq (..))
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
+import Domain.Action.UI.Ride.EndRide as Reexport (EndRideReq (..))
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import qualified Domain.Action.UI.Ride.EndRide.Internal as EInternal
+import Domain.Action.UI.Ride.StartRide as Reexport (StartRideReq (..))
 import qualified Domain.Action.UI.Ride.StartRide as SHandler
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Person as SP
@@ -31,7 +32,6 @@ import Servant
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
 import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
 import SharedLogic.LocationUpdates
-import qualified SharedLogic.MissingLocationUpdatesMarker as MLUMarker
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
@@ -51,11 +51,12 @@ type API =
            :<|> TokenAuth
              :> Capture "rideId" (Id SRide.Ride)
              :> "start"
-             :> ReqBody '[JSON] StartRideReq
+             :> ReqBody '[JSON] SHandler.StartRideReq
              :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "rideId" (Id SRide.Ride)
              :> "end"
+             :> ReqBody '[JSON] EHandler.EndRideReq
              :> Post '[JSON] APISuccess
            :<|> TokenAuth
              :> Capture "rideId" (Id SRide.Ride)
@@ -71,28 +72,26 @@ handler =
     :<|> endRide
     :<|> cancelRide
 
-newtype StartRideReq = StartRideReq
-  { rideOtp :: Text
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-startRide :: Id SP.Person -> Id SRide.Ride -> StartRideReq -> FlowHandler APISuccess.APISuccess
+startRide :: Id SP.Person -> Id SRide.Ride -> SHandler.StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide personId rideId req = withFlowHandlerAPI $ do
-  SHandler.startRideHandler handle personId (cast rideId) (req.rideOtp)
+  SHandler.startRideHandler handle personId (cast rideId) req
   where
     handle =
       SHandler.ServiceHandle
         { findById = QPerson.findById,
           findBookingById = QRB.findById,
           findRideById = QRide.findById,
-          startRide = SInternal.startRideTransaction,
+          startRideAndUpdateLocation = SInternal.startRideTransaction,
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
-          rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId')
+          rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId'),
+          addFirstWaypoint = \driverId pt -> do
+            clearPointsList defaultRideInterpolationHandler driverId
+            addPoints defaultRideInterpolationHandler driverId $ pt :| []
         }
 
-endRide :: Id SP.Person -> Id SRide.Ride -> FlowHandler APISuccess.APISuccess
-endRide personId rideId = withFlowHandlerAPI $ do
-  EHandler.endRideHandler handle personId rideId
+endRide :: Id SP.Person -> Id SRide.Ride -> EHandler.EndRideReq -> FlowHandler APISuccess.APISuccess
+endRide personId rideId req = withFlowHandlerAPI $ do
+  EHandler.endRideHandler handle personId rideId req
   where
     handle =
       EHandler.ServiceHandle
@@ -108,9 +107,9 @@ endRide personId rideId = withFlowHandlerAPI $ do
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          isMarketAsMissingLocationUpdates = MLUMarker.isMarketAsMissingLocationUpdates,
-          updateLocationAllowedDelay = asks (.updateLocationAllowedDelay) <&> fromIntegral,
-          recalcDistanceEnding = recalcDistanceBatches defaultRideInterpolationHandler True
+          addLastWaypointAndRecalcDistanceOnEnd = \driverId pt -> do
+            addPoints defaultRideInterpolationHandler driverId $ pt :| []
+            recalcDistanceBatches defaultRideInterpolationHandler True driverId
         }
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess

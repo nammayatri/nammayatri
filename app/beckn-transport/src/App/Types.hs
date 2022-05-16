@@ -15,8 +15,8 @@ import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
-import Beckn.Storage.Hedis.AppPrefixes (becknTransportPrefix)
-import Beckn.Storage.Hedis.Config
+import Beckn.Storage.Hedis
+import Beckn.Storage.Hedis.AppPrefixes
 import Beckn.Types.App
 import Beckn.Types.Cache
 import Beckn.Types.Common

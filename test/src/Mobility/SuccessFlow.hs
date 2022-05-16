@@ -1,6 +1,7 @@
 module Mobility.SuccessFlow where
 
 import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
+import qualified "beckn-transport" API.UI.Ride as TbeRideAPI
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common
@@ -43,7 +44,7 @@ doAnAppSearchByReq searchReq' = do
         <&> (.searchId)
 
   -- Do a get quotes request for getting quotes to confirm ride
-  (quoteAPIEntity :| _) <- poll do
+  (quoteAPIEntity :| _) <- pollDesc "get quotes" $ do
     -- List all confirmed rides (type = RIDEORDER)
     callBAP (getQuotes appSearchId appRegistrationToken)
       <&> (.quotes)
@@ -73,7 +74,7 @@ doAnAppSearchByReq searchReq' = do
   void . callBAP $
     appConfirmRide appRegistrationToken $ mkAppConfirmReq bapBookingId
 
-  void . poll $
+  void . pollDesc "confirm ride" $
     callBAP (appBookingStatus bapBookingId appRegistrationToken)
       <&> (.status)
       >>= (`shouldBe` AppRB.CONFIRMED)
@@ -145,7 +146,7 @@ successFlow :: ClientEnvs -> IO ()
 successFlow clients = withBecknClients clients $ do
   bBookingId <- doAnAppSearch
 
-  tBooking <- poll $ do
+  tBooking <- pollDesc "booking confirmed" $ do
     trb <- getBPPBooking bBookingId
     trb.status `shouldBe` TRB.CONFIRMED
     return $ Just trb
@@ -168,7 +169,7 @@ successFlow clients = withBecknClients clients $ do
 
   void . callBPP $
     rideStart driverToken1 tRide.id $
-      buildStartRideReq tRide.otp
+      buildStartRideReq tRide.otp searchReqOrigin
 
   void . poll $ do
     inprogressRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)
@@ -178,7 +179,7 @@ successFlow clients = withBecknClients clients $ do
     inprogressRide.status `shouldBe` BRide.INPROGRESS
     return $ Just ()
 
-  void . callBPP $ rideEnd driverToken1 tRide.id
+  void . callBPP $ rideEnd driverToken1 tRide.id $ TbeRideAPI.EndRideReq searchReqDestination
 
   completedRideId <- poll $ do
     completedRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)

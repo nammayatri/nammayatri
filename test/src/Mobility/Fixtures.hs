@@ -49,7 +49,7 @@ cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISucces
 cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
 rideStart :: Text -> Id TRide.Ride -> TbeRideAPI.StartRideReq -> ClientM APISuccess
-rideEnd :: Text -> Id TRide.Ride -> ClientM APISuccess
+rideEnd :: Text -> Id TRide.Ride -> TbeRideAPI.EndRideReq -> ClientM APISuccess
 rideCancel :: Text -> Id TRide.Ride -> TbeRideAPI.CancelRideReq -> ClientM APISuccess
 _ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRideAPI.API)
 
@@ -134,10 +134,11 @@ appBookingStatus :: Id BRB.Booking -> Text -> ClientM AppBooking.BookingStatusRe
 appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppBooking.BookingListRes
 appBookingStatus :<|> appBookingList = client (Proxy :: Proxy AbeRoutes.BookingAPI)
 
-buildStartRideReq :: Text -> TbeRideAPI.StartRideReq
-buildStartRideReq otp =
+buildStartRideReq :: Text -> LatLong -> TbeRideAPI.StartRideReq
+buildStartRideReq otp pt =
   TbeRideAPI.StartRideReq
-    { TbeRideAPI.rideOtp = otp
+    { TbeRideAPI.rideOtp = otp,
+      TbeRideAPI.point = pt
     }
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes

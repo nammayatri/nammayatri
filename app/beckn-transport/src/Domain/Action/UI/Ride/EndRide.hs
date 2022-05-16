@@ -1,10 +1,11 @@
 module Domain.Action.UI.Ride.EndRide where
 
+import Beckn.Prelude (ToSchema)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Data.Time (NominalDiffTime)
+import Beckn.Types.MapSearch
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
@@ -43,21 +44,26 @@ data ServiceHandle m = ServiceHandle
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Amount -> HighPrecMeters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
-    isMarketAsMissingLocationUpdates :: Id Ride.Ride -> m Bool,
-    updateLocationAllowedDelay :: m NominalDiffTime,
-    recalcDistanceEnding :: Id Person.Person -> m ()
+    addLastWaypointAndRecalcDistanceOnEnd :: Id Person.Person -> LatLong -> m ()
   }
+
+newtype EndRideReq = EndRideReq
+  { point :: LatLong
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 endRideHandler ::
   (MonadThrow m, Log m, MonadTime m) =>
   ServiceHandle m ->
   Id Person.Person ->
   Id Ride.Ride ->
+  EndRideReq ->
   m APISuccess.APISuccess
-endRideHandler ServiceHandle {..} requestorId rideId = do
+endRideHandler ServiceHandle {..} requestorId rideId req = do
   requestor <- findById requestorId >>= fromMaybeM (PersonNotFound requestorId.getId)
 
-  recalcDistanceEnding requestorId
+  addLastWaypointAndRecalcDistanceOnEnd requestorId req.point
+  -- here we update the current ride, so below we fetch the updated version
 
   ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
@@ -72,7 +78,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   now <- getCurrentTime
   (chargeableDistance, fare, totalFare, fareBreakups) <- do
     case booking.bookingDetails of
-      SRB.OneWayDetails oneWayDetails -> recalculateFare booking ride oneWayDetails now
+      SRB.OneWayDetails oneWayDetails -> recalculateFare booking ride oneWayDetails
       SRB.RentalDetails rentalDetails -> calcRentalFare booking ride rentalDetails now
 
   let updRide =
@@ -88,20 +94,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   return APISuccess.Success
   where
-    lastLocUpdateTooLongAgo now = do
-      allowedUpdatesDelay <- updateLocationAllowedDelay
-      res <-
-        findDriverLocById requestorId
-          <&> maybe True (\loc -> now `diffUTCTime` loc.updatedAt > allowedUpdatesDelay)
-      logDebug $ "last update was too long ago: " <> show res
-      pure res
-
-    thereWereMissingLocUpdates = do
-      res <- isMarketAsMissingLocationUpdates rideId
-      logDebug $ "there were missing location updates: " <> show res
-      pure res
-
-    recalculateFare booking ride oneWayDetails now = do
+    recalculateFare booking ride oneWayDetails = do
       let transporterId = booking.providerId
           vehicleVariant = booking.vehicleVariant
 
@@ -110,11 +103,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
           estimatedFare = booking.estimatedFare
       shouldRecalculateFare <- recalculateFareEnabled
-      missingLocationUpdates <-
-        (||)
-          <$> lastLocUpdateTooLongAgo now
-          <*> thereWereMissingLocUpdates
-      if shouldRecalculateFare && not missingLocationUpdates
+      if shouldRecalculateFare
         then do
           fareParams <- calculateFare transporterId vehicleVariant actualDistance booking.startTime
           let updatedFare = Fare.fareSum fareParams

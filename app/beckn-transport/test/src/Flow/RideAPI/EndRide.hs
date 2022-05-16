@@ -2,7 +2,8 @@ module Flow.RideAPI.EndRide (endRideTests) where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
-import qualified Domain.Action.UI.Ride.EndRide as Handle
+import Beckn.Types.MapSearch
+import Domain.Action.UI.Ride.EndRide as Handle
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
@@ -78,16 +79,21 @@ handle =
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure (),
       findDriverLocById = \_ -> pure Nothing,
-      isMarketAsMissingLocationUpdates = \_ -> pure True,
-      updateLocationAllowedDelay = pure 60,
-      recalcDistanceEnding = \_ -> pure ()
+      addLastWaypointAndRecalcDistanceOnEnd = \_ _ -> pure ()
     }
 
 endRide ::
   Id Person.Person ->
   Id Ride.Ride ->
+  EndRideReq ->
   IO APISuccess.APISuccess
 endRide = Handle.endRideHandler handle
+
+testEndRideReq :: EndRideReq
+testEndRideReq =
+  EndRideReq
+    { point = LatLong 10 10
+    }
 
 ride :: Ride.Ride
 ride =
@@ -125,34 +131,36 @@ rentalBooking = do
 successfulEndByDriver :: TestTree
 successfulEndByDriver =
   testCase "Requested by correct driver" $
-    endRide "1" "ride" `shouldReturn` APISuccess.Success
+    endRide "1" "ride" testEndRideReq `shouldReturn` APISuccess.Success
 
 successfulEndRental :: TestTree
 successfulEndRental =
   testCase "Requested for rentals by correct driver" $
-    endRide "1" "rentalRide" `shouldReturn` APISuccess.Success
+    endRide "1" "rentalRide" testEndRideReq `shouldReturn` APISuccess.Success
 
 failedEndRequestedByWrongDriver :: TestTree
 failedEndRequestedByWrongDriver =
   testCase "Requested by wrong driver" $
-    endRide "2" "ride" `shouldThrow` (== NotAnExecutor)
+    endRide "2" "ride" testEndRideReq `shouldThrow` (== NotAnExecutor)
 
 failedEndRequestedNotByDriver :: TestTree
 failedEndRequestedNotByDriver =
   testCase "Requested not by driver" $
-    endRide "admin" "ride" `shouldThrow` (== AccessDenied)
+    endRide "admin" "ride" testEndRideReq `shouldThrow` (== AccessDenied)
 
 failedEndWhenRideStatusIsWrong :: TestTree
 failedEndWhenRideStatusIsWrong =
   testCase "A ride has wrong status" $
-    endRide "1" "completed_ride" `shouldThrow` (\(RideInvalidStatus _) -> True)
+    endRide "1" "completed_ride" testEndRideReq `shouldThrow` (\(RideInvalidStatus _) -> True)
 
 failedEndNonexistentRide :: TestTree
 failedEndNonexistentRide =
   testCase "A ride does not even exist" $
-    endRide "1" "nonexistent_ride" `shouldThrow` (== RideDoesNotExist "nonexistent_ride")
+    endRide "1" rideId testEndRideReq `shouldThrow` (== RideDoesNotExist rideId.getId)
+  where
+    rideId = "nonexistent_ride"
 
 failedEndNonexistentDriver :: TestTree
 failedEndNonexistentDriver =
   testCase "A driver does not even exist" $
-    endRide "nonexistent_driver" "ride" `shouldThrow` (== PersonDoesNotExist "nonexistent_driver")
+    endRide "nonexistent_driver" "ride" testEndRideReq `shouldThrow` (== PersonDoesNotExist "nonexistent_driver")

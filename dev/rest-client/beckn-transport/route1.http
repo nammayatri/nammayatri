@@ -11,8 +11,8 @@ content-type: application/json
 [
     {
         "pt": {
-            "lon": 76.308364,
-            "lat": 10.025263
+            "lon": 76.30833070042235,
+            "lat": 10.025196668204602
         },
         "ts": "{{currentTime}}:01.114244Z"
     }

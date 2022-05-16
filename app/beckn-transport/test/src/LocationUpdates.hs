@@ -13,6 +13,7 @@ import Beckn.Types.MonadGuid
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging
 import qualified Data.List.NonEmpty as NE
+import Domain.Action.UI.Location.UpdateLocation
 import qualified Domain.Types.Person as Person
 import SharedLogic.LocationUpdates
 import Test.QuickCheck
@@ -67,6 +68,7 @@ testInterpolationHandler batchSize =
   RideInterpolationHandler
     { batchSize,
       addPoints = addPointsImplementation,
+      clearPointsList = clearPointsListImplementation,
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,

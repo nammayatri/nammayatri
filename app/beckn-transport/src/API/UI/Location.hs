@@ -21,7 +21,6 @@ import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
 import Servant
 import SharedLogic.LocationUpdates
-import qualified SharedLogic.MissingLocationUpdatesMarker as MLUMarker
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
@@ -60,8 +59,6 @@ updateLocation personId waypoints = withFlowHandlerAPI $ do
             upsertDriverLocation = \driverId point timestamp ->
               Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
             getInProgressByDriverId = QRide.getInProgressByDriverId,
-            missingUpdatesForThisRide = MLUMarker.isMarketAsMissingLocationUpdates,
-            ignoreUpdatesForThisRide = MLUMarker.markAsMissingLocationUpdates,
             interpolationHandler = defaultRideInterpolationHandler
           }
 

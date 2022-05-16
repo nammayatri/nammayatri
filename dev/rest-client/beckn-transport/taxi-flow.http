@@ -140,7 +140,6 @@ token: 2cdf9f89-bf7d-486c-ad8a-bc3561f8c971
 ###
 
 @searchId = {{searchRoute1.response.body.searchId}}
-#@searchId = {{rentalSearch.response.body.searchId}}
 
 # @name quotes
 GET {{app-host}}/rideSearch/{{searchId}}/quotes
@@ -215,7 +214,11 @@ token: {{driver-token}}
 content-type: application/json
 
 {
-    "rideOtp": "{{otp}}"
+    "rideOtp": "{{otp}}",
+    "point": {
+            "lon": 76.308364,
+            "lat": 10.025263
+    }
 }
 
 ###
@@ -223,3 +226,11 @@ content-type: application/json
 # @name rideEnd
 POST {{transporter-host}}/driver/ride/{{rideId}}/end
 token: {{driver-token}}
+content-type: application/json
+
+{
+  "point": {
+    "lat": 10.080241882783683,
+    "lon": 76.33893232031218
+  }
+}

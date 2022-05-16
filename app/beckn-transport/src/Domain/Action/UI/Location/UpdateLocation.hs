@@ -4,12 +4,12 @@ module Domain.Action.UI.Location.UpdateLocation
     Waypoint (..),
     UpdateLocationRes,
     updateLocationHandler,
+    processWaypoints,
   )
 where
 
 import App.Types
 import Beckn.Prelude
-import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
@@ -34,8 +34,6 @@ data Handler m = Handler
     findDriverLocationById :: Id Person.Person -> m (Maybe DriverLocation),
     upsertDriverLocation :: Id Person.Person -> LatLong -> UTCTime -> m (),
     getInProgressByDriverId :: Id Person.Person -> m (Maybe SRide.Ride),
-    missingUpdatesForThisRide :: Id SRide.Ride -> m Bool,
-    ignoreUpdatesForThisRide :: Id SRide.Ride -> m (),
     interpolationHandler :: RideInterpolationHandler m
   }
 
@@ -64,47 +62,22 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
   now <- getCurrentTime
   let calledBeforeRefreshPeriod =
         mbOldLoc <&> (\loc -> now `diffUTCTime` loc.updatedAt < refreshPeriod)
-      mbLastWaypoint =
-        mbOldLoc
-          >>= ( \loc ->
-                  if now `diffUTCTime` loc.updatedAt > refreshPeriod
-                    then Just $ mkLastWaypoint loc
-                    else Nothing
-              )
-      waypointsList = toList waypoints
-      pointsForCheck = maybe waypoints (:| waypointsList) mbLastWaypoint
-
   if calledBeforeRefreshPeriod == Just True
     then logWarning "Called before refresh period passed, ignoring"
-    else afterMissingUpdatesCheck pointsForCheck $ processWaypoints interpolationHandler driver.id $ NE.map (.pt) waypoints
-
-  pure Success
-  where
-    mkLastWaypoint loc =
-      Waypoint
-        { pt = GoogleMaps.getCoordinates loc,
-          ts = loc.updatedAt,
-          acc = Nothing
-        }
-
-    afterMissingUpdatesCheck waypoints' action = do
-      getInProgressByDriverId driverId
+    else
+      getInProgressByDriverId driver.id
         >>= maybe
           (logInfo "No ride is assigned to driver, ignoring")
-          ( \ride -> do
-              missingLocationUpdates <- missingUpdatesForThisRide ride.id
-              let missingUpdates =
-                    missingLocationUpdates
-                      || checkWaypointsForMissingUpdates allowedDelay waypoints'
-              if missingUpdates
-                then do
-                  logInfo $ "missing updates for driver " <> driverId.getId
-                  ignoreUpdatesForThisRide ride.id
-                else action
-          )
+          (const $ processWaypoints interpolationHandler driver.id $ NE.map (.pt) waypoints)
+  pure Success
 
-checkWaypointsForMissingUpdates :: NominalDiffTime -> NE.NonEmpty Waypoint -> Bool
-checkWaypointsForMissingUpdates allowedDelay wps =
-  or $ zipWith (\a b -> b.ts `diffUTCTime` a.ts > allowedDelay) wpsList (tail wpsList)
-  where
-    wpsList = toList wps
+processWaypoints ::
+  (Monad m, Log m) =>
+  RideInterpolationHandler m ->
+  Id Person.Person ->
+  NonEmpty LatLong ->
+  m ()
+processWaypoints ih@RideInterpolationHandler {..} driverId waypoints = do
+  addPoints driverId waypoints
+  let ending = False
+  recalcDistanceBatches ih ending driverId

@@ -66,6 +66,10 @@ searchReq =
         destination = AppBESearch.SearchReqLocation $ LatLong 10.5449 76.4356
       }
 
+searchReqOrigin, searchReqDestination :: LatLong
+searchReqOrigin = LatLong 10.0739 76.2733
+searchReqDestination = LatLong 10.5449 76.4356
+
 verifyError :: Int -> B.ByteString -> Either ClientError a -> IO ()
 verifyError expectedCode expectedMessage serverResponse = do
   case serverResponse of

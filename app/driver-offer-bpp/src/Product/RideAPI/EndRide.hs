@@ -1,7 +1,6 @@
 module Product.RideAPI.EndRide where
 
 import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Redis.Queries as Redis
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -39,7 +38,6 @@ endRide personId rideId req = withFlowHandlerAPI $ do
           calculateFare = Fare.calculateFare,
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          getKeyRedis = Redis.getKeyRedis,
           addLastWaypointAndRecalcDistanceOnEnd = \driverId pt -> do
             addPoints defaultRideInterpolationHandler driverId $ pt :| []
             recalcDistanceBatches defaultRideInterpolationHandler True driverId

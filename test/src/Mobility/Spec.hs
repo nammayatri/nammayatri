@@ -22,7 +22,6 @@ mkTestTree = do
   srvSpec <- testSpec "Serviceability" SRV.spec
   ndSpec <- testSpec "NearestDriver" ND.spec
 
-  -- these tests pass only when the real google maps api key is supplied
   locationUpdatesSpec <- testSpec "LocationUpdates" LU.spec
   ------------------------------------------------------------------
   return $

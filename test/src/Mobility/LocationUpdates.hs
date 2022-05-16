@@ -1,6 +1,7 @@
 module Mobility.LocationUpdates where
 
 import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
+import qualified "beckn-transport" API.UI.Ride as TbeRideAPI
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common (getAppBaseUrl)
@@ -21,7 +22,7 @@ import Utils
 spec :: Spec
 spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
-  describe "Testing location updates (these tests pass only when the real google maps api key is supplied)" $ do
+  describe "Testing location updates" $ do
     it "Testing location updates flow for short curvy route" $
       successFlowWithLocationUpdates 10 680 locationUpdatesRoute1 clients
     it "Testing location updates for the route with far isolated point" $
@@ -68,6 +69,7 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
 
   ---- we need to update location just before we start ride
   let initLoc = NE.head $ NE.head updates
+      lastLoc = NE.last $ NE.last updates
       locationEps = 1e-18
   initialUpdate <- liftIO $ buildUpdateLocationRequest $ initLoc :| []
   void . callBPP $
@@ -80,7 +82,8 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
   ----
   void . callBPP $
     rideStart driverToken1 tRide.id $
-      buildStartRideReq tRide.otp
+      buildStartRideReq tRide.otp initLoc
+  liftIO $ threadDelay waitBetweenUpdates
 
   void . pollDesc "ride changes its status to INPROGRESS" $ do
     inprogressRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)
@@ -97,7 +100,8 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
     liftIO $ threadDelay waitBetweenUpdates
 
   ----
-  void . callBPP $ rideEnd driverToken1 tRide.id
+  void . callBPP $ rideEnd driverToken1 tRide.id $ TbeRideAPI.EndRideReq lastLoc
+  liftIO $ threadDelay waitBetweenUpdates
 
   completedRideId <- pollDesc "ride should be completed" $ do
     completedRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)
