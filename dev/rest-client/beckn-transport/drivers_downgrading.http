@@ -44,3 +44,11 @@ token: {{coordinator-token}}
 GET {{transporter-host}}/driver/profile
 content-type: application/json
 token: {{token}}
+
+###
+
+@transporter-host = http://localhost:8014/v2
+@token = 001df941-427a-4085-a7d0-96240f166672
+POST {{transporter-host}}/driver/setRental
+?rental=true
+token: {{token}}

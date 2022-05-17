@@ -8,12 +8,14 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as GoogleMaps
 import qualified Data.List.NonEmpty as NE
+import qualified Domain.Types.FareProduct as SFP
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.SearchReqLocation as SSReqLoc
 import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
+import qualified Product.RideBooking as PRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRideBooking
@@ -44,7 +46,8 @@ getDriverPool rideBookingId =
       let vehicleVariant = rideBooking.vehicleVariant
           pickupPoint = rideBooking.fromLocationId
           orgId = rideBooking.providerId
-      map (.driverId) <$> calculateDriverPool pickupPoint orgId (Just vehicleVariant)
+          fareProductType = PRB.getFareProductType rideBooking.rideBookingDetails
+      map (.driverId) <$> calculateDriverPool pickupPoint orgId (Just vehicleVariant) fareProductType
 
 recalculateDriverPool ::
   ( EsqDBFlow m r,
@@ -56,9 +59,10 @@ recalculateDriverPool ::
   Id SRB.RideBooking ->
   Id SOrg.Organization ->
   SV.Variant ->
+  SFP.FareProductType ->
   m [Id Driver]
-recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant = do
-  driverPool <- map (.driverId) <$> calculateDriverPool pickupPoint transporterId (Just vehicleVariant)
+recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant fareProductType = do
+  driverPool <- map (.driverId) <$> calculateDriverPool pickupPoint transporterId (Just vehicleVariant) fareProductType
   cancelledDrivers <- QRide.findAllCancelledByRBId rideBookingId <&> map (cast . (.driverId))
   let filteredDriverPool = filter (`notElem` cancelledDrivers) driverPool
   Redis.setExRedis (driverPoolKey rideBookingId) (getId <$> filteredDriverPool) (60 * 10)
@@ -73,8 +77,9 @@ calculateDriverPool ::
   Id SSReqLoc.SearchReqLocation ->
   Id SOrg.Organization ->
   Maybe SV.Variant ->
+  SFP.FareProductType ->
   m [QP.DriverPoolResult]
-calculateDriverPool locId orgId variant = do
+calculateDriverPool locId orgId variant fareProductType = do
   pickupLoc <- QSReqLoc.findById locId >>= fromMaybeM LocationNotFound
   let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
   radius <- getRadius
@@ -85,6 +90,7 @@ calculateDriverPool locId orgId variant = do
         radius
         orgId
         variant
+        fareProductType
   case approxDriverPool of
     [] -> pure []
     (a : pprox) -> filterOutDriversWithDistanceAboveThreshold radius pickupLatLong (a :| pprox)

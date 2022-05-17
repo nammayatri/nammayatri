@@ -9,6 +9,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Data.Maybe as Mb
+import qualified Domain.Types.FareProduct as SFP
 import Domain.Types.Organization
 import Domain.Types.Person as Person
 import Domain.Types.Vehicle as Vehicle
@@ -210,8 +211,10 @@ getNearestDrivers ::
   Integer ->
   Id Organization ->
   Maybe Vehicle.Variant ->
+  SFP.FareProductType ->
   m [DriverPoolResult]
-getNearestDrivers LatLong {..} radius orgId mbVariant = do
+getNearestDrivers LatLong {..} radius orgId mbVariant fareProductType = do
+  let isRental = fareProductType == SFP.RENTAL
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   now <- getCurrentTime
   res <- Esq.findAll $ do
@@ -235,6 +238,7 @@ getNearestDrivers LatLong {..} radius orgId mbVariant = do
         person ^. PersonRole ==. val Person.DRIVER
           &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)
           &&. driverInfo ^. DriverInformationActive
+          &&. driverInfo ^. DriverInformationOptForRental >=. val isRental
           &&. not_ (driverInfo ^. DriverInformationOnRide)
           &&. ( isNothing (val mbVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbVariant -- when mbVariant = Nothing, we use all variants, is it correct?
                   ||. ( case mbVariant of

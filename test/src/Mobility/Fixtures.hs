@@ -74,6 +74,7 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
     :<|> _
   )
   :<|> ( setDriverOnline
+           :<|> _
            :<|> ( getDriverInfo
                     :<|> _
                   )

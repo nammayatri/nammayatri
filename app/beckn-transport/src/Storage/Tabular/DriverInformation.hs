@@ -22,6 +22,7 @@ mkPersist
       active Bool
       onRide Bool
       enabled Bool
+      optForRental Bool
       createdAt UTCTime
       updatedAt UTCTime
       canDowngradeToSedan Bool

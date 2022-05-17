@@ -5,6 +5,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import qualified Domain.Types.FareProduct as SFP
 import Domain.Types.Vehicle
 import EulerHS.Prelude
 import qualified "beckn-transport" Storage.Queries.DriverInformation as Q
@@ -24,48 +25,56 @@ spec = do
       it "Test downgrading driver with SUV ride request" testDowngradingDriverWithSUV
       it "Test downgrading driver with sedan ride request" testDowngradingDriverWithSedan
       it "Test downgrading driver with hatchback ride request" testDowngradingDriverWithHatchback
+      it "Test isRental" testIsRental
 
 testOrder :: IO ()
 testOrder = do
   res <-
     runTransporterFlow "Test ordering" $
-      Q.getNearestDrivers pickupPoint 5000 org1 (Just SUV) <&> getIds
+      Q.getNearestDrivers pickupPoint 5000 org1 (Just SUV) SFP.ONE_WAY <&> getIds
   res `shouldBe` [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
 testInRadius = do
   res <-
     runTransporterFlow "Test radius filtration" $
-      Q.getNearestDrivers pickupPoint 800 org1 (Just SUV) <&> getIds
+      Q.getNearestDrivers pickupPoint 800 org1 (Just SUV) SFP.ONE_WAY <&> getIds
   res `shouldBe` [closestDriver]
 
 testNotInRadius :: IO ()
 testNotInRadius = do
   res <-
     runTransporterFlow "Test outside radius filtration" $
-      Q.getNearestDrivers pickupPoint 0 org1 (Just SUV) <&> getIds
+      Q.getNearestDrivers pickupPoint 0 org1 (Just SUV) SFP.ONE_WAY <&> getIds
   res `shouldBe` []
 
 testDowngradingDriverWithSUV :: IO ()
 testDowngradingDriverWithSUV = do
   res <-
     runTransporterFlow "Test downgrading driver with SUV ride request" $
-      Q.getNearestDrivers pickupPoint 10000 org1 (Just SUV) <&> getIds
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just SUV) SFP.ONE_WAY <&> getIds
   res `shouldBe` [closestDriver, furthestDriver, suvDriver]
 
 testDowngradingDriverWithSedan :: IO ()
 testDowngradingDriverWithSedan = do
   res <-
     runTransporterFlow "Test downgrading driver with sedan ride request" $
-      Q.getNearestDrivers pickupPoint 10000 org1 (Just SEDAN) <&> getIds
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just SEDAN) SFP.ONE_WAY <&> getIds
   res `shouldBe` [suvDriver, sedanDriver]
 
 testDowngradingDriverWithHatchback :: IO ()
 testDowngradingDriverWithHatchback = do
   res <-
     runTransporterFlow "Test downgrading driver with hatchback ride request" $
-      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) <&> getIds
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.ONE_WAY <&> getIds
   res `shouldBe` [suvDriver, sedanDriver, hatchbackDriver]
+
+testIsRental :: IO ()
+testIsRental = do
+  res <-
+    runTransporterFlow "Test isRental" $
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL <&> getIds
+  res `shouldBe` []
 
 getIds :: [Q.DriverPoolResult] -> [Text]
 getIds = map (getId . (.driverId))

@@ -60,11 +60,13 @@ data RideBooking = RideBooking
   deriving (Generic)
 
 data RideBookingDetails = OneWayDetails OneWayRideBookingDetails | RentalDetails
+  deriving (Eq)
 
 data OneWayRideBookingDetails = OneWayRideBookingDetails
   { toLocationId :: Id DLoc.SearchReqLocation,
     estimatedDistance :: Double
   }
+  deriving (Eq)
 
 -- FIXME do we need to handle wrong variants, when for example toLocationId is Just, estimatedDistance = Nothing?
 mkRideBookingDetails :: Maybe (Id DLoc.SearchReqLocation) -> Maybe Double -> RideBookingDetails

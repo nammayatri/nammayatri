@@ -1,6 +1,7 @@
 module Product.Driver
   ( getInformation,
     setActivity,
+    setRental,
     listDriver,
     linkVehicle,
     changeDriverEnableState,
@@ -88,6 +89,7 @@ createDriverDetails personId = do
             active = False,
             onRide = False,
             enabled = True,
+            optForRental = False,
             createdAt = now,
             updatedAt = now,
             canDowngradeToSedan = False,
@@ -120,6 +122,14 @@ setActivity personId isActive = withFlowHandlerAPI $ do
     unless driverInfo.enabled $ throwError DriverAccountDisabled
   Esq.runTransaction $
     QDriverInformation.updateActivity driverId isActive
+  pure APISuccess.Success
+
+setRental :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
+setRental personId isRental = withFlowHandlerAPI $ do
+  _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let driverId = cast personId
+  Esq.runTransaction $
+    QDriverInformation.updateRental driverId isRental
   pure APISuccess.Success
 
 listDriver :: SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverAPI.ListDriverRes

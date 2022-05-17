@@ -9,6 +9,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.Text as T
 import Data.Traversable
+import qualified Domain.Types.FareProduct as SFP
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchReqLocation as DLoc
@@ -49,7 +50,7 @@ onSearchCallback ::
   DLoc.SearchReqLocation ->
   m [QuoteInfo]
 onSearchCallback searchRequest transporterId now fromLocation toLocation = do
-  pool <- DrPool.calculateDriverPool fromLocation.id transporterId Nothing
+  pool <- DrPool.calculateDriverPool fromLocation.id transporterId Nothing SFP.ONE_WAY
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId
       ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""

@@ -8,6 +8,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Domain.Types.AllocationEvent
 import qualified Domain.Types.AllocationEvent as AllocationEvent
+import qualified Domain.Types.FareProduct as SFP
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
@@ -210,3 +211,8 @@ getDropLocation :: EsqDBFlow m r => SRB.RideBookingDetails -> m (Maybe SLoc.Sear
 getDropLocation rideBookingType = do
   let mbToLocationId = SRB.getDropLocationId rideBookingType
   forM mbToLocationId $ QLoc.findById >=> fromMaybeM LocationNotFound
+
+getFareProductType :: SRB.RideBookingDetails -> SFP.FareProductType
+getFareProductType = \case
+  SRB.OneWayDetails _ -> SFP.ONE_WAY
+  SRB.RentalDetails -> SFP.RENTAL

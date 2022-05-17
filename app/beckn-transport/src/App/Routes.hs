@@ -175,6 +175,10 @@ type DriverAPI =
              :> TokenAuth
              :> MandatoryQueryParam "active" Bool
              :> Post '[JSON] APISuccess
+             :<|> "setRental"
+               :> TokenAuth
+               :> MandatoryQueryParam "rental" Bool
+               :> Post '[JSON] APISuccess
              :<|> "profile"
                :> ( TokenAuth
                       :> Get '[JSON] DriverAPI.DriverInformationRes
@@ -193,6 +197,7 @@ driverFlow =
       :<|> Driver.deleteDriver
   )
     :<|> ( Driver.setActivity
+             :<|> Driver.setRental
              :<|> ( Driver.getInformation
                       :<|> Driver.updateDriver
                   )

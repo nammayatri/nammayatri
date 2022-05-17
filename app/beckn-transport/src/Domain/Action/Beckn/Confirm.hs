@@ -92,7 +92,8 @@ handler transporter req = do
   handleRideBookingType quote.quoteDetails
 
   let pickupPoint = searchRequest.fromLocationId
-  driverPool <- recalculateDriverPool pickupPoint rideBooking.id transporterOrg.id rideBooking.vehicleVariant
+      fareProductType = DQuote.getFareProductType quote.quoteDetails
+  driverPool <- recalculateDriverPool pickupPoint rideBooking.id transporterOrg.id rideBooking.vehicleVariant fareProductType
   logTagInfo "OnConfirmCallback" $
     "Driver Pool for Ride " +|| rideBooking.id.getId ||+ " is set with drivers: "
       +|| T.intercalate ", " (getId <$> driverPool) ||+ ""

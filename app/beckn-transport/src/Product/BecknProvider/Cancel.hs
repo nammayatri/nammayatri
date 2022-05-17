@@ -17,6 +17,7 @@ import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
+import qualified Product.RideBooking as PRB
 import SharedLogic.DriverPool (recalculateDriverPool)
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -72,7 +73,8 @@ cancelRide rideId bookingCReason = do
       >>= fromMaybeM (OrgNotFound transporterId.getId)
   if isCancelledByDriver
     then do
-      void $ recalculateDriverPool rideBooking.fromLocationId rideBooking.id rideBooking.providerId rideBooking.vehicleVariant
+      let fareProductType = PRB.getFareProductType rideBooking.rideBookingDetails
+      void $ recalculateDriverPool rideBooking.fromLocationId rideBooking.id rideBooking.providerId rideBooking.vehicleVariant fareProductType
       reallocateRideTransaction transporter.shortId rideBooking.id ride bookingCReason
     else cancelRideTransaction rideBooking.id ride bookingCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
