@@ -106,6 +106,15 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
+  nginx:
+    image: nginx:stable
+    container_name: beckn-nginx
+    ports:
+      - 8080:80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+
+
   pg-admin:
     image: dpage/pgadmin4
     ports:
