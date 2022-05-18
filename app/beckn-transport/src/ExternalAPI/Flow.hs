@@ -9,6 +9,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Beckn.Utils.Callback (WithBecknCallbackMig, withBecknCallbackMig)
 import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
+import Beckn.Utils.Servant.SignatureAuth
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import Domain.Types.Organization as Org
@@ -17,7 +18,6 @@ import EulerHS.Prelude
 import Storage.Queries.SearchRequest as SearchRequest
 import Tools.Metrics (CoreMetrics)
 import Types.Error
-import Utils.Auth
 import Utils.Common
 
 withCallback ::
@@ -62,7 +62,7 @@ callBAP action api transporter searchRequestId reqConstr content = do
       authKey = getHttpManagerKey bppShortId
       txnId = searchRequest.transactionId
   bppUri <- makeBppUrl (transporter.id)
-  context <- buildTaxiContext action txnId bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  context <- buildTaxiContext action txnId bapId bapUri (Just bppShortId) (Just bppUri)
   Beckn.callBecknAPI (Just authKey) Nothing (show action) api bapUri $ reqConstr context content
 
 callOnUpdate ::

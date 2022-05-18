@@ -6,10 +6,9 @@ import Beckn.Types.App
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Common
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
-import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
+import Beckn.Utils.Servant.SignatureAuth
 import Core.Spec.API.Search as Search
 import qualified Core.Spec.Search as Search
-import qualified Data.Text as T
 import GHC.Records.Extra
 
 search ::
@@ -40,6 +39,3 @@ callBecknAPIWithSignature ::
 callBecknAPIWithSignature a b c d = do
   bapId <- asks (.bapId)
   void $ callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
-
-getHttpManagerKey :: Text -> String
-getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId

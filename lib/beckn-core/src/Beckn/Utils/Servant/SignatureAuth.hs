@@ -142,6 +142,9 @@ instance
 signatureAuthManagerKey :: String
 signatureAuthManagerKey = "http-signature"
 
+getHttpManagerKey :: Text -> String
+getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId
+
 prepareAuthManager ::
   HasLog r =>
   AuthenticatingEntity r =>

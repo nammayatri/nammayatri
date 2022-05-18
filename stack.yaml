@@ -41,6 +41,7 @@ packages:
   - app/mock-sms
   - app/mock-fcm
   - app/example-service
+  - app/mock-bap
   - app/parking-bap
   - app/public-transport-bap
   - app/public-transport-search-consumer

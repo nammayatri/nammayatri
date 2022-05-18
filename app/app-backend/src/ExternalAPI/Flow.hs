@@ -11,8 +11,7 @@ import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
-import Beckn.Utils.Servant.SignatureAuth (signatureAuthManagerKey)
-import qualified Data.Text as T
+import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
 import qualified ExternalAPI.Types as API
 import GHC.Records.Extra
@@ -118,6 +117,3 @@ callBecknAPIWithSignature a b c d = do
 callBecknAPIWithSignatureMetro a b c d = do
   bapId <- asks (.bapSelfIds.metro)
   callBecknAPI (Just $ getHttpManagerKey bapId) Nothing a b c d
-
-getHttpManagerKey :: Text -> String
-getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId

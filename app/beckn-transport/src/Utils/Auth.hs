@@ -7,7 +7,6 @@ import Beckn.Utils.Common as CoreCommon
 import qualified Beckn.Utils.Common as Utils
 import Beckn.Utils.Monitoring.Prometheus.Servant
 import Beckn.Utils.Servant.HeaderAuth
-import Beckn.Utils.Servant.SignatureAuth
 import Data.Text as T
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
@@ -17,9 +16,6 @@ import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.Error
-
-getHttpManagerKey :: Text -> String
-getHttpManagerKey keyId = signatureAuthManagerKey <> "-" <> T.unpack keyId
 
 instance
   SanitizedUrl (sub :: Type) =>

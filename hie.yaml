@@ -78,6 +78,15 @@ cradle:
     - path: "app/example-service/server/Paths_example_service.hs"
       component: "example-service:exe:example-service-exe"
 
+    - path: "app/mock-bap/src"
+      component: "mock-bap:lib"
+
+    - path: "app/mock-bap/server/Main.hs"
+      component: "mock-bap:exe:mock-bap-exe"
+
+    - path: "app/mock-bap/server/Paths_mock_bap.hs"
+      component: "mock-bap:exe:mock-bap-exe"
+
     - path: "app/parking-bap/src"
       component: "parking-bap:lib"
 
