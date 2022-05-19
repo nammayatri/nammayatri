@@ -199,6 +199,7 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
   unless (driver.organizationId == Just orgId || driver.role == SP.DRIVER) $ throwError Unauthorized
   clearDriverSession driverId
   Esq.runTransaction $ do
+    QR.deleteByPersonId personId
     whenJust driver.udf1 $ QVehicle.deleteById . Id
     QPerson.deleteById driverId
   return Success
@@ -207,7 +208,6 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
       regTokens <- QR.findAllByPersonId personId
       for_ regTokens $ \regToken -> do
         void $ Redis.deleteKeyRedis $ authTokenCacheKey regToken.token
-      Esq.runTransaction $ QR.deleteByPersonId personId
 
 updateDriver :: Id SP.Person -> DriverAPI.UpdateDriverReq -> FlowHandler DriverAPI.UpdateDriverRes
 updateDriver personId req = withFlowHandlerAPI $ do
