@@ -2,10 +2,11 @@ module Types.API.Ride where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
+import Domain.Types.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.CancellationReason (CancellationReasonCode)
 import Domain.Types.Ride
-import Domain.Types.SearchReqLocation
 import Domain.Types.Vehicle
 
 newtype StartRideReq = StartRideReq
@@ -23,8 +24,8 @@ data DriverRideRes = DriverRideRes
   { id :: Id Ride,
     shortRideId :: ShortId Ride,
     status :: RideStatus,
-    fromLocation :: SearchReqLocationAPIEntity,
-    toLocation :: Maybe SearchReqLocationAPIEntity,
+    fromLocation :: BookingLocationAPIEntity,
+    toLocation :: Maybe BookingLocationAPIEntity,
     discount :: Maybe Amount,
     driverName :: Text,
     driverNumber :: Maybe Text,
@@ -36,7 +37,7 @@ data DriverRideRes = DriverRideRes
     estimatedTotalFare :: Amount,
     computedFare :: Maybe Amount,
     computedTotalFare :: Maybe Amount,
-    actualRideDistance :: Double,
+    actualRideDistance :: HighPrecMeters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

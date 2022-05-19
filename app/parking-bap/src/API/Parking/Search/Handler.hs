@@ -69,7 +69,7 @@ mkIntent :: API.SearchReq -> Gps.Gps -> Search.Intent
 mkIntent req gps =
   Search.Intent
     { fulfillment =
-        Search.FulFillmentInfo
+        Search.FulfillmentInfo
           { start =
               Search.TimeInfo
                 { time =

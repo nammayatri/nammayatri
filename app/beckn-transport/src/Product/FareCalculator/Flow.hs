@@ -15,6 +15,7 @@ import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Calculator
   ( FareParameters (..),
+    TripStartTime,
     calculateFareParameters,
     fareSum,
     fareSumWithDiscount,
@@ -40,7 +41,7 @@ calculateFare ::
   EsqDBFlow m r =>
   Id Organization ->
   Vehicle.Variant ->
-  Meter ->
+  HighPrecMeters ->
   UTCTime ->
   m FareParameters
 calculateFare = doCalculateFare serviceHandle
@@ -50,8 +51,8 @@ doCalculateFare ::
   ServiceHandle m ->
   Id Organization ->
   Vehicle.Variant ->
-  Meter ->
-  UTCTime ->
+  HighPrecMeters ->
+  TripStartTime ->
   m FareParameters
 doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""

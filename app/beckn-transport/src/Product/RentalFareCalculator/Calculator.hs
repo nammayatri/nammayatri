@@ -41,7 +41,7 @@ rentalFareSumWithDiscount fp@RentalFareParameters {..} = do
 
 calculateRentalFareParameters ::
   DRentalFP.RentalFarePolicy ->
-  Meter ->
+  HighPrecMeters ->
   TripStartTime ->
   TripStopTime ->
   RentalFareParameters
@@ -55,10 +55,10 @@ calculateRentalFareParameters farePolicy distance startTime stopTime = do
 
 calculateExtraDistanceFare ::
   RentalFarePolicy ->
-  Meter ->
+  HighPrecMeters ->
   Amount
 calculateExtraDistanceFare farePolicy distance = do
-  let distanceInKm = getDistanceInMeter distance / 1000
+  let distanceInKm = metersToKilometers $ highPrecMetersToMeters distance
   let extraDistance = distanceInKm - farePolicy.baseDistance
   if extraDistance > 0
     then Amount (toRational extraDistance) * farePolicy.extraKmFare
@@ -72,7 +72,7 @@ calculateExtraTimeFare ::
 calculateExtraTimeFare farePolicy tripStartTime tripStopTime = do
   let tripTime = diffUTCTime tripStopTime tripStartTime
       tripTimeInMinutes = nominalDiffTimeToSeconds tripTime `div` 60
-      extraTime = toInteger tripTimeInMinutes - toInteger farePolicy.baseDurationHr * 60
+      extraTime = toInteger tripTimeInMinutes - toInteger farePolicy.baseDuration * 60
   if extraTime > 0
     then Amount (toRational extraTime) * farePolicy.extraMinuteFare
     else 0

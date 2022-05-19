@@ -7,6 +7,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
@@ -30,7 +31,7 @@ data ProviderInfo = ProviderInfo
 
 data QuoteInfo = QuoteInfo
   { bppQuoteId :: Id DQuote.BPPQuote,
-    vehicleVariant :: Text,
+    vehicleVariant :: VehicleVariant,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,

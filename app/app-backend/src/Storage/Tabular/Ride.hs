@@ -12,6 +12,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
+import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
 import qualified Storage.Tabular.RideBooking as SRB
 
 derivePersistField "Domain.RideStatus"
@@ -32,7 +33,7 @@ mkPersist
       vehicleNumber Text
       vehicleModel Text
       vehicleColor Text
-      vehicleVariant Text
+      vehicleVariant VehVar.VehicleVariant
       otp Text
       trackingUrl Text
       fare Amount Maybe

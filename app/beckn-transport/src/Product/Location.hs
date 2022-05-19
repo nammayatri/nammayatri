@@ -23,7 +23,6 @@ import SharedLogic.LocationUpdates
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
-import Tools.Metrics
 import Types.API.Location as Location
 import Utils.Common hiding (id)
 
@@ -150,41 +149,3 @@ locationToLatLong loc =
 
 getRoute :: Id Person.Person -> Location.Request -> FlowHandler GoogleMaps.DirectionsResp
 getRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleMaps.getRoutes
-
-getDistanceDuration ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    GoogleMaps.HasGoogleMaps m r
-  ) =>
-  MapSearch.LatLong ->
-  MapSearch.LatLong ->
-  m (Maybe Double, Maybe Integer)
-getDistanceDuration from to = do
-  routes <- GoogleMaps.getRoutes rec
-  case routes.routes of
-    [] -> return (Nothing, Nothing)
-    (x : _) ->
-      case x.legs of
-        [] -> return (Nothing, Nothing)
-        (y : _) -> do
-          let distanceMetr :: Double = fromIntegral y.distance.value
-              durationInSec :: Integer = fromIntegral y.duration.value
-          return (Just distanceMetr, Just durationInSec)
-  where
-    rec =
-      MapSearch.Request
-        { waypoints = from :| [to],
-          mode = Just CAR,
-          calcPoints = True
-        }
-
-calculateDistance ::
-  ( MonadFlow m,
-    CoreMetrics m,
-    GoogleMaps.HasGoogleMaps m r
-  ) =>
-  LatLong ->
-  LatLong ->
-  m (Maybe Double)
-calculateDistance sourceLoc destinationLoc =
-  getDistanceDuration sourceLoc destinationLoc <&> fst

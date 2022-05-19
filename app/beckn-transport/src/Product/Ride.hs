@@ -3,14 +3,14 @@ module Product.Ride where
 import App.Types
 import Beckn.Prelude
 import Beckn.Types.Id
+import qualified Domain.Types.BookingLocation as DBLoc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.SearchReqLocation as SLoc
 import qualified Product.RideBooking as RideBooking (getDropLocation)
+import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Types.API.Ride as API
 import Types.Error
@@ -28,7 +28,7 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 
 buildDriverRideRes :: (SRide.Ride, SRB.RideBooking) -> Flow API.DriverRideRes
 buildDriverRideRes (ride, rideBooking) = do
-  fromLocation <- QLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
+  fromLocation <- QBLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
   toLocation <- RideBooking.getDropLocation rideBooking.rideBookingDetails
 
   vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM (VehicleNotFound ride.vehicleId.getId)
@@ -39,8 +39,8 @@ buildDriverRideRes (ride, rideBooking) = do
       { id = ride.id,
         shortRideId = ride.shortId,
         status = ride.status,
-        fromLocation = SLoc.makeSearchReqLocationAPIEntity fromLocation,
-        toLocation = SLoc.makeSearchReqLocationAPIEntity <$> toLocation,
+        fromLocation = DBLoc.makeBookingLocationAPIEntity fromLocation,
+        toLocation = DBLoc.makeBookingLocationAPIEntity <$> toLocation,
         estimatedFare = rideBooking.estimatedFare,
         estimatedTotalFare = rideBooking.estimatedTotalFare,
         discount = rideBooking.discount,

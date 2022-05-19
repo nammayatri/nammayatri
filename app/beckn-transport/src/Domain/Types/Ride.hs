@@ -45,8 +45,8 @@ data Ride = Ride
     trackingUrl :: Text,
     fare :: Maybe Amount,
     totalFare :: Maybe Amount,
-    traveledDistance :: Double,
-    chargeableDistance :: Maybe Double,
+    traveledDistance :: HighPrecMeters,
+    chargeableDistance :: Maybe HighPrecMeters,
     tripStartTime :: Maybe UTCTime,
     tripEndTime :: Maybe UTCTime,
     createdAt :: UTCTime,
@@ -66,7 +66,7 @@ data RideAPIEntity = RideAPIEntity
     vehicleNumber :: Text,
     computedFare :: Maybe Amount,
     computedTotalFare :: Maybe Amount,
-    actualRideDistance :: Double,
+    actualRideDistance :: HighPrecMeters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

@@ -4,11 +4,13 @@ module Domain.Types.Quote where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Data.OpenApi as OpenApi
 import qualified Domain.Types.SearchRequest as DSearchRequest
+import Domain.Types.VehicleVariant (VehicleVariant)
 
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -26,7 +28,7 @@ data Quote = Quote
     providerName :: Text,
     providerMobileNumber :: Text,
     providerCompletedRidesCount :: Int,
-    vehicleVariant :: Text,
+    vehicleVariant :: VehicleVariant,
     createdAt :: UTCTime,
     quoteTerms :: [QuoteTerms],
     quoteDetails :: QuoteDetails
@@ -78,8 +80,8 @@ newtype OneWayQuoteDetails = OneWayQuoteDetails
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data RentalQuoteDetails = RentalQuoteDetails
-  { baseDistance :: Double,
-    baseDurationHr :: Int
+  { baseDistance :: Kilometers,
+    baseDuration :: Hours
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -91,7 +93,7 @@ data QuoteTerms = QuoteTerms
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
-    vehicleVariant :: Text,
+    vehicleVariant :: VehicleVariant,
     estimatedFare :: Amount,
     estimatedTotalFare :: Amount,
     discount :: Maybe Amount,

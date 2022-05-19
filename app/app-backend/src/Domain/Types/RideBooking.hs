@@ -4,15 +4,15 @@ module Domain.Types.RideBooking where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Domain.Types.BookingLocation as DLoc
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.SearchReqLocation as DLoc
-import qualified Domain.Types.SearchRequest as DSearchRequest
+import Domain.Types.VehicleVariant (VehicleVariant)
 import Servant.API
 
 data RideBookingStatus
@@ -39,8 +39,6 @@ data BPPRideBooking
 data RideBooking = RideBooking
   { id :: Id RideBooking,
     bppBookingId :: Maybe (Id BPPRideBooking),
-    requestId :: Id DSearchRequest.SearchRequest,
-    quoteId :: Id DQuote.Quote,
     status :: RideBookingStatus,
     providerId :: Text,
     providerUrl :: BaseUrl,
@@ -48,13 +46,13 @@ data RideBooking = RideBooking
     providerMobileNumber :: Text,
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
-    fromLocationId :: Id DLoc.SearchReqLocation,
-    toLocationId :: Maybe (Id DLoc.SearchReqLocation),
+    fromLocationId :: Id DLoc.BookingLocation,
+    toLocationId :: Maybe (Id DLoc.BookingLocation),
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    distance :: Maybe Double,
-    vehicleVariant :: Text,
+    distance :: Maybe HighPrecMeters,
+    vehicleVariant :: VehicleVariant,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

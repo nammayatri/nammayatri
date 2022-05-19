@@ -2,12 +2,13 @@ module Types.API.RideBooking where
 
 import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
+import Domain.Types.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.Ride (RideAPIEntity)
 import Domain.Types.RideBooking (RideBooking, RideBookingStatus)
-import Domain.Types.SearchReqLocation (SearchReqLocationAPIEntity)
 import EulerHS.Prelude hiding (id)
 import Types.App (Driver)
 
@@ -17,8 +18,8 @@ data RideBookingStatusRes = RideBookingStatusRes
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    toLocation :: Maybe SearchReqLocationAPIEntity,
-    fromLocation :: SearchReqLocationAPIEntity,
+    toLocation :: Maybe BookingLocationAPIEntity,
+    fromLocation :: BookingLocationAPIEntity,
     rideList :: [RideAPIEntity],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -37,10 +38,10 @@ newtype GetRideInfoRes = GetRideInfoRes
 
 data RideInfo = RideInfo
   { bookingId :: Id RideBooking,
-    pickupLoc :: SearchReqLocationAPIEntity,
-    dropLoc :: Maybe SearchReqLocationAPIEntity,
-    etaForPickupLoc :: Maybe Integer,
-    distanceToPickupLoc :: Maybe Double,
+    pickupLoc :: BookingLocationAPIEntity,
+    dropLoc :: Maybe BookingLocationAPIEntity,
+    etaForPickupLoc :: Minutes,
+    distanceToPickupLoc :: Meters,
     notificationExpiryTime :: UTCTime,
     estimatedFare :: Amount,
     discount :: Maybe Amount,

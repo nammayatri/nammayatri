@@ -3,9 +3,11 @@ module Services.Allocation.Internal where
 import App.Allocator.Environment (Flow)
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.AllocationEvent (AllocationEventType)
+import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.DriverInformation as SDriverInfo
 import qualified Domain.Types.NotificationStatus as SNS
 import Domain.Types.Organization
@@ -314,6 +316,7 @@ getRideInfo rideBookingId = do
       }
   where
     castToRideStatus = \case
+      SRB.NEW -> New
       SRB.CONFIRMED -> Confirmed
       SRB.AWAITING_REASSIGNMENT -> AwaitingReassignment
       SRB.TRIP_ASSIGNED -> Assigned

@@ -14,12 +14,10 @@ import Beckn.Types.Id
 import qualified Domain.Types.RideBooking as Domain
 import qualified Domain.Types.Vehicle as Veh
 import qualified Storage.Queries.RideBooking.RentalRideBooking as QRentalRideBooking
+import Storage.Tabular.BookingLocation (BookingLocationTId)
 import Storage.Tabular.FareProduct ()
 import Storage.Tabular.Organization (OrganizationTId)
-import Storage.Tabular.Quote (QuoteTId)
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
-import Storage.Tabular.SearchReqLocation (SearchReqLocationTId)
-import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
 import Types.Error
 import Utils.Common hiding (id)
@@ -31,17 +29,14 @@ mkPersist
   [defaultQQ|
     RideBookingT sql=ride_booking
       id Text
-      messageId Text
-      requestId SearchRequestTId
-      quoteId QuoteTId
       status Domain.RideBookingStatus
       providerId OrganizationTId
       bapId Text
       bapUri Text
       startTime UTCTime
-      riderId RiderDetailsTId
-      fromLocationId SearchReqLocationTId
-      toLocationId SearchReqLocationTId Maybe
+      riderId RiderDetailsTId Maybe
+      fromLocationId BookingLocationTId
+      toLocationId BookingLocationTId Maybe
       vehicleVariant Veh.Variant
       estimatedFare Amount
       discount Amount Maybe
@@ -70,7 +65,7 @@ instance TEntity RideBookingT Domain.RideBooking where
         pure $
           Domain.OneWayDetails
             Domain.OneWayRideBookingDetails
-              { estimatedDistance = estimatedDistance',
+              { estimatedDistance = HighPrecMeters estimatedDistance',
                 toLocationId = toLocationId'
               }
       Nothing -> do
@@ -80,9 +75,7 @@ instance TEntity RideBookingT Domain.RideBooking where
     return $
       Domain.RideBooking
         { id = Id id,
-          requestId = fromKey requestId,
-          quoteId = fromKey quoteId,
-          riderId = fromKey riderId,
+          riderId = fromKey <$> riderId,
           fromLocationId = fromKey fromLocationId,
           providerId = fromKey providerId,
           bapUri = pUrl,
@@ -94,11 +87,10 @@ instance TEntity RideBookingT Domain.RideBooking where
           Domain.RentalDetails _ -> (Nothing, Nothing)
     RideBookingT
       { id = getId id,
-        requestId = toKey requestId,
-        quoteId = toKey quoteId,
-        riderId = toKey riderId,
+        riderId = toKey <$> riderId,
         fromLocationId = toKey fromLocationId,
         toLocationId = toKey <$> toLocationId,
+        estimatedDistance = getHighPrecMeters <$> estimatedDistance,
         providerId = toKey providerId,
         bapUri = showBaseUrl bapUri,
         ..

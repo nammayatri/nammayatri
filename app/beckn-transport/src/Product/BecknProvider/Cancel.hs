@@ -104,9 +104,8 @@ notifyDriverOnCancel ::
   m ()
 notifyDriverOnCancel rideBooking ride cancellationReason =
   fork "cancelRide - Notify driver" $ do
-    searchRequest <- SearchRequest.findById (rideBooking.requestId) >>= fromMaybeM (SearchRequestNotFound rideBooking.requestId.getId)
     driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    Notify.notifyOnCancel searchRequest driver.id driver.deviceToken cancellationReason.source
+    Notify.notifyOnCancel undefined driver.id driver.deviceToken cancellationReason.source
 
 cancelRideTransaction ::
   EsqDBFlow m r =>

@@ -13,6 +13,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.Quote.QuoteTerms as Domain
+import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
 import qualified Storage.Queries.Quote.QuoteTerms as QQuoteTerms
 import qualified Storage.Queries.Quote.RentalQuote as QRentalQuote
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
@@ -35,7 +36,7 @@ mkPersist
       providerMobileNumber Text
       providerCompletedRidesCount Int
       distanceToNearestDriver Double Maybe
-      vehicleVariant Text
+      vehicleVariant VehVar.VehicleVariant
       createdAt UTCTime
       Primary id
       deriving Generic
@@ -63,7 +64,7 @@ instance TEntity QuoteT Domain.Quote where
         pure . Domain.RentalDetails $
           Domain.RentalQuoteDetails
             { baseDistance = rentalQuote.baseDistance,
-              baseDurationHr = rentalQuote.baseDurationHr
+              baseDuration = rentalQuote.baseDuration
             }
 
     return $

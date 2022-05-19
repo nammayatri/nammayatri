@@ -174,7 +174,7 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId rideBooking.requestId,
+          fcmEntityIds = getId rideBooking.id,
           fcmNotificationJSON = FCM.createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -221,7 +221,7 @@ notifyOnRideBookingReallocated rideBooking cancellationSource = do
           { fcmNotificationType = FCM.REALLOCATE_PRODUCT,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
-            fcmEntityIds = getId rideBooking.requestId,
+            fcmEntityIds = getId rideBooking.id,
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
           }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"

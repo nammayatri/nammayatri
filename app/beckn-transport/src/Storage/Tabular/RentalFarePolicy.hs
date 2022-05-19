@@ -10,6 +10,7 @@ module Storage.Tabular.RentalFarePolicy where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
+import Beckn.Types.Common (Hours (..), Kilometers (..))
 import Beckn.Types.Id
 import qualified Domain.Types.RentalFarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
@@ -24,8 +25,8 @@ mkPersist
       organizationId OrganizationTId
       vehicleVariant Vehicle.Variant
       baseFare Amount
-      baseDistance Double
-      baseDurationHr Int
+      baseDistance Int
+      baseDuration Int
       extraKmFare Amount
       extraMinuteFare Amount
       driverAllowanceForDay Amount Maybe
@@ -46,6 +47,8 @@ instance TEntity RentalFarePolicyT Domain.RentalFarePolicy where
       Domain.RentalFarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
+          baseDistance = Kilometers baseDistance,
+          baseDuration = Hours baseDuration,
           ..
         }
   toTType Domain.RentalFarePolicy {..} =
@@ -53,6 +56,8 @@ instance TEntity RentalFarePolicyT Domain.RentalFarePolicy where
       { id = getId id,
         organizationId = toKey organizationId,
         deleted = False,
+        baseDistance = getKilometers baseDistance,
+        baseDuration = getHours baseDuration,
         ..
       }
   toTEntity a =

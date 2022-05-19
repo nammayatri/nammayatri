@@ -1,4 +1,4 @@
-module Domain.Action.Beckn.Search.Rental where
+module Domain.Action.Beckn.OnSearch.Rental where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Storage.Esqueleto as Esq

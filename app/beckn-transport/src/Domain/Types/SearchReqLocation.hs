@@ -1,5 +1,3 @@
-{-# LANGUAGE UndecidableInstances #-}
-
 module Domain.Types.SearchReqLocation where
 
 import Beckn.Types.Id

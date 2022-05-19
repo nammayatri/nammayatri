@@ -72,8 +72,6 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
         SRB.RideBooking
           { id = Id id,
             bppBookingId = Nothing,
-            requestId = searchRequest.id,
-            quoteId = quote.id,
             status = SRB.NEW,
             providerId = quote.providerId,
             providerUrl = quote.providerUrl,
@@ -81,8 +79,8 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
             providerMobileNumber = quote.providerMobileNumber,
             startTime = searchRequest.startTime,
             riderId = searchRequest.riderId,
-            fromLocationId = searchRequest.fromLocationId,
-            toLocationId = searchRequest.toLocationId,
+            fromLocationId = undefined,
+            toLocationId = undefined,
             estimatedFare = quote.estimatedFare,
             discount = quote.discount,
             estimatedTotalFare = quote.estimatedTotalFare,
@@ -103,12 +101,9 @@ onConfirm (SignatureAuthResult signPayload _) req = withFlowHandlerBecknAPI $
     case req.contents of
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
       Right msg -> do
-        bppQuoteId <- (Id . (.id) <$> listToMaybe msg.order.items) & fromMaybeM (InternalError "Empty items list.")
         let bppRideBookingId = Id msg.order.id
-        quote <- QQuote.findByBPPQuoteId bppQuoteId >>= fromMaybeM (QuoteDoesNotExist bppQuoteId.getId)
-        rideBooking <- QRideB.findByQuoteId quote.id >>= fromMaybeM (RideBookingNotFound quote.id.getId)
         DB.runTransaction $ do
-          QRideB.updateBPPBookingId rideBooking.id bppRideBookingId
-          QRideB.updateStatus rideBooking.id SRB.CONFIRMED
+          QRideB.updateBPPBookingId undefined bppRideBookingId
+          QRideB.updateStatus undefined SRB.CONFIRMED
           QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
     return Ack

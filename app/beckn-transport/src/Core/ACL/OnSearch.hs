@@ -1,14 +1,14 @@
 module Core.ACL.OnSearch (mkOnSearchMessage) where
 
+import Beckn.Prelude
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
-import qualified Domain.Action.Beckn.Search as DSearch
+import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Types.Quote as DQuote
-import EulerHS.Prelude hiding (id, state)
 
 mkOnSearchMessage ::
-  DSearch.DOnSearchReq ->
+  DOnSearch.DOnSearchRes ->
   OnSearch.OnSearchMessage
-mkOnSearchMessage DSearch.DOnSearchReq {..} = do
+mkOnSearchMessage DOnSearch.DOnSearchRes {..} = do
   let provider =
         OnSearch.Provider
           { id = transporterInfo.shortId.getShortId,
@@ -24,12 +24,12 @@ mkOnSearchMessage DSearch.DOnSearchReq {..} = do
 
 mkItem :: DQuote.Quote -> OnSearch.Item
 mkItem DQuote.Quote {..} = do
-  let (distanceToNearestDriver, baseDistance, baseDurationHr, descriptions) =
+  let (distanceToNearestDriver, baseDistance, baseDuration, descriptions) =
         case quoteDetails of
           DQuote.OneWayDetails details ->
             (Just details.distanceToNearestDriver, Nothing, Nothing, Nothing)
           DQuote.RentalDetails details ->
-            (Nothing, Just details.baseDistance, Just details.baseDurationHr, Just details.descriptions)
+            (Nothing, Just details.baseDistance.getKilometers, Just details.baseDuration.getHours, Just details.descriptions)
   OnSearch.Item
     { id = id.getId,
       vehicle_variant = show vehicleVariant,

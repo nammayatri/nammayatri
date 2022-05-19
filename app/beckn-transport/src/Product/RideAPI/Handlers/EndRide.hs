@@ -31,17 +31,17 @@ data ServiceHandle m = ServiceHandle
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
-      Meter ->
+      HighPrecMeters ->
       UTCTime ->
       m Fare.FareParameters,
     calculateRentalFare ::
       Id DRentalFP.RentalFarePolicy ->
-      Meter ->
+      HighPrecMeters ->
       UTCTime ->
       UTCTime ->
       m RentalFare.RentalFareParameters,
     recalculateFareEnabled :: m Bool,
-    putDiffMetric :: Amount -> Double -> m (),
+    putDiffMetric :: Amount -> HighPrecMeters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
     getKeyRedis :: Text -> m (Maybe ()),
     updateLocationAllowedDelay :: m NominalDiffTime,
@@ -118,7 +118,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           <*> thereWereMissingLocUpdates
       if shouldRecalculateFare && not missingLocationUpdates
         then do
-          fareParams <- calculateFare transporterId vehicleVariant (Meter actualDistance) rideBooking.startTime
+          fareParams <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime
           let updatedFare = Fare.fareSum fareParams
               totalFare = Fare.fareSumWithDiscount fareParams
           let distanceDiff = actualDistance - oldDistance
@@ -134,7 +134,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
     calcRentalFare rideBooking ride rentalDetails now = do
       let actualDistance = ride.traveledDistance
-      fareParams <- calculateRentalFare rentalDetails.rentalFarePolicyId (Meter actualDistance) rideBooking.startTime now
+      fareParams <- calculateRentalFare rentalDetails.rentalFarePolicyId actualDistance rideBooking.startTime now
       let fare = RentalFare.rentalFareSum fareParams
           totalFare = RentalFare.rentalFareSumWithDiscount fareParams
       logTagInfo "Rental fare calculation" $

@@ -7,18 +7,18 @@ import Core.Search.Location
 import Data.OpenApi (ToSchema (declareNamedSchema), defaultSchemaOptions)
 
 newtype Intent = Intent
-  { fulfillment :: FulFillmentInfo
+  { fulfillment :: FulfillmentInfo
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
-data FulFillmentInfo = FulFillmentInfo
+data FulfillmentInfo = FulfillmentInfo
   { start :: TimeInfo,
     end :: LocationAndTime
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-instance ToSchema FulFillmentInfo where
+instance ToSchema FulfillmentInfo where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
 newtype TimeInfo = TimeInfo

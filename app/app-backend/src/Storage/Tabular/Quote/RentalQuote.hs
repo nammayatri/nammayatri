@@ -9,6 +9,7 @@ module Storage.Tabular.Quote.RentalQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.Quote.RentalQuote as Domain
@@ -19,8 +20,8 @@ mkPersist
   [defaultQQ|
     RentalQuoteT sql=rental_quote
       quoteId Text
-      baseDistance Double
-      baseDurationHr Int
+      baseDistance Int
+      baseDuration Int
       Primary quoteId
       deriving Generic
     |]
@@ -36,11 +37,15 @@ instance TEntity RentalQuoteT Domain.RentalQuote where
     return $
       Domain.RentalQuote
         { quoteId = Id quoteId,
+          baseDistance = Kilometers baseDistance,
+          baseDuration = Hours baseDuration,
           ..
         }
   toTType Domain.RentalQuote {..} =
     RentalQuoteT
       { quoteId = getId quoteId,
+        baseDistance = getKilometers baseDistance,
+        baseDuration = getHours baseDuration,
         ..
       }
   toTEntity a =

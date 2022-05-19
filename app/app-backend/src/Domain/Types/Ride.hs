@@ -10,6 +10,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.RideBooking as DRB
+import Domain.Types.VehicleVariant (VehicleVariant)
 import Servant.API
 
 data RideStatus
@@ -44,7 +45,7 @@ data Ride = Ride
     vehicleNumber :: Text,
     vehicleModel :: Text,
     vehicleColor :: Text,
-    vehicleVariant :: Text,
+    vehicleVariant :: VehicleVariant,
     otp :: Text,
     trackingUrl :: Text,
     fare :: Maybe Amount,
@@ -65,7 +66,7 @@ data RideAPIEntity = RideAPIEntity
     driverRegisteredAt :: UTCTime,
     vehicleNumber :: Text,
     vehicleColor :: Text,
-    vehicleVariant :: Text,
+    vehicleVariant :: VehicleVariant,
     vehicleModel :: Text,
     rideOtp :: Text,
     computedPrice :: Maybe Amount,

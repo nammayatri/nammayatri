@@ -9,6 +9,7 @@ module Storage.Tabular.BusinessEvent where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.BusinessEvent as Domain
 import Domain.Types.Vehicle (Variant)
@@ -30,8 +31,8 @@ mkPersist
       rideBookingId RideBookingTId Maybe
       whenPoolWasComputed Domain.WhenPoolWasComputed Maybe
       vehicleVariant Variant Maybe
-      distance Double Maybe
-      duration Double Maybe
+      distance Int Maybe
+      duration Int Maybe
       rideId RideTId Maybe
       Primary id
       deriving Generic
@@ -51,6 +52,8 @@ instance TEntity BusinessEventT Domain.BusinessEvent where
           driverId = cast . fromKey <$> driverId,
           rideBookingId = fromKey <$> rideBookingId,
           rideId = fromKey <$> rideId,
+          distance = Meters <$> distance,
+          duration = Seconds <$> duration,
           ..
         }
   toTType Domain.BusinessEvent {..} =
@@ -59,6 +62,8 @@ instance TEntity BusinessEventT Domain.BusinessEvent where
         driverId = toKey . cast <$> driverId,
         rideBookingId = toKey <$> rideBookingId,
         rideId = toKey <$> rideId,
+        distance = getMeters <$> distance,
+        duration = getSeconds <$> duration,
         ..
       }
   toTEntity a =

@@ -1,6 +1,7 @@
 module Domain.Types.Quote where
 
 import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time
 import qualified Domain.Types.FareProduct as DFareProduct
@@ -28,14 +29,14 @@ data Quote = Quote
 data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails RentalQuoteDetails
 
 data OneWayQuoteDetails = OneWayQuoteDetails
-  { distance :: Double,
-    distanceToNearestDriver :: Double
+  { distance :: HighPrecMeters,
+    distanceToNearestDriver :: HighPrecMeters
   }
 
 data RentalQuoteDetails = RentalQuoteDetails
   { rentalFarePolicyId :: Id DRentalFP.RentalFarePolicy,
-    baseDistance :: Double,
-    baseDurationHr :: Int,
+    baseDistance :: Kilometers,
+    baseDuration :: Hours,
     descriptions :: [Text]
   }
 

@@ -49,7 +49,7 @@ mkIntent origin mbDestination startTime = do
   let startLocation =
         Search.StartInfo
           { location = mkLocation origin,
-            time = Search.Time startTime
+            time = Search.TimeTimestamp startTime
           }
       mkStopInfo destination =
         Search.StopInfo
@@ -58,7 +58,7 @@ mkIntent origin mbDestination startTime = do
       mbEndLocation = mkStopInfo <$> mbDestination
 
       fulfillment =
-        Search.FulFillmentInfo
+        Search.FulfillmentInfo
           { start = startLocation,
             end = mbEndLocation
           }

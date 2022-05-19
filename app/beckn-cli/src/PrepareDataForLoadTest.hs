@@ -68,5 +68,33 @@ generateSearchRequest :: L.Flow API.SearchReq
 generateSearchRequest = do
   txnId <- L.generateGUID
   let context = example @API.Context & #message_id .~ txnId
-  let intent = example @API.SearchMessage
+  let intent =
+        API.SearchMessage
+          { intent =
+              API.Intent
+                { fulfillment =
+                    API.FulfillmentInfo
+                      { start =
+                          API.StartInfo
+                            { location =
+                                API.Location
+                                  { gps = API.Gps {lat = 20.5937, lon = 78.9629},
+                                    address =
+                                      API.Address
+                                        { door = Nothing,
+                                          area = Nothing,
+                                          building = Nothing,
+                                          street = Nothing,
+                                          city = Nothing,
+                                          state = Nothing,
+                                          country = Nothing,
+                                          area_code = Nothing
+                                        }
+                                  },
+                              time = API.TimeTimestamp example
+                            },
+                        end = Nothing
+                      }
+                }
+          }
   pure $ API.BecknReq context intent

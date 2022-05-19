@@ -5,7 +5,6 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.Organization
 import Domain.Types.Person
-import Domain.Types.Quote
 import Domain.Types.RideBooking as Booking
 import Domain.Types.RideBooking.RentalRideBooking as Booking
 import Storage.Tabular.Ride as Ride
@@ -32,13 +31,6 @@ updateStatus rbId rbStatus = do
 
 findById :: Transactionable m => Id RideBooking -> m (Maybe RideBooking)
 findById = Esq.findById
-
-findByQuoteId :: Transactionable m => Id Quote -> m (Maybe RideBooking)
-findByQuoteId quoteId =
-  Esq.findOne $ do
-    rideBooking <- from $ table @RideBookingT
-    where_ $ rideBooking ^. RideBookingQuoteId ==. val (toKey quoteId)
-    return rideBooking
 
 findAllByOrg :: Transactionable m => Id Organization -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [RideBooking]
 findAllByOrg orgId mbLimit mbOffset mbIsOnlyActive = do

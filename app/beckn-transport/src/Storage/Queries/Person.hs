@@ -197,17 +197,16 @@ updateAverageRating personId newAverageRating = do
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
-data DriverPoolResult = DriverPoolResult
+data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
-    distanceToDriver :: Double,
-    durationToPickup :: Maybe Double,
+    distanceToDriver :: HighPrecMeters,
     variant :: Vehicle.Variant,
     lat :: Double,
     lon :: Double
   }
   deriving (Generic)
 
-instance GoogleMaps.HasCoordinates DriverPoolResult where
+instance GoogleMaps.HasCoordinates NearestDriversResult where
   getCoordinates dpRes = LatLong dpRes.lat dpRes.lon
 
 getNearestDrivers ::
@@ -217,7 +216,7 @@ getNearestDrivers ::
   Id Organization ->
   Maybe Vehicle.Variant ->
   SFP.FareProductType ->
-  m [DriverPoolResult]
+  m [NearestDriversResult]
 getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
   let isRental = fareProductType == SFP.RENTAL
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
@@ -272,7 +271,7 @@ getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
     return (personId, dist, vehicleVariant, canDowngradeToSedan, canDowngradeToHatchback, dlat, dlon)
   return (makeDriverPoolResults =<< res)
   where
-    makeDriverPoolResults :: (Id Person, Double, Variant, Bool, Bool, Double, Double) -> [DriverPoolResult]
+    makeDriverPoolResults :: (Id Person, Double, Variant, Bool, Bool, Double, Double) -> [NearestDriversResult]
     makeDriverPoolResults (personId, dist, vehicleVariant, canDowngradeToSedan, canDowngradeToHatchback, dlat, dlon) = do
       case mbPoolVariant of
         Nothing -> do
@@ -282,4 +281,4 @@ getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
           suvResult <> sedanResult <> hatchbackResult
         Just poolVariant -> getResult poolVariant True
       where
-        getResult var cond = [DriverPoolResult (cast personId) dist Nothing var dlat dlon | cond]
+        getResult var cond = [NearestDriversResult (cast personId) (HighPrecMeters dist) var dlat dlon | cond]

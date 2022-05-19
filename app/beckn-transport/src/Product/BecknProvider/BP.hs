@@ -40,7 +40,7 @@ sendRideAssignedUpdateToBAP rideBooking ride = do
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
   buildRideAssignedUpdatePayload ride
-    >>= sendUpdateEvent transporter rideBooking.requestId
+    >>= sendUpdateEvent transporter undefined --rideBooking.requestId
 
 sendRideStartedUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -56,7 +56,7 @@ sendRideStartedUpdateToBAP rideBooking ride = do
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
   makeRideStartedUpdatePayload ride
-    & sendUpdateEvent transporter rideBooking.requestId
+    & sendUpdateEvent transporter undefined --rideBooking.requestId
 
 sendRideCompletedUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -72,7 +72,7 @@ sendRideCompletedUpdateToBAP rideBooking ride = do
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
   buildRideCompletedUpdatePayload ride
-    >>= sendUpdateEvent transporter rideBooking.requestId
+    >>= sendUpdateEvent transporter undefined --rideBooking.requestId
 
 sendRideBookingCanceledUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -86,7 +86,7 @@ sendRideBookingCanceledUpdateToBAP ::
   m ()
 sendRideBookingCanceledUpdateToBAP rideBooking transporter cancellationSource = do
   let message = OnUpdate.RideBookingCancelled $ OnUpdate.RideBookingCancelledEvent rideBooking.id.getId cancellationSource
-  sendUpdateEvent transporter rideBooking.requestId message
+  sendUpdateEvent transporter undefined message
 
 sendRideBookingReallocationUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -101,7 +101,7 @@ sendRideBookingReallocationUpdateToBAP ::
   m ()
 sendRideBookingReallocationUpdateToBAP rideBooking rideId transporter cancellationSource = do
   let message = OnUpdate.RideBookingReallocation $ OnUpdate.RideBookingReallocationEvent rideBooking.id.getId rideId.getId cancellationSource
-  sendUpdateEvent transporter rideBooking.requestId message
+  sendUpdateEvent transporter undefined message
 
 sendUpdateEvent ::
   ( EsqDBFlow m r,

@@ -12,11 +12,11 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Core.ACL.OnSearch as ACL
 import qualified Core.ACL.Search as ACL
 import Data.Aeson (encode)
+import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Organization as Org
 import EulerHS.Prelude hiding (state)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified SharedLogic.Transporter as Shared
 import Utils.Common
 
 search ::
@@ -28,11 +28,11 @@ search ::
 search transporterId (SignatureAuthResult signPayload subscriber) (SignatureAuthResult _ gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     dSearchReq <- ACL.buildSearchReq subscriber req
-    transporter <- Shared.findTransporter transporterId
     Esq.runTransaction $
       QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
+    DSearch.DSearchRes {..} <- DSearch.search transporterId dSearchReq
     let context = req.context
     let callbackUrl = gateway.subscriber_url
     ExternalAPI.withCallback' withRetry transporter Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
-      dOnSearchReq <- DSearch.handler transporter dSearchReq
-      pure $ ACL.mkOnSearchMessage dOnSearchReq
+      dOnSearchRes <- DOnSearch.onSearch (DOnSearch.DOnSearchReq {..})
+      pure $ ACL.mkOnSearchMessage dOnSearchRes

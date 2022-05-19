@@ -7,7 +7,7 @@ import Domain.Types.BusinessEvent
 import Domain.Types.Ride
 import Domain.Types.RideBooking
 import Domain.Types.Vehicle (Variant)
-import Storage.Queries.Person (DriverPoolResult)
+import SharedLogic.DriverPool (DriverPoolResult)
 import Storage.Tabular.BusinessEvent ()
 import Types.App (Driver)
 import Utils.Common
@@ -18,8 +18,8 @@ logBusinessEvent ::
   Maybe (Id RideBooking) ->
   Maybe WhenPoolWasComputed ->
   Maybe Variant ->
-  Maybe Double ->
-  Maybe Double ->
+  Maybe Meters ->
+  Maybe Seconds ->
   Maybe (Id Ride) ->
   SqlDB ()
 logBusinessEvent driverId eventType rideBookingId whenPoolWasComputed variant distance duration rideId = do
@@ -48,7 +48,7 @@ logDriverInPoolEvent whenPoolWasComputed rideBookingId driverInPool = do
     (Just whenPoolWasComputed)
     (Just driverInPool.variant)
     (Just driverInPool.distanceToDriver)
-    driverInPool.durationToPickup
+    (Just driverInPool.durationToPickup)
     Nothing
 
 logDriverAssignetEvent :: Id Driver -> Id RideBooking -> Id Ride -> SqlDB ()

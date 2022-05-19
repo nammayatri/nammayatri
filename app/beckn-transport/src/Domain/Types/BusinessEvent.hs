@@ -1,6 +1,7 @@
 module Domain.Types.BusinessEvent where
 
 import Beckn.Prelude
+import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Domain.Types.Ride (Ride)
 import Domain.Types.RideBooking (RideBooking)
@@ -15,8 +16,8 @@ data BusinessEvent = BusinessEvent
     rideBookingId :: Maybe (Id RideBooking),
     whenPoolWasComputed :: Maybe WhenPoolWasComputed,
     vehicleVariant :: Maybe Variant,
-    distance :: Maybe Double,
-    duration :: Maybe Double,
+    distance :: Maybe Meters,
+    duration :: Maybe Seconds,
     rideId :: Maybe (Id Ride)
   }
   deriving (Generic)

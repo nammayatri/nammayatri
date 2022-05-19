@@ -17,7 +17,7 @@ buildSearchRequest ::
   Text ->
   Location.SearchReqLocation ->
   Maybe Location.SearchReqLocation ->
-  Maybe Double ->
+  Maybe HighPrecMeters ->
   UTCTime ->
   m SearchRequest.SearchRequest
 buildSearchRequest userId pickup mbDrop mbDistance now = do

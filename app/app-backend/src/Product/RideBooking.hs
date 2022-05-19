@@ -2,14 +2,14 @@ module Product.RideBooking where
 
 import App.Types
 import Beckn.Types.Id
+import qualified Domain.Types.BookingLocation as SLoc
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.SearchReqLocation as SLoc
 import EulerHS.Prelude hiding (id)
+import qualified Storage.Queries.BookingLocation as QLoc
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
-import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Types.API.RideBooking as API
 import Types.Error
 import Utils.Common
@@ -43,8 +43,8 @@ buildRideBookingStatusRes rideBooking = do
         estimatedFare = rideBooking.estimatedFare,
         discount = rideBooking.discount,
         estimatedTotalFare = rideBooking.estimatedTotalFare,
-        toLocation = SLoc.makeSearchReqLocationAPIEntity <$> mbToLocation,
-        fromLocation = SLoc.makeSearchReqLocationAPIEntity fromLocation,
+        toLocation = SLoc.makeBookingLocationAPIEntity <$> mbToLocation,
+        fromLocation = SLoc.makeBookingLocationAPIEntity fromLocation,
         rideList = rideAPIEntityList,
         createdAt = rideBooking.createdAt,
         updatedAt = rideBooking.updatedAt

@@ -6,6 +6,7 @@ import qualified Beckn.Types.Core.Metro.API.Search as MigAPI
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Core.Taxi.API.Cancel as API
 import Beckn.Types.Core.Taxi.API.Confirm as API
+import qualified Beckn.Types.Core.Taxi.API.Init as API
 import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Utils.Dhall (FromDhall)
@@ -29,7 +30,7 @@ data BAPs a = BAPs
 
 search ::
   ( HasField "gatewayUrl" r BaseUrl,
-    EsqDBFlow m r,
+    MonadFlow m,
     CoreMetrics m,
     HasBapIds c r m
   ) =>
@@ -41,7 +42,7 @@ search req = do
 
 searchMetro ::
   ( HasField "gatewayUrl" r BaseUrl,
-    EsqDBFlow m r,
+    MonadFlow m,
     CoreMetrics m,
     HasBapIds c r m
   ) =>
@@ -50,6 +51,17 @@ searchMetro ::
 searchMetro req = do
   url <- asks (.gatewayUrl)
   void $ callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url req
+
+init ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasBapIds c r m
+  ) =>
+  BaseUrl ->
+  API.InitReq ->
+  m API.InitRes
+init = do
+  callBecknAPIWithSignature "init" API.initAPI
 
 confirm ::
   ( MonadFlow m,

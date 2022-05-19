@@ -9,6 +9,7 @@ module Storage.Tabular.SearchRequest where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Common (HighPrecMeters (..))
 import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
 import qualified Storage.Tabular.Person as SP
@@ -44,6 +45,7 @@ instance TEntity SearchRequestT Domain.SearchRequest where
           riderId = fromKey riderId,
           fromLocationId = fromKey fromLocationId,
           toLocationId = fromKey <$> toLocationId,
+          distance = HighPrecMeters <$> distance,
           ..
         }
   toTType Domain.SearchRequest {..} =
@@ -52,6 +54,7 @@ instance TEntity SearchRequestT Domain.SearchRequest where
         riderId = toKey riderId,
         fromLocationId = toKey fromLocationId,
         toLocationId = toKey <$> toLocationId,
+        distance = getHighPrecMeters <$> distance,
         ..
       }
   toTEntity a =

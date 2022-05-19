@@ -4,9 +4,9 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
+import Domain.Types.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.Ride (RideAPIEntity)
 import Domain.Types.RideBooking (RideBooking, RideBookingStatus)
-import Domain.Types.SearchReqLocation (SearchReqLocationAPIEntity)
 import EulerHS.Prelude hiding (id)
 
 data RideBookingStatusRes = RideBookingStatusRes
@@ -17,8 +17,8 @@ data RideBookingStatusRes = RideBookingStatusRes
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    toLocation :: Maybe SearchReqLocationAPIEntity,
-    fromLocation :: SearchReqLocationAPIEntity,
+    toLocation :: Maybe BookingLocationAPIEntity,
+    fromLocation :: BookingLocationAPIEntity,
     rideList :: [RideAPIEntity],
     createdAt :: UTCTime,
     updatedAt :: UTCTime

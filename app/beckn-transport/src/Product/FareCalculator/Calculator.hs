@@ -39,7 +39,7 @@ fareSumWithDiscount fp@FareParameters {..} = do
 
 calculateFareParameters ::
   FarePolicy ->
-  Meter ->
+  HighPrecMeters ->
   TripStartTime ->
   FareParameters
 calculateFareParameters farePolicy distance startTime = do
@@ -58,12 +58,12 @@ calculateBaseFare farePolicy = do
 
 calculateDistanceFare ::
   FarePolicy ->
-  Meter ->
+  HighPrecMeters ->
   Amount
 calculateDistanceFare farePolicy distance = do
   let sortedPerExtraKmRateList = NonEmpty.sortBy (compare `on` (.distanceRangeStart)) farePolicy.perExtraKmRateList -- sort it again just in case
   let baseDistance = (.distanceRangeStart) $ NonEmpty.head sortedPerExtraKmRateList
-      extraDistance = toRational (getDistanceInMeter distance) - baseDistance
+      extraDistance = toRational (getHighPrecMeters distance) - baseDistance
   if extraDistance <= 0
     then 0
     else do

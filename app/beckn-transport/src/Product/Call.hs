@@ -31,9 +31,13 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
   rideBooking <-
     QRB.findById ride.bookingId
       >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
+
+  riderId <-
+    rideBooking.riderId
+      & fromMaybeM (RideBookingFieldNotPresent "riderId")
   riderDetails <-
-    QRD.findById rideBooking.riderId
-      >>= fromMaybeM (RiderDetailsNotFound rideBooking.riderId.getId)
+    QRD.findById riderId
+      >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
   requestorPhone <- decrypt riderDetails.mobileNumber
   driverPhone <- getDriverPhone ride
   callbackUrl <- buildCallbackUrl

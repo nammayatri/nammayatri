@@ -9,19 +9,18 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
+import qualified Domain.Types.BookingLocation as DLoc
 import qualified Domain.Types.FareProduct as SFP
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.RiderDetails as DRD
-import qualified Domain.Types.SearchReqLocation as DLoc
-import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data RideBookingStatus
-  = CONFIRMED
+  = NEW
+  | CONFIRMED
   | AWAITING_REASSIGNMENT
   | COMPLETED
   | CANCELLED
@@ -40,16 +39,13 @@ instance ToHttpApiData RideBookingStatus where
 
 data RideBooking = RideBooking
   { id :: Id RideBooking,
-    messageId :: Text,
-    requestId :: Id DSR.SearchRequest,
-    quoteId :: Id DQuote.Quote,
     status :: RideBookingStatus,
     providerId :: Id DOrg.Organization,
     bapId :: Text,
     bapUri :: BaseUrl,
     startTime :: UTCTime,
-    riderId :: Id DRD.RiderDetails,
-    fromLocationId :: Id DLoc.SearchReqLocation,
+    riderId :: Maybe (Id DRD.RiderDetails),
+    fromLocationId :: Id DLoc.BookingLocation,
     vehicleVariant :: DVeh.Variant,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
@@ -62,11 +58,11 @@ data RideBooking = RideBooking
   deriving (Generic)
 
 data RideBookingDetails = OneWayDetails OneWayRideBookingDetails | RentalDetails RentalRideBookingDetails
-  deriving (Eq)
+  deriving (Generic, Eq)
 
 data OneWayRideBookingDetails = OneWayRideBookingDetails
-  { toLocationId :: Id DLoc.SearchReqLocation,
-    estimatedDistance :: Double
+  { toLocationId :: Id DLoc.BookingLocation,
+    estimatedDistance :: HighPrecMeters
   }
   deriving (Eq)
 

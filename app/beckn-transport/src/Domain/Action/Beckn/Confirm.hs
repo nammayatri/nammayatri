@@ -94,7 +94,7 @@ handler transporter req = do
 
   handleRideBookingType quote.quoteDetails
 
-  let pickupPoint = searchRequest.fromLocationId
+  let pickupPoint = undefined
       fareProductType = DQuote.getFareProductType quote.quoteDetails
   driverPoolResults <- recalculateDriverPool pickupPoint rideBooking.id transporterOrg.id rideBooking.vehicleVariant fareProductType
   Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_CONFIRM (Just rideBooking.id)) driverPoolResults
@@ -108,12 +108,9 @@ handler transporter req = do
     buildRideBooking searchRequest quote provider riderId now = do
       uid <- generateGUID
       let id = Id uid
-          messageId = searchRequest.messageId
-          requestId = searchRequest.id
-          quoteId = quote.id
           providerId = provider.id
           startTime = searchRequest.startTime
-          fromLocationId = searchRequest.fromLocationId
+          fromLocationId = undefined
           bapId = searchRequest.bapId
           bapUri = searchRequest.bapUri
           estimatedFare = quote.estimatedFare
@@ -127,7 +124,7 @@ handler transporter req = do
       let quoteDetails = quote.quoteDetails
       rideBookingDetails <- case quoteDetails of
         DQuote.OneWayDetails oneWayQuote -> do
-          toLocationId <- searchRequest.toLocationId & fromMaybeM (InternalError "ONE_WAY SearchRequest does not have toLocationId")
+          toLocationId <- undefined & fromMaybeM (InternalError "ONE_WAY SearchRequest does not have toLocationId")
           pure $
             SRB.OneWayDetails
               SRB.OneWayRideBookingDetails
@@ -136,7 +133,11 @@ handler transporter req = do
                 }
         DQuote.RentalDetails DQuote.RentalQuoteDetails {rentalFarePolicyId} -> do
           pure $ SRB.RentalDetails SRB.RentalRideBookingDetails {rentalFarePolicyId}
-      pure SRB.RideBooking {..}
+      pure
+        SRB.RideBooking
+          { riderId = Just riderId,
+            ..
+          }
 
 createScheduleRentalRideRequestJob :: UTCTime -> Scheduler.AllocateRentalJobData -> SqlDB ()
 createScheduleRentalRideRequestJob scheduledAt jobData =
@@ -174,7 +175,7 @@ makeOnConfirmCallback ::
 makeOnConfirmCallback rideBooking =
   DOnConfirmReq
     { rideBookingId = rideBooking.id,
-      quoteId = rideBooking.quoteId,
+      quoteId = undefined,
       estimatedTotalFare = rideBooking.estimatedTotalFare
     }
 

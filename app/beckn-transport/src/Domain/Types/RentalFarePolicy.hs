@@ -2,6 +2,7 @@ module Domain.Types.RentalFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle as Vehicle
@@ -11,8 +12,8 @@ data RentalFarePolicy = RentalFarePolicy
     organizationId :: Id Organization.Organization,
     vehicleVariant :: Vehicle.Variant,
     baseFare :: Amount,
-    baseDistance :: Double, -- Distance
-    baseDurationHr :: Int,
+    baseDistance :: Kilometers, -- Distance
+    baseDuration :: Hours,
     extraKmFare :: Amount,
     extraMinuteFare :: Amount,
     driverAllowanceForDay :: Maybe Amount
@@ -23,8 +24,8 @@ data RentalFarePolicyAPIEntity = RentalFarePolicyAPIEntity
   { id :: Id RentalFarePolicy,
     vehicleVariant :: Vehicle.Variant,
     baseFare :: Amount,
-    baseDistance :: Double, -- Distance
-    baseDurationHr :: Int,
+    baseDistance :: Kilometers, -- Distance
+    baseDuration :: Hours,
     extraKmFare :: Amount,
     extraMinuteFare :: Amount,
     driverAllowanceForDay :: Maybe Amount

@@ -112,8 +112,7 @@ processEvent (OnUpdate.RideBookingCancelled tcEvent) = do
     throwError (RideBookingInvalidStatus (show rideBooking.status))
   mbRide <- QRide.findActiveByRBId rideBooking.id
   let cancellationSource = tcEvent.cancellation_reason_id
-  let searchRequestId = rideBooking.requestId
-  logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
+  logTagInfo ("RideBookingId-" <> getId rideBooking.id) ("Cancellation reason " <> show cancellationSource)
   rideBookingCancellationReason <- buildRideBookingCancellationReason rideBooking.id (mbRide <&> (.id)) cancellationSource
   DB.runTransaction $ do
     QRB.updateStatus rideBooking.id SRB.CANCELLED
@@ -131,8 +130,7 @@ processEvent (OnUpdate.RideBookingReallocation rbrEvent) = do
   rideBooking <- QRB.findByBPPBookingId bppRideBookingId >>= fromMaybeM (RideBookingDoesNotExist bppRideBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist bppRideId.getId)
   let cancellationSource = rbrEvent.cancellation_reason_id
-  let searchRequestId = rideBooking.requestId
-  logTagInfo ("txnId-" <> getId searchRequestId) ("Cancellation reason " <> show cancellationSource)
+  logTagInfo ("RideBookingId-" <> getId rideBooking.id) ("Cancellation reason " <> show cancellationSource)
   rideBookingCancellationReason <- buildRideBookingCancellationReason rideBooking.id (Just ride.id) cancellationSource
   DB.runTransaction $ do
     QRB.updateStatus rideBooking.id SRB.AWAITING_REASSIGNMENT

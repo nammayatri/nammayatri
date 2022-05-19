@@ -31,6 +31,7 @@ import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Confirm as Confirm
 import qualified Product.CustomerSupport as CS
 import qualified Product.Feedback as Feedback
+import Product.Init
 import qualified Product.Location as Location
 import qualified Product.MetroOffer as Metro
 import qualified Product.Profile as Profile
@@ -84,6 +85,7 @@ type UIAPI =
     :<|> RegistrationAPI
     :<|> ProfileAPI
     :<|> SearchAPI
+    :<|> InitAPI
     :<|> QuoteAPI
     :<|> ConfirmAPI
     :<|> RideBookingAPI
@@ -120,6 +122,7 @@ uiAPI =
     :<|> registrationFlow
     :<|> profileFlow
     :<|> searchFlow
+    :<|> initFlow
     :<|> quoteFlow
     :<|> confirmFlow
     :<|> rideBookingFlow

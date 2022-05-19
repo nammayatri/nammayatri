@@ -1,6 +1,7 @@
 module Types.API.Location where
 
 import Beckn.Types.APISuccess (APISuccess)
+import Beckn.Types.Common (HighPrecMeters)
 import Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Data.OpenApi (ToSchema)
@@ -24,7 +25,7 @@ data Status = PreRide | ActualRide
 
 data GetLocationRes = GetLocationRes
   { currPoint :: LatLong,
-    totalDistance :: Double,
+    totalDistance :: HighPrecMeters,
     status :: Status,
     lastUpdate :: UTCTime
   }

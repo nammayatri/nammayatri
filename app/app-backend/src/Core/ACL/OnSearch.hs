@@ -10,6 +10,7 @@ import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Id
 import Beckn.Utils.Logging
 import Data.Text (unpack)
+import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.Quote as DQuote
@@ -83,10 +84,10 @@ buildQuoteInfo fareProductType item = do
   quoteDetails <- case fareProductType of
     DQuote.ONE_WAY -> DQuote.OneWayDetails <$> buildOneWayQuoteDetails item
     DQuote.RENTAL -> DQuote.RentalDetails <$> buildRentalQuoteDetails item
+  vehicleVariant <- readMaybe (T.unpack item.vehicle_variant) & fromMaybeM (InvalidRequest "Unable to parse item.vehicle_variant")
   pure
     DOnSearch.QuoteInfo
       { bppQuoteId = Id item.id,
-        vehicleVariant = item.vehicle_variant,
         estimatedFare = realToFrac item.estimated_price.value,
         discount = realToFrac <$> (item.discount <&> (.value)),
         estimatedTotalFare = realToFrac item.discounted_price.value,
@@ -110,7 +111,7 @@ buildRentalQuoteDetails ::
   OnSearch.Item ->
   m DQuote.RentalQuoteDetails
 buildRentalQuoteDetails item = do
-  baseDistance <- item.baseDistance & fromMaybeM (InvalidRequest "Missing baseDistance in rental search item")
-  baseDurationHr <- item.baseDurationHr & fromMaybeM (InvalidRequest "Missing baseDurationHr in rental search item")
+  baseDistance <- undefined & fromMaybeM (InvalidRequest "Missing baseDistance in rental search item")
+  baseDuration <- Hours <$> item.baseDuration & fromMaybeM (InvalidRequest "Missing baseDuration in rental search item")
 
   pure DQuote.RentalQuoteDetails {..}

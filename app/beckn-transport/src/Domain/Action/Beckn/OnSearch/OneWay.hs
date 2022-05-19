@@ -1,4 +1,4 @@
-module Domain.Action.Beckn.Search.OneWay where
+module Domain.Action.Beckn.OnSearch.OneWay where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch as MapSearch
@@ -42,7 +42,8 @@ onSearchCallback ::
   DLoc.SearchReqLocation ->
   m [DQuote.Quote]
 onSearchCallback searchRequest transporterId now fromLocation toLocation = do
-  pool <- DrPool.calculateDriverPool fromLocation.id transporterId Nothing SFP.ONE_WAY
+  pool <- DrPool.calculateDriverPool undefined transporterId Nothing SFP.ONE_WAY
+
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId
       ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""
@@ -55,11 +56,17 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   -- we take nearest one and calculate fare and make PI for him
 
   distance <-
-    (.info.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
+    metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
-      buildOneWayQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant now
+      buildOneWayQuote
+        searchRequest
+        fareParams
+        transporterId
+        distance
+        (metersToHighPrecMeters poolResult.distanceToDriver)
+        poolResult.variant now
   Esq.runTransaction $
     for_ listOfQuotes QQuote.create
   pure listOfQuotes
@@ -69,8 +76,8 @@ buildOneWayQuote ::
   DSearchRequest.SearchRequest ->
   Fare.FareParameters ->
   Id DOrg.Organization ->
-  Double ->
-  Double ->
+  HighPrecMeters ->
+  HighPrecMeters ->
   DVeh.Variant ->
   UTCTime ->
   m DQuote.Quote

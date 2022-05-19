@@ -10,6 +10,7 @@ module Storage.Tabular.Ride where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount (Amount)
+import Beckn.Types.Common (HighPrecMeters (..))
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
 import Storage.Tabular.Person (PersonTId)
@@ -57,6 +58,8 @@ instance TEntity RideT Domain.Ride where
           shortId = ShortId shortId,
           driverId = fromKey driverId,
           vehicleId = fromKey vehicleId,
+          traveledDistance = HighPrecMeters traveledDistance,
+          chargeableDistance = HighPrecMeters <$> chargeableDistance,
           ..
         }
   toTType Domain.Ride {..} =
@@ -66,6 +69,8 @@ instance TEntity RideT Domain.Ride where
         shortId = getShortId shortId,
         driverId = toKey driverId,
         vehicleId = toKey vehicleId,
+        traveledDistance = getHighPrecMeters traveledDistance,
+        chargeableDistance = getHighPrecMeters <$> chargeableDistance,
         ..
       }
   toTEntity a =

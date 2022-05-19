@@ -17,7 +17,6 @@ import EulerHS.Prelude hiding (id)
 import Product.RideBooking (buildRideBookingStatusRes)
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.SearchReqLocation as Location
 import Storage.Queries.SearchRequest as SearchRequest
 import Types.API.CustomerSupport as T
@@ -80,7 +79,7 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
     (Just searchRequestId, _) -> getByRequestId searchRequestId
     (_, Just mobileNumber) -> getByMobileNumber mobileNumber
     (_, _) -> throwError $ InvalidRequest "You should pass SearchRequestId or mobile number."
-  traverse (makeSearchRequestToOrder person) searchRequests
+  traverse (buildSearchRequestToOrder person) searchRequests
   where
     getByMobileNumber number = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
@@ -100,11 +99,11 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
           >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
       return $ T.OrderInfo person [searchRequest]
 
-makeSearchRequestToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
-makeSearchRequestToOrder SP.Person {firstName, lastName, mobileNumber} C.SearchRequest {..} = do
+buildSearchRequestToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
+buildSearchRequestToOrder SP.Person {firstName, lastName, mobileNumber} C.SearchRequest {..} = do
   fromLocation <- Location.findById fromLocationId
   toLocation <- join <$> mapM Location.findById toLocationId
-  rideBooking <- QRB.findByRequestId id
+  rideBooking <- undefined
   rbStatus <- buildRideBookingStatusRes `mapM` rideBooking
   decMobNum <- mapM decrypt mobileNumber
   let details =

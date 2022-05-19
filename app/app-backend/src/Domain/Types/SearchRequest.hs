@@ -3,6 +3,7 @@
 module Domain.Types.SearchRequest where
 
 import Beckn.Prelude
+import Beckn.Types.Common (HighPrecMeters)
 import Beckn.Types.Id
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchReqLocation as DLoc
@@ -17,7 +18,7 @@ data SearchRequest = SearchRequest
     riderId :: Id DP.Person,
     fromLocationId :: Id DLoc.SearchReqLocation,
     toLocationId :: Maybe (Id DLoc.SearchReqLocation),
-    distance :: Maybe Double,
+    distance :: Maybe HighPrecMeters,
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

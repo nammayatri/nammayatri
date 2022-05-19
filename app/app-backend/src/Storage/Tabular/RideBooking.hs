@@ -10,12 +10,12 @@ module Storage.Tabular.RideBooking where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
+import Beckn.Types.Common (HighPrecMeters (..))
 import Beckn.Types.Id
 import qualified Domain.Types.RideBooking as Domain
+import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
+import qualified Storage.Tabular.BookingLocation as SLoc
 import qualified Storage.Tabular.Person as SPerson
-import qualified Storage.Tabular.Quote as SQuote
-import qualified Storage.Tabular.SearchReqLocation as SLoc
-import qualified Storage.Tabular.SearchRequest as SSearchRequest
 
 derivePersistField "Domain.RideBookingStatus"
 
@@ -25,8 +25,6 @@ mkPersist
     RideBookingT sql=ride_booking
       id Text
       bppBookingId Text Maybe sql=bpp_ride_booking_id
-      requestId SSearchRequest.SearchRequestTId
-      quoteId SQuote.QuoteTId
       status Domain.RideBookingStatus
       providerId Text
       providerUrl Text
@@ -34,13 +32,13 @@ mkPersist
       providerMobileNumber Text
       startTime UTCTime
       riderId SPerson.PersonTId
-      fromLocationId SLoc.SearchReqLocationTId
-      toLocationId SLoc.SearchReqLocationTId Maybe
+      fromLocationId SLoc.BookingLocationTId
+      toLocationId SLoc.BookingLocationTId Maybe
       estimatedFare Amount
       discount Amount Maybe
       estimatedTotalFare Amount
       distance Double Maybe
-      vehicleVariant Text
+      vehicleVariant VehVar.VehicleVariant
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -60,24 +58,22 @@ instance TEntity RideBookingT Domain.RideBooking where
       Domain.RideBooking
         { id = Id id,
           bppBookingId = Id <$> bppBookingId,
-          requestId = fromKey requestId,
-          quoteId = fromKey quoteId,
           riderId = fromKey riderId,
           fromLocationId = fromKey fromLocationId,
           toLocationId = fromKey <$> toLocationId,
           providerUrl = pUrl,
+          distance = HighPrecMeters <$> distance,
           ..
         }
   toTType Domain.RideBooking {..} =
     RideBookingT
       { id = getId id,
         bppBookingId = getId <$> bppBookingId,
-        requestId = toKey requestId,
-        quoteId = toKey quoteId,
         riderId = toKey riderId,
         fromLocationId = toKey fromLocationId,
         toLocationId = toKey <$> toLocationId,
         providerUrl = showBaseUrl providerUrl,
+        distance = getHighPrecMeters <$> distance,
         ..
       }
   toTEntity a =

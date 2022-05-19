@@ -2,12 +2,11 @@ module Storage.Queries.RideBooking where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.Person (Person)
-import Domain.Types.Quote (Quote)
 import Domain.Types.RideBooking as DRB
-import Domain.Types.SearchRequest (SearchRequest)
 import qualified Storage.Tabular.Ride as R
 import qualified Storage.Tabular.RideBooking as RB
 import Storage.Tabular.SearchRequest ()
@@ -47,20 +46,6 @@ findByBPPBookingId bppRbId =
     where_ $ rideBooking ^. RB.RideBookingBppBookingId ==. val (Just $ getId bppRbId)
     return rideBooking
 
-findByQuoteId :: Transactionable m => Id Quote -> m (Maybe RideBooking)
-findByQuoteId quoteId_ =
-  findOne $ do
-    rideBooking <- from $ table @RB.RideBookingT
-    where_ $ rideBooking ^. RB.RideBookingQuoteId ==. val (toKey quoteId_)
-    return rideBooking
-
-findByRequestId :: Transactionable m => Id SearchRequest -> m (Maybe RideBooking)
-findByRequestId searchRequestId =
-  findOne $ do
-    rideBooking <- from $ table @RB.RideBookingT
-    where_ $ rideBooking ^. RB.RideBookingRequestId ==. val (toKey searchRequestId)
-    return rideBooking
-
 findAllByRiderId :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [RideBooking]
 findAllByRiderId personId mbLimit mbOffset mbOnlyActive = do
   let isOnlyActive = Just True == mbOnlyActive
@@ -89,3 +74,16 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive = do
     offset $ fromIntegral $ fromMaybe 0 mbOffset
     orderBy [desc $ rideBooking ^. RB.RideBookingCreatedAt]
     return rideBooking
+
+updatePaymentInfo :: Id RideBooking -> Amount -> Maybe Amount -> Amount -> SqlDB ()
+updatePaymentInfo rbId estimatedFare discount estimatedTotalFare = do
+  now <- getCurrentTime
+  update' $ \tbl -> do
+    set
+      tbl
+      [ RB.RideBookingUpdatedAt =. val now,
+        RB.RideBookingEstimatedFare =. val estimatedFare,
+        RB.RideBookingDiscount =. val discount,
+        RB.RideBookingEstimatedTotalFare =. val estimatedTotalFare
+      ]
+    where_ $ tbl ^. RB.RideBookingId ==. val (getId rbId)

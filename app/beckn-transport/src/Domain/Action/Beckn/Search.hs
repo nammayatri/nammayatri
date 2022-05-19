@@ -5,21 +5,14 @@ import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Data.List as List
 import Data.Traversable
-import qualified Domain.Action.Beckn.Search.OneWay as OneWay
-import qualified Domain.Action.Beckn.Search.Rental as Rental
-import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchReqLocation as DLoc
-import qualified Domain.Types.SearchRequest as DSearchRequest
+import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude hiding (id, state)
 import Product.Location
-import qualified Storage.Queries.FarePolicy.FareProduct as QFareProduct
 import qualified Storage.Queries.Geometry as QGeometry
-import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Tools.Metrics as Metrics
@@ -35,23 +28,18 @@ data DSearchReq = DSearchReq
     mbDropLocation :: Maybe DLoc.SearchReqLocationAPIEntity
   }
 
-data DOnSearchReq = DOnSearchReq
-  { transporterInfo :: TransporterInfo,
-    fareProductType :: DFareProduct.FareProductType,
-    quotes :: [DQuote.Quote]
+data DSearchRes = DSearchRes
+  { searchRequest :: DSR.SearchRequest,
+    transporter :: DOrg.Organization,
+    fromLocation :: DLoc.SearchReqLocation,
+    mbToLocation :: Maybe DLoc.SearchReqLocation,
+    searchMetricsMVar :: Metrics.SearchMetricsMVar
   }
 
-data TransporterInfo = TransporterInfo
-  { shortId :: ShortId DOrg.Organization,
-    name :: Text,
-    contacts :: Text,
-    ridesInProgress :: Int,
-    ridesCompleted :: Int,
-    ridesConfirmed :: Int
-  }
-
-handler :: DOrg.Organization -> DSearchReq -> Flow DOnSearchReq
-handler transporter req@DSearchReq {..} = do
+search :: Id DOrg.Organization -> DSearchReq -> Flow DSearchRes
+search transporterId req@DSearchReq {..} = do
+  transporter <- QOrg.findById transporterId >>= fromMaybeM (OrgDoesNotExist transporterId.getId)
+  unless transporter.enabled $ throwError AgencyDisabled
   let pickupLatLong = locationToLatLong pickupLocation
   let mbDropoffLatLong = locationToLatLong <$> mbDropLocation
   unlessM (rideServiceable QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
@@ -71,26 +59,7 @@ handler transporter req@DSearchReq {..} = do
     QLoc.create fromLocation
     whenJust mbToLocation QLoc.create
     QSearchRequest.create searchRequest
-
-  fareProducts <- QFareProduct.findEnabledByOrgId transporter.id
-  let isRentalProduct = any (\fareProduct -> fareProduct._type == DFareProduct.RENTAL) fareProducts
-  let isOneWayProduct = any (\fareProduct -> fareProduct._type == DFareProduct.ONE_WAY) fareProducts
-  onSearchReq <-
-    case mbToLocation of
-      Nothing -> do
-        quotes <-
-          if isRentalProduct
-            then Rental.onSearchCallback searchRequest.id transporter.id now
-            else pure []
-        buildOnSearchReq transporter quotes DFareProduct.RENTAL
-      Just toLocation -> do
-        quotes <-
-          if isOneWayProduct
-            then OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation
-            else pure []
-        buildOnSearchReq transporter quotes DFareProduct.ONE_WAY
-  Metrics.finishSearchMetrics transporter.id searchMetricsMVar
-  pure onSearchReq
+  pure DSearchRes {..}
 
 buildSearchReqLoc ::
   MonadGuid m =>
@@ -123,11 +92,11 @@ buildSearchRequest ::
   UTCTime ->
   Id DLoc.SearchReqLocation ->
   Maybe (Id DLoc.SearchReqLocation) ->
-  m DSearchRequest.SearchRequest
+  m DSR.SearchRequest
 buildSearchRequest DSearchReq {..} transporterId now validity fromLocationId mbToLocationId = do
   uuid <- generateGUID
   pure
-    DSearchRequest.SearchRequest
+    DSR.SearchRequest
       { id = Id uuid,
         messageId = messageId,
         startTime = pickupTime,
@@ -139,22 +108,3 @@ buildSearchRequest DSearchReq {..} transporterId now validity fromLocationId mbT
         bapUri = bapUri,
         createdAt = now
       }
-
-buildOnSearchReq ::
-  EsqDBFlow m r =>
-  DOrg.Organization ->
-  [DQuote.Quote] ->
-  DFareProduct.FareProductType ->
-  m DOnSearchReq
-buildOnSearchReq org quotes fareProductType = do
-  count <- QRide.getCountByStatus org.id
-  let transporterInfo =
-        TransporterInfo
-          { shortId = org.shortId,
-            name = org.name,
-            contacts = fromMaybe "" org.mobileNumber,
-            ridesInProgress = fromMaybe 0 $ List.lookup DRide.INPROGRESS count,
-            ridesCompleted = fromMaybe 0 $ List.lookup DRide.COMPLETED count,
-            ridesConfirmed = fromMaybe 0 $ List.lookup DRide.NEW count
-          }
-  pure $ DOnSearchReq {transporterInfo, fareProductType, quotes}

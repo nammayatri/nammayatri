@@ -9,6 +9,7 @@ module Storage.Tabular.Quote.OneWayQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.Quote.OneWayQuote as Domain
@@ -36,11 +37,15 @@ instance TEntity OneWayQuoteT Domain.OneWayQuote where
     return $
       Domain.OneWayQuote
         { quoteId = Id quoteId,
+          distance = HighPrecMeters distance,
+          distanceToNearestDriver = HighPrecMeters distanceToNearestDriver,
           ..
         }
   toTType Domain.OneWayQuote {..} =
     OneWayQuoteT
       { quoteId = getId quoteId,
+        distance = getHighPrecMeters distance,
+        distanceToNearestDriver = getHighPrecMeters distanceToNearestDriver,
         ..
       }
   toTEntity a =

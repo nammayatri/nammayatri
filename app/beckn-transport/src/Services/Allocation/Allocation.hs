@@ -48,7 +48,8 @@ data CurrentNotification = CurrentNotification
   deriving (Show)
 
 data RideStatus
-  = Confirmed
+  = New
+  | Confirmed
   | AwaitingReassignment
   | Assigned
   | Completed

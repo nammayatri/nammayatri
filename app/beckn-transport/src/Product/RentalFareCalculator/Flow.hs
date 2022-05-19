@@ -37,7 +37,7 @@ serviceHandle =
 calculateRentalFare ::
   EsqDBFlow m r =>
   Id DRentalFP.RentalFarePolicy ->
-  Meter ->
+  HighPrecMeters ->
   UTCTime ->
   UTCTime ->
   m RentalFareParameters
@@ -47,7 +47,7 @@ doCalculateRentalFare ::
   MonadHandler m =>
   ServiceHandle m ->
   Id DRentalFP.RentalFarePolicy ->
-  Meter ->
+  HighPrecMeters ->
   UTCTime ->
   UTCTime ->
   m RentalFareParameters
