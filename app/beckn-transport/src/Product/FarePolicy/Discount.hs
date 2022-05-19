@@ -14,7 +14,7 @@ import qualified Storage.Queries.FarePolicy.Discount as QDisc
 import qualified Storage.Queries.Person as QP
 import Types.API.FarePolicy.Discount
 import Types.Error
-import Utils.Common (GuidLike (generateGUID), MonadFlow, MonadTime (getCurrentTime), fromMaybeM, throwError, withFlowHandlerAPI)
+import Utils.Common (GuidLike (generateGUID), MonadFlow, MonadTime (getCurrentTime), fromMaybeM, logTagInfo, throwError, withFlowHandlerAPI)
 import qualified Utils.Notifications as Notify
 
 createFarePolicyDiscount :: SP.Person -> CreateFarePolicyDiscountReq -> FlowHandler CreateFarePolicyDiscountRes
@@ -29,6 +29,7 @@ createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createFarePolicyDiscount : ") (show disc)
   pure Success
   where
     buildDiscount :: MonadFlow m => Id Org.Organization -> m DFPDiscount.Discount
@@ -68,6 +69,7 @@ updateFarePolicyDiscount admin discId req = withFlowHandlerAPI $ do
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateFarePolicyDiscount : ") (show updatedFarePolicy)
   pure Success
 
 deleteFarePolicyDiscount :: SP.Person -> Id DFPDiscount.Discount -> FlowHandler UpdateFarePolicyDiscountRes
@@ -80,4 +82,5 @@ deleteFarePolicyDiscount admin discId = withFlowHandlerAPI $ do
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteFarePolicyDiscount : ") (show discount)
   pure Success

@@ -14,7 +14,7 @@ import qualified Storage.Queries.FarePolicy as SFarePolicy
 import qualified Storage.Queries.Person as QP
 import Types.API.FarePolicy
 import Types.Error
-import Utils.Common (fromMaybeM, throwError, withFlowHandlerAPI)
+import Utils.Common (fromMaybeM, logTagInfo, throwError, withFlowHandlerAPI)
 import qualified Utils.Notifications as Notify
 
 listFarePolicies :: SP.Person -> FlowHandler ListFarePolicyRes
@@ -43,4 +43,5 @@ updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
   let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
   for_ otherCoordinators $ \cooridinator -> do
     Notify.notifyFarePolicyChange cooridinator.id cooridinator.deviceToken
+  logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateFarePolicy : ") (show updatedFarePolicy)
   pure Success
