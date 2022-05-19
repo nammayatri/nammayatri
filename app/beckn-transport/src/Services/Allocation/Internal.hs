@@ -302,7 +302,7 @@ logDriverEvents eventType rideBookingId driverList = Esq.runTransaction $ traver
 getRideInfo :: EsqDBFlow m r => Id RideBooking -> m RideInfo
 getRideInfo rideBookingId = do
   rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingNotFound rideBookingId.getId)
-  rideStatus <- castToRideStatus $ rideBooking.status
+  let rideStatus = castToRideStatus $ rideBooking.status
   pure
     RideInfo
       { rideBookingId = rideBookingId,
@@ -320,7 +320,7 @@ getRideInfo rideBookingId = do
       SRB.SCHEDULED -> Scheduled
 
 findRideBookingById :: (EsqDBFlow m r) => Id SRB.RideBooking -> m SRB.RideBooking
-findRideBookingById rbId = QRideBooking.findById rbId >>= fromMaybeM RideBookingNotFound
+findRideBookingById rbId = QRideBooking.findById rbId >>= fromMaybeM (RideBookingNotFound rbId.getId)
 
 updateRideBookingStatus :: (EsqDBFlow m r) => SRB.RideBookingStatus -> Id SRB.RideBooking -> m ()
 updateRideBookingStatus status rbId = Esq.runTransaction $ QRideBooking.updateStatus rbId status

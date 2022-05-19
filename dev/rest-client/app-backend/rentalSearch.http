@@ -23,7 +23,7 @@ content-type: application/json
 ]
 
 ###
-@baseTime = 2022-05-15T14:59
+@baseTime = 2022-05-19T18:35
 
 # @name search
 POST {{app-host}}/rentalSearch
@@ -61,7 +61,7 @@ token: {{token}}
 
 ###
 # @name confirm
-@quoteId = {{quotes.response.body.quotes[1].onDemandCab.id}}
+@quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
 
 POST {{app-host}}/rideSearch/{{searchId}}/quotes/{{quoteId}}/confirm HTTP/1.1
 content-type: application/json
@@ -73,8 +73,23 @@ POST {{app-host}}/rideBooking/{{bookingId}}
 token: {{token}}
 
 ###
+# @name cancel
+POST {{app-host}}/rideBooking/{{bookingId}}/cancel
+content-type: application/json
+token: {{token}}
 
-@bppBookingId = 88e814a5-706b-47db-9952-db32a0d4f283
+{
+  "bookingCancellationReason": {
+    "reasonCode": "FAT",
+    "reasonStage": "OnConfirm",
+    "additionalInfo": "driver is too fat"
+  }
+}
+
+### OnSearch | OnConfirm | OnAssign
+###
+
+@bppBookingId = be602249-e241-4744-8e31-3e41d9ea6acc
 # this was taken from the database
 
 # @name notif-info
@@ -109,7 +124,7 @@ token: {{driver-token}}
 
 ###
 @rideId = {{driverList.response.body.list[0].id}}
-@otp = {{list2.response.body.list[0].ride.rideOtp}}
+@otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
 
 # @name startRide
 POST {{transporter-host}}/driver/ride/{{rideId}}/start

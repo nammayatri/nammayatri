@@ -8,6 +8,7 @@ module App.Scheduler where
 import Beckn.Mock.App (MockM, runMock)
 import Beckn.Prelude
 import Beckn.Scheduler
+import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Error (GenericError (InternalError))
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -73,7 +74,8 @@ createBananasCountingJob :: NominalDiffTime -> Flow (Id (Job JobType BananasCoun
 createBananasCountingJob scheduleIn = do
   now <- getCurrentTime
   bCount <- liftIO $ randomRIO (1, 10 :: Int)
-  createJobIn scheduleIn $ makeTestJobEntry PrintBananasCount $ makeJobData now bCount
+  Esq.runTransaction $
+    createJobIn scheduleIn $ makeTestJobEntry PrintBananasCount $ makeJobData now bCount
   where
     makeJobData now_ bCount_ =
       BananasCount
@@ -89,7 +91,9 @@ bananasCounterHandler job = do
 
 -----------------
 createTimePrinterJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
-createTimePrinterJob = flip createJobIn $ makeTestJobEntry PrintCurrentTimeWithErrorProbability ()
+createTimePrinterJob scheduleIn =
+  Esq.runTransaction $
+    createJobIn scheduleIn $ makeTestJobEntry PrintCurrentTimeWithErrorProbability ()
 
 timePrinterHandler :: Job JobType () -> SchedulerT ExecutionResult
 timePrinterHandler _ = do
@@ -104,7 +108,9 @@ timePrinterHandler _ = do
 
 -----------------
 createFakeJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
-createFakeJob = flip createJobIn $ makeTestJobEntry FakeJobType ()
+createFakeJob scheduleIn =
+  Esq.runTransaction $
+    createJobIn scheduleIn $ makeTestJobEntry FakeJobType ()
 
 -----------------
 data IncorrectlySerializable = IncSer
@@ -121,7 +127,9 @@ instance FromJSON (JSONfail a) where
   parseJSON _ = fail "fake fail"
 
 createIncorrectDataJob :: NominalDiffTime -> Flow (Id (Job JobType IncorrectlySerializable))
-createIncorrectDataJob = flip createJobIn $ makeTestJobEntry IncorrectDataJobType val
+createIncorrectDataJob scheduleIn =
+  Esq.runTransaction $
+    createJobIn scheduleIn $ makeTestJobEntry IncorrectDataJobType val
   where
     val = IncSer 2 "quux"
 
@@ -132,7 +140,9 @@ incorrectDataJobHandler _ = do
 
 -----------------
 createTestTerminationJob :: NominalDiffTime -> Flow (Id (Job JobType ()))
-createTestTerminationJob = flip createJobIn $ makeTestJobEntry TestTermination ()
+createTestTerminationJob scheduleIn =
+  Esq.runTransaction $
+    createJobIn scheduleIn $ makeTestJobEntry TestTermination ()
 
 testTerminationHandler :: Job JobType () -> SchedulerT ExecutionResult
 testTerminationHandler _ = flip C.catchAll (\_ -> pure Retry) $ do

@@ -10,6 +10,6 @@ import Utils.Common
 
 findTransporter :: Id DOrg.Organization -> Flow DOrg.Organization
 findTransporter transporterId = do
-  transporter <- QOrg.findById transporterId >>= fromMaybeM OrgDoesNotExist
+  transporter <- QOrg.findById transporterId >>= fromMaybeM (OrgDoesNotExist transporterId.getId)
   unless transporter.enabled $ throwError AgencyDisabled
   pure transporter

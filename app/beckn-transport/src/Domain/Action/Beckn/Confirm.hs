@@ -5,6 +5,7 @@ import App.Types
 import Beckn.External.Encryption (encrypt)
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Scheduler
+import Beckn.Storage.Esqueleto (SqlDB)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
@@ -48,13 +49,13 @@ data DOnConfirmReq = DOnConfirmReq
 handler ::
   DOrg.Organization -> DConfirmReq -> Flow DOnConfirmReq
 handler transporter req = do
-  quote <- QQuote.findById req.quoteId >>= fromMaybeM QuoteDoesNotExist
+  quote <- QQuote.findById req.quoteId >>= fromMaybeM (QuoteDoesNotExist req.quoteId.getId)
   let quoteTransporterId = quote.providerId
   transporterOrg <-
     Organization.findById quoteTransporterId
-      >>= fromMaybeM OrgNotFound
+      >>= fromMaybeM (OrgNotFound quoteTransporterId.getId)
   unless (quoteTransporterId == transporter.id) $ throwError AccessDenied
-  searchRequest <- SearchRequest.findById quote.requestId >>= fromMaybeM SearchRequestNotFound
+  searchRequest <- SearchRequest.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   let bapOrgId = searchRequest.bapId
   unless (req.bapId == bapOrgId) $ throwError AccessDenied
   now <- getCurrentTime
@@ -76,18 +77,18 @@ handler transporter req = do
       handleRideBookingType (DQuote.OneWayDetails _) =
         transaction $ RideRequest.create rideRequest
       handleRideBookingType DQuote.RentalDetails = do
-        transaction $ pure ()
         let secondsPerMinute = 60
         schedulingReserveTime <- secondsToNominalDiffTime <$> asks (.schedulingReserveTime)
         let scheduledTime = addUTCTime (negate schedulingReserveTime) rideBooking.startTime
             schedulingDelay = 0 * secondsPerMinute
             minimalSchedulingTime = addUTCTime (schedulingReserveTime + schedulingDelay) now
+        --        if True -- for debugging purposes
         if diffUTCTime scheduledTime now < schedulingDelay
-          then
+          then transaction $ createScheduleRentalRideRequestJob scheduledTime rideRequest
+          else
             throwError $
               InvalidRequest $
                 "minimum starting time is " <> show minimalSchedulingTime
-          else createScheduleRentalRideRequestJob scheduledTime rideRequest
 
   handleRideBookingType quote.quoteDetails
 
@@ -125,11 +126,11 @@ handler transporter req = do
         DQuote.RentalDetails -> pure SRB.RentalDetails
       pure SRB.RideBooking {..}
 
-createScheduleRentalRideRequestJob :: (EsqDBFlow m r) => UTCTime -> RideRequest.RideRequest -> m ()
+createScheduleRentalRideRequestJob :: UTCTime -> RideRequest.RideRequest -> SqlDB ()
 createScheduleRentalRideRequestJob scheduledAt rideRequest =
   void $ createJobByTime scheduledAt jobEntry
   where
-    --  void $ createJobIn 0 jobEntry -- for debugging purposes
+    -- void $ createJobIn 0 jobEntry -- for debugging purposes
 
     jobEntry =
       JobEntry
