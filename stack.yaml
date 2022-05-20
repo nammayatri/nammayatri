@@ -56,12 +56,12 @@ packages:
 # extra-deps: []
 
 extra-deps:
-  - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
-    commit: 50a1642665a8b068996a57347ffd9316aa11f3de
+  - git: git@bitbucket.org:juspay/beckn-gateway.git
+    commit: 07457cbf352fce2acbd4709a77fed3f59737637d
     subdirs:
       - app/gateway
-  - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
-    commit: f8f04f109252ea9eb120bd3cb6f74d2ffcc99a87
+  - git: git@bitbucket.org:juspay/beckn-gateway.git
+    commit: 07457cbf352fce2acbd4709a77fed3f59737637d
     subdirs:
       - app/mock-registry
   - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
