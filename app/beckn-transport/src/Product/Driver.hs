@@ -201,7 +201,7 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
   unless (driver.organizationId == Just orgId || driver.role == SP.DRIVER) $ throwError Unauthorized
   clearDriverSession driverId
   Esq.runTransaction $ do
-    QR.deleteByPersonId personId
+    QR.deleteByPersonId driverId
     whenJust driver.udf1 $ QVehicle.deleteById . Id
     QPerson.deleteById driverId
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteDriver : ") (show driverId)
