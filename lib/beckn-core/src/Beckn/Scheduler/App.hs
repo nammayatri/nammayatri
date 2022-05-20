@@ -14,7 +14,6 @@ import qualified Beckn.Scheduler.Storage.Queries as Q
 import Beckn.Scheduler.Types
 import Beckn.Storage.Esqueleto
 import Beckn.Storage.Esqueleto.Config (prepareEsqDBEnv)
-import qualified Beckn.Storage.Esqueleto.Queries as Esq
 import Beckn.Storage.Hedis (connectHedis)
 import qualified Beckn.Storage.Hedis.Queries as Hedis
 import qualified Beckn.Tools.Metrics.Init as Metrics
@@ -275,18 +274,8 @@ createJob scheduledAt jobEntry = do
   let job = makeJob id now
       jobText = encodeJob job
   Q.create jobText
-  mbFetchedJob <- Esq.findById jobText.id
-  fetchedJob <- fromMaybeM (InternalError $ "Failed to insert job: " <> show jobText) mbFetchedJob
-  case decodeJob @t @d fetchedJob of
-    Left err -> do
-      logError $ "failed to decode job:" <> show fetchedJob
-      throwError err
-    Right decodedJob ->
-      unless (typeAndDataAreEqual job decodedJob) $
-        logWarning $ "database representations of the inserted and the fetched jobs are not equal: " <> show job <> " : " <> show decodedJob
   pure job.id
   where
-    typeAndDataAreEqual job1 job2 = job1.jobData == job2.jobData && job1.jobType == job2.jobType
     makeJob id currentTime =
       Job
         { id = id,

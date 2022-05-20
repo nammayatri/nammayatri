@@ -28,7 +28,6 @@ import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
-import qualified Storage.Queries.RideBooking as QRideBooking
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.RideRequest as QRR
 import qualified Storage.Queries.Vehicle as QVeh
@@ -317,10 +316,3 @@ getRideInfo rideBookingId = do
       SRB.TRIP_ASSIGNED -> Assigned
       SRB.COMPLETED -> Completed
       SRB.CANCELLED -> Cancelled
-      SRB.SCHEDULED -> Scheduled
-
-findRideBookingById :: (EsqDBFlow m r) => Id SRB.RideBooking -> m SRB.RideBooking
-findRideBookingById rbId = QRideBooking.findById rbId >>= fromMaybeM (RideBookingNotFound rbId.getId)
-
-updateRideBookingStatus :: (EsqDBFlow m r) => SRB.RideBookingStatus -> Id SRB.RideBooking -> m ()
-updateRideBookingStatus status rbId = Esq.runTransaction $ QRideBooking.updateStatus rbId status

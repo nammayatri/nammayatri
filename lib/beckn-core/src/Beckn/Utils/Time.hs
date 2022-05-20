@@ -83,3 +83,9 @@ threadDelayMilliSec milli = liftIO $ threadDelay $ milli.getMilliseconds * 1000
 
 threadDelaySec :: (MonadIO m) => Seconds -> m ()
 threadDelaySec sec = liftIO $ threadDelay $ sec.getSeconds * 1000000
+
+compareTimeWithInterval :: NominalDiffTime -> UTCTime -> UTCTime -> Ordering
+compareTimeWithInterval dt time1 time2
+  | abs (diffUTCTime time1 time2) < abs dt = EQ
+  | time1 < time2 = LT
+  | otherwise = GT -- time1 > time2

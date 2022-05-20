@@ -1,9 +1,9 @@
 module Domain.Action.Beckn.Confirm where
 
 import App.Scheduler
+import qualified App.Scheduler as Scheduler
 import App.Types
 import Beckn.External.Encryption (encrypt)
-import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Scheduler
 import Beckn.Storage.Esqueleto (SqlDB)
 import qualified Beckn.Storage.Esqueleto as Esq
@@ -12,12 +12,10 @@ import Beckn.Types.Id
 import qualified Data.Text as T
 import Domain.Types.DiscountTransaction
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RiderDetails as SRD
-import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
@@ -28,7 +26,6 @@ import qualified Storage.Queries.RideBooking as QRideBooking
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as SearchRequest
-import Tools.Metrics
 import Types.Error
 import Utils.Common
 
@@ -61,7 +58,7 @@ handler transporter req = do
   now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   rideBooking <- buildRideBooking searchRequest quote transporterOrg riderDetails.id now
-  rideRequest <-
+  rideRequestForNow <-
     BP.buildRideReq
       (rideBooking.id)
       (transporterOrg.shortId)
@@ -75,24 +72,32 @@ handler transporter req = do
         additionalDBSaves
 
       handleRideBookingType (DQuote.OneWayDetails _) =
-        transaction $ RideRequest.create rideRequest
+        transaction $ RideRequest.create rideRequestForNow
       handleRideBookingType DQuote.RentalDetails = do
         let secondsPerMinute = 60
         schedulingReserveTime <- secondsToNominalDiffTime <$> asks (.schedulingReserveTime)
         let scheduledTime = addUTCTime (negate schedulingReserveTime) rideBooking.startTime
-            schedulingDelay = 0 * secondsPerMinute
-            minimalSchedulingTime = addUTCTime (schedulingReserveTime + schedulingDelay) now
-        --        if True -- for debugging purposes
-        if diffUTCTime scheduledTime now < schedulingDelay
-          then transaction $ createScheduleRentalRideRequestJob scheduledTime rideRequest
-          else
-            throwError $
-              InvalidRequest $
-                "minimum starting time is " <> show minimalSchedulingTime
+            presentIntervalWidth = 5 * secondsPerMinute -- 5 minutes
+        case compareTimeWithInterval presentIntervalWidth scheduledTime now of
+          LT -> throwError $ InvalidRequest "impossible to book a ride for the past"
+          EQ -> transaction $ RideRequest.create rideRequestForNow
+          GT ->
+            transaction $
+              createScheduleRentalRideRequestJob scheduledTime $
+                AllocateRentalJobData
+                  { rideBookingId = rideBooking.id,
+                    shortOrgId = transporterOrg.shortId
+                  }
 
   handleRideBookingType quote.quoteDetails
 
-  onConfirmCallback rideBooking searchRequest transporterOrg.id
+  let pickupPoint = searchRequest.fromLocationId
+  driverPool <- recalculateDriverPool pickupPoint rideBooking.id transporterOrg.id rideBooking.vehicleVariant
+  logTagInfo "OnConfirmCallback" $
+    "Driver Pool for Ride " +|| rideBooking.id.getId ||+ " is set with drivers: "
+      +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
+
+  pure $ makeOnConfirmCallback rideBooking
   where
     buildRideBooking searchRequest quote provider riderId now = do
       uid <- generateGUID
@@ -112,7 +117,7 @@ handler transporter req = do
           reallocationsCount = 0
           createdAt = now
           updatedAt = now
-          status = SRB.SCHEDULED
+          status = SRB.CONFIRMED
       let quoteDetails = quote.quoteDetails
       rideBookingDetails <- case quoteDetails of
         DQuote.OneWayDetails oneWayQuote -> do
@@ -126,8 +131,8 @@ handler transporter req = do
         DQuote.RentalDetails -> pure SRB.RentalDetails
       pure SRB.RideBooking {..}
 
-createScheduleRentalRideRequestJob :: UTCTime -> RideRequest.RideRequest -> SqlDB ()
-createScheduleRentalRideRequestJob scheduledAt rideRequest =
+createScheduleRentalRideRequestJob :: UTCTime -> Scheduler.AllocateRentalJobData -> SqlDB ()
+createScheduleRentalRideRequestJob scheduledAt jobData =
   void $ createJobByTime scheduledAt jobEntry
   where
     -- void $ createJobIn 0 jobEntry -- for debugging purposes
@@ -135,7 +140,7 @@ createScheduleRentalRideRequestJob scheduledAt rideRequest =
     jobEntry =
       JobEntry
         { jobType = AllocateRental,
-          jobData = rideRequest,
+          jobData = jobData,
           maxErrors = 5
         }
 
@@ -156,27 +161,15 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
             updatedAt = now
           }
 
-onConfirmCallback ::
-  ( EsqDBFlow m r,
-    CoreMetrics m,
-    EncFlow m r,
-    HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
-    HasGoogleMaps m r c
-  ) =>
+makeOnConfirmCallback ::
   SRB.RideBooking ->
-  SearchRequest.SearchRequest ->
-  Id Organization.Organization ->
-  m DOnConfirmReq
-onConfirmCallback rideBooking searchRequest transporterOrgId = do
-  let pickupPoint = searchRequest.fromLocationId
-  driverPool <- recalculateDriverPool pickupPoint rideBooking.id transporterOrgId rideBooking.vehicleVariant
-  logTagInfo "OnConfirmCallback" $ "Driver Pool for Ride " +|| rideBooking.id.getId ||+ " is set with drivers: " +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  pure $
-    DOnConfirmReq
-      { rideBookingId = rideBooking.id,
-        quoteId = rideBooking.quoteId,
-        estimatedTotalFare = rideBooking.estimatedTotalFare
-      }
+  DOnConfirmReq
+makeOnConfirmCallback rideBooking =
+  DOnConfirmReq
+    { rideBookingId = rideBooking.id,
+      quoteId = rideBooking.quoteId,
+      estimatedTotalFare = rideBooking.estimatedTotalFare
+    }
 
 mkDiscountTransaction :: SRB.RideBooking -> Amount -> UTCTime -> DiscountTransaction
 mkDiscountTransaction rideBooking discount currTime =

@@ -48,8 +48,7 @@ data CurrentNotification = CurrentNotification
   deriving (Show)
 
 data RideStatus
-  = Scheduled
-  | Confirmed
+  = Confirmed
   | AwaitingReassignment
   | Assigned
   | Completed
@@ -114,9 +113,7 @@ data ServiceHandle m = ServiceHandle
     removeRequest :: Id SRR.RideRequest -> m (),
     logEvent :: AllocationEventType -> Id SRB.RideBooking -> m (),
     logDriverEvents :: AllocationEventType -> Id SRB.RideBooking -> NonEmpty (Id Driver) -> m (),
-    metrics :: AllocatorMetricsHandle m,
-    findRideBookingById :: Id SRB.RideBooking -> m SRB.RideBooking,
-    updateRideBookingStatusToConfirmed :: Id SRB.RideBooking -> m ()
+    metrics :: AllocatorMetricsHandle m
   }
 
 process :: MonadHandler m => ServiceHandle m -> ShortId Organization -> Integer -> m Int
@@ -137,9 +134,6 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
     let requestId = rideRequest.requestId
     let rideBookingId = rideRequest.rideBookingId
     rideInfo <- getRideInfo rideBookingId
-    when (rideInfo.rideStatus == Scheduled) $
-      updateRideBookingStatusToConfirmed rideBookingId
-
     let rideStatus = rideInfo.rideStatus
     eres <- try $
       withLogTag ("RideRequest_" <> rideBookingId.getId) $ do
@@ -147,7 +141,6 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
         case rideRequest.requestData of
           Allocation ->
             case rideStatus of
-              Scheduled -> processAllocation handle shortOrgId rideInfo
               Confirmed -> processAllocation handle shortOrgId rideInfo
               AwaitingReassignment -> processAllocation handle shortOrgId rideInfo
               Cancelled -> logInfo "Ride is cancelled, allocation request skipped"

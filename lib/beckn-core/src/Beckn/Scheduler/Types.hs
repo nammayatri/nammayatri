@@ -42,7 +42,7 @@ setJobData data2_ Job {..} = Job {id = cast id, jobData = data2_, ..}
 
 type JobTypeConstraints a = (Eq a, Ord a, Show a, FromJSON a, ToJSON a)
 
-type JobDataConstraints a = (Eq a, Show a, FromJSON a, ToJSON a)
+type JobDataConstraints a = (Show a, FromJSON a, ToJSON a)
 
 encodeJob :: (JobTypeConstraints a, JobDataConstraints b) => Job a b -> JobText
 encodeJob Job {..} =

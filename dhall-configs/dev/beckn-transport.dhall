@@ -106,6 +106,5 @@ in
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
 , exotelCallbackUrl = "http://localhost:8014/v2/"
---, schedulingReserveTime = +3600
-, schedulingReserveTime = +5
+, schedulingReserveTime = +1800
 }

@@ -7,12 +7,15 @@ import Beckn.Scheduler
 import Beckn.Storage.Esqueleto (HasEsqEnv)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Esqueleto.Config (EsqDBEnv, prepareEsqDBEnv)
-import Beckn.Utils.Common (HasPrettyLogger, LogLevel (DEBUG), logInfo, logPretty)
+import Beckn.Types.Id (Id (Id), ShortId)
+import Beckn.Utils.Common (HasPrettyLogger, LogLevel (DEBUG), MonadGuid (generateGUIDText), MonadTime (getCurrentTime), logInfo, logPretty)
 import Beckn.Utils.Dhall
 import Beckn.Utils.IOLogging (LoggerConfig, LoggerEnv, prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Data.String.Conversions (cs)
-import qualified Domain.Types.RideRequest as Domain
+import Domain.Types.Organization (Organization)
+import qualified Domain.Types.RideBooking as DRB
+import qualified Domain.Types.RideRequest as RideRequest
 import qualified Storage.Queries.RideRequest as RideRequest
 import System.Environment (lookupEnv)
 
@@ -44,10 +47,32 @@ data HandlerEnv = HandlerEnv
     esqDBEnv :: EsqDBEnv
   }
 
-allocateRentalRide :: (HasEsqEnv r m, Log m, HasPrettyLogger m r, C.MonadCatch m) => Job JobType Domain.RideRequest -> m ExecutionResult
+--------------------------------------
+
+data AllocateRentalJobData = AllocateRentalJobData
+  { rideBookingId :: Id DRB.RideBooking,
+    shortOrgId :: ShortId Organization
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+allocateRentalRide ::
+  (HasEsqEnv r m, Log m, HasPrettyLogger m r, C.MonadCatch m, MonadGuid m) =>
+  Job JobType AllocateRentalJobData ->
+  m ExecutionResult
 allocateRentalRide job = C.handleAll (const $ pure Retry) $
   withLogTag ("JobId=" <> job.id.getId) $ do
+    guid <- Id <$> generateGUIDText
+    now <- getCurrentTime
+    let rideReq =
+          RideRequest.RideRequest
+            { id = guid,
+              createdAt = now,
+              rideBookingId = job.jobData.rideBookingId,
+              shortOrgId = job.jobData.shortOrgId,
+              _type = RideRequest.ALLOCATION,
+              info = Nothing
+            }
     logInfo $ "allocating rental ride for rideReqestId=" <> job.jobData.rideBookingId.getId
-    logPretty DEBUG "ride request" job.jobData
-    Esq.runTransaction $ RideRequest.create job.jobData
+    logPretty DEBUG "ride request" rideReq
+    Esq.runTransaction $ RideRequest.create rideReq
     pure Complete
