@@ -39,12 +39,12 @@ runSearch clientEnv orgId searchReq = do
 verifyCallbackContext :: Bool -> Text -> Context -> IO ()
 verifyCallbackContext expectBppUri transactionId context = do
   context.country `shouldBe` "IND"
-  context.domain `shouldBe` Domain.FINAL_MILE_DELIVERY
+  context.domain `shouldBe` Domain.LOGISTICS
   when expectBppUri $ context.bpp_uri `shouldSatisfy` isJust
   context.transaction_id `shouldBe` transactionId
   context.action `shouldBe` ON_SEARCH
   context.message_id `shouldBe` transactionId
-  context.core_version `shouldBe` "0.9.1"
+  context.core_version `shouldBe` "0.9.3"
 
 verifyDunzoCatalog :: OnSearchAPI.OnSearchCatalog -> IO ()
 verifyDunzoCatalog onSearchCatalog = do

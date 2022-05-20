@@ -68,7 +68,7 @@ in
 , migrationPath = Some (env:FMD_WRAPPER_MIGRATION_PATH as Text ? "dev/migrations/fmd-wrapper")
 , autoMigrate = True
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
-, coreVersion = "0.9.1"
+, coreVersion = "0.9.3"
 , dzConfig = mockDunzoConfig
 , authEntity =
   { signingKey = sec.signingKey

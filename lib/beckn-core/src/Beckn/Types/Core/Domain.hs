@@ -9,13 +9,13 @@ import EulerHS.Prelude
 
 data Domain
   = MOBILITY
-  | FINAL_MILE_DELIVERY
   | LOCAL_RETAIL
   | FOOD_AND_BEVERAGE
   | HEALTHCARE
   | METRO
   | PARKING
   | PUBLIC_TRANSPORT
+  | LOGISTICS
   deriving (Eq, Generic, Show, Read, FromDhall)
 
 instance Example Domain where
@@ -27,10 +27,10 @@ customAesonOptions =
     { constructorTagModifier = \case
         "MOBILITY" -> "nic2004:60221"
         "LOCAL_RETAIL" -> "nic2004:52110"
-        "FINAL_MILE_DELIVERY" -> "nic2004:55204"
         "METRO" -> "nic2004:60212"
         "PARKING" -> "nic2004:63031"
         "PUBLIC_TRANSPORT" -> "nic2004:63032"
+        "LOGISTICS" -> "nic2004:60232"
         val -> replaceUnderscoresString val, -- TODO: update remaining domains with codes
       sumEncoding = UntaggedValue
     }

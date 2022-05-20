@@ -55,7 +55,7 @@ fetchToken DDunzoCreds.DunzoCreds {..} DunzoConfig {..} = do
 
 validateContext :: HasFlowEnv m r '["coreVersion" ::: Text] => Action -> Context -> m ()
 validateContext action context = do
-  validateDomainMig Domain.FINAL_MILE_DELIVERY context
+  validateDomainMig Domain.LOGISTICS context
   validateContextCommonsMig action context
 
 validateBapUrl :: MonadFlow m => Subscriber -> Context -> m ()

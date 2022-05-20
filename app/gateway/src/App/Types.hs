@@ -60,7 +60,7 @@ data AppEnv = AppEnv
 
 data CoreVersions = CoreVersions
   { mobility :: Text,
-    finalMileDelivery :: Text,
+    logistics :: Text,
     localRetail :: Text,
     foodAndBeverage :: Text
   }

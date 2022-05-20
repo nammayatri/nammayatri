@@ -27,11 +27,11 @@ buildContext act tid = do
   now <- getCurrentTime
   return
     Context
-      { domain = Domain.FINAL_MILE_DELIVERY,
+      { domain = Domain.LOGISTICS,
         country = "IND",
         city = "Bangalore",
         action = act,
-        core_version = "0.9.1",
+        core_version = "0.9.3",
         bap_id = showBaseUrlText fmdTestAppBaseUrl,
         bap_uri = fmdTestAppBaseUrl,
         bpp_id = Nothing,

@@ -36,7 +36,7 @@ instance FromHttpApiData OrganizationType where
 
 data OrganizationDomain
   = MOBILITY
-  | FINAL_MILE_DELIVERY
+  | LOGISTICS
   | LOCAL_RETAIL
   | FOOD_AND_BEVERAGE
   | HEALTHCARE

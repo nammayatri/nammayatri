@@ -17,7 +17,7 @@ Authorization: Signature keyId="{{fmd-bap/subscriber-id}}|{{fmd-bap/unique-key}}
     "city": "Bangalore",
     "bap_uri": "{{fmd-bap/beeceptor/url}}",
     "timestamp": "2021-12-16T14:11:20.96971926Z",
-    "core_version": "0.9.1",
+    "core_version": "0.9.3",
     "bap_id": "{{fmd-bap/beeceptor/url}}"
   },
   "message": {

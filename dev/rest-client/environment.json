@@ -1,7 +1,7 @@
 {
     "rest-client.environmentVariables": {
         "$shared": {
-            "fmd/domain": "nic2004:55204"
+            "fmd/domain": "nic2004:60232"
         },
         "dev": {
             "app-host": "http://localhost:8013/v2",
@@ -17,7 +17,7 @@
             "dunzo/client_id":"7db7c5e4-5597-45f3-8dae-7d9a7056fb79",
             "dunzo/secret":"3a820bf8-cc91-4c93-92b9-d5e80e67aa9f",
             "dunzo/url": "https://apis-staging.dunzo.in/",
-            "fmd/domain": "nic2004:55204",
+            "fmd/domain": "nic2004:60232",
             "fmd-bap/beeceptor/url": "https://fmd-test.free.beeceptor.com",
             "fmd-bap/subscriber-id" : "fmd-test-app",
             "fmd-bap/unique-key" : "fmd-test-app-key",

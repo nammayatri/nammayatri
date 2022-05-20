@@ -56,18 +56,18 @@ in
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
-, coreVersion = "0.9.1"
+, coreVersion = "0.9.3"
 , dzConfig = dunzoConfig
 , authEntity =
   { signingKey = sec.signingKey
-  , uniqueKeyId = "api.sandbox.beckn.juspay.in/fmd/v1"
+  , uniqueKeyId = "api.sandbox.beckn.juspay.in/dunzo/v1"
   , signatureExpiry = common.signatureExpiry
   }
-, selfId = "api.sandbox.beckn.juspay.in/fmd/v1"
+, selfId = "api.sandbox.beckn.juspay.in/dunzo/v1"
 , graceTerminationPeriod = +90
 , httpClientOptions = common.httpClientOptions
 , hostName = "api.sandbox.beckn.juspay.in"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/fmd/v1/"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dunzo/v1/"
 , registryUrl = common.registryUrl
 , registrySecrets = sec.registrySecrets
 , disableSignatureAuth = False

@@ -13,7 +13,7 @@ let rcfg =
 
 let coreVersions =
   { mobility = "0.8.2"
-  , finalMileDelivery = "0.9.1"
+  , logistics = "0.9.3"
   , localRetail = "0.9.1"
   , foodAndBeverage = "0.9.1"
   }

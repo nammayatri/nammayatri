@@ -56,7 +56,7 @@ in
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/fmd-wrapper.log"}
-, coreVersion = "0.9.1"
+, coreVersion = "0.9.3"
 , dzConfig = dunzoConfig
 , authEntity =
   { signingKey = sec.signingKey
