@@ -50,26 +50,6 @@ data QuoteTerms = QuoteTerms
   }
   deriving (Show)
 
-getDistanceToNearestDriver :: QuoteDetails -> Maybe Double
-getDistanceToNearestDriver = \case
-  OneWayDetails oneWayDetails -> Just oneWayDetails.distanceToNearestDriver
-  RentalDetails _ -> Nothing
-
-getBaseDistance :: QuoteDetails -> Maybe Double
-getBaseDistance = \case
-  OneWayDetails _ -> Nothing
-  RentalDetails rentalDetails -> Just rentalDetails.baseDistance
-
-getBaseDurationHr :: QuoteDetails -> Maybe Int
-getBaseDurationHr = \case
-  OneWayDetails _ -> Nothing
-  RentalDetails rentalDetails -> Just rentalDetails.baseDurationHr
-
-getDescriptions :: QuoteDetails -> [Text]
-getDescriptions = \case
-  OneWayDetails _ -> []
-  RentalDetails rentalDetails -> rentalDetails.quoteTerms <&> (.description)
-
 getFareProductType :: QuoteDetails -> FareProductType
 getFareProductType = \case
   OneWayDetails _ -> ONE_WAY
@@ -94,15 +74,17 @@ data QuoteAPIEntity = QuoteAPIEntity
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
-makeQuoteAPIEntity Quote {..} =
+makeQuoteAPIEntity Quote {..} = do
+  let (nearestDriverDistance, baseDistance, baseDurationHr, descriptions) =
+        case quoteDetails of
+          OneWayDetails details ->
+            (Just details.distanceToNearestDriver, Nothing, Nothing, [])
+          RentalDetails details ->
+            (Nothing, Just details.baseDistance, Just details.baseDurationHr, details.quoteTerms <&> (.description))
   QuoteAPIEntity
     { fareProductType = getFareProductType quoteDetails,
       agencyName = providerName,
       agencyNumber = providerMobileNumber,
       agencyCompletedRidesCount = providerCompletedRidesCount,
-      nearestDriverDistance = getDistanceToNearestDriver quoteDetails,
-      baseDistance = getBaseDistance quoteDetails,
-      baseDurationHr = getBaseDurationHr quoteDetails,
-      descriptions = getDescriptions quoteDetails,
       ..
     }

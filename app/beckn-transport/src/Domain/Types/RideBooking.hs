@@ -17,6 +17,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API
+import qualified Domain.Types.FareProduct as SFP
 
 data RideBookingStatus
   = CONFIRMED
@@ -68,18 +69,7 @@ data OneWayRideBookingDetails = OneWayRideBookingDetails
   }
   deriving (Eq)
 
--- FIXME do we need to handle wrong variants, when for example toLocationId is Just, estimatedDistance = Nothing?
-mkRideBookingDetails :: Maybe (Id DLoc.SearchReqLocation) -> Maybe Double -> RideBookingDetails
-mkRideBookingDetails mbDropLocation mbEstimatedDistance = do
-  let mbTuple = (,) <$> mbDropLocation <*> mbEstimatedDistance
-  maybe RentalDetails (\(toLocationId, estimatedDistance) -> OneWayDetails $ OneWayRideBookingDetails {..}) mbTuple
-
-getDropLocationId :: RideBookingDetails -> Maybe (Id DLoc.SearchReqLocation)
-getDropLocationId rideBookingDetails = case rideBookingDetails of
-  RentalDetails -> Nothing
-  OneWayDetails oneWayDetails -> Just oneWayDetails.toLocationId
-
-getEstimatedDistance :: RideBookingDetails -> Maybe Double
-getEstimatedDistance rideBookingDetails = case rideBookingDetails of
-  RentalDetails -> Nothing
-  OneWayDetails oneWayDetails -> Just oneWayDetails.estimatedDistance
+getFareProductType :: RideBookingDetails -> SFP.FareProductType
+getFareProductType = \case
+  OneWayDetails _ -> SFP.ONE_WAY
+  RentalDetails -> SFP.RENTAL

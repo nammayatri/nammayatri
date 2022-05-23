@@ -15,6 +15,7 @@ import qualified Domain.Types.FareProduct as Domain
 import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.Vehicle as Vehicle
 import qualified Storage.Queries.Quote.OneWayQuote as QOneWayQuote
+import qualified Storage.Queries.RentalFarePolicy as QRentalFarePolicy
 import Storage.Tabular.FareProduct ()
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Products (ProductsTId)
@@ -50,7 +51,11 @@ instance TEntity QuoteT Domain.Quote where
   fromTEntity entity = do
     let QuoteT {..} = entityVal entity
     quoteDetails <- case fareProductType of
-      Domain.RENTAL -> return Domain.RentalDetails
+      Domain.RENTAL -> do
+        rentalFarePolicy <-
+          QRentalFarePolicy.findRentalFarePolicyForQuote (fromKey providerId) vehicleVariant estimatedFare
+            >>= fromMaybeM (InternalError "Rental fare policy does not exist")
+        return $ Domain.mkRentalQuoteDetails rentalFarePolicy
       Domain.ONE_WAY -> do
         oneWayQuoteEntity <- QOneWayQuote.findByQuoteId (Id id) >>= fromMaybeM (QuoteDoesNotExist id)
         return . Domain.OneWayDetails $

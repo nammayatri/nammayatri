@@ -73,7 +73,7 @@ handler transporter req = do
 
       handleRideBookingType (DQuote.OneWayDetails _) =
         transaction $ RideRequest.create rideRequestForNow
-      handleRideBookingType DQuote.RentalDetails = do
+      handleRideBookingType (DQuote.RentalDetails _) = do
         let secondsPerMinute = 60
         schedulingReserveTime <- secondsToNominalDiffTime <$> asks (.schedulingReserveTime)
         let scheduledTime = addUTCTime (negate schedulingReserveTime) rideBooking.startTime
@@ -129,7 +129,7 @@ handler transporter req = do
                 { estimatedDistance = oneWayQuote.distance,
                   ..
                 }
-        DQuote.RentalDetails -> pure SRB.RentalDetails
+        DQuote.RentalDetails _ -> pure SRB.RentalDetails
       pure SRB.RideBooking {..}
 
 createScheduleRentalRideRequestJob :: UTCTime -> Scheduler.AllocateRentalJobData -> SqlDB ()

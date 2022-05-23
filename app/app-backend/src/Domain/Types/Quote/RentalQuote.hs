@@ -12,14 +12,5 @@ data RentalQuote = RentalQuote
   }
   deriving (Generic, Show)
 
-mkRentalQuote :: DQuote.Quote -> Maybe RentalQuote
-mkRentalQuote DQuote.Quote {..} =
-  case quoteDetails of
-    DQuote.OneWayDetails _ -> Nothing
-    DQuote.RentalDetails rentalDetails ->
-      Just
-        RentalQuote
-          { quoteId = id,
-            baseDistance = rentalDetails.baseDistance,
-            baseDurationHr = rentalDetails.baseDurationHr
-          }
+mkRentalQuote :: Id DQuote.Quote -> DQuote.RentalQuoteDetails -> RentalQuote
+mkRentalQuote quoteId DQuote.RentalQuoteDetails {..} = RentalQuote {..}

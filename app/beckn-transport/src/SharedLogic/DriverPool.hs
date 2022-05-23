@@ -15,7 +15,6 @@ import qualified Domain.Types.SearchReqLocation as SSReqLoc
 import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
-import qualified Product.RideBooking as PRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRideBooking
@@ -46,7 +45,7 @@ getDriverPool rideBookingId =
       let vehicleVariant = rideBooking.vehicleVariant
           pickupPoint = rideBooking.fromLocationId
           orgId = rideBooking.providerId
-          fareProductType = PRB.getFareProductType rideBooking.rideBookingDetails
+          fareProductType = SRB.getFareProductType rideBooking.rideBookingDetails
       map (.driverId) <$> calculateDriverPool pickupPoint orgId (Just vehicleVariant) fareProductType
 
 recalculateDriverPool ::

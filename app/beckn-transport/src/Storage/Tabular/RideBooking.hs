@@ -20,6 +20,8 @@ import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.SearchReqLocation (SearchReqLocationTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 import Storage.Tabular.Vehicle ()
+import Types.Error
+import Utils.Common hiding (id)
 
 derivePersistField "Domain.RideBookingStatus"
 
@@ -60,6 +62,17 @@ instance TEntity RideBookingT Domain.RideBooking where
   fromTEntity entity = do
     let RideBookingT {..} = entityVal entity
     pUrl <- parseBaseUrl bapUri
+    rideBookingDetails <- case fromKey <$> toLocationId of
+      Just toLocationId' -> do
+        estimatedDistance' <-
+          estimatedDistance & fromMaybeM (InternalError "Missing estimatedDistance for one way ride booking")
+        pure $
+          Domain.OneWayDetails
+            Domain.OneWayRideBookingDetails
+              { estimatedDistance = estimatedDistance',
+                toLocationId = toLocationId'
+              }
+      Nothing -> pure Domain.RentalDetails
     return $
       Domain.RideBooking
         { id = Id id,
@@ -69,18 +82,19 @@ instance TEntity RideBookingT Domain.RideBooking where
           fromLocationId = fromKey fromLocationId,
           providerId = fromKey providerId,
           bapUri = pUrl,
-          rideBookingDetails = Domain.mkRideBookingDetails (fromKey <$> toLocationId) estimatedDistance,
           ..
         }
   toTType Domain.RideBooking {..} = do
+    let (toLocationId, estimatedDistance) = case rideBookingDetails of
+          Domain.OneWayDetails details -> (Just details.toLocationId, Just details.estimatedDistance)
+          Domain.RentalDetails -> (Nothing, Nothing)
     RideBookingT
       { id = getId id,
         requestId = toKey requestId,
         quoteId = toKey quoteId,
         riderId = toKey riderId,
         fromLocationId = toKey fromLocationId,
-        toLocationId = toKey <$> Domain.getDropLocationId rideBookingDetails,
-        estimatedDistance = Domain.getEstimatedDistance rideBookingDetails,
+        toLocationId = toKey <$> toLocationId,
         providerId = toKey providerId,
         bapUri = showBaseUrl bapUri,
         ..

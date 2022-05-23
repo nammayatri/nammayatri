@@ -76,12 +76,14 @@ instance TEntity QuoteT Domain.Quote where
           ..
         }
   toTType Domain.Quote {..} = do
+    let distanceToNearestDriver = case quoteDetails of
+          Domain.OneWayDetails details -> Just details.distanceToNearestDriver
+          Domain.RentalDetails _ -> Nothing
     QuoteT
       { id = getId id,
         bppQuoteId = getId bppQuoteId,
         requestId = toKey requestId,
         providerUrl = showBaseUrl providerUrl,
-        distanceToNearestDriver = Domain.getDistanceToNearestDriver quoteDetails,
         ..
       }
 

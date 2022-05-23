@@ -97,7 +97,9 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
           -- FIXME fix logic for Rental case
           actualDistance = ride.traveledDistance
-          oldDistance = fromMaybe actualDistance (SRB.getEstimatedDistance rideBooking.rideBookingDetails)
+          oldDistance = case rideBooking.rideBookingDetails of
+            SRB.OneWayDetails details -> details.estimatedDistance
+            SRB.RentalDetails -> actualDistance
 
           estimatedFare = rideBooking.estimatedFare
       shouldRecalculateFare <- recalculateFareEnabled

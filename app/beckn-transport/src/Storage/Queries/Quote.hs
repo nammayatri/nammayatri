@@ -12,7 +12,9 @@ import Storage.Tabular.Quote
 create :: Quote -> SqlDB ()
 create quote = do
   create' quote
-  whenJust (mkOneWayQuote quote) create'
+  case quote.quoteDetails of
+    OneWayDetails oneWayDetails -> create' (mkOneWayQuote quote.id oneWayDetails)
+    RentalDetails _ -> pure ()
 
 findAllByProductIds :: Transactionable m => Integer -> Integer -> [Id Products] -> m [Quote]
 findAllByProductIds limit_ offset_ ids = do

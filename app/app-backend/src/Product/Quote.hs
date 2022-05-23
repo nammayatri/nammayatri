@@ -48,8 +48,12 @@ getOffers searchRequest = do
       return . sortBy (compare `on` creationTime) $ quotes
   where
     sortByNearestDriverDistance quoteList = do
-      let sortFunc = compare `on` (SQuote.getDistanceToNearestDriver . (.quoteDetails))
+      let sortFunc = compare `on` getMbDistanceToNearestDriver
       sortBy sortFunc quoteList
+    getMbDistanceToNearestDriver quote = do
+      case quote.quoteDetails of
+        SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
+        SQuote.RentalDetails _ -> Nothing
     sortByEstimatedFare quoteList = do
       let sortFunc = compare `on` (.estimatedFare)
       sortBy sortFunc quoteList

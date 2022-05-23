@@ -3,7 +3,6 @@ module Domain.Action.Beckn.Search.OneWay where
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -26,15 +25,6 @@ import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 import Types.Error
 import Utils.Common
 
-data QuoteInfo = QuoteInfo
-  { quoteId :: Id DQuote.Quote,
-    vehicleVariant :: DVeh.Variant,
-    estimatedFare :: Amount,
-    discount :: Maybe Amount,
-    estimatedTotalFare :: Amount,
-    distanceToNearestDriver :: Double
-  }
-
 onSearchCallback ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
@@ -48,7 +38,7 @@ onSearchCallback ::
   UTCTime ->
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
-  m [QuoteInfo]
+  m [DQuote.Quote]
 onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   pool <- DrPool.calculateDriverPool fromLocation.id transporterId Nothing SFP.ONE_WAY
   logTagInfo "OnSearchCallback" $
@@ -65,15 +55,14 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   distance <-
     (.info.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
 
-  listOfQuotesAndDistances <-
+  listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
-      quote <- buildOneWayQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant now
-      pure (quote, poolResult.distanceToDriver)
+      buildOneWayQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant now
 
   Esq.runTransaction $
-    for_ (map fst listOfQuotesAndDistances) QQuote.create
-  pure $ uncurry mkQuoteInfo <$> listOfQuotesAndDistances
+    for_ listOfQuotes QQuote.create
+  pure listOfQuotes
 
 buildOneWayQuote ::
   EsqDBFlow m r =>
@@ -102,10 +91,3 @@ buildOneWayQuote productSearchRequest fareParams transporterId distance distance
         quoteDetails = DQuote.OneWayDetails oneWayQuoteDetails,
         ..
       }
-
-mkQuoteInfo :: DQuote.Quote -> Double -> QuoteInfo
-mkQuoteInfo DQuote.Quote {..} distanceToNearestDriver =
-  QuoteInfo
-    { quoteId = id,
-      ..
-    }

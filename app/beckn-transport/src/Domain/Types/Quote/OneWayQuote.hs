@@ -12,12 +12,5 @@ data OneWayQuote = OneWayQuote
   }
   deriving (Generic, Show, Eq)
 
-mkOneWayQuote :: DQuote.Quote -> Maybe OneWayQuote
-mkOneWayQuote DQuote.Quote {..} = case quoteDetails of
-  DQuote.RentalDetails -> Nothing
-  DQuote.OneWayDetails DQuote.OneWayQuoteDetails {..} ->
-    Just
-      OneWayQuote
-        { quoteId = id,
-          ..
-        }
+mkOneWayQuote :: Id DQuote.Quote -> DQuote.OneWayQuoteDetails -> OneWayQuote
+mkOneWayQuote quoteId DQuote.OneWayQuoteDetails {..} = OneWayQuote {..}

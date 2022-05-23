@@ -8,7 +8,12 @@ import qualified Fixtures.BaseUrl as Fixtures
 import qualified Fixtures.Time as Fixtures
 
 defaultRideBooking :: SRB.RideBooking
-defaultRideBooking =
+defaultRideBooking = do
+  let details =
+        SRB.OneWayRideBookingDetails
+          { toLocationId = Id "",
+            estimatedDistance = 0
+          }
   SRB.RideBooking
     { id = Id "1",
       transactionId = "",
@@ -26,7 +31,7 @@ defaultRideBooking =
       discount = Nothing,
       estimatedTotalFare = 0,
       reallocationsCount = 0,
-      rideBookingDetails = SRB.mkRideBookingDetails (Just $ Id "") (Just 0),
+      rideBookingDetails = SRB.OneWayDetails details,
       createdAt = Fixtures.defaultTime,
       updatedAt = Fixtures.defaultTime
     }
