@@ -16,6 +16,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified Storage.Queries.DriverInformation as QD
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
@@ -188,4 +189,5 @@ logout personId = withFlowHandlerAPI $ do
   Esq.runTransaction $ do
     QP.updateDeviceToken uperson.id Nothing
     QR.deleteByPersonId personId
+    when (uperson.role == SP.DRIVER) $ QD.updateActivity (cast uperson.id) False
   pure Success
