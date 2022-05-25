@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [12.1.1] - 22-04-2022
+
+### Fixed
+
+#1423: [BKN-1240] fix distance unit conversion errors by introducing Meter type
+
 ## [12.1.0] - 19-04-2022
 
 ### Added
@@ -736,7 +742,8 @@ policy
 
 - Go-live production release
 
-[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v12.1.0
+[Unreleased]: https://bitbucket.org/juspay/beckn/branches/compare/master..v12.1.1
+[12.1.1]: https://bitbucket.org/juspay/beckn/commits/tag/v12.1.1
 [12.1.0]: https://bitbucket.org/juspay/beckn/commits/tag/v12.1.0
 [12.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v12.0.0
 [11.0.0]: https://bitbucket.org/juspay/beckn/commits/tag/v11.0.0
