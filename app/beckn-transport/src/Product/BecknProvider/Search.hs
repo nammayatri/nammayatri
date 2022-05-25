@@ -27,9 +27,9 @@ search ::
   FlowHandler AckResponse
 search transporterId (SignatureAuthResult signPayload subscriber) (SignatureAuthResult _ gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    dSearchReq <- ACL.buildSearchReq subscriber req
     Esq.runTransaction $
       QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
+    dSearchReq <- ACL.buildSearchReq subscriber req
     DSearch.DSearchRes {..} <- DSearch.search transporterId dSearchReq
     let context = req.context
     let callbackUrl = gateway.subscriber_url

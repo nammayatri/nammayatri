@@ -115,14 +115,17 @@ buildRBLoc latLon now = do
       { id = locId,
         lat = latLon.lat,
         lon = latLon.lon,
-        street = Nothing,
-        door = Nothing,
-        city = Nothing,
-        state = Nothing,
-        country = Nothing,
-        building = Nothing,
-        areaCode = Nothing,
-        area = Nothing,
+        address =
+          DLoc.LocationAddress
+            { street = Nothing,
+              door = Nothing,
+              city = Nothing,
+              state = Nothing,
+              country = Nothing,
+              building = Nothing,
+              areaCode = Nothing,
+              area = Nothing
+            },
         createdAt = now,
         updatedAt = now
       }

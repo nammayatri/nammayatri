@@ -1,9 +1,10 @@
 module Core.ACL.Init where
 
 import Beckn.Prelude
+import Beckn.Product.Validation.Context
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import qualified Beckn.Types.Core.Taxi.Init as Init
-import Beckn.Types.Logging
 import Beckn.Types.MapSearch
 import qualified Beckn.Types.Registry as Subscriber
 import qualified Domain.Action.Beckn.Init as DInit
@@ -13,7 +14,7 @@ import Types.Error
 import Utils.Common
 
 buildInitReq ::
-  (MonadThrow m, Log m) =>
+  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
   Subscriber.Subscriber ->
   Init.InitReq ->
   m DInit.InitReq
@@ -21,6 +22,7 @@ buildInitReq subscriber req = do
   let context = req.context
       items = req.message.order.items
       fulfillment = req.message.order.fulfillment
+  validateContext Context.INIT context
   item <- case items of
     [item] -> return item
     _ -> throwError (InvalidRequest "order.items must contain exactly 1 item.")

@@ -1,161 +1,151 @@
-module Domain.Action.Beckn.Confirm where
+module Domain.Action.Beckn.Confirm
+  ( confirm,
+    DConfirmReq (..),
+    DConfirmRes (..),
+  )
+where
 
 import App.Scheduler
-import qualified App.Scheduler as Scheduler
-import App.Types
 import Beckn.External.Encryption (encrypt)
+import Beckn.External.GoogleMaps.Types
+import Beckn.Prelude
 import Beckn.Scheduler
-import Beckn.Storage.Esqueleto (SqlDB)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
+import Beckn.Types.Registry (Subscriber (..))
 import qualified Data.Text as T
+import qualified Domain.Types.BookingLocation as SBL
 import qualified Domain.Types.BusinessEvent as SB
 import Domain.Types.DiscountTransaction
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RiderDetails as SRD
-import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
-import SharedLogic.DriverPool (recalculateDriverPool)
+import qualified SharedLogic.DriverPool as DrPool
+import qualified Storage.Queries.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.Organization as Organization
-import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.RideBooking as QRideBooking
+import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
-import qualified Storage.Queries.SearchRequest as SearchRequest
+import Tools.Metrics
 import Types.Error
 import Utils.Common
 
 data DConfirmReq = DConfirmReq
-  { quoteId :: Id DQuote.Quote,
-    bapUri :: BaseUrl,
-    bapId :: Text,
+  { bookingId :: Id SRB.RideBooking,
+    customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
-    customerMobileCountryCode :: Text
+    fromAddress :: SBL.LocationAddress,
+    toAddress :: Maybe SBL.LocationAddress
   }
 
-data DOnConfirmReq = DOnConfirmReq
-  { rideBookingId :: Id SRB.RideBooking,
-    quoteId :: Id DQuote.Quote,
-    estimatedTotalFare :: Amount
+data DConfirmRes = DConfirmRes
+  { booking :: SRB.RideBooking,
+    fromLocation :: SBL.BookingLocation,
+    toLocation :: Maybe SBL.BookingLocation,
+    riderDetails :: SRD.RiderDetails,
+    transporter :: DOrg.Organization
   }
 
-handler ::
-  DOrg.Organization -> DConfirmReq -> Flow DOnConfirmReq
-handler transporter req = do
-  quote <- QQuote.findById req.quoteId >>= fromMaybeM (QuoteDoesNotExist req.quoteId.getId)
-  let quoteTransporterId = quote.providerId
-  transporterOrg <-
-    Organization.findById quoteTransporterId
-      >>= fromMaybeM (OrgNotFound quoteTransporterId.getId)
-  unless (quoteTransporterId == transporter.id) $ throwError AccessDenied
-  searchRequest <- SearchRequest.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  let bapOrgId = searchRequest.bapId
-  unless (req.bapId == bapOrgId) $ throwError AccessDenied
+confirm ::
+  ( EncFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
+    HasFlowEnv m r '["schedulingReserveTime" ::: Seconds],
+    CoreMetrics m,
+    HasGoogleMaps m r
+  ) =>
+  Id Organization.Organization ->
+  Subscriber ->
+  DConfirmReq ->
+  m DConfirmRes
+confirm transporterId subscriber req = do
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (RideBookingDoesNotExist req.bookingId.getId)
+  let transporterId' = booking.providerId
+  transporter <-
+    Organization.findById transporterId'
+      >>= fromMaybeM (OrgNotFound transporterId'.getId)
+  unless (transporterId' == transporterId) $ throwError AccessDenied
+  let bapOrgId = booking.bapId
+  unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
   now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
-  rideBooking <- buildRideBooking searchRequest quote transporterOrg riderDetails.id now
-
-  rideRequestForNow <-
+  rideRequest <-
     BP.buildRideReq
-      (rideBooking.id)
-      (transporterOrg.shortId)
+      (booking.id)
+      (transporter.shortId)
       RideRequest.ALLOCATION
       now
-  let transaction additionalDBSaves = Esq.runTransaction $ do
+
+  let finalTransaction addons = Esq.runTransaction $ do
         when isNewRider $ QRD.create riderDetails
-        QRideBooking.create rideBooking
-        whenJust quote.discount $ \disc ->
-          QDiscTransaction.create $ mkDiscountTransaction rideBooking disc now
-        additionalDBSaves
+        QRB.updateStatus booking.id SRB.CONFIRMED
+        QBL.updateAddress booking.fromLocationId req.fromAddress
+        RideRequest.create rideRequest
+        whenJust booking.discount $ \disc ->
+          QDiscTransaction.create $ mkDiscountTransaction booking disc now
+        addons
 
-      handleRideBookingType (DQuote.OneWayDetails _) =
-        transaction $ RideRequest.create rideRequestForNow
-      handleRideBookingType (DQuote.RentalDetails _) = do
-        let secondsPerMinute = 60
-        schedulingReserveTime <- secondsToNominalDiffTime <$> asks (.schedulingReserveTime)
-        let scheduledTime = addUTCTime (negate schedulingReserveTime) rideBooking.startTime
-            presentIntervalWidth = 5 * secondsPerMinute -- 5 minutes
-        case compareTimeWithInterval presentIntervalWidth scheduledTime now of
-          LT -> throwError $ InvalidRequest "impossible to book a ride for the past"
-          EQ -> transaction $ RideRequest.create rideRequestForNow
-          GT ->
-            transaction $
-              createScheduleRentalRideRequestJob scheduledTime $
-                AllocateRentalJobData
-                  { rideBookingId = rideBooking.id,
-                    shortOrgId = transporterOrg.shortId
-                  }
-
-  handleRideBookingType quote.quoteDetails
-
-  let pickupPoint = undefined
-      fareProductType = DQuote.getFareProductType quote.quoteDetails
-  driverPoolResults <- recalculateDriverPool pickupPoint rideBooking.id transporterOrg.id rideBooking.vehicleVariant fareProductType
-  Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_CONFIRM (Just rideBooking.id)) driverPoolResults
-  let driverPool = map (.driverId) driverPoolResults
-  logTagInfo "OnConfirmCallback" $
-    "Driver Pool for Ride " +|| rideBooking.id.getId ||+ " is set with drivers: "
-      +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-  Esq.runTransaction $ QBE.logRideConfirmedEvent rideBooking.id
-  pure $ makeOnConfirmCallback rideBooking
-  where
-    buildRideBooking searchRequest quote provider riderId now = do
-      uid <- generateGUID
-      let id = Id uid
-          providerId = provider.id
-          startTime = searchRequest.startTime
-          fromLocationId = undefined
-          bapId = searchRequest.bapId
-          bapUri = searchRequest.bapUri
-          estimatedFare = quote.estimatedFare
-          discount = quote.discount
-          estimatedTotalFare = quote.estimatedTotalFare
-          vehicleVariant = quote.vehicleVariant
-          reallocationsCount = 0
-          createdAt = now
-          updatedAt = now
-          status = SRB.CONFIRMED
-      let quoteDetails = quote.quoteDetails
-      rideBookingDetails <- case quoteDetails of
-        DQuote.OneWayDetails oneWayQuote -> do
-          toLocationId <- undefined & fromMaybeM (InternalError "ONE_WAY SearchRequest does not have toLocationId")
-          pure $
-            SRB.OneWayDetails
-              SRB.OneWayRideBookingDetails
-                { estimatedDistance = oneWayQuote.distance,
-                  ..
-                }
-        DQuote.RentalDetails DQuote.RentalQuoteDetails {rentalFarePolicyId} -> do
-          pure $ SRB.RentalDetails SRB.RentalRideBookingDetails {rentalFarePolicyId}
-      pure
-        SRB.RideBooking
-          { riderId = Just riderId,
+  fromLocation <- QBL.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
+  res <- case booking.rideBookingDetails of
+    SRB.OneWayDetails details -> do
+      finalTransaction $
+        whenJust req.toAddress $ \toAddr -> QBL.updateAddress details.toLocationId toAddr
+      toLocation <- QBL.findById details.toLocationId >>= fromMaybeM LocationNotFound
+      return $
+        DConfirmRes
+          { toLocation = Just toLocation,
             ..
           }
-
-createScheduleRentalRideRequestJob :: UTCTime -> Scheduler.AllocateRentalJobData -> SqlDB ()
-createScheduleRentalRideRequestJob scheduledAt jobData =
-  void $ createJobByTime scheduledAt jobEntry
+    SRB.RentalDetails _ -> do
+      let secondsPerMinute = 60
+      schedulingReserveTime <- secondsToNominalDiffTime <$> asks (.schedulingReserveTime)
+      let scheduledTime = addUTCTime (negate schedulingReserveTime) booking.startTime
+          presentIntervalWidth = 5 * secondsPerMinute -- 5 minutes
+      case compareTimeWithInterval presentIntervalWidth scheduledTime now of
+        LT -> throwError $ InvalidRequest "impossible to book a ride for the past"
+        EQ -> finalTransaction $ RideRequest.create rideRequest
+        GT ->
+          finalTransaction $
+            createScheduleRentalRideRequestJob scheduledTime $
+              AllocateRentalJobData
+                { rideBookingId = booking.id,
+                  shortOrgId = transporter.shortId
+                }
+      return $
+        DConfirmRes
+          { toLocation = Nothing,
+            ..
+          }
+  let pickupPoint = booking.fromLocationId
+      fareProductType = SRB.getFareProductType booking.rideBookingDetails
+  driverPoolResults <- DrPool.recalculateDriverPool pickupPoint booking.id transporter.id booking.vehicleVariant fareProductType
+  Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_CONFIRM (Just booking.id)) driverPoolResults
+  let driverPool = map (.driverId) driverPoolResults
+  logTagInfo "OnConfirmCallback" $
+    "Driver Pool for Ride " <> booking.id.getId <> " is set with drivers: "
+      <> T.intercalate ", " (getId <$> driverPool)
+  Esq.runTransaction $ QBE.logRideConfirmedEvent booking.id
+  return res
   where
-    -- void $ createJobIn 0 jobEntry -- for debugging purposes
-
-    jobEntry =
-      JobEntry
-        { jobType = AllocateRental,
-          jobData = jobData,
-          maxErrors = 5
-        }
+    createScheduleRentalRideRequestJob scheduledAt jobData =
+      void $
+        createJobByTime scheduledAt $
+          JobEntry
+            { jobType = AllocateRental,
+              jobData = jobData,
+              maxErrors = 5
+            }
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (SRD.RiderDetails, Bool)
 getRiderDetails customerMobileCountryCode customerPhoneNumber now =
   QRD.findByMobileNumber customerPhoneNumber >>= \case
-    Nothing -> map (,True) . encrypt =<< buildRiderDetails
+    Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
     Just a -> return (a, False)
   where
     buildRiderDetails = do
@@ -168,16 +158,6 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
             createdAt = now,
             updatedAt = now
           }
-
-makeOnConfirmCallback ::
-  SRB.RideBooking ->
-  DOnConfirmReq
-makeOnConfirmCallback rideBooking =
-  DOnConfirmReq
-    { rideBookingId = rideBooking.id,
-      quoteId = undefined,
-      estimatedTotalFare = rideBooking.estimatedTotalFare
-    }
 
 mkDiscountTransaction :: SRB.RideBooking -> Amount -> UTCTime -> DiscountTransaction
 mkDiscountTransaction rideBooking discount currTime =

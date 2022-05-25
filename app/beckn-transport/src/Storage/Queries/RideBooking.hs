@@ -7,6 +7,7 @@ import Domain.Types.Organization
 import Domain.Types.Person
 import Domain.Types.RideBooking as Booking
 import Domain.Types.RideBooking.RentalRideBooking as Booking
+import Domain.Types.RiderDetails (RiderDetails)
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideBooking as Booking
 import Utils.Common
@@ -25,6 +26,17 @@ updateStatus rbId rbStatus = do
     set
       tbl
       [ RideBookingStatus =. val rbStatus,
+        RideBookingUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideBookingTId ==. val (toKey rbId)
+
+updateRiderId :: Id RideBooking -> Id RiderDetails -> SqlDB ()
+updateRiderId rbId riderId = do
+  now <- getCurrentTime
+  Esq.update' $ \tbl -> do
+    set
+      tbl
+      [ RideBookingRiderId =. val (Just $ toKey riderId),
         RideBookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideBookingTId ==. val (toKey rbId)

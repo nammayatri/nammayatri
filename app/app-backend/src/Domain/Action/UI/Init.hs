@@ -5,6 +5,7 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Domain.Types.BookingLocation as DLoc
+import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.RideBooking as SRB
 import Domain.Types.VehicleVariant (VehicleVariant)
@@ -22,34 +23,37 @@ newtype InitReq = InitReq
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data InitRes = InitRes
-  { messageId :: Text,
-    providerId :: Text,
+  { providerId :: Text,
     providerUrl :: BaseUrl,
     fromLoc :: LatLong,
     toLoc :: Maybe LatLong,
     vehicleVariant :: VehicleVariant,
     quoteDetails :: SQuote.QuoteDetails,
-    startTime :: UTCTime
+    startTime :: UTCTime,
+    bookingId :: Id SRB.RideBooking
   }
   deriving (Show, Generic)
 
-init :: EsqDBFlow m r => InitReq -> m InitRes
-init req = do
+init :: EsqDBFlow m r => Id SP.Person -> InitReq -> m InitRes
+init personId req = do
   now <- getCurrentTime
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (QuoteDoesNotExist req.quoteId.getId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
+  when ((searchRequest.validTill) < now) $
+    throwError SearchRequestExpired
+  unless (searchRequest.riderId == personId) $ throwError AccessDenied
   fromLocation <- QSRLoc.findById searchRequest.fromLocationId >>= fromMaybeM LocationNotFound
   mbToLocation <- searchRequest.toLocationId `forM` (QSRLoc.findById >=> fromMaybeM LocationNotFound)
   bFromLocation <- buildBLoc fromLocation now
   mbBToLocation <- (`buildBLoc` now) `mapM` mbToLocation
-  rideBooking <- buildRideBooking searchRequest quote bFromLocation.id (mbBToLocation <&> (.id)) now
+  booking <- buildRideBooking searchRequest quote bFromLocation.id (mbBToLocation <&> (.id)) now
   DB.runTransaction $ do
     QBLoc.create bFromLocation
     whenJust mbBToLocation $ \loc -> QBLoc.create loc
-    QRideB.create rideBooking
+    QRideB.create booking
   return $
     InitRes
-      { messageId = rideBooking.id.getId,
+      { bookingId = booking.id,
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
         fromLoc = LatLong {lat = fromLocation.lat, lon = fromLocation.lon},
@@ -61,19 +65,23 @@ init req = do
   where
     buildBLoc searchReqLocation now = do
       locId <- generateGUID
+      let address =
+            DLoc.LocationAddress
+              { street = Nothing,
+                door = Nothing,
+                city = Nothing,
+                state = Nothing,
+                country = Nothing,
+                building = Nothing,
+                areaCode = Nothing,
+                area = Nothing
+              }
       return
         DLoc.BookingLocation
           { id = locId,
             lat = searchReqLocation.lat,
             lon = searchReqLocation.lon,
-            street = Nothing,
-            door = Nothing,
-            city = Nothing,
-            state = Nothing,
-            country = Nothing,
-            building = Nothing,
-            areaCode = Nothing,
-            area = Nothing,
+            address,
             createdAt = now,
             updatedAt = now
           }

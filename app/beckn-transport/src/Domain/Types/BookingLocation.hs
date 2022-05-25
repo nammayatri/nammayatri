@@ -11,18 +11,23 @@ data BookingLocation = BookingLocation
   { id :: Id BookingLocation,
     lat :: Double,
     lon :: Double,
-    street :: Maybe Text,
+    address :: LocationAddress,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Generic, Show, Eq, HasCoordinates)
+
+data LocationAddress = LocationAddress
+  { street :: Maybe Text,
     door :: Maybe Text,
     city :: Maybe Text,
     state :: Maybe Text,
     country :: Maybe Text,
     building :: Maybe Text,
     areaCode :: Maybe Text,
-    area :: Maybe Text,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    area :: Maybe Text
   }
-  deriving (Generic, Show, Eq, HasCoordinates)
+  deriving (Generic, Show, Eq)
 
 data BookingLocationAPIEntity = BookingLocationAPIEntity
   { lat :: Double,
@@ -39,7 +44,8 @@ data BookingLocationAPIEntity = BookingLocationAPIEntity
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 makeBookingLocationAPIEntity :: BookingLocation -> BookingLocationAPIEntity
-makeBookingLocationAPIEntity BookingLocation {..} =
+makeBookingLocationAPIEntity BookingLocation {..} = do
+  let LocationAddress {..} = address
   BookingLocationAPIEntity
     { ..
     }

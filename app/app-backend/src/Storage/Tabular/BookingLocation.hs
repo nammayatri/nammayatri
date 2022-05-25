@@ -41,12 +41,14 @@ instance TEntityKey BookingLocationT where
 instance TEntity BookingLocationT Domain.BookingLocation where
   fromTEntity entity = do
     let BookingLocationT {..} = entityVal entity
+        address = Domain.LocationAddress {..}
     return $
       Domain.BookingLocation
         { id = Id id,
           ..
         }
-  toTType Domain.BookingLocation {..} =
+  toTType Domain.BookingLocation {..} = do
+    let Domain.LocationAddress {..} = address
     BookingLocationT
       { id = getId id,
         ..
