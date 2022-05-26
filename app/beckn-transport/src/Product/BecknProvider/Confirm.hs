@@ -12,7 +12,7 @@ import qualified Core.ACL.OnConfirm as ACL
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Organization as Organization
 import EulerHS.Prelude hiding (id)
-import qualified ExternalAPI.Flow as ExternalAPI
+import qualified  ExternalAPI.Flow as ExternalAPI
 import qualified SharedLogic.Transporter as Shared
 import Utils.Common
 
@@ -29,5 +29,9 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
     let context = req.context
     let callbackUrl = context.bap_uri
     ExternalAPI.withCallback' withRetry transporter CONFIRM OnConfirm.onConfirmAPI context callbackUrl $ do
-       dOnConfirmReq <- DConfirm.handler transporter dConfirmReq
-       pure $ ACL.makeOnConfirmReq dOnConfirmReq
+      dOnConfirmReq <-
+        DConfirm.handler
+          transporter
+          dConfirmReq
+          pure
+          $ ACL.makeOnConfirmReq dOnConfirmReq
