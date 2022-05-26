@@ -1,16 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Product.Support
-  ( sendIssue,
-  )
+  ( sendIssue,)
 where
 
 import qualified App.Types as App
-import qualified Beckn.SesConfig as SesConfig
 import Beckn.Storage.Esqueleto (runTransaction)
-import Beckn.Types.APISuccess
+import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
-import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified Domain.Types.Issue as DIssue
@@ -20,22 +17,16 @@ import EulerHS.Prelude hiding (length)
 import qualified Storage.Queries.Issues as Queries
 import Types.API.Support as Support
 import Utils.Common
-import qualified Utils.SES as SES
 
 sendIssue :: Id Person.Person -> Support.SendIssueReq -> App.FlowHandler Support.SendIssueRes
 sendIssue personId request@SendIssueReq {..} = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   runRequestValidation validateSendIssueReq request
   let personIdTxt = getId personId
-  issuesConfig <- asks $ SesConfig.issuesConfig . App.sesCfg
   issueId <- L.generateGUID
   utcNow <- getCurrentTime
   runTransaction $
     Queries.insertIssue (mkDBIssue issueId personIdTxt request utcNow)
-  let mailSubject = mkMailSubject issueId (issue.reason)
-  let mailBody = mkMailBody issueId personIdTxt request utcNow
-  responseError <- liftIO $ SES.sendEmail issuesConfig mailSubject mailBody
-  whenJust responseError $ throwError . EmailSendingError
-  return Success
+  return APISuccess.Success
 
 mkDBIssue :: Text -> Text -> Support.SendIssueReq -> UTCTime -> DIssue.Issue
 mkDBIssue issueId customerId SendIssueReq {..} time =
@@ -50,24 +41,3 @@ mkDBIssue issueId customerId SendIssueReq {..} time =
       updatedAt = time
     }
 
-mkMailSubject :: Text -> Text -> Text
-mkMailSubject issueId reason = "Issue " <> issueId <> ". " <> reason
-
-mkMailBody :: Text -> Text -> Support.SendIssueReq -> UTCTime -> Text
-mkMailBody issueId personId SendIssueReq {..} time =
-  "Issue id: " <> issueId
-    <> "\nPerson id: "
-    <> personId
-    <> "\nOrder id: "
-    <> orderId
-    <> "\nContact email: "
-    <> email
-    <> "\nCreation time: "
-    <> show time
-    <> "\n\nReason: "
-    <> issue.reason
-    <> "\n\nDetails: "
-    <> issue.description
-  where
-    email = fromMaybe "No email provided by user." contactEmail
-    orderId = maybe "issue does not belong to specific order." getId rideBookingId
