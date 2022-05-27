@@ -1,7 +1,6 @@
 module Services.Allocation.Allocation where
 
 import Beckn.Types.Common
-import Beckn.Types.Core.Taxi.Common.CancellationSource (CancellationSource (..))
 import Beckn.Types.Id
 import Beckn.Utils.NonEmpty
 import Data.Generics.Labels ()
@@ -161,7 +160,7 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
           Cancellation ->
             case rideStatus of
               status | status == Confirmed || status == Assigned -> do
-                cancel handle rideBookingId ByUser Nothing
+                cancel handle rideBookingId SBCR.ByUser Nothing
                 logEvent ConsumerCancelled rideBookingId
               _ ->
                 logWarning $ "Ride status is " <> show rideStatus <> ", cancellation request skipped"
@@ -205,7 +204,7 @@ processAllocation handle@ServiceHandle {..} shortOrgId rideInfo = do
   if allocationTimeFinished || allocationLimitExceed
     then do
       let cancellationReason = if allocationTimeFinished then AllocationTimeExpired else ReallocationLimitExceed
-      cancel handle rideBookingId ByAllocator $ Just cancellationReason
+      cancel handle rideBookingId SBCR.ByAllocator $ Just cancellationReason
       logEvent AllocationTimeFinished rideBookingId
     else do
       currentNotifications <- getCurrentNotifications rideBookingId
@@ -260,7 +259,7 @@ proceedToNewDrivers handle@ServiceHandle {..} rideBookingId shortOrgId = do
       logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getId <$> filteredPool)
       processFilteredPool handle rideBookingId filteredPool shortOrgId
     [] -> do
-      cancel handle rideBookingId ByAllocator $ Just NoDriversInRange
+      cancel handle rideBookingId SBCR.ByAllocator $ Just NoDriversInRange
       logEvent EmptyDriverPool rideBookingId
 
 processFilteredPool ::
@@ -296,7 +295,7 @@ checkRideLater ServiceHandle {..} shortOrgId rideBookingId = do
   addAllocationRequest shortOrgId rideBookingId
   logInfo "Check ride later"
 
-cancel :: MonadHandler m => ServiceHandle m -> Id SRB.RideBooking -> CancellationSource -> Maybe AllocatorCancellationReason -> m ()
+cancel :: MonadHandler m => ServiceHandle m -> Id SRB.RideBooking -> SBCR.CancellationSource -> Maybe AllocatorCancellationReason -> m ()
 cancel ServiceHandle {..} rideBookingId cancellationSource mbReasonCode = do
   logInfo "Cancelling ride"
   rideBookingCancellationReason <- buildRideBookingCancellationReason

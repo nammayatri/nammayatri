@@ -2,26 +2,25 @@ module Product.BecknProvider.BP
   ( sendRideAssignedUpdateToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
-    sendRideBookingCanceledUpdateToBAP,
+    sendRideBookingCancelledUpdateToBAP,
     sendRideBookingReallocationUpdateToBAP,
     buildRideReq,
   )
 where
 
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
+import qualified Core.ACL.OnUpdate as ACL
 import qualified Domain.Types.Organization as SOrg
-import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.RideBookingCancellationReason as SRBCR
 import qualified Domain.Types.RideRequest as SRideRequest
-import qualified Domain.Types.SearchRequest as SSR
 import EulerHS.Prelude
 import ExternalAPI.Flow (callOnUpdate)
 import qualified Storage.Queries.Organization as QOrg
-import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Vehicle as Vehicle
+import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Metrics (CoreMetrics)
 import Types.Error
 import Utils.Common
@@ -39,8 +38,11 @@ sendRideAssignedUpdateToBAP rideBooking ride = do
   transporter <-
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
-  buildRideAssignedUpdatePayload ride
-    >>= sendUpdateEvent transporter undefined --rideBooking.requestId
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM (VehicleNotFound ride.vehicleId.getId)
+  let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
+  rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
+  void $ callOnUpdate transporter rideBooking rideAssignedMsg
 
 sendRideStartedUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -55,8 +57,9 @@ sendRideStartedUpdateToBAP rideBooking ride = do
   transporter <-
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
-  makeRideStartedUpdatePayload ride
-    & sendUpdateEvent transporter undefined --rideBooking.requestId
+  let rideStartedBuildReq = ACL.RideStartedBuildReq {..}
+  rideStartedMsg <- ACL.buildOnUpdateMessage rideStartedBuildReq
+  void $ callOnUpdate transporter rideBooking rideStartedMsg
 
 sendRideCompletedUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -71,10 +74,11 @@ sendRideCompletedUpdateToBAP rideBooking ride = do
   transporter <-
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
-  buildRideCompletedUpdatePayload ride
-    >>= sendUpdateEvent transporter undefined --rideBooking.requestId
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {..}
+  rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
+  void $ callOnUpdate transporter rideBooking rideCompletedMsg
 
-sendRideBookingCanceledUpdateToBAP ::
+sendRideBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -82,11 +86,12 @@ sendRideBookingCanceledUpdateToBAP ::
   ) =>
   SRB.RideBooking ->
   SOrg.Organization ->
-  OnUpdate.CancellationSource ->
+  SRBCR.CancellationSource ->
   m ()
-sendRideBookingCanceledUpdateToBAP rideBooking transporter cancellationSource = do
-  let message = OnUpdate.RideBookingCancelled $ OnUpdate.RideBookingCancelledEvent rideBooking.id.getId cancellationSource
-  sendUpdateEvent transporter undefined message
+sendRideBookingCancelledUpdateToBAP booking transporter cancellationSource = do
+  let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq {..}
+  bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
+  void $ callOnUpdate transporter booking bookingCancelledMsg
 
 sendRideBookingReallocationUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -97,87 +102,12 @@ sendRideBookingReallocationUpdateToBAP ::
   SRB.RideBooking ->
   Id SRide.Ride ->
   SOrg.Organization ->
-  OnUpdate.CancellationSource ->
+  SRBCR.CancellationSource ->
   m ()
-sendRideBookingReallocationUpdateToBAP rideBooking rideId transporter cancellationSource = do
-  let message = OnUpdate.RideBookingReallocation $ OnUpdate.RideBookingReallocationEvent rideBooking.id.getId rideId.getId cancellationSource
-  sendUpdateEvent transporter undefined message
-
-sendUpdateEvent ::
-  ( EsqDBFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
-  ) =>
-  SOrg.Organization ->
-  Id SSR.SearchRequest ->
-  OnUpdate.OnUpdateEvent ->
-  m ()
-sendUpdateEvent transporter requestId =
-  void . callOnUpdate transporter requestId . OnUpdate.OnUpdateMessage
-
-buildRideAssignedUpdatePayload ::
-  (EsqDBFlow m r, EncFlow m r) =>
-  SRide.Ride ->
-  m OnUpdate.OnUpdateEvent
-buildRideAssignedUpdatePayload ride = do
-  driver <-
-    Person.findById ride.driverId
-      >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  veh <- Vehicle.findById ride.vehicleId >>= fromMaybeM (VehicleNotFound ride.vehicleId.getId)
-  mobileNumber <- SP.getPersonNumber driver >>= fromMaybeM (InternalError "Driver mobile number is not present.")
-  name <- SP.getPersonFullName driver >>= fromMaybeM (PersonFieldNotPresent "firstName")
-  let agent =
-        OnUpdate.Agent
-          { name = name,
-            phone = mobileNumber,
-            rating = realToFrac <$> driver.rating,
-            registered_at = driver.createdAt
-          }
-      vehicle =
-        OnUpdate.Vehicle
-          { model = veh.model,
-            variant = show veh.variant,
-            color = veh.color,
-            registration = veh.registrationNo
-          }
-  return $
-    OnUpdate.RideAssigned
-      OnUpdate.RideAssignedEvent
-        { order_id = ride.bookingId.getId,
-          ride_id = ride.id.getId,
-          otp = ride.otp,
-          ..
-        }
-
-makeRideStartedUpdatePayload ::
-  SRide.Ride ->
-  OnUpdate.OnUpdateEvent
-makeRideStartedUpdatePayload ride = do
-  OnUpdate.RideStarted
-    OnUpdate.RideStartedEvent
-      { order_id = ride.bookingId.getId,
-        ride_id = ride.id.getId,
-        ..
-      }
-
-buildRideCompletedUpdatePayload ::
-  MonadFlow m =>
-  SRide.Ride ->
-  m OnUpdate.OnUpdateEvent
-buildRideCompletedUpdatePayload ride = do
-  fare <- OnUpdate.Price . realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
-  totalFare <- OnUpdate.Price . realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
-  chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
-  return $
-    OnUpdate.RideCompleted
-      OnUpdate.RideCompletedEvent
-        { order_id = ride.bookingId.getId,
-          ride_id = ride.id.getId,
-          chargeable_distance = chargeableDistance,
-          total_fare = totalFare,
-          ..
-        }
+sendRideBookingReallocationUpdateToBAP booking rideId transporter cancellationSource = do
+  let bookingReallocationBuildReq = ACL.BookingReallocationBuildReq {..}
+  bookingReallocationMsg <- ACL.buildOnUpdateMessage bookingReallocationBuildReq
+  void $ callOnUpdate transporter booking bookingReallocationMsg
 
 buildRideReq ::
   MonadFlow m =>

@@ -16,6 +16,8 @@ import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.Ride (RideTId)
 import Storage.Tabular.RideBooking (RideBookingTId)
 
+derivePersistField "Domain.CancellationSource"
+
 mkPersist
   defaultSqlSettings
   [defaultQQ|

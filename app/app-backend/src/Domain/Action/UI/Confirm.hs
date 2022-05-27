@@ -40,9 +40,9 @@ data ConfirmRes = ConfirmRes
 
 confirm :: (EncFlow m r, EsqDBFlow m r) => Id Person.Person -> ConfirmReq -> m ConfirmRes
 confirm personId req = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM SearchRequestDoesNotExist
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (RideBookingDoesNotExist req.bookingId.getId)
   unless (booking.riderId == personId) $ throwError AccessDenied
-  decRider <- QP.findById booking.riderId >>= fromMaybeM PersonNotFound >>= decrypt
+  decRider <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId) >>= decrypt
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
   bppBookingId <- booking.bppBookingId & fromMaybeM (RideBookingFieldNotPresent "bppBookingId")

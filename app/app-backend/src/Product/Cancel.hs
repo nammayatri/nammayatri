@@ -49,7 +49,7 @@ cancel bookingId personId req = withFlowHandlerAPI . withPersonIdLogTag personId
         SBCR.RideBookingCancellationReason
           { rideBookingId = rideBookingId,
             rideId = Nothing,
-            source = ReqCancel.ByUser,
+            source = SBCR.ByUser,
             reasonCode = Just reasonCode,
             reasonStage = Just reasonStage,
             additionalInfo = additionalInfo,

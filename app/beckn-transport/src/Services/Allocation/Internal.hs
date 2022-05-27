@@ -234,7 +234,7 @@ cancelRideBooking rideBookingId reason = do
       QDriverInfo.updateOnRide (cast ride.driverId) False
   logTagInfo ("rideBookingId-" <> getId rideBookingId) ("Cancellation reason " <> show reason.source)
   fork "cancelRideBooking - Notify BAP" $ do
-    BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter reason.source
+    BP.sendRideBookingCancelledUpdateToBAP rideBooking transporter reason.source
   whenJust mbRide $ \ride ->
     notifyDriverOnCancel rideBooking ride reason
 

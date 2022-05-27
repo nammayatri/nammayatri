@@ -3,7 +3,6 @@ module Utils.Notifications where
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
 import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
-import Beckn.Types.Core.Taxi.Common.CancellationSource (CancellationSource (..))
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -11,7 +10,7 @@ import qualified Data.Text as T
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import Domain.Types.RideBooking (RideBooking)
-import Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import EulerHS.Prelude
 
 -- | Send FCM "cancel" notification to driver
@@ -19,47 +18,46 @@ notifyOnCancel ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  SearchRequest ->
+  RideBooking ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
-  CancellationSource ->
+  SBCR.CancellationSource ->
   m ()
-notifyOnCancel searchRequest personId mbDeviceToken cancellationSource = do
+notifyOnCancel booking personId mbDeviceToken cancellationSource = do
   cancellationText <- getCancellationText
   FCM.notifyPerson (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
-    searchRequestId = SearchRequest.id searchRequest
     notificationData cancellationText =
       FCM.FCMData
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId searchRequestId,
+          fcmEntityIds = getId booking.id,
           fcmNotificationJSON = FCM.createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     body text =
       FCMNotificationBody text
     getCancellationText = case cancellationSource of
-      ByUser ->
+      SBCR.ByUser ->
         return $
           unwords
             [ "Customer had to cancel your ride for",
-              showTimeIst (searchRequest.startTime) <> ".",
+              showTimeIst (booking.startTime) <> ".",
               "Check the app for more details."
             ]
-      ByOrganization ->
+      SBCR.ByOrganization ->
         return $
           unwords
             [ "Your agency had to cancel the ride for",
-              showTimeIst (searchRequest.startTime) <> ".",
+              showTimeIst (booking.startTime) <> ".",
               "Check the app for more details."
             ]
-      ByDriver ->
+      SBCR.ByDriver ->
         return $
           unwords
             [ "You have cancelled the ride for",
-              showTimeIst (searchRequest.startTime) <> ".",
+              showTimeIst (booking.startTime) <> ".",
               "Check the app for more details."
             ]
       _ -> throwError (InternalError "Unexpected cancellation reason.")

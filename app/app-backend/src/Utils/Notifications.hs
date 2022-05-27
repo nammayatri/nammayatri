@@ -2,7 +2,6 @@ module Utils.Notifications where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
-import Beckn.Types.Core.Taxi.Common.CancellationSource (CancellationSource (..))
 import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Data.Text as T
@@ -10,6 +9,7 @@ import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as Person
@@ -164,7 +164,7 @@ notifyOnRegistration regToken personId mbDeviceToken =
             ]
    in FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
 
-notifyOnRideBookingCancelled :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
+notifyOnRideBookingCancelled :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> SBCR.CancellationSource -> m ()
 notifyOnRideBookingCancelled rideBooking cancellationSource = do
   person <- Person.findById rideBooking.riderId >>= fromMaybeM (PersonNotFound rideBooking.riderId.getId)
   FCM.notifyPerson (notificationData $ rideBooking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
@@ -182,25 +182,25 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
       FCMNotificationBody $ getCancellationText orgName
     -- reasonMsg = encodeToText reason
     getCancellationText orgName = case cancellationSource of
-      ByUser ->
+      SBCR.ByUser ->
         unwords
           [ "You have cancelled your ride for",
             showTimeIst (rideBooking.startTime) <> ".",
             "Check the app for details."
           ]
-      ByOrganization ->
+      SBCR.ByOrganization ->
         unwords
           [ "\"" <> orgName <> "\" agency had to cancel the ride for",
             showTimeIst (rideBooking.startTime) <> ".",
             "Please book again to get another ride."
           ]
-      ByDriver ->
+      SBCR.ByDriver ->
         unwords
           [ "The driver had to cancel the ride for",
             showTimeIst (rideBooking.startTime) <> ".",
             "Please book again to get another ride."
           ]
-      ByAllocator ->
+      SBCR.ByAllocator ->
         unwords
           [ "The ride for",
             showTimeIst (rideBooking.startTime),
@@ -208,7 +208,7 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
             "Please book again to get another ride."
           ]
 
-notifyOnRideBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> CancellationSource -> m ()
+notifyOnRideBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> SBCR.CancellationSource -> m ()
 notifyOnRideBookingReallocated rideBooking cancellationSource = do
   person <- Person.findById rideBooking.riderId >>= fromMaybeM (PersonNotFound rideBooking.riderId.getId)
   notificationData <- buildNotificationData
@@ -228,7 +228,7 @@ notifyOnRideBookingReallocated rideBooking cancellationSource = do
     buildBody = do
       FCMNotificationBody <$> getReallocationText
     getReallocationText = case cancellationSource of
-      ByDriver ->
+      SBCR.ByDriver ->
         return $
           unwords
             [ "The driver had to cancel the ride for",

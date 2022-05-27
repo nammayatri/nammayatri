@@ -9,7 +9,6 @@ import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
-import qualified Beckn.Types.Core.Taxi.Cancel.Req as ReqCancel
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Data.Aeson (encode)
@@ -31,7 +30,6 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.RideRequest as RideRequest
-import qualified Storage.Queries.SearchRequest as SearchRequest
 import Tools.Metrics (CoreMetrics)
 import Types.Error
 import Utils.Common
@@ -88,10 +86,10 @@ cancelRide rideId bookingCReason = do
   fork "cancelRide - Notify BAP" $ do
     if isCancelledByDriver
       then BP.sendRideBookingReallocationUpdateToBAP rideBooking ride.id transporter bookingCReason.source
-      else BP.sendRideBookingCanceledUpdateToBAP rideBooking transporter bookingCReason.source
+      else BP.sendRideBookingCancelledUpdateToBAP rideBooking transporter bookingCReason.source
   notifyDriverOnCancel rideBooking ride bookingCReason
   where
-    isCancelledByDriver = bookingCReason.source == ReqCancel.ByDriver
+    isCancelledByDriver = bookingCReason.source == SBCR.ByDriver
 
 notifyDriverOnCancel ::
   ( EsqDBFlow m r,
@@ -105,7 +103,7 @@ notifyDriverOnCancel ::
 notifyDriverOnCancel rideBooking ride cancellationReason =
   fork "cancelRide - Notify driver" $ do
     driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    Notify.notifyOnCancel undefined driver.id driver.deviceToken cancellationReason.source
+    Notify.notifyOnCancel rideBooking driver.id driver.deviceToken cancellationReason.source
 
 cancelRideTransaction ::
   EsqDBFlow m r =>
@@ -122,7 +120,7 @@ cancelRideTransaction rideBookingId ride bookingCReason = Esq.runTransaction $ d
     updateDriverInfo personId = do
       let driverId = cast personId
       DriverInformation.updateOnRide driverId False
-      when (bookingCReason.source == ReqCancel.ByDriver) $ QDriverStats.updateIdleTime driverId
+      when (bookingCReason.source == SBCR.ByDriver) $ QDriverStats.updateIdleTime driverId
 
 reallocateRideTransaction ::
   EsqDBFlow m r =>

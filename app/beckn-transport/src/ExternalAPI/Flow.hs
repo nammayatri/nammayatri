@@ -3,7 +3,7 @@
 module ExternalAPI.Flow where
 
 import qualified Beckn.Types.Core.Context as Context
-import Beckn.Types.Core.ReqTypes (BecknReq (..))
+import Beckn.Types.Core.ReqTypes (BecknCallbackReq (BecknCallbackReq))
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
@@ -13,11 +13,9 @@ import Beckn.Utils.Servant.SignatureAuth
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import Domain.Types.Organization as Org
-import Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.RideBooking as DRB
 import EulerHS.Prelude
-import Storage.Queries.SearchRequest as SearchRequest
 import Tools.Metrics (CoreMetrics)
-import Types.Error
 import Utils.Common
 
 withCallback ::
@@ -47,19 +45,18 @@ callOnUpdate ::
     CoreMetrics m
   ) =>
   Org.Organization ->
-  Id SearchRequest ->
+  DRB.RideBooking ->
   OnUpdate.OnUpdateMessage ->
   m ()
-callOnUpdate transporter searchRequestId content = do
-  searchRequest <- SearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestNotFound searchRequestId.getId)
-  let bapId = searchRequest.bapId
-      bapUri = searchRequest.bapUri
+callOnUpdate transporter rideBooking content = do
+  let bapId = rideBooking.bapId
+      bapUri = rideBooking.bapUri
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
   bppUri <- makeBppUrl (transporter.id)
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
-  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri $ BecknReq context content
+  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 makeBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

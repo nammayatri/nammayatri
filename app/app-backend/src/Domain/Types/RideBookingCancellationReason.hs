@@ -3,7 +3,6 @@
 module Domain.Types.RideBookingCancellationReason where
 
 import Beckn.Prelude
-import Beckn.Types.Core.Taxi.Common.CancellationSource (CancellationSource)
 import Beckn.Types.Id
 import Domain.Types.CancellationReason (CancellationReasonCode, CancellationStage)
 import Domain.Types.Ride (Ride)
@@ -19,3 +18,10 @@ data RideBookingCancellationReason = RideBookingCancellationReason
     additionalInfo :: Maybe Text
   }
   deriving (Generic, Show)
+
+data CancellationSource
+  = ByUser
+  | ByDriver
+  | ByOrganization
+  | ByAllocator
+  deriving (Show, Eq, Ord, Read, Generic)

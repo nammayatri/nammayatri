@@ -1,12 +1,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
-module Domain.Types.RideBookingCancellationReason
-  ( module Reexport,
-    module Domain.Types.RideBookingCancellationReason,
-  )
-where
+module Domain.Types.RideBookingCancellationReason where
 
-import Beckn.Types.Core.Taxi.Common.CancellationSource as Reexport (CancellationSource (..))
 import Beckn.Types.Id
 import Domain.Types.CancellationReason (CancellationReasonCode)
 import Domain.Types.Person (Person)
@@ -24,3 +19,10 @@ data RideBookingCancellationReason = RideBookingCancellationReason
     additionalInfo :: Maybe Text
   }
   deriving (Generic)
+
+data CancellationSource
+  = ByUser
+  | ByDriver
+  | ByOrganization
+  | ByAllocator
+  deriving (Show, Eq, Ord, Read, Generic)

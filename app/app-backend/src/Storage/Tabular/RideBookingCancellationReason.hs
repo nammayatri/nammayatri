@@ -9,13 +9,14 @@ module Storage.Tabular.RideBookingCancellationReason where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Core.Taxi.Common.CancellationSource (CancellationSource)
 import Beckn.Types.Id
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.RideBookingCancellationReason as Domain
 import qualified Storage.Tabular.CancellationReason as SCR
 import qualified Storage.Tabular.Ride as SRide
 import qualified Storage.Tabular.RideBooking as SRB
+
+derivePersistField "Domain.CancellationSource"
 
 mkPersist
   defaultSqlSettings
@@ -24,7 +25,7 @@ mkPersist
       id Text
       rideBookingId SRB.RideBookingTId
       rideId SRide.RideTId Maybe
-      source CancellationSource
+      source Domain.CancellationSource
       reasonCode SCR.CancellationReasonTId Maybe
       reasonStage DCR.CancellationStage Maybe
       additionalInfo Text Maybe

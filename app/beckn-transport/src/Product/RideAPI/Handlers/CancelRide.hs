@@ -2,7 +2,6 @@ module Product.RideAPI.Handlers.CancelRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Taxi.Common.CancellationSource as Cancel
 import Beckn.Types.Id
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
@@ -29,11 +28,11 @@ cancelRideHandler ServiceHandle {..} personId rideId req = do
       >>= fromMaybeM (PersonNotFound personId.getId)
   rideCancelationReason <- case authPerson.role of
     Person.ADMIN -> do
-      buildRideCancelationReason Nothing Cancel.ByOrganization ride
+      buildRideCancelationReason Nothing SBCR.ByOrganization ride
     Person.DRIVER -> do
       let driverId = ride.driverId
       unless (authPerson.id == driverId) $ throwError NotAnExecutor
-      buildRideCancelationReason (Just driverId) Cancel.ByDriver ride
+      buildRideCancelationReason (Just driverId) SBCR.ByDriver ride
   cancelRide rideId rideCancelationReason
   pure APISuccess.Success
   where

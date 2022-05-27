@@ -19,6 +19,6 @@ newtype OnConfirmReq = OnConfirmReq
 
 onConfirm :: EsqDBFlow m r => OnConfirmReq -> m ()
 onConfirm req = do
-  booking <- QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM RideBookingDoesNotExist
+  booking <- QRB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideBookingId" <> req.bppBookingId.getId)
   DB.runTransaction $ do
     QRB.updateStatus booking.id DRB.CONFIRMED
