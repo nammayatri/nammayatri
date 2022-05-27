@@ -5,7 +5,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
-import qualified Domain.Types.FareProduct as SFP
+import qualified "beckn-transport" Domain.Types.FareProduct as SFP
 import Domain.Types.Vehicle
 import EulerHS.Prelude
 import qualified "beckn-transport" Storage.Queries.DriverInformation as Q
@@ -26,6 +26,7 @@ spec = do
       it "Test downgrading driver with sedan ride request" testDowngradingDriverWithSedan
       it "Test downgrading driver with hatchback ride request" testDowngradingDriverWithHatchback
       it "Test isRental" testIsRental
+      it "Test notRental" testNotRental
 
 testOrder :: IO ()
 testOrder = do
@@ -71,8 +72,17 @@ testDowngradingDriverWithHatchback = do
 
 testIsRental :: IO ()
 testIsRental = do
+  runTransporterFlow "suvDriver is Rental" $ setSuvDriverRental True
   res <-
     runTransporterFlow "Test isRental" $
+      Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL <&> getIds
+  res `shouldBe` [suvDriver]
+
+testNotRental :: IO ()
+testNotRental = do
+  runTransporterFlow "suvDriver not Rental" $ setSuvDriverRental False
+  res <-
+    runTransporterFlow "Test notRental" $
       Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL <&> getIds
   res `shouldBe` []
 
@@ -108,3 +118,8 @@ setDriversActive :: Bool -> FlowR BecknTransport.AppEnv ()
 setDriversActive isActive = Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, otherDriver, suvDriver, sedanDriver, hatchbackDriver]
   forM_ drivers (\driver -> Q.updateActivity (Id driver) isActive)
+
+setSuvDriverRental :: Bool -> FlowR BecknTransport.AppEnv ()
+setSuvDriverRental isRental = Esq.runTransaction $ do
+  _ <- Q.updateRental (Id suvDriver) isRental
+  return ()
