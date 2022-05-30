@@ -11,6 +11,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Logging
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
@@ -75,11 +76,12 @@ buildQuoteInfo ::
   OnSearch.Item ->
   m DOnSearch.QuoteInfo
 buildQuoteInfo item = do
-  quoteInfoDetails <- case item.category_id of
-    OnSearch.ONE_WAY_TRIP -> DOnSearch.OneWayDetails <$> buildOneWayQuoteDetails item
-    OnSearch.RENTAL_TRIP -> DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
+  quoteDetails <- case item.category_id of
+    OnSearch.ONE_WAY_TRIP -> DQuote.OneWayDetails <$> buildOneWayQuoteDetails item
+    OnSearch.RENTAL_TRIP -> DQuote.RentalDetails <$> buildRentalQuoteDetails item
   let itemCode = item.descriptor.code
       vehicleVariant = itemCode.vehicleVariant
+  descriptions <- item.quote_terms & fromMaybeM (InvalidRequest "Missing quote_terms in rental search item")
   pure
     DOnSearch.QuoteInfo
       { estimatedFare = realToFrac item.price.value,
@@ -97,7 +99,7 @@ buildQuoteInfo item = do
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DOnSearch.OneWayQuoteInfoDetails
+  m DQuote.OneWayQuoteDetails
 buildOneWayQuoteDetails _item = do
   distanceToNearestDriver <- undefined & fromMaybeM (InvalidRequest "Missing nearest_driver_distance in one way search item")
   pure
@@ -108,9 +110,8 @@ buildOneWayQuoteDetails _item = do
 buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DOnSearch.RentalQuoteInfoDetails
+  m DQuote.RentalQuoteDetails
 buildRentalQuoteDetails item = do
   baseDistance <- item.base_distance & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
   baseDuration <- item.base_duration & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
-  descriptions <- item.quote_terms & fromMaybeM (InvalidRequest "Missing quote_terms in rental search item")
-  pure DOnSearch.RentalQuoteInfoDetails {..}
+  pure DQuote.RentalQuoteDetails {..}

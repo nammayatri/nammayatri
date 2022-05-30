@@ -2,16 +2,16 @@ module Product.BecknProvider.Cancel where
 
 import App.Types (FlowHandler)
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
-import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import qualified Core.ACL.Cancel as ACL
 import Data.Aeson (encode)
+import qualified Domain.Action.Beckn.Cancel as DCancel
 import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Ride as SRide
@@ -40,20 +40,13 @@ cancel ::
   SignatureAuthResult ->
   Cancel.CancelReq ->
   FlowHandler AckResponse
-cancel transporterId (SignatureAuthResult signPayload _) req = withFlowHandlerBecknAPI $
-  withTransactionIdLogTag req $ do
-    let context = req.context
-    validateContext Context.CANCEL context
-    let bookingId = req.message.order_id
-    transporterOrg <-
-      Organization.findById transporterId
-        >>= fromMaybeM (OrgNotFound transporterId.getId)
-    rideBooking <- QRB.findById (Id bookingId) >>= fromMaybeM (RideBookingDoesNotExist bookingId)
-    now <- getCurrentTime
-    rideReq <- BP.buildRideReq (rideBooking.id) (transporterOrg.shortId) SRideRequest.CANCELLATION now
+cancel transporterId subscriber@(SignatureAuthResult signPayload _) req =
+  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+    logTagInfo "Cancel API Flow" "Reached"
     Esq.runTransaction $ do
       QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
-      RideRequest.create rideReq
+    dConfirmReq <- ACL.buildCancelReq req
+    DCancel.cancel transporterId subscriber dConfirmReq
     return Ack
 
 cancelRide ::

@@ -87,3 +87,19 @@ updatePaymentInfo rbId estimatedFare discount estimatedTotalFare = do
         RB.RideBookingEstimatedTotalFare =. val estimatedTotalFare
       ]
     where_ $ tbl ^. RB.RideBookingId ==. val (getId rbId)
+
+findAllByPersonIdLimitOffset ::
+  Transactionable m =>
+  Id Person ->
+  Maybe Integer ->
+  Maybe Integer ->
+  m [RideBooking]
+findAllByPersonIdLimitOffset personId mlimit moffset =
+  Esq.findAll $ do
+    rideBooking <- from $ table @RB.RideBookingT
+    where_ $
+      rideBooking ^. RB.RideBookingRiderId ==. val (toKey personId)
+    limit $ fromIntegral $ fromMaybe 100 mlimit
+    offset $ fromIntegral $ fromMaybe 0 moffset
+    orderBy [desc $ rideBooking ^. RB.RideBookingCreatedAt]
+    return rideBooking

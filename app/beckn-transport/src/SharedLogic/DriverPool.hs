@@ -59,11 +59,11 @@ getDriverPool rideBookingId =
     calcDriverPool = do
       rideBooking <- QRideBooking.findById rideBookingId >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
       let vehicleVariant = rideBooking.vehicleVariant
-          pickupPoint = rideBooking.fromLocationId
           orgId = rideBooking.providerId
+      pickupLoc <- QBLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
+      let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           fareProductType = SRB.getFareProductType rideBooking.rideBookingDetails
-      driverPoolResults <- calculateDriverPool pickupPoint orgId (Just vehicleVariant) fareProductType
-      pure $ map (.driverId) driverPoolResults
+      map (.driverId) <$> calculateDriverPool pickupLatLong orgId (Just vehicleVariant) fareProductType
 
 recalculateDriverPool ::
   ( EsqDBFlow m r,
@@ -78,7 +78,9 @@ recalculateDriverPool ::
   SFP.FareProductType ->
   m [DriverPoolResult]
 recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant fareProductType = do
-  driverPoolResults <- calculateDriverPool pickupPoint transporterId (Just vehicleVariant) fareProductType
+  pickupLoc <- QBLoc.findById pickupPoint >>= fromMaybeM LocationNotFound
+  let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
+  driverPoolResults <- calculateDriverPool pickupLatLong transporterId (Just vehicleVariant) fareProductType
   cancelledDrivers <- QRide.findAllCancelledByRBId rideBookingId <&> map (cast . (.driverId))
   let filteredDriverPoolResults = [x | x <- driverPoolResults, x.driverId `notElem` cancelledDrivers]
       filteredDriverPool = map (.driverId) filteredDriverPoolResults
@@ -91,14 +93,12 @@ calculateDriverPool ::
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
-  Id DBLoc.BookingLocation ->
+  LatLong ->
   Id SOrg.Organization ->
   Maybe SV.Variant ->
   SFP.FareProductType ->
   m [DriverPoolResult]
-calculateDriverPool locId orgId variant fareProductType = do
-  pickupLoc <- QBLoc.findById locId >>= fromMaybeM LocationNotFound
-  let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
+calculateDriverPool pickupLatLong orgId variant fareProductType = do
   radius <- getRadius
   nearestDriversResult <-
     measuringDurationToLog INFO "calculateDriverPool" $

@@ -55,7 +55,8 @@ onSearchCallback ::
   DLoc.SearchReqLocation ->
   m [QuoteInfo]
 onSearchCallback searchRequest transporterId now fromLocation toLocation = do
-  pool <- DrPool.calculateDriverPool undefined transporterId Nothing SFP.ONE_WAY
+  let fromLoc = Loc.locationToLatLong fromLocation
+  pool <- DrPool.calculateDriverPool fromLoc transporterId Nothing SFP.ONE_WAY
 
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId

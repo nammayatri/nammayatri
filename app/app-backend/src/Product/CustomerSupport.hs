@@ -8,17 +8,17 @@ import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import qualified Domain.Types.BookingLocation as DBLoc
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
-import qualified Domain.Types.SearchReqLocation as SSearchLoc
-import Domain.Types.SearchRequest as C
+import qualified Domain.Types.RideBooking as DRB
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Product.RideBooking (buildRideBookingStatusRes)
+import qualified Storage.Queries.BookingLocation as QBLoc
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import qualified Storage.Queries.SearchReqLocation as Location
-import Storage.Queries.SearchRequest as SearchRequest
+import qualified Storage.Queries.RideBooking as QRB
 import Types.API.CustomerSupport as T
 import Types.Error
 import Utils.Common
@@ -75,46 +75,45 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
   supportP <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
     throwError AccessDenied
-  T.OrderInfo {person, searchRequests} <- case (mRequestId, mMobile) of
-    (Just searchRequestId, _) -> getByRequestId searchRequestId
+  T.OrderInfo {person, bookings} <- case (mRequestId, mMobile) of
+    (Just bookingId, _) -> getByRequestId bookingId
     (_, Just mobileNumber) -> getByMobileNumber mobileNumber
     (_, _) -> throwError $ InvalidRequest "You should pass SearchRequestId or mobile number."
-  traverse (buildSearchRequestToOrder person) searchRequests
+  traverse (buildRideBookingToOrder person) bookings
   where
     getByMobileNumber number = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
       person <-
         Person.findByRoleAndMobileNumberWithoutCC SP.USER number
           >>= fromMaybeM (PersonDoesNotExist number)
-      searchRequests <-
-        SearchRequest.findAllByPersonIdLimitOffset (person.id) (Just limit) moffset
-      return $ T.OrderInfo person searchRequests
-    getByRequestId searchRequestId = do
-      (searchRequest :: C.SearchRequest) <-
-        SearchRequest.findById (Id searchRequestId)
-          >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId)
-      let requestorId = searchRequest.riderId
+      bookings <-
+        QRB.findAllByPersonIdLimitOffset (person.id) (Just limit) moffset
+      return $ T.OrderInfo person bookings
+    getByRequestId bookingId = do
+      (booking :: DRB.RideBooking) <-
+        QRB.findById (Id bookingId)
+          >>= fromMaybeM (RideBookingDoesNotExist bookingId)
+      let requestorId = booking.riderId
       person <-
         Person.findById requestorId
           >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
-      return $ T.OrderInfo person [searchRequest]
+      return $ T.OrderInfo person [booking]
 
-buildSearchRequestToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> C.SearchRequest -> m T.OrderResp
-buildSearchRequestToOrder SP.Person {firstName, lastName, mobileNumber} C.SearchRequest {..} = do
-  fromLocation <- Location.findById fromLocationId
-  toLocation <- join <$> mapM Location.findById toLocationId
-  rideBooking <- undefined
-  rbStatus <- buildRideBookingStatusRes `mapM` rideBooking
+buildRideBookingToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> DRB.RideBooking -> m T.OrderResp
+buildRideBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
+  fromLocation <- QBLoc.findById booking.fromLocationId
+  toLocation <- join <$> (QBLoc.findById `traverse` booking.toLocationId)
+  rbStatus <- buildRideBookingStatusRes booking
   decMobNum <- mapM decrypt mobileNumber
   let details =
         T.OrderDetails
-          { id = getId id,
-            createdAt = createdAt,
-            updatedAt = createdAt,
-            startTime = startTime,
+          { id = getId booking.id,
+            createdAt = booking.createdAt,
+            updatedAt = booking.updatedAt,
+            startTime = booking.startTime,
             endTime = Nothing,
-            fromLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> fromLocation,
-            toLocation = SSearchLoc.makeSearchReqLocationAPIEntity <$> toLocation,
+            fromLocation = DBLoc.makeBookingLocationAPIEntity <$> fromLocation,
+            toLocation = DBLoc.makeBookingLocationAPIEntity <$> toLocation,
             travellerName = firstName <> lastName,
             travellerPhone = decMobNum,
             rideBooking = rbStatus

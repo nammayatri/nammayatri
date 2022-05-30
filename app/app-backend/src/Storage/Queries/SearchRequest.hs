@@ -10,22 +10,6 @@ import Storage.Tabular.SearchRequest
 create :: SearchRequest -> SqlDB ()
 create = create'
 
-findAllByPersonIdLimitOffset ::
-  Transactionable m =>
-  Id Person ->
-  Maybe Integer ->
-  Maybe Integer ->
-  m [SearchRequest]
-findAllByPersonIdLimitOffset personId mlimit moffset =
-  Esq.findAll $ do
-    searchRequest <- from $ table @SearchRequestT
-    where_ $
-      searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
-    limit $ fromIntegral $ fromMaybe 100 mlimit
-    offset $ fromIntegral $ fromMaybe 0 moffset
-    orderBy [desc $ searchRequest ^. SearchRequestCreatedAt]
-    return searchRequest
-
 findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 findById = Esq.findById
 

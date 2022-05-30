@@ -2,9 +2,9 @@ module Types.API.CustomerSupport where
 
 import Data.OpenApi (ToSchema)
 import Data.Time
+import Domain.Types.BookingLocation
 import qualified Domain.Types.Person as P
-import Domain.Types.SearchReqLocation as L
-import Domain.Types.SearchRequest as C
+import Domain.Types.RideBooking (RideBooking)
 import EulerHS.Prelude hiding (id)
 import Types.API.RideBooking (RideBookingStatusRes)
 
@@ -17,17 +17,17 @@ data OrderDetails = OrderDetails
     updatedAt :: UTCTime,
     startTime :: UTCTime,
     endTime :: Maybe UTCTime,
-    fromLocation :: Maybe L.SearchReqLocationAPIEntity,
-    toLocation :: Maybe L.SearchReqLocationAPIEntity,
+    fromLocation :: Maybe BookingLocationAPIEntity,
+    toLocation :: Maybe BookingLocationAPIEntity,
     travellerName :: Maybe Text,
     travellerPhone :: Maybe Text,
-    rideBooking :: Maybe RideBookingStatusRes
+    rideBooking :: RideBookingStatusRes
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
 data OrderInfo = OrderInfo
   { person :: P.Person,
-    searchRequests :: [C.SearchRequest]
+    bookings :: [RideBooking]
   }
   deriving (Generic)
 

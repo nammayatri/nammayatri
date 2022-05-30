@@ -14,7 +14,7 @@ import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnConfirm as ACL
 import Data.Aeson (encode)
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.Organization as Organization
+import qualified Domain.Types.Organization as Org
 import qualified ExternalAPI.Flow as ExternalAPI
 import Utils.Common
 

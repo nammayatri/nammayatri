@@ -86,7 +86,6 @@ confirm transporterId subscriber req = do
         when isNewRider $ QRD.create riderDetails
         QRB.updateStatus booking.id SRB.CONFIRMED
         QBL.updateAddress booking.fromLocationId req.fromAddress
-        RideRequest.create rideRequest
         whenJust booking.discount $ \disc ->
           QDiscTransaction.create $ mkDiscountTransaction booking disc now
         addons
@@ -94,7 +93,8 @@ confirm transporterId subscriber req = do
   fromLocation <- QBL.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
   res <- case booking.rideBookingDetails of
     SRB.OneWayDetails details -> do
-      finalTransaction $
+      finalTransaction $ do
+        RideRequest.create rideRequest
         whenJust req.toAddress $ \toAddr -> QBL.updateAddress details.toLocationId toAddr
       toLocation <- QBL.findById details.toLocationId >>= fromMaybeM LocationNotFound
       return $

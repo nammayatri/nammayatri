@@ -6,12 +6,15 @@ module Product.Confirm
 where
 
 import App.Types
+import qualified Beckn.Storage.Esqueleto as DB
+import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.APISuccess
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnConfirm as ACL
+import Data.Aeson (encode)
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Person as SP
@@ -42,7 +45,7 @@ onConfirm ::
   SignatureAuthResult ->
   OnConfirm.OnConfirmReq ->
   FlowHandler AckResponse
-onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onConfirm (SignatureAuthResult signPayload _) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnConfirmReq <- ACL.buildOnConfirmReq req
   DB.runTransaction $ do
     QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)

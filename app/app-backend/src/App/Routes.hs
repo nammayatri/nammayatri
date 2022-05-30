@@ -48,7 +48,6 @@ import qualified Product.Update as Update
 import Servant hiding (throwError)
 import Servant.OpenApi
 import qualified Types.API.Call as API
-import qualified Types.API.Cancel as Cancel
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.CustomerSupport as CustomerSupport
 import qualified Types.API.Feedback as Feedback
@@ -88,7 +87,7 @@ type UIAPI =
     :<|> QuoteAPI
     :<|> Confirm.ConfirmAPI
     :<|> RideBookingAPI
-    :<|> CancelAPI
+    :<|> Cancel.CancelAPI
     :<|> RideAPI
     :<|> CallAPIs
     :<|> SupportAPI
@@ -247,15 +246,7 @@ rideBookingFlow =
 
 -------- Cancel Flow----------
 
-type CancelAPI =
-  "rideBooking"
-    :> Capture "bookingId" (Id SRB.RideBooking)
-    :> "cancel"
-    :> TokenAuth
-    :> ReqBody '[JSON] Cancel.CancelReq
-    :> Post '[JSON] Cancel.CancelRes
-
-cancelFlow :: FlowServer CancelAPI
+cancelFlow :: FlowServer Cancel.CancelAPI
 cancelFlow =
   Cancel.cancel
 
