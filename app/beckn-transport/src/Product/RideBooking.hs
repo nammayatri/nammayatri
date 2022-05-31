@@ -209,4 +209,4 @@ buildRideBookingStatusRes rideBooking = do
 getDropLocation :: EsqDBFlow m r => SRB.RideBookingDetails -> m (Maybe SLoc.SearchReqLocation)
 getDropLocation = \case
   SRB.OneWayDetails details -> QLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound . Just
-  SRB.RentalDetails -> pure Nothing
+  SRB.RentalDetails _ -> pure Nothing

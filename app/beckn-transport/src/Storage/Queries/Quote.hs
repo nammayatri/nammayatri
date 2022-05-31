@@ -6,6 +6,7 @@ import Beckn.Types.Id
 import Domain.Types.Products
 import Domain.Types.Quote
 import Domain.Types.Quote.OneWayQuote
+import Domain.Types.Quote.RentalQuote
 import Domain.Types.SearchRequest
 import Storage.Tabular.Quote
 
@@ -14,7 +15,7 @@ create quote = do
   create' quote
   case quote.quoteDetails of
     OneWayDetails oneWayDetails -> create' (mkOneWayQuote quote.id oneWayDetails)
-    RentalDetails _ -> pure ()
+    RentalDetails rentalDetails -> create' (mkRentalQuote quote.id rentalDetails)
 
 findAllByProductIds :: Transactionable m => Integer -> Integer -> [Id Products] -> m [Quote]
 findAllByProductIds limit_ offset_ ids = do

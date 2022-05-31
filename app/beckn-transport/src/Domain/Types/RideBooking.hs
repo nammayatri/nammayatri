@@ -9,15 +9,16 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
+import qualified Domain.Types.FareProduct as SFP
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API
-import qualified Domain.Types.FareProduct as SFP
 
 data RideBookingStatus
   = CONFIRMED
@@ -60,7 +61,7 @@ data RideBooking = RideBooking
   }
   deriving (Generic)
 
-data RideBookingDetails = OneWayDetails OneWayRideBookingDetails | RentalDetails
+data RideBookingDetails = OneWayDetails OneWayRideBookingDetails | RentalDetails RentalRideBookingDetails
   deriving (Eq)
 
 data OneWayRideBookingDetails = OneWayRideBookingDetails
@@ -69,7 +70,15 @@ data OneWayRideBookingDetails = OneWayRideBookingDetails
   }
   deriving (Eq)
 
+newtype RentalRideBookingDetails = RentalRideBookingDetails
+  { rentalFarePolicyId :: Id DRentalFP.RentalFarePolicy
+  }
+  deriving (Eq)
+
+mkRentalRideBookingDetails :: Id DRentalFP.RentalFarePolicy -> RideBookingDetails
+mkRentalRideBookingDetails rentalFarePolicyId = RentalDetails $ RentalRideBookingDetails {..}
+
 getFareProductType :: RideBookingDetails -> SFP.FareProductType
 getFareProductType = \case
   OneWayDetails _ -> SFP.ONE_WAY
-  RentalDetails -> SFP.RENTAL
+  RentalDetails _ -> SFP.RENTAL

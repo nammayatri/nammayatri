@@ -34,3 +34,4 @@ startRide personId rideId req = withFlowHandlerAPI $ do
 startRideTransaction :: EsqDBFlow m r => Id SRide.Ride -> m ()
 startRideTransaction rideId = Esq.runTransaction $ do
   QRide.updateStatus rideId SRide.INPROGRESS
+  QRide.updateStartTime rideId

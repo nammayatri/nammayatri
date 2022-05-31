@@ -47,6 +47,8 @@ data Ride = Ride
     totalFare :: Maybe Amount,
     traveledDistance :: Double,
     chargeableDistance :: Maybe Double,
+    tripStartTime :: Maybe UTCTime,
+    tripEndTime :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

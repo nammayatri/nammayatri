@@ -9,6 +9,7 @@ import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Fixtures
 import Product.FareCalculator.Flow
+import Product.RentalFareCalculator.Flow
 import qualified Product.RideAPI.Handlers.EndRide as Handle
 import Test.Hspec
 import Test.Tasty
@@ -23,7 +24,8 @@ endRideTests =
     "Ending ride"
     [ testGroup
         "Successful"
-        [ successfulEndByDriver
+        [ successfulEndByDriver,
+          successfulEndRental
         ],
       testGroup
         "Failing"
@@ -42,13 +44,15 @@ handle =
         Id "1" -> pure $ Just Fixtures.defaultDriver
         Id "2" -> pure . Just $ Fixtures.defaultDriver{id = "2"}
         Id "admin" -> pure $ Just Fixtures.defaultAdmin
-        _ -> throwError (PersonDoesNotExist ""),
+        Id personId -> throwError (PersonDoesNotExist personId),
       findRideBookingById = \rbId -> pure $ case rbId of
         Id "rideBooking" -> Just rideBooking
+        Id "rentalRideBooking" -> Just rentalRideBooking
         _ -> Nothing,
       findRideById = \rideId -> pure $ case rideId of
         Id "ride" -> Just ride
         Id "completed_ride" -> Just ride{status = Ride.COMPLETED}
+        Id "rentalRide" -> Just rentalRide
         _ -> Nothing,
       findSearchRequestById = \searchRequestId ->
         if searchRequestId == "search"
@@ -62,6 +66,15 @@ handle =
             { baseFare = 100,
               distanceFare = 0,
               nightShiftRate = 0,
+              discount = Nothing
+            },
+      calculateRentalFare = \_ _ _ _ ->
+        pure $
+          RentalFareParameters
+            { baseFare = 100,
+              extraDistanceFare = 0,
+              extraTimeFare = 0,
+              nextDaysFare = Nothing,
               discount = Nothing
             },
       recalculateFareEnabled = pure False,
@@ -86,12 +99,30 @@ ride =
       Ride.bookingId = Id "rideBooking"
     }
 
+rentalRide :: Ride.Ride
+rentalRide =
+  ride
+    { Ride.id = "rentalRide",
+      Ride.bookingId = Id "rentalRideBooking"
+    }
+
 rideBooking :: SRB.RideBooking
 rideBooking =
   Fixtures.defaultRideBooking
     { SRB.id = Id "rideBooking",
       SRB.status = SRB.TRIP_ASSIGNED,
       SRB.quoteId = Id "search"
+    }
+
+rentalRideBooking :: SRB.RideBooking
+rentalRideBooking = do
+  let details =
+        SRB.RentalRideBookingDetails
+          { SRB.rentalFarePolicyId = Id "rentalFarePolicy"
+          }
+  rideBooking
+    { SRB.id = Id "rentalRideBooking",
+      SRB.rideBookingDetails = SRB.RentalDetails details
     }
 
 searchRequest :: SearchRequest.SearchRequest
@@ -105,6 +136,11 @@ successfulEndByDriver :: TestTree
 successfulEndByDriver =
   testCase "Requested by correct driver" $
     endRide "1" "ride" `shouldReturn` APISuccess.Success
+
+successfulEndRental :: TestTree
+successfulEndRental =
+  testCase "Requested for rentals by correct driver" $
+    endRide "1" "rentalRide" `shouldReturn` APISuccess.Success
 
 failedEndRequestedByWrongDriver :: TestTree
 failedEndRequestedByWrongDriver =
@@ -124,9 +160,9 @@ failedEndWhenRideStatusIsWrong =
 failedEndNonexistentRide :: TestTree
 failedEndNonexistentRide =
   testCase "A ride does not even exist" $
-    endRide "1" "nonexistent_ride" `shouldThrow` (== RideDoesNotExist "")
+    endRide "1" "nonexistent_ride" `shouldThrow` (== RideDoesNotExist "nonexistent_ride")
 
 failedEndNonexistentDriver :: TestTree
 failedEndNonexistentDriver =
   testCase "A driver does not even exist" $
-    endRide "nonexistent_driver" "ride" `shouldThrow` (== PersonDoesNotExist "")
+    endRide "nonexistent_driver" "ride" `shouldThrow` (== PersonDoesNotExist "nonexistent_driver")

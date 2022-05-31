@@ -2,6 +2,7 @@ CREATE TABLE atlas_transporter.quote_bak_1022 AS TABLE atlas_transporter.quote;
 CREATE TABLE atlas_transporter.ride_booking_bak_1022 AS TABLE atlas_transporter.ride_booking;
 CREATE TABLE atlas_transporter.fare_policy_discount_bak_1022 AS TABLE atlas_transporter.fare_policy_discount;
 CREATE TABLE atlas_transporter.search_request_bak_1022 AS TABLE atlas_transporter.search_request;
+CREATE TABLE atlas_transporter.ride_bak_1022 AS TABLE atlas_transporter.ride;
 
 CREATE TABLE atlas_transporter.fare_product (
     id character(36) NOT NULL PRIMARY KEY,
@@ -47,6 +48,16 @@ INSERT INTO atlas_transporter.one_way_quote (quote_id, distance, distance_to_nea
         T1.distance_to_nearest_driver
     FROM atlas_transporter.quote AS T1;
 
+CREATE TABLE atlas_transporter.rental_quote (
+    quote_id character(36) NOT NULL PRIMARY KEY REFERENCES atlas_transporter.quote (id),
+    rental_fare_policy_id character(36) NOT NULL REFERENCES atlas_transporter.rental_fare_policy (id)
+);
+
+CREATE TABLE atlas_transporter.rental_ride_booking (
+    ride_booking_id character(36) NOT NULL PRIMARY KEY REFERENCES atlas_transporter.ride_booking (id),
+    rental_fare_policy_id character(36) NOT NULL REFERENCES atlas_transporter.rental_fare_policy (id)
+);
+
 ALTER TABLE atlas_transporter.quote DROP COLUMN distance;
 ALTER TABLE atlas_transporter.quote DROP COLUMN distance_to_nearest_driver;
 ALTER TABLE atlas_transporter.quote ADD COLUMN fare_product_type character varying(255) NOT NULL DEFAULT 'ONE_WAY';
@@ -54,6 +65,9 @@ ALTER TABLE atlas_transporter.quote ADD COLUMN fare_product_type character varyi
 ALTER TABLE atlas_transporter.ride_booking RENAME COLUMN distance TO estimated_distance;
 ALTER TABLE atlas_transporter.ride_booking ALTER COLUMN estimated_distance DROP NOT NULL;
 ALTER TABLE atlas_transporter.ride_booking ALTER COLUMN to_location_id DROP NOT NULL;
+
+ALTER TABLE atlas_transporter.ride ADD COLUMN trip_start_time timestamp with time zone;
+ALTER TABLE atlas_transporter.ride ADD COLUMN trip_end_time timestamp with time zone;
 
 ALTER TABLE atlas_transporter.search_request ALTER COLUMN to_location_id DROP NOT NULL;
 

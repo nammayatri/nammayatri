@@ -8,13 +8,15 @@ import Data.Time (NominalDiffTime)
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.SearchRequest as SSearchRequest
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (pi)
-import qualified Product.FareCalculator.Interpreter as Fare
+import qualified Product.FareCalculator as Fare
 import Product.Location
+import qualified Product.RentalFareCalculator as RentalFare
 import Types.App (Driver)
 import Types.Error
 import Utils.Common
@@ -32,6 +34,12 @@ data ServiceHandle m = ServiceHandle
       Meter ->
       UTCTime ->
       m Fare.FareParameters,
+    calculateRentalFare ::
+      Id DRentalFP.RentalFarePolicy ->
+      Meter ->
+      UTCTime ->
+      UTCTime ->
+      m RentalFare.RentalFareParameters,
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Amount -> Double -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
@@ -61,12 +69,17 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
-  (chargeableDistance, fare, totalFare) <- recalculateFare rideBooking ride
+  now <- getCurrentTime
+  (chargeableDistance, fare, totalFare) <- do
+    case rideBooking.rideBookingDetails of
+      SRB.OneWayDetails oneWayDetails -> recalculateFare rideBooking ride oneWayDetails now
+      SRB.RentalDetails rentalDetails -> calcRentalFare rideBooking ride rentalDetails now
 
   let updRide =
         ride{chargeableDistance = Just chargeableDistance,
              fare = Just fare,
-             totalFare = Just totalFare
+             totalFare = Just totalFare,
+             tripEndTime = Just now
             }
 
   endRideTransaction rideBooking.id updRide (cast driverId)
@@ -75,8 +88,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   return APISuccess.Success
   where
-    lastLocUdateTooLongAgo = do
-      now <- getCurrentTime
+    lastLocUpdateTooLongAgo now = do
       allowedUpdatesDelay <- updateLocationAllowedDelay
       res <-
         findDriverLocById requestorId
@@ -91,21 +103,18 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       logDebug $ "there were missing location updates: " <> show res
       pure res
 
-    recalculateFare rideBooking ride = do
+    recalculateFare rideBooking ride oneWayDetails now = do
       let transporterId = rideBooking.providerId
           vehicleVariant = rideBooking.vehicleVariant
 
-          -- FIXME fix logic for Rental case
           actualDistance = ride.traveledDistance
-          oldDistance = case rideBooking.rideBookingDetails of
-            SRB.OneWayDetails details -> details.estimatedDistance
-            SRB.RentalDetails -> actualDistance
+          oldDistance = oneWayDetails.estimatedDistance
 
           estimatedFare = rideBooking.estimatedFare
       shouldRecalculateFare <- recalculateFareEnabled
       missingLocationUpdates <-
         (||)
-          <$> lastLocUdateTooLongAgo
+          <$> lastLocUpdateTooLongAgo now
           <*> thereWereMissingLocUpdates
       if shouldRecalculateFare && not missingLocationUpdates
         then do
@@ -122,3 +131,23 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           putDiffMetric fareDiff distanceDiff
           pure (actualDistance, updatedFare, totalFare)
         else pure (oldDistance, estimatedFare, rideBooking.estimatedTotalFare)
+
+    calcRentalFare rideBooking ride rentalDetails now = do
+      let actualDistance = ride.traveledDistance
+      fareParams <- calculateRentalFare rentalDetails.rentalFarePolicyId (Meter actualDistance) rideBooking.startTime now
+      let fare = RentalFare.rentalFareSum fareParams
+          totalFare = RentalFare.rentalFareSumWithDiscount fareParams
+      logTagInfo "Rental fare calculation" $
+        "Base fare: "
+          <> show (amountToDouble fareParams.baseFare)
+          <> ", Extra distance fare: "
+          <> show (amountToDouble fareParams.extraDistanceFare)
+          <> ", Extra time fare: "
+          <> show (amountToDouble fareParams.extraTimeFare)
+          <> ", Next days fare: "
+          <> show (amountToDouble (fromMaybe 0 fareParams.nextDaysFare))
+          <> ", Discount: "
+          <> show (amountToDouble (fromMaybe 0 fareParams.discount))
+      -- Do we ned this metrics in rental case?
+      -- putDiffMetric fareDiff distanceDiff
+      pure (actualDistance, fare, totalFare)

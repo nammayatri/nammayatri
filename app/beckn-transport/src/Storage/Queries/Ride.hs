@@ -114,6 +114,19 @@ updateStatus rideId status = do
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
+updateStartTime ::
+  Id Ride ->
+  SqlDB ()
+updateStartTime rideId = do
+  now <- getCurrentTime
+  update' $ \tbl -> do
+    set
+      tbl
+      [ RideTripStartTime =. val (Just now),
+        RideUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideTId ==. val (toKey rideId)
+
 updateStatusByIds ::
   [Id Ride] ->
   RideStatus ->
@@ -157,6 +170,7 @@ updateAll rideId ride = do
         RideFare =. val ride.fare,
         RideTotalFare =. val ride.totalFare,
         RideChargeableDistance =. val ride.chargeableDistance,
+        RideTripEndTime =. val ride.tripEndTime,
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)

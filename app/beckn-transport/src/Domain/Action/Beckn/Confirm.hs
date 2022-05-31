@@ -129,7 +129,8 @@ handler transporter req = do
                 { estimatedDistance = oneWayQuote.distance,
                   ..
                 }
-        DQuote.RentalDetails _ -> pure SRB.RentalDetails
+        DQuote.RentalDetails DQuote.RentalQuoteDetails {rentalFarePolicyId} -> do
+          pure $ SRB.RentalDetails SRB.RentalRideBookingDetails {rentalFarePolicyId}
       pure SRB.RideBooking {..}
 
 createScheduleRentalRideRequestJob :: UTCTime -> Scheduler.AllocateRentalJobData -> SqlDB ()

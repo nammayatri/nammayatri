@@ -6,7 +6,7 @@ import Data.Time
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Organization as DOrg
 import Domain.Types.Products (Products)
-import qualified Domain.Types.RentalFarePolicy as DRentalFarePolicy
+import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
@@ -33,7 +33,8 @@ data OneWayQuoteDetails = OneWayQuoteDetails
   }
 
 data RentalQuoteDetails = RentalQuoteDetails
-  { baseDistance :: Double,
+  { rentalFarePolicyId :: Id DRentalFP.RentalFarePolicy,
+    baseDistance :: Double,
     baseDurationHr :: Int,
     descriptions :: [Text]
   }
@@ -43,16 +44,17 @@ getFareProductType = \case
   OneWayDetails _ -> DFareProduct.ONE_WAY
   RentalDetails _ -> DFareProduct.RENTAL
 
-mkRentalQuoteDetails :: DRentalFarePolicy.RentalFarePolicy -> QuoteDetails
-mkRentalQuoteDetails rentalFarePolicy@DRentalFarePolicy.RentalFarePolicy {..} =
+mkRentalQuoteDetails :: DRentalFP.RentalFarePolicy -> QuoteDetails
+mkRentalQuoteDetails rentalFarePolicy@DRentalFP.RentalFarePolicy {..} =
   RentalDetails $
     RentalQuoteDetails
       { descriptions = mkDescriptions rentalFarePolicy,
+        rentalFarePolicyId = id,
         ..
       }
 
-mkDescriptions :: DRentalFarePolicy.RentalFarePolicy -> [Text]
-mkDescriptions DRentalFarePolicy.RentalFarePolicy {..} =
+mkDescriptions :: DRentalFP.RentalFarePolicy -> [Text]
+mkDescriptions DRentalFP.RentalFarePolicy {..} =
   [ "Extra km fare: " <> show extraKmFare,
     "Extra min fare: " <> show extraMinuteFare,
     "Extra fare for day: " <> maybe "not allowed" show driverAllowanceForDay,

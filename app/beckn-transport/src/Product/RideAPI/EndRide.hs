@@ -11,7 +11,8 @@ import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP
-import qualified Product.FareCalculator.Interpreter as Fare
+import qualified Product.FareCalculator as Fare
+import qualified Product.RentalFareCalculator as RentalFare
 import qualified Product.RideAPI.Handlers.EndRide as Handler
 import SharedLogic.LocationUpdates
 import qualified Storage.Queries.DriverInformation as DriverInformation
@@ -38,6 +39,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
           notifyCompleteToBAP = sendRideCompletedUpdateToBAP,
           endRideTransaction,
           calculateFare = Fare.calculateFare,
+          calculateRentalFare = RentalFare.calculateRentalFare,
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,

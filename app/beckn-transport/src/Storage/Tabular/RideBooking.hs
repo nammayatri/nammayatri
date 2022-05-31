@@ -13,6 +13,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.RideBooking as Domain
 import qualified Domain.Types.Vehicle as Veh
+import qualified Storage.Queries.RideBooking.RentalRideBooking as QRentalRideBooking
 import Storage.Tabular.FareProduct ()
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Quote (QuoteTId)
@@ -72,7 +73,10 @@ instance TEntity RideBookingT Domain.RideBooking where
               { estimatedDistance = estimatedDistance',
                 toLocationId = toLocationId'
               }
-      Nothing -> pure Domain.RentalDetails
+      Nothing -> do
+        rentalRideBooking <- QRentalRideBooking.findByRideBookingId (Id id) >>= fromMaybeM (RideBookingDoesNotExist id)
+        return $ Domain.mkRentalRideBookingDetails rentalRideBooking.rentalFarePolicyId
+
     return $
       Domain.RideBooking
         { id = Id id,
@@ -87,7 +91,7 @@ instance TEntity RideBookingT Domain.RideBooking where
   toTType Domain.RideBooking {..} = do
     let (toLocationId, estimatedDistance) = case rideBookingDetails of
           Domain.OneWayDetails details -> (Just details.toLocationId, Just details.estimatedDistance)
-          Domain.RentalDetails -> (Nothing, Nothing)
+          Domain.RentalDetails _ -> (Nothing, Nothing)
     RideBookingT
       { id = getId id,
         requestId = toKey requestId,

@@ -21,16 +21,8 @@ create = Esq.create'
 -- other function return only not deleted fare policies
 -- (RentalFarePolicyDeleted ==. val False)
 
-findById ::
-  Transactionable m =>
-  Id Domain.RentalFarePolicy ->
-  m (Maybe RentalFarePolicy)
-findById rentalFpId = do
-  Esq.findOne $ do
-    rentalFarePolicy <- from $ table @RentalFarePolicyT
-    where_ $
-      rentalFarePolicy ^. RentalFarePolicyId ==. val rentalFpId.getId
-    return rentalFarePolicy
+findById :: Transactionable m => Id RentalFarePolicy -> m (Maybe RentalFarePolicy)
+findById = Esq.findById
 
 findRentalFarePoliciesByOrg ::
   Transactionable m =>

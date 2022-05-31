@@ -27,6 +27,21 @@ instance IsHTTPError FarePolicyError where
 
 instance IsAPIError FarePolicyError
 
+data RentalFarePolicyError
+  = NoRentalFarePolicy
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''RentalFarePolicyError
+
+instance IsBaseError RentalFarePolicyError where
+  toMessage NoRentalFarePolicy = Just "No rental fare policy matches passed data."
+
+instance IsHTTPError RentalFarePolicyError where
+  toErrorCode NoRentalFarePolicy = "NO_RENTAL_FARE_POLICY"
+  toHttpCode _ = E500
+
+instance IsAPIError RentalFarePolicyError
+
 data FPDiscountError
   = FPDiscountDoesNotExist
   | FPDiscountAlreadyEnabled

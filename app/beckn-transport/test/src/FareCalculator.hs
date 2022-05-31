@@ -11,8 +11,7 @@ import Domain.Types.FareProduct
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude
-import Product.FareCalculator.Flow
-import Product.FareCalculator.Interpreter
+import Product.FareCalculator
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit

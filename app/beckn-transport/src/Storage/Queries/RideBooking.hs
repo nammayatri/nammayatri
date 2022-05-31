@@ -7,12 +7,17 @@ import Domain.Types.Organization
 import Domain.Types.Person
 import Domain.Types.Quote
 import Domain.Types.RideBooking as Booking
+import Domain.Types.RideBooking.RentalRideBooking as Booking
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideBooking as Booking
 import Utils.Common
 
 create :: RideBooking -> SqlDB ()
-create = Esq.create'
+create rideBooking = do
+  create' rideBooking
+  case rideBooking.rideBookingDetails of
+    Booking.OneWayDetails _ -> pure ()
+    Booking.RentalDetails rentalDetails -> create' (mkRentalRideBooking rideBooking.id rentalDetails)
 
 updateStatus :: Id RideBooking -> RideBookingStatus -> SqlDB ()
 updateStatus rbId rbStatus = do

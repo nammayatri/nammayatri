@@ -1,130 +1,63 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
-module Product.FareCalculator.Flow where
-
-import Beckn.Types.Amount (Amount (..))
-import Beckn.Types.Common
-import Beckn.Types.Id (Id)
-import qualified Data.List.NonEmpty as NonEmpty
-import Data.Time
-  ( LocalTime (localTimeOfDay),
-    TimeOfDay (..),
-    TimeZone,
-    midnight,
-    minutesToTimeZone,
-    utcToLocalTime,
+module Product.FareCalculator.Flow
+  ( FareParameters (..),
+    ServiceHandle (..),
+    calculateFare,
+    doCalculateFare,
+    fareSum,
+    fareSumWithDiscount,
   )
+where
+
+import Beckn.Types.Id
 import Domain.Types.FarePolicy (FarePolicy)
-import Domain.Types.FarePolicy.PerExtraKmRate (PerExtraKmRate (..))
-import qualified Domain.Types.Organization as Organization
-import qualified Domain.Types.SearchReqLocation as Location
+import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Vehicle as Vehicle
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (id)
+import Product.FareCalculator.Calculator
+  ( FareParameters (..),
+    calculateFareParameters,
+    fareSum,
+    fareSumWithDiscount,
+  )
+import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Error
 import Utils.Common
-
-newtype PickupLocation = PickupLocation {getPickupLocation :: Location.SearchReqLocation}
-  deriving newtype (Show, Eq)
-
-newtype DropLocation = DropLocation {getDropLocation :: Location.SearchReqLocation}
-  deriving newtype (Show, Eq)
-
-type TripStartTime = UTCTime
 
 type MonadHandler m = (MonadThrow m, Log m)
 
 newtype ServiceHandle m = ServiceHandle
-  { getFarePolicy :: Id Organization.Organization -> Vehicle.Variant -> m (Maybe FarePolicy)
+  { getFarePolicy :: Id Organization -> Vehicle.Variant -> m (Maybe FarePolicy)
   }
 
-data FareParameters = FareParameters
-  { baseFare :: Amount,
-    distanceFare :: Amount,
-    nightShiftRate :: Amount,
-    discount :: Maybe Amount
-  }
-  deriving stock (Show, Eq)
+serviceHandle :: EsqDBFlow m r => ServiceHandle m
+serviceHandle =
+  ServiceHandle
+    { getFarePolicy = \orgId vehicleVariant -> do
+        FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
+    }
+
+calculateFare ::
+  EsqDBFlow m r =>
+  Id Organization ->
+  Vehicle.Variant ->
+  Meter ->
+  UTCTime ->
+  m FareParameters
+calculateFare = doCalculateFare serviceHandle
 
 doCalculateFare ::
   MonadHandler m =>
   ServiceHandle m ->
-  Id Organization.Organization ->
+  Id Organization ->
   Vehicle.Variant ->
   Meter ->
-  TripStartTime ->
+  UTCTime ->
   m FareParameters
 doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
+  logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   farePolicy <- getFarePolicy orgId vehicleVariant >>= fromMaybeM NoFarePolicy
-  baseFare <- calculateBaseFare farePolicy
-  distanceFare <- calculateDistanceFare farePolicy distance
-  nightShiftRate <- calculateNightShiftRate farePolicy startTime
-  let discount = calculateDiscount farePolicy startTime
-  pure $ FareParameters baseFare distanceFare nightShiftRate discount
-
-calculateBaseFare ::
-  MonadHandler m =>
-  FarePolicy ->
-  m Amount
-calculateBaseFare farePolicy = do
-  let baseFare = fromMaybe 0 $ farePolicy.baseFare
-  pure $ Amount baseFare
-
-calculateDistanceFare ::
-  MonadHandler m =>
-  FarePolicy ->
-  Meter ->
-  m Amount
-calculateDistanceFare farePolicy distance = do
-  let sortedPerExtraKmRateList = NonEmpty.sortBy (compare `on` (.distanceRangeStart)) farePolicy.perExtraKmRateList -- sort it again just in case
-  let baseDistance = (.distanceRangeStart) $ NonEmpty.head sortedPerExtraKmRateList
-      extraDistance = toRational (getDistanceInMeter distance) - baseDistance
-  if extraDistance <= 0
-    then return $ Amount 0
-    else do
-      pure . Amount $ calculateExtraDistFare 0 extraDistance sortedPerExtraKmRateList
-  where
-    calculateExtraDistFare summ extraDist (PerExtraKmRate lowerBorder perKmRate :| sndPerExtraKmRate@(PerExtraKmRate upperBorder _) : perExtraKmRateList) = do
-      let boundSize = upperBorder - lowerBorder
-      let distWithinBounds = min extraDist boundSize
-          fareWithinBounds = distWithinBounds / 1000 * perKmRate
-      calculateExtraDistFare (summ + fareWithinBounds) (extraDist - distWithinBounds) (sndPerExtraKmRate :| perExtraKmRateList)
-    calculateExtraDistFare summ 0 _ = summ
-    calculateExtraDistFare summ extraDist (PerExtraKmRate _ perKmRate :| []) = summ + (extraDist / 1000 * perKmRate)
-
-calculateNightShiftRate ::
-  MonadHandler m =>
-  FarePolicy ->
-  TripStartTime ->
-  m Amount
-calculateNightShiftRate farePolicy tripStartTime = do
-  let timeOfDay = localTimeOfDay $ utcToLocalTime timeZone tripStartTime
-  let nightShiftRate = fromMaybe 1 $ farePolicy.nightShiftRate
-  let nightShiftStart = fromMaybe midnight $ farePolicy.nightShiftStart
-  let nightShiftEnd = fromMaybe midnight $ farePolicy.nightShiftEnd
-  pure . Amount $
-    if isTimeWithinBounds nightShiftStart nightShiftEnd timeOfDay
-      then nightShiftRate
-      else 1
-
-calculateDiscount :: FarePolicy -> TripStartTime -> Maybe Amount
-calculateDiscount farePolicy tripStartTime = do
-  let discount = calculateDiscount' 0 farePolicy.discountList
-  if discount <= 0 then Nothing else Just $ Amount discount
-  where
-    calculateDiscount' summ (discount : discountList) = do
-      if discount.enabled && (discount.fromDate <= tripStartTime && tripStartTime <= discount.toDate)
-        then calculateDiscount' (summ + discount.discount) discountList
-        else calculateDiscount' summ discountList
-    calculateDiscount' summ [] = summ
-
-timeZone :: TimeZone
-timeZone = minutesToTimeZone 330 -- TODO: Should be configurable. Hardcoded to IST +0530
-
-isTimeWithinBounds :: TimeOfDay -> TimeOfDay -> TimeOfDay -> Bool
-isTimeWithinBounds startTime endTime time =
-  if startTime >= endTime
-    then do
-      let midnightBeforeTimeleap = TimeOfDay 23 59 60
-      (startTime < time && time < midnightBeforeTimeleap) || (midnight <= time && time < endTime)
-    else startTime < time && time < endTime
+  let fareParams = calculateFareParameters farePolicy distance startTime
+  logTagInfo
+    "FareCalculator"
+    $ "Fare parameters calculated: " +|| fareParams ||+ ""
+  pure fareParams

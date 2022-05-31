@@ -13,6 +13,7 @@ import Flow.RideAPI.CancelRide (cancelRide)
 import Flow.RideAPI.EndRide (endRideTests)
 import Flow.RideAPI.StartRide (startRide)
 import qualified LocationUpdates as LocUpd
+import RentalFareCalculator
 import Test.Tasty
 
 main :: IO ()
@@ -38,6 +39,7 @@ specs appEnv = do
     testGroup
       "Unit tests"
       [ fareCalculator,
+        rentalFareCalculator,
         allocations,
         rideAPI,
         distanceCalculation,

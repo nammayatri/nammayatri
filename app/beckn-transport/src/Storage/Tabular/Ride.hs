@@ -34,6 +34,8 @@ mkPersist
       totalFare Amount Maybe
       traveledDistance Double
       chargeableDistance Double Maybe
+      tripStartTime UTCTime Maybe
+      tripEndTime UTCTime Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

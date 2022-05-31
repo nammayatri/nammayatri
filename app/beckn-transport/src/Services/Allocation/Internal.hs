@@ -118,6 +118,8 @@ assignDriver rideBookingId driverId = do
             totalFare = Nothing,
             traveledDistance = 0,
             chargeableDistance = Nothing,
+            tripStartTime = Nothing,
+            tripEndTime = Nothing,
             createdAt = now,
             updatedAt = now
           }
