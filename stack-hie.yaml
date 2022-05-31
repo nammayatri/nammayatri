@@ -33,13 +33,10 @@ ghc-options:
   "$locals": -O0
 
 packages:
-  - lib/beckn-core
   - app/beckn-cli
-  - app/gateway
   - app/beckn-transport
   - app/app-backend
   - app/search-result-aggregator
-  - app/mock-registry
   - app/mock-sms
   - app/mock-fcm
   - app/example-service
@@ -49,6 +46,7 @@ packages:
   - app/public-transport-search-consumer
   - app/mock-public-transport-bpp
   - app/mock-parking-bpp
+  - app/scheduler-example
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -62,6 +60,18 @@ packages:
 # extra-deps: []
 
 extra-deps:
+  - git: git@bitbucket.org:juspay/beckn-gateway.git
+    commit: b400761517570d270f9b1403ffe6afba17f808fa
+    subdirs:
+      - app/gateway
+  - git: git@bitbucket.org:juspay/beckn-gateway.git
+    commit: 07457cbf352fce2acbd4709a77fed3f59737637d
+    subdirs:
+      - app/mock-registry
+  - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
+    commit: a0fdf37012b0ad0f244d270fe174c9c4925af3b1
+    subdirs:
+      - lib/beckn-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs
     commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
     subdirs:
