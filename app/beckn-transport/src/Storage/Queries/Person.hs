@@ -217,7 +217,7 @@ getNearestDrivers ::
   Maybe Vehicle.Variant ->
   SFP.FareProductType ->
   m [DriverPoolResult]
-getNearestDrivers LatLong {..} radius orgId mbVariant fareProductType = do
+getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
   let isRental = fareProductType == SFP.RENTAL
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   now <- getCurrentTime
@@ -244,8 +244,8 @@ getNearestDrivers LatLong {..} radius orgId mbVariant fareProductType = do
           &&. driverInfo ^. DriverInformationActive
           &&. driverInfo ^. DriverInformationOptForRental >=. val isRental
           &&. not_ (driverInfo ^. DriverInformationOnRide)
-          &&. ( isNothing (val mbVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbVariant -- when mbVariant = Nothing, we use all variants, is it correct?
-                  ||. ( case mbVariant of
+          &&. ( isNothing (val mbPoolVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbPoolVariant -- when mbVariant = Nothing, we use all variants, is it correct?
+                  ||. ( case mbPoolVariant of
                           Just SEDAN ->
                             driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True
                               &&. vehicle ^. VehicleVariant ==. val SUV
@@ -260,14 +260,25 @@ getNearestDrivers LatLong {..} radius orgId mbVariant fareProductType = do
         ( person ^. PersonTId,
           location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
           vehicle ^. VehicleVariant,
+          driverInfo ^. DriverInformationCanDowngradeToSedan,
+          driverInfo ^. DriverInformationCanDowngradeToHatchback,
           location ^. DriverLocationLat,
           location ^. DriverLocationLon
         )
-    (personId, dist, vehicleVariant, dlat, dlon) <- from withTable
+    (personId, dist, vehicleVariant, canDowngradeToSedan, canDowngradeToHatchback, dlat, dlon) <- from withTable
     where_ $ dist <. val (fromIntegral radius)
     orderBy [asc dist]
-    return (personId, dist, vehicleVariant, dlat, dlon)
-  return $ makeDriverPoolResult <$> res
+    return (personId, dist, vehicleVariant, canDowngradeToSedan, canDowngradeToHatchback, dlat, dlon)
+  return (makeDriverPoolResults =<< res)
   where
-    makeDriverPoolResult (personId, dist, vehicleVariant, dlat, dlon) =
-      DriverPoolResult (cast personId) dist vehicleVariant dlat dlon
+    makeDriverPoolResults :: (Id Person, Double, Variant, Bool, Bool, Double, Double) -> [DriverPoolResult]
+    makeDriverPoolResults (personId, dist, vehicleVariant, canDowngradeToSedan, canDowngradeToHatchback, dlat, dlon) = do
+      case mbPoolVariant of
+        Nothing -> do
+          let suvResult = getResult SUV $ vehicleVariant == SUV
+              sedanResult = getResult SEDAN $ vehicleVariant == SEDAN || (vehicleVariant == SUV && canDowngradeToSedan)
+              hatchbackResult = getResult HATCHBACK $ vehicleVariant == HATCHBACK || canDowngradeToHatchback
+          suvResult <> sedanResult <> hatchbackResult
+        Just poolVariant -> getResult poolVariant True
+      where
+        getResult var cond = [DriverPoolResult (cast personId) dist var dlat dlon | cond]

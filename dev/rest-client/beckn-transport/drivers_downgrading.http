@@ -9,7 +9,7 @@ token: {{token}}
 
 {
     "canDowngradeToSedan" : true,
-    "canDowngradeToHatchback" : false
+    "canDowngradeToHatchback" : true
 }
 
 ###
