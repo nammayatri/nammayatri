@@ -21,10 +21,10 @@ buildSearchReq ::
   DSearch.DSearchReq ->
   m (BecknReq Search.SearchIntent)
 buildSearchReq req@DSearch.DSearchReq {..} = do
-  let txnId = getId searchId
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildContextMetro Context.SEARCH txnId bapIDs.metro bapURIs.metro
+  let messageId = getId searchId
+  context <- buildContextMetro Context.SEARCH messageId bapIDs.metro bapURIs.metro
   let intent = mkIntent req
   pure $ BecknReq context $ Search.SearchIntent intent
 

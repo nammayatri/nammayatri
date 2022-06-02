@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Product.Support (sendIssue) where
 
 import qualified App.Types as App

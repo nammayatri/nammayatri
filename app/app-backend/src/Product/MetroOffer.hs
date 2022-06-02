@@ -11,6 +11,7 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Data.Traversable
 import Domain.Types.SearchRequest (SearchRequest)
 import EulerHS.Prelude hiding (id)
 import qualified Tools.Metrics as Metrics
@@ -22,8 +23,7 @@ searchCbMetro ::
   OnSearchReq ->
   FlowHandler AckResponse
 searchCbMetro _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
-  Metrics.finishSearchMetrics transactionId
+  Metrics.finishSearchMetrics req.context.message_id
   case req.contents of
     Right msg -> setMetroOffers req.context msg.catalog
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err
@@ -36,9 +36,8 @@ buildContextMetro ::
   Text ->
   BaseUrl ->
   m Context
-buildContextMetro action txnId bapId bapUri = do
+buildContextMetro action message_id bapId bapUri = do
   timestamp <- getCurrentTime
-  message_id <- generateGUIDText
   return
     Context
       { domain = METRO,
@@ -49,7 +48,7 @@ buildContextMetro action txnId bapId bapUri = do
         bap_uri = bapUri,
         bpp_id = Nothing,
         bpp_uri = Nothing,
-        transaction_id = Just txnId,
+        transaction_id = Nothing,
         ..
       }
 
@@ -60,8 +59,7 @@ setMetroOffers ::
   Catalog ->
   m ()
 setMetroOffers context catalog = do
-  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
-  let searchReqId = Id transactionId
+  let searchReqId = Id context.message_id
   val <- catalogToMetroOffers searchReqId catalog
   Redis.setExRedis (metroOfferKey searchReqId) val (60 * 60 * 24)
 
@@ -82,38 +80,45 @@ catalogToMetroOffers searchRequestId Catalog {bpp_providers} =
   traverse (providerToMetroOffer searchRequestId) bpp_providers
 
 providerToMetroOffer :: (MonadThrow m, Log m, MonadTime m) => Id SearchRequest -> Provider -> m MetroOffer
-providerToMetroOffer rideSearchId Provider {descriptor, items, locations} = do
+providerToMetroOffer rideSearchId Provider {descriptor, items, fulfillments} = do
   description <- descriptor.name & fromMaybeM (InvalidRequest "Provider is missing descriptor.name")
-  rides <- traverse (itemToMetroRide locations) items
+  offerInfos <- uniteItemAndFulfillment items fulfillments
+  rides <- offerInfoToMetroRide `traverse` offerInfos
   createdAt <- getCurrentTime
   return $ MetroOffer {..}
 
-itemToMetroRide :: (MonadThrow m, MonadTime m, Log m) => [Location] -> Item -> m MetroRide
-itemToMetroRide locations item = do
+uniteItemAndFulfillment :: (MonadThrow m, Log m) => [Item] -> [Fulfillment] -> m [(Item, [Fulfillment])]
+uniteItemAndFulfillment items fulfillments = do
+  items `for` \item -> do
+    ff <- findFulfillments item.fulfillment_id
+    return (item, ff)
+  where
+    findFulfillments id = do
+      let fulfilments = filter (\fulfillment -> fulfillment.id == id) fulfillments
+      when (null fulfilments) . throwError . InvalidRequest $ "Fulfillment " <> id <> " not found in provider.fulfillments"
+      return fulfilments
+
+offerInfoToMetroRide :: (MonadTime m, MonadThrow m, Log m) => (Item, [Fulfillment]) -> m MetroRide
+offerInfoToMetroRide (item, fulfillments) = do
   price <-
     realToFrac <$> item.price.value
       & fromMaybeM (InvalidRequest "Missing price.value in item")
-  unless (length item.stops >= 2) $ throwError (InvalidRequest "There must be at least two stops in item")
-  let departureStop = head item.stops
-  let arrivalStop = last item.stops
   now <- getCurrentTime
   let schedule =
         filter (isInTheFuture now) $
-          zipWith ScheduleElement departureStop.time.schedule.times arrivalStop.time.schedule.times
-  departureStation <- findLoc departureStop.id >>= locToStation
-  arrivalStation <- findLoc arrivalStop.id >>= locToStation
+          zipWith ScheduleElement (fulfillments <&> (.start.time.timestamp)) (fulfillments <&> (.end.time.timestamp))
+  fulfillment <- listToMaybe fulfillments & fromMaybeM (InternalError "Empty fulfillments list.") --Already checkeed that list is not empty.
+  departureStation <- locToStation fulfillment.start.location
+  arrivalStation <- locToStation fulfillment.end.location
   return MetroRide {..}
   where
-    findLoc id =
-      find (\loc -> loc.id == id) locations
-        & fromMaybeM (InvalidRequest $ "Location " <> id <> " not found in provider.locations")
-    locToStation Location {..} = do
-      name <- descriptor.name & fromMaybeM (InvalidRequest "descriptor.name is missing")
+    locToStation loc = do
+      name <- loc.descriptor.name & fromMaybeM (InvalidRequest "descriptor.name is missing")
       return
         MetroStation
           { name = name,
-            stationCode = station_code,
-            point = gpsToLatLon gps
+            stationCode = loc.code,
+            point = gpsToLatLon loc.gps
           }
     gpsToLatLon Gps {..} = LatLong {..}
     isInTheFuture now scheduleElement = scheduleElement.departureTime > now
