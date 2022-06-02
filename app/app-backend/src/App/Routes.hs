@@ -8,6 +8,7 @@ import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.InternalAPI.Auth.API as Auth
 import Beckn.Types.APISuccess
 import Beckn.Types.App
+import qualified Beckn.Types.Core.Metro.API.OnSearch as Metro
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
@@ -76,7 +77,7 @@ type MainAPI =
 type BecknMetroAPI =
   SignatureAuth "Authorization"
     :> SignatureAuth "X-Gateway-Authorization"
-    :> Metro.OnSearch
+    :> Metro.OnSearchAPI
 
 type UIAPI =
   Get '[JSON] Text

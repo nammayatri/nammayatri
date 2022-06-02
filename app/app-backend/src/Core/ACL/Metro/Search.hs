@@ -4,10 +4,8 @@ module Core.ACL.Metro.Search (buildSearchReq) where
 
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
-import qualified Beckn.Types.Core.Migration.API.Search as Search
-import qualified Beckn.Types.Core.Migration.Gps as Gps
-import qualified Beckn.Types.Core.Migration.Intent as Intent
-import qualified Beckn.Types.Core.Migration.Location as Location
+import qualified Beckn.Types.Core.Metro.API.Search as Search
+import qualified Beckn.Types.Core.Metro.Search as Search
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
 import Control.Lens ((?~))
@@ -30,25 +28,25 @@ buildSearchReq req@DSearch.DSearchReq {..} = do
   let intent = mkIntent req
   pure $ BecknReq context $ Search.SearchIntent intent
 
-mkIntent :: DSearch.DSearchReq -> Intent.Intent
+mkIntent :: DSearch.DSearchReq -> Search.Intent
 mkIntent req = do
   let from = stopToLoc req.origin
   let to = stopToLoc req.destination
-  Intent.emptyIntent
+  Search.emptyIntent
     & #fulfillment
-      ?~ ( Intent.emptyFulFillmentInfo
+      ?~ ( Search.emptyFulFillmentInfo
              & #start
-               ?~ Intent.LocationAndTime
+               ?~ Search.LocationAndTime
                  { location = Just from,
                    time = Nothing
                  }
              & #end
-               ?~ Intent.LocationAndTime
+               ?~ Search.LocationAndTime
                  { location = Just to,
                    time = Nothing
                  }
          )
   where
     stopToLoc API.SearchReqLocation {gps} = do
-      let gps' = Gps.Gps gps.lat gps.lon
-      Location.emptyLocation & #gps ?~ gps'
+      let gps' = Search.Gps gps.lat gps.lon
+      Search.emptyLocation & #gps ?~ gps'

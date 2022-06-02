@@ -3,10 +3,9 @@ module Product.MetroOffer where
 import App.Types (FlowHandler)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Context as Context
-import Beckn.Types.Core.Migration.DecimalValue
-import Beckn.Types.Core.Migration.Gps
-import Beckn.Types.Core.ReqTypes
+import Beckn.Types.Core.Context
+import Beckn.Types.Core.Metro.API.OnSearch (OnSearchReq)
+import Beckn.Types.Core.Metro.OnSearch
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
@@ -14,23 +13,13 @@ import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import Domain.Types.SearchRequest (SearchRequest)
 import EulerHS.Prelude hiding (id)
-import Servant (JSON, Post, ReqBody, (:>))
 import qualified Tools.Metrics as Metrics
 import Types.API.MetroOffer
-import Types.CoreMetro.Catalog
-import Types.CoreMetro.Item
-import Types.CoreMetro.Location
-import Types.CoreMetro.Provider
-
-type OnSearch =
-  "on_search"
-    :> ReqBody '[JSON] (BecknCallbackReq OnSearchCatalog)
-    :> Post '[JSON] AckResponse
 
 searchCbMetro ::
   SignatureAuthResult ->
   SignatureAuthResult ->
-  BecknCallbackReq OnSearchCatalog ->
+  OnSearchReq ->
   FlowHandler AckResponse
 searchCbMetro _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
@@ -42,32 +31,32 @@ searchCbMetro _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ 
 
 buildContextMetro ::
   (MonadTime m, MonadGuid m, MonadThrow m) =>
-  Context.Action ->
+  Action ->
   Text ->
   Text ->
   BaseUrl ->
-  m Context.Context
+  m Context
 buildContextMetro action txnId bapId bapUri = do
   timestamp <- getCurrentTime
   message_id <- generateGUIDText
   return
-    Context.Context
-      { Context.domain = Context.METRO,
-        Context.country = "IND",
-        Context.city = "Kochi",
-        Context.core_version = "0.9.1",
-        Context.bap_id = bapId,
-        Context.bap_uri = bapUri,
-        Context.bpp_id = Nothing,
-        Context.bpp_uri = Nothing,
-        Context.transaction_id = Just txnId,
+    Context
+      { domain = METRO,
+        country = "IND",
+        city = "Kochi",
+        core_version = "0.9.1",
+        bap_id = bapId,
+        bap_uri = bapUri,
+        bpp_id = Nothing,
+        bpp_uri = Nothing,
+        transaction_id = Just txnId,
         ..
       }
 
 setMetroOffers ::
   (MonadThrow m, Log m, MonadTime m) =>
   MonadFlow m =>
-  Context.Context ->
+  Context ->
   Catalog ->
   m ()
 setMetroOffers context catalog = do
@@ -102,7 +91,7 @@ providerToMetroOffer rideSearchId Provider {descriptor, items, locations} = do
 itemToMetroRide :: (MonadThrow m, MonadTime m, Log m) => [Location] -> Item -> m MetroRide
 itemToMetroRide locations item = do
   price <-
-    (item.price.value >>= convertDecimalValueToAmount)
+    realToFrac <$> item.price.value
       & fromMaybeM (InvalidRequest "Missing price.value in item")
   unless (length item.stops >= 2) $ throwError (InvalidRequest "There must be at least two stops in item")
   let departureStop = head item.stops

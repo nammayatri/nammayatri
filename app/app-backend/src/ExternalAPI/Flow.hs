@@ -2,7 +2,7 @@
 
 module ExternalAPI.Flow where
 
-import qualified Beckn.Types.Core.Migration.API.Search as MigAPI
+import qualified Beckn.Types.Core.Metro.API.Search as MigAPI
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Core.Taxi.API.Cancel as API
 import Beckn.Types.Core.Taxi.API.Confirm as API
