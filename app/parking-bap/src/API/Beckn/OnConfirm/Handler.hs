@@ -30,8 +30,9 @@ onConfirm ::
 onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   logTagDebug "on_confirm req" (encodeToText req)
   validateContext Context.ON_CONFIRM $ req.context
+  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
   case req.contents of
-    Right msg -> handleOnConfirm (Id req.context.transaction_id) msg
+    Right msg -> handleOnConfirm (Id transactionId) msg
     Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
   return Ack
 

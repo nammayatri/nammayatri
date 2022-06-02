@@ -27,9 +27,10 @@ buildSearchReq subscriber req = do
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
     throwError (InvalidRequest "Invalid bap_uri") -- is it correct?
+  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
   pure
     DSearch.DSearchReq
-      { transactionId = context.transaction_id,
+      { transactionId = transactionId,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
         pickupLocation = mkLocation pickup.location,

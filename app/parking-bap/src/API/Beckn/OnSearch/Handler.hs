@@ -29,15 +29,16 @@ handler ::
 handler _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   logTagDebug "on_search req" (encodeToText req)
   validateContext Context.ON_SEARCH $ req.context
-  Metrics.finishSearchMetrics $ req.context.transaction_id
+  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
+  Metrics.finishSearchMetrics transactionId
   case req.contents of
-    Right msg -> searchCbService req msg.catalog
+    Right msg -> searchCbService req transactionId msg.catalog
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err
   return Ack
 
-searchCbService :: EsqDBFlow m r => BecknCallbackReq OnSearch.OnSearchCatalog -> OnSearch.Catalog -> m ()
-searchCbService req catalog = do
-  let searchRequestId = Id $ req.context.transaction_id
+searchCbService :: EsqDBFlow m r => BecknCallbackReq OnSearch.OnSearchCatalog -> Text -> OnSearch.Catalog -> m ()
+searchCbService req transactionId catalog = do
+  let searchRequestId = Id transactionId
   _searchRequest <- QSearch.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
   bppUrl <- req.context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_url")
   bppId <- req.context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")

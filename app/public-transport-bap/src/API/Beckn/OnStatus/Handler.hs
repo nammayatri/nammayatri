@@ -12,6 +12,7 @@ import qualified Core.Spec.Common.Context as Context
 import qualified Core.Spec.OnStatus as OnStatus
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
+import Tools.Error
 
 handler ::
   SignatureAuthResult ->
@@ -24,9 +25,10 @@ onStatus ::
   FlowHandler AckResponse
 onStatus _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext Context.ON_STATUS $ req.context
+  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
   case req.contents of
     Right msg -> do
-      let domainReq = BecknACL.mkOnStatus msg req.context.transaction_id
+      let domainReq = BecknACL.mkOnStatus msg transactionId
       DOnStatus.handler domainReq
     Left err -> logTagError "on_status req" $ "on_status error: " <> show err
   pure Ack

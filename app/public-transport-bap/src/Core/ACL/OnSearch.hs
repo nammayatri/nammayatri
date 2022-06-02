@@ -16,7 +16,7 @@ buildOnSearch ::
   OnSearch.Catalog ->
   m DOnSearch.OnSearchReq
 buildOnSearch req catalog = do
-  let txnId = Id $ req.context.transaction_id
+  txnId <- Id <$> req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
   bppUrl <- req.context.bpp_uri & fromMaybeM (InvalidRequest "Missing bpp_url")
   bppId <- req.context.bpp_id & fromMaybeM (InvalidRequest "Missing bpp_id")
   let providers = catalog.bpp_providers

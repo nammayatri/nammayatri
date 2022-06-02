@@ -13,6 +13,7 @@ import qualified Core.Spec.OnCancel as OnCancel
 import Core.Spec.OnStatus
 import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
+import Tools.Error
 
 handler ::
   SignatureAuthResult ->
@@ -27,8 +28,9 @@ onCancel _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   validateContext Context.ON_CANCEL $ req.context
   case req.contents of
     Right msg -> do
+      transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
       let order = msg.order
-      let domainReq = BecknACL.mkOnStatus (OnStatusMessage order) req.context.transaction_id
+      let domainReq = BecknACL.mkOnStatus (OnStatusMessage order) transactionId
       logPretty DEBUG "domain request" domainReq
       DOnStatus.handler domainReq
     Left err -> logTagError "on_cancel req" $ "on_cancel error: " <> show err

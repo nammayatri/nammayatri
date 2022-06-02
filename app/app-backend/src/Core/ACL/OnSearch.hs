@@ -47,6 +47,7 @@ searchCbService context catalog = do
         readMaybe (unpack provider.category_id)
           & fromMaybeM (InvalidRequest "Invalid category_id. Only RENTAL and ONE_WAY is supported by BAP")
       quotesInfo <- traverse (buildQuoteInfo fareProductType) items
+      transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing context.bpp_id")
       let providerInfo =
             DOnSearch.ProviderInfo
               { providerId = providerId,
@@ -57,7 +58,7 @@ searchCbService context catalog = do
               }
       pure
         DOnSearch.DOnSearchReq
-          { requestId = Id context.transaction_id,
+          { requestId = Id transactionId,
             ..
           }
 
@@ -66,7 +67,7 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   createdAt <- getCurrentTime
   id <- generateGUID
   bppId <- context.bpp_id & fromMaybeM (InvalidRequest "Missing context.bpp_id")
-  let transactionId = context.transaction_id
+  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Missing context.bpp_id")
   let errorType = show . (._type) <$> mbErr
   let errorCode = (.code) <$> mbErr
   let errorMessage = (.message) =<< mbErr

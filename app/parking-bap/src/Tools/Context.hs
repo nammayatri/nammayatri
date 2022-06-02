@@ -29,7 +29,7 @@ buildContext action txnId bapUri bppUri = do
         bap_uri = bapUri,
         bpp_id = show <$> bppUri,
         bpp_uri = bppUri,
-        transaction_id = txnId,
+        transaction_id = Just txnId,
         message_id = message_id,
         timestamp = timestamp
       }

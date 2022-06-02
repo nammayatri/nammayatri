@@ -33,7 +33,8 @@ searchCbMetro ::
   BecknCallbackReq OnSearchCatalog ->
   FlowHandler AckResponse
 searchCbMetro _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-  Metrics.finishSearchMetrics req.context.transaction_id
+  transactionId <- req.context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
+  Metrics.finishSearchMetrics transactionId
   case req.contents of
     Right msg -> setMetroOffers req.context msg.catalog
     Left err -> logTagError "on_search req" $ "on_search error: " <> show err
@@ -59,7 +60,7 @@ buildContextMetro action txnId bapId bapUri = do
         Context.bap_uri = bapUri,
         Context.bpp_id = Nothing,
         Context.bpp_uri = Nothing,
-        Context.transaction_id = txnId,
+        Context.transaction_id = Just txnId,
         ..
       }
 
@@ -70,7 +71,8 @@ setMetroOffers ::
   Catalog ->
   m ()
 setMetroOffers context catalog = do
-  let searchReqId = Id context.transaction_id
+  transactionId <- context.transaction_id & fromMaybeM (InvalidRequest "Context.transaction_id is not present.")
+  let searchReqId = Id transactionId
   val <- catalogToMetroOffers searchReqId catalog
   Redis.setExRedis (metroOfferKey searchReqId) val (60 * 60 * 24)
 

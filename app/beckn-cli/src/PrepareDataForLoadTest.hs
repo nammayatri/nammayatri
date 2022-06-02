@@ -15,6 +15,7 @@ import qualified Beckn.Types.Core.Taxi.API.Search as API
 import qualified Beckn.Types.Core.Taxi.Search as API
 import Beckn.Utils.Example (Example (example))
 import qualified Beckn.Utils.SignatureAuth as S
+import Control.Lens ((?~))
 import qualified Data.Aeson as J
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Lazy as LBS
@@ -67,6 +68,6 @@ runK6Script url filePath nmbOfReq = do
 generateSearchRequest :: L.Flow API.SearchReq
 generateSearchRequest = do
   txnId <- L.generateGUID
-  let context = example @API.Context & #transaction_id .~ txnId
+  let context = example @API.Context & #transaction_id ?~ txnId
   let intent = example @API.SearchMessage
   pure $ API.BecknReq context intent

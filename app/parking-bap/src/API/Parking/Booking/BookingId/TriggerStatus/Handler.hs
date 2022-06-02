@@ -43,7 +43,7 @@ triggerStatusUpdate _ bookingId = withFlowHandlerAPI $ do
             bap_uri = bapUri,
             bpp_id = Nothing,
             bpp_uri = Nothing,
-            transaction_id = txnId,
+            transaction_id = Just txnId,
             message_id = msgId,
             timestamp = currTime
           }
