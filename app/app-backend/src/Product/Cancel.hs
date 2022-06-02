@@ -4,9 +4,9 @@ import App.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.APISuccess (APISuccess (Success))
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.ReqTypes as Common
 import qualified Beckn.Types.Core.Taxi.Cancel.Req as ReqCancel
-import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import Beckn.Types.Id
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride

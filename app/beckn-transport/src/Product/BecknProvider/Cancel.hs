@@ -6,6 +6,7 @@ import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import qualified Beckn.Types.Core.Taxi.Cancel.Req as ReqCancel
 import Beckn.Types.Id
@@ -40,7 +41,7 @@ cancel ::
 cancel transporterId _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req.context
-    validateContext context
+    validateContext Context.CANCEL context
     let bookingId = req.message.order_id
     transporterOrg <-
       Organization.findById transporterId

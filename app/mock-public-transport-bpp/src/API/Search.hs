@@ -4,7 +4,7 @@ import API.Utils (buildOnActionContext)
 import Beckn.Mock.App
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack (AckResponse (..))
-import Beckn.Types.Core.Migration.Context
+import Beckn.Types.Core.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Common (logPretty)
 import Beckn.Utils.Time

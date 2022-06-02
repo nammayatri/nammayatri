@@ -6,9 +6,9 @@ import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.ReqTypes as Common
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
-import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -95,7 +95,7 @@ onConfirm ::
 onConfirm _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "on_confirm req" (show req)
-    validateContext req.context
+    validateContext Context.ON_CONFIRM req.context
     case req.contents of
       Left err -> logTagError "on_confirm req" $ "on_confirm error: " <> show err
       Right msg -> do

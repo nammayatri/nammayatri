@@ -4,6 +4,7 @@ import App.Types
 import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
@@ -28,7 +29,7 @@ onUpdate _org req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here
     logTagInfo "on_update req" (show req)
-    validateContext req.context
+    validateContext Context.ON_UPDATE req.context
     processEvent req.message.cabs_update_event
     return Ack
 

@@ -2,7 +2,7 @@ module Product.BecknProvider.Search (search) where
 
 import App.Types
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Migration.Context
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import Beckn.Types.Id
@@ -28,6 +28,6 @@ search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ g
     transporter <- Shared.findTransporter transporterId
     let context = req.context
     let callbackUrl = gateway.subscriber_url
-    ExternalAPI.withCallback' withRetry transporter SEARCH OnSearch.onSearchAPI context callbackUrl $ do
+    ExternalAPI.withCallback' withRetry transporter Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do
       dOnSearchReq <- DSearch.handler transporter dSearchReq
       pure $ ACL.mkOnSearchMessage dOnSearchReq

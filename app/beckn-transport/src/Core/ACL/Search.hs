@@ -2,6 +2,7 @@ module Core.ACL.Search (buildSearchReq) where
 
 import Beckn.Product.Validation.Context
 import Beckn.Types.Common
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
@@ -18,7 +19,7 @@ buildSearchReq ::
   m DSearch.DSearchReq
 buildSearchReq subscriber req = do
   let context = req.context
-  validateContext context
+  validateContext Context.SEARCH context
   let intent = req.message.intent
   let pickup = intent.fulfillment.start
   let mbDropOff = intent.fulfillment.end

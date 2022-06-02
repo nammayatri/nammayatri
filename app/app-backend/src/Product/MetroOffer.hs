@@ -3,10 +3,8 @@ module Product.MetroOffer where
 import App.Types (FlowHandler)
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
-import Beckn.Types.Core.Migration.Context
-import qualified Beckn.Types.Core.Migration.Context as Mig
+import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.Migration.DecimalValue
-import qualified Beckn.Types.Core.Migration.Domain as Mig
 import Beckn.Types.Core.Migration.Gps
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Error
@@ -43,32 +41,32 @@ searchCbMetro _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ 
 
 buildContextMetro ::
   (MonadTime m, MonadGuid m, MonadThrow m) =>
-  Mig.Action ->
+  Context.Action ->
   Text ->
   Text ->
   BaseUrl ->
-  m Mig.Context
+  m Context.Context
 buildContextMetro action txnId bapId bapUri = do
   timestamp <- getCurrentTime
   message_id <- generateGUIDText
   return
-    Mig.Context
-      { Mig.domain = Mig.METRO,
-        Mig.country = "IND",
-        Mig.city = "Kochi",
-        Mig.core_version = "0.9.1",
-        Mig.bap_id = bapId,
-        Mig.bap_uri = bapUri,
-        Mig.bpp_id = Nothing,
-        Mig.bpp_uri = Nothing,
-        Mig.transaction_id = txnId,
+    Context.Context
+      { Context.domain = Context.METRO,
+        Context.country = "IND",
+        Context.city = "Kochi",
+        Context.core_version = "0.9.1",
+        Context.bap_id = bapId,
+        Context.bap_uri = bapUri,
+        Context.bpp_id = Nothing,
+        Context.bpp_uri = Nothing,
+        Context.transaction_id = txnId,
         ..
       }
 
 setMetroOffers ::
   (MonadThrow m, Log m, MonadTime m) =>
   MonadFlow m =>
-  Context ->
+  Context.Context ->
   Catalog ->
   m ()
 setMetroOffers context catalog = do

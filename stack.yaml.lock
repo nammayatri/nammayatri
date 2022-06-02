@@ -10,13 +10,13 @@ packages:
     version: 0.1.0.0
     git: git@bitbucket.org:juspay/beckn-gateway.git
     pantry-tree:
-      size: 1039
-      sha256: 8ad21e3b556c5f00c0ef7664351b877ce8dfd5e2603847f006398f993010c726
-    commit: b400761517570d270f9b1403ffe6afba17f808fa
+      size: 1038
+      sha256: 8b77b8a7c8cb40c24daeb2179141023c135b95250169ec93961a7e528e4a08f9
+    commit: 087d3686c146c5295e3484fcc740f7e84ef2d0bf
   original:
     subdir: app/gateway
     git: git@bitbucket.org:juspay/beckn-gateway.git
-    commit: b400761517570d270f9b1403ffe6afba17f808fa
+    commit: 087d3686c146c5295e3484fcc740f7e84ef2d0bf
 - completed:
     subdir: app/mock-registry
     name: mock-registry
@@ -25,24 +25,11 @@ packages:
     pantry-tree:
       size: 662
       sha256: 01ff19c420130912002e3c645231f6f5d594b96fb7dde52dafd9ac98f3489b89
-    commit: 07457cbf352fce2acbd4709a77fed3f59737637d
+    commit: 087d3686c146c5295e3484fcc740f7e84ef2d0bf
   original:
     subdir: app/mock-registry
     git: git@bitbucket.org:juspay/beckn-gateway.git
-    commit: 07457cbf352fce2acbd4709a77fed3f59737637d
-- completed:
-    subdir: lib/beckn-core
-    name: beckn-core
-    version: 0.1.0.0
-    git: git@bitbucket.org:juspay/beckn-shared-kernel.git
-    pantry-tree:
-      size: 20800
-      sha256: 60febd04d4fce8b03412617ebb4e813b1aac475766e0eb03b1156a6b8cd0e757
-    commit: a0fdf37012b0ad0f244d270fe174c9c4925af3b1
-  original:
-    subdir: lib/beckn-core
-    git: git@bitbucket.org:juspay/beckn-shared-kernel.git
-    commit: a0fdf37012b0ad0f244d270fe174c9c4925af3b1
+    commit: 087d3686c146c5295e3484fcc740f7e84ef2d0bf
 - completed:
     subdir: core
     name: passetto-core

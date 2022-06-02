@@ -2,9 +2,9 @@ module Product.BecknProvider.Confirm where
 
 import App.Types
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
-import Beckn.Types.Core.Taxi.Common.Context (Action (CONFIRM))
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Core.ACL.Confirm as ACL
@@ -28,6 +28,6 @@ confirm transporterId (SignatureAuthResult _ subscriber) req =
     transporter <- Shared.findTransporter transporterId
     let context = req.context
     let callbackUrl = context.bap_uri
-    ExternalAPI.withCallback' withRetry transporter CONFIRM OnConfirm.onConfirmAPI context callbackUrl $ do
+    ExternalAPI.withCallback' withRetry transporter Context.CONFIRM OnConfirm.onConfirmAPI context callbackUrl $ do
       dOnConfirmReq <- DConfirm.handler transporter dConfirmReq
       pure $ ACL.makeOnConfirmReq dOnConfirmReq

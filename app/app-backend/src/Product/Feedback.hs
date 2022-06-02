@@ -2,8 +2,8 @@ module Product.Feedback where
 
 import qualified App.Types as App
 import Beckn.Types.APISuccess (APISuccess (Success))
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.ReqTypes as Common
-import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import qualified Beckn.Types.Core.Taxi.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Logging

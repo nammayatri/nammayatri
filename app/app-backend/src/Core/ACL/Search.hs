@@ -1,7 +1,7 @@
 module Core.ACL.Search (buildRentalSearchReq, buildOneWaySearchReq) where
 
 import Beckn.Types.Common
-import qualified Beckn.Types.Core.Migration.Context as Context
+import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import Beckn.Types.Id

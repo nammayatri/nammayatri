@@ -6,7 +6,7 @@ import Beckn.Mock.Utils
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Migration.Context
+import Beckn.Types.Core.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Utils.Time
 import "public-transport-bap" Core.Spec.Common

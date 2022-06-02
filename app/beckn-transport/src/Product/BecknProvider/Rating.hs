@@ -5,6 +5,7 @@ import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
@@ -30,7 +31,7 @@ ratingImpl _ _ req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "ratingAPI" "Received rating API call."
     let context = req.context
-    validateContext context
+    validateContext Context.RATING context
     let rideBookingId = Id $ req.message.id
     rideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
     ride <-

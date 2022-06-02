@@ -5,7 +5,7 @@ import Beckn.Mock.Exceptions (OrderError (OrderNotFound))
 import Beckn.Prelude
 import qualified Beckn.Storage.Hedis as Hed
 import Beckn.Types.Cache
-import Beckn.Types.Core.Migration.Context
+import Beckn.Types.Core.Context
 import Beckn.Utils.Error.Throwing
 import Beckn.Utils.Logging
 import Core.OnConfirm.Order

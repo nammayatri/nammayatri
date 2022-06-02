@@ -1,6 +1,7 @@
 module Core.ACL.Confirm where
 
 import Beckn.Product.Validation.Context
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import Beckn.Types.Id
 import Beckn.Types.Registry.Subscriber
@@ -17,7 +18,7 @@ buildConfirmReq ::
   m DConfirmReq
 buildConfirmReq subscriber req = do
   let context = req.context
-  validateContext context
+  validateContext Context.CONFIRM context
   let items = req.message.order.items
   item <- case items of
     [] -> throwError (InvalidRequest "List of confirmed items is empty.")

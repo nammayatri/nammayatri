@@ -9,9 +9,9 @@ module PrepareDataForLoadTest
 where
 
 import Beckn.Types.Base64
+import qualified Beckn.Types.Core.Context as API
 import qualified Beckn.Types.Core.ReqTypes as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
-import qualified Beckn.Types.Core.Taxi.Common.Context as API
 import qualified Beckn.Types.Core.Taxi.Search as API
 import Beckn.Utils.Example (Example (example))
 import qualified Beckn.Utils.SignatureAuth as S

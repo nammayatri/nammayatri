@@ -4,7 +4,7 @@ import API.Utils (buildOnActionContext)
 import Beckn.Mock.App
 import Beckn.Mock.Utils
 import Beckn.Types.Core.Ack
-import Beckn.Types.Core.Migration.Context
+import Beckn.Types.Core.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Error
 import Beckn.Types.Forkable

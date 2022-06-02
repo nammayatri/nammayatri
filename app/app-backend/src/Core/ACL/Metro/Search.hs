@@ -3,8 +3,8 @@
 module Core.ACL.Metro.Search (buildSearchReq) where
 
 import Beckn.Types.Common
+import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Migration.API.Search as Search
-import qualified Beckn.Types.Core.Migration.Context as Context
 import qualified Beckn.Types.Core.Migration.Gps as Gps
 import qualified Beckn.Types.Core.Migration.Intent as Intent
 import qualified Beckn.Types.Core.Migration.Location as Location

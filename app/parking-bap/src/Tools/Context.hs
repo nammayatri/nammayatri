@@ -36,5 +36,5 @@ buildContext action txnId bapUri bppUri = do
 
 validateContext :: (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) => Context.Action -> Context.Context -> m ()
 validateContext action context = do
-  Validation.validateDomainMig Domain.PARKING context
-  Validation.validateContextCommonsMig action context
+  Validation.validateDomain Domain.PARKING context
+  Validation.validateContextCommons action context

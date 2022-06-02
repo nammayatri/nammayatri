@@ -3,9 +3,9 @@ module Core.ACL.OnSearch where
 import Beckn.Product.Validation.Context (validateContext)
 import Beckn.Storage.Esqueleto (runTransaction)
 import Beckn.Types.Common hiding (id)
+import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
-import qualified Beckn.Types.Core.Taxi.Common.Context as Context
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Id
 import Beckn.Utils.Logging
@@ -25,7 +25,7 @@ buildOnSearchReq ::
   BecknCallbackReq OnSearch.OnSearchMessage ->
   m (Maybe DOnSearch.DOnSearchReq)
 buildOnSearchReq req = do
-  validateContext $ req.context
+  validateContext Context.ON_SEARCH $ req.context
   case req.contents of
     Right msg -> do
       let catalog = msg.catalog

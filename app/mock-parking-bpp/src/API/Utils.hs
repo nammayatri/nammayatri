@@ -2,7 +2,7 @@ module API.Utils where
 
 import Beckn.Mock.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Migration.Context
+import Beckn.Types.Core.Context
 import Environment
 import Relude
 
