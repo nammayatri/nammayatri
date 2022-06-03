@@ -14,7 +14,7 @@ data ServiceHandle m = ServiceHandle
   { findById :: Id Person.Person -> m (Maybe Person.Person),
     findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id SRide.Ride -> m (Maybe SRide.Ride),
-    startRide :: Id SRide.Ride -> m (),
+    startRide :: Id SRide.Ride -> Id SRB.RideBooking -> Id Person.Person -> m (),
     notifyBAPRideStarted :: SRB.RideBooking -> SRide.Ride -> m (),
     rateLimitStartRide :: Id Person.Person -> Id SRide.Ride -> m ()
   }
@@ -34,7 +34,7 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
   let inAppOtp = ride.otp
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
-  startRide ride.id
+  startRide ride.id rideBooking.id requestorId
   notifyBAPRideStarted rideBooking ride
   pure APISuccess.Success
   where

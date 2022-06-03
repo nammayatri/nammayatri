@@ -11,6 +11,7 @@ import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import qualified Beckn.Types.Core.Taxi.Cancel.Req as ReqCancel
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
@@ -19,6 +20,7 @@ import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
+import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
@@ -74,7 +76,8 @@ cancelRide rideId bookingCReason = do
   if isCancelledByDriver
     then do
       let fareProductType = SRB.getFareProductType rideBooking.rideBookingDetails
-      void $ recalculateDriverPool rideBooking.fromLocationId rideBooking.id rideBooking.providerId rideBooking.vehicleVariant fareProductType
+      driverPool <- recalculateDriverPool rideBooking.fromLocationId rideBooking.id rideBooking.providerId rideBooking.vehicleVariant fareProductType
+      Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_REALLOCATION (Just rideBooking.id)) driverPool
       reallocateRideTransaction transporter.shortId rideBooking.id ride bookingCReason
     else cancelRideTransaction rideBooking.id ride bookingCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)

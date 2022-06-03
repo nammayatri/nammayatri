@@ -200,6 +200,7 @@ updateAverageRating personId newAverageRating = do
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
     distanceToDriver :: Double,
+    durationToPickup :: Maybe Double,
     variant :: Vehicle.Variant,
     lat :: Double,
     lon :: Double

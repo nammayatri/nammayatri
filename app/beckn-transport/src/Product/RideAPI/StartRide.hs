@@ -8,9 +8,11 @@ import Beckn.Types.Id
 import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP
 import qualified Product.RideAPI.Handlers.StartRide as Handler
+import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
@@ -31,7 +33,8 @@ startRide personId rideId req = withFlowHandlerAPI $ do
           rateLimitStartRide = \personId' rideId' -> checkSlidingWindowLimit (getId personId' <> "_" <> getId rideId')
         }
 
-startRideTransaction :: EsqDBFlow m r => Id SRide.Ride -> m ()
-startRideTransaction rideId = Esq.runTransaction $ do
+startRideTransaction :: EsqDBFlow m r => Id SRide.Ride -> Id SRB.RideBooking -> Id SP.Person -> m ()
+startRideTransaction rideId rideBookingId driverId = Esq.runTransaction $ do
   QRide.updateStatus rideId SRide.INPROGRESS
   QRide.updateStartTime rideId
+  QBE.logRideCommencedEvent (cast driverId) rideBookingId rideId

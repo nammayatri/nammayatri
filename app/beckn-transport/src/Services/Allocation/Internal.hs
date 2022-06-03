@@ -20,6 +20,7 @@ import Product.BecknProvider.Cancel
 import Services.Allocation.Allocation as Alloc
 import qualified SharedLogic.DriverPool as DrPool
 import Storage.Queries.AllocationEvent (logAllocationEvent)
+import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverStats as QDS
@@ -78,7 +79,7 @@ assignDriver rideBookingId driverId = do
     QDI.updateOnRide (cast driver.id) True
     QRB.updateStatus rideBookingId SRB.TRIP_ASSIGNED
     QRide.create ride
-
+    QBE.logDriverAssignetEvent driverId rideBookingId ride.id
   fork "assignDriver - Notify BAP" $ do
     uRideBooking <- QRB.findById rideBookingId >>= fromMaybeM (RideBookingNotFound rideBookingId.getId)
     BP.sendRideAssignedUpdateToBAP uRideBooking ride

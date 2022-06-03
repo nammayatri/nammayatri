@@ -2,10 +2,13 @@ module SharedLogic.DriverPool (calculateDriverPool, recalculateDriverPool, getDr
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as GoogleMaps
+import qualified Data.List.NonEmpty as NE
+import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.FareProduct as SFP
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.RideBooking as SRB
@@ -13,6 +16,8 @@ import qualified Domain.Types.SearchReqLocation as SSReqLoc
 import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
+import Product.Location (getDistanceDuration, locationToLatLong)
+import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRideBooking
@@ -44,7 +49,9 @@ getDriverPool rideBookingId =
           pickupPoint = rideBooking.fromLocationId
           orgId = rideBooking.providerId
           fareProductType = SRB.getFareProductType rideBooking.rideBookingDetails
-      map (.driverId) <$> calculateDriverPool pickupPoint orgId (Just vehicleVariant) fareProductType
+      driverPoolResults <- calculateDriverPool pickupPoint orgId (Just vehicleVariant) fareProductType
+      Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_REALLOCATION (Just rideBooking.id)) driverPoolResults
+      pure $ map (.driverId) driverPoolResults
 
 recalculateDriverPool ::
   ( EsqDBFlow m r,
@@ -57,13 +64,14 @@ recalculateDriverPool ::
   Id SOrg.Organization ->
   SV.Variant ->
   SFP.FareProductType ->
-  m [Id Driver]
+  m [QP.DriverPoolResult]
 recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant fareProductType = do
-  driverPool <- map (.driverId) <$> calculateDriverPool pickupPoint transporterId (Just vehicleVariant) fareProductType
+  driverPoolResults <- calculateDriverPool pickupPoint transporterId (Just vehicleVariant) fareProductType
   cancelledDrivers <- QRide.findAllCancelledByRBId rideBookingId <&> map (cast . (.driverId))
-  let filteredDriverPool = filter (`notElem` cancelledDrivers) driverPool
+  let filteredDriverPoolResults = [x | x <- driverPoolResults, QP.driverId x `notElem` cancelledDrivers]
+      filteredDriverPool = map (.driverId) filteredDriverPoolResults
   Redis.setExRedis (driverPoolKey rideBookingId) (getId <$> filteredDriverPool) (60 * 10)
-  return filteredDriverPool
+  return filteredDriverPoolResults
 
 calculateDriverPool ::
   ( EsqDBFlow m r,
@@ -88,7 +96,8 @@ calculateDriverPool locId orgId variant fareProductType = do
         orgId
         variant
         fareProductType
-  case approxDriverPool of
+  approxDriverPool' <- mapM (addDuration pickupLatLong) approxDriverPool
+  case approxDriverPool' of
     [] -> pure []
     (a : pprox) -> filterOutDriversWithDistanceAboveThreshold radius pickupLatLong (a :| pprox)
   where
@@ -102,6 +111,20 @@ calculateDriverPool locId orgId variant fareProductType = do
         . readMaybe
         . toString
         $ conf.value
+
+addDuration ::
+  ( EsqDBFlow m r,
+    CoreMetrics m,
+    HasGoogleMaps m r c
+  ) =>
+  LatLong ->
+  QP.DriverPoolResult ->
+  m QP.DriverPoolResult
+addDuration pickup driverInPool = do
+  distDur <- getDistanceDuration pickup $ locationToLatLong driverInPool
+  case snd distDur of
+    Nothing -> return driverInPool
+    Just d -> return $ driverInPool {QP.durationToPickup = Just (fromInteger d :: Double)}
 
 filterOutDriversWithDistanceAboveThreshold ::
   ( EsqDBFlow m r,

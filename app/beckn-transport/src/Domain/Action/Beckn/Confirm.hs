@@ -10,6 +10,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import qualified Data.Text as T
+import qualified Domain.Types.BusinessEvent as SB
 import Domain.Types.DiscountTransaction
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
@@ -19,6 +20,7 @@ import qualified Domain.Types.RiderDetails as SRD
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
+import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Quote as QQuote
@@ -58,6 +60,7 @@ handler transporter req = do
   now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   rideBooking <- buildRideBooking searchRequest quote transporterOrg riderDetails.id now
+
   rideRequestForNow <-
     BP.buildRideReq
       (rideBooking.id)
@@ -93,11 +96,13 @@ handler transporter req = do
 
   let pickupPoint = searchRequest.fromLocationId
       fareProductType = DQuote.getFareProductType quote.quoteDetails
-  driverPool <- recalculateDriverPool pickupPoint rideBooking.id transporterOrg.id rideBooking.vehicleVariant fareProductType
+  driverPoolResults <- recalculateDriverPool pickupPoint rideBooking.id transporterOrg.id rideBooking.vehicleVariant fareProductType
+  Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_CONFIRM (Just rideBooking.id)) driverPoolResults
+  let driverPool = map (.driverId) driverPoolResults
   logTagInfo "OnConfirmCallback" $
     "Driver Pool for Ride " +|| rideBooking.id.getId ||+ " is set with drivers: "
       +|| T.intercalate ", " (getId <$> driverPool) ||+ ""
-
+  Esq.runTransaction $ QBE.logRideConfirmedEvent rideBooking.id
   pure $ makeOnConfirmCallback rideBooking
   where
     buildRideBooking searchRequest quote provider riderId now = do

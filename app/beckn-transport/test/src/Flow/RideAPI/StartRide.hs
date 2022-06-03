@@ -30,7 +30,7 @@ handle =
           if rideId == Id "1"
             then Just ride
             else Nothing,
-      startRide = \_quoteIds -> pure (),
+      startRide = \_ _ _ -> pure (),
       notifyBAPRideStarted = \_rideBooking _ride -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure ()
     }

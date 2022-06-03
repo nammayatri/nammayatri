@@ -8,6 +8,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.Text as T
 import Data.Traversable
+import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.FareProduct as SFP
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
@@ -19,6 +20,7 @@ import Product.FareCalculator
 import qualified Product.FareCalculator.Flow as Fare
 import qualified Product.Location as Loc
 import qualified SharedLogic.DriverPool as DrPool
+import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Products as QProduct
 import qualified Storage.Queries.Quote as QQuote
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
@@ -44,7 +46,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   logTagInfo "OnSearchCallback" $
     "Calculated Driver Pool for organization " +|| getId transporterId
       ||+ " with drivers " +| T.intercalate ", " (getId . (.driverId) <$> pool) |+ ""
-
+  Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_SEARCH Nothing) pool
   let listOfProtoQuotes =
         catMaybes $
           everyPossibleVariant <&> \var ->
@@ -54,12 +56,10 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
 
   distance <-
     (.info.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
-
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
       buildOneWayQuote searchRequest fareParams transporterId (getDistanceInMeter distance) poolResult.distanceToDriver poolResult.variant now
-
   Esq.runTransaction $
     for_ listOfQuotes QQuote.create
   pure listOfQuotes
