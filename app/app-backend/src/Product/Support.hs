@@ -1,8 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Product.Support
-  ( sendIssue,)
-where
+module Product.Support (sendIssue) where
 
 import qualified App.Types as App
 import Beckn.Storage.Esqueleto (runTransaction)
@@ -40,4 +38,3 @@ mkDBIssue issueId customerId SendIssueReq {..} time =
       createdAt = time,
       updatedAt = time
     }
-

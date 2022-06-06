@@ -77,8 +77,7 @@ data Organization = Organization
   deriving (Generic, Show, Eq)
 
 data OrganizationAPIEntity = OrganizationAPIEntity
-  { 
-    id :: Id Organization,
+  { id :: Id Organization,
     name :: Text,
     description :: Maybe Text,
     contactNumber :: Text,
