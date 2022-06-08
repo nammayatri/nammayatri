@@ -19,10 +19,7 @@ mkQuoteTerms QuoteTermsEntity {..} =
     }
 
 mkQuoteTermsEntities :: DQuote.Quote -> [QuoteTermsEntity]
-mkQuoteTermsEntities DQuote.Quote {..} =
-  case quoteDetails of
-    DQuote.OneWayDetails _ -> []
-    DQuote.RentalDetails rentalDetails -> mkQuoteTermsEntity id <$> rentalDetails.quoteTerms
+mkQuoteTermsEntities DQuote.Quote {..} = mkQuoteTermsEntity id <$> quoteTerms
 
 mkQuoteTermsEntity :: Id DQuote.Quote -> DQuote.QuoteTerms -> QuoteTermsEntity
 mkQuoteTermsEntity quoteId DQuote.QuoteTerms {..} =

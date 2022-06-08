@@ -28,7 +28,7 @@ data DSearchReq = DSearchReq
     now :: UTCTime
   }
 
-search :: Id Person.Person -> API.SearchReq -> Flow (API.SearchRes, DSearchReq)
+search :: Id Person.Person -> API.OneWaySearchReq -> Flow (API.SearchRes, DSearchReq)
 search personId req = do
   validateServiceability
   fromLocation <- DSearch.buildSearchReqLoc req.origin

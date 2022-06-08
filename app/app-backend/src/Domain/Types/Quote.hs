@@ -5,7 +5,9 @@ module Domain.Types.Quote where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Types.SearchRequest as DSearchRequest
+import qualified Tools.JSON as J
 
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -25,24 +27,34 @@ data Quote = Quote
     providerCompletedRidesCount :: Int,
     vehicleVariant :: Text,
     createdAt :: UTCTime,
+    quoteTerms :: [QuoteTerms],
     quoteDetails :: QuoteDetails
   }
   deriving (Generic, Show)
 
 data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails RentalQuoteDetails
-  deriving (Show)
+  deriving (Show, Generic)
 
+instance ToJSON QuoteDetails where
+  toJSON = genericToJSON J.taggedValueOptions
+
+instance FromJSON QuoteDetails where
+  parseJSON = genericParseJSON J.taggedValueOptions
+
+instance ToSchema QuoteDetails where
+  declareNamedSchema = genericDeclareNamedSchema J.taggedValueSchemaOptions
+
+-- Can I use distanceToNearestDriver instead of nearestDriverDistance in QuoteAPIEntity for consistency and less boilerplate?
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: Double
   }
-  deriving (Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data RentalQuoteDetails = RentalQuoteDetails
   { baseDistance :: Double,
-    baseDurationHr :: Int,
-    quoteTerms :: [QuoteTerms]
+    baseDurationHr :: Int
   }
-  deriving (Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data QuoteTerms = QuoteTerms
   { id :: Id QuoteTerms,
@@ -50,14 +62,8 @@ data QuoteTerms = QuoteTerms
   }
   deriving (Show)
 
-getFareProductType :: QuoteDetails -> FareProductType
-getFareProductType = \case
-  OneWayDetails _ -> ONE_WAY
-  RentalDetails _ -> RENTAL
-
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
-    fareProductType :: FareProductType,
     vehicleVariant :: Text,
     estimatedFare :: Amount,
     estimatedTotalFare :: Amount,
@@ -65,26 +71,18 @@ data QuoteAPIEntity = QuoteAPIEntity
     agencyName :: Text,
     agencyNumber :: Text,
     agencyCompletedRidesCount :: Int,
-    nearestDriverDistance :: Maybe Double,
-    baseDistance :: Maybe Double,
-    baseDurationHr :: Maybe Int,
     descriptions :: [Text],
+    quoteDetails :: QuoteDetails,
     createdAt :: UTCTime
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} = do
-  let (nearestDriverDistance, baseDistance, baseDurationHr, descriptions) =
-        case quoteDetails of
-          OneWayDetails details ->
-            (Just details.distanceToNearestDriver, Nothing, Nothing, [])
-          RentalDetails details ->
-            (Nothing, Just details.baseDistance, Just details.baseDurationHr, details.quoteTerms <&> (.description))
   QuoteAPIEntity
-    { fareProductType = getFareProductType quoteDetails,
-      agencyName = providerName,
+    { agencyName = providerName,
       agencyNumber = providerMobileNumber,
       agencyCompletedRidesCount = providerCompletedRidesCount,
+      descriptions = quoteTerms <&> (.description),
       ..
     }

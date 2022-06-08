@@ -34,18 +34,7 @@ data QuoteInfo = QuoteInfo
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    quoteInfoDetails :: QuoteInfoDetails
-  }
-
-data QuoteInfoDetails = OneWayDetails OneWayQuoteInfoDetails | RentalDetails RentalQuoteInfoDetails
-
-newtype OneWayQuoteInfoDetails = OneWayQuoteInfoDetails
-  { distanceToNearestDriver :: Double
-  }
-
-data RentalQuoteInfoDetails = RentalQuoteInfoDetails
-  { baseDistance :: Double,
-    baseDurationHr :: Int,
+    quoteDetails :: DQuote.QuoteDetails,
     descriptions :: [Text]
   }
 
@@ -82,11 +71,7 @@ buildQuote ::
   m DQuote.Quote
 buildQuote requestId providerInfo now QuoteInfo {..} = do
   uid <- generateGUID
-  quoteDetails <- case quoteInfoDetails of
-    OneWayDetails oneWayDetails ->
-      pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
-    RentalDetails rentalDetails -> do
-      DQuote.RentalDetails <$> buildRentalQuoteDetails rentalDetails
+  quoteTerms <- traverse buildQuoteTerms descriptions
   pure
     DQuote.Quote
       { id = uid,
@@ -98,14 +83,6 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
         createdAt = now,
         ..
       }
-
-mkOneWayQuoteDetails :: OneWayQuoteInfoDetails -> DQuote.OneWayQuoteDetails
-mkOneWayQuoteDetails OneWayQuoteInfoDetails {..} = DQuote.OneWayQuoteDetails {..}
-
-buildRentalQuoteDetails :: MonadFlow m => RentalQuoteInfoDetails -> m DQuote.RentalQuoteDetails
-buildRentalQuoteDetails RentalQuoteInfoDetails {..} = do
-  quoteTerms <- traverse buildQuoteTerms descriptions
-  pure DQuote.RentalQuoteDetails {..}
 
 buildQuoteTerms ::
   MonadFlow m =>

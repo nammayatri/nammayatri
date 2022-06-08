@@ -79,9 +79,9 @@ buildQuoteInfo ::
   OnSearch.Item ->
   m DOnSearch.QuoteInfo
 buildQuoteInfo fareProductType item = do
-  quoteInfoDetails <- case fareProductType of
-    DQuote.ONE_WAY -> DOnSearch.OneWayDetails <$> buildOneWayQuoteInfoDetails item
-    DQuote.RENTAL -> DOnSearch.RentalDetails <$> buildRentalQuoteInfoDetails item
+  quoteDetails <- case fareProductType of
+    DQuote.ONE_WAY -> DQuote.OneWayDetails <$> buildOneWayQuoteDetails item
+    DQuote.RENTAL -> DQuote.RentalDetails <$> buildRentalQuoteDetails item
   pure
     DOnSearch.QuoteInfo
       { bppQuoteId = Id item.id,
@@ -89,26 +89,27 @@ buildQuoteInfo fareProductType item = do
         estimatedFare = realToFrac item.estimated_price.value,
         discount = realToFrac <$> (item.discount <&> (.value)),
         estimatedTotalFare = realToFrac item.discounted_price.value,
+        descriptions = fromMaybe [] item.descriptions, --item.descriptions should not be Maybe
         ..
       }
 
-buildOneWayQuoteInfoDetails ::
+buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DOnSearch.OneWayQuoteInfoDetails
-buildOneWayQuoteInfoDetails item = do
+  m DQuote.OneWayQuoteDetails
+buildOneWayQuoteDetails item = do
   distanceToNearestDriver <- item.nearest_driver_distance & fromMaybeM (InvalidRequest "Missing nearest_driver_distance in one way search item")
   pure
-    DOnSearch.OneWayQuoteInfoDetails
+    DQuote.OneWayQuoteDetails
       { distanceToNearestDriver = realToFrac distanceToNearestDriver
       }
 
-buildRentalQuoteInfoDetails ::
+buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DOnSearch.RentalQuoteInfoDetails
-buildRentalQuoteInfoDetails item = do
+  m DQuote.RentalQuoteDetails
+buildRentalQuoteDetails item = do
   baseDistance <- item.baseDistance & fromMaybeM (InvalidRequest "Missing baseDistance in rental search item")
   baseDurationHr <- item.baseDurationHr & fromMaybeM (InvalidRequest "Missing baseDurationHr in rental search item")
-  descriptions <- item.descriptions & fromMaybeM (InvalidRequest "Missing descriptions in rental search item")
-  pure DOnSearch.RentalQuoteInfoDetails {..}
+
+  pure DQuote.RentalQuoteDetails {..}

@@ -10,6 +10,7 @@ import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
 import Test.Hspec
+import qualified "app-backend" Types.API.Search as AppBESearch
 import Types.API.Serviceability
 import Utils
 
@@ -57,12 +58,16 @@ nonServiceableDestination appClientEnv =
 
 nonServiceableSearchRequest :: ClientEnv -> IO ()
 nonServiceableSearchRequest appClientEnv = do
-  let sreq = searchReq
-  let updatedSearchReq =
-        sreq
-          & #origin . #gps .~ keralaLocation
-          & #destination . #gps .~ karnatakaLocation
-
+  let updatedSearchReq = case searchReq of
+        AppBESearch.OneWaySearch req ->
+          AppBESearch.OneWaySearch $
+            req
+              & #origin . #gps .~ keralaLocation
+              & #destination . #gps .~ karnatakaLocation
+        AppBESearch.RentalSearch req ->
+          AppBESearch.RentalSearch $
+            req
+              & #origin . #gps .~ keralaLocation
   result <- runClient appClientEnv (searchServices appRegistrationToken updatedSearchReq)
   verifyError 400 "RIDE_NOT_SERVICEABLE" result
 

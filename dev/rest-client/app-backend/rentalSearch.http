@@ -26,26 +26,29 @@ content-type: application/json
 @baseTime = 2022-05-19T18:35
 
 # @name search
-POST {{app-host}}/rentalSearch
+POST {{app-host}}/rideSearch
 content-type: application/json
 token: {{token}}
 
 {
-  "startTime": "{{baseTime}}:01.114244Z",
-  "origin": {
-    "address": {
-        "street": "Edapally Metro Station",
-        "state": "Kerala",
-        "door": "",
-        "country": "India",
-        "city": "Kochi",
-        "building": " ",
-        "areaCode": "",
-        "area": "Edappally"
-    },
-    "gps": {
-        "lon": 76.308364,
-        "lat": 10.025263
+  "fareProductType" : "RENTAL",
+  "contents" : {
+    "startTime": "{{baseTime}}:01.114244Z",
+    "origin": {
+      "address": {
+          "street": "Edapally Metro Station",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
+      "gps": {
+          "lon": 76.308364,
+          "lat": 10.025263
+      }
     }
   }
 }

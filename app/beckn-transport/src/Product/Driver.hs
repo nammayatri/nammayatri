@@ -157,6 +157,7 @@ buildDriverEntityRes (person, driverInfo) = do
         active = driverInfo.active,
         onRide = driverInfo.onRide,
         enabled = driverInfo.enabled,
+        optForRental = driverInfo.optForRental,
         registeredAt = person.createdAt,
         canDowngradeToSedan = driverInfo.canDowngradeToSedan,
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback

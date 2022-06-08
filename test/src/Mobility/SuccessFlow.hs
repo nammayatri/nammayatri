@@ -31,7 +31,10 @@ doAnAppSearchByReq searchReq' = do
   -- Driver sets online
   void . callBPP $ setDriverOnline driverToken1 True
   -- Moves driver to the pickup point
-  preUpdate <- liftIO $ buildUpdateLocationRequest $ searchReq'.origin.gps :| []
+  let origin = case searchReq' of
+        OneWaySearch req -> req.origin
+        RentalSearch req -> req.origin
+  preUpdate <- liftIO $ buildUpdateLocationRequest $ origin.gps :| []
   void . callBPP $
     updateLocation driverToken1 preUpdate
 

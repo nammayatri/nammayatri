@@ -50,6 +50,8 @@ instance TEntity QuoteT Domain.Quote where
   fromTEntity entity = do
     let QuoteT {..} = entityVal entity
     pUrl <- parseBaseUrl providerUrl
+    quoteTermsEntities <- QQuoteTerms.findAllByQuoteId (Id id)
+    let quoteTerms = Domain.mkQuoteTerms <$> quoteTermsEntities
     quoteDetails <- case distanceToNearestDriver of
       Just distanceToNearestDriver' ->
         pure . Domain.OneWayDetails $
@@ -58,13 +60,10 @@ instance TEntity QuoteT Domain.Quote where
             }
       Nothing -> do
         rentalQuote <- QRentalQuote.findByQuoteId (Id id) >>= fromMaybeM (QuoteDoesNotExist id)
-        quoteTermsEntities <- QQuoteTerms.findAllByQuoteId (Id id)
-        let quoteTerms = Domain.mkQuoteTerms <$> quoteTermsEntities
         pure . Domain.RentalDetails $
           Domain.RentalQuoteDetails
             { baseDistance = rentalQuote.baseDistance,
-              baseDurationHr = rentalQuote.baseDurationHr,
-              quoteTerms = quoteTerms
+              baseDurationHr = rentalQuote.baseDurationHr
             }
 
     return $
@@ -73,6 +72,7 @@ instance TEntity QuoteT Domain.Quote where
           bppQuoteId = Id bppQuoteId,
           requestId = fromKey requestId,
           providerUrl = pUrl,
+          quoteTerms = quoteTerms,
           ..
         }
   toTType Domain.Quote {..} = do

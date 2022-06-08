@@ -13,7 +13,7 @@ import Storage.Queries.Geometry
 import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Tools.Metrics as Metrics
-import qualified Types.API.RentalSearch as API
+import qualified Types.API.Search as API
 import Types.Error
 import Utils.Common
 
@@ -23,7 +23,7 @@ data DSearchReq = DSearchReq
     startTime :: UTCTime
   }
 
-search :: Id Person.Person -> API.SearchReq -> Flow (API.SearchRes, DSearchReq)
+search :: Id Person.Person -> API.RentalSearchReq -> Flow (API.SearchRes, DSearchReq)
 search personId req = do
   validateServiceability
   fromLocation <- DSearch.buildSearchReqLoc req.origin

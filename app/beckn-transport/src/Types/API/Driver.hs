@@ -42,6 +42,7 @@ data DriverInformationRes = DriverInformationRes
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
+    optForRental :: Bool,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     organization :: Organization.OrganizationAPIEntity
@@ -63,6 +64,7 @@ data DriverEntityRes = DriverEntityRes
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
+    optForRental :: Bool,
     canDowngradeToSedan :: Bool,
     canDowngradeToHatchback :: Bool,
     registeredAt :: UTCTime

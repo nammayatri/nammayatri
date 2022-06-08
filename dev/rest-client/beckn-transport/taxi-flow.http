@@ -14,36 +14,39 @@ content-type: application/json
 token: {{token}}
 
 {
-  "origin": {
-    "address": {
-        "street": "Edapally Metro Station",
-        "state": "Kerala",
-        "door": "",
-        "country": "India",
-        "city": "Kochi",
-        "building": " ",
-        "areaCode": "",
-        "area": "Edappally"
+  "fareProductType" : "ONE_WAY",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "Edapally Metro Station",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
+      "gps": {
+          "lon": 76.308364,
+          "lat": 10.025263
+      }
     },
-    "gps": {
-        "lon": 76.308364,
-        "lat": 10.025263
-    }
-  },
-  "destination": {
-    "address": {
-            "street": "Ambattukavu",
-            "state": "Kerala",
-            "door": "",
-            "country": "India",
-            "city": "Aluva",
-            "building": "Ambattukavu metro station",
-            "areaCode": "",
-            "area": "Choornikkara"
-        },
-    "gps": {
-        "lon": 76.3388894,
-        "lat": 10.0792806
+    "destination": {
+      "address": {
+              "street": "Ambattukavu",
+              "state": "Kerala",
+              "door": "",
+              "country": "India",
+              "city": "Aluva",
+              "building": "Ambattukavu metro station",
+              "areaCode": "",
+              "area": "Choornikkara"
+          },
+      "gps": {
+          "lon": 76.3388894,
+          "lat": 10.0792806
+      }
     }
   }
 }
@@ -59,37 +62,40 @@ token: {{app-token}}
 #Manimala Cross Road, Ponekkara, Edappally, Ernakulam, Kerala 682024, India
 
 {
-  "origin": {
-    "address": {
-        "street": "",
-        "state": "Kerala",
-        "door": "",
-        "country": "India",
-        "city": "Kochi",
-        "building": " ",
-        "areaCode": "",
-        "area": "Edappally"
-    },
+  "fareProductType" : "ONE_WAY",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
 
-    "gps": {
-        "lat": 10.021737163149579,
-        "lon": 76.30619847435514
-    }
-  },
-  "destination": {
-    "address": {
-            "street": "",
-            "state": "Kerala",
-            "door": "",
-            "country": "India",
-            "city": "Kochi",
-            "building": "",
-            "areaCode": "",
-            "area": "Edapally"
-        },
-    "gps": {
-        "lat": 10.023880128960258,
-        "lon": 76.30264171106143
+      "gps": {
+          "lat": 10.021737163149579,
+          "lon": 76.30619847435514
+      }
+    },
+    "destination": {
+      "address": {
+              "street": "",
+              "state": "Kerala",
+              "door": "",
+              "country": "India",
+              "city": "Kochi",
+              "building": "",
+              "areaCode": "",
+              "area": "Edapally"
+          },
+      "gps": {
+          "lat": 10.023880128960258,
+          "lon": 76.30264171106143
+      }
     }
   }
 }
@@ -97,6 +103,9 @@ token: {{app-token}}
 ###
 
 # @name rentalSearch
+
+@baseTime = 2022-05-19T18:35
+
 POST {{app-host}}/rideSearch
 content-type: application/json
 token: {{app-token}}
@@ -104,23 +113,26 @@ token: {{app-token}}
 #Manimala Cross Road, Ponekkara, Edappally, Ernakulam, Kerala 682024, India
 
 {
-  "origin": {
-    "address": {
-        "street": "",
-        "state": "Kerala",
-        "door": "",
-        "country": "India",
-        "city": "Kochi",
-        "building": " ",
-        "areaCode": "",
-        "area": "Edappally"
-    },
+  "fareProductType" : "RENTAL",
+  "contents" : {
+    "startTime": "{{baseTime}}:01.114244Z",
+    "origin": {
+      "address": {
+          "street": "",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
 
-    "gps": {
-        "lat": 10.021737163149579,
-        "lon": 76.30619847435514
-    },
-    "destination": null
+      "gps": {
+          "lat": 10.021737163149579,
+          "lon": 76.30619847435514
+      }
+    }
   }
 }
 ###

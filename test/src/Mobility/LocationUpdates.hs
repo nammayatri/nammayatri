@@ -29,10 +29,11 @@ spec = do
 
 searchReqFromUpdatesList :: LocationUpdates -> AppBackend.SearchReq
 searchReqFromUpdatesList updList =
-  AppBackend.SearchReq
-    { origin = AppBackend.SearchReqLocation defaultAddress $ NE.head $ NE.head updList,
-      destination = AppBackend.SearchReqLocation defaultAddress $ NE.last $ NE.last updList
-    }
+  AppBackend.OneWaySearch $
+    AppBackend.OneWaySearchReq
+      { origin = AppBackend.SearchReqLocation defaultAddress $ NE.head $ NE.head updList,
+        destination = AppBackend.SearchReqLocation defaultAddress $ NE.last $ NE.last updList
+      }
 
 waitBetweenUpdates :: Int
 waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates

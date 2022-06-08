@@ -1,14 +1,33 @@
 module Types.API.Search where
 
+import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong)
-import Data.OpenApi (ToSchema)
+import Data.OpenApi
 import Domain.Types.SearchRequest (SearchRequest)
-import EulerHS.Prelude hiding (id, state)
+import qualified Tools.JSON as J
 
-data SearchReq = SearchReq
+data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq
+  deriving (Generic, Show)
+
+instance ToJSON SearchReq where
+  toJSON = genericToJSON J.taggedValueOptions
+
+instance FromJSON SearchReq where
+  parseJSON = genericParseJSON J.taggedValueOptions
+
+instance ToSchema SearchReq where
+  declareNamedSchema = genericDeclareNamedSchema J.taggedValueSchemaOptions
+
+data OneWaySearchReq = OneWaySearchReq
   { origin :: SearchReqLocation,
     destination :: SearchReqLocation
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data RentalSearchReq = RentalSearchReq
+  { origin :: SearchReqLocation,
+    startTime :: UTCTime
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

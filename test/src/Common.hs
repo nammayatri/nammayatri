@@ -73,10 +73,11 @@ address =
 
 searchReq :: AppBESearch.SearchReq
 searchReq =
-  AppBESearch.SearchReq
-    { origin = AppBESearch.SearchReqLocation address $ LatLong 10.0739 76.2733,
-      destination = AppBESearch.SearchReqLocation address $ LatLong 10.5449 76.4356
-    }
+  AppBESearch.OneWaySearch $
+    AppBESearch.OneWaySearchReq
+      { origin = AppBESearch.SearchReqLocation address $ LatLong 10.0739 76.2733,
+        destination = AppBESearch.SearchReqLocation address $ LatLong 10.5449 76.4356
+      }
 
 verifyError :: Int -> B.ByteString -> Either ClientError a -> IO ()
 verifyError expectedCode expectedMessage serverResponse = do
