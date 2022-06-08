@@ -5,9 +5,10 @@ module Domain.Types.Quote where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Data.OpenApi as OpenApi
 import qualified Domain.Types.SearchRequest as DSearchRequest
-import qualified Tools.JSON as J
 
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -36,13 +37,39 @@ data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails RentalQuote
   deriving (Show, Generic)
 
 instance ToJSON QuoteDetails where
-  toJSON = genericToJSON J.taggedValueOptions
+  toJSON = genericToJSON fareProductOptions
 
 instance FromJSON QuoteDetails where
-  parseJSON = genericParseJSON J.taggedValueOptions
+  parseJSON = genericParseJSON fareProductOptions
 
 instance ToSchema QuoteDetails where
-  declareNamedSchema = genericDeclareNamedSchema J.taggedValueSchemaOptions
+  declareNamedSchema = genericDeclareNamedSchema fareProductSchemaOptions
+
+fareProductOptions :: Options
+fareProductOptions =
+  defaultOptions
+    { sumEncoding = fareProductTaggedObject,
+      constructorTagModifier = fareProductConstructorModifier
+    }
+
+fareProductSchemaOptions :: OpenApi.SchemaOptions
+fareProductSchemaOptions =
+  OpenApi.defaultSchemaOptions
+    { OpenApi.sumEncoding = fareProductTaggedObject,
+      OpenApi.constructorTagModifier = fareProductConstructorModifier
+    }
+
+fareProductTaggedObject :: SumEncoding
+fareProductTaggedObject =
+  defaultTaggedObject
+    { tagFieldName = "fareProductType"
+    }
+
+fareProductConstructorModifier :: String -> String
+fareProductConstructorModifier = \case
+  "OneWayDetails" -> "ONE_WAY"
+  "RentalDetails" -> "RENTAL"
+  x -> x
 
 -- Can I use distanceToNearestDriver instead of nearestDriverDistance in QuoteAPIEntity for consistency and less boilerplate?
 newtype OneWayQuoteDetails = OneWayQuoteDetails
