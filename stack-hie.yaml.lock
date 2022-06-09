@@ -5,6 +5,32 @@
 
 packages:
 - completed:
+    subdir: app/gateway
+    name: beckn-gateway
+    version: 0.1.0.0
+    git: git@bitbucket.org:juspay/beckn-gateway.git
+    pantry-tree:
+      size: 1039
+      sha256: 8ad21e3b556c5f00c0ef7664351b877ce8dfd5e2603847f006398f993010c726
+    commit: b400761517570d270f9b1403ffe6afba17f808fa
+  original:
+    subdir: app/gateway
+    git: git@bitbucket.org:juspay/beckn-gateway.git
+    commit: b400761517570d270f9b1403ffe6afba17f808fa
+- completed:
+    subdir: app/mock-registry
+    name: mock-registry
+    version: 0.1.0.0
+    git: git@bitbucket.org:juspay/beckn-gateway.git
+    pantry-tree:
+      size: 662
+      sha256: 01ff19c420130912002e3c645231f6f5d594b96fb7dde52dafd9ac98f3489b89
+    commit: 07457cbf352fce2acbd4709a77fed3f59737637d
+  original:
+    subdir: app/mock-registry
+    git: git@bitbucket.org:juspay/beckn-gateway.git
+    commit: 07457cbf352fce2acbd4709a77fed3f59737637d
+- completed:
     subdir: core
     name: passetto-core
     version: 0.1.0
@@ -205,19 +231,40 @@ packages:
   original:
     hackage: servant-foreign-0.15.2
 - completed:
-    hackage: servant-swagger-1.1.10@sha256:ca3237516f11cb4d28fff6ec0991b9dc765456a3985df3fb469641fb5c742c5a,4623
-    pantry-tree:
-      size: 1636
-      sha256: 83536669b525e5c6ff3368698bcdbeec55858b713642575f88d3c3b52d0bf380
-  original:
-    hackage: servant-swagger-1.1.10
-- completed:
     hackage: named-0.3.0.1@sha256:2975d50c9c5d88095026ffc1303d2d9be52e5f588a8f8bcb7003a04b79f10a06,2312
     pantry-tree:
       size: 426
       sha256: e0df5f146ecd48ef129dd74f868e8d2d754f0a11b36c5d0e56bd4b1947433c9f
   original:
     hackage: named-0.3.0.1@sha256:2975d50c9c5d88095026ffc1303d2d9be52e5f588a8f8bcb7003a04b79f10a06,2312
+- completed:
+    hackage: esqueleto-3.5.2.0@sha256:8519980763ccbfa4b89bc3382b4861971dee06092b6f911c9714d70ff5c598b6,4858
+    pantry-tree:
+      size: 2355
+      sha256: 0fddcfc9721afb89556692da95dd1b493faacdab640ad52f30b8e40c27fbb2c9
+  original:
+    hackage: esqueleto-3.5.2.0@sha256:8519980763ccbfa4b89bc3382b4861971dee06092b6f911c9714d70ff5c598b6,4858
+- completed:
+    hackage: persistent-2.13.0.1@sha256:08a79866b9f19710109d7d7feee6b33087065041b3ffdb123380d723aa17b666,6232
+    pantry-tree:
+      size: 5098
+      sha256: 5e537e8e3070cb463d2ae868d897f9adc29cb08d3790c59cb150af4e0885ff79
+  original:
+    hackage: persistent-2.13.0.1@sha256:08a79866b9f19710109d7d7feee6b33087065041b3ffdb123380d723aa17b666,6232
+- completed:
+    hackage: persistent-postgresql-2.13.0.0@sha256:52be384aa24859142549ed1eddaf84c4623de2bb522502d5aaa238364a22a7aa,3557
+    pantry-tree:
+      size: 988
+      sha256: 901e580f2a59f942533baec4cdd730ad1b343ac5e9deda266473724d177f0e9e
+  original:
+    hackage: persistent-postgresql-2.13.0.0@sha256:52be384aa24859142549ed1eddaf84c4623de2bb522502d5aaa238364a22a7aa,3557
+- completed:
+    hackage: lift-type-0.1.0.1@sha256:6e38e49bf086fd2203346417d96ad2e6c300d8d8f41d222780abdccc7a4e451b,1106
+    pantry-tree:
+      size: 361
+      sha256: 9de4bdc6ce32b78c28b4bce75b5b2e488bf0f875a136ae269a02df804eb94a1a
+  original:
+    hackage: lift-type-0.1.0.1@sha256:6e38e49bf086fd2203346417d96ad2e6c300d8d8f41d222780abdccc7a4e451b,1106
 - completed:
     hackage: dependent-map-0.4.0.0@sha256:ca2b131046f4340a1c35d138c5a003fe4a5be96b14efc26291ed35fd08c62221,1657
     pantry-tree:
@@ -275,6 +322,13 @@ packages:
   original:
     hackage: wire-streams-0.1.1.0@sha256:08816c7fa53b20f52e5c465252c106d9de8e6d9580ec0b6d9f000a34c7bcefc8,2130
 - completed:
+    hackage: mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
+    pantry-tree:
+      size: 574
+      sha256: 4147c0fd201f849d018f9408e82b75b0313294bb9fff290673dd30729eedf948
+  original:
+    hackage: mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
+- completed:
     hackage: hex-text-0.1.0.0@sha256:52dc2cf5ce45f7d86ea5e56e2ac57820f788c10bbb3fe83f6d57e678a426305b,1072
     pantry-tree:
       size: 314
@@ -282,12 +336,12 @@ packages:
   original:
     hackage: hex-text-0.1.0.0@sha256:52dc2cf5ce45f7d86ea5e56e2ac57820f788c10bbb3fe83f6d57e678a426305b,1072
 - completed:
-    hackage: postgresql-simple-migration-0.1.15.0@sha256:0e24e96908430f5caf9c1c1d9ca7c5c108e4e0409a255e2cbd77e8cd252dbb02,3879
+    hackage: postgresql-migration-0.2.1.3@sha256:7378629d0790630d54b299f34cc01bf4f3288031eb2060ededf80c1449264002,4990
     pantry-tree:
-      size: 766
-      sha256: c2843bfe43b804992bc913f33ec6b2c6cb0fc99c6d931b6ff85894e8aef9a99e
+      size: 1146
+      sha256: 718bcbb8a80e66efe74cfa03ee6c907abd2f935a21a96257798c500a9610028e
   original:
-    hackage: postgresql-simple-migration-0.1.15.0@sha256:0e24e96908430f5caf9c1c1d9ca7c5c108e4e0409a255e2cbd77e8cd252dbb02,3879
+    hackage: postgresql-migration-0.2.1.3@sha256:7378629d0790630d54b299f34cc01bf4f3288031eb2060ededf80c1449264002,4990
 - completed:
     hackage: prometheus-metrics-ghc-1.0.1.1@sha256:d378a7186a967140fe0e09d325fe5e3bfd7b77a1123934b40f81fdfed2eacbdc,1233
     pantry-tree:
@@ -317,13 +371,6 @@ packages:
   original:
     hackage: servant-multipart-0.12@sha256:aa81dd0478270ade4a21b75611d5bc9cce8107df2e89c37b9964a3421629825d,2761
 - completed:
-    hackage: time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1,928
-    pantry-tree:
-      size: 212
-      sha256: 9b516d4195fcea22cd1f4335cfe210e88deca397ba7dacc494d5a2feb69e1af8
-  original:
-    hackage: time-units-1.0.0@sha256:27cf54091c4a0ca73d504fc11d5c31ab4041d17404fe3499945e2055697746c1,928
-- completed:
     hackage: wai-middleware-prometheus-1.0.0@sha256:1625792914fb2139f005685be8ce519111451cfb854816e430fbf54af46238b4,1314
     pantry-tree:
       size: 307
@@ -338,22 +385,71 @@ packages:
   original:
     hackage: unix-memory-0.1.2@sha256:601231a46e84088103190a156c1919573237317e7d4f775cd555c54356e0e2c4,1269
 - completed:
-    hackage: mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
+    hackage: record-dot-preprocessor-0.2.14@sha256:00967231260e798d9125437db6e1cf04b3b232a9c0193a629563c0e6752c8e7c,2538
     pantry-tree:
-      size: 574
-      sha256: 4147c0fd201f849d018f9408e82b75b0313294bb9fff290673dd30729eedf948
+      size: 1078
+      sha256: 9c7f2f8c0159a565b3fa9d16068f1281c1bd9827155d6e71faa57a7c4684b25a
   original:
-    hackage: mason-0.2.3@sha256:186ff6306c7d44dbf7b108b87f73a30d45c70cd5c87d6f2a88d300def5542fef,1226
+    hackage: record-dot-preprocessor-0.2.14@sha256:00967231260e798d9125437db6e1cf04b3b232a9c0193a629563c0e6752c8e7c,2538
 - completed:
-    hackage: record-dot-preprocessor-0.2.7@sha256:bf7e83b2a01675577f81536fc3246e3b54e9d2dd28bb645599813dc5c486fbee,2440
+    hackage: kleene-0.1@sha256:751db2ef4fea28a1abc42e0cd18d82d900bbb33d1b4e86f72271426c501ba7af,2424
     pantry-tree:
-      size: 1003
-      sha256: 8e86a73101e570ce238522f45ffb906811116c752d1f08418a2abd078697488e
+      size: 1147
+      sha256: fba5a28ee3c79fd980231deb3b2464828bd356513cf3bfee6851922581aaf158
   original:
-    hackage: record-dot-preprocessor-0.2.7@sha256:bf7e83b2a01675577f81536fc3246e3b54e9d2dd28bb645599813dc5c486fbee,2440
+    hackage: kleene-0.1@sha256:751db2ef4fea28a1abc42e0cd18d82d900bbb33d1b4e86f72271426c501ba7af,2424
+- completed:
+    hackage: servant-openapi3-2.0.1.2@sha256:7beb612b56d01536bc97c745fd0c064f483198199619b1856a5a3f0a3a0f6431,4886
+    pantry-tree:
+      size: 1637
+      sha256: cf0ace24c9d7779da852f0424ad304969f2b57482e821db9821900e464b23cbe
+  original:
+    hackage: servant-openapi3-2.0.1.2@sha256:7beb612b56d01536bc97c745fd0c064f483198199619b1856a5a3f0a3a0f6431,4886
+- completed:
+    hackage: openapi3-3.1.0@sha256:815236a5d92cc8b3bc3cbcbba5503bd39035ccaf517d21cd02f74795b9747ae5,4824
+    pantry-tree:
+      size: 2191
+      sha256: b02f8fc5f43f4f1a0c18b25242669f45240ae0a160d484f92a190f49462acaf8
+  original:
+    hackage: openapi3-3.1.0@sha256:815236a5d92cc8b3bc3cbcbba5503bd39035ccaf517d21cd02f74795b9747ae5,4824
+- completed:
+    hackage: hw-kafka-client-4.0.3@sha256:20e3614454d5afd2a6acfc0709b9bf00bd6ee9a9bc646c2e2e4ccec1d16831a1,4861
+    pantry-tree:
+      size: 2057
+      sha256: 709ea6818b3b3beb8eed6f79ea76b8dc13cce9ae165870c17986d5de2d695447
+  original:
+    hackage: hw-kafka-client-4.0.3@sha256:20e3614454d5afd2a6acfc0709b9bf00bd6ee9a9bc646c2e2e4ccec1d16831a1,4861
+- completed:
+    hackage: constraints-0.11.2@sha256:d173efdf7a5d5515075635c686420211dccd9f85bc091a579ecc18b3f138a5fe,2324
+    pantry-tree:
+      size: 867
+      sha256: 6bd2134dba1371444d5e72064c89cacc37f4573c5036060b9ff5237734ca60f3
+  original:
+    hackage: constraints-0.11.2@sha256:d173efdf7a5d5515075635c686420211dccd9f85bc091a579ecc18b3f138a5fe,2324
+- completed:
+    hackage: some-1.0.1@sha256:26e5bab7276f48b25ea8660d3fd1166c0f20fd497dac879a40f408e23211f93e,2055
+    pantry-tree:
+      size: 708
+      sha256: c882b6ebe8a0616f1ab3908f1620087ad5c6d8d82d1a72b99226f6487419bfe6
+  original:
+    hackage: some-1.0.1@sha256:26e5bab7276f48b25ea8660d3fd1166c0f20fd497dac879a40f408e23211f93e,2055
+- completed:
+    hackage: c2hs-0.28.8@sha256:980c1a91c93e492d5412e904f2500b2ace34a421e8509529b6d98d89c51f9a2e,9208
+    pantry-tree:
+      size: 17398
+      sha256: 37edecd4f2eace540e82d8abc8fb6f5916b9732880ad16a5aa34e0c9b3f77f57
+  original:
+    hackage: c2hs-0.28.8@sha256:980c1a91c93e492d5412e904f2500b2ace34a421e8509529b6d98d89c51f9a2e,9208
+- completed:
+    hackage: language-c-0.9.0.1@sha256:7a1c57e8f9c29e94bcd5c748d99e4479a73bd8560cc0affd838f3b2d1bbc0384,4893
+    pantry-tree:
+      size: 3496
+      sha256: 65cf3410da4684205319a8f2dd4cf22edf8b76b1423b62bdbb88a53663cb88ed
+  original:
+    hackage: language-c-0.9.0.1@sha256:7a1c57e8f9c29e94bcd5c748d99e4479a73bd8560cc0affd838f3b2d1bbc0384,4893
 snapshots:
 - completed:
-    size: 496112
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/15/15.yaml
-    sha256: 86169722ad0056ffc9eacc157ef80ee21d7024f92c0d2961c89ccf432db230a3
-  original: lts-15.15
+    size: 534126
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/31.yaml
+    sha256: 637fb77049b25560622a224845b7acfe81a09fdb6a96a3c75997a10b651667f6
+  original: lts-16.31
