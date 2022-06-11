@@ -139,11 +139,6 @@ CREATE INDEX idx_organization_short_id ON atlas_transporter.organization USING b
 CREATE TRIGGER create_fare_policy_on_org_creation AFTER INSERT ON atlas_transporter.organization FOR EACH ROW EXECUTE FUNCTION atlas_transporter.create_fare_policy_on_org_creation();
 
 
-
-
-
-
-
 CREATE TABLE atlas_transporter.person (
 id character(36) NOT NULL,
 first_name character varying(255),

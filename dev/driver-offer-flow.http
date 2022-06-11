@@ -1,0 +1,45 @@
+
+@driver-offer-bpp-host = http://localhost:8016
+
+# @name healthcheck
+GET {{driver-offer-bpp-host}}
+
+###
+@currentTime = 2022-03-03T23:37
+
+# @name updateInitial
+POST {{driver-offer-bpp-host}}/v2/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.31642659311804,
+            "lat": 10.041437092019764
+        },
+        "ts": "{{currentTime}}:01.114244Z"
+    }
+]
+###
+# @name setActive
+POST {{driver-offer-bpp-host}}/v2/driver/setActivity?active=true
+content-type: application/json
+token: {{driver-token}}
+###
+
+# @name nearbySearchRequest
+GET {{driver-offer-bpp-host}}/v2/driver/nearbyRideRequest
+token: {{driver-token}}
+
+###
+
+# @name offerQuote
+POST {{driver-offer-bpp-host}}/v2/driver/searchRequest/quote/offer
+token: {{driver-token}}
+content-type: application/json
+
+{
+    "offeredFare": 30.5,
+    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[0].searchRequestId}}"
+}

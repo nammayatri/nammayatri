@@ -18,6 +18,7 @@ search-result-aggregator
 transporter-scheduler
 scheduler-example-app
 scheduler-example-scheduler
+driver-offer-bpp
 EOF
 }
 

@@ -39,6 +39,12 @@ cradle:
     - path: "app/beckn-cli/app/Paths_beckn_cli.hs"
       component: "beckn-cli:exe:beckn-cli-exe"
 
+    - path: "app/driver-offer-bpp/src"
+      component: "driver-offer-bpp:lib"
+
+    - path: "app/driver-offer-bpp/server/Main.hs"
+      component: "driver-offer-bpp:exe:driver-offer-bpp-exe"
+
     - path: "app/beckn-transport/src"
       component: "beckn-transport:lib"
 

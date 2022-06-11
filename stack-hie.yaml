@@ -35,6 +35,7 @@ ghc-options:
 packages:
   - app/beckn-cli
   - app/beckn-transport
+  - app/driver-offer-bpp
   - app/app-backend
   - app/search-result-aggregator
   - app/mock-sms
