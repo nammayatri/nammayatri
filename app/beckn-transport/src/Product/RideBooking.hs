@@ -11,6 +11,7 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import Domain.Types.AllocationEvent
 import qualified Domain.Types.AllocationEvent as AllocationEvent
 import Domain.Types.BookingLocation as DBLoc
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
@@ -24,6 +25,7 @@ import qualified Product.Location as Location
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.DriverLocation as QDrLoc
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
@@ -146,6 +148,7 @@ buildRideBookingStatusRes rideBooking = do
   let rbStatus = rideBooking.status
   now <- getCurrentTime
   rideAPIEntityList <- mapM (buildRideAPIEntity now) =<< QRide.findAllRideAPIEntityDataByRBId rideBooking.id
+  fareBreakups <- QFareBreakup.findAllByRideBookingId rideBooking.id
   return $
     API.RideBookingStatusRes
       { id = rideBooking.id,
@@ -156,6 +159,7 @@ buildRideBookingStatusRes rideBooking = do
         toLocation = DBLoc.makeBookingLocationAPIEntity <$> toLocation,
         fromLocation = DBLoc.makeBookingLocationAPIEntity fromLocation,
         rideList = rideAPIEntityList,
+        fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
         createdAt = rideBooking.createdAt,
         updatedAt = rideBooking.updatedAt
       }

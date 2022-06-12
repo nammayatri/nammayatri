@@ -5,12 +5,16 @@ module Product.FareCalculator.Flow
     doCalculateFare,
     fareSum,
     fareSumWithDiscount,
+    buildFareBreakups,
   )
 where
 
+import Beckn.Types.Amount
 import Beckn.Types.Id
+import Domain.Types.FareBreakup
 import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Organization (Organization)
+import Domain.Types.RideBooking (RideBooking)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Calculator
@@ -62,3 +66,33 @@ doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
     "FareCalculator"
     $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
+
+-- check, that sum of FareBreakups should be equal to fareSumWithDiscount
+buildFareBreakups :: MonadGuid m => FareParameters -> Id RideBooking -> m [FareBreakup]
+buildFareBreakups fareParams rideBookingId = do
+  baseFareBreakup <- buildBaseFareBreakup fareParams rideBookingId
+  distanceFareBreakup <- buildDistanceFareBreakup fareParams rideBookingId
+  discountFareBreakup <- buildDiscountFareBreakup fareParams.discount rideBookingId
+  pure $ [baseFareBreakup, distanceFareBreakup] <> maybeToList discountFareBreakup
+
+buildBaseFareBreakup :: MonadGuid m => FareParameters -> Id RideBooking -> m FareBreakup
+buildBaseFareBreakup FareParameters {..} rideBookingId = do
+  id <- Id <$> generateGUIDText
+  let amount = nightShiftRate * baseFare
+      description = "Base fare is " <> show amount <> "rupees"
+  pure FareBreakup {..}
+
+buildDistanceFareBreakup :: MonadGuid m => FareParameters -> Id RideBooking -> m FareBreakup
+buildDistanceFareBreakup FareParameters {..} rideBookingId = do
+  id <- Id <$> generateGUIDText
+  let amount = nightShiftRate * distanceFare
+      description = "Extra distance fare is " <> show amount <> " rupees"
+  pure FareBreakup {..}
+
+buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id RideBooking -> m (Maybe FareBreakup)
+buildDiscountFareBreakup mbDiscount rideBookingId = do
+  forM mbDiscount $ \discount -> do
+    id <- Id <$> generateGUIDText
+    let amount = -discount -- this amount should be always below zero
+        description = "Discount is " <> show discount <> " rupees"
+    pure FareBreakup {..}

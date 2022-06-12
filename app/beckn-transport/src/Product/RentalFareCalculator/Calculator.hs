@@ -25,7 +25,8 @@ data RentalFareParameters = RentalFareParameters
     extraDistanceFare :: Amount,
     extraTimeFare :: Amount,
     nextDaysFare :: Maybe Amount, --use 0 instead of Nothing?
-    discount :: Maybe Amount
+    discount :: Maybe Amount,
+    farePolicy :: RentalFarePolicy
   }
   deriving stock (Show, Eq)
 

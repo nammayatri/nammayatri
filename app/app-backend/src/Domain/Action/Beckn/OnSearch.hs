@@ -7,6 +7,7 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Quote as QQuote
@@ -34,7 +35,7 @@ data QuoteInfo = QuoteInfo
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    quoteDetails :: DQuote.QuoteDetails,
+    quoteDetails :: DQuote.QuoteAPIDetails,
     descriptions :: [Text]
   }
 
@@ -64,7 +65,12 @@ buildQuote ::
   m DQuote.Quote
 buildQuote requestId providerInfo now QuoteInfo {..} = do
   uid <- generateGUID
-  quoteTerms <- traverse buildQuoteTerms descriptions
+  tripTerms <- buildTripTerms descriptions
+  quoteDetails' <- case quoteDetails of
+    DQuote.OneWayAPIDetails oneWayDetails ->
+      pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
+    DQuote.RentalAPIDetails rentalDetails -> do
+      DQuote.RentalDetails <$> buildRentalQuoteDetails rentalDetails
   pure
     DQuote.Quote
       { id = uid,
@@ -74,17 +80,23 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
         providerId = providerInfo.providerId,
         providerUrl = providerInfo.url,
         createdAt = now,
+        quoteDetails = quoteDetails',
         ..
       }
 
-buildQuoteTerms ::
+mkOneWayQuoteDetails :: DQuote.OneWayQuoteAPIDetails -> DQuote.OneWayQuoteDetails
+mkOneWayQuoteDetails DQuote.OneWayQuoteAPIDetails {..} = DQuote.OneWayQuoteDetails {..}
+
+buildRentalQuoteDetails :: MonadFlow m => DQuote.RentalQuoteAPIDetails -> m DQuote.RentalQuoteDetails
+buildRentalQuoteDetails DQuote.RentalQuoteAPIDetails {..} = do
+  slabId <- generateGUID
+  pure DQuote.RentalQuoteDetails {..}
+
+buildTripTerms ::
   MonadFlow m =>
-  Text ->
-  m DQuote.QuoteTerms
-buildQuoteTerms description = do
-  uid <- generateGUID
-  return
-    DQuote.QuoteTerms
-      { id = uid,
-        ..
-      }
+  [Text] ->
+  m (Maybe DTripTerms.TripTerms)
+buildTripTerms [] = pure Nothing
+buildTripTerms descriptions = do
+  id <- generateGUID
+  pure . Just $ DTripTerms.TripTerms {..}

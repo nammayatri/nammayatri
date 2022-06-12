@@ -8,6 +8,7 @@ import qualified Domain.Types.BookingLocation as DLoc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.RideBooking as SRB
+import Domain.Types.SearchReqLocation (SearchReqLocation (..))
 import Domain.Types.VehicleVariant (VehicleVariant)
 import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Quote as QQuote
@@ -43,7 +44,7 @@ init personId req = do
     throwError SearchRequestExpired
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
   fromLocation <- QSRLoc.findById searchRequest.fromLocationId >>= fromMaybeM LocationNotFound
-  mbToLocation <- searchRequest.toLocationId `forM` (QSRLoc.findById >=> fromMaybeM LocationNotFound)
+  mbToLocation :: Maybe SearchReqLocation <- searchRequest.toLocationId `forM` (QSRLoc.findById >=> fromMaybeM LocationNotFound)
   bFromLocation <- buildBLoc fromLocation now
   mbBToLocation <- (`buildBLoc` now) `mapM` mbToLocation
   booking <- buildRideBooking searchRequest quote bFromLocation.id (mbBToLocation <&> (.id)) now
@@ -87,6 +88,14 @@ init personId req = do
           }
     buildRideBooking searchRequest quote fromLocId toLocId now = do
       id <- generateGUID
+      rideBookingDetails <- case quote.quoteDetails of
+        SQuote.OneWayDetails _ -> do
+          -- we need to throw errors here because of some redundancy of our domain model
+          toLocationId <- toLocId & fromMaybeM (InternalError "distance is null for rental search request")
+          distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for rental search request")
+          pure . SRB.OneWayDetails $ SRB.OneWayRideBookingDetails {..}
+        SQuote.RentalDetails SQuote.RentalQuoteDetails {..} ->
+          pure . SRB.RentalDetails $ SRB.RentalRideBookingDetails {..}
       return $
         SRB.RideBooking
           { id = Id id,
@@ -99,12 +108,12 @@ init personId req = do
             startTime = searchRequest.startTime,
             riderId = searchRequest.riderId,
             fromLocationId = fromLocId,
-            toLocationId = toLocId,
             estimatedFare = quote.estimatedFare,
             discount = quote.discount,
             estimatedTotalFare = quote.estimatedTotalFare,
-            distance = searchRequest.distance,
             vehicleVariant = quote.vehicleVariant,
+            rideBookingDetails,
+            tripTerms = quote.tripTerms,
             createdAt = now,
             updatedAt = now
           }

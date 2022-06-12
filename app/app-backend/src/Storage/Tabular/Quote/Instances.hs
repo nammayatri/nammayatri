@@ -6,76 +6,68 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as Domain
-import Storage.Tabular.Quote.QuoteTerms
-import Storage.Tabular.Quote.RentalQuote
 import Storage.Tabular.Quote.Table
+import Storage.Tabular.RentalSlab
+import Storage.Tabular.TripTerms
 import Types.Error
 import Utils.Common hiding (id)
 
-data QuoteDetailsT = OneWayDetailsT | RentalDetailsT RentalQuoteT
+-- we can move it back to Storage.Tabular.Quote
+data QuoteDetailsT = OneWayDetailsT | RentalDetailsT RentalSlabT
 
-type FullQuoteT = (QuoteT, [QuoteTermsT], QuoteDetailsT)
+type FullQuoteT = (QuoteT, Maybe TripTermsT, QuoteDetailsT)
 
 instance TType FullQuoteT Domain.Quote where
-  fromTType (QuoteT {..}, quoteTermsT, quoteDetailsT) = do
+  fromTType (QuoteT {..}, mbTripTermsT, quoteDetailsT) = do
     pUrl <- parseBaseUrl providerUrl
-    let quoteTerms = fromQuoteTermsTType <$> quoteTermsT
+    tripTerms <- forM mbTripTermsT fromTType
     quoteDetails <- case quoteDetailsT of
       OneWayDetailsT -> do
         distanceToNearestDriver' <- distanceToNearestDriver & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
         pure . Domain.OneWayDetails $
           Domain.OneWayQuoteDetails
-            { distanceToNearestDriver = distanceToNearestDriver'
+            { distanceToNearestDriver = HighPrecMeters distanceToNearestDriver'
             }
-      RentalDetailsT RentalQuoteT {..} -> do
-        pure . Domain.RentalDetails $
-          Domain.RentalQuoteDetails
-            { baseDistance = Kilometers baseDistance,
-              baseDuration = Hours baseDuration
-            }
-
+      RentalDetailsT rentalSlabT ->
+        pure . Domain.RentalDetails $ fromRentalSlabTType rentalSlabT
     return $
       Domain.Quote
         { id = Id id,
           requestId = fromKey requestId,
           providerUrl = pUrl,
-          quoteTerms = quoteTerms,
           ..
         }
   toTType Domain.Quote {..} = do
-    let (quoteDetailsT, distanceToNearestDriver) = case quoteDetails of
-          Domain.OneWayDetails details -> (OneWayDetailsT, Just details.distanceToNearestDriver)
+    let (fareProductType, quoteDetailsT, distanceToNearestDriver, rentalSlabId) = case quoteDetails of
+          Domain.OneWayDetails details -> (Domain.ONE_WAY, OneWayDetailsT, Just $ getHighPrecMeters details.distanceToNearestDriver, Nothing)
           Domain.RentalDetails details -> do
-            let rentalQuoteT = toRentalQuoteTType id details.baseDistance details.baseDuration
-            (RentalDetailsT rentalQuoteT, Nothing)
-        quoteTermsT = toQuoteTermsTType id <$> quoteTerms
+            let rentalSlabT = toRentalSlabTType details
+            (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey details.slabId)
+
         quoteT =
           QuoteT
             { id = getId id,
               requestId = toKey requestId,
               providerUrl = showBaseUrl providerUrl,
+              tripTermsId = toKey <$> (tripTerms <&> (.id)), -- mbTripTermsT <&> (.id) not working
               ..
             }
-    (quoteT, quoteTermsT, quoteDetailsT)
+    let mbTripTermsT = toTType <$> tripTerms
+    (quoteT, mbTripTermsT, quoteDetailsT)
 
-fromQuoteTermsTType :: QuoteTermsT -> Domain.QuoteTerms
-fromQuoteTermsTType QuoteTermsT {..} = do
-  Domain.QuoteTerms
-    { id = Id id,
-      ..
+-- use instance instead
+fromRentalSlabTType :: RentalSlabT -> Domain.RentalQuoteDetails
+fromRentalSlabTType RentalSlabT {..} =
+  Domain.RentalQuoteDetails
+    { slabId = Id id,
+      baseDistance = Kilometers baseDistance,
+      baseDuration = Hours baseDuration
     }
 
-toQuoteTermsTType :: Id Domain.Quote -> Domain.QuoteTerms -> QuoteTermsT
-toQuoteTermsTType quoteId Domain.QuoteTerms {..} =
-  QuoteTermsT
-    { id = getId id,
-      quoteId = toKey quoteId,
-      ..
-    }
-
-toRentalQuoteTType :: Id Domain.Quote -> Kilometers -> Hours -> RentalQuoteT
-toRentalQuoteTType quoteId (Kilometers baseDistance) (Hours baseDuration) =
-  RentalQuoteT
-    { quoteId = toKey quoteId,
-      ..
+toRentalSlabTType :: Domain.RentalQuoteDetails -> RentalSlabT
+toRentalSlabTType Domain.RentalQuoteDetails {..} =
+  RentalSlabT
+    { id = getId slabId,
+      baseDistance = getKilometers baseDistance,
+      baseDuration = getHours baseDuration
     }

@@ -12,6 +12,8 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.BookingLocation as DLoc
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.RentalSlab as DRentalSlab
+import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Servant.API
 
@@ -47,13 +49,37 @@ data RideBooking = RideBooking
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
     fromLocationId :: Id DLoc.BookingLocation,
-    toLocationId :: Maybe (Id DLoc.BookingLocation),
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    distance :: Maybe HighPrecMeters,
     vehicleVariant :: VehicleVariant,
+    rideBookingDetails :: RideBookingDetails,
+    tripTerms :: Maybe DTripTerms.TripTerms,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show)
+
+data RideBookingDetails = OneWayDetails OneWayRideBookingDetails | RentalDetails RentalRideBookingDetails
+  deriving (Show)
+
+data OneWayRideBookingDetails = OneWayRideBookingDetails
+  { toLocationId :: Id DLoc.BookingLocation,
+    distance :: HighPrecMeters
+  }
+  deriving (Show)
+
+-- the same as RentalSlab and RentalQuoteDetails
+data RentalRideBookingDetails = RentalRideBookingDetails
+  { slabId :: Id DRentalSlab.RentalSlab,
+    baseDistance :: Kilometers,
+    baseDuration :: Hours
+  }
+  deriving (Show)
+
+mkRentalQuoteDetails :: DRentalSlab.RentalSlab -> RentalRideBookingDetails
+mkRentalQuoteDetails DRentalSlab.RentalSlab {..} =
+  RentalRideBookingDetails
+    { slabId = id,
+      ..
+    }

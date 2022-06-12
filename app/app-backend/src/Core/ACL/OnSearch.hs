@@ -77,8 +77,8 @@ buildQuoteInfo ::
   m DOnSearch.QuoteInfo
 buildQuoteInfo item = do
   quoteDetails <- case item.category_id of
-    OnSearch.ONE_WAY_TRIP -> DQuote.OneWayDetails <$> buildOneWayQuoteDetails item
-    OnSearch.RENTAL_TRIP -> DQuote.RentalDetails <$> buildRentalQuoteDetails item
+    OnSearch.ONE_WAY_TRIP -> DQuote.OneWayAPIDetails <$> buildOneWayQuoteDetails item
+    OnSearch.RENTAL_TRIP -> DQuote.RentalAPIDetails <$> buildRentalQuoteDetails item
   let itemCode = item.descriptor.code
       vehicleVariant = itemCode.vehicleVariant
       estimatedFare = realToFrac item.price.value
@@ -99,21 +99,21 @@ buildQuoteInfo item = do
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DQuote.OneWayQuoteDetails
+  m DQuote.OneWayQuoteAPIDetails
 buildOneWayQuoteDetails item = do
   distanceToNearestDriver <-
     (item.tags <&> (.distance_to_nearest_driver))
       & fromMaybeM (InvalidRequest "Trip type is ONE_WAY, but distanceToNearestDriver is Nothing")
   pure
-    DQuote.OneWayQuoteDetails
+    DQuote.OneWayQuoteAPIDetails
       { distanceToNearestDriver = realToFrac distanceToNearestDriver
       }
 
 buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DQuote.RentalQuoteDetails
+  m DQuote.RentalQuoteAPIDetails
 buildRentalQuoteDetails item = do
   baseDistance <- item.base_distance & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
   baseDuration <- item.base_duration & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
-  pure DQuote.RentalQuoteDetails {..}
+  pure DQuote.RentalQuoteAPIDetails {..}

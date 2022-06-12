@@ -7,6 +7,7 @@ import Beckn.Types.Id
 import Data.OpenApi (ToSchema)
 import Data.Time (UTCTime)
 import Domain.Types.BookingLocation (BookingLocationAPIEntity)
+import Domain.Types.FareBreakup (FareBreakupAPIEntity)
 import Domain.Types.Ride (RideAPIEntity)
 import Domain.Types.RideBooking (RideBooking, RideBookingStatus)
 import EulerHS.Prelude hiding (id)
@@ -21,6 +22,7 @@ data RideBookingStatusRes = RideBookingStatusRes
     toLocation :: Maybe BookingLocationAPIEntity,
     fromLocation :: BookingLocationAPIEntity,
     rideList :: [RideAPIEntity],
+    fareBreakup :: [FareBreakupAPIEntity],
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

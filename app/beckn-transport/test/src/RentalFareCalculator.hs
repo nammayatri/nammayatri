@@ -4,10 +4,9 @@ import Beckn.Types.Amount
 import Beckn.Types.Common (HighPrecMeters (..))
 import Beckn.Types.Id
 import Data.Time hiding (parseTime)
-import qualified Domain.Types.Organization as Organization
 import Domain.Types.RentalFarePolicy
-import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude
+import qualified Fixtures.RentalFarePolicy as Fixtures
 import Product.RentalFareCalculator
 import Test.Hspec
 import Test.Tasty
@@ -33,13 +32,13 @@ defaultFarePolicy =
     }
 
 rentalFarePolicyId :: Id RentalFarePolicy
-rentalFarePolicyId = "rentalFarePolicyId"
+rentalFarePolicyId = Fixtures.defaultFarePolicy.id
 
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
     { getRentalFarePolicy = \rentalFarePolicyId_ -> pure $ case rentalFarePolicyId_ of
-        "rentalFarePolicyId" -> Just defaultFarePolicy
+        "rentalFarePolicyId" -> Just Fixtures.defaultFarePolicy
         _ -> Nothing
     }
 
@@ -57,9 +56,6 @@ mockTime hours minutes =
 
 mockTime2 :: UTCTime
 mockTime2 = parseTime "2018-12-09T00:00:00.000Z"
-
-orgID :: Id Organization.Organization
-orgID = "organization_id"
 
 -- Calculation tests
 

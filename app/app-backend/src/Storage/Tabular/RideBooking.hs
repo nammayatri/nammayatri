@@ -10,12 +10,17 @@ module Storage.Tabular.RideBooking where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
-import Beckn.Types.Common (HighPrecMeters (..))
 import Beckn.Types.Id
+import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RideBooking as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
 import qualified Storage.Tabular.BookingLocation as SLoc
 import qualified Storage.Tabular.Person as SPerson
+import Storage.Tabular.Quote ()
+import qualified Storage.Tabular.RentalSlab as SRentalSlab
+import qualified Storage.Tabular.TripTerms as STripTerms
+import Types.Error
+import Utils.Common hiding (id)
 
 derivePersistField "Domain.RideBookingStatus"
 
@@ -24,6 +29,7 @@ mkPersist
   [defaultQQ|
     RideBookingT sql=ride_booking
       id Text
+      fareProductType DQuote.FareProductType
       bppBookingId Text Maybe sql=bpp_ride_booking_id
       status Domain.RideBookingStatus
       providerId Text
@@ -39,6 +45,8 @@ mkPersist
       estimatedTotalFare Amount
       distance Double Maybe
       vehicleVariant VehVar.VehicleVariant
+      tripTermsId STripTerms.TripTermsTId Maybe
+      rentalSlabId SRentalSlab.RentalSlabTId Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -50,28 +58,68 @@ instance TEntityKey RideBookingT where
   fromKey (RideBookingTKey _id) = Id _id
   toKey (Id id) = RideBookingTKey id
 
-instance TType RideBookingT Domain.RideBooking where
-  fromTType RideBookingT {..} = do
+data RideBookingDetailsT = OneWayDetailsT | RentalDetailsT SRentalSlab.RentalSlabT
+
+type FullRideBookingT = (RideBookingT, Maybe STripTerms.TripTermsT, RideBookingDetailsT)
+
+instance TType FullRideBookingT Domain.RideBooking where
+  fromTType (RideBookingT {..}, mbTripTermsT, rideBookingDetailsT) = do
     pUrl <- parseBaseUrl providerUrl
+    tripTerms <- forM mbTripTermsT fromTType
+    rideBookingDetails <- case rideBookingDetailsT of
+      OneWayDetailsT -> do
+        toLocationId' <- toLocationId & fromMaybeM (InternalError "toLocationId is null for one way ride booking")
+        distance' <- distance & fromMaybeM (InternalError "distance is null for one way ride booking")
+        pure . Domain.OneWayDetails $
+          Domain.OneWayRideBookingDetails
+            { toLocationId = fromKey toLocationId',
+              distance = HighPrecMeters distance'
+            }
+      RentalDetailsT rentalSlabT ->
+        pure . Domain.RentalDetails $ fromRentalSlabTType rentalSlabT
     return $
       Domain.RideBooking
         { id = Id id,
           bppBookingId = Id <$> bppBookingId,
           riderId = fromKey riderId,
           fromLocationId = fromKey fromLocationId,
-          toLocationId = fromKey <$> toLocationId,
           providerUrl = pUrl,
-          distance = HighPrecMeters <$> distance,
           ..
         }
-  toTType Domain.RideBooking {..} =
-    RideBookingT
-      { id = getId id,
-        bppBookingId = getId <$> bppBookingId,
-        riderId = toKey riderId,
-        fromLocationId = toKey fromLocationId,
-        toLocationId = toKey <$> toLocationId,
-        providerUrl = showBaseUrl providerUrl,
-        distance = getHighPrecMeters <$> distance,
-        ..
-      }
+  toTType Domain.RideBooking {..} = do
+    let (fareProductType, rideBookingDetailsT, toLocationId, distance, rentalSlabId) = case rideBookingDetails of
+          Domain.OneWayDetails details -> (DQuote.ONE_WAY, OneWayDetailsT, Just . toKey $ details.toLocationId, Just details.distance, Nothing)
+          Domain.RentalDetails details -> do
+            let rentalSlabT = toRentalSlabTType details
+            (DQuote.RENTAL, RentalDetailsT rentalSlabT, Nothing, Nothing, Just . toKey $ details.slabId)
+
+        rideBookingT =
+          RideBookingT
+            { id = getId id,
+              bppBookingId = getId <$> bppBookingId,
+              riderId = toKey riderId,
+              fromLocationId = toKey fromLocationId,
+              providerUrl = showBaseUrl providerUrl,
+              tripTermsId = toKey <$> (tripTerms <&> (.id)),
+              distance = getHighPrecMeters <$> distance,
+              ..
+            }
+    let mbTripTermsT = toTType <$> tripTerms
+    (rideBookingT, mbTripTermsT, rideBookingDetailsT)
+
+-- use instance instead
+fromRentalSlabTType :: SRentalSlab.RentalSlabT -> Domain.RentalRideBookingDetails
+fromRentalSlabTType SRentalSlab.RentalSlabT {..} =
+  Domain.RentalRideBookingDetails
+    { slabId = Id id,
+      baseDistance = Kilometers baseDistance,
+      baseDuration = Hours baseDuration
+    }
+
+toRentalSlabTType :: Domain.RentalRideBookingDetails -> SRentalSlab.RentalSlabT
+toRentalSlabTType Domain.RentalRideBookingDetails {..} =
+  SRentalSlab.RentalSlabT
+    { id = getId slabId,
+      baseDistance = getKilometers baseDistance,
+      baseDuration = getHours baseDuration
+    }

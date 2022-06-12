@@ -9,9 +9,12 @@ import Beckn.Types.Id
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Data.OpenApi as OpenApi
+import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
+import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 
+-- move this in separate file
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
 data Quote = Quote
@@ -26,22 +29,67 @@ data Quote = Quote
     providerMobileNumber :: Text,
     providerCompletedRidesCount :: Int,
     vehicleVariant :: VehicleVariant,
-    createdAt :: UTCTime,
-    quoteTerms :: [QuoteTerms],
-    quoteDetails :: QuoteDetails
+    tripTerms :: Maybe DTripTerms.TripTerms,
+    quoteDetails :: QuoteDetails,
+    createdAt :: UTCTime
   }
   deriving (Generic, Show)
 
 data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails RentalQuoteDetails
+  deriving (Generic, Show)
+
+newtype OneWayQuoteDetails = OneWayQuoteDetails
+  { distanceToNearestDriver :: HighPrecMeters
+  }
+  deriving (Generic, Show)
+
+-- the same as RentalSlab
+data RentalQuoteDetails = RentalQuoteDetails
+  { slabId :: Id DRentalSlab.RentalSlab,
+    baseDistance :: Kilometers,
+    baseDuration :: Hours
+  }
+  deriving (Generic, Show)
+
+mkRentalSlab :: RentalQuoteDetails -> DRentalSlab.RentalSlab
+mkRentalSlab RentalQuoteDetails {..} =
+  DRentalSlab.RentalSlab
+    { id = slabId,
+      ..
+    }
+
+mkRentalQuoteDetails :: DRentalSlab.RentalSlab -> RentalQuoteDetails
+mkRentalQuoteDetails DRentalSlab.RentalSlab {..} =
+  RentalQuoteDetails
+    { slabId = id,
+      ..
+    }
+
+data QuoteAPIEntity = QuoteAPIEntity
+  { id :: Id Quote,
+    vehicleVariant :: VehicleVariant,
+    estimatedFare :: Amount,
+    estimatedTotalFare :: Amount,
+    discount :: Maybe Amount,
+    agencyName :: Text,
+    agencyNumber :: Text,
+    agencyCompletedRidesCount :: Int,
+    tripTerms :: [Text],
+    quoteDetails :: QuoteAPIDetails,
+    createdAt :: UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data QuoteAPIDetails = OneWayAPIDetails OneWayQuoteAPIDetails | RentalAPIDetails RentalQuoteAPIDetails
   deriving (Show, Generic)
 
-instance ToJSON QuoteDetails where
+instance ToJSON QuoteAPIDetails where
   toJSON = genericToJSON fareProductOptions
 
-instance FromJSON QuoteDetails where
+instance FromJSON QuoteAPIDetails where
   parseJSON = genericParseJSON fareProductOptions
 
-instance ToSchema QuoteDetails where
+instance ToSchema QuoteAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema fareProductSchemaOptions
 
 fareProductOptions :: Options
@@ -71,37 +119,22 @@ fareProductConstructorModifier = \case
   x -> x
 
 -- Can I use distanceToNearestDriver instead of nearestDriverDistance in QuoteAPIEntity for consistency and less boilerplate?
-newtype OneWayQuoteDetails = OneWayQuoteDetails
-  { distanceToNearestDriver :: Double
+newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
+  { distanceToNearestDriver :: HighPrecMeters
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-data RentalQuoteDetails = RentalQuoteDetails
+-- the same as RentalSlab
+data RentalQuoteAPIDetails = RentalQuoteAPIDetails
   { baseDistance :: Kilometers,
     baseDuration :: Hours
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-data QuoteTerms = QuoteTerms
-  { id :: Id QuoteTerms,
-    description :: Text
-  }
-  deriving (Show)
-
-data QuoteAPIEntity = QuoteAPIEntity
-  { id :: Id Quote,
-    vehicleVariant :: VehicleVariant,
-    estimatedFare :: Amount,
-    estimatedTotalFare :: Amount,
-    discount :: Maybe Amount,
-    agencyName :: Text,
-    agencyNumber :: Text,
-    agencyCompletedRidesCount :: Int,
-    descriptions :: [Text],
-    quoteDetails :: QuoteDetails,
-    createdAt :: UTCTime
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
+mkQuoteAPIDetails = \case
+  RentalDetails RentalQuoteDetails {..} -> RentalAPIDetails RentalQuoteAPIDetails {..}
+  OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} = do
@@ -109,6 +142,7 @@ makeQuoteAPIEntity Quote {..} = do
     { agencyName = providerName,
       agencyNumber = providerMobileNumber,
       agencyCompletedRidesCount = providerCompletedRidesCount,
-      descriptions = quoteTerms <&> (.description),
+      tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
+      quoteDetails = mkQuoteAPIDetails quoteDetails,
       ..
     }

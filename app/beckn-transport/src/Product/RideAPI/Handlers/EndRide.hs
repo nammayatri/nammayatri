@@ -6,6 +6,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time (NominalDiffTime)
 import qualified Domain.Types.DriverLocation as DrLoc
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RentalFarePolicy as DRentalFP
@@ -24,7 +25,7 @@ data ServiceHandle m = ServiceHandle
   { findById :: Id Person.Person -> m (Maybe Person.Person),
     findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    endRideTransaction :: Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m (),
+    endRideTransaction :: Id SRB.RideBooking -> Ride.Ride -> Id Driver -> [DFareBreakup.FareBreakup] -> m (),
     notifyCompleteToBAP :: SRB.RideBooking -> Ride.Ride -> m (),
     calculateFare ::
       Id Organization ->
@@ -38,6 +39,8 @@ data ServiceHandle m = ServiceHandle
       UTCTime ->
       UTCTime ->
       m RentalFare.RentalFareParameters,
+    buildFareBreakups :: Fare.FareParameters -> Id SRB.RideBooking -> m [DFareBreakup.FareBreakup],
+    buildRentalFareBreakups :: RentalFare.RentalFareParameters -> Id SRB.RideBooking -> m [DFareBreakup.FareBreakup],
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Amount -> HighPrecMeters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
@@ -68,7 +71,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   now <- getCurrentTime
-  (chargeableDistance, fare, totalFare) <- do
+  (chargeableDistance, fare, totalFare, fareBreakups) <- do
     case rideBooking.rideBookingDetails of
       SRB.OneWayDetails oneWayDetails -> recalculateFare rideBooking ride oneWayDetails now
       SRB.RentalDetails rentalDetails -> calcRentalFare rideBooking ride rentalDetails now
@@ -80,7 +83,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
              tripEndTime = Just now
             }
 
-  endRideTransaction rideBooking.id updRide (cast driverId)
+  endRideTransaction rideBooking.id updRide (cast driverId) fareBreakups
 
   notifyCompleteToBAP rideBooking updRide
 
@@ -127,8 +130,13 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
               <> ", Distance difference: "
               <> show distanceDiff
           putDiffMetric fareDiff distanceDiff
-          pure (actualDistance, updatedFare, totalFare)
-        else pure (oldDistance, estimatedFare, rideBooking.estimatedTotalFare)
+          fareBreakups <- buildFareBreakups fareParams rideBooking.id
+          pure (actualDistance, updatedFare, totalFare, fareBreakups)
+        else do
+          -- calculate fare again with old data for creating fare breakup
+          fareParams <- calculateFare transporterId vehicleVariant oldDistance rideBooking.startTime
+          fareBreakups <- buildFareBreakups fareParams rideBooking.id
+          pure (oldDistance, estimatedFare, rideBooking.estimatedTotalFare, fareBreakups)
 
     calcRentalFare rideBooking ride rentalDetails now = do
       let actualDistance = ride.traveledDistance
@@ -148,4 +156,5 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           <> show (amountToDouble (fromMaybe 0 fareParams.discount))
       -- Do we ned this metrics in rental case?
       -- putDiffMetric fareDiff distanceDiff
-      pure (actualDistance, fare, totalFare)
+      fareBreakups <- buildRentalFareBreakups fareParams rideBooking.id
+      pure (actualDistance, fare, totalFare, fareBreakups)

@@ -54,7 +54,7 @@ handle =
         Id "rentalRide" -> Just rentalRide
         _ -> Nothing,
       notifyCompleteToBAP = \_ _ -> pure (),
-      endRideTransaction = \_ _ _ -> pure (),
+      endRideTransaction = \_ _ _ _ -> pure (),
       calculateFare = \_ _ _ _ ->
         return $
           FareParameters
@@ -70,8 +70,11 @@ handle =
               extraDistanceFare = 0,
               extraTimeFare = 0,
               nextDaysFare = Nothing,
-              discount = Nothing
+              discount = Nothing,
+              farePolicy = Fixtures.defaultFarePolicy
             },
+      buildFareBreakups = \_ _ -> pure [],
+      buildRentalFareBreakups = \_ _ -> pure [],
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure (),
       findDriverLocById = \_ -> pure Nothing,

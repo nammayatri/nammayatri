@@ -102,7 +102,9 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
 buildRideBookingToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> DRB.RideBooking -> m T.OrderResp
 buildRideBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
   fromLocation <- QBLoc.findById booking.fromLocationId
-  toLocation <- join <$> (QBLoc.findById `traverse` booking.toLocationId)
+  toLocation <- case booking.rideBookingDetails of
+    DRB.RentalDetails _ -> return Nothing
+    DRB.OneWayDetails details -> QBLoc.findById details.toLocationId
   rbStatus <- buildRideBookingStatusRes booking
   decMobNum <- mapM decrypt mobileNumber
   let details =
