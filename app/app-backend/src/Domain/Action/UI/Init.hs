@@ -94,8 +94,8 @@ init personId req = do
           toLocationId <- toLocId & fromMaybeM (InternalError "distance is null for rental search request")
           distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for rental search request")
           pure . SRB.OneWayDetails $ SRB.OneWayRideBookingDetails {..}
-        SQuote.RentalDetails SQuote.RentalQuoteDetails {..} ->
-          pure . SRB.RentalDetails $ SRB.RentalRideBookingDetails {..}
+        SQuote.RentalDetails rentalSlab ->
+          pure $ SRB.RentalDetails rentalSlab
       return $
         SRB.RideBooking
           { id = Id id,

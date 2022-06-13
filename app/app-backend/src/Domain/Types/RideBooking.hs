@@ -60,7 +60,7 @@ data RideBooking = RideBooking
   }
   deriving (Generic, Show)
 
-data RideBookingDetails = OneWayDetails OneWayRideBookingDetails | RentalDetails RentalRideBookingDetails
+data RideBookingDetails = OneWayDetails OneWayRideBookingDetails | RentalDetails DRentalSlab.RentalSlab
   deriving (Show)
 
 data OneWayRideBookingDetails = OneWayRideBookingDetails
@@ -68,18 +68,3 @@ data OneWayRideBookingDetails = OneWayRideBookingDetails
     distance :: HighPrecMeters
   }
   deriving (Show)
-
--- the same as RentalSlab and RentalQuoteDetails
-data RentalRideBookingDetails = RentalRideBookingDetails
-  { slabId :: Id DRentalSlab.RentalSlab,
-    baseDistance :: Kilometers,
-    baseDuration :: Hours
-  }
-  deriving (Show)
-
-mkRentalQuoteDetails :: DRentalSlab.RentalSlab -> RentalRideBookingDetails
-mkRentalQuoteDetails DRentalSlab.RentalSlab {..} =
-  RentalRideBookingDetails
-    { slabId = id,
-      ..
-    }

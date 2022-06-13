@@ -76,7 +76,7 @@ instance TType FullRideBookingT Domain.RideBooking where
               distance = HighPrecMeters distance'
             }
       RentalDetailsT rentalSlabT ->
-        pure . Domain.RentalDetails $ fromRentalSlabTType rentalSlabT
+        Domain.RentalDetails <$> fromTType rentalSlabT
     return $
       Domain.RideBooking
         { id = Id id,
@@ -89,11 +89,11 @@ instance TType FullRideBookingT Domain.RideBooking where
   toTType Domain.RideBooking {..} = do
     let (fareProductType, rideBookingDetailsT, toLocationId, distance, rentalSlabId) = case rideBookingDetails of
           Domain.OneWayDetails details -> (DQuote.ONE_WAY, OneWayDetailsT, Just . toKey $ details.toLocationId, Just details.distance, Nothing)
-          Domain.RentalDetails details -> do
-            let rentalSlabT = toRentalSlabTType details
-            (DQuote.RENTAL, RentalDetailsT rentalSlabT, Nothing, Nothing, Just . toKey $ details.slabId)
+          Domain.RentalDetails rentalSlab -> do
+            let rentalSlabT = toTType rentalSlab
+            (DQuote.RENTAL, RentalDetailsT rentalSlabT, Nothing, Nothing, Just . toKey $ rentalSlab.id)
 
-        rideBookingT =
+    let rideBookingT =
           RideBookingT
             { id = getId id,
               bppBookingId = getId <$> bppBookingId,
@@ -106,20 +106,3 @@ instance TType FullRideBookingT Domain.RideBooking where
             }
     let mbTripTermsT = toTType <$> tripTerms
     (rideBookingT, mbTripTermsT, rideBookingDetailsT)
-
--- use instance instead
-fromRentalSlabTType :: SRentalSlab.RentalSlabT -> Domain.RentalRideBookingDetails
-fromRentalSlabTType SRentalSlab.RentalSlabT {..} =
-  Domain.RentalRideBookingDetails
-    { slabId = Id id,
-      baseDistance = Kilometers baseDistance,
-      baseDuration = Hours baseDuration
-    }
-
-toRentalSlabTType :: Domain.RentalRideBookingDetails -> SRentalSlab.RentalSlabT
-toRentalSlabTType Domain.RentalRideBookingDetails {..} =
-  SRentalSlab.RentalSlabT
-    { id = getId slabId,
-      baseDistance = getKilometers baseDistance,
-      baseDuration = getHours baseDuration
-    }

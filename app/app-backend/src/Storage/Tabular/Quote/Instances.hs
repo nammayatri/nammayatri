@@ -29,7 +29,7 @@ instance TType FullQuoteT Domain.Quote where
             { distanceToNearestDriver = HighPrecMeters distanceToNearestDriver'
             }
       RentalDetailsT rentalSlabT ->
-        pure . Domain.RentalDetails $ fromRentalSlabTType rentalSlabT
+        Domain.RentalDetails <$> fromTType rentalSlabT
     return $
       Domain.Quote
         { id = Id id,
@@ -40,9 +40,9 @@ instance TType FullQuoteT Domain.Quote where
   toTType Domain.Quote {..} = do
     let (fareProductType, quoteDetailsT, distanceToNearestDriver, rentalSlabId) = case quoteDetails of
           Domain.OneWayDetails details -> (Domain.ONE_WAY, OneWayDetailsT, Just $ getHighPrecMeters details.distanceToNearestDriver, Nothing)
-          Domain.RentalDetails details -> do
-            let rentalSlabT = toRentalSlabTType details
-            (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey details.slabId)
+          Domain.RentalDetails rentalSlab -> do
+            let rentalSlabT = toTType rentalSlab
+            (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey rentalSlab.id)
 
         quoteT =
           QuoteT
@@ -54,20 +54,3 @@ instance TType FullQuoteT Domain.Quote where
             }
     let mbTripTermsT = toTType <$> tripTerms
     (quoteT, mbTripTermsT, quoteDetailsT)
-
--- use instance instead
-fromRentalSlabTType :: RentalSlabT -> Domain.RentalQuoteDetails
-fromRentalSlabTType RentalSlabT {..} =
-  Domain.RentalQuoteDetails
-    { slabId = Id id,
-      baseDistance = Kilometers baseDistance,
-      baseDuration = Hours baseDuration
-    }
-
-toRentalSlabTType :: Domain.RentalQuoteDetails -> RentalSlabT
-toRentalSlabTType Domain.RentalQuoteDetails {..} =
-  RentalSlabT
-    { id = getId slabId,
-      baseDistance = getKilometers baseDistance,
-      baseDuration = getHours baseDuration
-    }

@@ -6,6 +6,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
@@ -87,10 +88,10 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
 mkOneWayQuoteDetails :: DQuote.OneWayQuoteAPIDetails -> DQuote.OneWayQuoteDetails
 mkOneWayQuoteDetails DQuote.OneWayQuoteAPIDetails {..} = DQuote.OneWayQuoteDetails {..}
 
-buildRentalQuoteDetails :: MonadFlow m => DQuote.RentalQuoteAPIDetails -> m DQuote.RentalQuoteDetails
+buildRentalQuoteDetails :: MonadFlow m => DQuote.RentalQuoteAPIDetails -> m DRentalSlab.RentalSlab
 buildRentalQuoteDetails DQuote.RentalQuoteAPIDetails {..} = do
-  slabId <- generateGUID
-  pure DQuote.RentalQuoteDetails {..}
+  id <- generateGUID
+  pure DRentalSlab.RentalSlab {..}
 
 buildTripTerms ::
   MonadFlow m =>

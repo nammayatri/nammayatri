@@ -35,35 +35,13 @@ data Quote = Quote
   }
   deriving (Generic, Show)
 
-data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails RentalQuoteDetails
+data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails DRentalSlab.RentalSlab
   deriving (Generic, Show)
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
   }
   deriving (Generic, Show)
-
--- the same as RentalSlab
-data RentalQuoteDetails = RentalQuoteDetails
-  { slabId :: Id DRentalSlab.RentalSlab,
-    baseDistance :: Kilometers,
-    baseDuration :: Hours
-  }
-  deriving (Generic, Show)
-
-mkRentalSlab :: RentalQuoteDetails -> DRentalSlab.RentalSlab
-mkRentalSlab RentalQuoteDetails {..} =
-  DRentalSlab.RentalSlab
-    { id = slabId,
-      ..
-    }
-
-mkRentalQuoteDetails :: DRentalSlab.RentalSlab -> RentalQuoteDetails
-mkRentalQuoteDetails DRentalSlab.RentalSlab {..} =
-  RentalQuoteDetails
-    { slabId = id,
-      ..
-    }
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
@@ -124,7 +102,6 @@ newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
--- the same as RentalSlab
 data RentalQuoteAPIDetails = RentalQuoteAPIDetails
   { baseDistance :: Kilometers,
     baseDuration :: Hours
@@ -133,7 +110,7 @@ data RentalQuoteAPIDetails = RentalQuoteAPIDetails
 
 mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
-  RentalDetails RentalQuoteDetails {..} -> RentalAPIDetails RentalQuoteAPIDetails {..}
+  RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails RentalQuoteAPIDetails {..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
