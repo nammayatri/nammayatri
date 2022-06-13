@@ -11,3 +11,9 @@ data RentalSlab = RentalSlab
     baseDuration :: Hours
   }
   deriving (Generic, Show)
+
+data RentalSlabAPIEntity = RentalSlabAPIEntity
+  { baseDistance :: Kilometers,
+    baseDuration :: Hours
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)

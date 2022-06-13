@@ -58,7 +58,7 @@ data QuoteAPIEntity = QuoteAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data QuoteAPIDetails = OneWayAPIDetails OneWayQuoteAPIDetails | RentalAPIDetails RentalQuoteAPIDetails
+data QuoteAPIDetails = OneWayAPIDetails OneWayQuoteAPIDetails | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
   deriving (Show, Generic)
 
 instance ToJSON QuoteAPIDetails where
@@ -102,15 +102,9 @@ newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-data RentalQuoteAPIDetails = RentalQuoteAPIDetails
-  { baseDistance :: Kilometers,
-    baseDuration :: Hours
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
 mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
-  RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails RentalQuoteAPIDetails {..}
+  RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity

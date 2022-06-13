@@ -70,8 +70,8 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
   quoteDetails' <- case quoteDetails of
     DQuote.OneWayAPIDetails oneWayDetails ->
       pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
-    DQuote.RentalAPIDetails rentalDetails -> do
-      DQuote.RentalDetails <$> buildRentalQuoteDetails rentalDetails
+    DQuote.RentalAPIDetails rentalSlab -> do
+      DQuote.RentalDetails <$> buildRentalSlabAPIEntity rentalSlab
   pure
     DQuote.Quote
       { id = uid,
@@ -88,8 +88,8 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
 mkOneWayQuoteDetails :: DQuote.OneWayQuoteAPIDetails -> DQuote.OneWayQuoteDetails
 mkOneWayQuoteDetails DQuote.OneWayQuoteAPIDetails {..} = DQuote.OneWayQuoteDetails {..}
 
-buildRentalQuoteDetails :: MonadFlow m => DQuote.RentalQuoteAPIDetails -> m DRentalSlab.RentalSlab
-buildRentalQuoteDetails DQuote.RentalQuoteAPIDetails {..} = do
+buildRentalSlabAPIEntity :: MonadFlow m => DRentalSlab.RentalSlabAPIEntity -> m DRentalSlab.RentalSlab
+buildRentalSlabAPIEntity DRentalSlab.RentalSlabAPIEntity {..} = do
   id <- generateGUID
   pure DRentalSlab.RentalSlab {..}
 

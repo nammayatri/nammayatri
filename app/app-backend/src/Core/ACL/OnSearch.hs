@@ -12,6 +12,7 @@ import Beckn.Utils.Logging
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
@@ -112,8 +113,8 @@ buildOneWayQuoteDetails item = do
 buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DQuote.RentalQuoteAPIDetails
+  m DRentalSlab.RentalSlabAPIEntity
 buildRentalQuoteDetails item = do
   baseDistance <- item.base_distance & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
   baseDuration <- item.base_duration & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
-  pure DQuote.RentalQuoteAPIDetails {..}
+  pure DRentalSlab.RentalSlabAPIEntity {..}
