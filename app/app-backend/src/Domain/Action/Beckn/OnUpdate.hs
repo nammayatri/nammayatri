@@ -1,12 +1,14 @@
-module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..)) where
+module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..), OnUpdateFareBreakup (..)) where
 
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBookingCancellationReason as QBCR
@@ -37,6 +39,7 @@ data OnUpdateReq
         bppRideId :: Id SRide.BPPRide,
         fare :: Amount,
         totalFare :: Amount,
+        fareBreakups :: [OnUpdateFareBreakup],
         chargeableDistance :: Double
       }
   | BookingCancelledReq
@@ -47,6 +50,11 @@ data OnUpdateReq
       { bppBookingId :: Id SRB.BPPRideBooking,
         bppRideId :: Id SRide.BPPRide
       }
+
+data OnUpdateFareBreakup = OnUpdateFareBreakup
+  { amount :: Amount,
+    description :: Text
+  }
 
 onUpdate :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => OnUpdateReq -> m ()
 onUpdate RideAssignedReq {..} = do
@@ -97,10 +105,21 @@ onUpdate RideCompletedReq {..} = do
              totalFare = Just totalFare,
              chargeableDistance = Just chargeableDistance
             }
+  breakups <- traverse (buildFareBreakup rideBooking.id) fareBreakups
   DB.runTransaction $ do
     QRB.updateStatus rideBooking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
+    QFareBreakup.createMany breakups
   Notify.notifyOnRideCompleted rideBooking ride
+  where
+    buildFareBreakup :: MonadFlow m => Id SRB.RideBooking -> OnUpdateFareBreakup -> m DFareBreakup.FareBreakup
+    buildFareBreakup rideBookingId OnUpdateFareBreakup {..} = do
+      guid <- generateGUID
+      pure
+        DFareBreakup.FareBreakup
+          { id = guid,
+            ..
+          }
 onUpdate BookingCancelledReq {..} = do
   rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideBookingId: " <> bppBookingId.getId)
   unless (isRideBookingCancellable rideBooking) $

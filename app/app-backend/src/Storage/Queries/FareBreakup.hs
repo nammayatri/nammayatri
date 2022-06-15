@@ -10,8 +10,8 @@ import Domain.Types.FareBreakup
 import Domain.Types.RideBooking
 import Storage.Tabular.FareBreakup
 
-create :: FareBreakup -> SqlDB ()
-create = Esq.create
+createMany :: [FareBreakup] -> SqlDB ()
+createMany = Esq.createMany
 
 findAllByRideBookingId :: (MonadThrow m, Log m, Transactionable m) => Id RideBooking -> m [FareBreakup]
 findAllByRideBookingId rideBookingId =

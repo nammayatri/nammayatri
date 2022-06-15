@@ -9,7 +9,6 @@ import Beckn.Types.Id
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
 import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
-import Types.Error
 import Utils.Common
 
 buildOnUpdateReq ::
@@ -58,15 +57,21 @@ parseEvent (OnUpdate.RideStarted rsEvent) =
         bppRideId = Id rsEvent.fulfillment.id
       }
 parseEvent (OnUpdate.RideCompleted rcEvent) = do
-  fareBreakup <- safeHead rcEvent.quote.breakup & fromMaybeM (InvalidRequest "quote.breakup is empty.") -- first one must be for fare.
   return $
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
         bppRideId = Id rcEvent.fulfillment.id,
-        fare = realToFrac fareBreakup.price.value,
-        totalFare = realToFrac rcEvent.quote.price.value,
-        chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance
+        fare = realToFrac rcEvent.quote.price.value,
+        totalFare = realToFrac rcEvent.quote.price.computed_value,
+        chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance,
+        fareBreakups = mkOnUpdateFareBreakup <$> rcEvent.quote.breakup
       }
+  where
+    mkOnUpdateFareBreakup breakup =
+      DOnUpdate.OnUpdateFareBreakup
+        { amount = realToFrac breakup.price.value,
+          description = breakup.title
+        }
 parseEvent (OnUpdate.RideBookingCancelled tcEvent) =
   return $
     DOnUpdate.BookingCancelledReq

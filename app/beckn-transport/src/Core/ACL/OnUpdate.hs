@@ -98,12 +98,14 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
             fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
           }
 buildOnUpdateMessage RideCompletedBuildReq {..} = do
+  fare <- realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   totalFare <- realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
   chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
   let price =
         RideCompletedOU.QuotePrice
           { currency = "INR",
-            value = totalFare
+            value = fare,
+            computed_value = totalFare
           }
       breakup = mkFareBreakupItem <$> fareBreakups
 
@@ -129,7 +131,7 @@ buildOnUpdateMessage RideCompletedBuildReq {..} = do
       RideCompletedOU.BreakupItem
         { title = description,
           price =
-            RideCompletedOU.QuotePrice
+            RideCompletedOU.BreakupPrice
               { currency = "INR",
                 value = realToFrac amount
               }
