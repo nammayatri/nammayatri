@@ -119,6 +119,19 @@ allFareParameters = testCase "Rental fare consist of all fare parameters" $ do
     stopTime = mockTime2
     distance = HighPrecMeters 115000.0
 
+fareBreakupSum :: TestTree
+fareBreakupSum = testCase "Sum of rental fare breakup should be equal to total fare" $ do
+  fareParams <- doCalculateRentalFare handle "rentalFarePolicyId" distance startTime stopTime
+  let totalFare = rentalFareSumWithDiscount fareParams
+  fareBreakups <- buildRentalFareBreakups fareParams "rideBookingId"
+  sum (fareBreakups <&> (.amount)) `shouldBe` totalFare
+  where
+    startTime = mockTime 15 13
+    stopTime = mockTime2
+    distance = Meter 116235.5
+
+-- Effects tests
+
 failOnMissingFareConfig :: TestTree
 failOnMissingFareConfig = testCase "Fail on missing RentalFarePolicy" $ do
   doCalculateRentalFare handle "fakeRentalFarePolicyId" distance startTime stopTime `shouldThrow` (== NoRentalFarePolicy)
@@ -138,5 +151,6 @@ rentalFareCalculator =
       extraTime,
       nextDay,
       allFareParameters,
+      fareBreakupSum,
       failOnMissingFareConfig
     ]

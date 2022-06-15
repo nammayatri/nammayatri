@@ -387,6 +387,43 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
                                  }
         }
 
+fareBreakupSum :: TestTree
+fareBreakupSum = testCase "Sum of fare breakup should be equal to total fare" $ do
+  fareParams <-
+    doCalculateFare
+      handle'
+      orgID
+      Vehicle.SUV
+      distance
+      startTime
+  let totalFare = fareSumWithDiscount fareParams
+  fareBreakups <- buildFareBreakups fareParams "rideBookingId"
+  sum (fareBreakups <&> (.amount)) `shouldBe` totalFare
+  where
+    startTime = mockTime 19
+    distance = Meter 18000.0
+    handle' =
+      handle
+        { getFarePolicy = \_orgId _vehicleVariant ->
+            pure $
+              Just
+                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
+                                  baseFare = Just 120.0,
+                                  perExtraKmRateList =
+                                    defaultPerExtraKmRate{distanceRangeStart = 3100}
+                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 14000, fare = 21},
+                                           defaultPerExtraKmRate{distanceRangeStart = 24000, fare = 23}
+                                         ],
+                                  discountList =
+                                    [ mkDiscount Vehicle.SUV (mockTime 2) (mockTime 23) 60 True,
+                                      mkDiscount Vehicle.SUV (mockTime 2) (mockTime 23) 60 True
+                                    ],
+                                  nightShiftStart = Just $ TimeOfDay 21 0 0,
+                                  nightShiftEnd = Just $ TimeOfDay 6 30 0,
+                                  nightShiftRate = Just 1.15
+                                 }
+        }
+
 -- Effects tests
 
 failOnMissingFareConfig :: TestTree
@@ -421,5 +458,6 @@ fareCalculator =
       nightSuv20kmWithDiscount,
       nightSuv20kmWithDiscountOff,
       nightSuv20kmWithClashedDiscounts,
+      fareBreakupSum,
       failOnMissingFareConfig
     ]

@@ -67,7 +67,6 @@ doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
     $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
 
--- check, that sum of FareBreakups should be equal to fareSumWithDiscount
 buildFareBreakups :: MonadGuid m => FareParameters -> Id RideBooking -> m [FareBreakup]
 buildFareBreakups fareParams rideBookingId = do
   baseFareBreakup <- buildBaseFareBreakup fareParams rideBookingId
