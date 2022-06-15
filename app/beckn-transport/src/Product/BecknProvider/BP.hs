@@ -11,6 +11,7 @@ where
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Core.ACL.OnUpdate as ACL
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
@@ -69,8 +70,9 @@ sendRideCompletedUpdateToBAP ::
   ) =>
   SRB.RideBooking ->
   SRide.Ride ->
+  [DFareBreakup.FareBreakup] ->
   m ()
-sendRideCompletedUpdateToBAP rideBooking ride = do
+sendRideCompletedUpdateToBAP rideBooking ride fareBreakups = do
   transporter <-
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)

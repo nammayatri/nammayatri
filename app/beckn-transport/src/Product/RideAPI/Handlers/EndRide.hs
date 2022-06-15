@@ -26,7 +26,7 @@ data ServiceHandle m = ServiceHandle
     findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     endRideTransaction :: Id SRB.RideBooking -> Ride.Ride -> Id Driver -> [DFareBreakup.FareBreakup] -> m (),
-    notifyCompleteToBAP :: SRB.RideBooking -> Ride.Ride -> m (),
+    notifyCompleteToBAP :: SRB.RideBooking -> Ride.Ride -> [DFareBreakup.FareBreakup] -> m (),
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
@@ -85,7 +85,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
 
   endRideTransaction rideBooking.id updRide (cast driverId) fareBreakups
 
-  notifyCompleteToBAP rideBooking updRide
+  notifyCompleteToBAP rideBooking updRide fareBreakups
 
   return APISuccess.Success
   where
