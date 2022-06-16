@@ -18,6 +18,6 @@ fareProductTaggedObject =
 
 fareProductConstructorModifier :: String -> String
 fareProductConstructorModifier = \case
-  "OneWayDetails" -> "ONE_WAY"
-  "RentalDetails" -> "RENTAL"
+  "OneWayAPIDetails" -> "ONE_WAY"
+  "RentalAPIDetails" -> "RENTAL"
   x -> x

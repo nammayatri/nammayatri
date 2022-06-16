@@ -31,6 +31,7 @@ data RideBookingStatusRes = RideBookingStatusRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+-- do not change constructor names without changing fareProductConstructorModifier
 data RideBookingAPIDetails = OneWayAPIDetails OneWayRideBookingAPIDetails | RentalAPIDetails RentalRideBookingAPIDetails
   deriving (Show, Generic)
 

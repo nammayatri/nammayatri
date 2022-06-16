@@ -85,7 +85,7 @@ buildDistanceFareBreakup :: MonadGuid m => FareParameters -> Id RideBooking -> m
 buildDistanceFareBreakup FareParameters {..} rideBookingId = do
   id <- Id <$> generateGUIDText
   let amount = nightShiftRate * distanceFare
-      description = "Extra distance fare is " <> show amount <> " rupees"
+      description = "Distance fare is " <> show amount <> " rupees"
   pure FareBreakup {..}
 
 buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id RideBooking -> m (Maybe FareBreakup)

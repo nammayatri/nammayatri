@@ -13,12 +13,12 @@ import Storage.Tabular.Quote
 create :: Quote -> SqlDB ()
 create quote =
   Esq.withFullEntity quote $ \(quoteT, mbTripTermsT, quoteDetailsT) -> do
-    Esq.create' quoteT
     traverse_ Esq.create' mbTripTermsT
     case quoteDetailsT of
       OneWayDetailsT -> pure ()
       RentalDetailsT rentalSlabT -> do
         Esq.create' rentalSlabT
+    Esq.create' quoteT
 
 findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById quoteId = Esq.buildDType $ do

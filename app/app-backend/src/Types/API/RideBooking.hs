@@ -36,6 +36,7 @@ newtype RideBookingListRes = RideBookingListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+-- do not change constructor names without changing fareProductConstructorModifier
 data RideBookingAPIDetails = OneWayAPIDetails OneWayRideBookingAPIDetails | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
   deriving (Show, Generic)
 

@@ -58,6 +58,7 @@ data QuoteAPIEntity = QuoteAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+-- do not change constructor names without changing fareProductConstructorModifier
 data QuoteAPIDetails = OneWayAPIDetails OneWayQuoteAPIDetails | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
   deriving (Show, Generic)
 
