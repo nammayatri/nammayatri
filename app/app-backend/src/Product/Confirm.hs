@@ -4,6 +4,7 @@ import App.Types
 import Beckn.External.Encryption (decrypt)
 import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Esqueleto as DB
+import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
@@ -12,6 +13,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Data.Aeson (encode)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.RideBooking as SRB
@@ -94,7 +96,7 @@ onConfirm ::
   SignatureAuthResult ->
   OnConfirm.OnConfirmReq ->
   FlowHandler AckResponse
-onConfirm _org req = withFlowHandlerBecknAPI $
+onConfirm (SignatureAuthResult signPayload _) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "on_confirm req" (show req)
     validateContext Context.ON_CONFIRM req.context
@@ -108,4 +110,5 @@ onConfirm _org req = withFlowHandlerBecknAPI $
         DB.runTransaction $ do
           QRideB.updateBPPBookingId rideBooking.id bppRideBookingId
           QRideB.updateStatus rideBooking.id SRB.CONFIRMED
+          QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
     return Ack

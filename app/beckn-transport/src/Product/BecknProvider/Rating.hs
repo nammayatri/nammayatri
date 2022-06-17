@@ -3,12 +3,14 @@ module Product.BecknProvider.Rating where
 import App.Types
 import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Rating as Rating
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Data.Aeson (encode)
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Person as SP
 import Domain.Types.Rating as Rating
@@ -27,7 +29,7 @@ ratingImpl ::
   SignatureAuthResult ->
   Rating.RatingReq ->
   FlowHandler AckResponse
-ratingImpl _ _ req = withFlowHandlerBecknAPI $
+ratingImpl _ (SignatureAuthResult signPayload _) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     logTagInfo "ratingAPI" "Received rating API call."
     let context = req.context
@@ -51,7 +53,9 @@ ratingImpl _ _ req = withFlowHandlerBecknAPI $
       Just rating -> do
         logTagInfo "FeedbackAPI" $
           "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
-        Esq.runTransaction $ Rating.updateRatingValue rating.id driverId ratingValue
+        Esq.runTransaction $ do
+          Rating.updateRatingValue rating.id driverId ratingValue
+          QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
     calculateAverageRating driverId
     return Ack
 

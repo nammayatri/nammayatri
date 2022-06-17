@@ -100,7 +100,6 @@ library:
     - -Werror
   dependencies:
     - beckn-core
-
 executables:
   app-backend-exe:
     main: Main.hs

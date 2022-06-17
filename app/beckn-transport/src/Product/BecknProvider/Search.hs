@@ -1,6 +1,8 @@
 module Product.BecknProvider.Search (search) where
 
 import App.Types
+import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
@@ -9,6 +11,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Core.ACL.OnSearch as ACL
 import qualified Core.ACL.Search as ACL
+import Data.Aeson (encode)
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Organization as Org
 import EulerHS.Prelude hiding (state)
@@ -22,10 +25,12 @@ search ::
   SignatureAuthResult ->
   Search.SearchReq ->
   FlowHandler AckResponse
-search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
+search transporterId (SignatureAuthResult signPayload subscriber) (SignatureAuthResult _ gateway) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     dSearchReq <- ACL.buildSearchReq subscriber req
     transporter <- Shared.findTransporter transporterId
+    Esq.runTransaction $
+      QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
     let context = req.context
     let callbackUrl = gateway.subscriber_url
     ExternalAPI.withCallback' withRetry transporter Context.SEARCH OnSearch.onSearchAPI context callbackUrl $ do

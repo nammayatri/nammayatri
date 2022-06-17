@@ -1,6 +1,8 @@
 module Product.Search where
 
 import App.Types
+import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
@@ -10,6 +12,7 @@ import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Core.ACL.Metro.Search as MetroACL
 import qualified Core.ACL.OnSearch as TaxiACL
 import qualified Core.ACL.Search as TaxiACL
+import Data.Aeson (encode)
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.UI.Search.OneWay as DOneWaySearch
 import qualified Domain.Action.UI.Search.Rental as DRentalSearch
@@ -50,7 +53,9 @@ searchCb ::
   SignatureAuthResult ->
   OnSearch.OnSearchReq ->
   FlowHandler AckResponse
-searchCb _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+searchCb (SignatureAuthResult signPayload _) _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
   DOnSearch.searchCb req.context.message_id mbDOnSearchReq
+  Esq.runTransaction $
+    QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
   pure Ack

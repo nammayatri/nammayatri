@@ -73,7 +73,7 @@ extra-deps:
     subdirs:
       - lib/beckn-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs
-    commit: 3c1596eaa7dd77e7bc017125aa7023d14e74d44f
+    commit: 0abc393f32b077d9a6b369dec18f6f257fe6b1d0
     subdirs:
       - core
       - client

@@ -4,6 +4,7 @@ import App.Types (FlowHandler)
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import Beckn.Product.Validation.Context
 import qualified Beckn.Storage.Esqueleto as Esq
+import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Common
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
@@ -12,6 +13,7 @@ import qualified Beckn.Types.Core.Taxi.Cancel.Req as ReqCancel
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Domain.Types.BusinessEvent as SB
+import Data.Aeson (encode)
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
@@ -21,6 +23,7 @@ import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
 import qualified Storage.Queries.BusinessEvent as QBE
+import qualified Storage.Queries.BecknRequest as QBR
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
@@ -40,7 +43,7 @@ cancel ::
   SignatureAuthResult ->
   Cancel.CancelReq ->
   FlowHandler AckResponse
-cancel transporterId _ req = withFlowHandlerBecknAPI $
+cancel transporterId (SignatureAuthResult signPayload _) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     let context = req.context
     validateContext Context.CANCEL context
@@ -51,7 +54,9 @@ cancel transporterId _ req = withFlowHandlerBecknAPI $
     rideBooking <- QRB.findById (Id bookingId) >>= fromMaybeM (RideBookingDoesNotExist bookingId)
     now <- getCurrentTime
     rideReq <- BP.buildRideReq (rideBooking.id) (transporterOrg.shortId) SRideRequest.CANCELLATION now
-    Esq.runTransaction $ RideRequest.create rideReq
+    Esq.runTransaction $ do
+      QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
+      RideRequest.create rideReq
     return Ack
 
 cancelRide ::
