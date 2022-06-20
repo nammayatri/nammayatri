@@ -41,7 +41,7 @@ parseEvent (OnUpdate.RideAssigned taEvent) =
   return $
     DOnUpdate.RideAssignedReq
       { bppBookingId = Id taEvent.id,
-        bppRideId = undefined,
+        bppRideId = Id taEvent.fulfillment.id,
         otp = taEvent.fulfillment.start.authorization.token,
         driverName = taEvent.fulfillment.agent.name,
         driverMobileNumber = taEvent.fulfillment.agent.phone,
@@ -55,17 +55,17 @@ parseEvent (OnUpdate.RideStarted rsEvent) =
   return $
     DOnUpdate.RideStartedReq
       { bppBookingId = Id rsEvent.id,
-        bppRideId = undefined
+        bppRideId = Id rsEvent.fulfillment.id
       }
 parseEvent (OnUpdate.RideCompleted rcEvent) = do
   fareBreakup <- safeHead rcEvent.quote.breakup & fromMaybeM (InvalidRequest "quote.breakup is empty.") -- first one must be for fare.
   return $
     DOnUpdate.RideCompletedReq
       { bppBookingId = Id rcEvent.id,
-        bppRideId = undefined,
+        bppRideId = Id rcEvent.fulfillment.id,
         fare = realToFrac fareBreakup.price.value,
         totalFare = realToFrac rcEvent.quote.price.value,
-        chargeableDistance = undefined
+        chargeableDistance = realToFrac rcEvent.fulfillment.chargeable_distance
       }
 parseEvent (OnUpdate.RideBookingCancelled tcEvent) =
   return $
@@ -77,8 +77,7 @@ parseEvent (OnUpdate.RideBookingReallocation rbrEvent) =
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,
-        bppRideId = undefined,
-        cancellationSource = castCancellationSource undefined
+        bppRideId = Id rbrEvent.fulfillment.id
       }
 
 castCancellationSource :: OnUpdate.CancellationSource -> SBCR.CancellationSource

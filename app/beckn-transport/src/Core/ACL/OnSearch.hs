@@ -64,11 +64,16 @@ mkOneWayItem DOneWaySearch.QuoteInfo {..} offer_id fulfillment_id = do
             value = realToFrac estimatedFare,
             offered_value = realToFrac estimatedTotalFare
           }
+      tags =
+        OnSearch.ItemTags
+          { distance_to_nearest_driver = realToFrac distanceToNearestDriver
+          }
   OnSearch.Item
     { category_id = OnSearch.ONE_WAY_TRIP,
       base_distance = Nothing,
       base_duration = Nothing,
-      quote_terms = Nothing,
+      quote_terms = [],
+      tags = Just tags,
       ..
     }
 
@@ -133,7 +138,8 @@ mkRentalItem DRentalSearch.QuoteInfo {..} offer_id fulfillment_id = do
     { category_id = OnSearch.RENTAL_TRIP,
       base_distance = Just baseDistance,
       base_duration = Just baseDuration,
-      quote_terms = Just descriptions,
+      quote_terms = descriptions,
+      tags = Nothing,
       ..
     }
 

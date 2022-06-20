@@ -39,8 +39,7 @@ data OnUpdateBuildReq
       }
   | BookingReallocationBuildReq
       { booking :: SRB.RideBooking,
-        rideId :: Id SRide.Ride,
-        cancellationSource :: SBCR.CancellationSource
+        rideId :: Id SRide.Ride
       }
 
 buildOnUpdateMessage ::
@@ -66,7 +65,8 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
           }
       fulfillment =
         RideAssignedOU.FulfillmentInfo
-          { start =
+          { id = ride.id.getId,
+            start =
               RideAssignedOU.StartInfo
                 { authorization =
                     RideAssignedOU.Authorization
@@ -92,12 +92,13 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
       OnUpdate.RideStarted
         RideStartedOU.RideStartedEvent
           { id = ride.bookingId.getId,
-            update_target = "fufillment.state.code"
+            update_target = "fufillment.state.code",
+            fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
           }
 buildOnUpdateMessage RideCompletedBuildReq {..} = do
   fare <- realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
   totalFare <- realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
-  -- chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
+  chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
   let price =
         RideCompletedOU.QuotePrice
           { currency = "INR",
@@ -123,6 +124,11 @@ buildOnUpdateMessage RideCompletedBuildReq {..} = do
               RideCompletedOU.RideCompletedQuote
                 { breakup = [fareBreakup],
                   ..
+                },
+            fulfillment =
+              RideCompletedOU.FulfillmentInfo
+                { id = ride.id.getId,
+                  chargeable_distance = chargeableDistance
                 }
           }
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
@@ -141,7 +147,8 @@ buildOnUpdateMessage BookingReallocationBuildReq {..} = do
       OnUpdate.RideBookingReallocation
         BookingReallocationOU.RideBookingReallocationEvent
           { id = booking.id.getId,
-            update_target = "fulfillment.state.code"
+            update_target = "fulfillment.state.code",
+            fulfillment = BookingReallocationOU.FulfillmentInfo rideId.getId
           }
 
 castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource

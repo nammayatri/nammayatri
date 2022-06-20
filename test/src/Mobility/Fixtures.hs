@@ -9,20 +9,23 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Beckn.Types.Time (Seconds)
 import Data.Time
+import qualified "app-backend" Domain.Action.UI.Cancel as CancelAPI
+import qualified "app-backend" Domain.Action.UI.Confirm as DConfirm
+import qualified "app-backend" Domain.Action.UI.Init as DInit
 import qualified "app-backend" Domain.Types.CancellationReason as AbeCRC
 import qualified "app-backend" Domain.Types.Person as TPerson
-import qualified "app-backend" Domain.Types.Quote as BQuote
+import qualified "app-backend" Domain.Types.Quote as AbeQuote
 import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
 import qualified "app-backend" Domain.Types.Ride as BRide
 import qualified "beckn-transport" Domain.Types.Ride as TRide
 import qualified "app-backend" Domain.Types.RideBooking as BRB
 import qualified "beckn-transport" Domain.Types.RideBooking as TRB
-import qualified "app-backend" Domain.Types.SearchRequest as BSearchRequest
 import EulerHS.Prelude
+import qualified "app-backend" Product.Cancel as CancelAPI
+import qualified "app-backend" Product.Confirm as ConfirmAPI
+import qualified "app-backend" Product.Init as InitAPI
 import Servant hiding (Context)
 import Servant.Client
-import qualified Types.API.Cancel as CancelAPI
-import qualified Types.API.Confirm as ConfirmAPI
 import qualified "beckn-transport" Types.API.Driver as DriverAPI
 import qualified "app-backend" Types.API.Feedback as AppFeedback
 import "beckn-transport" Types.API.Location
@@ -30,24 +33,10 @@ import qualified "app-backend" Types.API.Registration as Reg
 import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "app-backend" Types.API.RideBooking as AppRideBooking
 import qualified "beckn-transport" Types.API.RideBooking as TRideBookingAPI
-import qualified "app-backend" Types.API.Search as AppBESearch
 import qualified "app-backend" Types.API.Serviceability as AppServ
 
 timeBetweenLocationUpdates :: Seconds
 timeBetweenLocationUpdates = 1
-
-defaultAddress :: AppBESearch.SearchReqAddress
-defaultAddress =
-  AppBESearch.SearchReqAddress
-    { door = Nothing,
-      building = Nothing,
-      street = Nothing,
-      area = Just "Edappally",
-      city = Just "Kochi",
-      country = Just "India",
-      areaCode = Just "",
-      state = Just "Kerala"
-    }
 
 bapTransporterName :: Text
 bapTransporterName = "[A] Transporter #1"
@@ -57,8 +46,8 @@ getFutureTime =
   -- Generate a time 2 hours in to the future else booking will fail
   addUTCTime 7200 <$> getCurrentTime
 
-cancelRide :: Id BRB.RideBooking -> Text -> CancelAPI.CancelReq -> ClientM CancelAPI.CancelRes
-cancelRide = client (Proxy :: Proxy AbeRoutes.CancelAPI)
+cancelRide :: Id BRB.RideBooking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
+cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> ClientM APISuccess
@@ -92,14 +81,40 @@ getNotificationInfo rideBookingId = getNotif
     _ :<|> driver_rb_path = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
     _ :<|> getNotif = driver_rb_path rideBookingId
 
-buildAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
-buildAppCancelReq stage =
-  CancelAPI.CancelReq
-    { bookingCancellationReason = CancelAPI.RideBookingCancellationReasonAPIEntity (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
+mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
+mkAppCancelReq stage =
+  CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
+
+appInitRide :: Text -> DInit.InitReq -> ClientM InitAPI.InitRes
+appInitRide = client (Proxy :: Proxy InitAPI.InitAPI)
+
+mkAppInitReq :: Id AbeQuote.Quote -> DInit.InitReq
+mkAppInitReq =
+  DInit.InitReq
+
+appConfirmRide :: Text -> DConfirm.ConfirmReq -> ClientM APISuccess
+appConfirmRide = client (Proxy :: Proxy ConfirmAPI.ConfirmAPI)
+
+confirmAddress :: DConfirm.ConfirmLocationReq
+confirmAddress =
+  DConfirm.ConfirmLocationReq
+    { door = Just "#817",
+      building = Just "Juspay Apartments",
+      street = Just "27th Main",
+      area = Just "8th Block Koramangala",
+      city = Just "Bangalore",
+      country = Just "India",
+      areaCode = Just "560047",
+      state = Just "Karnataka"
     }
 
-appConfirmRide :: Text -> Id BSearchRequest.SearchRequest -> Id BQuote.Quote -> ClientM ConfirmAPI.ConfirmRes
-appConfirmRide = client (Proxy :: Proxy AbeRoutes.ConfirmAPI)
+mkAppConfirmReq :: Id BRB.RideBooking -> DConfirm.ConfirmReq
+mkAppConfirmReq bookingId =
+  DConfirm.ConfirmReq
+    { bookingId = bookingId,
+      fromLocation = confirmAddress,
+      toLocation = Just confirmAddress
+    }
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)

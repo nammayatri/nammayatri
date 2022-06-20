@@ -21,7 +21,6 @@ import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
-import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Metrics (putFareAndDistanceDeviations)
 import Types.App (Driver)
 import Utils.Common (withFlowHandlerAPI)
@@ -35,7 +34,6 @@ endRide personId rideId = withFlowHandlerAPI $ do
         { findById = Person.findById,
           findRideBookingById = QRB.findById,
           findRideById = QRide.findById,
-          findSearchRequestById = QSearchRequest.findById,
           notifyCompleteToBAP = sendRideCompletedUpdateToBAP,
           endRideTransaction,
           calculateFare = Fare.calculateFare,

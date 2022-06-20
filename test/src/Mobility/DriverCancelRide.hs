@@ -19,11 +19,10 @@ spec = do
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for ride cancelled by Driver" $ withBecknClients clients do
       void . callBPP $ setDriverOnline driverToken2 True
-      (bapQuoteId, bRideBookingId) <- doAnAppSearch
+      bRideBookingId <- doAnAppSearch
 
       tRideBooking <- poll $ do
-        tQuoteId <- getBPPQuoteId bapQuoteId
-        trb <- getBPPRideBooking tQuoteId
+        trb <- getBPPRideBooking bRideBookingId
         trb.status `shouldBe` TRB.CONFIRMED
         return $ Just trb
 

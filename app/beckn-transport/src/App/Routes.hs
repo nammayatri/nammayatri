@@ -7,6 +7,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Confirm as API
+import qualified Beckn.Types.Core.Taxi.API.Init as API
 import qualified Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Id
@@ -22,6 +23,7 @@ import Domain.Types.Vehicle
 import EulerHS.Prelude
 import Product.BecknProvider.Cancel as BP
 import Product.BecknProvider.Confirm as BP
+import qualified Product.BecknProvider.Init as BP
 import Product.BecknProvider.Rating as BP
 import Product.BecknProvider.Search as BP
 import qualified Product.Call as Call
@@ -315,6 +317,9 @@ type OrgBecknAPI =
     :> API.SearchAPI
     :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
+    :> API.InitAPI
+    :<|> Capture "orgId" (Id Organization)
+    :> SignatureAuth "Authorization"
     :> API.ConfirmAPI
     :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
@@ -326,6 +331,7 @@ type OrgBecknAPI =
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
   BP.search
+    :<|> BP.init
     :<|> BP.confirm
     :<|> BP.cancel
     :<|> BP.ratingImpl

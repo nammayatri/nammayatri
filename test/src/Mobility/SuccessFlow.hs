@@ -4,8 +4,6 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common
 import "beckn-transport" Domain.Types.Person as TPerson
-import qualified "app-backend" Domain.Types.Quote as BQuote
-import qualified "beckn-transport" Domain.Types.Quote as TQuote
 import qualified "app-backend" Domain.Types.Ride as BRide
 import qualified "beckn-transport" Domain.Types.Ride as TRide
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
@@ -15,18 +13,18 @@ import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
 import Storage.Queries.DriverLocation
-import qualified "app-backend" Storage.Queries.Quote as BQQuote
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
+import qualified "app-backend" Storage.Queries.RideBooking as BQRB
 import qualified "beckn-transport" Storage.Queries.RideBooking as TQRB
 import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import "app-backend" Types.API.Search
 import Utils
 
-doAnAppSearch :: HasCallStack => ClientsM (Id BQuote.Quote, Id BRB.RideBooking)
+doAnAppSearch :: HasCallStack => ClientsM (Id BRB.RideBooking)
 doAnAppSearch = doAnAppSearchByReq searchReq
 
-doAnAppSearchByReq :: HasCallStack => SearchReq -> ClientsM (Id BQuote.Quote, Id BRB.RideBooking)
+doAnAppSearchByReq :: HasCallStack => SearchReq -> ClientsM (Id BRB.RideBooking)
 doAnAppSearchByReq searchReq' = do
   -- Driver sets online
   void . callBPP $ setDriverOnline driverToken1 True
@@ -60,11 +58,20 @@ doAnAppSearchByReq searchReq' = do
   -- check if calculated price is greater than 0
   quoteAPIEntity.estimatedFare `shouldSatisfy` (> 100)
 
-  -- Confirm ride from app backend
-  confirmResult <-
+  -- Init ride from app backend
+  initResult <-
     callBAP $
-      appConfirmRide appRegistrationToken appSearchId bapQuoteId
-  let bapRideBookingId = confirmResult.bookingId
+      appInitRide appRegistrationToken $ mkAppInitReq bapQuoteId
+  let bapRideBookingId = initResult.bookingId
+
+  void . poll $ do
+    initRB <- getBAPRideBooking bapRideBookingId
+    initRB.bppBookingId `shouldSatisfy` isJust
+    return $ Just ()
+
+  -- Confirm ride from app backend
+  void . callBAP $
+    appConfirmRide appRegistrationToken $ mkAppConfirmReq bapRideBookingId
 
   void . poll $
     callBAP (appRideBookingStatus bapRideBookingId appRegistrationToken)
@@ -72,24 +79,28 @@ doAnAppSearchByReq searchReq' = do
       >>= (`shouldBe` AppRB.CONFIRMED)
       <&> Just
 
-  return (bapQuoteId, bapRideBookingId)
+  return bapRideBookingId
 
-getBPPQuoteId ::
-  Id BQuote.Quote ->
-  ClientsM (Id TQuote.Quote)
-getBPPQuoteId bapQuoteId = do
-  mbBQuote <- liftIO $ runAppFlow "" $ BQQuote.findById bapQuoteId
-  mbBQuote `shouldSatisfy` isJust
-  let Just bQuote = mbBQuote
-  return $ cast bQuote.bppQuoteId
+getBAPRideBooking ::
+  Id BRB.RideBooking ->
+  ClientsM BRB.RideBooking
+getBAPRideBooking bapRBId = do
+  mbBRB <- liftIO $ runAppFlow "" $ BQRB.findById bapRBId
+  mbBRB `shouldSatisfy` isJust
+  let Just bRB = mbBRB
+  return bRB
 
 getBPPRideBooking ::
-  Id TQuote.Quote ->
+  Id BRB.RideBooking ->
   ClientsM TRB.RideBooking
-getBPPRideBooking quoteId = do
-  mbRideBooking <- liftIO $ runTransporterFlow "" $ TQRB.findByQuoteId quoteId
-  mbRideBooking $> () `shouldSatisfy` isJust
-  return $ fromJust mbRideBooking
+getBPPRideBooking bapRBId = do
+  bRB <- getBAPRideBooking bapRBId
+  bRB.bppBookingId `shouldSatisfy` isJust
+  let Just bppBookingId = bRB.bppBookingId
+  mbTRB <- liftIO $ runTransporterFlow "" $ TQRB.findById $ cast bppBookingId
+  mbTRB $> () `shouldSatisfy` isJust
+  let Just tRB = mbTRB
+  return tRB
 
 getBPPRide ::
   Id TRB.RideBooking ->
@@ -132,11 +143,10 @@ spec = do
 
 successFlow :: ClientEnvs -> IO ()
 successFlow clients = withBecknClients clients $ do
-  (bapQuoteId, bRideBookingId) <- doAnAppSearch
+  bRideBookingId <- doAnAppSearch
 
   tRideBooking <- poll $ do
-    tQuoteId <- getBPPQuoteId bapQuoteId
-    trb <- getBPPRideBooking tQuoteId
+    trb <- getBPPRideBooking bRideBookingId
     trb.status `shouldBe` TRB.CONFIRMED
     return $ Just trb
 

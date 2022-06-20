@@ -1,6 +1,7 @@
 module Domain.Action.UI.Confirm
   ( confirm,
     ConfirmReq (..),
+    ConfirmLocationReq (..),
     ConfirmRes (..),
   )
 where
@@ -22,8 +23,20 @@ import Utils.Common
 
 data ConfirmReq = ConfirmReq
   { bookingId :: Id DRB.RideBooking,
-    fromLocation :: DBL.BookingLocationAPIEntity,
-    toLocation :: Maybe DBL.BookingLocationAPIEntity
+    fromLocation :: ConfirmLocationReq,
+    toLocation :: Maybe ConfirmLocationReq
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+data ConfirmLocationReq = ConfirmLocationReq
+  { street :: Maybe Text,
+    door :: Maybe Text,
+    city :: Maybe Text,
+    state :: Maybe Text,
+    country :: Maybe Text,
+    building :: Maybe Text,
+    areaCode :: Maybe Text,
+    area :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -46,8 +59,8 @@ confirm personId req = do
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
   bppBookingId <- booking.bppBookingId & fromMaybeM (RideBookingFieldNotPresent "bppBookingId")
-  let fromLocationAddress = makeLocationAddressFromAPIEntity req.fromLocation
-      toLocationAddress = makeLocationAddressFromAPIEntity <$> req.toLocation
+  let fromLocationAddress = makeLocationAddress req.fromLocation
+      toLocationAddress = makeLocationAddress <$> req.toLocation
   DB.runTransaction $ do
     QBL.updateAddress booking.fromLocationId fromLocationAddress
     whenJust toLocationAddress $ QBL.updateAddress booking.fromLocationId
@@ -59,6 +72,6 @@ confirm personId req = do
         ..
       }
 
-makeLocationAddressFromAPIEntity :: DBL.BookingLocationAPIEntity -> DBL.LocationAddress
-makeLocationAddressFromAPIEntity DBL.BookingLocationAPIEntity {..} =
+makeLocationAddress :: ConfirmLocationReq -> DBL.LocationAddress
+makeLocationAddress ConfirmLocationReq {..} =
   DBL.LocationAddress {..}

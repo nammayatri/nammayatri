@@ -45,8 +45,7 @@ data OnUpdateReq
       }
   | BookingReallocationReq
       { bppBookingId :: Id SRB.BPPRideBooking,
-        bppRideId :: Id SRide.BPPRide,
-        cancellationSource :: SBCR.CancellationSource
+        bppRideId :: Id SRide.BPPRide
       }
 
 onUpdate :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => OnUpdateReq -> m ()
@@ -122,15 +121,11 @@ onUpdate BookingCancelledReq {..} = do
 onUpdate BookingReallocationReq {..} = do
   rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  logTagInfo ("RideBookingId-" <> getId rideBooking.id) ("Cancellation reason " <> show cancellationSource)
-  rideBookingCancellationReason <- buildRideBookingCancellationReason rideBooking.id (Just ride.id) cancellationSource
   DB.runTransaction $ do
     QRB.updateStatus rideBooking.id SRB.AWAITING_REASSIGNMENT
     QRide.updateStatus ride.id SRide.CANCELLED
-    unless (cancellationSource == SBCR.ByUser) $
-      QBCR.create rideBookingCancellationReason
   -- notify customer
-  Notify.notifyOnRideBookingReallocated rideBooking cancellationSource
+  Notify.notifyOnRideBookingReallocated rideBooking
 
 buildRideBookingCancellationReason ::
   MonadFlow m =>

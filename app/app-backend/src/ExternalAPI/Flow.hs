@@ -60,8 +60,7 @@ init ::
   BaseUrl ->
   API.InitReq ->
   m API.InitRes
-init = do
-  callBecknAPIWithSignature "init" API.initAPI
+init = callBecknAPIWithSignature "init" API.initAPI
 
 confirm ::
   ( MonadFlow m,

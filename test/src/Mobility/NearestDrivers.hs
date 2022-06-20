@@ -86,7 +86,7 @@ testNotRental = do
       Q.getNearestDrivers pickupPoint 10000 org1 (Just HATCHBACK) SFP.RENTAL <&> getIds
   res `shouldBe` []
 
-getIds :: [Q.DriverPoolResult] -> [Text]
+getIds :: [Q.NearestDriversResult] -> [Text]
 getIds = map (getId . (.driverId))
 
 pickupPoint :: LatLong

@@ -208,8 +208,8 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
             "Please book again to get another ride."
           ]
 
-notifyOnRideBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> SBCR.CancellationSource -> m ()
-notifyOnRideBookingReallocated rideBooking cancellationSource = do
+notifyOnRideBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> m ()
+notifyOnRideBookingReallocated rideBooking = do
   person <- Person.findById rideBooking.riderId >>= fromMaybeM (PersonNotFound rideBooking.riderId.getId)
   notificationData <- buildNotificationData
   FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
@@ -227,12 +227,10 @@ notifyOnRideBookingReallocated rideBooking cancellationSource = do
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     buildBody = do
       FCMNotificationBody <$> getReallocationText
-    getReallocationText = case cancellationSource of
-      SBCR.ByDriver ->
-        return $
-          unwords
-            [ "The driver had to cancel the ride for",
-              showTimeIst (rideBooking.startTime) <> ".",
-              "Please wait until we allocate other driver."
-            ]
-      _ -> throwError $ InternalError "Ride reallocation started when cancelled not by driver, which supposed to be impossible."
+    getReallocationText =
+      return $
+        unwords
+          [ "The driver had to cancel the ride for",
+            showTimeIst (rideBooking.startTime) <> ".",
+            "Please wait until we allocate other driver."
+          ]

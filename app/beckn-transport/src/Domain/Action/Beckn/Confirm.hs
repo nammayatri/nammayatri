@@ -2,6 +2,7 @@ module Domain.Action.Beckn.Confirm
   ( confirm,
     DConfirmReq (..),
     DConfirmRes (..),
+    ConfirmResBDetails (..),
   )
 where
 
@@ -29,6 +30,7 @@ import qualified Storage.Queries.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.Organization as Organization
+import qualified Storage.Queries.RentalFarePolicy as QRFP
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
@@ -46,11 +48,19 @@ data DConfirmReq = DConfirmReq
 
 data DConfirmRes = DConfirmRes
   { booking :: SRB.RideBooking,
+    bDetails :: ConfirmResBDetails,
     fromLocation :: SBL.BookingLocation,
     toLocation :: Maybe SBL.BookingLocation,
     riderDetails :: SRD.RiderDetails,
     transporter :: DOrg.Organization
   }
+
+data ConfirmResBDetails
+  = OneWayDetails
+  | RentalDetails
+      { baseDuration :: Hours,
+        baseDistance :: Kilometers
+      }
 
 confirm ::
   ( EncFlow m r,
@@ -100,9 +110,10 @@ confirm transporterId subscriber req = do
       return $
         DConfirmRes
           { toLocation = Just toLocation,
+            bDetails = OneWayDetails,
             ..
           }
-    SRB.RentalDetails _ -> do
+    SRB.RentalDetails details -> do
       let secondsPerMinute = 60
       schedulingReserveTime <- secondsToNominalDiffTime <$> asks (.schedulingReserveTime)
       let scheduledTime = addUTCTime (negate schedulingReserveTime) booking.startTime
@@ -117,9 +128,11 @@ confirm transporterId subscriber req = do
                 { rideBookingId = booking.id,
                   shortOrgId = transporter.shortId
                 }
+      rentalFP <- QRFP.findById details.rentalFarePolicyId >>= fromMaybeM NoFarePolicy
       return $
         DConfirmRes
           { toLocation = Nothing,
+            bDetails = RentalDetails {baseDistance = rentalFP.baseDistance, baseDuration = rentalFP.baseDuration},
             ..
           }
   let pickupPoint = booking.fromLocationId

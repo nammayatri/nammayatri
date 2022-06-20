@@ -11,7 +11,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.SearchRequest as SSearchRequest
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (pi)
 import qualified Product.FareCalculator as Fare
@@ -26,7 +25,6 @@ data ServiceHandle m = ServiceHandle
     findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     endRideTransaction :: Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m (),
-    findSearchRequestById :: Id SSearchRequest.SearchRequest -> m (Maybe SSearchRequest.SearchRequest),
     notifyCompleteToBAP :: SRB.RideBooking -> Ride.Ride -> m (),
     calculateFare ::
       Id Organization ->

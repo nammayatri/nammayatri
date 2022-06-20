@@ -16,15 +16,12 @@ defaultRideBooking = do
           }
   SRB.RideBooking
     { id = Id "1",
-      messageId = "",
-      requestId = Id "1",
-      quoteId = "1",
       status = SRB.CONFIRMED,
       providerId = Id "",
       bapId = "",
       bapUri = Fixtures.defaultUrl,
       startTime = Fixtures.defaultTime,
-      riderId = Id "",
+      riderId = Just $ Id "",
       fromLocationId = Id "",
       vehicleVariant = Veh.SUV,
       estimatedFare = 0,

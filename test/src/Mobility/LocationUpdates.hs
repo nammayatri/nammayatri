@@ -31,8 +31,8 @@ searchReqFromUpdatesList :: LocationUpdates -> AppBackend.SearchReq
 searchReqFromUpdatesList updList =
   AppBackend.OneWaySearch $
     AppBackend.OneWaySearchReq
-      { origin = AppBackend.SearchReqLocation defaultAddress $ NE.head $ NE.head updList,
-        destination = AppBackend.SearchReqLocation defaultAddress $ NE.last $ NE.last updList
+      { origin = AppBackend.SearchReqLocation $ NE.head $ NE.head updList,
+        destination = AppBackend.SearchReqLocation $ NE.last $ NE.last updList
       }
 
 waitBetweenUpdates :: Int
@@ -41,11 +41,10 @@ waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates
 successFlowWithLocationUpdates :: Double -> Double -> NonEmpty (NonEmpty LatLong) -> ClientEnvs -> IO ()
 successFlowWithLocationUpdates eps distance updates clients = withBecknClients clients $ do
   let searchReq_ = searchReqFromUpdatesList updates
-  (bapQuoteId, bRideBookingId) <- doAnAppSearchByReq searchReq_
+  bRideBookingId <- doAnAppSearchByReq searchReq_
 
   tRideBooking <- pollDesc "ride booking id should exist and should be confirmed" $ do
-    tQuoteId <- getBPPQuoteId bapQuoteId
-    trb <- getBPPRideBooking tQuoteId
+    trb <- getBPPRideBooking bRideBookingId
     trb.status `shouldBe` TRB.CONFIRMED
     return $ Just trb
 
@@ -109,7 +108,7 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
     return $ Just completedRide.id
 
   tRide' <- getBPPRideById bppRideId
-  tRide'.traveledDistance `shouldSatisfy` equalsEps eps distance
+  tRide'.traveledDistance.getHighPrecMeters `shouldSatisfy` equalsEps eps distance
 
   -- Leave feedback
   void . callBAP $ callAppFeedback 5 completedRideId

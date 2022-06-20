@@ -102,9 +102,8 @@ sendRideBookingReallocationUpdateToBAP ::
   SRB.RideBooking ->
   Id SRide.Ride ->
   SOrg.Organization ->
-  SRBCR.CancellationSource ->
   m ()
-sendRideBookingReallocationUpdateToBAP booking rideId transporter cancellationSource = do
+sendRideBookingReallocationUpdateToBAP booking rideId transporter = do
   let bookingReallocationBuildReq = ACL.BookingReallocationBuildReq {..}
   bookingReallocationMsg <- ACL.buildOnUpdateMessage bookingReallocationBuildReq
   void $ callOnUpdate transporter booking bookingReallocationMsg

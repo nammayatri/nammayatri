@@ -15,11 +15,10 @@ spec = do
   clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for ride rejected by Driver" $ withBecknClients clients do
-      (bapQuoteId, bRideBookingId) <- doAnAppSearch
+      bRideBookingId <- doAnAppSearch
 
       tRideBooking <- poll $ do
-        tQuoteId <- getBPPQuoteId bapQuoteId
-        trb <- getBPPRideBooking tQuoteId
+        trb <- getBPPRideBooking bRideBookingId
         trb.status `shouldBe` TRB.CONFIRMED
         return $ Just trb
 

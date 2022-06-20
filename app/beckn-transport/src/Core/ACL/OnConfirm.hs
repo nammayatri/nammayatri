@@ -7,7 +7,6 @@ import Beckn.Types.Id
 import Data.Maybe (maybeToList)
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.BookingLocation as DBL
-import qualified Domain.Types.RideBooking as DRB
 import qualified Domain.Types.Vehicle as Veh
 
 mkOnConfirmMessage :: DConfirm.DConfirmRes -> OnConfirm.OnConfirmMessage
@@ -30,9 +29,9 @@ mkOnConfirmMessage res = do
     }
   where
     itemCode = do
-      let (fpType, mbDistance, mbDuration) = case res.booking.rideBookingDetails of
-            DRB.OneWayDetails _ -> (OnConfirm.ONE_WAY_TRIP, Nothing, Nothing)
-            DRB.RentalDetails _ -> (OnConfirm.RENTAL_TRIP, Just undefined, Just undefined)
+      let (fpType, mbDistance, mbDuration) = case res.bDetails of
+            DConfirm.OneWayDetails -> (OnConfirm.ONE_WAY_TRIP, Nothing, Nothing)
+            DConfirm.RentalDetails {baseDistance, baseDuration} -> (OnConfirm.RENTAL_TRIP, Just baseDistance, Just baseDuration)
           vehicleVariant = case res.booking.vehicleVariant of
             Veh.SEDAN -> OnConfirm.SEDAN
             Veh.SUV -> OnConfirm.SUV

@@ -3,7 +3,6 @@ module Flow.RideAPI.StartRide where
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Quote as Quote
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -46,14 +45,7 @@ ride =
 rideBooking :: SRB.RideBooking
 rideBooking =
   Fixtures.defaultRideBooking
-    { SRB.status = SRB.CONFIRMED,
-      SRB.quoteId = Id "2"
-    }
-
-searchQuote :: Quote.Quote
-searchQuote =
-  Fixtures.defaultQuote
-    { Quote.id = "2"
+    { SRB.status = SRB.CONFIRMED
     }
 
 searchRequest :: SearchRequest.SearchRequest

@@ -81,12 +81,12 @@ buildQuoteInfo item = do
     OnSearch.RENTAL_TRIP -> DQuote.RentalDetails <$> buildRentalQuoteDetails item
   let itemCode = item.descriptor.code
       vehicleVariant = itemCode.vehicleVariant
-  descriptions <- item.quote_terms & fromMaybeM (InvalidRequest "Missing quote_terms in rental search item")
+      estimatedFare = realToFrac item.price.value
+      estimatedTotalFare = realToFrac item.price.offered_value
+      descriptions = item.quote_terms
   pure
     DOnSearch.QuoteInfo
-      { estimatedFare = realToFrac item.price.value,
-        discount = undefined,
-        estimatedTotalFare = realToFrac item.price.offered_value,
+      { discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedTotalFare - estimatedFare,
         vehicleVariant = castVehicleVariant vehicleVariant,
         ..
       }
@@ -100,8 +100,10 @@ buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
   m DQuote.OneWayQuoteDetails
-buildOneWayQuoteDetails _item = do
-  distanceToNearestDriver <- undefined & fromMaybeM (InvalidRequest "Missing nearest_driver_distance in one way search item")
+buildOneWayQuoteDetails item = do
+  distanceToNearestDriver <-
+    (item.tags <&> (.distance_to_nearest_driver))
+      & fromMaybeM (InvalidRequest "Trip type is ONE_WAY, but distanceToNearestDriver is Nothing")
   pure
     DQuote.OneWayQuoteDetails
       { distanceToNearestDriver = realToFrac distanceToNearestDriver

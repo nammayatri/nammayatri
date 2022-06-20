@@ -5,7 +5,6 @@ import Beckn.Types.Id
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Fixtures
 import Product.FareCalculator.Flow
@@ -54,10 +53,6 @@ handle =
         Id "completed_ride" -> Just ride{status = Ride.COMPLETED}
         Id "rentalRide" -> Just rentalRide
         _ -> Nothing,
-      findSearchRequestById = \searchRequestId ->
-        if searchRequestId == "search"
-          then pure $ Just searchRequest
-          else throwError (SearchRequestNotFound searchRequestId.getId),
       notifyCompleteToBAP = \_ _ -> pure (),
       endRideTransaction = \_ _ _ -> pure (),
       calculateFare = \_ _ _ _ ->
@@ -110,8 +105,7 @@ rideBooking :: SRB.RideBooking
 rideBooking =
   Fixtures.defaultRideBooking
     { SRB.id = Id "rideBooking",
-      SRB.status = SRB.TRIP_ASSIGNED,
-      SRB.quoteId = Id "search"
+      SRB.status = SRB.TRIP_ASSIGNED
     }
 
 rentalRideBooking :: SRB.RideBooking
@@ -123,13 +117,6 @@ rentalRideBooking = do
   rideBooking
     { SRB.id = Id "rentalRideBooking",
       SRB.rideBookingDetails = SRB.RentalDetails details
-    }
-
-searchRequest :: SearchRequest.SearchRequest
-searchRequest =
-  Fixtures.defaultSearchRequest
-    { SearchRequest.id = "search",
-      SearchRequest.providerId = "someOrg"
     }
 
 successfulEndByDriver :: TestTree

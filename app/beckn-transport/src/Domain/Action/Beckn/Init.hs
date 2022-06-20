@@ -12,7 +12,6 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Domain.Types.BookingLocation as DLoc
-import qualified Domain.Types.FareProduct as DFP
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.RideBooking as DRB
 import qualified Domain.Types.Vehicle as Veh
@@ -20,20 +19,29 @@ import Product.FareCalculator
 import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Organization as QOrg
+import qualified Storage.Queries.RentalFarePolicy as QRFP
 import qualified Storage.Queries.RideBooking as QRB
 import Types.Error
 import Utils.Common
 
 data InitReq = InitReq
   { vehicleVariant :: Veh.Variant,
-    fareProductType :: DFP.FareProductType,
-    distance :: Maybe Kilometers,
-    duration :: Maybe Hours,
     fromLocation :: LatLong,
-    toLocation :: Maybe LatLong,
     startTime :: UTCTime,
     bapId :: Text,
-    bapUri :: BaseUrl
+    bapUri :: BaseUrl,
+    initTypeReq :: InitTypeReq
+  }
+
+data InitTypeReq = InitOneWayTypeReq InitOneWayReq | InitRentalTypeReq InitRentalReq
+
+newtype InitOneWayReq = InitOneWayReq
+  { toLocation :: LatLong
+  }
+
+data InitRentalReq = InitRentalReq
+  { distance :: Kilometers,
+    duration :: Hours
   }
 
 data InitRes = InitRes
@@ -53,15 +61,12 @@ init ::
 init transporterId req = do
   transporter <- QOrg.findById transporterId >>= fromMaybeM (OrgDoesNotExist transporterId.getId)
   unless transporter.enabled $ throwError AgencyDisabled
-  unlessM (rideServiceable QGeometry.someGeometriesContain req.fromLocation req.toLocation) $
-    throwError RideNotServiceable
   now <- getCurrentTime
-  rideBooking <- case req.fareProductType of
-    DFP.ONE_WAY -> do
-      toLocationLatLon <- req.toLocation & fromMaybeM (InternalError "FareProductType is ONE_WAY but ToLocation is Nothing")
-      initOneWayTrip req transporter.id req.fromLocation toLocationLatLon req.vehicleVariant req.startTime now
-    DFP.RENTAL -> do
-      return undefined
+  rideBooking <- case req.initTypeReq of
+    InitOneWayTypeReq oneWayReq -> do
+      initOneWayTrip req oneWayReq transporter.id now
+    InitRentalTypeReq rentalReq -> do
+      initRentalTrip req rentalReq transporter.id now
   return $
     InitRes
       { rideBooking = rideBooking,
@@ -70,22 +75,22 @@ init transporterId req = do
 
 initOneWayTrip ::
   ( EsqDBFlow m r,
+    HasField "geofencingConfig" r GeofencingConfig,
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
   InitReq ->
+  InitOneWayReq ->
   Id DOrg.Organization ->
-  LatLong ->
-  LatLong ->
-  Veh.Variant ->
-  UTCTime ->
   UTCTime ->
   m DRB.RideBooking
-initOneWayTrip req transporterId fromLocation toLocationLatLon vehicleVariant startTime now = do
+initOneWayTrip req oneWayReq transporterId now = do
+  unlessM (rideServiceable QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
+    throwError RideNotServiceable
   distance <-
-    metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocationLatLon
-  fareParams <- calculateFare transporterId vehicleVariant distance startTime
-  toLoc <- buildRBLoc toLocationLatLon now
+    metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
+  fareParams <- calculateFare transporterId req.vehicleVariant distance req.startTime
+  toLoc <- buildRBLoc oneWayReq.toLocation now
   let estimatedFare = fareSum fareParams
       discount = fareParams.discount
       estimatedTotalFare = fareSumWithDiscount fareParams
@@ -100,6 +105,32 @@ initOneWayTrip req transporterId fromLocation toLocationLatLon vehicleVariant st
   DB.runTransaction $ do
     QBLoc.create fromLoc
     QBLoc.create toLoc
+    QRB.create rideBooking
+  return rideBooking
+
+initRentalTrip ::
+  ( EsqDBFlow m r,
+    HasField "geofencingConfig" r GeofencingConfig,
+    CoreMetrics m,
+    HasGoogleMaps m r
+  ) =>
+  InitReq ->
+  InitRentalReq ->
+  Id DOrg.Organization ->
+  UTCTime ->
+  m DRB.RideBooking
+initRentalTrip req rentalReq transporterId now = do
+  unlessM (rideServiceable QGeometry.someGeometriesContain req.fromLocation Nothing) $
+    throwError RideNotServiceable
+  let estimatedFare = 0
+      discount = Nothing
+      estimatedTotalFare = 0
+  rentalFarePolicy <- QRFP.findByOffer transporterId req.vehicleVariant rentalReq.distance rentalReq.duration >>= fromMaybeM NoFarePolicy
+  let rentDetails = DRB.RentalDetails $ DRB.RentalRideBookingDetails {rentalFarePolicyId = rentalFarePolicy.id}
+  fromLoc <- buildRBLoc req.fromLocation now
+  rideBooking <- buildRideBooking req transporterId estimatedFare discount estimatedTotalFare rentDetails fromLoc.id now
+  DB.runTransaction $ do
+    QBLoc.create fromLoc
     QRB.create rideBooking
   return rideBooking
 

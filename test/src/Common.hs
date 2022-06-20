@@ -58,25 +58,12 @@ gatewayClientEnv = mkClientEnv defaultManager gatewayBaseUrl
 callGateway :: (Show a) => ClientM a -> IO a
 callGateway = runClient' gatewayClientEnv
 
-address :: AppBESearch.SearchReqAddress
-address =
-  AppBESearch.SearchReqAddress
-    { door = Just "#817",
-      building = Just "Juspay Apartments",
-      street = Just "27th Main",
-      area = Just "8th Block Koramangala",
-      city = Just "Bangalore",
-      country = Just "India",
-      areaCode = Just "560047",
-      state = Just "Karnataka"
-    }
-
 searchReq :: AppBESearch.SearchReq
 searchReq =
   AppBESearch.OneWaySearch $
     AppBESearch.OneWaySearchReq
-      { origin = AppBESearch.SearchReqLocation address $ LatLong 10.0739 76.2733,
-        destination = AppBESearch.SearchReqLocation address $ LatLong 10.5449 76.4356
+      { origin = AppBESearch.SearchReqLocation $ LatLong 10.0739 76.2733,
+        destination = AppBESearch.SearchReqLocation $ LatLong 10.5449 76.4356
       }
 
 verifyError :: Int -> B.ByteString -> Either ClientError a -> IO ()
