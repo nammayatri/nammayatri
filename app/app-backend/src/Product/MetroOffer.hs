@@ -11,6 +11,7 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import qualified Data.List.NonEmpty as NE
 import Data.Traversable
 import Domain.Types.SearchRequest (SearchRequest)
 import EulerHS.Prelude hiding (id)
@@ -87,29 +88,32 @@ providerToMetroOffer rideSearchId Provider {descriptor, items, fulfillments} = d
   createdAt <- getCurrentTime
   return $ MetroOffer {..}
 
-uniteItemAndFulfillment :: (MonadThrow m, Log m) => [Item] -> [Fulfillment] -> m [(Item, [Fulfillment])]
+uniteItemAndFulfillment :: (MonadThrow m, Log m) => [Item] -> [Fulfillment] -> m [(Item, NonEmpty Fulfillment)]
 uniteItemAndFulfillment items fulfillments = do
   items `for` \item -> do
-    ff <- findFulfillments item.fulfillment_id
-    return (item, ff)
+    itemFulfillments <- findFulfillments item.fulfillment_id
+    pure (item, itemFulfillments)
   where
     findFulfillments id = do
-      let fulfilments = filter (\fulfillment -> fulfillment.id == id) fulfillments
-      when (null fulfilments) . throwError . InvalidRequest $ "Fulfillment " <> id <> " not found in provider.fulfillments"
-      return fulfilments
+      let filteredFulfillments = filter (\fulfillment -> fulfillment.id == id) fulfillments
+      case filteredFulfillments of
+        [] -> throwError $ InvalidRequest $ "Fulfillment " <> id <> " not found in provider.fulfillments"
+        (f : fs) -> pure $ f :| fs
 
-offerInfoToMetroRide :: (MonadTime m, MonadThrow m, Log m) => (Item, [Fulfillment]) -> m MetroRide
+offerInfoToMetroRide :: (MonadTime m, MonadThrow m, Log m) => (Item, NonEmpty Fulfillment) -> m MetroRide
 offerInfoToMetroRide (item, fulfillments) = do
   price <-
     realToFrac <$> item.price.value
       & fromMaybeM (InvalidRequest "Missing price.value in item")
   now <- getCurrentTime
+  let startTimes = fulfillments <&> (.start.time.timestamp)
+  let endTimes = fulfillments <&> (.end.time.timestamp)
   let schedule =
         filter (isInTheFuture now) $
-          zipWith ScheduleElement (fulfillments <&> (.start.time.timestamp)) (fulfillments <&> (.end.time.timestamp))
-  fulfillment <- listToMaybe fulfillments & fromMaybeM (InternalError "Empty fulfillments list.") --Already checkeed that list is not empty.
-  departureStation <- locToStation fulfillment.start.location
-  arrivalStation <- locToStation fulfillment.end.location
+          zipWith ScheduleElement (NE.toList startTimes) (NE.toList endTimes)
+  let firstFulfillment = NE.head fulfillments
+  departureStation <- locToStation firstFulfillment.start.location
+  arrivalStation <- locToStation firstFulfillment.end.location
   return MetroRide {..}
   where
     locToStation loc = do
