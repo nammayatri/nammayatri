@@ -26,6 +26,7 @@ buildOnSearchReq ::
   m (Maybe DOnSearch.DOnSearchReq)
 buildOnSearchReq req = do
   validateContext Context.ON_SEARCH $ req.context
+  logOnSearchEvent req
   case req.contents of
     Right msg -> do
       let catalog = msg.catalog
