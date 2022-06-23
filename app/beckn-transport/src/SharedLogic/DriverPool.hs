@@ -7,7 +7,6 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as GoogleMaps
-import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.FareProduct as SFP
 import qualified Domain.Types.Organization as SOrg
@@ -115,7 +114,7 @@ calculateDriverPool locId orgId variant fareProductType = do
 addDuration ::
   ( EsqDBFlow m r,
     CoreMetrics m,
-    HasGoogleMaps m r c
+    HasGoogleMaps m r
   ) =>
   LatLong ->
   QP.DriverPoolResult ->

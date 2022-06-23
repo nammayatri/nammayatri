@@ -282,4 +282,4 @@ getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
           suvResult <> sedanResult <> hatchbackResult
         Just poolVariant -> getResult poolVariant True
       where
-        getResult var cond = [DriverPoolResult (cast personId) dist var dlat dlon | cond]
+        getResult var cond = [DriverPoolResult (cast personId) dist Nothing var dlat dlon | cond]
