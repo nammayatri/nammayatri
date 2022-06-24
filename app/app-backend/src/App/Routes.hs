@@ -353,10 +353,10 @@ type RouteAPI =
   "route"
     :> TokenAuth
     :> ReqBody '[JSON] Location.Request
-    :> Post '[JSON] GoogleMaps.DirectionsResp
+    :> Post '[JSON] Location.Response
 
 routeApiFlow :: FlowServer RouteAPI
-routeApiFlow = Location.getRoute
+routeApiFlow = Location.getRoute'
 
 -------- Serviceability----------
 type ServiceabilityAPI =
