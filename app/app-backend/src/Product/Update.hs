@@ -3,12 +3,14 @@ module Product.Update (onUpdate) where
 import App.Types
 import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Storage.Esqueleto as DB
+import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Data.Aeson (encode)
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideBookingCancellationReason as SBCR
@@ -25,11 +27,14 @@ onUpdate ::
   SignatureAuthResult ->
   OnUpdate.OnUpdateReq ->
   FlowHandler AckResponse
-onUpdate _org req = withFlowHandlerBecknAPI $
+onUpdate (SignatureAuthResult signPayload _) req = withFlowHandlerBecknAPI $
   withTransactionIdLogTag req $ do
     -- TODO: Verify api key here
     logTagInfo "on_update req" (show req)
     validateContext Context.ON_UPDATE req.context
+    DB.runTransaction $
+      QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
+
     processEvent req.message.cabs_update_event
     return Ack
 
