@@ -23,7 +23,6 @@ import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
 import qualified Storage.Queries.BusinessEvent as QBE
-import qualified Storage.Queries.BecknRequest as QBR
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
