@@ -79,6 +79,7 @@ dependencies:
   - either
   - extra
   - safe
+  - h3
 
 ghc-options:
   - -fwrite-ide-info

@@ -15,7 +15,28 @@ RUN apt-get update \
   && apt-get install -y \
   && apt install libtinfo5 -y \
   openssh-client \
-  librdkafka-dev
+  librdkafka-dev \
+  cmake \
+  make \
+  gcc \
+  libtool
+
+#Install H3
+# We have to build .so library because it seems like Haskell's Foreign
+# lib doesn't work with static libs
+RUN git clone https://github.com/uber/h3.git \
+    && cd h3 \
+    && git checkout v$(<VERSION) \
+    && mkdir build \
+    && cd build \
+    && cmake .. -DBUILD_SHARED_LIBS=ON --install-prefix=/usr \
+    && make \
+    && make install \
+    && cd .. \
+    && rm -rf build \
+    && cd ..
+#-----------
+
 RUN mv libgmp*.deb libgmp.deb
 
 # Dependencies for checks

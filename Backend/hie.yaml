@@ -201,6 +201,12 @@ cradle:
       - path: "app/mocks/public-transport-provider-platform/server/Paths_mock_public_transport_provider_platform.hs"
         component: "mock-public-transport-provider-platform:exe:mock-public-transport-provider-platform-exe"
 
+      - path: "lib/h3/src"
+        component: "h3:lib"
+
+      - path: "lib/h3/test"
+        component: "h3:test:h3-tests"
+
       - path: "test/src"
         component: "beckn-test:lib"
 

@@ -1,0 +1,88 @@
+name: h3
+version: 0.1.0.0
+github: "juspay/h3"
+license: AllRightsReserved
+author: "Juspay"
+maintainer: "Juspay"
+copyright: "2020 Juspay Technologies Private Limited"
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Please see the README on GitHub at <https://bitbucket.org/juspay/beckn#readme>
+
+default-extensions:
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - StandaloneDeriving
+  - GeneralisedNewtypeDeriving
+  - DerivingStrategies
+  - DuplicateRecordFields
+  - LambdaCase
+  - OverloadedLabels
+  - OverloadedStrings
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TypeApplications
+
+dependencies:
+- base >= 4.7 && < 5
+- text
+- exceptions
+- either
+
+build-tools:
+  - c2hs
+
+library:
+  source-dirs: src
+  exposed-modules:
+    - H3.Functions
+    - H3.Functions.Types
+    - H3.Functions.Types.Error
+    - H3.Functions.Types.Internal
+    - H3.Functions.DirectedEdges
+    - H3.Functions.DirectedEdges.Internal
+    - H3.Functions.Hierarchy
+    - H3.Functions.Hierarchy.Internal
+    - H3.Functions.Indexing
+    - H3.Functions.Indexing.Internal
+    - H3.Functions.Inspection
+    - H3.Functions.Inspection.Internal
+    - H3.Functions.Miscellaneous
+    - H3.Functions.Miscellaneous.Internal
+    - H3.Functions.Regions
+    - H3.Functions.Regions.Internal
+    - H3.Functions.Traversal
+    - H3.Functions.Traversal.Internal
+    - H3.Functions.Vertexes
+    - H3.Functions.Vertexes.Internal
+  ghc-options:
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror
+
+
+extra-libraries:
+  - h3
+
+tests:
+  h3-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - h3
+    - tasty
+    - tasty-hunit
+    - hspec-expectations
