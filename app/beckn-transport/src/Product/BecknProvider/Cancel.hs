@@ -12,8 +12,8 @@ import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import qualified Beckn.Types.Core.Taxi.Cancel.Req as ReqCancel
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
-import qualified Domain.Types.BusinessEvent as SB
 import Data.Aeson (encode)
+import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
