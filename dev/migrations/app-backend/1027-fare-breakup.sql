@@ -25,12 +25,20 @@ CREATE TABLE atlas_app.fare_breakup (
     amount double precision NOT NULL
 );
 
--- do we need migrate data also?
 ALTER TABLE atlas_app.quote ADD COLUMN fare_product_type varchar(255) NOT NULL DEFAULT 'ONE_WAY';
+UPDATE atlas_app.quote
+    SET fare_product_type = 'RENTAL'
+    WHERE distance_to_nearest_driver IS NULL;
+
+-- do we need migrate data also?
 ALTER TABLE atlas_app.quote ADD COLUMN trip_terms_id character(36) REFERENCES atlas_app.trip_terms (id);
 ALTER TABLE atlas_app.quote ADD COLUMN rental_slab_id character(36) REFERENCES atlas_app.rental_slab (id);
 
--- do we need migrate data also?
 ALTER TABLE atlas_app.ride_booking ADD COLUMN fare_product_type varchar(255) NOT NULL DEFAULT 'ONE_WAY';
+UPDATE atlas_app.ride_booking
+    SET fare_product_type = 'RENTAL'
+    WHERE to_location_id IS NULL;
+
+-- do we need migrate data also?
 ALTER TABLE atlas_app.ride_booking ADD COLUMN trip_terms_id character(36) REFERENCES atlas_app.trip_terms (id);
 ALTER TABLE atlas_app.ride_booking ADD COLUMN rental_slab_id character(36) REFERENCES atlas_app.rental_slab (id);
