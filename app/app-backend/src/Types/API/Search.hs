@@ -58,23 +58,10 @@ data RentalSearchReq = RentalSearchReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-data SearchReqLocation = SearchReqLocation
-  { address :: SearchReqAddress,
-    gps :: LatLong
+newtype SearchReqLocation = SearchReqLocation
+  { gps :: LatLong
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-data SearchReqAddress = SearchReqAddress
-  { door :: Maybe Text,
-    building :: Maybe Text,
-    street :: Maybe Text,
-    area :: Maybe Text,
-    city :: Maybe Text,
-    country :: Maybe Text,
-    areaCode :: Maybe Text,
-    state :: Maybe Text
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 newtype SearchRes = SearchRes
   { searchId :: Id SearchRequest

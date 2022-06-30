@@ -8,7 +8,6 @@ import Beckn.Types.Id (Id)
 import Beckn.Utils.Common
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SavedReqLocation as SavedReqLocation
-import qualified Domain.Types.SearchReqLocation as SearchLocation
 import EulerHS.Prelude hiding (state)
 import qualified Storage.Queries.SavedReqLocation as QSavedReqLocation
 import qualified Types.API.SavedLocations as SavedLocation
@@ -38,7 +37,6 @@ deleteSavedLocation riderId tag = withFlowHandlerAPI . withPersonIdLogTag riderI
 
 buildSavedReqLocationAPIEntity :: MonadFlow m => SavedLocation.SavedReqLocationAPIEntity -> UTCTime -> Id Person.Person -> m SavedLocation.SavedReqLocation
 buildSavedReqLocationAPIEntity SavedLocation.SavedReqLocationAPIEntity {..} now riderId = do
-  let SearchLocation.SearchReqLocationAPIEntity {..} = address
   locId <- generateGUID
   return
     SavedLocation.SavedReqLocation

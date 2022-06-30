@@ -30,8 +30,7 @@ data ProviderInfo = ProviderInfo
   }
 
 data QuoteInfo = QuoteInfo
-  { bppQuoteId :: Id DQuote.BPPQuote,
-    vehicleVariant :: VehicleVariant,
+  { vehicleVariant :: VehicleVariant,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
@@ -54,14 +53,7 @@ searchCbService DOnSearchReq {..} = do
   _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   now <- getCurrentTime
   quotes <- traverse (buildQuote requestId providerInfo now) quotesInfo
-  whenM (duplicateCheckCond (quotes <&> (.bppQuoteId)) requestId providerInfo.providerId) $
-    throwError $ InvalidRequest "Duplicate OnSearch request"
   DB.runTransaction $ traverse_ QQuote.create quotes
-  where
-    duplicateCheckCond :: EsqDBFlow m r => [Id DQuote.BPPQuote] -> Id DSearchReq.SearchRequest -> Text -> m Bool
-    duplicateCheckCond [] _ _ = return False
-    duplicateCheckCond (bppQuoteId_ : _) txnId_ bppId_ =
-      isJust <$> QQuote.findByTxnIdAndBppIdAndQuoteId txnId_ bppId_ bppQuoteId_
 
 buildQuote ::
   MonadFlow m =>

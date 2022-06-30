@@ -8,7 +8,6 @@ import qualified Domain.Action.Beckn.OnSearch.OneWay as OneWay
 import qualified Domain.Action.Beckn.OnSearch.Rental as Rental
 import qualified Domain.Types.FareProduct as DFareProduct
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSR
@@ -28,7 +27,7 @@ data DOnSearchReq = DOnSearchReq
 data DOnSearchRes = DOnSearchRes
   { transporterInfo :: TransporterInfo,
     fareProductType :: DFareProduct.FareProductType,
-    quotes :: [DQuote.Quote]
+    quoteInfos :: QuoteInfos
   }
 
 data TransporterInfo = TransporterInfo
@@ -40,6 +39,8 @@ data TransporterInfo = TransporterInfo
     ridesConfirmed :: Int
   }
 
+data QuoteInfos = OneWayQuoteInfo [OneWay.QuoteInfo] | RentalQuoteInfo [Rental.QuoteInfo]
+
 onSearch :: DOnSearchReq -> Flow DOnSearchRes
 onSearch DOnSearchReq {..} = do
   now <- getCurrentTime
@@ -49,27 +50,27 @@ onSearch DOnSearchReq {..} = do
   onSearchReq <-
     case mbToLocation of
       Nothing -> do
-        quotesInfo <-
+        quotesInfos <-
           if isRentalProduct
-            then Rental.onSearchCallback searchRequest.id transporter.id now
-            else pure []
-        buildDOnSearchRes transporter quotesInfo DFareProduct.RENTAL
+            then RentalQuoteInfo <$> Rental.onSearchCallback searchRequest transporter.id fromLocation now
+            else pure (RentalQuoteInfo [])
+        buildDOnSearchRes transporter quotesInfos DFareProduct.RENTAL
       Just toLocation -> do
-        quotesInfo <-
+        quotesInfos <-
           if isOneWayProduct
-            then OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation
-            else pure []
-        buildDOnSearchRes transporter quotesInfo DFareProduct.ONE_WAY
+            then OneWayQuoteInfo <$> OneWay.onSearchCallback searchRequest transporter.id now fromLocation toLocation
+            else pure (OneWayQuoteInfo [])
+        buildDOnSearchRes transporter quotesInfos DFareProduct.ONE_WAY
   Metrics.finishSearchMetrics transporter.id searchMetricsMVar
   pure onSearchReq
 
 buildDOnSearchRes ::
   EsqDBFlow m r =>
   DOrg.Organization ->
-  [DQuote.Quote] ->
+  QuoteInfos ->
   DFareProduct.FareProductType ->
   m DOnSearchRes
-buildDOnSearchRes org quotes fareProductType = do
+buildDOnSearchRes org quoteInfos fareProductType = do
   count <- QRide.getCountByStatus org.id
   let transporterInfo =
         TransporterInfo
@@ -80,4 +81,4 @@ buildDOnSearchRes org quotes fareProductType = do
             ridesCompleted = fromMaybe 0 $ List.lookup DRide.COMPLETED count,
             ridesConfirmed = fromMaybe 0 $ List.lookup DRide.NEW count
           }
-  pure $ DOnSearchRes {transporterInfo, fareProductType, quotes}
+  pure $ DOnSearchRes {transporterInfo, fareProductType, quoteInfos}

@@ -25,7 +25,6 @@ mkPersist
   [defaultQQ|
     QuoteT sql=quote
       id Text
-      bppQuoteId Text
       requestId SSearchRequest.SearchRequestTId
       estimatedFare Amount
       discount Amount Maybe
@@ -70,7 +69,6 @@ instance TEntity QuoteT Domain.Quote where
     return $
       Domain.Quote
         { id = Id id,
-          bppQuoteId = Id bppQuoteId,
           requestId = fromKey requestId,
           providerUrl = pUrl,
           quoteTerms = quoteTerms,
@@ -82,7 +80,6 @@ instance TEntity QuoteT Domain.Quote where
           Domain.RentalDetails _ -> Nothing
     QuoteT
       { id = getId id,
-        bppQuoteId = getId bppQuoteId,
         requestId = toKey requestId,
         providerUrl = showBaseUrl providerUrl,
         ..

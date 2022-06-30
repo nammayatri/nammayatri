@@ -52,14 +52,6 @@ buildSearchReqLoc API.SearchReqLocation {..} = do
       { id = locId,
         lat = gps.lat,
         lon = gps.lon,
-        city = address.city,
-        state = address.state,
-        country = address.country,
-        street = address.street,
-        door = address.door,
-        building = address.building,
-        areaCode = address.areaCode,
-        area = address.area,
         createdAt = now,
         updatedAt = now
       }

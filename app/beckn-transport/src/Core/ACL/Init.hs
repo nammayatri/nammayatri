@@ -26,10 +26,13 @@ buildInitReq subscriber req = do
     _ -> throwError (InvalidRequest "order.items must contain exactly 1 item.")
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
+  let itemCode = item.descriptor.code
   return $
     DInit.InitReq
-      { vehicleVariant = castVehicleVariant item.descriptor.code.vehicleVariant,
-        fareProductType = castFareProductType item.descriptor.code.fareProductType,
+      { vehicleVariant = castVehicleVariant itemCode.vehicleVariant,
+        fareProductType = castFareProductType itemCode.fareProductType,
+        distance = itemCode.distance,
+        duration = itemCode.duration,
         fromLocation = LatLong {lat = fulfillment.start.location.gps.lat, lon = fulfillment.start.location.gps.lon},
         toLocation = fulfillment.end <&> \end -> LatLong {lat = end.location.gps.lat, lon = end.location.gps.lon},
         bapId = subscriber.subscriber_id,
@@ -43,4 +46,4 @@ buildInitReq subscriber req = do
       Init.SEDAN -> Veh.SEDAN
     castFareProductType = \case
       Init.ONE_WAY_TRIP -> FP.ONE_WAY
-      Init.RENTAL_TRIP dist dur -> FP.RENTAL
+      Init.RENTAL_TRIP -> FP.RENTAL

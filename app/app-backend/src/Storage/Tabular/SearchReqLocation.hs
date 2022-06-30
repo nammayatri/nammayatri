@@ -19,14 +19,6 @@ mkPersist
       id Text
       lat Double
       lon Double
-      street Text Maybe
-      door Text Maybe
-      city Text Maybe
-      state Text Maybe
-      country Text Maybe
-      building Text Maybe
-      areaCode Text Maybe
-      area Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

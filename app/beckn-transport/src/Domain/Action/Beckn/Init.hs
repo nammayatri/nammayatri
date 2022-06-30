@@ -27,6 +27,8 @@ import Utils.Common
 data InitReq = InitReq
   { vehicleVariant :: Veh.Variant,
     fareProductType :: DFP.FareProductType,
+    distance :: Maybe Kilometers,
+    duration :: Maybe Hours,
     fromLocation :: LatLong,
     toLocation :: Maybe LatLong,
     startTime :: UTCTime,

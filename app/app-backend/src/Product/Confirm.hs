@@ -51,7 +51,7 @@ confirm personId searchRequestId quoteId = withFlowHandlerAPI . withPersonIdLogT
         Confirm.Order
           { items =
               [ Confirm.OrderItem
-                  { id = quote.bppQuoteId.getId
+                  { id = undefined
                   }
               ],
             fulfillment =

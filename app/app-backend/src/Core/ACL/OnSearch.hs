@@ -9,11 +9,9 @@ import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Id
 import Beckn.Utils.Logging
-import Data.Text (unpack)
-import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
-import qualified Domain.Types.Quote as DQuote
+import qualified Domain.Types.VehicleVariant as VehVar
 import EulerHS.Prelude hiding (id, state, unpack)
 import qualified Storage.Queries.OnSearchEvent as OnSearchEvent
 import Types.Error
@@ -45,17 +43,14 @@ searchCbService context catalog = do
     [] -> throwError $ InvalidRequest "Missing bpp/providers" -- TODO: make it NonEmpty
     (provider : _) -> do
       let items = provider.items
-      fareProductType <-
-        readMaybe (unpack provider.category_id)
-          & fromMaybeM (InvalidRequest "Invalid category_id. Only RENTAL and ONE_WAY is supported by BAP")
-      quotesInfo <- traverse (buildQuoteInfo fareProductType) items
+      quotesInfo <- traverse buildQuoteInfo items
       let providerInfo =
             DOnSearch.ProviderInfo
               { providerId = providerId,
-                name = provider.name,
+                name = provider.descriptor.name,
                 url = providerUrl,
                 mobileNumber = provider.contacts,
-                ridesCompleted = provider.rides_completed
+                ridesCompleted = provider.tags.rides_completed
               }
       pure
         DOnSearch.DOnSearchReq
@@ -77,30 +72,34 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
 
 buildQuoteInfo ::
   (MonadThrow m, Log m) =>
-  DQuote.FareProductType ->
   OnSearch.Item ->
   m DOnSearch.QuoteInfo
-buildQuoteInfo fareProductType item = do
-  quoteDetails <- case fareProductType of
-    DQuote.ONE_WAY -> DQuote.OneWayDetails <$> buildOneWayQuoteDetails item
-    DQuote.RENTAL -> DQuote.RentalDetails <$> buildRentalQuoteDetails item
-  vehicleVariant <- readMaybe (T.unpack item.vehicle_variant) & fromMaybeM (InvalidRequest "Unable to parse item.vehicle_variant")
+buildQuoteInfo item = do
+  quoteInfoDetails <- case item.category_id of
+    OnSearch.ONE_WAY_TRIP -> DOnSearch.OneWayDetails <$> buildOneWayQuoteDetails item
+    OnSearch.RENTAL_TRIP -> DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
+  let itemCode = item.descriptor.code
+      vehicleVariant = itemCode.vehicleVariant
   pure
     DOnSearch.QuoteInfo
-      { bppQuoteId = Id item.id,
-        estimatedFare = realToFrac item.estimated_price.value,
-        discount = realToFrac <$> (item.discount <&> (.value)),
-        estimatedTotalFare = realToFrac item.discounted_price.value,
-        descriptions = fromMaybe [] item.descriptions, --item.descriptions should not be Maybe
+      { estimatedFare = realToFrac item.price.value,
+        discount = undefined,
+        estimatedTotalFare = realToFrac item.price.offered_value,
+        vehicleVariant = castVehicleVariant vehicleVariant,
         ..
       }
+  where
+    castVehicleVariant = \case
+      OnSearch.SEDAN -> VehVar.SEDAN
+      OnSearch.SUV -> VehVar.SUV
+      OnSearch.HATCHBACK -> VehVar.HATCHBACK
 
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DQuote.OneWayQuoteDetails
-buildOneWayQuoteDetails item = do
-  distanceToNearestDriver <- item.nearest_driver_distance & fromMaybeM (InvalidRequest "Missing nearest_driver_distance in one way search item")
+  m DOnSearch.OneWayQuoteInfoDetails
+buildOneWayQuoteDetails _item = do
+  distanceToNearestDriver <- undefined & fromMaybeM (InvalidRequest "Missing nearest_driver_distance in one way search item")
   pure
     DQuote.OneWayQuoteDetails
       { distanceToNearestDriver = realToFrac distanceToNearestDriver
@@ -109,9 +108,9 @@ buildOneWayQuoteDetails item = do
 buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DQuote.RentalQuoteDetails
+  m DOnSearch.RentalQuoteInfoDetails
 buildRentalQuoteDetails item = do
-  baseDistance <- undefined & fromMaybeM (InvalidRequest "Missing baseDistance in rental search item")
-  baseDuration <- Hours <$> item.baseDuration & fromMaybeM (InvalidRequest "Missing baseDuration in rental search item")
-
-  pure DQuote.RentalQuoteDetails {..}
+  baseDistance <- item.base_distance & fromMaybeM (InvalidRequest "Missing base_distance in rental search item")
+  baseDuration <- item.base_duration & fromMaybeM (InvalidRequest "Missing base_duration in rental search item")
+  descriptions <- item.quote_terms & fromMaybeM (InvalidRequest "Missing quote_terms in rental search item")
+  pure DOnSearch.RentalQuoteInfoDetails {..}

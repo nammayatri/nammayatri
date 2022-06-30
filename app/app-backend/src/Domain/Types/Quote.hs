@@ -14,11 +14,8 @@ import Domain.Types.VehicleVariant (VehicleVariant)
 
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
-data BPPQuote
-
 data Quote = Quote
   { id :: Id Quote,
-    bppQuoteId :: Id BPPQuote,
     requestId :: Id DSearchRequest.SearchRequest,
     estimatedFare :: Amount,
     discount :: Maybe Amount,

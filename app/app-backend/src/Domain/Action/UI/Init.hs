@@ -4,9 +4,11 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import qualified Domain.Types.BookingLocation as DLoc
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.RideBooking as SRB
 import Domain.Types.VehicleVariant (VehicleVariant)
+import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RideBooking as QRideB
 import qualified Storage.Queries.SearchReqLocation as QSRLoc
@@ -33,12 +35,17 @@ data InitRes = InitRes
 
 init :: EsqDBFlow m r => InitReq -> m InitRes
 init req = do
+  now <- getCurrentTime
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (QuoteDoesNotExist req.quoteId.getId)
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
   fromLocation <- QSRLoc.findById searchRequest.fromLocationId >>= fromMaybeM LocationNotFound
   mbToLocation <- searchRequest.toLocationId `forM` (QSRLoc.findById >=> fromMaybeM LocationNotFound)
-  rideBooking <- buildRideBooking searchRequest quote
-  DB.runTransaction $
+  bFromLocation <- buildBLoc fromLocation now
+  mbBToLocation <- (`buildBLoc` now) `mapM` mbToLocation
+  rideBooking <- buildRideBooking searchRequest quote bFromLocation.id (mbBToLocation <&> (.id)) now
+  DB.runTransaction $ do
+    QBLoc.create bFromLocation
+    whenJust mbBToLocation $ \loc -> QBLoc.create loc
     QRideB.create rideBooking
   return $
     InitRes
@@ -52,9 +59,26 @@ init req = do
         startTime = searchRequest.startTime
       }
   where
-    buildRideBooking searchRequest quote = do
+    buildBLoc searchReqLocation now = do
+      locId <- generateGUID
+      return
+        DLoc.BookingLocation
+          { id = locId,
+            lat = searchReqLocation.lat,
+            lon = searchReqLocation.lon,
+            street = Nothing,
+            door = Nothing,
+            city = Nothing,
+            state = Nothing,
+            country = Nothing,
+            building = Nothing,
+            areaCode = Nothing,
+            area = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
+    buildRideBooking searchRequest quote fromLocId toLocId now = do
       id <- generateGUID
-      now <- getCurrentTime
       return $
         SRB.RideBooking
           { id = Id id,
@@ -66,8 +90,8 @@ init req = do
             providerMobileNumber = quote.providerMobileNumber,
             startTime = searchRequest.startTime,
             riderId = searchRequest.riderId,
-            fromLocationId = undefined,
-            toLocationId = undefined,
+            fromLocationId = fromLocId,
+            toLocationId = toLocId,
             estimatedFare = quote.estimatedFare,
             discount = quote.discount,
             estimatedTotalFare = quote.estimatedTotalFare,

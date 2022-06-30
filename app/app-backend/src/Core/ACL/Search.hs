@@ -72,11 +72,5 @@ mkIntent origin mbDestination startTime = do
             Search.Gps
               { lat = info.gps.lat,
                 lon = info.gps.lon
-              },
-          address = do
-            let API.SearchReqAddress {..} = info.address
-            Search.Address
-              { area_code = areaCode,
-                ..
               }
         }

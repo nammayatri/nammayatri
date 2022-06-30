@@ -1,7 +1,3 @@
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Domain.Types.SearchRequestForDriver where
 
 import Beckn.Prelude
@@ -25,10 +21,6 @@ data SearchRequestForDriver = SearchRequestForDriver
   }
   deriving (Generic, Show, PrettyShow)
 
-deriving newtype instance PrettyShow Seconds
-
-deriving newtype instance PrettyShow Meters
-
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   { searchRequestId :: Id SearchRequest,
     searchRequestValidTill :: UTCTime,
@@ -37,10 +29,6 @@ data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
     baseFare :: Double
   }
   deriving (Generic, ToJSON, ToSchema)
-
-deriving newtype instance ToSchema Seconds
-
-deriving newtype instance ToSchema Meters
 
 mkSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> SearchRequestForDriverAPIEntity
 mkSearchRequestForDriverAPIEntity SearchRequestForDriver {..} = SearchRequestForDriverAPIEntity {..}

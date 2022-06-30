@@ -78,18 +78,7 @@ generateSearchRequest = do
                           API.StartInfo
                             { location =
                                 API.Location
-                                  { gps = API.Gps {lat = 20.5937, lon = 78.9629},
-                                    address =
-                                      API.Address
-                                        { door = Nothing,
-                                          area = Nothing,
-                                          building = Nothing,
-                                          street = Nothing,
-                                          city = Nothing,
-                                          state = Nothing,
-                                          country = Nothing,
-                                          area_code = Nothing
-                                        }
+                                  { gps = API.Gps {lat = 20.5937, lon = 78.9629}
                                   },
                               time = API.TimeTimestamp example
                             },

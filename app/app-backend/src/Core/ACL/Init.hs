@@ -35,14 +35,14 @@ mkInitMessage res =
     }
   where
     itemCode = do
-      let fpType = case res.quoteDetails of
-            Quote.OneWayDetails _ -> Init.ONE_WAY_TRIP
-            Quote.RentalDetails r -> Init.RENTAL_TRIP r.baseDistance.getKilometers r.baseDuration.getHours
+      let (fpType, mbDistance, mbDuration) = case res.quoteDetails of
+            Quote.OneWayDetails _ -> (Init.ONE_WAY_TRIP, Nothing, Nothing)
+            Quote.RentalDetails r -> (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration)
           vehicleVariant = case res.vehicleVariant of
             VehVar.SEDAN -> Init.SEDAN
             VehVar.SUV -> Init.SUV
             VehVar.HATCHBACK -> Init.HATCHBACK
-      Init.ItemCode fpType vehicleVariant
+      Init.ItemCode fpType vehicleVariant mbDistance mbDuration
 
 mkOrderItem :: Init.ItemCode -> Init.OrderItem
 mkOrderItem code =

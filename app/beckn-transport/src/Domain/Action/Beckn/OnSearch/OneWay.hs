@@ -3,6 +3,7 @@ module Domain.Action.Beckn.OnSearch.OneWay where
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch as MapSearch
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -27,6 +28,18 @@ import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 import Types.Error
 import Utils.Common
 
+data QuoteInfo = QuoteInfo
+  { quoteId :: Id DQuote.Quote,
+    vehicleVariant :: DVeh.Variant,
+    estimatedFare :: Amount,
+    discount :: Maybe Amount,
+    estimatedTotalFare :: Amount,
+    distanceToNearestDriver :: HighPrecMeters,
+    fromLocation :: MapSearch.LatLong,
+    toLocation :: MapSearch.LatLong,
+    startTime :: UTCTime
+  }
+
 onSearchCallback ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
@@ -40,7 +53,7 @@ onSearchCallback ::
   UTCTime ->
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
-  m [DQuote.Quote]
+  m [QuoteInfo]
 onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   pool <- DrPool.calculateDriverPool undefined transporterId Nothing SFP.ONE_WAY
 
@@ -56,7 +69,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
   -- we take nearest one and calculate fare and make PI for him
 
   distance <-
-    metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) (Loc.locationToLatLong fromLocation) (Loc.locationToLatLong toLocation)
+    metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) fromLocation toLocation
   listOfQuotes <-
     for listOfProtoQuotes $ \poolResult -> do
       fareParams <- calculateFare transporterId poolResult.variant distance searchRequest.startTime
@@ -69,7 +82,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
         poolResult.variant now
   Esq.runTransaction $
     for_ listOfQuotes QQuote.create
-  pure listOfQuotes
+  pure $ mkQuoteInfo fromLocation toLocation now distance <$> listOfQuotes
 
 buildOneWayQuote ::
   EsqDBFlow m r =>
@@ -98,3 +111,12 @@ buildOneWayQuote productSearchRequest fareParams transporterId distance distance
         quoteDetails = DQuote.OneWayDetails oneWayQuoteDetails,
         ..
       }
+
+mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> HighPrecMeters -> DQuote.Quote -> QuoteInfo
+mkQuoteInfo fromLoc toLoc startTime distanceToNearestDriver DQuote.Quote {..} = do
+  let fromLocation = Loc.locationToLatLong fromLoc
+      toLocation = Loc.locationToLatLong toLoc
+  QuoteInfo
+    { quoteId = id,
+      ..
+    }
