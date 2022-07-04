@@ -201,7 +201,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats OWNER TO atlas_driver_offer_bpp_
 CREATE TABLE atlas_driver_offer_bpp.fare_policy (
 id character(36) NOT NULL,
 organization_id character (36) NOT NULL,
-base_fare double precision,
+base_fare double precision NOT NULL CHECK (base_fare > 0),
+fare_per_km double precision NOT NULL CHECK (fare_per_km > 0),
 night_shift_start time without time zone,
 night_shift_end time without time zone,
 night_shift_rate double precision,
@@ -210,17 +211,6 @@ updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 ,CONSTRAINT  fare_policy_org_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_driver_offer_bpp.organization(id)
 );
 ALTER TABLE atlas_driver_offer_bpp.fare_policy OWNER TO atlas_driver_offer_bpp_user;
-
-CREATE TABLE atlas_driver_offer_bpp.fare_policy_per_extra_km_rate (
-id character(36) NOT NULL,
-organization_id character(36) NOT NULL,
-distance_range_start double precision NOT NULL,
-fare double precision NOT NULL
-,CONSTRAINT  fare_policy_extra_km_rate_unique_extra_distance_range_start UNIQUE (organization_id, distance_range_start)
-,CONSTRAINT  fare_policy_per_extra_km_rate_pkey PRIMARY KEY (id)
-,CONSTRAINT  fare_policy_per_extra_km_rate_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_driver_offer_bpp.organization(id)
-);
-ALTER TABLE atlas_driver_offer_bpp.fare_policy_per_extra_km_rate OWNER TO atlas_driver_offer_bpp_user;
 
 CREATE TABLE atlas_driver_offer_bpp.vehicle (
 id character(36) NOT NULL,

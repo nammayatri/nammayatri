@@ -11,8 +11,6 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy as Domain
-import qualified Storage.Queries.FarePolicy.PerExtraKmRate as QExtraKmRate
-import Storage.Tabular.FarePolicy.PerExtraKmRate ()
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Vehicle ()
 
@@ -22,7 +20,8 @@ mkPersist
     FarePolicyT sql=fare_policy
       id Text
       organizationId OrganizationTId
-      baseFare Double Maybe
+      fareForPickup Double
+      farePerKm Double
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
       nightShiftRate Double Maybe
@@ -41,21 +40,16 @@ instance TEntityKey FarePolicyT where
 instance TEntity FarePolicyT Domain.FarePolicy where
   fromTEntity entity = do
     let FarePolicyT {..} = entityVal entity
-    perExtraKmRateList <- QExtraKmRate.findAll (fromKey organizationId)
     return $
       Domain.FarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
-          baseFare = toRational <$> baseFare,
-          nightShiftRate = toRational <$> nightShiftRate,
           ..
         }
   toTType Domain.FarePolicy {..} =
     FarePolicyT
       { id = getId id,
         organizationId = toKey organizationId,
-        baseFare = fromRational <$> baseFare,
-        nightShiftRate = fromRational <$> nightShiftRate,
         ..
       }
   toTEntity a =

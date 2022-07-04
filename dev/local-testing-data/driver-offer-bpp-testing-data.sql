@@ -65,15 +65,11 @@ INSERT INTO atlas_driver_offer_bpp.registration_token (id, auth_medium, auth_typ
 	('002d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1234', '002df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '002b93df-4f7c-440f-bada-4d46c396d7d0', 'USER                                ', NULL, '2022-04-12 15:15:42.296488+00', '2022-04-12 15:15:42.296488+00');
 
 INSERT INTO atlas_driver_offer_bpp.fare_policy
-  (id, organization_id, base_fare, night_shift_start, night_shift_end,
+  (id, organization_id, base_fare, fare_per_km, night_shift_start, night_shift_end,
     night_shift_rate, created_at, updated_at) VALUES
-  ('0991cec4-72d4-40f6-8ddd-c77a97c3b898', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 120, NULL, NULL, 1, now(), now()),
-  ('002d53e2-d02b-494a-a4ac-ec1ea0027e18', '7f7896dd-787e-4a0b-8675-c3f6fe93aa9e', 120, NULL, NULL, 1, now(), now());
+  ('0991cec4-72d4-40f6-8ddd-c77a97c3b898', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 120, 12, NULL, NULL, 1, now(), now()),
+  ('002d53e2-d02b-494a-a4ac-ec1ea0027e18', '7f7896dd-787e-4a0b-8675-c3f6fe93aa9e', 120, 12, NULL, NULL, 1, now(), now());
 
-INSERT INTO atlas_driver_offer_bpp.fare_policy_per_extra_km_rate
-  (id, organization_id, distance_range_start, fare) VALUES
-  ('0991cec4-72d4-40f6-8ddd-c77a97c3b897', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 5000, 12),
-  ('002d53e2-d02b-494a-a4ac-ec1ea0027e18', '7f7896dd-787e-4a0b-8675-c3f6fe93aa9e', 5000, 12);
 INSERT INTO atlas_driver_offer_bpp.vehicle (id, capacity, category, make, model, size, variant, color, energy_type, registration_no, registration_category, organization_id, created_at, updated_at) VALUES
 	('0c1cd0bc-b3a4-4c6c-811f-900ccf4dfb94', NULL, NULL, NULL, 'Model1', NULL, 'SUV', 'Black', NULL, '4810', NULL, '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', '2022-04-12 15:15:42.233691+00', '2022-04-12 15:15:42.233691+00'),
 	('f1b84838-5cb5-4eb1-8f4b-0dd0c4a2-suv', NULL, NULL, NULL, 'Model2', NULL, 'SUV', 'Black', NULL, '5613', NULL, 'e1f37274-f0aa-4bb3-93a0-2476349487b7', '2022-04-12 15:15:42.234832+00', '2022-04-12 15:15:42.234832+00'),

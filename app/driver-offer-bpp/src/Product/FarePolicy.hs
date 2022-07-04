@@ -6,7 +6,6 @@ import Beckn.Types.Id (Id (..))
 import Beckn.Utils.Validation (runRequestValidation)
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FarePolicy as DFarePolicy
-import qualified Domain.Types.FarePolicy.PerExtraKmRate as DPerExtraKmRate
 import qualified Domain.Types.Person as SP
 import Environment
 import EulerHS.Prelude
@@ -31,13 +30,12 @@ updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
   runRequestValidation validateUpdateFarePolicyRequest req
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy
   unless (admin.organizationId == Just farePolicy.organizationId) $ throwError AccessDenied
-  let perExtraKmRateList = map DPerExtraKmRate.fromPerExtraKmRateAPIEntity req.perExtraKmRateList
   let updatedFarePolicy =
-        farePolicy{baseFare = toRational <$> req.baseFare,
-                   perExtraKmRateList = perExtraKmRateList,
+        farePolicy{fareForPickup = req.fareForPickup,
+                   farePerKm = req.farePerKm,
                    nightShiftStart = req.nightShiftStart,
                    nightShiftEnd = req.nightShiftEnd,
-                   nightShiftRate = toRational <$> req.nightShiftRate
+                   nightShiftRate = req.nightShiftRate
                   }
   let Just orgId = admin.organizationId
   coordinators <- QP.findAdminsByOrgId orgId
