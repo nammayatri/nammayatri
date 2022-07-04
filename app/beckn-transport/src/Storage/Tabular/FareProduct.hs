@@ -32,9 +32,8 @@ instance TEntityKey FareProductT where
   fromKey (FareProductTKey _id) = Id _id
   toKey (Id id) = FareProductTKey id
 
-instance TEntity FareProductT Domain.FareProduct where
-  fromTEntity entity = do
-    let FareProductT {..} = entityVal entity
+instance TType FareProductT Domain.FareProduct where
+  fromTType FareProductT {..} = do
     return $
       Domain.FareProduct
         { id = Id id,
@@ -49,5 +48,3 @@ instance TEntity FareProductT Domain.FareProduct where
         productType = _type,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

@@ -40,9 +40,9 @@ instance TEntityKey RentalFarePolicyT where
   fromKey (RentalFarePolicyTKey _id) = Id _id
   toKey (Id id) = RentalFarePolicyTKey id
 
-instance TEntity RentalFarePolicyT Domain.RentalFarePolicy where
-  fromTEntity entity = do
-    let RentalFarePolicyT {..} = entityVal entity
+instance TType RentalFarePolicyT Domain.RentalFarePolicy where
+  fromTType RentalFarePolicyT {..} = do
+    let descriptions = Domain.mkDescriptions extraKmFare extraMinuteFare driverAllowanceForDay
     return $
       Domain.RentalFarePolicy
         { id = Id id,
@@ -60,5 +60,3 @@ instance TEntity RentalFarePolicyT Domain.RentalFarePolicy where
         baseDuration = getHours baseDuration,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

@@ -28,13 +28,17 @@ createRentalFarePolicy admin req = withFlowHandlerAPI $ do
   where
     toDomainType :: Id Organization -> Id RentalFarePolicy -> CreateRentalFarePolicyItem -> RentalFarePolicy
     toDomainType orgId guid CreateRentalFarePolicyItem {..} = do
+      let extraKmFare' = realToFrac extraKmFare
+          extraMinuteFare' = realToFrac extraMinuteFare
+          driverAllowanceForDay' = realToFrac <$> driverAllowanceForDay
       RentalFarePolicy
         { id = guid,
           organizationId = orgId,
           baseFare = realToFrac baseFare,
-          extraKmFare = realToFrac extraKmFare,
-          extraMinuteFare = realToFrac extraMinuteFare,
-          driverAllowanceForDay = realToFrac <$> driverAllowanceForDay,
+          extraKmFare = extraKmFare',
+          extraMinuteFare = extraMinuteFare',
+          driverAllowanceForDay = driverAllowanceForDay',
+          descriptions = mkDescriptions extraKmFare' extraMinuteFare' driverAllowanceForDay',
           ..
         }
 

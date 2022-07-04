@@ -35,7 +35,7 @@ upsertGpsCoord drLocationId latLong updateTime = do
   mbDrLoc <- Esq.findById @_ @DriverLocation drLocationId
   case mbDrLoc of
     Nothing -> Storage.Queries.DriverLocation.create drLocationId latLong updateTime
-    Just _ -> Esq.update' $ \tbl -> do
+    Just _ -> Esq.update $ \tbl -> do
       set
         tbl
         [ DriverLocationLat =. val latLong.lat,

@@ -20,28 +20,23 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     PerExtraKmRateT sql=fare_policy_per_extra_km_rate
-      id Text
+      Id Int
       vehicleVariant Vehicle.Variant
       organizationId OrganizationTId
       distanceRangeStart Double
       fare Double
-      Primary id
       deriving Generic
     |]
 
-instance TEntityKey PerExtraKmRateT where
-  type DomainKey PerExtraKmRateT = Id Domain.PerExtraKmRate
-  fromKey (PerExtraKmRateTKey _id) = Id _id
-  toKey (Id id) = PerExtraKmRateTKey id
+type FullPerExtraKmRate = (Id Organization, Vehicle.Variant, Domain.PerExtraKmRate)
 
-type FullPerExtraKmRate = (Id Domain.PerExtraKmRate, Id Organization, Vehicle.Variant, Domain.PerExtraKmRate)
+getDomainPart :: FullPerExtraKmRate -> Domain.PerExtraKmRate
+getDomainPart (_, _, domain) = domain
 
-instance TEntity PerExtraKmRateT FullPerExtraKmRate where
-  fromTEntity entity = do
-    let PerExtraKmRateT {..} = entityVal entity
+instance TType PerExtraKmRateT FullPerExtraKmRate where
+  fromTType PerExtraKmRateT {..} = do
     return
-      ( Id id,
-        fromKey organizationId,
+      ( fromKey organizationId,
         vehicleVariant,
         Domain.PerExtraKmRate
           { distanceRangeStart = toRational distanceRangeStart,
@@ -49,14 +44,11 @@ instance TEntity PerExtraKmRateT FullPerExtraKmRate where
             ..
           }
       )
-  toTType (id, orgId, vehVar, Domain.PerExtraKmRate {..}) =
+  toTType (orgId, vehVar, Domain.PerExtraKmRate {..}) =
     PerExtraKmRateT
-      { id = getId id,
-        organizationId = toKey orgId,
+      { organizationId = toKey orgId,
         vehicleVariant = vehVar,
         distanceRangeStart = fromRational distanceRangeStart,
         fare = fromRational fare,
         ..
       }
-  toTEntity a@(id, _, _, _) =
-    Entity (toKey id) $ toTType a

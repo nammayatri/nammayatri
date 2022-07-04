@@ -51,9 +51,8 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey id = BookingTKey id.getId
 
-instance TEntity BookingT Domain.Booking where
-  fromTEntity entity = do
-    let BookingT {..} = entityVal entity
+instance TType BookingT Domain.Booking where
+  fromTType BookingT {..} = do
     bppUrl_ <- parseBaseUrl bppUrl
     return $
       Domain.Booking
@@ -77,5 +76,3 @@ instance TEntity BookingT Domain.Booking where
         arrivalStationId = toKey arrivalStationId,
         ..
       }
-  toTEntity a = do
-    Entity (toKey a.id) $ toTType a

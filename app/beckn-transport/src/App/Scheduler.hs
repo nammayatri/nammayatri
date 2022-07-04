@@ -4,9 +4,8 @@ import App.Types (AppCfg, Log (withLogTag))
 import Beckn.Mock.App (runMock)
 import Beckn.Prelude
 import Beckn.Scheduler
-import Beckn.Storage.Esqueleto (HasEsqEnv)
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Esqueleto.Config (EsqDBEnv, prepareEsqDBEnv)
+import Beckn.Storage.Esqueleto.Config (EsqDBEnv, HasEsqEnv, prepareEsqDBEnv)
 import Beckn.Types.Id (Id (Id), ShortId)
 import Beckn.Utils.Common (HasPrettyLogger, LogLevel (DEBUG), MonadGuid (generateGUIDText), MonadTime (getCurrentTime), logInfo, logPretty)
 import Beckn.Utils.Dhall
@@ -56,7 +55,7 @@ data AllocateRentalJobData = AllocateRentalJobData
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 allocateRentalRide ::
-  (HasEsqEnv r m, Log m, HasPrettyLogger m r, C.MonadCatch m, MonadGuid m) =>
+  (HasEsqEnv m r, Log m, HasPrettyLogger m r, C.MonadCatch m, MonadGuid m) =>
   Job JobType AllocateRentalJobData ->
   m ExecutionResult
 allocateRentalRide job = C.handleAll (const $ pure Retry) $

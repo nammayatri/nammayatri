@@ -15,7 +15,7 @@ import Storage.Tabular.RentalFarePolicy
 create ::
   Domain.RentalFarePolicy ->
   SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 -- it's possible to find deleted fare policies only by their id.
 -- other function return only not deleted fare policies
@@ -39,7 +39,7 @@ findRentalFarePoliciesByOrg orgId = do
 markAllAsDeleted ::
   Id Organization ->
   SqlDB ()
-markAllAsDeleted orgId = Esq.update' $ \rentalFp -> do
+markAllAsDeleted orgId = Esq.update $ \rentalFp -> do
   set
     rentalFp
     [RentalFarePolicyDeleted =. val True]

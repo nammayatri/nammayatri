@@ -8,7 +8,7 @@ import Domain.Types.SavedReqLocation
 import Storage.Tabular.SavedReqLocation
 
 create :: SavedReqLocation -> SqlDB ()
-create = create'
+create = Esq.create
 
 findAllByRiderId :: Transactionable m => Id Person -> m [SavedReqLocation]
 findAllByRiderId perId =
@@ -20,7 +20,7 @@ findAllByRiderId perId =
 
 deleteByRiderIdAndTag :: Id Person -> Text -> SqlDB ()
 deleteByRiderIdAndTag perId addressTag = do
-  delete' $ do
+  Esq.delete $ do
     saveReqLocation <- from $ table @SavedReqLocationT
     where_ $
       (saveReqLocation ^. SavedReqLocationRiderId ==. val (toKey perId))

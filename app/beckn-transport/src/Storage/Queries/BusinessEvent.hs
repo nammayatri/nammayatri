@@ -25,7 +25,7 @@ logBusinessEvent ::
 logBusinessEvent driverId eventType rideBookingId whenPoolWasComputed variant distance duration rideId = do
   uuid <- generateGUID
   now <- getCurrentTime
-  Esq.create' $
+  Esq.create $
     BusinessEvent
       { id = uuid,
         eventType = eventType,

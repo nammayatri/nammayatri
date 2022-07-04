@@ -6,4 +6,4 @@ import Storage.Tabular.Issue ()
 
 insertIssue :: Issue -> SqlDB ()
 insertIssue = do
-  create'
+  create

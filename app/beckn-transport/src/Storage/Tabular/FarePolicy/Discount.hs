@@ -39,9 +39,8 @@ instance TEntityKey DiscountT where
   fromKey (DiscountTKey _id) = Id _id
   toKey (Id id) = DiscountTKey id
 
-instance TEntity DiscountT Domain.Discount where
-  fromTEntity entity = do
-    let DiscountT {..} = entityVal entity
+instance TType DiscountT Domain.Discount where
+  fromTType DiscountT {..} = do
     return $
       Domain.Discount
         { id = Id id,
@@ -56,5 +55,3 @@ instance TEntity DiscountT Domain.Discount where
         discount = fromRational discount,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

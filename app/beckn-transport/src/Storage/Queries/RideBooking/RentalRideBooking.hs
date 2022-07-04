@@ -6,12 +6,12 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.RideBooking
-import Domain.Types.RideBooking.RentalRideBooking
+import Storage.Tabular.RideBooking ()
 import Storage.Tabular.RideBooking.RentalRideBooking
 
-findByRideBookingId :: Transactionable m => Id RideBooking -> m (Maybe RentalRideBooking)
-findByRideBookingId rideBookingId =
-  findOne $ do
+findByRideBookingId' :: Transactionable m => Id RideBooking -> DTypeBuilder m (Maybe RentalRideBookingT)
+findByRideBookingId' rideBookingId =
+  Esq.findOne' $ do
     rentalRideBooking <- from $ table @RentalRideBookingT
-    where_ $ rentalRideBooking ^. RentalRideBookingRideBookingId ==. val (getId rideBookingId)
+    where_ $ rentalRideBooking ^. RentalRideBookingRideBookingId ==. val (toKey rideBookingId)
     return rentalRideBooking

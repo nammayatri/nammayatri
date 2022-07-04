@@ -39,9 +39,8 @@ instance TEntityKey QuoteT where
   fromKey (QuoteTKey _id) = Id _id
   toKey id = QuoteTKey id.getId
 
-instance TEntity QuoteT Domain.Quote where
-  fromTEntity entity = do
-    let QuoteT {..} = entityVal entity
+instance TType QuoteT Domain.Quote where
+  fromTType QuoteT {..} = do
     bppUrl_ <- parseBaseUrl bppUrl
     return $
       Domain.Quote
@@ -59,5 +58,3 @@ instance TEntity QuoteT Domain.Quote where
         bppUrl = showBaseUrl bppUrl,
         ..
       }
-  toTEntity a = do
-    Entity (toKey a.id) $ toTType a

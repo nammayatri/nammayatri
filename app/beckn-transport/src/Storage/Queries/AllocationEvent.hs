@@ -13,7 +13,7 @@ logAllocationEvent :: AllocationEventType -> Id RideBooking -> Maybe (Id Driver)
 logAllocationEvent eventType rideBookingId driverId = do
   uuid <- generateGUID
   now <- getCurrentTime
-  Esq.create' $
+  Esq.create $
     AllocationEvent
       { id = uuid,
         eventType = eventType,

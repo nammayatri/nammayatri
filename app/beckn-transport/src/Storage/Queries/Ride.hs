@@ -8,6 +8,7 @@ import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.RideBooking as Booking
 import Domain.Types.Vehicle
+import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideBooking as Booking
@@ -15,7 +16,7 @@ import Storage.Tabular.Vehicle as Vehicle
 import Utils.Common
 
 create :: Ride -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById = Esq.findById
@@ -52,11 +53,11 @@ findAllByDriverId ::
   Maybe Integer ->
   Maybe Bool ->
   m [(Ride, RideBooking)]
-findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = do
+findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
-  findAll $ do
+  res <- Esq.findAll' $ do
     (ride :& rideBooking) <-
       from $
         table @RideT
@@ -71,10 +72,14 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = do
     limit limitVal
     offset offsetVal
     return (ride, rideBooking)
+  fmap catMaybes $
+    for res $ \(rideT :: RideT, bookingT) -> do
+      fullBooking <- buildFullBooking bookingT
+      return $ (extractSolidType rideT,) <$> fullBooking
 
 findAllRideAPIEntityDataByRBId :: Transactionable m => Id RideBooking -> m [(Ride, Maybe Vehicle, Maybe Person)]
 findAllRideAPIEntityDataByRBId rbId =
-  findAll $ do
+  Esq.findAll $ do
     (ride :& mbVehicle :& mbPerson) <-
       from $
         table @RideT
@@ -106,7 +111,7 @@ updateStatus ::
   SqlDB ()
 updateStatus rideId status = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RideStatus =. val status,
@@ -119,7 +124,7 @@ updateStartTime ::
   SqlDB ()
 updateStartTime rideId = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RideTripStartTime =. val (Just now),
@@ -133,7 +138,7 @@ updateStatusByIds ::
   SqlDB ()
 updateStatusByIds ids status = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RideStatus =. val status,
@@ -147,7 +152,7 @@ updateDistance ::
   SqlDB ()
 updateDistance driverId distance = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RideTraveledDistance +=. val distance,
@@ -163,7 +168,7 @@ updateAll ::
   SqlDB ()
 updateAll rideId ride = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RideStatus =. val ride.status,

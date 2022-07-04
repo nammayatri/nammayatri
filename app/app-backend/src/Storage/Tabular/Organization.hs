@@ -31,9 +31,8 @@ instance TEntityKey OrganizationT where
   fromKey (OrganizationTKey _id) = Id _id
   toKey (Id id) = OrganizationTKey id
 
-instance TEntity OrganizationT Domain.Organization where
-  fromTEntity entity = do
-    let OrganizationT {..} = entityVal entity
+instance TType OrganizationT Domain.Organization where
+  fromTType OrganizationT {..} = do
     return $
       Domain.Organization
         { id = Id id,
@@ -48,5 +47,3 @@ instance TEntity OrganizationT Domain.Organization where
         orgType = _type,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

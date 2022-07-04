@@ -10,7 +10,7 @@ findById :: Transactionable m => Id ParkingLocation -> m (Maybe ParkingLocation)
 findById = Esq.findById
 
 create :: ParkingLocation -> SqlDB ()
-create = create'
+create = Esq.create
 
 findAll :: Transactionable m => m [ParkingLocation]
 findAll =

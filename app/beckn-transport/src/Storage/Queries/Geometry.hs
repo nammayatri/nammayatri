@@ -15,7 +15,7 @@ findGeometriesContaining gps regions =
         &&. containsPoint (gps.lon, gps.lat)
     return geometry
 
-someGeometriesContain :: (Transactionable m, Monad m) => LatLong -> [Text] -> m Bool
+someGeometriesContain :: Transactionable m => LatLong -> [Text] -> m Bool
 someGeometriesContain gps regions = do
   geometries <- findGeometriesContaining gps regions
   pure $ not $ null geometries

@@ -8,15 +8,16 @@
 module Storage.Tabular.FarePolicy where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Error (throwError)
 import qualified Domain.Types.FarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
-import qualified Storage.Queries.FarePolicy.Discount as QDiscount
-import qualified Storage.Queries.FarePolicy.PerExtraKmRate as QExtraKmRate
-import Storage.Tabular.FarePolicy.PerExtraKmRate ()
+import Storage.Tabular.FarePolicy.Discount (DiscountT)
+import Storage.Tabular.FarePolicy.PerExtraKmRate (PerExtraKmRateT, getDomainPart)
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Vehicle ()
+import Types.Error
 
 mkPersist
   defaultSqlSettings
@@ -41,11 +42,16 @@ instance TEntityKey FarePolicyT where
   fromKey (FarePolicyTKey _id) = Id _id
   toKey (Id id) = FarePolicyTKey id
 
-instance TEntity FarePolicyT Domain.FarePolicy where
-  fromTEntity entity = do
-    let FarePolicyT {..} = entityVal entity
-    perExtraKmRateList <- QExtraKmRate.findAll (fromKey organizationId) vehicleVariant
-    discountList <- QDiscount.findAll (fromKey organizationId) vehicleVariant
+type FullFarePolicyT = (FarePolicyT, [PerExtraKmRateT], [DiscountT])
+
+instance TType FullFarePolicyT Domain.FarePolicy where
+  fromTType (FarePolicyT {..}, perExtraKmRateList_, discountList_) = do
+    perExtraKmRateList <- case perExtraKmRateList_ of
+      (a : xs) -> do
+        b <- fromTType `traverse` (a :| xs)
+        return $ getDomainPart <$> b
+      _ -> throwError NoPerExtraKmRate
+    discountList <- fromTType `traverse` discountList_
     return $
       Domain.FarePolicy
         { id = Id id,
@@ -54,13 +60,17 @@ instance TEntity FarePolicyT Domain.FarePolicy where
           nightShiftRate = toRational <$> nightShiftRate,
           ..
         }
-  toTType Domain.FarePolicy {..} =
-    FarePolicyT
-      { id = getId id,
-        organizationId = toKey organizationId,
-        baseFare = fromRational <$> baseFare,
-        nightShiftRate = fromRational <$> nightShiftRate,
-        ..
-      }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a
+  toTType Domain.FarePolicy {..} = do
+    let fullPerExtraKmRateList = (organizationId,vehicleVariant,) <$> toList perExtraKmRateList
+        perExtraKmRateTTypeList = toTType <$> fullPerExtraKmRateList
+        discountTTypeList = toTType <$> discountList
+    ( FarePolicyT
+        { id = getId id,
+          organizationId = toKey organizationId,
+          baseFare = fromRational <$> baseFare,
+          nightShiftRate = fromRational <$> nightShiftRate,
+          ..
+        },
+      perExtraKmRateTTypeList,
+      discountTTypeList
+      )

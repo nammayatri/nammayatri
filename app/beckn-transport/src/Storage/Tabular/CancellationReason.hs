@@ -27,9 +27,8 @@ instance TEntityKey CancellationReasonT where
   fromKey (CancellationReasonTKey _id) = Domain.CancellationReasonCode _id
   toKey (Domain.CancellationReasonCode id) = CancellationReasonTKey id
 
-instance TEntity CancellationReasonT Domain.CancellationReason where
-  fromTEntity entity = do
-    let CancellationReasonT {..} = entityVal entity
+instance TType CancellationReasonT Domain.CancellationReason where
+  fromTType CancellationReasonT {..} = do
     return $
       Domain.CancellationReason
         { reasonCode = Domain.CancellationReasonCode reasonCode,
@@ -40,5 +39,3 @@ instance TEntity CancellationReasonT Domain.CancellationReason where
       { reasonCode = let (Domain.CancellationReasonCode rc) = reasonCode in rc,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.reasonCode) $ toTType a

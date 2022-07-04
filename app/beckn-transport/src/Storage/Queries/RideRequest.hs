@@ -8,7 +8,7 @@ import Domain.Types.RideRequest
 import Storage.Tabular.RideRequest
 
 create :: RideRequest -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 fetchOldest :: Transactionable m => ShortId Organization -> Integer -> m [RideRequest]
 fetchOldest shortId limit' = do
@@ -21,4 +21,4 @@ fetchOldest shortId limit' = do
     return rideRequest
 
 removeRequest :: Id RideRequest -> SqlDB ()
-removeRequest = Esq.deleteByKey' @RideRequestT
+removeRequest = Esq.deleteByKey @RideRequestT

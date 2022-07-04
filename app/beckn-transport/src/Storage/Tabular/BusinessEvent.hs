@@ -43,9 +43,8 @@ instance TEntityKey BusinessEventT where
   fromKey (BusinessEventTKey _id) = Id _id
   toKey (Id id) = BusinessEventTKey id
 
-instance TEntity BusinessEventT Domain.BusinessEvent where
-  fromTEntity entity = do
-    let BusinessEventT {..} = entityVal entity
+instance TType BusinessEventT Domain.BusinessEvent where
+  fromTType BusinessEventT {..} = do
     return $
       Domain.BusinessEvent
         { id = Id id,
@@ -66,5 +65,3 @@ instance TEntity BusinessEventT Domain.BusinessEvent where
         duration = getSeconds <$> duration,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

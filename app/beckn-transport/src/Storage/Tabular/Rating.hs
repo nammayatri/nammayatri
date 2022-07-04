@@ -33,9 +33,8 @@ instance TEntityKey RatingT where
   fromKey (RatingTKey _id) = Id _id
   toKey (Id id) = RatingTKey id
 
-instance TEntity RatingT Domain.Rating where
-  fromTEntity entity = do
-    let RatingT {..} = entityVal entity
+instance TType RatingT Domain.Rating where
+  fromTType RatingT {..} = do
     return $
       Domain.Rating
         { id = Id id,
@@ -50,5 +49,3 @@ instance TEntity RatingT Domain.Rating where
         rideId = toKey rideId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

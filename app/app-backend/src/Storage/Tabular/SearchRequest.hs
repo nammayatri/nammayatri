@@ -36,9 +36,8 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-instance TEntity SearchRequestT Domain.SearchRequest where
-  fromTEntity entity = do
-    let SearchRequestT {..} = entityVal entity
+instance TType SearchRequestT Domain.SearchRequest where
+  fromTType SearchRequestT {..} = do
     return $
       Domain.SearchRequest
         { id = Id id,
@@ -57,5 +56,3 @@ instance TEntity SearchRequestT Domain.SearchRequest where
         distance = getHighPrecMeters <$> distance,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

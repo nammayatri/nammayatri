@@ -51,9 +51,8 @@ instance TEntityKey RideT where
   fromKey (RideTKey _id) = Id _id
   toKey (Id id) = RideTKey id
 
-instance TEntity RideT Domain.Ride where
-  fromTEntity entity = do
-    let RideT {..} = entityVal entity
+instance TType RideT Domain.Ride where
+  fromTType RideT {..} = do
     return $
       Domain.Ride
         { id = Id id,
@@ -70,5 +69,3 @@ instance TEntity RideT Domain.Ride where
         shortId = getShortId shortId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

@@ -24,7 +24,7 @@ loadAllProviders =
 updateOrganizationRec :: Organization -> SqlDB ()
 updateOrganizationRec org = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ OrganizationName =. val org.name,

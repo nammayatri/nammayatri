@@ -34,9 +34,8 @@ instance TEntityKey TransporterConfigT where
   fromKey (TransporterConfigTKey _id) = Id _id
   toKey (Id id) = TransporterConfigTKey id
 
-instance TEntity TransporterConfigT Domain.TransporterConfig where
-  fromTEntity entity = do
-    let TransporterConfigT {..} = entityVal entity
+instance TType TransporterConfigT Domain.TransporterConfig where
+  fromTType TransporterConfigT {..} = do
     return $
       Domain.TransporterConfig
         { id = Id id,
@@ -51,5 +50,3 @@ instance TEntity TransporterConfigT Domain.TransporterConfig where
         configKey = key,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

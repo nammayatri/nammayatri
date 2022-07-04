@@ -50,9 +50,8 @@ instance TEntityKey RideBookingT where
   fromKey (RideBookingTKey _id) = Id _id
   toKey (Id id) = RideBookingTKey id
 
-instance TEntity RideBookingT Domain.RideBooking where
-  fromTEntity entity = do
-    let RideBookingT {..} = entityVal entity
+instance TType RideBookingT Domain.RideBooking where
+  fromTType RideBookingT {..} = do
     pUrl <- parseBaseUrl providerUrl
     return $
       Domain.RideBooking
@@ -76,5 +75,3 @@ instance TEntity RideBookingT Domain.RideBooking where
         distance = getHighPrecMeters <$> distance,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

@@ -32,9 +32,8 @@ instance TEntityKey SearchT where
   fromKey (SearchTKey _id) = Id _id
   toKey id = SearchTKey id.getId
 
-instance TEntity SearchT Domain.Search where
-  fromTEntity entity = do
-    let SearchT {..} = entityVal entity
+instance TType SearchT Domain.Search where
+  fromTType SearchT {..} = do
     return $
       Domain.Search
         { id = Id id,
@@ -47,5 +46,3 @@ instance TEntity SearchT Domain.Search where
         requestorId = requestorId.getId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

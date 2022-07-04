@@ -13,7 +13,7 @@ findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById = Esq.findById
 
 create :: Quote -> SqlDB ()
-create = create'
+create = Esq.create
 
 findAllBySearchId :: Transactionable m => Id Search -> m [Quote]
 findAllBySearchId searchId =

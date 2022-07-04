@@ -14,7 +14,6 @@ import Beckn.Types.MapSearch
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Logging
 import qualified Data.List.NonEmpty as NE
-import Data.Maybe
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide

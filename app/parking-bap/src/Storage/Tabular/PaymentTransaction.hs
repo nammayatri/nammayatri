@@ -38,14 +38,12 @@ instance TEntityKey PaymentTransactionT where
   fromKey (PaymentTransactionTKey _id) = Id _id
   toKey id = PaymentTransactionTKey id.getId
 
-instance TEntity PaymentTransactionT Domain.PaymentTransaction where
-  fromTEntity entity = do
-    let (PaymentTransactionTKey _id) = entityKey entity
-        PaymentTransactionT {..} = entityVal entity
+instance TType PaymentTransactionT Domain.PaymentTransaction where
+  fromTType PaymentTransactionT {..} = do
     paymentUrl_ <- parseBaseUrl paymentUrl
     return $
       Domain.PaymentTransaction
-        { id = Id _id,
+        { id = Id id,
           bookingId = fromKey bookingId,
           paymentUrl = paymentUrl_,
           ..
@@ -57,5 +55,3 @@ instance TEntity PaymentTransactionT Domain.PaymentTransaction where
         paymentUrl = showBaseUrl paymentUrl,
         ..
       }
-  toTEntity a = do
-    Entity (toKey a.id) $ toTType a

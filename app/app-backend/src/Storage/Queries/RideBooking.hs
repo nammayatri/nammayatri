@@ -12,12 +12,12 @@ import qualified Storage.Tabular.RideBooking as RB
 import Storage.Tabular.SearchRequest ()
 
 create :: RideBooking -> SqlDB ()
-create = create'
+create = Esq.create
 
 updateStatus :: Id RideBooking -> RideBookingStatus -> SqlDB ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RB.RideBookingUpdatedAt =. val now,
@@ -28,7 +28,7 @@ updateStatus rbId rbStatus = do
 updateBPPBookingId :: Id RideBooking -> Id BPPRideBooking -> SqlDB ()
 updateBPPBookingId rbId bppRbId = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RB.RideBookingUpdatedAt =. val now,
@@ -78,7 +78,7 @@ findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive = do
 updatePaymentInfo :: Id RideBooking -> Amount -> Maybe Amount -> Amount -> SqlDB ()
 updatePaymentInfo rbId estimatedFare discount estimatedTotalFare = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RB.RideBookingUpdatedAt =. val now,

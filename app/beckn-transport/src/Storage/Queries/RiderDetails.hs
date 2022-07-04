@@ -3,12 +3,13 @@ module Storage.Queries.RiderDetails where
 import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.RiderDetails
 import Storage.Tabular.RiderDetails
 
 create :: RiderDetails -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findById ::
   Transactionable m =>
@@ -17,7 +18,7 @@ findById ::
 findById = Esq.findById
 
 findByMobileNumber ::
-  (Transactionable m, EncFlow m r) =>
+  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
   Text ->
   m (Maybe RiderDetails)
 findByMobileNumber mobileNumber_ = do

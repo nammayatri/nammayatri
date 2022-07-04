@@ -20,12 +20,12 @@ findByQuoteId quoteId =
     return booking
 
 create :: Booking -> SqlDB ()
-create = create'
+create = Esq.create
 
 update :: Booking -> SqlDB ()
 update parkingBooking = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ BookingStatus =. val parkingBooking.status,
@@ -38,7 +38,7 @@ update parkingBooking = do
 updateStatusAndBppOrderId :: Booking -> SqlDB ()
 updateStatusAndBppOrderId parkingBooking = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ BookingStatus =. val parkingBooking.status,
@@ -52,7 +52,7 @@ updateStatusAndBppOrderId parkingBooking = do
 updateStatus :: Booking -> BookingStatus -> SqlDB ()
 updateStatus booking newStatus = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ BookingStatus =. val newStatus,

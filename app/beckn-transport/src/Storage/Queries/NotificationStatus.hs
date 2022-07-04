@@ -10,11 +10,11 @@ import Types.App
 import Utils.Common
 
 createMany :: [NotificationStatus] -> SqlDB ()
-createMany = createMany'
+createMany = Esq.createMany
 
 updateStatus :: Id RideBooking -> AnswerStatus -> [Id Driver] -> SqlDB ()
 updateStatus rideBookingId status driverIds =
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ NotificationStatusStatus =. val status
@@ -61,14 +61,14 @@ findActiveNotificationByDriverId driverId rideBookingId =
 
 cleanupNotifications :: Id RideBooking -> SqlDB ()
 cleanupNotifications rideBookingId =
-  Esq.delete' $ do
+  Esq.delete $ do
     notificationStatus <- from $ table @NotificationStatusT
     where_ (notificationStatus ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId))
 
 cleanupOldNotifications :: SqlDB Int
 cleanupOldNotifications = do
   compareTime <- getCurrentTime <&> addUTCTime (-300) -- We only remove very old notifications (older than 5 minutes) as a fail-safe
-  res <- Esq.deleteReturningCount' $ do
+  res <- Esq.deleteReturningCount $ do
     notificationStatus <- from $ table @NotificationStatusT
     where_ (notificationStatus ^. NotificationStatusExpiresAt ==. val compareTime)
   return $ fromIntegral res

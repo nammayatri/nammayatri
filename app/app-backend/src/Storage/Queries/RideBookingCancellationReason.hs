@@ -5,4 +5,4 @@ import Domain.Types.RideBookingCancellationReason
 import Storage.Tabular.RideBookingCancellationReason ()
 
 create :: RideBookingCancellationReason -> SqlDB ()
-create = create'
+create = Esq.create

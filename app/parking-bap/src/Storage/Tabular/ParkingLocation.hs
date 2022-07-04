@@ -37,9 +37,8 @@ instance TEntityKey ParkingLocationT where
   fromKey (ParkingLocationTKey _id) = Id _id
   toKey id = ParkingLocationTKey id.getId
 
-instance TEntity ParkingLocationT Domain.ParkingLocation where
-  fromTEntity entity = do
-    let ParkingLocationT {..} = entityVal entity
+instance TType ParkingLocationT Domain.ParkingLocation where
+  fromTType ParkingLocationT {..} = do
     return $
       Domain.ParkingLocation
         { id = Id id,
@@ -50,5 +49,3 @@ instance TEntity ParkingLocationT Domain.ParkingLocation where
       { id = id.getId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

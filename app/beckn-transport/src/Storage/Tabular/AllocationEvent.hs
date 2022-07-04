@@ -34,9 +34,8 @@ instance TEntityKey AllocationEventT where
   fromKey (AllocationEventTKey _id) = Id _id
   toKey (Id id) = AllocationEventTKey id
 
-instance TEntity AllocationEventT Domain.AllocationEvent where
-  fromTEntity entity = do
-    let AllocationEventT {..} = entityVal entity
+instance TType AllocationEventT Domain.AllocationEvent where
+  fromTType AllocationEventT {..} = do
     return $
       Domain.AllocationEvent
         { id = Id id,
@@ -51,5 +50,3 @@ instance TEntity AllocationEventT Domain.AllocationEvent where
         rideBookingId = toKey rideBookingId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

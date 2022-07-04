@@ -8,7 +8,7 @@ import Domain.Types.BookingLocation
 import Storage.Tabular.BookingLocation
 
 create :: BookingLocation -> SqlDB ()
-create = create'
+create = Esq.create
 
 findById ::
   Transactionable m =>
@@ -19,7 +19,7 @@ findById = Esq.findById
 updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
 updateAddress blId LocationAddress {..} = do
   now <- getCurrentTime
-  Esq.update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ BookingLocationStreet =. val street,

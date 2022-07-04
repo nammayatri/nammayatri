@@ -22,7 +22,7 @@ import Types.App (Driver)
 import Utils.Common
 
 create :: Person -> SqlDB ()
-create = create'
+create = Esq.create
 
 findById ::
   Transactionable m =>
@@ -106,7 +106,7 @@ findByEmail email_ =
 updateOrganizationIdAndMakeAdmin :: Id Person -> Id Organization -> SqlDB ()
 updateOrganizationIdAndMakeAdmin personId orgId = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PersonOrganizationId =. val (Just $ toKey orgId),
@@ -118,7 +118,7 @@ updateOrganizationIdAndMakeAdmin personId orgId = do
 updatePersonRec :: Id Person -> Person -> SqlDB ()
 updatePersonRec personId person = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PersonFirstName =. val (person.firstName),
@@ -141,7 +141,7 @@ updatePersonRec personId person = do
 updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
 updateDeviceToken personId mbDeviceToken = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PersonDeviceToken =. val mbDeviceToken,
@@ -152,7 +152,7 @@ updateDeviceToken personId mbDeviceToken = do
 setIsNewFalse :: Id Person -> SqlDB ()
 setIsNewFalse personId = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PersonIsNew =. val False,
@@ -161,7 +161,7 @@ setIsNewFalse personId = do
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
 
 deleteById :: Id Person -> SqlDB ()
-deleteById = Esq.deleteByKey' @PersonT
+deleteById = Esq.deleteByKey @PersonT
 
 updateVehicle :: Id Person -> Maybe (Id Vehicle) -> SqlDB ()
 updateVehicle personId mbVehicleId = do
@@ -169,7 +169,7 @@ updateVehicle personId mbVehicleId = do
         Just vehicleId -> (Just (getId vehicleId), Just "VEHICLE")
         Nothing -> (Nothing, Nothing)
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PersonUdf1 =. val mEntityId,
@@ -189,7 +189,7 @@ findByVehicleId (Id vehicleId) =
 updateAverageRating :: Id Person -> Double -> SqlDB ()
 updateAverageRating personId newAverageRating = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PersonRating =. val (Just newAverageRating),
@@ -244,7 +244,7 @@ getNearestDrivers LatLong {..} radius orgId mbPoolVariant fareProductType = do
           &&. driverInfo ^. DriverInformationActive
           &&. driverInfo ^. DriverInformationOptForRental >=. val isRental
           &&. not_ (driverInfo ^. DriverInformationOnRide)
-          &&. ( isNothing (val mbPoolVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbPoolVariant -- when mbVariant = Nothing, we use all variants, is it correct?
+          &&. ( Esq.isNothing (val mbPoolVariant) ||. just (vehicle ^. VehicleVariant) ==. val mbPoolVariant -- when mbVariant = Nothing, we use all variants, is it correct?
                   ||. ( case mbPoolVariant of
                           Just SEDAN ->
                             driverInfo ^. DriverInformationCanDowngradeToSedan ==. val True

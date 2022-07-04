@@ -12,11 +12,11 @@ packages:
     pantry-tree:
       size: 1038
       sha256: 2ee77a7d7e7af5d29eb6a514dec306d337e0e865086fc672222052ce54063108
-    commit: 6d2f58600b01cb0972ec1bccf4c1f1ebb90a4a6a
+    commit: 5e0920eb8d5008698246faff6c55f1bd178654de
   original:
     subdir: app/gateway
     git: git@bitbucket.org:juspay/beckn-gateway.git
-    commit: 6d2f58600b01cb0972ec1bccf4c1f1ebb90a4a6a
+    commit: 5e0920eb8d5008698246faff6c55f1bd178654de
 - completed:
     subdir: app/mock-registry
     name: mock-registry
@@ -24,12 +24,12 @@ packages:
     git: git@bitbucket.org:juspay/beckn-gateway.git
     pantry-tree:
       size: 662
-      sha256: 01ff19c420130912002e3c645231f6f5d594b96fb7dde52dafd9ac98f3489b89
-    commit: 6d2f58600b01cb0972ec1bccf4c1f1ebb90a4a6a
+      sha256: 1c47a74a14a8099d0a18383429850672bdd68ddc863ce3d442caa01cf3f9afb1
+    commit: 5e0920eb8d5008698246faff6c55f1bd178654de
   original:
     subdir: app/mock-registry
     git: git@bitbucket.org:juspay/beckn-gateway.git
-    commit: 6d2f58600b01cb0972ec1bccf4c1f1ebb90a4a6a
+    commit: 5e0920eb8d5008698246faff6c55f1bd178654de
 - completed:
     subdir: core
     name: passetto-core

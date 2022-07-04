@@ -36,9 +36,8 @@ instance TEntityKey IssueT where
   fromKey (IssueTKey _id) = Id _id
   toKey (Id id) = IssueTKey id
 
-instance TEntity IssueT Domain.Issue where
-  fromTEntity entity = do
-    let IssueT {..} = entityVal entity
+instance TType IssueT Domain.Issue where
+  fromTType IssueT {..} = do
     return $
       Domain.Issue
         { id = Id id,
@@ -53,5 +52,3 @@ instance TEntity IssueT Domain.Issue where
         rideBookingId = toKey <$> rideBookingId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

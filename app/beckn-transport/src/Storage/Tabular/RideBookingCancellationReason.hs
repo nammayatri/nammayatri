@@ -38,9 +38,8 @@ instance TEntityKey RideBookingCancellationReasonT where
   fromKey (RideBookingCancellationReasonTKey _id) = Id _id
   toKey (Id id) = RideBookingCancellationReasonTKey id
 
-instance TEntity RideBookingCancellationReasonT Domain.RideBookingCancellationReason where
-  fromTEntity entity = do
-    let RideBookingCancellationReasonT {..} = entityVal entity
+instance TType RideBookingCancellationReasonT Domain.RideBookingCancellationReason where
+  fromTType RideBookingCancellationReasonT {..} = do
     return $
       Domain.RideBookingCancellationReason
         { id = Id id,
@@ -59,5 +58,3 @@ instance TEntity RideBookingCancellationReasonT Domain.RideBookingCancellationRe
         reasonCode = toKey <$> reasonCode,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

@@ -56,6 +56,7 @@ search transporterId req@DSearchReq {..} = do
   mbToLocation <- buildSearchReqLoc now `traverse` mbDropLocation
   searchRequest <- buildSearchRequest req transporter.id now validity fromLocation.id (mbToLocation <&> (.id))
   Esq.runTransaction $ do
+    --These things are used only for analitics
     QLoc.create fromLocation
     whenJust mbToLocation QLoc.create
     QSearchRequest.create searchRequest

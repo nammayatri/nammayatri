@@ -8,7 +8,7 @@ import Domain.Types.SearchRequest
 import Storage.Tabular.SearchRequest
 
 create :: SearchRequest -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 findById = Esq.findById

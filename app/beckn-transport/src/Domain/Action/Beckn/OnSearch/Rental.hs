@@ -85,27 +85,17 @@ buildRentalQuote searchRequestId now rentalFarePolicy@DRentalFP.RentalFarePolicy
         productId = products.id,
         providerId = organizationId,
         createdAt = now,
-        quoteDetails = DQuote.mkRentalQuoteDetails rentalFarePolicy,
+        quoteDetails = DQuote.RentalDetails rentalFarePolicy,
         ..
       }
 
 mkQuoteInfo :: DQuote.Quote -> DRentalFP.RentalFarePolicy -> LatLong -> UTCTime -> QuoteInfo
-mkQuoteInfo quote rentalFarePolicy@DRentalFP.RentalFarePolicy {..} fromLocation startTime = do
+mkQuoteInfo quote DRentalFP.RentalFarePolicy {..} fromLocation startTime = do
   QuoteInfo
     { quoteId = quote.id,
       vehicleVariant = quote.vehicleVariant,
       estimatedFare = quote.estimatedFare,
       discount = quote.discount,
       estimatedTotalFare = quote.estimatedTotalFare,
-      descriptions = mkDescriptions rentalFarePolicy,
       ..
     }
-
-mkDescriptions :: DRentalFP.RentalFarePolicy -> [Text]
-mkDescriptions rentalFarePolicy =
-  [ "Extra km fare: " <> show rentalFarePolicy.extraKmFare,
-    "Extra min fare: " <> show rentalFarePolicy.extraMinuteFare,
-    "Extra fare for day: " <> (maybe "not allowed" show rentalFarePolicy.driverAllowanceForDay),
-    "A rider can choose this package for a trip where the rider may not have a pre-decided destination and may not want to return to the origin location",
-    "The rider may want to stop at multiple destinations and have the taxi wait for the rider at these locations"
-  ]

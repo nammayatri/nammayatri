@@ -26,9 +26,8 @@ instance TEntityKey GeometryT where
   fromKey (GeometryTKey _id) = _id
   toKey id = GeometryTKey id
 
-instance TEntity GeometryT Domain.Geometry where
-  fromTEntity entity = do
-    let GeometryT {..} = entityVal entity
+instance TType GeometryT Domain.Geometry where
+  fromTType GeometryT {..} = do
     return $
       Domain.Geometry
         { ..
@@ -37,5 +36,3 @@ instance TEntity GeometryT Domain.Geometry where
     GeometryT
       { ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

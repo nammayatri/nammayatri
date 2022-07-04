@@ -7,7 +7,7 @@ import Domain.Types.Products
 import Storage.Tabular.Products
 
 create :: Products -> SqlDB ()
-create = create'
+create = Esq.create
 
 findAllById :: Transactionable m => [Id Products] -> m [Products]
 findAllById ids =

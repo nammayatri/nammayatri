@@ -3,7 +3,6 @@ module Core.ACL.OnInit (mkOnInitMessage) where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import qualified Beckn.Types.Core.Taxi.OnInit as OnInit
-import Data.Maybe (maybeToList)
 import qualified Domain.Action.Beckn.Init as DInit
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage

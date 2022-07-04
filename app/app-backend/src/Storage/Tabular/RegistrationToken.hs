@@ -43,9 +43,8 @@ instance TEntityKey RegistrationTokenT where
   fromKey (RegistrationTokenTKey _id) = Id _id
   toKey (Id id) = RegistrationTokenTKey id
 
-instance TEntity RegistrationTokenT Domain.RegistrationToken where
-  fromTEntity entity = do
-    let RegistrationTokenT {..} = entityVal entity
+instance TType RegistrationTokenT Domain.RegistrationToken where
+  fromTType RegistrationTokenT {..} = do
     return $
       Domain.RegistrationToken
         { id = Id id,
@@ -56,5 +55,3 @@ instance TEntity RegistrationTokenT Domain.RegistrationToken where
       { id = getId id,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

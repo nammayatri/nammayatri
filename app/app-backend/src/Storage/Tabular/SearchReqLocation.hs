@@ -30,9 +30,8 @@ instance TEntityKey SearchReqLocationT where
   fromKey (SearchReqLocationTKey _id) = Id _id
   toKey (Id id) = SearchReqLocationTKey id
 
-instance TEntity SearchReqLocationT Domain.SearchReqLocation where
-  fromTEntity entity = do
-    let SearchReqLocationT {..} = entityVal entity
+instance TType SearchReqLocationT Domain.SearchReqLocation where
+  fromTType SearchReqLocationT {..} = do
     return $
       Domain.SearchReqLocation
         { id = Id id,
@@ -43,5 +42,3 @@ instance TEntity SearchReqLocationT Domain.SearchReqLocation where
       { id = getId id,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

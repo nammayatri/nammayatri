@@ -34,9 +34,8 @@ instance TEntityKey NotificationStatusT where
   fromKey (NotificationStatusTKey _id) = Id _id
   toKey (Id id) = NotificationStatusTKey id
 
-instance TEntity NotificationStatusT Domain.NotificationStatus where
-  fromTEntity entity = do
-    let NotificationStatusT {..} = entityVal entity
+instance TType NotificationStatusT Domain.NotificationStatus where
+  fromTType NotificationStatusT {..} = do
     return $
       Domain.NotificationStatus
         { id = Id id,
@@ -51,5 +50,3 @@ instance TEntity NotificationStatusT Domain.NotificationStatus where
         rideBookingId = toKey rideBookingId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

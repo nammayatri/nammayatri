@@ -9,7 +9,7 @@ import Domain.Types.RideBooking (RideBooking)
 import Storage.Tabular.Ride
 
 create :: Ride -> SqlDB ()
-create = create'
+create = Esq.create
 
 updateStatus ::
   Id Ride ->
@@ -17,7 +17,7 @@ updateStatus ::
   SqlDB ()
 updateStatus rideId status_ = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RideUpdatedAt =. val now,
@@ -38,7 +38,7 @@ findByBPPRideId bppRideId_ =
 updateMultiple :: Id Ride -> Ride -> SqlDB ()
 updateMultiple rideId ride = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RideUpdatedAt =. val now,

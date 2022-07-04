@@ -17,7 +17,7 @@ findById quoteId =
     return quote
 
 create :: Quote -> SqlDB ()
-create = create'
+create = Esq.create
 
 findAllBySearchId :: Transactionable m => Id Search -> m [Quote]
 findAllBySearchId searchId =

@@ -10,7 +10,7 @@ import Domain.Types.Person
 import Storage.Tabular.Person
 
 create :: Person -> SqlDB ()
-create = create'
+create = Esq.create
 
 findById ::
   Transactionable m =>
@@ -19,7 +19,7 @@ findById ::
 findById = Esq.findById
 
 findByEmailAndPassword ::
-  (Transactionable m, EncFlow m r) =>
+  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Person)
@@ -33,7 +33,7 @@ findByEmailAndPassword email_ password = do
     return person
 
 findByRoleAndMobileNumber ::
-  (Transactionable m, EncFlow m r) =>
+  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
   Role ->
   Text ->
   Text ->
@@ -48,7 +48,7 @@ findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
     return person
 
-findByRoleAndMobileNumberWithoutCC :: (Transactionable m, EncFlow m r) => Role -> Text -> m (Maybe Person)
+findByRoleAndMobileNumberWithoutCC :: (MonadThrow m, Log m, Transactionable m, EncFlow m r) => Role -> Text -> m (Maybe Person)
 findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
   mobileNumberDbHash <- getDbHash mobileNumber_
   findOne $ do
@@ -61,7 +61,7 @@ findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
 updateMultiple :: Id Person -> Person -> SqlDB ()
 updateMultiple personId person = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PersonUpdatedAt =. val now,
@@ -83,7 +83,7 @@ updateMultiple personId person = do
 updateDeviceToken :: Id Person -> Maybe FCMRecipientToken -> SqlDB ()
 updateDeviceToken personId mbDeviceToken = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PersonUpdatedAt =. val now,
@@ -94,7 +94,7 @@ updateDeviceToken personId mbDeviceToken = do
 setIsNewFalse :: Id Person -> SqlDB ()
 setIsNewFalse personId = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PersonUpdatedAt =. val now,
@@ -111,7 +111,7 @@ updatePersonalInfo ::
   SqlDB ()
 updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbDeviceToken = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       ( [PersonUpdatedAt =. val now]

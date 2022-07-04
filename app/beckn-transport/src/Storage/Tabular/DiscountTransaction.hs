@@ -33,9 +33,8 @@ instance TEntityKey DiscountTransactionT where
   fromKey (DiscountTransactionTKey _id) = fromKey _id
   toKey id = DiscountTransactionTKey $ toKey id
 
-instance TEntity DiscountTransactionT Domain.DiscountTransaction where
-  fromTEntity entity = do
-    let DiscountTransactionT {..} = entityVal entity
+instance TType DiscountTransactionT Domain.DiscountTransaction where
+  fromTType DiscountTransactionT {..} = do
     return $
       Domain.DiscountTransaction
         { rideBookingId = fromKey rideBookingId,
@@ -48,5 +47,3 @@ instance TEntity DiscountTransactionT Domain.DiscountTransaction where
         organizationId = toKey organizationId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.rideBookingId) $ toTType a

@@ -9,7 +9,7 @@ import Storage.Tabular.RegistrationToken
 import Utils.Common
 
 create :: RegistrationToken -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findById :: Transactionable m => Id RegistrationToken -> m (Maybe RegistrationToken)
 findById = Esq.findById
@@ -17,7 +17,7 @@ findById = Esq.findById
 setVerified :: Id RegistrationToken -> SqlDB ()
 setVerified rtId = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RegistrationTokenVerified =. val True,
@@ -35,7 +35,7 @@ findByToken token =
 updateAttempts :: Int -> Id RegistrationToken -> SqlDB ()
 updateAttempts attemps rtId = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RegistrationTokenAttempts =. val attemps,
@@ -45,13 +45,13 @@ updateAttempts attemps rtId = do
 
 deleteByPersonId :: Id Person -> SqlDB ()
 deleteByPersonId personId =
-  Esq.delete' $ do
+  Esq.delete $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $ regToken ^. RegistrationTokenEntityId ==. val (getId personId)
 
 deleteByPersonIdExceptNew :: Id Person -> Id RegistrationToken -> SqlDB ()
 deleteByPersonIdExceptNew personId newRT =
-  Esq.delete' $ do
+  Esq.delete $ do
     regToken <- from $ table @RegistrationTokenT
     where_ $
       regToken ^. RegistrationTokenEntityId ==. val (getId personId)

@@ -38,10 +38,9 @@ instance TEntityKey BookingLocationT where
   fromKey (BookingLocationTKey _id) = Id _id
   toKey (Id id) = BookingLocationTKey id
 
-instance TEntity BookingLocationT Domain.BookingLocation where
-  fromTEntity entity = do
-    let BookingLocationT {..} = entityVal entity
-        address = Domain.LocationAddress {..}
+instance TType BookingLocationT Domain.BookingLocation where
+  fromTType BookingLocationT {..} = do
+    let address = Domain.LocationAddress {..}
     return $
       Domain.BookingLocation
         { id = Id id,
@@ -53,5 +52,3 @@ instance TEntity BookingLocationT Domain.BookingLocation where
       { id = getId id,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

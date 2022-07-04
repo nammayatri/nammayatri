@@ -10,7 +10,7 @@ import Storage.Tabular.FarePolicy.Discount
 import Utils.Common
 
 create :: Discount -> SqlDB ()
-create = create'
+create = Esq.create
 
 findById ::
   Transactionable m =>
@@ -31,10 +31,23 @@ findAll orgId vehicleVariant =
         &&. discount ^. DiscountVehicleVariant ==. val vehicleVariant
     return discount
 
+findAll' ::
+  Transactionable m =>
+  Id Organization ->
+  Vehicle.Variant ->
+  DTypeBuilder m [DiscountT]
+findAll' orgId vehicleVariant =
+  Esq.findAll' $ do
+    discount <- from $ table @DiscountT
+    where_ $
+      discount ^. DiscountOrganizationId ==. val (toKey orgId)
+        &&. discount ^. DiscountVehicleVariant ==. val vehicleVariant
+    return discount
+
 update :: Id Discount -> Discount -> SqlDB ()
 update discId disc = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ DiscountFromDate =. val disc.fromDate,
@@ -46,4 +59,4 @@ update discId disc = do
     where_ $ tbl ^. DiscountId ==. val (getId discId)
 
 deleteById :: Id Discount -> SqlDB ()
-deleteById = deleteByKey' @DiscountT
+deleteById = deleteByKey @DiscountT

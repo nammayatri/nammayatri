@@ -7,7 +7,7 @@ import Domain.Types.SearchReqLocation
 import Storage.Tabular.SearchReqLocation ()
 
 create :: SearchReqLocation -> SqlDB ()
-create = create'
+create = Esq.create
 
 findById ::
   Transactionable m =>

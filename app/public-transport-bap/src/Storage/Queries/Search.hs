@@ -14,4 +14,4 @@ findById searchId =
     return search
 
 create :: Search -> SqlDB ()
-create = create'
+create = Esq.create

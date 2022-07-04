@@ -15,7 +15,7 @@ import Storage.Tabular.Person
 import Types.App (Driver)
 
 create :: DriverInformation -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findById :: Transactionable m => Id Driver -> m (Maybe DriverInformation)
 findById = Esq.findById . cast
@@ -34,7 +34,7 @@ fetchAllAvailableByIds driversIds = Esq.findAll $ do
 updateActivity :: Id Driver -> Bool -> SqlDB ()
 updateActivity driverId isActive = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ DriverInformationActive =. val isActive,
@@ -45,7 +45,7 @@ updateActivity driverId isActive = do
 updateEnabledState :: Id Driver -> Bool -> SqlDB ()
 updateEnabledState driverId isEnabled = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ DriverInformationEnabled =. val isEnabled,
@@ -56,7 +56,7 @@ updateEnabledState driverId isEnabled = do
 updateRental :: Id Driver -> Bool -> SqlDB ()
 updateRental driverId isRental = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  update $ \tbl -> do
     set
       tbl
       [ DriverInformationOptForRental =. val isRental,
@@ -70,7 +70,7 @@ updateOnRide ::
   SqlDB ()
 updateOnRide driverId onRide = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ DriverInformationOnRide =. val onRide,
@@ -81,7 +81,7 @@ updateOnRide driverId onRide = do
 updateDowngradingOptions :: Id Driver -> Bool -> Bool -> SqlDB ()
 updateDowngradingOptions driverId canDowngradeToSedan canDowngradeToHatchback = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ DriverInformationCanDowngradeToSedan =. val canDowngradeToSedan,
@@ -94,10 +94,12 @@ resetDowngradingOptions :: Id Driver -> SqlDB ()
 resetDowngradingOptions driverId = updateDowngradingOptions driverId False False
 
 deleteById :: Id Driver -> SqlDB ()
-deleteById = Esq.deleteByKey' @DriverInformationT . cast
+deleteById = Esq.deleteByKey @DriverInformationT . cast
 
 findAllWithLimitOffsetByOrgId ::
-  ( Transactionable m,
+  ( MonadThrow m,
+    Log m,
+    Transactionable m,
     EncFlow m r
   ) =>
   Maybe Text ->

@@ -9,7 +9,7 @@ import Storage.Tabular.Vehicle
 import Utils.Common
 
 create :: Vehicle -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findById ::
   Transactionable m =>
@@ -33,7 +33,7 @@ findByIdAndOrgId vid orgId =
 updateVehicleRec :: Vehicle -> SqlDB ()
 updateVehicleRec vehicle = do
   now <- getCurrentTime
-  Esq.update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ VehicleCapacity =. val vehicle.capacity,
@@ -50,7 +50,7 @@ updateVehicleRec vehicle = do
     where_ $ tbl ^. VehicleTId ==. val (toKey vehicle.id)
 
 deleteById :: Id Vehicle -> SqlDB ()
-deleteById = Esq.deleteByKey' @VehicleT
+deleteById = Esq.deleteByKey @VehicleT
 
 findByAnyOf :: Transactionable m => Maybe Text -> Maybe (Id Vehicle) -> m (Maybe Vehicle)
 findByAnyOf registrationNoM vehicleIdM =

@@ -23,12 +23,12 @@ findByBookingId bookingId =
     return parkingSearch
 
 create :: PaymentTransaction -> SqlDB ()
-create = create'
+create = Esq.create
 
 updateStatus :: Id PaymentTransaction -> PaymentStatus -> SqlDB ()
 updateStatus paymentTransactionId newStatus = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PaymentTransactionStatus =. val newStatus,
@@ -39,7 +39,7 @@ updateStatus paymentTransactionId newStatus = do
 updateTxnDetails :: Id PaymentTransaction -> Text -> PaymentStatus -> SqlDB ()
 updateTxnDetails paymentTransactionId paymentGatewayTxnStatus newStatus = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ PaymentTransactionStatus =. val newStatus,

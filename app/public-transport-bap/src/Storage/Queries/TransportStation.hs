@@ -16,7 +16,7 @@ findByStationCode stationCode =
     return parkingLocation
 
 create :: TransportStation -> SqlDB ()
-create = create'
+create = Esq.create
 
 findAll :: Transactionable m => m [TransportStation]
 findAll =

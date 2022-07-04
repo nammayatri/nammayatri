@@ -4,7 +4,7 @@ module Storage.Queries.FarePolicy.FareProduct where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common (MonadGuid (generateGUIDText), MonadTime (getCurrentTime))
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Domain.Types.FareProduct
 import Domain.Types.Organization (Organization)
@@ -46,7 +46,7 @@ upsertFareProduct orgId typ = do
     insertFareProduct = do
       now <- getCurrentTime
       guid <- Id <$> generateGUIDText
-      Esq.create' $
+      Esq.create $
         FareProduct
           { id = guid,
             organizationId = orgId,
@@ -58,7 +58,7 @@ deleteFareProduct ::
   Id Organization ->
   FareProductType ->
   SqlDB ()
-deleteFareProduct orgId fpType = Esq.delete' $ do
+deleteFareProduct orgId fpType = Esq.delete $ do
   fareProduct <- from $ table @FareProductT
   where_ $
     fareProduct ^. FareProductOrganizationId ==. val (toKey orgId)

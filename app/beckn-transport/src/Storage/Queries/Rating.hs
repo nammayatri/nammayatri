@@ -10,12 +10,12 @@ import Storage.Tabular.Rating
 import Utils.Common
 
 create :: Rating -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 updateRatingValue :: Id Rating -> Id Person -> Int -> SqlDB ()
 updateRatingValue ratingId driverId newRatingValue = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ RatingRatingValue =. val newRatingValue,

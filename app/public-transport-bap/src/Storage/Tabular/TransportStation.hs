@@ -30,9 +30,8 @@ instance TEntityKey TransportStationT where
   fromKey (TransportStationTKey _id) = Id _id
   toKey id = TransportStationTKey id.getId
 
-instance TEntity TransportStationT Domain.TransportStation where
-  fromTEntity entity = do
-    let TransportStationT {..} = entityVal entity
+instance TType TransportStationT Domain.TransportStation where
+  fromTType TransportStationT {..} = do
     return $
       Domain.TransportStation
         { id = Id id,
@@ -43,5 +42,3 @@ instance TEntity TransportStationT Domain.TransportStation where
       { id = id.getId,
         ..
       }
-  toTEntity a =
-    Entity (toKey (Id a.stationCode)) $ toTType a

@@ -5,4 +5,4 @@ import Domain.Types.DiscountTransaction
 import Storage.Tabular.DiscountTransaction ()
 
 create :: DiscountTransaction -> SqlDB ()
-create = Esq.create'
+create = Esq.create

@@ -36,9 +36,8 @@ instance TEntityKey DriverInformationT where
   fromKey (DriverInformationTKey _id) = fromKey _id
   toKey id = DriverInformationTKey $ toKey id
 
-instance TEntity DriverInformationT Domain.DriverInformation where
-  fromTEntity entity = do
-    let DriverInformationT {..} = entityVal entity
+instance TType DriverInformationT Domain.DriverInformation where
+  fromTType DriverInformationT {..} = do
     return $
       Domain.DriverInformation
         { driverId = fromKey driverId,
@@ -49,5 +48,3 @@ instance TEntity DriverInformationT Domain.DriverInformation where
       { driverId = toKey driverId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.driverId) $ toTType a

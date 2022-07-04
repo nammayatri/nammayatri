@@ -28,7 +28,8 @@ defaultFarePolicy =
       baseDuration = 3,
       extraKmFare = 2,
       extraMinuteFare = 1,
-      driverAllowanceForDay = Just 30
+      driverAllowanceForDay = Just 30,
+      descriptions = []
     }
 
 rentalFarePolicyId :: Id RentalFarePolicy
