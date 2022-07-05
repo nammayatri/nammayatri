@@ -38,9 +38,8 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-instance TEntity SearchRequestT Domain.SearchRequest where
-  fromTEntity entity = do
-    let SearchRequestT {..} = entityVal entity
+instance TType SearchRequestT Domain.SearchRequest where
+  fromTType SearchRequestT {..} = do
     pUrl <- parseBaseUrl bapUri
     gUrl <- parseBaseUrl gatewayUri
     return $
@@ -63,6 +62,3 @@ instance TEntity SearchRequestT Domain.SearchRequest where
         gatewayUri = showBaseUrl gatewayUri,
         ..
       }
-
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

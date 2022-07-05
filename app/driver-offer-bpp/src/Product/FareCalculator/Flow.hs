@@ -37,7 +37,7 @@ serviceHandle =
 calculateFare ::
   (Transactionable m, MonadFlow m) =>
   Id Organization ->
-  Meter ->
+  HighPrecMeters ->
   UTCTime ->
   m FareParameters
 calculateFare = doCalculateFare serviceHandle
@@ -46,7 +46,7 @@ doCalculateFare ::
   MonadHandler m =>
   ServiceHandle m ->
   Id Organization ->
-  Meter ->
+  HighPrecMeters ->
   UTCTime ->
   m FareParameters
 doCalculateFare ServiceHandle {..} orgId distance startTime = do

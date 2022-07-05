@@ -47,9 +47,8 @@ instance TEntityKey VehicleT where
   fromKey (VehicleTKey _id) = Id _id
   toKey (Id id) = VehicleTKey id
 
-instance TEntity VehicleT Domain.Vehicle where
-  fromTEntity entity = do
-    let VehicleT {..} = entityVal entity
+instance TType VehicleT Domain.Vehicle where
+  fromTType VehicleT {..} = do
     return $
       Domain.Vehicle
         { id = Id id,
@@ -62,5 +61,3 @@ instance TEntity VehicleT Domain.Vehicle where
         organizationId = toKey organizationId,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

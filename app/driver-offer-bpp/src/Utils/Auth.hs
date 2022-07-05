@@ -1,7 +1,7 @@
 module Utils.Auth where
 
 import Beckn.External.Encryption
-import Beckn.Storage.Esqueleto
+import Beckn.Storage.Esqueleto.Config
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
 import Beckn.Types.Id
@@ -44,7 +44,7 @@ instance VerificationMethod VerifyToken where
 
 verifyTokenAction ::
   forall m r.
-  (HasEsqEnv r m, MonadFlow m, HasField "authTokenCacheExpiry" r Seconds) =>
+  (HasEsqEnv m r, MonadFlow m, HasField "authTokenCacheExpiry" r Seconds) =>
   VerificationAction VerifyToken m
 verifyTokenAction = VerificationAction verifyPerson
 
@@ -66,13 +66,13 @@ verifyAdmin user = do
     Just _ -> return user
     Nothing -> throwError (PersonFieldNotPresent "organization_id")
 
-verifyToken :: (HasEsqEnv r m, MonadThrow m, Log m) => RegToken -> m SR.RegistrationToken
+verifyToken :: (HasEsqEnv m r, MonadThrow m, Log m) => RegToken -> m SR.RegistrationToken
 verifyToken regToken = do
   QR.findByToken regToken
     >>= Utils.fromMaybeM (InvalidToken regToken)
     >>= validateToken
 
-validateAdmin :: (HasEsqEnv r m, EncFlow m r) => RegToken -> m Person.Person
+validateAdmin :: (HasEsqEnv m r, EncFlow m r) => RegToken -> m Person.Person
 validateAdmin regToken = do
   SR.RegistrationToken {..} <- verifyToken regToken
   user <-
@@ -80,7 +80,7 @@ validateAdmin regToken = do
       >>= fromMaybeM (PersonNotFound entityId)
   verifyAdmin user
 
-verifyPerson :: (HasEsqEnv r m, MonadFlow m, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person)
+verifyPerson :: (HasEsqEnv m r, MonadFlow m, HasField "authTokenCacheExpiry" r Seconds) => RegToken -> m (Id Person.Person)
 verifyPerson token = do
   let key = authTokenCacheKey token
   authTokenCacheExpiry <- getSeconds <$> asks (.authTokenCacheExpiry)
@@ -98,10 +98,10 @@ authTokenCacheKey :: RegToken -> Text
 authTokenCacheKey regToken =
   "BPP:authTokenCacheKey:" <> regToken
 
-validateAdminAction :: forall m r. (HasEsqEnv r m, EncFlow m r) => VerificationAction AdminVerifyToken m
+validateAdminAction :: forall m r. (HasEsqEnv m r, EncFlow m r) => VerificationAction AdminVerifyToken m
 validateAdminAction = VerificationAction validateAdmin
 
-validateToken :: (HasEsqEnv r m, MonadThrow m, Log m) => SR.RegistrationToken -> m SR.RegistrationToken
+validateToken :: (HasEsqEnv m r, MonadThrow m, Log m) => SR.RegistrationToken -> m SR.RegistrationToken
 validateToken sr@SR.RegistrationToken {..} = do
   let nominal = realToFrac $ tokenExpiry * 24 * 60 * 60
   expired <- Utils.isExpired nominal updatedAt

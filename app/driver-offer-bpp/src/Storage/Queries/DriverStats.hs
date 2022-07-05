@@ -11,7 +11,7 @@ import Utils.Common
 createInitialDriverStats :: Id Driver -> SqlDB ()
 createInitialDriverStats driverId = do
   now <- getCurrentTime
-  create' $
+  Esq.create $
     DriverStats
       { driverId = driverId,
         idleSince = now
@@ -32,7 +32,7 @@ updateIdleTime driverId = updateIdleTimes [driverId]
 updateIdleTimes :: [Id Driver] -> SqlDB ()
 updateIdleTimes driverIds = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ DriverStatsIdleSince =. val now
@@ -43,4 +43,4 @@ fetchAll :: Transactionable m => m [DriverStats]
 fetchAll = Esq.findAll $ from $ table @DriverStatsT
 
 deleteById :: Id Driver -> SqlDB ()
-deleteById = deleteByKey' @DriverStatsT
+deleteById = Esq.deleteByKey @DriverStatsT

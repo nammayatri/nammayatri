@@ -14,7 +14,7 @@ import Storage.Tabular.DriverLocation
 create :: Id Person -> LatLong -> UTCTime -> SqlDB ()
 create drLocationId latLong updateTime =
   -- Tricky query to be able to insert meaningful Point
-  Esq.insertSelect' $
+  Esq.insertSelect $
     return $
       DriverLocationT
         <# val (toKey drLocationId)
@@ -32,7 +32,7 @@ findById = Esq.findById
 
 upsertGpsCoord :: Id Person -> LatLong -> UTCTime -> SqlDB ()
 upsertGpsCoord drLocationId latLong updateTime = do
-  mbDrLoc <- Esq.findById @_ @DriverLocation drLocationId
+  mbDrLoc <- Esq.findById @DriverLocation @DriverLocationT drLocationId
   case mbDrLoc of
     Nothing -> Storage.Queries.DriverLocation.create drLocationId latLong updateTime
     Just _ -> Esq.update $ \tbl -> do

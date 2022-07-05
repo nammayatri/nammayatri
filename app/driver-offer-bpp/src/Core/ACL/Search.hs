@@ -6,7 +6,6 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
-import Data.Maybe
 import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.SearchReqLocation as Location
 import Types.Error
@@ -42,8 +41,15 @@ buildSearchReq subscriber gateway req = do
       }
 
 mkLocation :: Search.Location -> Location.SearchReqLocationAPIEntity
-mkLocation (Search.Location Search.Gps {..} Search.Address {..}) =
+mkLocation (Search.Location Search.Gps {..}) =
   Location.SearchReqLocationAPIEntity
-    { areaCode = area_code,
+    { areaCode = Nothing,
+      street = Nothing,
+      door = Nothing,
+      city = Nothing,
+      state = Nothing,
+      country = Nothing,
+      building = Nothing,
+      area = Nothing,
       ..
     }

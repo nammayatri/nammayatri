@@ -9,7 +9,7 @@ import Domain.Types.SearchRequestForDriver
 import Storage.Tabular.SearchRequestForDriver
 
 create :: SearchRequestForDriver -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findByDriverAndSearchReq :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequestForDriver)
 findByDriverAndSearchReq driverId searchReqId = Esq.findOne $ do

@@ -31,7 +31,7 @@ resolver: lts-16.31
 packages:
   - app/beckn-cli
   - app/beckn-transport
-  # - app/driver-offer-bpp
+  - app/driver-offer-bpp
   - app/app-backend
   - app/search-result-aggregator
   - app/mock-sms

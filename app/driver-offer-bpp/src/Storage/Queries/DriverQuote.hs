@@ -5,4 +5,4 @@ import qualified Domain.Types.DriverQuote as Domain
 import Storage.Tabular.DriverQuote ()
 
 create :: Domain.DriverQuote -> SqlDB ()
-create = create'
+create = Esq.create

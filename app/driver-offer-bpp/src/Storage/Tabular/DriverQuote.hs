@@ -44,9 +44,8 @@ instance TEntityKey DriverQuoteT where
   fromKey (DriverQuoteTKey _id) = Id _id
   toKey (Id id) = DriverQuoteTKey id
 
-instance TEntity DriverQuoteT Domain.DriverQuote where
-  fromTEntity entity = do
-    let DriverQuoteT {..} = entityVal entity
+instance TType DriverQuoteT Domain.DriverQuote where
+  fromTType DriverQuoteT {..} = do
     return $
       Domain.DriverQuote
         { id = Id id,
@@ -65,5 +64,3 @@ instance TEntity DriverQuoteT Domain.DriverQuote where
         durationToPickup = fromIntegral $ getSeconds durationToPickup,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

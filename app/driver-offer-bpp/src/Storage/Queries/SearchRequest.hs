@@ -16,7 +16,7 @@ uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 func (a, b, c) = func a b c
 
 create :: SearchRequest -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 findById = Esq.findById

@@ -40,7 +40,8 @@ handler org sReq = do
   driverPool <- calculateDriverPool (getCoordinates fromLocation) org.id
 
   distance <-
-    (.info.distance) <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
+    metersToHighPrecMeters . (.distance)
+      <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
 
   estimatedFare <- calculateFare org.id distance sReq.pickupTime
   logDebug $
@@ -60,20 +61,21 @@ handler org sReq = do
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
       FareParameters ->
-      (DriverPoolResult, GoogleMaps.GetDistanceResultInfo) ->
+      GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchRequest estFareParams (dpRes, gdRes) = do
+    buildSearchRequestForDriver searchRequest estFareParams gdRes = do
       guid <- generateGUID
       now <- getCurrentTime
+      let driver = gdRes.origin
       pure
         SearchRequestForDriver
           { id = guid,
             searchRequestId = searchRequest.id,
             searchRequestValidTill = searchRequest.validTill,
-            driverId = cast dpRes.driverId,
-            vehicleVariant = dpRes.vehicle.variant,
-            distanceToPickup = Meters $ floor gdRes.distance.getDistanceInMeter,
-            durationToPickup = Seconds $ floor gdRes.duration,
+            driverId = cast driver.driverId,
+            vehicleVariant = driver.vehicle.variant,
+            distanceToPickup = gdRes.distance,
+            durationToPickup = gdRes.duration,
             baseFare = fareSum estFareParams,
             createdAt = now,
             ..

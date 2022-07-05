@@ -3,7 +3,7 @@
 module ExternalAPI where
 
 import qualified Beckn.Types.Core.Context as Context
-import Beckn.Types.Core.ReqTypes (BecknReq (..))
+import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
@@ -59,7 +59,7 @@ callOnUpdate transporter searchRequestId content = do
   bppUri <- makeBppUrl (transporter.id)
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
-  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri $ BecknReq context content
+  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri $ BecknCallbackReq context $ Right content
 
 makeBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

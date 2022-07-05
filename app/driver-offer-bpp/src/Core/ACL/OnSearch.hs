@@ -27,28 +27,45 @@ mkOnSearchMessage DOnSearchReq {..} = do
   let provider =
         OnSearch.Provider
           { id = transporterInfo.shortId.getShortId,
-            name = transporterInfo.name,
-            category_id = "ONE_WAY",
+            descriptor = undefined,
+            locations = undefined,
+            categories = undefined,
+            --            name = transporterInfo.name,
+            --            category_id = "ONE_WAY",
             items = map mkItem quotes,
+            offers = undefined,
+            add_ons = undefined,
+            fulfillments = undefined,
             contacts = transporterInfo.contacts,
-            rides_inprogress = transporterInfo.ridesInProgress,
-            rides_completed = transporterInfo.ridesCompleted,
-            rides_confirmed = transporterInfo.ridesConfirmed
+            tags = undefined,
+            payment = undefined
+            --            rides_inprogress = transporterInfo.ridesInProgress,
+            --            rides_completed = transporterInfo.ridesCompleted,
+            --            rides_confirmed = transporterInfo.ridesConfirmed
           }
-  OnSearch.OnSearchMessage $ OnSearch.Catalog [provider]
+  OnSearch.OnSearchMessage $
+    OnSearch.Catalog
+      { bpp_providers = [provider],
+        bpp_descriptor = undefined
+      }
 
 mkItem :: DQuote.DriverQuote -> OnSearch.Item
 mkItem q =
   OnSearch.Item
-    { id = q.id.getId,
-      vehicle_variant = show q.vehicleVariant,
-      estimated_price = estimated_price_,
-      discount = Nothing,
-      discounted_price = estimated_price_,
-      nearest_driver_distance = Just $ OnSearch.DecimalValue $ toRational q.distanceToPickup.getMeters,
-      baseDistance = Nothing,
-      baseDurationHr = Nothing,
-      descriptions = Nothing
+    { --    id = q.id.getId,
+      --      vehicle_variant = show q.vehicleVariant,
+      --      estimated_price = estimated_price_,
+      price = price_
+      --      discount = Nothing,
+      --      discounted_price = estimated_price_,
+      --      nearest_driver_distance = Just $ OnSearch.DecimalValue $ toRational q.distanceToPickup.getMeters,
+      --      baseDistance = Nothing,
+      --      baseDurationHr = Nothing,
+      --      descriptions = Nothing
     }
   where
-    estimated_price_ = OnSearch.Price $ realToFrac $ q.baseFare + fromMaybe 0 q.extraFareSelected
+    --    estimated_price_ = OnSearch.Price $ realToFrac $ q.baseFare + fromMaybe 0 q.extraFareSelected
+    price_ =
+      OnSearch.ItemPrice
+        { currency = "INR"
+        }

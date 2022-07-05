@@ -34,9 +34,8 @@ instance TEntityKey DriverLocationT where
   fromKey (DriverLocationTKey _id) = fromKey _id
   toKey id = DriverLocationTKey $ toKey id
 
-instance TEntity DriverLocationT Domain.DriverLocation where
-  fromTEntity entity = do
-    let DriverLocationT {..} = entityVal entity
+instance TType DriverLocationT Domain.DriverLocation where
+  fromTType DriverLocationT {..} = do
     return $
       Domain.DriverLocation
         { driverId = fromKey driverId,
@@ -48,5 +47,3 @@ instance TEntity DriverLocationT Domain.DriverLocation where
         point = Point,
         ..
       }
-  toTEntity a =
-    Entity (toKey a.driverId) $ toTType a

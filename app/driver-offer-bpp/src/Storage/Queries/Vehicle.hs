@@ -10,7 +10,7 @@ import Storage.Tabular.Vehicle
 import Utils.Common
 
 create :: Vehicle -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findById ::
   Transactionable m =>

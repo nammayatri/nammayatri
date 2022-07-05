@@ -16,7 +16,7 @@ import Utils.Common
 
 type TripStartTime = UTCTime
 
-type Distance = Meter
+type Distance = HighPrecMeters
 
 data FareParameters = FareParameters
   { fareForPickup :: Double,
@@ -49,7 +49,7 @@ calculateDistanceFare ::
   FarePolicy ->
   Distance ->
   Double
-calculateDistanceFare farePolicy distance = farePolicy.farePerKm * distance.getDistanceInMeter
+calculateDistanceFare farePolicy distance = farePolicy.farePerKm * distance.getHighPrecMeters
 
 calculateNightShiftRate ::
   FarePolicy ->

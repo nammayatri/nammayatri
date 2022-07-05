@@ -9,6 +9,7 @@ import Beckn.Storage.Esqueleto (Transactionable)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import qualified Beckn.Types.MapSearch as GoogleMaps
+import Data.List.NonEmpty as NE
 import qualified Domain.Types.Organization as SOrg
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
@@ -23,7 +24,7 @@ calculateDriverPool ::
   ) =>
   LatLong ->
   Id SOrg.Organization ->
-  m [(QP.DriverPoolResult, GoogleMaps.GetDistanceResultInfo)]
+  m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
 calculateDriverPool pickupLatLong orgId = do
   radius <- fromIntegral <$> asks (.defaultRadiusOfSearch)
   approxDriverPool <-
@@ -45,10 +46,9 @@ filterOutDriversWithDistanceAboveThreshold ::
   Integer ->
   LatLong ->
   NonEmpty QP.DriverPoolResult ->
-  m [(QP.DriverPoolResult, GoogleMaps.GetDistanceResultInfo)]
+  m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
 filterOutDriversWithDistanceAboveThreshold threshold pickupLatLong driverPoolResults = do
-  getDistanceResults <- GoogleMaps.getDistancesGeneral (Just GoogleMaps.CAR) driverPoolResults (pickupLatLong :| []) zipFunc Nothing
-  pure $ filter (filterFunc . snd) getDistanceResults
+  getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) driverPoolResults (pickupLatLong :| []) Nothing
+  pure $ NE.filter filterFunc getDistanceResults
   where
-    zipFunc dpRes _ estDist = (dpRes, estDist)
-    filterFunc estDist = getDistanceInMeter estDist.distance <= fromIntegral threshold
+    filterFunc estDist = getMeters estDist.distance <= fromIntegral threshold

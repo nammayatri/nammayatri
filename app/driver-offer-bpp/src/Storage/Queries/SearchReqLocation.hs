@@ -8,7 +8,7 @@ import Storage.Tabular.SearchReqLocation
 
 create :: SearchReqLocation -> SqlDB ()
 create s =
-  Esq.insertSelect' $
+  Esq.insertSelect $
     pure $
       SearchReqLocationT
         Esq.<# val s.id.getId

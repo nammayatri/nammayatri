@@ -26,7 +26,7 @@ updateFarePolicy :: FarePolicy -> SqlDB ()
 updateFarePolicy farePolicy = do
   now <- getCurrentTime
   void $
-    upsert'
+    Esq.upsert
       farePolicy
       [ FarePolicyFareForPickup =. val farePolicy.fareForPickup,
         FarePolicyFarePerKm =. val farePolicy.farePerKm,

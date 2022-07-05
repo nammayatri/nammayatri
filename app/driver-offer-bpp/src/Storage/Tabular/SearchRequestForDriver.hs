@@ -49,9 +49,8 @@ instance TEntityKey SearchRequestForDriverT where
   fromKey (SearchRequestForDriverTKey _id) = Id _id
   toKey (Id id) = SearchRequestForDriverTKey id
 
-instance TEntity SearchRequestForDriverT Domain.SearchRequestForDriver where
-  fromTEntity entity = do
-    let SearchRequestForDriverT {..} = entityVal entity
+instance TType SearchRequestForDriverT Domain.SearchRequestForDriver where
+  fromTType SearchRequestForDriverT {..} = do
     return $
       Domain.SearchRequestForDriver
         { id = Id id,
@@ -66,6 +65,3 @@ instance TEntity SearchRequestForDriverT Domain.SearchRequestForDriver where
         searchRequestId = toKey searchRequestId,
         ..
       }
-
-  toTEntity a =
-    Entity (toKey a.id) $ toTType a

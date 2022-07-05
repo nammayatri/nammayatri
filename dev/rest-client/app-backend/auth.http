@@ -1,4 +1,5 @@
 # @name login
+@app-host = https://api.sandbox.beckn.juspay.in/app/v2
 POST {{app-host}}/auth
 content-type: application/json
 

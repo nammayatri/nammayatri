@@ -15,7 +15,7 @@ import Storage.Tabular.Person
 import Types.App (Driver)
 
 create :: DriverInformation -> SqlDB ()
-create = Esq.create'
+create = Esq.create
 
 findById :: Transactionable m => Id Driver -> m (Maybe DriverInformation)
 findById = Esq.findById . cast
@@ -34,7 +34,7 @@ fetchAllAvailableByIds driversIds = Esq.findAll $ do
 updateActivity :: Id Driver -> Bool -> SqlDB ()
 updateActivity driverId isActive = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ DriverInformationActive =. val isActive,
@@ -45,7 +45,7 @@ updateActivity driverId isActive = do
 updateEnabledState :: Id Driver -> Bool -> SqlDB ()
 updateEnabledState driverId isEnabled = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ DriverInformationEnabled =. val isEnabled,
@@ -59,7 +59,7 @@ updateOnRide ::
   SqlDB ()
 updateOnRide driverId onRide = do
   now <- getCurrentTime
-  update' $ \tbl -> do
+  Esq.update $ \tbl -> do
     set
       tbl
       [ DriverInformationOnRide =. val onRide,
@@ -68,7 +68,7 @@ updateOnRide driverId onRide = do
     where_ $ tbl ^. DriverInformationDriverId ==. val (toKey $ cast driverId)
 
 deleteById :: Id Driver -> SqlDB ()
-deleteById = Esq.deleteByKey' @DriverInformationT . cast
+deleteById = Esq.deleteByKey @DriverInformationT . cast
 
 findAllWithLimitOffsetByOrgId ::
   ( Transactionable m,
