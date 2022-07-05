@@ -1,14 +1,24 @@
 module Core.ACL.OnSearch where
 
 import Beckn.Prelude
-import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
+import Beckn.Types.Core.Taxi.Common.Gps as Common
+import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Common
+import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
+import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Id (ShortId)
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Organization as DOrg
+import Domain.Types.SearchReqLocation
+import Domain.Types.SearchRequest
+import qualified Domain.Types.Vehicle.Variant as Variant
 
 data DOnSearchReq = DOnSearchReq
   { transporterInfo :: TransporterInfo,
-    quotes :: [DQuote.DriverQuote]
+    searchRequest :: SearchRequest,
+    fromLocation :: SearchReqLocation,
+    toLocation :: Maybe SearchReqLocation,
+    quotes :: [DQuote.DriverQuote],
+    now :: UTCTime
   }
 
 data TransporterInfo = TransporterInfo
@@ -20,52 +30,137 @@ data TransporterInfo = TransporterInfo
     ridesConfirmed :: Int
   }
 
+oneWayCategory :: OS.Category
+oneWayCategory =
+  OS.Category
+    { id = OS.ONE_WAY_TRIP,
+      descriptor =
+        OS.Descriptor
+          { name = ""
+          }
+    }
+
 mkOnSearchMessage ::
   DOnSearchReq ->
-  OnSearch.OnSearchMessage
-mkOnSearchMessage DOnSearchReq {..} = do
+  OS.OnSearchMessage
+mkOnSearchMessage req@DOnSearchReq {..} = do
+  let quoteEntitiesList :: [QuoteEntities]
+      quoteEntitiesList = map (mkQuoteEntities req) quotes
+      fulfillments_ = map (.fulfillment) quoteEntitiesList
+      categories_ = map (.category) quoteEntitiesList
+      offers_ = mapMaybe (.offer) quoteEntitiesList
+      items_ = map (.item) quoteEntitiesList
+
   let provider =
-        OnSearch.Provider
+        OS.Provider
           { id = transporterInfo.shortId.getShortId,
-            descriptor = undefined,
-            locations = undefined,
-            categories = undefined,
-            --            name = transporterInfo.name,
-            --            category_id = "ONE_WAY",
-            items = map mkItem quotes,
-            offers = undefined,
-            add_ons = undefined,
-            fulfillments = undefined,
+            descriptor = OS.Descriptor {name = ""},
+            locations = [],
+            categories = categories_,
+            items = items_,
+            offers = offers_,
+            add_ons = [],
+            fulfillments = fulfillments_,
             contacts = transporterInfo.contacts,
-            tags = undefined,
-            payment = undefined
-            --            rides_inprogress = transporterInfo.ridesInProgress,
-            --            rides_completed = transporterInfo.ridesCompleted,
-            --            rides_confirmed = transporterInfo.ridesConfirmed
+            tags =
+              OS.ProviderTags
+                { rides_inprogress = transporterInfo.ridesInProgress,
+                  rides_completed = transporterInfo.ridesCompleted,
+                  rides_confirmed = transporterInfo.ridesConfirmed
+                },
+            payment =
+              OS.Payment
+                { collected_by = "BPP",
+                  _type = OS.ON_FULFILLMENT,
+                  time = OS.TimeDuration "P2A" -- FIXME: what is this?
+                }
           }
-  OnSearch.OnSearchMessage $
-    OnSearch.Catalog
+  OS.OnSearchMessage $
+    OS.Catalog
       { bpp_providers = [provider],
-        bpp_descriptor = undefined
+        bpp_descriptor = OS.Descriptor transporterInfo.shortId.getShortId
       }
 
-mkItem :: DQuote.DriverQuote -> OnSearch.Item
-mkItem q =
-  OnSearch.Item
-    { --    id = q.id.getId,
+castVariant :: Variant.Variant -> Common.VehicleVariant
+castVariant _ = Common.SEDAN
+
+data QuoteEntities = QuoteEntities
+  { fulfillment :: OS.FulfillmentInfo,
+    category :: OS.Category,
+    offer :: Maybe OS.Offer,
+    item :: OS.Item
+  }
+
+mkQuoteEntities :: DOnSearchReq -> DQuote.DriverQuote -> QuoteEntities
+mkQuoteEntities dReq quote = do
+  let fulfillment = mkFulfillment dReq quote
+      category = oneWayCategory
+      offer = Nothing
+      item = mkItem category.id fulfillment.id quote
+  QuoteEntities {..}
+
+mkFulfillment :: DOnSearchReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
+mkFulfillment dReq quote =
+  OS.FulfillmentInfo
+    { id = mkFulfId quote.id.getId,
+      start =
+        OS.StartInfo
+          { location = OS.Location $ Common.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
+            time = Common.TimeTimestamp dReq.now
+          },
+      end =
+        dReq.toLocation <&> \toLoc ->
+          OS.StopInfo
+            { location = OS.Location $ Common.Gps {lat = toLoc.lat, lon = toLoc.lon}
+            },
+      vehicle =
+        OS.FulfillmentVehicle
+          { category = castVariant quote.vehicleVariant
+          }
+    }
+  where
+    mkFulfId quoteId = "fulf_" <> quoteId
+
+mkItem :: OS.FareProductType -> Text -> DQuote.DriverQuote -> OS.Item
+mkItem categoryId fulfillmentId q =
+  OS.Item
+    { category_id = categoryId,
+      fulfillment_id = fulfillmentId,
+      offer_id = Nothing,
+      price = price_,
+      descriptor =
+        OS.ItemDescriptor
+          { name = "",
+            code =
+              OS.ItemCode
+                { fareProductType = OS.ONE_WAY_TRIP,
+                  vehicleVariant = castVariant q.vehicleVariant,
+                  distance = Nothing,
+                  duration = Nothing
+                }
+          },
+      quote_terms = [],
+      tags =
+        Just $
+          OS.ItemTags
+            { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters
+            },
+      --    id = q.id.getId,
       --      vehicle_variant = show q.vehicleVariant,
       --      estimated_price = estimated_price_,
-      price = price_
       --      discount = Nothing,
       --      discounted_price = estimated_price_,
-      --      nearest_driver_distance = Just $ OnSearch.DecimalValue $ toRational q.distanceToPickup.getMeters,
-      --      baseDistance = Nothing,
-      --      baseDurationHr = Nothing,
+      --      nearest_driver_distance = Just $ OS.DecimalValue $ toRational q.distanceToPickup.getMeters,
+      base_distance = Nothing,
+      base_duration = Nothing
       --      descriptions = Nothing
     }
   where
-    --    estimated_price_ = OnSearch.Price $ realToFrac $ q.baseFare + fromMaybe 0 q.extraFareSelected
-    price_ =
-      OnSearch.ItemPrice
-        { currency = "INR"
+    --    estimated_price_ = OS.Price $ realToFrac $ q.baseFare + fromMaybe 0 q.extraFareSelected
+    price_ = do
+      let value_ = OS.DecimalValue $ toRational $ q.baseFare + fromMaybe 0 q.extraFareSelected
+      OS.ItemPrice
+        { currency = "INR",
+          value = value_,
+          offered_value = value_
         }

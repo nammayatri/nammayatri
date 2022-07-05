@@ -377,11 +377,12 @@ offerQuote driverId req = withFlowHandlerAPI $ do
           }
 
 buildOnSearchReq ::
-  (Monad m) =>
+  (MonadTime m) =>
   Org.Organization ->
   [DDrQuote.DriverQuote] ->
   m DOnSearchReq
 buildOnSearchReq org quotes = do
+  now <- getCurrentTime
   let transporterInfo =
         TransporterInfo
           { shortId = org.shortId,
@@ -391,4 +392,4 @@ buildOnSearchReq org quotes = do
             ridesCompleted = 0, -- FIXME
             ridesConfirmed = 0 -- FIXME
           }
-  pure $ DOnSearchReq {transporterInfo, quotes}
+  pure $ DOnSearchReq {transporterInfo, quotes, now}

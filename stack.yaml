@@ -67,6 +67,7 @@ extra-deps:
   # - ../beckn-shared-kernel/lib/beckn-core
   - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
     commit: 00d5210b7e5ab56fc567967f654da0a103903da4
+    #    commit: b464befaf40d4a4099d15a66090c36f5a36669c6
     subdirs:
       - lib/beckn-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs
