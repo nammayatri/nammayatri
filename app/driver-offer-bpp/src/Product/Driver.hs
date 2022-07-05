@@ -348,7 +348,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
   Esq.runTransaction $ QDrQt.create driverQuote
   context <- contextTemplate organization Context.SEARCH sReq.bapId sReq.bapUri (Just sReq.transactionId) sReq.messageId
   let callbackUrl = sReq.gatewayUri
-      action = buildOnSearchReq organization [driverQuote] <&> mkOnSearchMessage
+      action = buildOnSearchReq organization sReq [driverQuote] <&> mkOnSearchMessage
   void $ withCallback' withRetry organization Context.SEARCH API.onSearchAPI context callbackUrl action
   pure Success
   where
@@ -379,9 +379,10 @@ offerQuote driverId req = withFlowHandlerAPI $ do
 buildOnSearchReq ::
   (MonadTime m) =>
   Org.Organization ->
+  DSReq.SearchRequest ->
   [DDrQuote.DriverQuote] ->
   m DOnSearchReq
-buildOnSearchReq org quotes = do
+buildOnSearchReq org searchRequest quotes = do
   now <- getCurrentTime
   let transporterInfo =
         TransporterInfo
@@ -392,4 +393,4 @@ buildOnSearchReq org quotes = do
             ridesCompleted = 0, -- FIXME
             ridesConfirmed = 0 -- FIXME
           }
-  pure $ DOnSearchReq {transporterInfo, quotes, now}
+  pure $ DOnSearchReq {transporterInfo, quotes, now, searchRequest}

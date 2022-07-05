@@ -12,7 +12,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
 import Storage.Tabular.Organization (OrganizationTId)
-import Storage.Tabular.SearchReqLocation (SearchReqLocationTId)
+import Storage.Tabular.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId)
 
 mkPersist
   defaultSqlSettings
@@ -38,27 +38,34 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-instance TType SearchRequestT Domain.SearchRequest where
-  fromTType SearchRequestT {..} = do
+instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequest where
+  fromTType (SearchRequestT {..}, fromLoc, toLoc) = do
     pUrl <- parseBaseUrl bapUri
     gUrl <- parseBaseUrl gatewayUri
+    fromLoc_ <- fromTType fromLoc
+    toLoc_ <- fromTType toLoc
     return $
       Domain.SearchRequest
         { id = Id id,
           providerId = fromKey providerId,
-          fromLocationId = fromKey fromLocationId,
-          toLocationId = fromKey toLocationId,
+          --          fromLocation = fromKey fromLocationId,
+          fromLocation = fromLoc_,
+          --          toLocation = fromKey toLocationId,
+          toLocation = toLoc_,
           bapUri = pUrl,
           gatewayUri = gUrl,
           ..
         }
   toTType Domain.SearchRequest {..} =
-    SearchRequestT
-      { id = getId id,
-        providerId = toKey providerId,
-        fromLocationId = toKey fromLocationId,
-        toLocationId = toKey toLocationId,
-        bapUri = showBaseUrl bapUri,
-        gatewayUri = showBaseUrl gatewayUri,
-        ..
-      }
+    ( SearchRequestT
+        { id = getId id,
+          providerId = toKey providerId,
+          fromLocationId = toKey fromLocation.id,
+          toLocationId = toKey toLocation.id,
+          bapUri = showBaseUrl bapUri,
+          gatewayUri = showBaseUrl gatewayUri,
+          ..
+        },
+      toTType fromLocation,
+      toTType toLocation
+    )

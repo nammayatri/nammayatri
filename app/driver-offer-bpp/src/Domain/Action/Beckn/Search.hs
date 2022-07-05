@@ -36,7 +36,7 @@ handler :: DOrg.Organization -> DSearchReq -> Flow ()
 handler org sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
-  searchReq <- buildSearchRequest fromLocation.id toLocation.id org.id sReq
+  searchReq <- buildSearchRequest fromLocation toLocation org.id sReq
   driverPool <- calculateDriverPool (getCoordinates fromLocation) org.id
 
   distance <-
@@ -87,12 +87,12 @@ buildSearchRequest ::
     MonadReader r m,
     HasField "searchRequestExpirationSeconds" r Int
   ) =>
-  Id DLoc.SearchReqLocation ->
-  Id DLoc.SearchReqLocation ->
+  DLoc.SearchReqLocation ->
+  DLoc.SearchReqLocation ->
   Id DOrg.Organization ->
   DSearchReq ->
   m DSearchReq.SearchRequest
-buildSearchRequest fromId toId orgId sReq = do
+buildSearchRequest from to orgId sReq = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -104,8 +104,8 @@ buildSearchRequest fromId toId orgId sReq = do
         messageId = sReq.messageId,
         validTill = validTill_,
         providerId = orgId,
-        fromLocationId = fromId,
-        toLocationId = toId,
+        fromLocation = from,
+        toLocation = to,
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
         gatewayUri = sReq.gatewayUri,

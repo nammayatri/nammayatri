@@ -8,15 +8,12 @@ import qualified Beckn.Types.Core.Taxi.OnSearch as OS
 import Beckn.Types.Id (ShortId)
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Organization as DOrg
-import Domain.Types.SearchReqLocation
 import Domain.Types.SearchRequest
 import qualified Domain.Types.Vehicle.Variant as Variant
 
 data DOnSearchReq = DOnSearchReq
   { transporterInfo :: TransporterInfo,
     searchRequest :: SearchRequest,
-    fromLocation :: SearchReqLocation,
-    toLocation :: Maybe SearchReqLocation,
     quotes :: [DQuote.DriverQuote],
     now :: UTCTime
   }
@@ -82,7 +79,10 @@ mkOnSearchMessage req@DOnSearchReq {..} = do
       }
 
 castVariant :: Variant.Variant -> Common.VehicleVariant
-castVariant _ = Common.SEDAN
+castVariant Variant.SEDAN = Common.SEDAN
+castVariant Variant.HATCHBACK = Common.HATCHBACK
+castVariant Variant.SUV = Common.SUV
+castVariant Variant.AUTO = Common.HATCHBACK -- FIXME
 
 data QuoteEntities = QuoteEntities
   { fulfillment :: OS.FulfillmentInfo,
@@ -100,18 +100,20 @@ mkQuoteEntities dReq quote = do
   QuoteEntities {..}
 
 mkFulfillment :: DOnSearchReq -> DQuote.DriverQuote -> OS.FulfillmentInfo
-mkFulfillment dReq quote =
+mkFulfillment dReq quote = do
+  let fromLocation = dReq.searchRequest.fromLocation
+  let toLocation = dReq.searchRequest.toLocation
   OS.FulfillmentInfo
     { id = mkFulfId quote.id.getId,
       start =
         OS.StartInfo
-          { location = OS.Location $ Common.Gps {lat = dReq.fromLocation.lat, lon = dReq.fromLocation.lon},
+          { location = OS.Location $ Common.Gps {lat = fromLocation.lat, lon = fromLocation.lon},
             time = Common.TimeTimestamp dReq.now
           },
       end =
-        dReq.toLocation <&> \toLoc ->
+        Just
           OS.StopInfo
-            { location = OS.Location $ Common.Gps {lat = toLoc.lat, lon = toLoc.lon}
+            { location = OS.Location $ Common.Gps {lat = toLocation.lat, lon = toLocation.lon}
             },
       vehicle =
         OS.FulfillmentVehicle
