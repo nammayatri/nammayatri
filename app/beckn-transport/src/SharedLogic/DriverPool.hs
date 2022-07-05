@@ -108,10 +108,11 @@ calculateDriverPool pickupLatLong orgId variant fareProductType = do
         orgId
         variant
         fareProductType
-  approxDriverPool' <- mapM (buildDriverPoolResult pickupLatLong) nearestDriversResult
-  case approxDriverPool' of
+  case nearestDriversResult of
     [] -> pure []
-    (a : pprox) -> filterOutDriversWithDistanceAboveThreshold radius (a :| pprox)
+    (a : xs) -> do
+      approxDriverPool' <- buildDriverPoolResults pickupLatLong (a :| xs)
+      filterOutDriversWithDistanceAboveThreshold radius approxDriverPool'
   where
     getRadius =
       QTConf.findValueByOrgIdAndKey orgId (STConf.ConfigKey "radius")
@@ -124,22 +125,25 @@ calculateDriverPool pickupLatLong orgId variant fareProductType = do
         . toString
         $ conf.value
 
-buildDriverPoolResult ::
+buildDriverPoolResults ::
   ( EsqDBFlow m r,
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
   LatLong ->
-  QP.NearestDriversResult ->
-  m DriverPoolResult
-buildDriverPoolResult pickup QP.NearestDriversResult {..} = do
-  distDur <- MapSearch.getDistance (Just MapSearch.CAR) pickup (LatLong {..}) Nothing
-  return $
-    DriverPoolResult
-      { distanceToDriver = distDur.distance,
-        durationToPickup = distDur.duration,
-        ..
-      }
+  NonEmpty QP.NearestDriversResult ->
+  m (NonEmpty DriverPoolResult)
+buildDriverPoolResults pickup ndResults = do
+  distDurs <- MapSearch.getDistances (Just MapSearch.CAR) (pickup :| []) ndResults Nothing
+  return $ mkDriverPoolResult <$> distDurs
+  where
+    mkDriverPoolResult distDur = do
+      let QP.NearestDriversResult {..} = distDur.destination
+      DriverPoolResult
+        { distanceToDriver = distDur.distance,
+          durationToPickup = distDur.duration,
+          ..
+        }
 
 filterOutDriversWithDistanceAboveThreshold ::
   ( EsqDBFlow m r,
