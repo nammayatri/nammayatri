@@ -4,6 +4,7 @@ import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (getCoordinates))
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
@@ -76,7 +77,7 @@ handler org sReq = do
             vehicleVariant = driver.vehicle.variant,
             distanceToPickup = gdRes.distance,
             durationToPickup = gdRes.duration,
-            baseFare = fareSum estFareParams,
+            baseFare = amountToDouble $ fareSum estFareParams,
             createdAt = now,
             ..
           }

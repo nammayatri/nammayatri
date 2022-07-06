@@ -10,9 +10,9 @@ import Storage.Tabular.SearchRequest
 create :: SearchRequest -> SqlDB ()
 create dsReq = Esq.runTransaction $
   withFullEntity dsReq $ \(sReq, fromLoc, toLoc) -> do
-    Esq.create' sReq
     Esq.create' fromLoc
     Esq.create' toLoc
+    Esq.create' sReq
 
 findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
 findById searchRequestId = buildDType $

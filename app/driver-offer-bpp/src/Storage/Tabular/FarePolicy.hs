@@ -9,6 +9,7 @@ module Storage.Tabular.FarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy as Domain
 import Storage.Tabular.Organization (OrganizationTId)
@@ -43,11 +44,17 @@ instance TType FarePolicyT Domain.FarePolicy where
       Domain.FarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
+          fareForPickup = Amount $ toRational fareForPickup,
+          farePerKm = Amount $ toRational farePerKm,
+          nightShiftRate = Amount . toRational <$> nightShiftRate,
           ..
         }
   toTType Domain.FarePolicy {..} =
     FarePolicyT
       { id = getId id,
         organizationId = toKey organizationId,
+        fareForPickup = amountToDouble fareForPickup,
+        farePerKm = amountToDouble farePerKm,
+        nightShiftRate = amountToDouble <$> nightShiftRate,
         ..
       }

@@ -2,6 +2,7 @@
 
 module Product.FareCalculator.Calculator where
 
+import Beckn.Types.Amount
 import Data.Time
   ( LocalTime (localTimeOfDay),
     TimeOfDay (..),
@@ -19,13 +20,13 @@ type TripStartTime = UTCTime
 type Distance = HighPrecMeters
 
 data FareParameters = FareParameters
-  { fareForPickup :: Double,
-    distanceFare :: Double,
-    nightShiftRate :: Double
+  { fareForPickup :: Amount,
+    distanceFare :: Amount,
+    nightShiftRate :: Amount
   }
   deriving stock (Show, Eq)
 
-fareSum :: FareParameters -> Double
+fareSum :: FareParameters -> Amount
 fareSum FareParameters {..} =
   nightShiftRate * (fareForPickup + distanceFare)
 
@@ -42,19 +43,19 @@ calculateFareParameters farePolicy distance startTime = do
 
 calculateBaseFare ::
   FarePolicy ->
-  Double
+  Amount
 calculateBaseFare farePolicy = farePolicy.fareForPickup
 
 calculateDistanceFare ::
   FarePolicy ->
   Distance ->
-  Double
-calculateDistanceFare farePolicy distance = farePolicy.farePerKm * distance.getHighPrecMeters
+  Amount
+calculateDistanceFare farePolicy distance = farePolicy.farePerKm * (Amount $ toRational distance.getHighPrecMeters)
 
 calculateNightShiftRate ::
   FarePolicy ->
   TripStartTime ->
-  Double
+  Amount
 calculateNightShiftRate farePolicy tripStartTime = do
   let defaultNightShiftRate = 1
   let timeOfDay = localTimeOfDay $ utcToLocalTime timeZoneIST tripStartTime

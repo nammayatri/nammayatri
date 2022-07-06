@@ -2,6 +2,7 @@ module Storage.Queries.FarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Amount
 import Beckn.Types.Id
 import Domain.Types.FarePolicy
 import Domain.Types.Organization
@@ -28,10 +29,10 @@ updateFarePolicy farePolicy = do
   void $
     Esq.upsert
       farePolicy
-      [ FarePolicyFareForPickup =. val farePolicy.fareForPickup,
-        FarePolicyFarePerKm =. val farePolicy.farePerKm,
+      [ FarePolicyFareForPickup =. val (amountToDouble farePolicy.fareForPickup),
+        FarePolicyFarePerKm =. val (amountToDouble farePolicy.farePerKm),
         FarePolicyNightShiftStart =. val (farePolicy.nightShiftStart),
         FarePolicyNightShiftEnd =. val (farePolicy.nightShiftEnd),
-        FarePolicyNightShiftRate =. val farePolicy.nightShiftRate,
+        FarePolicyNightShiftRate =. val (amountToDouble <$> farePolicy.nightShiftRate),
         FarePolicyUpdatedAt =. val now
       ]
