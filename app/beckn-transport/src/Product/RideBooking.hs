@@ -152,7 +152,7 @@ buildRideBookingStatusRes rideBooking = do
   now <- getCurrentTime
   rideAPIEntityList <- mapM (buildRideAPIEntity now) =<< QRide.findAllRideAPIEntityDataByRBId rideBooking.id
   fareBreakups <- QFareBreakup.findAllByRideBookingId rideBooking.id
-  bookingDetails <- buildRideBookingAPIDetails rideBooking.rideBookingDetails
+  (bookingDetails, tripTerms) <- buildRideBookingAPIDetails rideBooking.rideBookingDetails
 
   return $
     API.RideBookingStatusRes
@@ -165,6 +165,7 @@ buildRideBookingStatusRes rideBooking = do
         rideList = rideAPIEntityList,
         fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
         bookingDetails,
+        tripTerms,
         createdAt = rideBooking.createdAt,
         updatedAt = rideBooking.updatedAt
       }
@@ -175,20 +176,22 @@ buildRideBookingStatusRes rideBooking = do
       decDriver <- maybe (return $ driverDefault now) decrypt mbDriver
       return $ SRide.makeRideAPIEntity ride decDriver vehicle
 
-    buildRideBookingAPIDetails :: EsqDBFlow m r => SRB.RideBookingDetails -> m API.RideBookingAPIDetails
+    buildRideBookingAPIDetails :: EsqDBFlow m r => SRB.RideBookingDetails -> m (API.RideBookingAPIDetails, [Text])
     buildRideBookingAPIDetails = \case
       SRB.OneWayDetails SRB.OneWayRideBookingDetails {..} -> do
         toLocation' <- QBLoc.findById toLocationId >>= fromMaybeM LocationNotFound
-        pure $
-          API.OneWayAPIDetails
-            API.OneWayRideBookingAPIDetails
-              { toLocation = DBLoc.makeBookingLocationAPIEntity toLocation'
-              }
+        let details =
+              API.OneWayAPIDetails
+                API.OneWayRideBookingAPIDetails
+                  { toLocation = DBLoc.makeBookingLocationAPIEntity toLocation'
+                  }
+        pure (details, [])
       SRB.RentalDetails (SRB.RentalRideBookingDetails rentalFarePolicyId) -> do
         DRentalFP.RentalFarePolicy {..} <-
           QRentalFP.findById rentalFarePolicyId
             >>= fromMaybeM NoRentalFarePolicy
-        pure $ API.RentalAPIDetails API.RentalRideBookingAPIDetails {..}
+        let details = API.RentalAPIDetails API.RentalRideBookingAPIDetails {..}
+        pure (details, descriptions)
 
     driverDefault now =
       SP.Person

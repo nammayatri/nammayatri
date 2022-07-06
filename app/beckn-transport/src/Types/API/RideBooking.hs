@@ -23,6 +23,7 @@ data RideBookingStatusRes = RideBookingStatusRes
     estimatedTotalFare :: Amount,
     fromLocation :: BookingLocationAPIEntity,
     rideList :: [RideAPIEntity],
+    tripTerms :: [Text],
     fareBreakup :: [FareBreakupAPIEntity],
     bookingDetails :: RideBookingAPIDetails,
     createdAt :: UTCTime,
