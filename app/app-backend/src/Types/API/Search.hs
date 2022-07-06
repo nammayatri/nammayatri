@@ -7,6 +7,7 @@ import Data.Aeson
 import Data.OpenApi
 import qualified Data.OpenApi as OpenApi
 import Domain.Types.SearchRequest (SearchRequest)
+import qualified Tools.JSON as J
 
 data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq
   deriving (Generic, Show)
@@ -23,21 +24,15 @@ instance ToSchema SearchReq where
 fareProductOptions :: Options
 fareProductOptions =
   defaultOptions
-    { sumEncoding = fareProductTaggedObject,
+    { sumEncoding = J.fareProductTaggedObject,
       constructorTagModifier = fareProductConstructorModifier
     }
 
 fareProductSchemaOptions :: OpenApi.SchemaOptions
 fareProductSchemaOptions =
   OpenApi.defaultSchemaOptions
-    { OpenApi.sumEncoding = fareProductTaggedObject,
+    { OpenApi.sumEncoding = J.fareProductTaggedObject,
       OpenApi.constructorTagModifier = fareProductConstructorModifier
-    }
-
-fareProductTaggedObject :: SumEncoding
-fareProductTaggedObject =
-  defaultTaggedObject
-    { tagFieldName = "fareProductType"
     }
 
 fareProductConstructorModifier :: String -> String

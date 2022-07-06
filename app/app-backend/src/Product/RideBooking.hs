@@ -5,6 +5,7 @@ import Beckn.Types.Id
 import qualified Domain.Types.BookingLocation as SLoc
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude hiding (id)
@@ -30,16 +31,11 @@ rideBookingList personId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 buildRideBookingStatusRes :: EsqDBFlow m r => SRB.RideBooking -> m API.RideBookingStatusRes
 buildRideBookingStatusRes rideBooking = do
   fromLocation <- QLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
-  (mbToLocation, baseDistance, baseDuration) <- case rideBooking.rideBookingDetails of
-    SRB.OneWayDetails details -> do
-      toLocation <- QLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound
-      pure (Just toLocation, Nothing, Nothing)
-    SRB.RentalDetails details -> do
-      pure (Nothing, Just details.baseDistance, Just details.baseDuration)
   rideAPIEntityList <-
     QRide.findAllByRBId rideBooking.id
       <&> fmap SRide.makeRideAPIEntity
   fareBreakups <- QFareBreakup.findAllByRideBookingId rideBooking.id
+  bookingDetails <- buildRideBookingAPIDetails rideBooking.rideBookingDetails
 
   return $
     API.RideBookingStatusRes
@@ -50,13 +46,23 @@ buildRideBookingStatusRes rideBooking = do
         estimatedFare = rideBooking.estimatedFare,
         discount = rideBooking.discount,
         estimatedTotalFare = rideBooking.estimatedTotalFare,
-        toLocation = SLoc.makeBookingLocationAPIEntity <$> mbToLocation,
         fromLocation = SLoc.makeBookingLocationAPIEntity fromLocation,
         rideList = rideAPIEntityList,
         tripTerms = fromMaybe [] $ rideBooking.tripTerms <&> (.descriptions),
         fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
+        bookingDetails,
         createdAt = rideBooking.createdAt,
-        updatedAt = rideBooking.updatedAt,
-        baseDistance,
-        baseDuration
+        updatedAt = rideBooking.updatedAt
       }
+
+buildRideBookingAPIDetails :: EsqDBFlow m r => SRB.RideBookingDetails -> m API.RideBookingAPIDetails
+buildRideBookingAPIDetails = \case
+  SRB.OneWayDetails SRB.OneWayRideBookingDetails {..} -> do
+    toLocation' <- QLoc.findById toLocationId >>= fromMaybeM LocationNotFound
+    pure $
+      API.OneWayAPIDetails
+        API.OneWayRideBookingAPIDetails
+          { toLocation = SLoc.makeBookingLocationAPIEntity toLocation'
+          }
+  SRB.RentalDetails DRentalSlab.RentalSlab {..} -> do
+    pure $ API.RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}

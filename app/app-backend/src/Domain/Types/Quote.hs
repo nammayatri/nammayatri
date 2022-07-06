@@ -6,13 +6,13 @@ import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Data.Aeson
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
-import qualified Data.OpenApi as OpenApi
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
+import qualified Tools.JSON as J
+import qualified Tools.Schema as S
 
 -- move this in separate file
 data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
@@ -62,39 +62,13 @@ data QuoteAPIDetails = OneWayAPIDetails OneWayQuoteAPIDetails | RentalAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON QuoteAPIDetails where
-  toJSON = genericToJSON fareProductOptions
+  toJSON = genericToJSON J.fareProductOptions
 
 instance FromJSON QuoteAPIDetails where
-  parseJSON = genericParseJSON fareProductOptions
+  parseJSON = genericParseJSON J.fareProductOptions
 
 instance ToSchema QuoteAPIDetails where
-  declareNamedSchema = genericDeclareNamedSchema fareProductSchemaOptions
-
-fareProductOptions :: Options
-fareProductOptions =
-  defaultOptions
-    { sumEncoding = fareProductTaggedObject,
-      constructorTagModifier = fareProductConstructorModifier
-    }
-
-fareProductSchemaOptions :: OpenApi.SchemaOptions
-fareProductSchemaOptions =
-  OpenApi.defaultSchemaOptions
-    { OpenApi.sumEncoding = fareProductTaggedObject,
-      OpenApi.constructorTagModifier = fareProductConstructorModifier
-    }
-
-fareProductTaggedObject :: SumEncoding
-fareProductTaggedObject =
-  defaultTaggedObject
-    { tagFieldName = "fareProductType"
-    }
-
-fareProductConstructorModifier :: String -> String
-fareProductConstructorModifier = \case
-  "OneWayDetails" -> "ONE_WAY"
-  "RentalDetails" -> "RENTAL"
-  x -> x
+  declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
 -- Can I use distanceToNearestDriver instead of nearestDriverDistance in QuoteAPIEntity for consistency and less boilerplate?
 newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
