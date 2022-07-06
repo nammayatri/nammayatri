@@ -3,7 +3,6 @@ module Tools.JSON where
 import Beckn.Prelude
 import Data.Aeson
 
---TODO reuse code from app-backend
 fareProductOptions :: Options
 fareProductOptions =
   defaultOptions

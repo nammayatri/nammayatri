@@ -13,6 +13,7 @@ import qualified Domain.Types.AllocationEvent as AllocationEvent
 import Domain.Types.BookingLocation as DBLoc
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as SP
+import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import Domain.Types.RideRequest
@@ -29,6 +30,7 @@ import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideRequest as RideRequest
@@ -79,7 +81,9 @@ getRideInfo rideBookingId personId = withFlowHandlerAPI $ do
         QBLoc.findById rideBooking.fromLocationId
           >>= fromMaybeM LocationNotFound
       let fromLatLong = Location.locationToLatLong fromLocation
-      toLocation <- getDropLocation rideBooking.rideBookingDetails
+      toLocation <- case rideBooking.rideBookingDetails of
+        SRB.OneWayDetails details -> QBLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound . Just
+        SRB.RentalDetails _ -> pure Nothing
       distanceDuration <- MapSearch.getDistance (Just MapSearch.CAR) driverLatLong fromLatLong
       return $
         API.GetRideInfoRes $
@@ -144,11 +148,12 @@ setDriverAcceptance rideBookingId personId req = withFlowHandlerAPI $ do
 buildRideBookingStatusRes :: (EsqDBFlow m r, EncFlow m r) => SRB.RideBooking -> m API.RideBookingStatusRes
 buildRideBookingStatusRes rideBooking = do
   fromLocation <- QBLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- getDropLocation rideBooking.rideBookingDetails
   let rbStatus = rideBooking.status
   now <- getCurrentTime
   rideAPIEntityList <- mapM (buildRideAPIEntity now) =<< QRide.findAllRideAPIEntityDataByRBId rideBooking.id
   fareBreakups <- QFareBreakup.findAllByRideBookingId rideBooking.id
+  bookingDetails <- buildRideBookingAPIDetails rideBooking.rideBookingDetails
+
   return $
     API.RideBookingStatusRes
       { id = rideBooking.id,
@@ -156,10 +161,10 @@ buildRideBookingStatusRes rideBooking = do
         estimatedFare = rideBooking.estimatedFare,
         discount = rideBooking.discount,
         estimatedTotalFare = rideBooking.estimatedTotalFare,
-        toLocation = DBLoc.makeBookingLocationAPIEntity <$> toLocation,
         fromLocation = DBLoc.makeBookingLocationAPIEntity fromLocation,
         rideList = rideAPIEntityList,
         fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
+        bookingDetails,
         createdAt = rideBooking.createdAt,
         updatedAt = rideBooking.updatedAt
       }
@@ -169,6 +174,21 @@ buildRideBookingStatusRes rideBooking = do
       let vehicle = fromMaybe (vehicleDefault now) mbVehicle
       decDriver <- maybe (return $ driverDefault now) decrypt mbDriver
       return $ SRide.makeRideAPIEntity ride decDriver vehicle
+
+    buildRideBookingAPIDetails :: EsqDBFlow m r => SRB.RideBookingDetails -> m API.RideBookingAPIDetails
+    buildRideBookingAPIDetails = \case
+      SRB.OneWayDetails SRB.OneWayRideBookingDetails {..} -> do
+        toLocation' <- QBLoc.findById toLocationId >>= fromMaybeM LocationNotFound
+        pure $
+          API.OneWayAPIDetails
+            API.OneWayRideBookingAPIDetails
+              { toLocation = DBLoc.makeBookingLocationAPIEntity toLocation'
+              }
+      SRB.RentalDetails (SRB.RentalRideBookingDetails rentalFarePolicyId) -> do
+        DRentalFP.RentalFarePolicy {..} <-
+          QRentalFP.findById rentalFarePolicyId
+            >>= fromMaybeM NoRentalFarePolicy
+        pure $ API.RentalAPIDetails API.RentalRideBookingAPIDetails {..}
 
     driverDefault now =
       SP.Person
@@ -211,8 +231,3 @@ buildRideBookingStatusRes rideBooking = do
           createdAt = now,
           updatedAt = now
         }
-
-getDropLocation :: EsqDBFlow m r => SRB.RideBookingDetails -> m (Maybe DBLoc.BookingLocation)
-getDropLocation = \case
-  SRB.OneWayDetails details -> QBLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound . Just
-  SRB.RentalDetails _ -> pure Nothing

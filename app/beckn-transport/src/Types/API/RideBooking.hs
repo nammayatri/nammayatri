@@ -4,13 +4,15 @@ import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Data.OpenApi (ToSchema)
+import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Data.Time (UTCTime)
 import Domain.Types.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.FareBreakup (FareBreakupAPIEntity)
 import Domain.Types.Ride (RideAPIEntity)
 import Domain.Types.RideBooking (RideBooking, RideBookingStatus)
 import EulerHS.Prelude hiding (id)
+import qualified Tools.JSON as J
+import qualified Tools.Schema as S
 import Types.App (Driver)
 
 data RideBookingStatusRes = RideBookingStatusRes
@@ -19,14 +21,37 @@ data RideBookingStatusRes = RideBookingStatusRes
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    toLocation :: Maybe BookingLocationAPIEntity,
     fromLocation :: BookingLocationAPIEntity,
     rideList :: [RideAPIEntity],
     fareBreakup :: [FareBreakupAPIEntity],
+    bookingDetails :: RideBookingAPIDetails,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data RideBookingAPIDetails = OneWayAPIDetails OneWayRideBookingAPIDetails | RentalAPIDetails RentalRideBookingAPIDetails
+  deriving (Show, Generic)
+
+instance ToJSON RideBookingAPIDetails where
+  toJSON = genericToJSON J.fareProductOptions
+
+instance FromJSON RideBookingAPIDetails where
+  parseJSON = genericParseJSON J.fareProductOptions
+
+instance ToSchema RideBookingAPIDetails where
+  declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
+
+newtype OneWayRideBookingAPIDetails = OneWayRideBookingAPIDetails
+  { toLocation :: BookingLocationAPIEntity
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data RentalRideBookingAPIDetails = RentalRideBookingAPIDetails
+  { baseDistance :: Kilometers,
+    baseDuration :: Hours
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 newtype RideBookingListRes = RideBookingListRes
   { list :: [RideBookingStatusRes]

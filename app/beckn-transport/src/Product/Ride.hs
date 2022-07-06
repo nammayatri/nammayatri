@@ -7,7 +7,6 @@ import qualified Domain.Types.BookingLocation as DBLoc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
-import qualified Product.RideBooking as RideBooking (getDropLocation)
 import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -29,7 +28,9 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 buildDriverRideRes :: (SRide.Ride, SRB.RideBooking) -> Flow API.DriverRideRes
 buildDriverRideRes (ride, rideBooking) = do
   fromLocation <- QBLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- RideBooking.getDropLocation rideBooking.rideBookingDetails
+  toLocation <- case rideBooking.rideBookingDetails of
+    SRB.OneWayDetails details -> QBLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound . Just
+    SRB.RentalDetails _ -> pure Nothing
 
   vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM (VehicleNotFound ride.vehicleId.getId)
   driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
