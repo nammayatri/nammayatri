@@ -11,14 +11,13 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common (logDebug)
 import Data.Time.Clock (addUTCTime)
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSearchReq
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
 import Environment
 import Product.FareCalculator.Flow
 import SharedLogic.DriverPool
 import Storage.Queries.Person
-import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 
@@ -53,8 +52,6 @@ handler org sReq = do
       <> show estimatedFare
   searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq estimatedFare) driverPool
   Esq.runTransaction $ do
-    QLoc.create fromLocation
-    QLoc.create toLocation
     QSReq.create searchReq
     mapM_ QSRD.create searchRequestsForDrivers
   where

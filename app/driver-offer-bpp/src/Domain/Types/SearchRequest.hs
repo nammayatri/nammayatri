@@ -4,7 +4,7 @@ import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 
 data SearchRequest = SearchRequest
   { id :: Id SearchRequest,

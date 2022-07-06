@@ -5,12 +5,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.SearchReqLocation where
+module Storage.Tabular.SearchRequest.SearchReqLocation where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.SearchReqLocation as Domain
+import qualified Domain.Types.SearchRequest.SearchReqLocation as Domain
 
 mkPersist
   defaultSqlSettings
@@ -19,7 +19,6 @@ mkPersist
       id Text
       lat Double
       lon Double
-      point Point
       street Text Maybe
       door Text Maybe
       city Text Maybe
@@ -39,16 +38,16 @@ instance TEntityKey SearchReqLocationT where
   fromKey (SearchReqLocationTKey _id) = Id _id
   toKey (Id id) = SearchReqLocationTKey id
 
-instance TType SearchReqLocationT Domain.SearchReqLocation where
-  fromTType SearchReqLocationT {..} = do
-    return $
-      Domain.SearchReqLocation
-        { id = Id id,
-          ..
-        }
-  toTType Domain.SearchReqLocation {..} =
-    SearchReqLocationT
-      { id = getId id,
-        point = Point,
-        ..
-      }
+mkDomainSearchReqLocation :: SearchReqLocationT -> Domain.SearchReqLocation
+mkDomainSearchReqLocation SearchReqLocationT {..} =
+  Domain.SearchReqLocation
+    { id = Id id,
+      ..
+    }
+
+mkTabularSearchReqLocation :: Domain.SearchReqLocation -> SearchReqLocationT
+mkTabularSearchReqLocation Domain.SearchReqLocation {..} =
+  SearchReqLocationT
+    { id = getId id,
+      ..
+    }

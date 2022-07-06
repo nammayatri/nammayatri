@@ -79,7 +79,6 @@ CREATE TABLE atlas_driver_offer_bpp.search_request_location (
 id character(36) NOT NULL,
 lat double precision NOT NULL,
 lon double precision NOT NULL,
-point public.geography(Point,4326) NOT NULL,
 city character varying(255),
 state character varying(255),
 country character varying(255),
@@ -201,7 +200,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats OWNER TO atlas_driver_offer_bpp_
 CREATE TABLE atlas_driver_offer_bpp.fare_policy (
 id character(36) NOT NULL,
 organization_id character (36) NOT NULL,
-base_fare double precision NOT NULL CHECK (base_fare > 0),
+fare_for_pickup double precision NOT NULL CHECK (fare_for_pickup > 0),
 fare_per_km double precision NOT NULL CHECK (fare_per_km > 0),
 night_shift_start time without time zone,
 night_shift_end time without time zone,

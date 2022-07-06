@@ -12,7 +12,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
 import Storage.Tabular.Organization (OrganizationTId)
-import Storage.Tabular.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId)
+import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 
 mkPersist
   defaultSqlSettings
@@ -42,15 +42,13 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
   fromTType (SearchRequestT {..}, fromLoc, toLoc) = do
     pUrl <- parseBaseUrl bapUri
     gUrl <- parseBaseUrl gatewayUri
-    fromLoc_ <- fromTType fromLoc
-    toLoc_ <- fromTType toLoc
+    let fromLoc_ = mkDomainSearchReqLocation fromLoc
+        toLoc_ = mkDomainSearchReqLocation toLoc
     return $
       Domain.SearchRequest
         { id = Id id,
           providerId = fromKey providerId,
-          --          fromLocation = fromKey fromLocationId,
           fromLocation = fromLoc_,
-          --          toLocation = fromKey toLocationId,
           toLocation = toLoc_,
           bapUri = pUrl,
           gatewayUri = gUrl,
@@ -66,6 +64,6 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           gatewayUri = showBaseUrl gatewayUri,
           ..
         },
-      toTType fromLocation,
-      toTType toLocation
+      mkTabularSearchReqLocation fromLocation,
+      mkTabularSearchReqLocation toLocation
     )

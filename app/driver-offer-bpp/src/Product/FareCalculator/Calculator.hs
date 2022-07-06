@@ -36,21 +36,9 @@ calculateFareParameters ::
   TripStartTime ->
   FareParameters
 calculateFareParameters farePolicy distance startTime = do
-  let fareForPickup = calculateBaseFare farePolicy
-  let distanceFare = calculateDistanceFare farePolicy distance
+  let distanceFare = farePolicy.farePerKm * (Amount $ toRational $ distance.getHighPrecMeters / 1000)
   let nightShiftRate = calculateNightShiftRate farePolicy startTime
-  FareParameters fareForPickup distanceFare nightShiftRate
-
-calculateBaseFare ::
-  FarePolicy ->
-  Amount
-calculateBaseFare farePolicy = farePolicy.fareForPickup
-
-calculateDistanceFare ::
-  FarePolicy ->
-  Distance ->
-  Amount
-calculateDistanceFare farePolicy distance = farePolicy.farePerKm * (Amount $ toRational distance.getHighPrecMeters)
+  FareParameters farePolicy.fareForPickup distanceFare nightShiftRate
 
 calculateNightShiftRate ::
   FarePolicy ->

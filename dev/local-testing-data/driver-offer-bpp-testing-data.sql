@@ -65,7 +65,7 @@ INSERT INTO atlas_driver_offer_bpp.registration_token (id, auth_medium, auth_typ
 	('002d53e2-d02b-494a-a4ac-ec1ea0027e18', 'SMS', 'OTP', '1234', '002df941-427a-4085-a7d0-96240f166672', true, 3, 365, 3, '002b93df-4f7c-440f-bada-4d46c396d7d0', 'USER                                ', NULL, '2022-04-12 15:15:42.296488+00', '2022-04-12 15:15:42.296488+00');
 
 INSERT INTO atlas_driver_offer_bpp.fare_policy
-  (id, organization_id, base_fare, fare_per_km, night_shift_start, night_shift_end,
+  (id, organization_id, fare_for_pickup, fare_per_km, night_shift_start, night_shift_end,
     night_shift_rate, created_at, updated_at) VALUES
   ('0991cec4-72d4-40f6-8ddd-c77a97c3b898', '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f', 120, 12, NULL, NULL, 1, now(), now()),
   ('002d53e2-d02b-494a-a4ac-ec1ea0027e18', '7f7896dd-787e-4a0b-8675-c3f6fe93aa9e', 120, 12, NULL, NULL, 1, now(), now());

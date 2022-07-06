@@ -4,8 +4,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.SearchRequest
-import Storage.Tabular.SearchReqLocation
 import Storage.Tabular.SearchRequest
+import Storage.Tabular.SearchRequest.SearchReqLocation
 
 create :: SearchRequest -> SqlDB ()
 create dsReq = Esq.runTransaction $

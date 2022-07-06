@@ -7,7 +7,7 @@ import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
 import qualified Domain.Action.Beckn.Search as DSearch
-import qualified Domain.Types.SearchReqLocation as Location
+import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import Types.Error
 import Utils.Common
 
