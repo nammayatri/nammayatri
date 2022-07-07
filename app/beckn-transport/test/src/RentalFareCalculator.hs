@@ -128,7 +128,7 @@ fareBreakupSum = testCase "Sum of rental fare breakup should be equal to total f
   where
     startTime = mockTime 15 13
     stopTime = mockTime2
-    distance = Meter 116235.5
+    distance = HighPrecMeters 116235.5
 
 -- Effects tests
 

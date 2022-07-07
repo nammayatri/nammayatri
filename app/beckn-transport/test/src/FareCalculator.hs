@@ -401,7 +401,7 @@ fareBreakupSum = testCase "Sum of fare breakup should be equal to total fare" $ 
   sum (fareBreakups <&> (.amount)) `shouldBe` totalFare
   where
     startTime = mockTime 19
-    distance = Meter 18000.0
+    distance = HighPrecMeters 18000.0
     handle' =
       handle
         { getFarePolicy = \_orgId _vehicleVariant ->

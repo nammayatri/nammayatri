@@ -4,7 +4,6 @@ module Storage.Queries.FullEntityBuilders where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Common
 import Domain.Types.Quote as Quote
 import Domain.Types.RideBooking as RideBooking
 import qualified Storage.Queries.RentalSlab as QRentalSlab
