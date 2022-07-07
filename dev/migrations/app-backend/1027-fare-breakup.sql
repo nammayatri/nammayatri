@@ -4,8 +4,8 @@ CREATE TABLE atlas_app.quote_terms_bak_1023 AS TABLE atlas_app.quote_terms;
 -- do we need migrate data also?
 CREATE TABLE atlas_app.rental_slab (
     id character(36) NOT NULL PRIMARY KEY,
-    base_distance double precision NOT NULL,
-    base_duration_hr integer NOT NULL
+    base_distance integer NOT NULL,
+    base_duration integer NOT NULL
 );
 
 DROP TABLE atlas_app.rental_quote;

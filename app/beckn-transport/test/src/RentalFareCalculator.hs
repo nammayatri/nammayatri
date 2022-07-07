@@ -16,21 +16,6 @@ import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 import Utils.Time
 
-defaultFarePolicy :: RentalFarePolicy
-defaultFarePolicy =
-  RentalFarePolicy
-    { id = rentalFarePolicyId,
-      vehicleVariant = Vehicle.HATCHBACK,
-      organizationId = orgID,
-      baseFare = 120.0,
-      baseDistance = 100,
-      baseDuration = 3,
-      extraKmFare = 2,
-      extraMinuteFare = 1,
-      driverAllowanceForDay = Just 30,
-      descriptions = []
-    }
-
 rentalFarePolicyId :: Id RentalFarePolicy
 rentalFarePolicyId = Fixtures.defaultFarePolicy.id
 

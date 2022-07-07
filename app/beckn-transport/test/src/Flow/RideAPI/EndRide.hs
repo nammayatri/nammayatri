@@ -53,7 +53,7 @@ handle =
         Id "completed_ride" -> Just ride{status = Ride.COMPLETED}
         Id "rentalRide" -> Just rentalRide
         _ -> Nothing,
-      notifyCompleteToBAP = \_ _ -> pure (),
+      notifyCompleteToBAP = \_ _ _ -> pure (),
       endRideTransaction = \_ _ _ _ -> pure (),
       calculateFare = \_ _ _ _ ->
         return $
