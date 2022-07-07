@@ -36,8 +36,19 @@ data QuoteInfo = QuoteInfo
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    quoteDetails :: DQuote.QuoteAPIDetails,
+    quoteDetails :: QuoteDetails,
     descriptions :: [Text]
+  }
+
+data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails RentalQuoteDetails
+
+newtype OneWayQuoteDetails = OneWayQuoteDetails
+  { distanceToNearestDriver :: HighPrecMeters
+  }
+
+data RentalQuoteDetails = RentalQuoteDetails
+  { baseDistance :: Kilometers,
+    baseDuration :: Hours
   }
 
 searchCb ::
@@ -68,10 +79,10 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
   quoteDetails' <- case quoteDetails of
-    DQuote.OneWayAPIDetails oneWayDetails ->
+    OneWayDetails oneWayDetails ->
       pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
-    DQuote.RentalAPIDetails rentalSlab -> do
-      DQuote.RentalDetails <$> buildRentalSlabAPIEntity rentalSlab
+    RentalDetails rentalSlab -> do
+      DQuote.RentalDetails <$> buildRentalSlab rentalSlab
   pure
     DQuote.Quote
       { id = uid,
@@ -85,11 +96,11 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
         ..
       }
 
-mkOneWayQuoteDetails :: DQuote.OneWayQuoteAPIDetails -> DQuote.OneWayQuoteDetails
-mkOneWayQuoteDetails DQuote.OneWayQuoteAPIDetails {..} = DQuote.OneWayQuoteDetails {..}
+mkOneWayQuoteDetails :: OneWayQuoteDetails -> DQuote.OneWayQuoteDetails
+mkOneWayQuoteDetails OneWayQuoteDetails {..} = DQuote.OneWayQuoteDetails {..}
 
-buildRentalSlabAPIEntity :: MonadFlow m => DRentalSlab.RentalSlabAPIEntity -> m DRentalSlab.RentalSlab
-buildRentalSlabAPIEntity DRentalSlab.RentalSlabAPIEntity {..} = do
+buildRentalSlab :: MonadFlow m => RentalQuoteDetails -> m DRentalSlab.RentalSlab
+buildRentalSlab RentalQuoteDetails {..} = do
   id <- generateGUID
   pure DRentalSlab.RentalSlab {..}
 
