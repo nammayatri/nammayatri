@@ -40,7 +40,10 @@ data QuoteInfo = QuoteInfo
     descriptions :: [Text]
   }
 
-data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails RentalQuoteDetails
+data QuoteDetails
+  = OneWayDetails OneWayQuoteDetails
+  | RentalDetails RentalQuoteDetails
+  | AutoDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
@@ -83,6 +86,8 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
       pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
     RentalDetails rentalSlab -> do
       DQuote.RentalDetails <$> buildRentalSlab rentalSlab
+    AutoDetails -> do
+      pure DQuote.AutoDetails
   pure
     DQuote.Quote
       { id = uid,

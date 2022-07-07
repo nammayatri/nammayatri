@@ -16,7 +16,6 @@ data SearchRequest = SearchRequest
     toLocation :: DLoc.SearchReqLocation,
     bapId :: Text,
     bapUri :: BaseUrl,
-    gatewayUri :: BaseUrl,
     createdAt :: UTCTime
   }
   deriving (Generic, PrettyShow, Show)

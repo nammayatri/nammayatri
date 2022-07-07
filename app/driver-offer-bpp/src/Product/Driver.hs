@@ -22,10 +22,10 @@ import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Core.Context as Context
-import qualified Beckn.Types.Core.Taxi.API.OnSearch as API
+import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import Beckn.Types.Id
 import Beckn.Utils.Validation
-import Core.ACL.OnSearch
+import Core.ACL.OnSelect
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
@@ -339,25 +339,28 @@ offerQuote ::
   DriverOfferReq ->
   FlowHandler APISuccess
 offerQuote driverId req = withFlowHandlerAPI $ do
+  logDebug $ "offered fare: " <> show req.offeredFare
   sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
   organization <- QOrg.findById sReq.providerId >>= fromMaybeM (OrgDoesNotExist sReq.providerId.getId)
+  driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   searchRequestForDriver <-
     QSRD.findByDriverAndSearchReq driverId sReq.id
       >>= fromMaybeM (InvalidRequest "no calculated request pool")
-  driverQuote <- buildDriverQuote sReq searchRequestForDriver
+  driverQuote <- buildDriverQuote driver sReq searchRequestForDriver
   Esq.runTransaction $ QDrQt.create driverQuote
-  context <- contextTemplate organization Context.SEARCH sReq.bapId sReq.bapUri (Just sReq.transactionId) sReq.messageId
-  let callbackUrl = sReq.gatewayUri
-      action = buildOnSearchReq organization sReq [driverQuote] <&> mkOnSearchMessage
-  void $ withCallback' withRetry organization Context.SEARCH API.onSearchAPI context callbackUrl action
+  context <- contextTemplate organization Context.SELECT sReq.bapId sReq.bapUri (Just sReq.transactionId) sReq.messageId
+  let callbackUrl = sReq.bapUri
+      action = buildOnSearchReq organization sReq [driverQuote] <&> mkOnSelectMessage
+  void $ withCallback' withRetry organization Context.SELECT API.onSelectAPI context callbackUrl action
   pure Success
   where
     buildDriverQuote ::
       (MonadFlow m) =>
+      SP.Person ->
       DSReq.SearchRequest ->
       SearchRequestForDriver ->
       m DDrQuote.DriverQuote
-    buildDriverQuote s sd = do
+    buildDriverQuote driver s sd = do
       guid <- generateGUID
       now <- getCurrentTime
       pure
@@ -366,6 +369,8 @@ offerQuote driverId req = withFlowHandlerAPI $ do
             status = DDrQuote.Active,
             searchRequestId = s.id,
             driverId,
+            driverName = driver.firstName,
+            driverRating = driver.rating,
             baseFare = sd.baseFare,
             vehicleVariant = sd.vehicleVariant,
             extraFareSelected = req.offeredFare,
@@ -381,7 +386,7 @@ buildOnSearchReq ::
   Org.Organization ->
   DSReq.SearchRequest ->
   [DDrQuote.DriverQuote] ->
-  m DOnSearchReq
+  m DOnSelectReq
 buildOnSearchReq org searchRequest quotes = do
   now <- getCurrentTime
   let transporterInfo =
@@ -393,4 +398,10 @@ buildOnSearchReq org searchRequest quotes = do
             ridesCompleted = 0, -- FIXME
             ridesConfirmed = 0 -- FIXME
           }
-  pure $ DOnSearchReq {transporterInfo, quotes, now, searchRequest}
+  pure $
+    DOnSelectReq
+      { transporterInfo,
+        quotes,
+        now,
+        searchRequest
+      }

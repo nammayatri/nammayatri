@@ -5,20 +5,36 @@ module Storage.Queries.Quote where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Data.Tuple.Extra
 import Domain.Types.Quote
 import Domain.Types.SearchRequest
 import Storage.Queries.FullEntityBuilders (buildFullQuote)
 import Storage.Tabular.Quote
+import Storage.Tabular.Quote.Instances
+
+createDetails :: QuoteDetailsT -> FullEntitySqlDB ()
+createDetails = \case
+  OneWayDetailsT -> pure ()
+  RentalDetailsT rentalSlabT -> do
+    Esq.create' rentalSlabT
+  AutoDetailsT -> pure ()
 
 create :: Quote -> SqlDB ()
 create quote =
   Esq.withFullEntity quote $ \(quoteT, mbTripTermsT, quoteDetailsT) -> do
-    traverse_ Esq.create' mbTripTermsT
-    case quoteDetailsT of
-      OneWayDetailsT -> pure ()
-      RentalDetailsT rentalSlabT -> do
-        Esq.create' rentalSlabT
     Esq.create' quoteT
+    traverse_ Esq.create' mbTripTermsT
+    createDetails quoteDetailsT
+
+createMany :: [Quote] -> SqlDB ()
+createMany quotes =
+  Esq.withFullEntities quotes $ \list -> do
+    let quoteTs = map fst3 list
+        mbTripTermsTs = mapMaybe snd3 list
+        quoteDetailsTs = map thd3 list
+    Esq.createMany' quoteTs
+    Esq.createMany' mbTripTermsTs
+    traverse_ createDetails quoteDetailsTs
 
 findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById quoteId = Esq.buildDType $ do

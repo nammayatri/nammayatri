@@ -1,26 +1,30 @@
 module Domain.Action.UI.Search.Common where
 
 import Beckn.Types.Id
+import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchReqLocation as Location
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude hiding (state)
+import qualified Storage.Queries.Person as QPerson
 import Tools.Metrics (CoreMetrics)
 import qualified Types.API.Search as API
+import Types.Error
 import Utils.Common
 
 buildSearchRequest ::
   ( (HasFlowEnv m r ["searchRequestExpiry" ::: Maybe Seconds, "graphhopperUrl" ::: BaseUrl]),
-    MonadFlow m,
+    EsqDBFlow m r,
     CoreMetrics m
   ) =>
-  Text ->
+  Id DPerson.Person ->
   Location.SearchReqLocation ->
   Maybe Location.SearchReqLocation ->
   Maybe HighPrecMeters ->
   UTCTime ->
   m SearchRequest.SearchRequest
-buildSearchRequest userId pickup mbDrop mbDistance now = do
+buildSearchRequest personId pickup mbDrop mbDistance now = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   searchRequestId <- generateGUID
   validTill <- getSearchRequestExpiry now
   return
@@ -28,10 +32,11 @@ buildSearchRequest userId pickup mbDrop mbDistance now = do
       { id = searchRequestId,
         startTime = now,
         validTill = validTill,
-        riderId = Id userId,
+        riderId = personId,
         fromLocationId = pickup.id,
         toLocationId = mbDrop <&> (.id),
         distance = mbDistance,
+        merchantId = person.merchantId,
         createdAt = now
       }
   where

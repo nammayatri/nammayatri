@@ -4,6 +4,7 @@ import App.Routes.FarePolicy
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import qualified Beckn.Types.Core.Taxi.API.Search as API
+import qualified Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi
@@ -15,6 +16,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
 import Product.BecknProvider.Search as BP
+import Product.BecknProvider.Select as BP
 import qualified Product.Driver as Driver
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
@@ -245,10 +247,14 @@ type OrgBecknAPI =
     :> SignatureAuth "Authorization"
     :> SignatureAuth "X-Gateway-Authorization"
     :> API.SearchAPI
+    :<|> Capture "orgId" (Id Organization)
+    :> SignatureAuth "Authorization"
+    :> API.SelectAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
   BP.search
+    :<|> BP.select
 
 type HealthCheckAPI = Get '[JSON] Text
 

@@ -16,10 +16,6 @@ import qualified Domain.Types.VehicleVariant as VehVar
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.TripTerms as STripTerms
-import Types.Error
-import Utils.Common hiding (id)
-
-derivePersistField "Domain.FareProductType"
 
 mkPersist
   defaultSqlSettings
@@ -49,45 +45,3 @@ instance TEntityKey QuoteT where
   type DomainKey QuoteT = Id Domain.Quote
   fromKey (QuoteTKey _id) = Id _id
   toKey (Id id) = QuoteTKey id
-
-data QuoteDetailsT = OneWayDetailsT | RentalDetailsT SRentalSlab.RentalSlabT
-
-type FullQuoteT = (QuoteT, Maybe STripTerms.TripTermsT, QuoteDetailsT)
-
-instance TType FullQuoteT Domain.Quote where
-  fromTType (QuoteT {..}, mbTripTermsT, quoteDetailsT) = do
-    pUrl <- parseBaseUrl providerUrl
-    tripTerms <- forM mbTripTermsT fromTType
-    quoteDetails <- case quoteDetailsT of
-      OneWayDetailsT -> do
-        distanceToNearestDriver' <- distanceToNearestDriver & fromMaybeM (QuoteFieldNotPresent "distanceToNearestDriver")
-        pure . Domain.OneWayDetails $
-          Domain.OneWayQuoteDetails
-            { distanceToNearestDriver = HighPrecMeters distanceToNearestDriver'
-            }
-      RentalDetailsT rentalSlabT ->
-        Domain.RentalDetails <$> fromTType rentalSlabT
-    return $
-      Domain.Quote
-        { id = Id id,
-          requestId = fromKey requestId,
-          providerUrl = pUrl,
-          ..
-        }
-  toTType Domain.Quote {..} = do
-    let (fareProductType, quoteDetailsT, distanceToNearestDriver, rentalSlabId) = case quoteDetails of
-          Domain.OneWayDetails details -> (Domain.ONE_WAY, OneWayDetailsT, Just $ getHighPrecMeters details.distanceToNearestDriver, Nothing)
-          Domain.RentalDetails rentalSlab -> do
-            let rentalSlabT = toTType rentalSlab
-            (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey rentalSlab.id)
-
-        quoteT =
-          QuoteT
-            { id = getId id,
-              requestId = toKey requestId,
-              providerUrl = showBaseUrl providerUrl,
-              tripTermsId = toKey <$> (tripTerms <&> (.id)), -- mbTripTermsT <&> (.id) not working
-              ..
-            }
-    let mbTripTermsT = toTType <$> tripTerms
-    (quoteT, mbTripTermsT, quoteDetailsT)

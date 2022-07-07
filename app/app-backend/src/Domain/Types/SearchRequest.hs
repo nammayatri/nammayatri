@@ -5,6 +5,7 @@ module Domain.Types.SearchRequest where
 import Beckn.Prelude
 import Beckn.Types.Common (HighPrecMeters)
 import Beckn.Types.Id
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SearchReqLocation as DLoc
 
@@ -19,6 +20,7 @@ data SearchRequest = SearchRequest
     fromLocationId :: Id DLoc.SearchReqLocation,
     toLocationId :: Maybe (Id DLoc.SearchReqLocation),
     distance :: Maybe HighPrecMeters,
+    merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
     createdAt :: UTCTime
   }
   deriving (Generic, Show)

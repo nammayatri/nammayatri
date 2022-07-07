@@ -197,7 +197,8 @@ mkAuthReq :: Reg.AuthReq
 mkAuthReq =
   Reg.AuthReq
     { mobileNumber = "9000090000",
-      mobileCountryCode = "+91"
+      mobileCountryCode = "+91",
+      merchantId = "FIXME"
     }
 
 mkAuthVerifyReq :: Reg.AuthVerifyReq

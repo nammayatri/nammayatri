@@ -5,8 +5,11 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Init as Init
+import Beckn.Types.Error (GenericError (InvalidRequest))
 import Beckn.Types.Field
+import Beckn.Types.Logging
 import Beckn.Types.MapSearch (LatLong)
+import Beckn.Utils.Common (throwError)
 import Beckn.Utils.Context (buildTaxiContext)
 import qualified Domain.Action.UI.Init as DInit
 import qualified Domain.Types.Quote as Quote
@@ -21,33 +24,39 @@ buildInitReq res = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.INIT res.bookingId.getId Nothing bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl)
-  pure $ BecknReq context $ mkInitMessage res
+  initMessage <- buildInitMessage res
+  pure $ BecknReq context initMessage
 
-mkInitMessage :: DInit.InitRes -> Init.InitMessage
-mkInitMessage res =
-  Init.InitMessage
-    { order =
-        Init.Order
-          { items = [mkOrderItem itemCode],
-            fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime,
-            payment = mkPayment
-          }
-    }
+buildInitMessage :: (MonadThrow m, Log m) => DInit.InitRes -> m Init.InitMessage
+buildInitMessage res = do
+  itemCode <- buildItemCode
+  pure
+    Init.InitMessage
+      { order =
+          Init.Order
+            { items = [mkOrderItem res.bppQuoteId itemCode],
+              fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime,
+              payment = mkPayment
+            }
+      }
   where
-    itemCode = do
-      let (fpType, mbDistance, mbDuration) = case res.quoteDetails of
-            Quote.OneWayDetails _ -> (Init.ONE_WAY_TRIP, Nothing, Nothing)
-            Quote.RentalDetails r -> (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration)
-          vehicleVariant = case res.vehicleVariant of
+    buildItemCode = do
+      (fpType, mbDistance, mbDuration) <- case res.quoteDetails of
+        Quote.OneWayDetails _ -> pure (Init.ONE_WAY_TRIP, Nothing, Nothing)
+        Quote.RentalDetails r -> pure (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration)
+        Quote.AutoDetails -> throwError $ InvalidRequest "Quote should be selected before init"
+      let vehicleVariant = case res.vehicleVariant of
             VehVar.SEDAN -> Init.SEDAN
             VehVar.SUV -> Init.SUV
             VehVar.HATCHBACK -> Init.HATCHBACK
-      Init.ItemCode fpType vehicleVariant mbDistance mbDuration
+            VehVar.AUTO -> Init.AUTO
+      pure $ Init.ItemCode fpType vehicleVariant mbDistance mbDuration
 
-mkOrderItem :: Init.ItemCode -> Init.OrderItem
-mkOrderItem code =
+mkOrderItem :: Maybe Text -> Init.ItemCode -> Init.OrderItem
+mkOrderItem mbBppItemId code =
   Init.OrderItem
-    { descriptor =
+    { id = mbBppItemId,
+      descriptor =
         Init.Descriptor
           { code = code
           }

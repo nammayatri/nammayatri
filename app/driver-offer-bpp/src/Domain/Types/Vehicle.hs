@@ -1,8 +1,11 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Vehicle where
 
 import Beckn.Types.Id
+import Beckn.Utils.GenericPretty
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToParamSchema, ToSchema)
@@ -16,6 +19,7 @@ import Servant.API
 
 data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (PrettyShow) via Showable Category
 
 instance FromHttpApiData Category where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -25,6 +29,7 @@ instance FromHttpApiData Category where
 -----
 data EnergyType = PETROL | DIESEL | HYBRID | ELECTRIC | NG
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+  deriving (PrettyShow) via Showable EnergyType
 
 instance FromHttpApiData EnergyType where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -34,6 +39,7 @@ instance FromHttpApiData EnergyType where
 ----
 data RegistrationCategory = COMMERCIAL | PERSONAL | OTHER | PUBLIC
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (PrettyShow) via Showable RegistrationCategory
 
 instance FromHttpApiData RegistrationCategory where
   parseUrlPiece = parseHeader . DT.encodeUtf8
@@ -56,7 +62,7 @@ data Vehicle = Vehicle
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, PrettyShow)
 
 data VehicleAPIEntity = VehicleAPIEntity
   { id :: Id Vehicle,

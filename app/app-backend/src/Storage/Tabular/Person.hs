@@ -13,6 +13,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.Person as Domain
+import qualified Storage.Tabular.Merchant as SMerchant
 
 derivePersistField "Domain.Role"
 derivePersistField "Domain.Gender"
@@ -39,6 +40,7 @@ mkPersist
       isNew Bool
       deviceToken FCMRecipientToken Maybe
       description Text Maybe
+      merchantId SMerchant.MerchantTId
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -56,6 +58,7 @@ instance TType PersonT Domain.Person where
       Domain.Person
         { id = Id id,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
+          merchantId = fromKey merchantId,
           ..
         }
   toTType Domain.Person {..} =
@@ -63,5 +66,6 @@ instance TType PersonT Domain.Person where
       { id = getId id,
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
+        merchantId = toKey merchantId,
         ..
       }

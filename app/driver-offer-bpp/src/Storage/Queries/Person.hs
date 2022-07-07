@@ -9,6 +9,7 @@ import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import Beckn.Utils.GenericPretty
 import qualified Data.Maybe as Mb
 import Domain.Types.Organization
 import Domain.Types.Person as Person
@@ -203,7 +204,7 @@ data DriverPoolResult = DriverPoolResult
     lat :: Double,
     lon :: Double
   }
-  deriving (Generic)
+  deriving (Generic, PrettyShow, Show)
 
 instance GoogleMaps.HasCoordinates DriverPoolResult where
   getCoordinates dpRes = LatLong dpRes.lat dpRes.lon

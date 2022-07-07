@@ -6,6 +6,7 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Data.Text as T
 import Domain.Types.Person as Person
+import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
@@ -13,6 +14,7 @@ import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as Person
+import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Metrics
 import Utils.Common
 
@@ -234,3 +236,26 @@ notifyOnRideBookingReallocated rideBooking = do
             showTimeIst (rideBooking.startTime) <> ".",
             "Please wait until we allocate other driver."
           ]
+
+notifyOnQuoteReceived :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => DQuote.Quote -> m ()
+notifyOnQuoteReceived quote = do
+  searchRequest <- QSearchReq.findById quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
+  person <- Person.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
+  let notificationData = mkNotificationData
+  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  where
+    mkNotificationData = do
+      let title = FCMNotificationTitle $ T.pack "Quote received!"
+          body =
+            FCMNotificationBody $
+              unwords
+                [ "New quote recived with price",
+                  show (quote.estimatedFare) <> "."
+                ]
+      FCM.FCMData
+        { fcmNotificationType = FCM.QUOTE_RECEIVED,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Product,
+          fcmEntityIds = getId quote.requestId,
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
+        }

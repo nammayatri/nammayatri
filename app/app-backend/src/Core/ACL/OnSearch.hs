@@ -78,6 +78,7 @@ buildQuoteInfo item = do
   quoteDetails <- case item.category_id of
     OnSearch.ONE_WAY_TRIP -> DOnSearch.OneWayDetails <$> buildOneWayQuoteDetails item
     OnSearch.RENTAL_TRIP -> DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
+    OnSearch.AUTO_TRIP -> pure DOnSearch.AutoDetails
   let itemCode = item.descriptor.code
       vehicleVariant = itemCode.vehicleVariant
       estimatedFare = realToFrac item.price.value
@@ -94,6 +95,7 @@ buildQuoteInfo item = do
       OnSearch.SEDAN -> VehVar.SEDAN
       OnSearch.SUV -> VehVar.SUV
       OnSearch.HATCHBACK -> VehVar.HATCHBACK
+      OnSearch.AUTO -> VehVar.AUTO
 
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>
@@ -108,6 +110,7 @@ buildOneWayQuoteDetails item = do
       { distanceToNearestDriver = realToFrac distanceToNearestDriver
       }
 
+--FIXME remove round by using Kilometers and Hours in spec
 buildRentalQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->

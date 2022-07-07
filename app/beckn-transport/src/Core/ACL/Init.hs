@@ -26,9 +26,10 @@ buildInitReq subscriber req = do
     throwError (InvalidRequest "Invalid bap_id")
   let itemCode = item.descriptor.code
   initTypeReq <- buildInitTypeReq item
+  vehicleVariant <- fromEitherM InvalidRequest $ castVehicleVariant itemCode.vehicleVariant
   return $
     DInit.InitReq
-      { vehicleVariant = castVehicleVariant itemCode.vehicleVariant,
+      { vehicleVariant, -- = castVehicleVariant itemCode.vehicleVariant,
         fromLocation = LatLong {lat = fulfillment.start.location.gps.lat, lon = fulfillment.start.location.gps.lon},
         -- toLocation = fulfillment.end <&> \end -> LatLong {lat = end.location.gps.lat, lon = end.location.gps.lon},
         bapId = subscriber.subscriber_id,
@@ -42,9 +43,10 @@ buildInitReq subscriber req = do
     fulfillment = req.message.order.fulfillment
 
     castVehicleVariant = \case
-      Init.SUV -> Veh.SUV
-      Init.HATCHBACK -> Veh.HATCHBACK
-      Init.SEDAN -> Veh.SEDAN
+      Init.SUV -> Right Veh.SUV
+      Init.HATCHBACK -> Right Veh.HATCHBACK
+      Init.SEDAN -> Right Veh.SEDAN
+      Init.AUTO -> Left "Auto vehicles are not supported by this BPP"
     buildInitTypeReq item = do
       let itemCode = item.descriptor.code
       case itemCode.fareProductType of
@@ -62,3 +64,4 @@ buildInitReq subscriber req = do
             DInit.InitRentalReq
               { ..
               }
+        Init.AUTO_TRIP -> throwError $ InvalidRequest "Auto trip is not supported by this BPP"

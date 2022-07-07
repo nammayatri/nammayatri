@@ -11,6 +11,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.BookingLocation as DLoc
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.TripTerms as DTripTerms
@@ -55,6 +56,7 @@ data RideBooking = RideBooking
     vehicleVariant :: VehicleVariant,
     rideBookingDetails :: RideBookingDetails,
     tripTerms :: Maybe DTripTerms.TripTerms,
+    merchantId :: Id DMerchant.Merchant,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

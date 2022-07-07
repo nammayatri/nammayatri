@@ -27,6 +27,8 @@ mkPersist
       status Domain.DriverQuoteStatus
       searchRequestId SReq.SearchRequestTId
       driverId PersonTId
+      driverName Text
+      driverRating Double Maybe
       baseFare Double
       extraFareSelected Double Maybe
       vehicleVariant Variant.Variant

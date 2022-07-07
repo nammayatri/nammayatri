@@ -12,6 +12,7 @@ import qualified Beckn.Types.Core.Metro.API.OnSearch as Metro
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnInit as API
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as API
+import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
@@ -19,6 +20,7 @@ import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi (Info (..), OpenApi (..))
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.CancellationReason as SCancellationReason
+import qualified Domain.Types.Quote as Quote
 import qualified Domain.Types.RegistrationToken as SRT
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
@@ -41,6 +43,7 @@ import qualified Product.Ride as Ride
 import qualified Product.RideBooking as RideBooking
 import qualified Product.SavedLocations as SavedLocations
 import qualified Product.Search as Search
+import qualified Product.Select as Select
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Support as Support
@@ -59,6 +62,7 @@ import qualified Types.API.Ride as RideAPI
 import qualified Types.API.RideBooking as RideBookingAPI
 import qualified Types.API.SavedLocations as SavedLocationsAPI
 import qualified Types.API.Search as Search
+import Types.API.Select
 import qualified Types.API.Serviceability as Serviceability
 import qualified Types.API.Support as Support
 import Utils.Auth (TokenAuth)
@@ -83,6 +87,7 @@ type UIAPI =
     :<|> RegistrationAPI
     :<|> ProfileAPI
     :<|> SearchAPI
+    :<|> SelectAPI
     :<|> Init.InitAPI
     :<|> QuoteAPI
     :<|> Confirm.ConfirmAPI
@@ -120,6 +125,7 @@ uiAPI =
     :<|> registrationFlow
     :<|> profileFlow
     :<|> searchFlow
+    :<|> selectFlow
     :<|> Init.init
     :<|> quoteFlow
     :<|> confirmFlow
@@ -186,6 +192,8 @@ type BecknCabAPI =
     :> SignatureAuth "X-Gateway-Authorization"
     :> API.OnSearchAPI
     :<|> SignatureAuth "Authorization"
+    :> API.OnSelectAPI
+    :<|> SignatureAuth "Authorization"
     :> API.OnInitAPI
     :<|> SignatureAuth "Authorization"
     :> API.OnConfirmAPI
@@ -201,6 +209,7 @@ type SearchAPI =
 becknCabApi :: FlowServer BecknCabAPI
 becknCabApi =
   Search.searchCb
+    :<|> Select.onSelect
     :<|> Init.onInit
     :<|> Confirm.onConfirm
     :<|> Update.onUpdate
@@ -219,6 +228,27 @@ type QuoteAPI =
 quoteFlow :: FlowServer QuoteAPI
 quoteFlow =
   Quote.getQuotes
+
+-------- Select Flow --------
+type SelectAPI =
+  "rideSearch"
+    :> ( TokenAuth
+           :> "quotes"
+           :> Capture "quoteId" (Id Quote.Quote)
+           :> "select"
+           :> Post '[JSON] APISuccess
+           :<|> TokenAuth
+             :> "quotes"
+             :> Capture "quoteId" (Id Quote.Quote)
+             :> "select"
+             :> "list"
+             :> Get '[JSON] SelectListRes
+       )
+
+selectFlow :: FlowServer SelectAPI
+selectFlow =
+  Select.select
+    :<|> Select.selectList
 
 -------- Confirm Flow --------
 

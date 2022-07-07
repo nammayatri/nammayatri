@@ -10,6 +10,7 @@ import Servant.API
 
 data OrganizationType
   = PROVIDER
+  | APP
   | GATEWAY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema)
 

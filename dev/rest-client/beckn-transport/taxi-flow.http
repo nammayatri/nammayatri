@@ -156,6 +156,7 @@ content-type: application/json
 token: {{token}}
 
 ###
+
 @bookingId = {{confirm.response.body.bookingId}}
 POST {{app-host}}/rideBooking/{{bookingId}}
 token: {{token}}

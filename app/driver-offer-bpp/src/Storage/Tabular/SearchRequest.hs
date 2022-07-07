@@ -27,7 +27,6 @@ mkPersist
       toLocationId SearchReqLocationTId
       bapId Text
       bapUri Text
-      gatewayUri Text
       createdAt UTCTime
       Primary id
       deriving Generic
@@ -41,7 +40,6 @@ instance TEntityKey SearchRequestT where
 instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequest where
   fromTType (SearchRequestT {..}, fromLoc, toLoc) = do
     pUrl <- parseBaseUrl bapUri
-    gUrl <- parseBaseUrl gatewayUri
     let fromLoc_ = mkDomainSearchReqLocation fromLoc
         toLoc_ = mkDomainSearchReqLocation toLoc
     return $
@@ -51,7 +49,6 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
-          gatewayUri = gUrl,
           ..
         }
   toTType Domain.SearchRequest {..} =
@@ -61,7 +58,6 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
-          gatewayUri = showBaseUrl gatewayUri,
           ..
         },
       mkTabularSearchReqLocation fromLocation,

@@ -6,6 +6,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person
 import Storage.Tabular.Person
 
@@ -32,13 +33,14 @@ findByEmailAndPassword email_ password = do
         &&. person ^. PersonPasswordHash ==. val (Just passwordDbHash)
     return person
 
-findByRoleAndMobileNumber ::
-  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
+findByRoleAndMobileNumberAndMerchantId ::
+  (Transactionable m, EncFlow m r) =>
   Role ->
   Text ->
   Text ->
+  Id Merchant ->
   m (Maybe Person)
-findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
+findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumber_ merchantId = do
   mobileNumberDbHash <- getDbHash mobileNumber_
   findOne $ do
     person <- from $ table @PersonT
@@ -46,16 +48,18 @@ findByRoleAndMobileNumber role_ countryCode mobileNumber_ = do
       person ^. PersonRole ==. val role_
         &&. person ^. PersonMobileCountryCode ==. val (Just countryCode)
         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
-findByRoleAndMobileNumberWithoutCC :: (MonadThrow m, Log m, Transactionable m, EncFlow m r) => Role -> Text -> m (Maybe Person)
-findByRoleAndMobileNumberWithoutCC role_ mobileNumber_ = do
+findByRoleAndMobileNumberAndMerchantIdWithoutCC :: (Transactionable m, EncFlow m r) => Role -> Text -> Id Merchant -> m (Maybe Person)
+findByRoleAndMobileNumberAndMerchantIdWithoutCC role_ mobileNumber_ merchantId = do
   mobileNumberDbHash <- getDbHash mobileNumber_
   findOne $ do
     person <- from $ table @PersonT
     where_ $
       person ^. PersonRole ==. val role_
         &&. person ^. PersonMobileNumberHash ==. val (Just mobileNumberDbHash)
+        &&. person ^. PersonMerchantId ==. val (toKey merchantId)
     return person
 
 updateMultiple :: Id Person -> Person -> SqlDB ()

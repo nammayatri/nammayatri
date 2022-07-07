@@ -1,21 +1,23 @@
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Domain.Types.Quote where
+module Domain.Types.Quote (module Domain.Types.Quote, module Types.Common) where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.GenericPretty
+import Data.Aeson
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Data.OpenApi as OpenApi
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant (VehicleVariant)
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
-
--- move this in separate file
-data FareProductType = ONE_WAY | RENTAL deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
+import Types.Common
 
 data Quote = Quote
   { id :: Id Quote,
@@ -33,15 +35,59 @@ data Quote = Quote
     quoteDetails :: QuoteDetails,
     createdAt :: UTCTime
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, PrettyShow)
 
-data QuoteDetails = OneWayDetails OneWayQuoteDetails | RentalDetails DRentalSlab.RentalSlab
+data QuoteDetails
+  = OneWayDetails OneWayQuoteDetails
+  | RentalDetails DRentalSlab.RentalSlab
+  | AutoDetails
   deriving (Generic, Show)
+  deriving (PrettyShow) via Showable QuoteDetails
+
+-- FIXME: make generic instances more powerful to capture this case
+
+defineFareProductType :: QuoteDetails -> FareProductType
+defineFareProductType (OneWayDetails _) = ONE_WAY
+defineFareProductType (RentalDetails _) = RENTAL
+defineFareProductType AutoDetails = AUTO
+
+fareProductOptions :: Options
+fareProductOptions =
+  defaultOptions
+    { sumEncoding = fareProductTaggedObject,
+      constructorTagModifier = fareProductConstructorModifier
+    }
+
+fareProductSchemaOptions :: OpenApi.SchemaOptions
+fareProductSchemaOptions =
+  OpenApi.defaultSchemaOptions
+    { OpenApi.sumEncoding = fareProductTaggedObject,
+      OpenApi.constructorTagModifier = fareProductConstructorModifier
+    }
+
+fareProductTaggedObject :: SumEncoding
+fareProductTaggedObject =
+  defaultTaggedObject
+    { tagFieldName = "fareProductType"
+    }
+
+fareProductConstructorModifier :: String -> String
+fareProductConstructorModifier = \case
+  "OneWayDetails" -> "ONE_WAY"
+  "RentalDetails" -> "RENTAL"
+  "AutoDetails" -> "AUTO"
+  x -> x
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
   }
-  deriving (Generic, Show)
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, PrettyShow)
+
+data QuoteTerms = QuoteTerms
+  { id :: Id QuoteTerms,
+    description :: Text
+  }
+  deriving (Show)
 
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
@@ -59,7 +105,10 @@ data QuoteAPIEntity = QuoteAPIEntity
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 -- do not change constructor names without changing fareProductConstructorModifier
-data QuoteAPIDetails = OneWayAPIDetails OneWayQuoteAPIDetails | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
+data QuoteAPIDetails
+  = OneWayAPIDetails OneWayQuoteAPIDetails
+  | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
+  | AutoAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON QuoteAPIDetails where
@@ -81,6 +130,7 @@ mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
   RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
+  AutoDetails -> AutoAPIDetails
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} = do

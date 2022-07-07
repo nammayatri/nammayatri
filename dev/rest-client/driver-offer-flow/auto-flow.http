@@ -1,0 +1,124 @@
+
+@driver-offer-bpp-host = http://localhost:8016
+@token = {{app-token}}
+
+# FIXME not working
+# @name healthcheck
+GET {{driver-offer-bpp-host}}
+
+###
+
+@currentTime = 2022-03-03T23:37
+
+# @name updateInitial
+POST {{driver-offer-bpp-host}}/v2/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.31742659311804,
+            "lat": 10.041437092019764
+        },
+        "ts": "{{currentTime}}:01.114244Z"
+    }
+]
+
+###
+
+# @name setActive
+POST {{driver-offer-bpp-host}}/v2/driver/setActivity?active=true
+content-type: application/json
+token: {{driver-token}}
+###
+
+###
+
+# @name search
+POST {{app-host}}/rideSearch
+content-type: application/json
+token: {{token}}
+
+{
+  "fareProductType" : "ONE_WAY",
+  "contents" : {
+    "origin": {
+      "address": {
+          "street": "Edapally Metro Station",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
+      "gps": {
+          "lon": 76.31642659311804,
+          "lat": 10.041437092019764
+      }
+    },
+    "destination": {
+      "address": {
+              "street": "Ambattukavu",
+              "state": "Kerala",
+              "door": "",
+              "country": "India",
+              "city": "Aluva",
+              "building": "Ambattukavu metro station",
+              "areaCode": "",
+              "area": "Choornikkara"
+          },
+      "gps": {
+          "lon": 76.3388894,
+          "lat": 10.0792806
+      }
+    }
+  }
+}
+
+###
+
+@searchId = {{search.response.body.searchId}}
+
+# @name quotes
+GET {{app-host}}/rideSearch/{{searchId}}/quotes
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name select
+@quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
+
+POST {{app-host}}/rideSearch/quotes/{{quoteId}}/select HTTP/1.1
+content-type: application/json
+token: {{token}}
+
+###
+
+# @name nearbySearchRequest
+GET {{driver-offer-bpp-host}}/v2/driver/nearbyRideRequest
+token: {{driver-token}}
+
+###
+
+# @name offerQuote
+POST {{driver-offer-bpp-host}}/v2/driver/searchRequest/quote/offer
+token: {{driver-token}}
+content-type: application/json
+
+{
+    "offeredFare": 30.5,
+    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[0].searchRequestId}}"
+}
+
+###
+
+# @name selectedQuotes
+GET {{app-host}}/rideSearch/quotes/{{quoteId}}/select/list
+content-type: application/json
+token: {{token}}
+
+###

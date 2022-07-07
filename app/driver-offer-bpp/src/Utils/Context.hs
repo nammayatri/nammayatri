@@ -3,6 +3,7 @@ module Utils.Context where
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Core.Context
+import Beckn.Types.TimeRFC339
 import Data.String.Conversions
 import Domain.Types.Organization (Organization (..))
 import Servant.Client
@@ -27,7 +28,7 @@ contextTemplate ::
   Text ->
   m Context
 contextTemplate org action bap_id bap_uri transaction_id message_id = do
-  now <- getCurrentTime
+  now <- UTCTimeRFC3339 <$> getCurrentTime
   core_version <- asks (.coreVersion)
   nwAddress <- asks (.nwAddress)
   let bpp_id = org.shortId.getShortId

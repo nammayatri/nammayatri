@@ -17,7 +17,6 @@ import qualified Data.Text as T
 import qualified Domain.Search as DSearch
 import qualified ExternalAPI.Flow as ExternalAPI
 import qualified Storage.Queries.Search as QSearch
-import Text.Read (readMaybe)
 import Tools.Auth (PersonId)
 import Tools.Context (buildContext)
 import Tools.Error

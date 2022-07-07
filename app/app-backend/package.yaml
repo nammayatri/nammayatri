@@ -84,6 +84,7 @@ dependencies:
   - servant-openapi3
   - openapi3
   - persistent
+  - extra
 
 ghc-options:
   - -fwrite-ide-info

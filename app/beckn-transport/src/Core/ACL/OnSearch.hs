@@ -151,6 +151,7 @@ mkVehicleRideDescription = \case
   OnSearch.SUV -> "SUV ride."
   OnSearch.HATCHBACK -> "Hatchback ride."
   OnSearch.SEDAN -> "Sedan ride."
+  OnSearch.AUTO -> "Auto ride."
 
 mkCategory :: DFP.FareProductType -> OnSearch.Category
 mkCategory DFP.ONE_WAY = do

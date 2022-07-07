@@ -54,6 +54,7 @@ getOffers searchRequest = do
       case quote.quoteDetails of
         SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
         SQuote.RentalDetails _ -> Nothing
+        SQuote.AutoDetails -> Nothing
     sortByEstimatedFare quoteList = do
       let sortFunc = compare `on` (.estimatedFare)
       sortBy sortFunc quoteList

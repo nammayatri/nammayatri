@@ -28,7 +28,7 @@ search personId req = do
   validateServiceability
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest (getId personId) fromLocation Nothing Nothing now
+  searchRequest <- DSearch.buildSearchRequest personId fromLocation Nothing Nothing now
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId

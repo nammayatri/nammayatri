@@ -7,6 +7,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Domain.Types.RideBooking as DRB
 import Storage.Queries.FullEntityBuilders (buildFullRideBooking)
@@ -52,6 +53,16 @@ findByBPPBookingId bppRbId = Esq.buildDType $ do
   bookingT <- Esq.findOne' $ do
     rideBooking <- from $ table @RB.RideBookingT
     where_ $ rideBooking ^. RB.RideBookingBppBookingId ==. val (Just $ getId bppRbId)
+    return rideBooking
+  join <$> mapM buildFullRideBooking bookingT
+
+findByIdAndMerchantId :: Transactionable m => Id RideBooking -> Id Merchant -> m (Maybe RideBooking)
+findByIdAndMerchantId rideBookingId merchantId = Esq.buildDType $ do
+  bookingT <- Esq.findOne' $ do
+    rideBooking <- from $ table @RB.RideBookingT
+    where_ $
+      rideBooking ^. RB.RideBookingId ==. val rideBookingId.getId
+        &&. rideBooking ^. RB.RideBookingMerchantId ==. val (toKey merchantId)
     return rideBooking
   join <$> mapM buildFullRideBooking bookingT
 

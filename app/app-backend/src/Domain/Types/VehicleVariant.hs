@@ -1,11 +1,13 @@
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Types.VehicleVariant where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Utils.GenericPretty
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO
   deriving
     ( Show,
       Eq,
@@ -18,5 +20,6 @@ data VehicleVariant = SEDAN | SUV | HATCHBACK
       Enum,
       Bounded
     )
+  deriving (PrettyShow) via Showable VehicleVariant
 
 derivePersistField "VehicleVariant"

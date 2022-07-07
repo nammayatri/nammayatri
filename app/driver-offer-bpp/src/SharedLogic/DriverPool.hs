@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingVia #-}
+
 module SharedLogic.DriverPool
   ( calculateDriverPool,
   )
@@ -20,7 +22,8 @@ calculateDriverPool ::
   ( Transactionable m,
     HasFlowEnv m r ["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     CoreMetrics m,
-    HasGoogleMaps m r
+    HasGoogleMaps m r,
+    HasPrettyLogger m r
   ) =>
   LatLong ->
   Id SOrg.Organization ->
@@ -33,6 +36,7 @@ calculateDriverPool pickupLatLong orgId = do
         pickupLatLong
         radius
         orgId
+  logPretty DEBUG "approxDriverPool" approxDriverPool
   case approxDriverPool of
     [] -> pure []
     (a : pprox) -> filterOutDriversWithDistanceAboveThreshold radius pickupLatLong (a :| pprox)
@@ -41,7 +45,8 @@ filterOutDriversWithDistanceAboveThreshold ::
   ( Transactionable m,
     CoreMetrics m,
     MonadFlow m,
-    HasGoogleMaps m r
+    HasGoogleMaps m r,
+    HasPrettyLogger m r
   ) =>
   Integer ->
   LatLong ->
@@ -49,6 +54,9 @@ filterOutDriversWithDistanceAboveThreshold ::
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
 filterOutDriversWithDistanceAboveThreshold threshold pickupLatLong driverPoolResults = do
   getDistanceResults <- GoogleMaps.getDistances (Just GoogleMaps.CAR) driverPoolResults (pickupLatLong :| []) Nothing
-  pure $ NE.filter filterFunc getDistanceResults
+  logPretty DEBUG "get distance results" getDistanceResults
+  let result = NE.filter filterFunc getDistanceResults
+  logPretty DEBUG "secondly filtered driver pool" result
+  pure result
   where
     filterFunc estDist = getMeters estDist.distance <= fromIntegral threshold

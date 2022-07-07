@@ -12,6 +12,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Common (HighPrecMeters (..))
 import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
+import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.Person as SP
 import qualified Storage.Tabular.SearchReqLocation as SLoc
 
@@ -26,6 +27,7 @@ mkPersist
       fromLocationId SLoc.SearchReqLocationTId
       toLocationId SLoc.SearchReqLocationTId Maybe
       distance Double Maybe
+      merchantId SMerchant.MerchantTId
       createdAt UTCTime
       Primary id
       deriving Generic
@@ -45,6 +47,7 @@ instance TType SearchRequestT Domain.SearchRequest where
           fromLocationId = fromKey fromLocationId,
           toLocationId = fromKey <$> toLocationId,
           distance = HighPrecMeters <$> distance,
+          merchantId = fromKey merchantId,
           ..
         }
   toTType Domain.SearchRequest {..} =
@@ -54,5 +57,6 @@ instance TType SearchRequestT Domain.SearchRequest where
         fromLocationId = toKey fromLocationId,
         toLocationId = toKey <$> toLocationId,
         distance = getHighPrecMeters <$> distance,
+        merchantId = toKey merchantId,
         ..
       }

@@ -10,17 +10,19 @@ module Storage.Tabular.RideBooking where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
+import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Utils.Error
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RideBooking as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
 import qualified Storage.Tabular.BookingLocation as SLoc
+import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.Person as SPerson
 import Storage.Tabular.Quote ()
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
 import qualified Storage.Tabular.TripTerms as STripTerms
 import Types.Error
-import Utils.Common hiding (id)
 
 derivePersistField "Domain.RideBookingStatus"
 
@@ -47,6 +49,7 @@ mkPersist
       vehicleVariant VehVar.VehicleVariant
       tripTermsId STripTerms.TripTermsTId Maybe
       rentalSlabId SRentalSlab.RentalSlabTId Maybe
+      merchantId SMerchant.MerchantTId
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -84,8 +87,10 @@ instance TType FullRideBookingT Domain.RideBooking where
           riderId = fromKey riderId,
           fromLocationId = fromKey fromLocationId,
           providerUrl = pUrl,
+          merchantId = fromKey merchantId,
           ..
         }
+
   toTType Domain.RideBooking {..} = do
     let (fareProductType, rideBookingDetailsT, toLocationId, distance, rentalSlabId) = case rideBookingDetails of
           Domain.OneWayDetails details -> (DQuote.ONE_WAY, OneWayDetailsT, Just . toKey $ details.toLocationId, Just details.distance, Nothing)
@@ -102,6 +107,7 @@ instance TType FullRideBookingT Domain.RideBooking where
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
               distance = getHighPrecMeters <$> distance,
+              merchantId = toKey merchantId,
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms

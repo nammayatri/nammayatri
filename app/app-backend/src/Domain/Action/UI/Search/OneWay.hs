@@ -35,7 +35,7 @@ search personId req = do
   toLocation <- DSearch.buildSearchReqLoc req.destination
   now <- getCurrentTime
   distance <- (\res -> metersToHighPrecMeters res.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.origin.gps req.destination.gps
-  searchRequest <- DSearch.buildSearchRequest (getId personId) fromLocation (Just toLocation) (Just distance) now
+  searchRequest <- DSearch.buildSearchRequest personId fromLocation (Just toLocation) (Just distance) now
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId

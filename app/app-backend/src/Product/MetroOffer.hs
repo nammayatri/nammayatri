@@ -9,6 +9,7 @@ import Beckn.Types.Core.Metro.OnSearch
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Types.TimeRFC339
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Data.List.NonEmpty as NE
@@ -38,7 +39,7 @@ buildContextMetro ::
   BaseUrl ->
   m Context
 buildContextMetro action message_id bapId bapUri = do
-  timestamp <- getCurrentTime
+  timestamp <- UTCTimeRFC3339 <$> getCurrentTime
   return
     Context
       { domain = METRO,

@@ -20,3 +20,18 @@ instance IsHTTPError RatingError where
   toHttpCode InvalidRatingValue = E400
 
 instance IsAPIError RatingError
+
+newtype MerchantError
+  = MerchantNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''MerchantError
+
+instance IsBaseError MerchantError where
+  toMessage (MerchantNotFound merchantId) = Just $ "Merchant with merchantId \"" <> show merchantId <> "\" not found."
+
+instance IsHTTPError MerchantError where
+  toErrorCode _ = "MERCHANT_NOT_FOUND"
+  toHttpCode _ = E400
+
+instance IsAPIError MerchantError

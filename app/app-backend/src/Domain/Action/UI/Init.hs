@@ -31,7 +31,8 @@ data InitRes = InitRes
     vehicleVariant :: VehicleVariant,
     quoteDetails :: SQuote.QuoteDetails,
     startTime :: UTCTime,
-    bookingId :: Id SRB.RideBooking
+    bookingId :: Id SRB.RideBooking,
+    bppQuoteId :: Maybe Text
   }
   deriving (Show, Generic)
 
@@ -48,6 +49,8 @@ init personId req = do
   bFromLocation <- buildBLoc fromLocation now
   mbBToLocation <- (`buildBLoc` now) `mapM` mbToLocation
   booking <- buildRideBooking searchRequest quote bFromLocation.id (mbBToLocation <&> (.id)) now
+  let bppQuoteId = Nothing
+
   DB.runTransaction $ do
     QBLoc.create bFromLocation
     whenJust mbBToLocation $ \loc -> QBLoc.create loc
@@ -61,7 +64,8 @@ init personId req = do
         toLoc = mbToLocation <&> \toLocation -> LatLong {lat = toLocation.lat, lon = toLocation.lon},
         vehicleVariant = quote.vehicleVariant,
         quoteDetails = quote.quoteDetails,
-        startTime = searchRequest.startTime
+        startTime = searchRequest.startTime,
+        bppQuoteId
       }
   where
     buildBLoc searchReqLocation now = do
@@ -96,6 +100,8 @@ init personId req = do
           pure . SRB.OneWayDetails $ SRB.OneWayRideBookingDetails {..}
         SQuote.RentalDetails rentalSlab ->
           pure $ SRB.RentalDetails rentalSlab
+        SQuote.AutoDetails ->
+          throwError $ InvalidRequest "init is not supported for auto trips"
       return $
         SRB.RideBooking
           { id = Id id,
@@ -114,6 +120,7 @@ init personId req = do
             vehicleVariant = quote.vehicleVariant,
             rideBookingDetails,
             tripTerms = quote.tripTerms,
+            merchantId = searchRequest.merchantId,
             createdAt = now,
             updatedAt = now
           }

@@ -3,6 +3,7 @@ module Core.Context where
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Predicate
+import Beckn.Types.TimeRFC339
 import Beckn.Utils.Validation
 import qualified Core.Spec.Common.Context as Context
 import qualified Core.Spec.Common.Domain as Domain
@@ -50,7 +51,7 @@ buildContext' ::
   Maybe BaseUrl ->
   m Context.Context
 buildContext' config action txnId bapId bapUri bppId bppUri = do
-  timestamp <- getCurrentTime
+  timestamp <- UTCTimeRFC3339 <$> getCurrentTime
   message_id <- generateGUIDText
   return
     Context.Context

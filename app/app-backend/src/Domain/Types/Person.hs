@@ -13,6 +13,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Domain.Types.Merchant as DMerchant
 import Servant.API
 
 data Role
@@ -70,6 +71,7 @@ data PersonE e = Person
     isNew :: Bool,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     description :: Maybe Text,
+    merchantId :: Id DMerchant.Merchant,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

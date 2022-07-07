@@ -7,6 +7,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Core.Context
 import Beckn.Types.Core.ReqTypes
 import Beckn.Types.Id
+import Beckn.Types.TimeRFC339
 import Beckn.Utils.Common
 import qualified Core.Status as Status
 import qualified Domain.Booking.Type as DBooking (Booking)
@@ -28,7 +29,7 @@ triggerStatusUpdate _ bookingId = withFlowHandlerAPI $ do
   pure Success
   where
     buildParkingContext action txnId = do
-      currTime <- getCurrentTime
+      currTime <- UTCTimeRFC3339 <$> getCurrentTime
       msgId <- generateGUIDText
       bapId <- asks (.selfId)
       bapUri <- asks (.selfURI)

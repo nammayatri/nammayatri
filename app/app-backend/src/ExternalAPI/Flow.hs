@@ -9,6 +9,7 @@ import Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Init as API
 import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
+import Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
@@ -51,6 +52,16 @@ searchMetro ::
 searchMetro req = do
   url <- asks (.gatewayUrl)
   void $ callBecknAPIWithSignatureMetro "search" MigAPI.searchAPI url req
+
+select ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasBapIds c r m
+  ) =>
+  BaseUrl ->
+  SelectReq ->
+  m SelectRes
+select = callBecknAPIWithSignature "select" API.selectAPI
 
 init ::
   ( MonadFlow m,

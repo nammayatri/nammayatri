@@ -13,10 +13,12 @@ import Beckn.Types.Id
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation (runRequestValidation)
 import qualified Crypto.Number.Generate as Cryptonite
+import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.Registration
@@ -34,9 +36,12 @@ auth req = withFlowHandlerAPI $ do
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
+  merchant <-
+    QMerchant.findByShortId req.merchantId
+      >>= fromMaybeM (MerchantNotFound $ getShortId req.merchantId)
   person <-
-    Person.findByRoleAndMobileNumber SP.USER countryCode mobileNumber
-      >>= maybe (createPerson req) return
+    Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumber merchant.id
+      >>= maybe (createPerson req merchant.id) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
@@ -53,8 +58,8 @@ auth req = withFlowHandlerAPI $ do
       authId = SR.id token
   return $ AuthRes {attempts, authId}
 
-makePerson :: EncFlow m r => AuthReq -> m SP.Person
-makePerson req = do
+makePerson :: EncFlow m r => AuthReq -> Id DMerchant.Merchant -> m SP.Person
+makePerson req merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt req.mobileNumber
@@ -76,6 +81,7 @@ makePerson req = do
         isNew = True,
         deviceToken = Nothing,
         description = Nothing,
+        merchantId = merchantId,
         createdAt = now,
         updatedAt = now
       }
@@ -149,9 +155,9 @@ getRegistrationTokenE :: EsqDBFlow m r => Id SR.RegistrationToken -> m SR.Regist
 getRegistrationTokenE tokenId =
   RegistrationToken.findById tokenId >>= fromMaybeM (TokenNotFound $ getId tokenId)
 
-createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> m SP.Person
-createPerson req = do
-  person <- makePerson req
+createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> Id DMerchant.Merchant -> m SP.Person
+createPerson req merchantId = do
+  person <- makePerson req merchantId
   DB.runTransaction $ Person.create person
   pure person
 

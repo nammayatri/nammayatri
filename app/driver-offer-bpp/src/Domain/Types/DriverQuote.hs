@@ -15,6 +15,8 @@ data DriverQuote = DriverQuote
     status :: DriverQuoteStatus,
     searchRequestId :: Id SearchRequest,
     driverId :: Id Person,
+    driverName :: Text,
+    driverRating :: Maybe Double,
     baseFare :: Double,
     extraFareSelected :: Maybe Double,
     vehicleVariant :: Variant.Variant,

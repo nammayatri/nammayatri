@@ -76,22 +76,22 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
   unless (supportP.role == SP.CUSTOMER_SUPPORT) $
     throwError AccessDenied
   T.OrderInfo {person, bookings} <- case (mRequestId, mMobile) of
-    (Just bookingId, _) -> getByRequestId bookingId
-    (_, Just mobileNumber) -> getByMobileNumber mobileNumber
+    (Just bookingId, _) -> getByRequestId bookingId supportP.merchantId
+    (_, Just mobileNumber) -> getByMobileNumber mobileNumber supportP.merchantId
     (_, _) -> throwError $ InvalidRequest "You should pass SearchRequestId or mobile number."
   traverse (buildRideBookingToOrder person) bookings
   where
-    getByMobileNumber number = do
+    getByMobileNumber number merchantId = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
       person <-
-        Person.findByRoleAndMobileNumberWithoutCC SP.USER number
+        Person.findByRoleAndMobileNumberAndMerchantIdWithoutCC SP.USER number merchantId
           >>= fromMaybeM (PersonDoesNotExist number)
       bookings <-
         QRB.findAllByPersonIdLimitOffset (person.id) (Just limit) moffset
       return $ T.OrderInfo person bookings
-    getByRequestId bookingId = do
+    getByRequestId bookingId merchantId = do
       (booking :: DRB.RideBooking) <-
-        QRB.findById (Id bookingId)
+        QRB.findByIdAndMerchantId (Id bookingId) merchantId
           >>= fromMaybeM (RideBookingDoesNotExist bookingId)
       let requestorId = booking.riderId
       person <-
