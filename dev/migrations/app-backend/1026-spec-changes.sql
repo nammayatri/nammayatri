@@ -1,3 +1,7 @@
+CREATE TABLE atlas_app.quote_bak_1026 AS TABLE atlas_app.quote;
+CREATE TABLE atlas_app.ride_booking_bak_1026 AS TABLE atlas_app.ride_booking;
+CREATE TABLE atlas_app.search_request_location_1026 AS TABLE atlas_app.search_request_location;
+
 CREATE TABLE atlas_app.booking_location (
    id CHARACTER(36) PRIMARY KEY NOT NULL,
    lat DOUBLE PRECISION NOT NULL,

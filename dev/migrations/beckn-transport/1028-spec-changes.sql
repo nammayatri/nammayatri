@@ -1,3 +1,7 @@
+CREATE TABLE atlas_transporter.quote_bak_1028 AS TABLE atlas_transporter.quote;
+CREATE TABLE atlas_transporter.ride_booking_bak_1028 AS TABLE atlas_transporter.ride_booking;
+CREATE TABLE atlas_transporter.search_request_location_1028 AS TABLE atlas_transporter.search_request_location;
+
 CREATE TABLE atlas_transporter.booking_location (
    id CHARACTER(36) PRIMARY KEY NOT NULL,
    lat DOUBLE PRECISION NOT NULL,
@@ -76,12 +80,12 @@ ALTER TABLE
    DROP COLUMN message_id;
 
 ALTER TABLE atlas_transporter.ride_booking ALTER COLUMN rider_id DROP NOT NULL;
-   
+
 ALTER TABLE
    atlas_transporter.business_event
 ALTER COLUMN
    distance TYPE integer USING (distance :: integer);
-   
+
 ALTER TABLE
    atlas_transporter.business_event
 ALTER COLUMN

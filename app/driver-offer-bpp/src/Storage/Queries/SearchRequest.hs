@@ -25,4 +25,4 @@ findById searchRequestId = buildDType $
               `innerJoin` table @SearchReqLocationT `Esq.on` (\(s :& _ :& loc2) -> s ^. SearchRequestToLocationId ==. loc2 ^. SearchReqLocationTId)
           )
       where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
-      pure $ (sReq, sFromLoc, sToLoc)
+      pure (sReq, sFromLoc, sToLoc)
