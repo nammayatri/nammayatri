@@ -147,18 +147,10 @@ mkItem categoryId fulfillmentId q =
           OS.ItemTags
             { distance_to_nearest_driver = OS.DecimalValue $ toRational q.distanceToPickup.getMeters
             },
-      --    id = q.id.getId,
-      --      vehicle_variant = show q.vehicleVariant,
-      --      estimated_price = estimated_price_,
-      --      discount = Nothing,
-      --      discounted_price = estimated_price_,
-      --      nearest_driver_distance = Just $ OS.DecimalValue $ toRational q.distanceToPickup.getMeters,
       base_distance = Nothing,
       base_duration = Nothing
-      --      descriptions = Nothing
     }
   where
-    --    estimated_price_ = OS.Price $ realToFrac $ q.baseFare + fromMaybe 0 q.extraFareSelected
     price_ = do
       let value_ = OS.DecimalValue $ toRational $ q.baseFare + fromMaybe 0 q.extraFareSelected
       OS.ItemPrice
