@@ -38,6 +38,7 @@ import Product.DriveronBoarding.DriverDrivingLicense as DrivingLicense
 import Types.API.Driveronboarding.DriverDrivingLicense (DriverDrivingLicenseReq, DriverDrivingLicenseRes)
 import Types.API.Driveronboarding.OperatingCity (OperatingCityReq, OperatingCityRes)
 import qualified Product.DriveronBoarding.OperatingCity as DOP
+import Types.API.Driveronboarding.Status (StatusRes)
 
 
 type DriverOfferAPI =

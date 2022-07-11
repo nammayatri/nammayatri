@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS atlas_transporter.DriverDrivingLicense
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.DriverDrivingLicense
 (
     id character(36) COLLATE pg_catalog."default" NOT NULL,
     driverId character varying(36) COLLATE pg_catalog."default" NOT NULL,

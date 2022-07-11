@@ -1,3 +1,4 @@
+
 module Types.API.Driveronboarding.Status where
 import Beckn.Types.Id (Id)
 import qualified Storage.Queries.Person as QPerson
@@ -12,7 +13,7 @@ import qualified Storage.Queries.Driveronboarding.OperatingCity as DO
 import Domain.Types.Driveronboarding.VehicleRegistrationCert
 import Domain.Types.Driveronboarding.OperatingCity
 
-import Environment
+import Environment ( FlowHandler )
 
 
 
@@ -55,25 +56,17 @@ data StatusRes = StatusRes
       
 
 ndData :: Id SP.Person -> FlowHandler StatusRes
-ndData personId = do
+ndData personId = withFlowHandlerAPI $ do
     person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
-    abc <- DVehicle.findByPId personId & fromMaybeM (PersonNotFound personId.getId)
+    abc <- DVehicle.findByPId personId >>= fromMaybeM (PersonNotFound personId.getId)
     def <- DDLI.findByDId personId >>= fromMaybeM (PersonNotFound personId.getId)
     ghi <- DO.findByorgId orgId >>= fromMaybeM (PersonNotFound orgId.getId)
-    let abc_ = removeMaybe abc
-    -- let def_ = removeMaybe def
-    -- let ghi_ =removeMaybe ghi
-    let rcveri = abc_.vehicleRegStatus
+    let rcveri = abc.vehicleRegStatus
     let dlveri = def.driverLicenseStatus
     let opcveri = ghi.enabled
     let hello = (StatusRes dlveri rcveri opcveri)
     return hello
-
-    where
-        removeMaybe (Just x) = x
-    
-
 
 
 

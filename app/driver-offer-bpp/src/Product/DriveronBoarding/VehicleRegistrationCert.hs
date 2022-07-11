@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -Wno-unused-matches #-}
 module Product.DriveronBoarding.VehicleRegistrationCert where
--- import Types.API.Driveronboarding.VehicleRegistrationCert
--- import Beckn.Prelude
--- import Beckn.Types.APISuccess (APISuccess (Success))
--- import App.Types (FlowHandler)
+import Types.API.Driveronboarding.VehicleRegistrationCert
+import Beckn.Prelude
+import Beckn.Types.APISuccess (APISuccess (Success))
+import Environment ( FlowHandler )
 
 
--- registrationHandler :: VehicleRegistrationCertReq -> FlowHandler APISuccess
--- registrationHandler req = pure Success
+registrationHandler :: VehicleRegistrationCertReq -> FlowHandler APISuccess
+registrationHandler req = pure Success

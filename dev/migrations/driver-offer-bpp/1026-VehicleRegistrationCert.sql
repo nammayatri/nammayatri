@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS atlas_transporter.VehicleRegistrationCert
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.VehicleRegistrationCert
 (
     id character(36) COLLATE pg_catalog."default" NOT NULL,
     driverId character varying(255) COLLATE pg_catalog."default" NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS atlas_transporter.VehicleRegistrationCert
     request_id character(36) COLLATE pg_catalog."default" NOT NULL,
     createdAt timestamp with time zone NOT NULL,
     updatedAt timestamp with time zone NOT NULL
-    ,CONSTRAINT  VehicleRegistrationCert_org_id_fkey FOREIGN KEY (driverId) REFERENCES atlas_transporter.organization(id)
+    ,CONSTRAINT  VehicleRegistrationCert_org_id_fkey FOREIGN KEY (driverId) REFERENCES atlas_driver_offer_bpp.organization(id)
 );
 
 -- data VehicleRegistrationCert = VehicleRegistrationCert {
