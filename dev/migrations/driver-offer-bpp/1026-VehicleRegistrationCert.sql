@@ -9,10 +9,12 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.VehicleRegistrationCert
     permitExpiry timestamp with time zone NOT NULL,
     vehicleClass character(36) COLLATE pg_catalog."default",
     vehicleNumber character(36) COLLATE pg_catalog."default",
+    insuranceValidity timestamp with time zone NOT NULL,
     request_id character(36) COLLATE pg_catalog."default" NOT NULL,
     createdAt timestamp with time zone NOT NULL,
+    rcStatus character varying(10) NOT NULL,
     updatedAt timestamp with time zone NOT NULL
-    ,CONSTRAINT  VehicleRegistrationCert_org_id_fkey FOREIGN KEY (driverId) REFERENCES atlas_driver_offer_bpp.organization(id)
+    ,CONSTRAINT  VehicleRegistrationCert_driver_id_fkey FOREIGN KEY (driverId) REFERENCES atlas_driver_offer_bpp.person(id)
 );
 
 -- data VehicleRegistrationCert = VehicleRegistrationCert {
@@ -23,10 +25,11 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.VehicleRegistrationCert
 --     permitNumber :: Maybe Text,
 --     permitStart :: Maybe UTCTime,
 --     permitExpiry :: Maybe UTCTime,
---     vehicleClass :: Maybe VehicleClass,
+--     vehicleClass :: Maybe COV,
 --     vehicleNumber :: Maybe Text,
+--     insuranceValidity :: Maybe UTCTime,
 --     request_id :: Text,
 --     createdAt :: UTCTime,
+--     rcStatus :: IdfyStatus,
 --     updatedAt :: UTCTime
 -- }
-

@@ -5,7 +5,6 @@ import Beckn.Types.Id
 import Domain.Types.Driveronboarding.OperatingCity
 import Storage.Tabular.Driveronboarding.OperatingCity
 import Domain.Types.Organization
-import Beckn.Types.Common (Log, EncFlow)
 
 create :: OperatingCity -> SqlDB ()
 create = Esq.create
@@ -17,7 +16,7 @@ findById ::
 findById = Esq.findById
 
 findByorgId ::
-  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
+  Transactionable m =>
   Id Organization ->
   m (Maybe OperatingCity)
 findByorgId personid = do

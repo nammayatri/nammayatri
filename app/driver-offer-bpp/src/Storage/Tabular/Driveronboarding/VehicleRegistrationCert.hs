@@ -14,8 +14,8 @@ import Storage.Tabular.Person (PersonTId)
 
 
 
-derivePersistField "Domain.VehicleClass"
-derivePersistField "Domain.Verification2"
+derivePersistField "Domain.COV"
+derivePersistField "Domain.IdfyStatus"
 
 mkPersist
   defaultSqlSettings
@@ -28,19 +28,16 @@ mkPersist
       permitNumber Text Maybe
       permitStart UTCTime Maybe
       permitExpiry UTCTime Maybe
-      vehicleClass Domain.VehicleClass Maybe
-      vehicleRegStatus Domain.Verification2
+      insuranceValidity  UTCTime Maybe
+      vehicleClass Domain.COV Maybe
       vehicleNumber Text Maybe
+      rcStatus Domain.IdfyStatus
       request_id Text
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
       deriving Generic
     |]
-
-
-
-
 
 instance TEntityKey VehicleRegistrationCertT where
   type DomainKey VehicleRegistrationCertT = Id Domain.VehicleRegistrationCert

@@ -23,6 +23,7 @@ import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
+import qualified Product.DriveronBoarding.Idfy as Idfy
 import Servant
 import Servant.OpenApi
 import qualified Types.API.Driver as DriverAPI
@@ -31,6 +32,7 @@ import qualified Types.API.OrgAdmin as OrgAdminAPI
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
+import Types.API.Idfy
 import Utils.Auth (AdminTokenAuth, TokenAuth)
 import Types.API.Driveronboarding.VehicleRegistrationCert (VehicleRegistrationCertReq, VehicleRegistrationCertRes)
 import Product.DriveronBoarding.VehicleRegistrationCert as DVechicleCert
@@ -38,8 +40,8 @@ import Product.DriveronBoarding.DriverDrivingLicense as DrivingLicense
 import Types.API.Driveronboarding.DriverDrivingLicense (DriverDrivingLicenseReq, DriverDrivingLicenseRes)
 import Types.API.Driveronboarding.OperatingCity (OperatingCityReq, OperatingCityRes)
 import qualified Product.DriveronBoarding.OperatingCity as DOP
+import Beckn.Types.Core.Ack (AckResponse)
 import Types.API.Driveronboarding.Status (StatusRes)
-
 
 type DriverOfferAPI =
   MainAPI
@@ -58,7 +60,8 @@ type UIAPI =
     :<|> OrganizationAPI
     :<|> FarePolicyAPI
     :<|> LocationAPI
-
+    :<|> IdfyHandlerAPI
+ 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
 
@@ -72,6 +75,7 @@ uiServer =
     :<|> organizationFlow
     :<|> farePolicyFlow
     :<|> locationFlow
+    :<|> idfyHandlerFlow
 
 mainServer :: FlowServer MainAPI
 mainServer =
@@ -245,6 +249,21 @@ type LocationAPI =
            :> Post '[JSON] UpdateLocationRes
        )
 
+type IdfyHandlerAPI =
+  "ext" :> "idfy"
+    :> "drivingLicense"
+      :> ReqBody '[JSON] IdfyDLReq 
+      :> Post '[JSON] AckResponse
+    :<|> "vehicleRegistrationCert"
+      :> ReqBody '[JSON] IdfyRCReq 
+      :> Post '[JSON] AckResponse 
+
+idfyHandlerFlow :: FlowServer IdfyHandlerAPI
+idfyHandlerFlow =
+  Idfy.idfyDrivingLicense      --update handler
+    :<|> Idfy.idfyRCLicense --update handler
+    
+
 locationFlow :: FlowServer LocationAPI
 locationFlow =
   --  Location.getLocation
@@ -311,7 +330,7 @@ swagger = do
   openApi
     { _openApiInfo =
         (_openApiInfo openApi)
-          { _infoTitle = "Yatri Partner",
+          { _infoTitle = "Namma Yatri Partner",
             _infoVersion = "1.0"
           }
     }

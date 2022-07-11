@@ -1,4 +1,7 @@
 module Product.DriveronBoarding.OperatingCity where
+  
+import Types.API.Driveronboarding.OperatingCity 
+import Environment
 import Domain.Types.Driveronboarding.OperatingCity as DO
 import Beckn.Types.Id
 import qualified Storage.Queries.Driveronboarding.OperatingCity as Queries
@@ -13,8 +16,6 @@ import qualified Domain.Types.Person as SP
 import Beckn.Types.Error (PersonError(PersonFieldNotPresent, PersonNotFound), OrganizationError (OrgNotFound))
 import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
-import Types.API.Driveronboarding.OperatingCity
-import Environment ( FlowHandler )
 
 -- registrationHandler :: OperatingCityReq -> FlowHandler APISuccess
 -- registrationHandler req = do

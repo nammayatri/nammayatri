@@ -3,7 +3,7 @@ module Product.DriveronBoarding.VehicleRegistrationCert where
 import Types.API.Driveronboarding.VehicleRegistrationCert
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess (Success))
-import Environment ( FlowHandler )
+import Environment
 
 
 registrationHandler :: VehicleRegistrationCertReq -> FlowHandler APISuccess

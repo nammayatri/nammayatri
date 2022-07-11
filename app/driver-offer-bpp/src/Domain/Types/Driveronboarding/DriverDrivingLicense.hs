@@ -4,34 +4,15 @@ import Beckn.Types.Id
 import Domain.Types.Person (Person)
 import Domain.Types.Driveronboarding.VehicleRegistrationCert
 
-
-data Verification1 = PENDINGVERIFICATION | VERIFIED | FAILEDVERIFICATION | WAITINGINPUT deriving
-    ( Show,
-      Eq,
-      Read,
-      Generic,
-      ToJSON,
-      FromJSON,
-      ToSchema,
-      ToParamSchema,
-      Enum,
-      Bounded
-    )
-
-
--- 3-T , - _
-
-
-
 data DriverDrivingLicense = DriverDrivingLicense {
     id :: Id DriverDrivingLicense,
     driverId :: Id Person,
     driverLicenseNumber :: Maybe Text,
     driverLicenseStart :: Maybe UTCTime,
-    driverLicenseStatus :: Verification1,
-    driverVerificationStatus :: Maybe Verification1,
+    driverLicenseStatus :: IdfyStatus,
+    driverVerificationStatus :: Maybe IdfyStatus,
     driverLicenseExpiry :: Maybe UTCTime,
-    classOfVehicle :: [VehicleClass],
+    classOfVehicle :: [COV],
     request_id :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

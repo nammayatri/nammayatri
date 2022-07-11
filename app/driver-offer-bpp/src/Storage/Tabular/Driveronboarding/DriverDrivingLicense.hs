@@ -10,13 +10,12 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Storage.Tabular.Person (PersonTId)
-import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as Domain1
-import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as Domain2
-
+import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as Domain
+import Domain.Types.Driveronboarding.VehicleRegistrationCert (IdfyStatus(..), COV (..))
 -- import Beckn.Types.Id
 
-derivePersistField "Domain1.Verification1"
-derivePersistField "Domain2.VehicleClass"
+derivePersistField "IdfyStatus"
+derivePersistField "COV"
 
 mkPersist
   defaultSqlSettings
@@ -26,10 +25,10 @@ mkPersist
       driverId PersonTId
       driverLicenseNumber Text Maybe
       driverLicenseStart UTCTime Maybe
-      driverLicenseStatus Domain1.Verification1
-      driverVerificationStatus Domain1.Verification1 Maybe
+      driverLicenseStatus IdfyStatus
+      driverVerificationStatus IdfyStatus Maybe
       driverLicenseExpiry UTCTime Maybe
-      classOfVehicle [Domain2.VehicleClass]
+      classOfVehicle [COV]
       request_id Text
       createdAt UTCTime
       updatedAt UTCTime
@@ -39,27 +38,22 @@ mkPersist
  
 
 instance TEntityKey DriverDrivingLicenseT where
-  type DomainKey DriverDrivingLicenseT = Id Domain1.DriverDrivingLicense
+  type DomainKey DriverDrivingLicenseT = Id Domain.DriverDrivingLicense
   fromKey (DriverDrivingLicenseTKey _id) = Id _id
   toKey (Id id) = DriverDrivingLicenseTKey id
 
-instance TType DriverDrivingLicenseT Domain1.DriverDrivingLicense where
+instance TType DriverDrivingLicenseT Domain.DriverDrivingLicense where
   fromTType DriverDrivingLicenseT {..} = do
     return $
-      Domain1.DriverDrivingLicense
+      Domain.DriverDrivingLicense
         { id = Id id,
           driverId = fromKey driverId,
           ..
         }
    
-  toTType Domain1.DriverDrivingLicense {..} =
+  toTType Domain.DriverDrivingLicense {..} =
     DriverDrivingLicenseT
       { id = getId id,
         driverId = toKey driverId,
         ..
       }
-
-
-
-
-

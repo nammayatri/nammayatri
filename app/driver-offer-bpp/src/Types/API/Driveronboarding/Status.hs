@@ -1,5 +1,5 @@
-
 module Types.API.Driveronboarding.Status where
+
 import Beckn.Types.Id (Id)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Driveronboarding.VehicleRegistrationCert as DVehicle
@@ -8,19 +8,19 @@ import Beckn.Utils.Error
 import Beckn.Types.Error
 import qualified Domain.Types.Person as SP
 import qualified Storage.Queries.Driveronboarding.DriverDrivingLicense as DDLI
-import Domain.Types.Driveronboarding.DriverDrivingLicense as DD
 import qualified Storage.Queries.Driveronboarding.OperatingCity as DO
-import Domain.Types.Driveronboarding.VehicleRegistrationCert
+import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as VRC
 import Domain.Types.Driveronboarding.OperatingCity
-
 import Environment ( FlowHandler )
 
 
+data VerificationStatus = PENDINGVERIFICATION | VERIFIED | FAILEDVERIFICATION | WAITINGINPUT 
+    deriving ( Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes
     {
-        dlVerificationStatus :: Verification1,
-        rcVerificationStatus :: Verification2,
+        dlVerificationStatus :: VerificationStatus,
+        rcVerificationStatus :: VerificationStatus,
         operatingCityStatus :: OperatingCityVerification
    
     }
@@ -62,31 +62,16 @@ ndData personId = withFlowHandlerAPI $ do
     abc <- DVehicle.findByPId personId >>= fromMaybeM (PersonNotFound personId.getId)
     def <- DDLI.findByDId personId >>= fromMaybeM (PersonNotFound personId.getId)
     ghi <- DO.findByorgId orgId >>= fromMaybeM (PersonNotFound orgId.getId)
-    let rcveri = abc.vehicleRegStatus
-    let dlveri = def.driverLicenseStatus
+    let rcveri = getVerificationStatus abc.rcStatus
+    let dlveri = getVerificationStatus def.driverLicenseStatus
     let opcveri = ghi.enabled
-    let hello = (StatusRes dlveri rcveri opcveri)
+    let hello = StatusRes dlveri rcveri opcveri
     return hello
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+getVerificationStatus :: VRC.IdfyStatus -> VerificationStatus
+getVerificationStatus = \case 
+    VRC.IN_PROGRESS -> PENDINGVERIFICATION
+    VRC.FAILED -> FAILEDVERIFICATION
+    VRC.COMPLETED -> FAILEDVERIFICATION
+    VRC.VALID -> VERIFIED
+    VRC.INVALID -> FAILEDVERIFICATION
