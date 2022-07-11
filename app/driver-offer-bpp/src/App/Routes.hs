@@ -32,6 +32,13 @@ import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
 import Utils.Auth (AdminTokenAuth, TokenAuth)
+import Types.API.Driveronboarding.VehicleRegistrationCert (VehicleRegistrationCertReq, VehicleRegistrationCertRes)
+import Product.DriveronBoarding.VehicleRegistrationCert as DVechicleCert
+import Product.DriveronBoarding.DriverDrivingLicense as DrivingLicense
+import Types.API.Driveronboarding.DriverDrivingLicense (DriverDrivingLicenseReq, DriverDrivingLicenseRes)
+import Types.API.Driveronboarding.OperatingCity (OperatingCityReq, OperatingCityRes)
+import qualified Product.DriveronBoarding.OperatingCity as DOP
+
 
 type DriverOfferAPI =
   MainAPI
@@ -255,6 +262,43 @@ orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
   BP.search
     :<|> BP.select
+  
+type VehicleRegCertAPI =
+  "v2" :> "driver"
+  :> "register" :> "vehicleRegistrationCert"
+  :> ReqBody '[JSON] VehicleRegistrationCertReq
+  :> Post '[JSON] VehicleRegistrationCertRes
+
+vehicleRegCertApiFlow :: FlowServer VehicleRegCertAPI
+vehicleRegCertApiFlow = DVechicleCert.registrationHandler 
+
+type DriverDrivingLicenseAPI =
+  "v2" :> "driver"
+  :> "register" :> "drivingLicense"
+  :> ReqBody '[JSON] DriverDrivingLicenseReq
+  :> Post '[JSON] DriverDrivingLicenseRes
+
+drivingLicenseApiFlow :: FlowServer DriverDrivingLicenseAPI
+drivingLicenseApiFlow = DrivingLicense.registrationHandler   
+
+type OperatingLocationAPI =
+  "driver"
+  :> "register" :> "OperatingLocation"
+  :> TokenAuth
+  :> ReqBody '[JSON] OperatingCityReq
+  :> Post '[JSON] OperatingCityRes
+
+operatingLocationAPIFlow :: FlowServer OperatingLocationAPI
+operatingLocationAPIFlow =  DOP.sendData  
+
+type StatusAPI = 
+  "driver"
+  :> "register" :> "status"
+  :> TokenAuth
+  :> ReqBody
+  :> Post '[JSON] StatusRes
+
+
 
 type HealthCheckAPI = Get '[JSON] Text
 

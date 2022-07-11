@@ -8,15 +8,15 @@
 module Storage.Tabular.Driveronboarding.DriverDrivingLicense where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as Domain hiding (driverId, id)
 import Beckn.Types.Id
 import Storage.Tabular.Person (PersonTId)
-import Domain.Types.Driveronboarding.DriverDrivingLicense (DLStatus)
-import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as Domain
+import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as Domain1
+import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as Domain2
+
 -- import Beckn.Types.Id
-derivePersistField "Domain.DLStatus"
-derivePersistField "Domain.VehicleClass"
-derivePersistField "Domain.DriverLicenseStatus"
+
+derivePersistField "Domain1.Verification1"
+derivePersistField "Domain2.VehicleClass"
 
 mkPersist
   defaultSqlSettings
@@ -26,10 +26,10 @@ mkPersist
       driverId PersonTId
       driverLicenseNumber Text Maybe
       driverLicenseStart UTCTime Maybe
-      driverLicenseStatus DLStatus
-      driverVerificationStatus Domain.DriverLicenseStatus Maybe
+      driverLicenseStatus Domain1.Verification1
+      driverVerificationStatus Domain1.Verification1 Maybe
       driverLicenseExpiry UTCTime Maybe
-      classOfVehicle [Domain.VehicleClass]
+      classOfVehicle [Domain2.VehicleClass]
       request_id Text
       createdAt UTCTime
       updatedAt UTCTime
@@ -39,20 +39,20 @@ mkPersist
  
 
 instance TEntityKey DriverDrivingLicenseT where
-  type DomainKey DriverDrivingLicenseT = Id Domain.DriverDrivingLicense
+  type DomainKey DriverDrivingLicenseT = Id Domain1.DriverDrivingLicense
   fromKey (DriverDrivingLicenseTKey _id) = Id _id
   toKey (Id id) = DriverDrivingLicenseTKey id
 
-instance TType DriverDrivingLicenseT Domain.DriverDrivingLicense where
+instance TType DriverDrivingLicenseT Domain1.DriverDrivingLicense where
   fromTType DriverDrivingLicenseT {..} = do
     return $
-      Domain.DriverDrivingLicense
+      Domain1.DriverDrivingLicense
         { id = Id id,
           driverId = fromKey driverId,
           ..
         }
    
-  toTType Domain.DriverDrivingLicense {..} =
+  toTType Domain1.DriverDrivingLicense {..} =
     DriverDrivingLicenseT
       { id = getId id,
         driverId = toKey driverId,

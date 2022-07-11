@@ -12,6 +12,7 @@ import Storage.Tabular.Organization (OrganizationTId)
 import qualified Domain.Types.Driveronboarding.OperatingCity as Domain
 import Beckn.Types.Id
 
+derivePersistField "Domain.OperatingCityVerification"
 
 mkPersist
   defaultSqlSettings
@@ -20,7 +21,7 @@ mkPersist
       id Text
       organizationId OrganizationTId
       cityName Text
-      enabled Bool
+      enabled Domain.OperatingCityVerification
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

@@ -15,6 +15,7 @@ import Storage.Tabular.Person (PersonTId)
 
 
 derivePersistField "Domain.VehicleClass"
+derivePersistField "Domain.Verification2"
 
 mkPersist
   defaultSqlSettings
@@ -28,6 +29,7 @@ mkPersist
       permitStart UTCTime Maybe
       permitExpiry UTCTime Maybe
       vehicleClass Domain.VehicleClass Maybe
+      vehicleRegStatus Domain.Verification2
       vehicleNumber Text Maybe
       request_id Text
       createdAt UTCTime

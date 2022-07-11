@@ -5,12 +5,22 @@ import Domain.Types.Person (Person)
 import Domain.Types.Driveronboarding.VehicleRegistrationCert
 
 
-data DLStatus = COMPLETED | IN_PROGRESS | FAILED  deriving (Show,Eq,Read,Generic,ToJSON,FromJSON,Enum,Bounded,ToSchema)
+data Verification1 = PENDINGVERIFICATION | VERIFIED | FAILEDVERIFICATION | WAITINGINPUT deriving
+    ( Show,
+      Eq,
+      Read,
+      Generic,
+      ToJSON,
+      FromJSON,
+      ToSchema,
+      ToParamSchema,
+      Enum,
+      Bounded
+    )
 
 
 -- 3-T , - _
 
-data DriverLicenseStatus = Completed | In_Progress | Failed deriving (Show,Eq,Read,Generic,ToJSON,FromJSON,Enum,Bounded,ToSchema)
 
 
 data DriverDrivingLicense = DriverDrivingLicense {
@@ -18,12 +28,12 @@ data DriverDrivingLicense = DriverDrivingLicense {
     driverId :: Id Person,
     driverLicenseNumber :: Maybe Text,
     driverLicenseStart :: Maybe UTCTime,
-    driverLicenseStatus :: DLStatus,
-    driverVerificationStatus :: Maybe DriverLicenseStatus,
+    driverLicenseStatus :: Verification1,
+    driverVerificationStatus :: Maybe Verification1,
     driverLicenseExpiry :: Maybe UTCTime,
     classOfVehicle :: [VehicleClass],
     request_id :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
 }
-    deriving (Generic)
+    deriving (Generic,ToSchema,ToJSON,FromJSON)
