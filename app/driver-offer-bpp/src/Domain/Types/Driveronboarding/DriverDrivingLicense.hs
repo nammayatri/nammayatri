@@ -12,7 +12,7 @@ data DriverDrivingLicense = DriverDrivingLicense {
     driverLicenseStatus :: IdfyStatus,
     driverVerificationStatus :: Maybe IdfyStatus,
     driverLicenseExpiry :: Maybe UTCTime,
-    classOfVehicle :: [COV],
+    classOfVehicle :: Maybe [COV], -- to be changed
     request_id :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.DriverDrivingLicense
+CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp._driver_driving_license_t
 (
     id character(36) COLLATE pg_catalog."default" NOT NULL,
     driver_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
@@ -14,18 +14,3 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.DriverDrivingLicense
     ,CONSTRAINT  DriverDrivingLicense_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_driver_offer_bpp.person(id)
 );
 
-
--- data DriverDrivingLicense = DriverDrivingLicense {
---     id :: Id DriverDrivingLicense,
---     driverId :: Id Person,
---     driverLicenseNumber :: Maybe Text,
---     driverLicenseStart :: Maybe UTCTime,
---     driverLicenseStatus :: IdfyStatus,
---     driverVerificationStatus :: Maybe IdfyStatus,
---     driverLicenseExpiry :: Maybe UTCTime,
---     classOfVehicle :: [COV],
---     request_id :: Text,
---     createdAt :: UTCTime,
---     updatedAt :: UTCTime
--- }
---     deriving (Generic)

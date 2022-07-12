@@ -20,7 +20,7 @@ derivePersistField "COV"
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-  DriverDrivingLicenseT sql = DriverDriving_License
+  DriverDrivingLicenseT sql = _driver_driving_license_t
       id Text
       driverId PersonTId
       driverLicenseNumber Text Maybe
@@ -28,7 +28,7 @@ mkPersist
       driverLicenseStatus IdfyStatus
       driverVerificationStatus IdfyStatus Maybe
       driverLicenseExpiry UTCTime Maybe
-      classOfVehicle [COV]
+      classOfVehicle [COV] Maybe
       request_id Text
       createdAt UTCTime
       updatedAt UTCTime

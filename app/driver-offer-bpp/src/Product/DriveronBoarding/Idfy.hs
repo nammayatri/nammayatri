@@ -18,7 +18,7 @@ idfyDrivingLicense req = withFlowHandlerAPI $ do
     let validTill = getUTCTimeFromDate req.result.source_output.nt_validity_to
     let cov = foldr f [] req.result.source_output.field
     let status = validateDLStatus validTill cov req.status now
-    runTransaction $ updateDLDetails req.request_id  validFrom validTill status [LMV]
+    runTransaction $ updateDLDetails req.request_id  validFrom validTill status (Just [LMV]) -- changed to Just [LMV]
     pure Ack
     where f = \x acc -> x.cov:acc
 

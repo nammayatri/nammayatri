@@ -26,15 +26,4 @@ findByorgId personid = do
     return vechileRegCert
 
 
--- findRentalFarePoliciesByOrg ::
---   Transactionable m =>
---   Id Organization ->
---   m [OperatingCity]
--- findRentalFarePoliciesByOrg orgId = do
---   Esq.findOne $ do
---     operatingCity  <- from $ table @OperatingCityT
---     where_ $
---       operatingCity ^. OperatingCityOrganizationId ==. val (toKey orgId)
---     return OperatingCity
-
 

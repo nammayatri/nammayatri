@@ -289,32 +289,6 @@ type OnBoardingAPI =
 
 onBoardingAPIFlow :: FlowServer OnBoardingAPI
 onBoardingAPIFlow = DO.registrationHandler1
--- type DriverDrivingLicenseAPI =
---   "v2" :> "driver"
---   :> "register" :> "drivingLicense"
---   :> ReqBody '[JSON] DriverDrivingLicenseReq
---   :> Post '[JSON] DriverDrivingLicenseRes
-
--- drivingLicenseApiFlow :: FlowServer DriverDrivingLicenseAPI
--- drivingLicenseApiFlow = DrivingLicense.registrationHandler   
-
--- type OperatingLocationAPI =
---   "driver"
---   :> "register" :> "OperatingLocation"
---   :> TokenAuth
---   :> ReqBody '[JSON] OperatingCityReq
---   :> Post '[JSON] OperatingCityRes
-
--- operatingLocationAPIFlow :: FlowServer OperatingLocationAPI
--- operatingLocationAPIFlow =  DOP.sendData  
-
--- type StatusAPI = 
---   "driver"
---   :> "register" :> "status"
---   :> TokenAuth
---   :> ReqBody
---   :> Post '[JSON] StatusRes
-
 
 
 type HealthCheckAPI = Get '[JSON] Text

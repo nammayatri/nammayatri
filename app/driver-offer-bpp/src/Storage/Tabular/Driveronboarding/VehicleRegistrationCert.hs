@@ -20,7 +20,7 @@ derivePersistField "Domain.IdfyStatus"
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    VehicleRegistrationCertT sql = vehicle_registrationcert
+    VehicleRegistrationCertT sql = _vehicle_registration_cert_t
       id Text
       driverId PersonTId
       vehicleRegistrationCertNumber Text Maybe

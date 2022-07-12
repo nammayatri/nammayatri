@@ -28,7 +28,7 @@ findByDId personid = do
     where_ $ driverDriving ^. DriverDrivingLicenseDriverId ==. val (toKey personid)
     return driverDriving
 
-updateDLDetails :: Text -> Maybe UTCTime -> Maybe UTCTime -> IdfyStatus -> [COV] -> SqlDB ()
+updateDLDetails :: Text -> Maybe UTCTime -> Maybe UTCTime -> IdfyStatus -> Maybe [COV] -> SqlDB () -- [COV] changed to Maybe [COV]
 updateDLDetails requestId start expiry status cov = do
   Esq.update $ \tbl -> do
     set
