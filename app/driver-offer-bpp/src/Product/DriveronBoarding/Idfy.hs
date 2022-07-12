@@ -47,11 +47,11 @@ getUTCTimeFromDate = \case
 
 --add validation for class of vehicle
 validateDLStatus :: Maybe UTCTime -> [Text] -> IdfyStatus -> UTCTime -> IdfyStatus
-validateDLStatus validTill _ status now = case status of
+validateDLStatus validTill cov status now = case status of
     COMPLETED -> do
         let tr = idfyValidityStatus now validTill
-        -- let cr = foldr' (\x acc -> x >= LMV && acc) False cov
-        if tr then VALID else INVALID
+        let cr = foldr' (\x acc -> isValidCOV x || acc) False cov
+        if tr && cr then VALID else INVALID
     _ -> status
 
 -- validate:
@@ -62,13 +62,19 @@ validateDLStatus validTill _ status now = case status of
 
 --add validation for class of vehicle
 validateRCStatus :: Maybe UTCTime -> Maybe UTCTime -> Maybe Text -> IdfyStatus -> UTCTime -> IdfyStatus
-validateRCStatus rcExpiry insuranceValidity _ status now = case status of
+validateRCStatus rcExpiry insuranceValidity cov status now = case status of
     COMPLETED -> do
         let tr = idfyValidityStatus now rcExpiry
-        -- let cr = Just LMV == cov
+        let cr = maybe False isValidCOV cov
         let ir = idfyValidityStatus now insuranceValidity
-        if tr && ir then VALID else INVALID
+        if tr && ir && cr then VALID else INVALID
     _ -> status
 
 idfyValidityStatus :: UTCTime -> Maybe UTCTime -> Bool
 idfyValidityStatus now = maybe False (now <=)
+
+inValidCov :: [Text]
+inValidCov = ["3W_NT", "3W_T", "3W_CAB", "MCWG", "MCWOG", "MGV", "MMV"]
+
+isValidCOV :: Text -> Bool
+isValidCOV cov = foldr' (\x acc -> x /= cov && acc) True inValidCov
