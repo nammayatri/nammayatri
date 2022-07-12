@@ -1,17 +1,17 @@
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp.DriverDrivingLicense
 (
     id character(36) COLLATE pg_catalog."default" NOT NULL,
-    driverId character varying(36) COLLATE pg_catalog."default" NOT NULL,
-    driverLicenseNumber character varying(255) COLLATE pg_catalog."default",
-    driverLicenseStart timestamp with time zone NOT NULL,
-    driverLicenseStatus character varying(10) NOT NULL,
-    driverVerificationStatus character varying(10) NOT NULL,
-    driverLicenseExpiry timestamp with time zone NOT NULL,
-    classOfVehicle text[][] COLLATE pg_catalog."default",
+    driver_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
+    driver_license_number character varying(255) COLLATE pg_catalog."default",
+    driver_license_start timestamp with time zone NOT NULL,
+    driver_license_status character varying(10) NOT NULL,
+    driver_verification_status character varying(10) NOT NULL,
+    driver_license_expiry timestamp with time zone NOT NULL,
+    class_of_vehicle text[][] COLLATE pg_catalog."default",
     request_id character(36) COLLATE pg_catalog."default" NOT NULL,
-    createdAt timestamp with time zone NOT NULL,
-    updatedAt timestamp with time zone NOT NULL
-    ,CONSTRAINT  DriverDrivingLicense_driver_id_fkey FOREIGN KEY (driverId) REFERENCES atlas_driver_offer_bpp.person(id)
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+    ,CONSTRAINT  DriverDrivingLicense_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_driver_offer_bpp.person(id)
 );
 
 

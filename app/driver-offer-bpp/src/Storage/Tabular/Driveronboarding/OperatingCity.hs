@@ -17,7 +17,7 @@ derivePersistField "Domain.OperatingCityVerification"
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    OperatingCityT sql = operating_city
+    OperatingCityT sql = _operating_city_t
       id Text
       organizationId OrganizationTId
       cityName Text
