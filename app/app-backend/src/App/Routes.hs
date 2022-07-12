@@ -13,6 +13,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnConfirm as API
 import qualified Beckn.Types.Core.Taxi.API.OnInit as API
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as API
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
+import qualified Beckn.Types.Core.Taxi.API.OnTrack as API
 import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
@@ -47,6 +48,7 @@ import qualified Product.Select as Select
 import qualified Product.Serviceability as Serviceability
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Support as Support
+import qualified Product.Track as Track
 import qualified Product.Update as Update
 import Servant hiding (throwError)
 import Servant.OpenApi
@@ -199,6 +201,8 @@ type BecknCabAPI =
     :> API.OnConfirmAPI
     :<|> SignatureAuth "Authorization"
     :> API.OnUpdateAPI
+    :<|> SignatureAuth "Authorization"
+    :> API.OnTrackAPI
 
 type SearchAPI =
   "rideSearch"
@@ -213,6 +217,7 @@ becknCabApi =
     :<|> Init.onInit
     :<|> Confirm.onConfirm
     :<|> Update.onUpdate
+    :<|> Track.onTrack
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =

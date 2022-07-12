@@ -47,7 +47,8 @@ data AppEnv = AppEnv
     coreMetrics :: CoreMetricsContainer,
     btmMetrics :: AllocatorMetricsContainer,
     loggerEnv :: LoggerEnv,
-    kafkaProducerTools :: KafkaProducerTools
+    kafkaProducerTools :: KafkaProducerTools,
+    selfUIUrl :: BaseUrl
   }
   deriving (Generic)
 

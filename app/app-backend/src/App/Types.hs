@@ -81,7 +81,7 @@ data AppCfg = AppCfg
     gatewayUrl :: BaseUrl,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
-    exotelCallbackUrl :: BaseUrl
+    selfUIUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
 
@@ -116,7 +116,7 @@ data AppEnv = AppEnv
     disableSignatureAuth :: Bool,
     gatewayUrl :: BaseUrl,
     encTools :: EncTools,
-    exotelCallbackUrl :: BaseUrl,
+    selfUIUrl :: BaseUrl,
     hedisEnv :: HedisEnv,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: TMVar (),

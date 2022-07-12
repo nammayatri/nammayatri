@@ -51,11 +51,11 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
   return $ CallAPI.CallRes callId
   where
     buildCallbackUrl = do
-      bapUrl <- asks (.exotelCallbackUrl)
+      bppUIUrl <- asks (.selfUIUrl)
       let rideid = T.unpack (strip (getId rideId))
       return $
-        bapUrl
-          { baseUrlPath = baseUrlPath bapUrl <> "/driver/ride/" <> rideid <> "/call/statusCallback"
+        bppUIUrl
+          { baseUrlPath = baseUrlPath bppUIUrl <> "/driver/ride/" <> rideid <> "/call/statusCallback"
           }
 
     buildCallStatus rideid callId exoResponse = do

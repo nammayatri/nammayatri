@@ -81,7 +81,7 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
-    exotelCallbackUrl :: BaseUrl,
+    selfUIUrl :: BaseUrl,
     schedulingReserveTime :: Seconds
   }
   deriving (Generic, FromDhall)
@@ -122,7 +122,7 @@ data AppEnv = AppEnv
     disableSignatureAuth :: Bool,
     encTools :: EncTools,
     kafkaProducerCfg :: KafkaProducerCfg,
-    exotelCallbackUrl :: BaseUrl,
+    selfUIUrl :: BaseUrl,
     esqDBEnv :: EsqDBEnv,
     isShuttingDown :: TMVar (),
     bppMetrics :: BPPMetricsContainer,

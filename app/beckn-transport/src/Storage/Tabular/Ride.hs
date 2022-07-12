@@ -48,6 +48,7 @@ instance TEntityKey RideT where
 
 instance TType RideT Domain.Ride where
   fromTType RideT {..} = do
+    tUrl <- parseBaseUrl trackingUrl
     return $
       Domain.Ride
         { id = Id id,
@@ -56,6 +57,7 @@ instance TType RideT Domain.Ride where
           driverId = fromKey driverId,
           traveledDistance = HighPrecMeters traveledDistance,
           chargeableDistance = HighPrecMeters <$> chargeableDistance,
+          trackingUrl = tUrl,
           ..
         }
   toTType Domain.Ride {..} =
@@ -66,5 +68,6 @@ instance TType RideT Domain.Ride where
         driverId = toKey driverId,
         traveledDistance = getHighPrecMeters traveledDistance,
         chargeableDistance = getHighPrecMeters <$> chargeableDistance,
+        trackingUrl = showBaseUrl trackingUrl,
         ..
       }

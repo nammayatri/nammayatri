@@ -92,6 +92,6 @@ buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id RideBooking -> m (
 buildDiscountFareBreakup mbDiscount rideBookingId = do
   forM mbDiscount $ \discount -> do
     id <- Id <$> generateGUIDText
-    let amount = - discount -- this amount should be always below zero
+    let amount = -discount -- this amount should be always below zero
         description = "Discount is " <> show discount <> " rupees"
     pure FareBreakup {..}

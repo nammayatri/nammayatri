@@ -4,7 +4,6 @@ import Beckn.Prelude
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Cancel.Req as Cancel
-import qualified Beckn.Types.Core.Taxi.Cancel.Req as ReqCancel
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import ExternalAPI.Flow
@@ -22,10 +21,10 @@ buildCancelReq res = do
   pure $ BecknReq context $ mkCancelMessage res
 
 mkCancelMessage :: DCancel.CancelRes -> Cancel.CancelMessage
-mkCancelMessage res = ReqCancel.CancelMessage res.bppBookingId.getId $ castCancellatonSource res.cancellationSource
+mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId $ castCancellatonSource res.cancellationSource
   where
     castCancellatonSource = \case
-      SBCR.ByUser -> ReqCancel.ByUser
-      SBCR.ByDriver -> ReqCancel.ByDriver
-      SBCR.ByOrganization -> ReqCancel.ByOrganization
-      SBCR.ByAllocator -> ReqCancel.ByAllocator
+      SBCR.ByUser -> Cancel.ByUser
+      SBCR.ByDriver -> Cancel.ByDriver
+      SBCR.ByOrganization -> Cancel.ByOrganization
+      SBCR.ByAllocator -> Cancel.ByAllocator

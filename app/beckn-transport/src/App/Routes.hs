@@ -10,6 +10,7 @@ import qualified Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Init as API
 import qualified Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
+import qualified Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi
@@ -26,6 +27,7 @@ import Product.BecknProvider.Confirm as BP
 import qualified Product.BecknProvider.Init as BP
 import Product.BecknProvider.Rating as BP
 import Product.BecknProvider.Search as BP
+import Product.BecknProvider.Track as BP
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Driver as Driver
@@ -312,6 +314,9 @@ type OrgBecknAPI =
     :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
     :> API.RatingAPI
+    :<|> Capture "orgId" (Id Organization)
+    :> SignatureAuth "Authorization"
+    :> API.TrackAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
@@ -320,6 +325,7 @@ orgBecknApiFlow =
     :<|> BP.confirm
     :<|> BP.cancel
     :<|> BP.ratingImpl
+    :<|> BP.track
 
 -------- Initiate a call (Exotel) APIs --------
 type CallAPIs =

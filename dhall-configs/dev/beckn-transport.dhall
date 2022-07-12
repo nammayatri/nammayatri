@@ -105,6 +105,6 @@ in
 , disableSignatureAuth = False
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
-, exotelCallbackUrl = "http://localhost:8014/v2/"
+, selfUIUrl = "http://localhost:8014/v2/"
 , schedulingReserveTime = +1800
 }

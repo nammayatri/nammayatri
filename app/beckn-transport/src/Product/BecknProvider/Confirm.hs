@@ -28,7 +28,7 @@ confirm transporterId (SignatureAuthResult signPayload subscriber) req =
     logTagInfo "confirm API Flow" "Reached"
     Esq.runTransaction $
       QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
-    dConfirmReq <- ACL.buildConfirmReq req
+    dConfirmReq <- ACL.buildConfirmReq subscriber req
     let context = req.context
     dConfirmRes <- DConfirm.confirm transporterId subscriber dConfirmReq
     ExternalAPI.withCallback dConfirmRes.transporter Context.CONFIRM OnConfirm.onConfirmAPI context context.bap_uri $

@@ -43,11 +43,11 @@ initiateCallToDriver rideId personId =
     return $ CallAPI.CallRes callId
   where
     buildCallbackUrl = do
-      bapUrl <- asks (.exotelCallbackUrl)
+      bapUIUrl <- asks (.selfUIUrl)
       let id = T.unpack (strip (getId rideId))
       return $
-        bapUrl
-          { baseUrlPath = baseUrlPath bapUrl <> "/ride/" <> id <> "/call/statusCallback"
+        bapUIUrl
+          { baseUrlPath = baseUrlPath bapUIUrl <> "/ride/" <> id <> "/call/statusCallback"
           }
 
     buildCallStatus id callId exotelResponse = do

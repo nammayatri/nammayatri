@@ -10,17 +10,14 @@ import qualified Beckn.Types.Core.Taxi.API.Init as API
 import Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import Beckn.Types.Core.Taxi.API.Select as API
+import Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Utils.Dhall (FromDhall)
-import Beckn.Utils.Error.BaseError.HTTPError.APIError
 import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import Beckn.Utils.Servant.SignatureAuth
 import EulerHS.Prelude
-import qualified ExternalAPI.Types as API
 import GHC.Records.Extra
 import Servant.Client
 import Tools.Metrics (CoreMetrics)
-import Types.API.Location
-import Types.Error
 import Utils.Common
 
 data BAPs a = BAPs
@@ -83,19 +80,6 @@ confirm ::
   m ConfirmRes
 confirm = callBecknAPIWithSignature "confirm" API.confirmAPI
 
-location ::
-  ( MonadFlow m,
-    CoreMetrics m
-  ) =>
-  BaseUrl ->
-  Text ->
-  m GetLocationRes
-location url req = do
-  -- TODO: fix authentication
-  callOwnAPI Nothing Nothing url (API.location req) "location"
-    `catchOwnAPI` throwError . \case
-      "RIDE_INVALID_STATUS" -> RideInvalidStatus "Cannot track this ride"
-
 cancel ::
   ( MonadFlow m,
     CoreMetrics m,
@@ -105,6 +89,16 @@ cancel ::
   CancelReq ->
   m CancelRes
 cancel = callBecknAPIWithSignature "cancel" API.cancelAPI
+
+track ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasBapIds c r m
+  ) =>
+  BaseUrl ->
+  TrackReq ->
+  m CancelRes
+track = callBecknAPIWithSignature "track" API.trackAPI
 
 feedback ::
   ( MonadFlow m,

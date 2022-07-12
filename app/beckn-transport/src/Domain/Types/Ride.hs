@@ -40,7 +40,7 @@ data Ride = Ride
     status :: RideStatus,
     driverId :: Id DPers.Person,
     otp :: Text,
-    trackingUrl :: Text,
+    trackingUrl :: BaseUrl,
     fare :: Maybe Amount,
     totalFare :: Maybe Amount,
     traveledDistance :: HighPrecMeters,

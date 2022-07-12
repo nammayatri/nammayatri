@@ -110,5 +110,5 @@ in
 , disableSignatureAuth = False
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
-, exotelCallbackUrl = "https://api.sandbox.beckn.juspay.in/bpp/cab/v2/"
+, selfUIUrl = "https://api.sandbox.beckn.juspay.in/bpp/cab/v2/"
 }

@@ -37,4 +37,5 @@ in  { appCfg = appCfg
     , driverPositionInfoExpiry = appCfg.driverPositionInfoExpiry
     , graceTerminationPeriod = appCfg.graceTerminationPeriod
     , encTools = appCfg.encTools
+    , selfUIUrl = appCfg.selfUIUrl
     }

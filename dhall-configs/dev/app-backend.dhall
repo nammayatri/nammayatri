@@ -90,7 +90,7 @@ in
 , metricsPort = +9999
 , xProviderUri = providerUri
 , hostName = "localhost"
-, exotelCallbackUrl = "http://localhost:8013/v2/"
+, selfUIUrl = "http://localhost:8013/v2/"
 , bapSelfIds =
   { cabs = "JUSPAY.MOBILITY.APP.UAT.1"
   , metro = "JUSPAY.MOBILITY.APP.UAT.2"

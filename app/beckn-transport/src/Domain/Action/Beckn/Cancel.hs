@@ -33,7 +33,9 @@ cancel transporterId _ req = do
   transporterOrg <-
     Organization.findById transporterId
       >>= fromMaybeM (OrgNotFound transporterId.getId)
-  rideBooking <- QRB.findById req.bookingId >>= fromMaybeM (RideBookingDoesNotExist req.bookingId.getId)
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (RideBookingDoesNotExist req.bookingId.getId)
+  let transporterId' = booking.providerId
+  unless (transporterId' == transporterId) $ throwError AccessDenied
   now <- getCurrentTime
-  rideReq <- BP.buildRideReq (rideBooking.id) (transporterOrg.shortId) SRideRequest.CANCELLATION now
+  rideReq <- BP.buildRideReq (booking.id) (transporterOrg.shortId) SRideRequest.CANCELLATION now
   Esq.runTransaction $ RideRequest.create rideReq

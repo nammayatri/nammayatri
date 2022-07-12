@@ -35,7 +35,7 @@ mkPersist
       vehicleColor Text
       vehicleVariant VehVar.VehicleVariant
       otp Text
-      trackingUrl Text
+      trackingUrl Text Maybe
       fare Amount Maybe
       totalFare Amount Maybe
       chargeableDistance Double Maybe
@@ -53,12 +53,14 @@ instance TEntityKey RideT where
 
 instance TType RideT Domain.Ride where
   fromTType RideT {..} = do
+    tUrl <- parseBaseUrl `mapM` trackingUrl
     return $
       Domain.Ride
         { id = Id id,
           bppRideId = Id bppRideId,
           bookingId = fromKey bookingId,
           shortId = ShortId shortId,
+          trackingUrl = tUrl,
           ..
         }
   toTType Domain.Ride {..} =
@@ -67,5 +69,6 @@ instance TType RideT Domain.Ride where
         bppRideId = getId bppRideId,
         bookingId = toKey bookingId,
         shortId = getShortId shortId,
+        trackingUrl = showBaseUrl <$> trackingUrl,
         ..
       }

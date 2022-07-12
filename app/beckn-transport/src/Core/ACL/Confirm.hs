@@ -7,16 +7,21 @@ import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import Beckn.Types.Core.Taxi.Confirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
+import qualified Beckn.Types.Registry.Subscriber as Subscriber
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.BookingLocation as DBL
+import Types.Error
 import Utils.Common
 
 buildConfirmReq ::
   (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  Subscriber.Subscriber ->
   Confirm.ConfirmReq ->
   m DConfirm.DConfirmReq
-buildConfirmReq req = do
+buildConfirmReq subscriber req = do
   validateContext Context.CONFIRM req.context
+  unless (subscriber.subscriber_id == req.context.bap_id) $
+    throwError (InvalidRequest "Invalid bap_id")
   let bookingId = Id req.message.order.id
       phone = req.message.order.customer.contact.phone
       customerMobileCountryCode = phone.country_code

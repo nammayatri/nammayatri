@@ -47,7 +47,7 @@ data Ride = Ride
     vehicleColor :: Text,
     vehicleVariant :: VehicleVariant,
     otp :: Text,
-    trackingUrl :: Text,
+    trackingUrl :: Maybe BaseUrl,
     fare :: Maybe Amount,
     totalFare :: Maybe Amount,
     chargeableDistance :: Maybe Double,

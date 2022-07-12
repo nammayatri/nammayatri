@@ -1,6 +1,7 @@
 module Domain.Action.Beckn.OnUpdate (onUpdate, OnUpdateReq (..), OnUpdateFareBreakup (..)) where
 
 import qualified Beckn.Storage.Esqueleto as DB
+import Beckn.Storage.Hedis.Config (HedisFlow)
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.FareBreakup as DFareBreakup
@@ -8,6 +9,8 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
+import ExternalAPI.Flow (BAPs, HasBapIds)
+import qualified Product.Track as Track
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
@@ -56,7 +59,19 @@ data OnUpdateFareBreakup = OnUpdateFareBreakup
     description :: Text
   }
 
-onUpdate :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => OnUpdateReq -> m ()
+onUpdate ::
+  ( EsqDBFlow m r,
+    FCMFlow m r,
+    CoreMetrics m,
+    HasBapIds c r m,
+    HasFlowEnv
+      m
+      r
+      '["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl],
+    HedisFlow m r
+  ) =>
+  OnUpdateReq ->
+  m ()
 onUpdate RideAssignedReq {..} = do
   rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideBookingId: " <> bppBookingId.getId)
   unless (isAssignable rideBooking) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
@@ -65,6 +80,7 @@ onUpdate RideAssignedReq {..} = do
     QRB.updateStatus rideBooking.id SRB.TRIP_ASSIGNED
     QRide.create ride
   Notify.notifyOnRideAssigned rideBooking ride
+  Track.track ride.id
   where
     buildRide :: MonadFlow m => SRB.RideBooking -> m SRide.Ride
     buildRide rideBooking = do
@@ -76,7 +92,7 @@ onUpdate RideAssignedReq {..} = do
           { id = guid,
             bookingId = rideBooking.id,
             status = SRide.NEW,
-            trackingUrl = "UNKNOWN", -- TODO: Fill this field
+            trackingUrl = Nothing,
             fare = Nothing,
             totalFare = Nothing,
             chargeableDistance = Nothing,

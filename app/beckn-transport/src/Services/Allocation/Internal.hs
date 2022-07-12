@@ -5,6 +5,7 @@ import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Data.Text as T
 import Domain.Types.AllocationEvent (AllocationEventType)
 import qualified Domain.Types.DriverInformation as SDriverInfo
 import qualified Domain.Types.NotificationStatus as SNS
@@ -17,6 +18,7 @@ import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import Product.BecknProvider.Cancel
+import Servant.Client (BaseUrl (..))
 import Services.Allocation.Allocation as Alloc
 import qualified SharedLogic.DriverPool as DrPool
 import Storage.Queries.AllocationEvent (logAllocationEvent)
@@ -94,6 +96,7 @@ assignDriver rideBookingId driverId = do
         ]
     buildRide rideBooking = do
       guid <- generateGUID
+      trackingUrl <- buildTrackingUrl guid
       shortId <- generateShortId
       otp <- generateOTPCode
       now <- getCurrentTime
@@ -105,7 +108,7 @@ assignDriver rideBookingId driverId = do
             status = SRide.NEW,
             driverId = cast driverId,
             otp = otp,
-            trackingUrl = "UNKNOWN", -- TODO: Fill this field
+            trackingUrl,
             fare = Nothing,
             totalFare = Nothing,
             traveledDistance = 0,
@@ -114,6 +117,14 @@ assignDriver rideBookingId driverId = do
             tripEndTime = Nothing,
             createdAt = now,
             updatedAt = now
+          }
+    buildTrackingUrl rideId = do
+      bppUIUrl <- asks (.selfUIUrl)
+      let rideid = T.unpack (getId rideId)
+      return $
+        bppUIUrl
+          { --TODO: find a way to build it using existing types from Routes
+            baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
 
 toRideRequest :: SRR.RideRequest -> Either Text Alloc.RideRequest

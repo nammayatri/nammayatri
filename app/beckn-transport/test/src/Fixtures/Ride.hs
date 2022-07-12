@@ -4,6 +4,7 @@ import Beckn.Types.Id
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures.Time as Fixtures
+import Servant.Client
 
 defaultRide :: Ride.Ride
 defaultRide =
@@ -12,7 +13,7 @@ defaultRide =
       bookingId = Id "1",
       driverId = Id "1",
       otp = "1234",
-      trackingUrl = "",
+      trackingUrl = BaseUrl Https "dummyUrl.wut" 0 "",
       shortId = "",
       fare = Nothing,
       totalFare = Nothing,

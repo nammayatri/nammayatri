@@ -25,6 +25,20 @@ updateStatus rideId status_ = do
       ]
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
+updateTrackingUrl ::
+  Id Ride ->
+  BaseUrl ->
+  SqlDB ()
+updateTrackingUrl rideId url = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideUpdatedAt =. val now,
+        RideTrackingUrl =. val (Just $ showBaseUrl url)
+      ]
+    where_ $ tbl ^. RideId ==. val (getId rideId)
+
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById = Esq.findById
 

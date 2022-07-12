@@ -38,6 +38,7 @@ data AppCfg = AppCfg
     defaultRadiusOfSearch :: Meters,
     driverPositionInfoExpiry :: Maybe Seconds,
     graceTerminationPeriod :: Seconds,
-    encTools :: EncTools
+    encTools :: EncTools,
+    selfUIUrl :: BaseUrl
   }
   deriving (Generic, FromDhall)
