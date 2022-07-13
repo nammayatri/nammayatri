@@ -351,7 +351,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
   Esq.runTransaction $ QDrQt.create driverQuote
   context <- contextTemplate organization Context.SELECT sReq.bapId sReq.bapUri (Just sReq.transactionId) sReq.messageId
   let callbackUrl = sReq.bapUri
-      action = buildOnSearchReq organization sReq [driverQuote] <&> mkOnSelectMessage
+      action = buildOnSelectReq organization sReq [driverQuote] <&> mkOnSelectMessage
   void $ withCallback' withRetry organization Context.SELECT API.onSelectAPI context callbackUrl action
   pure Success
   where
@@ -382,13 +382,13 @@ offerQuote driverId req = withFlowHandlerAPI $ do
             validTill = s.validTill -- what should be here? FIXME
           }
 
-buildOnSearchReq ::
+buildOnSelectReq ::
   (MonadTime m) =>
   Org.Organization ->
   DSReq.SearchRequest ->
   [DDrQuote.DriverQuote] ->
   m DOnSelectReq
-buildOnSearchReq org searchRequest quotes = do
+buildOnSelectReq org searchRequest quotes = do
   now <- getCurrentTime
   let transporterInfo =
         TransporterInfo

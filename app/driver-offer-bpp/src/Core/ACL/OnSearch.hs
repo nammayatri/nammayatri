@@ -1,33 +1,12 @@
 module Core.ACL.OnSearch where
 
 import Beckn.Prelude
-import Beckn.Types.Common
 import Beckn.Types.Core.Taxi.Common.Gps as Common
 import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Common
 import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import qualified Beckn.Types.Core.Taxi.OnSearch as OS
-import Beckn.Types.Id (ShortId)
-import qualified Domain.Types.Organization as DOrg
-import Domain.Types.SearchRequest
+import qualified Domain.Action.Beckn.Search as DSearch
 import qualified Domain.Types.Vehicle.Variant as Variant
-
-data DOnSearchReq = DOnSearchReq
-  { transporterInfo :: TransporterInfo,
-    searchRequest :: SearchRequest,
-    vehicleVariant :: Variant.Variant,
-    distanceToPickup :: Meters,
-    baseFare :: Double, -- FIXME: change type to Amount
-    now :: UTCTime
-  }
-
-data TransporterInfo = TransporterInfo
-  { shortId :: ShortId DOrg.Organization,
-    name :: Text,
-    contacts :: Text,
-    ridesInProgress :: Int,
-    ridesCompleted :: Int,
-    ridesConfirmed :: Int
-  }
 
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
@@ -40,14 +19,14 @@ autoOneWayCategory =
     }
 
 mkOnSearchMessage ::
-  DOnSearchReq ->
+  DSearch.DSearchRes ->
   OS.OnSearchMessage
-mkOnSearchMessage req@DOnSearchReq {..} = do
+mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let fulfillmentId = "fulfillment1"
-      fulfillment = mkFulfillment fulfillmentId req
+      fulfillment = mkFulfillment fulfillmentId res
       category = autoOneWayCategory
       categoryId = category.id
-      item = mkItem categoryId fulfillmentId req
+      item = mkItem categoryId fulfillmentId res
 
   let provider =
         OS.Provider
@@ -85,16 +64,16 @@ castVariant Variant.HATCHBACK = Common.HATCHBACK
 castVariant Variant.SUV = Common.SUV
 castVariant Variant.AUTO = Common.AUTO
 
-mkFulfillment :: Text -> DOnSearchReq -> OS.FulfillmentInfo
-mkFulfillment fulfillmentId dReq = do
-  let fromLocation = dReq.searchRequest.fromLocation
-  let toLocation = dReq.searchRequest.toLocation
+mkFulfillment :: Text -> DSearch.DSearchRes -> OS.FulfillmentInfo
+mkFulfillment fulfillmentId dRes = do
+  let fromLocation = dRes.searchRequest.fromLocation
+  let toLocation = dRes.searchRequest.toLocation
   OS.FulfillmentInfo
     { id = fulfillmentId,
       start =
         OS.StartInfo
           { location = OS.Location $ Common.Gps {lat = fromLocation.lat, lon = fromLocation.lon},
-            time = Common.TimeTimestamp dReq.now
+            time = Common.TimeTimestamp dRes.now
           },
       end =
         Just
@@ -103,12 +82,12 @@ mkFulfillment fulfillmentId dReq = do
             },
       vehicle =
         OS.FulfillmentVehicle
-          { category = castVariant dReq.vehicleVariant
+          { category = castVariant dRes.vehicleVariant
           }
     }
 
-mkItem :: OS.FareProductType -> Text -> DOnSearchReq -> OS.Item
-mkItem categoryId fulfillmentId dReq =
+mkItem :: OS.FareProductType -> Text -> DSearch.DSearchRes -> OS.Item
+mkItem categoryId fulfillmentId dRes =
   OS.Item
     { category_id = categoryId,
       fulfillment_id = fulfillmentId,
@@ -120,7 +99,7 @@ mkItem categoryId fulfillmentId dReq =
             code =
               OS.ItemCode
                 { fareProductType = OS.AUTO_TRIP,
-                  vehicleVariant = castVariant dReq.vehicleVariant,
+                  vehicleVariant = castVariant dRes.vehicleVariant,
                   distance = Nothing,
                   duration = Nothing
                 }
@@ -129,14 +108,14 @@ mkItem categoryId fulfillmentId dReq =
       tags =
         Just $
           OS.ItemTags
-            { distance_to_nearest_driver = OS.DecimalValue $ toRational dReq.distanceToPickup.getMeters
+            { distance_to_nearest_driver = OS.DecimalValue $ toRational dRes.distanceToPickup.getMeters
             },
       base_distance = Nothing,
       base_duration = Nothing
     }
   where
     price_ = do
-      let value_ = OS.DecimalValue $ toRational dReq.baseFare
+      let value_ = OS.DecimalValue $ toRational dRes.baseFare
       OS.ItemPrice
         { currency = "INR",
           value = value_,

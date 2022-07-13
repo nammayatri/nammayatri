@@ -14,10 +14,9 @@ import Utils.Common
 buildSearchReq ::
   (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
   Subscriber.Subscriber ->
-  Subscriber.Subscriber ->
   Search.SearchReq ->
   m DSearch.DSearchReq
-buildSearchReq subscriber gateway req = do
+buildSearchReq subscriber req = do
   let context = req.context
   validateContext Context.SEARCH context
   let intent = req.message.intent
@@ -34,7 +33,6 @@ buildSearchReq subscriber gateway req = do
         transactionId = context.transaction_id,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
-        gatewayUri = gateway.subscriber_url,
         pickupLocation = mkLocation pickup.location,
         pickupTime = pickup.time.timestamp,
         dropLocation = mkLocation dropOff.location

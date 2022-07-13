@@ -4,8 +4,10 @@ import App.Routes.FarePolicy
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Core.Ack (AckResponse)
+import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import qualified Beckn.Types.Core.Taxi.API.Select as API
+import qualified Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi
@@ -16,8 +18,10 @@ import Domain.Types.Vehicle
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
+import qualified Product.BecknProvider.Cancel as BP
 import Product.BecknProvider.Search as BP
 import Product.BecknProvider.Select as BP
+import qualified Product.BecknProvider.Track as BP
 import qualified Product.Driver as Driver
 import Product.DriveronBoarding.DriverOnBoarding as DO
 import qualified Product.DriveronBoarding.Idfy as Idfy
@@ -276,11 +280,19 @@ type OrgBecknAPI =
     :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
     :> API.SelectAPI
+    :<|> Capture "orgId" (Id Organization)
+    :> SignatureAuth "Authorization"
+    :> API.TrackAPI
+    :<|> Capture "orgId" (Id Organization)
+    :> SignatureAuth "Authorization"
+    :> API.CancelAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
   BP.search
     :<|> BP.select
+    :<|> BP.track
+    :<|> BP.cancel
 
 type OnBoardingAPI =
   "driver"

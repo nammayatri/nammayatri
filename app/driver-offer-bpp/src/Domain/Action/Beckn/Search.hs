@@ -6,36 +6,49 @@ import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount
 import Beckn.Types.Common
-import Beckn.Types.Core.Context as Context
-import qualified Beckn.Types.Core.Taxi.API.OnSearch as API
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
-import Core.ACL.OnSearch
 import qualified Domain.Types.Organization as DOrg
+import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
-import ExternalAPI.Flow (withCallback')
 import Product.FareCalculator.Flow
 import SharedLogic.DriverPool
 import qualified Storage.Queries.SearchRequest as QSReq
 import Types.Error
-import Utils.Context (contextTemplate)
 
 data DSearchReq = DSearchReq
   { messageId :: Text,
     transactionId :: Maybe Text,
     bapId :: Text,
     bapUri :: BaseUrl,
-    gatewayUri :: BaseUrl,
     pickupLocation :: DLoc.SearchReqLocationAPIEntity,
     pickupTime :: UTCTime,
     dropLocation :: DLoc.SearchReqLocationAPIEntity
   }
 
-handler :: DOrg.Organization -> DSearchReq -> Flow ()
+data DSearchRes = DSearchRes
+  { transporterInfo :: TransporterInfo,
+    searchRequest :: SearchRequest,
+    vehicleVariant :: Variant.Variant,
+    distanceToPickup :: Meters,
+    baseFare :: Double, -- FIXME: change type to Amount
+    now :: UTCTime
+  }
+
+data TransporterInfo = TransporterInfo
+  { shortId :: ShortId DOrg.Organization,
+    name :: Text,
+    contacts :: Text,
+    ridesInProgress :: Int,
+    ridesCompleted :: Int,
+    ridesConfirmed :: Int
+  }
+
+handler :: DOrg.Organization -> DSearchReq -> Flow DSearchRes
 handler org sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
@@ -59,12 +72,9 @@ handler org sReq = do
       <> show estimatedFare
   Esq.runTransaction $ do
     QSReq.create searchReq
-  context <- contextTemplate org Context.SEARCH sReq.bapId sReq.bapUri sReq.transactionId sReq.messageId
   logDebug $ "bap uri: " <> show sReq.bapUri
-  let callbackUrl = sReq.gatewayUri
-      variant = Variant.AUTO
-      action = buildOnSearchReq org variant distanceToPickup estimatedFare searchReq <&> mkOnSearchMessage
-  void $ withCallback' withRetry org Context.SEARCH API.onSearchAPI context callbackUrl action
+  let variant = Variant.AUTO
+  buildSearchRes org variant distanceToPickup estimatedFare searchReq
 
 buildSearchRequest ::
   ( MonadTime m,
@@ -104,15 +114,15 @@ buildSearchReqLocation DLoc.SearchReqLocationAPIEntity {..} = do
       updatedAt = now
   pure DLoc.SearchReqLocation {..}
 
-buildOnSearchReq ::
+buildSearchRes ::
   (MonadTime m) =>
   DOrg.Organization ->
   Variant.Variant ->
   Meters ->
   Double ->
   DSearchReq.SearchRequest ->
-  m DOnSearchReq
-buildOnSearchReq org vehicleVariant distanceToPickup baseFare searchRequest = do
+  m DSearchRes
+buildSearchRes org vehicleVariant distanceToPickup baseFare searchRequest = do
   now <- getCurrentTime
   let transporterInfo =
         TransporterInfo
@@ -124,7 +134,7 @@ buildOnSearchReq org vehicleVariant distanceToPickup baseFare searchRequest = do
             ridesConfirmed = 0 -- FIXME
           }
   pure $
-    DOnSearchReq
+    DSearchRes
       { transporterInfo,
         now,
         searchRequest,
