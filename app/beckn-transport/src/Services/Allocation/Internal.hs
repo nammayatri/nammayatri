@@ -17,7 +17,6 @@ import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
-import Product.BecknProvider.Cancel
 import Servant.Client (BaseUrl (..))
 import Services.Allocation.Allocation as Alloc
 import qualified SharedLogic.DriverPool as DrPool
@@ -236,7 +235,9 @@ cancelRideBooking rideBookingId reason = do
   fork "cancelRideBooking - Notify BAP" $ do
     BP.sendRideBookingCancelledUpdateToBAP rideBooking transporter reason.source
   whenJust mbRide $ \ride ->
-    notifyDriverOnCancel rideBooking ride reason
+    fork "cancelRide - Notify driver" $ do
+      driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      Notify.notifyOnCancel rideBooking driver.id driver.deviceToken reason.source
 
 cleanupNotifications :: EsqDBFlow m r => Id RideBooking -> m ()
 cleanupNotifications = Esq.runTransaction . QNS.cleanupNotifications

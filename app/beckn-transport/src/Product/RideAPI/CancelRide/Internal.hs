@@ -1,17 +1,10 @@
-module Product.BecknProvider.Cancel where
+module Product.RideAPI.CancelRide.Internal where
 
-import App.Types (FlowHandler)
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Queries.BecknRequest as QBR
+import Beckn.Types.App
 import Beckn.Types.Common
-import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Taxi.API.Cancel as Cancel
 import Beckn.Types.Id
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
-import qualified Core.ACL.Cancel as ACL
-import Data.Aeson (encode)
-import qualified Domain.Action.Beckn.Cancel as DCancel
 import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Ride as SRide
@@ -34,20 +27,6 @@ import Tools.Metrics (CoreMetrics)
 import Types.Error
 import Utils.Common
 import qualified Utils.Notifications as Notify
-
-cancel ::
-  Id Organization.Organization ->
-  SignatureAuthResult ->
-  Cancel.CancelReq ->
-  FlowHandler AckResponse
-cancel transporterId subscriber@(SignatureAuthResult signPayload _) req =
-  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    logTagInfo "Cancel API Flow" "Reached"
-    Esq.runTransaction $ do
-      QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
-    dConfirmReq <- ACL.buildCancelReq req
-    DCancel.cancel transporterId subscriber dConfirmReq
-    return Ack
 
 cancelRide ::
   ( EsqDBFlow m r,
@@ -80,23 +59,11 @@ cancelRide rideId bookingCReason = do
     if isCancelledByDriver
       then BP.sendRideBookingReallocationUpdateToBAP rideBooking ride.id transporter
       else BP.sendRideBookingCancelledUpdateToBAP rideBooking transporter bookingCReason.source
-  notifyDriverOnCancel rideBooking ride bookingCReason
-  where
-    isCancelledByDriver = bookingCReason.source == SBCR.ByDriver
-
-notifyDriverOnCancel ::
-  ( EsqDBFlow m r,
-    CoreMetrics m,
-    FCMFlow m r
-  ) =>
-  SRB.RideBooking ->
-  SRide.Ride ->
-  SBCR.RideBookingCancellationReason ->
-  m ()
-notifyDriverOnCancel rideBooking ride cancellationReason =
   fork "cancelRide - Notify driver" $ do
     driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    Notify.notifyOnCancel rideBooking driver.id driver.deviceToken cancellationReason.source
+    Notify.notifyOnCancel rideBooking driver.id driver.deviceToken bookingCReason.source
+  where
+    isCancelledByDriver = bookingCReason.source == SBCR.ByDriver
 
 cancelRideTransaction ::
   EsqDBFlow m r =>

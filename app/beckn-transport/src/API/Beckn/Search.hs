@@ -1,23 +1,34 @@
-module Product.BecknProvider.Search (search) where
+module API.Beckn.Search where
 
 import App.Types
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Queries.BecknRequest as QBR
-import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
+import qualified Beckn.Types.Core.Taxi.API.Search as API
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import Beckn.Types.Id
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnSearch as ACL
 import qualified Core.ACL.Search as ACL
 import Data.Aeson (encode)
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.Search as DSearch
+import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Organization as Org
-import EulerHS.Prelude hiding (state)
+import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
+import Servant
 import Utils.Common
+
+type API =
+  Capture "orgId" (Id Organization)
+    :> SignatureAuth "Authorization"
+    :> SignatureAuth "X-Gateway-Authorization"
+    :> API.SearchAPI
+
+handler :: FlowServer API
+handler = search
 
 search ::
   Id Org.Organization ->
