@@ -122,3 +122,15 @@ content-type: application/json
 token: {{token}}
 
 ###
+
+# @name initQuote
+@selectedQuoteId = {{selectedQuotes.response.body.selectedQuotes[0].id}}
+
+POST {{app-host}}/rideInit
+content-type: application/json
+token: {{token}}
+
+{
+  "selected": true,
+  "quoteId": "{{selectedQuoteId}}"
+}

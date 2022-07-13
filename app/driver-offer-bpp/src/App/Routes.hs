@@ -5,6 +5,7 @@ import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Core.Ack (AckResponse)
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
+import qualified Beckn.Types.Core.Taxi.API.Init as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import qualified Beckn.Types.Core.Taxi.API.Select as API
 import qualified Beckn.Types.Core.Taxi.API.Track as API
@@ -19,6 +20,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
 import qualified Product.BecknProvider.Cancel as BP
+import Product.BecknProvider.Init as BP
 import Product.BecknProvider.Search as BP
 import Product.BecknProvider.Select as BP
 import qualified Product.BecknProvider.Track as BP
@@ -281,6 +283,9 @@ type OrgBecknAPI =
     :> SignatureAuth "Authorization"
     :> API.SelectAPI
     :<|> Capture "orgId" (Id Organization)
+      :> SignatureAuth "Authorization"
+      :> API.InitAPI
+    :<|> Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
     :> API.TrackAPI
     :<|> Capture "orgId" (Id Organization)
@@ -291,6 +296,7 @@ orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
   BP.search
     :<|> BP.select
+    :<|> BP.init
     :<|> BP.track
     :<|> BP.cancel
 

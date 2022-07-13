@@ -49,7 +49,7 @@ handler orgId sReq = do
       <> show distance
       <> "; estimated fare:"
       <> show estimatedFare
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq estimatedFare) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq estimatedFare distance.getHighPrecMeters) driverPool
   Esq.runTransaction $ do
     QSReq.create searchReq
     mapM_ QSRD.create searchRequestsForDrivers
@@ -58,9 +58,10 @@ handler orgId sReq = do
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
       FareParameters ->
+      Double ->
       GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchRequest estFareParams gdRes = do
+    buildSearchRequestForDriver searchRequest estFareParams distance gdRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let driver = gdRes.origin

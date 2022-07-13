@@ -374,6 +374,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
             driverRating = driver.rating,
             baseFare = sd.baseFare,
             vehicleVariant = sd.vehicleVariant,
+            distance = sd.distance,
             extraFareSelected = req.offeredFare,
             distanceToPickup = sd.distanceToPickup,
             durationToPickup = sd.durationToPickup,

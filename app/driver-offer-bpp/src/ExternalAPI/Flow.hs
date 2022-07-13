@@ -21,10 +21,10 @@ import Types.Error
 import Utils.Common
 
 withCallback ::
-  HasFlowEnv m r '["nwAddress" ::: BaseUrl] =>
+  HasFlowEnv m r '["nwAddress" ::: BaseUrl, "httpClientOptions" ::: HttpClientOptions] =>
   Org.Organization ->
   WithBecknCallbackMig api callback_success m
-withCallback = withCallback' identity
+withCallback = withCallback' withRetry
 
 withCallback' ::
   (m () -> m ()) ->

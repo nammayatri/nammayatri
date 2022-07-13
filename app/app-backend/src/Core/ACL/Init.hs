@@ -5,14 +5,11 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Init as Init
-import Beckn.Types.Error (GenericError (InvalidRequest))
 import Beckn.Types.Field
 import Beckn.Types.Logging
 import Beckn.Types.MapSearch (LatLong)
-import Beckn.Utils.Common (throwError)
 import Beckn.Utils.Context (buildTaxiContext)
 import qualified Domain.Action.UI.Init as DInit
-import qualified Domain.Types.Quote as Quote
 import qualified Domain.Types.VehicleVariant as VehVar
 import ExternalAPI.Flow
 
@@ -42,9 +39,9 @@ buildInitMessage res = do
   where
     buildItemCode = do
       (fpType, mbDistance, mbDuration) <- case res.quoteDetails of
-        Quote.OneWayDetails _ -> pure (Init.ONE_WAY_TRIP, Nothing, Nothing)
-        Quote.RentalDetails r -> pure (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration)
-        Quote.AutoDetails -> throwError $ InvalidRequest "Quote should be selected before init"
+        DInit.InitOneWayDetails -> pure (Init.ONE_WAY_TRIP, Nothing, Nothing)
+        DInit.InitRentalDetails r -> pure (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration)
+        DInit.InitAutoDetails -> pure (Init.AUTO_TRIP, Nothing, Nothing)
       let vehicleVariant = case res.vehicleVariant of
             VehVar.SEDAN -> Init.SEDAN
             VehVar.SUV -> Init.SUV

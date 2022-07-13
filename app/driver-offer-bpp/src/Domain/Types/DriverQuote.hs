@@ -20,9 +20,13 @@ data DriverQuote = DriverQuote
     baseFare :: Double,
     extraFareSelected :: Maybe Double,
     vehicleVariant :: Variant.Variant,
+    distance :: Double,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     validTill :: UTCTime
   }
+
+getTotalFare :: DriverQuote -> Double
+getTotalFare q = q.baseFare + fromMaybe 0 q.extraFareSelected

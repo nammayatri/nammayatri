@@ -16,6 +16,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     vehicleVariant :: Variant.Variant,
+    distance :: Double,
     baseFare :: Double,
     createdAt :: UTCTime
   }

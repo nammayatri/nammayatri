@@ -32,6 +32,7 @@ mkPersist
       baseFare Double
       extraFareSelected Double Maybe
       vehicleVariant Variant.Variant
+      distance Double
       distanceToPickup Int
       durationToPickup Double
       validTill UTCTime
