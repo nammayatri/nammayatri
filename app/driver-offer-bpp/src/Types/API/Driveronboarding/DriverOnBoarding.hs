@@ -6,7 +6,8 @@ data DriverOnBoardingReq = DriverOnBoardingReq {
     organizationId :: Text,
     driverLicenseNumber :: Maybe Text,
     operatingCity :: Text,
-    driverDateOfBirth :: UTCTime,
+    driverDateOfBirth :: Maybe UTCTime,
+    driverIdNumber :: Maybe Text,
     vehicleRegistrationCertNumber :: Maybe Text
 }
 

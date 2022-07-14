@@ -12,6 +12,8 @@ import Beckn.Types.Id
 import Storage.Tabular.Person (PersonTId)
 import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as Domain
 import Domain.Types.Driveronboarding.VehicleRegistrationCert (IdfyStatus(..), COV (..))
+import Beckn.External.Encryption
+import qualified Data.ByteString as BS
 -- import Beckn.Types.Id
 
 derivePersistField "IdfyStatus"
@@ -48,12 +50,13 @@ instance TType DriverDrivingLicenseT Domain.DriverDrivingLicense where
       Domain.DriverDrivingLicense
         { id = Id id,
           driverId = fromKey driverId,
+          driverLicenseNumber = EncryptedHashed <$> (Encrypted <$> driverLicenseNumber) <*> Just (DbHash BS.empty),
           ..
         }
-   
   toTType Domain.DriverDrivingLicense {..} =
     DriverDrivingLicenseT
       { id = getId id,
         driverId = toKey driverId,
+        driverLicenseNumber = driverLicenseNumber <&> unEncrypted . (.encrypted),
         ..
       }

@@ -248,12 +248,12 @@ type LocationAPI =
 
 type IdfyHandlerAPI =
   "ext" :> "idfy"
-    :> "drivingLicense"
+    :> ("drivingLicense"
       :> ReqBody '[JSON] IdfyDLReq 
       :> Post '[JSON] AckResponse
-    :<|> "vehicleRegistrationCert"
-      :> ReqBody '[JSON] IdfyRCReq 
-      :> Post '[JSON] AckResponse 
+      :<|>"vehicleRegistrationCert"
+        :> ReqBody '[JSON] IdfyRCReq 
+        :> Post '[JSON] AckResponse)
 
 idfyHandlerFlow :: FlowServer IdfyHandlerAPI
 idfyHandlerFlow =

@@ -11,6 +11,8 @@ import Beckn.Storage.Esqueleto
 import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as Domain
 import Beckn.Types.Id
 import Storage.Tabular.Person (PersonTId)
+import qualified Data.ByteString as BS
+import Beckn.External.Encryption
 
 
 
@@ -50,15 +52,16 @@ instance TType VehicleRegistrationCertT Domain.VehicleRegistrationCert where
       Domain.VehicleRegistrationCert
         { id = Id id,
           driverId = fromKey driverId,
+          vehicleRegistrationCertNumber = EncryptedHashed <$> (Encrypted <$> vehicleRegistrationCertNumber) <*> Just (DbHash BS.empty),
           ..
         }
   toTType Domain.VehicleRegistrationCert {..} =
     VehicleRegistrationCertT
       { id = getId id,
         driverId = toKey driverId,
+        vehicleRegistrationCertNumber = vehicleRegistrationCertNumber <&> unEncrypted . (.encrypted),
         ..
       }
-  
 
 
 

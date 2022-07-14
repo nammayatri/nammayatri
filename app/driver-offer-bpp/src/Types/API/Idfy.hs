@@ -5,7 +5,7 @@ import Data.OpenApi (ToSchema (..))
 import EulerHS.Prelude 
 import Domain.Types.Driveronboarding.VehicleRegistrationCert (IdfyStatus)
 
-data IdfyDLReq = IdfyDLReq
+data IdfyDLReq = IdfyDLReq 
   { request_id :: Text,
     status :: IdfyStatus,
     result :: DLVerificationResult

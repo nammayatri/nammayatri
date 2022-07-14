@@ -1,3 +1,6 @@
+{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Driveronboarding.VehicleRegistrationCert where
 import Beckn.Prelude
@@ -7,6 +10,8 @@ import Data.Aeson
 import Data.OpenApi
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Beckn.External.Encryption
+import Beckn.Utils.Common
 
 -- added valid and invalid inorder to accomodate validation results
 data IdfyStatus = IN_PROGRESS |  FAILED | COMPLETED | VALID | INVALID
@@ -45,7 +50,44 @@ constructorForCOV =
     }    
 -- here we should only check vehicle class with three wheeler vehicle type only
 
-data VehicleRegistrationCert = VehicleRegistrationCert {
+data VehicleRegistrationCertE e = VehicleRegistrationCert {
+    id :: Id VehicleRegistrationCert,
+    driverId :: Id Person,
+    vehicleRegistrationCertNumber :: Maybe (EncryptedHashedField e Text),
+    fitnessCertExpiry :: Maybe UTCTime,
+    permitNumber :: Maybe Text,
+    permitStart :: Maybe UTCTime,
+    permitExpiry :: Maybe UTCTime,
+    vehicleClass :: Maybe COV,
+    vehicleNumber :: Maybe Text,
+    insuranceValidity :: Maybe UTCTime,
+    request_id :: Text,
+    rcStatus :: IdfyStatus,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+}
+  deriving (Generic)
+
+type VehicleRegistrationCert = VehicleRegistrationCertE 'AsEncrypted
+type DecryptedVehicleRegistrationCert = VehicleRegistrationCertE 'AsUnencrypted
+deriving instance Show DecryptedVehicleRegistrationCert
+
+instance EncryptedItem VehicleRegistrationCert where
+  type Unencrypted VehicleRegistrationCert = (DecryptedVehicleRegistrationCert, HashSalt)
+  encryptItem (VehicleRegistrationCert {..}, salt) = do
+    vehicleRegistrationCertNumber_ <- encryptItem $ (,salt) <$> vehicleRegistrationCertNumber
+    return VehicleRegistrationCert {vehicleRegistrationCertNumber = vehicleRegistrationCertNumber_, ..}
+  decryptItem VehicleRegistrationCert {..} = do
+    vehicleRegistrationCertNumber_ <- fmap fst <$> decryptItem vehicleRegistrationCertNumber
+    return (VehicleRegistrationCert {vehicleRegistrationCertNumber = vehicleRegistrationCertNumber_, ..}, "")
+    
+instance EncryptedItem' VehicleRegistrationCert where
+  type UnencryptedItem VehicleRegistrationCert = DecryptedVehicleRegistrationCert
+  toUnencrypted a salt = (a, salt)
+  fromUnencrypted a = fst a    
+
+data VehicleRegistrationCertAPIEntity = VehicleRegistrationCertAPIEntity
+  { 
     id :: Id VehicleRegistrationCert,
     driverId :: Id Person,
     vehicleRegistrationCertNumber :: Maybe Text,
@@ -57,10 +99,17 @@ data VehicleRegistrationCert = VehicleRegistrationCert {
     vehicleNumber :: Maybe Text,
     insuranceValidity :: Maybe UTCTime,
     request_id :: Text,
-    createdAt :: UTCTime,
-    rcStatus :: IdfyStatus,
-    updatedAt :: UTCTime
-}
+    rcStatus :: IdfyStatus
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)  
+
+
+makePersonAPIEntity :: DecryptedVehicleRegistrationCert -> VehicleRegistrationCertAPIEntity
+makePersonAPIEntity VehicleRegistrationCert {..} =
+  VehicleRegistrationCertAPIEntity
+    { vehicleRegistrationCertNumber = maskText <$> vehicleRegistrationCertNumber,
+      ..
+    }  
 
 
 

@@ -39,3 +39,18 @@ updateDLDetails requestId start expiry status cov = do
         DriverDrivingLicenseDriverLicenseStatus =. val status
       ]
     where_ $ tbl ^. DriverDrivingLicenseRequest_id  ==. val requestId
+
+-- updatePersonalInfo ::
+--   Id Person ->
+--   Maybe Text ->
+--   m (Maybe DriverDrivingLicense) -> 
+--   SqlDB ()
+-- updatePersonalInfo driverId var = do
+--   now <- getCurrentTime
+--   Esq.update $ \tbl -> do
+--     set
+--       tbl
+--       [
+--         DriverDrivingLicenseUpdatedAt =. val now
+--         DriverDrivingLicenseDriverId=. val var
+--       ]

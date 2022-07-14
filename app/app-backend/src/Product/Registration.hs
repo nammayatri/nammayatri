@@ -62,7 +62,8 @@ makePerson :: EncFlow m r => AuthReq -> Id DMerchant.Merchant -> m SP.Person
 makePerson req merchantId = do
   pid <- BC.generateGUID
   now <- getCurrentTime
-  encMobNum <- encrypt req.mobileNumber
+  a <- encrypt req.mobileNumber
+  -- encMobNum <- encrypt req.mobileNumber
   return $
     SP.Person
       { id = pid,
@@ -74,7 +75,7 @@ makePerson req merchantId = do
         identifierType = SP.MOBILENUMBER,
         email = Nothing,
         passwordHash = Nothing,
-        mobileNumber = Just encMobNum,
+        mobileNumber = Just a,
         mobileCountryCode = Just $ req.mobileCountryCode,
         identifier = Nothing,
         rating = Nothing,
