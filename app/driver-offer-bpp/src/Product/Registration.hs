@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-missing-fields #-}
 module Product.Registration (checkPersonExists, auth, verify, resend, logout) where
 
 import Beckn.External.Encryption
@@ -21,6 +22,10 @@ import Types.Error
 import Utils.Auth (authTokenCacheKey)
 import Utils.Common
 import qualified Utils.Notifications as Notify
+import qualified Beckn.Storage.Esqueleto as DB
+-- import Product.Registration as Reexport (makePerson)
+
+
 
 authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth" <> getId person.id <> ":hitsCount"
@@ -31,7 +36,9 @@ auth req = withFlowHandlerAPI $ do
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
-  person <- QP.findByMobileNumber countryCode mobileNumber >>= fromMaybeM (PersonDoesNotExist mobileNumber)
+  person <- 
+    QP.findByMobileNumber countryCode mobileNumber 
+      >>= maybe (createPerson req) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
@@ -47,6 +54,37 @@ auth req = withFlowHandlerAPI $ do
   let attempts = SR.attempts token
       authId = SR.id token
   return $ AuthRes {attempts, authId}
+
+makePerson :: EncFlow m r => AuthReq -> m SP.Person
+makePerson req = do
+  pid <- BC.generateGUID
+  now <- getCurrentTime
+  encMobNum <- encrypt req.mobileNumber
+
+  return $
+    SP.Person
+      { id = pid,
+        firstName = "Driver",
+        middleName = Nothing,
+        lastName = Nothing,
+        role = SP.DRIVER,
+        gender = SP.UNKNOWN,
+        identifierType = SP.MOBILENUMBER,
+        email = Nothing,
+        passwordHash = Nothing,
+        mobileNumber = Just encMobNum,
+        mobileCountryCode = Just $ req.mobileCountryCode,
+        identifier = Nothing,
+        rating = Nothing,
+        udf1 = Nothing,
+        udf2 = Nothing,
+        organizationId = Nothing,
+        isNew = True,
+        deviceToken = Nothing,
+        description = Nothing,
+        createdAt = now,
+        updatedAt = now
+      }  
 
 makeSession ::
   MonadFlow m =>
@@ -80,6 +118,12 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
 
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
+
+createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> m SP.Person
+createPerson req = do
+  person <- makePerson req
+  DB.runTransaction $ QP.create person
+  pure person
 
 verify :: Id SR.RegistrationToken -> AuthVerifyReq -> FlowHandler AuthVerifyRes
 verify tokenId req = withFlowHandlerAPI $ do
