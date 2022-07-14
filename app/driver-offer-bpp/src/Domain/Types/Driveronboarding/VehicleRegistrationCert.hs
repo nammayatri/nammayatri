@@ -13,8 +13,11 @@ import Beckn.Utils.JSON (constructorsToLowerOptions)
 import Beckn.External.Encryption
 import Beckn.Utils.Common
 
+data VerificationStatus = PENDING | VALID | INVALID
+  deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
+
 -- added valid and invalid inorder to accomodate validation results
-data IdfyStatus = IN_PROGRESS |  FAILED | COMPLETED | VALID | INVALID
+data IdfyStatus = IN_PROGRESS |  FAILED | COMPLETED
   deriving (Show,Eq,Read,Generic,Enum,Bounded)
 instance ToSchema IdfyStatus where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
@@ -53,7 +56,7 @@ constructorForCOV =
 data VehicleRegistrationCertE e = VehicleRegistrationCert {
     id :: Id VehicleRegistrationCert,
     driverId :: Id Person,
-    vehicleRegistrationCertNumber :: Maybe (EncryptedHashedField e Text),
+    vehicleRegistrationCertNumber :: Maybe (EncryptedHashedField e Text), -- remove maybe
     fitnessCertExpiry :: Maybe UTCTime,
     permitNumber :: Maybe Text,
     permitStart :: Maybe UTCTime,
@@ -62,7 +65,8 @@ data VehicleRegistrationCertE e = VehicleRegistrationCert {
     vehicleNumber :: Maybe Text,
     insuranceValidity :: Maybe UTCTime,
     request_id :: Text,
-    rcStatus :: IdfyStatus,
+    idfyStatus :: IdfyStatus,
+    verificationStatus :: VerificationStatus,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
 }
@@ -99,7 +103,8 @@ data VehicleRegistrationCertAPIEntity = VehicleRegistrationCertAPIEntity
     vehicleNumber :: Maybe Text,
     insuranceValidity :: Maybe UTCTime,
     request_id :: Text,
-    rcStatus :: IdfyStatus
+    verificationStatus :: VerificationStatus,
+    idfyStatus :: IdfyStatus
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)  
 

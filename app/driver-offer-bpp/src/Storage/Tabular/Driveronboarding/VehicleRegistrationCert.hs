@@ -18,6 +18,7 @@ import Beckn.External.Encryption
 
 derivePersistField "Domain.COV"
 derivePersistField "Domain.IdfyStatus"
+derivePersistField "Domain.VerificationStatus"
 
 mkPersist
   defaultSqlSettings
@@ -33,7 +34,8 @@ mkPersist
       insuranceValidity  UTCTime Maybe
       vehicleClass Domain.COV Maybe
       vehicleNumber Text Maybe
-      rcStatus Domain.IdfyStatus
+      idfyStatus Domain.IdfyStatus
+      verificationStatus Domain.VerificationStatus
       request_id Text
       createdAt UTCTime
       updatedAt UTCTime

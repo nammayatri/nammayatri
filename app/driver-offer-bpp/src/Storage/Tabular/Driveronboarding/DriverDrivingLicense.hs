@@ -11,12 +11,13 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Storage.Tabular.Person (PersonTId)
 import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as Domain
-import Domain.Types.Driveronboarding.VehicleRegistrationCert (IdfyStatus(..), COV (..))
+import Domain.Types.Driveronboarding.VehicleRegistrationCert (IdfyStatus(..), COV (..), VerificationStatus (..))
 import Beckn.External.Encryption
 import qualified Data.ByteString as BS
 -- import Beckn.Types.Id
 
 derivePersistField "IdfyStatus"
+derivePersistField "VerificationStatus"
 derivePersistField "COV"
 
 mkPersist
@@ -25,12 +26,13 @@ mkPersist
   DriverDrivingLicenseT sql = _driver_driving_license_t
       id Text
       driverId PersonTId
+      driverDob UTCTime Maybe
       driverLicenseNumber Text Maybe
       driverLicenseStart UTCTime Maybe
-      driverLicenseStatus IdfyStatus
-      driverVerificationStatus IdfyStatus Maybe
       driverLicenseExpiry UTCTime Maybe
       classOfVehicle [COV] Maybe
+      idfyStatus IdfyStatus
+      verificationStatus VerificationStatus
       request_id Text
       createdAt UTCTime
       updatedAt UTCTime

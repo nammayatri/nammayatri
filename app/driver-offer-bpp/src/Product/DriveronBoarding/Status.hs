@@ -19,16 +19,14 @@ ndData personId = withFlowHandlerAPI $ do
     abc <- DVehicle.findByPId personId >>= fromMaybeM (PersonNotFound personId.getId)
     def <- DDLI.findByDId personId >>= fromMaybeM (PersonNotFound personId.getId)
     ghi <- DO.findByorgId orgId >>= fromMaybeM (PersonNotFound orgId.getId)
-    let rcveri = getVerificationStatus abc.rcStatus
-    let dlveri = getVerificationStatus def.driverLicenseStatus
+    let rcveri = getVerificationStatus abc.verificationStatus
+    let dlveri = getVerificationStatus def.verificationStatus
     let opcveri = ghi.enabled
     let hello = StatusRes dlveri rcveri opcveri
     return hello
 
-getVerificationStatus :: VRC.IdfyStatus -> VerificationStatus
+getVerificationStatus :: VRC.VerificationStatus -> ResponseStatus
 getVerificationStatus = \case 
-    VRC.IN_PROGRESS -> PENDINGVERIFICATION
-    VRC.FAILED -> FAILEDVERIFICATION
-    VRC.COMPLETED -> FAILEDVERIFICATION
-    VRC.VALID -> VERIFIED
+    VRC.PENDING -> PENDINGVERIFICATION
+    VRC.VALID -> FAILEDVERIFICATION
     VRC.INVALID -> FAILEDVERIFICATION

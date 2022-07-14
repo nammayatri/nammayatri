@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module ExternalAPI where
+module ExternalAPI.Flow where
 
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes

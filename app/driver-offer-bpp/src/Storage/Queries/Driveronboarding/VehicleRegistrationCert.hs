@@ -36,8 +36,8 @@ findByPId personid = do
 --         permit expiry
 --         insurance expiry
 
-updateRCDetails :: Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> IdfyStatus -> Maybe COV -> SqlDB ()
-updateRCDetails requestId permitStart permitValidity fitnessExpiry insuranceValidity status cov = do
+updateRCDetails :: Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> IdfyStatus -> VerificationStatus -> Maybe COV -> UTCTime -> SqlDB ()
+updateRCDetails requestId permitStart permitValidity fitnessExpiry insuranceValidity idfyStatus verificationStatus cov now = do
   Esq.update $ \tbl -> do
     set
       tbl
@@ -46,6 +46,29 @@ updateRCDetails requestId permitStart permitValidity fitnessExpiry insuranceVali
         VehicleRegistrationCertPermitExpiry =. val permitValidity,
         VehicleRegistrationCertFitnessCertExpiry =. val fitnessExpiry,
         VehicleRegistrationCertInsuranceValidity =. val insuranceValidity,
-        VehicleRegistrationCertRcStatus =. val status
+        VehicleRegistrationCertIdfyStatus =. val idfyStatus,
+        VehicleRegistrationCertVerificationStatus =. val verificationStatus,
+        VehicleRegistrationCertUpdatedAt =. val now
       ]
     where_ $ tbl ^. VehicleRegistrationCertRequest_id  ==. val requestId
+
+resetRCRequest :: Id Person -> Maybe Text -> Text -> UTCTime -> SqlDB ()
+resetRCRequest driverId rcNumber requestId now = do
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ VehicleRegistrationCertVehicleRegistrationCertNumber =. val rcNumber,
+        VehicleRegistrationCertRequest_id =. val requestId,
+        VehicleRegistrationCertIdfyStatus =. val IN_PROGRESS,
+        VehicleRegistrationCertVerificationStatus =. val PENDING,
+        VehicleRegistrationCertVehicleClass =. val Nothing,
+        VehicleRegistrationCertPermitStart =. val Nothing,
+        VehicleRegistrationCertPermitExpiry =. val Nothing,
+        VehicleRegistrationCertFitnessCertExpiry =. val Nothing,
+        VehicleRegistrationCertInsuranceValidity =. val Nothing,
+        VehicleRegistrationCertUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. VehicleRegistrationCertDriverId  ==. val (toKey driverId)
+
+    -- driverLicenseNumber :: Maybe (EncryptedHashedField e Text), -- remove Maybe Data Type
+    -- request_id :: Text,

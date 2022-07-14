@@ -36,7 +36,7 @@ import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.Vehicle as SV
 import Environment
 import EulerHS.Prelude hiding (id, state)
-import ExternalAPI
+import ExternalAPI.Flow
 import GHC.Records.Extra
 import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation

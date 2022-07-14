@@ -17,7 +17,7 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
-import ExternalAPI
+import ExternalAPI.Flow ( withCallback' )
 import Product.FareCalculator.Flow
 import SharedLogic.DriverPool
 import qualified Storage.Queries.SearchRequest as QSReq

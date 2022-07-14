@@ -42,22 +42,17 @@ let smsConfig =
   , sender = "JUSPAY"
   }
 
+let idfyConfig =
+  { idfyUrl :: "http://localhost:4634",
+    idfyAccountId :: common.idfyCfg.accountId,
+    idfyApiKey :: common.idfyCfg.apiKey
+  }
+
+
 let geofencingConfig =
 { origin = GeoRestriction.Regions ["Ernakulam"]
 , destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
 }
-
-let smsConfig =
-  { sessionConfig = common.smsSessionConfig
-  , credConfig = {
-      username = common.smsUserName
-    , password = common.smsPassword
-    , otpHash = sec.smsOtpHash
-    }
-  , useFakeSms = Some 7891
-  , url = "http://localhost:4343"
-  , sender = "JUSPAY"
-  }
 
 let apiRateLimitOptions =
   { limit = +4
@@ -103,6 +98,7 @@ in
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"
 , smsCfg = smsConfig
+, idfyCfg = idfyConfig
 , driverPositionInfoExpiry = None Integer
 , searchRequestExpirationSeconds = +3600
 , defaultRadiusOfSearch = +5000 -- meters

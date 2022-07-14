@@ -8,10 +8,16 @@ let exotelCfg =
   , callerId = "xxxxxxx"
   }
 
+let idfyCfg = 
+  { accountId :: "xxxxxxxx",
+    apiKey :: "xxxxxxxx"
+  }
+
 in
 
 { smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
 , exotelCfg = exotelCfg
 , googleMapsKey = topSecret.googleMapsKey
+, idfyCfg = idfyCfg
 }

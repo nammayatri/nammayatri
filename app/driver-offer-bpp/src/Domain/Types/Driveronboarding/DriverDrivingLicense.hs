@@ -13,12 +13,13 @@ import Beckn.Utils.Common
 data DriverDrivingLicenseE e = DriverDrivingLicense {
     id :: Id DriverDrivingLicense,
     driverId :: Id Person,
-    driverLicenseNumber :: Maybe (EncryptedHashedField e Text),
+    driverDob :: Maybe UTCTime,
+    driverLicenseNumber :: Maybe (EncryptedHashedField e Text), -- remove Maybe Data Type
     driverLicenseStart :: Maybe UTCTime,
-    driverLicenseStatus :: IdfyStatus,
-    driverVerificationStatus :: Maybe IdfyStatus,
     driverLicenseExpiry :: Maybe UTCTime,
     classOfVehicle :: Maybe [COV], -- to be changed
+    idfyStatus :: IdfyStatus,
+    verificationStatus :: VerificationStatus,
     request_id :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -43,24 +44,22 @@ instance EncryptedItem' DriverDrivingLicense where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted a = fst a
 
-
-
 data DriverDrivingLicenseAPIEntity = DriverDrivingLicenseAPIEntity
   { 
     id :: Id DriverDrivingLicense,
     driverId :: Id Person,
     driverLicenseNumber :: Maybe Text,
     driverLicenseStart :: Maybe UTCTime,
-    driverLicenseStatus :: IdfyStatus,
-    driverVerificationStatus :: Maybe IdfyStatus,
+    idfyStatus :: IdfyStatus,
+    verificationStatus :: VerificationStatus,
     driverLicenseExpiry :: Maybe UTCTime,
     classOfVehicle :: Maybe [COV],
     request_id :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-makePersonAPIEntity :: DecryptedDriverDrivingLicense -> DriverDrivingLicenseAPIEntity
-makePersonAPIEntity DriverDrivingLicense {..} =
+makeDrivingLicenseEntity :: DecryptedDriverDrivingLicense -> DriverDrivingLicenseAPIEntity
+makeDrivingLicenseEntity DriverDrivingLicense {..} =
   DriverDrivingLicenseAPIEntity
     { driverLicenseNumber = maskText <$> driverLicenseNumber,
       ..
