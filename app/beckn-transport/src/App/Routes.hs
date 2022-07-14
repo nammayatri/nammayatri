@@ -1,6 +1,7 @@
 module App.Routes where
 
 import qualified API.Beckn.Handler as Beckn
+import qualified API.UI.OrgAdmin.Handler as OrgAdmin
 import qualified API.UI.Registration.Handler as Registration
 import qualified API.UI.Ride.Handler as Ride
 import App.Routes.FarePolicy
@@ -21,7 +22,6 @@ import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Driver as Driver
 import qualified Product.Location as Location
-import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.RideBooking as RideBooking
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
@@ -32,7 +32,6 @@ import qualified Types.API.Call as API
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Driver as DriverAPI
 import Types.API.Location as Location
-import qualified Types.API.OrgAdmin as OrgAdminAPI
 import qualified Types.API.RideBooking as RideBookingAPI
 import Types.API.Transporter
 import Types.API.Vehicle
@@ -49,7 +48,7 @@ type MainAPI =
 type UIAPI =
   HealthCheckAPI
     :<|> Registration.API
-    :<|> OrgAdminAPI
+    :<|> OrgAdmin.API
     :<|> DriverAPI
     :<|> VehicleAPI
     :<|> OrganizationAPI --Transporter
@@ -69,7 +68,7 @@ uiServer :: FlowServer UIAPI
 uiServer =
   pure "App is UP"
     :<|> Registration.handler
-    :<|> orgAdminFlow
+    :<|> OrgAdmin.handler
     :<|> driverFlow
     :<|> vehicleFlow
     :<|> organizationFlow
@@ -91,20 +90,6 @@ transporterServer :: FlowServer TransportAPI
 transporterServer =
   mainServer
     :<|> writeSwaggerJSONFlow
-
-type OrgAdminAPI =
-  "orgAdmin" :> "profile"
-    :> ( AdminTokenAuth
-           :> Get '[JSON] OrgAdminAPI.OrgAdminProfileRes
-           :<|> AdminTokenAuth
-             :> ReqBody '[JSON] OrgAdminAPI.UpdateOrgAdminProfileReq
-             :> Post '[JSON] OrgAdminAPI.UpdateOrgAdminProfileRes
-       )
-
-orgAdminFlow :: FlowServer OrgAdminAPI
-orgAdminFlow =
-  OrgAdmin.getProfile
-    :<|> OrgAdmin.updateProfile
 
 type DriverAPI =
   "org" :> "driver"

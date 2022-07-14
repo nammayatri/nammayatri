@@ -1,28 +1,58 @@
-module Product.OrgAdmin where
+module Domain.Action.UI.OrgAdmin
+  ( OrgAdminProfileRes (..),
+    UpdateOrgAdminProfileReq (..),
+    UpdateOrgAdminProfileRes,
+    getProfile,
+    updateProfile,
+  )
+where
 
-import App.Types
 import Beckn.External.Encryption (decrypt)
+import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Types.Id
 import Data.Maybe
+import Data.OpenApi (ToSchema)
+import Domain.Types.Organization (OrganizationAPIEntity)
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
-import qualified Types.API.OrgAdmin as API
 import Types.Error
 import Utils.Common
 
-getProfile :: SP.Person -> FlowHandler API.OrgAdminProfileRes
-getProfile admin = withFlowHandlerAPI $ do
+data OrgAdminProfileRes = OrgAdminProfileRes
+  { id :: Id SP.Person,
+    firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    maskedMobileNumber :: Maybe Text,
+    maskedDeviceToken :: Maybe FCMRecipientToken,
+    organization :: OrganizationAPIEntity
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+data UpdateOrgAdminProfileReq = UpdateOrgAdminProfileReq
+  { firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    deviceToken :: Maybe FCMRecipientToken
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+
+type UpdateOrgAdminProfileRes = OrgAdminProfileRes
+
+getProfile :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
+getProfile admin = do
   let Just orgId = admin.organizationId
   org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
   decAdmin <- decrypt admin
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
 
-updateProfile :: SP.Person -> API.UpdateOrgAdminProfileReq -> FlowHandler API.UpdateOrgAdminProfileRes
-updateProfile admin req = withFlowHandlerAPI $ do
+updateProfile :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile admin req = do
   let Just orgId = admin.organizationId
       updAdmin =
         admin{firstName = fromMaybe admin.firstName req.firstName,
@@ -37,9 +67,9 @@ updateProfile admin req = withFlowHandlerAPI $ do
   let personAPIEntity = SP.makePersonAPIEntity decUpdAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
 
-makeOrgAdminProfileRes :: SP.PersonAPIEntity -> Org.OrganizationAPIEntity -> API.OrgAdminProfileRes
+makeOrgAdminProfileRes :: SP.PersonAPIEntity -> Org.OrganizationAPIEntity -> OrgAdminProfileRes
 makeOrgAdminProfileRes SP.PersonAPIEntity {..} org =
-  API.OrgAdminProfileRes
+  OrgAdminProfileRes
     { organization = org,
       ..
     }
