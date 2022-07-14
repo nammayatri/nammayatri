@@ -31,10 +31,10 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
-import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as QOrganization
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
@@ -100,7 +100,7 @@ createDriverDetails personId = do
 
 getInformation :: Id SP.Person -> App.FlowHandler DriverAPI.DriverInformationRes
 getInformation personId = withFlowHandlerAPI $ do
-  _ <- Registration.checkPersonExists $ getId personId
+  _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound

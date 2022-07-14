@@ -1,6 +1,7 @@
 module App.Routes where
 
 import qualified API.Beckn.Handler as Beckn
+import qualified API.UI.Registration.Handler as Registration
 import qualified API.UI.Ride.Handler as Ride
 import App.Routes.FarePolicy
 import App.Types
@@ -12,7 +13,6 @@ import Data.OpenApi
 import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Organization (Organization)
 import Domain.Types.Person as SP
-import qualified Domain.Types.RegistrationToken as SRT
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import Domain.Types.Vehicle
@@ -22,7 +22,6 @@ import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Driver as Driver
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
-import qualified Product.Registration as Registration
 import qualified Product.RideBooking as RideBooking
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
@@ -34,7 +33,6 @@ import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Driver as DriverAPI
 import Types.API.Location as Location
 import qualified Types.API.OrgAdmin as OrgAdminAPI
-import Types.API.Registration
 import qualified Types.API.RideBooking as RideBookingAPI
 import Types.API.Transporter
 import Types.API.Vehicle
@@ -50,7 +48,7 @@ type MainAPI =
 
 type UIAPI =
   HealthCheckAPI
-    :<|> RegistrationAPI
+    :<|> Registration.API
     :<|> OrgAdminAPI
     :<|> DriverAPI
     :<|> VehicleAPI
@@ -70,7 +68,7 @@ transporterAPI = Proxy
 uiServer :: FlowServer UIAPI
 uiServer =
   pure "App is UP"
-    :<|> registrationFlow
+    :<|> Registration.handler
     :<|> orgAdminFlow
     :<|> driverFlow
     :<|> vehicleFlow
@@ -93,31 +91,6 @@ transporterServer :: FlowServer TransportAPI
 transporterServer =
   mainServer
     :<|> writeSwaggerJSONFlow
-
----- Registration Flow ------
-type RegistrationAPI =
-  "auth"
-    :> ( ReqBody '[JSON] AuthReq
-           :> Post '[JSON] AuthRes
-           :<|> Capture "authId" (Id SRT.RegistrationToken)
-             :> "verify"
-             :> ReqBody '[JSON] AuthVerifyReq
-             :> Post '[JSON] AuthVerifyRes
-           :<|> "otp"
-             :> Capture "authId" (Id SRT.RegistrationToken)
-             :> "resend"
-             :> Post '[JSON] ResendAuthRes
-           :<|> "logout"
-             :> TokenAuth
-             :> Post '[JSON] APISuccess
-       )
-
-registrationFlow :: FlowServer RegistrationAPI
-registrationFlow =
-  Registration.auth
-    :<|> Registration.verify
-    :<|> Registration.resend
-    :<|> Registration.logout
 
 type OrgAdminAPI =
   "orgAdmin" :> "profile"
