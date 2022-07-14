@@ -1,4 +1,4 @@
-module API.UI.Ride.Handler where
+module API.UI.Ride.Handler (API, handler) where
 
 import API.UI.Ride.Types
 import App.Types

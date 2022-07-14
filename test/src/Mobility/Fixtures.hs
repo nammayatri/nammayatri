@@ -1,5 +1,7 @@
 module Mobility.Fixtures where
 
+import qualified "beckn-transport" API.UI.Driver.Handler as DriverAPI
+import qualified "beckn-transport" API.UI.Driver.Types as DriverAPI
 import qualified "beckn-transport" API.UI.Ride.Handler as RideAPI
 import qualified "beckn-transport" API.UI.Ride.Types as RideAPI
 import "app-backend" App.Routes as AbeRoutes
@@ -28,7 +30,6 @@ import qualified "app-backend" Product.Confirm as ConfirmAPI
 import qualified "app-backend" Product.Init as InitAPI
 import Servant hiding (Context)
 import Servant.Client
-import qualified "beckn-transport" Types.API.Driver as DriverAPI
 import qualified "app-backend" Types.API.Feedback as AppFeedback
 import "beckn-transport" Types.API.Location
 import qualified "app-backend" Types.API.Registration as Reg
@@ -67,7 +68,7 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
            :<|> ( getDriverInfo
                     :<|> _
                   )
-         ) = client (Proxy :: Proxy TbeRoutes.DriverAPI)
+         ) = client (Proxy :: Proxy DriverAPI.API)
 
 rideRespond :: Id TRB.RideBooking -> Text -> TRideBookingAPI.SetDriverAcceptanceReq -> ClientM TRideBookingAPI.SetDriverAcceptanceRes
 rideRespond rideBookingId = rideResp

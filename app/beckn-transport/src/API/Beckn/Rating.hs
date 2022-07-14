@@ -1,4 +1,4 @@
-module API.Beckn.Rating where
+module API.Beckn.Rating (API, handler) where
 
 import App.Types
 import qualified Beckn.Storage.Esqueleto as Esq

@@ -1,4 +1,4 @@
-module API.UI.Registration.Handler where
+module API.UI.Registration.Handler (API, handler) where
 
 import API.UI.Registration.Types
 import App.Types

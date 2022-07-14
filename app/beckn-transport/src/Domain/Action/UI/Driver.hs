@@ -1,5 +1,14 @@
-module Product.Driver
-  ( getInformation,
+module Domain.Action.UI.Driver
+  ( DriverInformationRes (..),
+    ListDriverRes (..),
+    DriverEntityRes (..),
+    OnboardDriverReq (..),
+    OnboardDriverRes (..),
+    CreatePerson (..),
+    CreateVehicle (..),
+    UpdateDriverReq (..),
+    UpdateDriverRes,
+    getInformation,
     setActivity,
     setRental,
     listDriver,
@@ -10,12 +19,11 @@ module Product.Driver
   )
 where
 
-import App.Types
-import qualified App.Types as App
 import Beckn.External.Encryption (decrypt, encrypt)
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
+import Beckn.Prelude
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
@@ -23,13 +31,15 @@ import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Types.Predicate
+import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
+import Control.Applicative ((<|>))
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as SV
-import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -39,16 +49,140 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Metrics
-import qualified Types.API.Driver as DriverAPI
 import Types.Error
 import Utils.Auth (authTokenCacheKey)
-import Utils.Common (fromMaybeM, logTagInfo, throwError, withFlowHandlerAPI)
+import Utils.Common (fromMaybeM, logTagInfo, throwError, (:::))
 import qualified Utils.Notifications as Notify
 
-createDriver :: SP.Person -> DriverAPI.OnboardDriverReq -> FlowHandler DriverAPI.OnboardDriverRes
-createDriver admin req = withFlowHandlerAPI $ do
+data DriverInformationRes = DriverInformationRes
+  { id :: Id SP.Person,
+    firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    linkedVehicle :: SV.VehicleAPIEntity,
+    rating :: Maybe Int,
+    active :: Bool,
+    onRide :: Bool,
+    enabled :: Bool,
+    optForRental :: Bool,
+    canDowngradeToSedan :: Bool,
+    canDowngradeToHatchback :: Bool,
+    organization :: Org.OrganizationAPIEntity
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+newtype ListDriverRes = ListDriverRes
+  {list :: [DriverEntityRes]}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data DriverEntityRes = DriverEntityRes
+  { id :: Id SP.Person,
+    firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    linkedVehicle :: SV.VehicleAPIEntity,
+    rating :: Maybe Int,
+    active :: Bool,
+    onRide :: Bool,
+    enabled :: Bool,
+    optForRental :: Bool,
+    canDowngradeToSedan :: Bool,
+    canDowngradeToHatchback :: Bool,
+    registeredAt :: UTCTime
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+-- Create Person request and response
+data OnboardDriverReq = OnboardDriverReq
+  { person :: CreatePerson,
+    vehicle :: CreateVehicle
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+validateOnboardDriverReq :: Validate OnboardDriverReq
+validateOnboardDriverReq OnboardDriverReq {..} =
+  sequenceA_
+    [ validateObject "person" person validateCreatePerson,
+      validateObject "vehicle" vehicle validateCreateVehicle
+    ]
+
+data CreatePerson = CreatePerson
+  { firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    mobileNumber :: Text,
+    mobileCountryCode :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+validateCreatePerson :: Validate CreatePerson
+validateCreatePerson CreatePerson {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
+      validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "mobileNumber" mobileNumber P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    ]
+
+data CreateVehicle = CreateVehicle
+  { category :: SV.Category,
+    model :: Text,
+    variant :: SV.Variant,
+    color :: Text,
+    registrationNo :: Text,
+    capacity :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+validateCreateVehicle :: Validate CreateVehicle
+validateCreateVehicle CreateVehicle {..} =
+  sequenceA_
+    [ validateField "registrationNo" registrationNo $
+        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit),
+      validateField "model" model $
+        NotEmpty `And` star P.latinOrSpace,
+      validateField "color" color $ NotEmpty `And` P.name
+    ]
+
+newtype OnboardDriverRes = OnboardDriverRes
+  {driver :: SP.PersonAPIEntity}
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data UpdateDriverReq = UpdateDriverReq
+  { firstName :: Maybe Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    deviceToken :: Maybe FCM.FCMRecipientToken,
+    canDowngradeToSedan :: Maybe Bool,
+    canDowngradeToHatchback :: Maybe Bool
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+validateUpdateDriverReq :: Validate UpdateDriverReq
+validateUpdateDriverReq UpdateDriverReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ InMaybe $ MinLength 3 `And` P.name,
+      validateField "middleName" middleName $ InMaybe $ NotEmpty `And` P.name,
+      validateField "lastName" lastName $ InMaybe $ NotEmpty `And` P.name
+    ]
+
+type UpdateDriverRes = DriverInformationRes
+
+createDriver ::
+  ( HasFlowEnv m r ["inviteSmsTemplate" ::: Text, "smsCfg" ::: SmsConfig],
+    EsqDBFlow m r,
+    EncFlow m r,
+    CoreMetrics m
+  ) =>
+  SP.Person ->
+  OnboardDriverReq ->
+  m OnboardDriverRes
+createDriver admin req = do
   let Just orgId = admin.organizationId
-  runRequestValidation DriverAPI.validateOnboardDriverReq req
+  runRequestValidation validateOnboardDriverReq req
   let personEntity = req.person
   duplicateCheck
     (QVehicle.findByRegistrationNo req.vehicle.registrationNo)
@@ -74,7 +208,7 @@ createDriver admin req = withFlowHandlerAPI $ do
   sendInviteSms smsCfg inviteSmsTemplate (mobCounCode <> mobNum) (org.name)
     >>= SF.checkSmsResult
   let personAPIEntity = SP.makePersonAPIEntity decPerson
-  return $ DriverAPI.OnboardDriverRes personAPIEntity
+  return $ OnboardDriverRes personAPIEntity
   where
     duplicateCheck cond err = whenM (isJust <$> cond) $ throwError $ InvalidRequest err
 
@@ -98,8 +232,13 @@ createDriverDetails personId = do
   where
     driverId = cast personId
 
-getInformation :: Id SP.Person -> App.FlowHandler DriverAPI.DriverInformationRes
-getInformation personId = withFlowHandlerAPI $ do
+getInformation ::
+  ( EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  Id SP.Person ->
+  m DriverInformationRes
+getInformation personId = do
   _ <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -111,8 +250,13 @@ getInformation personId = withFlowHandlerAPI $ do
       >>= fromMaybeM (OrgNotFound orgId.getId)
   pure $ makeDriverInformationRes driverEntity organization
 
-setActivity :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
-setActivity personId isActive = withFlowHandlerAPI $ do
+setActivity ::
+  ( EsqDBFlow m r
+  ) =>
+  Id SP.Person ->
+  Bool ->
+  m APISuccess.APISuccess
+setActivity personId isActive = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   when isActive $ do
@@ -122,27 +266,40 @@ setActivity personId isActive = withFlowHandlerAPI $ do
     QDriverInformation.updateActivity driverId isActive
   pure APISuccess.Success
 
-setRental :: Id SP.Person -> Bool -> App.FlowHandler APISuccess.APISuccess
-setRental personId isRental = withFlowHandlerAPI $ do
+setRental ::
+  ( EsqDBFlow m r
+  ) =>
+  Id SP.Person ->
+  Bool ->
+  m APISuccess.APISuccess
+setRental personId isRental = do
   _ <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   Esq.runTransaction $
     QDriverInformation.updateRental driverId isRental
   pure APISuccess.Success
 
-listDriver :: SP.Person -> Maybe Text -> Maybe Integer -> Maybe Integer -> FlowHandler DriverAPI.ListDriverRes
-listDriver admin mbSearchString mbLimit mbOffset = withFlowHandlerAPI $ do
+listDriver ::
+  ( EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  SP.Person ->
+  Maybe Text ->
+  Maybe Integer ->
+  Maybe Integer ->
+  m ListDriverRes
+listDriver admin mbSearchString mbLimit mbOffset = do
   let Just orgId = admin.organizationId
   personList <- QDriverInformation.findAllWithLimitOffsetByOrgId mbSearchString mbLimit mbOffset orgId
   respPersonList <- traverse buildDriverEntityRes personList
-  return $ DriverAPI.ListDriverRes respPersonList
+  return $ ListDriverRes respPersonList
 
-buildDriverEntityRes :: (EsqDBFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverAPI.DriverEntityRes
+buildDriverEntityRes :: (EsqDBFlow m r, EncFlow m r) => (SP.Person, DriverInformation) -> m DriverEntityRes
 buildDriverEntityRes (person, driverInfo) = do
   vehicle <- QVehicle.findById person.id >>= fromMaybeM (VehicleNotFound person.id.getId)
   decMobNum <- mapM decrypt person.mobileNumber
   return $
-    DriverAPI.DriverEntityRes
+    DriverEntityRes
       { id = person.id,
         firstName = person.firstName,
         middleName = person.middleName,
@@ -159,8 +316,16 @@ buildDriverEntityRes (person, driverInfo) = do
         canDowngradeToHatchback = driverInfo.canDowngradeToHatchback
       }
 
-changeDriverEnableState :: SP.Person -> Id SP.Person -> Bool -> FlowHandler APISuccess
-changeDriverEnableState admin personId isEnabled = withFlowHandlerAPI $ do
+changeDriverEnableState ::
+  ( EsqDBFlow m r,
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  SP.Person ->
+  Id SP.Person ->
+  Bool ->
+  m APISuccess
+changeDriverEnableState admin personId isEnabled = do
   let Just orgId = admin.organizationId
   person <-
     QPerson.findById personId
@@ -178,8 +343,13 @@ changeDriverEnableState admin personId isEnabled = withFlowHandlerAPI $ do
     notificationTitle = "Account is disabled."
     notificationMessage = "Your account has been disabled. Contact support for more info."
 
-deleteDriver :: SP.Person -> Id SP.Person -> FlowHandler APISuccess
-deleteDriver admin driverId = withFlowHandlerAPI $ do
+deleteDriver ::
+  ( EsqDBFlow m r
+  ) =>
+  SP.Person ->
+  Id SP.Person ->
+  m APISuccess
+deleteDriver admin driverId = do
   let Just orgId = admin.organizationId
   driver <-
     QPerson.findById driverId
@@ -198,9 +368,15 @@ deleteDriver admin driverId = withFlowHandlerAPI $ do
       for_ regTokens $ \regToken -> do
         void $ Redis.deleteKeyRedis $ authTokenCacheKey regToken.token
 
-updateDriver :: Id SP.Person -> DriverAPI.UpdateDriverReq -> FlowHandler DriverAPI.UpdateDriverRes
-updateDriver personId req = withFlowHandlerAPI $ do
-  runRequestValidation DriverAPI.validateUpdateDriverReq req
+updateDriver ::
+  ( EsqDBFlow m r,
+    EncFlow m r
+  ) =>
+  Id SP.Person ->
+  UpdateDriverReq ->
+  m UpdateDriverRes
+updateDriver personId req = do
+  runRequestValidation validateUpdateDriverReq req
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let updPerson =
         person{firstName = fromMaybe person.firstName req.firstName,
@@ -252,7 +428,7 @@ sendInviteSms smsCfg inviteTemplate phoneNumber orgName = do
         SMS.text = SF.constructInviteSms orgName inviteTemplate
       }
 
-buildDriver :: (EncFlow m r) => DriverAPI.CreatePerson -> Id Org.Organization -> m SP.Person
+buildDriver :: (EncFlow m r) => CreatePerson -> Id Org.Organization -> m SP.Person
 buildDriver req orgId = do
   pid <- generateGUID
   now <- getCurrentTime
@@ -281,7 +457,7 @@ buildDriver req orgId = do
         SP.updatedAt = now
       }
 
-buildVehicle :: MonadFlow m => DriverAPI.CreateVehicle -> Id SP.Person -> Id Org.Organization -> m SV.Vehicle
+buildVehicle :: MonadFlow m => CreateVehicle -> Id SP.Person -> Id Org.Organization -> m SV.Vehicle
 buildVehicle req personId orgId = do
   now <- getCurrentTime
   return $
@@ -302,9 +478,9 @@ buildVehicle req personId orgId = do
         SV.updatedAt = now
       }
 
-makeDriverInformationRes :: DriverAPI.DriverEntityRes -> Org.Organization -> DriverAPI.DriverInformationRes
-makeDriverInformationRes DriverAPI.DriverEntityRes {..} org =
-  DriverAPI.DriverInformationRes
+makeDriverInformationRes :: DriverEntityRes -> Org.Organization -> DriverInformationRes
+makeDriverInformationRes DriverEntityRes {..} org =
+  DriverInformationRes
     { organization = Org.makeOrganizationAPIEntity org,
       ..
     }

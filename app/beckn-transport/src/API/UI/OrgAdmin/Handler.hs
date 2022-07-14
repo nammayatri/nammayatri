@@ -1,4 +1,4 @@
-module API.UI.OrgAdmin.Handler where
+module API.UI.OrgAdmin.Handler (API, handler) where
 
 import API.UI.OrgAdmin.Types
 import App.Types

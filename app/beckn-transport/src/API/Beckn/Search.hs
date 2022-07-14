@@ -1,4 +1,4 @@
-module API.Beckn.Search where
+module API.Beckn.Search (API, handler) where
 
 import App.Types
 import qualified Beckn.Storage.Esqueleto as Esq

@@ -1,6 +1,7 @@
 module App.Routes where
 
 import qualified API.Beckn.Handler as Beckn
+import qualified API.UI.Driver.Handler as Driver
 import qualified API.UI.OrgAdmin.Handler as OrgAdmin
 import qualified API.UI.Registration.Handler as Registration
 import qualified API.UI.Ride.Handler as Ride
@@ -20,7 +21,6 @@ import Domain.Types.Vehicle
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
-import qualified Product.Driver as Driver
 import qualified Product.Location as Location
 import qualified Product.RideBooking as RideBooking
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
@@ -30,7 +30,6 @@ import Servant
 import Servant.OpenApi
 import qualified Types.API.Call as API
 import qualified Types.API.CancellationReason as CancellationReasonAPI
-import qualified Types.API.Driver as DriverAPI
 import Types.API.Location as Location
 import qualified Types.API.RideBooking as RideBookingAPI
 import Types.API.Transporter
@@ -49,7 +48,7 @@ type UIAPI =
   HealthCheckAPI
     :<|> Registration.API
     :<|> OrgAdmin.API
-    :<|> DriverAPI
+    :<|> Driver.API
     :<|> VehicleAPI
     :<|> OrganizationAPI --Transporter
     :<|> RideBookingAPI
@@ -69,7 +68,7 @@ uiServer =
   pure "App is UP"
     :<|> Registration.handler
     :<|> OrgAdmin.handler
-    :<|> driverFlow
+    :<|> Driver.handler
     :<|> vehicleFlow
     :<|> organizationFlow
     :<|> rideBookingFlow
@@ -90,57 +89,6 @@ transporterServer :: FlowServer TransportAPI
 transporterServer =
   mainServer
     :<|> writeSwaggerJSONFlow
-
-type DriverAPI =
-  "org" :> "driver"
-    :> ( AdminTokenAuth
-           :> ReqBody '[JSON] DriverAPI.OnboardDriverReq
-           :> Post '[JSON] DriverAPI.OnboardDriverRes
-           :<|> "list"
-             :> AdminTokenAuth
-             :> QueryParam "searchString" Text
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
-             :> Get '[JSON] DriverAPI.ListDriverRes
-           :<|> AdminTokenAuth
-             :> Capture "driverId" (Id Person)
-             :> MandatoryQueryParam "enabled" Bool
-             :> Post '[JSON] APISuccess
-           :<|> AdminTokenAuth
-             :> Capture "driverId" (Id Person)
-             :> Delete '[JSON] APISuccess
-       )
-    :<|> "driver"
-      :> ( "setActivity"
-             :> TokenAuth
-             :> MandatoryQueryParam "active" Bool
-             :> Post '[JSON] APISuccess
-             :<|> "setRental"
-               :> TokenAuth
-               :> MandatoryQueryParam "rental" Bool
-               :> Post '[JSON] APISuccess
-             :<|> "profile"
-               :> ( TokenAuth
-                      :> Get '[JSON] DriverAPI.DriverInformationRes
-                      :<|> TokenAuth
-                        :> ReqBody '[JSON] DriverAPI.UpdateDriverReq
-                        :> Post '[JSON] DriverAPI.UpdateDriverRes
-                  )
-         )
-
-driverFlow :: FlowServer DriverAPI
-driverFlow =
-  ( Driver.createDriver
-      :<|> Driver.listDriver
-      :<|> Driver.changeDriverEnableState
-      :<|> Driver.deleteDriver
-  )
-    :<|> ( Driver.setActivity
-             :<|> Driver.setRental
-             :<|> ( Driver.getInformation
-                      :<|> Driver.updateDriver
-                  )
-         )
 
 -- Following is vehicle flow
 type VehicleAPI =

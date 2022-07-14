@@ -1,4 +1,4 @@
-module API.Beckn.Confirm where
+module API.Beckn.Confirm (API, handler) where
 
 import App.Types
 import qualified Beckn.Storage.Esqueleto as Esq
