@@ -2,9 +2,10 @@ module App.Routes where
 
 import qualified API.Beckn.Handler as Beckn
 import qualified API.UI.Driver.Handler as Driver
-import qualified API.UI.OrgAdmin.Handler as OrgAdmin
 import qualified API.UI.Registration.Handler as Registration
 import qualified API.UI.Ride.Handler as Ride
+import qualified API.UI.TranspAdmin.Handler as TranspAdmin
+import qualified API.UI.Transporter.Handler as Transporter
 import qualified API.UI.Vehicle.Handler as Vehicle
 import App.Routes.FarePolicy
 import App.Types
@@ -14,7 +15,6 @@ import Beckn.Types.App
 import Beckn.Types.Id
 import Data.OpenApi
 import qualified Domain.Types.CallStatus as SCS
-import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude
@@ -23,14 +23,12 @@ import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Location as Location
 import qualified Product.RideBooking as RideBooking
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
-import qualified Product.Transporter as Transporter
 import Servant
 import Servant.OpenApi
 import qualified Types.API.Call as API
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import Types.API.Location as Location
 import qualified Types.API.RideBooking as RideBookingAPI
-import Types.API.Transporter
 import Utils.Auth (AdminTokenAuth, TokenAuth)
 
 type TransportAPI =
@@ -44,10 +42,10 @@ type MainAPI =
 type UIAPI =
   HealthCheckAPI
     :<|> Registration.API
-    :<|> OrgAdmin.API
+    :<|> TranspAdmin.API
     :<|> Driver.API
     :<|> Vehicle.API
-    :<|> OrganizationAPI --Transporter
+    :<|> Transporter.API
     :<|> RideBookingAPI
     :<|> FarePolicyAPI
     :<|> LocationAPI
@@ -64,10 +62,10 @@ uiServer :: FlowServer UIAPI
 uiServer =
   pure "App is UP"
     :<|> Registration.handler
-    :<|> OrgAdmin.handler
+    :<|> TranspAdmin.handler
     :<|> Driver.handler
     :<|> Vehicle.handler
-    :<|> organizationFlow
+    :<|> Transporter.handler
     :<|> rideBookingFlow
     :<|> farePolicyFlow
     :<|> locationFlow
@@ -86,22 +84,6 @@ transporterServer :: FlowServer TransportAPI
 transporterServer =
   mainServer
     :<|> writeSwaggerJSONFlow
-
--- Following is organization creation
-type OrganizationAPI =
-  "transporter"
-    :> ( TokenAuth
-           :> Get '[JSON] TransporterRec
-           :<|> AdminTokenAuth
-           :> Capture "orgId" (Id Organization)
-           :> ReqBody '[JSON] UpdateTransporterReq
-           :> Post '[JSON] UpdateTransporterRes
-       )
-
-organizationFlow :: FlowServer OrganizationAPI
-organizationFlow =
-  Transporter.getTransporter
-    :<|> Transporter.updateTransporter
 
 type RideBookingAPI =
   "org" :> "rideBooking"

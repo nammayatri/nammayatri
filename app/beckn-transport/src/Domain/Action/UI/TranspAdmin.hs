@@ -1,7 +1,7 @@
-module Domain.Action.UI.OrgAdmin
-  ( OrgAdminProfileRes (..),
-    UpdateOrgAdminProfileReq (..),
-    UpdateOrgAdminProfileRes,
+module Domain.Action.UI.TranspAdmin
+  ( TranspAdminProfileRes (..),
+    UpdateTranspAdminProfileReq (..),
+    UpdateTranspAdminProfileRes,
     getProfile,
     updateProfile,
   )
@@ -22,7 +22,7 @@ import qualified Storage.Queries.Person as QPerson
 import Types.Error
 import Utils.Common
 
-data OrgAdminProfileRes = OrgAdminProfileRes
+data TranspAdminProfileRes = TranspAdminProfileRes
   { id :: Id SP.Person,
     firstName :: Text,
     middleName :: Maybe Text,
@@ -33,7 +33,7 @@ data OrgAdminProfileRes = OrgAdminProfileRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-data UpdateOrgAdminProfileReq = UpdateOrgAdminProfileReq
+data UpdateTranspAdminProfileReq = UpdateTranspAdminProfileReq
   { firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
@@ -41,17 +41,17 @@ data UpdateOrgAdminProfileReq = UpdateOrgAdminProfileReq
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-type UpdateOrgAdminProfileRes = OrgAdminProfileRes
+type UpdateTranspAdminProfileRes = TranspAdminProfileRes
 
-getProfile :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> m OrgAdminProfileRes
+getProfile :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> m TranspAdminProfileRes
 getProfile admin = do
   let Just orgId = admin.organizationId
   org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
   decAdmin <- decrypt admin
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
-  return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
+  return $ makeTranspAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
 
-updateProfile :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> UpdateTranspAdminProfileReq -> m UpdateTranspAdminProfileRes
 updateProfile admin req = do
   let Just orgId = admin.organizationId
       updAdmin =
@@ -65,11 +65,11 @@ updateProfile admin req = do
   org <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
   decUpdAdmin <- decrypt updAdmin
   let personAPIEntity = SP.makePersonAPIEntity decUpdAdmin
-  return $ makeOrgAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
+  return $ makeTranspAdminProfileRes personAPIEntity (Org.makeOrganizationAPIEntity org)
 
-makeOrgAdminProfileRes :: SP.PersonAPIEntity -> Org.OrganizationAPIEntity -> OrgAdminProfileRes
-makeOrgAdminProfileRes SP.PersonAPIEntity {..} org =
-  OrgAdminProfileRes
+makeTranspAdminProfileRes :: SP.PersonAPIEntity -> Org.OrganizationAPIEntity -> TranspAdminProfileRes
+makeTranspAdminProfileRes SP.PersonAPIEntity {..} org =
+  TranspAdminProfileRes
     { organization = org,
       ..
     }
