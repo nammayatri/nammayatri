@@ -35,7 +35,7 @@ import Beckn.Utils.Predicates
 validateIssue1 :: Validate DriverOnBoardingReq
 validateIssue1 DriverOnBoardingReq {..} =
   sequenceA_
-    [ validateField "driverLicenseNumber" (extractMaybe driverLicenseNumber) $ MinLength 5 `And` text
+    [ validateField "driverLicenseNumber" driverLicenseNumber $ MinLength 5 `And` text
     ]
     where
       extractMaybe (Just x) = x
@@ -43,54 +43,55 @@ validateIssue1 DriverOnBoardingReq {..} =
 
 registrationHandler1 :: Id SP.Person -> DriverOnBoardingReq -> FlowHandler DriverOnBoardingRes
 registrationHandler1 personId req@DriverOnBoardingReq {..}= withFlowHandlerAPI $ do
-  runRequestValidation validateIssue1 DriverOnBoardingReq {..}
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let orgId = Id req.organizationId :: Id DO.Organization
-  organization <- QOrganization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
-  let orgTxt = getId organization.id
-  task_id <- L.generateGUID -- task_id for idfy request
-  let group_id = personId   -- group_id for idfy request
-  now <- getCurrentTime
-  dlDetails <- QDDL.findByDId personId
-  rcDetails <- QVR.findByPId personId
-  handleDLVerification req personId dlDetails
-  handleRCVerification req personId rcDetails
-  return Success
+  if driverConsent then do
+    runRequestValidation validateIssue1 DriverOnBoardingReq {..}
+    person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    let orgId = Id req.organizationId :: Id DO.Organization
+    organization <- QOrganization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
+    let orgTxt = getId organization.id
+    task_id <- L.generateGUID -- task_id for idfy request
+    let group_id = personId   -- group_id for idfy request
+    now <- getCurrentTime
+    dlDetails <- QDDL.findByDId personId
+    rcDetails <- QVR.findByPId personId
+    handleDLVerification req personId dlDetails
+    handleRCVerification req personId rcDetails
+    return Success 
+  else 
+    throwError (InvalidRequest "User Consent is required")
 
 handleDLVerification :: DriverOnBoardingReq -> Id SP.Person -> Maybe DDL.DriverDrivingLicense -> Flow ()
 handleDLVerification req personId dl= do
-  when (isNothing req.driverLicenseNumber || isNothing req.driverDateOfBirth) $ return ()
   now <- getCurrentTime
   case dl of
     Nothing -> do
       dlId <- L.generateGUID
       let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
-      dlEntity <- buildDBDL dlId personId req.driverDateOfBirth req.driverLicenseNumber idfyReqId now
+      dlEntity <- buildDBDL dlId personId (Just req.driverDateOfBirth) (Just req.driverLicenseNumber) idfyReqId now
       runTransaction $ QDDL.create dlEntity
       return ()
     Just dlRecord -> do
       dlNumber <- mapM decrypt dlRecord.driverLicenseNumber
-      when (dlNumber /= req.driverLicenseNumber || dlRecord.driverDob /= req.driverDateOfBirth) do
+      when (dlNumber /= Just req.driverLicenseNumber || dlRecord.driverDob /= Just req.driverDateOfBirth) do
         let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
-        runTransaction $ QDDL.resetDLRequest personId req.driverLicenseNumber req.driverDateOfBirth idfyReqId now
+        runTransaction $ QDDL.resetDLRequest personId (Just req.driverLicenseNumber) (Just req.driverDateOfBirth) idfyReqId now
 
 
 handleRCVerification ::  DriverOnBoardingReq -> Id SP.Person -> Maybe DVR.VehicleRegistrationCert -> Flow ()
 handleRCVerification req personId rc = do
-  when (isNothing req.vehicleRegistrationCertNumber) $ return ()
   now <- getCurrentTime
   case rc of
-    Nothing -> do 
+    Nothing -> do
       rcId <- L.generateGUID
       let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
-      rcEntity <- buildDBRC rcId personId req.vehicleRegistrationCertNumber idfyReqId now
+      rcEntity <- buildDBRC rcId personId (Just req.vehicleRegistrationCertNumber) idfyReqId now
       runTransaction $ QVR.create rcEntity
       return ()
-    Just rcRecord -> do 
+    Just rcRecord -> do
       rcNumber <- mapM decrypt rcRecord.vehicleRegistrationCertNumber
-      when (rcNumber /= req.vehicleRegistrationCertNumber) do
+      when (rcNumber /= Just req.vehicleRegistrationCertNumber) do
         let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
-        runTransaction $ QVR.resetRCRequest personId req.driverLicenseNumber idfyReqId now
+        runTransaction $ QVR.resetRCRequest personId (Just req.driverLicenseNumber) idfyReqId now
 
 
 mkDBOP :: Text -> Text -> DriverOnBoardingReq -> UTCTime -> DOC.OperatingCity
@@ -125,7 +126,9 @@ buildDBRC opId personId rcNumber reqID time = do
       idfyStatus = DVR.IN_PROGRESS,
       verificationStatus = DVR.PENDING,
       createdAt = time,
-      updatedAt = time
+      updatedAt = time,
+      consentTimestamp = time,
+      consent = True
     }
 
 
@@ -146,7 +149,9 @@ buildDBDL opId personId dob dlNumber reqId time = do
         classOfVehicle = Nothing,
         request_id = reqId,
         createdAt = time,
-        updatedAt = time
+        updatedAt = time,
+        consentTimestamp = time,
+        consent = True
       }
 
 

@@ -22,7 +22,6 @@ import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
-import Types.Idfy 
 import System.Environment (lookupEnv)
 
 data AppCfg = AppCfg
@@ -45,7 +44,6 @@ data AppCfg = AppCfg
     disableSignatureAuth :: Bool,
     otpSmsTemplate :: Text,
     smsCfg :: SmsConfig,
-    idfyCfg :: IdfyConfig,
     inviteSmsTemplate :: Text,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverPositionInfoExpiry :: Maybe Seconds,
@@ -81,7 +79,6 @@ data AppEnv = AppEnv
     httpClientOptions :: HttpClientOptions,
     otpSmsTemplate :: Text,
     smsCfg :: SmsConfig,
-    idfyCfg :: IdfyConfig,
     inviteSmsTemplate :: Text,
     apiRateLimitOptions :: APIRateLimitOptions,
     driverPositionInfoExpiry :: Maybe Seconds,

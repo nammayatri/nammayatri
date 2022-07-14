@@ -37,6 +37,8 @@ mkPersist
       idfyStatus Domain.IdfyStatus
       verificationStatus Domain.VerificationStatus
       request_id Text
+      consent Bool
+      consentTimestamp UTCTime
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

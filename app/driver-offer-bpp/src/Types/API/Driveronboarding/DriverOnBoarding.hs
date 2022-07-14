@@ -4,17 +4,15 @@ import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 data DriverOnBoardingReq = DriverOnBoardingReq {
     organizationId :: Text,
-    driverLicenseNumber :: Maybe Text,
+    driverLicenseNumber :: Text,
     operatingCity :: Text,
-    driverDateOfBirth :: Maybe UTCTime,
-    driverIdNumber :: Maybe Text,
-    vehicleRegistrationCertNumber :: Maybe Text
+    driverDateOfBirth :: UTCTime, 
+    vehicleRegistrationCertNumber :: Text, 
+    driverConsent :: Bool
 }
 
     deriving (Generic,ToSchema,ToJSON,FromJSON)
 
 type DriverOnBoardingRes = APISuccess  
 
-
-
-
+-- add consentTimestamp

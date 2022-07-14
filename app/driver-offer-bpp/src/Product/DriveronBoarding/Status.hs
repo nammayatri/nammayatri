@@ -24,7 +24,7 @@ ndData personId = withFlowHandlerAPI $ do
     let opcveri = ghi.enabled
     let hello = StatusRes dlveri rcveri opcveri
     return hello
-
+-- handle not found scenerio
 getVerificationStatus :: VRC.VerificationStatus -> ResponseStatus
 getVerificationStatus = \case 
     VRC.PENDING -> PENDINGVERIFICATION

@@ -8,7 +8,6 @@ import Beckn.Types.Id
 import Domain.Types.Person (Person)
 import Domain.Types.Driveronboarding.VehicleRegistrationCert
 import Beckn.External.Encryption
-import Beckn.Utils.Common
 
 data DriverDrivingLicenseE e = DriverDrivingLicense {
     id :: Id DriverDrivingLicense,
@@ -22,7 +21,9 @@ data DriverDrivingLicenseE e = DriverDrivingLicense {
     verificationStatus :: VerificationStatus,
     request_id :: Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    consent :: Bool,
+    consentTimestamp :: UTCTime
 }
     deriving (Generic)
 
@@ -43,25 +44,3 @@ instance EncryptedItem' DriverDrivingLicense where
   type UnencryptedItem DriverDrivingLicense = DecryptedDriverDrivingLicense
   toUnencrypted a salt = (a, salt)
   fromUnencrypted a = fst a
-
-data DriverDrivingLicenseAPIEntity = DriverDrivingLicenseAPIEntity
-  { 
-    id :: Id DriverDrivingLicense,
-    driverId :: Id Person,
-    driverLicenseNumber :: Maybe Text,
-    driverLicenseStart :: Maybe UTCTime,
-    idfyStatus :: IdfyStatus,
-    verificationStatus :: VerificationStatus,
-    driverLicenseExpiry :: Maybe UTCTime,
-    classOfVehicle :: Maybe [COV],
-    request_id :: Text
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-makeDrivingLicenseEntity :: DecryptedDriverDrivingLicense -> DriverDrivingLicenseAPIEntity
-makeDrivingLicenseEntity DriverDrivingLicense {..} =
-  DriverDrivingLicenseAPIEntity
-    { driverLicenseNumber = maskText <$> driverLicenseNumber,
-      ..
-    }
-    

@@ -28,29 +28,33 @@ instance FromJSON IdfyStatus where
 instance ToJSON IdfyStatus where
   toJSON = genericToJSON constructorsToLowerOptions
 data COV = W_NT | W_T | W_CAB | HGV_T | HMV_HGV | HMV | HTV | LMV | LMV_NT | LMV_T | LMV_CAB | LMV_HMV | LTV | MCWG | MCWOG | HPMV | MGV | MMV | LDRXCV | PSV_BUS | TRANS | TRCTOR | Others
-  deriving (Show, Eq, Read, Generic, Enum, Bounded, Ord)
-
-instance ToSchema COV where
-  declareNamedSchema = genericDeclareNamedSchema $ fromAesonOptions constructorForCOV
+  deriving (Show, Eq, Read, Generic, Enum, Bounded, Ord, ToSchema)
 
 instance FromJSON COV where
-  parseJSON = genericParseJSON constructorForCOV
+  parseJSON = genericParseJSON constructorForCOVFromJson
 
 instance ToJSON COV where
-  toJSON = genericToJSON constructorForCOV
+  toJSON = genericToJSON constructorForCOVToJson
 
-constructorForCOV :: Options
-constructorForCOV =
+constructorForCOVFromJson :: Options
+constructorForCOVFromJson =
+  defaultOptions
+    { constructorTagModifier =  \case
+        "3W_NT" -> "W_NT"
+        "3W_T" -> "W_T"
+        "3W_CAB" -> "W_CAB"
+        val -> val
+    } 
+
+constructorForCOVToJson :: Options
+constructorForCOVToJson =
   defaultOptions
     { constructorTagModifier =  \case
         "W_NT" -> "3W_NT"
         "W_T" -> "3W_T"
         "W_CAB" -> "3W_CAB"
-        "3W_NT" -> "W_NT"
-        "3W_T" -> "W_T"
-        "3W_CAB" -> "W_CAB"
         val -> val
-    }    
+    }       
 -- here we should only check vehicle class with three wheeler vehicle type only
 
 data VehicleRegistrationCertE e = VehicleRegistrationCert {
@@ -68,7 +72,9 @@ data VehicleRegistrationCertE e = VehicleRegistrationCert {
     idfyStatus :: IdfyStatus,
     verificationStatus :: VerificationStatus,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    consent :: Bool,
+    consentTimestamp :: UTCTime
 }
   deriving (Generic)
 

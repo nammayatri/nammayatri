@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp._driver_driving_license_t
     idfy_status character varying(20) NOT NULL,
     verification_status character varying(20) NOT NULL,
     request_id character(36) COLLATE pg_catalog."default" NOT NULL,
+    consent boolean DEFAULT true NOT NULL,
+    consent_timestamp timestamp with time zone NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL
     ,CONSTRAINT  DriverDrivingLicense_driver_id_fkey FOREIGN KEY (driver_id) REFERENCES atlas_driver_offer_bpp.person(id)
