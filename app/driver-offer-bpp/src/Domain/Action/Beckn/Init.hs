@@ -34,6 +34,8 @@ data InitRes = InitRes
     transporter :: DOrg.Organization
   }
 
+-- FIXME: if the init request comes twice, this causes error
+-- because of the unique keys violating
 mkBookingLocation :: DLoc.SearchReqLocation -> DLoc.BookingLocation
 mkBookingLocation DLoc.SearchReqLocation {..} = do
   let address = DLoc.LocationAddress {..}
@@ -57,10 +59,13 @@ handler orgId req = do
       now <- getCurrentTime
       pure
         DRB.RideBooking
-          { status = DRB.NEW,
+          { quoteId = req.driverQuoteId,
+            status = DRB.NEW,
             providerId = orgId,
             bapId = req.bapId,
             bapUri = req.bapUri,
+            startTime = searchRequest.startTime,
+            riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = HighPrecMeters $ driverQuote.distance,
             estimatedFare = Amount $ toRational $ DQuote.getTotalFare driverQuote,

@@ -12,7 +12,7 @@ import qualified Core.ACL.OnInit as ACL
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Organization as Org
 import Environment
-import ExternalAPI
+import ExternalAPI.Flow as ExternalAPI
 import Utils.Common
 
 init ::

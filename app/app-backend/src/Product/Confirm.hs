@@ -38,6 +38,7 @@ confirm ::
 confirm personId req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dConfirmRes <- DConfirm.confirm personId req
+    logPretty DEBUG "dConfirmRes" dConfirmRes
     void . ExternalAPI.confirm dConfirmRes.bppUrl =<< ACL.buildConfirmReq dConfirmRes
     return Success
 

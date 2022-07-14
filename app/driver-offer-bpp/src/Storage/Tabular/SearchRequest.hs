@@ -21,6 +21,7 @@ mkPersist
       id Text
       transactionId Text
       messageId Text
+      startTime UTCTime
       validTill UTCTime
       providerId OrganizationTId
       fromLocationId SearchReqLocationTId

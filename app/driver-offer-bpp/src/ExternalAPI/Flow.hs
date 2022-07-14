@@ -13,11 +13,15 @@ import Beckn.Utils.Servant.SignatureAuth
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
 import Domain.Types.Organization as Org
-import Domain.Types.SearchRequest as SearchRequest
+--import Domain.Types.SearchRequest as SearchRequest
+
+--import Storage.Queries.SearchRequest as SearchRequest
+
+--import Types.Error
+
+import qualified Domain.Types.RideBooking as DRB
 import EulerHS.Prelude
-import Storage.Queries.SearchRequest as SearchRequest
 import Tools.Metrics (CoreMetrics)
-import Types.Error
 import Utils.Common
 
 withCallback ::
@@ -41,6 +45,7 @@ withCallback' doWithCallback transporter action api context cbUrl f = do
           & #bpp_id ?~ transporter.shortId.getShortId
   withBecknCallbackMig doWithCallback (Just authKey) action api context' cbUrl f
 
+{-
 callOnUpdate ::
   ( EsqDBFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -60,6 +65,26 @@ callOnUpdate transporter searchRequestId content = do
   msgId <- generateGUID
   context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
   void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri $ BecknCallbackReq context $ Right content
+-}
+
+callOnUpdate ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  Org.Organization ->
+  DRB.RideBooking ->
+  OnUpdate.OnUpdateMessage ->
+  m ()
+callOnUpdate transporter rideBooking content = do
+  let bapId = rideBooking.bapId
+      bapUri = rideBooking.bapUri
+  let bppShortId = getShortId $ transporter.shortId
+      authKey = getHttpManagerKey bppShortId
+  bppUri <- makeBppUrl (transporter.id)
+  msgId <- generateGUID
+  context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
 
 makeBppUrl ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],

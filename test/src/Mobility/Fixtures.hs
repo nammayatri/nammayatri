@@ -89,7 +89,7 @@ appInitRide = client (Proxy :: Proxy InitAPI.InitAPI)
 
 mkAppInitReq :: Id AbeQuote.Quote -> DInit.InitReq
 mkAppInitReq =
-  DInit.InitReq
+  flip DInit.InitReq False
 
 appConfirmRide :: Text -> DConfirm.ConfirmReq -> ClientM APISuccess
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.ConfirmAPI)

@@ -4,8 +4,10 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.Organization
+import Domain.Types.Person
 import Domain.Types.Vehicle
 import qualified Domain.Types.Vehicle.Variant as Variant
+import Storage.Tabular.Person
 import Storage.Tabular.Vehicle
 import Utils.Common
 
@@ -93,3 +95,19 @@ findByRegistrationNo registrationNo =
     vehicle <- from $ table @VehicleT
     where_ $ vehicle ^. VehicleRegistrationNo ==. val registrationNo
     return vehicle
+
+findByPersonId ::
+  Transactionable m =>
+  Id Person ->
+  m (Maybe Vehicle)
+findByPersonId personId =
+  Esq.findOne $ do
+    (person :& vehicle) <-
+      from $
+        table @PersonT
+          `innerJoin` table @VehicleT
+          `Esq.on` ( \(person :& vehicle) ->
+                       (person ^. PersonUdf1) ==. just (castString $ vehicle ^. VehicleId)
+                   )
+    where_ $ person ^. PersonTId ==. val (toKey personId)
+    pure vehicle

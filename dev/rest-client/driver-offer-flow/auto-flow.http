@@ -2,9 +2,8 @@
 @driver-offer-bpp-host = http://localhost:8016
 @token = {{app-token}}
 
-# FIXME not working
 # @name healthcheck
-GET {{driver-offer-bpp-host}}
+GET {{driver-offer-bpp-host}}/v2
 
 ###
 
@@ -134,3 +133,32 @@ token: {{token}}
   "selected": true,
   "quoteId": "{{selectedQuoteId}}"
 }
+
+###
+# @name confirmQuote
+@bookingId = {{initQuote.response.body.bookingId}}
+
+POST {{app-host}}/rideSearch/confirm
+content-type: application/json
+token: {{token}}
+
+{
+  "bookingId": "{{bookingId}}",
+  "fromLocation": {
+    "door": "2"
+  },
+  "toLocation": {
+    "door": "3"
+  }
+}
+
+###
+
+GET {{app-host}}/rideBooking/list
+  ?offset=0
+  &limit=50
+  &onlyActive=false
+content-type: application/json
+token: {{token}}
+
+###

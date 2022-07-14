@@ -10,23 +10,23 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 --import qualified Domain.Types.FareProduct as SFP
+
+--import qualified Domain.Types.RentalFarePolicy as DRentalFP
+
+--import qualified Domain.Types.Vehicle as DVeh
+import Domain.Types.DriverQuote
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.RideBooking.BookingLocation as DLoc
---import qualified Domain.Types.RentalFarePolicy as DRentalFP
---import qualified Domain.Types.RiderDetails as DRD
---import qualified Domain.Types.Vehicle as DVeh
-
+import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API
 
 data RideBookingStatus
   = NEW
-  | CONFIRMED
-  | AWAITING_REASSIGNMENT
+  | TRIP_ASSIGNED
   | COMPLETED
   | CANCELLED
-  | TRIP_ASSIGNED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 instance FromHttpApiData RideBookingStatus where
@@ -41,11 +41,13 @@ instance ToHttpApiData RideBookingStatus where
 
 data RideBooking = RideBooking
   { id :: Id RideBooking,
+    quoteId :: Id DriverQuote,
     status :: RideBookingStatus,
     providerId :: Id DOrg.Organization,
     bapId :: Text,
     bapUri :: BaseUrl,
-    --    riderId :: Maybe (Id DRD.RiderDetails),
+    startTime :: UTCTime,
+    riderId :: Maybe (Id DRD.RiderDetails),
     fromLocation :: DLoc.BookingLocation,
     toLocation :: DLoc.BookingLocation,
     vehicleVariant :: DVeh.Variant,

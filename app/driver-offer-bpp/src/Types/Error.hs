@@ -116,17 +116,21 @@ instanceExceptionWithParent 'BaseException ''ShardMappingError
 
 data DriverError
   = DriverAccountDisabled
+  | DriverWithoutVehicle Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
 
 instance IsBaseError DriverError where
   toMessage DriverAccountDisabled = Just "Driver account has been disabled. He can't go online and receive ride offers in this state."
+  toMessage (DriverWithoutVehicle personId) = Just $ "Driver with id = " <> personId <> " has no linked vehicle"
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
     DriverAccountDisabled -> "DRIVER_ACCOUNT_DISABLED"
+    DriverWithoutVehicle _ -> "DRIVER_WITHOUT_VEHICLE"
   toHttpCode = \case
     DriverAccountDisabled -> E403
+    DriverWithoutVehicle _ -> E500
 
 instance IsAPIError DriverError

@@ -76,7 +76,7 @@ in
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log"}
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log", logRawSql = False}
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , graceTerminationPeriod = +90

@@ -25,6 +25,7 @@ mkPersist
     SearchRequestForDriverT sql=search_request_for_driver
       id Text
       searchRequestId SearchRequestTId
+      startTime UTCTime
       distanceToPickup Meters
       durationToPickup Seconds
       vehicleVariant Variant.Variant

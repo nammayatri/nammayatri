@@ -69,6 +69,7 @@ handler orgId sReq = do
         SearchRequestForDriver
           { id = guid,
             searchRequestId = searchRequest.id,
+            startTime = searchRequest.startTime,
             searchRequestValidTill = searchRequest.validTill,
             driverId = cast driver.driverId,
             vehicleVariant = driver.vehicle.variant,
@@ -100,6 +101,7 @@ buildSearchRequest from to orgId sReq = do
       { id = id_,
         transactionId = fromMaybe "" sReq.transactionId,
         messageId = sReq.messageId,
+        startTime = sReq.pickupTime,
         validTill = validTill_,
         providerId = orgId,
         fromLocation = from,

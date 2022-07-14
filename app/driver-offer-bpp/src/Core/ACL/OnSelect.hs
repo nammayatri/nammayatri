@@ -3,13 +3,12 @@ module Core.ACL.OnSelect where
 import Beckn.Prelude
 import Beckn.Types.Core.Taxi.Common.Gps as Common
 import Beckn.Types.Core.Taxi.Common.TimeTimestamp as Common
-import qualified Beckn.Types.Core.Taxi.Common.VehicleVariant as Common
 import qualified Beckn.Types.Core.Taxi.OnSelect as OS
 import Beckn.Types.Id (ShortId)
+import Core.ACL.Common
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Organization as DOrg
 import Domain.Types.SearchRequest
-import qualified Domain.Types.Vehicle.Variant as Variant
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
@@ -74,12 +73,6 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
           }
   OS.OnSelectMessage $
     OS.Order {..}
-
-castVariant :: Variant.Variant -> Common.VehicleVariant
-castVariant Variant.SEDAN = Common.SEDAN
-castVariant Variant.HATCHBACK = Common.HATCHBACK
-castVariant Variant.SUV = Common.SUV
-castVariant Variant.AUTO = Common.AUTO -- FIXME
 
 data QuoteEntities = QuoteEntities
   { fulfillment :: OS.FulfillmentInfo,

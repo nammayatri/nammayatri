@@ -11,6 +11,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
     searchRequestId :: Id SearchRequest,
+    startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,
     distanceToPickup :: Meters,

@@ -14,8 +14,10 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.RideBooking as Domain
 import qualified Domain.Types.Vehicle.Variant as Veh
+import Storage.Tabular.DriverQuote (DriverQuoteTId)
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.RideBooking.BookingLocation hiding (createdAt, id, updatedAt)
+import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.RideBookingStatus"
@@ -25,10 +27,13 @@ mkPersist
   [defaultQQ|
     RideBookingT sql=ride_booking
       id Text
+      quoteId DriverQuoteTId
       status Domain.RideBookingStatus
       providerId OrganizationTId
       bapId Text
       bapUri Text
+      startTime UTCTime
+      riderId RiderDetailsTId Maybe
       fromLocationId BookingLocationTId
       toLocationId BookingLocationTId
       vehicleVariant Veh.Variant
@@ -53,20 +58,24 @@ instance TType (RideBookingT, BookingLocationT, BookingLocationT) Domain.RideBoo
     return $
       Domain.RideBooking
         { id = Id id,
+          quoteId = fromKey quoteId,
           providerId = fromKey providerId,
           fromLocation = fromLoc_,
           toLocation = toLoc_,
           bapUri = pUrl,
+          riderId = fromKey <$> riderId,
           estimatedDistance = HighPrecMeters estimatedDistance,
           ..
         }
   toTType Domain.RideBooking {..} =
     ( RideBookingT
         { id = getId id,
+          quoteId = toKey quoteId,
           providerId = toKey providerId,
           fromLocationId = toKey fromLocation.id,
           toLocationId = toKey toLocation.id,
           bapUri = showBaseUrl bapUri,
+          riderId = toKey <$> riderId,
           estimatedDistance = getHighPrecMeters estimatedDistance,
           ..
         },

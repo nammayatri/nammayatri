@@ -15,9 +15,9 @@ import qualified Domain.Types.DriverQuote as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Storage.Tabular.Person (PersonTId)
 import qualified Storage.Tabular.SearchRequest as SReq
+import Storage.Tabular.Vehicle ()
 
 derivePersistField "Domain.DriverQuoteStatus"
-derivePersistField "Variant.Variant"
 
 mkPersist
   defaultSqlSettings

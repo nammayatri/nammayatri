@@ -12,6 +12,7 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Utils.GenericPretty
 import qualified Domain.Types.BookingLocation as DBL
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RideBooking as DRB
@@ -50,6 +51,7 @@ data ConfirmRes = ConfirmRes
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text
   }
+  deriving (Generic, Show, PrettyShow)
 
 confirm :: (EncFlow m r, EsqDBFlow m r) => Id Person.Person -> ConfirmReq -> m ConfirmRes
 confirm personId req = do

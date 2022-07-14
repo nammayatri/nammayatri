@@ -1,0 +1,68 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+
+module Storage.Tabular.Ride where
+
+import Beckn.Prelude
+import Beckn.Storage.Esqueleto
+import Beckn.Types.Amount (Amount)
+import Beckn.Types.Common (HighPrecMeters (..))
+import Beckn.Types.Id
+import qualified Domain.Types.Ride as Domain
+import Storage.Tabular.Person (PersonTId)
+import Storage.Tabular.RideBooking (RideBookingTId)
+import Storage.Tabular.Vehicle (VehicleTId)
+
+derivePersistField "Domain.RideStatus"
+
+mkPersist
+  defaultSqlSettings
+  [defaultQQ|
+    RideT sql=ride
+      id Text
+      bookingId RideBookingTId
+      shortId Text
+      status Domain.RideStatus
+      driverId PersonTId
+      vehicleId VehicleTId
+      otp Text
+      trackingUrl Text
+      fare Amount Maybe
+      traveledDistance Double
+      createdAt UTCTime
+      updatedAt UTCTime
+      Primary id
+      deriving Generic
+    |]
+
+instance TEntityKey RideT where
+  type DomainKey RideT = Id Domain.Ride
+  fromKey (RideTKey _id) = Id _id
+  toKey (Id id) = RideTKey id
+
+instance TType RideT Domain.Ride where
+  fromTType RideT {..} = do
+    return $
+      Domain.Ride
+        { id = Id id,
+          bookingId = fromKey bookingId,
+          shortId = ShortId shortId,
+          driverId = fromKey driverId,
+          vehicleId = fromKey vehicleId,
+          traveledDistance = HighPrecMeters traveledDistance,
+          ..
+        }
+  toTType Domain.Ride {..} =
+    RideT
+      { id = getId id,
+        bookingId = toKey bookingId,
+        shortId = getShortId shortId,
+        driverId = toKey driverId,
+        vehicleId = toKey vehicleId,
+        traveledDistance = getHighPrecMeters traveledDistance,
+        ..
+      }
