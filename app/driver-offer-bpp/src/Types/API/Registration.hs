@@ -12,7 +12,8 @@ import EulerHS.Prelude hiding (id)
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,
-    mobileCountryCode :: Text
+    mobileCountryCode :: Text,
+    organizationId :: Text
   }
   deriving (Generic, FromJSON, ToSchema)
 

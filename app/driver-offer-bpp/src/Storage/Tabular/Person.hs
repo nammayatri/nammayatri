@@ -38,6 +38,7 @@ mkPersist
       identifier Text Maybe
       rating Double Maybe
       isNew Bool
+      registered Bool
       udf1 Text Maybe
       udf2 Text Maybe
       organizationId OrganizationTId Maybe

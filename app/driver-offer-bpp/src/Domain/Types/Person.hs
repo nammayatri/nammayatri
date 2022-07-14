@@ -70,6 +70,7 @@ data PersonE e = Person
     identifier :: Maybe Text,
     rating :: Maybe Double,
     isNew :: Bool,
+    registered :: Bool,
     udf1 :: Maybe Text,
     udf2 :: Maybe Text,
     organizationId :: Maybe (Id DOrg.Organization),
@@ -104,6 +105,7 @@ data PersonAPIEntity = PersonAPIEntity
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
+    registered :: Bool,
     maskedDeviceToken :: Maybe FCM.FCMRecipientToken,
     role :: Role
   }

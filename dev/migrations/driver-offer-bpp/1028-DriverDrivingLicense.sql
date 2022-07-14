@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp._driver_driving_license_t
     driver_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
     driver_license_number character varying(255) COLLATE pg_catalog."default",
     driver_dob timestamp with time zone NOT NULL,
-    driver_license_start timestamp with time zone NOT NULL,
+    driver_license_start timestamp with time zone,
     driver_verification_status character varying(10) NOT NULL,
     driver_license_expiry timestamp with time zone NOT NULL,
     class_of_vehicle text[][] COLLATE pg_catalog."default",

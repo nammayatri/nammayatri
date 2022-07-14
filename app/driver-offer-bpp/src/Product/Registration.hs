@@ -23,6 +23,7 @@ import Utils.Auth (authTokenCacheKey)
 import Utils.Common
 import qualified Utils.Notifications as Notify
 import qualified Beckn.Storage.Esqueleto as DB
+import qualified Domain.Types.Organization as DO
 -- import Product.Registration as Reexport (makePerson)
 
 
@@ -60,7 +61,7 @@ makePerson req = do
   pid <- BC.generateGUID
   now <- getCurrentTime
   encMobNum <- encrypt req.mobileNumber
-
+  let orgId = Just (Id req.organizationId :: Id DO.Organization)
   return $
     SP.Person
       { id = pid,
@@ -78,8 +79,9 @@ makePerson req = do
         rating = Nothing,
         udf1 = Nothing,
         udf2 = Nothing,
-        organizationId = Nothing,
+        organizationId = orgId,
         isNew = True,
+        registered = False,
         deviceToken = Nothing,
         description = Nothing,
         createdAt = now,
