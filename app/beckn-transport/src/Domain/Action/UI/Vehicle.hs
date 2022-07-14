@@ -1,22 +1,84 @@
-module Product.Vehicle where
+module Domain.Action.UI.Vehicle
+  ( UpdateVehicleReq (..),
+    UpdateVehicleRes,
+    GetVehicleRes (..),
+    ListVehicleRes (..),
+    VehicleRes (..),
+    Driver (..),
+    listVehicles,
+    updateVehicle,
+    getVehicle,
+  )
+where
 
-import App.Types
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Beckn.Utils.Validation (runRequestValidation)
+import Beckn.Types.Predicate
+import qualified Beckn.Utils.Predicates as P
+import Beckn.Utils.Validation
+import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
-import qualified Domain.Types.Vehicle as SV
+import Domain.Types.Vehicle as SV
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
-import Types.API.Vehicle as API
 import Types.Error
 import Utils.Common
 import qualified Utils.Defaults as Default
 
-listVehicles :: SP.Person -> Maybe SV.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> FlowHandler ListVehicleRes
-listVehicles admin variantM mbRegNum limitM offsetM = withFlowHandlerAPI $ do
+data UpdateVehicleReq = UpdateVehicleReq
+  { variant :: Maybe Variant,
+    model :: Maybe Text,
+    color :: Maybe Text,
+    capacity :: Maybe Int,
+    category :: Maybe Category,
+    make :: Maybe Text,
+    size :: Maybe Text,
+    energyType :: Maybe EnergyType,
+    registrationNo :: Maybe Text,
+    registrationCategory :: Maybe RegistrationCategory
+  }
+  deriving (Generic, FromJSON, ToSchema)
+
+newtype GetVehicleRes = GetVehicleRes
+  {vehicle :: SV.VehicleAPIEntity}
+  deriving (Generic, ToJSON, ToSchema)
+
+newtype ListVehicleRes = ListVehicleRes
+  {vehicles :: [VehicleRes]}
+  deriving (Generic, ToJSON, ToSchema)
+
+validateUpdateVehicleReq :: Validate UpdateVehicleReq
+validateUpdateVehicleReq UpdateVehicleReq {..} =
+  sequenceA_
+    [ validateField "model" model . InMaybe $
+        NotEmpty `And` star P.latinOrSpace,
+      validateField "color" color . InMaybe $ NotEmpty `And` P.name,
+      validateField "registrationNo" registrationNo . InMaybe $
+        LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
+    ]
+
+type UpdateVehicleRes = VehicleAPIEntity
+
+data VehicleRes = VehicleRes
+  { vehicle :: SV.VehicleAPIEntity,
+    driver :: Maybe Driver
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+data Driver = Driver
+  { id :: Text,
+    firstName :: Text,
+    middleName :: Maybe Text,
+    lastName :: Maybe Text,
+    rating :: Maybe Int,
+    organizationId :: Maybe (Id Org.Organization)
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+listVehicles :: (EsqDBFlow m r) => SP.Person -> Maybe SV.Variant -> Maybe Text -> Maybe Int -> Maybe Int -> m ListVehicleRes
+listVehicles admin variantM mbRegNum limitM offsetM = do
   let Just orgId = admin.organizationId
   personList <- QP.findAllByOrgId [SP.DRIVER] orgId
   vehicleList <- QV.findAllByVariantRegNumOrgId variantM mbRegNum limit offset orgId
@@ -26,8 +88,8 @@ listVehicles admin variantM mbRegNum limitM offsetM = withFlowHandlerAPI $ do
     limit = toInteger $ fromMaybe Default.limit limitM
     offset = toInteger $ fromMaybe Default.offset offsetM
 
-updateVehicle :: SP.Person -> Id SP.Person -> API.UpdateVehicleReq -> FlowHandler API.UpdateVehicleRes
-updateVehicle admin driverId req = withFlowHandlerAPI $ do
+updateVehicle :: (EsqDBFlow m r) => SP.Person -> Id SP.Person -> UpdateVehicleReq -> m UpdateVehicleRes
+updateVehicle admin driverId req = do
   let Just orgId = admin.organizationId
   runRequestValidation validateUpdateVehicleReq req
   driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
@@ -54,8 +116,8 @@ updateVehicle admin driverId req = withFlowHandlerAPI $ do
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateVehicle : ") (show updatedVehicle)
   return $ SV.makeVehicleAPIEntity updatedVehicle
 
-getVehicle :: Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> FlowHandler GetVehicleRes
-getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
+getVehicle :: (EsqDBFlow m r) => Id SP.Person -> Maybe Text -> Maybe (Id SP.Person) -> m GetVehicleRes
+getVehicle personId registrationNoM vehicleIdM = do
   user <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
@@ -70,9 +132,6 @@ getVehicle personId registrationNoM vehicleIdM = withFlowHandlerAPI $ do
     hasAccess user vehicle =
       when (user.organizationId /= Just (vehicle.organizationId)) $
         throwError Unauthorized
-
-addOrgId :: Id Org.Organization -> SV.Vehicle -> SV.Vehicle
-addOrgId orgId vehicle = vehicle {SV.organizationId = orgId}
 
 buildVehicleRes :: MonadFlow m => [SP.Person] -> SV.Vehicle -> m VehicleRes
 buildVehicleRes personList vehicle = do

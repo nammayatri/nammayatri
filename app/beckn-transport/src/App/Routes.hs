@@ -5,6 +5,7 @@ import qualified API.UI.Driver.Handler as Driver
 import qualified API.UI.OrgAdmin.Handler as OrgAdmin
 import qualified API.UI.Registration.Handler as Registration
 import qualified API.UI.Ride.Handler as Ride
+import qualified API.UI.Vehicle.Handler as Vehicle
 import App.Routes.FarePolicy
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
@@ -14,10 +15,8 @@ import Beckn.Types.Id
 import Data.OpenApi
 import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Organization (Organization)
-import Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
-import Domain.Types.Vehicle
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
@@ -25,7 +24,6 @@ import qualified Product.Location as Location
 import qualified Product.RideBooking as RideBooking
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
-import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.OpenApi
 import qualified Types.API.Call as API
@@ -33,7 +31,6 @@ import qualified Types.API.CancellationReason as CancellationReasonAPI
 import Types.API.Location as Location
 import qualified Types.API.RideBooking as RideBookingAPI
 import Types.API.Transporter
-import Types.API.Vehicle
 import Utils.Auth (AdminTokenAuth, TokenAuth)
 
 type TransportAPI =
@@ -49,7 +46,7 @@ type UIAPI =
     :<|> Registration.API
     :<|> OrgAdmin.API
     :<|> Driver.API
-    :<|> VehicleAPI
+    :<|> Vehicle.API
     :<|> OrganizationAPI --Transporter
     :<|> RideBookingAPI
     :<|> FarePolicyAPI
@@ -69,7 +66,7 @@ uiServer =
     :<|> Registration.handler
     :<|> OrgAdmin.handler
     :<|> Driver.handler
-    :<|> vehicleFlow
+    :<|> Vehicle.handler
     :<|> organizationFlow
     :<|> rideBookingFlow
     :<|> farePolicyFlow
@@ -89,32 +86,6 @@ transporterServer :: FlowServer TransportAPI
 transporterServer =
   mainServer
     :<|> writeSwaggerJSONFlow
-
--- Following is vehicle flow
-type VehicleAPI =
-  "org" :> "vehicle"
-    :> ( "list"
-           :> AdminTokenAuth
-           :> QueryParam "variant" Variant
-           :> QueryParam "registrationNo" Text
-           :> QueryParam "limit" Int
-           :> QueryParam "offset" Int
-           :> Get '[JSON] ListVehicleRes
-           :<|> AdminTokenAuth
-             :> Capture "driverId" (Id Person)
-             :> ReqBody '[JSON] UpdateVehicleReq
-             :> Post '[JSON] UpdateVehicleRes
-           :<|> TokenAuth
-             :> QueryParam "registrationNo" Text
-             :> QueryParam "driverId" (Id Person)
-             :> Get '[JSON] GetVehicleRes
-       )
-
-vehicleFlow :: FlowServer VehicleAPI
-vehicleFlow =
-  Vehicle.listVehicles
-    :<|> Vehicle.updateVehicle
-    :<|> Vehicle.getVehicle
 
 -- Following is organization creation
 type OrganizationAPI =
