@@ -1,6 +1,7 @@
 module App.Routes where
 
 import qualified API.Beckn.Handler as Beckn
+import qualified API.UI.Ride.Handler as Ride
 import App.Routes.FarePolicy
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
@@ -22,10 +23,6 @@ import qualified Product.Driver as Driver
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Registration as Registration
-import qualified Product.Ride as Ride
-import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
-import qualified Product.RideAPI.EndRide as RideAPI.EndRide
-import qualified Product.RideAPI.StartRide as RideAPI.StartRide
 import qualified Product.RideBooking as RideBooking
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import qualified Product.Transporter as Transporter
@@ -38,7 +35,6 @@ import qualified Types.API.Driver as DriverAPI
 import Types.API.Location as Location
 import qualified Types.API.OrgAdmin as OrgAdminAPI
 import Types.API.Registration
-import qualified Types.API.Ride as RideAPI
 import qualified Types.API.RideBooking as RideBookingAPI
 import Types.API.Transporter
 import Types.API.Vehicle
@@ -64,7 +60,7 @@ type UIAPI =
     :<|> LocationAPI
     :<|> CallAPIs
     :<|> RouteAPI
-    :<|> RideAPI
+    :<|> Ride.API
     :<|> CancellationReasonAPI
     :<|> GoogleMapsProxyAPI
 
@@ -84,7 +80,7 @@ uiServer =
     :<|> locationFlow
     :<|> callFlow
     :<|> routeApiFlow
-    :<|> rideFlow
+    :<|> Ride.handler
     :<|> cancellationReasonFlow
     :<|> googleMapsProxyFlow
 
@@ -321,37 +317,6 @@ type RouteAPI =
 
 routeApiFlow :: FlowServer RouteAPI
 routeApiFlow = Location.getRoute
-
-type RideAPI =
-  "driver" :> "ride"
-    :> ( "list"
-           :> TokenAuth
-           :> QueryParam "limit" Integer
-           :> QueryParam "offset" Integer
-           :> QueryParam "onlyActive" Bool
-           :> Get '[JSON] RideAPI.DriverRideListRes
-           :<|> TokenAuth
-             :> Capture "rideId" (Id SRide.Ride)
-             :> "start"
-             :> ReqBody '[JSON] RideAPI.StartRideReq
-             :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-             :> Capture "rideId" (Id SRide.Ride)
-             :> "end"
-             :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-             :> Capture "rideId" (Id SRide.Ride)
-             :> "cancel"
-             :> ReqBody '[JSON] RideAPI.CancelRideReq
-             :> Post '[JSON] APISuccess
-       )
-
-rideFlow :: FlowServer RideAPI
-rideFlow =
-  Ride.listDriverRides
-    :<|> RideAPI.StartRide.startRide
-    :<|> RideAPI.EndRide.endRide
-    :<|> RideAPI.CancelRide.cancelRide
 
 type CancellationReasonAPI =
   "cancellationReason"

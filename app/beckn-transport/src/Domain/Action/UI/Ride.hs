@@ -1,6 +1,6 @@
-module Product.Ride where
+module Domain.Action.UI.Ride (listDriverRides) where
 
-import App.Types
+import API.UI.Ride.Types
 import Beckn.Prelude
 import Beckn.Types.Id
 import qualified Domain.Types.BookingLocation as DBLoc
@@ -8,24 +8,24 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import qualified Storage.Queries.BookingLocation as QBLoc
-import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
-import qualified Types.API.Ride as API
 import Types.Error
 import Utils.Common
 
 listDriverRides ::
+  (EsqDBFlow m r, EncFlow m r) =>
   Id SP.Person ->
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
-  FlowHandler API.DriverRideListRes
-listDriverRides driverId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
+  m DriverRideListRes
+listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
   rideData <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive
-  API.DriverRideListRes <$> traverse buildDriverRideRes rideData
+  DriverRideListRes <$> traverse buildDriverRideRes rideData
 
-buildDriverRideRes :: (SRide.Ride, SRB.RideBooking) -> Flow API.DriverRideRes
+buildDriverRideRes :: (EsqDBFlow m r, EncFlow m r) => (SRide.Ride, SRB.RideBooking) -> m DriverRideRes
 buildDriverRideRes (ride, rideBooking) = do
   fromLocation <- QBLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
   toLocation <- case rideBooking.rideBookingDetails of
@@ -33,10 +33,10 @@ buildDriverRideRes (ride, rideBooking) = do
     SRB.RentalDetails _ -> pure Nothing
 
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-  driver <- QP.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   driverNumber <- SP.getPersonNumber driver
   pure
-    API.DriverRideRes
+    DriverRideRes
       { id = ride.id,
         shortRideId = ride.shortId,
         status = ride.status,

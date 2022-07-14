@@ -1,5 +1,7 @@
 module Mobility.Fixtures where
 
+import qualified "beckn-transport" API.UI.Ride.Handler as RideAPI
+import qualified "beckn-transport" API.UI.Ride.Types as RideAPI
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
@@ -30,7 +32,6 @@ import qualified "beckn-transport" Types.API.Driver as DriverAPI
 import qualified "app-backend" Types.API.Feedback as AppFeedback
 import "beckn-transport" Types.API.Location
 import qualified "app-backend" Types.API.Registration as Reg
-import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "app-backend" Types.API.RideBooking as AppRideBooking
 import qualified "beckn-transport" Types.API.RideBooking as TRideBookingAPI
 import qualified "app-backend" Types.API.Serviceability as AppServ
@@ -52,7 +53,7 @@ cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> ClientM APISuccess
 rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
-_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRoutes.RideAPI)
+_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy RideAPI.API)
 
 getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
 setDriverOnline :: Text -> Bool -> ClientM APISuccess

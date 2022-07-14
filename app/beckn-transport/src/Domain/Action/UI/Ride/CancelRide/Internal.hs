@@ -1,4 +1,4 @@
-module Product.RideAPI.CancelRide.Internal where
+module Domain.Action.UI.Ride.CancelRide.Internal (cancelRide) where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Storage.Esqueleto as Esq

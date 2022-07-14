@@ -1,13 +1,13 @@
-module Product.RideAPI.Handlers.CancelRide where
+module Domain.Action.UI.Ride.CancelRide where
 
+import Beckn.Prelude
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBookingCancellationReason as SBCR
-import EulerHS.Prelude
-import Types.API.Ride (CancelRideReq (..))
 import Types.Error
 import Utils.Common
 
@@ -18,6 +18,12 @@ data ServiceHandle m = ServiceHandle
     findById :: Id Person.Person -> m (Maybe Person.Person),
     cancelRide :: Id SRide.Ride -> SBCR.RideBookingCancellationReason -> m ()
   }
+
+data CancelRideReq = CancelRideReq
+  { reasonCode :: CancellationReasonCode,
+    additionalInfo :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 cancelRideHandler :: MonadHandler m => ServiceHandle m -> Id Person.Person -> Id SRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} personId rideId req = do

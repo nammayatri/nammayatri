@@ -1,5 +1,6 @@
 module Mobility.DriverCancelRide where
 
+import qualified "beckn-transport" API.UI.Ride.Types as RideAPI
 import Common (getAppBaseUrl)
 import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
 import qualified "beckn-transport" Domain.Types.Ride as TRide
@@ -9,7 +10,6 @@ import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
 import Mobility.SuccessFlow
-import qualified "beckn-transport" Types.API.Ride as RideAPI
 import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import Utils
 

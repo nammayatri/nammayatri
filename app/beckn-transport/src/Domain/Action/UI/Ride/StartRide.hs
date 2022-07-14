@@ -1,4 +1,4 @@
-module Product.RideAPI.Handlers.StartRide where
+module Domain.Action.UI.Ride.StartRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common

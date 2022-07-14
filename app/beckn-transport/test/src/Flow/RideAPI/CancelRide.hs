@@ -2,16 +2,15 @@ module Flow.RideAPI.CancelRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
+import qualified Domain.Action.UI.Ride.CancelRide as CancelRide
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import EulerHS.Prelude
 import qualified Fixtures
-import qualified Product.RideAPI.Handlers.CancelRide as CancelRide
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
-import qualified Types.API.Ride as RideAPI
 import Types.Error
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
@@ -40,12 +39,12 @@ cancelRide =
       failedCancellationWhenQuoteStatusIsWrong
     ]
 
-runHandler :: CancelRide.ServiceHandle IO -> Id Person.Person -> Id Ride.Ride -> RideAPI.CancelRideReq -> IO APISuccess.APISuccess
+runHandler :: CancelRide.ServiceHandle IO -> Id Person.Person -> Id Ride.Ride -> CancelRide.CancelRideReq -> IO APISuccess.APISuccess
 runHandler = CancelRide.cancelRideHandler
 
-someCancelRideReq :: RideAPI.CancelRideReq
+someCancelRideReq :: CancelRide.CancelRideReq
 someCancelRideReq =
-  RideAPI.CancelRideReq (CancellationReasonCode "OTHER") $ Just "Your car is not flying."
+  CancelRide.CancelRideReq (CancellationReasonCode "OTHER") $ Just "Your car is not flying."
 
 successfulCancellationByDriver :: TestTree
 successfulCancellationByDriver =

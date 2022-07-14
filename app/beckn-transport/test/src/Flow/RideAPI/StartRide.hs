@@ -2,13 +2,13 @@ module Flow.RideAPI.StartRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
+import qualified Domain.Action.UI.Ride.StartRide as StartRide
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Fixtures
-import qualified Product.RideAPI.Handlers.StartRide as StartRide
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit

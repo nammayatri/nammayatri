@@ -1,4 +1,4 @@
-module Product.RideAPI.Handlers.EndRide where
+module Domain.Action.UI.Ride.EndRide where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Amount

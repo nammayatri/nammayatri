@@ -1,11 +1,15 @@
-module Types.API.Ride where
+module API.UI.Ride.Types
+  ( module API.UI.Ride.Types,
+    module Reexport,
+  )
+where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Domain.Action.UI.Ride.CancelRide as Reexport (CancelRideReq (..))
 import Domain.Types.BookingLocation (BookingLocationAPIEntity)
-import Domain.Types.CancellationReason (CancellationReasonCode)
 import Domain.Types.Ride
 import Domain.Types.Vehicle
 
@@ -13,12 +17,6 @@ newtype StartRideReq = StartRideReq
   { rideOtp :: Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
-
-data CancelRideReq = CancelRideReq
-  { reasonCode :: CancellationReasonCode,
-    additionalInfo :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DriverRideRes = DriverRideRes
   { id :: Id Ride,

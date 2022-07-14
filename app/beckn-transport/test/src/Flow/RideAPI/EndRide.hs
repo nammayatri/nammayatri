@@ -2,6 +2,7 @@ module Flow.RideAPI.EndRide (endRideTests) where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
+import qualified Domain.Action.UI.Ride.EndRide as Handle
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideBooking as SRB
@@ -9,7 +10,6 @@ import EulerHS.Prelude
 import qualified Fixtures
 import Product.FareCalculator.Flow
 import Product.RentalFareCalculator.Flow
-import qualified Product.RideAPI.Handlers.EndRide as Handle
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
