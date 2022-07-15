@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp._operating_city_t
 (
-    id character(36) COLLATE pg_catalog."default" NOT NULL,
-    organization_id character varying(255) COLLATE pg_catalog."default" NOT NULL,
-    city_name character varying(255) COLLATE pg_catalog."default",
+    id character(36) NOT NULL,
+    organization_id character varying(255) NOT NULL,
+    city_name character varying(255),
     enabled boolean NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL
