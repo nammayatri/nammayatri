@@ -2,7 +2,7 @@ module Types.API.Driveronboarding.Status where
 
 import Beckn.Prelude
 
-data ResponseStatus = PENDINGVERIFICATION | VERIFIED | FAILEDVERIFICATION | WAITING_INPUT
+data ResponseStatus = VERIFICATION_PENDING | VERIFIED | VERIFICATION_FAILED | WAITING_INPUT
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes

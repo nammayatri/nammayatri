@@ -31,7 +31,7 @@ statusHandler personId = withFlowHandlerAPI $ do
 
 getVerificationStatus :: VRC.VerificationStatus -> ResponseStatus
 getVerificationStatus = \case
-  VRC.PENDING -> PENDINGVERIFICATION
+  VRC.PENDING -> VERIFICATION_PENDING
   VRC.VALID -> VERIFIED
-  VRC.INVALID -> FAILEDVERIFICATION
+  VRC.INVALID -> VERIFICATION_FAILED
   VRC.NOTFOUND -> WAITING_INPUT
