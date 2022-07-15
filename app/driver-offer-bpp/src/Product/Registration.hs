@@ -24,7 +24,6 @@ import Types.API.Registration
 import Types.Error
 import Utils.Auth (authTokenCacheKey)
 import Utils.Common
-import qualified Utils.Notifications as Notify
 
 -- import Product.Registration as Reexport (makePerson)
 
@@ -130,7 +129,7 @@ createPerson req = do
 verify :: Id SR.RegistrationToken -> AuthVerifyReq -> FlowHandler AuthVerifyRes
 verify tokenId req = withFlowHandlerAPI $ do
   runRequestValidation validateAuthVerifyReq req
-  regToken@SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
+  SR.RegistrationToken {..} <- checkRegistrationTokenExists tokenId
   checkSlidingWindowLimit (verifyHitsCountKey $ Id entityId)
   when verified $ throwError $ AuthBlocked "Already verified."
   checkForExpiry authExpiry updatedAt
@@ -145,8 +144,6 @@ verify tokenId req = withFlowHandlerAPI $ do
     QP.updateDeviceToken person.id deviceToken
     when isNewPerson $
       QP.setIsNewFalse person.id
-  when isNewPerson $
-    Notify.notifyOnRegistration regToken person.id deviceToken
   updPers <- QP.findById (Id entityId) >>= fromMaybeM (PersonNotFound entityId)
   decPerson <- decrypt updPers
   let personAPIEntity = SP.makePersonAPIEntity decPerson
