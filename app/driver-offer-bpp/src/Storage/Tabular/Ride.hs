@@ -15,7 +15,6 @@ import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.RideBooking (RideBookingTId)
-import Storage.Tabular.Vehicle (VehicleTId)
 
 derivePersistField "Domain.RideStatus"
 
@@ -28,7 +27,6 @@ mkPersist
       shortId Text
       status Domain.RideStatus
       driverId PersonTId
-      vehicleId VehicleTId
       otp Text
       trackingUrl Text
       fare Amount Maybe
@@ -52,7 +50,6 @@ instance TType RideT Domain.Ride where
           bookingId = fromKey bookingId,
           shortId = ShortId shortId,
           driverId = fromKey driverId,
-          vehicleId = fromKey vehicleId,
           traveledDistance = HighPrecMeters traveledDistance,
           ..
         }
@@ -62,7 +59,6 @@ instance TType RideT Domain.Ride where
         bookingId = toKey bookingId,
         shortId = getShortId shortId,
         driverId = toKey driverId,
-        vehicleId = toKey vehicleId,
         traveledDistance = getHighPrecMeters traveledDistance,
         ..
       }

@@ -4,9 +4,7 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Core.Ack
-import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
-import Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Core.ACL.Confirm as ACL
@@ -35,11 +33,7 @@ confirm transporterId (SignatureAuthResult signPayload subscriber) req =
     dConfirmRes <- DConfirm.handler subscriber transporterId dConfirmReq
     now <- getCurrentTime
     fork "on_confirm/on_update" $ do
-      liftIO $ threadDelaySec 2
-      _ <-
-        ExternalAPI.withCallback dConfirmRes.transporter Context.CONFIRM OnConfirm.onConfirmAPI context context.bap_uri $
-          -- there should be DOnConfirm.onConfirm, but it is empty anyway
-
-          pure $ ACL.mkOnConfirmMessage now dConfirmRes
+      ExternalAPI.callOnConfirm dConfirmRes.transporter context $ ACL.mkOnConfirmMessage now dConfirmRes
       BP.sendRideAssignedUpdateToBAP dConfirmRes.booking dConfirmRes.ride
+    -- FIXME: we might try to send these two events in one request
     pure Ack

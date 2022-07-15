@@ -4,7 +4,6 @@ module Types.API.Driver
   ( DriverInformationRes (..),
     ListDriverRes (..),
     DriverEntityRes (..),
-    LinkVehicleRes,
     OnboardDriverReq (..),
     OnboardDriverRes (..),
     CreatePerson (..),
@@ -21,7 +20,6 @@ module Types.API.Driver
 where
 
 import Beckn.External.FCM.Types (FCMRecipientToken)
-import Beckn.Types.APISuccess (APISuccess)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import qualified Beckn.Utils.Predicates as P
@@ -44,7 +42,7 @@ data DriverInformationRes = DriverInformationRes
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
-    linkedVehicle :: Maybe VehicleAPIEntity,
+    linkedVehicle :: VehicleAPIEntity,
     rating :: Maybe Int,
     active :: Bool,
     onRide :: Bool,
@@ -63,7 +61,7 @@ data DriverEntityRes = DriverEntityRes
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     mobileNumber :: Maybe Text,
-    linkedVehicle :: Maybe VehicleAPIEntity,
+    linkedVehicle :: VehicleAPIEntity,
     rating :: Maybe Int,
     active :: Bool,
     onRide :: Bool,
@@ -71,8 +69,6 @@ data DriverEntityRes = DriverEntityRes
     registeredAt :: UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
-type LinkVehicleRes = APISuccess
 
 -- Create Person request and response
 data OnboardDriverReq = OnboardDriverReq

@@ -10,9 +10,11 @@ module Storage.Tabular.Vehicle where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import qualified Domain.Types.Person as DPers
 import qualified Domain.Types.Vehicle as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import qualified Storage.Tabular.Organization as TOrg
+import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.Category"
 derivePersistField "Variant.Variant"
@@ -23,7 +25,7 @@ mkPersist
   defaultSqlSettings
   [defaultQQ|
     VehicleT sql=vehicle
-      id Text
+      driverId PersonTId
       organizationId TOrg.OrganizationTId
       variant Variant.Variant
       model Text
@@ -37,27 +39,27 @@ mkPersist
       registrationCategory Domain.RegistrationCategory Maybe
       createdAt UTCTime
       updatedAt UTCTime
-      Primary id
+      Primary driverId
       Unique VehicleRegistrationNo
       deriving Generic
     |]
 
 instance TEntityKey VehicleT where
-  type DomainKey VehicleT = Id Domain.Vehicle
-  fromKey (VehicleTKey _id) = Id _id
-  toKey (Id id) = VehicleTKey id
+  type DomainKey VehicleT = Id DPers.Person
+  fromKey (VehicleTKey _id) = fromKey _id
+  toKey id = VehicleTKey $ toKey id
 
 instance TType VehicleT Domain.Vehicle where
   fromTType VehicleT {..} = do
     return $
       Domain.Vehicle
-        { id = Id id,
+        { driverId = fromKey driverId,
           organizationId = fromKey organizationId,
           ..
         }
   toTType Domain.Vehicle {..} =
     VehicleT
-      { id = getId id,
+      { driverId = toKey driverId,
         organizationId = toKey organizationId,
         ..
       }

@@ -47,10 +47,5 @@ findByQuoteId quoteId = buildDType $ do
 findById :: Transactionable m => Id SelectedQuote -> m (Maybe SelectedQuote)
 findById selQuoteId = buildDType $
   runMaybeT $ do
-    selQuoteT <- MaybeT $
-      Esq.findOne' $ do
-        selQuote <- from $ table @SelectedQuoteT
-        where_ $
-          selQuote ^. SelectedQuoteTId ==. val (toKey selQuoteId)
-        return selQuote
+    selQuoteT <- MaybeT $ Esq.findById' selQuoteId
     MaybeT $ buildFullSelectedQuote selQuoteT

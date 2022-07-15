@@ -18,7 +18,8 @@ import Servant.API
 import Utils.Common
 
 data RideStatus
-  = INPROGRESS
+  = NEW
+  | INPROGRESS
   | COMPLETED
   | CANCELLED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -39,7 +40,6 @@ data Ride = Ride
     shortId :: ShortId Ride,
     status :: RideStatus,
     driverId :: Id DPers.Person,
-    vehicleId :: Id DVeh.Vehicle,
     otp :: Text,
     trackingUrl :: Text,
     fare :: Maybe Amount,

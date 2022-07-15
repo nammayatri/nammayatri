@@ -16,7 +16,6 @@ import Data.OpenApi
 import Domain.Types.Organization (Organization)
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SRT
-import Domain.Types.Vehicle
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
@@ -145,12 +144,6 @@ type DriverAPI =
              :> Get '[JSON] DriverAPI.ListDriverRes
            :<|> AdminTokenAuth
              :> Capture "driverId" (Id Person)
-             :> "vehicle"
-             :> Capture "vehicleId" (Id Vehicle)
-             :> "link"
-             :> Post '[JSON] DriverAPI.LinkVehicleRes
-           :<|> AdminTokenAuth
-             :> Capture "driverId" (Id Person)
              :> MandatoryQueryParam "enabled" Bool
              :> Post '[JSON] APISuccess
            :<|> AdminTokenAuth
@@ -186,7 +179,6 @@ driverFlow :: FlowServer DriverAPI
 driverFlow =
   ( Driver.createDriver
       :<|> Driver.listDriver
-      :<|> Driver.linkVehicle
       :<|> Driver.changeDriverEnableState
       :<|> Driver.deleteDriver
   )
@@ -201,35 +193,27 @@ driverFlow =
 -- Following is vehicle flow
 type VehicleAPI =
   "org" :> "vehicle"
-    :> ( AdminTokenAuth
-           :> ReqBody '[JSON] CreateVehicleReq
-           :> Post '[JSON] CreateVehicleRes
-           :<|> "list"
-             :> AdminTokenAuth
-             :> QueryParam "variant" Variant.Variant
-             :> QueryParam "registrationNo" Text
-             :> QueryParam "limit" Int
-             :> QueryParam "offset" Int
-             :> Get '[JSON] ListVehicleRes
+    :> ( "list"
+           :> AdminTokenAuth
+           :> QueryParam "variant" Variant.Variant
+           :> QueryParam "registrationNo" Text
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> Get '[JSON] ListVehicleRes
            :<|> AdminTokenAuth
-             :> Capture "vehicleId" (Id Vehicle)
+             :> Capture "driverId" (Id Person)
              :> ReqBody '[JSON] UpdateVehicleReq
              :> Post '[JSON] UpdateVehicleRes
-           :<|> AdminTokenAuth
-             :> Capture "vehicleId" (Id Vehicle)
-             :> Delete '[JSON] DeleteVehicleRes
            :<|> TokenAuth
              :> QueryParam "registrationNo" Text
-             :> QueryParam "vehicleId" (Id Vehicle)
-             :> Get '[JSON] CreateVehicleRes
+             :> QueryParam "driverId" (Id Person)
+             :> Get '[JSON] GetVehicleRes
        )
 
 vehicleFlow :: FlowServer VehicleAPI
 vehicleFlow =
-  Vehicle.createVehicle
-    :<|> Vehicle.listVehicles
+  Vehicle.listVehicles
     :<|> Vehicle.updateVehicle
-    :<|> Vehicle.deleteVehicle
     :<|> Vehicle.getVehicle
 
 -- Following is organization creation
@@ -282,8 +266,8 @@ type OrgBecknAPI =
     :> SignatureAuth "X-Gateway-Authorization"
     :> API.SearchAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
-    :> API.SelectAPI
+      :> SignatureAuth "Authorization"
+      :> API.SelectAPI
     :<|> Capture "orgId" (Id Organization)
       :> SignatureAuth "Authorization"
       :> API.InitAPI
@@ -291,11 +275,11 @@ type OrgBecknAPI =
       :> SignatureAuth "Authorization"
       :> API.ConfirmAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
-    :> API.TrackAPI
+      :> SignatureAuth "Authorization"
+      :> API.TrackAPI
     :<|> Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
-    :> API.CancelAPI
+      :> SignatureAuth "Authorization"
+      :> API.CancelAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =

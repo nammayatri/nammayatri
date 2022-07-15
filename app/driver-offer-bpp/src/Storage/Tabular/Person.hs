@@ -39,8 +39,6 @@ mkPersist
       rating Double Maybe
       isNew Bool
       registered Bool
-      udf1 Text Maybe
-      udf2 Text Maybe
       organizationId OrganizationTId Maybe
       deviceToken FCMRecipientToken Maybe
       description Text Maybe

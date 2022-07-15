@@ -4,8 +4,6 @@ module Product.BecknProvider.BP
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
     sendRideBookingCancelledUpdateToBAP,
-    sendRideBookingReallocationUpdateToBAP,
-    buildRideReq,
     -}
   )
 where
@@ -41,8 +39,8 @@ sendRideAssignedUpdateToBAP rideBooking ride = do
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.vehicleId >>= fromMaybeM (VehicleNotFound ride.vehicleId.getId)
-  let rideAssignedBuildReq = ACL.RideAssignedBuildReq {ride = ride, ..}
+  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+  let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
   void $ callOnUpdate transporter rideBooking rideAssignedMsg
 
@@ -96,38 +94,4 @@ sendRideBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq {..}
   bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
   void $ callOnUpdate transporter booking bookingCancelledMsg
-
-sendRideBookingReallocationUpdateToBAP ::
-  ( EsqDBFlow m r,
-    EncFlow m r,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
-    CoreMetrics m
-  ) =>
-  SRB.RideBooking ->
-  Id SRide.Ride ->
-  SOrg.Organization ->
-  m ()
-sendRideBookingReallocationUpdateToBAP booking rideId transporter = do
-  let bookingReallocationBuildReq = ACL.BookingReallocationBuildReq {..}
-  bookingReallocationMsg <- ACL.buildOnUpdateMessage bookingReallocationBuildReq
-  void $ callOnUpdate transporter booking bookingReallocationMsg
-
-buildRideReq ::
-  MonadFlow m =>
-  Id SRB.RideBooking ->
-  ShortId SOrg.Organization ->
-  SRideRequest.RideRequestType ->
-  UTCTime ->
-  m SRideRequest.RideRequest
-buildRideReq rideId shortOrgId rideRequestType now = do
-  guid <- generateGUID
- pure
-    SRideRequest.RideRequest
-      { id = Id guid,
-        rideBookingId = rideId,
-        shortOrgId = shortOrgId,
-        createdAt = now,
-        _type = rideRequestType,
-        info = Nothing
-      }
-      -}
+-}

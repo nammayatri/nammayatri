@@ -10,16 +10,12 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
 import Beckn.Utils.Common
---import Beckn.Utils.Error.Throwing
---import Beckn.Utils.Logging
 import Data.String.Conversions
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideBooking as DRB
 import qualified Domain.Types.RideBooking.BookingLocation as DBL
 import qualified Domain.Types.RiderDetails as DRD
---import qualified Product.BecknProvider.BP as BP
-
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -29,8 +25,6 @@ import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideBooking.BookingLocation as QBL
 import qualified Storage.Queries.RiderDetails as QRD
-import qualified Storage.Queries.Vehicle as QVeh
-import Types.Error
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -76,8 +70,7 @@ handler subscriber transporterId req = do
   unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
   now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
-  vehicle <- QVeh.findByPersonId driver.id >>= fromMaybeM (DriverWithoutVehicle driver.id.getId) --FIXME
-  ride <- buildRide driver.id vehicle.id booking
+  ride <- buildRide driver.id booking
   Esq.runTransaction $ do
     when isNewRider $ QRD.create riderDetails
     QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
@@ -110,7 +103,7 @@ handler subscriber transporterId req = do
             cs (showTimeIst rideBooking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId vehicleId rideBooking = do
+    buildRide driverId rideBooking = do
       guid <- generateGUID
       shortId <- generateShortId
       otp <- generateOTPCode
@@ -120,9 +113,8 @@ handler subscriber transporterId req = do
           { id = guid,
             bookingId = rideBooking.id,
             shortId = shortId,
-            status = DRide.INPROGRESS,
+            status = DRide.NEW,
             driverId = cast driverId,
-            vehicleId,
             otp = otp,
             trackingUrl = "UNKNOWN", -- TODO: Fill this field
             fare = Nothing,
