@@ -6,15 +6,15 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Tabular.Driveronboarding.DriverDrivingLicense where
+
+import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import Storage.Tabular.Person (PersonTId)
-import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as Domain
-import Domain.Types.Driveronboarding.VehicleRegistrationCert (IdfyStatus(..), COV (..), VerificationStatus (..))
-import Beckn.External.Encryption
 import qualified Data.ByteString as BS
--- import Beckn.Types.Id
+import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as Domain
+import Domain.Types.Driveronboarding.VehicleRegistrationCert (COV (..), IdfyStatus (..), VerificationStatus (..))
+import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "IdfyStatus"
 derivePersistField "VerificationStatus"
@@ -42,7 +42,6 @@ mkPersist
       Primary id
       deriving Generic
     |]
- 
 
 instance TEntityKey DriverDrivingLicenseT where
   type DomainKey DriverDrivingLicenseT = Id Domain.DriverDrivingLicense

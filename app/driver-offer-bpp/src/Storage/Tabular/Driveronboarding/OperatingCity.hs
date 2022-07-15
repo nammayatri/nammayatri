@@ -6,11 +6,12 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Tabular.Driveronboarding.OperatingCity where
+
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Storage.Tabular.Organization (OrganizationTId)
-import qualified Domain.Types.Driveronboarding.OperatingCity as Domain
 import Beckn.Types.Id
+import qualified Domain.Types.Driveronboarding.OperatingCity as Domain
+import Storage.Tabular.Organization (OrganizationTId)
 
 derivePersistField "Domain.OperatingCityVerification"
 
@@ -26,7 +27,8 @@ mkPersist
       updatedAt UTCTime
       Primary id
       deriving Generic
-    |]   
+    |]
+
 instance TEntityKey OperatingCityT where
   type DomainKey OperatingCityT = Id Domain.OperatingCity
   fromKey (OperatingCityTKey _id) = Id _id
@@ -40,7 +42,7 @@ instance TType OperatingCityT Domain.OperatingCity where
           organizationId = fromKey organizationId,
           ..
         }
-   
+
   toTType Domain.OperatingCity {..} =
     OperatingCityT
       { id = getId id,

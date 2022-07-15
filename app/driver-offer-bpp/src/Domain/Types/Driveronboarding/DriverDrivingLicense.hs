@@ -3,14 +3,15 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Driveronboarding.DriverDrivingLicense where
+
+import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
-import Domain.Types.Person (Person)
 import Domain.Types.Driveronboarding.VehicleRegistrationCert
-import Beckn.External.Encryption
+import Domain.Types.Person (Person)
 
-data DriverDrivingLicenseE e = DriverDrivingLicense {
-    id :: Id DriverDrivingLicense,
+data DriverDrivingLicenseE e = DriverDrivingLicense
+  { id :: Id DriverDrivingLicense,
     driverId :: Id Person,
     driverDob :: Maybe UTCTime,
     driverLicenseNumber :: Maybe (EncryptedHashedField e Text), -- remove Maybe Data Type
@@ -25,11 +26,13 @@ data DriverDrivingLicenseE e = DriverDrivingLicense {
     updatedAt :: UTCTime,
     consent :: Bool,
     consentTimestamp :: UTCTime
-}
-    deriving (Generic)
+  }
+  deriving (Generic)
 
 type DriverDrivingLicense = DriverDrivingLicenseE 'AsEncrypted
+
 type DecryptedDriverDrivingLicense = DriverDrivingLicenseE 'AsUnencrypted
+
 deriving instance Show DecryptedDriverDrivingLicense
 
 instance EncryptedItem DriverDrivingLicense where

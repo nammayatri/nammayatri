@@ -3,6 +3,7 @@ module App.Routes where
 import App.Routes.FarePolicy
 import Beckn.Types.APISuccess
 import Beckn.Types.App
+import Beckn.Types.Core.Ack (AckResponse)
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import qualified Beckn.Types.Core.Taxi.API.Select as API
 import Beckn.Types.Id
@@ -18,27 +19,26 @@ import EulerHS.Prelude
 import Product.BecknProvider.Search as BP
 import Product.BecknProvider.Select as BP
 import qualified Product.Driver as Driver
+import Product.DriveronBoarding.DriverOnBoarding as DO
+import qualified Product.DriveronBoarding.Idfy as Idfy
+import Product.DriveronBoarding.Status as Status
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
-import qualified Product.DriveronBoarding.Idfy as Idfy
 import Servant
 import Servant.OpenApi
 import qualified Types.API.Driver as DriverAPI
+import Types.API.Driveronboarding.DriverOnBoarding
+import Types.API.Driveronboarding.Status
+import Types.API.Idfy
 import Types.API.Location as Location
 import qualified Types.API.OrgAdmin as OrgAdminAPI
 import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
-import Types.API.Idfy
-import Types.API.Driveronboarding.DriverOnBoarding
 import Utils.Auth (AdminTokenAuth, TokenAuth)
-import Beckn.Types.Core.Ack (AckResponse)
-import Product.DriveronBoarding.DriverOnBoarding as DO
-import Product.DriveronBoarding.Status as Status
-import Types.API.Driveronboarding.Status
 
 type DriverOfferAPI =
   MainAPI
@@ -59,7 +59,7 @@ type UIAPI =
     :<|> LocationAPI
     :<|> IdfyHandlerAPI
     :<|> OnBoardingAPI
- 
+
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
 
@@ -250,18 +250,18 @@ type LocationAPI =
 
 type IdfyHandlerAPI =
   "ext" :> "idfy"
-    :> ("drivingLicense"
-      :> ReqBody '[JSON] IdfyDLReq 
-      :> Post '[JSON] AckResponse
-      :<|>"vehicleRegistrationCert"
-        :> ReqBody '[JSON] IdfyRCReq 
-        :> Post '[JSON] AckResponse)
+    :> ( "drivingLicense"
+           :> ReqBody '[JSON] IdfyDLReq
+           :> Post '[JSON] AckResponse
+           :<|> "vehicleRegistrationCert"
+             :> ReqBody '[JSON] IdfyRCReq
+             :> Post '[JSON] AckResponse
+       )
 
 idfyHandlerFlow :: FlowServer IdfyHandlerAPI
 idfyHandlerFlow =
-  Idfy.idfyDrivingLicense      --update handler
+  Idfy.idfyDrivingLicense --update handler
     :<|> Idfy.idfyRCLicense --update handler
-    
 
 locationFlow :: FlowServer LocationAPI
 locationFlow =
@@ -281,23 +281,23 @@ orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
   BP.search
     :<|> BP.select
-  
+
 type OnBoardingAPI =
   "driver"
-  :> ("register"
-  :> TokenAuth
-  :> ReqBody '[JSON] DriverOnBoardingReq
-  :> Post '[JSON] DriverOnBoardingRes
-  :<|> "register" :> "status" 
-  :> TokenAuth
-  :> Get '[JSON] StatusRes)
+    :> ( "register"
+           :> TokenAuth
+           :> ReqBody '[JSON] DriverOnBoardingReq
+           :> Post '[JSON] DriverOnBoardingRes
+           :<|> "register"
+           :> "status"
+           :> TokenAuth
+           :> Get '[JSON] StatusRes
+       )
 
 onBoardingAPIFlow :: FlowServer OnBoardingAPI
-onBoardingAPIFlow = 
+onBoardingAPIFlow =
   DO.registrationHandler
     :<|> Status.statusHandler
-
-
 
 type HealthCheckAPI = Get '[JSON] Text
 

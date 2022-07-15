@@ -12,5 +12,3 @@ findOrgByShortId shortId_ = do
     org <- from $ table @OrganizationT
     where_ $ org ^. OrganizationShortId ==. val (getShortId shortId_)
     return org
-
-

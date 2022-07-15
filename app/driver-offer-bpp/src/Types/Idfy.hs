@@ -1,4 +1,4 @@
- module Types.Idfy where
+module Types.Idfy where
 
 import Beckn.Types.App
 import Beckn.Utils.Dhall (FromDhall)

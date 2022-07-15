@@ -270,4 +270,3 @@ setRegisteredTrue personId = do
         PersonUpdatedAt =. val now
       ]
     where_ $ tbl ^. PersonTId ==. val (toKey personId)
-

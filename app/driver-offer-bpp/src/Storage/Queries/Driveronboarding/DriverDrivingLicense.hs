@@ -1,13 +1,15 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.Driveronboarding.DriverDrivingLicense where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
-import Domain.Types.Driveronboarding.DriverDrivingLicense
-import Domain.Types.Person (Person)
-import Storage.Tabular.Person ()
-import Storage.Tabular.Driveronboarding.DriverDrivingLicense
 import Beckn.Types.Id
-import Domain.Types.Driveronboarding.VehicleRegistrationCert (COV(..), IdfyStatus(..), VerificationStatus(..))
+import Domain.Types.Driveronboarding.DriverDrivingLicense
+import Domain.Types.Driveronboarding.VehicleRegistrationCert (COV (..), IdfyStatus (..), VerificationStatus (..))
+import Domain.Types.Person (Person)
+import Storage.Tabular.Driveronboarding.DriverDrivingLicense
+import Storage.Tabular.Person ()
 
 create :: DriverDrivingLicense -> SqlDB ()
 create = Esq.create
@@ -24,12 +26,12 @@ findByDId ::
   m (Maybe DriverDrivingLicense)
 findByDId personid = do
   findOne $ do
-    driverDriving <- from $ table @DriverDrivingLicenseT 
+    driverDriving <- from $ table @DriverDrivingLicenseT
     where_ $ driverDriving ^. DriverDrivingLicenseDriverId ==. val (toKey personid)
     return driverDriving
 
 updateDLDetails :: Text -> Maybe UTCTime -> Maybe UTCTime -> IdfyStatus -> VerificationStatus -> Maybe [COV] -> UTCTime -> SqlDB () -- [COV] changed to Maybe [COV]
-updateDLDetails requestId start expiry idfyStatus verificationStatus cov now= do
+updateDLDetails requestId start expiry idfyStatus verificationStatus cov now = do
   Esq.update $ \tbl -> do
     set
       tbl
@@ -40,7 +42,7 @@ updateDLDetails requestId start expiry idfyStatus verificationStatus cov now= do
         DriverDrivingLicenseVerificationStatus =. val verificationStatus,
         DriverDrivingLicenseUpdatedAt =. val now
       ]
-    where_ $ tbl ^. DriverDrivingLicenseRequest_id  ==. val requestId
+    where_ $ tbl ^. DriverDrivingLicenseRequest_id ==. val requestId
 
 resetDLRequest :: Id Person -> Maybe Text -> Maybe UTCTime -> Text -> UTCTime -> SqlDB ()
 resetDLRequest driverId dlNumber dob requestId now = do
@@ -57,4 +59,4 @@ resetDLRequest driverId dlNumber dob requestId now = do
         DriverDrivingLicenseVerificationStatus =. val PENDING,
         DriverDrivingLicenseUpdatedAt =. val now
       ]
-    where_ $ tbl ^. DriverDrivingLicenseDriverId  ==. val (toKey driverId)
+    where_ $ tbl ^. DriverDrivingLicenseDriverId ==. val (toKey driverId)

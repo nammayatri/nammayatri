@@ -3,23 +3,27 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Domain.Types.Driveronboarding.VehicleRegistrationCert where
+
+import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Types.Id
-import Domain.Types.Person (Person)
-import Data.Aeson
-    ( Options(constructorTagModifier), defaultOptions )
-import Data.OpenApi
-import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
-import Beckn.Utils.JSON (constructorsToLowerOptions)
-import Beckn.External.Encryption
 import Beckn.Utils.Common
+import Beckn.Utils.JSON (constructorsToLowerOptions)
+import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
+import Data.Aeson
+  ( Options (constructorTagModifier),
+    defaultOptions,
+  )
+import Data.OpenApi
+import Domain.Types.Person (Person)
 
 data VerificationStatus = PENDING | VALID | INVALID | NOTFOUND
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
 
 -- added valid and invalid inorder to accomodate validation results
-data IdfyStatus = IN_PROGRESS |  FAILED | COMPLETED
-  deriving (Show,Eq,Read,Generic,Enum,Bounded)
+data IdfyStatus = IN_PROGRESS | FAILED | COMPLETED
+  deriving (Show, Eq, Read, Generic, Enum, Bounded)
+
 instance ToSchema IdfyStatus where
   declareNamedSchema = genericDeclareUnNamedSchema defaultSchemaOptions
 
@@ -28,6 +32,7 @@ instance FromJSON IdfyStatus where
 
 instance ToJSON IdfyStatus where
   toJSON = genericToJSON constructorsToLowerOptions
+
 data COV = W_NT | W_T | W_CAB | HGV_T | HMV_HGV | HMV | HTV | LMV | LMV_NT | LMV_T | LMV_CAB | LMV_HMV | LTV | MCWG | MCWOG | HPMV | MGV | MMV | LDRXCV | PSV_BUS | TRANS | TRCTOR | Others
   deriving (Show, Eq, Read, Generic, Enum, Bounded, Ord, ToSchema)
 
@@ -40,26 +45,27 @@ instance ToJSON COV where
 constructorForCOVFromJson :: Options
 constructorForCOVFromJson =
   defaultOptions
-    { constructorTagModifier =  \case
+    { constructorTagModifier = \case
         "3W_NT" -> "W_NT"
         "3W_T" -> "W_T"
         "3W_CAB" -> "W_CAB"
         val -> val
-    } 
+    }
 
 constructorForCOVToJson :: Options
 constructorForCOVToJson =
   defaultOptions
-    { constructorTagModifier =  \case
+    { constructorTagModifier = \case
         "W_NT" -> "3W_NT"
         "W_T" -> "3W_T"
         "W_CAB" -> "3W_CAB"
         val -> val
-    }       
+    }
+
 -- here we should only check vehicle class with three wheeler vehicle type only
 
-data VehicleRegistrationCertE e = VehicleRegistrationCert {
-    id :: Id VehicleRegistrationCert,
+data VehicleRegistrationCertE e = VehicleRegistrationCert
+  { id :: Id VehicleRegistrationCert,
     driverId :: Id Person,
     vehicleRegistrationCertNumber :: Maybe (EncryptedHashedField e Text), -- remove maybe
     fitnessCertExpiry :: Maybe UTCTime,
@@ -76,11 +82,13 @@ data VehicleRegistrationCertE e = VehicleRegistrationCert {
     updatedAt :: UTCTime,
     consent :: Bool,
     consentTimestamp :: UTCTime
-}
+  }
   deriving (Generic)
 
 type VehicleRegistrationCert = VehicleRegistrationCertE 'AsEncrypted
+
 type DecryptedVehicleRegistrationCert = VehicleRegistrationCertE 'AsUnencrypted
+
 deriving instance Show DecryptedVehicleRegistrationCert
 
 instance EncryptedItem VehicleRegistrationCert where
@@ -91,15 +99,14 @@ instance EncryptedItem VehicleRegistrationCert where
   decryptItem VehicleRegistrationCert {..} = do
     vehicleRegistrationCertNumber_ <- fmap fst <$> decryptItem vehicleRegistrationCertNumber
     return (VehicleRegistrationCert {vehicleRegistrationCertNumber = vehicleRegistrationCertNumber_, ..}, "")
-    
+
 instance EncryptedItem' VehicleRegistrationCert where
   type UnencryptedItem VehicleRegistrationCert = DecryptedVehicleRegistrationCert
   toUnencrypted a salt = (a, salt)
-  fromUnencrypted a = fst a    
+  fromUnencrypted a = fst a
 
 data VehicleRegistrationCertAPIEntity = VehicleRegistrationCertAPIEntity
-  { 
-    id :: Id VehicleRegistrationCert,
+  { id :: Id VehicleRegistrationCert,
     driverId :: Id Person,
     vehicleRegistrationCertNumber :: Maybe Text,
     fitnessCertExpiry :: Maybe UTCTime,
@@ -113,18 +120,11 @@ data VehicleRegistrationCertAPIEntity = VehicleRegistrationCertAPIEntity
     verificationStatus :: VerificationStatus,
     idfyStatus :: IdfyStatus
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)  
-
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 makePersonAPIEntity :: DecryptedVehicleRegistrationCert -> VehicleRegistrationCertAPIEntity
 makePersonAPIEntity VehicleRegistrationCert {..} =
   VehicleRegistrationCertAPIEntity
     { vehicleRegistrationCertNumber = maskText <$> vehicleRegistrationCertNumber,
       ..
-    }  
-
-
-
-
-
-
+    }

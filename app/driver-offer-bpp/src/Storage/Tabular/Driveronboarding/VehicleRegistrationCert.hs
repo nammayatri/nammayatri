@@ -6,15 +6,14 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Tabular.Driveronboarding.VehicleRegistrationCert where
+
+import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as Domain
 import Beckn.Types.Id
-import Storage.Tabular.Person (PersonTId)
 import qualified Data.ByteString as BS
-import Beckn.External.Encryption
-
-
+import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as Domain
+import Storage.Tabular.Person (PersonTId)
 
 derivePersistField "Domain.COV"
 derivePersistField "Domain.IdfyStatus"
@@ -66,7 +65,3 @@ instance TType VehicleRegistrationCertT Domain.VehicleRegistrationCert where
         vehicleRegistrationCertNumber = vehicleRegistrationCertNumber <&> unEncrypted . (.encrypted),
         ..
       }
-
-
-
-    

@@ -1,9 +1,11 @@
 {-# OPTIONS_GHC -Wno-missing-fields #-}
+
 module Product.Registration (checkPersonExists, auth, verify, resend, logout) where
 
 import Beckn.External.Encryption
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Sms.Config
+import qualified Beckn.Storage.Esqueleto as DB
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess
@@ -11,6 +13,7 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation (runRequestValidation)
+import qualified Domain.Types.Organization as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
@@ -22,11 +25,8 @@ import Types.Error
 import Utils.Auth (authTokenCacheKey)
 import Utils.Common
 import qualified Utils.Notifications as Notify
-import qualified Beckn.Storage.Esqueleto as DB
-import qualified Domain.Types.Organization as DO
+
 -- import Product.Registration as Reexport (makePerson)
-
-
 
 authHitsCountKey :: SP.Person -> Text
 authHitsCountKey person = "BPP:Registration:auth" <> getId person.id <> ":hitsCount"
@@ -37,8 +37,8 @@ auth req = withFlowHandlerAPI $ do
   smsCfg <- asks (.smsCfg)
   let mobileNumber = req.mobileNumber
       countryCode = req.mobileCountryCode
-  person <- 
-    QP.findByMobileNumber countryCode mobileNumber 
+  person <-
+    QP.findByMobileNumber countryCode mobileNumber
       >>= maybe (createPerson req) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
@@ -86,7 +86,7 @@ makePerson req = do
         description = Nothing,
         createdAt = now,
         updatedAt = now
-      }  
+      }
 
 makeSession ::
   MonadFlow m =>

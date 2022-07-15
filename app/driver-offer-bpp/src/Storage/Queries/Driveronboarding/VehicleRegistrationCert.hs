@@ -1,11 +1,13 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.Driveronboarding.VehicleRegistrationCert where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Storage.Tabular.Driveronboarding.VehicleRegistrationCert
 import Domain.Types.Driveronboarding.VehicleRegistrationCert
 import Domain.Types.Person (Person)
+import Storage.Tabular.Driveronboarding.VehicleRegistrationCert
 import Storage.Tabular.Person ()
 
 create :: VehicleRegistrationCert -> SqlDB ()
@@ -17,7 +19,6 @@ findById ::
   m (Maybe VehicleRegistrationCert)
 findById = Esq.findById
 
- 
 findByPId ::
   Transactionable m =>
   Id Person ->
@@ -42,7 +43,7 @@ updateRCDetails requestId permitStart permitValidity fitnessExpiry insuranceVali
         VehicleRegistrationCertVerificationStatus =. val verificationStatus,
         VehicleRegistrationCertUpdatedAt =. val now
       ]
-    where_ $ tbl ^. VehicleRegistrationCertRequest_id  ==. val requestId
+    where_ $ tbl ^. VehicleRegistrationCertRequest_id ==. val requestId
 
 resetRCRequest :: Id Person -> Maybe Text -> Text -> UTCTime -> SqlDB ()
 resetRCRequest driverId rcNumber requestId now = do
@@ -60,4 +61,4 @@ resetRCRequest driverId rcNumber requestId now = do
         VehicleRegistrationCertInsuranceValidity =. val Nothing,
         VehicleRegistrationCertUpdatedAt =. val now
       ]
-    where_ $ tbl ^. VehicleRegistrationCertDriverId  ==. val (toKey driverId)
+    where_ $ tbl ^. VehicleRegistrationCertDriverId ==. val (toKey driverId)
