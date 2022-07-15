@@ -4,8 +4,7 @@ import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 
 data DriverOnBoardingReq = DriverOnBoardingReq
-  { organizationId :: Text,
-    driverLicenseNumber :: Text,
+  { driverLicenseNumber :: Text,
     operatingCity :: Text,
     driverDateOfBirth :: UTCTime,
     vehicleRegistrationCertNumber :: Text

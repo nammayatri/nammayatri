@@ -18,13 +18,11 @@ import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
 import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as DDL
 import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as DVR hiding (VALID)
-import qualified Domain.Types.Organization as DO
 import qualified Domain.Types.Person as SP
 import Environment
 import qualified EulerHS.Language as L
 import qualified Storage.Queries.Driveronboarding.DriverDrivingLicense as QDDL
 import qualified Storage.Queries.Driveronboarding.VehicleRegistrationCert as QVR
-import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
 import Types.API.Driveronboarding.DriverOnBoarding
 import Types.Error
@@ -43,9 +41,6 @@ registrationHandler :: Id SP.Person -> DriverOnBoardingReq -> FlowHandler Driver
 registrationHandler personId req@DriverOnBoardingReq {..} = withFlowHandlerAPI $ do
   runRequestValidation validateDriverDrivingLicense DriverOnBoardingReq {..}
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let orgId = Id req.organizationId :: Id DO.Organization
-  organization <- QOrganization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
-  let orgTxt = getId organization.id
   task_id <- L.generateGUID -- task_id for idfy request
   let group_id = personId -- group_id for idfy request
   now <- getCurrentTime
