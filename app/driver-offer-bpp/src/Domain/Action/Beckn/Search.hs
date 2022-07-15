@@ -9,6 +9,7 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
+import Domain.Types.BusinessEvent (WhenPoolWasComputed (ON_SEARCH))
 import qualified Domain.Types.Organization as DOrg
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -17,6 +18,7 @@ import Domain.Types.Vehicle.Variant as Variant
 import Environment
 import Product.FareCalculator.Flow
 import SharedLogic.DriverPool
+import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.SearchRequest as QSReq
 import Types.Error
 
@@ -72,6 +74,7 @@ handler org sReq = do
       <> show estimatedFare
   Esq.runTransaction $ do
     QSReq.create searchReq
+    traverse_ (QBE.logDriverInPoolEvent ON_SEARCH Nothing) driverPool
   logDebug $ "bap uri: " <> show sReq.bapUri
   let variant = Variant.AUTO
   buildSearchRes org variant distanceToPickup estimatedFare searchReq

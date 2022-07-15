@@ -14,6 +14,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
 import Beckn.Types.Id
 import qualified Domain.Types.Person as SP
+import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
 import Types.Error
 import Utils.Common
@@ -22,13 +23,13 @@ data OnUpdateBuildReq
   = RideAssignedBuildReq
       { driver :: SP.Person,
         vehicle :: SVeh.Vehicle,
-        ride :: Text --SRide.Ride
+        ride :: DRide.Ride
       }
   | RideStartedBuildReq
-      { ride :: Text --SRide.Ride
+      { ride :: DRide.Ride
       }
   | RideCompletedBuildReq
-      { ride :: Text, --SRide.Ride,
+      { ride :: DRide.Ride,
         fareBreakups :: Text --[DFareBreakup.FareBreakup]
       }
   | BookingCancelledBuildReq
@@ -63,13 +64,13 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
           }
       fulfillment =
         RideAssignedOU.FulfillmentInfo
-          { id = "ride.id.getId",
+          { id = ride.id.getId,
             start =
               RideAssignedOU.StartInfo
                 { authorization =
                     RideAssignedOU.Authorization
                       { _type = "OTP",
-                        token = "ride.otp"
+                        token = ride.otp
                       }
                 },
             vehicle = veh,
@@ -79,7 +80,7 @@ buildOnUpdateMessage RideAssignedBuildReq {..} = do
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideAssigned
         RideAssignedOU.RideAssignedEvent
-          { id = "ride.bookingId.getId",
+          { id = ride.bookingId.getId,
             state = "ACTIVE",
             update_target = "state,fufillment.state.code,fulfillment.start.authorization,fulfillment.agent,fulfillment.vehicle",
             ..

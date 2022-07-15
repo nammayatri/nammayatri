@@ -19,6 +19,8 @@ import Domain.Types.RideBooking as DRB
 import qualified Domain.Types.RideBooking.BookingLocation as DBL
 import qualified Domain.Types.RiderDetails as DRD
 --import qualified Product.BecknProvider.BP as BP
+
+import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import Storage.Queries.Organization as QOrg
@@ -83,6 +85,8 @@ handler subscriber transporterId req = do
     QBL.updateAddress booking.toLocation.id req.toAddress
     QDI.updateOnRide (cast driver.id) True
     QRide.create ride
+    QBE.logRideConfirmedEvent booking.id
+    QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
 
   uRideBooking <- QRB.findById booking.id >>= fromMaybeM (RideBookingNotFound booking.id.getId)
   Notify.notifyDriver notificationType notificationTitle (message uRideBooking) driver.id driver.deviceToken

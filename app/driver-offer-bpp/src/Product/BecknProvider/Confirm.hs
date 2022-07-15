@@ -1,6 +1,8 @@
 module Product.BecknProvider.Confirm (confirm) where
 
 import Beckn.Prelude
+import qualified Beckn.Storage.Esqueleto as Esq
+import Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
@@ -9,6 +11,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnConfirm as ACL
+import Data.Aeson (encode)
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Organization as Org
 import Environment
@@ -21,9 +24,12 @@ confirm ::
   SignatureAuthResult ->
   Confirm.ConfirmReq ->
   FlowHandler AckResponse
-confirm transporterId (SignatureAuthResult _ subscriber) req =
+confirm transporterId (SignatureAuthResult signPayload subscriber) req =
   withFlowHandlerAPI . withTransactionIdLogTag req $ do
-    -- log beckn request
+    logTagInfo "Confirm API Flow" "Reached"
+    Esq.runTransaction $
+      QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
+
     dConfirmReq <- ACL.buildConfirmReq req
     let context = req.context
     dConfirmRes <- DConfirm.handler subscriber transporterId dConfirmReq
