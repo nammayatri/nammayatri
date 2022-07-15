@@ -30,8 +30,8 @@ import Types.API.Driveronboarding.DriverOnBoarding
 import Types.Error
 import Utils.Common
 
-validateDriverOnBoarding :: Validate DriverOnBoardingReq
-validateDriverOnBoarding DriverOnBoardingReq {..} =
+validateDriverDrivingLicense :: Validate DriverOnBoardingReq
+validateDriverDrivingLicense DriverOnBoardingReq {..} =
   sequenceA_
     [ validateField "driverLicenseNumber" driverLicenseNumber $ MinLength 5 `And` text
     ]
@@ -41,22 +41,19 @@ validateDriverOnBoarding DriverOnBoardingReq {..} =
 
 registrationHandler :: Id SP.Person -> DriverOnBoardingReq -> FlowHandler DriverOnBoardingRes
 registrationHandler personId req@DriverOnBoardingReq {..} = withFlowHandlerAPI $ do
-  if driverConsent
-    then do
-      runRequestValidation validateDriverOnBoarding DriverOnBoardingReq {..}
-      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      let orgId = Id req.organizationId :: Id DO.Organization
-      organization <- QOrganization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
-      let orgTxt = getId organization.id
-      task_id <- L.generateGUID -- task_id for idfy request
-      let group_id = personId -- group_id for idfy request
-      now <- getCurrentTime
-      driverDLDetails <- QDDL.findByDId personId
-      vehicleRCDetails <- QVR.findByPId personId
-      handleDLVerification req personId driverDLDetails
-      handleRCVerification req personId vehicleRCDetails
-      return Success
-    else throwError (InvalidRequest "User Consent is required")
+  runRequestValidation validateDriverDrivingLicense DriverOnBoardingReq {..}
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let orgId = Id req.organizationId :: Id DO.Organization
+  organization <- QOrganization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
+  let orgTxt = getId organization.id
+  task_id <- L.generateGUID -- task_id for idfy request
+  let group_id = personId -- group_id for idfy request
+  now <- getCurrentTime
+  driverDLDetails <- QDDL.findByDId personId
+  vehicleRCDetails <- QVR.findByPId personId
+  handleDLVerification req personId driverDLDetails
+  handleRCVerification req personId vehicleRCDetails
+  return Success
 
 handleDLVerification :: DriverOnBoardingReq -> Id SP.Person -> Maybe DDL.DriverDrivingLicense -> Flow ()
 handleDLVerification req personId dl = do

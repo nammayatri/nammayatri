@@ -17,21 +17,21 @@ import Types.API.Driveronboarding.Status
 
 statusHandler :: Id SP.Person -> FlowHandler StatusRes
 statusHandler personId = withFlowHandlerAPI $ do
-  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
-  vehicleRegCert <- DVehicle.findByPId personId >>= fromMaybeM (PersonNotFound personId.getId)
-  driverDrivingLicense <- QDDL.findByDId personId >>= fromMaybeM (PersonNotFound personId.getId)
-  operatinCity <- DO.findByorgId orgId >>= fromMaybeM (PersonNotFound orgId.getId)
-  let vehicleRCVerification = getVerificationStatus vehicleRegCert.verificationStatus
-  let driverDLVerification = getVerificationStatus driverDrivingLicense.verificationStatus
-  let operatingCityVerification = operatinCity.cityName
+  vehicleRegCertM <- DVehicle.findByPId personId
+  driverDrivingLicenseM <- QDDL.findByDId personId
+  operatingCity <- DO.findByorgId orgId >>= fromMaybeM (PersonNotFound orgId.getId)
+  let vehicleRCVerification = getVerificationStatus ((.verificationStatus) <$> vehicleRegCertM)
+  let driverDLVerification = getVerificationStatus ((.verificationStatus) <$> driverDrivingLicenseM)
+  let operatingCityVerification = operatingCity.cityName
   let response = StatusRes vehicleRCVerification driverDLVerification operatingCityVerification
   when (vehicleRCVerification == VERIFIED || driverDLVerification == VERIFIED) $ DB.runTransaction $ Person.setRegisteredTrue personId
   return response
 
-getVerificationStatus :: VRC.VerificationStatus -> ResponseStatus
+getVerificationStatus :: Maybe VRC.VerificationStatus -> ResponseStatus
 getVerificationStatus = \case
-  VRC.PENDING -> VERIFICATION_PENDING
-  VRC.VALID -> VERIFIED
-  VRC.INVALID -> VERIFICATION_FAILED
-  VRC.NOTFOUND -> WAITING_INPUT
+  Just VRC.PENDING -> VERIFICATION_PENDING
+  Just VRC.VALID -> VERIFIED
+  Just VRC.INVALID -> VERIFICATION_FAILED
+  Nothing -> WAITING_INPUT

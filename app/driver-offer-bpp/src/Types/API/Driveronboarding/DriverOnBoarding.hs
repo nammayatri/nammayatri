@@ -8,8 +8,7 @@ data DriverOnBoardingReq = DriverOnBoardingReq
     driverLicenseNumber :: Text,
     operatingCity :: Text,
     driverDateOfBirth :: UTCTime,
-    vehicleRegistrationCertNumber :: Text,
-    driverConsent :: Bool
+    vehicleRegistrationCertNumber :: Text
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 

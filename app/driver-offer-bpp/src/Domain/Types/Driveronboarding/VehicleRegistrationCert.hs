@@ -17,7 +17,7 @@ import Data.Aeson
 import Data.OpenApi
 import Domain.Types.Person (Person)
 
-data VerificationStatus = PENDING | VALID | INVALID | NOTFOUND
+data VerificationStatus = PENDING | VALID | INVALID
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
 
 -- added valid and invalid inorder to accomodate validation results
