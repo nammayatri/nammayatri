@@ -16,9 +16,10 @@ data DriverDrivingLicenseE e = DriverDrivingLicense {
     driverLicenseNumber :: Maybe (EncryptedHashedField e Text), -- remove Maybe Data Type
     driverLicenseStart :: Maybe UTCTime,
     driverLicenseExpiry :: Maybe UTCTime,
-    classOfVehicle :: Maybe [COV], -- to be changed
+    classOfVehicle :: Maybe [COV],
     idfyStatus :: IdfyStatus,
     verificationStatus :: VerificationStatus,
+    driverVerificationStatus :: VerificationStatus,
     request_id :: Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,

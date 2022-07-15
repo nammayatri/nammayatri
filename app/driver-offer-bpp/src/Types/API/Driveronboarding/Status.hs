@@ -3,7 +3,7 @@ import Beckn.Prelude
 import Domain.Types.Driveronboarding.OperatingCity
 
 
-data ResponseStatus = PENDINGVERIFICATION | VERIFIED | FAILEDVERIFICATION | WAITINGINPUT 
+data ResponseStatus = PENDINGVERIFICATION | VERIFIED | FAILEDVERIFICATION | WAITING_INPUT 
     deriving ( Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes = StatusRes

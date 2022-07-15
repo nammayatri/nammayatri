@@ -8,14 +8,3 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp._operating_city_t
     updated_at timestamp with time zone NOT NULL
     ,CONSTRAINT  OperatingCityT_org_id_fkey FOREIGN KEY (organization_id) REFERENCES atlas_driver_offer_bpp.organization(id)
 );
-
--- INSERT INTO atlas_driver_offer_bpp.OperatingCity (
---     id,
---     organizationId,
---     cityName,
---     enabled,
---     createdAt,
---     updatedAt
--- )
--- VALUES 
---     ('ASDA','ASDA1','BANGALORE',TRUE,current_timestamp,current_timestamp)

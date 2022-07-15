@@ -27,14 +27,6 @@ findByPId personid = do
     vechileRegCert <- from $ table @VehicleRegistrationCertT
     where_ $ vechileRegCert ^. VehicleRegistrationCertDriverId ==. val (toKey personid)
     return vechileRegCert
-    
--- data to be update in DB:
---         rc status
---         vehicle class
---         rc start date
---         rc exp. date
---         permit expiry
---         insurance expiry
 
 updateRCDetails :: Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> IdfyStatus -> VerificationStatus -> Maybe COV -> UTCTime -> SqlDB ()
 updateRCDetails requestId permitStart permitValidity fitnessExpiry insuranceValidity idfyStatus verificationStatus cov now = do
@@ -69,6 +61,3 @@ resetRCRequest driverId rcNumber requestId now = do
         VehicleRegistrationCertUpdatedAt =. val now
       ]
     where_ $ tbl ^. VehicleRegistrationCertDriverId  ==. val (toKey driverId)
-
-    -- driverLicenseNumber :: Maybe (EncryptedHashedField e Text), -- remove Maybe Data Type
-    -- request_id :: Text,

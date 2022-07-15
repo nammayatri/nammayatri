@@ -259,3 +259,15 @@ getNearestDrivers LatLong {..} radiusMeters orgId = do
   where
     makeDriverPoolResult (personId, dist, vehicleVariant, dlat, dlon) =
       DriverPoolResult (cast personId) dist vehicleVariant dlat dlon
+
+setRegisteredTrue :: Id Person -> SqlDB ()
+setRegisteredTrue personId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ PersonRegistered =. val True,
+        PersonUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. PersonTId ==. val (toKey personId)
+

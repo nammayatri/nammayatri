@@ -32,8 +32,8 @@ import Beckn.Utils.Validation
 import Beckn.Types.Predicate
 import Beckn.Utils.Predicates
 
-validateIssue1 :: Validate DriverOnBoardingReq
-validateIssue1 DriverOnBoardingReq {..} =
+validateDriverOnBoarding :: Validate DriverOnBoardingReq
+validateDriverOnBoarding DriverOnBoardingReq {..} =
   sequenceA_
     [ validateField "driverLicenseNumber" driverLicenseNumber $ MinLength 5 `And` text
     ]
@@ -41,10 +41,10 @@ validateIssue1 DriverOnBoardingReq {..} =
       extractMaybe (Just x) = x
       text = star $ alphanum \/  ","
 
-registrationHandler1 :: Id SP.Person -> DriverOnBoardingReq -> FlowHandler DriverOnBoardingRes
-registrationHandler1 personId req@DriverOnBoardingReq {..}= withFlowHandlerAPI $ do
+registrationHandler :: Id SP.Person -> DriverOnBoardingReq -> FlowHandler DriverOnBoardingRes
+registrationHandler personId req@DriverOnBoardingReq {..}= withFlowHandlerAPI $ do
   if driverConsent then do
-    runRequestValidation validateIssue1 DriverOnBoardingReq {..}
+    runRequestValidation validateDriverOnBoarding DriverOnBoardingReq {..}
     person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     let orgId = Id req.organizationId :: Id DO.Organization
     organization <- QOrganization.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
@@ -52,10 +52,10 @@ registrationHandler1 personId req@DriverOnBoardingReq {..}= withFlowHandlerAPI $
     task_id <- L.generateGUID -- task_id for idfy request
     let group_id = personId   -- group_id for idfy request
     now <- getCurrentTime
-    dlDetails <- QDDL.findByDId personId
-    rcDetails <- QVR.findByPId personId
-    handleDLVerification req personId dlDetails
-    handleRCVerification req personId rcDetails
+    driverDLDetails <- QDDL.findByDId personId
+    vehicleRCDetails <- QVR.findByPId personId
+    handleDLVerification req personId driverDLDetails
+    handleRCVerification req personId vehicleRCDetails
     return Success 
   else 
     throwError (InvalidRequest "User Consent is required")
@@ -67,7 +67,7 @@ handleDLVerification req personId dl= do
     Nothing -> do
       dlId <- L.generateGUID
       let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
-      dlEntity <- buildDBDL dlId personId (Just req.driverDateOfBirth) (Just req.driverLicenseNumber) idfyReqId now
+      dlEntity <- mkDriverDrivingLicenseEntry dlId personId (Just req.driverDateOfBirth) (Just req.driverLicenseNumber) idfyReqId now
       runTransaction $ QDDL.create dlEntity
       return ()
     Just dlRecord -> do
@@ -84,7 +84,7 @@ handleRCVerification req personId rc = do
     Nothing -> do
       rcId <- L.generateGUID
       let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
-      rcEntity <- buildDBRC rcId personId (Just req.vehicleRegistrationCertNumber) idfyReqId now
+      rcEntity <- mkVehicleRegistrationCertEntry rcId personId (Just req.vehicleRegistrationCertNumber) idfyReqId now
       runTransaction $ QVR.create rcEntity
       return ()
     Just rcRecord -> do
@@ -93,9 +93,11 @@ handleRCVerification req personId rc = do
         let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
         runTransaction $ QVR.resetRCRequest personId (Just req.driverLicenseNumber) idfyReqId now
 
+        
 
-mkDBOP :: Text -> Text -> DriverOnBoardingReq -> UTCTime -> DOC.OperatingCity
-mkDBOP opId orgId req time =
+
+mkOperatingCityEntry :: Text -> Text -> DriverOnBoardingReq -> UTCTime -> DOC.OperatingCity
+mkOperatingCityEntry opId orgId req time =
   DOC.OperatingCity
   {
     id = Id opId,
@@ -106,8 +108,8 @@ mkDBOP opId orgId req time =
     updatedAt = time
   }
 
-buildDBRC :: EncFlow m r => Text -> Id SP.Person -> Maybe Text -> Text -> UTCTime -> m DVR.VehicleRegistrationCert
-buildDBRC opId personId rcNumber reqID time = do
+mkVehicleRegistrationCertEntry :: EncFlow m r => Text -> Id SP.Person -> Maybe Text -> Text -> UTCTime -> m DVR.VehicleRegistrationCert
+mkVehicleRegistrationCertEntry opId personId rcNumber reqID time = do
   vrc <- mapM encrypt rcNumber
   return $
     DVR.VehicleRegistrationCert
@@ -132,8 +134,8 @@ buildDBRC opId personId rcNumber reqID time = do
     }
 
 
-buildDBDL :: EncFlow m r => Text -> Id SP.Person -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime ->m DDL.DriverDrivingLicense
-buildDBDL opId personId dob dlNumber reqId time = do
+mkDriverDrivingLicenseEntry :: EncFlow m r => Text -> Id SP.Person -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime ->m DDL.DriverDrivingLicense
+mkDriverDrivingLicenseEntry opId personId dob dlNumber reqId time = do
   ddl <- mapM encrypt dlNumber
   return $
     DDL.DriverDrivingLicense
@@ -143,22 +145,15 @@ buildDBDL opId personId dob dlNumber reqId time = do
         driverDob = dob,
         driverLicenseNumber = ddl,
         driverLicenseStart = Nothing,
-        idfyStatus = DVR.IN_PROGRESS,
-        verificationStatus = DVR.PENDING,
         driverLicenseExpiry = Nothing,
         classOfVehicle = Nothing,
+        idfyStatus = DVR.IN_PROGRESS,
+        verificationStatus = DVR.PENDING,
+        driverVerificationStatus = DVR.PENDING,
         request_id = reqId,
+        consent = True,
         createdAt = time,
         updatedAt = time,
-        consentTimestamp = time,
-        consent = True
+        consentTimestamp = time
       }
 
-
--- createDDL :: (EncFlow m r, EsqDBFlow m r) => Id SP.Person -> DriverOnBoardingReq ->m DDL.DriverDrivingLicense
--- createDDL personId req = do
---   opId <- L.generateGUID
---   utcNow <- getCurrentTime
---   ddl <- mkDBOP2 opId personId req utcNow
---   runTransaction $ QDDL.create ddl
---   return ddl

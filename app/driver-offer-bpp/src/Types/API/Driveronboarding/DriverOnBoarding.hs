@@ -14,5 +14,3 @@ data DriverOnBoardingReq = DriverOnBoardingReq {
     deriving (Generic,ToSchema,ToJSON,FromJSON)
 
 type DriverOnBoardingRes = APISuccess  
-
--- add consentTimestamp

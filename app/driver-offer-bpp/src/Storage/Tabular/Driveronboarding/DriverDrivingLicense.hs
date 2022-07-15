@@ -33,6 +33,7 @@ mkPersist
       classOfVehicle [COV] Maybe
       idfyStatus IdfyStatus
       verificationStatus VerificationStatus
+      driverVerificationStatus VerificationStatus
       request_id Text
       consent Bool
       consentTimestamp UTCTime

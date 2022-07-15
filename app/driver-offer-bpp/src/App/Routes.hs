@@ -37,6 +37,8 @@ import Types.API.Driveronboarding.DriverOnBoarding
 import Utils.Auth (AdminTokenAuth, TokenAuth)
 import Beckn.Types.Core.Ack (AckResponse)
 import Product.DriveronBoarding.DriverOnBoarding as DO
+import Product.DriveronBoarding.Status as Status
+import Types.API.Driveronboarding.Status
 
 type DriverOfferAPI =
   MainAPI
@@ -282,13 +284,19 @@ orgBecknApiFlow =
   
 type OnBoardingAPI =
   "driver"
-  :> "register"
+  :> ("register"
   :> TokenAuth
   :> ReqBody '[JSON] DriverOnBoardingReq
   :> Post '[JSON] DriverOnBoardingRes
+  :<|> "register" :> "status" 
+  :> TokenAuth
+  :> Get '[JSON] StatusRes)
 
 onBoardingAPIFlow :: FlowServer OnBoardingAPI
-onBoardingAPIFlow = DO.registrationHandler1
+onBoardingAPIFlow = 
+  DO.registrationHandler
+    :<|> Status.statusHandler
+
 
 
 type HealthCheckAPI = Get '[JSON] Text

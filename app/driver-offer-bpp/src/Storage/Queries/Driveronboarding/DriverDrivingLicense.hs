@@ -58,6 +58,3 @@ resetDLRequest driverId dlNumber dob requestId now = do
         DriverDrivingLicenseUpdatedAt =. val now
       ]
     where_ $ tbl ^. DriverDrivingLicenseDriverId  ==. val (toKey driverId)
-
-    -- driverLicenseNumber :: Maybe (EncryptedHashedField e Text), -- remove Maybe Data Type
-    -- request_id :: Text,

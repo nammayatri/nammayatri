@@ -105,7 +105,6 @@ data PersonAPIEntity = PersonAPIEntity
     middleName :: Maybe Text,
     lastName :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
-    registered :: Bool,
     maskedDeviceToken :: Maybe FCM.FCMRecipientToken,
     role :: Role
   }

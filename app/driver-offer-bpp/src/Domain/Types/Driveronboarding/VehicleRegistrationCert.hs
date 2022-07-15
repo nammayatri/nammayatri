@@ -7,13 +7,14 @@ import Beckn.Prelude
 import Beckn.Types.Id
 import Domain.Types.Person (Person)
 import Data.Aeson
+    ( Options(constructorTagModifier), defaultOptions )
 import Data.OpenApi
 import Beckn.Utils.Schema (genericDeclareUnNamedSchema)
 import Beckn.Utils.JSON (constructorsToLowerOptions)
 import Beckn.External.Encryption
 import Beckn.Utils.Common
 
-data VerificationStatus = PENDING | VALID | INVALID
+data VerificationStatus = PENDING | VALID | INVALID | NOTFOUND
   deriving (Show, Eq, Read, Generic, Enum, Bounded, FromJSON, ToJSON, ToSchema)
 
 -- added valid and invalid inorder to accomodate validation results
