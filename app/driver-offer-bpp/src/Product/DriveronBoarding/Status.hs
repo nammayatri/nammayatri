@@ -5,7 +5,6 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Error
 import Beckn.Types.Id (Id)
 import Beckn.Utils.Error
-import Domain.Types.Driveronboarding.OperatingCity
 import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as VRC
 import qualified Domain.Types.Person as SP
 import Environment (FlowHandler)
@@ -25,9 +24,9 @@ statusHandler personId = withFlowHandlerAPI $ do
   operatinCity <- DO.findByorgId orgId >>= fromMaybeM (PersonNotFound orgId.getId)
   let vehicleRCVerification = getVerificationStatus vehicleRegCert.verificationStatus
   let driverDLVerification = getVerificationStatus driverDrivingLicense.verificationStatus
-  let operatingCityVerification = operatinCity.enabled
+  let operatingCityVerification = operatinCity.cityName
   let response = StatusRes vehicleRCVerification driverDLVerification operatingCityVerification
-  when (vehicleRCVerification == VERIFIED || driverDLVerification == VERIFIED || operatingCityVerification == VALID) $ DB.runTransaction $ Person.setRegisteredTrue personId
+  when (vehicleRCVerification == VERIFIED || driverDLVerification == VERIFIED) $ DB.runTransaction $ Person.setRegisteredTrue personId
   return response
 
 getVerificationStatus :: VRC.VerificationStatus -> ResponseStatus

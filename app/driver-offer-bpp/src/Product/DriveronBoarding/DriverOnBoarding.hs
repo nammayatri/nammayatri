@@ -17,7 +17,6 @@ import Beckn.Types.Validation
 import Beckn.Utils.Predicates
 import Beckn.Utils.Validation
 import qualified Domain.Types.Driveronboarding.DriverDrivingLicense as DDL
-import Domain.Types.Driveronboarding.OperatingCity as DOC
 import qualified Domain.Types.Driveronboarding.VehicleRegistrationCert as DVR hiding (VALID)
 import qualified Domain.Types.Organization as DO
 import qualified Domain.Types.Person as SP
@@ -90,17 +89,6 @@ handleRCVerification req personId rc = do
       when (rcNumber /= Just req.vehicleRegistrationCertNumber) do
         let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
         runTransaction $ QVR.resetRCRequest personId (Just req.driverLicenseNumber) idfyReqId now
-
-mkOperatingCityEntry :: Text -> Text -> DriverOnBoardingReq -> UTCTime -> DOC.OperatingCity
-mkOperatingCityEntry opId orgId req time =
-  DOC.OperatingCity
-    { id = Id opId,
-      organizationId = Id orgId,
-      cityName = req.operatingCity,
-      enabled = VALID,
-      createdAt = time,
-      updatedAt = time
-    }
 
 mkVehicleRegistrationCertEntry :: EncFlow m r => Text -> Id SP.Person -> Maybe Text -> Text -> UTCTime -> m DVR.VehicleRegistrationCert
 mkVehicleRegistrationCertEntry opId personId rcNumber reqID time = do
