@@ -1,4 +1,4 @@
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+
 module Product.DriveronBoarding.Status where
 import Beckn.Types.Id (Id)
 import qualified Storage.Queries.Person as QPerson
@@ -28,8 +28,7 @@ statusHandler personId = withFlowHandlerAPI $ do
     let driverDLVerification = getVerificationStatus driverDrivingLicense.verificationStatus
     let operatingCityVerification = operatinCity.enabled
     let response = StatusRes vehicleRCVerification driverDLVerification operatingCityVerification
-    case (vehicleRCVerification,driverDLVerification,operatingCityVerification) of
-        (VERIFIED,VERIFIED,VALID) -> DB.runTransaction $ Person.setRegisteredTrue personId   
+    when (vehicleRCVerification == VERIFIED || driverDLVerification == VERIFIED || operatingCityVerification == VALID) $ DB.runTransaction $ Person.setRegisteredTrue personId 
     return response
 
 getVerificationStatus :: VRC.VerificationStatus -> ResponseStatus
