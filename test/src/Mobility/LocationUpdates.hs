@@ -1,5 +1,6 @@
 module Mobility.LocationUpdates where
 
+import qualified "beckn-transport" API.UI.Booking.Types as TbeBookingAPI
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common (getAppBaseUrl)
@@ -13,7 +14,6 @@ import HSpec
 import Mobility.Fixtures
 import Mobility.Fixtures.Routes
 import Mobility.SuccessFlow
-import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import qualified "app-backend" Types.API.Search as AppBackend
 import Utils
 
@@ -57,7 +57,7 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
   -- Driver Accepts a ride
   void . callBPP $
     rideRespond tRideBooking.id driverToken1 $
-      RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
+      TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
 
   tRide <- pollDesc ("ride with id=" <> tRideBooking.id.getId <> " should exist and should have status=NEW") $ do
     tRide <- getBPPRide tRideBooking.id

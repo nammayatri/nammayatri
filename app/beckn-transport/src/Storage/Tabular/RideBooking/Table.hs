@@ -11,7 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Domain.Types.RideBooking as Domain
+import qualified Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Vehicle as Veh
 import Storage.Tabular.BookingLocation (BookingLocationTId)
 import Storage.Tabular.FareProduct ()

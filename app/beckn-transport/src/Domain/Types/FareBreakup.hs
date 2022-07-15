@@ -3,7 +3,7 @@ module Domain.Types.FareBreakup where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.Types.RideBooking
+import Domain.Types.Booking.Type
 
 data FareBreakup = FareBreakup
   { id :: Id FareBreakup,

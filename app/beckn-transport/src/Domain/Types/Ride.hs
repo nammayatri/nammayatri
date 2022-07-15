@@ -9,8 +9,8 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Person as DPers
-import qualified Domain.Types.RideBooking as DRB
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API

@@ -10,9 +10,8 @@ import Domain.Types.Organization
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude hiding (id)
-import Services.Allocation.Allocation
+import Services.Allocation.Allocation as Alloc
 import Test.Tasty.HUnit
-import qualified Types.API.RideBooking as RideBooking
 import Types.App
 import Utils.Common
 import Utils.GuidGenerator ()
@@ -76,9 +75,9 @@ addRequest requestData Repository {..} rideBookingId = do
   modifyIORef currentIdVar (+ 1)
   modifyIORef rideRequestsVar $ Map.insert requestId request
 
-addResponse :: Repository -> Id SRB.RideBooking -> Id Driver -> RideBooking.NotificationStatus -> IO ()
+addResponse :: Repository -> Id SRB.RideBooking -> Id Driver -> Alloc.Response -> IO ()
 addResponse repository@Repository {..} rideBookingId driverId status = do
-  let driverResponse = RideBooking.DriverResponse driverId status
+  let driverResponse = DriverResponseType driverId status
   addRequest (DriverResponse driverResponse) repository rideBookingId
 
 addDriverPool :: Repository -> Map (Id SRB.RideBooking) [Id Driver] -> IO ()

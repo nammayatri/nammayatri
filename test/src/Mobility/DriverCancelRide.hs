@@ -1,5 +1,6 @@
 module Mobility.DriverCancelRide where
 
+import qualified "beckn-transport" API.UI.Booking.Types as TbeBookingAPI
 import qualified "beckn-transport" API.UI.Ride.Types as RideAPI
 import Common (getAppBaseUrl)
 import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
@@ -10,7 +11,6 @@ import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
 import Mobility.SuccessFlow
-import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import Utils
 
 spec :: Spec
@@ -35,7 +35,7 @@ spec = do
       -- Driver1 Accepts a ride
       void . callBPP $
         rideRespond tRideBooking.id driverToken1 $
-          RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
+          TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
 
       tRide1 <- poll $ do
         tRide <- getBPPRide tRideBooking.id
@@ -61,7 +61,7 @@ spec = do
       -- Driver2 Accepts a ride
       void . callBPP $
         rideRespond tRideBooking.id driverToken2 $
-          RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
+          TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
 
       tRide2 <- poll $ do
         tRide <- getBPPRide tRideBooking.id

@@ -10,7 +10,7 @@ module Storage.Tabular.RideBooking.RentalRideBooking where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.RideBooking as Domain
+import qualified Domain.Types.Booking.Type as Domain
 import Storage.Tabular.RentalFarePolicy (RentalFarePolicyTId)
 import Storage.Tabular.RideBooking.Table
 

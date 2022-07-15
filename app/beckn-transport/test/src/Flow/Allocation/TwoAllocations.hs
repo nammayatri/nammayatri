@@ -8,7 +8,6 @@ import Flow.Allocation.Internal
 import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
-import qualified Types.API.RideBooking as RideBooking
 
 rideBooking01Id :: Id SRB.RideBooking
 rideBooking01Id = Id "rideBooking01"
@@ -30,14 +29,14 @@ twoAllocations = testCase "Two allocations" $ do
   void $ process (handle r) org1 numRequestsToProcess
   checkNotificationStatus r rideBooking01Id (Id "driver01") Notified
   checkNotificationStatus r rideBooking02Id (Id "driver05") Notified
-  addResponse r rideBooking01Id (Id "driver01") RideBooking.REJECT
-  addResponse r rideBooking02Id (Id "driver05") RideBooking.REJECT
+  addResponse r rideBooking01Id (Id "driver01") Reject
+  addResponse r rideBooking02Id (Id "driver05") Reject
   void $ process (handle r) org1 numRequestsToProcess
-  addResponse r rideBooking01Id (Id "driver02") RideBooking.REJECT
-  addResponse r rideBooking02Id (Id "driver07") RideBooking.REJECT
+  addResponse r rideBooking01Id (Id "driver02") Reject
+  addResponse r rideBooking02Id (Id "driver07") Reject
   void $ process (handle r) org1 numRequestsToProcess
-  addResponse r rideBooking01Id (Id "driver03") RideBooking.ACCEPT
-  addResponse r rideBooking02Id (Id "driver08") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver03") Accept
+  addResponse r rideBooking02Id (Id "driver08") Accept
   void $ process (handle r) org1 numRequestsToProcess
   assignments <- readIORef assignmentsVar
   assignments @?= [(rideBooking02Id, Id "driver08"), (rideBooking01Id, Id "driver03")]

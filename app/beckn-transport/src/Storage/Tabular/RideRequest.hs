@@ -10,8 +10,10 @@ module Storage.Tabular.RideRequest where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.RideRequest as Domain
 import Storage.Tabular.RideBooking (RideBookingTId)
+import Types.Error
 
 derivePersistField "Domain.RideRequestType"
 
@@ -36,12 +38,14 @@ instance TEntityKey RideRequestT where
 
 instance TType RideRequestT Domain.RideRequest where
   fromTType RideRequestT {..} = do
+    decInfo <- for info $ \i -> decodeFromText i & fromMaybeM (InternalError $ "Unable to parse RideRequest.info: " <> show i)
     return $
       Domain.RideRequest
         { id = Id id,
           rideBookingId = fromKey rideBookingId,
           shortOrgId = ShortId shortOrgId,
           _type = reqType,
+          info = decInfo,
           ..
         }
   toTType Domain.RideRequest {..} =
@@ -50,5 +54,6 @@ instance TType RideRequestT Domain.RideRequest where
         rideBookingId = toKey rideBookingId,
         shortOrgId = getShortId shortOrgId,
         reqType = _type,
+        info = encodeToText <$> info,
         ..
       }

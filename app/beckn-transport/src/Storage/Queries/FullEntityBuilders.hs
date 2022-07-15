@@ -3,10 +3,10 @@ module Storage.Queries.FullEntityBuilders where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Domain.Types.Booking.Type as Booking
 import Domain.Types.FarePolicy
 import qualified Domain.Types.FareProduct as Domain
 import Domain.Types.Quote as Quote
-import Domain.Types.RideBooking as Booking
 import qualified Storage.Queries.FarePolicy.Discount as QDisc
 import qualified Storage.Queries.FarePolicy.PerExtraKmRate as QExtraKmRate
 import qualified Storage.Queries.Quote.OneWayQuote as QOneWayQuote

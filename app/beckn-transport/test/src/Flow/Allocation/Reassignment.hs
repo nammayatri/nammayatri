@@ -8,7 +8,6 @@ import Flow.Allocation.Internal
 import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
-import qualified Types.API.RideBooking as RideBooking
 import Types.App
 
 rideBooking01Id :: Id SRB.RideBooking
@@ -33,7 +32,7 @@ reassignmentRide = testCase "Reassignment rideBooking after cancellation" $ do
   addDriverPool r driverPoolPerRide
   addRequest Allocation r rideBooking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  addResponse r rideBooking01Id (Id "driver01") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
   addRequest Cancellation r rideBooking01Id
   void $ process (handle r) org1 numRequestsToProcess
@@ -41,7 +40,7 @@ reassignmentRide = testCase "Reassignment rideBooking after cancellation" $ do
   addRequest Allocation r rideBooking01Id
   void $ process (handle r) org1 numRequestsToProcess
   checkNotificationStatus r rideBooking01Id (Id "driver02") Notified
-  addResponse r rideBooking01Id (Id "driver02") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver02") Accept
   void $ process (handle r) org1 numRequestsToProcess
   assignments <- readIORef assignmentsVar
   assignments @?= [(rideBooking01Id, Id "driver02"), (rideBooking01Id, Id "driver01")]
@@ -57,13 +56,13 @@ reassignmentDriver = testCase "Reassignment driver after cancellation" $ do
   addDriverPool r driverPoolPerRide
   addRequest Allocation r rideBooking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  addResponse r rideBooking01Id (Id "driver01") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
   addRequest Cancellation r rideBooking01Id
   void $ process (handle r) org1 numRequestsToProcess
   addRequest Allocation r rideBooking02Id
   void $ process (handle r) org1 numRequestsToProcess
-  addResponse r rideBooking02Id (Id "driver01") RideBooking.ACCEPT
+  addResponse r rideBooking02Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
   assignments <- readIORef assignmentsVar
   assignments @?= [(rideBooking02Id, Id "driver01"), (rideBooking01Id, Id "driver01")]

@@ -8,7 +8,6 @@ import Flow.Allocation.Internal
 import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
-import qualified Types.API.RideBooking as RideBooking
 import Types.App
 
 rideBooking01Id :: Id SRB.RideBooking
@@ -55,7 +54,7 @@ cancellationAfterAssignment = testCase "Cancellation after assignment" $ do
   addDriverPool r driverPoolPerRide
   addRequest Allocation r rideBooking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  addResponse r rideBooking01Id (Id "driver01") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
   onRide1 <- readIORef onRideVar
   onRide1 @?= [Id "driver01"]

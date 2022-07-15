@@ -12,7 +12,6 @@ import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude
-import qualified Types.API.RideBooking as RideBooking
 import Types.App
 import Utils.Common
 
@@ -24,8 +23,19 @@ newtype OrderTime = OrderTime
 data RequestData
   = Allocation
   | Cancellation
-  | DriverResponse RideBooking.DriverResponse
+  | DriverResponse DriverResponseType
   deriving (Generic, Show, FromJSON, ToJSON)
+
+data DriverResponseType = DriverResponseType
+  { driverId :: Id Driver,
+    response :: Response
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
+
+data Response
+  = Accept
+  | Reject
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 data RideRequest = RideRequest
   { requestId :: Id SRR.RideRequest,
@@ -173,18 +183,18 @@ processRequest handle@ServiceHandle {..} shortOrgId rideRequest = do
         metrics.incrementFailedTaskCounter
     removeRequest requestId
 
-processDriverResponse :: MonadHandler m => ServiceHandle m -> RideBooking.DriverResponse -> Id SRB.RideBooking -> m ()
+processDriverResponse :: MonadHandler m => ServiceHandle m -> DriverResponseType -> Id SRB.RideBooking -> m ()
 processDriverResponse handle@ServiceHandle {..} response rideBookingId = do
   currentNotifications <- getCurrentNotifications rideBookingId
   logInfo $ "getCurrentNotifications" <> show currentNotifications
   if response.driverId `elem` map (.driverId) currentNotifications
-    then case response.status of
-      RideBooking.ACCEPT -> do
+    then case response.response of
+      Accept -> do
         logInfo $ "Assigning driver" <> show response.driverId
         assignDriver rideBookingId response.driverId
         cleanupNotifications rideBookingId
         logDriverEvents MarkedAsAccepted rideBookingId $ singleton response.driverId
-      RideBooking.REJECT ->
+      Reject ->
         processRejection handle rideBookingId response.driverId
     else logDriverNoLongerNotified rideBookingId response.driverId
 

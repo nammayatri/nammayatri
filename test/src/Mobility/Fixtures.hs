@@ -1,9 +1,11 @@
 module Mobility.Fixtures where
 
-import qualified "beckn-transport" API.UI.Driver.Handler as DriverAPI
-import qualified "beckn-transport" API.UI.Driver.Types as DriverAPI
-import qualified "beckn-transport" API.UI.Ride.Handler as RideAPI
-import qualified "beckn-transport" API.UI.Ride.Types as RideAPI
+import qualified "beckn-transport" API.UI.Booking.Handler as TbeBookingAPI
+import qualified "beckn-transport" API.UI.Booking.Types as TbeBookingAPI
+import qualified "beckn-transport" API.UI.Driver.Handler as TbeDriverAPI
+import qualified "beckn-transport" API.UI.Driver.Types as TbeDriverAPI
+import qualified "beckn-transport" API.UI.Ride.Handler as TbeRideAPI
+import qualified "beckn-transport" API.UI.Ride.Types as TbeRideAPI
 import "app-backend" App.Routes as AbeRoutes
 import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
@@ -34,7 +36,6 @@ import qualified "app-backend" Types.API.Feedback as AppFeedback
 import "beckn-transport" Types.API.Location
 import qualified "app-backend" Types.API.Registration as Reg
 import qualified "app-backend" Types.API.RideBooking as AppRideBooking
-import qualified "beckn-transport" Types.API.RideBooking as TRideBookingAPI
 import qualified "app-backend" Types.API.Serviceability as AppServ
 
 timeBetweenLocationUpdates :: Seconds
@@ -51,12 +52,12 @@ getFutureTime =
 cancelRide :: Id BRB.RideBooking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
 cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
-rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
+rideStart :: Text -> Id TRide.Ride -> TbeRideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> ClientM APISuccess
-rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
-_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy RideAPI.API)
+rideCancel :: Text -> Id TRide.Ride -> TbeRideAPI.CancelRideReq -> ClientM APISuccess
+_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRideAPI.API)
 
-getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
+getDriverInfo :: Text -> ClientM TbeDriverAPI.DriverInformationRes
 setDriverOnline :: Text -> Bool -> ClientM APISuccess
 ( _
     :<|> _
@@ -68,18 +69,18 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
            :<|> ( getDriverInfo
                     :<|> _
                   )
-         ) = client (Proxy :: Proxy DriverAPI.API)
+         ) = client (Proxy :: Proxy TbeDriverAPI.API)
 
-rideRespond :: Id TRB.RideBooking -> Text -> TRideBookingAPI.SetDriverAcceptanceReq -> ClientM TRideBookingAPI.SetDriverAcceptanceRes
+rideRespond :: Id TRB.RideBooking -> Text -> TbeBookingAPI.SetDriverAcceptanceReq -> ClientM TbeBookingAPI.SetDriverAcceptanceRes
 rideRespond rideBookingId = rideResp
   where
-    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeBookingAPI.API)
     rideResp :<|> _ = driver_rb_path rideBookingId
 
-getNotificationInfo :: Id TRB.RideBooking -> Text -> ClientM TRideBookingAPI.GetRideInfoRes
+getNotificationInfo :: Id TRB.RideBooking -> Text -> ClientM TbeBookingAPI.GetRideInfoRes
 getNotificationInfo rideBookingId = getNotif
   where
-    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeBookingAPI.API)
     _ :<|> getNotif = driver_rb_path rideBookingId
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
@@ -129,18 +130,18 @@ callAppFeedback ratingValue rideId =
           }
    in appFeedback appRegistrationToken request
 
-tRideBookingStatus :: Id TRB.RideBooking -> Text -> ClientM TRideBookingAPI.RideBookingStatusRes
-tRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM TRideBookingAPI.RideBookingListRes
-(tRideBookingStatus :<|> tRideBookingList :<|> _) :<|> _ = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+tRideBookingStatus :: Id TRB.RideBooking -> Text -> ClientM TRB.RideBookingAPIEntity
+tRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM TbeBookingAPI.RideBookingListRes
+(tRideBookingStatus :<|> tRideBookingList :<|> _) :<|> _ = client (Proxy :: Proxy TbeBookingAPI.API)
 
 appRideBookingStatus :: Id BRB.RideBooking -> Text -> ClientM AppRideBooking.RideBookingStatusRes
 appRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppRideBooking.RideBookingListRes
 appRideBookingStatus :<|> appRideBookingList = client (Proxy :: Proxy AbeRoutes.RideBookingAPI)
 
-buildStartRideReq :: Text -> RideAPI.StartRideReq
+buildStartRideReq :: Text -> TbeRideAPI.StartRideReq
 buildStartRideReq otp =
-  RideAPI.StartRideReq
-    { RideAPI.rideOtp = otp
+  TbeRideAPI.StartRideReq
+    { TbeRideAPI.rideOtp = otp
     }
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes

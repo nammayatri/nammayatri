@@ -142,9 +142,14 @@ toRideRequest req =
       SRR.ALLOCATION -> Right Alloc.Allocation
       SRR.CANCELLATION -> Right Alloc.Cancellation
       SRR.DRIVER_RESPONSE ->
-        case req.info >>= decodeFromText of
-          Just driverResponse -> Right $ DriverResponse driverResponse
-          Nothing -> Left $ "Error decoding driver response: " <> show req.info
+        case req.info of
+          Just driverResponse -> Right . DriverResponse $ castDriverResponse driverResponse
+          Nothing -> Left "Driver info is not present "
+    castDriverResponse SRR.DriverResponse {..} = do
+      let response = case status of
+            SRR.ACCEPT -> Alloc.Accept
+            SRR.REJECT -> Alloc.Reject
+      Alloc.DriverResponseType {..}
 
 getCurrentNotifications ::
   Id RideBooking ->

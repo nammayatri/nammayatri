@@ -1,5 +1,6 @@
 module Mobility.SuccessFlow where
 
+import qualified "beckn-transport" API.UI.Booking.Types as TbeBookingAPI
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common
@@ -17,7 +18,6 @@ import qualified "beckn-transport" Storage.Queries.Ride as TQRide
 import qualified "app-backend" Storage.Queries.RideBooking as BQRB
 import qualified "beckn-transport" Storage.Queries.RideBooking as TQRB
 import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
-import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import "app-backend" Types.API.Search
 import Utils
 
@@ -159,7 +159,7 @@ successFlow clients = withBecknClients clients $ do
   -- Driver Accepts a ride
   void . callBPP $
     rideRespond tRideBooking.id driverToken1 $
-      RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
+      TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
 
   tRide <- poll $ do
     tRide <- getBPPRide tRideBooking.id

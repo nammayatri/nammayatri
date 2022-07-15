@@ -3,10 +3,10 @@ module Storage.Queries.Ride where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Domain.Types.Booking.Type as Booking
 import Domain.Types.Organization
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
-import Domain.Types.RideBooking as Booking
 import Domain.Types.Vehicle
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Person as Person

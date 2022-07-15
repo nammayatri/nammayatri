@@ -8,7 +8,6 @@ import Flow.Allocation.Internal
 import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
-import qualified Types.API.RideBooking as RideBooking
 
 rideBooking01Id :: Id SRB.RideBooking
 rideBooking01Id = Id "rideBooking01"
@@ -32,7 +31,7 @@ allocationDriverResponseAllocationDriverResponse = testCaseSteps "Allocation - D
   checkFreeNotificationStatus r rideBooking02Id (Id "driver01")
   checkFreeNotificationStatus r rideBooking02Id (Id "driver02")
   step "The first driver agrees - the first booking to him"
-  addResponse r rideBooking01Id (Id "driver01") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
   assignments1 <- readIORef assignmentsVar
   assignments1 @?= [(rideBooking01Id, Id "driver01")]
@@ -50,7 +49,7 @@ allocationDriverResponseAllocationDriverResponse = testCaseSteps "Allocation - D
   checkFreeNotificationStatus r rideBooking02Id (Id "driver01")
   checkNotificationStatus r rideBooking02Id (Id "driver02") Notified
   step "The second driver agrees - the second booking to him"
-  addResponse r rideBooking02Id (Id "driver02") RideBooking.ACCEPT
+  addResponse r rideBooking02Id (Id "driver02") Accept
   void $ process (handle r) org1 numRequestsToProcess
   onRide2 <- readIORef onRideVar
   onRide2 @?= [Id "driver02", Id "driver01"]
@@ -76,7 +75,7 @@ allocationDriverResponseCancellationAllocationDriverResponse = testCaseSteps "Al
   checkFreeNotificationStatus r rideBooking02Id (Id "driver01")
   checkFreeNotificationStatus r rideBooking02Id (Id "driver02")
   step "The first driver agrees - the first booking to him"
-  addResponse r rideBooking01Id (Id "driver01") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
   assignments1 <- readIORef assignmentsVar
   assignments1 @?= [(rideBooking01Id, Id "driver01")]
@@ -96,7 +95,7 @@ allocationDriverResponseCancellationAllocationDriverResponse = testCaseSteps "Al
   checkNotificationStatus r rideBooking02Id (Id "driver01") Notified
   checkNotificationStatus r rideBooking02Id (Id "driver02") Notified
   step "The first driver agrees - the second booking to him"
-  addResponse r rideBooking02Id (Id "driver01") RideBooking.ACCEPT
+  addResponse r rideBooking02Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
   onRide3 <- readIORef onRideVar
   onRide3 @?= [Id "driver01"]
@@ -123,7 +122,7 @@ twoAllocationTwoDriverResponse = testCaseSteps "Allocation - Allocation - Driver
   checkFreeNotificationStatus r rideBooking02Id (Id "driver01")
   checkFreeNotificationStatus r rideBooking02Id (Id "driver02")
   step "The first driver agrees - the first booking to him"
-  addResponse r rideBooking01Id (Id "driver01") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
   assignments1 <- readIORef assignmentsVar
   assignments1 @?= [(rideBooking01Id, Id "driver01")]
@@ -135,7 +134,7 @@ twoAllocationTwoDriverResponse = testCaseSteps "Allocation - Allocation - Driver
   checkFreeNotificationStatus r rideBooking02Id (Id "driver01")
   checkNotificationStatus r rideBooking02Id (Id "driver02") Notified
   step "The second driver agrees - the second booking to him"
-  addResponse r rideBooking02Id (Id "driver02") RideBooking.ACCEPT
+  addResponse r rideBooking02Id (Id "driver02") Accept
   void $ process (handle r) org1 numRequestsToProcess
   onRide2 <- readIORef onRideVar
   onRide2 @?= [Id "driver02", Id "driver01"]

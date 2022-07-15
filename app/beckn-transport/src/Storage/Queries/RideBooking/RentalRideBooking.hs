@@ -5,7 +5,7 @@ module Storage.Queries.RideBooking.RentalRideBooking where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Domain.Types.RideBooking
+import Domain.Types.Booking.Type
 import Storage.Tabular.RideBooking ()
 import Storage.Tabular.RideBooking.RentalRideBooking
 

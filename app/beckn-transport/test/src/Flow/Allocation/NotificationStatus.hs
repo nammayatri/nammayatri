@@ -8,7 +8,6 @@ import Flow.Allocation.Internal
 import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
-import qualified Types.API.RideBooking as RideBooking
 import Types.App
 
 rideBooking01Id :: Id SRB.RideBooking
@@ -31,7 +30,7 @@ checkNotificationStatuses = testCaseSteps "Check NotificationStatus" $ \step -> 
   checkNotificationStatus r rideBooking01Id (Id "driver01") Notified
   checkNotificationStatus r rideBooking01Id (Id "driver02") Notified
   step "Driver01 Rejected"
-  addResponse r rideBooking01Id (Id "driver01") RideBooking.REJECT
+  addResponse r rideBooking01Id (Id "driver01") Reject
   void $ process (handle r) org1 numRequestsToProcess
   checkNotificationStatus r rideBooking01Id (Id "driver01") Rejected
   checkNotificationStatus r rideBooking01Id (Id "driver02") Notified
@@ -41,7 +40,7 @@ checkNotificationStatuses = testCaseSteps "Check NotificationStatus" $ \step -> 
   void $ process (handle r) org1 numRequestsToProcess
   checkNotificationStatus r rideBooking01Id (Id "driver02") Ignored
   step "Driver03 No NotificationStatus"
-  addResponse r rideBooking01Id (Id "driver03") RideBooking.ACCEPT
+  addResponse r rideBooking01Id (Id "driver03") Accept
   void $ process (handle r) org1 numRequestsToProcess
   assignments2 <- readIORef assignmentsVar
   assignments2 @?= [(rideBooking01Id, Id "driver03")]
