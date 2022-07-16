@@ -1,18 +1,23 @@
 module Core.ACL.OnConfirm (mkOnConfirmMessage) where
 
 import Beckn.Prelude
-import Beckn.Types.Amount (Amount)
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import qualified Core.ACL.Common as Common
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.RideBooking.BookingLocation as DBL
+import Product.FareCalculator.Calculator
+import Utils.Common (amountToDecimalValue)
 
 mkOnConfirmMessage :: UTCTime -> DConfirm.DConfirmRes -> OnConfirm.OnConfirmMessage
 mkOnConfirmMessage now res = do
   let booking = res.booking
   let vehicleVariant = Common.castVariant res.booking.vehicleVariant
   let itemCode = OnConfirm.ItemCode OnConfirm.ONE_WAY_TRIP vehicleVariant Nothing Nothing
+      fareParams = booking.fareParams
+      totalFare = fareSum fareParams
+      totalFareDecimal = amountToDecimalValue totalFare
+      currency = "INR"
   OnConfirm.OnConfirmMessage
     { order =
         OnConfirm.Order
@@ -22,10 +27,29 @@ mkOnConfirmMessage now res = do
             fulfillment = mkFulfillmentInfo res.fromLocation res.toLocation now, -- booking.startTime, --FIXME
             quote =
               OnConfirm.Quote
-                { price = mkPrice booking.estimatedFare booking.estimatedFare,
-                  breakup = mkBreakup booking.estimatedFare
+                { price =
+                    OnConfirm.QuotePrice
+                      { currency,
+                        value = totalFareDecimal,
+                        offered_value = totalFareDecimal
+                      },
+                  breakup =
+                    mkBreakupList
+                      (OnConfirm.BreakupItemPrice currency . amountToDecimalValue)
+                      OnConfirm.BreakupItem
+                      fareParams
                 },
-            payment = mkPayment booking.estimatedFare
+            payment =
+              OnConfirm.Payment
+                { collected_by = "BAP",
+                  params =
+                    OnConfirm.PaymentParams
+                      { currency,
+                        amount = totalFareDecimal
+                      },
+                  _type = OnConfirm.ON_FULFILLMENT,
+                  time = OnConfirm.TimeDuration "P2D"
+                }
           }
     }
 
@@ -41,7 +65,7 @@ mkOrderItem code =
 mkFulfillmentInfo :: DBL.BookingLocation -> DBL.BookingLocation -> UTCTime -> OnConfirm.FulfillmentInfo
 mkFulfillmentInfo fromLoc toLoc startTime =
   OnConfirm.FulfillmentInfo
-    { state = OnConfirm.FulfillmentState "SEARCHING_FOR_DRIVERS",
+    { state = OnConfirm.FulfillmentState "TRIP_ASSIGNED",
       start =
         OnConfirm.StartInfo
           { location =
@@ -71,37 +95,3 @@ mkFulfillmentInfo fromLoc toLoc startTime =
     }
   where
     castAddress DBL.LocationAddress {..} = OnConfirm.Address {area_code = areaCode, ..}
-
-mkPrice :: Amount -> Amount -> OnConfirm.QuotePrice
-mkPrice estimatedFare estimatedTotalFare =
-  OnConfirm.QuotePrice
-    { currency = "INR",
-      value = realToFrac estimatedFare,
-      offered_value = realToFrac estimatedTotalFare
-    }
-
-mkBreakup :: Amount -> [OnConfirm.BreakupItem]
-mkBreakup estimatedFare = [estimatedFareBreakupItem]
-  where
-    estimatedFareBreakupItem =
-      OnConfirm.BreakupItem
-        { title = "Estimated trip fare",
-          price =
-            OnConfirm.BreakupItemPrice
-              { currency = "INR",
-                value = realToFrac estimatedFare
-              }
-        }
-
-mkPayment :: Amount -> OnConfirm.Payment
-mkPayment estimatedTotalFare =
-  OnConfirm.Payment
-    { collected_by = "BAP",
-      params =
-        OnConfirm.PaymentParams
-          { amount = realToFrac estimatedTotalFare,
-            currency = "INR"
-          },
-      time = OnConfirm.TimeDuration "P2D",
-      _type = OnConfirm.ON_FULFILLMENT
-    }

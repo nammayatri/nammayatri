@@ -119,6 +119,8 @@ handler subscriber transporterId req = do
             trackingUrl = "UNKNOWN", -- TODO: Fill this field
             fare = Nothing,
             traveledDistance = 0,
+            tripStartTime = Nothing,
+            tripEndTime = Nothing,
             createdAt = now,
             updatedAt = now
           }

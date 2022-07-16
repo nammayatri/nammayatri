@@ -1,6 +1,5 @@
 module Domain.Types.RideBooking where
 
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Data.Aeson
@@ -9,12 +8,8 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
---import qualified Domain.Types.FareProduct as SFP
-
---import qualified Domain.Types.RentalFarePolicy as DRentalFP
-
---import qualified Domain.Types.Vehicle as DVeh
 import Domain.Types.DriverQuote
+import Domain.Types.FareParams (FareParameters)
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.RideBooking.BookingLocation as DLoc
 import qualified Domain.Types.RiderDetails as DRD
@@ -52,7 +47,7 @@ data RideBooking = RideBooking
     toLocation :: DLoc.BookingLocation,
     vehicleVariant :: DVeh.Variant,
     estimatedDistance :: HighPrecMeters,
-    estimatedFare :: Amount,
+    fareParams :: FareParameters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

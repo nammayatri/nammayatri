@@ -1,6 +1,5 @@
 module Product.FareCalculator.Flow
-  ( FareParameters (..),
-    ServiceHandle (..),
+  ( ServiceHandle (..),
     calculateFare,
     doCalculateFare,
     fareSum,
@@ -8,13 +7,14 @@ module Product.FareCalculator.Flow
 where
 
 import Beckn.Storage.Esqueleto (Transactionable)
+import Beckn.Types.Amount
 import Beckn.Types.Id
+import Domain.Types.FareParams
 import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Organization (Organization)
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Calculator
-  ( FareParameters (..),
-    calculateFareParameters,
+  ( calculateFareParameters,
     fareSum,
   )
 import qualified Storage.Queries.FarePolicy as FarePolicyS
@@ -39,6 +39,7 @@ calculateFare ::
   Id Organization ->
   HighPrecMeters ->
   UTCTime ->
+  Maybe Amount ->
   m FareParameters
 calculateFare = doCalculateFare serviceHandle
 
@@ -48,11 +49,12 @@ doCalculateFare ::
   Id Organization ->
   HighPrecMeters ->
   UTCTime ->
+  Maybe Amount ->
   m FareParameters
-doCalculateFare ServiceHandle {..} orgId distance startTime = do
+doCalculateFare ServiceHandle {..} orgId distance startTime driverSelectedFare = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ ""
   farePolicy <- getFarePolicy orgId >>= fromMaybeM NoFarePolicy
-  let fareParams = calculateFareParameters farePolicy distance startTime
+  let fareParams = calculateFareParameters farePolicy distance startTime driverSelectedFare
   logTagInfo
     "FareCalculator"
     $ "Fare parameters calculated: " +|| fareParams ||+ ""

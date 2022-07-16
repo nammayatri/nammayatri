@@ -1,21 +1,23 @@
 module Product.BecknProvider.BP
   ( sendRideAssignedUpdateToBAP,
-  {-
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
-    sendRideBookingCancelledUpdateToBAP,
-    -}
+    {-
+      sendRideBookingCancelledUpdateToBAP,
+      -}
   )
 where
 
 import Beckn.Types.Common
 --import Beckn.Types.Id
 import qualified Core.ACL.OnUpdate as ACL
---import qualified Domain.Types.FareBreakup as DFareBreakup
 --import qualified Domain.Types.Organization as SOrg
+
+--import qualified Domain.Types.RideBookingCancellationReason as SRBCR
+
+import qualified Domain.Types.FareParams as Fare
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
---import qualified Domain.Types.RideBookingCancellationReason as SRBCR
 import EulerHS.Prelude
 import ExternalAPI.Flow (callOnUpdate)
 import qualified Storage.Queries.Organization as QOrg
@@ -44,7 +46,6 @@ sendRideAssignedUpdateToBAP rideBooking ride = do
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
   void $ callOnUpdate transporter rideBooking rideAssignedMsg
 
-{-
 sendRideStartedUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
@@ -70,16 +71,17 @@ sendRideCompletedUpdateToBAP ::
   ) =>
   SRB.RideBooking ->
   SRide.Ride ->
-  [DFareBreakup.FareBreakup] ->
+  Fare.FareParameters ->
   m ()
-sendRideCompletedUpdateToBAP rideBooking ride fareBreakups = do
+sendRideCompletedUpdateToBAP rideBooking ride fareParams = do
   transporter <-
     QOrg.findById rideBooking.providerId
       >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {..}
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
   void $ callOnUpdate transporter rideBooking rideCompletedMsg
 
+{-
 sendRideBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,

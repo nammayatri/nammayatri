@@ -7,6 +7,8 @@ module Utils.Common
 where
 
 import Beckn.Prelude
+import Beckn.Types.Amount
+import Beckn.Types.Core.Taxi.Common.DecimalValue
 import Beckn.Utils.Common as CoreCommon
 import Beckn.Utils.Shutdown
 import qualified Crypto.Number.Generate as Cryptonite
@@ -36,3 +38,6 @@ withRandomId :: (MonadGuid m, Log m) => m b -> m b
 withRandomId f = do
   id <- generateGUID
   withLogTag id f
+
+amountToDecimalValue :: Amount -> DecimalValue
+amountToDecimalValue (Amount v) = DecimalValue v

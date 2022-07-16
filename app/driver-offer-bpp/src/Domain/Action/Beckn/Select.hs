@@ -10,6 +10,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common (logDebug)
 import Data.Time.Clock (addUTCTime)
+import Domain.Types.FareParams
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
@@ -35,21 +36,22 @@ handler :: Id DOrg.Organization -> DSelectReq -> Flow ()
 handler orgId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
-  searchReq <- buildSearchRequest fromLocation toLocation orgId sReq
   driverPool <- calculateDriverPool (getCoordinates fromLocation) orgId
 
   distance <-
     metersToHighPrecMeters . (.distance)
       <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
 
-  estimatedFare <- calculateFare orgId distance sReq.pickupTime
+  fareParams <- calculateFare orgId distance sReq.pickupTime Nothing
+  searchReq <- buildSearchRequest fromLocation toLocation orgId fareParams sReq
+  let baseFare = amountToDouble $ fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
       <> "; estimated distance = "
       <> show distance
-      <> "; estimated fare:"
-      <> show estimatedFare
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq estimatedFare distance.getHighPrecMeters) driverPool
+      <> "; estimated base fare:"
+      <> show baseFare
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq baseFare distance.getHighPrecMeters) driverPool
   Esq.runTransaction $ do
     QSReq.create searchReq
     mapM_ QSRD.create searchRequestsForDrivers
@@ -57,11 +59,11 @@ handler orgId sReq = do
     buildSearchRequestForDriver ::
       (MonadFlow m) =>
       DSearchReq.SearchRequest ->
-      FareParameters ->
+      Double ->
       Double ->
       GoogleMaps.GetDistanceResult DriverPoolResult MapSearch.LatLong ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchRequest estFareParams distance gdRes = do
+    buildSearchRequestForDriver searchRequest baseFare_ distance gdRes = do
       guid <- generateGUID
       now <- getCurrentTime
       let driver = gdRes.origin
@@ -75,7 +77,7 @@ handler orgId sReq = do
             vehicleVariant = driver.vehicle.variant,
             distanceToPickup = gdRes.distance,
             durationToPickup = gdRes.duration,
-            baseFare = amountToDouble $ fareSum estFareParams,
+            baseFare = baseFare_,
             createdAt = now,
             ..
           }
@@ -89,9 +91,10 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
   Id DOrg.Organization ->
+  FareParameters ->
   DSelectReq ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq = do
+buildSearchRequest from to orgId fareParams sReq = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -108,7 +111,8 @@ buildSearchRequest from to orgId sReq = do
         toLocation = to,
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
-        createdAt = createdAt_
+        createdAt = createdAt_,
+        fareParams
       }
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation

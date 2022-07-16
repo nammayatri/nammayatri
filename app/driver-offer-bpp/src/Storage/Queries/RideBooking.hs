@@ -15,16 +15,24 @@ create dsReq = Esq.runTransaction $
     Esq.create' toLoc
     Esq.create' sReq
 
+baseRideBookingQuery ::
+  From
+    ( ( SqlExpr (Entity RideBookingT)
+          :& SqlExpr (Entity BookingLocationT)
+      )
+        :& SqlExpr (Entity BookingLocationT)
+    )
+baseRideBookingQuery =
+  table @RideBookingT
+    `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& loc1) -> rb ^. RideBookingFromLocationId ==. loc1 ^. BookingLocationTId)
+    `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& _ :& loc2) -> rb ^. RideBookingToLocationId ==. loc2 ^. BookingLocationTId)
+
 findById :: Transactionable m => Id RideBooking -> m (Maybe RideBooking)
 findById rideBookingId = buildDType $
   fmap (fmap extractSolidType) $
     Esq.findOne' $ do
       (rb :& bFromLoc :& bToLoc) <-
-        from
-          ( table @RideBookingT
-              `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& loc1) -> rb ^. RideBookingFromLocationId ==. loc1 ^. BookingLocationTId)
-              `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& _ :& loc2) -> rb ^. RideBookingToLocationId ==. loc2 ^. BookingLocationTId)
-          )
+        from baseRideBookingQuery
       where_ $ rb ^. RideBookingTId ==. val (toKey rideBookingId)
       pure (rb, bFromLoc, bToLoc)
 

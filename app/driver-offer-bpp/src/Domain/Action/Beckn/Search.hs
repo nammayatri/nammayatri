@@ -10,6 +10,7 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common
 import Domain.Types.BusinessEvent (WhenPoolWasComputed (ON_SEARCH))
+import qualified Domain.Types.FareParams as Params
 import qualified Domain.Types.Organization as DOrg
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -54,7 +55,6 @@ handler :: DOrg.Organization -> DSearchReq -> Flow DSearchRes
 handler org sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
-  searchReq <- buildSearchRequest fromLocation toLocation org.id sReq
   driverPool <- calculateDriverPool (getCoordinates fromLocation) org.id
   distanceToPickup <-
     case driverPool of
@@ -65,7 +65,9 @@ handler org sReq = do
     metersToHighPrecMeters . (.distance)
       <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
 
-  estimatedFare <- amountToDouble . fareSum <$> calculateFare org.id distance sReq.pickupTime
+  fareParams <- calculateFare org.id distance sReq.pickupTime Nothing
+  let estimatedFare = amountToDouble $ fareSum fareParams
+  searchReq <- buildSearchRequest fromLocation toLocation org.id fareParams sReq
   logDebug $
     "search request id=" <> show searchReq.id
       <> "; estimated distance = "
@@ -88,9 +90,10 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
   Id DOrg.Organization ->
+  Params.FareParameters ->
   DSearchReq ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId sReq = do
+buildSearchRequest from to orgId fareParams sReq = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -107,7 +110,8 @@ buildSearchRequest from to orgId sReq = do
         toLocation = to,
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
-        createdAt = createdAt_
+        createdAt = createdAt_,
+        fareParams
       }
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation

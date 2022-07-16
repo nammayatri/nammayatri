@@ -1,6 +1,5 @@
 module SharedLogic.LocationUpdates
   ( RideInterpolationHandler (..),
-    processWaypoints,
     recalcDistanceBatches,
     defaultRideInterpolationHandler,
     --- next functions are needed for tests:
@@ -13,8 +12,7 @@ where
 
 import Beckn.Product.MapSearch.GoogleMaps.SnapToRoad
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Hedis (HedisFlow)
-import Beckn.Storage.Hedis.Queries
+import Beckn.Storage.Hedis
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Beckn.Types.MapSearch
@@ -25,10 +23,12 @@ import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics as Metrics
+import Utils.Hedis
 
 data RideInterpolationHandler m = RideInterpolationHandler
   { batchSize :: Integer,
     addPoints :: Id Person.Person -> NonEmpty LatLong -> m (),
+    clearPointsList :: Id Person.Person -> m (),
     getWaypointsNumber :: Id Person.Person -> m Integer,
     getFirstNwaypoints :: Id Person.Person -> Integer -> m [LatLong],
     deleteFirstNwaypoints :: Id Person.Person -> Integer -> m (),
@@ -37,16 +37,6 @@ data RideInterpolationHandler m = RideInterpolationHandler
   }
 
 --------------------------------------------------------------------------------
-processWaypoints ::
-  (Monad m, Log m) =>
-  RideInterpolationHandler m ->
-  Id Person.Person ->
-  NonEmpty LatLong ->
-  m ()
-processWaypoints ih@RideInterpolationHandler {..} driverId waypoints = do
-  addPoints driverId waypoints
-  let ending = False
-  recalcDistanceBatches ih ending driverId
 
 recalcDistanceBatches ::
   (Monad m, Log m) =>
@@ -60,11 +50,12 @@ recalcDistanceBatches h@RideInterpolationHandler {..} ending driverId = do
   where
     atLeastBatchPlusOne = getWaypointsNumber driverId <&> (> batchSize)
     pointsRemaining = (> 0) <$> getWaypointsNumber driverId
+    continueCondition =
+      if ending
+        then pointsRemaining
+        else atLeastBatchPlusOne
+
     recalcDistanceBatches' acc = do
-      let continueCondition =
-            if ending
-              then pointsRemaining
-              else atLeastBatchPlusOne
       batchLeft <- continueCondition
       if batchLeft
         then do
@@ -101,6 +92,7 @@ defaultRideInterpolationHandler =
   RideInterpolationHandler
     { batchSize = 98,
       addPoints = addPointsImplementation,
+      clearPointsList = clearPointsListImplementation,
       getWaypointsNumber = getWaypointsNumberImplementation,
       getFirstNwaypoints = getFirstNwaypointsImplementation,
       deleteFirstNwaypoints = deleteFirstNwaypointsImplementation,
@@ -117,7 +109,13 @@ addPointsImplementation driverId waypoints = do
       pointsList = toList waypoints :: [LatLong]
       numPoints = length pointsList
   rPush key pointsList
-  logInfo $ mconcat ["added ", show numPoints, " points for riderId = ", driverId.getId]
+  logInfo $ mconcat ["added ", show numPoints, " points for driverId = ", driverId.getId]
+
+clearPointsListImplementation :: (HedisFlow m env) => Id Person.Person -> m ()
+clearPointsListImplementation driverId = do
+  let key = makeWaypointsRedisKey driverId
+  clearList key
+  logInfo $ mconcat ["cleared location updates for driverId = ", driverId.getId]
 
 getWaypointsNumberImplementation :: (HedisFlow m env) => Id Person.Person -> m Integer
 getWaypointsNumberImplementation = lLen . makeWaypointsRedisKey

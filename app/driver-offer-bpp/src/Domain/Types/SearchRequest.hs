@@ -3,6 +3,7 @@ module Domain.Types.SearchRequest where
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty (PrettyShow)
+import qualified Domain.Types.FareParams as Params
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 
@@ -17,6 +18,7 @@ data SearchRequest = SearchRequest
     toLocation :: DLoc.SearchReqLocation,
     bapId :: Text,
     bapUri :: BaseUrl,
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    fareParams :: Params.FareParameters
   }
   deriving (Generic, PrettyShow, Show)

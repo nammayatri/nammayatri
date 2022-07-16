@@ -2,7 +2,6 @@ module Domain.Action.Beckn.Init where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
-import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
@@ -68,10 +67,10 @@ handler orgId req = do
             riderId = Nothing,
             vehicleVariant = driverQuote.vehicleVariant,
             estimatedDistance = HighPrecMeters $ driverQuote.distance,
-            estimatedFare = Amount $ toRational $ DQuote.getTotalFare driverQuote,
             createdAt = now,
             updatedAt = now,
             fromLocation = mkBookingLocation searchRequest.fromLocation,
             toLocation = mkBookingLocation searchRequest.toLocation,
+            fareParams = driverQuote.fareParams,
             ..
           }

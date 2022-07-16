@@ -7,6 +7,7 @@ import Domain.Types.Organization
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.RideBooking as Booking
+import Storage.Queries.RideBooking (baseRideBookingQuery)
 import Storage.Tabular.Ride as Ride
 import Storage.Tabular.RideBooking as Booking
 import Utils.Common
@@ -35,7 +36,6 @@ findAllCancelledByRBId rideBookingId =
         &&. ride ^. RideStatus ==. val Ride.CANCELLED
     return ride
 
-{-
 findAllByDriverId ::
   Transactionable m =>
   Id Person ->
@@ -48,11 +48,11 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   res <- Esq.findAll' $ do
-    (ride :& rideBooking) <-
+    (rideBooking :& fromLocation :& toLocation :& ride) <-
       from $
-        table @RideT
-          `innerJoin` table @RideBookingT
-            `Esq.on` ( \(ride :& rideBooking) ->
+        baseRideBookingQuery
+          `innerJoin` table @RideT
+            `Esq.on` ( \(rideBooking :& _ :& _ :& ride) ->
                          ride ^. Ride.RideBookingId ==. rideBooking ^. Booking.RideBookingTId
                      )
     where_ $
@@ -61,31 +61,11 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
-    return (ride, rideBooking)
-  fmap catMaybes $
-    for res $ \(rideT :: RideT, bookingT) -> do
-      fullBooking <- buildFullBooking bookingT
-      return $ (extractSolidType rideT,) <$> fullBooking
+    return (rideBooking, fromLocation, toLocation, ride)
 
-findAllRideAPIEntityDataByRBId :: Transactionable m => Id RideBooking -> m [(Ride, Maybe Vehicle, Maybe Person)]
-findAllRideAPIEntityDataByRBId rbId =
-  Esq.findAll $ do
-    (ride :& mbVehicle :& mbPerson) <-
-      from $
-        table @RideT
-          `leftJoin` table @VehicleT
-            `Esq.on` ( \(ride :& mbVehicle) ->
-                         just (ride ^. Ride.RideDriverId) ==. mbVehicle ?. Vehicle.VehicleDriverId
-                     )
-          `leftJoin` table @PersonT
-            `Esq.on` ( \(ride :& _ :& mbPerson) ->
-                         just (ride ^. Ride.RideDriverId) ==. mbPerson ?. Person.PersonTId
-                     )
-    where_ $
-      ride ^. Ride.RideBookingId ==. val (toKey rbId)
-    orderBy [desc $ ride ^. RideCreatedAt]
-    return (ride, mbVehicle, mbPerson)
--}
+  pure $
+    res <&> \(bookingT, fromLocationT, toLocationT, rideT :: RideT) -> do
+      (extractSolidType rideT, extractSolidType (bookingT, fromLocationT, toLocationT))
 
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId driverId =
@@ -110,7 +90,6 @@ updateStatus rideId status = do
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
 
-{-
 updateStartTime ::
   Id Ride ->
   SqlDB ()
@@ -123,7 +102,6 @@ updateStartTime rideId = do
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)
--}
 
 updateStatusByIds ::
   [Id Ride] ->
@@ -166,9 +144,7 @@ updateAll rideId ride = do
       tbl
       [ RideStatus =. val ride.status,
         RideFare =. val ride.fare,
-        --        RideTotalFare =. val ride.totalFare,
-        --        RideChargeableDistance =. val (getHighPrecMeters <$> ride.chargeableDistance),
-        --        RideTripEndTime =. val ride.tripEndTime,
+        RideTripEndTime =. val ride.tripEndTime,
         RideUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideTId ==. val (toKey rideId)

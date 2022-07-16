@@ -17,6 +17,7 @@ buildOnSelectReq ::
   OnSelect.OnSelectReq ->
   m (Maybe DOnSelect.DOnSelectReq)
 buildOnSelectReq req = do
+  logDebug $ "on_select request: " <> show req
   let context = req.context
   validateContext Context.ON_SELECT context
   handleError req.contents $ \message -> do

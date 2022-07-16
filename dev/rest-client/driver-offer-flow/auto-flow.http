@@ -154,6 +154,7 @@ token: {{token}}
 
 ###
 
+# @name list2
 GET {{app-host}}/rideBooking/list
   ?offset=0
   &limit=50
@@ -162,3 +163,107 @@ content-type: application/json
 token: {{token}}
 
 ###
+# @name driverList
+GET {{driver-offer-bpp-host}}/v2/driver/ride/list?limit=100&offset=0
+token: {{driver-token}}
+
+###
+@rideId = {{driverList.response.body.list[0].id}}
+@otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
+
+# @name startRide
+POST {{driver-offer-bpp-host}}/v2/driver/ride/{{rideId}}/start
+token: {{driver-token}}
+content-type: application/json
+
+{
+    "rideOtp": "{{otp}}",
+    "point": {
+            "lon": 76.308364,
+            "lat": 10.025263
+    }
+}
+
+# 76.308364, 10.025263
+###
+
+@currentTime = 2022-03-03T23:37
+
+# @name update1
+POST {{driver-offer-bpp-host}}/v2/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lon": 76.308364,
+            "lat": 10.025263
+        },
+        "ts": "{{currentTime}}:01.114244Z"
+    },
+    {
+        "pt": {
+            "lat": 10.036754844278509,
+            "lon": 76.31406568451686
+        },
+        "ts": "{{currentTime}}:10.114244Z",
+        "aux": "Pathadippalam metro"
+    },
+    {
+        "pt": {
+            "lat": 10.047446731143813,
+            "lon": 76.3182331061409
+        },
+        "ts": "{{currentTime}}:19.114244Z",
+        "aux": "Cochi university metro"
+    },
+    {
+        "pt": {
+            "lat": 10.059363529228063,
+            "lon": 76.32187725922056
+        },
+        "ts": "{{currentTime}}:28.114244Z",
+        "aux": "Kalamassery metro"
+    }
+]
+
+###
+
+# @name update2
+POST {{driver-offer-bpp-host}}/v2/driver/location
+token: {{driver-token}}
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 10.072808633266954,
+            "lon": 76.33348375279246
+        },
+        "ts": "{{currentTime}}:38.114244Z",
+        "aux": "Muttom metro"
+    },
+    {
+        "pt": {
+            "lat": 10.080241882783683,
+            "lon": 76.33893232031218
+        },
+        "ts": "{{currentTime}}:49.114244Z",
+        "aux": "Ambattukavu metro"
+    }
+]
+
+###
+
+# @name rideEnd
+POST {{driver-offer-bpp-host}}/v2/driver/ride/{{rideId}}/end
+token: {{driver-token}}
+content-type: application/json
+
+{
+  "point": {
+    "lat": 10.080241882783683,
+    "lon": 76.33893232031218
+  }
+}

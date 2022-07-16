@@ -20,6 +20,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (Success))
 import qualified Beckn.Types.APISuccess as APISuccess
+import Beckn.Types.Amount
 import Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnSelect as API
 import Beckn.Types.Id
@@ -28,6 +29,7 @@ import Core.ACL.OnSelect
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.DriverQuote as DDrQuote
+import qualified Domain.Types.FareParams as Fare
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.SearchRequest as DSReq
@@ -319,11 +321,14 @@ offerQuote driverId req = withFlowHandlerAPI $ do
   searchRequestForDriver <-
     QSRD.findByDriverAndSearchReq driverId sReq.id
       >>= fromMaybeM (InvalidRequest "no calculated request pool")
-  driverQuote <- buildDriverQuote driver sReq searchRequestForDriver
+  driverQuote <- buildDriverQuote driver sReq searchRequestForDriver req.offeredFare
   Esq.runTransaction $ QDrQt.create driverQuote
   context <- contextTemplate organization Context.SELECT sReq.bapId sReq.bapUri (Just sReq.transactionId) sReq.messageId
   let callbackUrl = sReq.bapUri
-      action = buildOnSelectReq organization sReq [driverQuote] <&> mkOnSelectMessage
+      action = do
+        onSelectReq <- buildOnSelectReq organization sReq [driverQuote] <&> mkOnSelectMessage
+        logDebug $ "on_select request bpp: " <> show onSelectReq
+        pure onSelectReq
   void $ withCallback' withRetry organization Context.SELECT API.onSelectAPI context callbackUrl action
   pure Success
   where
@@ -332,8 +337,9 @@ offerQuote driverId req = withFlowHandlerAPI $ do
       SP.Person ->
       DSReq.SearchRequest ->
       SearchRequestForDriver ->
+      Maybe Double ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver s sd = do
+    buildDriverQuote driver s sd offeredFare = do
       guid <- generateGUID
       now <- getCurrentTime
       pure
@@ -344,25 +350,26 @@ offerQuote driverId req = withFlowHandlerAPI $ do
             driverId,
             driverName = driver.firstName,
             driverRating = driver.rating,
-            baseFare = sd.baseFare,
             vehicleVariant = sd.vehicleVariant,
             distance = sd.distance,
-            extraFareSelected = req.offeredFare,
             distanceToPickup = sd.distanceToPickup,
             durationToPickup = sd.durationToPickup,
             createdAt = now,
             updatedAt = now,
-            validTill = s.validTill -- what should be here? FIXME
+            validTill = s.validTill, -- what should be here? FIXME
+            fareParams = s.fareParams {Fare.driverSelectedFare = fmap (Amount . toRational) offeredFare}
           }
 
 buildOnSelectReq ::
-  (MonadTime m) =>
+  (MonadTime m, HasPrettyLogger m r) =>
   Org.Organization ->
   DSReq.SearchRequest ->
   [DDrQuote.DriverQuote] ->
   m DOnSelectReq
 buildOnSelectReq org searchRequest quotes = do
   now <- getCurrentTime
+  logPretty DEBUG "on_select: searchRequest" searchRequest
+  logPretty DEBUG "on_select: quotes" quotes
   let transporterInfo =
         TransporterInfo
           { shortId = org.shortId,

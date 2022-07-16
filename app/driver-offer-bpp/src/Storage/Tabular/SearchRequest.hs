@@ -9,7 +9,9 @@ module Storage.Tabular.SearchRequest where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Amount
 import Beckn.Types.Id
+import qualified Domain.Types.FareParams as Params
 import qualified Domain.Types.SearchRequest as Domain
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
@@ -29,6 +31,13 @@ mkPersist
       bapId Text
       bapUri Text
       createdAt UTCTime
+
+      fareForPickup Amount
+      distanceFare Amount
+      driverSelectedFare Amount Maybe
+      nightShiftRate Amount Maybe
+      nightCoefIncluded Bool
+
       Primary id
       deriving Generic
     |]
@@ -43,6 +52,8 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
     pUrl <- parseBaseUrl bapUri
     let fromLoc_ = mkDomainSearchReqLocation fromLoc
         toLoc_ = mkDomainSearchReqLocation toLoc
+        fareParams = Params.FareParameters {..}
+
     return $
       Domain.SearchRequest
         { id = Id id,
@@ -53,14 +64,15 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           ..
         }
   toTType Domain.SearchRequest {..} =
-    ( SearchRequestT
-        { id = getId id,
-          providerId = toKey providerId,
-          fromLocationId = toKey fromLocation.id,
-          toLocationId = toKey toLocation.id,
-          bapUri = showBaseUrl bapUri,
-          ..
-        },
-      mkTabularSearchReqLocation fromLocation,
-      mkTabularSearchReqLocation toLocation
-    )
+    let Params.FareParameters {..} = fareParams
+     in ( SearchRequestT
+            { id = getId id,
+              providerId = toKey providerId,
+              fromLocationId = toKey fromLocation.id,
+              toLocationId = toKey toLocation.id,
+              bapUri = showBaseUrl bapUri,
+              ..
+            },
+          mkTabularSearchReqLocation fromLocation,
+          mkTabularSearchReqLocation toLocation
+        )

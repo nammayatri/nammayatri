@@ -9,13 +9,14 @@ import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as RideAssignedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideBookingCancelledEvent as BookingCancelledOU
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideBookingReallocationEvent as BookingReallocationOU
+import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
-import Beckn.Types.Id
+import qualified Domain.Types.FareParams as Fare
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as SVeh
+import Product.FareCalculator.Calculator (fareSum, mkBreakupList)
 import Types.Error
 import Utils.Common
 
@@ -30,15 +31,11 @@ data OnUpdateBuildReq
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
-        fareBreakups :: Text --[DFareBreakup.FareBreakup]
+        fareParams :: Fare.FareParameters
       }
   | BookingCancelledBuildReq
       { booking :: Text, --SRB.RideBooking,
         cancellationSource :: Text --SBCR.CancellationSource
-      }
-  | BookingReallocationBuildReq
-      { booking :: Text, --SRB.RideBooking,
-        rideId :: Id Text --SRide.Ride
       }
 
 buildOnUpdateMessage ::
@@ -90,48 +87,38 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideStarted
         RideStartedOU.RideStartedEvent
-          { id = "ride.bookingId.getId",
+          { id = ride.bookingId.getId,
             update_target = "fufillment.state.code",
-            fulfillment = RideStartedOU.FulfillmentInfo "ride.id.getId"
+            fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
           }
-buildOnUpdateMessage RideCompletedBuildReq {..} = do
-  -- fare <- realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
-  -- totalFare <- realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
-  -- chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
-  let price =
+buildOnUpdateMessage req@RideCompletedBuildReq {} = do
+  let currency = "INR"
+      totalFare = amountToDecimalValue $ fareSum req.fareParams
+      ride = req.ride
+      price =
         RideCompletedOU.QuotePrice
-          { currency = "INR",
-            value = 1, --fare,
-            computed_value = 1 --totalFare
+          { currency,
+            value = totalFare,
+            computed_value = totalFare
           }
-      breakup = [] -- mkFareBreakupItem <$> fareBreakups
+      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . amountToDecimalValue) OnUpdate.BreakupItem req.fareParams
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted
         RideCompletedOU.RideCompletedEvent
-          { id = "ride.bookingId.getId",
+          { id = ride.bookingId.getId,
             update_target = "fulfillment.state.code,quote.price,quote.breakup",
             quote =
               RideCompletedOU.RideCompletedQuote
-                { ..
+                { price,
+                  breakup
                 },
             fulfillment =
               RideCompletedOU.FulfillmentInfo
-                { id = "ride.id.getId",
-                  chargeable_distance = 1 --chargeableDistance
+                { id = ride.id.getId,
+                  chargeable_distance = DecimalValue $ toRational ride.traveledDistance.getHighPrecMeters
                 }
           }
--- where
---   mkFareBreakupItem :: DFareBreakup.FareBreakup -> RideCompletedOU.BreakupItem
---   mkFareBreakupItem DFareBreakup.FareBreakup {..} =
---     RideCompletedOU.BreakupItem
---       { title = description,
---         price =
---           RideCompletedOU.BreakupPrice
---             { currency = "INR",
---               value = realToFrac amount
---             }
---       }
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
     OnUpdate.OnUpdateMessage $
@@ -141,15 +128,6 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
             state = "CANCELLED",
             update_target = "state,fufillment.state.code",
             cancellation_reason = BookingCancelledOU.ByUser --castCancellationSource cancellationSource
-          }
-buildOnUpdateMessage BookingReallocationBuildReq {..} = do
-  return $
-    OnUpdate.OnUpdateMessage $
-      OnUpdate.RideBookingReallocation
-        BookingReallocationOU.RideBookingReallocationEvent
-          { id = "booking.id.getId",
-            update_target = "fulfillment.state.code",
-            fulfillment = BookingReallocationOU.FulfillmentInfo rideId.getId
           }
 
 -- castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource

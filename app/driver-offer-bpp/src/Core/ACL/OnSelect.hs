@@ -9,6 +9,8 @@ import Core.ACL.Common
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Organization as DOrg
 import Domain.Types.SearchRequest
+import Product.FareCalculator.Calculator (fareSum)
+import Utils.Common
 
 data DOnSelectReq = DOnSelectReq
   { transporterInfo :: TransporterInfo,
@@ -147,7 +149,7 @@ mkItem categoryId fulfillmentId q =
     }
   where
     price_ = do
-      let value_ = OS.DecimalValue $ toRational $ q.baseFare + fromMaybe 0 q.extraFareSelected
+      let value_ = amountToDecimalValue $ fareSum q.fareParams
       OS.ItemPrice
         { currency = "INR",
           value = value_,

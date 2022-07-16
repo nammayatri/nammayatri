@@ -5,6 +5,7 @@ module Environment where
 import Beckn.External.Encryption (EncTools)
 import Beckn.Sms.Config
 import Beckn.Storage.Esqueleto.Config
+import Beckn.Storage.Hedis
 import qualified Beckn.Storage.Redis.Config as T
 import qualified Beckn.Tools.Metrics.CoreMetrics as Metrics
 import Beckn.Types.App
@@ -23,9 +24,11 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
 import System.Environment (lookupEnv)
+import Tools.Metrics.TransporterBPPMetrics.Types
 
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
+    hedisCfg :: HedisCfg,
     port :: Int,
     metricsPort :: Int,
     hostName :: Text,
@@ -39,6 +42,8 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     registryUrl :: BaseUrl,
+    updateLocationRefreshPeriod :: Seconds,
+    updateLocationAllowedDelay :: Seconds,
     encTools :: EncTools,
     authTokenCacheExpiry :: Seconds,
     disableSignatureAuth :: Bool,
@@ -68,8 +73,11 @@ data AppEnv = AppEnv
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
     registryUrl :: BaseUrl,
+    updateLocationRefreshPeriod :: Seconds,
+    updateLocationAllowedDelay :: Seconds,
     disableSignatureAuth :: Bool,
     esqDBEnv :: EsqDBEnv,
+    hedisEnv :: HedisEnv,
     isShuttingDown :: TMVar (),
     loggerEnv :: LoggerEnv,
     encTools :: EncTools,
@@ -87,6 +95,7 @@ data AppEnv = AppEnv
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     defaultRadiusOfSearch :: Meters,
+    transporterMetrics :: TransporterMetricsContainer,
     searchRequestExpirationSeconds :: Int
   }
   deriving (Generic)
@@ -101,7 +110,10 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  let modifierFunc = ("driver-offer-bpp:" <>)
+  hedisEnv <- connectHedis hedisCfg modifierFunc
   coreMetrics <- Metrics.registerCoreMetricsContainer
+  transporterMetrics <- registerTransporterMetricsContainer
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

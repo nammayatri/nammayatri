@@ -31,6 +31,8 @@ mkPersist
       trackingUrl Text
       fare Amount Maybe
       traveledDistance Double
+      tripStartTime UTCTime Maybe
+      tripEndTime UTCTime Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

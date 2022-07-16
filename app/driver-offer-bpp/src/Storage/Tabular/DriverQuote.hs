@@ -9,9 +9,11 @@ module Storage.Tabular.DriverQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Amount
 import Beckn.Types.Common (Meters (..), Seconds (..))
 import Beckn.Types.Id
 import qualified Domain.Types.DriverQuote as Domain
+import qualified Domain.Types.FareParams as Params
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Storage.Tabular.Person (PersonTId)
 import qualified Storage.Tabular.SearchRequest as SReq
@@ -29,8 +31,6 @@ mkPersist
       driverId PersonTId
       driverName Text
       driverRating Double Maybe
-      baseFare Double
-      extraFareSelected Double Maybe
       vehicleVariant Variant.Variant
       distance Double
       distanceToPickup Int
@@ -38,6 +38,13 @@ mkPersist
       validTill UTCTime
       createdAt UTCTime
       updatedAt UTCTime
+
+      fareForPickup Amount
+      distanceFare Amount
+      driverSelectedFare Amount Maybe
+      nightShiftRate Amount Maybe
+      nightCoefIncluded Bool
+
       Primary id
       deriving Generic
     |]
@@ -49,6 +56,7 @@ instance TEntityKey DriverQuoteT where
 
 instance TType DriverQuoteT Domain.DriverQuote where
   fromTType DriverQuoteT {..} = do
+    let fareParams = Params.FareParameters {..}
     return $
       Domain.DriverQuote
         { id = Id id,
@@ -58,7 +66,8 @@ instance TType DriverQuoteT Domain.DriverQuote where
           durationToPickup = Seconds $ floor durationToPickup,
           ..
         }
-  toTType Domain.DriverQuote {..} =
+  toTType Domain.DriverQuote {..} = do
+    let Params.FareParameters {..} = fareParams
     DriverQuoteT
       { id = getId id,
         searchRequestId = toKey searchRequestId,

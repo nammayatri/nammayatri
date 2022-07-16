@@ -44,6 +44,8 @@ data Ride = Ride
     trackingUrl :: Text,
     fare :: Maybe Amount,
     traveledDistance :: HighPrecMeters,
+    tripStartTime :: Maybe UTCTime,
+    tripEndTime :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

@@ -16,6 +16,7 @@ import Data.OpenApi
 import Domain.Types.Organization (Organization)
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SRT
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
@@ -32,6 +33,10 @@ import Product.DriveronBoarding.Status as Status
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Registration as Registration
+import qualified Product.Ride as Ride
+--import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
+import qualified Product.RideAPI.EndRide as RideAPI.EndRide
+import qualified Product.RideAPI.StartRide as RideAPI.StartRide
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
@@ -43,6 +48,7 @@ import Types.API.Idfy
 import Types.API.Location as Location
 import qualified Types.API.OrgAdmin as OrgAdminAPI
 import Types.API.Registration
+import qualified Types.API.Ride as RideAPI
 import Types.API.Transporter
 import Types.API.Vehicle
 import Utils.Auth (AdminTokenAuth, TokenAuth)
@@ -64,6 +70,7 @@ type UIAPI =
     :<|> OrganizationAPI
     :<|> FarePolicyAPI
     :<|> LocationAPI
+    :<|> RideAPI
     :<|> IdfyHandlerAPI
     :<|> OnBoardingAPI
 
@@ -80,6 +87,7 @@ uiServer =
     :<|> organizationFlow
     :<|> farePolicyFlow
     :<|> locationFlow
+    :<|> rideFlow
     :<|> idfyHandlerFlow
     :<|> onBoardingAPIFlow
 
@@ -235,10 +243,17 @@ organizationFlow =
 -- Location update and get for tracking is as follows
 type LocationAPI =
   "driver" :> "location"
-    :> ( TokenAuth
-           :> ReqBody '[JSON] UpdateLocationReq
-           :> Post '[JSON] UpdateLocationRes
+    :> ( Capture "rideId" (Id DRide.Ride) -- TODO: add auth
+           :> Get '[JSON] GetLocationRes
+           :<|> TokenAuth
+             :> ReqBody '[JSON] UpdateLocationReq
+             :> Post '[JSON] UpdateLocationRes
        )
+
+locationFlow :: FlowServer LocationAPI
+locationFlow =
+  Location.getLocation
+    :<|> Location.updateLocation
 
 type IdfyHandlerAPI =
   "ext" :> "idfy"
@@ -255,10 +270,40 @@ idfyHandlerFlow =
   Idfy.idfyDrivingLicense --update handler
     :<|> Idfy.idfyRCLicense --update handler
 
-locationFlow :: FlowServer LocationAPI
-locationFlow =
-  --  Location.getLocation
-  Location.updateLocation
+type RideAPI =
+  "driver" :> "ride"
+    :> ( "list"
+           :> TokenAuth
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
+           :> QueryParam "onlyActive" Bool
+           :> Get '[JSON] RideAPI.DriverRideListRes
+           :<|> TokenAuth
+             :> Capture "rideId" (Id DRide.Ride)
+             :> "start"
+             :> ReqBody '[JSON] RideAPI.StartRideReq
+             :> Post '[JSON] APISuccess
+           :<|> TokenAuth
+             :> Capture "rideId" (Id DRide.Ride)
+             :> "end"
+             :> ReqBody '[JSON] RideAPI.EndRideReq
+             :> Post '[JSON] APISuccess
+             {-
+                        :<|> TokenAuth
+                          :> Capture "rideId" (Id SRide.Ride)
+                          :> "cancel"
+                          :> ReqBody '[JSON] RideAPI.CancelRideReq
+                          :> Post '[JSON] APISuccess
+                          -}
+       )
+
+rideFlow :: FlowServer RideAPI
+rideFlow =
+  Ride.listDriverRides
+    :<|> RideAPI.StartRide.startRide
+    :<|> RideAPI.EndRide.endRide
+
+--    :<|> RideAPI.CancelRide.cancelRide
 
 type OrgBecknAPI =
   Capture "orgId" (Id Organization)

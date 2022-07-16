@@ -66,6 +66,7 @@ in
 
 { esqDBCfg = esqDBCfg
 , redisCfg = rcfg
+, hedisCfg = rcfg
 , port = +8016
 , metricsPort = +9997
 , hostName = "localhost"
@@ -77,6 +78,8 @@ in
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log", logRawSql = False}
+, updateLocationRefreshPeriod = +1
+, updateLocationAllowedDelay = +60
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , graceTerminationPeriod = +90

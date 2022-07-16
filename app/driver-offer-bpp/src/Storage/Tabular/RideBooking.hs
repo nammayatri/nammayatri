@@ -12,6 +12,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import qualified Domain.Types.FareParams as Params
 import qualified Domain.Types.RideBooking as Domain
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Storage.Tabular.DriverQuote (DriverQuoteTId)
@@ -37,10 +38,16 @@ mkPersist
       fromLocationId BookingLocationTId
       toLocationId BookingLocationTId
       vehicleVariant Veh.Variant
-      estimatedFare Amount
       estimatedDistance Double
       createdAt UTCTime
       updatedAt UTCTime
+
+      fareForPickup Amount
+      distanceFare Amount
+      driverSelectedFare Amount Maybe
+      nightShiftRate Amount Maybe
+      nightCoefIncluded Bool
+
       Primary id
       deriving Generic
     |]
@@ -55,6 +62,7 @@ instance TType (RideBookingT, BookingLocationT, BookingLocationT) Domain.RideBoo
     pUrl <- parseBaseUrl bapUri
     let fromLoc_ = mkDomainBookingLocation fromLoc
         toLoc_ = mkDomainBookingLocation toLoc
+        fareParams = Params.FareParameters {..}
     return $
       Domain.RideBooking
         { id = Id id,
@@ -68,17 +76,18 @@ instance TType (RideBookingT, BookingLocationT, BookingLocationT) Domain.RideBoo
           ..
         }
   toTType Domain.RideBooking {..} =
-    ( RideBookingT
-        { id = getId id,
-          quoteId = toKey quoteId,
-          providerId = toKey providerId,
-          fromLocationId = toKey fromLocation.id,
-          toLocationId = toKey toLocation.id,
-          bapUri = showBaseUrl bapUri,
-          riderId = toKey <$> riderId,
-          estimatedDistance = getHighPrecMeters estimatedDistance,
-          ..
-        },
-      mkTabularBookingLocation fromLocation,
-      mkTabularBookingLocation toLocation
-    )
+    let Params.FareParameters {..} = fareParams
+     in ( RideBookingT
+            { id = getId id,
+              quoteId = toKey quoteId,
+              providerId = toKey providerId,
+              fromLocationId = toKey fromLocation.id,
+              toLocationId = toKey toLocation.id,
+              bapUri = showBaseUrl bapUri,
+              riderId = toKey <$> riderId,
+              estimatedDistance = getHighPrecMeters estimatedDistance,
+              ..
+            },
+          mkTabularBookingLocation fromLocation,
+          mkTabularBookingLocation toLocation
+        )

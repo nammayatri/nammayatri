@@ -1,15 +1,19 @@
 module Core.ACL.OnInit where
 
 import Beckn.Prelude
-import Beckn.Types.Amount
 import Beckn.Types.Core.Taxi.OnInit as OnInit
 import Domain.Action.Beckn.Init as DInit
+import Product.FareCalculator.Calculator (fareSum, mkBreakupList)
+import Utils.Common (amountToDecimalValue)
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
   let rb = res.rideBooking
-      fareDecimalValue = DecimalValue $ toRational $ amountToDouble rb.estimatedFare
+      fareParams = rb.fareParams
+      fareDecimalValue = amountToDecimalValue $ fareSum fareParams
       currency = "INR"
+      breakup_ = mkBreakupList (OnInit.BreakupItemPrice currency . amountToDecimalValue) OnInit.BreakupItem fareParams
+
   OnInit.OnInitMessage
     { order =
         OnInit.Order
@@ -19,17 +23,11 @@ mkOnInitMessage res = do
               OnInit.Quote
                 { price =
                     OnInit.QuotePrice
-                      { currency = "INR",
+                      { currency,
                         value = fareDecimalValue,
                         offered_value = fareDecimalValue
                       },
-                  breakup =
-                    [ OnInit.BreakupItem
-                        { title = "fare",
-                          price =
-                            OnInit.BreakupItemPrice {currency, value = fareDecimalValue}
-                        }
-                    ]
+                  breakup = breakup_
                 },
             payment =
               OnInit.Payment
