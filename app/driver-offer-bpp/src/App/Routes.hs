@@ -26,6 +26,7 @@ import Product.BecknProvider.Init as BP
 import Product.BecknProvider.Search as BP
 import Product.BecknProvider.Select as BP
 import qualified Product.BecknProvider.Track as BP
+import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Driver as Driver
 import Product.DriveronBoarding.DriverOnBoarding as DO
 import qualified Product.DriveronBoarding.Idfy as Idfy
@@ -34,13 +35,14 @@ import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
---import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
+import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
 import qualified Product.RideAPI.EndRide as RideAPI.EndRide
 import qualified Product.RideAPI.StartRide as RideAPI.StartRide
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.OpenApi
+import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Driver as DriverAPI
 import Types.API.Driveronboarding.DriverOnBoarding
 import Types.API.Driveronboarding.Status
@@ -58,8 +60,8 @@ type DriverOfferAPI =
     :<|> SwaggerAPI
 
 type MainAPI =
-  "v2" :> UIAPI
-    :<|> OrgBecknAPI
+  "ui" :> UIAPI
+    :<|> "beckn" :> OrgBecknAPI
 
 type UIAPI =
   HealthCheckAPI
@@ -73,6 +75,8 @@ type UIAPI =
     :<|> RideAPI
     :<|> IdfyHandlerAPI
     :<|> OnBoardingAPI
+    :<|> RideAPI
+    :<|> CancellationReasonAPI
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
@@ -90,6 +94,8 @@ uiServer =
     :<|> rideFlow
     :<|> idfyHandlerFlow
     :<|> onBoardingAPIFlow
+    :<|> rideFlow
+    :<|> cancellationReasonFlow
 
 mainServer :: FlowServer MainAPI
 mainServer =
@@ -279,22 +285,20 @@ type RideAPI =
            :> QueryParam "onlyActive" Bool
            :> Get '[JSON] RideAPI.DriverRideListRes
            :<|> TokenAuth
-             :> Capture "rideId" (Id DRide.Ride)
-             :> "start"
-             :> ReqBody '[JSON] RideAPI.StartRideReq
-             :> Post '[JSON] APISuccess
+           :> Capture "rideId" (Id DRide.Ride)
+           :> "start"
+           :> ReqBody '[JSON] RideAPI.StartRideReq
+           :> Post '[JSON] APISuccess
            :<|> TokenAuth
-             :> Capture "rideId" (Id DRide.Ride)
-             :> "end"
-             :> ReqBody '[JSON] RideAPI.EndRideReq
-             :> Post '[JSON] APISuccess
-             {-
-                        :<|> TokenAuth
-                          :> Capture "rideId" (Id SRide.Ride)
-                          :> "cancel"
-                          :> ReqBody '[JSON] RideAPI.CancelRideReq
-                          :> Post '[JSON] APISuccess
-                          -}
+           :> Capture "rideId" (Id DRide.Ride)
+           :> "end"
+           :> ReqBody '[JSON] RideAPI.EndRideReq
+           :> Post '[JSON] APISuccess
+           :<|> TokenAuth
+           :> Capture "rideId" (Id DRide.Ride)
+           :> "cancel"
+           :> ReqBody '[JSON] RideAPI.CancelRideReq
+           :> Post '[JSON] APISuccess
        )
 
 rideFlow :: FlowServer RideAPI
@@ -302,42 +306,28 @@ rideFlow =
   Ride.listDriverRides
     :<|> RideAPI.StartRide.startRide
     :<|> RideAPI.EndRide.endRide
-
---    :<|> RideAPI.CancelRide.cancelRide
+    :<|> RideAPI.CancelRide.cancelRide
 
 type OrgBecknAPI =
   Capture "orgId" (Id Organization)
     :> SignatureAuth "Authorization"
-    :> SignatureAuth "X-Gateway-Authorization"
-    :> API.SearchAPI
-    :<|> Capture "orgId" (Id Organization)
-      :> SignatureAuth "Authorization"
-      :> API.SelectAPI
-    :<|> Capture "orgId" (Id Organization)
-      :> SignatureAuth "Authorization"
-      :> API.InitAPI
-    :<|> Capture "orgId" (Id Organization)
-      :> SignatureAuth "Authorization"
-      :> API.ConfirmAPI
-    :<|> Capture "orgId" (Id Organization)
-      :> SignatureAuth "Authorization"
-      :> API.TrackAPI
-    :<|> Capture "orgId" (Id Organization)
-      :> SignatureAuth "Authorization"
-      :> API.CancelAPI
-    :<|> Capture "orgId" (Id Organization)
-      :> SignatureAuth "Authorization"
-      :> API.TrackAPI
+    :> ( SignatureAuth "X-Gateway-Authorization"
+           :> API.SearchAPI
+           :<|> API.SelectAPI
+           :<|> API.InitAPI
+           :<|> API.ConfirmAPI
+           :<|> API.TrackAPI
+           :<|> API.CancelAPI
+       )
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
-orgBecknApiFlow =
-  BP.search
-    :<|> BP.select
-    :<|> BP.init
-    :<|> BP.confirm
-    :<|> BP.track
-    :<|> BP.cancel
-    :<|> BP.track
+orgBecknApiFlow orgId aurhRes =
+  BP.search orgId aurhRes
+    :<|> BP.select orgId aurhRes
+    :<|> BP.init orgId aurhRes
+    :<|> BP.confirm orgId aurhRes
+    :<|> BP.track orgId aurhRes
+    :<|> BP.cancel orgId aurhRes
 
 type OnBoardingAPI =
   "driver"
@@ -355,6 +345,16 @@ onBoardingAPIFlow :: FlowServer OnBoardingAPI
 onBoardingAPIFlow =
   DO.registrationHandler
     :<|> Status.statusHandler
+
+type CancellationReasonAPI =
+  "cancellationReason"
+    :> ( "list"
+           :> TokenAuth
+           :> Get '[JSON] CancellationReasonAPI.ListRes
+       )
+
+cancellationReasonFlow :: FlowServer CancellationReasonAPI
+cancellationReasonFlow = CancellationReason.list
 
 type HealthCheckAPI = Get '[JSON] Text
 

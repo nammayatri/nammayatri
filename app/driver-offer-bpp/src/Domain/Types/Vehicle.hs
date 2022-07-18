@@ -1,7 +1,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Domain.Types.Vehicle where
+module Domain.Types.Vehicle (module Domain.Types.Vehicle, module Reexport) where
 
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
@@ -13,11 +13,11 @@ import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Person as DPers
-import qualified Domain.Types.Vehicle.Variant as Variant
+import Domain.Types.Vehicle.Variant as Reexport
 import EulerHS.Prelude hiding (id)
 import Servant.API
 
-data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO
+data Category = CAR | MOTORCYCLE | TRAIN | BUS | FLIGHT | AUTO_CATEGORY
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
   deriving (PrettyShow) via Showable Category
 
@@ -49,7 +49,7 @@ instance FromHttpApiData RegistrationCategory where
 data Vehicle = Vehicle
   { driverId :: Id DPers.Person,
     organizationId :: Id DOrg.Organization,
-    variant :: Variant.Variant,
+    variant :: Reexport.Variant,
     model :: Text,
     color :: Text,
     registrationNo :: Text,
@@ -66,7 +66,7 @@ data Vehicle = Vehicle
 
 data VehicleAPIEntity = VehicleAPIEntity
   { driverId :: Id DPers.Person,
-    variant :: Variant.Variant,
+    variant :: Reexport.Variant,
     model :: Text,
     color :: Text,
     registrationNo :: Text,

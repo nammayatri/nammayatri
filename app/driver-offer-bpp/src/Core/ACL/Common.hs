@@ -7,4 +7,4 @@ castVariant :: Variant.Variant -> Common.VehicleVariant
 castVariant Variant.SEDAN = Common.SEDAN
 castVariant Variant.HATCHBACK = Common.HATCHBACK
 castVariant Variant.SUV = Common.SUV
-castVariant Variant.AUTO = Common.AUTO
+castVariant Variant.AUTO_VARIANT = Common.AUTO

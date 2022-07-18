@@ -4,8 +4,8 @@ import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
---import Domain.Types.CancellationReason (CancellationReasonCode)
 import Beckn.Types.MapSearch
+import Domain.Types.CancellationReason (CancellationReasonCode)
 import Domain.Types.Ride
 import Domain.Types.RideBooking.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.Vehicle.Variant
@@ -21,13 +21,11 @@ newtype EndRideReq = EndRideReq
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-{-
 data CancelRideReq = CancelRideReq
   { reasonCode :: CancellationReasonCode,
     additionalInfo :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
--}
 
 data DriverRideRes = DriverRideRes
   { id :: Id Ride,

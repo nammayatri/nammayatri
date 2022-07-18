@@ -3,14 +3,14 @@
 @token = {{app-token}}
 
 # @name healthcheck
-GET {{driver-offer-bpp-host}}/v2
+GET {{driver-offer-bpp-host}}/ui
 
 ###
 
 @currentTime = 2022-03-03T23:37
 
 # @name updateInitial
-POST {{driver-offer-bpp-host}}/v2/driver/location
+POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{driver-token}}
 content-type: application/json
 
@@ -27,7 +27,7 @@ content-type: application/json
 ###
 
 # @name setActive
-POST {{driver-offer-bpp-host}}/v2/driver/setActivity?active=true
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
 content-type: application/json
 token: {{driver-token}}
 ###
@@ -98,13 +98,13 @@ token: {{token}}
 ###
 
 # @name nearbySearchRequest
-GET {{driver-offer-bpp-host}}/v2/driver/nearbyRideRequest
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
 token: {{driver-token}}
 
 ###
 
 # @name offerQuote
-POST {{driver-offer-bpp-host}}/v2/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
 token: {{driver-token}}
 content-type: application/json
 
@@ -267,3 +267,18 @@ content-type: application/json
     "lon": 76.33893232031218
   }
 }
+
+###
+# @name cancel
+POST {{app-host}}/rideBooking/{{bookingId}}/cancel
+content-type: application/json
+token: {{token}}
+
+{
+  "reasonCode": "OTHER",
+  "reasonStage": "OnAssign",
+  "additionalInfo": "driver is too fat"
+}
+
+### OnSearch | OnConfirm | OnAssign
+###

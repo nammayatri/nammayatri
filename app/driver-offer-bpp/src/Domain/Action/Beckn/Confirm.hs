@@ -11,6 +11,9 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
 import Beckn.Utils.Common
 import Data.String.Conversions
+--import qualified Product.BecknProvider.BP as BP
+
+import qualified Data.Text as T
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideBooking as DRB
@@ -52,7 +55,7 @@ handler ::
     HasPrettyLogger m r,
     EncFlow m r,
     CoreMetrics m,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
   ) =>
   Subscriber.Subscriber ->
   Id DOrg.Organization ->
@@ -106,10 +109,10 @@ handler subscriber transporterId req = do
           ]
     buildRide driverId rideBooking = do
       guid <- Id <$> generateGUID
-      tUrl <- buildTrackingUrl guid.getId
       shortId <- generateShortId
       otp <- generateOTPCode
       now <- getCurrentTime
+      trackingUrl <- buildTrackingUrl guid
       return
         DRide.Ride
           { id = guid,
@@ -118,7 +121,7 @@ handler subscriber transporterId req = do
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,
-            trackingUrl = tUrl,
+            trackingUrl = trackingUrl,
             fare = Nothing,
             traveledDistance = 0,
             tripStartTime = Nothing,
@@ -128,7 +131,7 @@ handler subscriber transporterId req = do
           }
     buildTrackingUrl rideId = do
       bppUIUrl <- asks (.selfUIUrl)
-      let rideid = cs rideId
+      let rideid = T.unpack (getId rideId)
       return $
         bppUIUrl
           { --TODO: find a way to build it using existing types from Routes

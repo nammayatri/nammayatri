@@ -27,15 +27,6 @@ findActiveByRBId rbId =
         &&. ride ^. RideStatus !=. val Ride.CANCELLED
     return ride
 
-findAllCancelledByRBId :: Transactionable m => Id RideBooking -> m [Ride]
-findAllCancelledByRBId rideBookingId =
-  findAll $ do
-    ride <- from $ table @RideT
-    where_ $
-      ride ^. Ride.RideBookingId ==. val (toKey rideBookingId)
-        &&. ride ^. RideStatus ==. val Ride.CANCELLED
-    return ride
-
 findAllByDriverId ::
   Transactionable m =>
   Id Person ->

@@ -12,7 +12,6 @@ import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.Person as DPers
 import qualified Domain.Types.RideBooking as DRB
 import qualified Domain.Types.Vehicle as DVeh
-import qualified Domain.Types.Vehicle.Variant as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API
 import Utils.Common

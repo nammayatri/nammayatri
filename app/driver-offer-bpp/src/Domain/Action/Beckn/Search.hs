@@ -78,7 +78,7 @@ handler org sReq = do
     QSReq.create searchReq
     traverse_ (QBE.logDriverInPoolEvent ON_SEARCH Nothing) driverPool
   logDebug $ "bap uri: " <> show sReq.bapUri
-  let variant = Variant.AUTO
+  let variant = Variant.AUTO_VARIANT
   buildSearchRes org variant distanceToPickup estimatedFare searchReq
 
 buildSearchRequest ::

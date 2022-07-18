@@ -8,9 +8,9 @@ where
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
-import Beckn.Utils.Error.Throwing
+import Beckn.Utils.Common
 import qualified Domain.Types.Organization as Org
-import Domain.Types.Ride as DRide
+import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Ride as QRide

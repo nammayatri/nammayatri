@@ -82,11 +82,9 @@ content-type: application/json
 token: {{token}}
 
 {
-  "bookingCancellationReason": {
-    "reasonCode": "FAT",
-    "reasonStage": "OnConfirm",
-    "additionalInfo": "driver is too fat"
-  }
+  "reasonCode": "OTHER",
+  "reasonStage": "OnConfirm",
+  "additionalInfo": "driver is too fat"
 }
 
 ### OnSearch | OnConfirm | OnAssign

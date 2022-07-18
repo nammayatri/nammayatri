@@ -2,20 +2,15 @@ module Product.BecknProvider.BP
   ( sendRideAssignedUpdateToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
-    {-
-      sendRideBookingCancelledUpdateToBAP,
-      -}
+    sendBookingCancelledUpdateToBAP,
   )
 where
 
 import Beckn.Types.Common
---import Beckn.Types.Id
 import qualified Core.ACL.OnUpdate as ACL
---import qualified Domain.Types.Organization as SOrg
-
---import qualified Domain.Types.RideBookingCancellationReason as SRBCR
-
+import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.FareParams as Fare
+import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude
@@ -81,8 +76,7 @@ sendRideCompletedUpdateToBAP rideBooking ride fareParams = do
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
   void $ callOnUpdate transporter rideBooking rideCompletedMsg
 
-{-
-sendRideBookingCancelledUpdateToBAP ::
+sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
@@ -92,8 +86,7 @@ sendRideBookingCancelledUpdateToBAP ::
   SOrg.Organization ->
   SRBCR.CancellationSource ->
   m ()
-sendRideBookingCancelledUpdateToBAP booking transporter cancellationSource = do
+sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq {..}
   bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
   void $ callOnUpdate transporter booking bookingCancelledMsg
--}

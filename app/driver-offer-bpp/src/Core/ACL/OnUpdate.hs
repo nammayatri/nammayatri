@@ -12,9 +12,11 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideBookingCancell
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParams as Fare
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
+import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.Vehicle as SVeh
 import Product.FareCalculator.Calculator (fareSum, mkBreakupList)
 import Types.Error
@@ -34,8 +36,8 @@ data OnUpdateBuildReq
         fareParams :: Fare.FareParameters
       }
   | BookingCancelledBuildReq
-      { booking :: Text, --SRB.RideBooking,
-        cancellationSource :: Text --SBCR.CancellationSource
+      { booking :: SRB.RideBooking,
+        cancellationSource :: SBCR.CancellationSource
       }
 
 buildOnUpdateMessage ::
@@ -124,15 +126,15 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideBookingCancelled
         BookingCancelledOU.RideBookingCancelledEvent
-          { id = "booking.id.getId",
+          { id = booking.id.getId,
             state = "CANCELLED",
             update_target = "state,fufillment.state.code",
-            cancellation_reason = BookingCancelledOU.ByUser --castCancellationSource cancellationSource
+            cancellation_reason = castCancellationSource cancellationSource
           }
 
--- castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource
--- castCancellationSource = \case
---   SBCR.ByUser -> BookingCancelledOU.ByUser
---   SBCR.ByDriver -> BookingCancelledOU.ByDriver
---   SBCR.ByOrganization -> BookingCancelledOU.ByOrganization
---   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
+castCancellationSource :: SBCR.CancellationSource -> BookingCancelledOU.CancellationSource
+castCancellationSource = \case
+  SBCR.ByUser -> BookingCancelledOU.ByUser
+  SBCR.ByDriver -> BookingCancelledOU.ByDriver
+  SBCR.ByOrganization -> BookingCancelledOU.ByOrganization
+  SBCR.ByAllocator -> BookingCancelledOU.ByAllocator

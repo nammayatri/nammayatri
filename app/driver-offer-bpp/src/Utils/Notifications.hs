@@ -3,11 +3,64 @@ module Utils.Notifications where
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
 import Beckn.Tools.Metrics.CoreMetrics (CoreMetrics)
+import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Data.Text as T
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
+import Domain.Types.RideBooking (RideBooking)
 import EulerHS.Prelude
+
+-- | Send FCM "cancel" notification to driver
+notifyOnCancel ::
+  ( FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  RideBooking ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  SBCR.CancellationSource ->
+  m ()
+notifyOnCancel booking personId mbDeviceToken cancellationSource = do
+  cancellationText <- getCancellationText
+  FCM.notifyPerson (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notificationData cancellationText =
+      FCM.FCMData
+        { fcmNotificationType = FCM.CANCELLED_PRODUCT,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Product,
+          fcmEntityIds = getId booking.id,
+          fcmNotificationJSON = FCM.createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT
+        }
+    title = FCMNotificationTitle $ T.pack "Ride cancelled!"
+    body text =
+      FCMNotificationBody text
+    getCancellationText = case cancellationSource of
+      SBCR.ByUser ->
+        return $
+          unwords
+            [ "Customer had to cancel your ride for",
+              showTimeIst (booking.startTime) <> ".",
+              "Check the app for more details."
+            ]
+      SBCR.ByOrganization ->
+        return $
+          unwords
+            [ "Your agency had to cancel the ride for",
+              showTimeIst (booking.startTime) <> ".",
+              "Check the app for more details."
+            ]
+      SBCR.ByDriver ->
+        return $
+          unwords
+            [ "You have cancelled the ride for",
+              showTimeIst (booking.startTime) <> ".",
+              "Check the app for more details."
+            ]
+      _ -> throwError (InternalError "Unexpected cancellation reason.")
 
 notifyOnRegistration ::
   ( FCMFlow m r,

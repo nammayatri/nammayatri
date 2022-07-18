@@ -48,7 +48,7 @@ packages:
   - app/mock-public-transport-bpp
   - app/mock-parking-bpp
   - app/scheduler-example
-  - lib/beckn-core
+  - lib/beckn-spec
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as

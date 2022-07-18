@@ -11,7 +11,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Servant.API
 
-data Variant = SEDAN | SUV | HATCHBACK | AUTO
+data Variant = SEDAN | SUV | HATCHBACK | AUTO_VARIANT
   deriving
     ( Show,
       Eq,

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-missing-fields #-}
-
 module Product.Registration (checkPersonExists, auth, verify, resend, logout) where
 
 import Beckn.External.Encryption
