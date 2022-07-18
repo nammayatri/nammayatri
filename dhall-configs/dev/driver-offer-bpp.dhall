@@ -71,6 +71,7 @@ in
 , metricsPort = +9997
 , hostName = "localhost"
 , nwAddress = "http://localhost:8016"
+, selfUIUrl = "http://localhost:8016/v2/"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , migrationPath = Some (env:BECKN_TRANSPORT_MIGRATION_PATH as Text ? "dev/migrations/driver-offer-bpp")

@@ -1,8 +1,3 @@
-{-# OPTIONS_GHC -Wno-missing-fields #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
-
---TODO: Do not forget to remove these ^^^^^
-
 module Domain.Action.Beckn.Track
   ( track,
     DTrackReq (..),
@@ -11,12 +6,18 @@ module Domain.Action.Beckn.Track
 where
 
 import Beckn.Types.Common
+import Beckn.Types.Error
 import Beckn.Types.Id
+import Beckn.Utils.Error.Throwing
 import qualified Domain.Types.Organization as Org
+import Domain.Types.Ride as DRide
 import EulerHS.Prelude
+import qualified Storage.Queries.Organization as QOrg
+import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RideBooking as QRB
 
 newtype DTrackReq = TrackReq
-  { rideId :: Id Text --DRide.Ride
+  { rideId :: Id DRide.Ride
   }
 
 data DTrackRes = TrackRes
@@ -30,14 +31,15 @@ track ::
   DTrackReq ->
   m DTrackRes
 track transporterId req = do
-  -- transporter <-
-  --   QOrg.findById transporterId
-  --     >>= fromMaybeM (OrgNotFound transporterId.getId)
-  -- ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
-  -- booking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
-  -- let transporterId' = booking.providerId
-  -- unless (transporterId' == transporterId) $ throwError AccessDenied
+  transporter <-
+    QOrg.findById transporterId
+      >>= fromMaybeM (OrgNotFound transporterId.getId)
+  ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
+  let transporterId' = booking.providerId
+  unless (transporterId' == transporterId) $ throwError AccessDenied
   return $
     TrackRes
-      { ..
+      { url = ride.trackingUrl,
+        ..
       }

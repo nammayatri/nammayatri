@@ -325,6 +325,9 @@ type OrgBecknAPI =
     :<|> Capture "orgId" (Id Organization)
       :> SignatureAuth "Authorization"
       :> API.CancelAPI
+    :<|> Capture "orgId" (Id Organization)
+      :> SignatureAuth "Authorization"
+      :> API.TrackAPI
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow =
@@ -334,6 +337,7 @@ orgBecknApiFlow =
     :<|> BP.confirm
     :<|> BP.track
     :<|> BP.cancel
+    :<|> BP.track
 
 type OnBoardingAPI =
   "driver"

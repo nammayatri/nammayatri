@@ -16,6 +16,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideBooking as DRB
 import qualified Domain.Types.RideBooking.BookingLocation as DBL
 import qualified Domain.Types.RiderDetails as DRD
+import Servant.Client (BaseUrl (..))
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -51,7 +52,7 @@ handler ::
     HasPrettyLogger m r,
     EncFlow m r,
     CoreMetrics m,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "selfUIUrl" ::: BaseUrl]
   ) =>
   Subscriber.Subscriber ->
   Id DOrg.Organization ->
@@ -104,7 +105,8 @@ handler subscriber transporterId req = do
             "Check the app for more details."
           ]
     buildRide driverId rideBooking = do
-      guid <- generateGUID
+      guid <- Id <$> generateGUID
+      tUrl <- buildTrackingUrl guid.getId
       shortId <- generateShortId
       otp <- generateOTPCode
       now <- getCurrentTime
@@ -116,13 +118,21 @@ handler subscriber transporterId req = do
             status = DRide.NEW,
             driverId = cast driverId,
             otp = otp,
-            trackingUrl = "UNKNOWN", -- TODO: Fill this field
+            trackingUrl = tUrl,
             fare = Nothing,
             traveledDistance = 0,
             tripStartTime = Nothing,
             tripEndTime = Nothing,
             createdAt = now,
             updatedAt = now
+          }
+    buildTrackingUrl rideId = do
+      bppUIUrl <- asks (.selfUIUrl)
+      let rideid = cs rideId
+      return $
+        bppUIUrl
+          { --TODO: find a way to build it using existing types from Routes
+            baseUrlPath = baseUrlPath bppUIUrl <> "/driver/location/" <> rideid
           }
 
 getRiderDetails :: (EncFlow m r, EsqDBFlow m r) => Text -> Text -> UTCTime -> m (DRD.RiderDetails, Bool)
