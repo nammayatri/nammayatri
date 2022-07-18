@@ -17,8 +17,6 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
 
-derivePersistField "Variant.Variant"
-
 mkPersist
   defaultSqlSettings
   [defaultQQ|

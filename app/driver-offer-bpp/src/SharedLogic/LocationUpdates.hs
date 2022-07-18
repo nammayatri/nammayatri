@@ -23,7 +23,6 @@ import EulerHS.Prelude hiding (id, state)
 import GHC.Records.Extra
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics as Metrics
-import Utils.Hedis
 
 data RideInterpolationHandler m = RideInterpolationHandler
   { batchSize :: Integer,

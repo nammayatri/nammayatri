@@ -9,10 +9,9 @@ module Storage.Tabular.SearchRequest where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Domain.Types.FareParams as Params
 import qualified Domain.Types.SearchRequest as Domain
+import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 
@@ -31,12 +30,7 @@ mkPersist
       bapId Text
       bapUri Text
       createdAt UTCTime
-
-      fareForPickup Amount
-      distanceFare Amount
-      driverSelectedFare Amount Maybe
-      nightShiftRate Amount Maybe
-      nightCoefIncluded Bool
+      fareParametersId Fare.FareParametersTId
 
       Primary id
       deriving Generic
@@ -47,12 +41,12 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.SearchRequest where
-  fromTType (SearchRequestT {..}, fromLoc, toLoc) = do
+instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT, Fare.FareParametersT) Domain.SearchRequest where
+  fromTType (SearchRequestT {..}, fromLoc, toLoc, fareParametersT) = do
     pUrl <- parseBaseUrl bapUri
     let fromLoc_ = mkDomainSearchReqLocation fromLoc
         toLoc_ = mkDomainSearchReqLocation toLoc
-        fareParams = Params.FareParameters {..}
+        fareParams = Fare.mkDomainFromTabularFareParams fareParametersT
 
     return $
       Domain.SearchRequest
@@ -64,15 +58,17 @@ instance TType (SearchRequestT, SearchReqLocationT, SearchReqLocationT) Domain.S
           ..
         }
   toTType Domain.SearchRequest {..} =
-    let Params.FareParameters {..} = fareParams
+    let fareParamsId = cast id
      in ( SearchRequestT
             { id = getId id,
               providerId = toKey providerId,
               fromLocationId = toKey fromLocation.id,
               toLocationId = toKey toLocation.id,
               bapUri = showBaseUrl bapUri,
+              fareParametersId = toKey fareParamsId,
               ..
             },
           mkTabularSearchReqLocation fromLocation,
-          mkTabularSearchReqLocation toLocation
+          mkTabularSearchReqLocation toLocation,
+          Fare.mkTabularFromDomainFareParams fareParamsId fareParams
         )

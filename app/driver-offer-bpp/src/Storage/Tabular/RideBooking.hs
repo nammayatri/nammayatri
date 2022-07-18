@@ -9,13 +9,12 @@ module Storage.Tabular.RideBooking where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import qualified Domain.Types.FareParams as Params
 import qualified Domain.Types.RideBooking as Domain
 import qualified Domain.Types.Vehicle.Variant as Veh
 import Storage.Tabular.DriverQuote (DriverQuoteTId)
+import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.RideBooking.BookingLocation hiding (createdAt, id, updatedAt)
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
@@ -41,12 +40,7 @@ mkPersist
       estimatedDistance Double
       createdAt UTCTime
       updatedAt UTCTime
-
-      fareForPickup Amount
-      distanceFare Amount
-      driverSelectedFare Amount Maybe
-      nightShiftRate Amount Maybe
-      nightCoefIncluded Bool
+      fareParametersId Fare.FareParametersTId
 
       Primary id
       deriving Generic
@@ -57,12 +51,11 @@ instance TEntityKey RideBookingT where
   fromKey (RideBookingTKey _id) = Id _id
   toKey (Id id) = RideBookingTKey id
 
-instance TType (RideBookingT, BookingLocationT, BookingLocationT) Domain.RideBooking where
-  fromTType (RideBookingT {..}, fromLoc, toLoc) = do
+instance TType (RideBookingT, BookingLocationT, BookingLocationT, Fare.FareParametersT) Domain.RideBooking where
+  fromTType (RideBookingT {..}, fromLoc, toLoc, fareParametersT) = do
     pUrl <- parseBaseUrl bapUri
     let fromLoc_ = mkDomainBookingLocation fromLoc
         toLoc_ = mkDomainBookingLocation toLoc
-        fareParams = Params.FareParameters {..}
     return $
       Domain.RideBooking
         { id = Id id,
@@ -73,10 +66,11 @@ instance TType (RideBookingT, BookingLocationT, BookingLocationT) Domain.RideBoo
           bapUri = pUrl,
           riderId = fromKey <$> riderId,
           estimatedDistance = HighPrecMeters estimatedDistance,
+          fareParams = Fare.mkDomainFromTabularFareParams fareParametersT,
           ..
         }
   toTType Domain.RideBooking {..} =
-    let Params.FareParameters {..} = fareParams
+    let fareParamsId = cast id
      in ( RideBookingT
             { id = getId id,
               quoteId = toKey quoteId,
@@ -86,8 +80,10 @@ instance TType (RideBookingT, BookingLocationT, BookingLocationT) Domain.RideBoo
               bapUri = showBaseUrl bapUri,
               riderId = toKey <$> riderId,
               estimatedDistance = getHighPrecMeters estimatedDistance,
+              fareParametersId = toKey fareParamsId,
               ..
             },
           mkTabularBookingLocation fromLocation,
-          mkTabularBookingLocation toLocation
+          mkTabularBookingLocation toLocation,
+          Fare.mkTabularFromDomainFareParams fareParamsId fareParams
         )

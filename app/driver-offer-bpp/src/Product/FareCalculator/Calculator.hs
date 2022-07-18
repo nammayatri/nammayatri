@@ -2,6 +2,7 @@
 
 module Product.FareCalculator.Calculator where
 
+import Beckn.Prelude
 import Beckn.Types.Amount
 import Data.Time
   ( LocalTime (localTimeOfDay),
@@ -13,7 +14,6 @@ import Data.Time
   )
 import Domain.Types.FareParams
 import Domain.Types.FarePolicy (FarePolicy)
-import EulerHS.Prelude
 import Utils.Common
 
 type TripStartTime = UTCTime

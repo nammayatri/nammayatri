@@ -48,11 +48,11 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   res <- Esq.findAll' $ do
-    (rideBooking :& fromLocation :& toLocation :& ride) <-
+    (rideBooking :& fromLocation :& toLocation :& fareParams :& ride) <-
       from $
         baseRideBookingQuery
           `innerJoin` table @RideT
-            `Esq.on` ( \(rideBooking :& _ :& _ :& ride) ->
+            `Esq.on` ( \(rideBooking :& _ :& _ :& _ :& ride) ->
                          ride ^. Ride.RideBookingId ==. rideBooking ^. Booking.RideBookingTId
                      )
     where_ $
@@ -61,11 +61,11 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
-    return (rideBooking, fromLocation, toLocation, ride)
+    return (rideBooking, fromLocation, toLocation, fareParams, ride)
 
   pure $
-    res <&> \(bookingT, fromLocationT, toLocationT, rideT :: RideT) -> do
-      (extractSolidType rideT, extractSolidType (bookingT, fromLocationT, toLocationT))
+    res <&> \(bookingT, fromLocationT, toLocationT, fareParams, rideT :: RideT) -> do
+      (extractSolidType rideT, extractSolidType (bookingT, fromLocationT, toLocationT, fareParams))
 
 getInProgressByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
 getInProgressByDriverId driverId =

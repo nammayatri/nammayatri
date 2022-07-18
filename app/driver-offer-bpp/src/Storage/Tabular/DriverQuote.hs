@@ -9,12 +9,11 @@ module Storage.Tabular.DriverQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
-import Beckn.Types.Amount
 import Beckn.Types.Common (Meters (..), Seconds (..))
 import Beckn.Types.Id
 import qualified Domain.Types.DriverQuote as Domain
-import qualified Domain.Types.FareParams as Params
 import qualified Domain.Types.Vehicle.Variant as Variant
+import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.Person (PersonTId)
 import qualified Storage.Tabular.SearchRequest as SReq
 import Storage.Tabular.Vehicle ()
@@ -38,12 +37,7 @@ mkPersist
       validTill UTCTime
       createdAt UTCTime
       updatedAt UTCTime
-
-      fareForPickup Amount
-      distanceFare Amount
-      driverSelectedFare Amount Maybe
-      nightShiftRate Amount Maybe
-      nightCoefIncluded Bool
+      fareParametersId Fare.FareParametersTId
 
       Primary id
       deriving Generic
@@ -54,9 +48,8 @@ instance TEntityKey DriverQuoteT where
   fromKey (DriverQuoteTKey _id) = Id _id
   toKey (Id id) = DriverQuoteTKey id
 
-instance TType DriverQuoteT Domain.DriverQuote where
-  fromTType DriverQuoteT {..} = do
-    let fareParams = Params.FareParameters {..}
+instance TType (DriverQuoteT, Fare.FareParametersT) Domain.DriverQuote where
+  fromTType (DriverQuoteT {..}, fareParams) = do
     return $
       Domain.DriverQuote
         { id = Id id,
@@ -64,15 +57,19 @@ instance TType DriverQuoteT Domain.DriverQuote where
           driverId = fromKey driverId,
           distanceToPickup = Meters distanceToPickup,
           durationToPickup = Seconds $ floor durationToPickup,
+          fareParams = Fare.mkDomainFromTabularFareParams fareParams,
           ..
         }
-  toTType Domain.DriverQuote {..} = do
-    let Params.FareParameters {..} = fareParams
-    DriverQuoteT
-      { id = getId id,
-        searchRequestId = toKey searchRequestId,
-        driverId = toKey driverId,
-        distanceToPickup = getMeters distanceToPickup,
-        durationToPickup = fromIntegral $ getSeconds durationToPickup,
-        ..
-      }
+  toTType Domain.DriverQuote {..} =
+    let fareParamsId = cast id
+     in ( DriverQuoteT
+            { id = getId id,
+              searchRequestId = toKey searchRequestId,
+              driverId = toKey driverId,
+              distanceToPickup = getMeters distanceToPickup,
+              durationToPickup = fromIntegral $ getSeconds durationToPickup,
+              fareParametersId = toKey fareParamsId,
+              ..
+            },
+          Fare.mkTabularFromDomainFareParams fareParamsId fareParams
+        )
