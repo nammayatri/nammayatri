@@ -87,6 +87,7 @@ in
 , registryUrl = common.registryUrl
 , encTools = encTools
 , authTokenCacheExpiry = +600
+, minimumDriverRatesCount = +5
 , disableSignatureAuth = False
 , httpClientOptions = common.httpClientOptions
 , fcmUrl = common.fcmUrl

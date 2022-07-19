@@ -7,6 +7,7 @@ import Beckn.Types.Core.Ack (AckResponse)
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Init as API
+import qualified Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import qualified Beckn.Types.Core.Taxi.API.Select as API
 import qualified Beckn.Types.Core.Taxi.API.Track as API
@@ -23,6 +24,7 @@ import EulerHS.Prelude
 import qualified Product.BecknProvider.Cancel as BP
 import qualified Product.BecknProvider.Confirm as BP
 import Product.BecknProvider.Init as BP
+import Product.BecknProvider.Rating as BP
 import Product.BecknProvider.Search as BP
 import Product.BecknProvider.Select as BP
 import qualified Product.BecknProvider.Track as BP
@@ -318,6 +320,7 @@ type OrgBecknAPI =
            :<|> API.ConfirmAPI
            :<|> API.TrackAPI
            :<|> API.CancelAPI
+           :<|> API.RatingAPI
        )
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
@@ -328,6 +331,7 @@ orgBecknApiFlow orgId aurhRes =
     :<|> BP.confirm orgId aurhRes
     :<|> BP.track orgId aurhRes
     :<|> BP.cancel orgId aurhRes
+    :<|> BP.ratingImpl orgId aurhRes
 
 type OnBoardingAPI =
   "driver"
