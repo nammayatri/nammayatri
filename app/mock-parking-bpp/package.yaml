@@ -54,6 +54,7 @@ dependencies:
   - http-client
   - exceptions
   - beckn-core
+  - beckn-spec
   - parking-bap
   - http-types
   - relude
@@ -90,3 +91,4 @@ executables:
     dependencies:
       - mock-parking-bpp
       - beckn-core
+      - beckn-spec

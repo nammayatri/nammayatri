@@ -88,3 +88,4 @@ executables:
     dependencies:
       - mock-bap
       - beckn-core
+      - beckn-spec

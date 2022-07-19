@@ -101,6 +101,7 @@ library:
     - -Werror
   dependencies:
     - beckn-core
+    - beckn-spec
 
 executables:
   beckn-transport-exe:
@@ -114,6 +115,8 @@ executables:
     dependencies:
       - beckn-transport
       - beckn-core
+      - beckn-spec
+
   allocation-service-exe:
     main: AllocationServiceMain.hs
     source-dirs: server
@@ -125,6 +128,7 @@ executables:
     dependencies:
       - beckn-transport
       - beckn-core
+      - beckn-spec
   driver-tracking-healthcheck-exe:
     main: DriverTrackingHealthcheckMain.hs
     source-dirs: server
@@ -136,6 +140,7 @@ executables:
     dependencies:
       - beckn-transport
       - beckn-core
+      - beckn-spec
   transporter-scheduler-exe:
     main: Scheduler.hs
     source-dirs: server
@@ -147,6 +152,7 @@ executables:
     dependencies:
       - beckn-transport
       - beckn-core
+      - beckn-spec
 
 
 tests:
@@ -158,6 +164,7 @@ tests:
     dependencies:
       - beckn-transport
       - beckn-core
+      - beckn-spec
       - tasty
       - tasty-hunit
       - tasty-hspec

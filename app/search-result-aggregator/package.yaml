@@ -94,3 +94,4 @@ executables:
     dependencies:
       - search-result-aggregator
       - beckn-core
+      - beckn-spec

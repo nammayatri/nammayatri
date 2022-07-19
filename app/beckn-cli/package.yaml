@@ -101,6 +101,7 @@ library:
     - -Werror
   dependencies:
     - beckn-core
+    - beckn-spec
 
 executables:
   beckn-cli-exe:
@@ -113,3 +114,5 @@ executables:
     dependencies:
       - beckn-cli
       - beckn-core
+      - beckn-spec
+

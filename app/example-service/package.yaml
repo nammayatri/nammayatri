@@ -54,15 +54,16 @@ dependencies:
   - aeson
   - base >= 4.7 && < 5
   - beckn-core
+  - beckn-spec
   - bytestring
   - record-dot-preprocessor
   - record-hasfield
   - text
   - time
   - servant-server
-  - persistent            
-  - persistent-postgresql 
-  - esqueleto           
+  - persistent
+  - persistent-postgresql
+  - esqueleto
   - template-haskell
 
 ghc-options:
@@ -92,3 +93,4 @@ executables:
     dependencies:
       - example-service
       - beckn-core
+      - beckn-spec

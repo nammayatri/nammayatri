@@ -100,3 +100,4 @@ executables:
     dependencies:
       - parking-bap
       - beckn-core
+      - beckn-spec

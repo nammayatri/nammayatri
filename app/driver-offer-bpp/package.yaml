@@ -101,6 +101,7 @@ library:
     - -Werror
   dependencies:
     - beckn-core
+    - beckn-spec
 
 executables:
   driver-offer-bpp-exe:
@@ -114,3 +115,4 @@ executables:
     dependencies:
       - driver-offer-bpp
       - beckn-core
+      - beckn-spec

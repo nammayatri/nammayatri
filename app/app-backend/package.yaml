@@ -101,6 +101,7 @@ library:
     - -Werror
   dependencies:
     - beckn-core
+    - beckn-spec
 executables:
   app-backend-exe:
     main: Main.hs
@@ -112,3 +113,4 @@ executables:
     dependencies:
       - app-backend
       - beckn-core
+      - beckn-spec
