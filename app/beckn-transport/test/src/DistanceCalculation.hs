@@ -1,8 +1,8 @@
 module DistanceCalculation where
 
 import Beckn.Types.MapSearch
+import Beckn.Utils.CalculateDistance
 import EulerHS.Prelude
-import SharedLogic.CalculateDistance
 import Test.Tasty
 import Test.Tasty.HUnit
 import Utils.Numeric
