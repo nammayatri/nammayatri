@@ -282,3 +282,15 @@ token: {{token}}
 
 ### OnSearch | OnConfirm | OnAssign
 ###
+
+@bapRideId = {{list2.response.body.list[0].rideList[0].id}}
+
+# @name feedback
+POST {{app-host}}/feedback/rateRide
+token: {{token}}
+content-type: application/json
+
+{
+  "rideId": "{{bapRideId}}",
+  "rating" : 5
+}
