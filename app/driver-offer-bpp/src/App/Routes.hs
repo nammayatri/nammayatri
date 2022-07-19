@@ -331,7 +331,7 @@ orgBecknApiFlow orgId aurhRes =
     :<|> BP.confirm orgId aurhRes
     :<|> BP.track orgId aurhRes
     :<|> BP.cancel orgId aurhRes
-    :<|> BP.ratingImpl orgId aurhRes
+    :<|> BP.rating orgId aurhRes
 
 type OnBoardingAPI =
   "driver"
