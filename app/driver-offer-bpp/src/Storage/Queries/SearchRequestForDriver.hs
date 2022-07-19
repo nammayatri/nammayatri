@@ -25,3 +25,8 @@ findByDriver driverId = Esq.findAll $ do
   where_ $
     sReq ^. SearchRequestForDriverDriverId ==. val (toKey driverId)
   pure sReq
+
+removeAllBySearchId :: Id SearchRequest -> SqlDB ()
+removeAllBySearchId searchReqId = Esq.delete $ do
+  sReqForDriver <- from $ table @SearchRequestForDriverT
+  where_ $ sReqForDriver ^. SearchRequestForDriverSearchRequestId ==. val (toKey searchReqId)

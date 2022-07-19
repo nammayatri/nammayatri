@@ -8,6 +8,7 @@ import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
 import qualified "beckn-transport-allocator" App as Allocator
 import qualified "beckn-transport-driver-tracking-health-check" App as DriverHC
+import qualified "driver-offer-bpp" App as DriverOfferBpp
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-public-transport-bpp" App as MockPublicTransportBpp
 import qualified "mock-registry" App as MockRegistry
@@ -24,10 +25,13 @@ import Beckn.Types.Logging (LoggerConfig)
 import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Data.Text as T (replace, toUpper, unpack)
+import qualified "driver-offer-bpp" Environment as DriverOfferBpp
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
-import Mobility.Fixtures
-import qualified Mobility.Spec as Mobility
+import qualified Mobility.ARDU.Spec as Mobility.ARDU
+import Mobility.Fixtures.AppBackend
+import Mobility.Fixtures.Common
+import qualified Mobility.Transporter.Spec as Mobility.Transporter
 import PublicTransport.Common
 import qualified PublicTransport.Spec as PublicTransport
 import Resources
@@ -52,7 +56,8 @@ main = do
       "public-transport-bap",
       "mock-public-transport-bpp",
       "public-transport-search-consumer",
-      "search-result-aggregator"
+      "search-result-aggregator",
+      "driver-offer-bpp"
     ]
   -- ... and run
   defaultMain =<< specs
@@ -70,7 +75,8 @@ main = do
 specs :: IO TestTree
 specs =
   specs'
-    [Mobility.mkTestTree, PublicTransport.mkTestTree]
+    --    [Transporter.Mobility.mkTestTree, PublicTransport.mkTestTree]
+    [Mobility.ARDU.mkTestTree]
 
 specs' :: [IO TestTree] -> IO TestTree
 specs' trees = do
@@ -113,7 +119,10 @@ specs' trees = do
             & #kafkaConsumerCfgs . #publicTransportSearch . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
         SearchResultAggregator.runSearchResultAggregator $ \cfg ->
           cfg & hideLogging
-            & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds
+            & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
+        DriverOfferBpp.runDriverOfferBpp $ \cfg ->
+          cfg & hideLogging
+            & #updateLocationRefreshPeriod .~ timeBetweenLocationUpdates
       ]
 
     startServers servers = do
@@ -126,7 +135,6 @@ specs' trees = do
     cleanupServers _ = do
       releaseTestResources
       signalProcess sigINT =<< getProcessID
-
     migrateDB = do
       (appBackendCfg :: AppBackend.AppCfg) <- readDhallConfigDefault "app-backend"
       Esq.migrateIfNeeded appBackendCfg.migrationPath True appBackendCfg.esqDBCfg
@@ -135,6 +143,10 @@ specs' trees = do
       (transportCfg :: TransporterBackend.AppCfg) <- readDhallConfigDefault "beckn-transport"
       Esq.migrateIfNeeded transportCfg.migrationPath True transportCfg.esqDBCfg
         >>= handleLeft exitDBMigrationFailure "Couldn't migrate beckn-transporter database: "
+
+      (driverOfferCfg :: DriverOfferBpp.AppCfg) <- readDhallConfigDefault "driver-offer-bpp"
+      Esq.migrateIfNeeded driverOfferCfg.migrationPath True driverOfferCfg.esqDBCfg
+        >>= handleLeft exitDBMigrationFailure "Couldn't migrate driver-offer BPP database: "
 
 hideLogging :: HasField "loggerConfig" cfg LoggerConfig => cfg -> cfg
 hideLogging cfg =

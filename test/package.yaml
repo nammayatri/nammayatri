@@ -95,6 +95,7 @@ dependencies:
   - public-transport-search-consumer
   - beckn-transport-allocator
   - beckn-transport-driver-tracking-health-check
+  - driver-offer-bpp
 
 ghc-options:
   - -fwrite-ide-info
@@ -103,7 +104,7 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
-  - -Werror
+    # - -Werror
   - -Wno-unrecognised-pragmas
   - -fplugin=RecordDotPreprocessor
   - -threaded

@@ -1,4 +1,4 @@
-module Mobility.SuccessFlow where
+module Mobility.Transporter.SuccessFlow where
 
 import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
 import qualified "beckn-transport" API.UI.Ride as TbeRideAPI
@@ -17,8 +17,12 @@ import Mobility.Fixtures
 import qualified "app-backend" Storage.Queries.Booking as BQRB
 import qualified "beckn-transport" Storage.Queries.Booking as TQRB
 import Storage.Queries.DriverLocation
+import Mobility.Fixtures.AppBackend
+import Mobility.Fixtures.Transporter
+import "beckn-transport" Storage.Queries.DriverLocation
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
 import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
+import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import "app-backend" Types.API.Search
 import Utils
 
@@ -150,8 +154,13 @@ successFlow clients = withBecknClients clients $ do
 
   -- Driver Accepts a ride
   void . callBPP $
+-- <<<<<<< HEAD:test/src/Mobility/SuccessFlow.hs
     rideRespond tBooking.id driverToken1 $
       TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
+-- =======
+--    rideRespond tRideBooking.id driverToken1 $
+--      RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
+-- >>>>>>> slight refactoring of tests structure, readable local testing data for ARDU flow, healthcheck test for ARDU:test/src/Mobility/Transporter/SuccessFlow.hs
 
   tRide <- poll $ do
     tRide <- getBPPRide tBooking.id

@@ -1,14 +1,14 @@
-module Mobility.Spec where
+module Mobility.Transporter.Spec where
 
 import EulerHS.Prelude
-import qualified Mobility.AppCancelRide as CR
-import qualified Mobility.DriverCancelRide as DCR
-import qualified Mobility.DriversRejectRide as DRR
-import qualified Mobility.HealthCheck as HC
-import qualified Mobility.LocationUpdates as LU
-import qualified Mobility.NearestDrivers as ND
-import qualified Mobility.Serviceability as SRV
-import qualified Mobility.SuccessFlow as SF
+import qualified Mobility.Transporter.AppCancelRide as CR
+import qualified Mobility.Transporter.DriverCancelRide as DCR
+import qualified Mobility.Transporter.DriversRejectRide as DRR
+import qualified Mobility.Transporter.HealthCheck as HC
+import qualified Mobility.Transporter.LocationUpdates as LU
+import qualified Mobility.Transporter.NearestDrivers as ND
+import qualified Mobility.Transporter.Serviceability as SRV
+import qualified Mobility.Transporter.SuccessFlow as SF
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
 

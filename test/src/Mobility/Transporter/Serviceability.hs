@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module Mobility.Serviceability where
+module Mobility.Transporter.Serviceability where
 
 import Beckn.Types.MapSearch (LatLong (..))
 import Common
 import EulerHS.Prelude
-import Mobility.Fixtures
+import Mobility.Fixtures.AppBackend
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client

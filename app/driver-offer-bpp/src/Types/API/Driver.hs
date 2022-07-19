@@ -22,6 +22,7 @@ where
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import Beckn.Types.Id
 import Beckn.Types.Predicate
+import Beckn.Utils.GenericPretty (PrettyShow)
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Data.Aeson
@@ -150,12 +151,12 @@ type UpdateDriverRes = DriverInformationRes
 newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
   { searchRequests :: [SearchRequestForDriverAPIEntity]
   }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, ToSchema)
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, PrettyShow)
 
 data DriverOfferReq = DriverOfferReq
   { offeredFare :: Maybe Double,
     searchRequestId :: Id DSReq.SearchRequest
   }
   deriving stock (Generic)
-  deriving anyclass (FromJSON, ToSchema)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)

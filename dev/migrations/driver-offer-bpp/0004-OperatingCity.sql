@@ -11,6 +11,6 @@ CREATE TABLE IF NOT EXISTS atlas_driver_offer_bpp._operating_city_t
 
 -- local testing data
 INSERT INTO atlas_driver_offer_bpp._operating_city_t (id, organization_id, city_name, enabled, created_at, updated_at) VALUES
-  ('149c5260-f475-4ed7-849b-daba37751bbe','7f7896dd-787e-4a0b-8675-e9e6fe93bb8f','Bangalore', true, now(), now());
+  ('149c5260-f475-4ed7-849b-daba37751bbe','favorit0-0000-0000-0000-00000favorit','Bangalore', true, now(), now());
 INSERT INTO atlas_driver_offer_bpp._operating_city_t (id, organization_id, city_name, enabled, created_at, updated_at) VALUES
-  ('d4cb5e58-d655-476f-bf34-5863a4377016','7f7896dd-787e-4a0b-8675-c3f6fe93aa9e','Bangalore', true, now(), now());
+  ('d4cb5e58-d655-476f-bf34-5863a4377016','nearest-drivers-testing-organization','Bangalore', true, now(), now());

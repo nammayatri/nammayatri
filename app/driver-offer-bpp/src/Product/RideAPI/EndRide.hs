@@ -22,7 +22,7 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics (putFareAndDistanceDeviations)
 import Types.API.Ride
 import Types.App (Driver)
-import Utils.Common (withFlowHandlerAPI)
+import Utils.Common
 
 endRide :: Id SP.Person -> Id Ride.Ride -> EndRideReq -> FlowHandler APISuccess.APISuccess
 endRide personId rideId req = withFlowHandlerAPI $ do

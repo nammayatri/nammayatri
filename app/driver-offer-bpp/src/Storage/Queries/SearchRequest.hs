@@ -3,7 +3,7 @@ module Storage.Queries.SearchRequest where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Domain.Types.SearchRequest
+import Domain.Types.SearchRequest as Domain
 import Storage.Tabular.SearchRequest
 import Storage.Tabular.SearchRequest.SearchReqLocation
 
@@ -26,3 +26,8 @@ findById searchRequestId = buildDType $
           )
       where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
       pure (sReq, sFromLoc, sToLoc)
+
+markAsInactive :: Id SearchRequest -> SqlDB ()
+markAsInactive searchReqId = Esq.update $ \p -> do
+  set p [SearchRequestStatus =. val Domain.Inactive]
+  where_ $ p ^. SearchRequestTId ==. val (toKey searchReqId)

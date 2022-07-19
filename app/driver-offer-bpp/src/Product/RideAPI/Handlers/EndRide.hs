@@ -45,6 +45,7 @@ endRideHandler ::
   EndRideReq ->
   m APISuccess.APISuccess
 endRideHandler ServiceHandle {..} requestorId rideId req = do
+  logDebug "pavsi1"
   requestor <- findById requestorId >>= fromMaybeM (PersonNotFound requestorId.getId)
 
   addLastWaypointAndRecalcDistanceOnEnd requestorId req.point
@@ -52,14 +53,17 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
 
   ride <- findRideById (cast rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
+  logDebug "pavsi2"
   case requestor.role of
     Person.DRIVER -> unless (requestorId == driverId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
   unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
+  logDebug "pavsi3"
   booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
+  logDebug "pavsi4"
   now <- getCurrentTime
   putDiffs booking ride
 
@@ -67,9 +71,12 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
         ride{tripEndTime = Just now
             }
 
+  logDebug "pavsi5"
   endRideTransaction booking.id updRide (cast driverId)
 
+  logDebug "pavsi6"
   notifyCompleteToBAP booking updRide booking.fareParams
+  logDebug "pavsi7"
 
   return APISuccess.Success
   where

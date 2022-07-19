@@ -321,6 +321,7 @@ offerQuote ::
 offerQuote driverId req = withFlowHandlerAPI $ do
   logDebug $ "offered fare: " <> show req.offeredFare
   sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
+  when (sReq.status == DSReq.Inactive) $ throwError $ SearchRequestNotRelevant sReq.id.getId
   let mbOfferedFareAmount = fmap realToFrac req.offeredFare
   organization <- QOrg.findById sReq.providerId >>= fromMaybeM (OrgDoesNotExist sReq.providerId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

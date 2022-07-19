@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Mobility.Fixtures where
+module Mobility.Fixtures (module Reexport) where
 
 import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
 import qualified "beckn-transport" API.UI.Driver as TbeDriverAPI
@@ -215,3 +215,9 @@ getTransporterBaseUrl =
       baseUrlPort = 8014,
       baseUrlPath = "/v2"
     }
+
+{-
+import Mobility.Fixtures.AppBackend as Reexport
+import Mobility.Fixtures.Common as Reexport
+import Mobility.Fixtures.Transporter as Reexport
+-}

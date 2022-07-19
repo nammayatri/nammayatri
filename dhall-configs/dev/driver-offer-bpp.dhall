@@ -74,11 +74,11 @@ in
 , selfUIUrl = "http://localhost:8016/ui/"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
-, migrationPath = Some (env:BECKN_TRANSPORT_MIGRATION_PATH as Text ? "dev/migrations/driver-offer-bpp")
+, migrationPath = Some (env:DRIVER_OFFER_BPP_MIGRATION_PATH as Text ? "dev/migrations/driver-offer-bpp")
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = True}
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False}
 , updateLocationRefreshPeriod = +1
 , updateLocationAllowedDelay = +60
 , googleMapsUrl = common.googleMapsUrl

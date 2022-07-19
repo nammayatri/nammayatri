@@ -118,6 +118,7 @@ buildSearchRequest from to orgId sReq = do
       { id = id_,
         transactionId = fromMaybe "" sReq.transactionId,
         messageId = sReq.messageId,
+        status = Active,
         startTime = sReq.pickupTime,
         validTill = validTill_,
         providerId = orgId,

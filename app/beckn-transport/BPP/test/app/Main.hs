@@ -1,6 +1,5 @@
 module Main where
 
-import DistanceCalculation
 import EulerHS.Prelude
 import Flow.RideAPI.CancelRide (cancelRide)
 import Flow.RideAPI.EndRide (endRideTests)
@@ -25,6 +24,5 @@ specs appEnv = do
       [ fareCalculator,
         rentalFareCalculator,
         rideAPI,
-        distanceCalculation,
         LocUpd.locationUpdatesTree appEnv
       ]

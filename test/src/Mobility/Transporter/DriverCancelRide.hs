@@ -1,7 +1,5 @@
-module Mobility.DriverCancelRide where
+module Mobility.Transporter.DriverCancelRide where
 
-import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
-import qualified "beckn-transport" API.UI.Ride as RideAPI
 import Common (getAppBaseUrl)
 import qualified "app-backend" Domain.Types.Booking as AppRB
 import qualified "beckn-transport" Domain.Types.Booking as TRB
@@ -9,8 +7,11 @@ import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
 import qualified "beckn-transport" Domain.Types.Ride as TRide
 import EulerHS.Prelude
 import HSpec
-import Mobility.Fixtures
-import Mobility.SuccessFlow
+import Mobility.Fixtures.AppBackend
+import Mobility.Fixtures.Transporter
+import Mobility.Transporter.SuccessFlow
+import qualified "beckn-transport" Types.API.Ride as RideAPI
+import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import Utils
 
 spec :: Spec
@@ -34,8 +35,13 @@ spec = do
 
       -- Driver1 Accepts a ride
       void . callBPP $
+-- <<<<<<< HEAD:test/src/Mobility/DriverCancelRide.hs
         rideRespond tBooking.id driverToken1 $
           TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
+-- =======
+--        rideRespond tRideBooking.id driverToken1 $
+--          RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
+-- >>>>>>> slight refactoring of tests structure, readable local testing data for ARDU flow, healthcheck test for ARDU:test/src/Mobility/Transporter/DriverCancelRide.hs
 
       tRide1 <- poll $ do
         tRide <- getBPPRide tBooking.id
@@ -60,8 +66,13 @@ spec = do
 
       -- Driver2 Accepts a ride
       void . callBPP $
+-- <<<<<<< HEAD:test/src/Mobility/DriverCancelRide.hs
         rideRespond tBooking.id driverToken2 $
           TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
+-- =======
+--        rideRespond tRideBooking.id driverToken2 $
+--          RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
+-- >>>>>>> slight refactoring of tests structure, readable local testing data for ARDU flow, healthcheck test for ARDU:test/src/Mobility/Transporter/DriverCancelRide.hs
 
       tRide2 <- poll $ do
         tRide <- getBPPRide tBooking.id

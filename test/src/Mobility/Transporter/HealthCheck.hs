@@ -1,9 +1,9 @@
-module Mobility.HealthCheck where
+module Mobility.Transporter.HealthCheck where
 
 import Common (getAppBaseUrl)
 import Data.Text.Encoding as DT
 import EulerHS.Prelude
-import Mobility.Fixtures
+import Mobility.Fixtures.Transporter
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant hiding (Context)

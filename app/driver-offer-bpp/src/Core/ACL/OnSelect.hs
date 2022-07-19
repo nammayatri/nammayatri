@@ -52,7 +52,7 @@ mkOnSelectMessage req@DOnSelectReq {..} = do
   let provider =
         OS.Provider
           { id = transporterInfo.shortId.getShortId,
-            descriptor = OS.Descriptor {name = ""},
+            descriptor = OS.Descriptor {name = transporterInfo.name},
             locations = [],
             categories = categories_,
             items = items_,

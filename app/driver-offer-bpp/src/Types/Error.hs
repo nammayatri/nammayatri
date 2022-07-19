@@ -152,3 +152,20 @@ instance IsHTTPError OfferError where
     NotAllowedExtraFee {} -> E400
 
 instance IsAPIError OfferError
+
+newtype SearchRequestError1
+  = SearchRequestNotRelevant Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SearchRequestError1
+
+instance IsBaseError SearchRequestError1 where
+  toMessage (SearchRequestNotRelevant _) = Just "Search request no longer relevant"
+
+instance IsHTTPError SearchRequestError1 where
+  toErrorCode = \case
+    SearchRequestNotRelevant _ -> "SEARCH_REQUEST_NOT_RELEVANT"
+  toHttpCode = \case
+    SearchRequestNotRelevant _ -> E400
+
+instance IsAPIError SearchRequestError1

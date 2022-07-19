@@ -11,6 +11,8 @@
             "app-token": "ea37f941-427a-4085-a7d0-96240f166672",
             "coordinator-token": "ea37f941-427a-4085-a7d0-96240f166672",
             "driver-token": "001df941-427a-4085-a7d0-96240f166672",
+            "driver-offer-bpp-auto-token1": "favorit-auto1-0000000000000000-token",
+            "driver-offer-bpp-auto-token2": "favorit-auto2-0000000000000000-token",
             "gw/url": "http://localhost:8015/v1",
             "gw/nsdl/url": "https://pilot-gateway-1.beckn.nsdl.co.in",
             "rg/beckn-one/url": "https://beckn-one.succinct.in/subscribers",

@@ -27,6 +27,8 @@ import Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
+import qualified Storage.Queries.SearchRequest as QSR
+import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
@@ -85,6 +87,8 @@ handler subscriber transporterId req = do
     QRide.create ride
     QBE.logRideConfirmedEvent booking.id
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
+    QSR.markAsInactive driverQuote.searchRequestId
+    QSRD.removeAllBySearchId driverQuote.searchRequestId
 
   uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   Notify.notifyDriver notificationType notificationTitle (message uBooking) driver.id driver.deviceToken

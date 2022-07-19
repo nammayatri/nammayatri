@@ -11,6 +11,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 data SearchRequestForDriver = SearchRequestForDriver
   { id :: Id SearchRequestForDriver,
     searchRequestId :: Id SearchRequest,
+    messageId :: Text,
     startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     driverId :: Id Person,
@@ -25,12 +26,13 @@ data SearchRequestForDriver = SearchRequestForDriver
 
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   { searchRequestId :: Id SearchRequest,
+    messageId :: Text,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     baseFare :: Double
   }
-  deriving (Generic, ToJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
 mkSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> SearchRequestForDriverAPIEntity
 mkSearchRequestForDriverAPIEntity SearchRequestForDriver {..} = SearchRequestForDriverAPIEntity {..}

@@ -5,6 +5,7 @@ import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Flow
 import Beckn.Utils.Common
 import Data.String.Conversions
+import qualified "driver-offer-bpp" Environment as ARDU
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import GHC.IO (unsafePerformIO)
@@ -12,7 +13,7 @@ import HSpec
 import Network.HTTP.Client (Manager)
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
-import Resources (appBackendEnv, transporterAppEnv)
+import Resources (appBackendEnv, driverOfferBppEnv, transporterAppEnv)
 import Servant.Client hiding (client)
 
 defaultTestLoggerConfig :: LoggerConfig
@@ -116,3 +117,6 @@ runAppFlow tag = runFlow tag appBackendEnv
 
 runTransporterFlow :: Text -> FlowR BecknTransport.AppEnv a -> IO a
 runTransporterFlow tag = runFlow tag transporterAppEnv
+
+runARDUFlow :: Text -> FlowR ARDU.AppEnv a -> IO a
+runARDUFlow tag = runFlow tag driverOfferBppEnv
