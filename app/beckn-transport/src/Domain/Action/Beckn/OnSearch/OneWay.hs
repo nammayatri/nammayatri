@@ -2,6 +2,7 @@ module Domain.Action.Beckn.OnSearch.OneWay where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
 import qualified Beckn.Product.MapSearch as MapSearch
+import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount
 import Beckn.Types.Common
@@ -19,7 +20,6 @@ import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
 import Product.FareCalculator
 import qualified Product.FareCalculator.Flow as Fare
-import qualified Product.Location as Loc
 import qualified SharedLogic.DriverPool as DrPool
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Products as QProduct
@@ -55,7 +55,7 @@ onSearchCallback ::
   DLoc.SearchReqLocation ->
   m [QuoteInfo]
 onSearchCallback searchRequest transporterId now fromLocation toLocation = do
-  let fromLoc = Loc.locationToLatLong fromLocation
+  let fromLoc = getCoordinates fromLocation
   pool <- DrPool.calculateDriverPool fromLoc transporterId Nothing SFP.ONE_WAY
 
   logTagInfo "OnSearchCallback" $
@@ -115,8 +115,8 @@ buildOneWayQuote productSearchRequest fareParams transporterId distance distance
 
 mkQuoteInfo :: DLoc.SearchReqLocation -> DLoc.SearchReqLocation -> UTCTime -> HighPrecMeters -> DQuote.Quote -> QuoteInfo
 mkQuoteInfo fromLoc toLoc startTime distanceToNearestDriver DQuote.Quote {..} = do
-  let fromLocation = Loc.locationToLatLong fromLoc
-      toLocation = Loc.locationToLatLong toLoc
+  let fromLocation = getCoordinates fromLoc
+      toLocation = getCoordinates toLoc
   QuoteInfo
     { quoteId = id,
       ..

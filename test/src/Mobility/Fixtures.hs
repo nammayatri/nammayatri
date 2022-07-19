@@ -4,10 +4,11 @@ import qualified "beckn-transport" API.UI.Booking.Handler as TbeBookingAPI
 import qualified "beckn-transport" API.UI.Booking.Types as TbeBookingAPI
 import qualified "beckn-transport" API.UI.Driver.Handler as TbeDriverAPI
 import qualified "beckn-transport" API.UI.Driver.Types as TbeDriverAPI
+import qualified "beckn-transport" API.UI.Location.Handler as TbeLocation
+import qualified "beckn-transport" API.UI.Location.Types as TbeLocation
 import qualified "beckn-transport" API.UI.Ride.Handler as TbeRideAPI
 import qualified "beckn-transport" API.UI.Ride.Types as TbeRideAPI
 import "app-backend" App.Routes as AbeRoutes
-import "beckn-transport" App.Routes as TbeRoutes
 import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.App
@@ -33,7 +34,6 @@ import qualified "app-backend" Product.Init as InitAPI
 import Servant hiding (Context)
 import Servant.Client
 import qualified "app-backend" Types.API.Feedback as AppFeedback
-import "beckn-transport" Types.API.Location
 import qualified "app-backend" Types.API.Registration as Reg
 import qualified "app-backend" Types.API.RideBooking as AppRideBooking
 import qualified "app-backend" Types.API.Serviceability as AppServ
@@ -154,15 +154,15 @@ destinationServiceability regToken = destination
   where
     _ :<|> destination = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
-updateLocation :: RegToken -> NonEmpty Waypoint -> ClientM APISuccess
-(_ :<|> updateLocation) = client (Proxy @LocationAPI)
+updateLocation :: RegToken -> NonEmpty TbeLocation.Waypoint -> ClientM APISuccess
+(_ :<|> updateLocation) = client (Proxy @TbeLocation.API)
 
-buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty Waypoint)
+buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty TbeLocation.Waypoint)
 buildUpdateLocationRequest pts = do
   now <- getCurrentTime
   pure $
     flip fmap pts $ \ll ->
-      Waypoint
+      TbeLocation.Waypoint
         { pt = ll,
           ts = now,
           acc = Nothing

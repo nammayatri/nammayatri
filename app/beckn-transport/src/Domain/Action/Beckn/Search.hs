@@ -1,6 +1,14 @@
-module Domain.Action.Beckn.Search where
+module Domain.Action.Beckn.Search
+  ( DSearchReq (..),
+    DSearchRes (..),
+    LocationReq (..),
+    search,
+  )
+where
 
 import App.Types
+import Beckn.Prelude (ToSchema)
+import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
@@ -10,7 +18,6 @@ import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSR
 import EulerHS.Prelude hiding (id, state)
-import Product.Location
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.SearchReqLocation as QLoc
@@ -23,9 +30,9 @@ data DSearchReq = DSearchReq
   { messageId :: Text,
     bapId :: Text,
     bapUri :: BaseUrl,
-    pickupLocation :: DLoc.SearchReqLocationAPIEntity,
+    pickupLocation :: LocationReq,
     pickupTime :: UTCTime,
-    mbDropLocation :: Maybe DLoc.SearchReqLocationAPIEntity
+    mbDropLocation :: Maybe LocationReq
   }
 
 data DSearchRes = DSearchRes
@@ -36,12 +43,18 @@ data DSearchRes = DSearchRes
     searchMetricsMVar :: Metrics.SearchMetricsMVar
   }
 
+data LocationReq = LocationReq
+  { lat :: Double,
+    lon :: Double
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, HasCoordinates)
+
 search :: Id DOrg.Organization -> DSearchReq -> Flow DSearchRes
 search transporterId req@DSearchReq {..} = do
   transporter <- QOrg.findById transporterId >>= fromMaybeM (OrgDoesNotExist transporterId.getId)
   unless transporter.enabled $ throwError AgencyDisabled
-  let pickupLatLong = locationToLatLong pickupLocation
-  let mbDropoffLatLong = locationToLatLong <$> mbDropLocation
+  let pickupLatLong = getCoordinates pickupLocation
+  let mbDropoffLatLong = getCoordinates <$> mbDropLocation
   unlessM (rideServiceable QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
     throwError RideNotServiceable
   whenJustM
@@ -65,9 +78,9 @@ search transporterId req@DSearchReq {..} = do
 buildSearchReqLoc ::
   MonadGuid m =>
   UTCTime ->
-  DLoc.SearchReqLocationAPIEntity ->
+  LocationReq ->
   m DLoc.SearchReqLocation
-buildSearchReqLoc now DLoc.SearchReqLocationAPIEntity {..} = do
+buildSearchReqLoc now LocationReq {..} = do
   locId <- generateGUID
   return
     DLoc.SearchReqLocation

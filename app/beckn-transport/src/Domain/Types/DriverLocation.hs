@@ -1,5 +1,6 @@
 module Domain.Types.DriverLocation where
 
+import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates)
 import Beckn.Types.Id
 import Data.Time
 import Domain.Types.Person (Person)
@@ -12,4 +13,4 @@ data DriverLocation = DriverLocation
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, HasCoordinates)

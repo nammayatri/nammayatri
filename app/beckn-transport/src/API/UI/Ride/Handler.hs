@@ -3,7 +3,6 @@ module API.UI.Ride.Handler (API, handler) where
 import API.UI.Ride.Types
 import App.Types
 import Beckn.Prelude
-import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
@@ -22,6 +21,7 @@ import qualified Product.FareCalculator as Fare
 import qualified Product.RentalFareCalculator as RentalFare
 import Servant
 import SharedLogic.LocationUpdates
+import qualified SharedLogic.MissingLocationUpdatesMarker as MLUMarker
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
@@ -93,7 +93,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,
-          getKeyRedis = Redis.getKeyRedis,
+          isMarketAsMissingLocationUpdates = MLUMarker.isMarketAsMissingLocationUpdates,
           updateLocationAllowedDelay = asks (.updateLocationAllowedDelay) <&> fromIntegral,
           recalcDistanceEnding = recalcDistanceBatches defaultRideInterpolationHandler True
         }

@@ -78,7 +78,7 @@ handle =
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure (),
       findDriverLocById = \_ -> pure Nothing,
-      getKeyRedis = \_ -> pure (Just ()),
+      isMarketAsMissingLocationUpdates = \_ -> pure True,
       updateLocationAllowedDelay = pure 60,
       recalcDistanceEnding = \_ -> pure ()
     }

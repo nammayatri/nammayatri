@@ -1,6 +1,7 @@
 module Domain.Action.Beckn.OnSearch.Rental where
 
 import Beckn.External.GoogleMaps.Types (HasGoogleMaps)
+import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount
 import Beckn.Types.Common
@@ -14,7 +15,6 @@ import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
-import qualified Product.Location as Loc
 import qualified Storage.Queries.Products as QProduct
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.RentalFarePolicy as QRentalFarePolicy
@@ -51,7 +51,7 @@ onSearchCallback ::
 onSearchCallback searchRequest transporterId fromLocation now = do
   rentalFarePolicies <- QRentalFarePolicy.findRentalFarePoliciesByOrg transporterId
 
-  let fromLoc = Loc.locationToLatLong fromLocation
+  let fromLoc = getCoordinates fromLocation
   (listOfQuotes, quoteInfos) <- fmap unzip $
     forM rentalFarePolicies $ \fp -> do
       quote <- buildRentalQuote searchRequest.id now fp

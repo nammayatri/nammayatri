@@ -3,8 +3,10 @@ module App.Routes where
 import qualified API.Beckn.Handler as Beckn
 import qualified API.UI.Booking.Handler as Booking
 import qualified API.UI.Driver.Handler as Driver
+import qualified API.UI.Location.Handler as Location
 import qualified API.UI.Registration.Handler as Registration
 import qualified API.UI.Ride.Handler as Ride
+import qualified API.UI.Route.Handler as Route
 import qualified API.UI.TranspAdmin.Handler as TranspAdmin
 import qualified API.UI.Transporter.Handler as Transporter
 import qualified API.UI.Vehicle.Handler as Vehicle
@@ -19,13 +21,11 @@ import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
-import qualified Product.Location as Location
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import Servant
 import Servant.OpenApi
 import qualified Types.API.Call as API
 import qualified Types.API.CancellationReason as CancellationReasonAPI
-import Types.API.Location as Location
 import Utils.Auth (TokenAuth)
 
 type TransportAPI =
@@ -45,9 +45,9 @@ type UIAPI =
     :<|> Transporter.API
     :<|> Booking.API
     :<|> FarePolicyAPI
-    :<|> LocationAPI
+    :<|> Location.API
     :<|> CallAPIs
-    :<|> RouteAPI
+    :<|> Route.API
     :<|> Ride.API
     :<|> CancellationReasonAPI
     :<|> GoogleMapsProxyAPI
@@ -65,9 +65,9 @@ uiServer =
     :<|> Transporter.handler
     :<|> Booking.handler
     :<|> farePolicyFlow
-    :<|> locationFlow
+    :<|> Location.handler
     :<|> callFlow
-    :<|> routeApiFlow
+    :<|> Route.handler
     :<|> Ride.handler
     :<|> cancellationReasonFlow
     :<|> googleMapsProxyFlow
@@ -81,21 +81,6 @@ transporterServer :: FlowServer TransportAPI
 transporterServer =
   mainServer
     :<|> writeSwaggerJSONFlow
-
--- Location update and get for tracking is as follows
-type LocationAPI =
-  "driver" :> "location"
-    :> ( Capture "rideId" (Id SRide.Ride) -- TODO: add auth
-           :> Get '[JSON] GetLocationRes
-           :<|> TokenAuth
-           :> ReqBody '[JSON] UpdateLocationReq
-           :> Post '[JSON] UpdateLocationRes
-       )
-
-locationFlow :: FlowServer LocationAPI
-locationFlow =
-  Location.getLocation
-    :<|> Location.updateLocation
 
 -- location flow over
 type OrgBecknAPI = Beckn.API
@@ -125,15 +110,6 @@ callFlow rideId =
   Call.initiateCallToCustomer rideId
     :<|> Call.callStatusCallback rideId
     :<|> Call.getCallStatus rideId
-
-type RouteAPI =
-  "route"
-    :> TokenAuth
-    :> ReqBody '[JSON] Location.Request
-    :> Post '[JSON] GoogleMaps.DirectionsResp
-
-routeApiFlow :: FlowServer RouteAPI
-routeApiFlow = Location.getRoute
 
 type CancellationReasonAPI =
   "cancellationReason"

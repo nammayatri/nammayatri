@@ -1,17 +1,21 @@
-module Product.Location where
+module Domain.Action.UI.Location.UpdateLocation
+  ( Handler (..),
+    UpdateLocationReq,
+    Waypoint (..),
+    UpdateLocationRes,
+    updateLocationHandler,
+  )
+where
 
 import App.Types
-import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
-import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
-import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.GenericPretty (PrettyShow)
 import Beckn.Utils.Logging
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.DriverLocation (DriverLocation)
@@ -19,11 +23,9 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
 import SharedLogic.LocationUpdates
-import qualified Storage.Queries.DriverLocation as DrLoc
-import qualified Storage.Queries.Person as Person
-import qualified Storage.Queries.Ride as QRide
-import Types.API.Location as Location
 import Utils.Common hiding (id)
+
+type MonadHandler m = (MonadThrow m, Log m, MonadGuid m, MonadTime m)
 
 data Handler m = Handler
   { refreshPeriod :: NominalDiffTime,
@@ -37,33 +39,23 @@ data Handler m = Handler
     interpolationHandler :: RideInterpolationHandler m
   }
 
-updateLocation :: Id Person.Person -> UpdateLocationReq -> FlowHandler APISuccess
-updateLocation personId waypoints = withFlowHandlerAPI $ do
-  handler <- constructHandler
-  updateLocationHandler handler personId waypoints
-  where
-    constructHandler = do
-      refreshPeriod <- fromIntegral <$> asks (.updateLocationRefreshPeriod)
-      allowedDelay <- fromIntegral <$> asks (.updateLocationAllowedDelay)
-      pure $
-        Handler
-          { refreshPeriod,
-            allowedDelay,
-            findPersonById = Person.findById,
-            findDriverLocationById = DrLoc.findById,
-            upsertDriverLocation = \driverId point timestamp ->
-              Esq.runTransaction $ DrLoc.upsertGpsCoord driverId point timestamp,
-            getInProgressByDriverId = QRide.getInProgressByDriverId,
-            missingUpdatesForThisRide = \rideId -> isJust <$> Redis.getKeyRedis @() (missingLocationUpdatesKey rideId),
-            ignoreUpdatesForThisRide = \rideId -> Redis.setExRedis (missingLocationUpdatesKey rideId) () (60 * 60 * 24),
-            interpolationHandler = defaultRideInterpolationHandler
-          }
+type UpdateLocationReq = NonEmpty Waypoint
 
-updateLocationHandler :: Handler Flow -> Id Person.Person -> UpdateLocationReq -> Flow APISuccess
+-- Short field names for lesser json array size:
+data Waypoint = Waypoint
+  { pt :: LatLong, -- point
+    ts :: UTCTime, -- timestamp
+    acc :: Maybe Double -- accuracy, optional for now
+  }
+  deriving (Generic, ToJSON, Show, FromJSON, ToSchema, PrettyShow)
+
+type UpdateLocationRes = APISuccess
+
+updateLocationHandler :: MonadHandler m => Handler m -> Id Person.Person -> UpdateLocationReq -> m UpdateLocationRes
 updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocationUpdate" $ do
   logInfo $ "got location updates: " <> getId driverId <> " " <> encodeToText waypoints
   driver <-
-    Person.findById driverId
+    findPersonById driverId
       >>= fromMaybeM (PersonNotFound driverId.getId)
   unless (driver.role == Person.DRIVER) $ throwError AccessDenied
   mbOldLoc <- findDriverLocationById driver.id
@@ -90,7 +82,7 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
   where
     mkLastWaypoint loc =
       Waypoint
-        { pt = locationToLatLong loc,
+        { pt = GoogleMaps.getCoordinates loc,
           ts = loc.updatedAt,
           acc = Nothing
         }
@@ -111,40 +103,8 @@ updateLocationHandler Handler {..} driverId waypoints = withLogTag "driverLocati
                 else action
           )
 
-missingLocationUpdatesKey :: Id SRide.Ride -> Text
-missingLocationUpdatesKey (Id rideId) = "BPP:missingLocationUpdates:" <> rideId
-
 checkWaypointsForMissingUpdates :: NominalDiffTime -> NE.NonEmpty Waypoint -> Bool
 checkWaypointsForMissingUpdates allowedDelay wps =
   or $ zipWith (\a b -> b.ts `diffUTCTime` a.ts > allowedDelay) wpsList (tail wpsList)
   where
     wpsList = toList wps
-
-getLocation :: Id SRide.Ride -> FlowHandler GetLocationRes
-getLocation rideId = withFlowHandlerAPI $ do
-  ride <-
-    QRide.findById rideId
-      >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  status <-
-    case ride.status of
-      SRide.NEW -> pure PreRide
-      SRide.INPROGRESS -> pure ActualRide
-      _ -> throwError $ RideInvalidStatus "Cannot track this ride"
-  driver <-
-    ride.driverId
-      & Person.findById
-      >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  currLocation <-
-    DrLoc.findById driver.id
-      >>= fromMaybeM LocationNotFound
-  let lastUpdate = currLocation.updatedAt
-  let totalDistance = ride.traveledDistance
-      currPoint = locationToLatLong currLocation
-  return $ GetLocationRes {..}
-
-locationToLatLong :: (HasField "lat" a Double, HasField "lon" a Double) => a -> MapSearch.LatLong
-locationToLatLong loc =
-  MapSearch.LatLong loc.lat loc.lon
-
-getRoute :: Id Person.Person -> Location.Request -> FlowHandler GoogleMaps.DirectionsResp
-getRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleMaps.getRoutes

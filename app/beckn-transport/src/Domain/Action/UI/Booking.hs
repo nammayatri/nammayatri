@@ -16,6 +16,7 @@ where
 
 import Beckn.External.GoogleMaps.Types
 import qualified Beckn.Product.MapSearch as MapSearch
+import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
 import Beckn.Types.Amount
@@ -33,7 +34,6 @@ import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP (buildRideReq)
-import qualified Product.Location as Location
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.DriverLocation as QDrLoc
@@ -116,11 +116,11 @@ getRideInfo bookingId personId = do
       driverLocation <-
         QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
-      let driverLatLong = Location.locationToLatLong driverLocation
+      let driverLatLong = getCoordinates driverLocation
       fromLocation <-
         QBLoc.findById booking.fromLocationId
           >>= fromMaybeM LocationNotFound
-      let fromLatLong = Location.locationToLatLong fromLocation
+      let fromLatLong = getCoordinates fromLocation
       toLocation <- case booking.rideBookingDetails of
         SRB.OneWayDetails details -> QBLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound . Just
         SRB.RentalDetails _ -> pure Nothing

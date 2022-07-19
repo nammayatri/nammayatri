@@ -15,7 +15,6 @@ import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (pi)
 import qualified Product.FareCalculator as Fare
-import Product.Location
 import qualified Product.RentalFareCalculator as RentalFare
 import Types.App (Driver)
 import Types.Error
@@ -44,7 +43,7 @@ data ServiceHandle m = ServiceHandle
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Amount -> HighPrecMeters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
-    getKeyRedis :: Text -> m (Maybe ()),
+    isMarketAsMissingLocationUpdates :: Id Ride.Ride -> m Bool,
     updateLocationAllowedDelay :: m NominalDiffTime,
     recalcDistanceEnding :: Id Person.Person -> m ()
   }
@@ -98,9 +97,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       pure res
 
     thereWereMissingLocUpdates = do
-      res <-
-        getKeyRedis (missingLocationUpdatesKey rideId)
-          <&> isJust
+      res <- isMarketAsMissingLocationUpdates rideId
       logDebug $ "there were missing location updates: " <> show res
       pure res
 
