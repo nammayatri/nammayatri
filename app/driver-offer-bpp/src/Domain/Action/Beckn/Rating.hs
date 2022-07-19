@@ -37,14 +37,13 @@ handler req = do
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- mkRating ride.id driverId ratingValue
+      newRating <- buildRating ride.id driverId ratingValue
       Esq.runTransaction $ Rating.create newRating
     Just rating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       Esq.runTransaction $ do
         Rating.updateRatingValue rating.id driverId ratingValue
-  -- QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature) -- move to API layer
   calculateAverageRating driverId
 
 calculateAverageRating ::
@@ -64,8 +63,8 @@ calculateAverageRating personId = do
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     Esq.runTransaction $ QP.updateAverageRating personId newAverage
 
-mkRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> m Rating.Rating
-mkRating rideId driverId ratingValue = do
+buildRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> m Rating.Rating
+buildRating rideId driverId ratingValue = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

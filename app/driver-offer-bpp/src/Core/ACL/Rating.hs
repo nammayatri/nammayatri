@@ -17,7 +17,7 @@ buildRatingReq ::
   m DRating.DRatingReq
 buildRatingReq subscriber req = do
   let context = req.context
-  validateContext Context.SELECT context
+  validateContext Context.RATING context
   unless (subscriber.subscriber_id == context.bap_id) $
     throwError (InvalidRequest "Invalid bap_id")
   unless (subscriber.subscriber_url == context.bap_uri) $
