@@ -10,12 +10,14 @@ import App.Types
 import Servant
 
 type API =
-  Search.API
-    :<|> Init.API
-    :<|> Confirm.API
-    :<|> Cancel.API
-    :<|> Rating.API
-    :<|> Track.API
+  "v1"
+    :> ( Search.API
+           :<|> Init.API
+           :<|> Confirm.API
+           :<|> Cancel.API
+           :<|> Rating.API
+           :<|> Track.API
+       )
 
 handler :: FlowServer API
 handler =
