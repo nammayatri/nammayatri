@@ -5,16 +5,16 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FarePolicy where
+module Storage.Tabular.FarePolicy.OneWayFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Utils.Error (throwError)
-import qualified Domain.Types.FarePolicy as Domain
+import qualified Domain.Types.FarePolicy.OneWayFarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.FarePolicy.Discount (DiscountT)
-import Storage.Tabular.FarePolicy.PerExtraKmRate (PerExtraKmRateT, getDomainPart)
+import Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateT, getDomainPart)
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Vehicle ()
 import Types.Error
@@ -22,7 +22,7 @@ import Types.Error
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    FarePolicyT sql=fare_policy
+    OneWayFarePolicyT sql=fare_policy
       id Text
       vehicleVariant Vehicle.Variant
       organizationId OrganizationTId
@@ -37,15 +37,15 @@ mkPersist
       deriving Generic
     |]
 
-instance TEntityKey FarePolicyT where
-  type DomainKey FarePolicyT = Id Domain.FarePolicy
-  fromKey (FarePolicyTKey _id) = Id _id
-  toKey (Id id) = FarePolicyTKey id
+instance TEntityKey OneWayFarePolicyT where
+  type DomainKey OneWayFarePolicyT = Id Domain.FarePolicy
+  fromKey (OneWayFarePolicyTKey _id) = Id _id
+  toKey (Id id) = OneWayFarePolicyTKey id
 
-type FullFarePolicyT = (FarePolicyT, [PerExtraKmRateT], [DiscountT])
+type FullOneWayFarePolicyT = (OneWayFarePolicyT, [PerExtraKmRateT], [DiscountT])
 
-instance TType FullFarePolicyT Domain.FarePolicy where
-  fromTType (FarePolicyT {..}, perExtraKmRateList_, discountList_) = do
+instance TType FullOneWayFarePolicyT Domain.FarePolicy where
+  fromTType (OneWayFarePolicyT {..}, perExtraKmRateList_, discountList_) = do
     perExtraKmRateList <- case perExtraKmRateList_ of
       (a : xs) -> do
         b <- fromTType `traverse` (a :| xs)
@@ -64,7 +64,7 @@ instance TType FullFarePolicyT Domain.FarePolicy where
     let fullPerExtraKmRateList = (organizationId,vehicleVariant,) <$> toList perExtraKmRateList
         perExtraKmRateTTypeList = toTType <$> fullPerExtraKmRateList
         discountTTypeList = toTType <$> discountList
-    ( FarePolicyT
+    ( OneWayFarePolicyT
         { id = getId id,
           organizationId = toKey organizationId,
           baseFare = fromRational <$> baseFare,

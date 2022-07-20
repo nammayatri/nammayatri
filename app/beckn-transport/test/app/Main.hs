@@ -2,7 +2,6 @@ module Main where
 
 import DistanceCalculation
 import EulerHS.Prelude
-import FareCalculator
 import Flow.Allocation.AllocationTimeFinished
 import Flow.Allocation.Cancellation
 import Flow.Allocation.NotificationStatus
@@ -13,6 +12,7 @@ import Flow.RideAPI.CancelRide (cancelRide)
 import Flow.RideAPI.EndRide (endRideTests)
 import Flow.RideAPI.StartRide (startRide)
 import qualified LocationUpdates as LocUpd
+import OneWayFareCalculator
 import RentalFareCalculator
 import Test.Tasty
 

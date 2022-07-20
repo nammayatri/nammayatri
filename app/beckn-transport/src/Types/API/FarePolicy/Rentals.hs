@@ -6,7 +6,7 @@ import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation (Validate, validateField)
-import Domain.Types.RentalFarePolicy (RentalFarePolicyAPIEntity)
+import Domain.Types.FarePolicy.RentalFarePolicy (RentalFarePolicyAPIEntity)
 import qualified Domain.Types.Vehicle as Vehicle
 
 newtype ListRentalFarePoliciesRes = ListRentalFarePoliciesRes

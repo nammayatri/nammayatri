@@ -1,17 +1,17 @@
-module FareCalculator where
+module OneWayFareCalculator where
 
 import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time hiding (parseTime)
-import Domain.Types.FarePolicy
 import Domain.Types.FarePolicy.Discount
-import Domain.Types.FarePolicy.PerExtraKmRate
-import Domain.Types.FareProduct
+import Domain.Types.FarePolicy.FareProduct
+import Domain.Types.FarePolicy.OneWayFarePolicy
+import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude
-import Product.FareCalculator
+import SharedLogic.FareCalculator.OneWayFareCalculator
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -397,7 +397,7 @@ fareBreakupSum = testCase "Sum of fare breakup should be equal to total fare" $ 
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  fareBreakups <- buildFareBreakups fareParams "rideBookingId"
+  fareBreakups <- buildOneWayFareBreakups fareParams "rideBookingId"
   sum (fareBreakups <&> (.amount)) `shouldBe` totalFare
   where
     startTime = mockTime 19

@@ -14,7 +14,7 @@ import Beckn.Types.Id
 import qualified Domain.Types.Booking.Type as Domain
 import qualified Domain.Types.Vehicle as Veh
 import Storage.Tabular.BookingLocation (BookingLocationTId)
-import Storage.Tabular.FareProduct ()
+import Storage.Tabular.FarePolicy.FareProduct ()
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.RiderDetails (RiderDetailsTId)
 import Storage.Tabular.Vehicle ()

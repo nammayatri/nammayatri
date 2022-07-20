@@ -6,7 +6,7 @@ import Beckn.Types.MapSearch (LatLong (..))
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSearch.OneWay as DOneWaySearch
 import qualified Domain.Action.Beckn.OnSearch.Rental as DRentalSearch
-import qualified Domain.Types.FareProduct as DFP
+import qualified Domain.Types.FarePolicy.FareProduct as DFP
 import qualified Domain.Types.Vehicle as Veh
 
 mkOnSearchMessage ::

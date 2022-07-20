@@ -1,15 +1,15 @@
-module Product.FarePolicy.Rentals where
+module Product.FarePolicy.RentalFarePolicy where
 
 import App.Types
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
 import Beckn.Utils.Validation (runRequestValidation)
+import Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import Domain.Types.Organization
 import qualified Domain.Types.Person as SP
-import Domain.Types.RentalFarePolicy as Domain
 import EulerHS.Prelude
-import qualified Storage.Queries.RentalFarePolicy as SRentalFarePolicy
+import qualified Storage.Queries.FarePolicy.RentalFarePolicy as SRentalFarePolicy
 import Types.API.FarePolicy.Rentals
 import Types.Error
 import Utils.Common

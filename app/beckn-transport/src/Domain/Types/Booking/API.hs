@@ -10,16 +10,16 @@ import Data.OpenApi
 import Domain.Types.Booking.Type
 import Domain.Types.BookingLocation
 import qualified Domain.Types.BookingLocation as DLoc
-import Domain.Types.FareBreakup
-import qualified Domain.Types.FareBreakup as DFareBreakup
+import Domain.Types.FarePolicy.FareBreakup
+import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.BookingLocation as QBLoc
-import qualified Storage.Queries.FareBreakup as QFareBreakup
-import qualified Storage.Queries.RentalFarePolicy as QRentalFP
+import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
+import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.Ride as QRide
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S

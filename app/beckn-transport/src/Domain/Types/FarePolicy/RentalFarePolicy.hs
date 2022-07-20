@@ -1,4 +1,4 @@
-module Domain.Types.RentalFarePolicy where
+module Domain.Types.FarePolicy.RentalFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Types.Amount

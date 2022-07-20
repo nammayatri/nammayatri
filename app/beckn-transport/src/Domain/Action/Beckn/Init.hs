@@ -15,11 +15,11 @@ import qualified Domain.Types.BookingLocation as DLoc
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.RideBooking as DRB
 import qualified Domain.Types.Vehicle as Veh
-import Product.FareCalculator
+import SharedLogic.FareCalculator.OneWayFareCalculator
 import qualified Storage.Queries.BookingLocation as QBLoc
+import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Organization as QOrg
-import qualified Storage.Queries.RentalFarePolicy as QRFP
 import qualified Storage.Queries.RideBooking as QRB
 import Types.Error
 import Utils.Common

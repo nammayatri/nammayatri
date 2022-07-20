@@ -11,10 +11,10 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Domain.Types.FareProduct as Domain
+import qualified Domain.Types.FarePolicy.FareProduct as Domain
 import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.Vehicle as Vehicle
-import Storage.Tabular.FareProduct ()
+import Storage.Tabular.FarePolicy.FareProduct ()
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Products (ProductsTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)

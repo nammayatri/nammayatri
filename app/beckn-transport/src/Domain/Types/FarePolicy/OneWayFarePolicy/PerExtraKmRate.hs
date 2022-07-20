@@ -1,4 +1,4 @@
-module Domain.Types.FarePolicy.PerExtraKmRate where
+module Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate where
 
 import Beckn.Types.Predicate
 import Beckn.Utils.Validation

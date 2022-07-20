@@ -11,16 +11,16 @@ import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.Text as T
 import Data.Traversable
 import qualified Domain.Types.BusinessEvent as SB
-import qualified Domain.Types.FareProduct as SFP
+import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
-import Product.FareCalculator
-import qualified Product.FareCalculator.Flow as Fare
 import qualified SharedLogic.DriverPool as DrPool
+import SharedLogic.FareCalculator.OneWayFareCalculator
+import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Products as QProduct
 import qualified Storage.Queries.Quote as QQuote
@@ -88,7 +88,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
 buildOneWayQuote ::
   EsqDBFlow m r =>
   DSearchRequest.SearchRequest ->
-  Fare.FareParameters ->
+  Fare.OneWayFareParameters ->
   Id DOrg.Organization ->
   HighPrecMeters ->
   HighPrecMeters ->

@@ -4,10 +4,10 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time
-import qualified Domain.Types.FareProduct as DFareProduct
+import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Organization as DOrg
 import Domain.Types.Products (Products)
-import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)

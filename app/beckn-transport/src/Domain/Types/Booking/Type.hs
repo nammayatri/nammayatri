@@ -10,9 +10,9 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.BookingLocation as DLoc
-import qualified Domain.Types.FareProduct as SFP
+import qualified Domain.Types.FarePolicy.FareProduct as SFP
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)

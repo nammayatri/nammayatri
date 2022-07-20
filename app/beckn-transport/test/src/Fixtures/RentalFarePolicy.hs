@@ -1,7 +1,7 @@
 module Fixtures.RentalFarePolicy where
 
 import Beckn.Prelude
-import qualified Domain.Types.RentalFarePolicy as DRentalFP
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Vehicle as Veh
 
 defaultFarePolicy :: DRentalFP.RentalFarePolicy

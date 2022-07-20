@@ -8,8 +8,8 @@ import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude
 import qualified Fixtures
-import Product.FareCalculator.Flow
-import Product.RentalFareCalculator.Flow
+import SharedLogic.FareCalculator.OneWayFareCalculator.Flow
+import SharedLogic.FareCalculator.RentalFareCalculator.Flow
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -57,7 +57,7 @@ handle =
       endRideTransaction = \_ _ _ _ -> pure (),
       calculateFare = \_ _ _ _ ->
         return $
-          FareParameters
+          OneWayFareParameters
             { baseFare = 100,
               distanceFare = 0,
               nightShiftRate = 0,
@@ -73,7 +73,7 @@ handle =
               discount = Nothing,
               farePolicy = Fixtures.defaultFarePolicy
             },
-      buildFareBreakups = \_ _ -> pure [],
+      buildOneWayFareBreakups = \_ _ -> pure [],
       buildRentalFareBreakups = \_ _ -> pure [],
       recalculateFareEnabled = pure False,
       putDiffMetric = \_ _ -> pure (),

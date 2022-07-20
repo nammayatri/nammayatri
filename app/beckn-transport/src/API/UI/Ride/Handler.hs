@@ -17,9 +17,9 @@ import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Product.BecknProvider.BP
-import qualified Product.FareCalculator as Fare
-import qualified Product.RentalFareCalculator as RentalFare
 import Servant
+import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
+import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
 import SharedLogic.LocationUpdates
 import qualified SharedLogic.MissingLocationUpdatesMarker as MLUMarker
 import qualified Storage.Queries.DriverLocation as DrLoc
@@ -89,7 +89,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
           calculateFare = Fare.calculateFare,
           calculateRentalFare = RentalFare.calculateRentalFare,
           buildRentalFareBreakups = RentalFare.buildRentalFareBreakups,
-          buildFareBreakups = Fare.buildFareBreakups,
+          buildOneWayFareBreakups = Fare.buildOneWayFareBreakups,
           recalculateFareEnabled = asks (.recalculateFareEnabled),
           putDiffMetric = putFareAndDistanceDeviations,
           findDriverLocById = DrLoc.findById,

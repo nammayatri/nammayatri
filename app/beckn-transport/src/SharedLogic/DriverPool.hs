@@ -14,7 +14,7 @@ import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.BookingLocation as DBLoc
-import qualified Domain.Types.FareProduct as SFP
+import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.TransporterConfig as STConf

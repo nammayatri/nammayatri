@@ -1,30 +1,30 @@
-module Product.FareCalculator.Flow
-  ( FareParameters (..),
+module SharedLogic.FareCalculator.OneWayFareCalculator.Flow
+  ( OneWayFareParameters (..),
     ServiceHandle (..),
     calculateFare,
     doCalculateFare,
     fareSum,
     fareSumWithDiscount,
-    buildFareBreakups,
+    buildOneWayFareBreakups,
   )
 where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.Types.FareBreakup
-import Domain.Types.FarePolicy (FarePolicy)
+import Domain.Types.FarePolicy.FareBreakup
+import Domain.Types.FarePolicy.OneWayFarePolicy (FarePolicy)
 import Domain.Types.Organization (Organization)
 import Domain.Types.RideBooking (RideBooking)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
-import Product.FareCalculator.Calculator
-  ( FareParameters (..),
+import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
+  ( OneWayFareParameters (..),
     TripStartTime,
     calculateFareParameters,
     fareSum,
     fareSumWithDiscount,
   )
-import qualified Storage.Queries.FarePolicy as FarePolicyS
+import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as FarePolicyS
 import Types.Error
 import Utils.Common
 
@@ -38,7 +38,7 @@ serviceHandle :: EsqDBFlow m r => ServiceHandle m
 serviceHandle =
   ServiceHandle
     { getFarePolicy = \orgId vehicleVariant -> do
-        FarePolicyS.findFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
+        FarePolicyS.findOneWayFarePolicyByOrgAndVehicleVariant orgId vehicleVariant
     }
 
 calculateFare ::
@@ -47,7 +47,7 @@ calculateFare ::
   Vehicle.Variant ->
   HighPrecMeters ->
   UTCTime ->
-  m FareParameters
+  m OneWayFareParameters
 calculateFare = doCalculateFare serviceHandle
 
 doCalculateFare ::
@@ -57,7 +57,7 @@ doCalculateFare ::
   Vehicle.Variant ->
   HighPrecMeters ->
   TripStartTime ->
-  m FareParameters
+  m OneWayFareParameters
 doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ " for " +|| vehicleVariant ||+ ""
   farePolicy <- getFarePolicy orgId vehicleVariant >>= fromMaybeM NoFarePolicy
@@ -67,22 +67,22 @@ doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
     $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
 
-buildFareBreakups :: MonadGuid m => FareParameters -> Id RideBooking -> m [FareBreakup]
-buildFareBreakups fareParams rideBookingId = do
+buildOneWayFareBreakups :: MonadGuid m => OneWayFareParameters -> Id RideBooking -> m [FareBreakup]
+buildOneWayFareBreakups fareParams rideBookingId = do
   baseFareBreakup <- buildBaseFareBreakup fareParams rideBookingId
   distanceFareBreakup <- buildDistanceFareBreakup fareParams rideBookingId
   discountFareBreakup <- buildDiscountFareBreakup fareParams.discount rideBookingId
   pure $ [baseFareBreakup, distanceFareBreakup] <> maybeToList discountFareBreakup
 
-buildBaseFareBreakup :: MonadGuid m => FareParameters -> Id RideBooking -> m FareBreakup
-buildBaseFareBreakup FareParameters {..} rideBookingId = do
+buildBaseFareBreakup :: MonadGuid m => OneWayFareParameters -> Id RideBooking -> m FareBreakup
+buildBaseFareBreakup OneWayFareParameters {..} rideBookingId = do
   id <- Id <$> generateGUIDText
   let amount = nightShiftRate * baseFare
       description = "Base fare is " <> show amount <> "rupees"
   pure FareBreakup {..}
 
-buildDistanceFareBreakup :: MonadGuid m => FareParameters -> Id RideBooking -> m FareBreakup
-buildDistanceFareBreakup FareParameters {..} rideBookingId = do
+buildDistanceFareBreakup :: MonadGuid m => OneWayFareParameters -> Id RideBooking -> m FareBreakup
+buildDistanceFareBreakup OneWayFareParameters {..} rideBookingId = do
   id <- Id <$> generateGUIDText
   let amount = nightShiftRate * distanceFare
       description = "Distance fare is " <> show amount <> " rupees"

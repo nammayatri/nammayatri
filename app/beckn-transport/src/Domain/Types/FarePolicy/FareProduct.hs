@@ -1,4 +1,4 @@
-module Domain.Types.FareProduct where
+module Domain.Types.FarePolicy.FareProduct where
 
 import Beckn.Prelude
 import Beckn.Types.Id (Id)

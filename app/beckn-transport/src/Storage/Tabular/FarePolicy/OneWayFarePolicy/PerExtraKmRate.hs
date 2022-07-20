@@ -5,12 +5,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FarePolicy.PerExtraKmRate where
+module Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.FarePolicy.PerExtraKmRate as Domain
+import qualified Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate as Domain
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.Organization (OrganizationTId)
@@ -19,7 +19,7 @@ import Storage.Tabular.Vehicle ()
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    PerExtraKmRateT sql=fare_policy_per_extra_km_rate
+    PerExtraKmRateT sql=one_way_fare_policy_per_extra_km_rate
       Id Int
       vehicleVariant Vehicle.Variant
       organizationId OrganizationTId

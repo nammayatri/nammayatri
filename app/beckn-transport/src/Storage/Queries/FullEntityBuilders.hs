@@ -4,23 +4,23 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.Booking.Type as Booking
-import Domain.Types.FarePolicy
-import qualified Domain.Types.FareProduct as Domain
+import qualified Domain.Types.FarePolicy.FareProduct as Domain
+import Domain.Types.FarePolicy.OneWayFarePolicy
 import Domain.Types.Quote as Quote
 import qualified Storage.Queries.FarePolicy.Discount as QDisc
-import qualified Storage.Queries.FarePolicy.PerExtraKmRate as QExtraKmRate
+import qualified Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate as QExtraKmRate
 import qualified Storage.Queries.Quote.OneWayQuote as QOneWayQuote
 import qualified Storage.Queries.Quote.RentalQuote as QRentalQuote
 import qualified Storage.Queries.RideBooking.RentalRideBooking as QRentalRideBooking
-import Storage.Tabular.FarePolicy
+import Storage.Tabular.FarePolicy.OneWayFarePolicy
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.RentalQuote (RentalQuoteT (..))
 import Storage.Tabular.RideBooking as Booking
 
-buildFullFarePolicy :: Transactionable m => FarePolicyT -> DTypeBuilder m (SolidType FullFarePolicyT)
-buildFullFarePolicy farePolicy = do
-  let orgId = fromKey $ Storage.Tabular.FarePolicy.organizationId farePolicy
-      vehicleVariant = Storage.Tabular.FarePolicy.vehicleVariant farePolicy
+buildFullOneWayFarePolicy :: Transactionable m => OneWayFarePolicyT -> DTypeBuilder m (SolidType FullOneWayFarePolicyT)
+buildFullOneWayFarePolicy farePolicy = do
+  let orgId = fromKey $ Storage.Tabular.FarePolicy.OneWayFarePolicy.organizationId farePolicy
+      vehicleVariant = Storage.Tabular.FarePolicy.OneWayFarePolicy.vehicleVariant farePolicy
   perExtraKmRate <- QExtraKmRate.findAll' orgId vehicleVariant
   discount <- QDisc.findAll' orgId vehicleVariant
 

@@ -6,7 +6,7 @@ import Beckn.Types.Id
 import qualified Data.List as List
 import qualified Domain.Action.Beckn.OnSearch.OneWay as OneWay
 import qualified Domain.Action.Beckn.OnSearch.Rental as Rental
-import qualified Domain.Types.FareProduct as DFareProduct
+import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchReqLocation as DLoc

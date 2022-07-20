@@ -5,7 +5,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
-import qualified "beckn-transport" Domain.Types.FareProduct as SFP
+import qualified "beckn-transport" Domain.Types.FarePolicy.FareProduct as SFP
 import Domain.Types.Vehicle
 import EulerHS.Prelude
 import qualified "beckn-transport" Storage.Queries.DriverInformation as Q

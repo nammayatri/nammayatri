@@ -5,8 +5,8 @@ import App.Routes.FarePolicy.FareProduct
 import App.Routes.FarePolicy.Rentals
 import App.Types
 import Beckn.Types.Id (Id)
-import Domain.Types.FarePolicy (FarePolicy)
-import Product.FarePolicy
+import Domain.Types.FarePolicy.OneWayFarePolicy (FarePolicy)
+import Product.FarePolicy.OneWayFarePolicy
 import Servant
 import Types.API.FarePolicy
 import Utils.Auth
@@ -31,6 +31,6 @@ farePolicyFlow =
   fareProductFlow
     :<|> ( discountFlow
              :<|> fpRentalsFlow
-             :<|> listFarePolicies
-             :<|> updateFarePolicy
+             :<|> listOneWayFarePolicies
+             :<|> updateOneWayFarePolicy
          )

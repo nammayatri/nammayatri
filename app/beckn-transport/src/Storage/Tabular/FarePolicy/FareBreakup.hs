@@ -5,13 +5,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FareBreakup where
+module Storage.Tabular.FarePolicy.FareBreakup where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Domain.Types.FareBreakup as Domain
+import qualified Domain.Types.FarePolicy.FareBreakup as Domain
 import qualified Storage.Tabular.RideBooking as SRideBooking
 
 mkPersist

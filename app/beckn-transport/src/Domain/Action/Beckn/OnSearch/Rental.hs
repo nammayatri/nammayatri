@@ -8,16 +8,16 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Data.Traversable
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
+import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFarePolicy
 import qualified Storage.Queries.Products as QProduct
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.RentalFarePolicy as QRentalFarePolicy
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
 import Types.Error
 import Utils.Common

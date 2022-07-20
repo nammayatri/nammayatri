@@ -3,7 +3,7 @@
 module Types.API.FarePolicy.FareProduct where
 
 import Beckn.Prelude
-import Domain.Types.FareProduct
+import Domain.Types.FarePolicy.FareProduct
 
 newtype ListFareProductsRes = ListFareProductsRes
   { list :: [FareProductAPIEntity]

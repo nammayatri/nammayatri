@@ -1,6 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 
-module Product.FareCalculator.Calculator where
+module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator where
 
 import Beckn.Types.Amount (Amount (..))
 import Beckn.Types.Common
@@ -13,14 +13,14 @@ import Data.Time
     minutesToTimeZone,
     utcToLocalTime,
   )
-import Domain.Types.FarePolicy (FarePolicy)
-import Domain.Types.FarePolicy.PerExtraKmRate (PerExtraKmRate (..))
+import Domain.Types.FarePolicy.OneWayFarePolicy (FarePolicy)
+import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRate (..))
 import EulerHS.Prelude
 import Utils.Common
 
 type TripStartTime = UTCTime
 
-data FareParameters = FareParameters
+data OneWayFareParameters = OneWayFareParameters
   { baseFare :: Amount,
     distanceFare :: Amount,
     nightShiftRate :: Amount,
@@ -28,12 +28,12 @@ data FareParameters = FareParameters
   }
   deriving stock (Show, Eq)
 
-fareSum :: FareParameters -> Amount
-fareSum FareParameters {..} =
+fareSum :: OneWayFareParameters -> Amount
+fareSum OneWayFareParameters {..} =
   nightShiftRate * (baseFare + distanceFare)
 
-fareSumWithDiscount :: FareParameters -> Amount
-fareSumWithDiscount fp@FareParameters {..} = do
+fareSumWithDiscount :: OneWayFareParameters -> Amount
+fareSumWithDiscount fp@OneWayFareParameters {..} = do
   let fareSumm = fareSum fp
   max 0 $ maybe fareSumm (fareSumm -) discount
 
@@ -41,13 +41,13 @@ calculateFareParameters ::
   FarePolicy ->
   HighPrecMeters ->
   TripStartTime ->
-  FareParameters
+  OneWayFareParameters
 calculateFareParameters farePolicy distance startTime = do
   let baseFare = calculateBaseFare farePolicy
   let distanceFare = calculateDistanceFare farePolicy distance
   let nightShiftRate = calculateNightShiftRate farePolicy startTime
   let discount = calculateDiscount farePolicy startTime
-  FareParameters baseFare distanceFare nightShiftRate discount
+  OneWayFareParameters baseFare distanceFare nightShiftRate discount
 
 calculateBaseFare ::
   FarePolicy ->

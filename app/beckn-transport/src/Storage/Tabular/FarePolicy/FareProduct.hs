@@ -5,12 +5,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.FareProduct where
+module Storage.Tabular.FarePolicy.FareProduct where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.FareProduct as Domain
+import qualified Domain.Types.FarePolicy.FareProduct as Domain
 import qualified Storage.Tabular.Organization as TOrg
 
 derivePersistField "Domain.FareProductType"

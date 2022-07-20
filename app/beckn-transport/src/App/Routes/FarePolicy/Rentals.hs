@@ -2,7 +2,7 @@ module App.Routes.FarePolicy.Rentals where
 
 import App.Types
 import Beckn.Types.APISuccess (APISuccess)
-import Product.FarePolicy.Rentals
+import Product.FarePolicy.RentalFarePolicy
 import Servant
 import Types.API.FarePolicy.Rentals
 import Utils.Auth

@@ -29,8 +29,8 @@ import qualified SharedLogic.DriverPool as DrPool
 import qualified Storage.Queries.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
+import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.Organization as Organization
-import qualified Storage.Queries.RentalFarePolicy as QRFP
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD

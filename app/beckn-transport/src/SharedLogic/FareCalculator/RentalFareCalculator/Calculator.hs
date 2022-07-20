@@ -1,6 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 
-module Product.RentalFareCalculator.Calculator where
+module SharedLogic.FareCalculator.RentalFareCalculator.Calculator where
 
 import Beckn.Types.Amount (Amount (..))
 import Beckn.Types.Common
@@ -11,8 +11,8 @@ import Data.Time
     minutesToTimeZone,
     utcToLocalTime,
   )
-import Domain.Types.RentalFarePolicy (RentalFarePolicy)
-import qualified Domain.Types.RentalFarePolicy as DRentalFP
+import Domain.Types.FarePolicy.RentalFarePolicy (RentalFarePolicy)
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import EulerHS.Prelude
 import Utils.Common
 

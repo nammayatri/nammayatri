@@ -11,7 +11,7 @@ where
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Core.ACL.OnUpdate as ACL
-import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideBooking as SRB

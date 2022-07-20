@@ -5,14 +5,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.RentalFarePolicy where
+module Storage.Tabular.FarePolicy.RentalFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Common (Hours (..), Kilometers (..))
 import Beckn.Types.Id
-import qualified Domain.Types.RentalFarePolicy as Domain
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import qualified Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Vehicle ()

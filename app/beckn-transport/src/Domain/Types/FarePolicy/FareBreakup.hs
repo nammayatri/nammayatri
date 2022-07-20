@@ -1,4 +1,4 @@
-module Domain.Types.FareBreakup where
+module Domain.Types.FarePolicy.FareBreakup where
 
 import Beckn.Prelude
 import Beckn.Types.Amount

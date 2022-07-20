@@ -11,8 +11,8 @@ import Beckn.Types.Predicate
 import Beckn.Utils.Validation
 import Data.OpenApi (ToSchema)
 import Data.Time (TimeOfDay (..))
-import Domain.Types.FarePolicy (FarePolicyAPIEntity)
-import Domain.Types.FarePolicy.PerExtraKmRate (PerExtraKmRateAPIEntity, validatePerExtraKmRateAPIEntity)
+import Domain.Types.FarePolicy.OneWayFarePolicy (FarePolicyAPIEntity)
+import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateAPIEntity, validatePerExtraKmRateAPIEntity)
 import EulerHS.Prelude hiding (id)
 
 newtype ListFarePolicyRes = ListFarePolicyRes

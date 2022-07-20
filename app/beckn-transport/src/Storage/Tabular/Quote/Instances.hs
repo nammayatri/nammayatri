@@ -7,13 +7,13 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import qualified Domain.Types.Quote as Domain
-import qualified Domain.Types.RentalFarePolicy as Domain
-import Storage.Tabular.FareProduct ()
+import Storage.Tabular.FarePolicy.FareProduct ()
+import Storage.Tabular.FarePolicy.RentalFarePolicy (RentalFarePolicyT)
 import Storage.Tabular.Quote.OneWayQuote
 import Storage.Tabular.Quote.RentalQuote
 import Storage.Tabular.Quote.Table
-import Storage.Tabular.RentalFarePolicy (RentalFarePolicyT)
 import Storage.Tabular.Vehicle ()
 
 data QuoteDetailsT = OneWayDetailsT OneWayQuoteT | RentalDetailsT (RentalQuoteT, RentalFarePolicyT)

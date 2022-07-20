@@ -5,7 +5,7 @@ module Product.FarePolicy.FareProduct where
 import App.Types
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
-import Domain.Types.FareProduct
+import Domain.Types.FarePolicy.FareProduct
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude
 import qualified Storage.Queries.FarePolicy.FareProduct as SFareProduct

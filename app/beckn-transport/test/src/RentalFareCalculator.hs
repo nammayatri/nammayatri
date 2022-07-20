@@ -4,10 +4,10 @@ import Beckn.Types.Amount
 import Beckn.Types.Common (HighPrecMeters (..))
 import Beckn.Types.Id
 import Data.Time hiding (parseTime)
-import Domain.Types.RentalFarePolicy
+import Domain.Types.FarePolicy.RentalFarePolicy
 import EulerHS.Prelude
 import qualified Fixtures.RentalFarePolicy as Fixtures
-import Product.RentalFareCalculator
+import SharedLogic.FareCalculator.RentalFareCalculator
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit

@@ -1,16 +1,16 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Storage.Queries.RentalFarePolicy where
+module Storage.Queries.FarePolicy.RentalFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common (Hours, Kilometers)
 import Beckn.Types.Id
+import Domain.Types.FarePolicy.RentalFarePolicy
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import Domain.Types.Organization
-import Domain.Types.RentalFarePolicy
-import qualified Domain.Types.RentalFarePolicy as Domain
 import Domain.Types.Vehicle as Vehicle
-import Storage.Tabular.RentalFarePolicy
+import Storage.Tabular.FarePolicy.RentalFarePolicy
 
 create ::
   Domain.RentalFarePolicy ->

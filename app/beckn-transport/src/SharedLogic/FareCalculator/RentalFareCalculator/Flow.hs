@@ -1,4 +1,4 @@
-module Product.RentalFareCalculator.Flow
+module SharedLogic.FareCalculator.RentalFareCalculator.Flow
   ( RentalFareParameters (..),
     ServiceHandle (..),
     calculateRentalFare,
@@ -11,17 +11,17 @@ where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.Types.FareBreakup
-import qualified Domain.Types.RentalFarePolicy as DRentalFP
+import Domain.Types.FarePolicy.FareBreakup
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import Domain.Types.RideBooking (RideBooking)
 import EulerHS.Prelude hiding (id)
-import Product.RentalFareCalculator.Calculator
+import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
   ( RentalFareParameters (..),
     calculateRentalFareParameters,
     rentalFareSum,
     rentalFareSumWithDiscount,
   )
-import qualified Storage.Queries.RentalFarePolicy as QRentalFP
+import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
 import Types.Error
 import Utils.Common
 

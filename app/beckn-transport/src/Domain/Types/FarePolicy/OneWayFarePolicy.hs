@@ -1,9 +1,9 @@
-module Domain.Types.FarePolicy where
+module Domain.Types.FarePolicy.OneWayFarePolicy where
 
 import Beckn.Prelude
 import Beckn.Types.Id (Id)
 import Domain.Types.FarePolicy.Discount
-import Domain.Types.FarePolicy.PerExtraKmRate
+import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle as Vehicle
 

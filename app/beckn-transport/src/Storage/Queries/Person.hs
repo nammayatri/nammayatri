@@ -10,7 +10,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Data.Maybe as Mb
-import qualified Domain.Types.FareProduct as SFP
+import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import Domain.Types.Organization
 import Domain.Types.Person as Person
 import Domain.Types.Vehicle as Vehicle

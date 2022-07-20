@@ -1,5 +1,5 @@
-module Storage.Queries.FarePolicy.PerExtraKmRate
-  ( Storage.Queries.FarePolicy.PerExtraKmRate.findAll',
+module Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate
+  ( Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate.findAll',
     deleteAll',
   )
 where
@@ -9,7 +9,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.Organization (Organization)
 import Domain.Types.Vehicle as Vehicle
-import Storage.Tabular.FarePolicy.PerExtraKmRate
+import Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 import Utils.Common
 
 findAll' ::

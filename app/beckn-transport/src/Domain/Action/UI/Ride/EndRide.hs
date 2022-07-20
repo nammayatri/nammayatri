@@ -6,16 +6,16 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time (NominalDiffTime)
 import qualified Domain.Types.DriverLocation as DrLoc
-import qualified Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (pi)
-import qualified Product.FareCalculator as Fare
-import qualified Product.RentalFareCalculator as RentalFare
+import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
+import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
 import Types.App (Driver)
 import Types.Error
 import Utils.Common
@@ -31,14 +31,14 @@ data ServiceHandle m = ServiceHandle
       Vehicle.Variant ->
       HighPrecMeters ->
       UTCTime ->
-      m Fare.FareParameters,
+      m Fare.OneWayFareParameters,
     calculateRentalFare ::
       Id DRentalFP.RentalFarePolicy ->
       HighPrecMeters ->
       UTCTime ->
       UTCTime ->
       m RentalFare.RentalFareParameters,
-    buildFareBreakups :: Fare.FareParameters -> Id SRB.RideBooking -> m [DFareBreakup.FareBreakup],
+    buildOneWayFareBreakups :: Fare.OneWayFareParameters -> Id SRB.RideBooking -> m [DFareBreakup.FareBreakup],
     buildRentalFareBreakups :: RentalFare.RentalFareParameters -> Id SRB.RideBooking -> m [DFareBreakup.FareBreakup],
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Amount -> HighPrecMeters -> m (),
@@ -127,12 +127,12 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
               <> ", Distance difference: "
               <> show distanceDiff
           putDiffMetric fareDiff distanceDiff
-          fareBreakups <- buildFareBreakups fareParams rideBooking.id
+          fareBreakups <- buildOneWayFareBreakups fareParams rideBooking.id
           pure (actualDistance, updatedFare, totalFare, fareBreakups)
         else do
           -- calculate fare again with old data for creating fare breakup
           fareParams <- calculateFare transporterId vehicleVariant oldDistance rideBooking.startTime
-          fareBreakups <- buildFareBreakups fareParams rideBooking.id
+          fareBreakups <- buildOneWayFareBreakups fareParams rideBooking.id
           pure (oldDistance, estimatedFare, rideBooking.estimatedTotalFare, fareBreakups)
 
     calcRentalFare rideBooking ride rentalDetails now = do
