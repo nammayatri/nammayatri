@@ -5,6 +5,7 @@ import qualified API.Beckn.Confirm as Confirm
 import qualified API.Beckn.Init as Init
 import qualified API.Beckn.Rating as Rating
 import qualified API.Beckn.Search as Search
+import qualified API.Beckn.Track as Track
 import App.Types
 import Servant
 
@@ -14,6 +15,7 @@ type API =
     :<|> Confirm.API
     :<|> Cancel.API
     :<|> Rating.API
+    :<|> Track.API
 
 handler :: FlowServer API
 handler =
@@ -22,3 +24,4 @@ handler =
     :<|> Confirm.handler
     :<|> Cancel.handler
     :<|> Rating.handler
+    :<|> Track.handler

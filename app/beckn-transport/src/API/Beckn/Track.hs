@@ -1,27 +1,36 @@
-module Product.BecknProvider.Track where
+module API.Beckn.Track (API, handler) where
 
 import App.Types
-import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnTrack as OnTrack
-import qualified Beckn.Types.Core.Taxi.API.Track as Track
+import qualified Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Id
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnTrack as ACL
 import qualified Core.ACL.Track as ACL
 import Data.Aeson (encode)
 import qualified Domain.Action.Beckn.Track as DTrack
-import qualified Domain.Types.Organization as Org
+import Domain.Types.Organization (Organization)
+import EulerHS.Prelude
 import qualified ExternalAPI.Flow as ExternalAPI
+import Servant hiding (throwError)
 import Utils.Common
 
+type API =
+  Capture "orgId" (Id Organization)
+    :> SignatureAuth "Authorization"
+    :> API.TrackAPI
+
+handler :: FlowServer API
+handler = track
+
 track ::
-  Id Org.Organization ->
+  Id Organization ->
   SignatureAuthResult ->
-  Track.TrackReq ->
+  API.TrackReq ->
   FlowHandler AckResponse
 track transporterId (SignatureAuthResult signPayload subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
