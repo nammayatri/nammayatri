@@ -7,8 +7,8 @@ import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Vehicle as Vehicle
 
-data FarePolicy = FarePolicy
-  { id :: Id FarePolicy,
+data OneWayFarePolicy = OneWayFarePolicy
+  { id :: Id OneWayFarePolicy,
     vehicleVariant :: Vehicle.Variant,
     organizationId :: Id Organization.Organization,
     baseFare :: Maybe Rational,
@@ -22,8 +22,8 @@ data FarePolicy = FarePolicy
   }
   deriving (Generic, Show, Eq)
 
-data FarePolicyAPIEntity = FarePolicyAPIEntity
-  { id :: Id FarePolicy,
+data OneWayFarePolicyAPIEntity = OneWayFarePolicyAPIEntity
+  { id :: Id OneWayFarePolicy,
     vehicleVariant :: Vehicle.Variant,
     baseFare :: Maybe Double,
     perExtraKmRateList :: NonEmpty PerExtraKmRateAPIEntity,
@@ -34,9 +34,9 @@ data FarePolicyAPIEntity = FarePolicyAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-makeFarePolicyAPIEntity :: FarePolicy -> FarePolicyAPIEntity
-makeFarePolicyAPIEntity FarePolicy {..} =
-  FarePolicyAPIEntity
+makeOneWayFarePolicyAPIEntity :: OneWayFarePolicy -> OneWayFarePolicyAPIEntity
+makeOneWayFarePolicyAPIEntity OneWayFarePolicy {..} =
+  OneWayFarePolicyAPIEntity
     { id = id,
       baseFare = fromRational <$> baseFare,
       perExtraKmRateList = makePerExtraKmRateAPIEntity <$> perExtraKmRateList,

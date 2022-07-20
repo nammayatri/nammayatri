@@ -1,24 +1,74 @@
-module Product.FarePolicy.Discount where
+module Domain.Action.UI.FarePolicy.Discount
+  ( UpdateFarePolicyDiscountReq,
+    UpdateFarePolicyDiscountRes,
+    CreateFarePolicyDiscountReq,
+    CreateFarePolicyDiscountRes,
+    DeleteFarePolicyDiscountRes,
+    createFarePolicyDiscount,
+    updateFarePolicyDiscount,
+    deleteFarePolicyDiscount,
+  )
+where
 
-import App.Types
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
 import Beckn.Types.Id (Id (..))
-import Beckn.Utils.Validation (runRequestValidation)
+import Beckn.Types.Predicate
+import Beckn.Utils.Validation
+import Data.OpenApi (ToSchema)
 import qualified Domain.Types.FarePolicy.Discount as DFPDiscount
 import qualified Domain.Types.FarePolicy.FareProduct as DFProduct
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Person as SP
-import EulerHS.Prelude
+import qualified Domain.Types.Vehicle as Veh
+import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.FarePolicy.Discount as QDisc
 import qualified Storage.Queries.Person as QP
-import Types.API.FarePolicy.Discount
+import Tools.Metrics
 import Types.Error
-import Utils.Common (GuidLike (generateGUID), MonadFlow, MonadTime (getCurrentTime), fromMaybeM, logTagInfo, throwError, withFlowHandlerAPI)
+import Utils.Common
 import qualified Utils.Notifications as Notify
+import qualified Utils.Validation as TV
 
-createFarePolicyDiscount :: SP.Person -> CreateFarePolicyDiscountReq -> FlowHandler CreateFarePolicyDiscountRes
-createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
+data CreateFarePolicyDiscountReq = CreateFarePolicyDiscountReq
+  { vehicleVariant :: Veh.Variant,
+    fromDate :: UTCTime,
+    toDate :: UTCTime,
+    discount :: Double,
+    enabled :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToSchema)
+
+type CreateFarePolicyDiscountRes = APISuccess
+
+validateCreateFarePolicyDiscountReq :: Validate CreateFarePolicyDiscountReq
+validateCreateFarePolicyDiscountReq CreateFarePolicyDiscountReq {..} =
+  sequenceA_
+    [ validateField "discount" discount $ Min @Double 0.01,
+      TV.validateDiscountDate "toDate" toDate fromDate
+    ]
+
+data UpdateFarePolicyDiscountReq = UpdateFarePolicyDiscountReq
+  { fromDate :: UTCTime,
+    toDate :: UTCTime,
+    discount :: Double,
+    enabled :: Bool
+  }
+  deriving (Generic, Show, FromJSON, ToSchema)
+
+type UpdateFarePolicyDiscountRes = APISuccess
+
+validateUpdateFarePolicyDiscountReq :: Validate UpdateFarePolicyDiscountReq
+validateUpdateFarePolicyDiscountReq UpdateFarePolicyDiscountReq {..} =
+  sequenceA_
+    [ validateField "discount" discount $ Min @Double 0.01,
+      TV.validateDiscountDate "toDate" toDate fromDate
+    ]
+
+type DeleteFarePolicyDiscountRes = APISuccess
+
+createFarePolicyDiscount :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> CreateFarePolicyDiscountReq -> m CreateFarePolicyDiscountRes
+createFarePolicyDiscount admin req = do
   orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   runRequestValidation validateCreateFarePolicyDiscountReq req
   discounts <- QDisc.findAll orgId req.vehicleVariant
@@ -26,8 +76,8 @@ createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
   disc <- buildDiscount orgId
   cooridinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $ QDisc.create disc
-  let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
-  for_ otherCoordinators $ \cooridinator -> do
+  let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
+  for_ otherCoordinators $ \cooridinator ->
     Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> createFarePolicyDiscount : ") (show disc)
   pure Success
@@ -50,8 +100,8 @@ createFarePolicyDiscount admin req = withFlowHandlerAPI $ do
             updatedAt = currTime
           }
 
-updateFarePolicyDiscount :: SP.Person -> Id DFPDiscount.Discount -> UpdateFarePolicyDiscountReq -> FlowHandler UpdateFarePolicyDiscountRes
-updateFarePolicyDiscount admin discId req = withFlowHandlerAPI $ do
+updateFarePolicyDiscount :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFPDiscount.Discount -> UpdateFarePolicyDiscountReq -> m UpdateFarePolicyDiscountRes
+updateFarePolicyDiscount admin discId req = do
   orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   runRequestValidation validateUpdateFarePolicyDiscountReq req
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
@@ -66,21 +116,21 @@ updateFarePolicyDiscount admin discId req = withFlowHandlerAPI $ do
                 }
   cooridinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $ QDisc.update discId updatedFarePolicy
-  let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
-  for_ otherCoordinators $ \cooridinator -> do
+  let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
+  for_ otherCoordinators $ \cooridinator ->
     Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> updateFarePolicyDiscount : ") (show updatedFarePolicy)
   pure Success
 
-deleteFarePolicyDiscount :: SP.Person -> Id DFPDiscount.Discount -> FlowHandler UpdateFarePolicyDiscountRes
-deleteFarePolicyDiscount admin discId = withFlowHandlerAPI $ do
+deleteFarePolicyDiscount :: (EsqDBFlow m r, FCMFlow m r, CoreMetrics m) => SP.Person -> Id DFPDiscount.Discount -> m UpdateFarePolicyDiscountRes
+deleteFarePolicyDiscount admin discId = do
   orgId <- admin.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
   discount <- QDisc.findById discId >>= fromMaybeM FPDiscountDoesNotExist
   unless (discount.organizationId == orgId) $ throwError AccessDenied
   cooridinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $ QDisc.deleteById discId
-  let otherCoordinators = filter (\coordinator -> coordinator.id /= admin.id) cooridinators
-  for_ otherCoordinators $ \cooridinator -> do
+  let otherCoordinators = filter ((/= admin.id) . (.id)) cooridinators
+  for_ otherCoordinators $ \cooridinator ->
     Notify.notifyDiscountChange cooridinator.id cooridinator.deviceToken
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> deleteFarePolicyDiscount : ") (show discount)
   pure Success

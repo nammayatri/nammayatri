@@ -12,7 +12,7 @@ where
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Domain.Types.FarePolicy.FareBreakup
-import Domain.Types.FarePolicy.OneWayFarePolicy (FarePolicy)
+import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.Organization (Organization)
 import Domain.Types.RideBooking (RideBooking)
 import qualified Domain.Types.Vehicle as Vehicle
@@ -31,7 +31,7 @@ import Utils.Common
 type MonadHandler m = (MonadThrow m, Log m)
 
 newtype ServiceHandle m = ServiceHandle
-  { getFarePolicy :: Id Organization -> Vehicle.Variant -> m (Maybe FarePolicy)
+  { getFarePolicy :: Id Organization -> Vehicle.Variant -> m (Maybe OneWayFarePolicy)
   }
 
 serviceHandle :: EsqDBFlow m r => ServiceHandle m

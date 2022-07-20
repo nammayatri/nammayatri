@@ -24,7 +24,7 @@ buildFullOneWayFarePolicy farePolicy = do
   perExtraKmRate <- QExtraKmRate.findAll' orgId vehicleVariant
   discount <- QDisc.findAll' orgId vehicleVariant
 
-  return $ extractSolidType @FarePolicy (farePolicy, perExtraKmRate, discount)
+  return $ extractSolidType @OneWayFarePolicy (farePolicy, perExtraKmRate, discount)
 
 buildFullQuote :: Transactionable m => QuoteT -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
 buildFullQuote quoteT@QuoteT {..} = runMaybeT $ do

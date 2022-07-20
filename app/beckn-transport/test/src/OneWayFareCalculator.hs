@@ -23,9 +23,9 @@ import Utils.Time
 defaultPerExtraKmRate :: PerExtraKmRate
 defaultPerExtraKmRate = PerExtraKmRate 5000 12.0
 
-defaultFarePolicy :: FarePolicy
-defaultFarePolicy =
-  FarePolicy
+defaultOneWayFarePolicy :: OneWayFarePolicy
+defaultOneWayFarePolicy =
+  OneWayFarePolicy
     { id = "fare_config_id",
       vehicleVariant = Vehicle.HATCHBACK,
       organizationId = orgID,
@@ -51,7 +51,7 @@ orgID = "organization_id"
 handle :: ServiceHandle IO
 handle =
   ServiceHandle
-    { getFarePolicy = \_orgId _vehicleVariant -> pure $ Just defaultFarePolicy
+    { getFarePolicy = \_orgId _vehicleVariant -> pure $ Just defaultOneWayFarePolicy
     }
 
 -- Calculation tests
@@ -90,13 +90,13 @@ sedan10km = testCase "Calculate fare for 10km for Sedan" $ do
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
-                                  baseFare = Just 175.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
-                                         ]
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
+                                        baseFare = Just 175.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
+                                               ]
+                                       }
         }
 
 sedan20km :: TestTree
@@ -118,13 +118,13 @@ sedan20km = testCase "Calculate fare for 20km for Sedan" $ do
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
-                                  baseFare = Just 175.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
-                                         ]
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
+                                        baseFare = Just 175.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
+                                               ]
+                                       }
         }
 
 sedan30km :: TestTree
@@ -146,13 +146,13 @@ sedan30km = testCase "Calculate fare for 30km for Sedan" $ do
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
-                                  baseFare = Just 175.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
-                                         ]
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
+                                        baseFare = Just 175.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 5000, fare = 15}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 15000, fare = 30}
+                                               ]
+                                       }
         }
 
 suv20km :: TestTree
@@ -174,14 +174,14 @@ suv20km = testCase "Calculate fare for 20km for SUV" $ do
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
-                                  baseFare = Just 0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 0}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 10000, fare = 20},
-                                           defaultPerExtraKmRate{distanceRangeStart = 20000, fare = 25}
-                                         ]
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
+                                        baseFare = Just 0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 0}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 10000, fare = 20},
+                                                 defaultPerExtraKmRate{distanceRangeStart = 20000, fare = 25}
+                                               ]
+                                       }
         }
 
 -- Night Shift
@@ -205,17 +205,17 @@ nightHatchback20km = testCase "Calculate night shift fare for 20km for Hatchback
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.HATCHBACK,
-                                  baseFare = Just 100.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 4000}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 14000, fare = 13.5},
-                                           defaultPerExtraKmRate{distanceRangeStart = 24000, fare = 20}
-                                         ],
-                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
-                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
-                                  nightShiftRate = Just 1.1
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.HATCHBACK,
+                                        baseFare = Just 100.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 4000}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 14000, fare = 13.5},
+                                                 defaultPerExtraKmRate{distanceRangeStart = 24000, fare = 20}
+                                               ],
+                                        nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                        nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                        nightShiftRate = Just 1.1
+                                       }
         }
 
 nightSedan20km :: TestTree
@@ -237,17 +237,17 @@ nightSedan20km = testCase "Calculate night shift fare for 20km for Sedan" $ do
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SEDAN,
-                                  baseFare = Just 100.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 3000}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 15},
-                                           defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 18}
-                                         ],
-                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
-                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
-                                  nightShiftRate = Just 1.1
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SEDAN,
+                                        baseFare = Just 100.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 3000}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 15},
+                                                 defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 18}
+                                               ],
+                                        nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                        nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                        nightShiftRate = Just 1.1
+                                       }
         }
 
 nightSuv20km :: TestTree
@@ -269,17 +269,17 @@ nightSuv20km = testCase "Calculate night shift fare for 20km for SUV" $ do
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
-                                  baseFare = Just 150.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 3000}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
-                                           defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
-                                         ],
-                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
-                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
-                                  nightShiftRate = Just 1.1
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
+                                        baseFare = Just 150.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 3000}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
+                                                 defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
+                                               ],
+                                        nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                        nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                        nightShiftRate = Just 1.1
+                                       }
         }
 
 nightSuv20kmWithDiscount :: TestTree
@@ -301,21 +301,21 @@ nightSuv20kmWithDiscount = testCase "Calculate night shift fare for 20km for SUV
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
-                                  baseFare = Just 150.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 3000}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
-                                           defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
-                                         ],
-                                  discountList =
-                                    [ mkDiscount Vehicle.SUV (mockTime 19) (mockTime 20) 50 True,
-                                      mkDiscount Vehicle.SUV (mockTime 20) (mockTime 23) 50 True
-                                    ],
-                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
-                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
-                                  nightShiftRate = Just 1.1
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
+                                        baseFare = Just 150.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 3000}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
+                                                 defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
+                                               ],
+                                        discountList =
+                                          [ mkDiscount Vehicle.SUV (mockTime 19) (mockTime 20) 50 True,
+                                            mkDiscount Vehicle.SUV (mockTime 20) (mockTime 23) 50 True
+                                          ],
+                                        nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                        nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                        nightShiftRate = Just 1.1
+                                       }
         }
 
 nightSuv20kmWithDiscountOff :: TestTree
@@ -337,18 +337,18 @@ nightSuv20kmWithDiscountOff = testCase "Calculate night shift fare for 20km for 
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
-                                  baseFare = Just 150.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 3000}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
-                                           defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
-                                         ],
-                                  discountList = [mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 False],
-                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
-                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
-                                  nightShiftRate = Just 1.1
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
+                                        baseFare = Just 150.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 3000}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
+                                                 defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
+                                               ],
+                                        discountList = [mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 False],
+                                        nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                        nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                        nightShiftRate = Just 1.1
+                                       }
         }
 
 nightSuv20kmWithClashedDiscounts :: TestTree
@@ -370,21 +370,21 @@ nightSuv20kmWithClashedDiscounts = testCase "Calculate night shift fare for 20km
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
-                                  baseFare = Just 150.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 3000}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
-                                           defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
-                                         ],
-                                  discountList =
-                                    [ mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True,
-                                      mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True
-                                    ],
-                                  nightShiftStart = Just $ TimeOfDay 20 0 0,
-                                  nightShiftEnd = Just $ TimeOfDay 5 30 0,
-                                  nightShiftRate = Just 1.1
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
+                                        baseFare = Just 150.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 3000}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 13000, fare = 20},
+                                                 defaultPerExtraKmRate{distanceRangeStart = 23000, fare = 25}
+                                               ],
+                                        discountList =
+                                          [ mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True,
+                                            mkDiscount Vehicle.SUV (mockTime 0) (mockTime 23) 50 True
+                                          ],
+                                        nightShiftStart = Just $ TimeOfDay 20 0 0,
+                                        nightShiftEnd = Just $ TimeOfDay 5 30 0,
+                                        nightShiftRate = Just 1.1
+                                       }
         }
 
 fareBreakupSum :: TestTree
@@ -407,21 +407,21 @@ fareBreakupSum = testCase "Sum of fare breakup should be equal to total fare" $ 
         { getFarePolicy = \_orgId _vehicleVariant ->
             pure $
               Just
-                defaultFarePolicy{vehicleVariant = Vehicle.SUV,
-                                  baseFare = Just 120.0,
-                                  perExtraKmRateList =
-                                    defaultPerExtraKmRate{distanceRangeStart = 3100}
-                                      :| [ defaultPerExtraKmRate{distanceRangeStart = 14000, fare = 21},
-                                           defaultPerExtraKmRate{distanceRangeStart = 24000, fare = 23}
-                                         ],
-                                  discountList =
-                                    [ mkDiscount Vehicle.SUV (mockTime 2) (mockTime 23) 60 True,
-                                      mkDiscount Vehicle.SUV (mockTime 2) (mockTime 23) 60 True
-                                    ],
-                                  nightShiftStart = Just $ TimeOfDay 21 0 0,
-                                  nightShiftEnd = Just $ TimeOfDay 6 30 0,
-                                  nightShiftRate = Just 1.15
-                                 }
+                defaultOneWayFarePolicy{vehicleVariant = Vehicle.SUV,
+                                        baseFare = Just 120.0,
+                                        perExtraKmRateList =
+                                          defaultPerExtraKmRate{distanceRangeStart = 3100}
+                                            :| [ defaultPerExtraKmRate{distanceRangeStart = 14000, fare = 21},
+                                                 defaultPerExtraKmRate{distanceRangeStart = 24000, fare = 23}
+                                               ],
+                                        discountList =
+                                          [ mkDiscount Vehicle.SUV (mockTime 2) (mockTime 23) 60 True,
+                                            mkDiscount Vehicle.SUV (mockTime 2) (mockTime 23) 60 True
+                                          ],
+                                        nightShiftStart = Just $ TimeOfDay 21 0 0,
+                                        nightShiftEnd = Just $ TimeOfDay 6 30 0,
+                                        nightShiftRate = Just 1.15
+                                       }
         }
 
 -- Effects tests

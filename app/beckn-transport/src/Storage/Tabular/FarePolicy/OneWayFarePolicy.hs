@@ -38,13 +38,13 @@ mkPersist
     |]
 
 instance TEntityKey OneWayFarePolicyT where
-  type DomainKey OneWayFarePolicyT = Id Domain.FarePolicy
+  type DomainKey OneWayFarePolicyT = Id Domain.OneWayFarePolicy
   fromKey (OneWayFarePolicyTKey _id) = Id _id
   toKey (Id id) = OneWayFarePolicyTKey id
 
 type FullOneWayFarePolicyT = (OneWayFarePolicyT, [PerExtraKmRateT], [DiscountT])
 
-instance TType FullOneWayFarePolicyT Domain.FarePolicy where
+instance TType FullOneWayFarePolicyT Domain.OneWayFarePolicy where
   fromTType (OneWayFarePolicyT {..}, perExtraKmRateList_, discountList_) = do
     perExtraKmRateList <- case perExtraKmRateList_ of
       (a : xs) -> do
@@ -53,14 +53,14 @@ instance TType FullOneWayFarePolicyT Domain.FarePolicy where
       _ -> throwError NoPerExtraKmRate
     discountList <- fromTType `traverse` discountList_
     return $
-      Domain.FarePolicy
+      Domain.OneWayFarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
           baseFare = toRational <$> baseFare,
           nightShiftRate = toRational <$> nightShiftRate,
           ..
         }
-  toTType Domain.FarePolicy {..} = do
+  toTType Domain.OneWayFarePolicy {..} = do
     let fullPerExtraKmRateList = (organizationId,vehicleVariant,) <$> toList perExtraKmRateList
         perExtraKmRateTTypeList = toTType <$> fullPerExtraKmRateList
         discountTTypeList = toTType <$> discountList

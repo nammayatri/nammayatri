@@ -15,7 +15,7 @@ findOneWayFarePolicyByOrgAndVehicleVariant ::
   Transactionable m =>
   Id Organization ->
   Vehicle.Variant ->
-  m (Maybe FarePolicy)
+  m (Maybe OneWayFarePolicy)
 findOneWayFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ =
   Esq.buildDType $ do
     mbFarePolicy <- Esq.findOne' $ do
@@ -26,7 +26,7 @@ findOneWayFarePolicyByOrgAndVehicleVariant orgId vehicleVariant_ =
       return farePolicy
     mapM buildFullOneWayFarePolicy mbFarePolicy
 
-findOneWayFarePoliciesByOrgId :: Transactionable m => Id Organization -> m [FarePolicy]
+findOneWayFarePoliciesByOrgId :: Transactionable m => Id Organization -> m [OneWayFarePolicy]
 findOneWayFarePoliciesByOrgId orgId =
   Esq.buildDType $ do
     farePolicy <- Esq.findAll' $ do
@@ -36,13 +36,13 @@ findOneWayFarePoliciesByOrgId orgId =
       return farePolicy
     mapM buildFullOneWayFarePolicy farePolicy
 
-findById :: Transactionable m => Id FarePolicy -> m (Maybe FarePolicy)
+findById :: Transactionable m => Id OneWayFarePolicy -> m (Maybe OneWayFarePolicy)
 findById fpId =
   Esq.buildDType $ do
     mbfarePolicy <- Esq.findById' fpId
     mapM buildFullOneWayFarePolicy mbfarePolicy
 
-updateOneWayFarePolicy :: FarePolicy -> SqlDB ()
+updateOneWayFarePolicy :: OneWayFarePolicy -> SqlDB ()
 updateOneWayFarePolicy farePolicy = do
   now <- getCurrentTime
   withFullEntity farePolicy $ \(farePolicyT, _, perExtraKmRateList) -> do

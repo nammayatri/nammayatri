@@ -13,7 +13,7 @@ import Data.Time
     minutesToTimeZone,
     utcToLocalTime,
   )
-import Domain.Types.FarePolicy.OneWayFarePolicy (FarePolicy)
+import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRate (..))
 import EulerHS.Prelude
 import Utils.Common
@@ -38,7 +38,7 @@ fareSumWithDiscount fp@OneWayFareParameters {..} = do
   max 0 $ maybe fareSumm (fareSumm -) discount
 
 calculateFareParameters ::
-  FarePolicy ->
+  OneWayFarePolicy ->
   HighPrecMeters ->
   TripStartTime ->
   OneWayFareParameters
@@ -50,14 +50,14 @@ calculateFareParameters farePolicy distance startTime = do
   OneWayFareParameters baseFare distanceFare nightShiftRate discount
 
 calculateBaseFare ::
-  FarePolicy ->
+  OneWayFarePolicy ->
   Amount
 calculateBaseFare farePolicy = do
   let baseFare = fromMaybe 0 $ farePolicy.baseFare
   Amount baseFare
 
 calculateDistanceFare ::
-  FarePolicy ->
+  OneWayFarePolicy ->
   HighPrecMeters ->
   Amount
 calculateDistanceFare farePolicy distance = do
@@ -78,7 +78,7 @@ calculateDistanceFare farePolicy distance = do
     calculateExtraDistFare summ extraDist (PerExtraKmRate _ perKmRate :| []) = summ + (extraDist / 1000 * perKmRate)
 
 calculateNightShiftRate ::
-  FarePolicy ->
+  OneWayFarePolicy ->
   TripStartTime ->
   Amount
 calculateNightShiftRate farePolicy tripStartTime = do
@@ -91,7 +91,7 @@ calculateNightShiftRate farePolicy tripStartTime = do
       then nightShiftRate
       else 1
 
-calculateDiscount :: FarePolicy -> TripStartTime -> Maybe Amount
+calculateDiscount :: OneWayFarePolicy -> TripStartTime -> Maybe Amount
 calculateDiscount farePolicy tripStartTime = do
   let discount = calculateDiscount' 0 farePolicy.discountList
   if discount <= 0 then Nothing else Just $ Amount discount
