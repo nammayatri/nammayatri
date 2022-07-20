@@ -1,9 +1,19 @@
-module Product.Call where
+module Domain.Action.UI.Call
+  ( CallRes (..),
+    CallCallbackReq,
+    CallCallbackRes,
+    GetCallStatusRes,
+    initiateCallToCustomer,
+    callStatusCallback,
+    getCallStatus,
+  )
+where
 
-import App.Types
 import Beckn.External.Encryption (decrypt)
 import Beckn.External.Exotel.Flow (initiateCall)
 import Beckn.External.Exotel.Types
+import qualified Beckn.External.Exotel.Types as Call
+import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
@@ -12,19 +22,36 @@ import qualified Data.Text as T
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import EulerHS.Prelude
 import Servant.Client (BaseUrl (..))
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RiderDetails as QRD
-import qualified Types.API.Call as CallAPI
+import Tools.Metrics
 import Types.Error
 import Utils.Common
 
-initiateCallToCustomer :: Id SRide.Ride -> Id SP.Person -> FlowHandler CallAPI.CallRes
-initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
+newtype CallRes = CallRes
+  { callId :: Id SCS.CallStatus
+  }
+  deriving (Generic, Eq, Show, FromJSON, ToJSON, ToSchema)
+
+type CallCallbackReq = Call.ExotelCallCallback
+
+type CallCallbackRes = AckResponse
+
+type GetCallStatusRes = SCS.CallStatusAPIEntity
+
+initiateCallToCustomer ::
+  ( EsqDBFlow m r,
+    EncFlow m r,
+    CoreMetrics m,
+    HasFlowEnv m r ["exotelCfg" ::: Maybe ExotelCfg, "selfUIUrl" ::: BaseUrl]
+  ) =>
+  Id SRide.Ride ->
+  m CallRes
+initiateCallToCustomer rideId = do
   ride <-
     QRide.findById rideId
       >>= fromMaybeM (RideDoesNotExist rideId.getId)
@@ -48,7 +75,7 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
   let rId = strip (getId rideId)
   callStatus <- buildCallStatus (Id rId) callId exotelResponse
   runTransaction $ QCallStatus.create callStatus
-  return $ CallAPI.CallRes callId
+  return $ CallRes callId
   where
     buildCallbackUrl = do
       bppUIUrl <- asks (.selfUIUrl)
@@ -71,15 +98,15 @@ initiateCallToCustomer rideId _ = withFlowHandlerAPI $ do
             createdAt = now
           }
 
-callStatusCallback :: Id SRide.Ride -> CallAPI.CallCallbackReq -> FlowHandler CallAPI.CallCallbackRes
-callStatusCallback _ req = withFlowHandlerAPI $ do
+callStatusCallback :: (EsqDBFlow m r) => CallCallbackReq -> m CallCallbackRes
+callStatusCallback req = do
   let callId = Id req.customField.callId
   _ <- QCallStatus.findById callId >>= fromMaybeM CallStatusDoesNotExist
-  runTransaction $ QCallStatus.updateCallStatus callId req
+  runTransaction $ QCallStatus.updateCallStatus callId req.status req.conversationDuration req.recordingUrl
   return Ack
 
-getCallStatus :: Id SRide.Ride -> Id SCS.CallStatus -> Id SP.Person -> FlowHandler CallAPI.GetCallStatusRes
-getCallStatus _ callStatusId _ = withFlowHandlerAPI $ do
+getCallStatus :: (EsqDBFlow m r) => Id SCS.CallStatus -> m GetCallStatusRes
+getCallStatus callStatusId = do
   QCallStatus.findById callStatusId >>= fromMaybeM CallStatusDoesNotExist <&> SCS.makeCallStatusAPIEntity
 
 getDriverPhone :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Text

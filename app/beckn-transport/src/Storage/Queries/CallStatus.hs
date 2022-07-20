@@ -1,11 +1,11 @@
 module Storage.Queries.CallStatus where
 
+import Beckn.External.Exotel.Types (ExotelCallStatus)
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.CallStatus
 import Storage.Tabular.CallStatus
-import qualified Types.API.Call as CallAPI
 
 create :: CallStatus -> SqlDB ()
 create = Esq.create
@@ -13,13 +13,13 @@ create = Esq.create
 findById :: Transactionable m => Id CallStatus -> m (Maybe CallStatus)
 findById = Esq.findById
 
-updateCallStatus :: Id CallStatus -> CallAPI.CallCallbackReq -> SqlDB ()
-updateCallStatus callId req = do
+updateCallStatus :: Id CallStatus -> ExotelCallStatus -> Int -> BaseUrl -> SqlDB ()
+updateCallStatus callId status conversationDuration recordingUrl = do
   Esq.update $ \tbl -> do
     set
       tbl
-      [ CallStatusStatus =. val req.status,
-        CallStatusConversationDuration =. val req.conversationDuration,
-        CallStatusRecordingUrl =. val (Just (showBaseUrl req.recordingUrl))
+      [ CallStatusStatus =. val status,
+        CallStatusConversationDuration =. val conversationDuration,
+        CallStatusRecordingUrl =. val (Just (showBaseUrl recordingUrl))
       ]
     where_ $ tbl ^. CallStatusId ==. val (getId callId)
