@@ -1,0 +1,46 @@
+module API.UI.GoogleMaps.Handler (API, handler) where
+
+import API.UI.GoogleMaps.Types
+import App.Types
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import Beckn.Types.Id
+import qualified Domain.Action.UI.GoogleMaps as DGoogleMaps
+import qualified Domain.Types.Person as SP
+import EulerHS.Prelude
+import Servant
+import Utils.Auth
+import Utils.Common
+
+type API =
+  "googleMaps"
+    :> ( "autoComplete"
+           :> TokenAuth
+           :> MandatoryQueryParam "input" Text
+           :> MandatoryQueryParam "location" Text -- Passing it as <latitude>,<longitude>
+           :> MandatoryQueryParam "radius" Integer
+           :> MandatoryQueryParam "language" Text
+           :> Get '[JSON] GoogleMaps.SearchLocationResp
+           :<|> "placeDetails"
+             :> TokenAuth
+             :> MandatoryQueryParam "place_id" Text
+             :> Get '[JSON] GoogleMaps.PlaceDetailsResp
+           :<|> "getPlaceName"
+             :> TokenAuth
+             :> MandatoryQueryParam "latlng" Text -- Passing it as <latitude>,<longitude>
+             :> Get '[JSON] GoogleMaps.GetPlaceNameResp
+       )
+
+handler :: FlowServer API
+handler =
+  autoComplete
+    :<|> placeDetails
+    :<|> getPlaceName
+
+autoComplete :: Id SP.Person -> Text -> Text -> Integer -> Text -> FlowHandler SearchLocationResp
+autoComplete _ input location radius = withFlowHandlerAPI . DGoogleMaps.autoComplete input location radius
+
+placeDetails :: Id SP.Person -> Text -> FlowHandler PlaceDetailsResp
+placeDetails _ = withFlowHandlerAPI . DGoogleMaps.placeDetails
+
+getPlaceName :: Id SP.Person -> Text -> FlowHandler GetPlaceNameResp
+getPlaceName _ = withFlowHandlerAPI . DGoogleMaps.getPlaceName
