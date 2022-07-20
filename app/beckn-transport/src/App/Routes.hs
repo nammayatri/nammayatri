@@ -3,6 +3,7 @@ module App.Routes where
 import qualified API.Beckn.Handler as Beckn
 import qualified API.UI.Booking.Handler as Booking
 import qualified API.UI.Call.Handler as Call
+import qualified API.UI.CancellationReason.Handler as CancellationReason
 import qualified API.UI.Driver.Handler as Driver
 import qualified API.UI.Location.Handler as Location
 import qualified API.UI.Registration.Handler as Registration
@@ -17,11 +18,9 @@ import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.App
 import Data.OpenApi
 import EulerHS.Prelude
-import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Services.GoogleMaps as GoogleMapsFlow
 import Servant
 import Servant.OpenApi
-import qualified Types.API.CancellationReason as CancellationReasonAPI
 import Utils.Auth (TokenAuth)
 
 type TransportAPI =
@@ -45,7 +44,7 @@ type UIAPI =
     :<|> Call.API
     :<|> Route.API
     :<|> Ride.API
-    :<|> CancellationReasonAPI
+    :<|> CancellationReason.API
     :<|> GoogleMapsProxyAPI
 
 transporterAPI :: Proxy TransportAPI
@@ -65,7 +64,7 @@ uiServer =
     :<|> Call.handler
     :<|> Route.handler
     :<|> Ride.handler
-    :<|> cancellationReasonFlow
+    :<|> CancellationReason.handler
     :<|> googleMapsProxyFlow
 
 mainServer :: FlowServer MainAPI
@@ -83,16 +82,6 @@ type OrgBecknAPI = Beckn.API
 
 orgBecknApiFlow :: FlowServer OrgBecknAPI
 orgBecknApiFlow = Beckn.handler
-
-type CancellationReasonAPI =
-  "cancellationReason"
-    :> ( "list"
-           :> TokenAuth
-           :> Get '[JSON] CancellationReasonAPI.ListRes
-       )
-
-cancellationReasonFlow :: FlowServer CancellationReasonAPI
-cancellationReasonFlow = CancellationReason.list
 
 type HealthCheckAPI = Get '[JSON] Text
 
