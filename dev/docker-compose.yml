@@ -15,8 +15,6 @@ services:
       - ./local-testing-data/app-backend.sql:/docker-entrypoint-initdb.d/2-app-backend-testing-data.sql:Z
       - ./sql-seed/transporter-backend-seed.sql:/docker-entrypoint-initdb.d/1-transporter-backend-seed.sql:Z
       - ./local-testing-data/beckn-transport.sql:/docker-entrypoint-initdb.d/2-beckn-transport-testing-data.sql:Z
-      - ./sql-seed/parking-bap-seed.sql:/docker-entrypoint-initdb.d/1-parking-bap-seed.sql:Z
-      - ./local-testing-data/parking-bap.sql:/docker-entrypoint-initdb.d/2-parking-bap-testing-data.sql:Z
       - ./sql-seed/public-transport-bap-seed.sql:/docker-entrypoint-initdb.d/1-public-transport-bap-seed.sql:Z
       - ./local-testing-data/public-transport-bap.sql:/docker-entrypoint-initdb.d/2-public-transport-bap-testing-data.sql:Z
       - ./sql-seed/mock-registry-seed.sql:/docker-entrypoint-initdb.d/1-mock-registry-seed.sql:Z

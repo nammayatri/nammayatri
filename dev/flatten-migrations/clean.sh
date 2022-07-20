@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SCHEMAS='atlas_parking atlas_public_transport atlas_fmd_wrapper atlas_app atlas_transporter atlas_registry'
+SCHEMAS='atlas_public_transport atlas_fmd_wrapper atlas_app atlas_transporter atlas_registry'
 TRASH_FOLDER=~/.beckn-trash
 
 for schema in $SCHEMAS ; do

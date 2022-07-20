@@ -117,13 +117,11 @@ Each of the application has particular set of defined APIs and Schemas. To get a
 | beckn-transport                          | `8014` |
 | beckn-gateway                            | `8015` |
 | mock-registry                            | `8020` |
-| parking-bap                              | `8022` |
 | public-transport-bap                     | `8023` |
 | public-transport-search-consumer         | `8024` |
 | search-result-aggregator                 | `8025` |
 | scheduler-example-scheduler              | `8051` |
 | transporter-scheduler                    | `8053` |
-| mock-parking-bpp                         | `8090` |
 | allocation-service                       | `9996` |
 
 2. Paste the copied swagger json inside https://editor.swagger.io/

@@ -10,7 +10,7 @@ echo $LOCAL_DATA_DIR
 echo $MIGRATIONS_DIR
 
 
-SCHEMAS='atlas_parking atlas_public_transport atlas_fmd_wrapper atlas_app atlas_transporter atlas_registry'
+SCHEMAS='atlas_public_transport atlas_fmd_wrapper atlas_app atlas_transporter atlas_registry'
 
 if [ $ACTION = _fetch_inserts ] ; then
   echo 'start fetching test data'

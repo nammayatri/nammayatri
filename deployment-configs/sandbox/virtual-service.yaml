@@ -73,28 +73,6 @@ spec:
     timeout: 40s
   - match:
     - uri:
-        prefix: /bap/parking/v1/
-    rewrite:
-      uri: /beckn/
-    route:
-    - destination:
-        host: beckn-parking-bap-sandbox
-        port:
-          number: 8022
-    timeout: 40s
-  - match:
-    - uri:
-        prefix: /bap/parking/
-    rewrite:
-      uri: /parking/
-    route:
-    - destination:
-        host: beckn-parking-bap-sandbox
-        port:
-          number: 8022
-    timeout: 40s
-  - match:
-    - uri:
         prefix: /bap/
     rewrite:
       uri: /
@@ -240,28 +218,6 @@ spec:
         host: beckn-app-customer-support-master
         port:
           number: 3000
-    timeout: 40s
-  - match:
-    - uri:
-        prefix: /dev/bap/parking/v1/
-    rewrite:
-      uri: /beckn/
-    route:
-    - destination:
-        host: beckn-parking-bap-master
-        port:
-          number: 8022
-    timeout: 40s
-  - match:
-    - uri:
-        prefix: /dev/bap/parking/
-    rewrite:
-      uri: /parking/
-    route:
-    - destination:
-        host: beckn-parking-bap-master
-        port:
-          number: 8022
     timeout: 40s
   - match:
     - uri:
