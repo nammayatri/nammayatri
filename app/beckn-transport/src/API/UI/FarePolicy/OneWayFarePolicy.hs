@@ -1,8 +1,12 @@
-module API.UI.FarePolicy.OneWayFarePolicy.Handler (API, handler) where
+module API.UI.FarePolicy.OneWayFarePolicy (module Reexport, API, handler) where
 
-import API.UI.FarePolicy.OneWayFarePolicy.Types
 import App.Types
 import Beckn.Types.Id (Id (..))
+import Domain.Action.UI.FarePolicy.OneWayFarePolicy as Reexport
+  ( ListOneWayFarePolicyRes (..),
+    UpdateOneWayFarePolicyReq (..),
+    UpdateOneWayFarePolicyRes,
+  )
 import qualified Domain.Action.UI.FarePolicy.OneWayFarePolicy as OneWayFP
 import Domain.Types.FarePolicy.OneWayFarePolicy
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy as DFarePolicy

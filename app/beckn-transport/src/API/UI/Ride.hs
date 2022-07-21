@@ -1,13 +1,23 @@
-module API.UI.Ride.Handler (API, handler) where
+module API.UI.Ride
+  ( module Reexport,
+    StartRideReq (..),
+    API,
+    handler,
+  )
+where
 
-import API.UI.Ride.Types
 import App.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
+import Domain.Action.UI.Ride as Reexport
+  ( DriverRideListRes (..),
+    DriverRideRes (..),
+  )
 import qualified Domain.Action.UI.Ride as DRide
+import Domain.Action.UI.Ride.CancelRide as Reexport (CancelRideReq (..))
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
@@ -60,6 +70,11 @@ handler =
     :<|> startRide
     :<|> endRide
     :<|> cancelRide
+
+newtype StartRideReq = StartRideReq
+  { rideOtp :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 startRide :: Id SP.Person -> Id SRide.Ride -> StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide personId rideId req = withFlowHandlerAPI $ do

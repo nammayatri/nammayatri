@@ -1,8 +1,15 @@
-module API.UI.Vehicle.Handler (API, handler) where
+module API.UI.Vehicle (module Reexport, API, handler) where
 
-import API.UI.Vehicle.Types
 import App.Types
 import Beckn.Types.Id
+import Domain.Action.UI.Vehicle as Reexport
+  ( Driver (..),
+    GetVehicleRes (..),
+    ListVehicleRes (..),
+    UpdateVehicleReq (..),
+    UpdateVehicleRes,
+    VehicleRes (..),
+  )
 import qualified Domain.Action.UI.Vehicle as DVeh
 import Domain.Types.Person as SP
 import Domain.Types.Vehicle as SV

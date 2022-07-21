@@ -1,8 +1,12 @@
-module API.UI.TranspAdmin.Handler (API, handler) where
+module API.UI.TranspAdmin (module Reexport, API, handler) where
 
-import API.UI.TranspAdmin.Types
 import App.Types
 import Beckn.Prelude
+import Domain.Action.UI.TranspAdmin as Reexport
+  ( TranspAdminProfileRes (..),
+    UpdateTranspAdminProfileReq (..),
+    UpdateTranspAdminProfileRes,
+  )
 import qualified Domain.Action.UI.TranspAdmin as DTranspAdmin
 import qualified Domain.Types.Person as SP
 import Servant

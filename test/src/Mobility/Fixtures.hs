@@ -1,13 +1,9 @@
 module Mobility.Fixtures where
 
-import qualified "beckn-transport" API.UI.Booking.Handler as TbeBookingAPI
-import qualified "beckn-transport" API.UI.Booking.Types as TbeBookingAPI
-import qualified "beckn-transport" API.UI.Driver.Handler as TbeDriverAPI
-import qualified "beckn-transport" API.UI.Driver.Types as TbeDriverAPI
-import qualified "beckn-transport" API.UI.Location.Handler as TbeLocation
-import qualified "beckn-transport" API.UI.Location.Types as TbeLocation
-import qualified "beckn-transport" API.UI.Ride.Handler as TbeRideAPI
-import qualified "beckn-transport" API.UI.Ride.Types as TbeRideAPI
+import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
+import qualified "beckn-transport" API.UI.Driver as TbeDriverAPI
+import qualified "beckn-transport" API.UI.Location as TbeLocation
+import qualified "beckn-transport" API.UI.Ride as TbeRideAPI
 import "app-backend" App.Routes as AbeRoutes
 import Beckn.External.FCM.Types
 import Beckn.Types.APISuccess

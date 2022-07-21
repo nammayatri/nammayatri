@@ -1,9 +1,9 @@
-module API.UI.FarePolicy.Handler (API, handler) where
+module API.UI.FarePolicy (API, handler) where
 
-import qualified API.UI.FarePolicy.Discount.Handler as Discount
-import qualified API.UI.FarePolicy.FareProduct.Handler as FareProduct
-import qualified API.UI.FarePolicy.OneWayFarePolicy.Handler as OneWay
-import qualified API.UI.FarePolicy.RentalFarePolicy.Handler as Rentals
+import qualified API.UI.FarePolicy.Discount as Discount
+import qualified API.UI.FarePolicy.FareProduct as FareProduct
+import qualified API.UI.FarePolicy.OneWayFarePolicy as OneWay
+import qualified API.UI.FarePolicy.RentalFarePolicy as Rentals
 import App.Types
 import Servant
 

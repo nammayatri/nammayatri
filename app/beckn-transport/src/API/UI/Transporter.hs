@@ -1,8 +1,12 @@
-module API.UI.Transporter.Handler where
+module API.UI.Transporter (module Reexport, API, handler) where
 
-import API.UI.Transporter.Types
 import App.Types
 import Beckn.Types.Id
+import Domain.Action.UI.Transporter as Reexport
+  ( TransporterRec (..),
+    UpdateTransporterReq (..),
+    UpdateTransporterRes,
+  )
 import qualified Domain.Action.UI.Transporter as DTransp
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Organization as SO

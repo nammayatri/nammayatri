@@ -1,4 +1,4 @@
-module API.Beckn.Handler (API, handler) where
+module API.Beckn (API, handler) where
 
 import qualified API.Beckn.Cancel as Cancel
 import qualified API.Beckn.Confirm as Confirm

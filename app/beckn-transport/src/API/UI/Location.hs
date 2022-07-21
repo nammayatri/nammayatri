@@ -1,12 +1,20 @@
-module API.UI.Location.Handler (API, handler) where
+module API.UI.Location (module Reexport, API, handler) where
 
-import API.UI.Location.Types
 import App.Types
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Id
+import Domain.Action.UI.Location as Reexport
+  ( GetLocationRes (..),
+    Status (..),
+  )
 import qualified Domain.Action.UI.Location as DLocation
+import Domain.Action.UI.Location.UpdateLocation as Reexport
+  ( UpdateLocationReq,
+    UpdateLocationRes,
+    Waypoint (..),
+  )
 import qualified Domain.Action.UI.Location.UpdateLocation as DLocation
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide

@@ -1,12 +1,22 @@
-module API.UI.Driver.Handler (API, handler) where
+module API.UI.Driver (module Reexport, API, handler) where
 
-import API.UI.Driver.Types
 import App.Types
 import qualified App.Types as App
 import Beckn.Types.APISuccess
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Domain.Action.UI.Driver as Reexport
+  ( CreatePerson (..),
+    CreateVehicle (..),
+    DriverEntityRes (..),
+    DriverInformationRes (..),
+    ListDriverRes (..),
+    OnboardDriverReq (..),
+    OnboardDriverRes (..),
+    UpdateDriverReq (..),
+    UpdateDriverRes,
+  )
 import qualified Domain.Action.UI.Driver as DDriver
 import Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id, state)

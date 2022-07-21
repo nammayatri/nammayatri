@@ -1,9 +1,17 @@
-module API.UI.Booking.Handler (API, handler) where
+module API.UI.Booking (module Reexport, API, handler) where
 
-import API.UI.Booking.Types
 import App.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
+import Domain.Action.UI.Booking as Reexport
+  ( DriverResponse (..),
+    GetRideInfoRes (..),
+    NotificationStatus (..),
+    RideBookingListRes (..),
+    RideInfo (..),
+    SetDriverAcceptanceReq (..),
+    SetDriverAcceptanceRes,
+  )
 import qualified Domain.Action.UI.Booking as DBooking
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RideBooking as SRB

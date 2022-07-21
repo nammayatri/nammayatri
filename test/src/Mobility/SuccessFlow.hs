@@ -1,6 +1,6 @@
 module Mobility.SuccessFlow where
 
-import qualified "beckn-transport" API.UI.Booking.Types as TbeBookingAPI
+import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common

@@ -1,8 +1,14 @@
-module API.UI.FarePolicy.Discount.Handler (API, handler) where
+module API.UI.FarePolicy.Discount (module Reexport, API, handler) where
 
-import API.UI.FarePolicy.Discount.Types
 import App.Types
 import Beckn.Types.Id (Id (..))
+import Domain.Action.UI.FarePolicy.Discount as Reexport
+  ( CreateFarePolicyDiscountReq,
+    CreateFarePolicyDiscountRes,
+    DeleteFarePolicyDiscountRes,
+    UpdateFarePolicyDiscountReq,
+    UpdateFarePolicyDiscountRes,
+  )
 import qualified Domain.Action.UI.FarePolicy.Discount as DDiscount
 import Domain.Types.FarePolicy.Discount (Discount)
 import qualified Domain.Types.FarePolicy.Discount as DFPDiscount

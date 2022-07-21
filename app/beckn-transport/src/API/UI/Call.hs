@@ -1,8 +1,13 @@
-module API.UI.Call.Handler (API, handler) where
+module API.UI.Call (module Reexport, API, handler) where
 
-import API.UI.Call.Types
 import App.Types
 import Beckn.Types.Id
+import Domain.Action.UI.Call as Reexport
+  ( CallCallbackReq,
+    CallCallbackRes,
+    CallRes (..),
+    GetCallStatusRes,
+  )
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Person as SP

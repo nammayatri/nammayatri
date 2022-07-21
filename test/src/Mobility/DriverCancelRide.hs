@@ -1,7 +1,7 @@
 module Mobility.DriverCancelRide where
 
-import qualified "beckn-transport" API.UI.Booking.Types as TbeBookingAPI
-import qualified "beckn-transport" API.UI.Ride.Types as RideAPI
+import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
+import qualified "beckn-transport" API.UI.Ride as RideAPI
 import Common (getAppBaseUrl)
 import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
 import qualified "beckn-transport" Domain.Types.Ride as TRide

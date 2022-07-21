@@ -1,7 +1,7 @@
 module API where
 
-import qualified API.Beckn.Handler as Beckn
-import qualified API.UI.Handler as UI
+import qualified API.Beckn as Beckn
+import qualified API.UI as UI
 import App.Types
 import Data.OpenApi
 import EulerHS.Prelude

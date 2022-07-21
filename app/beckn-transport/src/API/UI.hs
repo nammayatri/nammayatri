@@ -1,18 +1,18 @@
-module API.UI.Handler (API, handler) where
+module API.UI (API, handler) where
 
-import qualified API.UI.Booking.Handler as Booking
-import qualified API.UI.Call.Handler as Call
-import qualified API.UI.CancellationReason.Handler as CancellationReason
-import qualified API.UI.Driver.Handler as Driver
-import qualified API.UI.FarePolicy.Handler as FarePolicy
-import qualified API.UI.GoogleMaps.Handler as GoogleMaps
-import qualified API.UI.Location.Handler as Location
-import qualified API.UI.Registration.Handler as Registration
-import qualified API.UI.Ride.Handler as Ride
-import qualified API.UI.Route.Handler as Route
-import qualified API.UI.TranspAdmin.Handler as TranspAdmin
-import qualified API.UI.Transporter.Handler as Transporter
-import qualified API.UI.Vehicle.Handler as Vehicle
+import qualified API.UI.Booking as Booking
+import qualified API.UI.Call as Call
+import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.Driver as Driver
+import qualified API.UI.FarePolicy as FarePolicy
+import qualified API.UI.GoogleMaps as GoogleMaps
+import qualified API.UI.Location as Location
+import qualified API.UI.Registration as Registration
+import qualified API.UI.Ride as Ride
+import qualified API.UI.Route as Route
+import qualified API.UI.TranspAdmin as TranspAdmin
+import qualified API.UI.Transporter as Transporter
+import qualified API.UI.Vehicle as Vehicle
 import App.Types
 import EulerHS.Prelude
 import Servant

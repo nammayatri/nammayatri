@@ -1,9 +1,13 @@
-module API.UI.GoogleMaps.Handler (API, handler) where
+module API.UI.GoogleMaps (module Reexport, API, handler) where
 
-import API.UI.GoogleMaps.Types
 import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.Id
+import Domain.Action.UI.GoogleMaps as Reexport
+  ( GetPlaceNameResp (..),
+    PlaceDetailsResp (..),
+    SearchLocationResp (..),
+  )
 import qualified Domain.Action.UI.GoogleMaps as DGoogleMaps
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude

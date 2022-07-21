@@ -1,8 +1,12 @@
-module API.UI.FarePolicy.RentalFarePolicy.Handler (API, handler) where
+module API.UI.FarePolicy.RentalFarePolicy (module Reexport, API, handler) where
 
-import API.UI.FarePolicy.RentalFarePolicy.Types
 import App.Types
 import Beckn.Types.APISuccess
+import Domain.Action.UI.FarePolicy.RentalFarePolicy as Reexport
+  ( CreateRentalFarePolicyItem (..),
+    CreateRentalFarePolicyReq (..),
+    ListRentalFarePoliciesRes (..),
+  )
 import qualified Domain.Action.UI.FarePolicy.RentalFarePolicy as RentalFP
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude

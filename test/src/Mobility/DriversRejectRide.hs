@@ -1,6 +1,6 @@
 module Mobility.DriversRejectRide where
 
-import qualified "beckn-transport" API.UI.Booking.Types as TbeBookingAPI
+import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
 import Common (getAppBaseUrl)
 import qualified "app-backend" Domain.Types.RideBooking as AppRB
 import qualified "beckn-transport" Domain.Types.RideBooking as TRB

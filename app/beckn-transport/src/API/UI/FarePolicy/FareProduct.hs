@@ -1,8 +1,11 @@
-module API.UI.FarePolicy.FareProduct.Handler (API, handler) where
+module API.UI.FarePolicy.FareProduct (module Reexport, API, handler) where
 
-import API.UI.FarePolicy.FareProduct.Types
 import App.Types
 import Beckn.Types.APISuccess
+import Domain.Action.UI.FarePolicy.FareProduct as Reexport
+  ( ListFareProductsRes (..),
+    UpdateFareProductReq (..),
+  )
 import qualified Domain.Action.UI.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.Person as SP
 import EulerHS.Prelude

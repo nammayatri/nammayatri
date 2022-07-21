@@ -1,9 +1,15 @@
-module API.UI.Registration.Handler (API, handler) where
+module API.UI.Registration (module Reexport, API, handler) where
 
-import API.UI.Registration.Types
 import App.Types
 import Beckn.Types.APISuccess
 import Beckn.Types.Id
+import Domain.Action.UI.Registration as Reexport
+  ( AuthReq (..),
+    AuthRes (..),
+    AuthVerifyReq (..),
+    AuthVerifyRes (..),
+    ResendAuthRes,
+  )
 import qualified Domain.Action.UI.Registration as DReg
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
