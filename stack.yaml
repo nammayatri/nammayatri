@@ -41,6 +41,7 @@ packages:
   - app/mock-fcm
   - app/example-service
   - app/mock-bap
+  - app/mock-idfy
   - app/public-transport-bap
   - app/public-transport-search-consumer
   - app/mock-public-transport-bpp

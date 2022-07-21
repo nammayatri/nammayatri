@@ -122,6 +122,15 @@ cradle:
 
     - path: "app/mock-sms/server/Paths_mock_sms.hs"
       component: "mock-sms:exe:mock-fcm-exe"
+    
+    - path: "app/mock-idfy/src"
+      component: "mock-idfy:lib"
+
+    - path: "app/mock-idfy/server/Main.hs"
+      component: "mock-idfy:exe:mock-fcm-exe"
+
+    - path: "app/mock-idfy/server/Paths_mock_idfy.hs"
+      component: "mock-idfy:exe:mock-fcm-exe"
 
     - path: "app/mock-fcm/src"
       component: "mock-fcm:lib"
