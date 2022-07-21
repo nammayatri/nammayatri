@@ -21,7 +21,7 @@ mkOnInitMessage res =
           }
     }
   where
-    booking = res.rideBooking
+    booking = res.booking
 
 mkPrice :: Amount -> Amount -> OnInit.QuotePrice
 mkPrice estimatedFare estimatedTotalFare =

@@ -5,9 +5,9 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.CancellationReason (CancellationReasonCode)
 import Domain.Types.Ride
-import Domain.Types.RideBooking.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.Vehicle.Variant
 
 data StartRideReq = StartRideReq

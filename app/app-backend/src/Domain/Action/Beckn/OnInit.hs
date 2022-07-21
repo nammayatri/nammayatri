@@ -4,13 +4,13 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.Types.RideBooking (BPPRideBooking, RideBooking)
-import qualified Storage.Queries.RideBooking as QRideB
+import Domain.Types.Booking (BPPBooking, Booking)
+import qualified Storage.Queries.Booking as QRideB
 import Utils.Common
 
 data OnInitReq = OnInitReq
-  { rideBookingId :: Id RideBooking,
-    bppRideBookingId :: Id BPPRideBooking,
+  { bookingId :: Id Booking,
+    bppBookingId :: Id BPPBooking,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount
@@ -20,5 +20,5 @@ data OnInitReq = OnInitReq
 onInit :: EsqDBFlow m r => OnInitReq -> m ()
 onInit req = do
   DB.runTransaction $ do
-    QRideB.updateBPPBookingId req.rideBookingId req.bppRideBookingId
-    QRideB.updatePaymentInfo req.rideBookingId req.estimatedFare req.discount req.estimatedTotalFare
+    QRideB.updateBPPBookingId req.bookingId req.bppBookingId
+    QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare

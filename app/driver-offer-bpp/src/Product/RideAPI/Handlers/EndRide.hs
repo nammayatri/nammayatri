@@ -5,12 +5,12 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParams as Fare
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude hiding (pi)
 import Product.FareCalculator.Calculator as Fare
 import Types.API.Ride (EndRideReq)
@@ -20,10 +20,10 @@ import Utils.Common
 
 data ServiceHandle m = ServiceHandle
   { findById :: Id Person.Person -> m (Maybe Person.Person),
-    findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
+    findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    endRideTransaction :: Id SRB.RideBooking -> Ride.Ride -> Id Driver -> m (),
-    notifyCompleteToBAP :: SRB.RideBooking -> Ride.Ride -> Fare.FareParameters -> m (),
+    endRideTransaction :: Id SRB.Booking -> Ride.Ride -> Id Driver -> m (),
+    notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> m (),
     calculateFare ::
       Id Organization ->
       --      Vehicle.Variant ->
@@ -57,31 +57,31 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
     _ -> throwError AccessDenied
   unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
+  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   now <- getCurrentTime
-  putDiffs rideBooking ride
+  putDiffs booking ride
 
   let updRide =
         ride{tripEndTime = Just now
             }
 
-  endRideTransaction rideBooking.id updRide (cast driverId)
+  endRideTransaction booking.id updRide (cast driverId)
 
-  notifyCompleteToBAP rideBooking updRide rideBooking.fareParams
+  notifyCompleteToBAP booking updRide booking.fareParams
 
   return APISuccess.Success
   where
-    putDiffs rideBooking ride = do
-      let transporterId = rideBooking.providerId
+    putDiffs booking ride = do
+      let transporterId = booking.providerId
           actualDistance = ride.traveledDistance
-          oldDistance = rideBooking.estimatedDistance
+          oldDistance = booking.estimatedDistance
 
       -- maybe compare only distance fare?
-      let estimatedBaseFare = fareSum rideBooking.fareParams
+      let estimatedBaseFare = fareSum booking.fareParams
 
-      fareParams <- calculateFare transporterId actualDistance rideBooking.startTime rideBooking.fareParams.driverSelectedFare
+      fareParams <- calculateFare transporterId actualDistance booking.startTime booking.fareParams.driverSelectedFare
       let updatedBaseFare = Fare.fareSum fareParams
       let distanceDiff = actualDistance - oldDistance
       let fareDiff = updatedBaseFare - estimatedBaseFare

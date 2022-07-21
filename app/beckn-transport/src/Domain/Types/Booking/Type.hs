@@ -18,7 +18,7 @@ import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API
 
-data RideBookingStatus
+data BookingStatus
   = NEW
   | CONFIRMED
   | AWAITING_REASSIGNMENT
@@ -27,19 +27,19 @@ data RideBookingStatus
   | TRIP_ASSIGNED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-instance FromHttpApiData RideBookingStatus where
+instance FromHttpApiData BookingStatus where
   parseUrlPiece = parseHeader . DT.encodeUtf8
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
-instance ToHttpApiData RideBookingStatus where
+instance ToHttpApiData BookingStatus where
   toUrlPiece = DT.decodeUtf8 . toHeader
   toQueryParam = toUrlPiece
   toHeader = BSL.toStrict . encode
 
-data RideBooking = RideBooking
-  { id :: Id RideBooking,
-    status :: RideBookingStatus,
+data Booking = Booking
+  { id :: Id Booking,
+    status :: BookingStatus,
     providerId :: Id DOrg.Organization,
     bapId :: Text,
     bapUri :: BaseUrl,
@@ -51,30 +51,30 @@ data RideBooking = RideBooking
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
     reallocationsCount :: Int,
-    rideBookingDetails :: RideBookingDetails,
+    bookingDetails :: BookingDetails,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic)
 
-data RideBookingDetails = OneWayDetails OneWayRideBookingDetails | RentalDetails RentalRideBookingDetails
+data BookingDetails = OneWayDetails OneWayBookingDetails | RentalDetails RentalBookingDetails
   deriving (Generic, Eq)
 
-data OneWayRideBookingDetails = OneWayRideBookingDetails
+data OneWayBookingDetails = OneWayBookingDetails
   { toLocationId :: Id DLoc.BookingLocation,
     estimatedDistance :: HighPrecMeters
   }
   deriving (Eq)
 
-newtype RentalRideBookingDetails = RentalRideBookingDetails
+newtype RentalBookingDetails = RentalBookingDetails
   { rentalFarePolicyId :: Id DRentalFP.RentalFarePolicy
   }
   deriving (Eq)
 
-mkRentalRideBookingDetails :: Id DRentalFP.RentalFarePolicy -> RideBookingDetails
-mkRentalRideBookingDetails rentalFarePolicyId = RentalDetails $ RentalRideBookingDetails {..}
+mkRentalBookingDetails :: Id DRentalFP.RentalFarePolicy -> BookingDetails
+mkRentalBookingDetails rentalFarePolicyId = RentalDetails $ RentalBookingDetails {..}
 
-getFareProductType :: RideBookingDetails -> SFP.FareProductType
+getFareProductType :: BookingDetails -> SFP.FareProductType
 getFareProductType = \case
   OneWayDetails _ -> SFP.ONE_WAY
   RentalDetails _ -> SFP.RENTAL

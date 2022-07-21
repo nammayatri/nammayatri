@@ -6,16 +6,16 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Domain.Types.Booking
 import Domain.Types.FareBreakup
-import Domain.Types.RideBooking
 import Storage.Tabular.FareBreakup
 
 createMany :: [FareBreakup] -> SqlDB ()
 createMany = Esq.createMany
 
-findAllByRideBookingId :: (MonadThrow m, Log m, Transactionable m) => Id RideBooking -> m [FareBreakup]
-findAllByRideBookingId rideBookingId =
+findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
+findAllByBookingId bookingId =
   findAll $ do
     fareBreakup <- from $ table @FareBreakupT
-    where_ $ fareBreakup ^. FareBreakupRideBookingId ==. val (toKey rideBookingId)
+    where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
     return fareBreakup

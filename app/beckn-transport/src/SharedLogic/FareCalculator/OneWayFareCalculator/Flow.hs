@@ -11,10 +11,10 @@ where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import Domain.Types.Booking.Type
 import Domain.Types.FarePolicy.FareBreakup
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.Organization (Organization)
-import Domain.Types.RideBooking (RideBooking)
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
@@ -67,29 +67,29 @@ doCalculateFare ServiceHandle {..} orgId vehicleVariant distance startTime = do
     $ "Fare parameters calculated: " +|| fareParams ||+ ""
   pure fareParams
 
-buildOneWayFareBreakups :: MonadGuid m => OneWayFareParameters -> Id RideBooking -> m [FareBreakup]
-buildOneWayFareBreakups fareParams rideBookingId = do
-  baseFareBreakup <- buildBaseFareBreakup fareParams rideBookingId
-  distanceFareBreakup <- buildDistanceFareBreakup fareParams rideBookingId
-  discountFareBreakup <- buildDiscountFareBreakup fareParams.discount rideBookingId
+buildOneWayFareBreakups :: MonadGuid m => OneWayFareParameters -> Id Booking -> m [FareBreakup]
+buildOneWayFareBreakups fareParams bookingId = do
+  baseFareBreakup <- buildBaseFareBreakup fareParams bookingId
+  distanceFareBreakup <- buildDistanceFareBreakup fareParams bookingId
+  discountFareBreakup <- buildDiscountFareBreakup fareParams.discount bookingId
   pure $ [baseFareBreakup, distanceFareBreakup] <> maybeToList discountFareBreakup
 
-buildBaseFareBreakup :: MonadGuid m => OneWayFareParameters -> Id RideBooking -> m FareBreakup
-buildBaseFareBreakup OneWayFareParameters {..} rideBookingId = do
+buildBaseFareBreakup :: MonadGuid m => OneWayFareParameters -> Id Booking -> m FareBreakup
+buildBaseFareBreakup OneWayFareParameters {..} bookingId = do
   id <- Id <$> generateGUIDText
   let amount = nightShiftRate * baseFare
       description = "Base fare is " <> show amount <> "rupees"
   pure FareBreakup {..}
 
-buildDistanceFareBreakup :: MonadGuid m => OneWayFareParameters -> Id RideBooking -> m FareBreakup
-buildDistanceFareBreakup OneWayFareParameters {..} rideBookingId = do
+buildDistanceFareBreakup :: MonadGuid m => OneWayFareParameters -> Id Booking -> m FareBreakup
+buildDistanceFareBreakup OneWayFareParameters {..} bookingId = do
   id <- Id <$> generateGUIDText
   let amount = nightShiftRate * distanceFare
       description = "Distance fare is " <> show amount <> " rupees"
   pure FareBreakup {..}
 
-buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id RideBooking -> m (Maybe FareBreakup)
-buildDiscountFareBreakup mbDiscount rideBookingId = do
+buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id Booking -> m (Maybe FareBreakup)
+buildDiscountFareBreakup mbDiscount bookingId = do
   forM mbDiscount $ \discount -> do
     id <- Id <$> generateGUIDText
     let amount = negate discount -- this amount should be always below zero

@@ -12,7 +12,7 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.RideRequest as Domain
-import Storage.Tabular.RideBooking (RideBookingTId)
+import Storage.Tabular.Booking (BookingTId)
 import Types.Error
 
 derivePersistField "Domain.RideRequestType"
@@ -22,7 +22,7 @@ mkPersist
   [defaultQQ|
     RideRequestT sql=ride_request
       id Text
-      rideBookingId RideBookingTId
+      bookingId BookingTId
       shortOrgId Text
       createdAt UTCTime
       reqType Domain.RideRequestType sql=type
@@ -42,7 +42,7 @@ instance TType RideRequestT Domain.RideRequest where
     return $
       Domain.RideRequest
         { id = Id id,
-          rideBookingId = fromKey rideBookingId,
+          bookingId = fromKey bookingId,
           shortOrgId = ShortId shortOrgId,
           _type = reqType,
           info = decInfo,
@@ -51,7 +51,7 @@ instance TType RideRequestT Domain.RideRequest where
   toTType Domain.RideRequest {..} =
     RideRequestT
       { id = getId id,
-        rideBookingId = toKey rideBookingId,
+        bookingId = toKey bookingId,
         shortOrgId = getShortId shortOrgId,
         reqType = _type,
         info = encodeToText <$> info,

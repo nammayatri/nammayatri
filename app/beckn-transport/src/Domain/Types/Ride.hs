@@ -35,7 +35,7 @@ instance ToHttpApiData RideStatus where
 
 data Ride = Ride
   { id :: Id Ride,
-    bookingId :: Id DRB.RideBooking,
+    bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
     status :: RideStatus,
     driverId :: Id DPers.Person,

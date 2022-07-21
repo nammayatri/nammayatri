@@ -4,10 +4,10 @@ import Beckn.Prelude
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import Types.Error
 import Utils.Common
 
@@ -16,7 +16,7 @@ type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id SRide.Ride -> m (Maybe SRide.Ride),
     findById :: Id Person.Person -> m (Maybe Person.Person),
-    cancelRide :: Id SRide.Ride -> SBCR.RideBookingCancellationReason -> m ()
+    cancelRide :: Id SRide.Ride -> SBCR.BookingCancellationReason -> m ()
   }
 
 data CancelRideReq = CancelRideReq
@@ -48,9 +48,9 @@ cancelRideHandler ServiceHandle {..} personId rideId req = do
       let CancelRideReq {..} = req
       guid <- generateGUID
       return $
-        SBCR.RideBookingCancellationReason
+        SBCR.BookingCancellationReason
           { id = guid,
-            rideBookingId = ride.bookingId,
+            bookingId = ride.bookingId,
             rideId = Just ride.id,
             source = source,
             reasonCode = Just reasonCode,

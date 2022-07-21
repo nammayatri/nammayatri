@@ -19,15 +19,16 @@ import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi (Info (..), OpenApi (..))
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.CancellationReason as SCancellationReason
 import qualified Domain.Types.Quote as Quote
 import qualified Domain.Types.RegistrationToken as SRT
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.SearchRequest as SSR
 import EulerHS.Prelude
 import Product.Auth (authAPI)
+import qualified Product.Booking as Booking
 import qualified Product.Call as Call
 import qualified Product.Cancel as Cancel
 import qualified Product.CancellationReason as CancellationReason
@@ -41,7 +42,6 @@ import qualified Product.Profile as Profile
 import qualified Product.Quote as Quote
 import qualified Product.Registration as Registration
 import qualified Product.Ride as Ride
-import qualified Product.RideBooking as RideBooking
 import qualified Product.SavedLocations as SavedLocations
 import qualified Product.Search as Search
 import qualified Product.Select as Select
@@ -52,6 +52,7 @@ import qualified Product.Track as Track
 import qualified Product.Update as Update
 import Servant hiding (throwError)
 import Servant.OpenApi
+import qualified Types.API.Booking as BookingAPI
 import qualified Types.API.Call as API
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.CustomerSupport as CustomerSupport
@@ -61,7 +62,6 @@ import qualified Types.API.Profile as Profile
 import qualified Types.API.Quote as QuoteAPI
 import Types.API.Registration
 import qualified Types.API.Ride as RideAPI
-import qualified Types.API.RideBooking as RideBookingAPI
 import qualified Types.API.SavedLocations as SavedLocationsAPI
 import qualified Types.API.Search as Search
 import Types.API.Select
@@ -93,7 +93,7 @@ type UIAPI =
     :<|> Init.InitAPI
     :<|> QuoteAPI
     :<|> Confirm.ConfirmAPI
-    :<|> RideBookingAPI
+    :<|> BookingAPI
     :<|> Cancel.CancelAPI
     :<|> RideAPI
     :<|> DeprecatedCallAPIs
@@ -132,7 +132,7 @@ uiAPI =
     :<|> Init.init
     :<|> quoteFlow
     :<|> confirmFlow
-    :<|> rideBookingFlow
+    :<|> bookingFlow
     :<|> cancelFlow
     :<|> rideFlow
     :<|> deprecatedCallFlow
@@ -263,23 +263,23 @@ confirmFlow :: FlowServer Confirm.ConfirmAPI
 confirmFlow =
   Confirm.confirm
 
-type RideBookingAPI =
+type BookingAPI =
   "rideBooking"
-    :> ( Capture "bookingId" (Id SRB.RideBooking)
+    :> ( Capture "rideBookingId" (Id SRB.Booking)
            :> TokenAuth
-           :> Post '[JSON] RideBookingAPI.RideBookingStatusRes
+           :> Post '[JSON] BookingAPI.BookingStatusRes
            :<|> "list"
              :> TokenAuth
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
              :> QueryParam "onlyActive" Bool
-             :> Get '[JSON] RideBookingAPI.RideBookingListRes
+             :> Get '[JSON] BookingAPI.BookingListRes
        )
 
-rideBookingFlow :: FlowServer RideBookingAPI
-rideBookingFlow =
-  RideBooking.rideBookingStatus
-    :<|> RideBooking.rideBookingList
+bookingFlow :: FlowServer BookingAPI
+bookingFlow =
+  Booking.bookingStatus
+    :<|> Booking.bookingList
 
 -------- Cancel Flow----------
 

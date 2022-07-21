@@ -11,8 +11,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.AllocationEvent as Domain
+import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.RideBooking (RideBookingTId)
 
 derivePersistField "Domain.AllocationEventType"
 
@@ -24,7 +24,7 @@ mkPersist
       driverId PersonTId Maybe
       eventType Domain.AllocationEventType
       timestamp UTCTime
-      rideBookingId RideBookingTId
+      bookingId BookingTId
       Primary id
       deriving Generic
     |]
@@ -40,13 +40,13 @@ instance TType AllocationEventT Domain.AllocationEvent where
       Domain.AllocationEvent
         { id = Id id,
           driverId = cast . fromKey <$> driverId,
-          rideBookingId = fromKey rideBookingId,
+          bookingId = fromKey bookingId,
           ..
         }
   toTType Domain.AllocationEvent {..} =
     AllocationEventT
       { id = getId id,
         driverId = toKey . cast <$> driverId,
-        rideBookingId = toKey rideBookingId,
+        bookingId = toKey bookingId,
         ..
       }

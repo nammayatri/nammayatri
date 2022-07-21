@@ -3,9 +3,9 @@ module Storage.Queries.BusinessEvent where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Domain.Types.Booking
 import Domain.Types.BusinessEvent
 import Domain.Types.Ride
-import Domain.Types.RideBooking
 import Domain.Types.Vehicle (Variant)
 import SharedLogic.DriverPool (DriverPoolResult)
 import Storage.Tabular.BusinessEvent ()
@@ -15,14 +15,14 @@ import Utils.Common
 logBusinessEvent ::
   Maybe (Id Driver) ->
   EventType ->
-  Maybe (Id RideBooking) ->
+  Maybe (Id Booking) ->
   Maybe WhenPoolWasComputed ->
   Maybe Variant ->
   Maybe Meters ->
   Maybe Seconds ->
   Maybe (Id Ride) ->
   SqlDB ()
-logBusinessEvent driverId eventType rideBookingId whenPoolWasComputed variant distance duration rideId = do
+logBusinessEvent driverId eventType bookingId whenPoolWasComputed variant distance duration rideId = do
   uuid <- generateGUID
   now <- getCurrentTime
   Esq.create $
@@ -31,7 +31,7 @@ logBusinessEvent driverId eventType rideBookingId whenPoolWasComputed variant di
         eventType = eventType,
         timeStamp = now,
         driverId = driverId,
-        rideBookingId = rideBookingId,
+        bookingId = bookingId,
         whenPoolWasComputed = whenPoolWasComputed,
         vehicleVariant = variant,
         distance = distance,
@@ -39,48 +39,48 @@ logBusinessEvent driverId eventType rideBookingId whenPoolWasComputed variant di
         rideId = rideId
       }
 
-logDriverInPoolEvent :: WhenPoolWasComputed -> Maybe (Id RideBooking) -> DriverPoolResult -> SqlDB ()
-logDriverInPoolEvent whenPoolWasComputed rideBookingId driverInPool = do
+logDriverInPoolEvent :: WhenPoolWasComputed -> Maybe (Id Booking) -> DriverPoolResult -> SqlDB ()
+logDriverInPoolEvent whenPoolWasComputed bookingId driverInPool = do
   logBusinessEvent
     (Just driverInPool.driverId)
     DRIVER_IN_POOL
-    rideBookingId
+    bookingId
     (Just whenPoolWasComputed)
     (Just driverInPool.variant)
     (Just driverInPool.distanceToPickup)
     (Just driverInPool.durationToPickup)
     Nothing
 
-logDriverAssignetEvent :: Id Driver -> Id RideBooking -> Id Ride -> SqlDB ()
-logDriverAssignetEvent driverId rideBookingId rideId = do
+logDriverAssignetEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB ()
+logDriverAssignetEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
     DRIVER_ASSIGNED
-    (Just rideBookingId)
+    (Just bookingId)
     Nothing
     Nothing
     Nothing
     Nothing
     (Just rideId)
 
-logRideConfirmedEvent :: Id RideBooking -> SqlDB ()
-logRideConfirmedEvent rideBookingId = do
+logRideConfirmedEvent :: Id Booking -> SqlDB ()
+logRideConfirmedEvent bookingId = do
   logBusinessEvent
     Nothing
     RIDE_CONFIRMED
-    (Just rideBookingId)
+    (Just bookingId)
     Nothing
     Nothing
     Nothing
     Nothing
     Nothing
 
-logRideCommencedEvent :: Id Driver -> Id RideBooking -> Id Ride -> SqlDB ()
-logRideCommencedEvent driverId rideBookingId rideId = do
+logRideCommencedEvent :: Id Driver -> Id Booking -> Id Ride -> SqlDB ()
+logRideCommencedEvent driverId bookingId rideId = do
   logBusinessEvent
     (Just driverId)
     RIDE_COMMENCED
-    (Just rideBookingId)
+    (Just bookingId)
     Nothing
     Nothing
     Nothing

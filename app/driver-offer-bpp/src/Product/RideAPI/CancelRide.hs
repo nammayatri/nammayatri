@@ -4,21 +4,21 @@ import Beckn.External.GoogleMaps.Types
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import qualified Product.RideAPI.Handlers.CancelRide as Handler
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
 import Tools.Metrics
 import Types.API.Ride (CancelRideReq)
 import Types.Error
@@ -54,29 +54,29 @@ cancelRideImpl ::
   m ()
 cancelRideImpl rideId bookingCReason = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
-  let transporterId = rideBooking.providerId
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let transporterId = booking.providerId
   transporter <-
     QOrg.findById transporterId
       >>= fromMaybeM (OrgNotFound transporterId.getId)
-  cancelRideTransaction rideBooking.id ride bookingCReason
+  cancelRideTransaction booking.id ride bookingCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   fork "cancelRide - Notify BAP" $ do
-    BP.sendBookingCancelledUpdateToBAP rideBooking transporter bookingCReason.source
+    BP.sendBookingCancelledUpdateToBAP booking transporter bookingCReason.source
   fork "cancelRide - Notify driver" $ do
     driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    Notify.notifyOnCancel rideBooking driver.id driver.deviceToken bookingCReason.source
+    Notify.notifyOnCancel booking driver.id driver.deviceToken bookingCReason.source
 
 cancelRideTransaction ::
   EsqDBFlow m r =>
-  Id SRB.RideBooking ->
+  Id SRB.Booking ->
   SRide.Ride ->
   SBCR.BookingCancellationReason ->
   m ()
-cancelRideTransaction rideBookingId ride bookingCReason = Esq.runTransaction $ do
+cancelRideTransaction bookingId ride bookingCReason = Esq.runTransaction $ do
   updateDriverInfo ride.driverId
   QRide.updateStatus ride.id SRide.CANCELLED
-  QRB.updateStatus rideBookingId SRB.CANCELLED
+  QRB.updateStatus bookingId SRB.CANCELLED
   QBCR.create bookingCReason
   where
     updateDriverInfo personId = do

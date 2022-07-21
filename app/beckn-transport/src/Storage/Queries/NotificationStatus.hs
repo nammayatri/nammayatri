@@ -3,8 +3,8 @@ module Storage.Queries.NotificationStatus where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Domain.Types.Booking
 import Domain.Types.NotificationStatus as NotificationStatus
-import Domain.Types.RideBooking
 import Storage.Tabular.NotificationStatus
 import Types.App
 import Utils.Common
@@ -12,23 +12,23 @@ import Utils.Common
 createMany :: [NotificationStatus] -> SqlDB ()
 createMany = Esq.createMany
 
-updateStatus :: Id RideBooking -> AnswerStatus -> [Id Driver] -> SqlDB ()
-updateStatus rideBookingId status driverIds =
+updateStatus :: Id Booking -> AnswerStatus -> [Id Driver] -> SqlDB ()
+updateStatus bookingId status driverIds =
   Esq.update $ \tbl -> do
     set
       tbl
       [ NotificationStatusStatus =. val status
       ]
     where_ $
-      tbl ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId)
+      tbl ^. NotificationStatusBookingId ==. val (toKey bookingId)
         &&. tbl ^. NotificationStatusDriverId `in_` valList (toKey . cast <$> driverIds)
 
-fetchAttemptedNotificationsByRBId :: Transactionable m => Id RideBooking -> m [NotificationStatus]
-fetchAttemptedNotificationsByRBId rideBookingId =
+fetchAttemptedNotificationsByRBId :: Transactionable m => Id Booking -> m [NotificationStatus]
+fetchAttemptedNotificationsByRBId bookingId =
   Esq.findAll $ do
     notificationStatus <- from $ table @NotificationStatusT
     where_ $
-      notificationStatus ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId)
+      notificationStatus ^. NotificationStatusBookingId ==. val (toKey bookingId)
         &&. notificationStatus ^. NotificationStatusStatus `in_` valList [NotificationStatus.REJECTED, NotificationStatus.IGNORED]
     return notificationStatus
 
@@ -40,30 +40,30 @@ fetchActiveNotifications =
       notificationStatus ^. NotificationStatusStatus ==. val NotificationStatus.NOTIFIED
     return notificationStatus
 
-findActiveNotificationByRBId :: Transactionable m => Id RideBooking -> m [NotificationStatus.NotificationStatus]
-findActiveNotificationByRBId rideBookingId =
+findActiveNotificationByRBId :: Transactionable m => Id Booking -> m [NotificationStatus.NotificationStatus]
+findActiveNotificationByRBId bookingId =
   Esq.findAll $ do
     notificationStatus <- from $ table @NotificationStatusT
     where_ $
-      notificationStatus ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId)
+      notificationStatus ^. NotificationStatusBookingId ==. val (toKey bookingId)
         &&. notificationStatus ^. NotificationStatusStatus ==. val NotificationStatus.NOTIFIED
     return notificationStatus
 
-findActiveNotificationByDriverId :: Transactionable m => Id Driver -> Id RideBooking -> m (Maybe NotificationStatus)
-findActiveNotificationByDriverId driverId rideBookingId =
+findActiveNotificationByDriverId :: Transactionable m => Id Driver -> Id Booking -> m (Maybe NotificationStatus)
+findActiveNotificationByDriverId driverId bookingId =
   Esq.findOne $ do
     notificationStatus <- from $ table @NotificationStatusT
     where_ $
-      notificationStatus ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId)
+      notificationStatus ^. NotificationStatusBookingId ==. val (toKey bookingId)
         &&. notificationStatus ^. NotificationStatusStatus ==. val NotificationStatus.NOTIFIED
         &&. notificationStatus ^. NotificationStatusDriverId ==. val (toKey $ cast driverId)
     return notificationStatus
 
-cleanupNotifications :: Id RideBooking -> SqlDB ()
-cleanupNotifications rideBookingId =
+cleanupNotifications :: Id Booking -> SqlDB ()
+cleanupNotifications bookingId =
   Esq.delete $ do
     notificationStatus <- from $ table @NotificationStatusT
-    where_ (notificationStatus ^. NotificationStatusRideBookingId ==. val (toKey rideBookingId))
+    where_ (notificationStatus ^. NotificationStatusBookingId ==. val (toKey bookingId))
 
 cleanupOldNotifications :: SqlDB Int
 cleanupOldNotifications = do

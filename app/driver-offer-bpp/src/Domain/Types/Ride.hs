@@ -9,8 +9,8 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as DPers
-import qualified Domain.Types.RideBooking as DRB
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
 import Servant.API
@@ -35,7 +35,7 @@ instance ToHttpApiData RideStatus where
 
 data Ride = Ride
   { id :: Id Ride,
-    bookingId :: Id DRB.RideBooking,
+    bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
     status :: RideStatus,
     driverId :: Id DPers.Person,
@@ -52,7 +52,7 @@ data Ride = Ride
 
 data RideAPIEntity = RideAPIEntity
   { id :: Id Ride,
-    bookingId :: Id DRB.RideBooking,
+    bookingId :: Id DRB.Booking,
     shortRideId :: ShortId Ride,
     status :: RideStatus,
     driverName :: Text,

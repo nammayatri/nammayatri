@@ -3,9 +3,9 @@ module Flow.RideAPI.StartRide where
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import qualified Domain.Action.UI.Ride.StartRide as StartRide
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Fixtures
@@ -19,10 +19,10 @@ handle :: StartRide.ServiceHandle IO
 handle =
   StartRide.ServiceHandle
     { findById = \_personid -> pure $ Just Fixtures.defaultDriver,
-      findRideBookingById = \rbId ->
+      findBookingById = \rbId ->
         pure $
           if rbId == Id "1"
-            then Just rideBooking
+            then Just booking
             else Nothing,
       findRideById = \rideId ->
         pure $
@@ -30,7 +30,7 @@ handle =
             then Just ride
             else Nothing,
       startRide = \_ _ _ -> pure (),
-      notifyBAPRideStarted = \_rideBooking _ride -> pure (),
+      notifyBAPRideStarted = \_booking _ride -> pure (),
       rateLimitStartRide = \_driverId _rideId -> pure ()
     }
 
@@ -42,9 +42,9 @@ ride =
       Ride.otp = "otp"
     }
 
-rideBooking :: SRB.RideBooking
-rideBooking =
-  Fixtures.defaultRideBooking
+booking :: SRB.Booking
+booking =
+  Fixtures.defaultBooking
     { SRB.status = SRB.CONFIRMED
     }
 

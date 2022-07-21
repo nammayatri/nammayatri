@@ -7,10 +7,10 @@ import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import qualified Data.Text as T
+import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
-import Domain.Types.RideBooking (RideBooking)
 import EulerHS.Prelude
 
 -- | Send FCM "cancel" notification to driver
@@ -18,7 +18,7 @@ notifyOnCancel ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  RideBooking ->
+  Booking ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   SBCR.CancellationSource ->
@@ -147,11 +147,11 @@ notifyDriverNewAllocation ::
   ( FCMFlow m r,
     CoreMetrics m
   ) =>
-  Id rideBookingId ->
+  Id bookingId ->
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyDriverNewAllocation rideBookingId personId =
+notifyDriverNewAllocation bookingId personId =
   FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "New allocation request."
@@ -166,7 +166,7 @@ notifyDriverNewAllocation rideBookingId personId =
         { fcmNotificationType = FCM.ALLOCATION_REQUEST,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId rideBookingId,
+          fcmEntityIds = getId bookingId,
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST
         }
 

@@ -2,7 +2,7 @@ module Flow.Allocation.Reassignment where
 
 import Beckn.Types.Id
 import qualified Data.Map as Map
-import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.Booking as SRB
 import EulerHS.Prelude hiding (id)
 import Flow.Allocation.Internal
 import Services.Allocation.Allocation
@@ -10,11 +10,11 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App
 
-rideBooking01Id :: Id SRB.RideBooking
-rideBooking01Id = Id "rideBooking01"
+booking01Id :: Id SRB.Booking
+booking01Id = Id "booking01"
 
-rideBooking02Id :: Id SRB.RideBooking
-rideBooking02Id = Id "rideBooking02"
+booking02Id :: Id SRB.Booking
+booking02Id = Id "booking02"
 
 driverPool1 :: [Id Driver]
 driverPool1 = [Id "driver01", Id "driver02"]
@@ -22,51 +22,51 @@ driverPool1 = [Id "driver01", Id "driver02"]
 driverPool2 :: [Id Driver]
 driverPool2 = [Id "driver01", Id "driver03"]
 
-driverPoolPerRide :: Map (Id SRB.RideBooking) [Id Driver]
-driverPoolPerRide = Map.fromList [(rideBooking01Id, driverPool1), (rideBooking02Id, driverPool2)]
+driverPoolPerRide :: Map (Id SRB.Booking) [Id Driver]
+driverPoolPerRide = Map.fromList [(booking01Id, driverPool1), (booking02Id, driverPool2)]
 
 reassignmentRide :: TestTree
-reassignmentRide = testCase "Reassignment rideBooking after cancellation" $ do
+reassignmentRide = testCase "Reassignment booking after cancellation" $ do
   r@Repository {..} <- initRepository
-  addRideBooking r rideBooking01Id 0
+  addBooking r booking01Id 0
   addDriverPool r driverPoolPerRide
-  addRequest Allocation r rideBooking01Id
+  addRequest Allocation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  addResponse r rideBooking01Id (Id "driver01") Accept
+  addResponse r booking01Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
-  addRequest Cancellation r rideBooking01Id
+  addRequest Cancellation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  updateRideBooking r rideBooking01Id AwaitingReassignment
-  addRequest Allocation r rideBooking01Id
+  updateBooking r booking01Id AwaitingReassignment
+  addRequest Allocation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  checkNotificationStatus r rideBooking01Id (Id "driver02") Notified
-  addResponse r rideBooking01Id (Id "driver02") Accept
+  checkNotificationStatus r booking01Id (Id "driver02") Notified
+  addResponse r booking01Id (Id "driver02") Accept
   void $ process (handle r) org1 numRequestsToProcess
   assignments <- readIORef assignmentsVar
-  assignments @?= [(rideBooking01Id, Id "driver02"), (rideBooking01Id, Id "driver01")]
-  checkRideStatus r rideBooking01Id Assigned
+  assignments @?= [(booking01Id, Id "driver02"), (booking01Id, Id "driver01")]
+  checkRideStatus r booking01Id Assigned
   onRide <- readIORef onRideVar
   onRide @?= [Id "driver02"]
 
 reassignmentDriver :: TestTree
 reassignmentDriver = testCase "Reassignment driver after cancellation" $ do
   r@Repository {..} <- initRepository
-  addRideBooking r rideBooking01Id 0
-  addRideBooking r rideBooking02Id 0
+  addBooking r booking01Id 0
+  addBooking r booking02Id 0
   addDriverPool r driverPoolPerRide
-  addRequest Allocation r rideBooking01Id
+  addRequest Allocation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  addResponse r rideBooking01Id (Id "driver01") Accept
+  addResponse r booking01Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
-  addRequest Cancellation r rideBooking01Id
+  addRequest Cancellation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  addRequest Allocation r rideBooking02Id
+  addRequest Allocation r booking02Id
   void $ process (handle r) org1 numRequestsToProcess
-  addResponse r rideBooking02Id (Id "driver01") Accept
+  addResponse r booking02Id (Id "driver01") Accept
   void $ process (handle r) org1 numRequestsToProcess
   assignments <- readIORef assignmentsVar
-  assignments @?= [(rideBooking02Id, Id "driver01"), (rideBooking01Id, Id "driver01")]
-  checkRideStatus r rideBooking02Id Assigned
+  assignments @?= [(booking02Id, Id "driver01"), (booking01Id, Id "driver01")]
+  checkRideStatus r booking02Id Assigned
   onRide <- readIORef onRideVar
   onRide @?= [Id "driver01"]
 

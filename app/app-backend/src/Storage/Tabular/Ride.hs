@@ -13,7 +13,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
 import qualified Domain.Types.VehicleVariant as VehVar (VehicleVariant)
-import qualified Storage.Tabular.RideBooking as SRB
+import qualified Storage.Tabular.Booking as SRB
 
 derivePersistField "Domain.RideStatus"
 
@@ -23,7 +23,7 @@ mkPersist
     RideT sql=ride
       id Text
       bppRideId Text
-      bookingId SRB.RideBookingTId
+      bookingId SRB.BookingTId
       shortId Text
       status Domain.RideStatus
       driverName Text

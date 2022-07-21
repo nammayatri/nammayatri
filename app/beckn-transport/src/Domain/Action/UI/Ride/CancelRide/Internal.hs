@@ -5,23 +5,23 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.App
 import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.Organization as Organization
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
 import SharedLogic.DriverPool (recalculateDriverPool)
+import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Organization as Organization
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
-import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import qualified Storage.Queries.RideRequest as RideRequest
 import Tools.Metrics (CoreMetrics)
 import Types.Error
@@ -38,43 +38,43 @@ cancelRide ::
     CoreMetrics m
   ) =>
   Id SRide.Ride ->
-  SBCR.RideBookingCancellationReason ->
+  SBCR.BookingCancellationReason ->
   m ()
 cancelRide rideId bookingCReason = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
-  let transporterId = rideBooking.providerId
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let transporterId = booking.providerId
   transporter <-
     Organization.findById transporterId
       >>= fromMaybeM (OrgNotFound transporterId.getId)
   if isCancelledByDriver
     then do
-      let fareProductType = SRB.getFareProductType rideBooking.rideBookingDetails
-      driverPool <- recalculateDriverPool rideBooking.fromLocationId rideBooking.id rideBooking.providerId rideBooking.vehicleVariant fareProductType
-      Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_REALLOCATION (Just rideBooking.id)) driverPool
-      reallocateRideTransaction transporter.shortId rideBooking.id ride bookingCReason
-    else cancelRideTransaction rideBooking.id ride bookingCReason
+      let fareProductType = SRB.getFareProductType booking.bookingDetails
+      driverPool <- recalculateDriverPool booking.fromLocationId booking.id booking.providerId booking.vehicleVariant fareProductType
+      Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_REALLOCATION (Just booking.id)) driverPool
+      reallocateRideTransaction transporter.shortId booking.id ride bookingCReason
+    else cancelRideTransaction booking.id ride bookingCReason
   logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
   fork "cancelRide - Notify BAP" $ do
     if isCancelledByDriver
-      then BP.sendRideBookingReallocationUpdateToBAP rideBooking ride.id transporter
-      else BP.sendRideBookingCancelledUpdateToBAP rideBooking transporter bookingCReason.source
+      then BP.sendBookingReallocationUpdateToBAP booking ride.id transporter
+      else BP.sendBookingCancelledUpdateToBAP booking transporter bookingCReason.source
   fork "cancelRide - Notify driver" $ do
     driver <- Person.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    Notify.notifyOnCancel rideBooking driver.id driver.deviceToken bookingCReason.source
+    Notify.notifyOnCancel booking driver.id driver.deviceToken bookingCReason.source
   where
     isCancelledByDriver = bookingCReason.source == SBCR.ByDriver
 
 cancelRideTransaction ::
   EsqDBFlow m r =>
-  Id SRB.RideBooking ->
+  Id SRB.Booking ->
   SRide.Ride ->
-  SBCR.RideBookingCancellationReason ->
+  SBCR.BookingCancellationReason ->
   m ()
-cancelRideTransaction rideBookingId ride bookingCReason = Esq.runTransaction $ do
+cancelRideTransaction bookingId ride bookingCReason = Esq.runTransaction $ do
   updateDriverInfo ride.driverId
   QRide.updateStatus ride.id SRide.CANCELLED
-  QRB.updateStatus rideBookingId SRB.CANCELLED
+  QRB.updateStatus bookingId SRB.CANCELLED
   QBCR.create bookingCReason
   where
     updateDriverInfo personId = do
@@ -85,21 +85,21 @@ cancelRideTransaction rideBookingId ride bookingCReason = Esq.runTransaction $ d
 reallocateRideTransaction ::
   EsqDBFlow m r =>
   ShortId Organization.Organization ->
-  Id SRB.RideBooking ->
+  Id SRB.Booking ->
   SRide.Ride ->
-  SBCR.RideBookingCancellationReason ->
+  SBCR.BookingCancellationReason ->
   m ()
-reallocateRideTransaction orgShortId rideBookingId ride bookingCReason = do
+reallocateRideTransaction orgShortId bookingId ride bookingCReason = do
   now <- getCurrentTime
   rideRequest <-
     BP.buildRideReq
-      rideBookingId
+      bookingId
       orgShortId
       SRideRequest.ALLOCATION
       now
   Esq.runTransaction $ do
-    QRB.updateStatus rideBookingId SRB.AWAITING_REASSIGNMENT
-    QRB.increaseReallocationsCounter rideBookingId
+    QRB.updateStatus bookingId SRB.AWAITING_REASSIGNMENT
+    QRB.increaseReallocationsCounter bookingId
     QRide.updateStatus ride.id SRide.CANCELLED
     updateDriverInfo
     QBCR.create bookingCReason

@@ -6,14 +6,14 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Utils.Error.Throwing
+import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.DriverQuote as DQuote
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.RideBooking as DRB
-import qualified Domain.Types.RideBooking.BookingLocation as DLoc
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.Organization as QOrg
-import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.SearchRequest as QSR
 
 -- fields that are not used because of stateful init API
@@ -29,7 +29,7 @@ data InitReq = InitReq
   }
 
 data InitRes = InitRes
-  { rideBooking :: DRB.RideBooking,
+  { booking :: DRB.Booking,
     transporter :: DOrg.Organization
   }
 
@@ -48,16 +48,16 @@ handler orgId req = do
   transporter <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
   driverQuote <- QDQuote.findById req.driverQuoteId >>= fromMaybeM (QuoteNotFound req.driverQuoteId.getId)
   searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
-  rideBooking <- buildRideBooking searchRequest driverQuote
+  booking <- buildBooking searchRequest driverQuote
   Esq.runTransaction $
-    QRB.create rideBooking
+    QRB.create booking
   pure InitRes {..}
   where
-    buildRideBooking searchRequest driverQuote = do
+    buildBooking searchRequest driverQuote = do
       id <- Id <$> generateGUID
       now <- getCurrentTime
       pure
-        DRB.RideBooking
+        DRB.Booking
           { quoteId = req.driverQuoteId,
             status = DRB.NEW,
             providerId = orgId,

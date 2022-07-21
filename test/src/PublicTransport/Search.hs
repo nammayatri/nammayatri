@@ -8,7 +8,7 @@ import Beckn.Utils.Time (threadDelaySec)
 import Common
 import qualified Data.Text as T
 import Domain.Action.UI.QuoteConfirm
-import Domain.Types.Booking
+import qualified "public-transport-bap" Domain.Types.Booking as TB
 import Domain.Types.PaymentTransaction (PaymentStatus (FAILED, PENDING, SUCCESS))
 import qualified "app-backend" Domain.Types.SearchRequest as AppBE
 import qualified "public-transport-bap" Environment as Bap
@@ -61,19 +61,19 @@ testConfirm shouldSucceed quote = do
 runPublicTransportFlow :: Text -> FlowR Bap.AppEnv a -> IO a
 runPublicTransportFlow tag = runFlow tag publicTransportBapEnv
 
-assertBooking :: MonadIO m => BookingStatus -> PaymentStatus -> BookingAPIEntity -> m ()
+assertBooking :: MonadIO m => TB.BookingStatus -> PaymentStatus -> TB.BookingAPIEntity -> m ()
 assertBooking bookingStatus paymentStatus booking = do
   booking.status `shouldBe` bookingStatus
   (.status) <$> booking.paymentTxn `shouldBe` Just paymentStatus
 
-assertBookingAwaitingPayment :: MonadIO m => BookingAPIEntity -> m ()
-assertBookingAwaitingPayment = assertBooking AWAITING_PAYMENT PENDING
+assertBookingAwaitingPayment :: MonadIO m => TB.BookingAPIEntity -> m ()
+assertBookingAwaitingPayment = assertBooking TB.AWAITING_PAYMENT PENDING
 
-assertSuccessfulBooking :: MonadIO m => BookingAPIEntity -> m ()
-assertSuccessfulBooking = assertBooking CONFIRMED SUCCESS
+assertSuccessfulBooking :: MonadIO m => TB.BookingAPIEntity -> m ()
+assertSuccessfulBooking = assertBooking TB.CONFIRMED SUCCESS
 
-assertFailedBooking :: MonadIO m => BookingAPIEntity -> m ()
-assertFailedBooking = assertBooking CANCELLED FAILED
+assertFailedBooking :: MonadIO m => TB.BookingAPIEntity -> m ()
+assertFailedBooking = assertBooking TB.CANCELLED FAILED
 
 testSearch :: IO (PublicTransportQuote, PublicTransportQuote)
 testSearch = do

@@ -4,10 +4,10 @@ import Beckn.Product.Validation.Context (validateContext)
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideBookingCancelledEvent as OnUpdate
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as OnUpdate
 import Beckn.Types.Id
 import qualified Domain.Action.Beckn.OnUpdate as DOnUpdate
-import qualified Domain.Types.RideBookingCancellationReason as SBCR
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
 import Utils.Common
 
@@ -72,13 +72,13 @@ parseEvent (OnUpdate.RideCompleted rcEvent) = do
         { amount = realToFrac breakup.price.value,
           description = breakup.title
         }
-parseEvent (OnUpdate.RideBookingCancelled tcEvent) =
+parseEvent (OnUpdate.BookingCancelled tcEvent) =
   return $
     DOnUpdate.BookingCancelledReq
       { bppBookingId = Id $ tcEvent.id,
         cancellationSource = castCancellationSource tcEvent.cancellation_reason
       }
-parseEvent (OnUpdate.RideBookingReallocation rbrEvent) =
+parseEvent (OnUpdate.BookingReallocation rbrEvent) =
   return $
     DOnUpdate.BookingReallocationReq
       { bppBookingId = Id $ rbrEvent.id,

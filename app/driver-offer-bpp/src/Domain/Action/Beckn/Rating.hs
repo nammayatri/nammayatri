@@ -3,31 +3,31 @@ module Domain.Action.Beckn.Rating where
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Person as SP
 import Domain.Types.Rating as Rating
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.RideBooking as DRideBooking
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
 import Types.Error
 import Utils.Common
 
 data DRatingReq = DRatingReq
-  { rideBookingId :: Id DRideBooking.RideBooking,
+  { bookingId :: Id DBooking.Booking,
     ratingValue :: Int
   }
 
 handler :: DRatingReq -> Flow ()
 handler req = do
-  rideBooking <- QRB.findById req.rideBookingId >>= fromMaybeM (RideBookingDoesNotExist req.rideBookingId.getId)
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   ride <-
-    QRide.findActiveByRBId rideBooking.id
-      >>= fromMaybeM (RideNotFound rideBooking.id.getId)
+    QRide.findActiveByRBId booking.id
+      >>= fromMaybeM (RideNotFound booking.id.getId)
   let driverId = ride.driverId
   unless (ride.status == Ride.COMPLETED) $
     throwError $ RideInvalidStatus "Ride is not ready for rating."

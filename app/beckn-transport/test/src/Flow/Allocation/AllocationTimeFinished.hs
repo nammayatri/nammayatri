@@ -2,7 +2,7 @@ module Flow.Allocation.AllocationTimeFinished where
 
 import Beckn.Types.Id
 import qualified Data.Map as Map
-import qualified Domain.Types.RideBooking as SRB
+import qualified Domain.Types.Booking as SRB
 import EulerHS.Prelude hiding (id)
 import Flow.Allocation.Internal
 import Services.Allocation.Allocation
@@ -10,22 +10,22 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App
 
-rideBooking01Id :: Id SRB.RideBooking
-rideBooking01Id = Id "rideBooking01"
+booking01Id :: Id SRB.Booking
+booking01Id = Id "booking01"
 
 driverPool1 :: [Id Driver]
 driverPool1 = [Id "driver01", Id "driver02"]
 
-driverPoolPerRide :: Map (Id SRB.RideBooking) [Id Driver]
-driverPoolPerRide = Map.fromList [(rideBooking01Id, driverPool1)]
+driverPoolPerRide :: Map (Id SRB.Booking) [Id Driver]
+driverPoolPerRide = Map.fromList [(booking01Id, driverPool1)]
 
 allocationTimeFinished :: TestTree
 allocationTimeFinished = testCase "AllocationTimeFinished" $ do
   r@Repository {..} <- initRepository
-  addRideBooking r rideBooking01Id 0
+  addBooking r booking01Id 0
   addDriverPool r driverPoolPerRide
-  addRequest Allocation r rideBooking01Id
+  addRequest Allocation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
   threadDelay 3400000
   void $ process (handle r) org1 numRequestsToProcess
-  checkRideStatus r rideBooking01Id Cancelled
+  checkRideStatus r booking01Id Cancelled

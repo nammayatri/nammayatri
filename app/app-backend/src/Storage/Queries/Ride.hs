@@ -4,8 +4,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Domain.Types.Booking (Booking)
 import Domain.Types.Ride
-import Domain.Types.RideBooking (RideBooking)
 import Storage.Tabular.Ride
 
 create :: Ride -> SqlDB ()
@@ -63,7 +63,7 @@ updateMultiple rideId ride = do
       ]
     where_ $ tbl ^. RideId ==. val (getId rideId)
 
-findActiveByRBId :: Transactionable m => Id RideBooking -> m (Maybe Ride)
+findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId =
   findOne $ do
     ride <- from $ table @RideT
@@ -72,10 +72,10 @@ findActiveByRBId rbId =
         &&. ride ^. RideStatus !=. val CANCELLED
     return ride
 
-findAllByRBId :: EsqDBFlow m r => Id RideBooking -> m [Ride]
-findAllByRBId rideBookingId =
+findAllByRBId :: EsqDBFlow m r => Id Booking -> m [Ride]
+findAllByRBId bookingId =
   findAll $ do
     ride <- from $ table @RideT
-    where_ $ ride ^. RideBookingId ==. val (toKey rideBookingId)
+    where_ $ ride ^. RideBookingId ==. val (toKey bookingId)
     orderBy [desc $ ride ^. RideCreatedAt]
     return ride

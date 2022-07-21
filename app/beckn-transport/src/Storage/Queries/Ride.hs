@@ -11,9 +11,9 @@ import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle
 import Storage.Queries.FullEntityBuilders
+import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Person as Person
 import Storage.Tabular.Ride as Ride
-import Storage.Tabular.RideBooking as Booking
 import Storage.Tabular.Vehicle as Vehicle
 import Utils.Common
 
@@ -23,7 +23,7 @@ create = Esq.create
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById = Esq.findById
 
-findActiveByRBId :: Transactionable m => Id RideBooking -> m (Maybe Ride)
+findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId =
   findOne $ do
     ride <- from $ table @RideT
@@ -32,12 +32,12 @@ findActiveByRBId rbId =
         &&. ride ^. RideStatus !=. val Ride.CANCELLED
     return ride
 
-findAllCancelledByRBId :: Transactionable m => Id RideBooking -> m [Ride]
-findAllCancelledByRBId rideBookingId =
+findAllCancelledByRBId :: Transactionable m => Id Booking -> m [Ride]
+findAllCancelledByRBId bookingId =
   findAll $ do
     ride <- from $ table @RideT
     where_ $
-      ride ^. Ride.RideBookingId ==. val (toKey rideBookingId)
+      ride ^. Ride.RideBookingId ==. val (toKey bookingId)
         &&. ride ^. RideStatus ==. val Ride.CANCELLED
     return ride
 
@@ -47,18 +47,18 @@ findAllByDriverId ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
-  m [(Ride, RideBooking)]
+  m [(Ride, Booking)]
 findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   res <- Esq.findAll' $ do
-    (ride :& rideBooking) <-
+    (ride :& booking) <-
       from $
         table @RideT
-          `innerJoin` table @RideBookingT
-            `Esq.on` ( \(ride :& rideBooking) ->
-                         ride ^. Ride.RideBookingId ==. rideBooking ^. Booking.RideBookingTId
+          `innerJoin` table @BookingT
+            `Esq.on` ( \(ride :& booking) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
     where_ $
       ride ^. RideDriverId ==. val (toKey driverId)
@@ -66,13 +66,13 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
-    return (ride, rideBooking)
+    return (ride, booking)
   fmap catMaybes $
     for res $ \(rideT :: RideT, bookingT) -> do
       fullBooking <- buildFullBooking bookingT
       return $ (extractSolidType rideT,) <$> fullBooking
 
-findAllRideAPIEntityDataByRBId :: Transactionable m => Id RideBooking -> m [(Ride, Maybe Vehicle, Maybe Person)]
+findAllRideAPIEntityDataByRBId :: Transactionable m => Id Booking -> m [(Ride, Maybe Vehicle, Maybe Person)]
 findAllRideAPIEntityDataByRBId rbId =
   Esq.findAll $ do
     (ride :& mbVehicle :& mbPerson) <-
@@ -189,13 +189,13 @@ updateAll rideId ride = do
 getCountByStatus :: Transactionable m => Id Organization -> m [(RideStatus, Int)]
 getCountByStatus orgId = do
   Esq.findAll $ do
-    (ride :& rideBooking) <-
+    (ride :& booking) <-
       from $
         table @RideT
-          `innerJoin` table @RideBookingT
-            `Esq.on` ( \(ride :& rideBooking) ->
-                         ride ^. Ride.RideBookingId ==. rideBooking ^. Booking.RideBookingTId
+          `innerJoin` table @BookingT
+            `Esq.on` ( \(ride :& booking) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
-    where_ $ rideBooking ^. RideBookingProviderId ==. val (toKey orgId)
+    where_ $ booking ^. BookingProviderId ==. val (toKey orgId)
     groupBy $ ride ^. RideStatus
     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))

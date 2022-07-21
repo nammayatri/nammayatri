@@ -5,12 +5,12 @@ import Beckn.External.FCM.Types as FCM
 import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Person as Person
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
 import qualified Storage.Queries.Person as Person
@@ -23,11 +23,11 @@ notifyOnRideAssigned ::
     FCMFlow m r,
     CoreMetrics m
   ) =>
-  SRB.RideBooking ->
+  SRB.Booking ->
   SRide.Ride ->
   m ()
-notifyOnRideAssigned rideBooking ride = do
-  let personId = rideBooking.riderId
+notifyOnRideAssigned booking ride = do
+  let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -53,11 +53,11 @@ notifyOnRideStarted ::
     FCMFlow m r,
     CoreMetrics m
   ) =>
-  SRB.RideBooking ->
+  SRB.Booking ->
   SRide.Ride ->
   m ()
-notifyOnRideStarted rideBooking ride = do
-  let personId = rideBooking.riderId
+notifyOnRideStarted booking ride = do
+  let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -83,11 +83,11 @@ notifyOnRideCompleted ::
     FCMFlow m r,
     CoreMetrics m
   ) =>
-  SRB.RideBooking ->
+  SRB.Booking ->
   SRide.Ride ->
   m ()
-notifyOnRideCompleted rideBooking ride = do
-  let personId = rideBooking.riderId
+notifyOnRideCompleted booking ride = do
+  let personId = booking.riderId
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -166,17 +166,17 @@ notifyOnRegistration regToken personId mbDeviceToken =
             ]
    in FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
 
-notifyOnRideBookingCancelled :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> SBCR.CancellationSource -> m ()
-notifyOnRideBookingCancelled rideBooking cancellationSource = do
-  person <- Person.findById rideBooking.riderId >>= fromMaybeM (PersonNotFound rideBooking.riderId.getId)
-  FCM.notifyPerson (notificationData $ rideBooking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+notifyOnBookingCancelled :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.Booking -> SBCR.CancellationSource -> m ()
+notifyOnBookingCancelled booking cancellationSource = do
+  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+  FCM.notifyPerson (notificationData $ booking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
     notificationData orgName =
       FCM.FCMData
         { fcmNotificationType = FCM.CANCELLED_PRODUCT,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
-          fcmEntityIds = getId rideBooking.id,
+          fcmEntityIds = getId booking.id,
           fcmNotificationJSON = FCM.createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -187,32 +187,32 @@ notifyOnRideBookingCancelled rideBooking cancellationSource = do
       SBCR.ByUser ->
         unwords
           [ "You have cancelled your ride for",
-            showTimeIst (rideBooking.startTime) <> ".",
+            showTimeIst (booking.startTime) <> ".",
             "Check the app for details."
           ]
       SBCR.ByOrganization ->
         unwords
           [ "\"" <> orgName <> "\" agency had to cancel the ride for",
-            showTimeIst (rideBooking.startTime) <> ".",
+            showTimeIst (booking.startTime) <> ".",
             "Please book again to get another ride."
           ]
       SBCR.ByDriver ->
         unwords
           [ "The driver had to cancel the ride for",
-            showTimeIst (rideBooking.startTime) <> ".",
+            showTimeIst (booking.startTime) <> ".",
             "Please book again to get another ride."
           ]
       SBCR.ByAllocator ->
         unwords
           [ "The ride for",
-            showTimeIst (rideBooking.startTime),
+            showTimeIst (booking.startTime),
             "was cancelled as we could not find a driver.",
             "Please book again to get another ride."
           ]
 
-notifyOnRideBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.RideBooking -> m ()
-notifyOnRideBookingReallocated rideBooking = do
-  person <- Person.findById rideBooking.riderId >>= fromMaybeM (PersonNotFound rideBooking.riderId.getId)
+notifyOnBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.Booking -> m ()
+notifyOnBookingReallocated booking = do
+  person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   notificationData <- buildNotificationData
   FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
@@ -223,7 +223,7 @@ notifyOnRideBookingReallocated rideBooking = do
           { fcmNotificationType = FCM.REALLOCATE_PRODUCT,
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
-            fcmEntityIds = getId rideBooking.id,
+            fcmEntityIds = getId booking.id,
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
           }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -233,7 +233,7 @@ notifyOnRideBookingReallocated rideBooking = do
       return $
         unwords
           [ "The driver had to cancel the ride for",
-            showTimeIst (rideBooking.startTime) <> ".",
+            showTimeIst (booking.startTime) <> ".",
             "Please wait until we allocate other driver."
           ]
 

@@ -9,8 +9,8 @@ import qualified Core.ACL.Init as ACL
 import qualified Core.ACL.OnInit as TaxiACL
 import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Action.UI.Init as DInit
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as SP
-import qualified Domain.Types.RideBooking as DRB
 import qualified ExternalAPI.Flow as ExternalAPI
 import Servant
 import Utils.Auth
@@ -23,7 +23,7 @@ type InitAPI =
     :> Post '[JSON] InitRes
 
 newtype InitRes = InitRes
-  { bookingId :: Id DRB.RideBooking
+  { bookingId :: Id DRB.Booking
   }
   deriving (Show, FromJSON, ToJSON, Generic, ToSchema)
 

@@ -7,7 +7,7 @@ import Domain.Types.Booking.Type
 
 data FareBreakup = FareBreakup
   { id :: Id FareBreakup,
-    rideBookingId :: Id RideBooking,
+    bookingId :: Id Booking,
     description :: Text,
     amount :: Amount
   }

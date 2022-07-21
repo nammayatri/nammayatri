@@ -12,8 +12,8 @@ import Beckn.Utils.Dhall
 import Beckn.Utils.IOLogging (LoggerConfig, LoggerEnv, prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Data.String.Conversions (cs)
+import qualified Domain.Types.Booking as DRB
 import Domain.Types.Organization (Organization)
-import qualified Domain.Types.RideBooking as DRB
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Storage.Queries.RideRequest as RideRequest
 import System.Environment (lookupEnv)
@@ -49,7 +49,7 @@ data HandlerEnv = HandlerEnv
 --------------------------------------
 
 data AllocateRentalJobData = AllocateRentalJobData
-  { rideBookingId :: Id DRB.RideBooking,
+  { bookingId :: Id DRB.Booking,
     shortOrgId :: ShortId Organization
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
@@ -66,12 +66,12 @@ allocateRentalRide job = C.handleAll (const $ pure Retry) $
           RideRequest.RideRequest
             { id = guid,
               createdAt = now,
-              rideBookingId = job.jobData.rideBookingId,
+              bookingId = job.jobData.bookingId,
               shortOrgId = job.jobData.shortOrgId,
               _type = RideRequest.ALLOCATION,
               info = Nothing
             }
-    logInfo $ "allocating rental ride for rideReqestId=" <> job.jobData.rideBookingId.getId
+    logInfo $ "allocating rental ride for rideReqestId=" <> job.jobData.bookingId.getId
     logPretty DEBUG "ride request" rideReq
     Esq.runTransaction $ RideRequest.create rideReq
     pure Complete

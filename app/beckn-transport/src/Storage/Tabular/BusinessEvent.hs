@@ -13,9 +13,9 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.BusinessEvent as Domain
 import Domain.Types.Vehicle (Variant)
+import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.Ride (RideTId)
-import Storage.Tabular.RideBooking (RideBookingTId)
 
 derivePersistField "Domain.EventType"
 derivePersistField "Domain.WhenPoolWasComputed"
@@ -28,7 +28,7 @@ mkPersist
       driverId PersonTId Maybe
       eventType Domain.EventType
       timeStamp UTCTime
-      rideBookingId RideBookingTId Maybe
+      bookingId BookingTId Maybe
       whenPoolWasComputed Domain.WhenPoolWasComputed Maybe
       vehicleVariant Variant Maybe
       distance Int Maybe
@@ -49,7 +49,7 @@ instance TType BusinessEventT Domain.BusinessEvent where
       Domain.BusinessEvent
         { id = Id id,
           driverId = cast . fromKey <$> driverId,
-          rideBookingId = fromKey <$> rideBookingId,
+          bookingId = fromKey <$> bookingId,
           rideId = fromKey <$> rideId,
           distance = Meters <$> distance,
           duration = Seconds <$> duration,
@@ -59,7 +59,7 @@ instance TType BusinessEventT Domain.BusinessEvent where
     BusinessEventT
       { id = getId id,
         driverId = toKey . cast <$> driverId,
-        rideBookingId = toKey <$> rideBookingId,
+        bookingId = toKey <$> bookingId,
         rideId = toKey <$> rideId,
         distance = getMeters <$> distance,
         duration = getSeconds <$> duration,

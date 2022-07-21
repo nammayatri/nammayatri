@@ -13,9 +13,9 @@ import Storage.Tabular.FarePolicy.FareBreakup
 create :: FareBreakup -> SqlDB ()
 create = Esq.create
 
-findAllByRideBookingId :: (MonadThrow m, Log m, Transactionable m) => Id RideBooking -> m [FareBreakup]
-findAllByRideBookingId rideBookingId =
+findAllByBookingId :: (MonadThrow m, Log m, Transactionable m) => Id Booking -> m [FareBreakup]
+findAllByBookingId bookingId =
   findAll $ do
     fareBreakup <- from $ table @FareBreakupT
-    where_ $ fareBreakup ^. FareBreakupRideBookingId ==. val (toKey rideBookingId)
+    where_ $ fareBreakup ^. FareBreakupBookingId ==. val (toKey bookingId)
     return fareBreakup

@@ -11,16 +11,16 @@ import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Beckn.Types.MapSearch as MapSearch
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DLoc
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.RideBooking as DRB
 import qualified Domain.Types.Vehicle as Veh
 import SharedLogic.FareCalculator.OneWayFareCalculator
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Organization as QOrg
-import qualified Storage.Queries.RideBooking as QRB
 import Types.Error
 import Utils.Common
 
@@ -45,7 +45,7 @@ data InitRentalReq = InitRentalReq
   }
 
 data InitRes = InitRes
-  { rideBooking :: DRB.RideBooking,
+  { booking :: DRB.Booking,
     transporter :: DOrg.Organization
   }
 
@@ -62,14 +62,14 @@ init transporterId req = do
   transporter <- QOrg.findById transporterId >>= fromMaybeM (OrgDoesNotExist transporterId.getId)
   unless transporter.enabled $ throwError AgencyDisabled
   now <- getCurrentTime
-  rideBooking <- case req.initTypeReq of
+  booking <- case req.initTypeReq of
     InitOneWayTypeReq oneWayReq -> do
       initOneWayTrip req oneWayReq transporter.id now
     InitRentalTypeReq rentalReq -> do
       initRentalTrip req rentalReq transporter.id now
   return $
     InitRes
-      { rideBooking = rideBooking,
+      { booking = booking,
         transporter = transporter
       }
 
@@ -83,7 +83,7 @@ initOneWayTrip ::
   InitOneWayReq ->
   Id DOrg.Organization ->
   UTCTime ->
-  m DRB.RideBooking
+  m DRB.Booking
 initOneWayTrip req oneWayReq transporterId now = do
   unlessM (rideServiceable QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
     throwError RideNotServiceable
@@ -96,17 +96,17 @@ initOneWayTrip req oneWayReq transporterId now = do
       estimatedTotalFare = fareSumWithDiscount fareParams
       owDetails =
         DRB.OneWayDetails $
-          DRB.OneWayRideBookingDetails
+          DRB.OneWayBookingDetails
             { DRB.toLocationId = toLoc.id,
               DRB.estimatedDistance = distance
             }
   fromLoc <- buildRBLoc req.fromLocation now
-  rideBooking <- buildRideBooking req transporterId estimatedFare discount estimatedTotalFare owDetails fromLoc.id now
+  booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare owDetails fromLoc.id now
   DB.runTransaction $ do
     QBLoc.create fromLoc
     QBLoc.create toLoc
-    QRB.create rideBooking
-  return rideBooking
+    QRB.create booking
+  return booking
 
 initRentalTrip ::
   ( EsqDBFlow m r,
@@ -118,7 +118,7 @@ initRentalTrip ::
   InitRentalReq ->
   Id DOrg.Organization ->
   UTCTime ->
-  m DRB.RideBooking
+  m DRB.Booking
 initRentalTrip req rentalReq transporterId now = do
   unlessM (rideServiceable QGeometry.someGeometriesContain req.fromLocation Nothing) $
     throwError RideNotServiceable
@@ -126,13 +126,13 @@ initRentalTrip req rentalReq transporterId now = do
       discount = Nothing
       estimatedTotalFare = 0
   rentalFarePolicy <- QRFP.findByOffer transporterId req.vehicleVariant rentalReq.distance rentalReq.duration >>= fromMaybeM NoFarePolicy
-  let rentDetails = DRB.RentalDetails $ DRB.RentalRideBookingDetails {rentalFarePolicyId = rentalFarePolicy.id}
+  let rentDetails = DRB.RentalDetails $ DRB.RentalBookingDetails {rentalFarePolicyId = rentalFarePolicy.id}
   fromLoc <- buildRBLoc req.fromLocation now
-  rideBooking <- buildRideBooking req transporterId estimatedFare discount estimatedTotalFare rentDetails fromLoc.id now
+  booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare rentDetails fromLoc.id now
   DB.runTransaction $ do
     QBLoc.create fromLoc
-    QRB.create rideBooking
-  return rideBooking
+    QRB.create booking
+  return booking
 
 buildRBLoc ::
   (MonadFlow m) =>
@@ -161,21 +161,21 @@ buildRBLoc latLon now = do
         updatedAt = now
       }
 
-buildRideBooking ::
+buildBooking ::
   MonadFlow m =>
   InitReq ->
   Id DOrg.Organization ->
   Amount ->
   Maybe Amount ->
   Amount ->
-  DRB.RideBookingDetails ->
+  DRB.BookingDetails ->
   Id DLoc.BookingLocation ->
   UTCTime ->
-  m DRB.RideBooking
-buildRideBooking req orgId estimatedFare discount estimatedTotalFare rideBookingDetails fromLocationId now = do
+  m DRB.Booking
+buildBooking req orgId estimatedFare discount estimatedTotalFare bookingDetails fromLocationId now = do
   id <- generateGUID
   return $
-    DRB.RideBooking
+    DRB.Booking
       { id = Id id,
         status = DRB.NEW,
         providerId = orgId,
@@ -189,7 +189,7 @@ buildRideBooking req orgId estimatedFare discount estimatedTotalFare rideBooking
         estimatedTotalFare = estimatedTotalFare,
         vehicleVariant = req.vehicleVariant,
         reallocationsCount = 0,
-        rideBookingDetails = rideBookingDetails,
+        bookingDetails = bookingDetails,
         createdAt = now,
         updatedAt = now
       }

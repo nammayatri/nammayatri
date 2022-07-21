@@ -5,9 +5,9 @@ module Flow.Allocation.Internal where
 import Beckn.Types.Id
 import qualified Data.Map as Map
 import qualified Data.Time as Time
+import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverPool
 import Domain.Types.Organization
-import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude hiding (id)
 import Services.Allocation.Allocation as Alloc
@@ -17,7 +17,7 @@ import Utils.Common
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 
-type NotificationStatusMap = (Map (Id SRB.RideBooking, Id Driver) (NotificationStatus, UTCTime))
+type NotificationStatusMap = (Map (Id SRB.Booking, Id Driver) (NotificationStatus, UTCTime))
 
 org1 :: ShortId Organization
 org1 = ShortId "Org1"
@@ -39,53 +39,53 @@ isNotified _ (Notified, _) = True
 isNotified _ _ = False
 
 attemptedNotification ::
-  Id SRB.RideBooking ->
-  (Id SRB.RideBooking, Id Driver) ->
+  Id SRB.Booking ->
+  (Id SRB.Booking, Id Driver) ->
   (NotificationStatus, UTCTime) ->
   Bool
-attemptedNotification rideBookingId (id, _) (status, _) =
-  id == rideBookingId && status `elem` [Rejected, Ignored]
+attemptedNotification bookingId (id, _) (status, _) =
+  id == bookingId && status `elem` [Rejected, Ignored]
 
-addRideBooking :: Repository -> Id SRB.RideBooking -> Int -> IO ()
-addRideBooking Repository {..} rideBookingId reallocationsCount = do
+addBooking :: Repository -> Id SRB.Booking -> Int -> IO ()
+addBooking Repository {..} bookingId reallocationsCount = do
   currTime <- Time.getCurrentTime
   let rideInfo =
         RideInfo
-          { rideBookingId = rideBookingId,
+          { bookingId = bookingId,
             rideStatus = Confirmed,
             orderTime = OrderTime currTime,
             reallocationsCount = reallocationsCount
           }
-  modifyIORef rideBookingsVar $ Map.insert rideBookingId rideInfo
+  modifyIORef bookingsVar $ Map.insert bookingId rideInfo
 
-updateRideBooking :: Repository -> Id SRB.RideBooking -> RideStatus -> IO ()
-updateRideBooking Repository {..} rideBookingId status = do
-  modifyIORef rideBookingsVar $ Map.adjust (\rideInfo -> rideInfo {rideStatus = status}) rideBookingId
+updateBooking :: Repository -> Id SRB.Booking -> RideStatus -> IO ()
+updateBooking Repository {..} bookingId status = do
+  modifyIORef bookingsVar $ Map.adjust (\rideInfo -> rideInfo {rideStatus = status}) bookingId
 
-addRequest :: RequestData -> Repository -> Id SRB.RideBooking -> IO ()
-addRequest requestData Repository {..} rideBookingId = do
+addRequest :: RequestData -> Repository -> Id SRB.Booking -> IO ()
+addRequest requestData Repository {..} bookingId = do
   currentId <- readIORef currentIdVar
   let requestId = Id $ show currentId
   let request =
         RideRequest
           { requestId = requestId,
-            rideBookingId = rideBookingId,
+            bookingId = bookingId,
             requestData = requestData
           }
   modifyIORef currentIdVar (+ 1)
   modifyIORef rideRequestsVar $ Map.insert requestId request
 
-addResponse :: Repository -> Id SRB.RideBooking -> Id Driver -> Alloc.Response -> IO ()
-addResponse repository@Repository {..} rideBookingId driverId status = do
+addResponse :: Repository -> Id SRB.Booking -> Id Driver -> Alloc.Response -> IO ()
+addResponse repository@Repository {..} bookingId driverId status = do
   let driverResponse = DriverResponseType driverId status
-  addRequest (DriverResponse driverResponse) repository rideBookingId
+  addRequest (DriverResponse driverResponse) repository bookingId
 
-addDriverPool :: Repository -> Map (Id SRB.RideBooking) [Id Driver] -> IO ()
+addDriverPool :: Repository -> Map (Id SRB.Booking) [Id Driver] -> IO ()
 addDriverPool Repository {..} driversMap = do
   let driverPool = mkDefaultDriverPool <$> driversMap
   writeIORef driverPoolVar driverPool
 
-addSortedDriverPool :: Repository -> Map (Id SRB.RideBooking) SortedDriverPool -> IO ()
+addSortedDriverPool :: Repository -> Map (Id SRB.Booking) SortedDriverPool -> IO ()
 addSortedDriverPool Repository {..} driverPool = do
   writeIORef driverPoolVar driverPool
 
@@ -99,58 +99,58 @@ mkDefaultDriverPoolItem driverId =
 mkDefaultDriverPool :: [Id Driver] -> SortedDriverPool
 mkDefaultDriverPool driverIds = mkSortedDriverPool $ mkDefaultDriverPoolItem <$> driverIds
 
-addDriverInPool :: Repository -> Id SRB.RideBooking -> Id Driver -> IO ()
+addDriverInPool :: Repository -> Id SRB.Booking -> Id Driver -> IO ()
 addDriverInPool Repository {..} bookingId driverId = do
   driversPool <- readIORef driverPoolVar
   let newDriversPool = Map.adjust (addItemToPool $ mkDefaultDriverPoolItem driverId) bookingId driversPool
   writeIORef driverPoolVar newDriversPool
 
-checkRideStatus :: Repository -> Id SRB.RideBooking -> RideStatus -> IO ()
-checkRideStatus Repository {..} rideBookingId expectedStatus = do
-  rideBookings <- readIORef rideBookingsVar
-  case Map.lookup rideBookingId rideBookings of
-    Nothing -> assertFailure $ "RideBooking " <> show (rideBookingId.getId) <> " not found"
+checkRideStatus :: Repository -> Id SRB.Booking -> RideStatus -> IO ()
+checkRideStatus Repository {..} bookingId expectedStatus = do
+  bookings <- readIORef bookingsVar
+  case Map.lookup bookingId bookings of
+    Nothing -> assertFailure $ "Booking " <> show (bookingId.getId) <> " not found"
     Just rideInfo -> rideInfo.rideStatus @?= expectedStatus
 
-checkNotificationStatus :: Repository -> Id SRB.RideBooking -> Id Driver -> NotificationStatus -> IO ()
-checkNotificationStatus Repository {..} rideBookingId driverId expectedStatus = do
+checkNotificationStatus :: Repository -> Id SRB.Booking -> Id Driver -> NotificationStatus -> IO ()
+checkNotificationStatus Repository {..} bookingId driverId expectedStatus = do
   notifications <- readIORef notificationStatusVar
-  case Map.lookup (rideBookingId, driverId) notifications of
+  case Map.lookup (bookingId, driverId) notifications of
     Nothing ->
       assertFailure $
-        "Notification for rideBookingId=" <> show (rideBookingId.getId) <> " and driverId=" <> show (driverId.getId) <> " is not found"
+        "Notification for bookingId=" <> show (bookingId.getId) <> " and driverId=" <> show (driverId.getId) <> " is not found"
     Just (status, _) -> status @?= expectedStatus
 
-checkFreeNotificationStatus :: Repository -> Id SRB.RideBooking -> Id Driver -> IO ()
-checkFreeNotificationStatus Repository {..} rideBookingId driverId = do
+checkFreeNotificationStatus :: Repository -> Id SRB.Booking -> Id Driver -> IO ()
+checkFreeNotificationStatus Repository {..} bookingId driverId = do
   notifications <- readIORef notificationStatusVar
-  Map.lookup (rideBookingId, driverId) notifications @?= Nothing
+  Map.lookup (bookingId, driverId) notifications @?= Nothing
 
 addNotification ::
-  Id SRB.RideBooking ->
+  Id SRB.Booking ->
   UTCTime ->
   NotificationStatusMap ->
   Id Driver ->
   NotificationStatusMap
-addNotification rideBookingId expiryTime notificationStatuses driverId =
+addNotification bookingId expiryTime notificationStatuses driverId =
   Map.insert
-    (rideBookingId, driverId)
+    (bookingId, driverId)
     (Notified, expiryTime)
     notificationStatuses
 
 updateNotification ::
-  Id SRB.RideBooking ->
+  Id SRB.Booking ->
   NotificationStatus ->
   NotificationStatusMap ->
   Id Driver ->
   NotificationStatusMap
-updateNotification rideBookingId nStatus notificationStatuses driverId =
+updateNotification bookingId nStatus notificationStatuses driverId =
   Map.adjust
     (\(_, expiryTime) -> (nStatus, expiryTime))
-    (rideBookingId, driverId)
+    (bookingId, driverId)
     notificationStatuses
 
-toCurrentNotification :: ((Id SRB.RideBooking, Id Driver), (NotificationStatus, UTCTime)) -> CurrentNotification
+toCurrentNotification :: ((Id SRB.Booking, Id Driver), (NotificationStatus, UTCTime)) -> CurrentNotification
 toCurrentNotification ((_, driverId), (_, expiryTime)) =
   CurrentNotification driverId expiryTime
 
@@ -204,15 +204,15 @@ handle repository@Repository {..} =
         notificationStatus <- readIORef notificationStatusVar
         let filtered = fmap snd $ Map.keys $ Map.filter (\(status, _) -> status == Notified) notificationStatus
         pure filtered,
-      assignDriver = \rideBookingId driverId -> do
-        modifyIORef assignmentsVar $ (:) (rideBookingId, driverId)
-        modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Assigned) rideBookingId
+      assignDriver = \bookingId driverId -> do
+        modifyIORef assignmentsVar $ (:) (bookingId, driverId)
+        modifyIORef bookingsVar $ Map.adjust (#rideStatus .~ Assigned) bookingId
         modifyIORef onRideVar $ (:) driverId,
-      cancelRideBooking = \rideBookingId _ -> do
-        modifyIORef rideBookingsVar $ Map.adjust (#rideStatus .~ Cancelled) rideBookingId
+      cancelBooking = \bookingId _ -> do
+        modifyIORef bookingsVar $ Map.adjust (#rideStatus .~ Cancelled) bookingId
         assignments <- readIORef assignmentsVar
-        let driversForRideBookingId = map snd $ filter (\(rbId, _) -> rideBookingId == rbId) assignments
-        modifyIORef onRideVar $ filter (`notElem` driversForRideBookingId),
+        let driversForBookingId = map snd $ filter (\(rbId, _) -> bookingId == rbId) assignments
+        modifyIORef onRideVar $ filter (`notElem` driversForBookingId),
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),
       getTopDriversByIdleTime = \count driverIds -> pure $ take count driverIds,
@@ -223,11 +223,11 @@ handle repository@Repository {..} =
       sendRideNotAssignedNotification = \_ _ -> pure (),
       removeRequest = modifyIORef rideRequestsVar . Map.delete,
       addAllocationRequest = \_ -> addRequest Allocation repository,
-      getRideInfo = \rideBookingId -> do
-        rideBookings <- readIORef rideBookingsVar
-        case Map.lookup rideBookingId rideBookings of
+      getRideInfo = \bookingId -> do
+        bookings <- readIORef bookingsVar
+        case Map.lookup bookingId bookings of
           Just rideInfo -> pure rideInfo
-          Nothing -> assertFailure $ "RideBooking " <> show rideBookingId <> " not found in the map.",
+          Nothing -> assertFailure $ "Booking " <> show bookingId <> " not found in the map.",
       logEvent = \_ _ -> pure (),
       logDriverEvents = \_ _ _ -> pure (),
       metrics =
@@ -241,11 +241,11 @@ handle repository@Repository {..} =
 
 data Repository = Repository
   { currentIdVar :: IORef Int,
-    driverPoolVar :: IORef (Map (Id SRB.RideBooking) SortedDriverPool),
-    rideBookingsVar :: IORef (Map (Id SRB.RideBooking) RideInfo),
+    driverPoolVar :: IORef (Map (Id SRB.Booking) SortedDriverPool),
+    bookingsVar :: IORef (Map (Id SRB.Booking) RideInfo),
     rideRequestsVar :: IORef (Map (Id SRR.RideRequest) RideRequest),
     notificationStatusVar :: IORef NotificationStatusMap,
-    assignmentsVar :: IORef [(Id SRB.RideBooking, Id Driver)],
+    assignmentsVar :: IORef [(Id SRB.Booking, Id Driver)],
     onRideVar :: IORef [Id Driver]
   }
 

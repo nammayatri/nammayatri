@@ -2,8 +2,8 @@ module Flow.Allocation.NearestDrivers where
 
 import Beckn.Types.Id
 import qualified Data.Map as Map
+import qualified Domain.Types.Booking as SRB
 import Domain.Types.DriverPool
-import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude hiding (id)
 import Flow.Allocation.Internal
 import Services.Allocation.Allocation
@@ -13,8 +13,8 @@ import Test.Tasty.HUnit
 -- Filtering driver pool in allocation business logic can affect sorting.
 -- This tests should check, that notifications are sent to first drivers in pool, that are nearest
 
-rideBooking01Id :: Id SRB.RideBooking
-rideBooking01Id = Id "rideBooking01"
+booking01Id :: Id SRB.Booking
+booking01Id = Id "rideBooking01"
 
 driverPool1 :: [DriverPoolItem]
 driverPool1 =
@@ -30,23 +30,23 @@ driverPool1 =
     DriverPoolItem (Id "driver04_1000m") 1000
   ]
 
-driverPoolPerRide :: Map (Id SRB.RideBooking) SortedDriverPool
-driverPoolPerRide = Map.fromList [(rideBooking01Id, mkSortedDriverPool driverPool1)]
+driverPoolPerRide :: Map (Id SRB.Booking) SortedDriverPool
+driverPoolPerRide = Map.fromList [(booking01Id, mkSortedDriverPool driverPool1)]
 
 nearestDrivers :: TestTree
 nearestDrivers = testCase "Notifications should be sent to nearest drivers" $ do
   r@Repository {..} <- initRepository
-  addRideBooking r rideBooking01Id 0
+  addBooking r booking01Id 0
   addSortedDriverPool r driverPoolPerRide
-  addRequest Allocation r rideBooking01Id
+  addRequest Allocation r booking01Id
   void $ process (handle r) org1 numRequestsToProcess
-  checkNotificationStatus r rideBooking01Id (Id "driver01_100m") Notified
-  checkNotificationStatus r rideBooking01Id (Id "driver06_200m") Notified
-  checkNotificationStatus r rideBooking01Id (Id "driver05_300m") Notified
-  checkNotificationStatus r rideBooking01Id (Id "driver07_400m") Notified
-  checkNotificationStatus r rideBooking01Id (Id "driver03_500m") Notified
-  checkFreeNotificationStatus r rideBooking01Id (Id "driver08_600m")
-  checkFreeNotificationStatus r rideBooking01Id (Id "driver02_700m")
-  checkFreeNotificationStatus r rideBooking01Id (Id "driver10_800m")
-  checkFreeNotificationStatus r rideBooking01Id (Id "driver09_900m")
-  checkFreeNotificationStatus r rideBooking01Id (Id "driver04_1000m")
+  checkNotificationStatus r booking01Id (Id "driver01_100m") Notified
+  checkNotificationStatus r booking01Id (Id "driver06_200m") Notified
+  checkNotificationStatus r booking01Id (Id "driver05_300m") Notified
+  checkNotificationStatus r booking01Id (Id "driver07_400m") Notified
+  checkNotificationStatus r booking01Id (Id "driver03_500m") Notified
+  checkFreeNotificationStatus r booking01Id (Id "driver08_600m")
+  checkFreeNotificationStatus r booking01Id (Id "driver02_700m")
+  checkFreeNotificationStatus r booking01Id (Id "driver10_800m")
+  checkFreeNotificationStatus r booking01Id (Id "driver09_900m")
+  checkFreeNotificationStatus r booking01Id (Id "driver04_1000m")

@@ -9,24 +9,24 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude
 import qualified Product.BecknProvider.BP as BP
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPers
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
 import Tools.Metrics
 import Types.Error
 import qualified Utils.Notifications as Notify
 
 newtype CancelReq = CancelReq
-  { bookingId :: Id SRB.RideBooking
+  { bookingId :: Id SRB.Booking
   }
 
 cancel ::
@@ -44,7 +44,7 @@ cancel transporterId _ req = do
   transporter <-
     QOrg.findById transporterId
       >>= fromMaybeM (OrgNotFound transporterId.getId)
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (RideBookingDoesNotExist req.bookingId.getId)
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId req.bookingId
@@ -56,7 +56,7 @@ cancel transporterId _ req = do
       QRide.updateStatus ride.id SRide.CANCELLED
       QDriverInfo.updateOnRide (cast ride.driverId) False
   logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
-  fork "cancelRideBooking - Notify BAP" $ do
+  fork "cancelBooking - Notify BAP" $ do
     BP.sendBookingCancelledUpdateToBAP booking transporter bookingCR.source
   whenJust mbRide $ \ride ->
     fork "cancelRide - Notify driver" $ do

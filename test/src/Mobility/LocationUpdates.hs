@@ -5,10 +5,10 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common (getAppBaseUrl)
 import qualified Data.List.NonEmpty as NE
+import qualified "app-backend" Domain.Types.Booking as AppRB
+import qualified "beckn-transport" Domain.Types.Booking as TRB
 import qualified "app-backend" Domain.Types.Ride as BRide
 import qualified "beckn-transport" Domain.Types.Ride as TRide
-import qualified "app-backend" Domain.Types.RideBooking as AppRB
-import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
@@ -41,26 +41,26 @@ waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates
 successFlowWithLocationUpdates :: Double -> Double -> NonEmpty (NonEmpty LatLong) -> ClientEnvs -> IO ()
 successFlowWithLocationUpdates eps distance updates clients = withBecknClients clients $ do
   let searchReq_ = searchReqFromUpdatesList updates
-  bRideBookingId <- doAnAppSearchByReq searchReq_
+  bBookingId <- doAnAppSearchByReq searchReq_
 
-  tRideBooking <- pollDesc "ride booking id should exist and should be confirmed" $ do
-    trb <- getBPPRideBooking bRideBookingId
+  tBooking <- pollDesc "ride booking id should exist and should be confirmed" $ do
+    trb <- getBPPBooking bBookingId
     trb.status `shouldBe` TRB.CONFIRMED
     return $ Just trb
 
   rideInfo <-
     poll . callBPP $
-      getNotificationInfo tRideBooking.id driverToken1
+      getNotificationInfo tBooking.id driverToken1
         <&> (.rideRequest)
-  rideInfo.bookingId `shouldBe` tRideBooking.id
+  rideInfo.bookingId `shouldBe` tBooking.id
 
   -- Driver Accepts a ride
   void . callBPP $
-    rideRespond tRideBooking.id driverToken1 $
+    rideRespond tBooking.id driverToken1 $
       TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
 
-  tRide <- pollDesc ("ride with id=" <> tRideBooking.id.getId <> " should exist and should have status=NEW") $ do
-    tRide <- getBPPRide tRideBooking.id
+  tRide <- pollDesc ("ride with id=" <> tBooking.id.getId <> " should exist and should have status=NEW") $ do
+    tRide <- getBPPRide tBooking.id
     tRide.status `shouldBe` TRide.NEW
     return $ Just tRide
 
@@ -83,7 +83,7 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
       buildStartRideReq tRide.otp
 
   void . pollDesc "ride changes its status to INPROGRESS" $ do
-    inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+    inprogressRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)
     inprogressRBStatusResult.rideList `shouldSatisfy` not . null
     inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
     let [inprogressRide] = inprogressRBStatusResult.rideList
@@ -100,7 +100,7 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
   void . callBPP $ rideEnd driverToken1 tRide.id
 
   completedRideId <- pollDesc "ride should be completed" $ do
-    completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+    completedRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)
     completedRBStatusResult.rideList `shouldSatisfy` not . null
     completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
     let [completedRide] = completedRBStatusResult.rideList

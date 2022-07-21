@@ -4,7 +4,7 @@ module Domain.Types.AllocationEvent where
 
 import Beckn.Types.Id (Id)
 import Data.Time (UTCTime)
-import qualified Domain.Types.RideBooking as DRB
+import qualified Domain.Types.Booking as DRB
 import EulerHS.Prelude hiding (id)
 import Types.App (Driver)
 
@@ -13,7 +13,7 @@ data AllocationEvent = AllocationEvent
     driverId :: Maybe (Id Driver),
     eventType :: AllocationEventType,
     timestamp :: UTCTime,
-    rideBookingId :: Id DRB.RideBooking
+    bookingId :: Id DRB.Booking
   }
   deriving (Generic)
 

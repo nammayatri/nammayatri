@@ -7,15 +7,15 @@ import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.FarePolicy.FareProduct as Domain
 import Domain.Types.FarePolicy.OneWayFarePolicy
 import Domain.Types.Quote as Quote
+import qualified Storage.Queries.Booking.RentalBooking as QRentalBooking
 import qualified Storage.Queries.FarePolicy.Discount as QDisc
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate as QExtraKmRate
 import qualified Storage.Queries.Quote.OneWayQuote as QOneWayQuote
 import qualified Storage.Queries.Quote.RentalQuote as QRentalQuote
-import qualified Storage.Queries.RideBooking.RentalRideBooking as QRentalRideBooking
+import Storage.Tabular.Booking as Booking
 import Storage.Tabular.FarePolicy.OneWayFarePolicy
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.RentalQuote (RentalQuoteT (..))
-import Storage.Tabular.RideBooking as Booking
 
 buildFullOneWayFarePolicy :: Transactionable m => OneWayFarePolicyT -> DTypeBuilder m (SolidType FullOneWayFarePolicyT)
 buildFullOneWayFarePolicy farePolicy = do
@@ -38,11 +38,11 @@ buildFullQuote quoteT@QuoteT {..} = runMaybeT $ do
       return $ Quote.OneWayDetailsT oneWayQuoteT
   return $ extractSolidType @Quote (quoteT, quoteDetails)
 
-buildFullBooking :: Transactionable m => RideBookingT -> DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking bookingT@RideBookingT {..} = runMaybeT $ do
+buildFullBooking :: Transactionable m => BookingT -> DTypeBuilder m (Maybe (SolidType FullBookingT))
+buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
   bookingDetailsT <- case toLocationId of
     Nothing -> do
-      rentalRideBooking <- MaybeT $ QRentalRideBooking.findByRideBookingId' (Id id)
-      return $ Booking.RentalDetailsT rentalRideBooking
+      rentalBooking <- MaybeT $ QRentalBooking.findByBookingId' (Id id)
+      return $ Booking.RentalDetailsT rentalBooking
     Just _ -> return Booking.OneWayDetailsT
-  return $ extractSolidType @RideBooking (bookingT, bookingDetailsT)
+  return $ extractSolidType @Booking (bookingT, bookingDetailsT)

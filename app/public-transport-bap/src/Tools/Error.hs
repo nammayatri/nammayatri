@@ -29,40 +29,6 @@ instance IsHTTPError TransportStationError where
 
 instance IsAPIError TransportStationError
 
-data BookingError
-  = BookingNotFound Text
-  | BookingDoesNotExist Text
-  | BookingFieldNotPresent Text
-  | BookingInvalidStatus Text
-  | BookingBppOrderIdNotFound
-  deriving (Eq, Show, IsBecknAPIError)
-
-instanceExceptionWithParent 'HTTPException ''BookingError
-
-instance IsBaseError BookingError where
-  toMessage = \case
-    BookingNotFound bookingId -> Just $ "Booking with bookingId \"" <> show bookingId <> "\" not found. "
-    BookingDoesNotExist bookingId -> Just $ "No booking matches passed data with id \"" <> show bookingId <> "\" not exist. "
-    BookingFieldNotPresent field -> Just $ "Required field " <> field <> " is null for this booking."
-    BookingInvalidStatus msg -> Just $ "Attempted to do some action in wrong booking status. " <> msg
-    _ -> Nothing
-
-instance IsHTTPError BookingError where
-  toErrorCode = \case
-    BookingNotFound _ -> "BOOKING_NOT_FOUND"
-    BookingDoesNotExist _ -> "BOOKING_DOES_NOT_EXIST"
-    BookingFieldNotPresent _ -> "BOOKING_FIELD_NOT_PRESENT"
-    BookingInvalidStatus _ -> "BOOKING_INVALID_STATUS"
-    BookingBppOrderIdNotFound -> "BOOKING_BPP_ORDER_ID_NOT_FOUND"
-  toHttpCode = \case
-    BookingNotFound _ -> E500
-    BookingDoesNotExist _ -> E400
-    BookingFieldNotPresent _ -> E500
-    BookingInvalidStatus _ -> E400
-    BookingBppOrderIdNotFound -> E500
-
-instance IsAPIError BookingError
-
 data PaymentDetailsError
   = PaymentDetailsNotFound Text
   deriving (Eq, Show, IsBecknAPIError)

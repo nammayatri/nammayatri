@@ -8,17 +8,17 @@ import Beckn.External.Encryption (decrypt)
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBLoc
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
-import qualified Domain.Types.RideBooking as DRB
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
-import Product.RideBooking (buildRideBookingStatusRes)
+import Product.Booking (buildBookingStatusRes)
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingLocation as QBLoc
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
-import qualified Storage.Queries.RideBooking as QRB
 import Types.API.CustomerSupport as T
 import Types.Error
 import Utils.Common
@@ -79,7 +79,7 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
     (Just bookingId, _) -> getByRequestId bookingId supportP.merchantId
     (_, Just mobileNumber) -> getByMobileNumber mobileNumber supportP.merchantId
     (_, _) -> throwError $ InvalidRequest "You should pass SearchRequestId or mobile number."
-  traverse (buildRideBookingToOrder person) bookings
+  traverse (buildBookingToOrder person) bookings
   where
     getByMobileNumber number merchantId = do
       let limit = maybe 10 (\x -> if x <= 10 then x else 10) mlimit
@@ -90,22 +90,22 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
         QRB.findAllByPersonIdLimitOffset (person.id) (Just limit) moffset
       return $ T.OrderInfo person bookings
     getByRequestId bookingId merchantId = do
-      (booking :: DRB.RideBooking) <-
+      (booking :: DRB.Booking) <-
         QRB.findByIdAndMerchantId (Id bookingId) merchantId
-          >>= fromMaybeM (RideBookingDoesNotExist bookingId)
+          >>= fromMaybeM (BookingDoesNotExist bookingId)
       let requestorId = booking.riderId
       person <-
         Person.findById requestorId
           >>= fromMaybeM (PersonDoesNotExist requestorId.getId)
       return $ T.OrderInfo person [booking]
 
-buildRideBookingToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> DRB.RideBooking -> m T.OrderResp
-buildRideBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
+buildBookingToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m T.OrderResp
+buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
   fromLocation <- QBLoc.findById booking.fromLocationId
-  toLocation <- case booking.rideBookingDetails of
+  toLocation <- case booking.bookingDetails of
     DRB.RentalDetails _ -> return Nothing
     DRB.OneWayDetails details -> QBLoc.findById details.toLocationId
-  rbStatus <- buildRideBookingStatusRes booking
+  rbStatus <- buildBookingStatusRes booking
   decMobNum <- mapM decrypt mobileNumber
   let details =
         T.OrderDetails

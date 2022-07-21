@@ -4,17 +4,17 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Hedis.Config (HedisFlow)
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import EulerHS.Prelude hiding (state)
 import ExternalAPI.Flow (BAPs, HasBapIds)
 import qualified Product.Track as Track
+import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
-import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import Tools.Metrics (CoreMetrics)
 import Types.Error
 import Utils.Common
@@ -22,7 +22,7 @@ import qualified Utils.Notifications as Notify
 
 data OnUpdateReq
   = RideAssignedReq
-      { bppBookingId :: Id SRB.BPPRideBooking,
+      { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         driverName :: Text,
         driverMobileNumber :: Text,
@@ -34,11 +34,11 @@ data OnUpdateReq
         vehicleModel :: Text
       }
   | RideStartedReq
-      { bppBookingId :: Id SRB.BPPRideBooking,
+      { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide
       }
   | RideCompletedReq
-      { bppBookingId :: Id SRB.BPPRideBooking,
+      { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide,
         fare :: Amount,
         totalFare :: Amount,
@@ -46,11 +46,11 @@ data OnUpdateReq
         chargeableDistance :: Double
       }
   | BookingCancelledReq
-      { bppBookingId :: Id SRB.BPPRideBooking,
+      { bppBookingId :: Id SRB.BPPBooking,
         cancellationSource :: SBCR.CancellationSource
       }
   | BookingReallocationReq
-      { bppBookingId :: Id SRB.BPPRideBooking,
+      { bppBookingId :: Id SRB.BPPBooking,
         bppRideId :: Id SRide.BPPRide
       }
 
@@ -73,47 +73,47 @@ onUpdate ::
   OnUpdateReq ->
   m ()
 onUpdate RideAssignedReq {..} = do
-  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideBookingId: " <> bppBookingId.getId)
-  unless (isAssignable rideBooking) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
-  ride <- buildRide rideBooking
+  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  unless (isAssignable booking) $ throwError (BookingInvalidStatus $ show booking.status)
+  ride <- buildRide booking
   DB.runTransaction $ do
-    QRB.updateStatus rideBooking.id SRB.TRIP_ASSIGNED
+    QRB.updateStatus booking.id SRB.TRIP_ASSIGNED
     QRide.create ride
-  Notify.notifyOnRideAssigned rideBooking ride
+  Notify.notifyOnRideAssigned booking ride
   Track.track ride.id
   where
-    buildRide :: MonadFlow m => SRB.RideBooking -> m SRide.Ride
-    buildRide rideBooking = do
+    buildRide :: MonadFlow m => SRB.Booking -> m SRide.Ride
+    buildRide booking = do
       guid <- generateGUID
       shortId <- generateShortId
       now <- getCurrentTime
       return
         SRide.Ride
           { id = guid,
-            bookingId = rideBooking.id,
+            bookingId = booking.id,
             status = SRide.NEW,
             trackingUrl = Nothing,
             fare = Nothing,
             totalFare = Nothing,
             chargeableDistance = Nothing,
-            vehicleVariant = rideBooking.vehicleVariant,
+            vehicleVariant = booking.vehicleVariant,
             createdAt = now,
             updatedAt = now,
             ..
           }
-    isAssignable rideBooking = rideBooking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT]
+    isAssignable booking = booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT]
 onUpdate RideStartedReq {..} = do
-  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideBookingId: " <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  unless (rideBooking.status == SRB.TRIP_ASSIGNED) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
+  unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
   DB.runTransaction $ do
     QRide.updateStatus ride.id SRide.INPROGRESS
-  Notify.notifyOnRideStarted rideBooking ride
+  Notify.notifyOnRideStarted booking ride
 onUpdate RideCompletedReq {..} = do
-  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideBookingId: " <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
-  unless (rideBooking.status == SRB.TRIP_ASSIGNED) $ throwError (RideBookingInvalidStatus $ show rideBooking.status)
+  unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
   let updRide =
         ride{status = SRide.COMPLETED,
@@ -121,15 +121,15 @@ onUpdate RideCompletedReq {..} = do
              totalFare = Just totalFare,
              chargeableDistance = Just chargeableDistance
             }
-  breakups <- traverse (buildFareBreakup rideBooking.id) fareBreakups
+  breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   DB.runTransaction $ do
-    QRB.updateStatus rideBooking.id SRB.COMPLETED
+    QRB.updateStatus booking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
-  Notify.notifyOnRideCompleted rideBooking ride
+  Notify.notifyOnRideCompleted booking ride
   where
-    buildFareBreakup :: MonadFlow m => Id SRB.RideBooking -> OnUpdateFareBreakup -> m DFareBreakup.FareBreakup
-    buildFareBreakup rideBookingId OnUpdateFareBreakup {..} = do
+    buildFareBreakup :: MonadFlow m => Id SRB.Booking -> OnUpdateFareBreakup -> m DFareBreakup.FareBreakup
+    buildFareBreakup bookingId OnUpdateFareBreakup {..} = do
       guid <- generateGUID
       pure
         DFareBreakup.FareBreakup
@@ -137,43 +137,43 @@ onUpdate RideCompletedReq {..} = do
             ..
           }
 onUpdate BookingCancelledReq {..} = do
-  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideBookingId: " <> bppBookingId.getId)
-  unless (isRideBookingCancellable rideBooking) $
-    throwError (RideBookingInvalidStatus (show rideBooking.status))
-  mbRide <- QRide.findActiveByRBId rideBooking.id
-  logTagInfo ("RideBookingId-" <> getId rideBooking.id) ("Cancellation reason " <> show cancellationSource)
-  rideBookingCancellationReason <- buildRideBookingCancellationReason rideBooking.id (mbRide <&> (.id)) cancellationSource
+  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
+  unless (isBookingCancellable booking) $
+    throwError (BookingInvalidStatus (show booking.status))
+  mbRide <- QRide.findActiveByRBId booking.id
+  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show cancellationSource)
+  bookingCancellationReason <- buildBookingCancellationReason booking.id (mbRide <&> (.id)) cancellationSource
   DB.runTransaction $ do
-    QRB.updateStatus rideBooking.id SRB.CANCELLED
+    QRB.updateStatus booking.id SRB.CANCELLED
     whenJust mbRide $ \ride -> QRide.updateStatus ride.id SRide.CANCELLED
     unless (cancellationSource == SBCR.ByUser) $
-      QBCR.create rideBookingCancellationReason
+      QBCR.create bookingCancellationReason
   -- notify customer
-  Notify.notifyOnRideBookingCancelled rideBooking cancellationSource
+  Notify.notifyOnBookingCancelled booking cancellationSource
   where
-    isRideBookingCancellable rideBooking =
-      rideBooking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
+    isBookingCancellable booking =
+      booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.TRIP_ASSIGNED]
 onUpdate BookingReallocationReq {..} = do
-  rideBooking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideBookingId: " <> bppBookingId.getId)
+  booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   DB.runTransaction $ do
-    QRB.updateStatus rideBooking.id SRB.AWAITING_REASSIGNMENT
+    QRB.updateStatus booking.id SRB.AWAITING_REASSIGNMENT
     QRide.updateStatus ride.id SRide.CANCELLED
   -- notify customer
-  Notify.notifyOnRideBookingReallocated rideBooking
+  Notify.notifyOnBookingReallocated booking
 
-buildRideBookingCancellationReason ::
+buildBookingCancellationReason ::
   MonadFlow m =>
-  Id SRB.RideBooking ->
+  Id SRB.Booking ->
   Maybe (Id SRide.Ride) ->
   SBCR.CancellationSource ->
-  m SBCR.RideBookingCancellationReason
-buildRideBookingCancellationReason rideBookingId mbRideId cancellationSource = do
+  m SBCR.BookingCancellationReason
+buildBookingCancellationReason bookingId mbRideId cancellationSource = do
   guid <- generateGUID
   return
-    SBCR.RideBookingCancellationReason
+    SBCR.BookingCancellationReason
       { id = guid,
-        rideBookingId = rideBookingId,
+        bookingId = bookingId,
         rideId = mbRideId,
         source = cancellationSource,
         reasonCode = Nothing,

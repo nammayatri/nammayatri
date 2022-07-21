@@ -27,10 +27,10 @@ import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Servant.Client (BaseUrl (..))
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Metrics
 import Types.Error
@@ -61,13 +61,12 @@ initiateCallToCustomer rideId = do
   ride <-
     QRide.findById rideId
       >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  rideBooking <-
+  booking <-
     QRB.findById ride.bookingId
-      >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
-
+      >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   riderId <-
-    rideBooking.riderId
-      & fromMaybeM (RideBookingFieldNotPresent "riderId")
+    booking.riderId
+      & fromMaybeM (BookingFieldNotPresent "riderId")
   riderDetails <-
     QRD.findById riderId
       >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
@@ -90,7 +89,6 @@ initiateCallToCustomer rideId = do
         bppUIUrl
           { baseUrlPath = baseUrlPath bppUIUrl <> "/driver/ride/" <> rideid <> "/call/statusCallback"
           }
-
     buildCallStatus rideid callId exoResponse = do
       now <- getCurrentTime
       return $
@@ -125,10 +123,10 @@ getCustomerMobileNumber callSid callFrom_ _ callStatus_ = do
   let callFrom = dropFirstZero callFrom_
   driver <- QPerson.findByMobileNumber "+91" callFrom >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
   activeRide <- QRide.getActiveByDriverId driver.id >>= fromMaybeM (RideForDriverNotFound $ getId driver.id)
-  activeRideBooking <- QRB.findById activeRide.bookingId >>= fromMaybeM (RideBookingNotFound $ getId activeRide.bookingId)
+  activeBooking <- QRB.findById activeRide.bookingId >>= fromMaybeM (BookingNotFound $ getId activeRide.bookingId)
   riderId <-
-    activeRideBooking.riderId
-      & fromMaybeM (RideBookingFieldNotPresent "riderId")
+    activeBooking.riderId
+      & fromMaybeM (BookingFieldNotPresent "riderId")
   riderDetails <-
     QRD.findById riderId
       >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
@@ -139,7 +137,6 @@ getCustomerMobileNumber callSid callFrom_ _ callStatus_ = do
   return requestorPhone
   where
     dropFirstZero = T.dropWhile (== '0')
-
     buildCallStatus rideId callId exotelCallId exoStatus = do
       now <- getCurrentTime
       return $

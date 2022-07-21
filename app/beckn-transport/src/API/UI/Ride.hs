@@ -32,10 +32,10 @@ import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
 import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
 import SharedLogic.LocationUpdates
 import qualified SharedLogic.MissingLocationUpdatesMarker as MLUMarker
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
 import Tools.Metrics (putFareAndDistanceDeviations)
 import Utils.Auth
 import Utils.Common
@@ -83,7 +83,7 @@ startRide personId rideId req = withFlowHandlerAPI $ do
     handle =
       SHandler.ServiceHandle
         { findById = QPerson.findById,
-          findRideBookingById = QRB.findById,
+          findBookingById = QRB.findById,
           findRideById = QRide.findById,
           startRide = SInternal.startRideTransaction,
           notifyBAPRideStarted = sendRideStartedUpdateToBAP,
@@ -97,7 +97,7 @@ endRide personId rideId = withFlowHandlerAPI $ do
     handle =
       EHandler.ServiceHandle
         { findById = QPerson.findById,
-          findRideBookingById = QRB.findById,
+          findBookingById = QRB.findById,
           findRideById = QRide.findById,
           notifyCompleteToBAP = sendRideCompletedUpdateToBAP,
           endRideTransaction = EInternal.endRideTransaction,

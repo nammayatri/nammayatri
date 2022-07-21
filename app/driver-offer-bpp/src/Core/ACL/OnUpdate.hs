@@ -7,16 +7,16 @@ where
 import Beckn.Prelude
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as RideAssignedOU
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideBookingCancelledEvent as BookingCancelledOU
 import Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareParams as Fare
 import qualified Domain.Types.Person as SP
 import Domain.Types.Ride as DRide
-import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.Vehicle as SVeh
 import Product.FareCalculator.Calculator (fareSum, mkBreakupList)
 import Types.Error
@@ -36,7 +36,7 @@ data OnUpdateBuildReq
         fareParams :: Fare.FareParameters
       }
   | BookingCancelledBuildReq
-      { booking :: SRB.RideBooking,
+      { booking :: SRB.Booking,
         cancellationSource :: SBCR.CancellationSource
       }
 
@@ -124,8 +124,8 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
     OnUpdate.OnUpdateMessage $
-      OnUpdate.RideBookingCancelled
-        BookingCancelledOU.RideBookingCancelledEvent
+      OnUpdate.BookingCancelled
+        BookingCancelledOU.BookingCancelledEvent
           { id = booking.id.getId,
             state = "CANCELLED",
             update_target = "state,fufillment.state.code",

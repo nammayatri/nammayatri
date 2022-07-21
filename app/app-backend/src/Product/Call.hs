@@ -16,16 +16,16 @@ import Beckn.Utils.Logging
 import Data.Text
 import qualified Data.Text as T
 import Data.Text.Conversions
+import Domain.Types.Booking as DRB
 import Domain.Types.CallStatus
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
-import Domain.Types.RideBooking as DRB
 import Servant.Client (BaseUrl (..))
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Merchant as Merchant
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
 import qualified Types.API.Call as CallAPI
 import Types.Error
 import Utils.Common
@@ -51,7 +51,6 @@ initiateCallToDriver rideId personId =
         bapUIUrl
           { baseUrlPath = baseUrlPath bapUIUrl <> "/ride/" <> id <> "/call/statusCallback"
           }
-
     buildCallStatus id callId exotelResponse = do
       now <- getCurrentTime
       return $
@@ -90,20 +89,18 @@ getDriverMobileNumber callSid callFrom_ callTo_ callStatus_ = do
     person <-
       Person.findByRoleAndMobileNumberAndMerchantId USER "+91" callFrom merchant.id
         >>= fromMaybeM (PersonWithPhoneNotFound callFrom)
-    rideBookings <- QRB.findByRiderIdAndStatus person.id DRB.TRIP_ASSIGNED
-    rideBooking <- fromMaybeM (RideBookingForRiderNotFound $ getId person.id) (headMaybe rideBookings)
-    ride <- QRide.findActiveByRBId rideBooking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId rideBooking.id)
+    bookings <- QRB.findByRiderIdAndStatus person.id DRB.TRIP_ASSIGNED
+    booking <- fromMaybeM (BookingForRiderNotFound $ getId person.id) (headMaybe bookings)
+    ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideWithBookingIdNotFound $ getId booking.id)
     callId <- generateGUID
     callStatusObj <- buildCallStatus ride.id callId callSid callStatus
     runTransaction $ QCallStatus.create callStatusObj
     return ride.driverMobileNumber
   where
     dropFirstZero = T.dropWhile (== '0')
-
     headMaybe :: [a] -> Maybe a
     headMaybe [] = Nothing
     headMaybe (x : _) = Just x
-
     buildCallStatus rideId callId exotelCallId exoStatus = do
       now <- getCurrentTime
       return $
@@ -123,8 +120,8 @@ getCallStatus _ callStatusId _ = withFlowHandlerAPI $ do
 
 getPerson :: (EsqDBFlow m r, EncFlow m r) => SRide.Ride -> m Person
 getPerson ride = do
-  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
-  let personId = rideBooking.riderId
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let personId = booking.riderId
   Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
 -- | Get person's mobile phone

@@ -20,6 +20,6 @@ data OnTrackReq = OnTrackReq
 
 onTrack :: EsqDBFlow m r => OnTrackReq -> m ()
 onTrack req = do
-  ride <- QRide.findByBPPRideId req.bppRideId >>= fromMaybeM (RideBookingDoesNotExist $ "BppRideId:" <> req.bppRideId.getId)
+  ride <- QRide.findByBPPRideId req.bppRideId >>= fromMaybeM (BookingDoesNotExist $ "BppRideId:" <> req.bppRideId.getId)
   DB.runTransaction $ do
     QRide.updateTrackingUrl ride.id req.trackUrl

@@ -8,10 +8,10 @@ where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingLocation as DBLoc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
 import Domain.Types.Vehicle (Variant)
 import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Person as QPerson
@@ -61,10 +61,10 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
   rideData <- QRide.findAllByDriverId driverId mbLimit mbOffset mbOnlyActive
   DriverRideListRes <$> traverse buildDriverRideRes rideData
 
-buildDriverRideRes :: (EsqDBFlow m r, EncFlow m r) => (SRide.Ride, SRB.RideBooking) -> m DriverRideRes
-buildDriverRideRes (ride, rideBooking) = do
-  fromLocation <- QBLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- case rideBooking.rideBookingDetails of
+buildDriverRideRes :: (EsqDBFlow m r, EncFlow m r) => (SRide.Ride, SRB.Booking) -> m DriverRideRes
+buildDriverRideRes (ride, booking) = do
+  fromLocation <- QBLoc.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
+  toLocation <- case booking.bookingDetails of
     SRB.OneWayDetails details -> QBLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound . Just
     SRB.RentalDetails _ -> pure Nothing
 
@@ -78,9 +78,9 @@ buildDriverRideRes (ride, rideBooking) = do
         status = ride.status,
         fromLocation = DBLoc.makeBookingLocationAPIEntity fromLocation,
         toLocation = DBLoc.makeBookingLocationAPIEntity <$> toLocation,
-        estimatedFare = rideBooking.estimatedFare,
-        estimatedTotalFare = rideBooking.estimatedTotalFare,
-        discount = rideBooking.discount,
+        estimatedFare = booking.estimatedFare,
+        estimatedTotalFare = booking.estimatedTotalFare,
+        discount = booking.discount,
         driverName = driver.firstName,
         driverNumber = driverNumber,
         vehicleNumber = vehicle.registrationNo,

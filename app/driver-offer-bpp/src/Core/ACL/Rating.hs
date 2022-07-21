@@ -24,6 +24,6 @@ buildRatingReq subscriber req = do
     throwError (InvalidRequest "Invalid bap_uri")
   pure
     DRating.DRatingReq
-      { rideBookingId = Id $ req.message.id,
+      { bookingId = Id $ req.message.id,
         ratingValue = req.message.value
       }

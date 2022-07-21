@@ -16,22 +16,22 @@ import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
 import Beckn.Types.Registry (Subscriber (..))
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingLocation as SBL
 import qualified Domain.Types.BusinessEvent as SB
 import Domain.Types.DiscountTransaction
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Organization as Organization
-import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RiderDetails as SRD
 import qualified Product.BecknProvider.BP as BP
 import qualified SharedLogic.DriverPool as DrPool
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.Organization as Organization
-import qualified Storage.Queries.RideBooking as QRB
 import qualified Storage.Queries.RideRequest as RideRequest
 import qualified Storage.Queries.RiderDetails as QRD
 import Tools.Metrics
@@ -39,7 +39,7 @@ import Types.Error
 import Utils.Common
 
 data DConfirmReq = DConfirmReq
-  { bookingId :: Id SRB.RideBooking,
+  { bookingId :: Id SRB.Booking,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: SBL.LocationAddress,
@@ -47,7 +47,7 @@ data DConfirmReq = DConfirmReq
   }
 
 data DConfirmRes = DConfirmRes
-  { booking :: SRB.RideBooking,
+  { booking :: SRB.Booking,
     bDetails :: ConfirmResBDetails,
     fromLocation :: SBL.BookingLocation,
     toLocation :: Maybe SBL.BookingLocation,
@@ -75,7 +75,7 @@ confirm ::
   DConfirmReq ->
   m DConfirmRes
 confirm transporterId subscriber req = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (RideBookingDoesNotExist req.bookingId.getId)
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   let transporterId' = booking.providerId
   transporter <-
     Organization.findById transporterId'
@@ -102,7 +102,7 @@ confirm transporterId subscriber req = do
         addons
 
   fromLocation <- QBL.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
-  res <- case booking.rideBookingDetails of
+  res <- case booking.bookingDetails of
     SRB.OneWayDetails details -> do
       finalTransaction $ do
         RideRequest.create rideRequest
@@ -126,7 +126,7 @@ confirm transporterId subscriber req = do
           finalTransaction $
             createScheduleRentalRideRequestJob scheduledTime $
               AllocateRentalJobData
-                { rideBookingId = booking.id,
+                { bookingId = booking.id,
                   shortOrgId = transporter.shortId
                 }
       rentalFP <- QRFP.findById details.rentalFarePolicyId >>= fromMaybeM NoFarePolicy
@@ -137,7 +137,7 @@ confirm transporterId subscriber req = do
             ..
           }
   let pickupPoint = booking.fromLocationId
-      fareProductType = SRB.getFareProductType booking.rideBookingDetails
+      fareProductType = SRB.getFareProductType booking.bookingDetails
   driverPoolResults <- DrPool.recalculateDriverPool pickupPoint booking.id transporter.id booking.vehicleVariant fareProductType
   Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_CONFIRM (Just booking.id)) driverPoolResults
   let driverPool = map (.driverId) driverPoolResults
@@ -173,11 +173,11 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
             updatedAt = now
           }
 
-mkDiscountTransaction :: SRB.RideBooking -> Amount -> UTCTime -> DiscountTransaction
-mkDiscountTransaction rideBooking discount currTime =
+mkDiscountTransaction :: SRB.Booking -> Amount -> UTCTime -> DiscountTransaction
+mkDiscountTransaction booking discount currTime =
   DiscountTransaction
-    { rideBookingId = rideBooking.id,
-      organizationId = rideBooking.providerId,
+    { bookingId = booking.id,
+      organizationId = booking.providerId,
       discount = discount,
       createdAt = currTime
     }

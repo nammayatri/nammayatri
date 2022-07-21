@@ -3,15 +3,15 @@ module Domain.Action.UI.Feedback where
 import qualified App.Types as App
 import Beckn.Prelude
 import Beckn.Types.Id
-import qualified Domain.Types.RideBooking as DRideBooking
+import qualified Domain.Types.Booking as DRideBooking
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
 import qualified Types.API.Feedback as API
 import Types.Error
 import Utils.Common
 
 data DRatingReq = DRatingReq
-  { bppRideBookingId :: Id DRideBooking.BPPRideBooking,
+  { bppBookingId :: Id DRideBooking.BPPBooking,
     ratingValue :: Int,
     providerId :: Text,
     providerUrl :: BaseUrl
@@ -23,11 +23,11 @@ feedback request = do
   unless (ratingValue `elem` [1 .. 5]) $ throwError InvalidRatingValue
   let rideId = request.rideId
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  rideBooking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
-  bppRideBookingId <- rideBooking.bppBookingId & fromMaybeM (RideBookingFieldNotPresent "bppBookingId")
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   pure
     DRatingReq
-      { providerId = rideBooking.providerId,
-        providerUrl = rideBooking.providerUrl,
+      { providerId = booking.providerId,
+        providerUrl = booking.providerUrl,
         ..
       }

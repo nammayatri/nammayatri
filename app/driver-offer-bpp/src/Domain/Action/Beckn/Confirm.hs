@@ -11,29 +11,27 @@ import Beckn.Types.Id
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
 import Beckn.Utils.Common
 import Data.String.Conversions
---import qualified Product.BecknProvider.BP as BP
-
 import qualified Data.Text as T
+import Domain.Types.Booking as DRB
+import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Ride as DRide
-import Domain.Types.RideBooking as DRB
-import qualified Domain.Types.RideBooking.BookingLocation as DBL
 import qualified Domain.Types.RiderDetails as DRD
 import Servant.Client (BaseUrl (..))
+import Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
-import Storage.Queries.RideBooking as QRB
-import qualified Storage.Queries.RideBooking.BookingLocation as QBL
 import qualified Storage.Queries.RiderDetails as QRD
 import Utils.Common
 import qualified Utils.Notifications as Notify
 
 data DConfirmReq = DConfirmReq
-  { bookingId :: Id DRB.RideBooking,
+  { bookingId :: Id DRB.Booking,
     customerMobileCountryCode :: Text,
     customerPhoneNumber :: Text,
     fromAddress :: DBL.LocationAddress,
@@ -41,7 +39,7 @@ data DConfirmReq = DConfirmReq
   }
 
 data DConfirmRes = DConfirmRes
-  { booking :: DRB.RideBooking,
+  { booking :: DRB.Booking,
     ride :: DRide.Ride,
     fromLocation :: DBL.BookingLocation,
     toLocation :: DBL.BookingLocation,
@@ -62,7 +60,7 @@ handler ::
   DConfirmReq ->
   m DConfirmRes
 handler subscriber transporterId req = do
-  booking <- QRB.findById req.bookingId >>= fromMaybeM (RideBookingDoesNotExist req.bookingId.getId)
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   driverQuote <- QDQ.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
   driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
   let transporterId' = booking.providerId
@@ -86,29 +84,29 @@ handler subscriber transporterId req = do
     QBE.logRideConfirmedEvent booking.id
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
 
-  uRideBooking <- QRB.findById booking.id >>= fromMaybeM (RideBookingNotFound booking.id.getId)
-  Notify.notifyDriver notificationType notificationTitle (message uRideBooking) driver.id driver.deviceToken
+  uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
+  Notify.notifyDriver notificationType notificationTitle (message uBooking) driver.id driver.deviceToken
 
   pure
     DConfirmRes
-      { booking = uRideBooking,
+      { booking = uBooking,
         ride,
         riderDetails,
         transporter,
-        fromLocation = uRideBooking.fromLocation,
-        toLocation = uRideBooking.toLocation
+        fromLocation = uBooking.fromLocation,
+        toLocation = uBooking.toLocation
       }
   where
     notificationType = FCM.DRIVER_ASSIGNMENT
     notificationTitle = "Driver has been assigned the ride!"
-    message rideBooking =
+    message booking =
       cs $
         unwords
           [ "You have been assigned a ride for",
-            cs (showTimeIst rideBooking.startTime) <> ".",
+            cs (showTimeIst booking.startTime) <> ".",
             "Check the app for more details."
           ]
-    buildRide driverId rideBooking = do
+    buildRide driverId booking = do
       guid <- Id <$> generateGUID
       shortId <- generateShortId
       otp <- generateOTPCode
@@ -117,7 +115,7 @@ handler subscriber transporterId req = do
       return
         DRide.Ride
           { id = guid,
-            bookingId = rideBooking.id,
+            bookingId = booking.id,
             shortId = shortId,
             status = DRide.NEW,
             driverId = cast driverId,

@@ -3,10 +3,10 @@ module Mobility.DriverCancelRide where
 import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
 import qualified "beckn-transport" API.UI.Ride as RideAPI
 import Common (getAppBaseUrl)
+import qualified "app-backend" Domain.Types.Booking as AppRB
+import qualified "beckn-transport" Domain.Types.Booking as TRB
 import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
 import qualified "beckn-transport" Domain.Types.Ride as TRide
-import qualified "app-backend" Domain.Types.RideBooking as AppRB
-import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.Fixtures
@@ -19,26 +19,26 @@ spec = do
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for ride cancelled by Driver" $ withBecknClients clients do
       void . callBPP $ setDriverOnline driverToken2 True
-      bRideBookingId <- doAnAppSearch
+      bBookingId <- doAnAppSearch
 
-      tRideBooking <- poll $ do
-        trb <- getBPPRideBooking bRideBookingId
+      tBooking <- poll $ do
+        trb <- getBPPBooking bBookingId
         trb.status `shouldBe` TRB.CONFIRMED
         return $ Just trb
 
       rideInfo <-
         poll . callBPP $
-          getNotificationInfo tRideBooking.id driverToken1
+          getNotificationInfo tBooking.id driverToken1
             <&> (.rideRequest)
-      rideInfo.bookingId `shouldBe` tRideBooking.id
+      rideInfo.bookingId `shouldBe` tBooking.id
 
       -- Driver1 Accepts a ride
       void . callBPP $
-        rideRespond tRideBooking.id driverToken1 $
+        rideRespond tBooking.id driverToken1 $
           TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
 
       tRide1 <- poll $ do
-        tRide <- getBPPRide tRideBooking.id
+        tRide <- getBPPRide tBooking.id
         tRide.status `shouldBe` TRide.NEW
         return $ Just tRide
 
@@ -47,24 +47,24 @@ spec = do
           RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
 
       void . poll $
-        callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+        callBAP (appBookingStatus bBookingId appRegistrationToken)
           <&> (.status)
           >>= (`shouldBe` AppRB.AWAITING_REASSIGNMENT)
           <&> Just
 
       rideInfo2 <-
         poll . callBPP $
-          getNotificationInfo tRideBooking.id driverToken2
+          getNotificationInfo tBooking.id driverToken2
             <&> (.rideRequest)
-      rideInfo2.bookingId `shouldBe` tRideBooking.id
+      rideInfo2.bookingId `shouldBe` tBooking.id
 
       -- Driver2 Accepts a ride
       void . callBPP $
-        rideRespond tRideBooking.id driverToken2 $
+        rideRespond tBooking.id driverToken2 $
           TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.ACCEPT
 
       tRide2 <- poll $ do
-        tRide <- getBPPRide tRideBooking.id
+        tRide <- getBPPRide tBooking.id
         tRide.status `shouldBe` TRide.NEW
         return $ Just tRide
 
@@ -73,7 +73,7 @@ spec = do
           RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
 
       void . poll $
-        callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+        callBAP (appBookingStatus bBookingId appRegistrationToken)
           <&> (.status)
           >>= (`shouldBe` AppRB.CANCELLED)
           <&> Just

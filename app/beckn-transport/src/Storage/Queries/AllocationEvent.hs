@@ -4,13 +4,13 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.AllocationEvent
-import Domain.Types.RideBooking
+import Domain.Types.Booking
 import Storage.Tabular.AllocationEvent ()
 import Types.App (Driver)
 import Utils.Common
 
-logAllocationEvent :: AllocationEventType -> Id RideBooking -> Maybe (Id Driver) -> SqlDB ()
-logAllocationEvent eventType rideBookingId driverId = do
+logAllocationEvent :: AllocationEventType -> Id Booking -> Maybe (Id Driver) -> SqlDB ()
+logAllocationEvent eventType bookingId driverId = do
   uuid <- generateGUID
   now <- getCurrentTime
   Esq.create $
@@ -19,5 +19,5 @@ logAllocationEvent eventType rideBookingId driverId = do
         eventType = eventType,
         timestamp = now,
         driverId = driverId,
-        rideBookingId = rideBookingId
+        bookingId = bookingId
       }

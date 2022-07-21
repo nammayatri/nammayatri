@@ -25,9 +25,9 @@ import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 import Types.Error
 
-data RideBookingAPIEntity = RideBookingAPIEntity
-  { id :: Id RideBooking,
-    status :: RideBookingStatus,
+data BookingAPIEntity = BookingAPIEntity
+  { id :: Id Booking,
+    status :: BookingStatus,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
@@ -35,23 +35,23 @@ data RideBookingAPIEntity = RideBookingAPIEntity
     rideList :: [DRide.RideAPIEntity],
     tripTerms :: [Text],
     fareBreakup :: [FareBreakupAPIEntity],
-    bookingDetails :: RideBookingDetailsAPIEntity,
+    bookingDetails :: BookingDetailsAPIEntity,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 -- do not change constructor names without changing fareProductConstructorModifier
-data RideBookingDetailsAPIEntity = OneWayDetailsAPIEntity OneWayBookingDetailsAPIEntity | RentalDetailsAPIEntity RentalBookingDetailsAPIEntity
+data BookingDetailsAPIEntity = OneWayDetailsAPIEntity OneWayBookingDetailsAPIEntity | RentalDetailsAPIEntity RentalBookingDetailsAPIEntity
   deriving (Show, Generic)
 
-instance ToJSON RideBookingDetailsAPIEntity where
+instance ToJSON BookingDetailsAPIEntity where
   toJSON = genericToJSON J.fareProductOptions
 
-instance FromJSON RideBookingDetailsAPIEntity where
+instance FromJSON BookingDetailsAPIEntity where
   parseJSON = genericParseJSON J.fareProductOptions
 
-instance ToSchema RideBookingDetailsAPIEntity where
+instance ToSchema BookingDetailsAPIEntity where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
 newtype OneWayBookingDetailsAPIEntity = OneWayBookingDetailsAPIEntity
@@ -65,17 +65,17 @@ data RentalBookingDetailsAPIEntity = RentalBookingDetailsAPIEntity
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-buildRideBookingAPIEntity :: (EsqDBFlow m r, EncFlow m r) => RideBooking -> m RideBookingAPIEntity
-buildRideBookingAPIEntity booking = do
+buildBookingAPIEntity :: (EsqDBFlow m r, EncFlow m r) => Booking -> m BookingAPIEntity
+buildBookingAPIEntity booking = do
   fromLocation <- QBLoc.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
   let rbStatus = booking.status
   now <- getCurrentTime
   rideAPIEntityList <- mapM (buildRideAPIEntity now) =<< QRide.findAllRideAPIEntityDataByRBId booking.id
-  fareBreakups <- QFareBreakup.findAllByRideBookingId booking.id
-  (bookingDetails, tripTerms) <- buildRideBookingAPIDetails booking.rideBookingDetails
+  fareBreakups <- QFareBreakup.findAllByBookingId booking.id
+  (bookingDetails, tripTerms) <- buildBookingAPIDetails booking.bookingDetails
 
   return $
-    RideBookingAPIEntity
+    BookingAPIEntity
       { id = booking.id,
         status = rbStatus,
         estimatedFare = booking.estimatedFare,
@@ -96,9 +96,9 @@ buildRideBookingAPIEntity booking = do
       decDriver <- maybe (return $ driverDefault now) decrypt mbDriver
       return $ DRide.makeRideAPIEntity ride decDriver vehicle
 
-    buildRideBookingAPIDetails :: EsqDBFlow m r => RideBookingDetails -> m (RideBookingDetailsAPIEntity, [Text])
-    buildRideBookingAPIDetails = \case
-      OneWayDetails OneWayRideBookingDetails {..} -> do
+    buildBookingAPIDetails :: EsqDBFlow m r => BookingDetails -> m (BookingDetailsAPIEntity, [Text])
+    buildBookingAPIDetails = \case
+      OneWayDetails OneWayBookingDetails {..} -> do
         toLocation' <- QBLoc.findById toLocationId >>= fromMaybeM LocationNotFound
         let details =
               OneWayDetailsAPIEntity
@@ -106,7 +106,7 @@ buildRideBookingAPIEntity booking = do
                   { toLocation = makeBookingLocationAPIEntity toLocation'
                   }
         pure (details, [])
-      RentalDetails (RentalRideBookingDetails rentalFarePolicyId) -> do
+      RentalDetails (RentalBookingDetails rentalFarePolicyId) -> do
         DRentalFP.RentalFarePolicy {..} <-
           QRentalFP.findById rentalFarePolicyId
             >>= fromMaybeM NoRentalFarePolicy

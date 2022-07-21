@@ -12,14 +12,14 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy.FareBreakup as Domain
-import qualified Storage.Tabular.RideBooking as SRideBooking
+import qualified Storage.Tabular.Booking as SBooking
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     FareBreakupT sql=fare_breakup
       id Text
-      rideBookingId SRideBooking.RideBookingTId
+      bookingId SBooking.BookingTId
       description Text
       amount Amount
       Primary id
@@ -36,12 +36,12 @@ instance TType FareBreakupT Domain.FareBreakup where
     return $
       Domain.FareBreakup
         { id = Id id,
-          rideBookingId = fromKey rideBookingId,
+          bookingId = fromKey bookingId,
           ..
         }
   toTType Domain.FareBreakup {..} =
     FareBreakupT
       { id = getId id,
-        rideBookingId = toKey rideBookingId,
+        bookingId = toKey bookingId,
         ..
       }

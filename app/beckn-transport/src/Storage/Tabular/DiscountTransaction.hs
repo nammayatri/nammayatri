@@ -11,25 +11,25 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import Domain.Types.Booking (Booking)
 import qualified Domain.Types.DiscountTransaction as Domain
-import Domain.Types.RideBooking (RideBooking)
+import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.Organization (OrganizationTId)
-import Storage.Tabular.RideBooking (RideBookingTId)
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     DiscountTransactionT sql=discount_transaction
-      rideBookingId RideBookingTId sql=ride_booking_id
+      bookingId BookingTId sql=booking_id
       organizationId OrganizationTId
       discount Amount
       createdAt UTCTime
-      Primary rideBookingId
+      Primary bookingId
       deriving Generic
     |]
 
 instance TEntityKey DiscountTransactionT where
-  type DomainKey DiscountTransactionT = Id RideBooking
+  type DomainKey DiscountTransactionT = Id Booking
   fromKey (DiscountTransactionTKey _id) = fromKey _id
   toKey id = DiscountTransactionTKey $ toKey id
 
@@ -37,13 +37,13 @@ instance TType DiscountTransactionT Domain.DiscountTransaction where
   fromTType DiscountTransactionT {..} = do
     return $
       Domain.DiscountTransaction
-        { rideBookingId = fromKey rideBookingId,
+        { bookingId = fromKey bookingId,
           organizationId = fromKey organizationId,
           ..
         }
   toTType Domain.DiscountTransaction {..} =
     DiscountTransactionT
-      { rideBookingId = toKey rideBookingId,
+      { bookingId = toKey bookingId,
         organizationId = toKey organizationId,
         ..
       }

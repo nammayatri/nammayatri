@@ -13,8 +13,8 @@ import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common (HighPrecMeters (..))
 import Beckn.Types.Id
 import qualified Domain.Types.Ride as Domain
+import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.RideBooking (RideBookingTId)
 
 derivePersistField "Domain.RideStatus"
 
@@ -23,7 +23,7 @@ mkPersist
   [defaultQQ|
     RideT sql=ride
       id Text
-      bookingId RideBookingTId
+      bookingId BookingTId
       shortId Text
       status Domain.RideStatus
       driverId PersonTId

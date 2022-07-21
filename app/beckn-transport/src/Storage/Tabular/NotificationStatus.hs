@@ -11,8 +11,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.NotificationStatus as Domain
+import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.Person (PersonTId)
-import Storage.Tabular.RideBooking (RideBookingTId)
 
 derivePersistField "Domain.AnswerStatus"
 
@@ -21,7 +21,7 @@ mkPersist
   [defaultQQ|
     NotificationStatusT sql=notification_status
       id Text
-      rideBookingId RideBookingTId
+      bookingId BookingTId
       driverId PersonTId
       status Domain.AnswerStatus
       expiresAt UTCTime
@@ -40,13 +40,13 @@ instance TType NotificationStatusT Domain.NotificationStatus where
       Domain.NotificationStatus
         { id = Id id,
           driverId = cast $ fromKey driverId,
-          rideBookingId = fromKey rideBookingId,
+          bookingId = fromKey bookingId,
           ..
         }
   toTType Domain.NotificationStatus {..} =
     NotificationStatusT
       { id = getId id,
         driverId = toKey $ cast driverId,
-        rideBookingId = toKey rideBookingId,
+        bookingId = toKey bookingId,
         ..
       }

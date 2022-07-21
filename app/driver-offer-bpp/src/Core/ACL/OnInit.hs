@@ -8,7 +8,7 @@ import Utils.Common (amountToDecimalValue)
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
 mkOnInitMessage res = do
-  let rb = res.rideBooking
+  let rb = res.booking
       fareParams = rb.fareParams
       fareDecimalValue = amountToDecimalValue $ fareSum fareParams
       currency = "INR"
@@ -17,7 +17,7 @@ mkOnInitMessage res = do
   OnInit.OnInitMessage
     { order =
         OnInit.Order
-          { id = res.rideBooking.id.getId,
+          { id = res.booking.id.getId,
             state = OnInit.NEW,
             quote =
               OnInit.Quote

@@ -5,7 +5,7 @@ import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Cancel.Req as Cancel
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.Types.RideBookingCancellationReason as SBCR
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import ExternalAPI.Flow
 import Utils.Common
 

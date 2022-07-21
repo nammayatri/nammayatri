@@ -5,22 +5,22 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import qualified Domain.Types.Booking.Type as DRB
 import qualified Domain.Types.Organization as Org
 import Domain.Types.Person as SP
 import Domain.Types.Rating as Rating
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.RideBooking as DRB
 import qualified EulerHS.Language as L
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
 import Tools.Metrics
 import Types.Error
 import Utils.Common
 
 data DRatingReq = DRatingReq
-  { bookingId :: Id DRB.RideBooking,
+  { bookingId :: Id DRB.Booking,
     ratingValue :: Int
   }
 
@@ -38,7 +38,7 @@ ratingImpl ::
   DRatingReq ->
   m ()
 ratingImpl transporterId req = do
-  rideBooking <- QRB.findById req.bookingId >>= fromMaybeM (RideBookingDoesNotExist req.bookingId.getId)
+  rideBooking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   unless (rideBooking.providerId == transporterId) $ throwError AccessDenied
   ride <-
     QRide.findActiveByRBId rideBooking.id

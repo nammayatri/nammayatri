@@ -12,8 +12,8 @@ import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Beckn.Utils.Servant.SignatureAuth
 import Control.Lens.Operators ((?~))
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as DRB
 import Domain.Types.Organization as Org
-import qualified Domain.Types.RideBooking as DRB
 import EulerHS.Prelude
 import Tools.Metrics (CoreMetrics)
 import Utils.Common
@@ -45,12 +45,12 @@ callOnUpdate ::
     CoreMetrics m
   ) =>
   Org.Organization ->
-  DRB.RideBooking ->
+  DRB.Booking ->
   OnUpdate.OnUpdateMessage ->
   m ()
-callOnUpdate transporter rideBooking content = do
-  let bapId = rideBooking.bapId
-      bapUri = rideBooking.bapUri
+callOnUpdate transporter booking content = do
+  let bapId = booking.bapId
+      bapUri = booking.bapUri
   let bppShortId = getShortId $ transporter.shortId
       authKey = getHttpManagerKey bppShortId
   bppUri <- makeBppUrl (transporter.id)

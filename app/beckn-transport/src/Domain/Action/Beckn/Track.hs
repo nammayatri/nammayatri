@@ -10,9 +10,9 @@ import Beckn.Types.Id
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRB
 import Types.Error
 import Utils.Common
 
@@ -35,7 +35,7 @@ track transporterId req = do
     QOrg.findById transporterId
       >>= fromMaybeM (OrgNotFound transporterId.getId)
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideDoesNotExist req.rideId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let transporterId' = booking.providerId
   unless (transporterId' == transporterId) $ throwError AccessDenied
   return $

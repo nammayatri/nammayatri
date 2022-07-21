@@ -164,7 +164,7 @@ token: {{token}}
 
 ###
 # @name driverList
-GET {{driver-offer-bpp-host}}/v2/driver/ride/list?limit=100&offset=0
+GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
 token: {{driver-token}}
 
 ###
@@ -172,7 +172,7 @@ token: {{driver-token}}
 @otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
 
 # @name startRide
-POST {{driver-offer-bpp-host}}/v2/driver/ride/{{rideId}}/start
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
 token: {{driver-token}}
 content-type: application/json
 
@@ -190,7 +190,7 @@ content-type: application/json
 @currentTime = 2022-03-03T23:37
 
 # @name update1
-POST {{driver-offer-bpp-host}}/v2/driver/location
+POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{driver-token}}
 content-type: application/json
 
@@ -231,7 +231,7 @@ content-type: application/json
 ###
 
 # @name update2
-POST {{driver-offer-bpp-host}}/v2/driver/location
+POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{driver-token}}
 content-type: application/json
 
@@ -257,7 +257,7 @@ content-type: application/json
 ###
 
 # @name rideEnd
-POST {{driver-offer-bpp-host}}/v2/driver/ride/{{rideId}}/end
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
 token: {{driver-token}}
 content-type: application/json
 

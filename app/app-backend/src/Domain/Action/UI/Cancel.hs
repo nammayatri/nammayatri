@@ -8,14 +8,14 @@ where
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Id
+import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.RideBookingCancellationReason as SBCR
+import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QR
-import qualified Storage.Queries.RideBooking as QRB
-import qualified Storage.Queries.RideBookingCancellationReason as QBCR
 import Types.Error
 import Utils.Common
 
@@ -27,39 +27,39 @@ data CancelReq = CancelReq
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data CancelRes = CancelRes
-  { bppBookingId :: Id SRB.BPPRideBooking,
+  { bppBookingId :: Id SRB.BPPBooking,
     bppId :: Text,
     bppUrl :: BaseUrl,
     cancellationSource :: SBCR.CancellationSource
   }
 
-cancel :: (EncFlow m r, EsqDBFlow m r) => Id SRB.RideBooking -> Id Person.Person -> CancelReq -> m CancelRes
+cancel :: (EncFlow m r, EsqDBFlow m r) => Id SRB.Booking -> Id Person.Person -> CancelReq -> m CancelRes
 cancel bookingId _ req = do
-  rideBooking <- QRB.findById bookingId >>= fromMaybeM (RideBookingDoesNotExist bookingId.getId)
-  canCancelRideBooking <- isRideBookingCancellable rideBooking
-  unless canCancelRideBooking $
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  canCancelBooking <- isBookingCancellable booking
+  unless canCancelBooking $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
-  when (rideBooking.status == SRB.NEW) $ throwError (RideBookingInvalidStatus "NEW")
-  bppBookingId <- fromMaybeM (RideBookingFieldNotPresent "bppBookingId") rideBooking.bppBookingId
+  when (booking.status == SRB.NEW) $ throwError (BookingInvalidStatus "NEW")
+  bppBookingId <- fromMaybeM (BookingFieldNotPresent "bppBookingId") booking.bppBookingId
 
-  rideBookingCancelationReason <- buildRideBookingCancelationReason rideBooking.id
+  bookingCancelationReason <- buildBookingCancelationReason
   DB.runTransaction
-    (QBCR.create rideBookingCancelationReason)
+    (QBCR.create bookingCancelationReason)
     `rethrow` \(SQLRequestError _ _) -> RideInvalidStatus "This ride is already cancelled"
   return $
     CancelRes
       { bppBookingId = bppBookingId,
-        bppId = rideBooking.providerId,
-        bppUrl = rideBooking.providerUrl,
+        bppId = booking.providerId,
+        bppUrl = booking.providerUrl,
         cancellationSource = SBCR.ByUser
       }
   where
-    buildRideBookingCancelationReason rideBookingId = do
+    buildBookingCancelationReason = do
       let CancelReq {..} = req
       id <- generateGUID
       return $
-        SBCR.RideBookingCancellationReason
-          { rideBookingId = rideBookingId,
+        SBCR.BookingCancellationReason
+          { bookingId = bookingId,
             rideId = Nothing,
             source = SBCR.ByUser,
             reasonCode = Just reasonCode,
@@ -68,10 +68,10 @@ cancel bookingId _ req = do
             ..
           }
 
-isRideBookingCancellable :: EsqDBFlow m r => SRB.RideBooking -> m Bool
-isRideBookingCancellable rideBooking
-  | rideBooking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT] = pure True
-  | rideBooking.status == SRB.TRIP_ASSIGNED = do
-    ride <- QR.findActiveByRBId rideBooking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> rideBooking.id.getId)
+isBookingCancellable :: EsqDBFlow m r => SRB.Booking -> m Bool
+isBookingCancellable booking
+  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT] = pure True
+  | booking.status == SRB.TRIP_ASSIGNED = do
+    ride <- QR.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "BookingId: " <> booking.id.getId)
     pure (ride.status == Ride.NEW)
   | otherwise = pure False

@@ -3,19 +3,19 @@ module Domain.Action.UI.Ride.StartRide where
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude
 import Types.Error
 import Utils.Common
 
 data ServiceHandle m = ServiceHandle
   { findById :: Id Person.Person -> m (Maybe Person.Person),
-    findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
+    findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id SRide.Ride -> m (Maybe SRide.Ride),
-    startRide :: Id SRide.Ride -> Id SRB.RideBooking -> Id Person.Person -> m (),
-    notifyBAPRideStarted :: SRB.RideBooking -> SRide.Ride -> m (),
+    startRide :: Id SRide.Ride -> Id SRB.Booking -> Id Person.Person -> m (),
+    notifyBAPRideStarted :: SRB.Booking -> SRide.Ride -> m (),
     rateLimitStartRide :: Id Person.Person -> Id SRide.Ride -> m ()
   }
 
@@ -30,12 +30,12 @@ startRideHandler ServiceHandle {..} requestorId rideId otp = do
       unless (rideDriver == requestorId) $ throwError NotAnExecutor
     _ -> throwError AccessDenied
   unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus "This ride cannot be started"
-  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
+  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   let inAppOtp = ride.otp
   when (otp /= inAppOtp) $ throwError IncorrectOTP
   logTagInfo "startRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
-  startRide ride.id rideBooking.id requestorId
-  notifyBAPRideStarted rideBooking ride
+  startRide ride.id booking.id requestorId
+  notifyBAPRideStarted booking ride
   pure APISuccess.Success
   where
     isValidRideStatus status = status == SRide.NEW

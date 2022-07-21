@@ -5,13 +5,13 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Time (NominalDiffTime)
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (pi)
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
@@ -22,10 +22,10 @@ import Utils.Common
 
 data ServiceHandle m = ServiceHandle
   { findById :: Id Person.Person -> m (Maybe Person.Person),
-    findRideBookingById :: Id SRB.RideBooking -> m (Maybe SRB.RideBooking),
+    findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    endRideTransaction :: Id SRB.RideBooking -> Ride.Ride -> Id Driver -> [DFareBreakup.FareBreakup] -> m (),
-    notifyCompleteToBAP :: SRB.RideBooking -> Ride.Ride -> [DFareBreakup.FareBreakup] -> m (),
+    endRideTransaction :: Id SRB.Booking -> Ride.Ride -> Id Driver -> [DFareBreakup.FareBreakup] -> m (),
+    notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> [DFareBreakup.FareBreakup] -> m (),
     calculateFare ::
       Id Organization ->
       Vehicle.Variant ->
@@ -38,8 +38,8 @@ data ServiceHandle m = ServiceHandle
       UTCTime ->
       UTCTime ->
       m RentalFare.RentalFareParameters,
-    buildOneWayFareBreakups :: Fare.OneWayFareParameters -> Id SRB.RideBooking -> m [DFareBreakup.FareBreakup],
-    buildRentalFareBreakups :: RentalFare.RentalFareParameters -> Id SRB.RideBooking -> m [DFareBreakup.FareBreakup],
+    buildOneWayFareBreakups :: Fare.OneWayFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
+    buildRentalFareBreakups :: RentalFare.RentalFareParameters -> Id SRB.Booking -> m [DFareBreakup.FareBreakup],
     recalculateFareEnabled :: m Bool,
     putDiffMetric :: Amount -> HighPrecMeters -> m (),
     findDriverLocById :: Id Person.Person -> m (Maybe DrLoc.DriverLocation),
@@ -66,14 +66,14 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
     _ -> throwError AccessDenied
   unless (ride.status == Ride.INPROGRESS) $ throwError $ RideInvalidStatus "This ride cannot be ended"
 
-  rideBooking <- findRideBookingById ride.bookingId >>= fromMaybeM (RideBookingNotFound ride.bookingId.getId)
+  booking <- findBookingById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   logTagInfo "endRide" ("DriverId " <> getId requestorId <> ", RideId " <> getId rideId)
 
   now <- getCurrentTime
   (chargeableDistance, fare, totalFare, fareBreakups) <- do
-    case rideBooking.rideBookingDetails of
-      SRB.OneWayDetails oneWayDetails -> recalculateFare rideBooking ride oneWayDetails now
-      SRB.RentalDetails rentalDetails -> calcRentalFare rideBooking ride rentalDetails now
+    case booking.bookingDetails of
+      SRB.OneWayDetails oneWayDetails -> recalculateFare booking ride oneWayDetails now
+      SRB.RentalDetails rentalDetails -> calcRentalFare booking ride rentalDetails now
 
   let updRide =
         ride{chargeableDistance = Just chargeableDistance,
@@ -82,9 +82,9 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
              tripEndTime = Just now
             }
 
-  endRideTransaction rideBooking.id updRide (cast driverId) fareBreakups
+  endRideTransaction booking.id updRide (cast driverId) fareBreakups
 
-  notifyCompleteToBAP rideBooking updRide fareBreakups
+  notifyCompleteToBAP booking updRide fareBreakups
 
   return APISuccess.Success
   where
@@ -101,14 +101,14 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
       logDebug $ "there were missing location updates: " <> show res
       pure res
 
-    recalculateFare rideBooking ride oneWayDetails now = do
-      let transporterId = rideBooking.providerId
-          vehicleVariant = rideBooking.vehicleVariant
+    recalculateFare booking ride oneWayDetails now = do
+      let transporterId = booking.providerId
+          vehicleVariant = booking.vehicleVariant
 
           actualDistance = ride.traveledDistance
           oldDistance = oneWayDetails.estimatedDistance
 
-          estimatedFare = rideBooking.estimatedFare
+          estimatedFare = booking.estimatedFare
       shouldRecalculateFare <- recalculateFareEnabled
       missingLocationUpdates <-
         (||)
@@ -116,7 +116,7 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           <*> thereWereMissingLocUpdates
       if shouldRecalculateFare && not missingLocationUpdates
         then do
-          fareParams <- calculateFare transporterId vehicleVariant actualDistance rideBooking.startTime
+          fareParams <- calculateFare transporterId vehicleVariant actualDistance booking.startTime
           let updatedFare = Fare.fareSum fareParams
               totalFare = Fare.fareSumWithDiscount fareParams
           let distanceDiff = actualDistance - oldDistance
@@ -127,17 +127,17 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
               <> ", Distance difference: "
               <> show distanceDiff
           putDiffMetric fareDiff distanceDiff
-          fareBreakups <- buildOneWayFareBreakups fareParams rideBooking.id
+          fareBreakups <- buildOneWayFareBreakups fareParams booking.id
           pure (actualDistance, updatedFare, totalFare, fareBreakups)
         else do
           -- calculate fare again with old data for creating fare breakup
-          fareParams <- calculateFare transporterId vehicleVariant oldDistance rideBooking.startTime
-          fareBreakups <- buildOneWayFareBreakups fareParams rideBooking.id
-          pure (oldDistance, estimatedFare, rideBooking.estimatedTotalFare, fareBreakups)
+          fareParams <- calculateFare transporterId vehicleVariant oldDistance booking.startTime
+          fareBreakups <- buildOneWayFareBreakups fareParams booking.id
+          pure (oldDistance, estimatedFare, booking.estimatedTotalFare, fareBreakups)
 
-    calcRentalFare rideBooking ride rentalDetails now = do
+    calcRentalFare booking ride rentalDetails now = do
       let actualDistance = ride.traveledDistance
-      fareParams <- calculateRentalFare rentalDetails.rentalFarePolicyId actualDistance rideBooking.startTime now
+      fareParams <- calculateRentalFare rentalDetails.rentalFarePolicyId actualDistance booking.startTime now
       let fare = RentalFare.rentalFareSum fareParams
           totalFare = RentalFare.rentalFareSumWithDiscount fareParams
       logTagInfo "Rental fare calculation" $
@@ -153,5 +153,5 @@ endRideHandler ServiceHandle {..} requestorId rideId = do
           <> show (amountToDouble (fromMaybe 0 fareParams.discount))
       -- Do we ned this metrics in rental case?
       -- putDiffMetric fareDiff distanceDiff
-      fareBreakups <- buildRentalFareBreakups fareParams rideBooking.id
+      fareBreakups <- buildRentalFareBreakups fareParams booking.id
       pure (actualDistance, fare, totalFare, fareBreakups)

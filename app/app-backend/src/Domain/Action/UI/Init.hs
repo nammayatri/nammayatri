@@ -4,18 +4,18 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import qualified Domain.Types.Booking as SRB
 import Domain.Types.BookingLocation
 import qualified Domain.Types.BookingLocation as DLoc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Quote as SQuote
 import Domain.Types.RentalSlab
-import qualified Domain.Types.RideBooking as SRB
 import Domain.Types.SearchReqLocation (SearchReqLocation (..))
 import Domain.Types.SearchRequest
 import Domain.Types.VehicleVariant (VehicleVariant)
+import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.RideBooking as QRideB
 import qualified Storage.Queries.SearchReqLocation as QSRLoc
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SelectedQuote as QSQuote
@@ -36,7 +36,7 @@ data InitRes = InitRes
     vehicleVariant :: VehicleVariant,
     quoteDetails :: InitQuoteDetails,
     startTime :: UTCTime,
-    bookingId :: Id SRB.RideBooking,
+    bookingId :: Id SRB.Booking,
     bppQuoteId :: Maybe Text
   }
   deriving (Show, Generic)
@@ -45,7 +45,7 @@ data InitQuoteDetails = InitOneWayDetails | InitRentalDetails RentalSlabAPIEntit
   deriving (Show, Generic)
 
 data InitHandler q m = InitHandler
-  { hBuildRideBooking :: SearchRequest -> q -> Id BookingLocation -> Maybe (Id BookingLocation) -> UTCTime -> m SRB.RideBooking,
+  { hBuildBooking :: SearchRequest -> q -> Id BookingLocation -> Maybe (Id BookingLocation) -> UTCTime -> m SRB.Booking,
     hGetBPPQuoteId :: q -> Maybe (Id SQuote.BPPQuote),
     hGetInitQuoteDetails :: q -> m InitQuoteDetails
   }
@@ -60,7 +60,7 @@ init personId_ req_ = do
         personId_
         quote_
         InitHandler
-          { hBuildRideBooking = buildRideBookingStatic,
+          { hBuildBooking = buildBookingStatic,
             hGetBPPQuoteId = const Nothing,
             hGetInitQuoteDetails = \q -> case q.quoteDetails of
               SQuote.OneWayDetails _ -> pure InitOneWayDetails
@@ -74,7 +74,7 @@ init personId_ req_ = do
         personId_
         selQuote_
         InitHandler
-          { hBuildRideBooking = buildRideBookingDynamic,
+          { hBuildBooking = buildBookingDynamic,
             hGetBPPQuoteId = Just . (.bppQuoteId),
             hGetInitQuoteDetails = \_ -> pure InitAutoDetails
           }
@@ -89,7 +89,7 @@ init personId_ req_ = do
       mbToLocation :: Maybe SearchReqLocation <- searchRequest.toLocationId `forM` (QSRLoc.findById >=> fromMaybeM LocationNotFound)
       bFromLocation <- buildBLoc fromLocation now
       mbBToLocation <- (`buildBLoc` now) `mapM` mbToLocation
-      booking <- h.hBuildRideBooking searchRequest quote bFromLocation.id (mbBToLocation <&> (.id)) now
+      booking <- h.hBuildBooking searchRequest quote bFromLocation.id (mbBToLocation <&> (.id)) now
       let bppQuoteId = (.getId) <$> h.hGetBPPQuoteId quote
       details <- hGetInitQuoteDetails h quote
       DB.runTransaction $ do
@@ -134,10 +134,10 @@ init personId_ req_ = do
       -- we need to throw errors here because of some redundancy of our domain model
       toLocationId <- mbToLocId & fromMaybeM (InternalError "distance is null for rental search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for rental search request")
-      pure . SRB.OneWayDetails $ SRB.OneWayRideBookingDetails {..}
+      pure . SRB.OneWayDetails $ SRB.OneWayBookingDetails {..}
 
-    buildRideBookingStatic searchRequest quote fromLocId toLocId now =
-      buildRideBooking searchRequest quote fromLocId now $ \q -> case q.quoteDetails of
+    buildBookingStatic searchRequest quote fromLocId toLocId now =
+      buildBooking searchRequest quote fromLocId now $ \q -> case q.quoteDetails of
         SQuote.OneWayDetails _ ->
           buildOneWayDetails toLocId searchRequest
         SQuote.RentalDetails rentalSlab ->
@@ -145,15 +145,15 @@ init personId_ req_ = do
         SQuote.AutoDetails ->
           throwError $ InvalidRequest "init is not supported for auto trips"
 
-    buildRideBookingDynamic searchRequest quote fromLocId toLocId now =
-      buildRideBooking searchRequest quote fromLocId now $ \_ ->
+    buildBookingDynamic searchRequest quote fromLocId toLocId now =
+      buildBooking searchRequest quote fromLocId now $ \_ ->
         buildOneWayDetails toLocId searchRequest
 
-    buildRideBooking searchRequest quote fromLocId now buildFunc = do
+    buildBooking searchRequest quote fromLocId now buildFunc = do
       id <- generateGUID
-      rideBookingDetails <- buildFunc quote
+      bookingDetails <- buildFunc quote
       return $
-        SRB.RideBooking
+        SRB.Booking
           { id = Id id,
             bppBookingId = Nothing,
             status = SRB.NEW,
@@ -168,7 +168,7 @@ init personId_ req_ = do
             discount = quote.discount,
             estimatedTotalFare = quote.estimatedTotalFare,
             vehicleVariant = quote.vehicleVariant,
-            rideBookingDetails,
+            bookingDetails,
             tripTerms = quote.tripTerms,
             merchantId = searchRequest.merchantId,
             createdAt = now,

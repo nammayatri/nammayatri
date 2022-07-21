@@ -5,7 +5,7 @@ import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import qualified Core.ACL.Common as Common
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.RideBooking.BookingLocation as DBL
+import qualified Domain.Types.Booking.BookingLocation as DBL
 import Product.FareCalculator.Calculator
 import Utils.Common (amountToDecimalValue)
 

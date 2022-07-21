@@ -7,17 +7,17 @@ where
 import Beckn.Prelude
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
+import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingReallocationEvent as BookingReallocationOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent as RideAssignedOU
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideBookingCancelledEvent as BookingCancelledOU
-import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideBookingReallocationEvent as BookingReallocationOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
 import Beckn.Types.Id
+import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.RideBookingCancellationReason as SBCR
 import qualified Domain.Types.Vehicle as SVeh
 import Types.Error
 import Utils.Common
@@ -36,11 +36,11 @@ data OnUpdateBuildReq
         fareBreakups :: [DFareBreakup.FareBreakup]
       }
   | BookingCancelledBuildReq
-      { booking :: SRB.RideBooking,
+      { booking :: SRB.Booking,
         cancellationSource :: SBCR.CancellationSource
       }
   | BookingReallocationBuildReq
-      { booking :: SRB.RideBooking,
+      { booking :: SRB.Booking,
         rideId :: Id SRide.Ride
       }
 
@@ -139,8 +139,8 @@ buildOnUpdateMessage RideCompletedBuildReq {..} = do
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do
   return $
     OnUpdate.OnUpdateMessage $
-      OnUpdate.RideBookingCancelled
-        BookingCancelledOU.RideBookingCancelledEvent
+      OnUpdate.BookingCancelled
+        BookingCancelledOU.BookingCancelledEvent
           { id = booking.id.getId,
             state = "CANCELLED",
             update_target = "state,fufillment.state.code",
@@ -149,8 +149,8 @@ buildOnUpdateMessage BookingCancelledBuildReq {..} = do
 buildOnUpdateMessage BookingReallocationBuildReq {..} = do
   return $
     OnUpdate.OnUpdateMessage $
-      OnUpdate.RideBookingReallocation
-        BookingReallocationOU.RideBookingReallocationEvent
+      OnUpdate.BookingReallocation
+        BookingReallocationOU.BookingReallocationEvent
           { id = booking.id.getId,
             update_target = "fulfillment.state.code",
             fulfillment = BookingReallocationOU.FulfillmentInfo rideId.getId

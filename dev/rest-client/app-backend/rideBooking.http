@@ -69,7 +69,7 @@ token: {{token}}
 
 ###
 
-GET {{app-host}}/rideBooking/list
+GET {{app-host}}/booking/list
   ?offset=0
   &limit=50
   &onlyActive=false
@@ -78,7 +78,7 @@ token: {{token}}
 
 ###
 @bookingId = {{confirm.response.body.bookingId}}
-POST {{app-host}}/rideBooking/{{bookingId}}
+POST {{app-host}}/booking/{{bookingId}}
 token: {{token}}
 
 ###

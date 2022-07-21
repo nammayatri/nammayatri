@@ -18,8 +18,8 @@ buildOnInitReq ::
 buildOnInitReq req = do
   validateContext Context.ON_INIT $ req.context
   handleError req.contents $ \message -> do
-    let rideBookingId = Id req.context.message_id
-        bppRideBookingId = Id message.order.id
+    let bookingId = Id req.context.message_id
+        bppBookingId = Id message.order.id
         estimatedFare = message.order.quote.price.value
         estimatedTotalFare = message.order.quote.price.offered_value
         -- We assume that first item in list is always estimatedPriceBreakup and others are discounts

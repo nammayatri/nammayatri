@@ -2,8 +2,8 @@ module Product.BecknProvider.BP
   ( sendRideAssignedUpdateToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
-    sendRideBookingCancelledUpdateToBAP,
-    sendRideBookingReallocationUpdateToBAP,
+    sendBookingCancelledUpdateToBAP,
+    sendBookingReallocationUpdateToBAP,
     buildRideReq,
   )
 where
@@ -11,11 +11,11 @@ where
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Core.ACL.OnUpdate as ACL
+import qualified Domain.Types.Booking.Type as SRB
+import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideBooking as SRB
-import qualified Domain.Types.RideBookingCancellationReason as SRBCR
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
 import ExternalAPI.Flow (callOnUpdate)
@@ -32,18 +32,18 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  SRB.RideBooking ->
+  SRB.Booking ->
   SRide.Ride ->
   m ()
-sendRideAssignedUpdateToBAP rideBooking ride = do
+sendRideAssignedUpdateToBAP booking ride = do
   transporter <-
-    QOrg.findById rideBooking.providerId
-      >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
+    QOrg.findById booking.providerId
+      >>= fromMaybeM (OrgNotFound booking.providerId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   let rideAssignedBuildReq = ACL.RideAssignedBuildReq {..}
   rideAssignedMsg <- ACL.buildOnUpdateMessage rideAssignedBuildReq
-  void $ callOnUpdate transporter rideBooking rideAssignedMsg
+  void $ callOnUpdate transporter booking rideAssignedMsg
 
 sendRideStartedUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -51,16 +51,16 @@ sendRideStartedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  SRB.RideBooking ->
+  SRB.Booking ->
   SRide.Ride ->
   m ()
-sendRideStartedUpdateToBAP rideBooking ride = do
+sendRideStartedUpdateToBAP booking ride = do
   transporter <-
-    QOrg.findById rideBooking.providerId
-      >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
+    QOrg.findById booking.providerId
+      >>= fromMaybeM (OrgNotFound booking.providerId.getId)
   let rideStartedBuildReq = ACL.RideStartedBuildReq {..}
   rideStartedMsg <- ACL.buildOnUpdateMessage rideStartedBuildReq
-  void $ callOnUpdate transporter rideBooking rideStartedMsg
+  void $ callOnUpdate transporter booking rideStartedMsg
 
 sendRideCompletedUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -68,51 +68,51 @@ sendRideCompletedUpdateToBAP ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  SRB.RideBooking ->
+  SRB.Booking ->
   SRide.Ride ->
   [DFareBreakup.FareBreakup] ->
   m ()
-sendRideCompletedUpdateToBAP rideBooking ride fareBreakups = do
+sendRideCompletedUpdateToBAP booking ride fareBreakups = do
   transporter <-
-    QOrg.findById rideBooking.providerId
-      >>= fromMaybeM (OrgNotFound rideBooking.providerId.getId)
+    QOrg.findById booking.providerId
+      >>= fromMaybeM (OrgNotFound booking.providerId.getId)
   let rideCompletedBuildReq = ACL.RideCompletedBuildReq {..}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
-  void $ callOnUpdate transporter rideBooking rideCompletedMsg
+  void $ callOnUpdate transporter booking rideCompletedMsg
 
-sendRideBookingCancelledUpdateToBAP ::
+sendBookingCancelledUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  SRB.RideBooking ->
+  SRB.Booking ->
   SOrg.Organization ->
   SRBCR.CancellationSource ->
   m ()
-sendRideBookingCancelledUpdateToBAP booking transporter cancellationSource = do
+sendBookingCancelledUpdateToBAP booking transporter cancellationSource = do
   let bookingCancelledBuildReq = ACL.BookingCancelledBuildReq {..}
   bookingCancelledMsg <- ACL.buildOnUpdateMessage bookingCancelledBuildReq
   void $ callOnUpdate transporter booking bookingCancelledMsg
 
-sendRideBookingReallocationUpdateToBAP ::
+sendBookingReallocationUpdateToBAP ::
   ( EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     CoreMetrics m
   ) =>
-  SRB.RideBooking ->
+  SRB.Booking ->
   Id SRide.Ride ->
   SOrg.Organization ->
   m ()
-sendRideBookingReallocationUpdateToBAP booking rideId transporter = do
+sendBookingReallocationUpdateToBAP booking rideId transporter = do
   let bookingReallocationBuildReq = ACL.BookingReallocationBuildReq {..}
   bookingReallocationMsg <- ACL.buildOnUpdateMessage bookingReallocationBuildReq
   void $ callOnUpdate transporter booking bookingReallocationMsg
 
 buildRideReq ::
   MonadFlow m =>
-  Id SRB.RideBooking ->
+  Id SRB.Booking ->
   ShortId SOrg.Organization ->
   SRideRequest.RideRequestType ->
   UTCTime ->
@@ -122,7 +122,7 @@ buildRideReq rideId shortOrgId rideRequestType now = do
   pure
     SRideRequest.RideRequest
       { id = Id guid,
-        rideBookingId = rideId,
+        bookingId = rideId,
         shortOrgId = shortOrgId,
         createdAt = now,
         _type = rideRequestType,

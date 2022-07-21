@@ -3,13 +3,13 @@ module Storage.Queries.Ride where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Domain.Types.Booking as Booking
 import Domain.Types.Organization
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
-import Domain.Types.RideBooking as Booking
-import Storage.Queries.RideBooking (baseRideBookingQuery)
+import Storage.Queries.Booking (baseBookingQuery)
+import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Ride as Ride
-import Storage.Tabular.RideBooking as Booking
 import Utils.Common
 
 create :: Ride -> SqlDB ()
@@ -18,7 +18,7 @@ create = Esq.create
 findById :: Transactionable m => Id Ride -> m (Maybe Ride)
 findById = Esq.findById
 
-findActiveByRBId :: Transactionable m => Id RideBooking -> m (Maybe Ride)
+findActiveByRBId :: Transactionable m => Id Booking -> m (Maybe Ride)
 findActiveByRBId rbId =
   findOne $ do
     ride <- from $ table @RideT
@@ -33,18 +33,18 @@ findAllByDriverId ::
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
-  m [(Ride, RideBooking)]
+  m [(Ride, Booking)]
 findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   res <- Esq.findAll' $ do
-    (rideBooking :& fromLocation :& toLocation :& fareParams :& ride) <-
+    (booking :& fromLocation :& toLocation :& fareParams :& ride) <-
       from $
-        baseRideBookingQuery
+        baseBookingQuery
           `innerJoin` table @RideT
-            `Esq.on` ( \(rideBooking :& _ :& _ :& _ :& ride) ->
-                         ride ^. Ride.RideBookingId ==. rideBooking ^. Booking.RideBookingTId
+            `Esq.on` ( \(booking :& _ :& _ :& _ :& ride) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
     where_ $
       ride ^. RideDriverId ==. val (toKey driverId)
@@ -52,7 +52,7 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
-    return (rideBooking, fromLocation, toLocation, fareParams, ride)
+    return (booking, fromLocation, toLocation, fareParams, ride)
 
   pure $
     res <&> \(bookingT, fromLocationT, toLocationT, fareParams, rideT :: RideT) -> do
@@ -143,13 +143,13 @@ updateAll rideId ride = do
 getCountByStatus :: Transactionable m => Id Organization -> m [(RideStatus, Int)]
 getCountByStatus orgId = do
   Esq.findAll $ do
-    (ride :& rideBooking) <-
+    (ride :& booking) <-
       from $
         table @RideT
-          `innerJoin` table @RideBookingT
-            `Esq.on` ( \(ride :& rideBooking) ->
-                         ride ^. Ride.RideBookingId ==. rideBooking ^. Booking.RideBookingTId
+          `innerJoin` table @BookingT
+            `Esq.on` ( \(ride :& booking) ->
+                         ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
-    where_ $ rideBooking ^. RideBookingProviderId ==. val (toKey orgId)
+    where_ $ booking ^. BookingProviderId ==. val (toKey orgId)
     groupBy $ ride ^. RideStatus
     return (ride ^. RideStatus, countRows :: SqlExpr (Esq.Value Int))

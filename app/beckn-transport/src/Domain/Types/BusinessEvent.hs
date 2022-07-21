@@ -3,8 +3,8 @@ module Domain.Types.BusinessEvent where
 import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
+import Domain.Types.Booking (Booking)
 import Domain.Types.Ride (Ride)
-import Domain.Types.RideBooking (RideBooking)
 import Domain.Types.Vehicle (Variant)
 import Types.App (Driver)
 
@@ -13,7 +13,7 @@ data BusinessEvent = BusinessEvent
     driverId :: Maybe (Id Driver),
     eventType :: EventType,
     timeStamp :: UTCTime,
-    rideBookingId :: Maybe (Id RideBooking),
+    bookingId :: Maybe (Id Booking),
     whenPoolWasComputed :: Maybe WhenPoolWasComputed,
     vehicleVariant :: Maybe Variant,
     distance :: Maybe Meters,

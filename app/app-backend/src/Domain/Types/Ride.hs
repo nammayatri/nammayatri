@@ -9,7 +9,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Domain.Types.RideBooking as DRB
+import qualified Domain.Types.Booking as DRB
 import Domain.Types.VehicleVariant (VehicleVariant)
 import Servant.API
 
@@ -35,7 +35,7 @@ data BPPRide
 data Ride = Ride
   { id :: Id Ride,
     bppRideId :: Id BPPRide,
-    bookingId :: Id DRB.RideBooking,
+    bookingId :: Id DRB.Booking,
     shortId :: ShortId Ride,
     status :: RideStatus,
     driverName :: Text,

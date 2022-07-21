@@ -158,12 +158,12 @@ token: {{token}}
 ###
 
 @bookingId = {{confirm.response.body.bookingId}}
-POST {{app-host}}/rideBooking/{{bookingId}}
+POST {{app-host}}/booking/{{bookingId}}
 token: {{token}}
 
 ###
 
-GET {{app-host}}/rideBooking/list
+GET {{app-host}}/booking/list
   ?offset=0
   &limit=50
   &onlyActive=false
@@ -176,14 +176,14 @@ token: {{token}}
 # this was taken from the database
 
 # @name notif-info
-GET {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification
+GET {{transporter-host}}/driver/booking/{{bppBookingId}}/notification
 token: {{driver-token}}
 
 ###
 
 # @name accept
 
-POST {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification/respond
+POST {{transporter-host}}/driver/booking/{{bppBookingId}}/notification/respond
 token: {{driver-token}}
 content-type: application/json
 
@@ -193,7 +193,7 @@ content-type: application/json
 
 ###
 # @name list2
-GET {{app-host}}/rideBooking/list
+GET {{app-host}}/booking/list
   ?offset=0
   &limit=50
   &onlyActive=false

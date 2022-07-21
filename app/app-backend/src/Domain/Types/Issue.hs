@@ -8,7 +8,7 @@ import qualified Domain.Types.Quote as DQuote
 data Issue = Issue
   { id :: Id Issue,
     customerId :: Id DPerson.Person,
-    rideBookingId :: Maybe (Id DQuote.Quote),
+    bookingId :: Maybe (Id DQuote.Quote),
     contactEmail :: Maybe Text,
     reason :: Text,
     description :: Text,

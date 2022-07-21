@@ -13,19 +13,19 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.List.NonEmpty as NE
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingLocation as DBLoc
 import Domain.Types.DriverPool
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Organization as SOrg
-import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.TransporterConfig as STConf
 import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.RideBooking as QRideBooking
 import qualified Storage.Queries.TransporterConfig as QTConf
 import Tools.Metrics
 import Types.App (Driver)
@@ -45,7 +45,7 @@ data DriverPoolResult = DriverPoolResult
 mkDriverPoolItem :: DriverPoolResult -> DriverPoolItem
 mkDriverPoolItem DriverPoolResult {..} = DriverPoolItem {..}
 
-driverPoolKey :: Id SRB.RideBooking -> Text
+driverPoolKey :: Id SRB.Booking -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
 
 getKeyRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> m (Maybe [DriverPoolItem])
@@ -60,19 +60,19 @@ getDriverPool ::
     HasFlowEnv m r '["defaultRadiusOfSearch" ::: Meters, "driverPositionInfoExpiry" ::: Maybe Seconds],
     HasGoogleMaps m r
   ) =>
-  Id SRB.RideBooking ->
+  Id SRB.Booking ->
   m SortedDriverPool
-getDriverPool rideBookingId =
-  getKeyRedis (driverPoolKey rideBookingId)
+getDriverPool bookingId =
+  getKeyRedis (driverPoolKey bookingId)
     >>= maybe calcDriverPool (pure . mkSortedDriverPool)
   where
     calcDriverPool = do
-      rideBooking <- QRideBooking.findById rideBookingId >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
-      let vehicleVariant = rideBooking.vehicleVariant
-          orgId = rideBooking.providerId
-      pickupLoc <- QBLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
+      booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+      let vehicleVariant = booking.vehicleVariant
+          orgId = booking.providerId
+      pickupLoc <- QBLoc.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
-          fareProductType = SRB.getFareProductType rideBooking.rideBookingDetails
+          fareProductType = SRB.getFareProductType booking.bookingDetails
       mkSortedDriverPool . map mkDriverPoolItem <$> calculateDriverPool pickupLatLong orgId (Just vehicleVariant) fareProductType
 
 recalculateDriverPool ::
@@ -82,19 +82,19 @@ recalculateDriverPool ::
     HasGoogleMaps m r
   ) =>
   Id DBLoc.BookingLocation ->
-  Id SRB.RideBooking ->
+  Id SRB.Booking ->
   Id SOrg.Organization ->
   SV.Variant ->
   SFP.FareProductType ->
   m [DriverPoolResult]
-recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant fareProductType = do
+recalculateDriverPool pickupPoint bookingId transporterId vehicleVariant fareProductType = do
   pickupLoc <- QBLoc.findById pickupPoint >>= fromMaybeM LocationNotFound
   let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
   driverPoolResults <- calculateDriverPool pickupLatLong transporterId (Just vehicleVariant) fareProductType
-  cancelledDrivers <- QRide.findAllCancelledByRBId rideBookingId <&> map (cast . (.driverId))
+  cancelledDrivers <- QRide.findAllCancelledByRBId bookingId <&> map (cast . (.driverId))
   let filteredDriverPoolResults = [x | x <- driverPoolResults, x.driverId `notElem` cancelledDrivers]
       filteredDriverPool = map mkDriverPoolItem filteredDriverPoolResults
-  setExRedis (driverPoolKey rideBookingId) filteredDriverPool (60 * 10)
+  setExRedis (driverPoolKey bookingId) filteredDriverPool (60 * 10)
   return filteredDriverPoolResults
 
 calculateDriverPool ::

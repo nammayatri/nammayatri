@@ -3,9 +3,9 @@ module Flow.RideAPI.EndRide (endRideTests) where
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import qualified Domain.Action.UI.Ride.EndRide as Handle
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
-import qualified Domain.Types.RideBooking as SRB
 import EulerHS.Prelude
 import qualified Fixtures
 import SharedLogic.FareCalculator.OneWayFareCalculator.Flow
@@ -44,9 +44,9 @@ handle =
         Id "2" -> pure . Just $ Fixtures.defaultDriver{id = "2"}
         Id "admin" -> pure $ Just Fixtures.defaultAdmin
         Id personId -> throwError (PersonDoesNotExist personId),
-      findRideBookingById = \rbId -> pure $ case rbId of
-        Id "rideBooking" -> Just rideBooking
-        Id "rentalRideBooking" -> Just rentalRideBooking
+      findBookingById = \rbId -> pure $ case rbId of
+        Id "booking" -> Just booking
+        Id "rentalBooking" -> Just rentalBooking
         _ -> Nothing,
       findRideById = \rideId -> pure $ case rideId of
         Id "ride" -> Just ride
@@ -94,32 +94,32 @@ ride =
   Fixtures.defaultRide
     { Ride.id = "ride",
       Ride.status = Ride.INPROGRESS,
-      Ride.bookingId = Id "rideBooking"
+      Ride.bookingId = Id "booking"
     }
 
 rentalRide :: Ride.Ride
 rentalRide =
   ride
     { Ride.id = "rentalRide",
-      Ride.bookingId = Id "rentalRideBooking"
+      Ride.bookingId = Id "rentalBooking"
     }
 
-rideBooking :: SRB.RideBooking
-rideBooking =
-  Fixtures.defaultRideBooking
-    { SRB.id = Id "rideBooking",
+booking :: SRB.Booking
+booking =
+  Fixtures.defaultBooking
+    { SRB.id = Id "booking",
       SRB.status = SRB.TRIP_ASSIGNED
     }
 
-rentalRideBooking :: SRB.RideBooking
-rentalRideBooking = do
+rentalBooking :: SRB.Booking
+rentalBooking = do
   let details =
-        SRB.RentalRideBookingDetails
+        SRB.RentalBookingDetails
           { SRB.rentalFarePolicyId = Id "rentalFarePolicy"
           }
-  rideBooking
-    { SRB.id = Id "rentalRideBooking",
-      SRB.rideBookingDetails = SRB.RentalDetails details
+  booking
+    { SRB.id = Id "rentalBooking",
+      SRB.bookingDetails = SRB.RentalDetails details
     }
 
 successfulEndByDriver :: TestTree

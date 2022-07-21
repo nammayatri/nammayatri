@@ -7,8 +7,8 @@ import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
 import Data.OpenApi hiding (info)
 import Data.Time (UTCTime)
+import qualified Domain.Types.Booking as DRB
 import Domain.Types.Organization
-import qualified Domain.Types.RideBooking as DRB
 import EulerHS.Prelude hiding (id)
 import Types.App (Driver)
 
@@ -18,7 +18,7 @@ data RideRequestType = ALLOCATION | CANCELLATION | DRIVER_RESPONSE
 
 data RideRequest = RideRequest
   { id :: Id RideRequest,
-    rideBookingId :: Id DRB.RideBooking,
+    bookingId :: Id DRB.Booking,
     shortOrgId :: ShortId Organization,
     createdAt :: UTCTime,
     _type :: RideRequestType,

@@ -14,14 +14,14 @@ import qualified Domain.Types.Issue as Domain
 import qualified Storage.Tabular.Person as SPerson
 import qualified Storage.Tabular.Quote as SQuote
 
---FIXME: rideBookingId SQuote.QuoteTId Maybe
+--FIXME: bookingId SQuote.QuoteTId Maybe
 mkPersist
   defaultSqlSettings
   [defaultQQ|
     IssueT sql=issue
       id Text
       customerId SPerson.PersonTId
-      rideBookingId SQuote.QuoteTId Maybe
+      bookingId SQuote.QuoteTId Maybe
       contactEmail Text Maybe
       reason Text
       description Text
@@ -42,13 +42,13 @@ instance TType IssueT Domain.Issue where
       Domain.Issue
         { id = Id id,
           customerId = fromKey customerId,
-          rideBookingId = fromKey <$> rideBookingId,
+          bookingId = fromKey <$> bookingId,
           ..
         }
   toTType Domain.Issue {..} =
     IssueT
       { id = getId id,
         customerId = toKey customerId,
-        rideBookingId = toKey <$> rideBookingId,
+        bookingId = toKey <$> bookingId,
         ..
       }

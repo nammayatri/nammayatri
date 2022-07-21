@@ -72,12 +72,20 @@ token: {{token}}
 
 ###
 @bookingId = {{confirm.response.body.bookingId}}
+<<<<<<< HEAD
+POST {{app-host}}/booking/{{bookingId}}
+=======
 POST {{app-host}}/rideBooking/{{bookingId}}
+>>>>>>> 315deb9f1... rest-client4
 token: {{token}}
 
 ###
 # @name cancel
+<<<<<<< HEAD
+POST {{app-host}}/booking/{{bookingId}}/cancel
+=======
 POST {{app-host}}/rideBooking/{{bookingId}}/cancel
+>>>>>>> 315deb9f1... rest-client4
 content-type: application/json
 token: {{token}}
 
@@ -94,14 +102,18 @@ token: {{token}}
 # this was taken from the database
 
 # @name notif-info
+<<<<<<< HEAD
+GET {{transporter-host}}/driver/booking/{{bppBookingId}}/notification
+=======
 GET {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification
+>>>>>>> 315deb9f1... rest-client4
 token: {{driver-token}}
 
 ###
 
 # @name accept
 
-POST {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification/respond
+POST {{transporter-host}}/driver/booking/{{bppBookingId}}/notification/respond
 token: {{driver-token}}
 content-type: application/json
 
@@ -111,7 +123,7 @@ content-type: application/json
 
 ###
 # @name list2
-GET {{app-host}}/rideBooking/list
+GET {{app-host}}/booking/list
   ?offset=0
   &limit=50
   &onlyActive=false
@@ -144,7 +156,7 @@ token: {{driver-token}}
 
 ###
 # @name list3
-GET {{app-host}}/rideBooking/list
+GET {{app-host}}/booking/list
   ?offset=0
   &limit=50
   &onlyActive=false

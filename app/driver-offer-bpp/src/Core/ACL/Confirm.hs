@@ -11,7 +11,7 @@ import Beckn.Types.Field
 import Beckn.Types.Id
 import Beckn.Utils.Error.Throwing
 import Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.RideBooking.BookingLocation as DBL
+import qualified Domain.Types.Booking.BookingLocation as DBL
 
 buildConfirmReq ::
   (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>

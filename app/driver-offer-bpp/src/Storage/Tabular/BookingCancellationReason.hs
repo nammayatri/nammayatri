@@ -11,10 +11,10 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.BookingCancellationReason as Domain
+import Storage.Tabular.Booking (BookingTId)
 import Storage.Tabular.CancellationReason (CancellationReasonTId)
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.Ride (RideTId)
-import Storage.Tabular.RideBooking (RideBookingTId)
 
 derivePersistField "Domain.CancellationSource"
 
@@ -24,7 +24,7 @@ mkPersist
     BookingCancellationReasonT sql=booking_cancellation_reason
       id Text
       driverId PersonTId Maybe
-      bookingId RideBookingTId
+      bookingId BookingTId
       rideId RideTId Maybe
       source Domain.CancellationSource
       reasonCode CancellationReasonTId Maybe

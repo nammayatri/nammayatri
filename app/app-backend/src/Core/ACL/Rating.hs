@@ -18,4 +18,4 @@ buildRatingReq DFeedback.DRatingReq {..} = do
   bapIDs <- asks (.bapSelfIds)
   msgId <- generateGUID
   context <- buildTaxiContext Context.RATING msgId Nothing bapIDs.cabs bapURIs.cabs (Just providerId) (Just providerUrl)
-  pure $ BecknReq context $ Rating.RatingMessage bppRideBookingId.getId ratingValue
+  pure $ BecknReq context $ Rating.RatingMessage bppBookingId.getId ratingValue
