@@ -95,6 +95,7 @@ confirm transporterId subscriber req = do
   let finalTransaction addons = Esq.runTransaction $ do
         when isNewRider $ QRD.create riderDetails
         QRB.updateStatus booking.id SRB.CONFIRMED
+        QRB.updateRiderId booking.id riderDetails.id
         QBL.updateAddress booking.fromLocationId req.fromAddress
         whenJust booking.discount $ \disc ->
           QDiscTransaction.create $ mkDiscountTransaction booking disc now

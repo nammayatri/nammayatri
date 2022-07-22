@@ -77,6 +77,7 @@ handler subscriber transporterId req = do
   ride <- buildRide driver.id booking
   Esq.runTransaction $ do
     when isNewRider $ QRD.create riderDetails
+    QRB.updateRiderId booking.id riderDetails.id
     QRB.updateStatus booking.id DRB.TRIP_ASSIGNED
     QBL.updateAddress booking.fromLocation.id req.fromAddress
     QBL.updateAddress booking.toLocation.id req.toAddress

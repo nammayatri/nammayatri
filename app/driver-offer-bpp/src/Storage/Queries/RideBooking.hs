@@ -5,6 +5,7 @@ import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Beckn.Types.Time
 import Domain.Types.RideBooking
+import Domain.Types.RiderDetails (RiderDetails)
 import qualified Storage.Tabular.FareParameters as Fare
 import Storage.Tabular.RideBooking
 import Storage.Tabular.RideBooking.BookingLocation
@@ -51,6 +52,17 @@ updateStatus rbId rbStatus = do
     set
       tbl
       [ RideBookingStatus =. val rbStatus,
+        RideBookingUpdatedAt =. val now
+      ]
+    where_ $ tbl ^. RideBookingTId ==. val (toKey rbId)
+
+updateRiderId :: Id RideBooking -> Id RiderDetails -> SqlDB ()
+updateRiderId rbId riderId = do
+  now <- getCurrentTime
+  Esq.update $ \tbl -> do
+    set
+      tbl
+      [ RideBookingRiderId =. val (Just $ toKey riderId),
         RideBookingUpdatedAt =. val now
       ]
     where_ $ tbl ^. RideBookingTId ==. val (toKey rbId)
