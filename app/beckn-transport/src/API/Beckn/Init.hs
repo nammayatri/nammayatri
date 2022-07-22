@@ -1,8 +1,6 @@
 module API.Beckn.Init (API, handler) where
 
 import App.Types
-import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Storage.Queries.BecknRequest as QBR
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Init as API
@@ -12,7 +10,6 @@ import Beckn.Types.Id
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Init as ACL
 import qualified Core.ACL.OnInit as ACL
-import Data.Aeson (encode)
 import qualified Domain.Action.Beckn.Init as DInit
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Organization as Org
@@ -34,10 +31,8 @@ initImpl ::
   SignatureAuthResult ->
   Init.InitReq ->
   FlowHandler AckResponse
-initImpl transporterId (SignatureAuthResult signPayload subscriber) req =
+initImpl transporterId (SignatureAuthResult _ subscriber) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
-    Esq.runTransaction $
-      QBR.logBecknRequest (show $ encode req) (show $ signPayload.signature)
     dInitReq <- ACL.buildInitReq subscriber req
     let context = req.context
     dInitRes <- DInit.init transporterId dInitReq

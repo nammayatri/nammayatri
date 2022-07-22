@@ -74,6 +74,7 @@ dependencies:
   - servant-openapi3
   - euler-hs
   - relude
+  - wai
 
 ghc-options:
   - -Wall
