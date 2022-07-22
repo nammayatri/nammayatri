@@ -4,11 +4,11 @@ let sec = ./secrets/beckn-transport.dhall
 let JobType = < AllocateRental | FakeType >
 
 let postgresConfig =
-  { connectHost = "localhost"
-  , connectPort = 5434
+  { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
+  , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_dev"
+  , connectDatabase = "atlas_transporter"
   }
 
 let esqDBCfg =
@@ -21,17 +21,17 @@ let esqDBCfg =
   }
 
 let rcfg =
-  { connectHost = "localhost"
+  { connectHost = "beckn-redis-001-001.zkt6uh.0001.aps1.cache.amazonaws.com"
   , connectPort = 6379
   , connectAuth = None Text
-  , connectDatabase = +0
+  , connectDatabase = +1
   , connectMaxConnections = +50
   , connectMaxIdleTime = +30
-  , connectTimeout = None Integer
+  , connectTimeout = Some +100
   }
 
 in
-{ loggerConfig = common.loggerConfig // { logRawSql = False, logFilePath = "/tmp/transporter-scheduler.log", prettyPrinting = True }
+{ loggerConfig = common.loggerConfig // { logRawSql = False, logFilePath = "/tmp/transporter-scheduler.log" }
 , esqDBCfg = esqDBCfg
 , metricsPort = +8054
 , hedisCfg = rcfg
@@ -42,5 +42,5 @@ in
 , waitBeforeRetry = +1
 , jobType = None JobType
 , tasksPerIteration = +20
-, graceTerminationPeriod = +10
+, graceTerminationPeriod = +1
 }
