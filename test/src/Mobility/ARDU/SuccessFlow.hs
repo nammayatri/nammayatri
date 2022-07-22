@@ -33,81 +33,6 @@ import qualified "driver-offer-bpp" Types.API.Ride as RideAPI
 import "app-backend" Types.API.Search
 import Utils
 
-doAnAppSearchByReq :: HasCallStack => SearchReq -> ClientsM (Id BRB.RideBooking)
-doAnAppSearchByReq searchReq' = do
-  -- Driver sets online
-  void . callBPP $ setDriverOnline driverToken1 True
-  -- Moves driver to the pickup point
-  origin <- case searchReq' of
-    OneWaySearch req -> pure req.origin
-    RentalSearch _ -> error "driver offer bpp doesn't support rentals"
-  preUpdate <- liftIO $ buildUpdateLocationRequest $ origin.gps :| []
-  void . callBPP $
-    updateLocation driverToken1 preUpdate
-
-  -- Do an App Search
-  appSearchId <-
-    callBAP $
-      searchServices appRegistrationToken searchReq'
-        <&> (.searchId)
-
-  -- Do a get quotes request for getting quotes to confirm ride
-  (quoteAPIEntity :| _) <- pollDesc "get on_search quotes" $ do
-    -- List all confirmed rides (type = RIDEORDER)
-    callBAP (getQuotes appSearchId appRegistrationToken)
-      <&> (.quotes)
-      -- since all BPP can give quote for now we filter by orgId
-      <&> mapMaybe \case
-        OnDemandCab p -> Just p
-        _ -> Nothing
-      <&> filter (\p -> p.agencyName == bapTransporterName)
-      <&> nonEmpty
-
-  -- check if calculated price is greater than 0
-  quoteAPIEntity.estimatedFare `shouldSatisfy` (> 100)
-
-  let quoteId = quoteAPIEntity.id
-  void $ callBAP $ selectQuote appRegistrationToken quoteId
-
-  (searchReqForDriver :| _) <- pollDesc "get at least one nearby search request for driver" $ do
-    callBPP (getNearbySearchRequests driverToken1)
-      <&> (.searchRequests)
-      <&> filter (\p -> p.messageId == quoteId.getId)
-      <&> nonEmpty
-
-  void $ callBPP (offerQuote driverToken1 $ TDriver.DriverOfferReq (Just 30.5) searchReqForDriver.searchRequestId)
-
-  (selectedQuoteAPIEntity :| _) <- pollDesc "get at least one on_select quote" $ do
-    callBAP (selectList appRegistrationToken quoteId)
-      <&> (.selectedQuotes)
-      <&> filter (\p -> p.providerName == bapTransporterName)
-      <&> nonEmpty
-
-  let selectedQuoteId = selectedQuoteAPIEntity.id
-
-  -- Init ride from app backend
-  initResult <-
-    callBAP $
-      appInitRide appRegistrationToken $ mkAppInitReqSelected selectedQuoteId
-  let bapRideBookingId = initResult.bookingId
-
-  void . pollDesc "init result" $ do
-    initRB <- getBAPRideBooking bapRideBookingId
-    initRB.bppBookingId `shouldSatisfy` isJust
-    return $ Just ()
-
-  -- Confirm ride from app backend
-  void . callBAP $
-    appConfirmRide appRegistrationToken $ mkAppConfirmReq bapRideBookingId
-
-  void . pollDesc "ride confirmed and assigned" $
-    callBAP (appRideBookingStatus bapRideBookingId appRegistrationToken)
-      <&> (.status)
-      >>= (`shouldBe` AppRB.TRIP_ASSIGNED)
-      <&> Just
-
-  return bapRideBookingId
-
 getBAPRideBooking ::
   Id BRB.RideBooking ->
   ClientsM BRB.RideBooking
@@ -187,24 +112,86 @@ searchReqFromUpdatesList updList =
 waitBetweenUpdates :: Int
 waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates
 
+setupDriver :: Text -> LatLong -> ClientsM ()
+setupDriver driverToken initialPoint = do
+  -- Driver sets online
+  void . callBPP $ setDriverOnline driverToken True
+  -- Moves driver to the pickup point
+  preUpdate <- liftIO $ buildUpdateLocationRequest $ initialPoint :| []
+  void . callBPP $
+    updateLocation driverToken preUpdate
+
 successFlowWithLocationUpdates :: Double -> Double -> NonEmpty (NonEmpty LatLong) -> ClientEnvs -> IO ()
 successFlowWithLocationUpdates eps distance updates clients = withBecknClients clients $ do
-  let (origin, destination, searchReq_) = searchReqFromUpdatesList updates
+  let (origin, destination, searchReq') = searchReqFromUpdatesList updates
 
-  bRideBookingId <- doAnAppSearchByReq searchReq_
+  setupDriver driverToken1 origin
+
+  -- Do an App Search
+  appSearchId <-
+    callBAP $
+      searchServices appRegistrationToken searchReq'
+        <&> (.searchId)
+
+  -- Do a get quotes request for getting quotes to confirm ride
+  (quoteAPIEntity :| _) <- pollDesc "get on_search quotes" $ do
+    -- List all confirmed rides (type = RIDEORDER)
+    callBAP (getQuotes appSearchId appRegistrationToken)
+      <&> (.quotes)
+      -- since all BPP can give quote for now we filter by orgId
+      <&> mapMaybe \case
+        OnDemandCab p -> Just p
+        _ -> Nothing
+      <&> filter (\p -> p.agencyName == bapTransporterName)
+      <&> nonEmpty
+
+  -- check if calculated price is greater than 0
+  quoteAPIEntity.estimatedFare `shouldSatisfy` (> 100)
+
+  let quoteId = quoteAPIEntity.id
+  void $ callBAP $ selectQuote appRegistrationToken quoteId
+
+  (searchReqForDriver :| _) <- pollDesc "get at least one nearby search request for driver" $ do
+    callBPP (getNearbySearchRequests driverToken1)
+      <&> (.searchRequests)
+      <&> filter (\p -> p.messageId == quoteId.getId)
+      <&> nonEmpty
+
+  void $ callBPP (offerQuote driverToken1 $ TDriver.DriverOfferReq (Just 30.5) searchReqForDriver.searchRequestId)
+
+  (selectedQuoteAPIEntity :| _) <- pollDesc "get at least one on_select quote" $ do
+    callBAP (selectList appRegistrationToken quoteId)
+      <&> (.selectedQuotes)
+      <&> filter (\p -> p.providerName == bapTransporterName)
+      <&> nonEmpty
+
+  let selectedQuoteId = selectedQuoteAPIEntity.id
+
+  -- Init ride from app backend
+  initResult <-
+    callBAP $
+      appInitRide appRegistrationToken $ mkAppInitReqSelected selectedQuoteId
+  let bRideBookingId = initResult.bookingId
+
+  void . pollDesc "init result" $ do
+    initRB <- getBAPRideBooking bRideBookingId
+    initRB.bppBookingId `shouldSatisfy` isJust
+    return $ Just ()
+
+  -- Confirm ride from app backend
+  void . callBAP $
+    appConfirmRide appRegistrationToken $ mkAppConfirmReq bRideBookingId
+
+  void . pollDesc "ride confirmed and assigned" $
+    callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+      <&> (.status)
+      >>= (`shouldBe` AppRB.TRIP_ASSIGNED)
+      <&> Just
 
   tRideBooking <- pollDesc "trip assigned" $ do
     trb <- getBPPRideBooking bRideBookingId
     trb.status `shouldBe` TRB.TRIP_ASSIGNED
     return $ Just trb
-
-  {-
-    rideInfo <-
-      poll . callBPP $
-        getNotificationInfo tRideBooking.id driverToken1
-          <&> (.rideRequest)
-    rideInfo.bookingId `shouldBe` tRideBooking.id
-  -}
 
   tRide <- pollDesc "new ride" $ do
     tRide <- getBPPRide tRideBooking.id

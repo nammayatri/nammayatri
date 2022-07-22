@@ -100,6 +100,9 @@ callBAP, callBPP :: (HasCallStack, Show a) => ClientM a -> ClientsM a
 callBAP client = asks (.bap) >>= (`runClient'` client)
 callBPP client = asks (.bpp) >>= (`runClient'` client)
 
+callBppEither :: ClientM a -> ClientsM (Either ClientError a)
+callBppEither client = asks (.bpp) >>= (`runClient` client)
+
 mkMobilityClients :: BaseUrl -> BaseUrl -> IO ClientEnvs
 mkMobilityClients bapUrl bppUrl = do
   pure $
