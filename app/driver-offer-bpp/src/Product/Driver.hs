@@ -325,6 +325,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
   let mbOfferedFareAmount = fmap realToFrac req.offeredFare
   organization <- QOrg.findById sReq.providerId >>= fromMaybeM (OrgDoesNotExist sReq.providerId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  whenM (QDrQt.thereAreActiveQuotes driverId) (throwError FoundActiveQuotes)
   sReqFD <-
     QSRD.findByDriverAndSearchReq driverId sReq.id
       >>= fromMaybeM (InvalidRequest "no search request for driver")

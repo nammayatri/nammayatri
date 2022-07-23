@@ -3,7 +3,7 @@ module Mobility.ARDU.HealthCheck where
 import Common (getAppBaseUrl)
 import Data.Text.Encoding as DT
 import EulerHS.Prelude
-import Mobility.Fixtures.ARDU (getDriverOfferBppBaseUrl)
+import qualified Mobility.ARDU.APICalls as API
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant hiding (Context)
@@ -21,10 +21,10 @@ spec = do
   appManager <- runIO $ Client.newManager tlsManagerSettings
   let appBaseUrl = getAppBaseUrl
       appClientEnv = mkClientEnv appManager appBaseUrl
-      driverFlowClientEnv = mkClientEnv appManager getDriverOfferBppBaseUrl
+      driverFlowClientEnv = mkClientEnv appManager API.getDriverOfferBppBaseUrl
       gatewayClientEnv =
         mkClientEnv appManager $
-          getDriverOfferBppBaseUrl
+          API.getDriverOfferBppBaseUrl
             { baseUrlPort = 8015,
               baseUrlPath = "/v1"
             }

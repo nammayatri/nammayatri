@@ -5,7 +5,8 @@ import qualified "app-backend" Domain.Types.Booking as AppRB
 import qualified "app-backend" Domain.Types.CancellationReason as AppCR
 import EulerHS.Prelude
 import HSpec
-import Mobility.Fixtures.AppBackend
+import Mobility.AppBackend.APICalls
+import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Transporter
 import Mobility.Transporter.SuccessFlow (doAnAppSearch)
 import Utils

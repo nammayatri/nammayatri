@@ -29,11 +29,8 @@ import qualified "driver-offer-bpp" Environment as DriverOfferBpp
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
-import Mobility.Fixtures.AppBackend
 import Mobility.Fixtures.Common
-import qualified Mobility.Transporter.Spec as Mobility.Transporter
 import PublicTransport.Common
-import qualified PublicTransport.Spec as PublicTransport
 import Resources
 import System.Environment as Env (setEnv)
 import System.Posix

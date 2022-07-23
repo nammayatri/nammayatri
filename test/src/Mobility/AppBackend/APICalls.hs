@@ -1,4 +1,4 @@
-module Mobility.Fixtures.AppBackend where
+module Mobility.AppBackend.APICalls where
 
 import "app-backend" App.Routes as AbeRoutes
 import Beckn.External.FCM.Types
@@ -15,6 +15,7 @@ import qualified "app-backend" Domain.Types.Ride as BRide
 import qualified "app-backend" Domain.Types.RideBooking as BRB
 import qualified "app-backend" Domain.Types.SelectedQuote as AbeSelQuote
 import EulerHS.Prelude
+import Mobility.AppBackend.Fixtures
 import qualified "app-backend" Product.Cancel as CancelAPI
 import qualified "app-backend" Product.Confirm as ConfirmAPI
 import qualified "app-backend" Product.Init as InitAPI
@@ -33,16 +34,13 @@ selectQuote :<|> selectList = client (Proxy :: Proxy AbeRoutes.SelectAPI)
 cancelRide :: Id BRB.RideBooking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
 cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
--- app
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
 
--- app
 appInitRide :: Text -> DInit.InitReq -> ClientM InitAPI.InitRes
 appInitRide = client (Proxy :: Proxy InitAPI.InitAPI)
 
--- app
 mkAppInitReq :: Id AbeQuote.Quote -> DInit.InitReq
 mkAppInitReq =
   flip DInit.InitReq False
@@ -50,11 +48,9 @@ mkAppInitReq =
 mkAppInitReqSelected :: Id AbeSelQuote.SelectedQuote -> DInit.InitReq
 mkAppInitReqSelected = flip DInit.InitReq True . cast
 
--- app
 appConfirmRide :: Text -> DConfirm.ConfirmReq -> ClientM APISuccess
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.ConfirmAPI)
 
--- app
 confirmAddress :: DConfirm.ConfirmLocationReq
 confirmAddress =
   DConfirm.ConfirmLocationReq
@@ -68,7 +64,6 @@ confirmAddress =
       state = Just "Karnataka"
     }
 
--- app
 mkAppConfirmReq :: Id BRB.RideBooking -> DConfirm.ConfirmReq
 mkAppConfirmReq bookingId =
   DConfirm.ConfirmReq
@@ -77,11 +72,9 @@ mkAppConfirmReq bookingId =
       toLocation = Just confirmAddress
     }
 
--- app
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
 
--- app
 callAppFeedback :: Int -> Id BRide.Ride -> ClientM APISuccess
 callAppFeedback ratingValue rideId =
   let request =
@@ -91,28 +84,20 @@ callAppFeedback ratingValue rideId =
           }
    in appFeedback appRegistrationToken request
 
--- app
 appRideBookingStatus :: Id BRB.RideBooking -> Text -> ClientM AppRideBooking.RideBookingStatusRes
 appRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppRideBooking.RideBookingListRes
 appRideBookingStatus :<|> appRideBookingList = client (Proxy :: Proxy AbeRoutes.RideBookingAPI)
 
--- app
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 originServiceability regToken = origin
   where
     origin :<|> _ = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
--- app
 destinationServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 destinationServiceability regToken = destination
   where
     _ :<|> destination = client (Proxy :: Proxy AbeRoutes.ServiceabilityAPI) regToken
 
--- app
-appRegistrationToken :: Text
-appRegistrationToken = "ea37f941-427a-4085-a7d0-96240f166672"
-
--- app
 appAuth :: Reg.AuthReq -> ClientM Reg.AuthRes
 appVerify :: Id AppSRT.RegistrationToken -> Reg.AuthVerifyReq -> ClientM Reg.AuthVerifyRes
 appReInitiateLogin :: Id AppSRT.RegistrationToken -> ClientM Reg.ResendAuthRes
@@ -123,7 +108,6 @@ appAuth
   :<|> logout =
     client (Proxy :: Proxy AbeRoutes.RegistrationAPI)
 
--- app
 mkAuthReq :: Reg.AuthReq
 mkAuthReq =
   Reg.AuthReq
@@ -132,7 +116,6 @@ mkAuthReq =
       merchantId = "FIXME"
     }
 
--- app
 mkAuthVerifyReq :: Reg.AuthVerifyReq
 mkAuthVerifyReq =
   Reg.AuthVerifyReq
@@ -140,10 +123,8 @@ mkAuthVerifyReq =
       deviceToken = FCMRecipientToken "AN_DEV_TOKEN"
     }
 
--- app
 initiateAuth :: ClientM Reg.AuthRes
 initiateAuth = appAuth mkAuthReq
 
--- app
 verifyAuth :: Id AppSRT.RegistrationToken -> ClientM Reg.AuthVerifyRes
 verifyAuth tokenId = appVerify tokenId mkAuthVerifyReq

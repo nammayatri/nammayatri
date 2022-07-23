@@ -3,7 +3,9 @@ module Utils where
 import qualified "app-backend" App.Types as BecknApp
 import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Flow
+import Beckn.Types.Id (Id)
 import Beckn.Utils.Common
+import Data.Aeson (decode)
 import Data.String.Conversions
 import qualified "driver-offer-bpp" Environment as ARDU
 import EulerHS.Prelude
@@ -70,6 +72,13 @@ poll = pollDesc ""
 pollDesc :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> m (Maybe a) -> m a
 pollDesc description = pollWithDescription description (expBackoff 0.1e6 10e6)
 
+pollList :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> m [a] -> m (NonEmpty a)
+pollList description action = pollDesc description $ nonEmpty <$> action
+
+pollFilteredList :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> (a -> Bool) -> m [a] -> m (NonEmpty a)
+pollFilteredList description filterFunc action =
+  pollDesc description $ nonEmpty . filter filterFunc <$> action
+
 runFlow :: (MonadIO m, Log (FlowR env)) => Text -> env -> FlowR env a -> m a
 runFlow tag appEnv flow = do
   liftIO $
@@ -123,3 +132,23 @@ runTransporterFlow tag = runFlow tag transporterAppEnv
 
 runARDUFlow :: Text -> FlowR ARDU.AppEnv a -> IO a
 runARDUFlow tag = runFlow tag driverOfferBppEnv
+
+data Person
+
+data DriverTestData = DriverTestData
+  { driverId :: Id Person,
+    token :: Text
+  }
+
+shouldReturnErrorCode :: MonadIO m => Text -> Text -> Either ClientError a -> m ()
+shouldReturnErrorCode description code eithRes =
+  case eithRes of
+    Left (FailureResponse _ offerRes) -> do
+      let offerResBody = responseBody offerRes
+          mbAPIError = decode offerResBody :: Maybe APIError
+      fmap (.errorCode) mbAPIError `shouldBe` Just code
+    Left _ -> expectationFailure $ cs $ description <> ": unexpected error"
+    Right _ -> expectationFailure $ cs $ description <> ": unexpected success"
+
+equalsEps :: Double -> Double -> Double -> Bool
+equalsEps eps x y = abs (x - y) < eps

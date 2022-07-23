@@ -89,6 +89,7 @@ handler subscriber transporterId req = do
     QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id
     QSR.markAsInactive driverQuote.searchRequestId
     QSRD.removeAllBySearchId driverQuote.searchRequestId
+    QDQ.setInactiveByRequestId driverQuote.searchRequestId
 
   uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
   Notify.notifyDriver notificationType notificationTitle (message uBooking) driver.id driver.deviceToken

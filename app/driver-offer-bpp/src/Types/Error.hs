@@ -153,19 +153,37 @@ instance IsHTTPError OfferError where
 
 instance IsAPIError OfferError
 
-newtype SearchRequestError1
+newtype SearchRequestErrorARDU
   = SearchRequestNotRelevant Text
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''SearchRequestError1
+instanceExceptionWithParent 'HTTPException ''SearchRequestErrorARDU
 
-instance IsBaseError SearchRequestError1 where
+instance IsBaseError SearchRequestErrorARDU where
   toMessage (SearchRequestNotRelevant _) = Just "Search request no longer relevant"
 
-instance IsHTTPError SearchRequestError1 where
+instance IsHTTPError SearchRequestErrorARDU where
   toErrorCode = \case
     SearchRequestNotRelevant _ -> "SEARCH_REQUEST_NOT_RELEVANT"
   toHttpCode = \case
     SearchRequestNotRelevant _ -> E400
 
-instance IsAPIError SearchRequestError1
+instance IsAPIError SearchRequestErrorARDU
+
+--
+data OfferingError
+  = FoundActiveQuotes
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OfferingError
+
+instance IsBaseError OfferingError where
+  toMessage FoundActiveQuotes = Just "Failed to offer quote, there are other active quotes from this driver"
+
+instance IsHTTPError OfferingError where
+  toErrorCode = \case
+    FoundActiveQuotes -> "FOUND_ACTIVE_QUOTES"
+  toHttpCode = \case
+    FoundActiveQuotes -> E400
+
+instance IsAPIError OfferingError

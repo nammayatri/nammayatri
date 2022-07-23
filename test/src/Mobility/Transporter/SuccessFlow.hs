@@ -18,6 +18,8 @@ import qualified "app-backend" Storage.Queries.Booking as BQRB
 import qualified "beckn-transport" Storage.Queries.Booking as TQRB
 import Storage.Queries.DriverLocation
 import Mobility.Fixtures.AppBackend
+import Mobility.AppBackend.APICalls
+import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Transporter
 import "beckn-transport" Storage.Queries.DriverLocation
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
@@ -126,9 +128,6 @@ getBPPDriverLocation driverId = do
       { lat = res.lat,
         lon = res.lon
       }
-
-equalsEps :: Double -> Double -> Double -> Bool
-equalsEps eps x y = abs (x - y) < eps
 
 spec :: Spec
 spec = do

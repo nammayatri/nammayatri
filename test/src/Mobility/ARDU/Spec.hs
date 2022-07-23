@@ -12,6 +12,7 @@ import qualified Mobility.ARDU.DriversRejectRide as DRR
 --import qualified Mobility.ARDU.Serviceability as SRV
 
 import Mobility.ARDU.DriverAcceptsNonrelevantQuote as NQ
+import qualified Mobility.ARDU.DriverOffersTwice as OF
 import qualified Mobility.ARDU.HealthCheck as HC
 import qualified Mobility.ARDU.SuccessFlow as SF
 import Test.Tasty
@@ -22,13 +23,7 @@ mkTestTree = do
   hcSpec <- testSpec "HealthCheck" HC.spec
   sfSpec <- testSpec "SuccessFlow" SF.spec
   nqSpec <- testSpec "SecondDriver" NQ.spec
-  --  drrSpec <- testSpec "DriversRejectRide" DRR.spec
-  --  crSpec <- testSpec "AppCancelRide" CR.spec
-  --  dcrSpec <- testSpec "DriverCancelRide" DCR.spec
-  --  srvSpec <- testSpec "Serviceability" SRV.spec
-  --  ndSpec <- testSpec "NearestDriver" ND.spec
-
-  --  locationUpdatesSpec <- testSpec "LocationUpdates" LU.spec
+  otSpec <- testSpec "OffersTwice" OF.spec
   ------------------------------------------------------------------
   return $
     testGroup
@@ -37,19 +32,8 @@ mkTestTree = do
         after AllSucceed "HealthCheck" $
           testGroup
             "APIs"
-            [ -- ndSpec,
-              -- srvSpec,
-              sfSpec,
-              nqSpec
-              {-
-                            after AllSucceed "SuccessFlow" $
-                              testGroup
-                                "Flows"
-                                [ drrSpec,
-                                  crSpec,
-                                  dcrSpec
-                                ]
-              -}
+            [ sfSpec,
+              nqSpec,
+              otSpec
             ]
-            --              testGroup "LocationUpdates" [locationUpdatesSpec]
       ]

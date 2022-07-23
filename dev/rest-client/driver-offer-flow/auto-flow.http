@@ -1,7 +1,6 @@
-
+@token1 = {{driver-offer-bpp-auto-token1}}
+@token2 = {{driver-offer-bpp-auto-token2}}
 @driver-offer-bpp-host = http://localhost:8016
-@token = {{app-token}}
-@driver-token2 = 002df941-427a-4085-a7d0-96240f166672
 
 # @name healthcheck
 GET {{driver-offer-bpp-host}}/ui
@@ -12,7 +11,7 @@ GET {{driver-offer-bpp-host}}/ui
 
 # @name updateInitial
 POST {{driver-offer-bpp-host}}/ui/driver/location
-token: {{driver-token}}
+token: {{token1}}
 content-type: application/json
 
 [
@@ -30,7 +29,7 @@ content-type: application/json
 # @name setActive
 POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
 content-type: application/json
-token: {{driver-token}}
+token: {{token1}}
 ###
 
 ###
@@ -38,7 +37,7 @@ token: {{driver-token}}
 # @name search
 POST {{app-host}}/rideSearch
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 {
   "fareProductType" : "ONE_WAY",
@@ -85,7 +84,7 @@ token: {{token}}
 # @name quotes
 GET {{app-host}}/rideSearch/{{searchId}}/results
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 ###
 
@@ -94,19 +93,19 @@ token: {{token}}
 
 POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 ###
 
 # @name nearbySearchRequest
 GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
-token: {{driver-token}}
+token: {{token1}}
 
 ###
 
 # @name offerQuote
 POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
-token: {{driver-token}}
+token: {{token1}}
 content-type: application/json
 
 {
@@ -119,7 +118,7 @@ content-type: application/json
 # @name selectedQuotes
 GET {{app-host}}/estimate/{{estimateId}}/quotes
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 ###
 @selectedQuoteId = {{selectedQuotes.response.body.selectedQuotes[0].id}}
@@ -129,7 +128,7 @@ token: {{token}}
 
 POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 {
   "selected": true,
@@ -150,12 +149,12 @@ GET {{app-host}}/rideBooking/list
   &limit=50
   &onlyActive=false
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 ###
 # @name driverList
 GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
-token: {{driver-token}}
+token: {{token1}}
 
 ###
 @rideId = {{driverList.response.body.list[0].id}}
@@ -163,7 +162,7 @@ token: {{driver-token}}
 
 # @name startRide
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
-token: {{driver-token}}
+token: {{token1}}
 content-type: application/json
 
 {
@@ -181,7 +180,7 @@ content-type: application/json
 
 # @name update1
 POST {{driver-offer-bpp-host}}/ui/driver/location
-token: {{driver-token}}
+token: {{token1}}
 content-type: application/json
 
 [
@@ -222,7 +221,7 @@ content-type: application/json
 
 # @name update2
 POST {{driver-offer-bpp-host}}/ui/driver/location
-token: {{driver-token}}
+token: {{token1}}
 content-type: application/json
 
 [
@@ -248,7 +247,7 @@ content-type: application/json
 
 # @name rideEnd
 POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
-token: {{driver-token}}
+token: {{token1}}
 content-type: application/json
 
 {
@@ -262,7 +261,7 @@ content-type: application/json
 # @name cancel
 POST {{app-host}}/rideBooking/{{bookingId}}/cancel
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 {
   "reasonCode": "OTHER",
@@ -277,7 +276,7 @@ token: {{token}}
 
 # @name feedback
 POST {{app-host}}/feedback/rateRide
-token: {{token}}
+token: {{app-token}}
 content-type: application/json
 
 {

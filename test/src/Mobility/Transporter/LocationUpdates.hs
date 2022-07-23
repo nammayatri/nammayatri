@@ -10,7 +10,8 @@ import qualified "app-backend" Domain.Types.RideBooking as AppRB
 import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude
 import HSpec
-import Mobility.Fixtures.AppBackend
+import Mobility.AppBackend.APICalls
+import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Common
 import Mobility.Fixtures.Routes
 import Mobility.Fixtures.Transporter

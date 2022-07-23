@@ -7,7 +7,8 @@ import qualified "beckn-transport" Domain.Types.CancellationReason as SCR
 import qualified "beckn-transport" Domain.Types.Ride as TRide
 import EulerHS.Prelude
 import HSpec
-import Mobility.Fixtures.AppBackend
+import Mobility.AppBackend.APICalls
+import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Transporter
 import Mobility.Transporter.SuccessFlow
 import qualified "beckn-transport" Types.API.Ride as RideAPI

@@ -1,7 +1,6 @@
 @token1 = {{driver-offer-bpp-auto-token1}}
 @token2 = {{driver-offer-bpp-auto-token2}}
 @driver-offer-bpp-host = http://localhost:8016
-@token = {{app-token}}
 
 # @name healthcheck
 GET {{driver-offer-bpp-host}}/v2
@@ -62,7 +61,7 @@ token: {{token2}}
 # @name search
 POST {{app-host}}/rideSearch
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 {
   "fareProductType" : "ONE_WAY",
@@ -109,7 +108,7 @@ token: {{token}}
 # @name quotes
 GET {{app-host}}/rideSearch/{{searchId}}/quotes
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 ###
 
@@ -118,7 +117,7 @@ token: {{token}}
 
 POST {{app-host}}/rideSearch/quotes/{{quoteId}}/select HTTP/1.1
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 ###
 
@@ -144,7 +143,7 @@ content-type: application/json
 # @name selectedQuotes
 GET {{app-host}}/rideSearch/quotes/{{quoteId}}/select/list
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 ###
 
@@ -153,7 +152,7 @@ token: {{token}}
 
 POST {{app-host}}/rideInit
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 {
   "selected": true,
@@ -167,7 +166,7 @@ token: {{token}}
 
 POST {{app-host}}/rideSearch/confirm
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 {
   "bookingId": "{{bookingId}}",
@@ -203,7 +202,7 @@ GET {{app-host}}/rideBooking/list
   &limit=50
   &onlyActive=false
 content-type: application/json
-token: {{token}}
+token: {{app-token}}
 
 ###
 # @name driverList
