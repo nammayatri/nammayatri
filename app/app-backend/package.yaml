@@ -85,6 +85,7 @@ dependencies:
   - openapi3
   - persistent
   - extra
+  - text-conversions
 
 ghc-options:
   - -fwrite-ide-info

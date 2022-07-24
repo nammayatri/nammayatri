@@ -85,6 +85,7 @@ dependencies:
   - openapi3
   - string-conversions
   - either
+  - text-conversions
 
 ghc-options:
   - -fwrite-ide-info

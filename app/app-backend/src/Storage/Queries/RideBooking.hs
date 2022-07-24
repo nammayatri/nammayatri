@@ -80,6 +80,16 @@ findAllByRiderId personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     return rideBooking
   catMaybes <$> mapM buildFullRideBooking bookingT
 
+findByRiderIdAndStatus :: Transactionable m => Id Person -> RideBookingStatus -> m [RideBooking]
+findByRiderIdAndStatus personId status = Esq.buildDType $ do
+  bookingT <- Esq.findAll' $ do
+    rideBooking <- from $ table @RB.RideBookingT
+    where_ $
+      rideBooking ^. RB.RideBookingRiderId ==. val (toKey personId)
+        &&. rideBooking ^. RB.RideBookingStatus ==. val status
+    return rideBooking
+  catMaybes <$> mapM buildFullRideBooking bookingT
+
 findAllByRiderIdAndRide :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [RideBooking]
 findAllByRiderIdAndRide personId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
   let isOnlyActive = Just True == mbOnlyActive

@@ -96,6 +96,7 @@ type UIAPI =
     :<|> RideBookingAPI
     :<|> Cancel.CancelAPI
     :<|> RideAPI
+    :<|> DeprecatedCallAPIs
     :<|> CallAPIs
     :<|> SupportAPI
     :<|> RouteAPI
@@ -134,6 +135,7 @@ uiAPI =
     :<|> rideBookingFlow
     :<|> cancelFlow
     :<|> rideFlow
+    :<|> deprecatedCallFlow
     :<|> callFlow
     :<|> supportFlow
     :<|> routeApiFlow
@@ -298,7 +300,7 @@ rideFlow =
   Ride.getDriverLoc
 
 -------- Initiate a call (Exotel) APIs --------
-type CallAPIs =
+type DeprecatedCallAPIs =
   "ride"
     :> Capture "rideId" (Id SRide.Ride)
     :> "call"
@@ -314,11 +316,35 @@ type CallAPIs =
            :> Get '[JSON] API.GetCallStatusRes
        )
 
-callFlow :: FlowServer CallAPIs
-callFlow rideId =
+deprecatedCallFlow :: FlowServer DeprecatedCallAPIs
+deprecatedCallFlow rideId =
   Call.initiateCallToDriver rideId
     :<|> Call.callStatusCallback rideId
     :<|> Call.getCallStatus rideId
+
+-------- Direct call (Exotel) APIs
+type CallAPIs =
+  "exotel"
+    :> "call"
+    :> ( "driver"
+           :> "number"
+           :> MandatoryQueryParam "CallSid" Text
+           :> MandatoryQueryParam "CallFrom" Text
+           :> MandatoryQueryParam "CallTo" Text
+           :> MandatoryQueryParam "CallStatus" Text
+           :> Get '[JSON] API.MobileNumberResp
+           :<|> "statusCallback"
+           :> MandatoryQueryParam "CallSid" Text
+           :> MandatoryQueryParam "DialCallStatus" Text
+           :> MandatoryQueryParam "RecordingUrl" Text
+           :> QueryParam "Legs[0][OnCallDuration]" Int
+           :> Get '[JSON] API.CallCallbackRes
+       )
+
+callFlow :: FlowServer CallAPIs
+callFlow =
+  Call.getDriverMobileNumber
+    :<|> Call.directCallStatusCallback
 
 -------- Support Flow----------
 type SupportAPI =

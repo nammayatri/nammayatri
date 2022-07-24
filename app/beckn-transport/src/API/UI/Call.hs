@@ -1,4 +1,4 @@
-module API.UI.Call (module Reexport, API, handler) where
+module API.UI.Call (module Reexport, DeprecatedAPI, API, handler, deprecatedHandler) where
 
 import App.Types
 import Beckn.Types.Id
@@ -7,6 +7,7 @@ import Domain.Action.UI.Call as Reexport
     CallCallbackRes,
     CallRes (..),
     GetCallStatusRes,
+    MobileNumberResp,
   )
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.CallStatus as SCS
@@ -17,7 +18,7 @@ import Servant
 import Utils.Auth
 import Utils.Common
 
-type API =
+type DeprecatedAPI =
   "driver" :> "ride"
     :> Capture "rideId" (Id SRide.Ride)
     :> "call"
@@ -33,8 +34,27 @@ type API =
            :> Get '[JSON] GetCallStatusRes
        )
 
-handler :: FlowServer API
-handler rideId =
+-------- Direct call (Exotel) APIs
+type API =
+  "exotel"
+    :> "call"
+    :> ( "customer"
+           :> "number"
+           :> MandatoryQueryParam "CallSid" Text
+           :> MandatoryQueryParam "CallFrom" Text
+           :> MandatoryQueryParam "CallTo" Text
+           :> MandatoryQueryParam "CallStatus" Text
+           :> Get '[JSON] MobileNumberResp
+           :<|> "statusCallback"
+           :> MandatoryQueryParam "CallSid" Text
+           :> MandatoryQueryParam "DialCallStatus" Text
+           :> MandatoryQueryParam "RecordingUrl" Text
+           :> QueryParam "Legs[0][OnCallDuration]" Int
+           :> Get '[JSON] CallCallbackRes
+       )
+
+deprecatedHandler :: FlowServer DeprecatedAPI
+deprecatedHandler rideId =
   initiateCallToCustomer rideId
     :<|> callStatusCallback rideId
     :<|> getCallStatus rideId
@@ -47,3 +67,16 @@ callStatusCallback _ = withFlowHandlerAPI . DCall.callStatusCallback
 
 getCallStatus :: Id SRide.Ride -> Id SCS.CallStatus -> Id SP.Person -> FlowHandler GetCallStatusRes
 getCallStatus _ callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId
+
+handler :: FlowServer API
+handler =
+  getCustomerMobileNumber
+    :<|> directCallStatusCallback
+
+getCustomerMobileNumber :: Text -> Text -> Text -> Text -> FlowHandler MobileNumberResp
+getCustomerMobileNumber callSid callFrom_ callTo callStatus_ =
+  withFlowHandlerAPI $ DCall.getCustomerMobileNumber callSid callFrom_ callTo callStatus_
+
+directCallStatusCallback :: Text -> Text -> Text -> Maybe Int -> FlowHandler CallCallbackRes
+directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration =
+  withFlowHandlerAPI $ DCall.directCallStatusCallback callSid dialCallStatus_ recordingUrl_ callDuration

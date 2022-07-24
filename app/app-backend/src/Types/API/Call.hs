@@ -18,4 +18,6 @@ type CallCallbackReq = Call.ExotelCallCallback
 
 type CallCallbackRes = AckResponse
 
+type MobileNumberResp = Text
+
 type GetCallStatusRes = DCS.CallStatusAPIEntity

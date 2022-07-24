@@ -18,6 +18,8 @@ mkPersist
     MerchantT sql=merchant
       id Text
       shortId Text
+      exoPhone Text Maybe
+      exoPhoneCountryCode Text Maybe
       Primary id
       Unique MerchantShortId
       deriving Generic
@@ -30,14 +32,15 @@ instance TEntityKey MerchantT where
 
 instance TType MerchantT Domain.Merchant where
   fromTType MerchantT {..} = do
-    let
     return $
       Domain.Merchant
         { id = Id id,
-          shortId = ShortId shortId
+          shortId = ShortId shortId,
+          ..
         }
   toTType Domain.Merchant {..} =
     MerchantT
       { id = getId id,
-        shortId = getShortId shortId
+        shortId = getShortId shortId,
+        ..
       }
