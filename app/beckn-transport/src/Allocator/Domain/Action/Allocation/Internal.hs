@@ -1,6 +1,7 @@
-module Services.Allocation.Internal where
+module Allocator.Domain.Action.Allocation.Internal where
 
-import App.Allocator.Environment (Flow)
+import Allocator.Domain.Action.Allocation as Alloc
+import Allocator.Environment (Flow)
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
@@ -19,7 +20,6 @@ import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude hiding (id)
 import qualified Product.BecknProvider.BP as BP
 import Servant.Client (BaseUrl (..))
-import Services.Allocation.Allocation as Alloc
 import qualified SharedLogic.DriverPool as DrPool
 import Storage.Queries.AllocationEvent (logAllocationEvent)
 import qualified Storage.Queries.Booking as QRB

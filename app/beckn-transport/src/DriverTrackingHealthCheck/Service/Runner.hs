@@ -1,41 +1,27 @@
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
-module Services.DriverTrackingHealthcheck where
+module DriverTrackingHealthCheck.Service.Runner where
 
-import App.DriverTrackingHealthcheck.Environment (AppEnv)
 import Beckn.External.Encryption (decrypt)
 import Beckn.External.FCM.Types (FCMNotificationType (TRIGGER_SERVICE))
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
-import Beckn.Storage.Redis.Queries (lpush, rpop, tryLockRedis, unlockRedis)
+import Beckn.Storage.Redis.Queries (lpush, rpop)
 import Beckn.Types.Common
 import Beckn.Types.Error (PersonError (PersonFieldNotPresent))
-import Beckn.Types.Flow (FlowR)
 import Beckn.Types.Id (Id, cast)
 import Data.Either
 import Data.List.NonEmpty (nonEmpty)
 import qualified Domain.Types.Person as SP
-import qualified Product.HealthCheck as HC
+import qualified DriverTrackingHealthCheck.API as HC
+import DriverTrackingHealthCheck.Environment (Flow)
+import DriverTrackingHealthCheck.Service.Runner.DataLocker
 import qualified Storage.Queries.DriverInformation as DrInfo
 import Types.App (Driver)
 import Utils.Common
 import Utils.Notifications (notifyDevice)
-
-type Flow = FlowR AppEnv
-
--- TODO: move this function somewhere
-withLock :: Flow () -> Flow ()
-withLock f = do
-  getLock
-  f `catch` (log ERROR . makeLogSomeException)
-  unlockRedis lockKey
-  where
-    getLock = do
-      lockAvailable <- tryLockRedis lockKey 10
-      unless lockAvailable getLock
-    lockKey = "beckn:" <> serviceName <> ":lock"
 
 driverTrackingHealthcheckService :: Flow ()
 driverTrackingHealthcheckService = withLogTag "driverTrackingHealthcheckService" do
@@ -46,9 +32,9 @@ driverTrackingHealthcheckService = withLogTag "driverTrackingHealthcheckService"
 driverLastLocationUpdateCheckService :: Flow ()
 driverLastLocationUpdateCheckService = service "driverLastLocationUpdateCheckService" $ withRandomId do
   delay <- asks (.driverAllowedDelay)
-  withLock $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
+  withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
-    HC.iAmAlive serviceName
+    HC.iAmAlive
     drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
     let driverDetails = map fetchPersonIdAndMobileNumber drivers
     flip map driverDetails \case
@@ -67,15 +53,12 @@ driverLastLocationUpdateCheckService = service "driverLastLocationUpdateCheckSer
     fetchPersonIdAndMobileNumber :: SP.Person -> (Id Driver, Maybe FCM.FCMRecipientToken)
     fetchPersonIdAndMobileNumber driver = (cast driver.id :: Id Driver, driver.deviceToken)
 
-serviceName :: Text
-serviceName = "driver-tracking-healthcheck"
-
 redisKey :: Text
 redisKey = "beckn:driver-tracking-healthcheck:drivers-to-ping"
 
 driverDevicePingService :: Flow ()
 driverDevicePingService = service "driverDevicePingService" do
-  HC.iAmAlive serviceName
+  HC.iAmAlive
   rpop redisKey >>= flip whenJust \(driverId, token) ->
     withLogTag driverId.getId do
       log INFO "Ping driver"
@@ -86,9 +69,9 @@ driverDevicePingService = service "driverDevicePingService" do
 driverMakingInactiveService :: Flow ()
 driverMakingInactiveService = service "driverMakingInactiveService" $ withRandomId do
   delay <- asks (.driverInactiveDelay)
-  withLock $ measuringDurationToLog INFO "driverMakingInactiveService" do
+  withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverMakingInactiveService" do
     now <- getCurrentTime
-    HC.iAmAlive serviceName
+    HC.iAmAlive
     drivers <- DrInfo.getDriversWithOutdatedLocationsToMakeInactive (negate (fromIntegral delay) `addUTCTime` now)
     logPretty INFO ("Drivers to make inactive: " <> show (length drivers)) ((.id) <$> drivers)
     mapM_ fetchPersonIdAndMobileNumber drivers

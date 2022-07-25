@@ -3,6 +3,7 @@
 
 module Main where
 
+import qualified "beckn-transport" Allocator.App as Allocator
 import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
@@ -13,8 +14,6 @@ import qualified "mock-sms" App as MockSms
 import qualified "public-transport-bap" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
 import qualified "search-result-aggregator" App as SearchResultAggregator
-import qualified "beckn-transport" App.Allocator as Allocator
-import qualified "beckn-transport" App.DriverTrackingHealthcheck as DriverHC
 import qualified "app-backend" App.Types as AppBackend
 import qualified "beckn-transport" App.Types as TransporterBackend
 import Beckn.Exit (exitDBMigrationFailure)
@@ -24,6 +23,7 @@ import Beckn.Types.Logging (LoggerConfig)
 import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Data.Text as T (replace, toUpper, unpack)
+import qualified "beckn-transport" DriverTrackingHealthCheck.App as DriverHC
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
 import Mobility.Fixtures

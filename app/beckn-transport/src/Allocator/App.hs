@@ -1,7 +1,8 @@
-module App.Allocator where
+module Allocator.App where
 
-import App.Allocator.Config
-import App.Allocator.Environment
+import Allocator.API
+import Allocator.Environment
+import qualified Allocator.Service.Runner as Allocator
 import Beckn.Exit
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Tools.Metrics.Init as Metrics
@@ -17,9 +18,7 @@ import qualified Data.Map as Map
 import EulerHS.Prelude hiding (exitSuccess)
 import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
-import Product.HealthCheck
 import Servant
-import qualified Services.Allocation.Runner as Allocator
 import qualified Storage.Queries.Organization as Storage
 import Utils.Common
 
@@ -52,6 +51,6 @@ runAllocator configModifier = do
               (handleShutdown appEnv.isShuttingDown (releaseAppEnv appEnv))
             & setPort config.healthcheckPort
     void . forkIO . runSettings settings $
-      Server.run healthCheckAPI (healthCheck "allocation") EmptyContext (App.EnvR flowRt' appEnv)
+      Server.run healthCheckAPI healthCheck EmptyContext (App.EnvR flowRt' appEnv)
 
     runFlowR flowRt' appEnv Allocator.run

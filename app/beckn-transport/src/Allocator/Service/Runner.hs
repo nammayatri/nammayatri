@@ -1,6 +1,9 @@
-module Services.Allocation.Runner where
+module Allocator.Service.Runner where
 
-import App.Allocator.Environment
+import Allocator.API (iAmAlive)
+import qualified Allocator.Domain.Action.Allocation as Allocation
+import qualified Allocator.Domain.Action.Allocation.Internal as I
+import Allocator.Environment
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
 import Beckn.Types.Id
@@ -10,8 +13,6 @@ import Control.Monad.Catch (Handler (..), catches)
 import qualified Data.Map as Map
 import Domain.Types.Organization
 import EulerHS.Prelude
-import qualified Services.Allocation.Allocation as Allocation
-import qualified Services.Allocation.Internal as I
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Metrics as TMetrics
 import Types.Error
@@ -77,8 +78,7 @@ run = do
   untilShutdown . runnerHandler . withLogTag "Allocation service" $ do
     shortOrgId <- getOrganizationLock
     log INFO $ "Got lock for " <> shortOrgId.getShortId
-    now <- getCurrentTime
-    Redis.setKeyRedis "beckn:allocation:service" now
+    iAmAlive
     ((), processTime) <- measureDuration $ do
       requestsNum <- asks (.requestsNumPerIteration)
       eres <- try $ Allocation.process handle shortOrgId requestsNum

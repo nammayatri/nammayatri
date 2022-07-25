@@ -1,4 +1,4 @@
-module Services.Allocation.Allocation where
+module Allocator.Domain.Action.Allocation where
 
 import Beckn.Types.Common
 import Beckn.Types.Id

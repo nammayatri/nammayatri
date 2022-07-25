@@ -2,6 +2,7 @@
 
 module Flow.Allocation.Internal where
 
+import Allocator.Domain.Action.Allocation as Alloc
 import Beckn.Types.Id
 import qualified Data.Map as Map
 import qualified Data.Time as Time
@@ -10,7 +11,6 @@ import Domain.Types.DriverPool
 import Domain.Types.Organization
 import qualified Domain.Types.RideRequest as SRR
 import EulerHS.Prelude hiding (id)
-import Services.Allocation.Allocation as Alloc
 import Test.Tasty.HUnit
 import Types.App
 import Utils.Common

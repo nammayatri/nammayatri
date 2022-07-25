@@ -1,16 +1,40 @@
-module App.DriverTrackingHealthcheck.Environment where
+module DriverTrackingHealthCheck.Environment where
 
-import App.DriverTrackingHealthcheck.Config
 import Beckn.External.Encryption (EncTools)
 import Beckn.Sms.Config (SmsConfig)
 import Beckn.Storage.Esqueleto.Config
+import Beckn.Storage.Redis.Config (RedisConfig)
 import Beckn.Types.Common
+import Beckn.Types.Flow (FlowR)
 import Beckn.Utils.App (getPodName)
+import Beckn.Utils.Dhall
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.Client (HttpClientOptions)
 import Beckn.Utils.Shutdown
 import EulerHS.Prelude
 import Tools.Metrics
+
+type Flow = FlowR AppEnv
+
+data AppCfg = AppCfg
+  { loggerConfig :: LoggerConfig,
+    metricsPort :: Int,
+    healthcheckPort :: Int,
+    httpClientOptions :: HttpClientOptions,
+    graceTerminationPeriod :: Seconds,
+    redisCfg :: RedisConfig,
+    esqDBCfg :: EsqDBConfig,
+    nwAddress :: BaseUrl,
+    fcmJsonPath :: Maybe Text,
+    fcmUrl :: BaseUrl,
+    encTools :: EncTools,
+    driverAllowedDelay :: Seconds,
+    notificationMinDelay :: Microseconds,
+    driverInactiveDelay :: Seconds,
+    smsCfg :: SmsConfig,
+    driverInactiveSmsTemplate :: Text
+  }
+  deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,

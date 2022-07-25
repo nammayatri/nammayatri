@@ -1,11 +1,11 @@
 module Flow.Allocation.AllocationTimeFinished where
 
+import Allocator.Domain.Action.Allocation
 import Beckn.Types.Id
 import qualified Data.Map as Map
 import qualified Domain.Types.Booking as SRB
 import EulerHS.Prelude hiding (id)
 import Flow.Allocation.Internal
-import Services.Allocation.Allocation
 import Test.Tasty
 import Test.Tasty.HUnit
 import Types.App

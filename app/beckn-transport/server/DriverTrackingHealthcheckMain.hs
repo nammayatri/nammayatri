@@ -1,6 +1,6 @@
 module Main where
 
-import App.DriverTrackingHealthcheck
+import DriverTrackingHealthCheck.App
 import Prelude
 
 main :: IO ()

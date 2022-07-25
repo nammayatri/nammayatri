@@ -1,4 +1,4 @@
-module Product.HealthCheck where
+module DriverTrackingHealthCheck.API (healthCheckAPI, healthCheck, iAmAlive) where
 
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
@@ -19,10 +19,9 @@ healthCheck ::
     HasField "isShuttingDown" r Shutdown,
     HasField "loggerEnv" r LoggerEnv
   ) =>
-  Text ->
   FlowHandlerR r Text
-healthCheck serviceName = withFlowHandlerAPI do
-  mbTime <- Redis.getKeyRedis (mkKey serviceName)
+healthCheck = withFlowHandlerAPI do
+  mbTime <- Redis.getKeyRedis key
   maybe markAsDead checkLastUpdateTime mbTime
   where
     markAsDead = throwError ServiceUnavailable
@@ -33,8 +32,9 @@ healthCheck serviceName = withFlowHandlerAPI do
         then markAsDead
         else return "Service is up!"
 
-mkKey :: Text -> Text
-mkKey serviceName = "beckn:" <> serviceName <> ":service"
+key :: Text
+key = "beckn:driver-tracking-healthcheck:service"
 
-iAmAlive :: MonadFlow m => Text -> m ()
-iAmAlive serviceName = getCurrentTime >>= Redis.setKeyRedis (mkKey serviceName)
+--TODO: Make ServiceHealthChecker util in shared-kernel
+iAmAlive :: MonadFlow m => m ()
+iAmAlive = getCurrentTime >>= Redis.setKeyRedis key

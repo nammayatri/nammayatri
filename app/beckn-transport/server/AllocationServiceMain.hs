@@ -1,6 +1,6 @@
 module Main where
 
-import App.Allocator
+import Allocator.App
 import Prelude
 
 main :: IO ()

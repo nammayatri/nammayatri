@@ -1,7 +1,5 @@
-module App.DriverTrackingHealthcheck where
+module DriverTrackingHealthCheck.App where
 
-import App.DriverTrackingHealthcheck.Config
-import App.DriverTrackingHealthcheck.Environment
 import Beckn.Exit
 import Beckn.Storage.Redis.Config
 import qualified Beckn.Tools.Metrics.Init as Metrics
@@ -13,12 +11,13 @@ import qualified Beckn.Utils.FlowLogging as L
 import qualified Beckn.Utils.Servant.Server as Server
 import Beckn.Utils.Shutdown
 import Control.Concurrent
+import DriverTrackingHealthCheck.API
+import DriverTrackingHealthCheck.Environment
+import qualified DriverTrackingHealthCheck.Service.Runner as Service
 import EulerHS.Prelude hiding (exitSuccess)
 import qualified EulerHS.Runtime as R
 import Network.Wai.Handler.Warp
-import Product.HealthCheck
 import Servant
-import qualified Services.DriverTrackingHealthcheck as Service
 import Utils.Common
 
 runDriverHealthcheck :: (AppCfg -> AppCfg) -> IO ()
@@ -43,7 +42,7 @@ runDriverHealthcheck configModifier = do
             & setInstallShutdownHandler (handleShutdown appEnv.isShuttingDown (releaseAppEnv appEnv))
             & setPort config.healthcheckPort
     void . forkIO . runSettings settings $
-      Server.run healthCheckAPI (healthCheck "driver-tracking-healthcheck") EmptyContext (App.EnvR flowRt' appEnv)
+      Server.run healthCheckAPI healthCheck EmptyContext (App.EnvR flowRt' appEnv)
 
     runFlowR flowRt' appEnv Service.driverTrackingHealthcheckService
     waitForShutdown appEnv.isShuttingDown
