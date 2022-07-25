@@ -19,12 +19,13 @@ createDetails = \case
     Esq.create' rentalSlabT
   AutoDetailsT -> pure ()
 
+-- order of creating entites make sense!
 create :: Quote -> SqlDB ()
 create quote =
   Esq.withFullEntity quote $ \(quoteT, mbTripTermsT, quoteDetailsT) -> do
-    Esq.create' quoteT
     traverse_ Esq.create' mbTripTermsT
     createDetails quoteDetailsT
+    Esq.create' quoteT
 
 createMany :: [Quote] -> SqlDB ()
 createMany quotes =

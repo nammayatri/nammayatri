@@ -35,9 +35,9 @@ data RentalFarePolicyAPIEntity = RentalFarePolicyAPIEntity
 
 mkDescriptions :: Amount -> Amount -> Maybe Amount -> [Text]
 mkDescriptions kmRate minuteRate minuteFare =
-  [ "Extra km fare: " <> show kmRate,
-    "Extra min fare: " <> show minuteRate,
-    "Extra fare for day: " <> maybe "not allowed" show minuteFare,
+  [ "Extra km fare: " <> amountToString kmRate,
+    "Extra min fare: " <> amountToString minuteRate,
+    "Extra fare for day: " <> maybe "not allowed" amountToString minuteFare,
     "A rider can choose this package for a trip where the rider may not have a pre-decided destination and may not want to return to the origin location",
     "The rider may want to stop at multiple destinations and have the taxi wait for the rider at these locations"
   ]
