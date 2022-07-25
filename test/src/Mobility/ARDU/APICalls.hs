@@ -16,8 +16,8 @@ import qualified "driver-offer-bpp" Types.API.Ride as RideAPI
 
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> RideAPI.EndRideReq -> ClientM APISuccess
---rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
-_ :<|> rideStart :<|> rideEnd = client (Proxy :: Proxy DrOfRoutes.RideAPI)
+rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
+_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy DrOfRoutes.RideAPI)
 
 getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
 getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes
@@ -63,5 +63,5 @@ getDriverOfferBppBaseUrl =
     { baseUrlScheme = Http,
       baseUrlHost = "localhost",
       baseUrlPort = 8016,
-      baseUrlPath = "/v2"
+      baseUrlPath = "/ui"
     }

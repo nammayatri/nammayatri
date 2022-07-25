@@ -1,7 +1,17 @@
 module Mobility.Fixtures.Routes where
 
+import Beckn.Prelude
 import Beckn.Types.MapSearch
-import Data.List.NonEmpty
+import Data.List.NonEmpty as NE
+import "app-backend" Types.API.Search
+
+defaultSearchReq :: SearchReq
+defaultSearchReq =
+  OneWaySearch $
+    OneWaySearchReq
+      { origin = SearchReqLocation $ LatLong 10.0739 76.2733,
+        destination = SearchReqLocation $ LatLong 10.5449 76.4356
+      }
 
 type LocationUpdates = NonEmpty (NonEmpty LatLong)
 
@@ -16,6 +26,22 @@ locationUpdatesRoute1 =
            :| [ LatLong 10.023880128960258 76.30264171106143
               ]
        ]
+
+searchReqFromUpdatesList :: LocationUpdates -> (LatLong, LatLong, SearchReq)
+searchReqFromUpdatesList updList =
+  let origin = NE.head $ NE.head updList
+      destination = NE.last $ NE.last updList
+      req =
+        OneWaySearch $
+          OneWaySearchReq
+            { origin = SearchReqLocation $ NE.head $ NE.head updList,
+              destination = SearchReqLocation $ NE.last $ NE.last updList
+            }
+   in (origin, destination, req)
+
+{-# NOINLINE route1SearchRequest #-}
+route1SearchRequest :: (LatLong, LatLong, SearchReq)
+route1SearchRequest = searchReqFromUpdatesList locationUpdatesRoute1
 
 -- test case from production
 locationUpdatesIsolatedPoint :: LocationUpdates

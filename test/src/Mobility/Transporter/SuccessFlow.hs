@@ -2,6 +2,8 @@ module Mobility.Transporter.SuccessFlow where
 
 import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
 import qualified "beckn-transport" API.UI.Ride as TbeRideAPI
+--import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
+import qualified "beckn-transport" API.UI.Booking as RideBookingAPI
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common
@@ -20,16 +22,16 @@ import Storage.Queries.DriverLocation
 import Mobility.Fixtures.AppBackend
 import Mobility.AppBackend.APICalls
 import Mobility.AppBackend.Fixtures
+import Mobility.Fixtures.Routes
 import Mobility.Fixtures.Transporter
 import "beckn-transport" Storage.Queries.DriverLocation
 import qualified "beckn-transport" Storage.Queries.Ride as TQRide
 import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
-import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import "app-backend" Types.API.Search
 import Utils
 
-doAnAppSearch :: HasCallStack => ClientsM (Id BRB.Booking)
-doAnAppSearch = doAnAppSearchByReq searchReq
+doAnAppSearch :: HasCallStack => ClientsM (Id BRB.RideBooking)
+doAnAppSearch = doAnAppSearchByReq defaultSearchReq
 
 doAnAppSearchByReq :: HasCallStack => SearchReq -> ClientsM (Id BRB.Booking)
 doAnAppSearchByReq searchReq' = do

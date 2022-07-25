@@ -7,6 +7,7 @@ import Common
 import EulerHS.Prelude
 import Mobility.AppBackend.APICalls
 import Mobility.AppBackend.Fixtures
+import Mobility.Fixtures.Routes
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant.Client
@@ -59,7 +60,7 @@ nonServiceableDestination appClientEnv =
 
 nonServiceableSearchRequest :: ClientEnv -> IO ()
 nonServiceableSearchRequest appClientEnv = do
-  let updatedSearchReq = case searchReq of
+  let updatedSearchReq = case defaultSearchReq of
         AppBESearch.OneWaySearch req ->
           AppBESearch.OneWaySearch $
             req

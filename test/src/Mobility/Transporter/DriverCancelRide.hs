@@ -1,5 +1,7 @@
 module Mobility.Transporter.DriverCancelRide where
 
+import qualified "beckn-transport" API.UI.Booking as RideBookingAPI
+import qualified "beckn-transport" API.UI.Ride as RideAPI
 import Common (getAppBaseUrl)
 import qualified "app-backend" Domain.Types.Booking as AppRB
 import qualified "beckn-transport" Domain.Types.Booking as TRB
@@ -11,8 +13,6 @@ import Mobility.AppBackend.APICalls
 import Mobility.AppBackend.Fixtures
 import Mobility.Fixtures.Transporter
 import Mobility.Transporter.SuccessFlow
-import qualified "beckn-transport" Types.API.Ride as RideAPI
-import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
 import Utils
 
 spec :: Spec

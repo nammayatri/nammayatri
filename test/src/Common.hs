@@ -3,7 +3,6 @@ module Common where
 import "app-backend" App.Routes as AbeRoutes
 import Beckn.Types.Base64
 import Beckn.Types.Id
-import Beckn.Types.MapSearch (LatLong (..))
 import qualified Beckn.Utils.SignatureAuth as HttpSig
 import qualified Data.Aeson as J
 import qualified Data.ByteString as B
@@ -57,18 +56,6 @@ gatewayClientEnv = mkClientEnv defaultManager gatewayBaseUrl
 
 callGateway :: (Show a) => ClientM a -> IO a
 callGateway = runClient' gatewayClientEnv
-
-searchReq :: AppBESearch.SearchReq
-searchReq =
-  AppBESearch.OneWaySearch $
-    AppBESearch.OneWaySearchReq
-      { origin = AppBESearch.SearchReqLocation $ LatLong 10.0739 76.2733,
-        destination = AppBESearch.SearchReqLocation $ LatLong 10.5449 76.4356
-      }
-
-searchReqOrigin, searchReqDestination :: LatLong
-searchReqOrigin = LatLong 10.0739 76.2733
-searchReqDestination = LatLong 10.5449 76.4356
 
 verifyError :: Int -> B.ByteString -> Either ClientError a -> IO ()
 verifyError expectedCode expectedMessage serverResponse = do

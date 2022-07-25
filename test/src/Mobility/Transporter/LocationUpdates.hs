@@ -1,5 +1,6 @@
 module Mobility.Transporter.LocationUpdates where
 
+import qualified "beckn-transport" API.UI.Booking as RideBookingAPI
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common (getAppBaseUrl)
@@ -16,8 +17,6 @@ import Mobility.Fixtures.Common
 import Mobility.Fixtures.Routes
 import Mobility.Fixtures.Transporter
 import Mobility.Transporter.SuccessFlow
-import qualified "beckn-transport" Types.API.RideBooking as RideBookingAPI
-import qualified "app-backend" Types.API.Search as AppBackend
 import Utils
 
 -- these tests pass only when the real google maps api key is supplied
@@ -30,20 +29,12 @@ spec = do
     it "Testing location updates for the route with far isolated point" $
       successFlowWithLocationUpdates 50 8350 locationUpdatesIsolatedPoint clients
 
-searchReqFromUpdatesList :: LocationUpdates -> AppBackend.SearchReq
-searchReqFromUpdatesList updList =
-  AppBackend.OneWaySearch $
-    AppBackend.OneWaySearchReq
-      { origin = AppBackend.SearchReqLocation $ NE.head $ NE.head updList,
-        destination = AppBackend.SearchReqLocation $ NE.last $ NE.last updList
-      }
-
 waitBetweenUpdates :: Int
 waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates
 
 successFlowWithLocationUpdates :: Double -> Double -> NonEmpty (NonEmpty LatLong) -> ClientEnvs -> IO ()
 successFlowWithLocationUpdates eps distance updates clients = withBecknClients clients $ do
-  let searchReq_ = searchReqFromUpdatesList updates
+  let (_, _, searchReq_) = searchReqFromUpdatesList updates
   bRideBookingId <- doAnAppSearchByReq searchReq_
 
   tRideBooking <- pollDesc "ride booking id should exist and should be confirmed" $ do

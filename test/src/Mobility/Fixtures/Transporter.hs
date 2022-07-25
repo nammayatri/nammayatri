@@ -1,21 +1,26 @@
 module Mobility.Fixtures.Transporter where
 
-import "beckn-transport" App.Routes as TbeRoutes
+--import "beckn-transport" App.Routes as TbeRoutes
+
+--import qualified "beckn-transport" Types.API.Driver as DriverAPI
+
+import qualified "beckn-transport" API.UI.Booking as BookingAPI
+import qualified "beckn-transport" API.UI.Driver as DriverAPI
+import "beckn-transport" API.UI.Location
+import qualified "beckn-transport" API.UI.Location as LocationAPI
+import qualified "beckn-transport" API.UI.Ride as RideAPI
 import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import Data.Time
+import qualified "beckn-transport" Domain.Types.Booking.API as BookingAPI
 import qualified "app-backend" Domain.Types.Person as TPerson
 import qualified "beckn-transport" Domain.Types.Ride as TRide
 import qualified "beckn-transport" Domain.Types.RideBooking as TRB
 import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client
-import qualified "beckn-transport" Types.API.Driver as DriverAPI
-import "beckn-transport" Types.API.Location
-import qualified "beckn-transport" Types.API.Ride as RideAPI
-import qualified "beckn-transport" Types.API.RideBooking as TRideBookingAPI
 
 bapTransporterName :: Text
 bapTransporterName = "[A] Transporter #1"
@@ -23,7 +28,7 @@ bapTransporterName = "[A] Transporter #1"
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> ClientM APISuccess
 rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
-_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy TbeRoutes.RideAPI)
+_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy RideAPI.API)
 
 getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
 setDriverOnline :: Text -> Bool -> ClientM APISuccess
@@ -37,23 +42,23 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
            :<|> ( getDriverInfo
                     :<|> _
                   )
-         ) = client (Proxy :: Proxy TbeRoutes.DriverAPI)
+         ) = client (Proxy :: Proxy DriverAPI.API)
 
-rideRespond :: Id TRB.RideBooking -> Text -> TRideBookingAPI.SetDriverAcceptanceReq -> ClientM TRideBookingAPI.SetDriverAcceptanceRes
+rideRespond :: Id TRB.RideBooking -> Text -> BookingAPI.SetDriverAcceptanceReq -> ClientM BookingAPI.SetDriverAcceptanceRes
 rideRespond rideBookingId = rideResp
   where
-    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+    _ :<|> driver_rb_path = client (Proxy :: Proxy BookingAPI.API)
     rideResp :<|> _ = driver_rb_path rideBookingId
 
-getNotificationInfo :: Id TRB.RideBooking -> Text -> ClientM TRideBookingAPI.GetRideInfoRes
+getNotificationInfo :: Id TRB.RideBooking -> Text -> ClientM BookingAPI.GetRideInfoRes
 getNotificationInfo rideBookingId = getNotif
   where
-    _ :<|> driver_rb_path = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+    _ :<|> driver_rb_path = client (Proxy :: Proxy BookingAPI.API)
     _ :<|> getNotif = driver_rb_path rideBookingId
 
-tRideBookingStatus :: Id TRB.RideBooking -> Text -> ClientM TRideBookingAPI.RideBookingStatusRes
-tRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM TRideBookingAPI.RideBookingListRes
-(tRideBookingStatus :<|> tRideBookingList :<|> _) :<|> _ = client (Proxy :: Proxy TbeRoutes.RideBookingAPI)
+tRideBookingStatus :: Id TRB.RideBooking -> Text -> ClientM BookingAPI.RideBookingAPIEntity
+tRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM BookingAPI.RideBookingListRes
+(tRideBookingStatus :<|> tRideBookingList :<|> _) :<|> _ = client (Proxy :: Proxy BookingAPI.API)
 
 buildStartRideReq :: Text -> RideAPI.StartRideReq
 buildStartRideReq otp =
@@ -62,7 +67,7 @@ buildStartRideReq otp =
     }
 
 updateLocation :: RegToken -> NonEmpty Waypoint -> ClientM APISuccess
-(_ :<|> updateLocation) = client (Proxy @LocationAPI)
+(_ :<|> updateLocation) = client (Proxy @LocationAPI.API)
 
 buildUpdateLocationRequest :: NonEmpty LatLong -> IO (NonEmpty Waypoint)
 buildUpdateLocationRequest pts = do
