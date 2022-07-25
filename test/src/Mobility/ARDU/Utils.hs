@@ -6,19 +6,20 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common
 import qualified "app-backend" Domain.Action.UI.Cancel as AppCancel
+import qualified "app-backend" Domain.Types.Booking as AppRB
+import qualified "driver-offer-bpp" Domain.Types.Booking as TRB
 import qualified "app-backend" Domain.Types.CancellationReason as AppCR
 import qualified "driver-offer-bpp" Domain.Types.CancellationReason as SCR
 import qualified "driver-offer-bpp" Domain.Types.DriverInformation as TDrInfo
+--import qualified "app-backend" Domain.Types.SelectedQuote as AppSelQuote
+import qualified "app-backend" Domain.Types.Estimate as AppEstimate
 import "driver-offer-bpp" Domain.Types.Person as TPerson
 import qualified "app-backend" Domain.Types.Quote as AppQuote
 import qualified "app-backend" Domain.Types.Ride as BRide
 import qualified "driver-offer-bpp" Domain.Types.Ride as TRide
-import qualified "app-backend" Domain.Types.RideBooking as AppRB
-import qualified "driver-offer-bpp" Domain.Types.RideBooking as TRB
 import qualified "app-backend" Domain.Types.SearchRequest as AppSearchReq
 import qualified "driver-offer-bpp" Domain.Types.SearchRequest as ArduSReq
 import "driver-offer-bpp" Domain.Types.SearchRequestForDriver
-import qualified "app-backend" Domain.Types.SelectedQuote as AppSelQuote
 import EulerHS.Prelude
 import HSpec
 import qualified Mobility.ARDU.APICalls as API
@@ -26,33 +27,32 @@ import Mobility.ARDU.Fixtures
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client
+import qualified "app-backend" Storage.Queries.Booking as BQRB
+import qualified "driver-offer-bpp" Storage.Queries.Booking as TQRB
 import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as DriverInfo
 import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as QTDrInfo
 import "driver-offer-bpp" Storage.Queries.DriverLocation
 import qualified "driver-offer-bpp" Storage.Queries.Ride as TQRide
-import qualified "app-backend" Storage.Queries.RideBooking as BQRB
-import qualified "driver-offer-bpp" Storage.Queries.RideBooking as TQRB
 import qualified "driver-offer-bpp" Types.API.Driver as TDriver
-import "app-backend" Types.API.Quote (OfferRes (OnDemandCab))
 import qualified "driver-offer-bpp" Types.API.Ride as RideAPI
 import qualified "app-backend" Types.API.Search as AppSearch
 import Utils
 
 -- database calls
-getBAPRideBooking ::
-  Id AppRB.RideBooking ->
-  ClientsM AppRB.RideBooking
-getBAPRideBooking bapRBId = do
+getBAPBooking ::
+  Id AppRB.Booking ->
+  ClientsM AppRB.Booking
+getBAPBooking bapRBId = do
   mbBRB <- liftIO $ runAppFlow "" $ BQRB.findById bapRBId
   mbBRB `shouldSatisfy` isJust
   let Just bRB = mbBRB
   return bRB
 
-getBPPRideBooking ::
-  Id AppRB.RideBooking ->
-  ClientsM TRB.RideBooking
-getBPPRideBooking bapRBId = do
-  bRB <- getBAPRideBooking bapRBId
+getBPPBooking ::
+  Id AppRB.Booking ->
+  ClientsM TRB.Booking
+getBPPBooking bapRBId = do
+  bRB <- getBAPBooking bapRBId
   bRB.bppBookingId `shouldSatisfy` isJust
   let Just bppBookingId = bRB.bppBookingId
   mbTRB <- liftIO $ runARDUFlow "" $ TQRB.findById $ cast bppBookingId
@@ -61,7 +61,7 @@ getBPPRideBooking bapRBId = do
   return tRB
 
 getBPPRide ::
-  Id TRB.RideBooking ->
+  Id TRB.Booking ->
   ClientsM TRide.Ride
 getBPPRide rideBookingId = do
   mbRide <- liftIO $ runARDUFlow "" $ TQRide.findActiveByRBId rideBookingId
@@ -114,29 +114,26 @@ resetDriver driver = runARDUFlow "" $
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)
 search token searchReq_ = callBAP $ searchServices token searchReq_ <&> (.searchId)
 
-getOnSearchTaxiQuotesByTransporterName ::
+getOnSearchTaxiEstimatesByTransporterName ::
   Text ->
   Id AppSearchReq.SearchRequest ->
   Text ->
-  ClientsM (NonEmpty AppQuote.QuoteAPIEntity)
-getOnSearchTaxiQuotesByTransporterName appToken searchId transporterName =
+  ClientsM (NonEmpty AppEstimate.EstimateAPIEntity)
+getOnSearchTaxiEstimatesByTransporterName appToken searchId transporterName =
   pollFilteredList
-    "get on_search quotes"
+    "get on_search estimates"
     (\p -> p.agencyName == transporterName)
     $ callBAP (getQuotes searchId appToken)
-      <&> (.quotes)
-      <&> mapMaybe \case
-        OnDemandCab p -> Just p
-        _ -> Nothing
+      <&> (.estimates)
 
-select :: Text -> Id AppQuote.Quote -> ClientsM ()
+select :: Text -> Id AppEstimate.Estimate -> ClientsM ()
 select bapToken quoteId = void $ callBAP $ selectQuote bapToken quoteId
 
-getNearbySearchRequestForDriver :: DriverTestData -> Id AppQuote.Quote -> ClientsM (NonEmpty SearchRequestForDriverAPIEntity)
-getNearbySearchRequestForDriver driver quoteId =
+getNearbySearchRequestForDriver :: DriverTestData -> Id AppEstimate.Estimate -> ClientsM (NonEmpty SearchRequestForDriverAPIEntity)
+getNearbySearchRequestForDriver driver estimateId =
   pollFilteredList
     "get at least one nearby search request for driver"
-    (\p -> p.messageId == quoteId.getId)
+    (\p -> p.messageId == estimateId.getId)
     ((.searchRequests) <$> callBPP (API.getNearbySearchRequests driver.token))
 
 offerQuote :: DriverTestData -> Double -> Id ArduSReq.SearchRequest -> ClientsM ()
@@ -147,53 +144,59 @@ offerQuoteEither :: DriverTestData -> Double -> Id ArduSReq.SearchRequest -> Cli
 offerQuoteEither driver fare bppSearchRequestId =
   callBppEither $ API.offerQuote driver.token $ TDriver.DriverOfferReq (Just fare) bppSearchRequestId
 
-getSelectedQuotesByQuoteId :: Text -> Id AppQuote.Quote -> ClientsM (NonEmpty AppSelQuote.SelectedQuoteAPIEntity)
-getSelectedQuotesByQuoteId appToken quoteId =
+getQuotesByEstimateId :: Text -> Id AppEstimate.Estimate -> ClientsM (NonEmpty AppQuote.QuoteAPIEntity)
+getQuotesByEstimateId appToken estimateId =
   pollFilteredList
     "get at least one on_select quote"
-    (\p -> p.providerName == bapTransporterName)
-    ((.selectedQuotes) <$> callBAP (selectList appToken quoteId))
+    (\p -> p.agencyName == bapTransporterName)
+    ((.selectedQuotes) <$> callBAP (selectList appToken estimateId))
 
-initWithCheck :: Text -> Id AppSelQuote.SelectedQuote -> ClientsM (Id AppRB.RideBooking)
+{-
+initWithCheck :: Text -> Id AppSelQuote.SelectedQuote -> ClientsM (Id AppRB.Booking)
 initWithCheck appToken selectedQuoteId = do
-  bRideBookingId <- fmap (.bookingId) $ callBAP $ appInitRide appToken $ mkAppInitReqSelected selectedQuoteId
+  bBookingId <- fmap (.bookingId) $ callBAP $ appInitRide appToken $ mkAppInitReqSelected selectedQuoteId
   void . pollDesc "init result" $ do
-    initRB <- getBAPRideBooking bRideBookingId
+    initRB <- getBAPBooking bBookingId
     initRB.bppBookingId `shouldSatisfy` isJust
     return $ Just ()
-  pure bRideBookingId
+  pure bBookingId
+-}
 
-confirmWithCheck :: Text -> Id AppRB.RideBooking -> ClientsM (TRB.RideBooking, TRide.Ride)
-confirmWithCheck appToken bRideBookingId = do
-  void . callBAP $
-    appConfirmRide appToken $ mkAppConfirmReq bRideBookingId
+confirmWithCheck :: Text -> DriverTestData -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, TRide.Ride)
+confirmWithCheck appToken _driver quoteId = do
+  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId $ BapAPI.mkAppConfirmReq
+
+  void . pollDesc "booking exists" $ do
+    initRB <- getBAPBooking bBookingId
+    initRB.bppBookingId `shouldSatisfy` isJust
+    return $ Just ()
 
   void . pollDesc "ride confirmed and assigned" $
-    callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+    callBAP (appBookingStatus bBookingId appToken)
       <&> (.status)
       >>= (`shouldBe` AppRB.TRIP_ASSIGNED)
       <&> Just
 
-  tRideBooking <- pollDesc "trip assigned" $ do
-    trb <- getBPPRideBooking bRideBookingId
+  tBooking <- pollDesc "trip assigned" $ do
+    trb <- getBPPBooking bBookingId
     trb.status `shouldBe` TRB.TRIP_ASSIGNED
     return $ Just trb
 
   tRide <- pollDesc "new ride" $ do
-    tRide <- getBPPRide tRideBooking.id
+    tRide <- getBPPRide tBooking.id
     tRide.status `shouldBe` TRide.NEW
     return $ Just tRide
 
-  pure (tRideBooking, tRide)
+  pure (bBookingId, tBooking, tRide)
 
-startRide :: DriverTestData -> LatLong -> TRide.Ride -> Id AppRB.RideBooking -> ClientsM ()
-startRide driver origin tRide bRideBookingId = do
+startRide :: DriverTestData -> LatLong -> TRide.Ride -> Id AppRB.Booking -> ClientsM ()
+startRide driver origin tRide bBookingId = do
   void . callBPP $
     API.rideStart driver.token tRide.id $
       API.buildStartRideReq tRide.otp origin
 
   void . pollDesc "trip started" $ do
-    inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+    inprogressRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)
     inprogressRBStatusResult.rideList `shouldSatisfy` not . null
     inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
     let [inprogressRide] = inprogressRBStatusResult.rideList
@@ -204,84 +207,84 @@ endRide ::
   DriverTestData ->
   LatLong ->
   TRide.Ride ->
-  Id AppRB.RideBooking ->
+  Id AppRB.Booking ->
   ClientsM ()
-endRide driver destination tRide bRideBookingId = do
+endRide driver destination tRide bBookingId = do
   void . callBPP $ API.rideEnd driver.token tRide.id $ RideAPI.EndRideReq destination
   void $
     pollDesc "ride completed" $ do
-      completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
+      completedRBStatusResult <- callBAP (appBookingStatus bBookingId appRegistrationToken)
       completedRBStatusResult.rideList `shouldSatisfy` not . null
       completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
       let [completedRide] = completedRBStatusResult.rideList
       completedRide.status `shouldBe` BRide.COMPLETED
       return $ Just completedRide.id
 
-cancellationChecks :: Id AppRB.RideBooking -> DriverTestData -> ClientsM ()
-cancellationChecks bapRideBookingId driver =
+cancellationChecks :: Id AppRB.Booking -> DriverTestData -> ClientsM ()
+cancellationChecks bapBookingId driver =
   void $
     pollDesc "ride cancelled by driver" $ do
-      bapRideBooking <- getBAPRideBooking bapRideBookingId
-      bapRideBooking.status `shouldBe` AppRB.CANCELLED
-      bppRideBooking <- getBPPRideBooking bapRideBookingId
-      bppRideBooking.status `shouldBe` TRB.CANCELLED
+      bapBooking <- getBAPBooking bapBookingId
+      bapBooking.status `shouldBe` AppRB.CANCELLED
+      bppBooking <- getBPPBooking bapBookingId
+      bppBooking.status `shouldBe` TRB.CANCELLED
       driverInfo <- getBPPDriverInformation $ cast driver.driverId
       driverInfo.onRide `shouldBe` False
 
       pure $ Just ()
 
-cancelRideByDriver :: DriverTestData -> Id AppRB.RideBooking -> TRide.Ride -> ClientsM ()
-cancelRideByDriver driver bapRideBookingId tRide = do
+cancelRideByDriver :: DriverTestData -> Id AppRB.Booking -> TRide.Ride -> ClientsM ()
+cancelRideByDriver driver bapBookingId tRide = do
   void . callBPP $
     API.rideCancel driver.token tRide.id $
       RideAPI.CancelRideReq (SCR.CancellationReasonCode "OTHER") Nothing
-  cancellationChecks bapRideBookingId driver
+  cancellationChecks bapBookingId driver
 
-cancelRideByApp :: Text -> DriverTestData -> Id AppRB.RideBooking -> ClientsM ()
-cancelRideByApp appToken driver bapRideBookingId = do
+cancelRideByApp :: Text -> DriverTestData -> Id AppRB.Booking -> ClientsM ()
+cancelRideByApp appToken driver bapBookingId = do
   void . callBAP $
-    BapAPI.cancelRide bapRideBookingId appToken $
+    BapAPI.cancelRide bapBookingId appToken $
       AppCancel.CancelReq
         { reasonCode = AppCR.CancellationReasonCode "",
           reasonStage = AppCR.OnAssign,
           additionalInfo = Nothing
         }
-  cancellationChecks bapRideBookingId driver
+  cancellationChecks bapBookingId driver
 
 -- aggregate functions
 
 -- from search to select (inclusive)
-search'Select :: Text -> AppSearch.SearchReq -> ClientsM (Id AppQuote.Quote)
+search'Select :: Text -> AppSearch.SearchReq -> ClientsM (Id AppEstimate.Estimate)
 search'Select appToken searchReq' = do
   appSearchId <- search appToken searchReq'
-  (bapQuoteAPIEntity :| _) <- getOnSearchTaxiQuotesByTransporterName appToken appSearchId bapTransporterName
+  (bapQuoteAPIEntity :| _) <- getOnSearchTaxiEstimatesByTransporterName appToken appSearchId bapTransporterName
   let quoteId = bapQuoteAPIEntity.id
   select appToken quoteId
   pure quoteId
 
 data SearchConfirmResult = SearchConfirmResult
-  { bapRideBookingId :: Id AppRB.RideBooking,
-    bppRideBooking :: TRB.RideBooking,
+  { bapBookingId :: Id AppRB.Booking,
+    bppBooking :: TRB.Booking,
     ride :: TRide.Ride
   }
 
 search'Confirm :: Text -> DriverTestData -> AppSearch.SearchReq -> ClientsM SearchConfirmResult
 search'Confirm appToken driver searchReq' = do
-  quoteId <- search'Select appToken searchReq'
+  estimateId <- search'Select appToken searchReq'
 
-  (searchReqForDriver :| _) <- getNearbySearchRequestForDriver driver quoteId
+  (searchReqForDriver :| _) <- getNearbySearchRequestForDriver driver estimateId
 
-  let firstDriverFare = 30.5 -- this doesn't matter i think and can be hardcoded
-  offerQuote driver firstDriverFare searchReqForDriver.searchRequestId
+  offerQuote driver defaultAllowedDriverFee searchReqForDriver.searchRequestId
 
-  (selectedQuoteAPIEntity :| _) <- getSelectedQuotesByQuoteId appToken quoteId
-  let selectedQuoteId = selectedQuoteAPIEntity.id
+  (quoteAPIEntity :| _) <- getQuotesByEstimateId appToken estimateId
+  --  let selectedQuoteId = selectedQuoteAPIEntity.id
+  let quoteId = quoteAPIEntity.id
 
-  bapRideBookingId <- initWithCheck appToken selectedQuoteId
-  (bppRideBooking, ride) <- confirmWithCheck appToken bapRideBookingId
+  --  bapBookingId <- initWithCheck appToken selectedQuoteId
+  (bapBookingId, bppBooking, ride) <- confirmWithCheck appToken driver quoteId
   pure $
     SearchConfirmResult
-      { bapRideBookingId,
-        bppRideBooking,
+      { bapBookingId,
+        bppBooking,
         ride
       }

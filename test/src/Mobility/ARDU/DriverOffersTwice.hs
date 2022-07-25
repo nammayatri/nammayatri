@@ -32,10 +32,9 @@ driverOffersTwice clients = withBecknClients clients $ do
   (searchReqForDriver1 :| _) <- Utils.getNearbySearchRequestForDriver arduDriver1 quoteId1
   (searchReqForDriver2 :| _) <- Utils.getNearbySearchRequestForDriver arduDriver1 quoteId2
 
-  let driverFare = 30.5
-  Utils.offerQuote arduDriver1 driverFare searchReqForDriver1.searchRequestId
+  Utils.offerQuote arduDriver1 defaultAllowedDriverFee searchReqForDriver1.searchRequestId
 
-  eithRes <- Utils.offerQuoteEither arduDriver1 driverFare searchReqForDriver2.searchRequestId
+  eithRes <- Utils.offerQuoteEither arduDriver1 defaultAllowedDriverFee searchReqForDriver2.searchRequestId
   shouldReturnErrorCode "error on active quotes found" "FOUND_ACTIVE_QUOTES" eithRes
 
   liftIO $ runARDUFlow "" $ Esq.runTransaction $ setInactiveByRequestId searchReqForDriver1.searchRequestId

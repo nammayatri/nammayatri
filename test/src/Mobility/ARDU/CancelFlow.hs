@@ -25,11 +25,11 @@ cancelFlow = do
   let (origin, _, searchReq') = route1SearchRequest
   Utils.setupDriver arduDriver1 origin
   scRes <- search'Confirm appRegistrationToken arduDriver1 searchReq'
-  cancelRideByDriver arduDriver1 scRes.bapRideBookingId scRes.ride
+  cancelRideByDriver arduDriver1 scRes.bapBookingId scRes.ride
 
 appCancelFlow :: ClientsM ()
 appCancelFlow = do
   let (origin, _, searchReq') = route1SearchRequest
   Utils.setupDriver arduDriver1 origin
   scRes <- search'Confirm appRegistrationToken arduDriver1 searchReq'
-  cancelRideByApp appRegistrationToken arduDriver1 scRes.bapRideBookingId
+  cancelRideByApp appRegistrationToken arduDriver1 scRes.bapBookingId

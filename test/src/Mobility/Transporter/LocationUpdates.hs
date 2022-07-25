@@ -1,22 +1,17 @@
 module Mobility.Transporter.LocationUpdates where
 
-import qualified "beckn-transport" API.UI.Booking as RideBookingAPI
-import Beckn.Types.Id
 import Beckn.Types.MapSearch
 import Common (getAppBaseUrl)
 import qualified Data.List.NonEmpty as NE
-import qualified "app-backend" Domain.Types.Ride as BRide
-import qualified "beckn-transport" Domain.Types.Ride as TRide
-import qualified "app-backend" Domain.Types.RideBooking as AppRB
-import qualified "beckn-transport" Domain.Types.RideBooking as TRB
+import qualified "beckn-transport" Domain.Types.Booking as TRB
 import EulerHS.Prelude
 import HSpec
 import Mobility.AppBackend.APICalls
 import Mobility.AppBackend.Fixtures
-import Mobility.Fixtures.Common
 import Mobility.Fixtures.Routes
-import Mobility.Fixtures.Transporter
-import Mobility.Transporter.SuccessFlow
+import Mobility.Transporter.APICalls
+import Mobility.Transporter.Fixtures
+import qualified Mobility.Transporter.Utils as Utils
 import Utils
 
 -- these tests pass only when the real google maps api key is supplied
@@ -29,82 +24,40 @@ spec = do
     it "Testing location updates for the route with far isolated point" $
       successFlowWithLocationUpdates 50 8350 locationUpdatesIsolatedPoint clients
 
-waitBetweenUpdates :: Int
-waitBetweenUpdates = 1e5 + 1e6 * fromIntegral timeBetweenLocationUpdates
-
 successFlowWithLocationUpdates :: Double -> Double -> NonEmpty (NonEmpty LatLong) -> ClientEnvs -> IO ()
 successFlowWithLocationUpdates eps distance updates clients = withBecknClients clients $ do
-  let (_, _, searchReq_) = searchReqFromUpdatesList updates
-  bRideBookingId <- doAnAppSearchByReq searchReq_
+  let (origin, destination, searchReq_) = searchReqFromUpdatesList updates
 
-  tRideBooking <- pollDesc "ride booking id should exist and should be confirmed" $ do
-    trb <- getBPPRideBooking bRideBookingId
-    trb.status `shouldBe` TRB.CONFIRMED
-    return $ Just trb
+  Utils.setupDriver transporterDriver1 origin
 
-  rideInfo <-
-    poll . callBPP $
-      getNotificationInfo tRideBooking.id driverToken1
-        <&> (.rideRequest)
-  rideInfo.bookingId `shouldBe` tRideBooking.id
+  scRes <- Utils.search'Confirm appRegistrationToken transporterDriver1 searchReq_
+
+  let tBooking = scRes.bppBooking :: TRB.Booking
+      bBookingId = scRes.bapBookingId
 
   -- Driver Accepts a ride
-  void . callBPP $
-    rideRespond tRideBooking.id driverToken1 $
-      RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.ACCEPT
-
-  tRide <- pollDesc ("ride with id=" <> tRideBooking.id.getId <> " should exist and should have status=NEW") $ do
-    tRide <- getBPPRide tRideBooking.id
-    tRide.status `shouldBe` TRide.NEW
-    return $ Just tRide
+  tRide <- Utils.acceptRide transporterDriver1 tBooking
 
   let bppRideId = tRide.id
 
-  ---- we need to update location just before we start ride
-  let initLoc = NE.head $ NE.head updates
-      locationEps = 1e-18
-  initialUpdate <- liftIO $ buildUpdateLocationRequest $ initLoc :| []
-  void . callBPP $
-    updateLocation driverToken1 initialUpdate
+  -- we need to update location just before we start ride
+  Utils.updateLocation transporterDriver1 $ origin :| []
+
+  --
+  Utils.startRide appRegistrationToken transporterDriver1 origin tRide bBookingId
+
   liftIO $ threadDelay waitBetweenUpdates
-
-  loc <- getBPPDriverLocation $ cast testDriverId1
-  loc `shouldSatisfy` \l -> equalsEps eps initLoc.lat l.lat && equalsEps locationEps initLoc.lon l.lon
-
-  ----
-  void . callBPP $
-    rideStart driverToken1 tRide.id $
-      buildStartRideReq tRide.otp
-
-  void . pollDesc "ride changes its status to INPROGRESS" $ do
-    inprogressRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
-    inprogressRBStatusResult.rideList `shouldSatisfy` not . null
-    inprogressRBStatusResult.status `shouldBe` AppRB.TRIP_ASSIGNED
-    let [inprogressRide] = inprogressRBStatusResult.rideList
-    inprogressRide.status `shouldBe` BRide.INPROGRESS
-    return $ Just ()
-  ----
-
   forM_ (NE.toList updates) $ \upd -> do
-    updReq <- liftIO $ buildUpdateLocationRequest upd
-    void . callBPP $ updateLocation driverToken1 updReq
+    Utils.updateLocation transporterDriver1 upd
     liftIO $ threadDelay waitBetweenUpdates
 
   ----
-  void . callBPP $ rideEnd driverToken1 tRide.id
+  completedRideId <- Utils.endRide appRegistrationToken transporterDriver1 destination tRide bBookingId
 
-  completedRideId <- pollDesc "ride should be completed" $ do
-    completedRBStatusResult <- callBAP (appRideBookingStatus bRideBookingId appRegistrationToken)
-    completedRBStatusResult.rideList `shouldSatisfy` not . null
-    completedRBStatusResult.status `shouldBe` AppRB.COMPLETED
-    let [completedRide] = completedRBStatusResult.rideList
-    completedRide.status `shouldBe` BRide.COMPLETED
-    return $ Just completedRide.id
-
-  tRide' <- getBPPRideById bppRideId
+  tRide' <- Utils.getBPPRideById bppRideId
   tRide'.traveledDistance.getHighPrecMeters `shouldSatisfy` equalsEps eps distance
 
   -- Leave feedback
   void . callBAP $ callAppFeedback 5 completedRideId
 
-  void . callBPP $ setDriverOnline driverToken1 False
+  liftIO $ Utils.resetDriver transporterDriver1

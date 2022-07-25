@@ -1,8 +1,12 @@
 module Mobility.ARDU.Fixtures where
 
+import Beckn.Prelude
 import Beckn.Types.Id
-import EulerHS.Prelude
+import Beckn.Types.Time
 import Utils
+
+timeBetweenLocationUpdates :: Seconds
+timeBetweenLocationUpdates = 1
 
 bapTransporterName :: Text
 bapTransporterName = "Driver-Offer-Provider #1"
@@ -17,6 +21,9 @@ arduDriver1 =
 arduDriver2 :: DriverTestData
 arduDriver2 =
   DriverTestData
-    { driverId = Id "favorit-sedan-0000000000000000000000",
-      token = "favorit-sedan-0000000000000000-token"
+    { driverId = Id "favorit-auto2-0000000000000000000000",
+      token = "favorit-auto2-0000000000000000-token"
     }
+
+defaultAllowedDriverFee :: Double
+defaultAllowedDriverFee = 30

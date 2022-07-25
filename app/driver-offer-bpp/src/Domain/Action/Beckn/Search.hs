@@ -61,6 +61,7 @@ handler :: DOrg.Organization -> DSearchReq -> Flow DSearchRes
 handler org sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
+  -- <<<<<<< HEAD
   driverPool <- calculateDriverPool Nothing (getCoordinates fromLocation) org.id
   let getVariant x = x.origin.vehicle.variant
       listOfProtoQuotes = nubBy ((==) `on` getVariant) driverPool
@@ -96,6 +97,35 @@ mkEstimate org dSReq dist g = do
         distanceToPickup = g.distance,
         baseFare
       }
+
+{-
+=======
+  driverPool <- calculateDriverPool (getCoordinates fromLocation) org.id
+  let mbDistanceToPickup = (.distance) <$> listToMaybe driverPool
+  case mbDistanceToPickup of
+    Nothing -> pure Nothing
+    Just distanceToPickup -> do
+      distance <-
+        metersToHighPrecMeters . (.distance)
+          <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
+
+      fareParams <- calculateFare org.id distance sReq.pickupTime Nothing
+      let estimatedFare = amountToDouble $ fareSum fareParams
+      searchReq <- buildSearchRequest fromLocation toLocation org.id fareParams sReq
+      logDebug $
+        "search request id=" <> show searchReq.id
+          <> "; estimated distance = "
+          <> show distance
+          <> "; estimated fare:"
+          <> show estimatedFare
+      Esq.runTransaction $ do
+        QSReq.create searchReq
+        traverse_ (QBE.logDriverInPoolEvent ON_SEARCH Nothing) driverPool
+      logDebug $ "bap uri: " <> show sReq.bapUri
+      let variant = Variant.AUTO_VARIANT
+      Just <$> buildSearchRes org variant distanceToPickup estimatedFare searchReq
+>>>>>>> transporter tests refactoring
+-}
 
 buildSearchRequest ::
   ( MonadTime m,

@@ -5,7 +5,6 @@ module Domain.Types.SearchRequest where
 import Beckn.Prelude
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
-import qualified Domain.Types.FareParams as Params
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 

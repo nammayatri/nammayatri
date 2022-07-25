@@ -43,7 +43,7 @@ callMockPublicTransportBpp :: (Show a) => ClientM a -> IO a
 callMockPublicTransportBpp = runClient' mockPublicTransportBppClientEnv
 
 mockWaitTimeSeconds :: Seconds
-mockWaitTimeSeconds = 2
+mockWaitTimeSeconds = 1
 
 {-# NOINLINE publicTransportBapEnv #-}
 publicTransportBapEnv :: Bap.AppEnv

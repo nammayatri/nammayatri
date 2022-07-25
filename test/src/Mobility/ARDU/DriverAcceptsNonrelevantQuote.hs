@@ -27,7 +27,7 @@ driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
 
   appSearchId <- Utils.search appRegistrationToken searchReq'
 
-  (bapQuoteAPIEntity :| _) <- Utils.getOnSearchTaxiQuotesByTransporterName appRegistrationToken appSearchId bapTransporterName
+  (bapQuoteAPIEntity :| _) <- Utils.getOnSearchTaxiEstimatesByTransporterName appRegistrationToken appSearchId bapTransporterName
 
   bapQuoteAPIEntity.estimatedFare `shouldSatisfy` (> 100) -- ?
   let quoteId = bapQuoteAPIEntity.id
@@ -36,19 +36,15 @@ driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
   -- first driver gets nearby requests
   (searchReqForDriver :| _) <- Utils.getNearbySearchRequestForDriver arduDriver1 quoteId
 
-  let firstDriverFare = 30.5
-  Utils.offerQuote arduDriver1 firstDriverFare searchReqForDriver.searchRequestId
+  Utils.offerQuote arduDriver1 defaultAllowedDriverFee searchReqForDriver.searchRequestId
 
-  (selectedQuoteAPIEntity :| _) <- Utils.getSelectedQuotesByQuoteId appRegistrationToken quoteId
+  (selectedQuoteAPIEntity :| _) <- Utils.getQuotesByEstimateId appRegistrationToken quoteId
   let selectedQuoteId = selectedQuoteAPIEntity.id
 
   -- second driver gets nearby requests
   (searchReqForSecondDriver :| _) <- Utils.getNearbySearchRequestForDriver arduDriver2 quoteId
 
-  bRideBookingId <- Utils.initWithCheck appRegistrationToken selectedQuoteId
-
-  void $ Utils.confirmWithCheck appRegistrationToken bRideBookingId
+  void $ Utils.confirmWithCheck appRegistrationToken arduDriver2 selectedQuoteId
   --
-  let secondDriverFare = 30.5
-  eithRes <- Utils.offerQuoteEither arduDriver2 secondDriverFare searchReqForSecondDriver.searchRequestId
+  eithRes <- Utils.offerQuoteEither arduDriver2 defaultAllowedDriverFee searchReqForSecondDriver.searchRequestId
   shouldReturnErrorCode "error on nonrelevant search request" "SEARCH_REQUEST_NOT_RELEVANT" eithRes

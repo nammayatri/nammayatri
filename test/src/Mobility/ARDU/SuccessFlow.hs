@@ -10,7 +10,6 @@ import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures
 import qualified Mobility.ARDU.Utils as Utils
 import Mobility.AppBackend.Fixtures
-import Mobility.Fixtures.Common
 import Mobility.Fixtures.Routes
 import Utils
 
@@ -35,9 +34,9 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
   Utils.setupDriver arduDriver1 origin
   scRes <- Utils.search'Confirm appRegistrationToken arduDriver1 searchReq'
   let tRide = scRes.ride
-      bRideBookingId = scRes.bapRideBookingId
+      bBookingId = scRes.bapBookingId
 
-  Utils.startRide arduDriver1 origin tRide bRideBookingId
+  Utils.startRide arduDriver1 origin tRide bBookingId
   ----
 
   liftIO $ threadDelay waitBetweenUpdates
@@ -48,7 +47,7 @@ successFlowWithLocationUpdates eps distance updates clients = withBecknClients c
 
   liftIO $ threadDelay waitBetweenUpdates
   ----
-  Utils.endRide arduDriver1 destination tRide bRideBookingId
+  Utils.endRide arduDriver1 destination tRide bBookingId
 
   tRide' <- Utils.getBPPRideById tRide.id
   tRide'.traveledDistance.getHighPrecMeters `shouldSatisfy` equalsEps eps distance

@@ -7,48 +7,37 @@ import Beckn.Types.App
 import Beckn.Types.Id
 import qualified "app-backend" Domain.Action.UI.Cancel as CancelAPI
 import qualified "app-backend" Domain.Action.UI.Confirm as DConfirm
-import qualified "app-backend" Domain.Action.UI.Init as DInit
+import qualified "app-backend" Domain.Types.Booking as BRB
 import qualified "app-backend" Domain.Types.CancellationReason as AbeCRC
+import qualified "app-backend" Domain.Types.Estimate as AbeEstimate
 import qualified "app-backend" Domain.Types.Quote as AbeQuote
 import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
 import qualified "app-backend" Domain.Types.Ride as BRide
-import qualified "app-backend" Domain.Types.RideBooking as BRB
-import qualified "app-backend" Domain.Types.SelectedQuote as AbeSelQuote
+--import qualified "app-backend" Domain.Types.SelectedQuote as AbeSelQuote
 import EulerHS.Prelude
 import Mobility.AppBackend.Fixtures
 import qualified "app-backend" Product.Cancel as CancelAPI
 import qualified "app-backend" Product.Confirm as ConfirmAPI
-import qualified "app-backend" Product.Init as InitAPI
 import Servant hiding (Context)
 import Servant.Client
+import qualified "app-backend" Types.API.Booking as AppBooking
 import qualified "app-backend" Types.API.Feedback as AppFeedback
 import qualified "app-backend" Types.API.Registration as Reg
-import qualified "app-backend" Types.API.RideBooking as AppRideBooking
 import qualified "app-backend" Types.API.Select as AppSelect
 import qualified "app-backend" Types.API.Serviceability as AppServ
 
-selectQuote :: RegToken -> Id AbeQuote.Quote -> ClientM APISuccess
-selectList :: RegToken -> Id AbeQuote.Quote -> ClientM AppSelect.SelectListRes
+selectQuote :: RegToken -> Id AbeEstimate.Estimate -> ClientM APISuccess
+selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
 selectQuote :<|> selectList = client (Proxy :: Proxy AbeRoutes.SelectAPI)
 
-cancelRide :: Id BRB.RideBooking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
+cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
 cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)
 
 mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
 
-appInitRide :: Text -> DInit.InitReq -> ClientM InitAPI.InitRes
-appInitRide = client (Proxy :: Proxy InitAPI.InitAPI)
-
-mkAppInitReq :: Id AbeQuote.Quote -> DInit.InitReq
-mkAppInitReq =
-  flip DInit.InitReq False
-
-mkAppInitReqSelected :: Id AbeSelQuote.SelectedQuote -> DInit.InitReq
-mkAppInitReqSelected = flip DInit.InitReq True . cast
-
-appConfirmRide :: Text -> DConfirm.ConfirmReq -> ClientM APISuccess
+appConfirmRide :: Text -> Id AbeQuote.Quote -> DConfirm.ConfirmReq -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.ConfirmAPI)
 
 confirmAddress :: DConfirm.ConfirmLocationReq
@@ -64,11 +53,10 @@ confirmAddress =
       state = Just "Karnataka"
     }
 
-mkAppConfirmReq :: Id BRB.RideBooking -> DConfirm.ConfirmReq
-mkAppConfirmReq bookingId =
+mkAppConfirmReq :: DConfirm.ConfirmReq
+mkAppConfirmReq =
   DConfirm.ConfirmReq
-    { bookingId = bookingId,
-      fromLocation = confirmAddress,
+    { fromLocation = confirmAddress,
       toLocation = Just confirmAddress
     }
 
@@ -84,9 +72,9 @@ callAppFeedback ratingValue rideId =
           }
    in appFeedback appRegistrationToken request
 
-appRideBookingStatus :: Id BRB.RideBooking -> Text -> ClientM AppRideBooking.RideBookingStatusRes
-appRideBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppRideBooking.RideBookingListRes
-appRideBookingStatus :<|> appRideBookingList = client (Proxy :: Proxy AbeRoutes.RideBookingAPI)
+appBookingStatus :: Id BRB.Booking -> Text -> ClientM AppBooking.BookingStatusRes
+appBookingList :: Text -> Maybe Integer -> Maybe Integer -> Maybe Bool -> ClientM AppBooking.BookingListRes
+appBookingStatus :<|> appBookingList = client (Proxy :: Proxy AbeRoutes.BookingAPI)
 
 originServiceability :: RegToken -> AppServ.ServiceabilityReq -> ClientM AppServ.ServiceabilityRes
 originServiceability regToken = origin

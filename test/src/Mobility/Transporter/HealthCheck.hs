@@ -3,7 +3,7 @@ module Mobility.Transporter.HealthCheck where
 import Common (getAppBaseUrl)
 import Data.Text.Encoding as DT
 import EulerHS.Prelude
-import Mobility.Fixtures.Transporter
+import qualified Mobility.Transporter.APICalls as API
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Servant hiding (Context)
@@ -20,7 +20,7 @@ spec :: Spec
 spec = do
   appManager <- runIO $ Client.newManager tlsManagerSettings
   let appBaseUrl = getAppBaseUrl
-      transporterBaseUrl = getTransporterBaseUrl
+      transporterBaseUrl = API.getTransporterBaseUrl
       appClientEnv = mkClientEnv appManager appBaseUrl
       tbeClientEnv = mkClientEnv appManager transporterBaseUrl
       gatewayClientEnv =

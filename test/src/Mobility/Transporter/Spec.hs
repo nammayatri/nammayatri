@@ -8,14 +8,12 @@ import qualified Mobility.Transporter.HealthCheck as HC
 import qualified Mobility.Transporter.LocationUpdates as LU
 import qualified Mobility.Transporter.NearestDrivers as ND
 import qualified Mobility.Transporter.Serviceability as SRV
-import qualified Mobility.Transporter.SuccessFlow as SF
 import Test.Tasty
 import Test.Tasty.Hspec hiding (after)
 
 mkTestTree :: IO TestTree
 mkTestTree = do
   hcSpec <- testSpec "HealthCheck" HC.spec
-  sfSpec <- testSpec "SuccessFlow" SF.spec
   drrSpec <- testSpec "DriversRejectRide" DRR.spec
   crSpec <- testSpec "AppCancelRide" CR.spec
   dcrSpec <- testSpec "DriverCancelRide" DCR.spec
@@ -33,14 +31,9 @@ mkTestTree = do
             "APIs"
             [ ndSpec,
               srvSpec,
-              sfSpec,
-              after AllSucceed "SuccessFlow" $
-                testGroup
-                  "Flows"
-                  [ drrSpec,
-                    crSpec,
-                    dcrSpec
-                  ]
+              drrSpec,
+              crSpec,
+              dcrSpec
             ],
         testGroup "LocationUpdates" [locationUpdatesSpec]
       ]

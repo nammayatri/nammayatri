@@ -1,43 +1,27 @@
 module Mobility.Transporter.DriversRejectRide where
 
-import qualified "beckn-transport" API.UI.Booking as RideBookingAPI
 import Common (getAppBaseUrl)
-import qualified "app-backend" Domain.Types.Booking as AppRB
-import qualified "beckn-transport" Domain.Types.Booking as TRB
 import EulerHS.Prelude
 import HSpec
-import Mobility.AppBackend.APICalls
 import Mobility.AppBackend.Fixtures
-import Mobility.Fixtures.Transporter
-import Mobility.Transporter.SuccessFlow
+import Mobility.Fixtures.Routes
+import qualified Mobility.Transporter.APICalls as API
+import Mobility.Transporter.Fixtures
+import qualified Mobility.Transporter.Utils as Utils
 import Utils
 
 spec :: Spec
 spec = do
-  clients <- runIO $ mkMobilityClients getAppBaseUrl getTransporterBaseUrl
+  clients <- runIO $ mkMobilityClients getAppBaseUrl API.getTransporterBaseUrl
   describe "Testing App and Transporter APIs" $
     it "Testing API flow for ride rejected by Driver" $ withBecknClients clients do
-      bBookingId <- doAnAppSearch
-
-      tBooking <- poll $ do
-        trb <- getBPPBooking bBookingId
-        trb.status `shouldBe` TRB.CONFIRMED
-        return $ Just trb
+      let (origin, _destination, searchReq_) = route1SearchRequest
+      Utils.setupDriver transporterDriver1 origin
+      scRes <- Utils.search'Confirm appRegistrationToken transporterDriver1 searchReq_
+      let bBookingId = scRes.bapBookingId
+          tBooking = scRes.bppBooking
 
       -- Driver Rejects a ride
-      void . callBPP $
--- <<<<<<< HEAD:test/src/Mobility/DriversRejectRide.hs
-        rideRespond tBooking.id driverToken1 $
-          TbeBookingAPI.SetDriverAcceptanceReq TbeBookingAPI.REJECT
--- =======
---        rideRespond tRideBooking.id driverToken1 $
---          RideBookingAPI.SetDriverAcceptanceReq RideBookingAPI.REJECT
--- >>>>>>> slight refactoring of tests structure, readable local testing data for ARDU flow, healthcheck test for ARDU:test/src/Mobility/Transporter/DriversRejectRide.hs
+      Utils.rejectRide appRegistrationToken transporterDriver1 tBooking bBookingId
 
-      void . poll $
-        callBAP (appBookingStatus bBookingId appRegistrationToken)
-          <&> (.status)
-          >>= (`shouldBe` AppRB.CANCELLED)
-          <&> Just
-
-      void . callBPP $ setDriverOnline driverToken1 False
+      liftIO $ Utils.resetDriver transporterDriver1

@@ -28,8 +28,9 @@ import qualified Data.Text as T (replace, toUpper, unpack)
 import qualified "driver-offer-bpp" Environment as DriverOfferBpp
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
+import qualified Mobility.ARDU.Fixtures as ARDU
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
-import Mobility.Fixtures.Common
+import qualified Mobility.Transporter.Fixtures as Transporter
 import qualified Mobility.Transporter.Spec as Transporter.Mobility
 import PublicTransport.Common
 import qualified PublicTransport.Spec as PublicTransport
@@ -74,9 +75,9 @@ main = do
 specs :: IO TestTree
 specs =
   specs'
-    [ --      Transporter.Mobility.mkTestTree,
-      --      PublicTransport.mkTestTree,
+    [ Transporter.Mobility.mkTestTree,
       Mobility.ARDU.mkTestTree
+        PublicTransport.mkTestTree
     ]
 
 specs' :: [IO TestTree] -> IO TestTree
@@ -106,7 +107,7 @@ specs' trees = do
               & #geofencingConfig . #destination .~ Regions ["Kerala", "Kochi"],
         TransporterBackend.runTransporterBackendApp $ \cfg ->
           cfg & hideLogging
-            & #updateLocationRefreshPeriod .~ timeBetweenLocationUpdates,
+            & #updateLocationRefreshPeriod .~ Transporter.timeBetweenLocationUpdates,
         MockSms.runMockSms hideLogging,
         MockFcm.runMockFcm hideLogging,
         MockRegistry.runRegistryService hideLogging,
@@ -123,7 +124,7 @@ specs' trees = do
             & #kafkaConsumerCfgs . #publicTransportQuotes . #timeoutMilliseconds .~ kafkaConsumerTimeoutMilliseconds,
         DriverOfferBpp.runDriverOfferBpp $ \cfg ->
           cfg & hideLogging
-            & #updateLocationRefreshPeriod .~ timeBetweenLocationUpdates
+            & #updateLocationRefreshPeriod .~ ARDU.timeBetweenLocationUpdates
       ]
 
     startServers servers = do
