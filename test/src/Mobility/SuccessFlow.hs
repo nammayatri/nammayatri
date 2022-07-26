@@ -59,20 +59,11 @@ doAnAppSearchByReq searchReq' = do
   -- check if calculated price is greater than 0
   quoteAPIEntity.estimatedFare `shouldSatisfy` (> 100)
 
-  -- Init ride from app backend
-  initResult <-
-    callBAP $
-      appInitRide appRegistrationToken $ mkAppInitReq bapQuoteId
-  let bapBookingId = initResult.bookingId
-
-  void . poll $ do
-    initRB <- getBAPBooking bapBookingId
-    initRB.bppBookingId `shouldSatisfy` isJust
-    return $ Just ()
-
   -- Confirm ride from app backend
-  void . callBAP $
-    appConfirmRide appRegistrationToken $ mkAppConfirmReq bapBookingId
+  confirmRes <-
+    callBAP $
+      appConfirmRide appRegistrationToken bapQuoteId $ mkAppConfirmReq False
+  let bapBookingId = confirmRes.bookingId
 
   void . pollDesc "confirm ride" $
     callBAP (appBookingStatus bapBookingId appRegistrationToken)

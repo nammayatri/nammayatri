@@ -5,17 +5,16 @@ import Beckn.Types.App
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Init as Init
-import Beckn.Types.Field
 import Beckn.Types.Logging
 import Beckn.Types.MapSearch (LatLong)
 import Beckn.Utils.Context (buildTaxiContext)
-import qualified Domain.Action.UI.Init as DInit
+import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.VehicleVariant as VehVar
-import ExternalAPI.Flow
+import qualified ExternalAPI.Flow as ExternalAPI
 
 buildInitReq ::
-  (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DInit.InitRes ->
+  (ExternalAPI.HasBapInfo r m, MonadFlow m) =>
+  DConfirm.ConfirmRes ->
   m (BecknReq Init.InitMessage)
 buildInitReq res = do
   bapURIs <- asks (.bapSelfURIs)
@@ -24,7 +23,7 @@ buildInitReq res = do
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 
-buildInitMessage :: (MonadThrow m, Log m) => DInit.InitRes -> m Init.InitMessage
+buildInitMessage :: (MonadThrow m, Log m) => DConfirm.ConfirmRes -> m Init.InitMessage
 buildInitMessage res = do
   itemCode <- buildItemCode
   pure
@@ -39,9 +38,9 @@ buildInitMessage res = do
   where
     buildItemCode = do
       (fpType, mbDistance, mbDuration) <- case res.quoteDetails of
-        DInit.InitOneWayDetails -> pure (Init.ONE_WAY_TRIP, Nothing, Nothing)
-        DInit.InitRentalDetails r -> pure (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration)
-        DInit.InitAutoDetails -> pure (Init.AUTO_TRIP, Nothing, Nothing)
+        DConfirm.ConfirmOneWayDetails -> pure (Init.ONE_WAY_TRIP, Nothing, Nothing)
+        DConfirm.ConfirmRentalDetails r -> pure (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration)
+        DConfirm.ConfirmAutoDetails -> pure (Init.AUTO_TRIP, Nothing, Nothing)
       let vehicleVariant = case res.vehicleVariant of
             VehVar.SEDAN -> Init.SEDAN
             VehVar.SUV -> Init.SUV

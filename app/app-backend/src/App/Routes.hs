@@ -90,7 +90,6 @@ type UIAPI =
     :<|> ProfileAPI
     :<|> SearchAPI
     :<|> SelectAPI
-    :<|> Init.InitAPI
     :<|> QuoteAPI
     :<|> Confirm.ConfirmAPI
     :<|> BookingAPI
@@ -129,7 +128,6 @@ uiAPI =
     :<|> profileFlow
     :<|> searchFlow
     :<|> selectFlow
-    :<|> Init.init
     :<|> quoteFlow
     :<|> confirmFlow
     :<|> bookingFlow
@@ -193,18 +191,14 @@ profileFlow =
 
 type BecknCabAPI =
   SignatureAuth "Authorization"
-    :> SignatureAuth "X-Gateway-Authorization"
-    :> API.OnSearchAPI
-    :<|> SignatureAuth "Authorization"
-    :> API.OnSelectAPI
-    :<|> SignatureAuth "Authorization"
-    :> API.OnInitAPI
-    :<|> SignatureAuth "Authorization"
-    :> API.OnConfirmAPI
-    :<|> SignatureAuth "Authorization"
-    :> API.OnUpdateAPI
-    :<|> SignatureAuth "Authorization"
-    :> API.OnTrackAPI
+    :> ( SignatureAuth "X-Gateway-Authorization"
+           :> API.OnSearchAPI
+           :<|> API.OnSelectAPI
+           :<|> API.OnInitAPI
+           :<|> API.OnConfirmAPI
+           :<|> API.OnUpdateAPI
+           :<|> API.OnTrackAPI
+       )
 
 type SearchAPI =
   "rideSearch"
@@ -213,13 +207,13 @@ type SearchAPI =
     :> Post '[JSON] Search.SearchRes
 
 becknCabApi :: FlowServer BecknCabAPI
-becknCabApi =
-  Search.searchCb
-    :<|> Select.onSelect
-    :<|> Init.onInit
-    :<|> Confirm.onConfirm
-    :<|> Update.onUpdate
-    :<|> Track.onTrack
+becknCabApi auth =
+  Search.searchCb auth
+    :<|> Select.onSelect auth
+    :<|> Init.onInit auth
+    :<|> Confirm.onConfirm auth
+    :<|> Update.onUpdate auth
+    :<|> Track.onTrack auth
 
 searchFlow :: FlowServer SearchAPI
 searchFlow =

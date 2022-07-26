@@ -23,7 +23,7 @@ import Utils.Common
 track ::
   ( EsqDBFlow m r,
     CoreMetrics m,
-    ExternalAPI.HasBapIds c r m,
+    ExternalAPI.HasBapInfo r m,
     HasFlowEnv
       m
       r

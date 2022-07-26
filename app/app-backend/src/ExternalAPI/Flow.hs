@@ -30,7 +30,7 @@ search ::
   ( HasField "gatewayUrl" r BaseUrl,
     MonadFlow m,
     CoreMetrics m,
-    HasBapIds c r m
+    HasBapInfo r m
   ) =>
   API.SearchReq ->
   m API.SearchRes
@@ -42,7 +42,7 @@ searchMetro ::
   ( HasField "gatewayUrl" r BaseUrl,
     MonadFlow m,
     CoreMetrics m,
-    HasBapIds c r m
+    HasBapInfo r m
   ) =>
   BecknReq MigAPI.SearchIntent ->
   m ()
@@ -53,7 +53,7 @@ searchMetro req = do
 select ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapIds c r m
+    HasBapInfo r m
   ) =>
   BaseUrl ->
   SelectReq ->
@@ -63,7 +63,7 @@ select = callBecknAPIWithSignature "select" API.selectAPI
 init ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapIds c r m
+    HasBapInfo r m
   ) =>
   BaseUrl ->
   API.InitReq ->
@@ -73,7 +73,7 @@ init = callBecknAPIWithSignature "init" API.initAPI
 confirm ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapIds c r m
+    HasBapInfo r m
   ) =>
   BaseUrl ->
   ConfirmReq ->
@@ -83,7 +83,7 @@ confirm = callBecknAPIWithSignature "confirm" API.confirmAPI
 cancel ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapIds c r m
+    HasBapInfo r m
   ) =>
   BaseUrl ->
   CancelReq ->
@@ -93,7 +93,7 @@ cancel = callBecknAPIWithSignature "cancel" API.cancelAPI
 track ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapIds c r m
+    HasBapInfo r m
   ) =>
   BaseUrl ->
   TrackReq ->
@@ -103,15 +103,16 @@ track = callBecknAPIWithSignature "track" API.trackAPI
 feedback ::
   ( MonadFlow m,
     CoreMetrics m,
-    HasBapIds c r m
+    HasBapInfo r m
   ) =>
   BaseUrl ->
   RatingReq ->
   m RatingRes
 feedback = callBecknAPIWithSignature "feedback" API.ratingAPI
 
-type HasBapIds c r m =
+type HasBapInfo r m =
   ( HasField "bapSelfIds" r (BAPs Text),
+    HasField "bapSelfURIs" r (BAPs BaseUrl),
     MonadReader r m
   )
 
@@ -120,7 +121,7 @@ callBecknAPIWithSignature,
     ( MonadFlow m,
       CoreMetrics m,
       IsBecknAPI api req res,
-      HasBapIds c r m
+      HasBapInfo r m
     ) =>
     Text ->
     Proxy api ->

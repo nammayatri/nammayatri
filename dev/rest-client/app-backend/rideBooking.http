@@ -56,14 +56,14 @@ token: {{token}}
 # @name confirm
 @quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
 
-POST {{app-host}}/rideSearch/{{searchId}}/quotes/{{quoteId}}/confirm HTTP/1.1
+POST {{app-host}}/rideSearch/quotes/{{quoteId}}/confirm HTTP/1.1
 content-type: application/json
 token: {{token}}
 
 ###
 @quoteId = {{quotes.response.body.quotes[0].publicTransport.id}}
 
-POST {{app-host}}/rideSearch/{{searchId}}/quotes/{{quoteId}}/confirm HTTP/1.1
+POST {{app-host}}/rideSearch/quotes/{{quoteId}}/confirm HTTP/1.1
 content-type: application/json
 token: {{token}}
 

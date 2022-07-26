@@ -121,29 +121,17 @@ content-type: application/json
 token: {{token}}
 
 ###
-
-# @name initQuote
 @selectedQuoteId = {{selectedQuotes.response.body.selectedQuotes[0].id}}
 
-POST {{app-host}}/rideInit
+###
+# @name confirmQuote
+
+POST {{app-host}}/rideSearch/quotes/{{selectedQuoteId}}/confirm
 content-type: application/json
 token: {{token}}
 
 {
   "selected": true,
-  "quoteId": "{{selectedQuoteId}}"
-}
-
-###
-# @name confirmQuote
-@bookingId = {{initQuote.response.body.bookingId}}
-
-POST {{app-host}}/rideSearch/confirm
-content-type: application/json
-token: {{token}}
-
-{
-  "bookingId": "{{bookingId}}",
   "fromLocation": {
     "door": "2"
   },
@@ -153,6 +141,7 @@ token: {{token}}
 }
 
 ###
+@bookingId = {{confirmQuote.response.body.bookingId}}
 
 # @name list2
 GET {{app-host}}/rideBooking/list

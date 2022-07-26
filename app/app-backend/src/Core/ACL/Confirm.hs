@@ -6,7 +6,7 @@ import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
-import qualified Domain.Action.UI.Confirm as DConfirm
+import qualified Domain.Action.Beckn.OnInit as DOnInit
 import qualified Domain.Types.BookingLocation as DBL
 import EulerHS.Prelude hiding (id)
 import ExternalAPI.Flow
@@ -14,7 +14,7 @@ import Utils.Common
 
 buildConfirmReq ::
   (HasFlowEnv m r ["bapSelfIds" ::: BAPs Text, "bapSelfURIs" ::: BAPs BaseUrl]) =>
-  DConfirm.ConfirmRes ->
+  DOnInit.OnInitRes ->
   m (BecknReq Confirm.ConfirmMessage)
 buildConfirmReq res = do
   bapURIs <- asks (.bapSelfURIs)
@@ -23,7 +23,7 @@ buildConfirmReq res = do
   context <- buildTaxiContext Context.CONFIRM messageId Nothing bapIDs.cabs bapURIs.cabs (Just res.bppId) (Just res.bppUrl)
   pure $ BecknReq context $ mkConfirmMessage res
 
-mkConfirmMessage :: DConfirm.ConfirmRes -> Confirm.ConfirmMessage
+mkConfirmMessage :: DOnInit.OnInitRes -> Confirm.ConfirmMessage
 mkConfirmMessage res =
   Confirm.ConfirmMessage
     { order =

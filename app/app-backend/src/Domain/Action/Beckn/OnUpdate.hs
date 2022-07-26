@@ -9,7 +9,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (state)
-import ExternalAPI.Flow (BAPs, HasBapIds)
+import ExternalAPI.Flow (BAPs, HasBapInfo)
 import qualified Product.Track as Track
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -63,7 +63,7 @@ onUpdate ::
   ( EsqDBFlow m r,
     FCMFlow m r,
     CoreMetrics m,
-    HasBapIds c r m,
+    HasBapInfo r m,
     HasFlowEnv
       m
       r
