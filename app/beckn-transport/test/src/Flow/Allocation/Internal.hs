@@ -3,9 +3,9 @@
 module Flow.Allocation.Internal where
 
 import Beckn.Types.Id
-import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Time as Time
+import Domain.Types.DriverPool
 import Domain.Types.Organization
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideRequest as SRR
@@ -81,13 +81,28 @@ addResponse repository@Repository {..} rideBookingId driverId status = do
   addRequest (DriverResponse driverResponse) repository rideBookingId
 
 addDriverPool :: Repository -> Map (Id SRB.RideBooking) [Id Driver] -> IO ()
-addDriverPool Repository {..} dP = do
-  writeIORef driverPoolVar dP
+addDriverPool Repository {..} driversMap = do
+  let driverPool = mkDefaultDriverPool <$> driversMap
+  writeIORef driverPoolVar driverPool
+
+addSortedDriverPool :: Repository -> Map (Id SRB.RideBooking) SortedDriverPool -> IO ()
+addSortedDriverPool Repository {..} driverPool = do
+  writeIORef driverPoolVar driverPool
+
+mkDefaultDriverPoolItem :: Id Driver -> DriverPoolItem
+mkDefaultDriverPoolItem driverId =
+  DriverPoolItem
+    { driverId,
+      distanceToPickup = 100
+    }
+
+mkDefaultDriverPool :: [Id Driver] -> SortedDriverPool
+mkDefaultDriverPool driverIds = mkSortedDriverPool $ mkDefaultDriverPoolItem <$> driverIds
 
 addDriverInPool :: Repository -> Id SRB.RideBooking -> Id Driver -> IO ()
-addDriverInPool Repository {..} rideId driverId = do
+addDriverInPool Repository {..} bookingId driverId = do
   driversPool <- readIORef driverPoolVar
-  let newDriversPool = Map.adjust (driverId :) rideId driversPool
+  let newDriversPool = Map.adjust (addItemToPool $ mkDefaultDriverPoolItem driverId) bookingId driversPool
   writeIORef driverPoolVar newDriversPool
 
 checkRideStatus :: Repository -> Id SRB.RideBooking -> RideStatus -> IO ()
@@ -101,7 +116,9 @@ checkNotificationStatus :: Repository -> Id SRB.RideBooking -> Id Driver -> Noti
 checkNotificationStatus Repository {..} rideBookingId driverId expectedStatus = do
   notifications <- readIORef notificationStatusVar
   case Map.lookup (rideBookingId, driverId) notifications of
-    Nothing -> assertFailure " not found"
+    Nothing ->
+      assertFailure $
+        "Notification for rideBookingId=" <> show (rideBookingId.getId) <> " and driverId=" <> show (driverId.getId) <> " is not found"
     Just (status, _) -> status @?= expectedStatus
 
 checkFreeNotificationStatus :: Repository -> Id SRB.RideBooking -> Id Driver -> IO ()
@@ -149,9 +166,9 @@ handle repository@Repository {..} =
         rideRequests <- readIORef rideRequestsVar
         let requests = Map.elems rideRequests
         pure $ take (fromIntegral numRides) requests,
-      getDriverPool = \rideId -> do
+      getDriverPool = \bookingId -> do
         poolMap <- readIORef driverPoolVar
-        let pool = fromMaybe [] $ Map.lookup rideId poolMap
+        let pool = fromMaybe (mkSortedDriverPool []) $ Map.lookup bookingId poolMap
         pure pool,
       sendNewRideNotifications = \_ _ -> pure (),
       getCurrentNotifications = \rideId -> do
@@ -199,9 +216,10 @@ handle repository@Repository {..} =
       cleanupNotifications = \rideId ->
         modifyIORef notificationStatusVar $ Map.filterWithKey (\(r, _) _ -> r /= rideId),
       getTopDriversByIdleTime = \count driverIds -> pure $ take count driverIds,
-      checkAvailability = \draversIDs -> do
+      checkAvailability = \driversPool -> do
         onRide <- readIORef onRideVar
-        pure (filter (`notElem` onRide) $ NonEmpty.toList draversIDs),
+        -- trying to break sorting elements by distance
+        pure (mkSortedDriverPool . sortBy (compare `on` (.driverId)) . filter (\item -> item.driverId `notElem` onRide) . getSortedDriverPool $ driversPool),
       sendRideNotAssignedNotification = \_ _ -> pure (),
       removeRequest = modifyIORef rideRequestsVar . Map.delete,
       addAllocationRequest = \_ -> addRequest Allocation repository,
@@ -223,7 +241,7 @@ handle repository@Repository {..} =
 
 data Repository = Repository
   { currentIdVar :: IORef Int,
-    driverPoolVar :: IORef (Map (Id SRB.RideBooking) [Id Driver]),
+    driverPoolVar :: IORef (Map (Id SRB.RideBooking) SortedDriverPool),
     rideBookingsVar :: IORef (Map (Id SRB.RideBooking) RideInfo),
     rideRequestsVar :: IORef (Map (Id SRR.RideRequest) RideRequest),
     notificationStatusVar :: IORef NotificationStatusMap,

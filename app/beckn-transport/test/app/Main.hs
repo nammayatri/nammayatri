@@ -4,6 +4,7 @@ import DistanceCalculation
 import EulerHS.Prelude
 import Flow.Allocation.AllocationTimeFinished
 import Flow.Allocation.Cancellation
+import Flow.Allocation.NearestDrivers
 import Flow.Allocation.NotificationStatus
 import Flow.Allocation.OnePoolTwoRide
 import Flow.Allocation.Reassignment
@@ -33,7 +34,8 @@ specs appEnv = do
             onePoolTwoRide,
             twoAllocations,
             cancellation,
-            reassignment
+            reassignment,
+            nearestDrivers
           ]
   return $
     testGroup

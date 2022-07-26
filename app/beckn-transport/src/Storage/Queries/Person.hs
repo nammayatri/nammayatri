@@ -174,7 +174,7 @@ updateAverageRating personId newAverageRating = do
 
 data NearestDriversResult = NearestDriversResult
   { driverId :: Id Driver,
-    distanceToDriver :: HighPrecMeters,
+    distanceToPickup :: HighPrecMeters,
     variant :: Vehicle.Variant,
     lat :: Double,
     lon :: Double

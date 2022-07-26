@@ -8,6 +8,7 @@ import Beckn.Types.Id
 import qualified Data.Text as T
 import Domain.Types.AllocationEvent (AllocationEventType)
 import qualified Domain.Types.DriverInformation as SDriverInfo
+import Domain.Types.DriverPool
 import qualified Domain.Types.NotificationStatus as SNS
 import Domain.Types.Organization
 import qualified Domain.Types.Ride as SRide
@@ -51,7 +52,7 @@ getConfiguredAllocationTime = asks (.rideAllocationExpiry)
 getConfiguredReallocationsLimit :: Flow Int
 getConfiguredReallocationsLimit = asks (.reallocationsLimit)
 
-getDriverPool :: Id RideBooking -> Flow [Id Driver]
+getDriverPool :: Id RideBooking -> Flow SortedDriverPool
 getDriverPool = DrPool.getDriverPool
 
 getDriverBatchSize :: Flow Int
@@ -208,10 +209,14 @@ getDriversWithNotification = QNS.fetchActiveNotifications <&> fmap (.driverId)
 getTopDriversByIdleTime :: EsqDBFlow m r => Int -> [Id Driver] -> m [Id Driver]
 getTopDriversByIdleTime = QDS.getTopDriversByIdleTime
 
-checkAvailability :: EsqDBFlow m r => NonEmpty (Id Driver) -> m [Id Driver]
-checkAvailability driverIds = do
-  driversInfo <- QDriverInfo.fetchAllAvailableByIds $ toList driverIds
-  pure $ map (cast . SDriverInfo.driverId) driversInfo
+checkAvailability :: EsqDBFlow m r => SortedDriverPool -> m SortedDriverPool
+checkAvailability driverPool = do
+  let driverIds = getDriverIds driverPool
+  driversInfo <- QDriverInfo.fetchAllAvailableByIds driverIds
+  let availableDriverIds = map (cast . SDriverInfo.driverId) driversInfo
+  -- availableDriverIds is part of driverPool, but isn't sorted by distance
+  -- So we can use order that we have in sorted pool driverPool
+  pure $ filterDriverPool (`elem` availableDriverIds) driverPool
 
 cancelRideBooking ::
   ( EsqDBFlow m r,

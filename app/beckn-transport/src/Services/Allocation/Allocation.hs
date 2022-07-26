@@ -7,6 +7,7 @@ import Data.Generics.Labels ()
 import qualified Data.Text as T
 import Domain.Types.AllocationEvent (AllocationEventType (..))
 import qualified Domain.Types.CancellationReason as SCR
+import Domain.Types.DriverPool
 import Domain.Types.Organization
 import qualified Domain.Types.RideBooking as SRB
 import qualified Domain.Types.RideBookingCancellationReason as SBCR
@@ -103,7 +104,7 @@ data ServiceHandle m = ServiceHandle
     getConfiguredReallocationsLimit :: m Int,
     getDriverBatchSize :: m Int,
     getRequests :: ShortId Organization -> Integer -> m [RideRequest],
-    getDriverPool :: Id SRB.RideBooking -> m [Id Driver],
+    getDriverPool :: Id SRB.RideBooking -> m SortedDriverPool,
     getCurrentNotifications :: Id SRB.RideBooking -> m [CurrentNotification],
     cleanupOldNotifications :: m Int,
     sendNewRideNotifications :: Id SRB.RideBooking -> NonEmpty (Id Driver) -> m (),
@@ -114,7 +115,7 @@ data ServiceHandle m = ServiceHandle
     getAttemptedDrivers :: Id SRB.RideBooking -> m [Id Driver],
     getDriversWithNotification :: m [Id Driver],
     getTopDriversByIdleTime :: Int -> [Id Driver] -> m [Id Driver],
-    checkAvailability :: NonEmpty (Id Driver) -> m [Id Driver],
+    checkAvailability :: SortedDriverPool -> m SortedDriverPool,
     assignDriver :: Id SRB.RideBooking -> Id Driver -> m (),
     cancelRideBooking :: Id SRB.RideBooking -> SBCR.RideBookingCancellationReason -> m (),
     cleanupNotifications :: Id SRB.RideBooking -> m (),
@@ -258,25 +259,30 @@ proceedToNewDrivers ::
 proceedToNewDrivers handle@ServiceHandle {..} rideBookingId shortOrgId = do
   logInfo "Proceed to new drivers"
   driverPool <- getDriverPool rideBookingId
-  logInfo $ "DriverPool " <> T.intercalate ", " (getId <$> driverPool)
+  logInfo $ "DriverPool " <> T.intercalate ", " (getDriverPoolDescs driverPool)
   attemptedDrivers <- getAttemptedDrivers rideBookingId
-  let newDrivers = filter (`notElem` attemptedDrivers) driverPool
-  case newDrivers of
-    driverId : driverIds -> do
-      availableDrivers <- checkAvailability $ driverId :| driverIds
+  let newDriversPool = filterDriverPool (`notElem` attemptedDrivers) driverPool
+  if not $ null (getDriverIds newDriversPool)
+    then do
+      availableDriversPool <- checkAvailability newDriversPool
       driversWithNotification <- getDriversWithNotification
-      let filteredPool = filter (`notElem` driversWithNotification) availableDrivers
-      logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getId <$> filteredPool)
+      let filteredPool = filterDriverPool (`notElem` driversWithNotification) availableDriversPool
+      logInfo $ "Filtered_DriverPool " <> T.intercalate ", " (getDriverPoolDescs filteredPool)
       processFilteredPool handle rideBookingId filteredPool shortOrgId
-    [] -> do
+    else do
       cancel handle rideBookingId SBCR.ByAllocator $ Just NoDriversInRange
       logEvent EmptyDriverPool rideBookingId
+  where
+    getDriverPoolDescs :: SortedDriverPool -> [Text]
+    getDriverPoolDescs pool =
+      (\driverPoolResult -> driverPoolResult.driverId.getId <> "(" <> show driverPoolResult.distanceToPickup <> "m)")
+        <$> getSortedDriverPool pool
 
 processFilteredPool ::
   MonadHandler m =>
   ServiceHandle m ->
   Id SRB.RideBooking ->
-  [Id Driver] ->
+  SortedDriverPool ->
   ShortId Organization ->
   m ()
 processFilteredPool handle@ServiceHandle {..} rideBookingId filteredPool shortOrgId = do
@@ -284,8 +290,8 @@ processFilteredPool handle@ServiceHandle {..} rideBookingId filteredPool shortOr
   batchSize <- getDriverBatchSize
   topDrivers <-
     case sortMode of
-      ETA -> pure $ take batchSize filteredPool
-      IdleTime -> getTopDriversByIdleTime batchSize filteredPool
+      ETA -> pure $ take batchSize (getDriverIds filteredPool)
+      IdleTime -> getTopDriversByIdleTime batchSize (getDriverIds filteredPool)
   case topDrivers of
     driverId : driverIds -> do
       let drivers = driverId :| driverIds

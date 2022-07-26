@@ -79,7 +79,7 @@ onSearchCallback searchRequest transporterId now fromLocation toLocation = do
         fareParams
         transporterId
         distance
-        (metersToHighPrecMeters poolResult.distanceToDriver)
+        (metersToHighPrecMeters poolResult.distanceToPickup)
         poolResult.variant now
   Esq.runTransaction $
     for_ listOfQuotes QQuote.create

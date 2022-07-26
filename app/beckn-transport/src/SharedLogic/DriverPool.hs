@@ -14,6 +14,7 @@ import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.BookingLocation as DBLoc
+import Domain.Types.DriverPool
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.RideBooking as SRB
@@ -33,7 +34,7 @@ import Utils.Common
 
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
-    distanceToDriver :: Meters,
+    distanceToPickup :: Meters,
     durationToPickup :: Seconds,
     variant :: Vehicle.Variant,
     lat :: Double,
@@ -41,8 +42,17 @@ data DriverPoolResult = DriverPoolResult
   }
   deriving (Generic, MapSearch.HasCoordinates)
 
+mkDriverPoolItem :: DriverPoolResult -> DriverPoolItem
+mkDriverPoolItem DriverPoolResult {..} = DriverPoolItem {..}
+
 driverPoolKey :: Id SRB.RideBooking -> Text
 driverPoolKey = ("beckn:driverpool:" <>) . getId
+
+getKeyRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> m (Maybe [DriverPoolItem])
+getKeyRedis = Redis.getKeyRedis
+
+setExRedis :: (MonadFlow m, MonadThrow m, Log m) => Text -> [DriverPoolItem] -> Int -> m ()
+setExRedis = Redis.setExRedis
 
 getDriverPool ::
   ( CoreMetrics m,
@@ -51,10 +61,10 @@ getDriverPool ::
     HasGoogleMaps m r
   ) =>
   Id SRB.RideBooking ->
-  m [Id Driver]
+  m SortedDriverPool
 getDriverPool rideBookingId =
-  Redis.getKeyRedis (driverPoolKey rideBookingId)
-    >>= maybe calcDriverPool (pure . map Id)
+  getKeyRedis (driverPoolKey rideBookingId)
+    >>= maybe calcDriverPool (pure . mkSortedDriverPool)
   where
     calcDriverPool = do
       rideBooking <- QRideBooking.findById rideBookingId >>= fromMaybeM (RideBookingDoesNotExist rideBookingId.getId)
@@ -63,7 +73,7 @@ getDriverPool rideBookingId =
       pickupLoc <- QBLoc.findById rideBooking.fromLocationId >>= fromMaybeM LocationNotFound
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           fareProductType = SRB.getFareProductType rideBooking.rideBookingDetails
-      map (.driverId) <$> calculateDriverPool pickupLatLong orgId (Just vehicleVariant) fareProductType
+      mkSortedDriverPool . map mkDriverPoolItem <$> calculateDriverPool pickupLatLong orgId (Just vehicleVariant) fareProductType
 
 recalculateDriverPool ::
   ( EsqDBFlow m r,
@@ -83,8 +93,8 @@ recalculateDriverPool pickupPoint rideBookingId transporterId vehicleVariant far
   driverPoolResults <- calculateDriverPool pickupLatLong transporterId (Just vehicleVariant) fareProductType
   cancelledDrivers <- QRide.findAllCancelledByRBId rideBookingId <&> map (cast . (.driverId))
   let filteredDriverPoolResults = [x | x <- driverPoolResults, x.driverId `notElem` cancelledDrivers]
-      filteredDriverPool = map (.driverId) filteredDriverPoolResults
-  Redis.setExRedis (driverPoolKey rideBookingId) (getId <$> filteredDriverPool) (60 * 10)
+      filteredDriverPool = map mkDriverPoolItem filteredDriverPoolResults
+  setExRedis (driverPoolKey rideBookingId) filteredDriverPool (60 * 10)
   return filteredDriverPoolResults
 
 calculateDriverPool ::
@@ -140,7 +150,7 @@ buildDriverPoolResults pickup ndResults = do
     mkDriverPoolResult distDur = do
       let QP.NearestDriversResult {..} = distDur.destination
       DriverPoolResult
-        { distanceToDriver = distDur.distance,
+        { distanceToPickup = distDur.distance,
           durationToPickup = distDur.duration,
           ..
         }
@@ -156,4 +166,4 @@ filterOutDriversWithDistanceAboveThreshold ::
 filterOutDriversWithDistanceAboveThreshold threshold driverPoolResults = do
   pure $ NE.filter filterFunc driverPoolResults
   where
-    filterFunc drPoolRes = drPoolRes.distanceToDriver <= fromIntegral threshold
+    filterFunc drPoolRes = drPoolRes.distanceToPickup <= fromIntegral threshold

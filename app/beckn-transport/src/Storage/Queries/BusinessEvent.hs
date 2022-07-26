@@ -47,7 +47,7 @@ logDriverInPoolEvent whenPoolWasComputed rideBookingId driverInPool = do
     rideBookingId
     (Just whenPoolWasComputed)
     (Just driverInPool.variant)
-    (Just driverInPool.distanceToDriver)
+    (Just driverInPool.distanceToPickup)
     (Just driverInPool.durationToPickup)
     Nothing
 
