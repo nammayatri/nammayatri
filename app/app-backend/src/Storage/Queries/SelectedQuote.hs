@@ -9,19 +9,20 @@ import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.SelectedQuote
 import Types.Common
 
+-- order of creating entites make sense!
 create :: SelectedQuote -> SqlDB ()
 create quote =
   Esq.withFullEntity quote $ \(quoteT, mbTripTermsT) -> do
-    Esq.create' quoteT
     traverse_ Esq.create' mbTripTermsT
+    Esq.create' quoteT
 
 createMany :: [SelectedQuote] -> SqlDB ()
 createMany quotes =
   Esq.withFullEntities quotes $ \list -> do
     let quotesT = map fst list
         mbTripTermsTs = mapMaybe snd list
-    Esq.createMany' quotesT
     Esq.createMany' mbTripTermsTs
+    Esq.createMany' quotesT
 
 findByBppIdAndQuoteId :: Transactionable m => Text -> Id BPPQuote -> m (Maybe SelectedQuote)
 findByBppIdAndQuoteId bppId quoteId = buildDType $

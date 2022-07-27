@@ -31,11 +31,11 @@ createMany :: [Quote] -> SqlDB ()
 createMany quotes =
   Esq.withFullEntities quotes $ \list -> do
     let quoteTs = map fst3 list
-        mbTripTermsTs = mapMaybe snd3 list
+        tripTermsTs = mapMaybe snd3 list
         quoteDetailsTs = map thd3 list
-    Esq.createMany' quoteTs
-    Esq.createMany' mbTripTermsTs
+    Esq.createMany' tripTermsTs
     traverse_ createDetails quoteDetailsTs
+    Esq.createMany' quoteTs
 
 findById :: Transactionable m => Id Quote -> m (Maybe Quote)
 findById quoteId = Esq.buildDType $ do
