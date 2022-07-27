@@ -39,7 +39,9 @@ data DriverRideRes = DriverRideRes
     computedTotalFare :: Maybe Amount,
     actualRideDistance :: HighPrecMeters,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    tripStartTime :: Maybe UTCTime,
+    tripEndTime :: Maybe UTCTime
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -89,5 +91,7 @@ buildDriverRideRes (ride, rideBooking) = do
         computedTotalFare = ride.totalFare,
         actualRideDistance = ride.traveledDistance,
         createdAt = ride.createdAt,
-        updatedAt = ride.updatedAt
+        updatedAt = ride.updatedAt,
+        tripStartTime = ride.tripStartTime,
+        tripEndTime = ride.tripEndTime
       }
