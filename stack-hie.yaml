@@ -34,7 +34,9 @@ ghc-options:
 
 packages:
   - app/beckn-cli
-  - app/beckn-transport
+  - app/beckn-transport/BPP
+  - app/beckn-transport/Allocator
+  - app/beckn-transport/DriverTrackingHealthCheck
   - app/driver-offer-bpp
   - app/app-backend
   - app/search-result-aggregator

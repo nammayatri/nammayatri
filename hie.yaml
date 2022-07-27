@@ -45,13 +45,22 @@ cradle:
     - path: "app/driver-offer-bpp/server/Main.hs"
       component: "driver-offer-bpp:exe:driver-offer-bpp-exe"
 
-    - path: "app/beckn-transport/src"
+    - path: "app/beckn-transport/Allocator/src"
+      component: "beckn-transport-allocator:lib"
+
+    - path: "app/beckn-transport/Allocator/server/Main.hs"
+      component: "beckn-transport-allocator:exe:beckn-transport-btm-exe"
+
+    - path: "app/beckn-transport/DriverTrackingHealthCheck/src"
+      component: "beckn-transport-driver-tracking-health-check:lib"
+
+    - path: "app/beckn-transport/DriverTrackingHealthCheck/server/Main.hs"
+      component: "beckn-transport-driver-tracking-health-check:exe:driver-tracking-healthcheck-exe"
+
+    - path: "app/beckn-transport/BPP/src"
       component: "beckn-transport:lib"
 
-    - path: "app/beckn-transport/server/BackgroundTaskManagerMain.hs"
-      component: "beckn-transport:exe:beckn-transport-btm-exe"
-
-    - path: "app/beckn-transport/server/Main.hs"
+    - path: "app/beckn-transport/BPP/server/Main.hs"
       component: "beckn-transport:exe:beckn-transport-exe"
 
     - path: "app/beckn-transport/server/Main.hs"

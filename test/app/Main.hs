@@ -3,10 +3,11 @@
 
 module Main where
 
-import qualified "beckn-transport" Allocator.App as Allocator
 import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
+import qualified "beckn-transport-allocator" App as Allocator
+import qualified "beckn-transport-driver-tracking-health-check" App as DriverHC
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-public-transport-bpp" App as MockPublicTransportBpp
 import qualified "mock-registry" App as MockRegistry
@@ -23,7 +24,6 @@ import Beckn.Types.Logging (LoggerConfig)
 import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Data.Text as T (replace, toUpper, unpack)
-import qualified "beckn-transport" DriverTrackingHealthCheck.App as DriverHC
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
 import Mobility.Fixtures
