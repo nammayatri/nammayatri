@@ -2,7 +2,6 @@ module Product.FarePolicy where
 
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess
-import Beckn.Types.Amount
 import Beckn.Types.Id (Id (..))
 import Beckn.Utils.Validation (runRequestValidation)
 import Domain.Types.FarePolicy
@@ -20,10 +19,10 @@ import qualified Utils.Notifications as Notify
 listFarePolicies :: SP.Person -> FlowHandler ListFarePolicyRes
 listFarePolicies person = withFlowHandlerAPI $ do
   orgId <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organizationId")
-  oneWayFarePolicies <- SFarePolicy.findFarePolicyByOrg orgId
+  oneWayFarePolicies <- SFarePolicy.findFarePoliciesByOrg orgId
   pure $
     ListFarePolicyRes
-      { oneWayFarePolicies = map makeFarePolicyAPIEntity $ maybeToList oneWayFarePolicies
+      { oneWayFarePolicies = map makeFarePolicyAPIEntity oneWayFarePolicies
       }
 
 updateFarePolicy :: SP.Person -> Id DFarePolicy.FarePolicy -> UpdateFarePolicyReq -> FlowHandler UpdateFarePolicyRes
@@ -32,12 +31,17 @@ updateFarePolicy admin fpId req = withFlowHandlerAPI $ do
   farePolicy <- SFarePolicy.findById fpId >>= fromMaybeM NoFarePolicy
   unless (admin.organizationId == Just farePolicy.organizationId) $ throwError AccessDenied
   let updatedFarePolicy =
-        farePolicy{fareForPickup = Amount $ toRational req.fareForPickup,
-                   farePerKm = Amount $ toRational req.farePerKm,
-                   nightShiftStart = req.nightShiftStart,
-                   nightShiftEnd = req.nightShiftEnd,
-                   nightShiftRate = Amount . toRational <$> req.nightShiftRate
-                  }
+        farePolicy
+          { baseDistancePerKmFare = realToFrac req.baseDistancePerKmFare,
+            baseDistance = req.baseDistance,
+            extraKmFare = realToFrac req.extraKmFare,
+            deadKmFare = realToFrac req.deadKmFare,
+            driverExtraFeeList = map realToFrac req.driverExtraFeeList,
+            nightShiftStart = req.nightShiftStart,
+            nightShiftEnd = req.nightShiftEnd,
+            nightShiftRate = realToFrac <$> req.nightShiftRate
+          } ::
+          DFarePolicy.FarePolicy
   let Just orgId = admin.organizationId
   coordinators <- QP.findAdminsByOrgId orgId
   Esq.runTransaction $

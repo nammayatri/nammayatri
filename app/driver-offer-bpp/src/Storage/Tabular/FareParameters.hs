@@ -19,8 +19,8 @@ mkPersist
     FareParametersT sql=fare_parameters
 
       id Text
-      fareForPickup Amount
-      distanceFare Amount
+      baseFare Amount
+      extraKmFare Amount Maybe
       driverSelectedFare Amount Maybe
       nightShiftRate Amount Maybe
       nightCoefIncluded Bool

@@ -134,3 +134,21 @@ instance IsHTTPError DriverError where
     DriverWithoutVehicle _ -> E500
 
 instance IsAPIError DriverError
+
+--
+newtype OfferError
+  = NotAllowedExtraFee Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''OfferError
+
+instance IsBaseError OfferError where
+  toMessage (NotAllowedExtraFee x) = Just $ "Not allowed extra fee: " <> x
+
+instance IsHTTPError OfferError where
+  toErrorCode = \case
+    NotAllowedExtraFee {} -> "EXTRA_FEE_NOT_ALLOWED"
+  toHttpCode = \case
+    NotAllowedExtraFee {} -> E400
+
+instance IsAPIError OfferError

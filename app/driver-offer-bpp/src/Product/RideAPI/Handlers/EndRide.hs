@@ -11,6 +11,7 @@ import Domain.Types.FareParams as Fare
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as Ride
+import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (pi)
 import Product.FareCalculator.Calculator as Fare
 import Types.API.Ride (EndRideReq)
@@ -26,7 +27,7 @@ data ServiceHandle m = ServiceHandle
     notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> m (),
     calculateFare ::
       Id Organization ->
-      --      Vehicle.Variant ->
+      Variant ->
       HighPrecMeters ->
       UTCTime ->
       Maybe Amount ->
@@ -80,7 +81,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       -- maybe compare only distance fare?
       let estimatedBaseFare = fareSum booking.fareParams
 
-      fareParams <- calculateFare transporterId actualDistance booking.startTime booking.fareParams.driverSelectedFare
+      fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.startTime booking.fareParams.driverSelectedFare
       let updatedBaseFare = Fare.fareSum fareParams
       let distanceDiff = actualDistance - oldDistance
       let fareDiff = updatedBaseFare - estimatedBaseFare

@@ -10,8 +10,10 @@ module Storage.Tabular.FarePolicy where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
+import Beckn.Types.Common (HighPrecMeters (HighPrecMeters))
 import Beckn.Types.Id
 import qualified Domain.Types.FarePolicy as Domain
+import qualified Domain.Types.Vehicle.Variant as Variant
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Vehicle ()
 
@@ -21,11 +23,17 @@ mkPersist
     FarePolicyT sql=fare_policy
       id Text
       organizationId OrganizationTId
-      fareForPickup Double
-      farePerKm Double
+      vehicleVariant Variant.Variant
+
+      baseDistancePerKmFare Amount
+      baseDistance Double
+      extraKmFare Amount
+      deadKmFare Amount
+      driverExtraFeeList (PostgresList Double)
+
       nightShiftStart TimeOfDay Maybe
       nightShiftEnd TimeOfDay Maybe
-      nightShiftRate Double Maybe
+      nightShiftRate Amount Maybe
       createdAt UTCTime
       updatedAt UTCTime
       UniqueFarePolicyId id
@@ -44,17 +52,17 @@ instance TType FarePolicyT Domain.FarePolicy where
       Domain.FarePolicy
         { id = Id id,
           organizationId = fromKey organizationId,
-          fareForPickup = Amount $ toRational fareForPickup,
-          farePerKm = Amount $ toRational farePerKm,
+          baseDistance = HighPrecMeters baseDistance,
           nightShiftRate = Amount . toRational <$> nightShiftRate,
+          driverExtraFeeList = map realToFrac $ unPostgresList driverExtraFeeList,
           ..
         }
+
   toTType Domain.FarePolicy {..} =
     FarePolicyT
       { id = getId id,
         organizationId = toKey organizationId,
-        fareForPickup = amountToDouble fareForPickup,
-        farePerKm = amountToDouble farePerKm,
-        nightShiftRate = amountToDouble <$> nightShiftRate,
+        baseDistance = baseDistance.getHighPrecMeters,
+        driverExtraFeeList = PostgresList $ map amountToDouble driverExtraFeeList,
         ..
       }

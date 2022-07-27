@@ -10,6 +10,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.SearchReqLocation as SRLoc
 import qualified Domain.Types.SearchRequest as DSearchReq
+import Domain.Types.VehicleVariant (VehicleVariant)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -22,7 +23,8 @@ data DSelectReq = DSelectReq
     fromLocation :: SRLoc.SearchReqLocation,
     toLocation :: Maybe SRLoc.SearchReqLocation,
     providerId :: Text,
-    providerUrl :: BaseUrl
+    providerUrl :: BaseUrl,
+    variant :: VehicleVariant
   }
 
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> Flow DSelectReq
@@ -42,5 +44,6 @@ select personId estimateId = do
     DSelectReq
       { providerId = estimate.providerId,
         providerUrl = estimate.providerUrl,
+        variant = estimate.vehicleVariant,
         ..
       }

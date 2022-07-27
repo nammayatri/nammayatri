@@ -39,10 +39,12 @@ import Environment
 import EulerHS.Prelude hiding (id, state)
 import ExternalAPI.Flow
 import GHC.Records.Extra
+import Product.FareCalculator.Flow (calculateFare)
 import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
+import Storage.Queries.FarePolicy (findFarePolicyByOrgAndVariant)
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Organization as QOrganization
 import qualified Storage.Queries.Person as QPerson
@@ -309,6 +311,9 @@ getNearbySearchRequests driverId = withFlowHandlerAPI $ do
   nearbyReqs <- QSRD.findByDriver driverId
   pure $ GetNearbySearchRequestsRes $ map mkSearchRequestForDriverAPIEntity nearbyReqs
 
+isAllowedExtraFee :: [Amount] -> Amount -> Bool
+isAllowedExtraFee list val = let eps = 0.1 in any (\x -> abs (x - val) < eps) list
+
 offerQuote ::
   Id SP.Person ->
   DriverOfferReq ->
@@ -316,12 +321,18 @@ offerQuote ::
 offerQuote driverId req = withFlowHandlerAPI $ do
   logDebug $ "offered fare: " <> show req.offeredFare
   sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
+  let mbOfferedFareAmount = fmap realToFrac req.offeredFare
   organization <- QOrg.findById sReq.providerId >>= fromMaybeM (OrgDoesNotExist sReq.providerId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  searchRequestForDriver <-
+  sReqFD <-
     QSRD.findByDriverAndSearchReq driverId sReq.id
-      >>= fromMaybeM (InvalidRequest "no calculated request pool")
-  driverQuote <- buildDriverQuote driver sReq searchRequestForDriver req.offeredFare
+      >>= fromMaybeM (InvalidRequest "no search request for driver")
+  farePolicy <- findFarePolicyByOrgAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
+  whenJust mbOfferedFareAmount $ \off ->
+    unless (isAllowedExtraFee farePolicy.driverExtraFeeList off) $
+      throwError $ NotAllowedExtraFee $ amountToString off
+  fareParams <- calculateFare organization.id sReqFD.vehicleVariant (HighPrecMeters sReqFD.distance) sReqFD.startTime mbOfferedFareAmount
+  driverQuote <- buildDriverQuote driver sReq sReqFD fareParams
   Esq.runTransaction $ QDrQt.create driverQuote
   context <- contextTemplate organization Context.SELECT sReq.bapId sReq.bapUri (Just sReq.transactionId) sReq.messageId
   let callbackUrl = sReq.bapUri
@@ -337,9 +348,9 @@ offerQuote driverId req = withFlowHandlerAPI $ do
       SP.Person ->
       DSReq.SearchRequest ->
       SearchRequestForDriver ->
-      Maybe Double ->
+      Fare.FareParameters ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver s sd offeredFare = do
+    buildDriverQuote driver s sd fareParams = do
       guid <- generateGUID
       now <- getCurrentTime
       pure
@@ -357,7 +368,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
             createdAt = now,
             updatedAt = now,
             validTill = s.validTill, -- what should be here? FIXME
-            fareParams = s.fareParams {Fare.driverSelectedFare = fmap (Amount . toRational) offeredFare}
+            fareParams
           }
 
 buildOnSelectReq ::

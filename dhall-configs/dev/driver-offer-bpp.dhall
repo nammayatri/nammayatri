@@ -78,7 +78,7 @@ in
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log", logRawSql = False}
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log", logRawSql = True}
 , updateLocationRefreshPeriod = +1
 , updateLocationAllowedDelay = +60
 , googleMapsUrl = common.googleMapsUrl

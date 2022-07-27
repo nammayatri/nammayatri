@@ -4,8 +4,10 @@ import Beckn.Prelude
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Context as Context
 import Beckn.Types.Core.ReqTypes
+import qualified Beckn.Types.Core.Taxi.Common.ItemCode as Common
 import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Domain.Action.UI.Select as DSelect
+import Domain.Types.VehicleVariant
 import ExternalAPI.Flow
 import Utils.Common
 
@@ -18,15 +20,37 @@ buildSelectReq dSelectReq = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
   context <- buildTaxiContext Context.SELECT messageId Nothing bapIDs.cabs bapURIs.cabs (Just dSelectReq.providerId) (Just dSelectReq.providerUrl)
-  let order = mkIntent dSelectReq
+  let order = mkOrder dSelectReq
   pure $ BecknReq context $ Select.SelectMessage order
 
-mkIntent :: DSelect.DSelectReq -> Select.Intent
-mkIntent req = do
+castVariant :: VehicleVariant -> Common.VehicleVariant
+castVariant AUTO = Common.AUTO
+castVariant HATCHBACK = Common.HATCHBACK
+castVariant SEDAN = Common.SEDAN
+castVariant SUV = Common.SUV
+
+mkOrder :: DSelect.DSelectReq -> Select.Order
+mkOrder req = do
   let from = req.fromLocation
       mbTo = req.toLocation
-  Select.Intent
-    { fulfillment =
+      items =
+        (: []) $
+          Select.OrderItem
+            { id = Nothing,
+              descriptor =
+                Select.Descriptor
+                  { code =
+                      Select.ItemCode
+                        { fareProductType = Common.DRIVER_OFFER_ESTIMATE,
+                          vehicleVariant = castVariant req.variant,
+                          distance = Nothing,
+                          duration = Nothing
+                        }
+                  }
+            }
+  Select.Order
+    { items,
+      fulfillment =
         Select.FulfillmentInfo
           { start =
               Select.StartInfo

@@ -5,8 +5,8 @@ import Beckn.Types.Amount
 import Beckn.Utils.GenericPretty (PrettyShow)
 
 data FareParameters = FareParameters
-  { fareForPickup :: Amount,
-    distanceFare :: Amount,
+  { baseFare :: Amount,
+    extraKmFare :: Maybe Amount,
     driverSelectedFare :: Maybe Amount,
     nightShiftRate :: Maybe Amount,
     nightCoefIncluded :: Bool

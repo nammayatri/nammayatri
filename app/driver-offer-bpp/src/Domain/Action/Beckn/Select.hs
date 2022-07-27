@@ -10,11 +10,11 @@ import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
 import Beckn.Utils.Common (logDebug)
 import Data.Time.Clock (addUTCTime)
-import Domain.Types.FareParams
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
+import Domain.Types.Vehicle.Variant (Variant)
 import Environment
 import Product.FareCalculator.Flow
 import SharedLogic.DriverPool
@@ -29,21 +29,22 @@ data DSelectReq = DSelectReq
     bapUri :: BaseUrl,
     pickupLocation :: DLoc.SearchReqLocationAPIEntity,
     pickupTime :: UTCTime,
-    dropLocation :: DLoc.SearchReqLocationAPIEntity
+    dropLocation :: DLoc.SearchReqLocationAPIEntity,
+    variant :: Variant
   }
 
 handler :: Id DOrg.Organization -> DSelectReq -> Flow ()
 handler orgId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
-  driverPool <- calculateDriverPool (getCoordinates fromLocation) orgId
+  driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId
 
   distance <-
     metersToHighPrecMeters . (.distance)
       <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
 
-  fareParams <- calculateFare orgId distance sReq.pickupTime Nothing
-  searchReq <- buildSearchRequest fromLocation toLocation orgId fareParams sReq
+  fareParams <- calculateFare orgId sReq.variant distance sReq.pickupTime Nothing
+  searchReq <- buildSearchRequest fromLocation toLocation orgId sReq
   let baseFare = amountToDouble $ fareSum fareParams
   logDebug $
     "search request id=" <> show searchReq.id
@@ -91,10 +92,9 @@ buildSearchRequest ::
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
   Id DOrg.Organization ->
-  FareParameters ->
   DSelectReq ->
   m DSearchReq.SearchRequest
-buildSearchRequest from to orgId fareParams sReq = do
+buildSearchRequest from to orgId sReq = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
@@ -111,8 +111,7 @@ buildSearchRequest from to orgId fareParams sReq = do
         toLocation = to,
         bapId = sReq.bapId,
         bapUri = sReq.bapUri,
-        createdAt = createdAt_,
-        fareParams
+        createdAt = createdAt_
       }
 
 buildSearchReqLocation :: (MonadGuid m, MonadTime m) => DLoc.SearchReqLocationAPIEntity -> m DLoc.SearchReqLocation

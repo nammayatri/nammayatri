@@ -4,15 +4,17 @@ module Beckn.Types.Core.Taxi.Select
   )
 where
 
-import Beckn.Types.Core.Taxi.Search.Fulfillment as Reexport
-import Beckn.Types.Core.Taxi.Search.Intent as Reexport
-import Beckn.Types.Core.Taxi.Search.Location as Reexport
-import Beckn.Types.Core.Taxi.Search.StartInfo as Reexport
-import Beckn.Types.Core.Taxi.Search.StopInfo as Reexport
+import Beckn.Types.Core.Taxi.Select.Descriptor as Reexport
+import Beckn.Types.Core.Taxi.Select.Fulfillment as Reexport
+import Beckn.Types.Core.Taxi.Select.Location as Reexport
+import Beckn.Types.Core.Taxi.Select.Order as Reexport
+import Beckn.Types.Core.Taxi.Select.Payment as Reexport
+import Beckn.Types.Core.Taxi.Select.StartInfo as Reexport
+import Beckn.Types.Core.Taxi.Select.StopInfo as Reexport
 import Data.OpenApi (ToSchema)
 import EulerHS.Prelude
 
 newtype SelectMessage = SelectMessage
-  { intent :: Intent
+  { order :: Order
   }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

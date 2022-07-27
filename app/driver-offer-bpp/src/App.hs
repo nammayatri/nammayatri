@@ -8,7 +8,7 @@ import qualified Beckn.Tools.Metrics.Init as Metrics
 import qualified Beckn.Types.App as App
 import Beckn.Types.Flow
 import Beckn.Utils.App
-import Beckn.Utils.Dhall (readDhallConfigDefault)
+import Beckn.Utils.Dhall
 import qualified Beckn.Utils.FlowLogging as L
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T

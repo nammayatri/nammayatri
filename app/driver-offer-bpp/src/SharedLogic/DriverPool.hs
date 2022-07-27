@@ -13,6 +13,7 @@ import Beckn.Types.MapSearch
 import qualified Beckn.Types.MapSearch as GoogleMaps
 import Data.List.NonEmpty as NE
 import qualified Domain.Types.Organization as SOrg
+import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import Tools.Metrics
@@ -25,14 +26,16 @@ calculateDriverPool ::
     HasGoogleMaps m r,
     HasPrettyLogger m r
   ) =>
+  Maybe Variant ->
   LatLong ->
   Id SOrg.Organization ->
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
-calculateDriverPool pickupLatLong orgId = do
+calculateDriverPool variant pickupLatLong orgId = do
   radius <- fromIntegral <$> asks (.defaultRadiusOfSearch)
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QP.getNearestDrivers
+        variant
         pickupLatLong
         radius
         orgId

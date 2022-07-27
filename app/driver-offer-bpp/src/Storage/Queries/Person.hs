@@ -186,11 +186,12 @@ instance GoogleMaps.HasCoordinates DriverPoolResult where
 
 getNearestDrivers ::
   (Transactionable m, HasFlowEnv m r '["driverPositionInfoExpiry" ::: Maybe Seconds]) =>
+  Maybe Variant ->
   LatLong ->
   Integer ->
   Id Organization ->
   m [DriverPoolResult]
-getNearestDrivers LatLong {..} radiusMeters orgId = do
+getNearestDrivers mbVariant LatLong {..} radiusMeters orgId = do
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   now <- getCurrentTime
   res <- Esq.findAll $ do
@@ -219,6 +220,7 @@ getNearestDrivers LatLong {..} radiusMeters orgId = do
           &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
                   ||. (location ^. DriverLocationUpdatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
               )
+          &&. whenJust_ mbVariant (\var -> vehicle ^. VehicleVariant ==. val var)
       return
         ( person ^. PersonTId,
           location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),

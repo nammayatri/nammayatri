@@ -13,7 +13,7 @@ import Data.Time
     utcToLocalTime,
   )
 import Domain.Types.FareParams
-import Domain.Types.FarePolicy (FarePolicy)
+import Domain.Types.FarePolicy
 import Utils.Common
 
 type TripStartTime = UTCTime
@@ -52,7 +52,14 @@ fareSum fareParams = do
 baseFareSum :: FareParameters -> Amount
 baseFareSum fareParams = do
   let dayPartCoef = calculateDayPartRate fareParams
-  dayPartCoef * (fareParams.fareForPickup + fareParams.distanceFare)
+  dayPartCoef
+    * sum
+      ( catMaybes
+          [ Just fareParams.baseFare,
+            fareParams.extraKmFare,
+            fareParams.driverSelectedFare
+          ]
+      )
 
 calculateDayPartRate :: FareParameters -> Amount
 calculateDayPartRate fareParams = do
@@ -67,10 +74,24 @@ calculateFareParameters ::
   TripStartTime ->
   Maybe Amount ->
   FareParameters
-calculateFareParameters farePolicy distance startTime mbExtraFare = do
-  let distanceFare = farePolicy.farePerKm * Amount (toRational $ distance.getHighPrecMeters / 1000)
-  let nightCoefIncluded = defineWhetherNightCoefIncluded farePolicy startTime
-  FareParameters farePolicy.fareForPickup distanceFare mbExtraFare farePolicy.nightShiftRate nightCoefIncluded
+calculateFareParameters fp distance startTime mbExtraFare = do
+  let baseDistanceFare = fp.baseDistancePerKmFare * distanceToAmountKm fp.baseDistance
+      mbExtraDistance =
+        distance - fp.baseDistance
+          & (\dist -> if dist > 0 then Just dist else Nothing)
+      mbExtraKmFare = mbExtraDistance <&> \ex -> distanceToAmountKm ex * fp.extraKmFare
+      nightCoefIncluded = defineWhetherNightCoefIncluded fp startTime
+
+  FareParameters
+    { baseFare = fp.deadKmFare + baseDistanceFare,
+      extraKmFare = mbExtraKmFare,
+      driverSelectedFare = mbExtraFare,
+      nightShiftRate = fp.nightShiftRate,
+      nightCoefIncluded
+    }
+
+distanceToAmountKm :: HighPrecMeters -> Amount
+distanceToAmountKm x = realToFrac $ x.getHighPrecMeters / 1000
 
 defineWhetherNightCoefIncluded ::
   FarePolicy ->

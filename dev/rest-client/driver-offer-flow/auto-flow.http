@@ -1,6 +1,7 @@
 
 @driver-offer-bpp-host = http://localhost:8016
 @token = {{app-token}}
+@driver-token2 = 002df941-427a-4085-a7d0-96240f166672
 
 # @name healthcheck
 GET {{driver-offer-bpp-host}}/ui
@@ -109,7 +110,7 @@ token: {{driver-token}}
 content-type: application/json
 
 {
-    "offeredFare": 30.5,
+    "offeredFare": 30,
     "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[0].searchRequestId}}"
 }
 

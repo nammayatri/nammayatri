@@ -12,6 +12,7 @@ import Beckn.Types.Id
 import Domain.Types.FareParams
 import Domain.Types.FarePolicy (FarePolicy)
 import Domain.Types.Organization (Organization)
+import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Calculator
   ( calculateFareParameters,
@@ -24,19 +25,19 @@ import Utils.Common
 type MonadHandler m = (MonadThrow m, Log m)
 
 newtype ServiceHandle m = ServiceHandle
-  { getFarePolicy :: Id Organization -> m (Maybe FarePolicy)
+  { getFarePolicy :: Id Organization -> Variant -> m (Maybe FarePolicy)
   }
 
 serviceHandle :: Transactionable m => ServiceHandle m
 serviceHandle =
   ServiceHandle
-    { getFarePolicy = \orgId -> do
-        FarePolicyS.findFarePolicyByOrg orgId
+    { getFarePolicy = FarePolicyS.findFarePolicyByOrgAndVariant
     }
 
 calculateFare ::
   (Transactionable m, MonadFlow m) =>
   Id Organization ->
+  Variant ->
   HighPrecMeters ->
   UTCTime ->
   Maybe Amount ->
@@ -47,13 +48,14 @@ doCalculateFare ::
   MonadHandler m =>
   ServiceHandle m ->
   Id Organization ->
+  Variant ->
   HighPrecMeters ->
   UTCTime ->
   Maybe Amount ->
   m FareParameters
-doCalculateFare ServiceHandle {..} orgId distance startTime driverSelectedFare = do
+doCalculateFare ServiceHandle {..} orgId variant distance startTime driverSelectedFare = do
   logTagInfo "FareCalculator" $ "Initiating fare calculation for organization " +|| orgId ||+ ""
-  farePolicy <- getFarePolicy orgId >>= fromMaybeM NoFarePolicy
+  farePolicy <- getFarePolicy orgId variant >>= fromMaybeM NoFarePolicy
   let fareParams = calculateFareParameters farePolicy distance startTime driverSelectedFare
   logTagInfo
     "FareCalculator"

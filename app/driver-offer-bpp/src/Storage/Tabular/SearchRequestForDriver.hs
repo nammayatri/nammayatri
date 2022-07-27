@@ -16,6 +16,7 @@ import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Storage.Tabular.Person (PersonTId)
 import Storage.Tabular.SearchRequest (SearchRequestTId)
+import Storage.Tabular.Vehicle ()
 
 mkPersist
   defaultSqlSettings
