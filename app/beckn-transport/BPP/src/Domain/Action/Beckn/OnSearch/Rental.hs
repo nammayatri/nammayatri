@@ -7,6 +7,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
+import Beckn.Utils.Common
 import Data.Traversable
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Organization as DOrg
@@ -18,9 +19,8 @@ import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFarePolicy
 import qualified Storage.Queries.Products as QProduct
 import qualified Storage.Queries.Quote as QQuote
+import Tools.Error
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
-import Types.Error
-import Utils.Common
 
 data QuoteInfo = QuoteInfo
   { quoteId :: Id DQuote.Quote,

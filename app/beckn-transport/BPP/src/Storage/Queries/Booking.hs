@@ -3,6 +3,7 @@ module Storage.Queries.Booking where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Booking.Type as Booking
 import Domain.Types.Organization
 import Domain.Types.Person
@@ -12,7 +13,6 @@ import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Booking.BookingLocation as Loc
 import Storage.Tabular.Booking.RentalBooking as RentalBooking
 import Storage.Tabular.Ride as Ride
-import Utils.Common
 
 create :: Booking -> SqlDB ()
 create booking = do

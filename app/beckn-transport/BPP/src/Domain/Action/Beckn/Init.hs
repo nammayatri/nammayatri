@@ -11,6 +11,7 @@ import Beckn.Types.Geofencing
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Organization as DOrg
@@ -20,8 +21,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Organization as QOrg
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data InitReq = InitReq
   { vehicleVariant :: Veh.Variant,

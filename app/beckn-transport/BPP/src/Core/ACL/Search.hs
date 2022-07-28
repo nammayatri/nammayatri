@@ -6,10 +6,10 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified Beckn.Types.Core.Taxi.Search as Search
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
+import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Search as DSearch
 import EulerHS.Prelude hiding (state)
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 buildSearchReq ::
   (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>

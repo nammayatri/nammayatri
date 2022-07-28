@@ -1,4 +1,4 @@
-module Utils.Auth where
+module Tools.Auth where
 
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.App
@@ -15,7 +15,7 @@ import EulerHS.Prelude hiding (id)
 import Servant hiding (throwError)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import Types.Error
+import Tools.Error
 
 instance
   SanitizedUrl (sub :: Type) =>

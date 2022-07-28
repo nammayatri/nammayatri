@@ -1,12 +1,12 @@
 module Utils where
 
 import qualified "app-backend" App.Types as BecknApp
-import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Types.Flow
 import Beckn.Types.Id (Id)
 import Beckn.Utils.Common
 import Data.Aeson (decode)
 import Data.String.Conversions
+import qualified "beckn-transport" Environment as BecknTransport
 import qualified "driver-offer-bpp" Environment as ARDU
 import EulerHS.Prelude
 import qualified EulerHS.Runtime as R

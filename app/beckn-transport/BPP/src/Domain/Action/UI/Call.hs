@@ -20,6 +20,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto (runTransaction)
 import Beckn.Types.Core.Ack
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Text
 import qualified Data.Text as T
 import Data.Text.Conversions
@@ -32,9 +33,8 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Common
 
 newtype CallRes = CallRes
   { callId :: Id SCS.CallStatus

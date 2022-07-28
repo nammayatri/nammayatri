@@ -1,25 +1,30 @@
+{-# LANGUAGE PackageImports #-}
+
 module Environment where
 
-import qualified App.Types as App
 import Beckn.External.Encryption (EncTools)
 import Beckn.External.Exotel.Types (ExotelCfg)
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Common
 import Beckn.Types.Flow (FlowR)
+import Beckn.Types.Id (ShortId)
 import Beckn.Utils.App (getPodName)
+import Beckn.Utils.Common
 import Beckn.Utils.Dhall (FromDhall)
 import Beckn.Utils.IOLogging
 import Beckn.Utils.Servant.SignatureAuth
 import Beckn.Utils.Shutdown
+import Domain.Action.Allocation (SortMode)
+import Domain.Types.Organization (Organization)
+import qualified "beckn-transport" Environment as App
 import EulerHS.Prelude
 import EulerHS.Types (RedisConfig)
 import Tools.Metrics
 import Tools.Streaming.Kafka
-import Types.App (SortMode)
-import Types.Shard
-import Utils.Common
 
 type Flow = FlowR AppEnv
+
+type Shards = Map Int (ShortId Organization)
 
 data AppCfg = AppCfg
   { appCfg :: App.AppCfg,

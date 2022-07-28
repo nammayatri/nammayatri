@@ -5,6 +5,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Organization as Org
 import Domain.Types.Person as SP
@@ -15,9 +16,8 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Rating as Rating
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Common
 
 data DRatingReq = DRatingReq
   { bookingId :: Id DRB.Booking,

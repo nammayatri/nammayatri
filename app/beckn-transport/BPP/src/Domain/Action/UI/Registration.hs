@@ -12,7 +12,6 @@ module Domain.Action.UI.Registration
   )
 where
 
-import App.Types
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.External.MyValueFirst.Flow as SF
@@ -25,6 +24,7 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Types.Predicate
 import Beckn.Types.SlidingWindowLimiter (APIRateLimitOptions)
+import Beckn.Utils.Common
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation
@@ -35,10 +35,9 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
-import Types.Error
-import Utils.Auth (authTokenCacheKey)
-import Utils.Common
-import qualified Utils.Notifications as Notify
+import Tools.Auth (authTokenCacheKey)
+import Tools.Error
+import qualified Tools.Notifications as Notify
 
 data AuthReq = AuthReq
   { mobileNumber :: Text,

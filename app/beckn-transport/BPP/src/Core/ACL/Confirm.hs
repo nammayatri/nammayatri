@@ -8,10 +8,10 @@ import Beckn.Types.Core.Taxi.Confirm
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
+import Beckn.Utils.Common
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 buildConfirmReq ::
   (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>

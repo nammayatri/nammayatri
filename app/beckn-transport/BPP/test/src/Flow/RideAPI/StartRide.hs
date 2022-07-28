@@ -13,7 +13,7 @@ import qualified Fixtures
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
-import Types.Error
+import Tools.Error
 import Utils.SilentLogger ()
 
 handle :: StartRide.ServiceHandle IO

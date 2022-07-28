@@ -11,6 +11,7 @@ import Beckn.External.Encryption (decrypt)
 import Beckn.External.FCM.Types (FCMRecipientToken)
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Maybe
 import Data.OpenApi (ToSchema)
 import Domain.Types.Organization (OrganizationAPIEntity)
@@ -19,8 +20,7 @@ import qualified Domain.Types.Person as SP
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data TranspAdminProfileRes = TranspAdminProfileRes
   { id :: Id SP.Person,

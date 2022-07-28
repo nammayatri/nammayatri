@@ -17,7 +17,7 @@ import Storage.Tabular.FarePolicy.Discount (DiscountT)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRateT, getDomainPart)
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.Vehicle ()
-import Types.Error
+import Tools.Error
 
 mkPersist
   defaultSqlSettings

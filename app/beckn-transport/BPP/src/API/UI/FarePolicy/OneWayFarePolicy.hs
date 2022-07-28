@@ -1,7 +1,7 @@
 module API.UI.FarePolicy.OneWayFarePolicy (module Reexport, API, handler) where
 
-import App.Types
 import Beckn.Types.Id (Id (..))
+import Beckn.Utils.Common
 import Domain.Action.UI.FarePolicy.OneWayFarePolicy as Reexport
   ( ListOneWayFarePolicyRes (..),
     UpdateOneWayFarePolicyReq (..),
@@ -11,10 +11,10 @@ import qualified Domain.Action.UI.FarePolicy.OneWayFarePolicy as OneWayFP
 import Domain.Types.FarePolicy.OneWayFarePolicy
 import qualified Domain.Types.FarePolicy.OneWayFarePolicy as DFarePolicy
 import qualified Domain.Types.Person as SP
+import Environment
 import EulerHS.Prelude
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type API =
   -- "oneWay" -- TODO: we should add this layer

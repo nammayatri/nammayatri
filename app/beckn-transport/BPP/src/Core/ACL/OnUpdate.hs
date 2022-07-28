@@ -13,14 +13,14 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideAssignedEvent 
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent as RideCompletedOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.Vehicle as SVeh
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data OnUpdateBuildReq
   = RideAssignedBuildReq

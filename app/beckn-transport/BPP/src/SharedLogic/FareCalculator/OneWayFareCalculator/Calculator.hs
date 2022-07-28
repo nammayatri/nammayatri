@@ -4,6 +4,7 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator where
 
 import Beckn.Types.Amount (Amount (..))
 import Beckn.Types.Common
+import Beckn.Utils.Common
 import qualified Data.List.NonEmpty as NonEmpty
 import Data.Time
   ( LocalTime (localTimeOfDay),
@@ -16,7 +17,6 @@ import Data.Time
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.FarePolicy.OneWayFarePolicy.PerExtraKmRate (PerExtraKmRate (..))
 import EulerHS.Prelude
-import Utils.Common
 
 type TripStartTime = UTCTime
 

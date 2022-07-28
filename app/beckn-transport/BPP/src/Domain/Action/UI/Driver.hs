@@ -32,6 +32,7 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.Predicate
+import Beckn.Utils.Common (fromMaybeM, logTagInfo, throwError, (:::))
 import qualified Beckn.Utils.Predicates as P
 import Beckn.Utils.Validation
 import Control.Applicative ((<|>))
@@ -48,11 +49,10 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Vehicle as QVehicle
+import Tools.Auth (authTokenCacheKey)
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Auth (authTokenCacheKey)
-import Utils.Common (fromMaybeM, logTagInfo, throwError, (:::))
-import qualified Utils.Notifications as Notify
+import qualified Tools.Notifications as Notify
 
 data DriverInformationRes = DriverInformationRes
   { id :: Id SP.Person,

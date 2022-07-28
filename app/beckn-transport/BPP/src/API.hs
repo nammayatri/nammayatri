@@ -2,8 +2,8 @@ module API where
 
 import qualified API.Beckn as Beckn
 import qualified API.UI as UI
-import App.Types
 import Data.OpenApi
+import Environment
 import EulerHS.Prelude
 import Servant
 import Servant.OpenApi

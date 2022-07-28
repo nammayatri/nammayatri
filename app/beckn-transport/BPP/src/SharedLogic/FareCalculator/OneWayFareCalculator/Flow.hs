@@ -11,7 +11,8 @@ where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import Domain.Types.Booking.Type
+import Beckn.Utils.Common
+import Domain.Types.Booking
 import Domain.Types.FarePolicy.FareBreakup
 import Domain.Types.FarePolicy.OneWayFarePolicy (OneWayFarePolicy)
 import Domain.Types.Organization (Organization)
@@ -25,8 +26,7 @@ import SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
     fareSumWithDiscount,
   )
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy as FarePolicyS
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 type MonadHandler m = (MonadThrow m, Log m)
 

@@ -1,7 +1,7 @@
 module API.UI.TranspAdmin (module Reexport, API, handler) where
 
-import App.Types
 import Beckn.Prelude
+import Beckn.Utils.Common (withFlowHandlerAPI)
 import Domain.Action.UI.TranspAdmin as Reexport
   ( TranspAdminProfileRes (..),
     UpdateTranspAdminProfileReq (..),
@@ -9,9 +9,9 @@ import Domain.Action.UI.TranspAdmin as Reexport
   )
 import qualified Domain.Action.UI.TranspAdmin as DTranspAdmin
 import qualified Domain.Types.Person as SP
+import Environment
 import Servant
-import Utils.Auth (AdminTokenAuth)
-import Utils.Common (withFlowHandlerAPI)
+import Tools.Auth (AdminTokenAuth)
 
 type API =
   "orgAdmin" :> "profile"

@@ -4,9 +4,9 @@ import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Types.Id (Id)
 import Domain.Types.Booking (Booking)
+import Domain.Types.Person (Driver)
 import Domain.Types.Ride (Ride)
 import Domain.Types.Vehicle (Variant)
-import Types.App (Driver)
 
 data BusinessEvent = BusinessEvent
   { id :: Id BusinessEvent,

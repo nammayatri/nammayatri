@@ -13,7 +13,7 @@ import Beckn.Types.Id
 import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.RideRequest as Domain
 import Storage.Tabular.Booking (BookingTId)
-import Types.Error
+import Tools.Error
 
 derivePersistField "Domain.RideRequestType"
 

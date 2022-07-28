@@ -15,14 +15,14 @@ import Beckn.Types.APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id (Id (..))
 import Beckn.Types.Predicate
+import Beckn.Utils.Common
 import Beckn.Utils.Validation
 import Domain.Types.FarePolicy.RentalFarePolicy as Domain
 import Domain.Types.Organization
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Vehicle as Vehicle
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as SRentalFarePolicy
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 newtype ListRentalFarePoliciesRes = ListRentalFarePoliciesRes
   { rentalFarePolicies :: [RentalFarePolicyAPIEntity]

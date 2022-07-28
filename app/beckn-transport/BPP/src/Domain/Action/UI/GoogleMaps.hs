@@ -10,9 +10,9 @@ where
 
 import qualified Beckn.External.GoogleMaps.Client as ClientGoogleMaps
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
+import Beckn.Utils.Common (MonadFlow)
 import EulerHS.Prelude
 import Tools.Metrics
-import Utils.Common (MonadFlow)
 
 autoComplete :: (MonadFlow m, GoogleMaps.HasGoogleMaps m r, CoreMetrics m) => Text -> Text -> Integer -> Text -> m GoogleMaps.SearchLocationResp
 autoComplete input location radius lang = do

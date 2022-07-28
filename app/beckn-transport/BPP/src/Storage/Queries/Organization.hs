@@ -3,9 +3,9 @@ module Storage.Queries.Organization where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Organization as Organization
 import Storage.Tabular.Organization
-import Utils.Common
 
 findById :: Transactionable m => Id Organization -> m (Maybe Organization)
 findById = Esq.findById

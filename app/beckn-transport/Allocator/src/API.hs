@@ -2,12 +2,12 @@ module API (healthCheckAPI, healthCheck, iAmAlive) where
 
 import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.Common
+import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (LoggerEnv)
 import EulerHS.Prelude
 import Servant (Get, JSON)
+import Tools.Error
 import Tools.Metrics (CoreMetricsContainer)
-import Types.Error
-import Utils.Common
 
 type HealthCheckAPI = Get '[JSON] Text
 

@@ -5,12 +5,12 @@ import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data ServiceHandle m = ServiceHandle
   { findById :: Id Person.Person -> m (Maybe Person.Person),

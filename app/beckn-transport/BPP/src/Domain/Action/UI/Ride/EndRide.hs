@@ -6,6 +6,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
@@ -17,15 +18,13 @@ import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (pi)
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
 import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
-import Types.App (Driver)
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 data ServiceHandle m = ServiceHandle
   { findById :: Id Person.Person -> m (Maybe Person.Person),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    endRideTransaction :: Id SRB.Booking -> Ride.Ride -> Id Driver -> [DFareBreakup.FareBreakup] -> m (),
+    endRideTransaction :: Id SRB.Booking -> Ride.Ride -> Id Person.Driver -> [DFareBreakup.FareBreakup] -> m (),
     notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> [DFareBreakup.FareBreakup] -> m (),
     calculateFare ::
       Id Organization ->

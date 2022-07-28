@@ -1,8 +1,8 @@
 module Resources where
 
 import qualified "app-backend" App.Types as BecknApp
-import qualified "beckn-transport" App.Types as BecknTransport
 import Beckn.Utils.Dhall (readDhallConfig)
+import qualified "beckn-transport" Environment as BecknTransport
 import qualified "driver-offer-bpp" Environment as ARDU
 import EulerHS.Prelude
 import GHC.IO (unsafePerformIO)

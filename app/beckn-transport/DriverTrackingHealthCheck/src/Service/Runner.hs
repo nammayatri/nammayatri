@@ -13,15 +13,16 @@ import Beckn.Storage.Redis.Queries (lpush, rpop)
 import Beckn.Types.Common
 import Beckn.Types.Error (PersonError (PersonFieldNotPresent))
 import Beckn.Types.Id (Id, cast)
+import Beckn.Utils.Common
+import Beckn.Utils.Service
 import Data.Either
 import Data.List.NonEmpty (nonEmpty)
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as SP
 import Environment (Flow)
 import Service.Runner.DataLocker
 import qualified Storage.Queries.DriverInformation as DrInfo
-import Types.App (Driver)
-import Utils.Common
-import Utils.Notifications (notifyDevice)
+import Tools.Notifications
 
 driverTrackingHealthcheckService :: Flow ()
 driverTrackingHealthcheckService = withLogTag "driverTrackingHealthcheckService" do
@@ -30,7 +31,7 @@ driverTrackingHealthcheckService = withLogTag "driverTrackingHealthcheckService"
   driverMakingInactiveService
 
 driverLastLocationUpdateCheckService :: Flow ()
-driverLastLocationUpdateCheckService = service "driverLastLocationUpdateCheckService" $ withRandomId do
+driverLastLocationUpdateCheckService = startService "driverLastLocationUpdateCheckService" $ withRandomId do
   delay <- asks (.driverAllowedDelay)
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverLastLocationUpdateCheckService" do
     now <- getCurrentTime
@@ -57,7 +58,7 @@ redisKey :: Text
 redisKey = "beckn:driver-tracking-healthcheck:drivers-to-ping"
 
 driverDevicePingService :: Flow ()
-driverDevicePingService = service "driverDevicePingService" do
+driverDevicePingService = startService "driverDevicePingService" do
   HC.iAmAlive
   rpop redisKey >>= flip whenJust \(driverId, token) ->
     withLogTag driverId.getId do
@@ -67,7 +68,7 @@ driverDevicePingService = service "driverDevicePingService" do
     >>= threadDelay . (.getMicroseconds)
 
 driverMakingInactiveService :: Flow ()
-driverMakingInactiveService = service "driverMakingInactiveService" $ withRandomId do
+driverMakingInactiveService = startService "driverMakingInactiveService" $ withRandomId do
   delay <- asks (.driverInactiveDelay)
   withLock "driver-tracking-healthcheck" $ measuringDurationToLog INFO "driverMakingInactiveService" do
     now <- getCurrentTime

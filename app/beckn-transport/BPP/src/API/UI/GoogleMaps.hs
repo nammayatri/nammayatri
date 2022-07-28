@@ -1,8 +1,8 @@
 module API.UI.GoogleMaps (module Reexport, API, handler) where
 
-import App.Types
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Action.UI.GoogleMaps as Reexport
   ( GetPlaceNameResp (..),
     PlaceDetailsResp (..),
@@ -10,10 +10,10 @@ import Domain.Action.UI.GoogleMaps as Reexport
   )
 import qualified Domain.Action.UI.GoogleMaps as DGoogleMaps
 import qualified Domain.Types.Person as SP
+import Environment
 import EulerHS.Prelude
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type API =
   "googleMaps"

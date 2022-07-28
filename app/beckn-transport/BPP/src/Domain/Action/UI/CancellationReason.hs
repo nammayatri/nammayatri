@@ -4,10 +4,10 @@ module Domain.Action.UI.CancellationReason
   )
 where
 
+import Beckn.Utils.Common
 import qualified Domain.Types.CancellationReason as SCR
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.CancellationReason as QCR
-import Utils.Common
 
 type ListRes = [SCR.CancellationReasonAPIEntity]
 

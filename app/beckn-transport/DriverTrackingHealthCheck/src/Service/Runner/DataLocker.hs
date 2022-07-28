@@ -3,8 +3,8 @@ module Service.Runner.DataLocker where
 import Beckn.Prelude
 import Beckn.Storage.Redis.Queries (tryLockRedis, unlockRedis)
 import Beckn.Types.Common
+import Beckn.Utils.Common
 import Environment (Flow)
-import Utils.Common
 
 --TODO: Make DataLocker util in shared-kernel
 withLock :: Text -> Flow () -> Flow ()

@@ -1,6 +1,5 @@
 module Domain.Action.Beckn.OnSearch where
 
-import App.Types
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Data.List as List
@@ -11,6 +10,7 @@ import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.FarePolicy.FareProduct as QFareProduct
 import qualified Storage.Queries.Ride as QRide

@@ -8,22 +8,20 @@ module Domain.Action.UI.Location.UpdateLocation
   )
 where
 
-import App.Types
 import Beckn.Prelude hiding (Handler)
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.Common hiding (id)
 import Beckn.Utils.GenericPretty (PrettyShow)
-import Beckn.Utils.Logging
 import qualified Data.List.NonEmpty as NE
 import Domain.Types.DriverLocation (DriverLocation)
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
 import SharedLogic.LocationUpdates
-import Utils.Common hiding (id)
 
 type MonadHandler m = (MonadThrow m, Log m, MonadGuid m, MonadTime m)
 

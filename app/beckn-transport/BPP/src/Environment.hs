@@ -1,4 +1,4 @@
-module App.Types
+module Environment
   ( AppCfg (),
     AppEnv (..),
     Env,

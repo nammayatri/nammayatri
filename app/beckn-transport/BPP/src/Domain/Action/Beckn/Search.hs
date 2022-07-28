@@ -6,24 +6,24 @@ module Domain.Action.Beckn.Search
   )
 where
 
-import App.Types
 import Beckn.Prelude (ToSchema)
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates (..))
 import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Data.Traversable
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
+import Environment
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Tools.Error
 import qualified Tools.Metrics as Metrics
-import Types.Error
-import Utils.Common
 
 data DSearchReq = DSearchReq
   { messageId :: Text,

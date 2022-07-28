@@ -12,7 +12,6 @@ import qualified Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation (runRequestValidation)
-import qualified Crypto.Number.Generate as Cryptonite
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
@@ -114,10 +113,6 @@ makeSession SmsSessionConfig {..} entityId fakeOtp = do
         updatedAt = now,
         info = Nothing
       }
-
-generateOTPCode :: MonadFlow m => m Text
-generateOTPCode =
-  liftIO $ padNumber 4 <$> Cryptonite.generateBetween 1 9999
 
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BAP:Registration:verify:" <> getId id <> ":hitsCount"

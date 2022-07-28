@@ -23,6 +23,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.Common
 import Data.OpenApi (ToSchema (..))
 import Domain.Types.AllocationEvent
 import qualified Domain.Types.AllocationEvent as AllocationEvent
@@ -32,7 +33,6 @@ import qualified Domain.Types.Person as SP
 import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude hiding (id)
-import Product.BecknProvider.BP (buildRideReq)
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as QDrLoc
@@ -40,9 +40,8 @@ import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RideRequest as RideRequest
+import Tools.Error
 import Tools.Metrics
-import Types.Error
-import Utils.Common
 
 newtype BookingListRes = BookingListRes
   { list :: [SRB.BookingAPIEntity]
@@ -95,11 +94,23 @@ bookingCancel bookingId admin = do
   org <-
     QOrg.findById orgId
       >>= fromMaybeM (OrgNotFound orgId.getId)
-  now <- getCurrentTime
-  rideReq <- buildRideReq bookingId (org.shortId) SRideRequest.CANCELLATION now
+  rideReq <- buildRideReq (org.shortId)
   Esq.runTransaction $ RideRequest.create rideReq
   logTagInfo ("orgAdmin-" <> getId admin.id <> " -> bookingCancel : ") (show rideReq)
   return Success
+  where
+    buildRideReq shortOrgId = do
+      guid <- generateGUID
+      now <- getCurrentTime
+      pure
+        SRideRequest.RideRequest
+          { id = Id guid,
+            bookingId = bookingId,
+            shortOrgId = shortOrgId,
+            createdAt = now,
+            _type = SRideRequest.CANCELLATION,
+            info = Nothing
+          }
 
 getRideInfo ::
   (EsqDBFlow m r, CoreMetrics m, HasGoogleMaps m r) => Id SRB.Booking -> Id SP.Person -> m GetRideInfoRes

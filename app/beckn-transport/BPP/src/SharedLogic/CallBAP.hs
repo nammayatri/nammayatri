@@ -1,30 +1,38 @@
-module Product.BecknProvider.BP
+{-# LANGUAGE OverloadedLabels #-}
+
+module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,
     sendBookingCancelledUpdateToBAP,
     sendBookingReallocationUpdateToBAP,
-    buildRideReq,
+    buildBppUrl,
   )
 where
 
 import Beckn.Types.Common
+import qualified Beckn.Types.Core.Context as Context
+import Beckn.Types.Core.ReqTypes (BecknCallbackReq (BecknCallbackReq))
+import qualified Beckn.Types.Core.Taxi.API.OnUpdate as API
+import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import Beckn.Types.Id
+import Beckn.Utils.Common
+import qualified Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.OnUpdate as ACL
+import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import Domain.Types.Organization as Org
 import qualified Domain.Types.Organization as SOrg
 import qualified Domain.Types.Ride as SRide
-import qualified Domain.Types.RideRequest as SRideRequest
 import EulerHS.Prelude
-import ExternalAPI.Flow (callOnUpdate)
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVeh
+import Tools.Error
 import Tools.Metrics (CoreMetrics)
-import Types.Error
-import Utils.Common
 
 sendRideAssignedUpdateToBAP ::
   ( EsqDBFlow m r,
@@ -110,21 +118,31 @@ sendBookingReallocationUpdateToBAP booking rideId transporter = do
   bookingReallocationMsg <- ACL.buildOnUpdateMessage bookingReallocationBuildReq
   void $ callOnUpdate transporter booking bookingReallocationMsg
 
-buildRideReq ::
-  MonadFlow m =>
-  Id SRB.Booking ->
-  ShortId SOrg.Organization ->
-  SRideRequest.RideRequestType ->
-  UTCTime ->
-  m SRideRequest.RideRequest
-buildRideReq rideId shortOrgId rideRequestType now = do
-  guid <- generateGUID
-  pure
-    SRideRequest.RideRequest
-      { id = Id guid,
-        bookingId = rideId,
-        shortOrgId = shortOrgId,
-        createdAt = now,
-        _type = rideRequestType,
-        info = Nothing
-      }
+callOnUpdate ::
+  ( EsqDBFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  Org.Organization ->
+  SRB.Booking ->
+  OnUpdate.OnUpdateMessage ->
+  m ()
+callOnUpdate transporter booking content = do
+  let bapId = booking.bapId
+      bapUri = booking.bapUri
+  let bppShortId = getShortId $ transporter.shortId
+      authKey = getHttpManagerKey bppShortId
+  bppUri <- buildBppUrl transporter.id
+  msgId <- generateGUID
+  context <- buildTaxiContext Context.ON_UPDATE msgId Nothing bapId bapUri (Just transporter.shortId.getShortId) (Just bppUri)
+  void . Beckn.callBecknAPI (Just authKey) Nothing (show Context.ON_UPDATE) API.onUpdateAPI bapUri . BecknCallbackReq context $ Right content
+
+buildBppUrl ::
+  ( HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  Id Org.Organization ->
+  m BaseUrl
+buildBppUrl (Id transporterId) =
+  asks (.nwAddress)
+    <&> #baseUrlPath %~ (<> "/" <> T.unpack transporterId)

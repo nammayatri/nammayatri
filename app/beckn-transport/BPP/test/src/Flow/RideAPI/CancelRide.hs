@@ -11,7 +11,7 @@ import qualified Fixtures
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
-import Types.Error
+import Tools.Error
 import Utils.GuidGenerator ()
 import Utils.SilentLogger ()
 

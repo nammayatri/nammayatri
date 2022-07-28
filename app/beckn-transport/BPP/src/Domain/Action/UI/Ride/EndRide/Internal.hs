@@ -6,13 +6,13 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
+import Domain.Types.Person (Driver)
 import qualified Domain.Types.Ride as SRide
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverStats as DriverStats
 import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
-import Types.App (Driver)
 
 endRideTransaction :: EsqDBFlow m r => Id SRB.Booking -> SRide.Ride -> Id Driver -> [DFareBreakup.FareBreakup] -> m ()
 endRideTransaction bookingId ride driverId fareBreakups = Esq.runTransaction $ do

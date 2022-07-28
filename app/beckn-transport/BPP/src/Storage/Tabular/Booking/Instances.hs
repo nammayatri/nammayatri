@@ -6,14 +6,14 @@ module Storage.Tabular.Booking.Instances where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import qualified Domain.Types.Booking.Type as Domain
 import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.Booking.RentalBooking
 import Storage.Tabular.Booking.Table
 import Storage.Tabular.FarePolicy.FareProduct ()
 import Storage.Tabular.Vehicle ()
-import Types.Error
-import Utils.Common hiding (id)
+import Tools.Error
 
 data BookingDetailsT = OneWayDetailsT BookingLocationT | RentalDetailsT RentalBookingT
 

@@ -20,9 +20,9 @@ import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.Ride as QRide
+import Tools.Error
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
-import Types.Error
 
 data BookingAPIEntity = BookingAPIEntity
   { id :: Id Booking,

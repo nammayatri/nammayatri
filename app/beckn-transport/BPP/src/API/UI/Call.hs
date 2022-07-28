@@ -1,7 +1,7 @@
 module API.UI.Call (module Reexport, DeprecatedAPI, API, handler, deprecatedHandler) where
 
-import App.Types
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Action.UI.Call as Reexport
   ( CallCallbackReq,
     CallCallbackRes,
@@ -13,10 +13,10 @@ import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
+import Environment
 import EulerHS.Prelude
 import Servant
-import Utils.Auth
-import Utils.Common
+import Tools.Auth
 
 type DeprecatedAPI =
   "driver" :> "ride"

@@ -3,6 +3,7 @@ module Flow.RideAPI.EndRide (endRideTests) where
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.Common (throwError)
 import Domain.Action.UI.Ride.EndRide as Handle
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
@@ -14,8 +15,7 @@ import SharedLogic.FareCalculator.RentalFareCalculator.Flow
 import Test.Hspec
 import Test.Tasty
 import Test.Tasty.HUnit
-import Types.Error
-import Utils.Common (throwError)
+import Tools.Error
 import Utils.SilentLogger ()
 
 endRideTests :: TestTree

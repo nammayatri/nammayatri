@@ -1,6 +1,5 @@
 module App.Scheduler where
 
-import App.Types (AppCfg, Log (withLogTag))
 import Beckn.Mock.App (runMock)
 import Beckn.Prelude
 import Beckn.Scheduler
@@ -15,6 +14,7 @@ import Data.String.Conversions (cs)
 import qualified Domain.Types.Booking as DRB
 import Domain.Types.Organization (Organization)
 import qualified Domain.Types.RideRequest as RideRequest
+import Environment (AppCfg, Log (withLogTag))
 import qualified Storage.Queries.RideRequest as RideRequest
 import System.Environment (lookupEnv)
 

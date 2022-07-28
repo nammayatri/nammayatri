@@ -8,6 +8,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Beckn.Types.MapSearch as MapSearch
+import Beckn.Utils.Common
 import qualified Data.Text as T
 import Data.Traversable
 import qualified Domain.Types.BusinessEvent as SB
@@ -24,9 +25,8 @@ import qualified SharedLogic.FareCalculator.OneWayFareCalculator.Flow as Fare
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.Products as QProduct
 import qualified Storage.Queries.Quote as QQuote
+import Tools.Error
 import Tools.Metrics (CoreMetrics, HasBPPMetrics)
-import Types.Error
-import Utils.Common
 
 data QuoteInfo = QuoteInfo
   { quoteId :: Id DQuote.Quote,

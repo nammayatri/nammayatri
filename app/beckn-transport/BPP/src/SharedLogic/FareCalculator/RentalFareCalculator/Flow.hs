@@ -11,6 +11,7 @@ where
 
 import Beckn.Types.Amount
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Booking (Booking)
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
@@ -22,8 +23,7 @@ import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
     rentalFareSumWithDiscount,
   )
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
-import Types.Error
-import Utils.Common
+import Tools.Error
 
 type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
 

@@ -32,7 +32,6 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
-import Utils.Common
 import qualified Utils.Notifications as Notify
 
 data DConfirmReq = DConfirmReq

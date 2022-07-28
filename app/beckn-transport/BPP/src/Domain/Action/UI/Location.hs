@@ -6,12 +6,12 @@ import Beckn.Types.Common
 import Beckn.Types.Error
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Beckn.Utils.Common hiding (id)
 import qualified Domain.Types.Ride as SRide
 import GHC.Records.Extra
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
-import Utils.Common hiding (id)
 
 data Status = PreRide | ActualRide
   deriving (Generic, ToJSON, Show, FromJSON, ToSchema)

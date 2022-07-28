@@ -3,11 +3,11 @@ module Storage.Queries.NotificationStatus where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Booking
 import Domain.Types.NotificationStatus as NotificationStatus
+import Domain.Types.Person (Driver)
 import Storage.Tabular.NotificationStatus
-import Types.App
-import Utils.Common
 
 createMany :: [NotificationStatus] -> SqlDB ()
 createMany = Esq.createMany

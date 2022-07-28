@@ -6,9 +6,9 @@ module Storage.Queries.Booking.BookingLocation where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Booking.BookingLocation
 import Storage.Tabular.Booking.BookingLocation
-import Utils.Common
 
 updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
 updateAddress blId LocationAddress {..} = do

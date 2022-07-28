@@ -17,7 +17,6 @@ import qualified "public-transport-bap" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
 import qualified "search-result-aggregator" App as SearchResultAggregator
 import qualified "app-backend" App.Types as AppBackend
-import qualified "beckn-transport" App.Types as TransporterBackend
 import Beckn.Exit (exitDBMigrationFailure)
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Esqueleto.Migration as Esq
@@ -25,6 +24,7 @@ import Beckn.Types.Logging (LoggerConfig)
 import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
 import qualified Data.Text as T (replace, toUpper, unpack)
+import qualified "beckn-transport" Environment as TransporterBackend
 import qualified "driver-offer-bpp" Environment as DriverOfferBpp
 import EulerHS.Prelude
 import GHC.Records.Extra (HasField)

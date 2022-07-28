@@ -7,10 +7,10 @@ where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Domain.Types.Organization (Organization)
 import Domain.Types.Vehicle as Vehicle
 import Storage.Tabular.FarePolicy.OneWayFarePolicy.PerExtraKmRate
-import Utils.Common
 
 findAll' ::
   ( Transactionable m,

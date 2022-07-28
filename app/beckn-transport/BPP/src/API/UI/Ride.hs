@@ -5,11 +5,11 @@ module API.UI.Ride
   )
 where
 
-import App.Types
 import Beckn.Prelude
 import Beckn.Types.APISuccess (APISuccess)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
+import Beckn.Utils.Common
 import Beckn.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Domain.Action.UI.Ride as Reexport
   ( DriverRideListRes (..),
@@ -27,8 +27,9 @@ import qualified Domain.Action.UI.Ride.StartRide as SHandler
 import qualified Domain.Action.UI.Ride.StartRide.Internal as SInternal
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import Product.BecknProvider.BP
+import Environment
 import Servant
+import SharedLogic.CallBAP
 import qualified SharedLogic.FareCalculator.OneWayFareCalculator as Fare
 import qualified SharedLogic.FareCalculator.RentalFareCalculator as RentalFare
 import SharedLogic.LocationUpdates
@@ -36,9 +37,8 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverLocation as DrLoc
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import Tools.Auth
 import Tools.Metrics (putFareAndDistanceDeviations)
-import Utils.Auth
-import Utils.Common
 
 type API =
   "driver" :> "ride"

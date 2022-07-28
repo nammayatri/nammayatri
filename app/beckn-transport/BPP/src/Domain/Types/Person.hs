@@ -55,6 +55,8 @@ instance FromHttpApiData Gender where
   parseQueryParam = parseUrlPiece
   parseHeader = first T.pack . eitherDecode . BSL.fromStrict
 
+data Driver -- = Person
+
 data PersonE e = Person
   { id :: Id Person,
     firstName :: Text,
