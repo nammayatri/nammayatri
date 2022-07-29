@@ -152,7 +152,7 @@ notifyDriverNewAllocation ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyDriverNewAllocation bookingId personId =
-  FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
+  FCM.notifyPersonWithPriority (Just FCM.HIGH) notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "New allocation request."
     body =
