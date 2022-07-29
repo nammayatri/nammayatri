@@ -107,7 +107,7 @@ token: {{app-token}}
 @baseTime = 2022-05-19T18:35
 
 # POST {{app-host}}/rideSearch
-POST https://api.sandbox.beckn.juspay.in/app/v2/rideSearch
+POST {{app-host}}/rideSearch
 content-type: application/json
 #token: {{app-token}}
 token: 2cdf9f89-bf7d-486c-ad8a-bc3561f8c971
@@ -147,22 +147,48 @@ content-type: application/json
 token: {{token}}
 
 ###
-# @name confirm
 @quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
 
-POST {{app-host}}/rideSearch/{{searchId}}/quotes/{{quoteId}}/confirm HTTP/1.1
+# @name confirm
+
+POST {{app-host}}/rideSearch/quotes/{{quoteId}}/confirm HTTP/1.1
 content-type: application/json
 token: {{token}}
 
+{
+  "selected": false,
+  "fromLocation": {
+          "street": "Edapally Metro Station",
+          "state": "Kerala",
+          "door": "",
+          "country": "India",
+          "city": "Kochi",
+          "building": " ",
+          "areaCode": "",
+          "area": "Edappally"
+      },
+  "toLocation": {
+              "street": "Ambattukavu",
+              "state": "Kerala",
+              "door": "",
+              "country": "India",
+              "city": "Aluva",
+              "building": "Ambattukavu metro station",
+              "areaCode": "",
+              "area": "Choornikkara"
+          }
+}
+
 ###
 
+# @bookingId = {{confirm.response.body.bookingId}}
 @bookingId = {{confirm.response.body.bookingId}}
-POST {{app-host}}/booking/{{bookingId}}
+POST {{app-host}}/rideBooking/{{bookingId}}
 token: {{token}}
 
 ###
 
-GET {{app-host}}/booking/list
+GET {{app-host}}/rideBooking/list
   ?offset=0
   &limit=50
   &onlyActive=false
@@ -171,18 +197,19 @@ token: {{token}}
 
 ###
 
-@bppBookingId = c5ca14d1-7f81-4056-b473-40554e73bf2c
-# this was taken from the database
+@bppBookingId = 7b8eee2b-f13a-4f77-bffb-bbc623527ced
+# this should be taken from the transporter BPP database
+# select id from booking where status = 'CONFIRMED';
 
 # @name notif-info
-GET {{transporter-host}}/driver/booking/{{bppBookingId}}/notification
+GET {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification
 token: {{driver-token}}
 
 ###
 
 # @name accept
 
-POST {{transporter-host}}/driver/booking/{{bppBookingId}}/notification/respond
+POST {{transporter-host}}/driver/rideBooking/{{bppBookingId}}/notification/respond
 token: {{driver-token}}
 content-type: application/json
 
@@ -192,7 +219,7 @@ content-type: application/json
 
 ###
 # @name list2
-GET {{app-host}}/booking/list
+GET {{app-host}}/rideBooking/list
   ?offset=0
   &limit=50
   &onlyActive=false
@@ -206,7 +233,7 @@ token: {{driver-token}}
 
 ###
 @rideId = {{driverList.response.body.list[0].id}}
-@otp = {{list2.response.body.list[0].ride.rideOtp}}
+@otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
 
 # @name startRide
 POST {{transporter-host}}/driver/ride/{{rideId}}/start

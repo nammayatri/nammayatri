@@ -86,6 +86,7 @@ dependencies:
   - persistent
   - extra
   - text-conversions
+  - fmt
 
 ghc-options:
   - -fwrite-ide-info

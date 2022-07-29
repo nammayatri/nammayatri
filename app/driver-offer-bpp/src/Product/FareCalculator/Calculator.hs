@@ -22,27 +22,25 @@ type Distance = HighPrecMeters
 
 mkBreakupList :: (Amount -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
-  {-
-    let dayPartRate = calculateDayPartRate fareParams
-        fareForPickupFinal = fareParams.fareForPickup * dayPartRate
-        fareForPickupCaption = mconcat ["Fare for pickup: ", show fareForPickupFinal, " INR"]
-        fareForPickupItem = mkBreakupItem fareForPickupCaption (mkPrice fareForPickupFinal)
+  -- TODO: what should be here?
+  let dayPartRate = calculateDayPartRate fareParams
+      fareForPickupFinal = fareParams.fareForPickup * dayPartRate
+      fareForPickupCaption = mconcat ["Fare for pickup: ", amountToString fareForPickupFinal, " INR"]
+      fareForPickupItem = mkBreakupItem fareForPickupCaption (mkPrice fareForPickupFinal)
 
-        distanceFareFinal = fareParams.distanceFare * dayPartRate
-        distanceFareCaption = mconcat ["Distance fare: ", show distanceFareFinal, " INR"]
-        distanceFareItem = mkBreakupItem distanceFareCaption (mkPrice distanceFareFinal)
+      distanceFareFinal = fareParams.distanceFare * dayPartRate
+      distanceFareCaption = mconcat ["Distance fare: ", amountToString distanceFareFinal, " INR"]
+      distanceFareItem = mkBreakupItem distanceFareCaption (mkPrice distanceFareFinal)
 
-        mkSelectedFareCaption selFare = mconcat ["Fare selected by driver: ", show selFare, " INR"]
-        mbSelectedFareItem =
-          fareParams.driverSelectedFare <&> \selFare ->
-            mkBreakupItem (mkSelectedFareCaption selFare) (mkPrice selFare)
-  -}
-  let totalFareFinal = fareSum fareParams
-      totalFareCaption = mconcat ["Total fare: ", show totalFareFinal, " INR"]
+      mkSelectedFareCaption selFare = mconcat ["Fare selected by driver: ", amountToString selFare, " INR"]
+      mbSelectedFareItem =
+        fareParams.driverSelectedFare <&> \selFare ->
+          mkBreakupItem (mkSelectedFareCaption selFare) (mkPrice selFare)
+
+      totalFareFinal = fareSum fareParams
+      totalFareCaption = mconcat ["Total fare: ", amountToString totalFareFinal, " INR"]
       totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinal
-  --  catMaybes [Just totalFareItem, Just fareForPickupItem, Just distanceFareItem, mbSelectedFareItem]
-  --  FIXME: improve spec?
-  catMaybes [Just totalFareItem]
+  catMaybes [Just totalFareItem, Just fareForPickupItem, Just distanceFareItem, mbSelectedFareItem]
 
 -- TODO: make some tests for it
 fareSum :: FareParameters -> Amount

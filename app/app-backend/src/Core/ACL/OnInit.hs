@@ -22,14 +22,7 @@ buildOnInitReq req = do
         bppBookingId = Id message.order.id
         estimatedFare = message.order.quote.price.value
         estimatedTotalFare = message.order.quote.price.offered_value
-        -- We assume that first item in list is always estimatedPriceBreakup and others are discounts
-        (estimatedPriceBreakup : discountPriceBreakups) = message.order.quote.breakup
-    unless (estimatedFare == estimatedPriceBreakup.price.value) $
-      throwError (InvalidRequest "Estimated fare is not first item in Breakup list.")
-    let discount =
-          if null discountPriceBreakups
-            then Nothing
-            else Just $ foldr (\v sm -> sm + v.price.value) 0 discountPriceBreakups
+    let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ abs (estimatedFare - estimatedTotalFare)
     whenJust discount $ \disc ->
       when (estimatedFare < disc) $ throwError (InvalidRequest "Discount value more than estimated fare.")
     return $
