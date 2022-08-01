@@ -9,6 +9,7 @@ import qualified Beckn.Types.Core.Taxi.API.OnSearch as OnSearch
 import qualified Beckn.Types.Core.Taxi.OnSearch as OnSearch
 import Beckn.Types.Id
 import Beckn.Utils.Logging
+import Core.ACL.Common (validatePrices)
 import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import Domain.Types.OnSearchEvent
 import qualified Domain.Types.VehicleVariant as VehVar
@@ -80,7 +81,9 @@ buildEstimateOrQuoteInfo item = do
       estimatedFare = realToFrac item.price.value
       estimatedTotalFare = realToFrac item.price.offered_value
       descriptions = item.quote_terms
-      discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedTotalFare - estimatedFare
+  validatePrices estimatedFare estimatedTotalFare
+  -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
+  let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
   case item.category_id of
     OnSearch.ONE_WAY_TRIP -> do
       quoteDetails <- DOnSearch.OneWayDetails <$> buildOneWayQuoteDetails item

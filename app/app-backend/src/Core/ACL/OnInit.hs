@@ -6,8 +6,8 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import qualified Beckn.Types.Core.Taxi.OnInit as OnInit
 import Beckn.Types.Id
+import Core.ACL.Common
 import qualified Domain.Action.Beckn.OnInit as DOnInit
-import Types.Error
 import Utils.Common
 
 buildOnInitReq ::
@@ -22,9 +22,9 @@ buildOnInitReq req = do
         bppBookingId = Id message.order.id
         estimatedFare = message.order.quote.price.value
         estimatedTotalFare = message.order.quote.price.offered_value
-    let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ abs (estimatedFare - estimatedTotalFare)
-    whenJust discount $ \disc ->
-      when (estimatedFare < disc) $ throwError (InvalidRequest "Discount value more than estimated fare.")
+    validatePrices estimatedFare estimatedTotalFare
+    -- if we get here, the discount >= 0
+    let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
     return $
       DOnInit.OnInitReq
         { estimatedFare = realToFrac estimatedFare,
