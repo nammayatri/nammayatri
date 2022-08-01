@@ -31,7 +31,7 @@ data TransporterInfo = TransporterInfo
 oneWayCategory :: OS.Category
 oneWayCategory =
   OS.Category
-    { id = OS.AUTO_TRIP,
+    { id = OS.DRIVER_OFFER,
       descriptor =
         OS.Descriptor
           { name = ""
@@ -128,7 +128,7 @@ mkItem categoryId fulfillmentId q =
           { name = "",
             code =
               OS.ItemCode
-                { fareProductType = OS.AUTO_TRIP,
+                { fareProductType = OS.DRIVER_OFFER,
                   vehicleVariant = castVariant q.vehicleVariant,
                   distance = Nothing,
                   duration = Nothing

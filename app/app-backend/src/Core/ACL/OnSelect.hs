@@ -61,7 +61,8 @@ buildQuoteInfo item = do
   quoteDetails <- case item.category_id of
     OnSelect.ONE_WAY_TRIP -> throwError $ InvalidRequest "select not supported for one way trip"
     OnSelect.RENTAL_TRIP -> throwError $ InvalidRequest "select not supported for rental trip"
-    OnSelect.AUTO_TRIP -> buildDriverOfferQuoteDetails item
+    OnSelect.DRIVER_OFFER -> buildDriverOfferQuoteDetails item
+    OnSelect.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Estimates is only supported in on_search"
   let itemCode = item.descriptor.code
       vehicleVariant = itemCode.vehicleVariant
       estimatedFare = realToFrac item.price.value

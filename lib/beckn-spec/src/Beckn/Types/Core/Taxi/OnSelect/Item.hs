@@ -25,7 +25,7 @@ data Item = Item
     -- Only when FareProductType.RENTAL_TRIP
     base_distance :: Maybe Kilometers,
     base_duration :: Maybe Hours,
-    -- Only when FareProductType.AUTO_TRIP
+    -- Only when FareProductType.DRIVER_OFFER
     driver_name :: Maybe Text,
     duration_to_pickup :: Maybe Int, -- Seconds?
     valid_till :: Maybe UTCTime,

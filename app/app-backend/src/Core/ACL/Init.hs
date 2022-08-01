@@ -28,7 +28,7 @@ buildInitMessage res = do
   let (fareProductType, mbDistance, mbDuration, mbBppItemId) = case res.quoteDetails of
         DConfirm.ConfirmOneWayDetails -> (Init.ONE_WAY_TRIP, Nothing, Nothing, Nothing)
         DConfirm.ConfirmRentalDetails r -> (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration, Nothing)
-        DConfirm.ConfirmAutoDetails bppQuoteId -> (Init.AUTO_TRIP, Nothing, Nothing, Just bppQuoteId.getId)
+        DConfirm.ConfirmAutoDetails bppQuoteId -> (Init.DRIVER_OFFER, Nothing, Nothing, Just bppQuoteId.getId)
   let vehicleVariant = castVehicleVariant res.vehicleVariant
   let itemCode =
         Init.ItemCode

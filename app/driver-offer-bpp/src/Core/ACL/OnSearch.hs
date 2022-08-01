@@ -11,7 +11,7 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 autoOneWayCategory :: OS.Category
 autoOneWayCategory =
   OS.Category
-    { id = OS.AUTO_TRIP,
+    { id = OS.DRIVER_OFFER_ESTIMATE,
       descriptor =
         OS.Descriptor
           { name = ""
@@ -98,7 +98,7 @@ mkItem categoryId fulfillmentId dRes =
           { name = "",
             code =
               OS.ItemCode
-                { fareProductType = OS.AUTO_TRIP,
+                { fareProductType = OS.DRIVER_OFFER_ESTIMATE,
                   vehicleVariant = castVariant dRes.vehicleVariant,
                   distance = Nothing,
                   duration = Nothing

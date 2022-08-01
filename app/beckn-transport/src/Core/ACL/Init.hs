@@ -64,4 +64,5 @@ buildInitReq subscriber req = do
             DInit.InitRentalReq
               { ..
               }
-        Init.AUTO_TRIP -> throwError $ InvalidRequest "Auto trip is not supported by this BPP"
+        Init.DRIVER_OFFER_ESTIMATE -> throwError $ InvalidRequest "Driver offer is not supported by this BPP"
+        Init.DRIVER_OFFER -> throwError $ InvalidRequest "Driver offer is not supported by this BPP"

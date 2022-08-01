@@ -88,7 +88,8 @@ buildEstimateOrQuoteInfo item = do
     OnSearch.RENTAL_TRIP -> do
       quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
       pure $ Right DOnSearch.QuoteInfo {..}
-    OnSearch.AUTO_TRIP -> pure $ Left DOnSearch.EstimateInfo {..}
+    OnSearch.DRIVER_OFFER_ESTIMATE -> pure $ Left DOnSearch.EstimateInfo {..}
+    OnSearch.DRIVER_OFFER -> throwError $ InvalidRequest "DRIVER_OFFER supported in on_select, use DRIVER_OFFER_ESTIMATE"
   where
     castVehicleVariant = \case
       OnSearch.SEDAN -> VehVar.SEDAN

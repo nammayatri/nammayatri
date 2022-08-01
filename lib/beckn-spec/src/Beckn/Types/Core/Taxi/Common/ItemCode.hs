@@ -28,8 +28,10 @@ instance Show ItemCode where
     show ONE_WAY_TRIP <> "_" <> show vehVar
   show (ItemCode RENTAL_TRIP vehVar (Just dist) (Just dur)) =
     show RENTAL_TRIP <> "_" <> show vehVar <> "_" <> show dist <> "_" <> show dur
-  show (ItemCode AUTO_TRIP vehVar Nothing Nothing) =
-    show AUTO_TRIP <> "_" <> show vehVar
+  show (ItemCode DRIVER_OFFER_ESTIMATE vehVar Nothing Nothing) =
+    show DRIVER_OFFER_ESTIMATE <> "_" <> show vehVar
+  show (ItemCode DRIVER_OFFER vehVar Nothing Nothing) =
+    show DRIVER_OFFER <> "_" <> show vehVar
   show _ = error "ItemCode content doesn't correspond its FareProductType/"
 
 instance Read ItemCode where
@@ -49,8 +51,12 @@ instance Read ItemCode where
                    r5 <- stripPrefix "_" r4,
                    (v3, r6) <- readsPrec (app_prec + 1) r5
                ]
-            ++ [ (ItemCode AUTO_TRIP v1 Nothing Nothing, r2)
-                 | r1 <- stripPrefix "AUTO_TRIP_" r,
+            ++ [ (ItemCode DRIVER_OFFER_ESTIMATE v1 Nothing Nothing, r2)
+                 | r1 <- stripPrefix "DRIVER_OFFER_ESTIMATE_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
+            ++ [ (ItemCode DRIVER_OFFER v1 Nothing Nothing, r2)
+                 | r1 <- stripPrefix "DRIVER_OFFER_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
       )
