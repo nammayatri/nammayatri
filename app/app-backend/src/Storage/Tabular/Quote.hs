@@ -13,6 +13,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.Quote as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
+import qualified Storage.Tabular.DriverOffer as SDriverOffer
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
 import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.TripTerms as STripTerms
@@ -36,6 +37,7 @@ mkPersist
       vehicleVariant VehVar.VehicleVariant
       tripTermsId STripTerms.TripTermsTId Maybe
       rentalSlabId SRentalSlab.RentalSlabTId Maybe
+      driverOfferId SDriverOffer.DriverOfferTId Maybe
       createdAt UTCTime
       Primary id
       deriving Generic

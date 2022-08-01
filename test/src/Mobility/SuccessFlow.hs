@@ -62,7 +62,7 @@ doAnAppSearchByReq searchReq' = do
   -- Confirm ride from app backend
   confirmRes <-
     callBAP $
-      appConfirmRide appRegistrationToken bapQuoteId $ mkAppConfirmReq False
+      appConfirmRide appRegistrationToken bapQuoteId mkAppConfirmReq
   let bapBookingId = confirmRes.bookingId
 
   void . pollDesc "confirm ride" $

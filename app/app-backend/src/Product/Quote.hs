@@ -3,13 +3,16 @@ module Product.Quote where
 import App.Types
 import Beckn.Storage.Hedis as Hedis
 import Beckn.Streaming.Kafka.Topic.PublicTransportQuoteList
+import Beckn.Types.Amount
 import Beckn.Types.Id
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.SearchReqLocation as Location
 import qualified Domain.Types.SearchRequest as SSR
 import EulerHS.Prelude hiding (id)
 import qualified Product.MetroOffer as Metro
+import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Quote as QRentalQuote
 import qualified Storage.Queries.SearchReqLocation as Location
@@ -25,11 +28,13 @@ getQuotes searchRequestId _ = withFlowHandlerAPI $ do
   fromLocation <- Location.findById searchRequest.fromLocationId >>= fromMaybeM LocationNotFound
   mbToLocation <- forM (searchRequest.toLocationId) (Location.findById >=> fromMaybeM LocationNotFound)
   offers <- getOffers searchRequest
+  estimates <- getEstimates searchRequestId
   return $
     API.GetQuotesRes
       { fromLocation = Location.makeSearchReqLocationAPIEntity fromLocation,
         toLocation = Location.makeSearchReqLocationAPIEntity <$> mbToLocation,
-        quotes = offers
+        quotes = offers,
+        estimates
       }
 
 getOffers :: (HedisFlow m r, EsqDBFlow m r) => SSR.SearchRequest -> m [API.OfferRes]
@@ -54,10 +59,7 @@ getOffers searchRequest = do
       case quote.quoteDetails of
         SQuote.OneWayDetails details -> Just details.distanceToNearestDriver
         SQuote.RentalDetails _ -> Nothing
-        SQuote.AutoDetails -> Nothing
-    sortByEstimatedFare quoteList = do
-      let sortFunc = compare `on` (.estimatedFare)
-      sortBy sortFunc quoteList
+        SQuote.DriverOfferDetails details -> Just details.distanceToPickup
     creationTime :: API.OfferRes -> UTCTime
     creationTime (API.OnDemandCab SQuote.QuoteAPIEntity {createdAt}) = createdAt
     creationTime (API.Metro MetroOffer {createdAt}) = createdAt
@@ -68,3 +70,14 @@ getPubTransportOffers transactionId =
   Hedis.getList redisKey
   where
     redisKey = "publicTransportQuoteList:" <> getId transactionId
+
+getEstimates :: EsqDBFlow m r => Id SSR.SearchRequest -> m [DEstimate.EstimateAPIEntity]
+getEstimates searchRequestId = do
+  estimateList <- QEstimate.findAllByRequestId searchRequestId
+  let estimates = DEstimate.mkEstimateAPIEntity <$> sortByEstimatedFare estimateList
+  return . sortBy (compare `on` (.createdAt)) $ estimates
+
+sortByEstimatedFare :: (HasField "estimatedFare" r Amount) => [r] -> [r]
+sortByEstimatedFare resultList = do
+  let sortFunc = compare `on` (.estimatedFare)
+  sortBy sortFunc resultList

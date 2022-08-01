@@ -97,11 +97,10 @@ confirmAddress =
       state = Just "Karnataka"
     }
 
-mkAppConfirmReq :: Bool -> DConfirm.ConfirmReq
-mkAppConfirmReq isSelected =
+mkAppConfirmReq :: DConfirm.ConfirmReq
+mkAppConfirmReq =
   DConfirm.ConfirmReq
-    { selected = isSelected,
-      fromLocation = confirmAddress,
+    { fromLocation = confirmAddress,
       toLocation = Just confirmAddress
     }
 

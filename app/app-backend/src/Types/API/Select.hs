@@ -3,10 +3,10 @@
 module Types.API.Select where
 
 import Beckn.Prelude
-import Domain.Types.SelectedQuote
+import Domain.Types.Quote
 
 newtype SelectListRes = SelectListRes
-  { selectedQuotes :: [SelectedQuoteAPIEntity]
+  { selectedQuotes :: [QuoteAPIEntity]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

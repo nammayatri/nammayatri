@@ -11,17 +11,17 @@ import qualified Core.ACL.OnSelect as ACL
 import qualified Core.ACL.Select as ACL
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import qualified Domain.Action.UI.Select as DSelect
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
-import Domain.Types.SelectedQuote (mkSelQuoteAPIEntity)
 import qualified ExternalAPI.Flow as ExternalAPI
-import qualified Storage.Queries.SelectedQuote as QSQuote
+import qualified Storage.Queries.Quote as QQuote
 import Types.API.Select
 import Utils.Common
 
-select :: Id DPerson.Person -> Id DQuote.Quote -> FlowHandler APISuccess
-select personId quoteId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  dSelectReq <- DSelect.select personId quoteId
+select :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler APISuccess
+select personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  dSelectReq <- DSelect.select personId estimateId
   becknReq <- ACL.buildSelectReq dSelectReq
   void $ ExternalAPI.select dSelectReq.providerUrl becknReq
   pure Success
@@ -35,7 +35,7 @@ onSelect _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   whenJust mbDOnSelectReq DOnSelect.onSelect
   pure Ack
 
-selectList :: Id DPerson.Person -> Id DQuote.Quote -> FlowHandler SelectListRes
-selectList personId quoteId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
-  selectedQuotes <- QSQuote.findByQuoteId quoteId
-  pure $ SelectListRes $ map mkSelQuoteAPIEntity selectedQuotes
+selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler SelectListRes
+selectList personId estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  selectedQuotes <- QQuote.findAllByEstimateId estimateId
+  pure $ SelectListRes $ map DQuote.makeQuoteAPIEntity selectedQuotes

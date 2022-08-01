@@ -11,6 +11,7 @@ import Beckn.Utils.GenericPretty
 import Data.Aeson
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Data.OpenApi as OpenApi
+import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import qualified Domain.Types.TripTerms as DTripTerms
@@ -40,7 +41,7 @@ data Quote = Quote
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
   | RentalDetails DRentalSlab.RentalSlab
-  | AutoDetails
+  | DriverOfferDetails DDriverOffer.DriverOffer
   deriving (Generic, Show)
   deriving (PrettyShow) via Showable QuoteDetails
 
@@ -49,7 +50,7 @@ data QuoteDetails
 defineFareProductType :: QuoteDetails -> FareProductType
 defineFareProductType (OneWayDetails _) = ONE_WAY
 defineFareProductType (RentalDetails _) = RENTAL
-defineFareProductType AutoDetails = AUTO
+defineFareProductType (DriverOfferDetails _) = AUTO
 
 fareProductOptions :: Options
 fareProductOptions =
@@ -83,12 +84,6 @@ newtype OneWayQuoteDetails = OneWayQuoteDetails
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, PrettyShow)
 
-data QuoteTerms = QuoteTerms
-  { id :: Id QuoteTerms,
-    description :: Text
-  }
-  deriving (Show)
-
 data QuoteAPIEntity = QuoteAPIEntity
   { id :: Id Quote,
     vehicleVariant :: VehicleVariant,
@@ -108,7 +103,7 @@ data QuoteAPIEntity = QuoteAPIEntity
 data QuoteAPIDetails
   = OneWayAPIDetails OneWayQuoteAPIDetails
   | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
-  | AutoAPIDetails
+  | DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity
   deriving (Show, Generic)
 
 instance ToJSON QuoteAPIDetails where
@@ -120,7 +115,6 @@ instance FromJSON QuoteAPIDetails where
 instance ToSchema QuoteAPIDetails where
   declareNamedSchema = genericDeclareNamedSchema S.fareProductSchemaOptions
 
--- Can I use distanceToNearestDriver instead of nearestDriverDistance in QuoteAPIEntity for consistency and less boilerplate?
 newtype OneWayQuoteAPIDetails = OneWayQuoteAPIDetails
   { distanceToNearestDriver :: HighPrecMeters
   }
@@ -130,7 +124,7 @@ mkQuoteAPIDetails :: QuoteDetails -> QuoteAPIDetails
 mkQuoteAPIDetails = \case
   RentalDetails DRentalSlab.RentalSlab {..} -> RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
   OneWayDetails OneWayQuoteDetails {..} -> OneWayAPIDetails OneWayQuoteAPIDetails {..}
-  AutoDetails -> AutoAPIDetails
+  DriverOfferDetails DDriverOffer.DriverOffer {..} -> DriverOfferAPIDetails DDriverOffer.DriverOfferAPIEntity {..}
 
 makeQuoteAPIEntity :: Quote -> QuoteAPIEntity
 makeQuoteAPIEntity Quote {..} = do

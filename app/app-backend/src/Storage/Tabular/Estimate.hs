@@ -5,25 +5,23 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.SelectedQuote where
+module Storage.Tabular.Estimate where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Domain.Types.SelectedQuote as Domain
+import qualified Domain.Types.Estimate as Domain
 import qualified Domain.Types.VehicleVariant as VehVar
-import qualified Storage.Tabular.Quote as TQuote
+import qualified Storage.Tabular.SearchRequest as SSearchRequest
 import qualified Storage.Tabular.TripTerms as STripTerms
-import Types.Common hiding (id)
 
 mkPersist
   defaultSqlSettings
   [defaultQQ|
-    SelectedQuoteT sql=selected_quote
+    EstimateT sql=estimate
       id Text
-      fareProductType FareProductType
-      quoteId TQuote.QuoteTId
+      requestId SSearchRequest.SearchRequestTId
       estimatedFare Amount
       discount Amount Maybe
       estimatedTotalFare Amount
@@ -35,46 +33,36 @@ mkPersist
       vehicleVariant VehVar.VehicleVariant
       tripTermsId STripTerms.TripTermsTId Maybe
       createdAt UTCTime
-      driverName Text
-      durationToPickup Int
-      distanceToPickup Double
-      validTill UTCTime
-      bppQuoteId Text
-      rating Double Maybe
       Primary id
       deriving Generic
     |]
 
-instance TEntityKey SelectedQuoteT where
-  type DomainKey SelectedQuoteT = Id Domain.SelectedQuote
-  fromKey (SelectedQuoteTKey _id) = Id _id
-  toKey (Id id) = SelectedQuoteTKey id
+instance TEntityKey EstimateT where
+  type DomainKey EstimateT = Id Domain.Estimate
+  fromKey (EstimateTKey _id) = Id _id
+  toKey (Id id) = EstimateTKey id
 
-type FullSelectedQuoteT = (SelectedQuoteT, Maybe STripTerms.TripTermsT)
+type FullEstimateT = (EstimateT, Maybe STripTerms.TripTermsT)
 
-instance TType FullSelectedQuoteT Domain.SelectedQuote where
-  fromTType (SelectedQuoteT {..}, mbTripTermsT) = do
+instance TType FullEstimateT Domain.Estimate where
+  fromTType (EstimateT {..}, mbTripTermsT) = do
     pUrl <- parseBaseUrl providerUrl
     tripTerms <- forM mbTripTermsT fromTType
-
     return $
-      Domain.SelectedQuote
+      Domain.Estimate
         { id = Id id,
+          requestId = fromKey requestId,
           providerUrl = pUrl,
-          bppQuoteId = Id bppQuoteId,
-          quoteId = fromKey quoteId,
           ..
         }
-  toTType Domain.SelectedQuote {..} = do
-    let quoteT =
-          SelectedQuoteT
+  toTType Domain.Estimate {..} = do
+    let estimateT =
+          EstimateT
             { id = getId id,
-              fareProductType = AUTO,
+              requestId = toKey requestId,
               providerUrl = showBaseUrl providerUrl,
               tripTermsId = toKey <$> (tripTerms <&> (.id)),
-              bppQuoteId = bppQuoteId.getId,
-              quoteId = toKey quoteId,
               ..
             }
     let mbTripTermsT = toTType <$> tripTerms
-    (quoteT, mbTripTermsT)
+    (estimateT, mbTripTermsT)

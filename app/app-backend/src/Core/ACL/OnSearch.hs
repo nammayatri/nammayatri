@@ -43,7 +43,7 @@ searchCbService context catalog = do
     [] -> throwError $ InvalidRequest "Missing bpp/providers" -- TODO: make it NonEmpty
     (provider : _) -> do
       let items = provider.items
-      quotesInfo <- traverse buildQuoteInfo items
+      (estimatesInfo, quotesInfo) <- partitionEithers <$> traverse buildEstimateOrQuoteInfo items
       let providerInfo =
             DOnSearch.ProviderInfo
               { providerId = providerId,
@@ -70,26 +70,25 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   runTransaction $
     OnSearchEvent.create $ OnSearchEvent {..}
 
-buildQuoteInfo ::
+buildEstimateOrQuoteInfo ::
   (MonadThrow m, Log m) =>
   OnSearch.Item ->
-  m DOnSearch.QuoteInfo
-buildQuoteInfo item = do
-  quoteDetails <- case item.category_id of
-    OnSearch.ONE_WAY_TRIP -> DOnSearch.OneWayDetails <$> buildOneWayQuoteDetails item
-    OnSearch.RENTAL_TRIP -> DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
-    OnSearch.AUTO_TRIP -> pure DOnSearch.AutoDetails
+  m (Either DOnSearch.EstimateInfo DOnSearch.QuoteInfo)
+buildEstimateOrQuoteInfo item = do
   let itemCode = item.descriptor.code
-      vehicleVariant = itemCode.vehicleVariant
+      vehicleVariant = castVehicleVariant itemCode.vehicleVariant
       estimatedFare = realToFrac item.price.value
       estimatedTotalFare = realToFrac item.price.offered_value
       descriptions = item.quote_terms
-  pure
-    DOnSearch.QuoteInfo
-      { discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedTotalFare - estimatedFare,
-        vehicleVariant = castVehicleVariant vehicleVariant,
-        ..
-      }
+      discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedTotalFare - estimatedFare
+  case item.category_id of
+    OnSearch.ONE_WAY_TRIP -> do
+      quoteDetails <- DOnSearch.OneWayDetails <$> buildOneWayQuoteDetails item
+      pure $ Right DOnSearch.QuoteInfo {..}
+    OnSearch.RENTAL_TRIP -> do
+      quoteDetails <- DOnSearch.RentalDetails <$> buildRentalQuoteDetails item
+      pure $ Right DOnSearch.QuoteInfo {..}
+    OnSearch.AUTO_TRIP -> pure $ Left DOnSearch.EstimateInfo {..}
   where
     castVehicleVariant = \case
       OnSearch.SEDAN -> VehVar.SEDAN

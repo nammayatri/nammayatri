@@ -22,7 +22,7 @@ import Data.OpenApi (Info (..), OpenApi (..))
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CallStatus as SCS
 import qualified Domain.Types.CancellationReason as SCancellationReason
-import qualified Domain.Types.Quote as Quote
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.RegistrationToken as SRT
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as SSR
@@ -223,7 +223,7 @@ type QuoteAPI =
   "rideSearch"
     :> Capture "searchId" (Id SSR.SearchRequest)
     :> TokenAuth
-    :> "quotes"
+    :> "results"
     :> Get '[JSON] QuoteAPI.GetQuotesRes
 
 quoteFlow :: FlowServer QuoteAPI
@@ -232,17 +232,14 @@ quoteFlow =
 
 -------- Select Flow --------
 type SelectAPI =
-  "rideSearch"
+  "estimate"
     :> ( TokenAuth
-           :> "quotes"
-           :> Capture "quoteId" (Id Quote.Quote)
+           :> Capture "estimateId" (Id DEstimate.Estimate)
            :> "select"
            :> Post '[JSON] APISuccess
            :<|> TokenAuth
+             :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "quotes"
-             :> Capture "quoteId" (Id Quote.Quote)
-             :> "select"
-             :> "list"
              :> Get '[JSON] SelectListRes
        )
 

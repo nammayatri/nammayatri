@@ -21,4 +21,5 @@ fareProductConstructorModifier :: String -> String
 fareProductConstructorModifier = \case
   "OneWayAPIDetails" -> "ONE_WAY"
   "RentalAPIDetails" -> "RENTAL"
+  "DriverOfferAPIDetails" -> "AUTO"
   x -> x

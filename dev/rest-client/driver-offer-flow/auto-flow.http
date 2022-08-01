@@ -82,16 +82,16 @@ token: {{token}}
 @searchId = {{search.response.body.searchId}}
 
 # @name quotes
-GET {{app-host}}/rideSearch/{{searchId}}/quotes
+GET {{app-host}}/rideSearch/{{searchId}}/results
 content-type: application/json
 token: {{token}}
 
 ###
 
 # @name select
-@quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
+@estimateId = {{quotes.response.body.estimates[0].id}}
 
-POST {{app-host}}/rideSearch/quotes/{{quoteId}}/select HTTP/1.1
+POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
 content-type: application/json
 token: {{token}}
 
@@ -116,7 +116,7 @@ content-type: application/json
 ###
 
 # @name selectedQuotes
-GET {{app-host}}/rideSearch/quotes/{{quoteId}}/select/list
+GET {{app-host}}/estimate/{{estimateId}}/quotes
 content-type: application/json
 token: {{token}}
 

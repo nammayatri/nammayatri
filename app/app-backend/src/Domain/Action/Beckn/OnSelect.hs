@@ -10,16 +10,17 @@ import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Error
 import Beckn.Types.Id
+import qualified Domain.Types.DriverOffer as DDriverOffer
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.SelectedQuote as DSQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
+import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.SelectedQuote as QSQuote
 import Utils.Common
 
 data DOnSelectReq = DOnSelectReq
-  { quoteId :: Id DQuote.Quote,
+  { estimateId :: Id DEstimate.Estimate,
     providerInfo :: ProviderInfo,
     quotesInfo :: [QuoteInfo]
   }
@@ -37,17 +38,14 @@ data QuoteInfo = QuoteInfo
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
-    quoteDetails :: QuoteDetails,
+    quoteDetails :: DriverOfferQuoteDetails,
     descriptions :: [Text]
   }
 
-newtype QuoteDetails
-  = AutoDetails AutoQuoteDetails
-
-data AutoQuoteDetails = AutoQuoteDetails
+data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   { driverName :: Text,
     durationToPickup :: Int, -- Seconds?
-    distanceToPickup :: Double,
+    distanceToPickup :: HighPrecMeters,
     validTill :: UTCTime,
     rating :: Maybe Double,
     bppDriverQuoteId :: Id DQuote.BPPQuote
@@ -58,40 +56,56 @@ onSelect ::
   DOnSelectReq ->
   Flow ()
 onSelect DOnSelectReq {..} = do
-  _quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId) -- check that the quote is present
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (QuoteDoesNotExist estimateId.getId) -- FIXME EstimateDoesNotExist
   now <- getCurrentTime
-  quotes <- traverse (buildSelectedQuote quoteId providerInfo now) quotesInfo
+  quotes <- traverse (buildSelectedQuote estimate providerInfo now) quotesInfo
   logPretty DEBUG "quotes" quotes
-  whenM (duplicateCheckCond (quotes <&> (.bppQuoteId)) providerInfo.providerId) $
+  whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
     throwError $ InvalidRequest "Duplicate OnSelect quote"
-  DB.runTransaction $ QSQuote.createMany quotes
+  DB.runTransaction $ QQuote.createMany quotes
   where
     duplicateCheckCond :: EsqDBFlow m r => [Id DQuote.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False
     duplicateCheckCond (bppQuoteId_ : _) bppId_ =
-      isJust <$> QSQuote.findByBppIdAndQuoteId bppId_ bppQuoteId_
+      isJust <$> QQuote.findByBppIdAndQuoteId bppId_ bppQuoteId_
 
 buildSelectedQuote ::
   MonadFlow m =>
-  Id DQuote.Quote ->
+  DEstimate.Estimate ->
   ProviderInfo ->
   UTCTime ->
   QuoteInfo ->
-  m DSQuote.SelectedQuote
-buildSelectedQuote quoteId providerInfo now QuoteInfo {..} = do
+  m DQuote.Quote
+buildSelectedQuote estimate providerInfo now QuoteInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
-  let AutoDetails autoDetails@AutoQuoteDetails {..} = quoteDetails
+  driverOffer <- buildDriverOffer estimate.id quoteDetails
+  let quote =
+        DQuote.Quote
+          { id = uid,
+            providerMobileNumber = providerInfo.mobileNumber,
+            providerName = providerInfo.name,
+            providerCompletedRidesCount = providerInfo.ridesCompleted,
+            providerId = providerInfo.providerId,
+            providerUrl = providerInfo.url,
+            createdAt = now,
+            quoteDetails = DQuote.DriverOfferDetails driverOffer,
+            requestId = estimate.requestId,
+            ..
+          }
+  pure quote
+
+buildDriverOffer ::
+  MonadFlow m =>
+  Id DEstimate.Estimate ->
+  DriverOfferQuoteDetails ->
+  m DDriverOffer.DriverOffer
+buildDriverOffer estimateId DriverOfferQuoteDetails {..} = do
+  uid <- generateGUID
   pure
-    DSQuote.SelectedQuote
+    DDriverOffer.DriverOffer
       { id = uid,
-        providerMobileNumber = providerInfo.mobileNumber,
-        providerName = providerInfo.name,
-        providerCompletedRidesCount = providerInfo.ridesCompleted,
-        providerId = providerInfo.providerId,
-        providerUrl = providerInfo.url,
-        createdAt = now,
-        bppQuoteId = autoDetails.bppDriverQuoteId,
+        bppQuoteId = bppDriverQuoteId,
         ..
       }
 

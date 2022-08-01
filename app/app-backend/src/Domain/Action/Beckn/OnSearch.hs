@@ -5,12 +5,14 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Amount
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id, state)
+import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import qualified Tools.Metrics as Metrics
@@ -20,6 +22,7 @@ import Utils.Common
 data DOnSearchReq = DOnSearchReq
   { requestId :: Id DSearchReq.SearchRequest,
     providerInfo :: ProviderInfo,
+    estimatesInfo :: [EstimateInfo],
     quotesInfo :: [QuoteInfo]
   }
 
@@ -29,6 +32,14 @@ data ProviderInfo = ProviderInfo
     url :: BaseUrl,
     mobileNumber :: Text,
     ridesCompleted :: Int
+  }
+
+data EstimateInfo = EstimateInfo
+  { vehicleVariant :: VehicleVariant,
+    estimatedFare :: Amount,
+    discount :: Maybe Amount,
+    estimatedTotalFare :: Amount,
+    descriptions :: [Text]
   }
 
 data QuoteInfo = QuoteInfo
@@ -43,7 +54,6 @@ data QuoteInfo = QuoteInfo
 data QuoteDetails
   = OneWayDetails OneWayQuoteDetails
   | RentalDetails RentalQuoteDetails
-  | AutoDetails
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters
@@ -68,8 +78,33 @@ searchCbService ::
 searchCbService DOnSearchReq {..} = do
   _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
   now <- getCurrentTime
+  estimates <- traverse (buildEstimate requestId providerInfo now) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now) quotesInfo
-  DB.runTransaction $ traverse_ QQuote.create quotes
+  DB.runTransaction do
+    QEstimate.createMany estimates
+    QQuote.createMany quotes
+
+buildEstimate ::
+  MonadFlow m =>
+  Id DSearchReq.SearchRequest ->
+  ProviderInfo ->
+  UTCTime ->
+  EstimateInfo ->
+  m DEstimate.Estimate
+buildEstimate requestId providerInfo now EstimateInfo {..} = do
+  uid <- generateGUID
+  tripTerms <- buildTripTerms descriptions
+  pure
+    DEstimate.Estimate
+      { id = uid,
+        providerMobileNumber = providerInfo.mobileNumber,
+        providerName = providerInfo.name,
+        providerCompletedRidesCount = providerInfo.ridesCompleted,
+        providerId = providerInfo.providerId,
+        providerUrl = providerInfo.url,
+        createdAt = now,
+        ..
+      }
 
 buildQuote ::
   MonadFlow m =>
@@ -86,8 +121,6 @@ buildQuote requestId providerInfo now QuoteInfo {..} = do
       pure . DQuote.OneWayDetails $ mkOneWayQuoteDetails oneWayDetails
     RentalDetails rentalSlab -> do
       DQuote.RentalDetails <$> buildRentalSlab rentalSlab
-    AutoDetails -> do
-      pure DQuote.AutoDetails
   pure
     DQuote.Quote
       { id = uid,

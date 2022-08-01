@@ -5,6 +5,7 @@ import Beckn.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Beckn.Utils.Schema as S
 import Data.Char (toLower)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import Domain.Types.Estimate (EstimateAPIEntity)
 import Domain.Types.Quote (QuoteAPIEntity)
 import Domain.Types.SearchReqLocation (SearchReqLocationAPIEntity)
 import EulerHS.Prelude hiding (id)
@@ -13,7 +14,8 @@ import Types.API.MetroOffer
 data GetQuotesRes = GetQuotesRes
   { fromLocation :: SearchReqLocationAPIEntity,
     toLocation :: Maybe SearchReqLocationAPIEntity,
-    quotes :: [OfferRes]
+    quotes :: [OfferRes],
+    estimates :: [EstimateAPIEntity]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

@@ -36,7 +36,7 @@ buildOnSelectReq req = do
             }
     pure
       DOnSelect.DOnSelectReq
-        { quoteId = Id context.message_id,
+        { estimateId = Id context.message_id,
           ..
         }
 
@@ -61,7 +61,7 @@ buildQuoteInfo item = do
   quoteDetails <- case item.category_id of
     OnSelect.ONE_WAY_TRIP -> throwError $ InvalidRequest "select not supported for one way trip"
     OnSelect.RENTAL_TRIP -> throwError $ InvalidRequest "select not supported for rental trip"
-    OnSelect.AUTO_TRIP -> DOnSelect.AutoDetails <$> buildAutoQuoteDetails item
+    OnSelect.AUTO_TRIP -> buildDriverOfferQuoteDetails item
   let itemCode = item.descriptor.code
       vehicleVariant = itemCode.vehicleVariant
       estimatedFare = realToFrac item.price.value
@@ -80,11 +80,11 @@ buildQuoteInfo item = do
       OnSelect.HATCHBACK -> HATCHBACK
       OnSelect.AUTO -> AUTO
 
-buildAutoQuoteDetails ::
+buildDriverOfferQuoteDetails ::
   (MonadThrow m, Log m) =>
   OnSelect.Item ->
-  m DOnSelect.AutoQuoteDetails
-buildAutoQuoteDetails item = do
+  m DOnSelect.DriverOfferQuoteDetails
+buildDriverOfferQuoteDetails item = do
   driverName <- item.driver_name & fromMaybeM (InvalidRequest "Missing driver_name in auto select item")
   durationToPickup <- item.duration_to_pickup & fromMaybeM (InvalidRequest "Missing duration_to_pickup in auto select item")
   distanceToPickup' <-
@@ -94,7 +94,7 @@ buildAutoQuoteDetails item = do
   let rating = item.rating
   let bppQuoteId = item.id
   pure $
-    DOnSelect.AutoQuoteDetails
+    DOnSelect.DriverOfferQuoteDetails
       { distanceToPickup = realToFrac distanceToPickup',
         bppDriverQuoteId = Id bppQuoteId,
         ..

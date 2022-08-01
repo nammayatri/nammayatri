@@ -8,12 +8,16 @@ import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Beckn.Utils.Error
 import qualified Domain.Types.Quote as Domain
+import qualified Storage.Tabular.DriverOffer as SDriverOffer
 import Storage.Tabular.Quote
 import qualified Storage.Tabular.RentalSlab as SRentalSlab
 import qualified Storage.Tabular.TripTerms as STripTerms
 import Types.Error
 
-data QuoteDetailsT = OneWayDetailsT | RentalDetailsT SRentalSlab.RentalSlabT | AutoDetailsT
+data QuoteDetailsT
+  = OneWayDetailsT
+  | RentalDetailsT SRentalSlab.RentalSlabT
+  | DriverOfferDetailsT SDriverOffer.DriverOfferT
 
 type FullQuoteT = (QuoteT, Maybe STripTerms.TripTermsT, QuoteDetailsT)
 
@@ -30,7 +34,8 @@ instance TType FullQuoteT Domain.Quote where
             }
       RentalDetailsT rentalSlabT ->
         Domain.RentalDetails <$> fromTType rentalSlabT
-      AutoDetailsT -> pure Domain.AutoDetails
+      DriverOfferDetailsT driverOfferT ->
+        Domain.DriverOfferDetails <$> fromTType driverOfferT
     return $
       Domain.Quote
         { id = Id id,
@@ -39,13 +44,16 @@ instance TType FullQuoteT Domain.Quote where
           ..
         }
   toTType Domain.Quote {..} = do
-    let (fareProductType, quoteDetailsT, distanceToNearestDriver, rentalSlabId) = case quoteDetails of
-          Domain.OneWayDetails details -> (Domain.ONE_WAY, OneWayDetailsT, Just $ getHighPrecMeters details.distanceToNearestDriver, Nothing)
-          Domain.RentalDetails rentalSlab -> do
-            let rentalSlabT = toTType rentalSlab
-            (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey rentalSlab.id)
-          Domain.AutoDetails ->
-            (Domain.AUTO, AutoDetailsT, Nothing, Nothing)
+    let (fareProductType, quoteDetailsT, distanceToNearestDriver, rentalSlabId, driverOfferId) =
+          case quoteDetails of
+            Domain.OneWayDetails details ->
+              (Domain.ONE_WAY, OneWayDetailsT, Just $ getHighPrecMeters details.distanceToNearestDriver, Nothing, Nothing)
+            Domain.RentalDetails rentalSlab -> do
+              let rentalSlabT = toTType rentalSlab
+              (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey rentalSlab.id, Nothing)
+            Domain.DriverOfferDetails driverOffer -> do
+              let driverOfferT = toTType driverOffer
+              (Domain.AUTO, DriverOfferDetailsT driverOfferT, Nothing, Nothing, Just $ toKey driverOffer.id)
         quoteT =
           QuoteT
             { id = getId id,

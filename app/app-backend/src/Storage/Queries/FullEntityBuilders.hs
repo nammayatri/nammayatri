@@ -6,30 +6,25 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Domain.Types.Booking as Booking
 import Domain.Types.Quote as Quote
-import Domain.Types.SelectedQuote
 import qualified Storage.Queries.RentalSlab as QRentalSlab
 import qualified Storage.Queries.TripTerms as QTripTerms
 import Storage.Tabular.Booking as Booking
+import Storage.Tabular.DriverOffer
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.Instances as Quote
-import Storage.Tabular.SelectedQuote as SQuote
+import Storage.Tabular.RentalSlab
+import Storage.Tabular.TripTerms
 
-buildFullQuote :: Transactionable m => QuoteT -> DTypeBuilder m (Maybe (SolidType FullQuoteT))
-buildFullQuote quoteT@QuoteT {..} = runMaybeT $ do
-  mbTripTermsT <- forM tripTermsId $ MaybeT . QTripTerms.findById' . fromKey
-  quoteDetails <- case fareProductType of
-    ONE_WAY -> return Quote.OneWayDetailsT
-    RENTAL -> do
-      rentalSlabId' <- MaybeT . pure $ rentalSlabId -- Throw an error here if Nothing?
-      rentalSlabT <- MaybeT $ QRentalSlab.findById' (fromKey rentalSlabId')
-      return $ Quote.RentalDetailsT rentalSlabT
-    AUTO -> pure AutoDetailsT
-  return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetails)
-
-buildFullSelectedQuote :: Transactionable m => SelectedQuoteT -> DTypeBuilder m (Maybe (SolidType SQuote.FullSelectedQuoteT))
-buildFullSelectedQuote quoteT@SelectedQuoteT {..} = runMaybeT $ do
-  mbTripTermsT <- forM tripTermsId $ MaybeT . QTripTerms.findById' . fromKey
-  return $ extractSolidType @SelectedQuote (quoteT, mbTripTermsT)
+buildFullQuote ::
+  Transactionable m =>
+  (QuoteT, Maybe TripTermsT, Maybe RentalSlabT, Maybe DriverOfferT) ->
+  DTypeBuilder m (Maybe (SolidType FullQuoteT))
+buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer) = runMaybeT $ do
+  quoteDetailsT <- case fareProductType of
+    ONE_WAY -> pure Quote.OneWayDetailsT
+    RENTAL -> MaybeT $ pure (Quote.RentalDetailsT <$> mbRentalSlab)
+    AUTO -> MaybeT $ pure (Quote.DriverOfferDetailsT <$> mbDriverOffer)
+  return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
 buildFullBooking :: Transactionable m => BookingT -> DTypeBuilder m (Maybe (SolidType FullBookingT))
 buildFullBooking bookingT@BookingT {..} = runMaybeT $ do

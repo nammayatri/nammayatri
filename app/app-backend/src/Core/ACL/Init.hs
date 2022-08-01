@@ -25,28 +25,33 @@ buildInitReq res = do
 
 buildInitMessage :: (MonadThrow m, Log m) => DConfirm.ConfirmRes -> m Init.InitMessage
 buildInitMessage res = do
-  itemCode <- buildItemCode
+  let (fareProductType, mbDistance, mbDuration, mbBppItemId) = case res.quoteDetails of
+        DConfirm.ConfirmOneWayDetails -> (Init.ONE_WAY_TRIP, Nothing, Nothing, Nothing)
+        DConfirm.ConfirmRentalDetails r -> (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration, Nothing)
+        DConfirm.ConfirmAutoDetails bppQuoteId -> (Init.AUTO_TRIP, Nothing, Nothing, Just bppQuoteId.getId)
+  let vehicleVariant = castVehicleVariant res.vehicleVariant
+  let itemCode =
+        Init.ItemCode
+          { fareProductType,
+            vehicleVariant,
+            distance = mbDistance,
+            duration = mbDuration
+          }
   pure
     Init.InitMessage
       { order =
           Init.Order
-            { items = [mkOrderItem res.bppQuoteId itemCode],
+            { items = [mkOrderItem mbBppItemId itemCode],
               fulfillment = mkFulfillmentInfo res.fromLoc res.toLoc res.startTime,
               payment = mkPayment
             }
       }
   where
-    buildItemCode = do
-      (fpType, mbDistance, mbDuration) <- case res.quoteDetails of
-        DConfirm.ConfirmOneWayDetails -> pure (Init.ONE_WAY_TRIP, Nothing, Nothing)
-        DConfirm.ConfirmRentalDetails r -> pure (Init.RENTAL_TRIP, Just r.baseDistance, Just r.baseDuration)
-        DConfirm.ConfirmAutoDetails -> pure (Init.AUTO_TRIP, Nothing, Nothing)
-      let vehicleVariant = case res.vehicleVariant of
-            VehVar.SEDAN -> Init.SEDAN
-            VehVar.SUV -> Init.SUV
-            VehVar.HATCHBACK -> Init.HATCHBACK
-            VehVar.AUTO -> Init.AUTO
-      pure $ Init.ItemCode fpType vehicleVariant mbDistance mbDuration
+    castVehicleVariant = \case
+      VehVar.SEDAN -> Init.SEDAN
+      VehVar.SUV -> Init.SUV
+      VehVar.HATCHBACK -> Init.HATCHBACK
+      VehVar.AUTO -> Init.AUTO
 
 mkOrderItem :: Maybe Text -> Init.ItemCode -> Init.OrderItem
 mkOrderItem mbBppItemId code =
