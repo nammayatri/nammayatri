@@ -99,6 +99,8 @@ onUpdate RideAssignedReq {..} = do
             vehicleVariant = booking.vehicleVariant,
             createdAt = now,
             updatedAt = now,
+            rideStartTime = Nothing,
+            rideEndTime = Nothing,
             ..
           }
     isAssignable booking = booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT]
@@ -107,23 +109,30 @@ onUpdate RideStartedReq {..} = do
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
+  rideStartTime <- getCurrentTime
+  let updRideForStartReq =
+        ride{status = SRide.INPROGRESS,
+             rideStartTime = Just rideStartTime,
+             rideEndTime = Nothing
+            }
   DB.runTransaction $ do
-    QRide.updateStatus ride.id SRide.INPROGRESS
+    QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   Notify.notifyOnRideStarted booking ride
 onUpdate RideCompletedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == SRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
   unless (ride.status == SRide.INPROGRESS) $ throwError (RideInvalidStatus $ show ride.status)
+  rideEndTime <- getCurrentTime
   let updRide =
         ride{status = SRide.COMPLETED,
              fare = Just fare,
              totalFare = Just totalFare,
-             chargeableDistance = Just chargeableDistance
+             chargeableDistance = Just chargeableDistance,
+             rideEndTime = Just rideEndTime
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   DB.runTransaction $ do
-    QRB.updateStatus booking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
   Notify.notifyOnRideCompleted booking ride

@@ -1,6 +1,7 @@
 module Types.API.Booking where
 
 import Beckn.Types.Amount
+import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Data.Time (UTCTime)
@@ -26,6 +27,9 @@ data BookingStatusRes = BookingStatusRes
     tripTerms :: [Text],
     fareBreakup :: [FareBreakupAPIEntity],
     bookingDetails :: BookingAPIDetails,
+    rideStartTime :: Maybe UTCTime,
+    rideEndTime :: Maybe UTCTime,
+    duration :: Maybe Seconds,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

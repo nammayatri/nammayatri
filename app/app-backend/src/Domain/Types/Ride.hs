@@ -51,6 +51,8 @@ data Ride = Ride
     fare :: Maybe Amount,
     totalFare :: Maybe Amount,
     chargeableDistance :: Maybe Double,
+    rideStartTime :: Maybe UTCTime,
+    rideEndTime :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -71,6 +73,8 @@ data RideAPIEntity = RideAPIEntity
     rideOtp :: Text,
     computedPrice :: Maybe Amount,
     chargeableRideDistance :: Maybe Double,
+    rideStartTime :: Maybe UTCTime,
+    rideEndTime :: Maybe UTCTime,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

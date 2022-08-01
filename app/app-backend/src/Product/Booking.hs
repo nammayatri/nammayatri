@@ -29,12 +29,19 @@ bookingList personId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 
 buildBookingStatusRes :: EsqDBFlow m r => SRB.Booking -> m API.BookingStatusRes
 buildBookingStatusRes booking = do
+  ride <- QRide.findActiveByRBId booking.id >>= fromMaybeM (RideDoesNotExist (booking.id).getId)
   rideAPIEntityList <-
     QRide.findAllByRBId booking.id
       <&> fmap SRide.makeRideAPIEntity
   fareBreakups <- QFareBreakup.findAllByBookingId booking.id
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
-
+  let timeTimeInMinutes =
+        if isNothing (ride.rideStartTime) || isNothing (ride.rideEndTime)
+          then Nothing
+          else do
+            startTime <- ride.rideStartTime
+            endTime <- ride.rideEndTime
+            Just (nominalDiffTimeToSeconds (diffUTCTime endTime startTime))
   return $
     API.BookingStatusRes
       { id = booking.id,
@@ -49,6 +56,9 @@ buildBookingStatusRes booking = do
         tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
         fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
         bookingDetails,
+        rideStartTime = ride.rideStartTime,
+        rideEndTime = ride.rideEndTime,
+        duration = timeTimeInMinutes,
         createdAt = booking.createdAt,
         updatedAt = booking.updatedAt
       }

@@ -39,6 +39,8 @@ mkPersist
       fare Amount Maybe
       totalFare Amount Maybe
       chargeableDistance Double Maybe
+      rideStartTime UTCTime Maybe
+      rideEndTime UTCTime Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
