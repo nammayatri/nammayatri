@@ -62,7 +62,7 @@ data PersonE e = Person
     role :: Role,
     gender :: Gender,
     identifierType :: IdentifierType,
-    email :: Maybe Text,
+    email :: Maybe (EncryptedHashedField e Text),
     mobileNumber :: Maybe (EncryptedHashedField e Text),
     mobileCountryCode :: Maybe Text,
     passwordHash :: Maybe DbHash,
@@ -90,10 +90,12 @@ instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
   encryptItem (Person {..}, salt) = do
     mobileNumber_ <- encryptItem $ (,salt) <$> mobileNumber
-    return Person {mobileNumber = mobileNumber_, ..}
+    email_ <- encryptItem $ (,salt) <$> email
+    return Person {mobileNumber = mobileNumber_, email = email_, ..}
   decryptItem Person {..} = do
     mobileNumber_ <- fmap fst <$> decryptItem mobileNumber
-    return (Person {mobileNumber = mobileNumber_, ..}, "")
+    email_ <- fmap fst <$> decryptItem email
+    return (Person {mobileNumber = mobileNumber_, email = email_, ..}, "")
 
 instance EncryptedItem' Person where
   type UnencryptedItem Person = DecryptedPerson
@@ -105,6 +107,7 @@ data PersonAPIEntity = PersonAPIEntity
     firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
+    maskedEmail :: Maybe Text,
     maskedMobileNumber :: Maybe Text,
     maskedDeviceToken :: Maybe FCM.FCMRecipientToken
   }
@@ -113,7 +116,8 @@ data PersonAPIEntity = PersonAPIEntity
 makePersonAPIEntity :: DecryptedPerson -> PersonAPIEntity
 makePersonAPIEntity Person {..} =
   PersonAPIEntity
-    { maskedMobileNumber = maskText <$> mobileNumber,
+    { maskedEmail = maskText <$> email,
+      maskedMobileNumber = maskText <$> mobileNumber,
       maskedDeviceToken = FCM.FCMRecipientToken . maskText . (.getFCMRecipientToken) <$> deviceToken,
       ..
     }

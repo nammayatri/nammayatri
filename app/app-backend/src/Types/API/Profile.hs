@@ -11,6 +11,7 @@ data UpdateProfileReq = UpdateProfileReq
   { firstName :: Maybe Text,
     middleName :: Maybe Text,
     lastName :: Maybe Text,
+    email :: Maybe Text,
     deviceToken :: Maybe FCM.FCMRecipientToken
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)

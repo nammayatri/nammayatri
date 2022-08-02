@@ -30,7 +30,8 @@ mkPersist
       role Domain.Role
       gender Domain.Gender
       identifierType Domain.IdentifierType
-      email Text Maybe
+      emailEncrypted Text Maybe
+      emailHash DbHash Maybe
       mobileNumberEncrypted Text Maybe
       mobileNumberHash DbHash Maybe
       mobileCountryCode Text Maybe
@@ -57,6 +58,7 @@ instance TType PersonT Domain.Person where
     return $
       Domain.Person
         { id = Id id,
+          email = EncryptedHashed <$> (Encrypted <$> emailEncrypted) <*> emailHash,
           mobileNumber = EncryptedHashed <$> (Encrypted <$> mobileNumberEncrypted) <*> mobileNumberHash,
           merchantId = fromKey merchantId,
           ..
@@ -64,6 +66,8 @@ instance TType PersonT Domain.Person where
   toTType Domain.Person {..} =
     PersonT
       { id = getId id,
+        emailEncrypted = email <&> unEncrypted . (.encrypted),
+        emailHash = email <&> (.hash),
         mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber <&> (.hash),
         merchantId = toKey merchantId,

@@ -1,7 +1,7 @@
 module Product.Profile where
 
 import App.Types
-import Beckn.External.Encryption (decrypt)
+import Beckn.External.Encryption
 import Beckn.Storage.Esqueleto (runTransaction)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
@@ -21,11 +21,13 @@ getPersonDetails personId = withFlowHandlerAPI $ do
 
 updatePerson :: Id Person.Person -> Profile.UpdateProfileReq -> FlowHandler APISuccess.APISuccess
 updatePerson personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  mbEncEmail <- encrypt `mapM` req.email
   runTransaction $
     QPerson.updatePersonalInfo
       personId
       (req.firstName)
       (req.middleName)
       (req.lastName)
+      mbEncEmail
       (req.deviceToken)
   pure APISuccess.Success

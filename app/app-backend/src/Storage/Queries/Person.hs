@@ -20,16 +20,17 @@ findById ::
 findById = Esq.findById
 
 findByEmailAndPassword ::
-  (MonadThrow m, Log m, Transactionable m, EncFlow m r) =>
+  (Transactionable m, EncFlow m r) =>
   Text ->
   Text ->
   m (Maybe Person)
 findByEmailAndPassword email_ password = do
+  emailDbHash <- getDbHash email_
   passwordDbHash <- getDbHash password
   findOne $ do
     person <- from $ table @PersonT
     where_ $
-      person ^. PersonEmail ==. val (Just email_)
+      person ^. PersonEmailHash ==. val (Just emailDbHash)
         &&. person ^. PersonPasswordHash ==. val (Just passwordDbHash)
     return person
 
@@ -73,7 +74,6 @@ updateMultiple personId person = do
         PersonMiddleName =. val (person.middleName),
         PersonLastName =. val (person.lastName),
         PersonGender =. val (person.gender),
-        PersonEmail =. val (person.email),
         PersonDescription =. val (person.description),
         PersonRole =. val (person.role),
         PersonIdentifier =. val (person.identifier),
@@ -109,10 +109,13 @@ updatePersonalInfo ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe (EncryptedHashed Text) ->
   Maybe FCMRecipientToken ->
   SqlDB ()
-updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbDeviceToken = do
+updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken = do
   now <- getCurrentTime
+  let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
+  let mbEmailHash = mbEncEmail <&> (.hash)
   Esq.update $ \tbl -> do
     set
       tbl
@@ -120,6 +123,8 @@ updatePersonalInfo personId mbFirstName mbMiddleName mbLastName mbDeviceToken = 
           <> updateWhenJust_ (\x -> PersonFirstName =. val (Just x)) mbFirstName
           <> updateWhenJust_ (\x -> PersonMiddleName =. val (Just x)) mbMiddleName
           <> updateWhenJust_ (\x -> PersonLastName =. val (Just x)) mbLastName
+          <> updateWhenJust_ (\x -> PersonEmailEncrypted =. val (Just x)) mbEmailEncrypted
+          <> updateWhenJust_ (\x -> PersonEmailHash =. val (Just x)) mbEmailHash
           <> updateWhenJust_ (\x -> PersonDeviceToken =. val (Just x)) mbDeviceToken
       )
     where_ $ tbl ^. PersonId ==. val (getId personId)
