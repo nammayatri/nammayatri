@@ -18,4 +18,14 @@ buildRatingReq DFeedback.DRatingReq {..} = do
   bapIDs <- asks (.bapSelfIds)
   msgId <- generateGUID
   context <- buildTaxiContext Context.RATING msgId Nothing bapIDs.cabs bapURIs.cabs (Just providerId) (Just providerUrl)
-  pure $ BecknReq context $ Rating.RatingMessage bppBookingId.getId ratingValue
+  let message =
+        Rating.RatingMessage
+          { id = bppBookingId.getId,
+            value = ratingValue,
+            feedback_form =
+              Rating.FeedbackForm
+                { question = "Evaluate your ride experience.",
+                  answer = feedbackDetails
+                }
+          }
+  pure $ BecknReq context message

@@ -12,13 +12,14 @@ import Utils.Common
 create :: Rating -> SqlDB ()
 create = Esq.create
 
-updateRatingValue :: Id Rating -> Id Person -> Int -> SqlDB ()
-updateRatingValue ratingId driverId newRatingValue = do
+updateRating :: Id Rating -> Id Person -> Int -> Text -> SqlDB ()
+updateRating ratingId driverId newRatingValue newFeedbackDetails = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do
     set
       tbl
       [ RatingRatingValue =. val newRatingValue,
+        RatingFeedbackDetails =. val newFeedbackDetails,
         RatingUpdatedAt =. val now
       ]
     where_ $

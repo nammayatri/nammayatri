@@ -19,7 +19,8 @@ import Utils.Common
 
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,
-    ratingValue :: Int
+    ratingValue :: Int,
+    feedbackDetails :: Text
   }
 
 handler :: DRatingReq -> Flow ()
@@ -32,18 +33,19 @@ handler req = do
   unless (ride.status == Ride.COMPLETED) $
     throwError $ RideInvalidStatus "Ride is not ready for rating."
   let ratingValue = req.ratingValue
+      feedbackDetails = req.feedbackDetails
   mbRating <- Rating.findByRideId ride.id
   case mbRating of
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " +|| ride.id ||+ " with rating " +|| ratingValue ||+ "."
-      newRating <- buildRating ride.id driverId ratingValue
+      newRating <- buildRating ride.id driverId ratingValue feedbackDetails
       Esq.runTransaction $ Rating.create newRating
     Just rating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " +|| ride.id ||+ " with new rating " +|| ratingValue ||+ "."
       Esq.runTransaction $ do
-        Rating.updateRatingValue rating.id driverId ratingValue
+        Rating.updateRating rating.id driverId ratingValue feedbackDetails
   calculateAverageRating driverId
 
 calculateAverageRating ::
@@ -63,8 +65,8 @@ calculateAverageRating personId = do
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     Esq.runTransaction $ QP.updateAverageRating personId newAverage
 
-buildRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> m Rating.Rating
-buildRating rideId driverId ratingValue = do
+buildRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> Text -> m Rating.Rating
+buildRating rideId driverId ratingValue feedbackDetails = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

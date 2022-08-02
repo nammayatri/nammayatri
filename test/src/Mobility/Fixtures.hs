@@ -114,7 +114,8 @@ callAppFeedback ratingValue rideId =
   let request =
         AppFeedback.FeedbackReq
           { rideId = rideId,
-            rating = ratingValue
+            rating = ratingValue,
+            feedbackDetails = "Driver is so qt!"
           }
    in appFeedback appRegistrationToken request
 

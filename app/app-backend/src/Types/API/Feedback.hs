@@ -12,7 +12,8 @@ import EulerHS.Prelude
 
 data FeedbackReq = FeedbackReq
   { rideId :: Id SRide.Ride,
-    rating :: Int
+    rating :: Int,
+    feedbackDetails :: Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

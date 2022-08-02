@@ -26,5 +26,6 @@ buildRatingReq subscriber req = do
   pure
     DRating.DRatingReq
       { bookingId = Id req.message.id,
-        ratingValue = req.message.value
+        ratingValue = req.message.value,
+        feedbackDetails = req.message.feedback_form.answer
       }

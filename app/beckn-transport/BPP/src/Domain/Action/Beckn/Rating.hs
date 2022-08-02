@@ -21,7 +21,8 @@ import Utils.Common
 
 data DRatingReq = DRatingReq
   { bookingId :: Id DRB.Booking,
-    ratingValue :: Int
+    ratingValue :: Int,
+    feedbackDetails :: Text
   }
 
 ratingImpl ::
@@ -51,13 +52,13 @@ ratingImpl transporterId req = do
     Nothing -> do
       logTagInfo "FeedbackAPI" $
         "Creating a new record for " <> show ride.id <> " with rating " <> show req.ratingValue <> "."
-      newRating <- mkRating ride.id driverId req.ratingValue
+      newRating <- mkRating ride.id driverId req.ratingValue req.feedbackDetails
       Esq.runTransaction $ Rating.create newRating
     Just rating -> do
       logTagInfo "FeedbackAPI" $
         "Updating existing rating for " <> show ride.id <> " with new rating " <> show req.ratingValue <> "."
       Esq.runTransaction $ do
-        Rating.updateRatingValue rating.id driverId req.ratingValue
+        Rating.updateRating rating.id driverId req.ratingValue req.feedbackDetails
   calculateAverageRating driverId
 
 calculateAverageRating ::
@@ -77,8 +78,8 @@ calculateAverageRating personId = do
     logTagInfo "PersonAPI" $ "New average rating for person " <> show personId <> " , rating is " <> show newAverage <> ""
     Esq.runTransaction $ QP.updateAverageRating personId newAverage
 
-mkRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> m Rating.Rating
-mkRating rideId driverId ratingValue = do
+mkRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> Text -> m Rating.Rating
+mkRating rideId driverId ratingValue feedbackDetails = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
   let createdAt = now

@@ -22,6 +22,7 @@ mkPersist
       rideId RideTId
       driverId PersonTId
       ratingValue Int
+      feedbackDetails Text
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
