@@ -55,10 +55,11 @@ buildBookingStatusRes booking = do
 
 mkBookingAPIDetails :: SRB.BookingDetails -> API.BookingAPIDetails
 mkBookingAPIDetails = \case
-  SRB.OneWayDetails SRB.OneWayBookingDetails {..} ->
-    API.OneWayAPIDetails
+  SRB.OneWayDetails details -> API.OneWayAPIDetails . mkOneWayAPIDetails $ details
+  SRB.RentalDetails DRentalSlab.RentalSlab {..} -> API.RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
+  SRB.DriverOfferDetails details -> API.DriverOfferAPIDetails . mkOneWayAPIDetails $ details
+  where
+    mkOneWayAPIDetails SRB.OneWayBookingDetails {..} =
       API.OneWayBookingAPIDetails
         { toLocation = SLoc.makeBookingLocationAPIEntity toLocation
         }
-  SRB.RentalDetails DRentalSlab.RentalSlab {..} ->
-    API.RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}

@@ -62,7 +62,10 @@ data Booking = Booking
   }
   deriving (Generic, Show)
 
-data BookingDetails = OneWayDetails OneWayBookingDetails | RentalDetails DRentalSlab.RentalSlab
+data BookingDetails
+  = OneWayDetails OneWayBookingDetails
+  | RentalDetails DRentalSlab.RentalSlab
+  | DriverOfferDetails OneWayBookingDetails
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails

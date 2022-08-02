@@ -8,9 +8,7 @@ import Beckn.Types.Amount
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
-import Data.Aeson
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
-import qualified Data.OpenApi as OpenApi
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.SearchRequest as DSearchRequest
@@ -44,40 +42,6 @@ data QuoteDetails
   | DriverOfferDetails DDriverOffer.DriverOffer
   deriving (Generic, Show)
   deriving (PrettyShow) via Showable QuoteDetails
-
--- FIXME: make generic instances more powerful to capture this case
-
-defineFareProductType :: QuoteDetails -> FareProductType
-defineFareProductType (OneWayDetails _) = ONE_WAY
-defineFareProductType (RentalDetails _) = RENTAL
-defineFareProductType (DriverOfferDetails _) = AUTO
-
-fareProductOptions :: Options
-fareProductOptions =
-  defaultOptions
-    { sumEncoding = fareProductTaggedObject,
-      constructorTagModifier = fareProductConstructorModifier
-    }
-
-fareProductSchemaOptions :: OpenApi.SchemaOptions
-fareProductSchemaOptions =
-  OpenApi.defaultSchemaOptions
-    { OpenApi.sumEncoding = fareProductTaggedObject,
-      OpenApi.constructorTagModifier = fareProductConstructorModifier
-    }
-
-fareProductTaggedObject :: SumEncoding
-fareProductTaggedObject =
-  defaultTaggedObject
-    { tagFieldName = "fareProductType"
-    }
-
-fareProductConstructorModifier :: String -> String
-fareProductConstructorModifier = \case
-  "OneWayDetails" -> "ONE_WAY"
-  "RentalDetails" -> "RENTAL"
-  "AutoDetails" -> "AUTO"
-  x -> x
 
 newtype OneWayQuoteDetails = OneWayQuoteDetails
   { distanceToNearestDriver :: HighPrecMeters

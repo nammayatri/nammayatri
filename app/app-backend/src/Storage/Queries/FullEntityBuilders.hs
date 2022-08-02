@@ -22,7 +22,7 @@ buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer) =
   quoteDetailsT <- case fareProductType of
     ONE_WAY -> pure Quote.OneWayDetailsT
     RENTAL -> MaybeT $ pure (Quote.RentalDetailsT <$> mbRentalSlab)
-    AUTO -> MaybeT $ pure (Quote.DriverOfferDetailsT <$> mbDriverOffer)
+    DRIVER_OFFER -> MaybeT $ pure (Quote.DriverOfferDetailsT <$> mbDriverOffer)
   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
 buildFullBooking ::
@@ -33,5 +33,5 @@ buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRe
   bookingDetails <- case fareProductType of
     ONE_WAY -> MaybeT $ pure (Booking.OneWayDetailsT <$> mbToLocT)
     RENTAL -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalSlab)
-    AUTO -> MaybeT $ pure Nothing -- no ride booking available for auto trips
+    DRIVER_OFFER -> MaybeT $ pure (Booking.DriverOfferDetailsT <$> mbToLocT)
   return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)

@@ -62,6 +62,9 @@ handler ::
 handler subscriber transporterId req = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   driverQuote <- QDQ.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+  now <- getCurrentTime
+  when (driverQuote.validTill < now) $
+    throwError $ QuoteExpired driverQuote.id.getId
   driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
   let transporterId' = booking.providerId
   transporter <-
@@ -70,7 +73,6 @@ handler subscriber transporterId req = do
   unless (transporterId' == transporterId) $ throwError AccessDenied
   let bapOrgId = booking.bapId
   unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
-  now <- getCurrentTime
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
   ride <- buildRide driver.id booking
   Esq.runTransaction $ do

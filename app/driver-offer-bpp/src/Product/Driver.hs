@@ -344,7 +344,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
   pure Success
   where
     buildDriverQuote ::
-      (MonadFlow m) =>
+      HasFlowEnv m r '["driverQuoteExpirationSeconds" ::: Int] =>
       SP.Person ->
       DSReq.SearchRequest ->
       SearchRequestForDriver ->
@@ -353,6 +353,8 @@ offerQuote driverId req = withFlowHandlerAPI $ do
     buildDriverQuote driver s sd fareParams = do
       guid <- generateGUID
       now <- getCurrentTime
+      driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
+      let validTill = fromIntegral driverQuoteExpirationSeconds `addUTCTime` now
       pure
         DDrQuote.DriverQuote
           { id = guid,
@@ -367,7 +369,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
             durationToPickup = sd.durationToPickup,
             createdAt = now,
             updatedAt = now,
-            validTill = s.validTill, -- what should be here? FIXME
+            validTill,
             fareParams
           }
 

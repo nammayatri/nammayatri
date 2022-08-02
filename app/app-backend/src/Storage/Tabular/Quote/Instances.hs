@@ -53,7 +53,7 @@ instance TType FullQuoteT Domain.Quote where
               (Domain.RENTAL, RentalDetailsT rentalSlabT, Nothing, Just $ toKey rentalSlab.id, Nothing)
             Domain.DriverOfferDetails driverOffer -> do
               let driverOfferT = toTType driverOffer
-              (Domain.AUTO, DriverOfferDetailsT driverOfferT, Nothing, Nothing, Just $ toKey driverOffer.id)
+              (Domain.DRIVER_OFFER, DriverOfferDetailsT driverOfferT, Nothing, Nothing, Just $ toKey driverOffer.id)
         quoteT =
           QuoteT
             { id = getId id,

@@ -78,7 +78,7 @@ in
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/beckn-transport.log", logRawSql = True}
+, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = True}
 , updateLocationRefreshPeriod = +1
 , updateLocationAllowedDelay = +60
 , googleMapsUrl = common.googleMapsUrl
@@ -98,5 +98,6 @@ in
 , smsCfg = smsConfig
 , driverPositionInfoExpiry = None Integer
 , searchRequestExpirationSeconds = +3600
+, driverQuoteExpirationSeconds = +60
 , defaultRadiusOfSearch = +5000 -- meters
 }

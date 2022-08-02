@@ -26,7 +26,7 @@ data DSelectReq = DSelectReq
 select :: Id DPerson.Person -> Id DEstimate.Estimate -> Flow DSelectReq
 select personId estimateId = do
   now <- getCurrentTime
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (QuoteDoesNotExist estimateId.getId) --FIXME EstimateDoesNotExist
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   let searchRequestId = estimate.requestId
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   when ((searchRequest.validTill) < now) $

@@ -61,6 +61,7 @@ data AppCfg = AppCfg
     defaultRadiusOfSearch :: Meters,
     redisCfg :: T.RedisConfig,
     searchRequestExpirationSeconds :: Int,
+    driverQuoteExpirationSeconds :: Int,
     httpClientOptions :: HttpClientOptions
   }
   deriving (Generic, FromDhall)
@@ -100,7 +101,8 @@ data AppEnv = AppEnv
     googleMapsKey :: Text,
     defaultRadiusOfSearch :: Meters,
     transporterMetrics :: TransporterMetricsContainer,
-    searchRequestExpirationSeconds :: Int
+    searchRequestExpirationSeconds :: Int,
+    driverQuoteExpirationSeconds :: Int
   }
   deriving (Generic)
 

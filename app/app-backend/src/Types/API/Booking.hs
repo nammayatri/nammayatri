@@ -37,7 +37,10 @@ newtype BookingListRes = BookingListRes
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 -- do not change constructor names without changing fareProductConstructorModifier
-data BookingAPIDetails = OneWayAPIDetails OneWayBookingAPIDetails | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
+data BookingAPIDetails
+  = OneWayAPIDetails OneWayBookingAPIDetails
+  | RentalAPIDetails DRentalSlab.RentalSlabAPIEntity
+  | DriverOfferAPIDetails OneWayBookingAPIDetails
   deriving (Show, Generic)
 
 instance ToJSON BookingAPIDetails where

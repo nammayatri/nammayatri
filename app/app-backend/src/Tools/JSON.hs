@@ -3,7 +3,7 @@ module Tools.JSON where
 import Beckn.Prelude
 import Data.Aeson
 
---TODO reuse code from app-backend
+-- FIXME: make generic instances more powerful to capture this case
 fareProductOptions :: Options
 fareProductOptions =
   defaultOptions
@@ -21,5 +21,5 @@ fareProductConstructorModifier :: String -> String
 fareProductConstructorModifier = \case
   "OneWayAPIDetails" -> "ONE_WAY"
   "RentalAPIDetails" -> "RENTAL"
-  "DriverOfferAPIDetails" -> "AUTO"
+  "DriverOfferAPIDetails" -> "DRIVER_OFFER"
   x -> x

@@ -12,10 +12,10 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
-import qualified Domain.Types.Booking as SRB
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
-import qualified Domain.Types.Person as SP
-import qualified Domain.Types.Quote as SQuote
+import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RentalSlab
 import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
@@ -56,22 +56,28 @@ data ConfirmRes = ConfirmRes
     vehicleVariant :: VehicleVariant,
     quoteDetails :: ConfirmQuoteDetails,
     startTime :: UTCTime,
-    bookingId :: Id SRB.Booking
+    bookingId :: Id DRB.Booking
   }
   deriving (Show, Generic)
 
 data ConfirmQuoteDetails
   = ConfirmOneWayDetails
   | ConfirmRentalDetails RentalSlabAPIEntity
-  | ConfirmAutoDetails (Id SQuote.BPPQuote)
+  | ConfirmAutoDetails (Id DQuote.BPPQuote)
   deriving (Show, Generic)
 
-confirm :: EsqDBFlow m r => Id SP.Person -> Id SQuote.Quote -> ConfirmAPIReq -> m ConfirmRes
+confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> ConfirmAPIReq -> m ConfirmRes
 confirm personId quoteId req = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
-  when ((searchRequest.validTill) < now) $
+  case quote.quoteDetails of
+    DQuote.OneWayDetails _ -> pure ()
+    DQuote.RentalDetails _ -> pure ()
+    DQuote.DriverOfferDetails driverOffer -> do
+      when (driverOffer.validTill < now) $
+        throwError $ QuoteExpired quote.id.getId
+  when (searchRequest.validTill < now) $
     throwError SearchRequestExpired
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
   let fromLocation = searchRequest.fromLocation
@@ -94,11 +100,11 @@ confirm personId quoteId req = do
         startTime = searchRequest.startTime
       }
   where
-    mkConfirmQuoteDetails :: SQuote.QuoteDetails -> ConfirmQuoteDetails
+    mkConfirmQuoteDetails :: DQuote.QuoteDetails -> ConfirmQuoteDetails
     mkConfirmQuoteDetails = \case
-      SQuote.OneWayDetails _ -> ConfirmOneWayDetails
-      SQuote.RentalDetails RentalSlab {..} -> ConfirmRentalDetails $ RentalSlabAPIEntity {..}
-      SQuote.DriverOfferDetails driverOffer -> ConfirmAutoDetails driverOffer.bppQuoteId
+      DQuote.OneWayDetails _ -> ConfirmOneWayDetails
+      DQuote.RentalDetails RentalSlab {..} -> ConfirmRentalDetails $ RentalSlabAPIEntity {..}
+      DQuote.DriverOfferDetails driverOffer -> ConfirmAutoDetails driverOffer.bppQuoteId
 
 buildBookingLocation :: MonadGuid m => UTCTime -> (DSRLoc.SearchReqLocation, ConfirmLocationAPIEntity) -> m DBL.BookingLocation
 buildBookingLocation now (searchReqLocation, ConfirmLocationAPIEntity {..}) = do
@@ -117,19 +123,19 @@ buildBookingLocation now (searchReqLocation, ConfirmLocationAPIEntity {..}) = do
 buildBooking ::
   MonadFlow m =>
   DSReq.SearchRequest ->
-  SQuote.Quote ->
+  DQuote.Quote ->
   DBL.BookingLocation ->
   Maybe DBL.BookingLocation ->
   UTCTime ->
-  m SRB.Booking
+  m DRB.Booking
 buildBooking searchRequest quote fromLoc mbToLoc now = do
   id <- generateGUID
   bookingDetails <- buildBookingDetails
   return $
-    SRB.Booking
+    DRB.Booking
       { id = Id id,
         bppBookingId = Nothing,
-        status = SRB.NEW,
+        status = DRB.NEW,
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
         providerName = quote.providerName,
@@ -149,11 +155,11 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
       }
   where
     buildBookingDetails = case quote.quoteDetails of
-      SQuote.OneWayDetails _ -> buildOneWayDetails
-      SQuote.RentalDetails rentalSlab -> pure $ SRB.RentalDetails rentalSlab
-      SQuote.DriverOfferDetails _ -> buildOneWayDetails -- do we need DriverOfferDetails for Booking?
+      DQuote.OneWayDetails _ -> DRB.OneWayDetails <$> buildOneWayDetails
+      DQuote.RentalDetails rentalSlab -> pure $ DRB.RentalDetails rentalSlab
+      DQuote.DriverOfferDetails _ -> DRB.DriverOfferDetails <$> buildOneWayDetails
     buildOneWayDetails = do
       -- we need to throw errors here because of some redundancy of our domain model
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
-      pure . SRB.OneWayDetails $ SRB.OneWayBookingDetails {..}
+      pure DRB.OneWayBookingDetails {..}

@@ -50,6 +50,7 @@ onInit req = do
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing
         DRB.OneWayDetails details -> Just details.toLocation
+        DRB.DriverOfferDetails details -> Just details.toLocation
   return $
     OnInitRes
       { bookingId = booking.id,

@@ -103,6 +103,7 @@ buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
   let mbToLocation = case booking.bookingDetails of
         DRB.RentalDetails _ -> Nothing
         DRB.OneWayDetails details -> Just details.toLocation
+        DRB.DriverOfferDetails details -> Just details.toLocation
   rbStatus <- buildBookingStatusRes booking
   decMobNum <- mapM decrypt mobileNumber
   let details =

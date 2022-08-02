@@ -39,17 +39,16 @@ instance IsHTTPError MerchantError where
 instance IsAPIError MerchantError
 
 --
-newtype SelectedQuoteError
-  = SelectedQuoteNotFound Text
+newtype EstimateError = EstimateDoesNotExist Text
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''SelectedQuoteError
+instanceExceptionWithParent 'HTTPException ''EstimateError
 
-instance IsBaseError SelectedQuoteError where
-  toMessage (SelectedQuoteNotFound qId) = Just $ "Selected quote with id \"" <> show qId <> "\" not found."
+instance IsBaseError EstimateError where
+  toMessage (EstimateDoesNotExist estimateId) = Just $ "No estimate matches passed data \"" <> show estimateId <> "\" not exist. "
 
-instance IsHTTPError SelectedQuoteError where
-  toErrorCode _ = "SELECTED_QUOTE_NOT_FOUND"
+instance IsHTTPError EstimateError where
+  toErrorCode _ = "ESTIMATE_DOES_NOT_EXIST"
   toHttpCode _ = E400
 
-instance IsAPIError SelectedQuoteError
+instance IsAPIError EstimateError

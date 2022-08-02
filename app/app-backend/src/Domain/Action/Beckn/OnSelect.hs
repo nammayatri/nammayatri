@@ -17,6 +17,7 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
+import Types.Error
 import Utils.Common
 
 data DOnSelectReq = DOnSelectReq
@@ -56,7 +57,7 @@ onSelect ::
   DOnSelectReq ->
   Flow ()
 onSelect DOnSelectReq {..} = do
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (QuoteDoesNotExist estimateId.getId) -- FIXME EstimateDoesNotExist
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   now <- getCurrentTime
   quotes <- traverse (buildSelectedQuote estimate providerInfo now) quotesInfo
   logPretty DEBUG "quotes" quotes

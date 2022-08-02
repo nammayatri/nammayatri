@@ -90,12 +90,12 @@ buildDriverOfferQuoteDetails ::
   OnSelect.Item ->
   m DOnSelect.DriverOfferQuoteDetails
 buildDriverOfferQuoteDetails item = do
-  driverName <- item.driver_name & fromMaybeM (InvalidRequest "Missing driver_name in auto select item")
-  durationToPickup <- item.duration_to_pickup & fromMaybeM (InvalidRequest "Missing duration_to_pickup in auto select item")
+  driverName <- item.driver_name & fromMaybeM (InvalidRequest "Missing driver_name in driver offer select item")
+  durationToPickup <- item.duration_to_pickup & fromMaybeM (InvalidRequest "Missing duration_to_pickup in driver offer select item")
   distanceToPickup' <-
     (item.tags <&> (.distance_to_nearest_driver))
-      & fromMaybeM (InvalidRequest "Trip type is AUTO, but distanceToNearestDriver is Nothing")
-  validTill <- item.valid_till & fromMaybeM (InvalidRequest "Missing valid_till in auto select item")
+      & fromMaybeM (InvalidRequest "Trip type is DRIVER_OFFER, but distance_to_nearest_driver is Nothing")
+  validTill <- item.valid_till & fromMaybeM (InvalidRequest "Missing valid_till in driver offer select item")
   let rating = item.rating
   let bppQuoteId = item.id
   pure $

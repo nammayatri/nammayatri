@@ -47,15 +47,18 @@ handler :: (EsqDBFlow m r) => Id DOrg.Organization -> InitReq -> m InitRes
 handler orgId req = do
   transporter <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
   driverQuote <- QDQuote.findById req.driverQuoteId >>= fromMaybeM (QuoteNotFound req.driverQuoteId.getId)
+  now <- getCurrentTime
+  when (driverQuote.validTill < now) $
+    throwError $ QuoteExpired driverQuote.id.getId
   searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
-  booking <- buildBooking searchRequest driverQuote
+  -- do we need to check searchRequest.validTill?
+  booking <- buildBooking searchRequest driverQuote now
   Esq.runTransaction $
     QRB.create booking
   pure InitRes {..}
   where
-    buildBooking searchRequest driverQuote = do
+    buildBooking searchRequest driverQuote now = do
       id <- Id <$> generateGUID
-      now <- getCurrentTime
       pure
         DRB.Booking
           { quoteId = req.driverQuoteId,

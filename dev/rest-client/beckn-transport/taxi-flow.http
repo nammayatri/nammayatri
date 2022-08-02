@@ -106,11 +106,9 @@ token: {{app-token}}
 
 @baseTime = 2022-05-19T18:35
 
-# POST {{app-host}}/rideSearch
 POST {{app-host}}/rideSearch
 content-type: application/json
-#token: {{app-token}}
-token: 2cdf9f89-bf7d-486c-ad8a-bc3561f8c971
+token: {{app-token}}
 #Palarivattom - Edappally Rd, Opp.St.George Church, Ponekkara, Edappally, Ernakulam, Kerala 682024, India
 #Manimala Cross Road, Ponekkara, Edappally, Ernakulam, Kerala 682024, India
 
@@ -142,7 +140,7 @@ token: 2cdf9f89-bf7d-486c-ad8a-bc3561f8c971
 @searchId = {{searchRoute1.response.body.searchId}}
 
 # @name quotes
-GET {{app-host}}/rideSearch/{{searchId}}/quotes
+GET {{app-host}}/rideSearch/{{searchId}}/results
 content-type: application/json
 token: {{token}}
 

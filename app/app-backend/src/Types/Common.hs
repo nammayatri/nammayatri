@@ -11,7 +11,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Common as Reexport
 
-data FareProductType = ONE_WAY | RENTAL | AUTO deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
+data FareProductType = ONE_WAY | RENTAL | DRIVER_OFFER deriving (Generic, Show, Read, Eq, FromJSON, ToJSON, ToSchema)
 
 derivePersistField "FareProductType"
 

@@ -61,7 +61,7 @@ instance TEntityKey BookingT where
   fromKey (BookingTKey _id) = Id _id
   toKey (Id id) = BookingTKey id
 
-data BookingDetailsT = OneWayDetailsT SLoc.BookingLocationT | RentalDetailsT SRentalSlab.RentalSlabT
+data BookingDetailsT = OneWayDetailsT SLoc.BookingLocationT | RentalDetailsT SRentalSlab.RentalSlabT | DriverOfferDetailsT SLoc.BookingLocationT
 
 type FullBookingT = (BookingT, SLoc.BookingLocationT, Maybe STripTerms.TripTermsT, BookingDetailsT)
 
@@ -71,16 +71,9 @@ instance TType FullBookingT Domain.Booking where
     fromLocation <- fromTType fromLocT
     tripTerms <- forM mbTripTermsT fromTType
     bookingDetails <- case bookingDetailsT of
-      OneWayDetailsT toLocT -> do
-        toLocation <- fromTType toLocT
-        distance' <- distance & fromMaybeM (InternalError "distance is null for one way ride booking")
-        pure . Domain.OneWayDetails $
-          Domain.OneWayBookingDetails
-            { toLocation,
-              distance = HighPrecMeters distance'
-            }
-      RentalDetailsT rentalSlabT ->
-        Domain.RentalDetails <$> fromTType rentalSlabT
+      OneWayDetailsT toLocT -> Domain.OneWayDetails <$> buildOneWayDetails toLocT
+      RentalDetailsT rentalSlabT -> Domain.RentalDetails <$> fromTType rentalSlabT
+      DriverOfferDetailsT toLocT -> Domain.DriverOfferDetails <$> buildOneWayDetails toLocT
     return $
       Domain.Booking
         { id = Id id,
@@ -90,6 +83,15 @@ instance TType FullBookingT Domain.Booking where
           merchantId = fromKey merchantId,
           ..
         }
+    where
+      buildOneWayDetails toLocT = do
+        toLocation <- fromTType toLocT
+        distance' <- distance & fromMaybeM (InternalError "distance is null for one way booking")
+        pure
+          Domain.OneWayBookingDetails
+            { toLocation,
+              distance = HighPrecMeters distance'
+            }
 
   toTType Domain.Booking {..} = do
     let (fareProductType, bookingDetailsT, toLocationId, distance, rentalSlabId) = case bookingDetails of
@@ -99,7 +101,9 @@ instance TType FullBookingT Domain.Booking where
           Domain.RentalDetails rentalSlab -> do
             let rentalSlabT = toTType rentalSlab
             (DQuote.RENTAL, RentalDetailsT rentalSlabT, Nothing, Nothing, Just . toKey $ rentalSlab.id)
-
+          Domain.DriverOfferDetails details -> do
+            let toLocT = toTType details.toLocation
+            (DQuote.DRIVER_OFFER, DriverOfferDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.distance, Nothing)
     let bookingT =
           BookingT
             { id = getId id,
