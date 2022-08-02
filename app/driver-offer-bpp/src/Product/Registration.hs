@@ -11,12 +11,14 @@ import Beckn.Types.Common as BC
 import Beckn.Types.Id
 import Beckn.Utils.SlidingWindowLimiter
 import Beckn.Utils.Validation (runRequestValidation)
+import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Organization as DO
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.DriverInformation as QD
+import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
 import Types.API.Registration
@@ -37,14 +39,13 @@ auth req = withFlowHandlerAPI $ do
       countryCode = req.mobileCountryCode
   person <-
     QP.findByMobileNumber countryCode mobileNumber
-      >>= maybe (createPerson req) return
+      >>= maybe (createDriverWhihDetails req) return
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
       useFakeOtpM = useFakeSms smsCfg
       scfg = sessionConfig smsCfg
   token <- makeSession scfg entityId SR.USER (show <$> useFakeOtpM)
-  Esq.runTransaction $ do
-    QR.create token
+  Esq.runTransaction $ QR.create token
   whenNothing_ useFakeOtpM $ do
     otpSmsTemplate <- asks (.otpSmsTemplate)
     withLogTag ("personId_" <> getId person.id) $
@@ -53,6 +54,23 @@ auth req = withFlowHandlerAPI $ do
   let attempts = SR.attempts token
       authId = SR.id token
   return $ AuthRes {attempts, authId}
+
+createDriverDetails :: Id SP.Person -> Esq.SqlDB ()
+createDriverDetails personId = do
+  now <- getCurrentTime
+  let driverInfo =
+        DriverInfo.DriverInformation
+          { driverId = personId,
+            active = False,
+            onRide = False,
+            enabled = False,
+            createdAt = now,
+            updatedAt = now
+          }
+  QDriverStats.createInitialDriverStats driverId
+  QD.create driverInfo
+  where
+    driverId = cast personId
 
 makePerson :: EncFlow m r => AuthReq -> m SP.Person
 makePerson req = do
@@ -117,10 +135,13 @@ makeSession SmsSessionConfig {..} entityId entityType fakeOtp = do
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createPerson :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> m SP.Person
-createPerson req = do
+createDriverWhihDetails :: (EncFlow m r, EsqDBFlow m r) => AuthReq -> m SP.Person
+createDriverWhihDetails req = do
   person <- makePerson req
-  DB.runTransaction $ QP.create person
+  DB.runTransaction $ do
+    QP.create person
+    createDriverDetails (person.id)
+
   pure person
 
 verify :: Id SR.RegistrationToken -> AuthVerifyReq -> FlowHandler AuthVerifyRes

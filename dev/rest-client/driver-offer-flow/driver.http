@@ -1,0 +1,57 @@
+
+@driver-offer-bpp-host = http://localhost:8016
+@token = {{app-token}}
+
+
+
+# @name setActive
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
+content-type: application/json
+token: c69f5849-9081-4374-bae9-99d6589688b9
+
+###
+
+# @name createDriver
+POST {{driver-offer-bpp-host}}/ui/org/driver
+content-type: application/json
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+{
+  "person" : {
+    "firstName": "Jonh",
+    "middleName": " Maybeext",
+    "lastName": "Maybext",
+    "mobileNumber": "9602580676",
+    "mobileCountryCode": "+7"
+  },
+  "vehicle" : {
+    "category": "CAR",
+    "model": "Ford",
+    "variant": "SEDAN",
+    "color": "White",
+    "registrationNo": "6002",
+    "capacity": 120
+  }
+}
+###
+
+# @name deleteDriver
+DELETE  {{driver-offer-bpp-host}}/ui/org/driver/984e3bb5-d200-4dcc-8f6c-abb09ce68d6a
+content-type: application/json
+token: ea37f941-427a-4085-a7d0-96240f166672
+
+###
+
+# @name authDriver
+POST {{driver-offer-bpp-host}}/ui/auth
+content-type: application/json
+
+{
+  "mobileNumber" : "9000000001",
+  "mobileCountryCode": "+7",
+  "organizationId": "7f7896dd-787e-4a0b-8675-e9e6fe93bb8"
+}
+
+###
+
+
