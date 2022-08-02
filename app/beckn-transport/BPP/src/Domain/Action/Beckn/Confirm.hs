@@ -17,7 +17,7 @@ import Beckn.Types.Id
 import Beckn.Types.Registry (Subscriber (..))
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.BookingLocation as SBL
+import qualified Domain.Types.Booking.BookingLocation as SBL
 import qualified Domain.Types.BusinessEvent as SB
 import Domain.Types.DiscountTransaction
 import qualified Domain.Types.Organization as DOrg
@@ -27,7 +27,7 @@ import qualified Domain.Types.RiderDetails as SRD
 import qualified Product.BecknProvider.BP as BP
 import qualified SharedLogic.DriverPool as DrPool
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.BookingLocation as QBL
+import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DiscountTransaction as QDiscTransaction
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
@@ -96,21 +96,20 @@ confirm transporterId subscriber req = do
         when isNewRider $ QRD.create riderDetails
         QRB.updateStatus booking.id SRB.CONFIRMED
         QRB.updateRiderId booking.id riderDetails.id
-        QBL.updateAddress booking.fromLocationId req.fromAddress
+        QBL.updateAddress booking.fromLocation.id req.fromAddress
         whenJust booking.discount $ \disc ->
           QDiscTransaction.create $ mkDiscountTransaction booking disc now
         addons
 
-  fromLocation <- QBL.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
+  let fromLocation = booking.fromLocation
   res <- case booking.bookingDetails of
     SRB.OneWayDetails details -> do
       finalTransaction $ do
         RideRequest.create rideRequest
-        whenJust req.toAddress $ \toAddr -> QBL.updateAddress details.toLocationId toAddr
-      toLocation <- QBL.findById details.toLocationId >>= fromMaybeM LocationNotFound
+        whenJust req.toAddress $ \toAddr -> QBL.updateAddress details.toLocation.id toAddr
       return $
         DConfirmRes
-          { toLocation = Just toLocation,
+          { toLocation = Just details.toLocation,
             bDetails = OneWayDetails,
             ..
           }
@@ -136,9 +135,8 @@ confirm transporterId subscriber req = do
             bDetails = RentalDetails {baseDistance = rentalFP.baseDistance, baseDuration = rentalFP.baseDuration},
             ..
           }
-  let pickupPoint = booking.fromLocationId
-      fareProductType = SRB.getFareProductType booking.bookingDetails
-  driverPoolResults <- DrPool.recalculateDriverPool pickupPoint booking.id transporter.id booking.vehicleVariant fareProductType
+
+  driverPoolResults <- DrPool.recalculateDriverPool booking
   Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_CONFIRM (Just booking.id)) driverPoolResults
   let driverPool = map (.driverId) driverPoolResults
   logTagInfo "OnConfirmCallback" $

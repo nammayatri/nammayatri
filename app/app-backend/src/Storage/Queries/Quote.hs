@@ -3,7 +3,7 @@
 module Storage.Queries.Quote where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq hiding (Table)
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Data.Tuple.Extra
 import Domain.Types.Estimate
@@ -41,11 +41,6 @@ createMany quotes =
     Esq.createMany' mbTripTermsTs
     traverse_ createDetails quoteDetailsTs
     Esq.createMany' quoteTs
-
--- remove when https://bitbucket.org/juspay/beckn-shared-kernel/pull-requests/35 will be merged
-type Table a = SqlExpr (Entity a)
-
-type MbTable a = SqlExpr (Maybe (Entity a))
 
 fullQuoteTable ::
   From

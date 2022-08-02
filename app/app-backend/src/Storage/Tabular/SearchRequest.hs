@@ -14,7 +14,7 @@ import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
 import qualified Storage.Tabular.Merchant as SMerchant
 import qualified Storage.Tabular.Person as SP
-import qualified Storage.Tabular.SearchReqLocation as SLoc
+import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc
 
 mkPersist
   defaultSqlSettings
@@ -38,25 +38,31 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-instance TType SearchRequestT Domain.SearchRequest where
-  fromTType SearchRequestT {..} = do
+type FullSearchRequestT = (SearchRequestT, SLoc.SearchReqLocationT, Maybe SLoc.SearchReqLocationT)
+
+instance TType FullSearchRequestT Domain.SearchRequest where
+  fromTType (SearchRequestT {..}, fromLoc, mbToLoc) = do
+    fromLocation <- fromTType fromLoc
+    toLocation <- mapM fromTType mbToLoc
     return $
       Domain.SearchRequest
         { id = Id id,
           riderId = fromKey riderId,
-          fromLocationId = fromKey fromLocationId,
-          toLocationId = fromKey <$> toLocationId,
           distance = HighPrecMeters <$> distance,
           merchantId = fromKey merchantId,
           ..
         }
-  toTType Domain.SearchRequest {..} =
-    SearchRequestT
-      { id = getId id,
-        riderId = toKey riderId,
-        fromLocationId = toKey fromLocationId,
-        toLocationId = toKey <$> toLocationId,
-        distance = getHighPrecMeters <$> distance,
-        merchantId = toKey merchantId,
-        ..
-      }
+  toTType Domain.SearchRequest {..} = do
+    let fromLoc = toTType fromLocation
+        mbToLoc = toTType <$> toLocation
+        searchReq =
+          SearchRequestT
+            { id = getId id,
+              riderId = toKey riderId,
+              fromLocationId = toKey fromLocation.id,
+              toLocationId = toKey <$> (toLocation <&> (.id)),
+              distance = getHighPrecMeters <$> distance,
+              merchantId = toKey merchantId,
+              ..
+            }
+    (searchReq, fromLoc, mbToLoc)

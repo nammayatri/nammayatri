@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Mobility.Fixtures where
 
 import qualified "beckn-transport" API.UI.Booking as TbeBookingAPI
@@ -101,7 +103,7 @@ mkAppConfirmReq :: DConfirm.ConfirmReq
 mkAppConfirmReq =
   DConfirm.ConfirmReq
     { fromLocation = confirmAddress,
-      toLocation = Just confirmAddress
+      mbToLocation = Just confirmAddress
     }
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess

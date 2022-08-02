@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.SearchRequest where
 
 import Beckn.Prelude
@@ -7,39 +9,69 @@ import Domain.Types.Merchant
 import Domain.Types.Person (Person)
 import Domain.Types.SearchRequest
 import Storage.Tabular.SearchRequest
+import Storage.Tabular.SearchRequest.SearchReqLocation
 
 create :: SearchRequest -> SqlDB ()
-create = Esq.create
+create dsReq = Esq.runTransaction $
+  withFullEntity dsReq $ \(sReq, fromLoc, mbToLoc) -> do
+    Esq.create' fromLoc
+    traverse_ Esq.create' mbToLoc
+    Esq.create' sReq
+
+fullSearchRequestTable ::
+  From
+    ( Table SearchRequestT
+        :& Table SearchReqLocationT
+        :& MbTable SearchReqLocationT
+    )
+fullSearchRequestTable =
+  table @SearchRequestT
+    `innerJoin` table @SearchReqLocationT
+      `Esq.on` ( \(s :& loc1) ->
+                   s ^. SearchRequestFromLocationId ==. loc1 ^. SearchReqLocationTId
+               )
+    `leftJoin` table @SearchReqLocationT
+      `Esq.on` ( \(s :& _ :& mbLoc2) ->
+                   s ^. SearchRequestToLocationId ==. mbLoc2 ?. SearchReqLocationTId
+               )
 
 findById :: Transactionable m => Id SearchRequest -> m (Maybe SearchRequest)
-findById = Esq.findById
+findById searchRequestId = Esq.buildDType $ do
+  mbFullSearchReqT <- Esq.findOne' $ do
+    (sReq :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
+    where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
+    pure (sReq, sFromLoc, mbSToLoc)
+  pure $ extractSolidType <$> mbFullSearchReqT
 
 findByIdAndMerchantId ::
   Transactionable m =>
   Id SearchRequest ->
   Id Merchant ->
   m (Maybe SearchRequest)
-findByIdAndMerchantId reqId merchantId = do
-  findOne $ do
-    searchRequest <- from $ table @SearchRequestT
+findByIdAndMerchantId reqId merchantId = Esq.buildDType $ do
+  mbFullSearchReqT <- Esq.findOne' $ do
+    (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $
       searchRequest ^. SearchRequestId ==. val (getId reqId)
         &&. searchRequest ^. SearchRequestMerchantId ==. val (toKey merchantId)
-    return searchRequest
+    return (searchRequest, sFromLoc, mbSToLoc)
+  pure $ extractSolidType <$> mbFullSearchReqT
 
 findByPersonId :: Transactionable m => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
-findByPersonId personId searchRequestId =
-  Esq.findOne $ do
-    searchRequest <- from $ table @SearchRequestT
+findByPersonId personId searchRequestId = Esq.buildDType $ do
+  mbFullSearchReqT <- Esq.findOne' $ do
+    (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey personId)
         &&. searchRequest ^. SearchRequestId ==. val (getId searchRequestId)
-    return searchRequest
+    return (searchRequest, sFromLoc, mbSToLoc)
+  pure $ extractSolidType <$> mbFullSearchReqT
 
 findAllByPerson :: Transactionable m => Id Person -> m [SearchRequest]
-findAllByPerson perId =
-  Esq.findAll $ do
-    searchRequest <- from $ table @SearchRequestT
+findAllByPerson perId = Esq.buildDType $ do
+  fullSearchRequestsT <- Esq.findAll' $ do
+    (searchRequest :& sFromLoc :& mbSToLoc) <- from fullSearchRequestTable
     where_ $
       searchRequest ^. SearchRequestRiderId ==. val (toKey perId)
-    return searchRequest
+    return (searchRequest, sFromLoc, mbSToLoc)
+  pure $ extractSolidType <$> fullSearchRequestsT

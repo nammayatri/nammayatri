@@ -9,11 +9,10 @@ import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.BookingLocation as DBLoc
+import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.Vehicle (Variant)
-import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Vehicle as QVeh
@@ -63,10 +62,9 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive = do
 
 buildDriverRideRes :: (EsqDBFlow m r, EncFlow m r) => (SRide.Ride, SRB.Booking) -> m DriverRideRes
 buildDriverRideRes (ride, booking) = do
-  fromLocation <- QBLoc.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocation <- case booking.bookingDetails of
-    SRB.OneWayDetails details -> QBLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound . Just
-    SRB.RentalDetails _ -> pure Nothing
+  let mbToLocation = case booking.bookingDetails of
+        SRB.OneWayDetails details -> Just details.toLocation
+        SRB.RentalDetails _ -> Nothing
 
   vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
   driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -76,8 +74,8 @@ buildDriverRideRes (ride, booking) = do
       { id = ride.id,
         shortRideId = ride.shortId,
         status = ride.status,
-        fromLocation = DBLoc.makeBookingLocationAPIEntity fromLocation,
-        toLocation = DBLoc.makeBookingLocationAPIEntity <$> toLocation,
+        fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
+        toLocation = DBLoc.makeBookingLocationAPIEntity <$> mbToLocation,
         estimatedFare = booking.estimatedFare,
         estimatedTotalFare = booking.estimatedTotalFare,
         discount = booking.discount,

@@ -3,7 +3,7 @@
 module Storage.Queries.Estimate where
 
 import Beckn.Prelude
-import Beckn.Storage.Esqueleto as Esq hiding (Table)
+import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
 import Domain.Types.Estimate
 import Domain.Types.SearchRequest
@@ -24,11 +24,6 @@ createMany estimates =
         tripTermsTs = mapMaybe snd list
     Esq.createMany' tripTermsTs
     Esq.createMany' estimateTs
-
--- remove when https://bitbucket.org/juspay/beckn-shared-kernel/pull-requests/35 will be merged
-type Table a = SqlExpr (Entity a)
-
-type MbTable a = SqlExpr (Maybe (Entity a))
 
 fullEstimateTable ::
   From

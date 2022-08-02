@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.Booking where
 
 import Beckn.Prelude
@@ -18,16 +20,14 @@ create dsReq = Esq.runTransaction $
     Esq.create' toLoc
     Esq.create' sReq
 
-baseBookingQuery ::
+baseBookingTable ::
   From
-    ( ( ( SqlExpr (Entity BookingT)
-            :& SqlExpr (Entity BookingLocationT)
-        )
-          :& SqlExpr (Entity BookingLocationT)
-      )
-        :& SqlExpr (Entity Fare.FareParametersT)
+    ( Table BookingT
+        :& Table BookingLocationT
+        :& Table BookingLocationT
+        :& Table Fare.FareParametersT
     )
-baseBookingQuery =
+baseBookingTable =
   table @BookingT
     `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& loc1) -> rb ^. BookingFromLocationId ==. loc1 ^. BookingLocationTId)
     `innerJoin` table @BookingLocationT `Esq.on` (\(rb :& _ :& loc2) -> rb ^. BookingToLocationId ==. loc2 ^. BookingLocationTId)
@@ -41,7 +41,7 @@ findById bookingId = buildDType $
   fmap (fmap extractSolidType) $
     Esq.findOne' $ do
       (rb :& bFromLoc :& bToLoc :& farePars) <-
-        from baseBookingQuery
+        from baseBookingTable
       where_ $ rb ^. BookingTId ==. val (toKey bookingId)
       pure (rb, bFromLoc, bToLoc, farePars)
 

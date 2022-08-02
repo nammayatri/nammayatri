@@ -9,7 +9,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import EulerHS.Prelude hiding (id)
 import Servant
 import Servant.Client.Core (BaseUrl)
@@ -33,8 +33,8 @@ data SearchRequest = SearchRequest
     startTime :: UTCTime,
     validTill :: UTCTime,
     providerId :: Id DOrg.Organization,
-    fromLocationId :: Id DLoc.SearchReqLocation,
-    toLocationId :: Maybe (Id DLoc.SearchReqLocation),
+    fromLocation :: DLoc.SearchReqLocation,
+    toLocation :: Maybe DLoc.SearchReqLocation,
     bapId :: Text,
     bapUri :: BaseUrl,
     createdAt :: UTCTime

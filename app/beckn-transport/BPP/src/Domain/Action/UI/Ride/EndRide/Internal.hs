@@ -4,7 +4,7 @@ import Beckn.Prelude
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import qualified Domain.Types.Booking.Type as SRB
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
 import qualified Storage.Queries.Booking as QRB

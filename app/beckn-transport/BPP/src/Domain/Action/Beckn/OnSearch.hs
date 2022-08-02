@@ -9,8 +9,8 @@ import qualified Domain.Action.Beckn.OnSearch.Rental as Rental
 import qualified Domain.Types.FarePolicy.FareProduct as DFareProduct
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.FarePolicy.FareProduct as QFareProduct
 import qualified Storage.Queries.Ride as QRide

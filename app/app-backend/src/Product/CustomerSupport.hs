@@ -9,14 +9,13 @@ import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.BookingLocation as DBLoc
+import qualified Domain.Types.Booking.BookingLocation as DBLoc
 import Domain.Types.Person as SP
 import qualified Domain.Types.RegistrationToken as SR
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import Product.Booking (buildBookingStatusRes)
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.BookingLocation as QBLoc
 import Storage.Queries.Person as Person
 import qualified Storage.Queries.RegistrationToken as RegistrationToken
 import Types.API.CustomerSupport as T
@@ -101,10 +100,9 @@ listOrder personId mRequestId mMobile mlimit moffset = withFlowHandlerAPI $ do
 
 buildBookingToOrder :: (EsqDBFlow m r, EncFlow m r) => SP.Person -> DRB.Booking -> m T.OrderResp
 buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
-  fromLocation <- QBLoc.findById booking.fromLocationId
-  toLocation <- case booking.bookingDetails of
-    DRB.RentalDetails _ -> return Nothing
-    DRB.OneWayDetails details -> QBLoc.findById details.toLocationId
+  let mbToLocation = case booking.bookingDetails of
+        DRB.RentalDetails _ -> Nothing
+        DRB.OneWayDetails details -> Just details.toLocation
   rbStatus <- buildBookingStatusRes booking
   decMobNum <- mapM decrypt mobileNumber
   let details =
@@ -114,8 +112,8 @@ buildBookingToOrder SP.Person {firstName, lastName, mobileNumber} booking = do
             updatedAt = booking.updatedAt,
             startTime = booking.startTime,
             endTime = Nothing,
-            fromLocation = DBLoc.makeBookingLocationAPIEntity <$> fromLocation,
-            toLocation = DBLoc.makeBookingLocationAPIEntity <$> toLocation,
+            fromLocation = DBLoc.makeBookingLocationAPIEntity booking.fromLocation,
+            toLocation = DBLoc.makeBookingLocationAPIEntity <$> mbToLocation,
             travellerName = firstName <> lastName,
             travellerPhone = decMobNum,
             rideBooking = rbStatus

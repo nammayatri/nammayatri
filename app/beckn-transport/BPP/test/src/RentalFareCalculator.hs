@@ -123,7 +123,7 @@ fareBreakupSum :: TestTree
 fareBreakupSum = testCase "Sum of rental fare breakup should be equal to total fare" $ do
   fareParams <- doCalculateRentalFare handle "rentalFarePolicyId" distance startTime stopTime
   let totalFare = rentalFareSumWithDiscount fareParams
-  fareBreakups <- buildRentalFareBreakups fareParams "rideBookingId"
+  fareBreakups <- buildRentalFareBreakups fareParams "bookingId"
   sum (fareBreakups <&> (.amount)) `shouldBe` totalFare
   where
     startTime = mockTime 15 13

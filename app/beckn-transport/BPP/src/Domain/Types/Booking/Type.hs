@@ -9,7 +9,7 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Data.Time
-import qualified Domain.Types.BookingLocation as DLoc
+import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import qualified Domain.Types.Organization as DOrg
@@ -45,7 +45,7 @@ data Booking = Booking
     bapUri :: BaseUrl,
     startTime :: UTCTime,
     riderId :: Maybe (Id DRD.RiderDetails),
-    fromLocationId :: Id DLoc.BookingLocation,
+    fromLocation :: DLoc.BookingLocation,
     vehicleVariant :: DVeh.Variant,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
@@ -61,7 +61,7 @@ data BookingDetails = OneWayDetails OneWayBookingDetails | RentalDetails RentalB
   deriving (Generic, Eq)
 
 data OneWayBookingDetails = OneWayBookingDetails
-  { toLocationId :: Id DLoc.BookingLocation,
+  { toLocation :: DLoc.BookingLocation,
     estimatedDistance :: HighPrecMeters
   }
   deriving (Eq)

@@ -5,12 +5,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.BookingLocation where
+module Storage.Tabular.Booking.BookingLocation where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.BookingLocation as Domain
+import qualified Domain.Types.Booking.BookingLocation as Domain
 
 mkPersist
   defaultSqlSettings

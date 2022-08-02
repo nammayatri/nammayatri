@@ -1,20 +1,11 @@
-module Storage.Queries.BookingLocation where
+module Storage.Queries.Booking.BookingLocation where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Domain.Types.BookingLocation
-import Storage.Tabular.BookingLocation
-
-create :: BookingLocation -> SqlDB ()
-create = Esq.create
-
-findById ::
-  Transactionable m =>
-  Id BookingLocation ->
-  m (Maybe BookingLocation)
-findById = Esq.findById
+import Domain.Types.Booking.BookingLocation
+import Storage.Tabular.Booking.BookingLocation
 
 updateAddress :: Id BookingLocation -> LocationAddress -> SqlDB ()
 updateAddress blId LocationAddress {..} = do

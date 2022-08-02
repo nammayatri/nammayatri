@@ -14,7 +14,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
 import EulerHS.Prelude hiding (id, state)
 import Storage.Queries.Geometry
-import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Tools.Metrics as Metrics
 import qualified Types.API.Search as API
@@ -40,8 +39,6 @@ search personId req = do
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
   DB.runTransaction $ do
-    Location.create fromLocation
-    Location.create toLocation
     QSearchRequest.create searchRequest
   let dSearchReq =
         DSearchReq

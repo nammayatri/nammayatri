@@ -1,11 +1,9 @@
-module Domain.Types.BookingLocation where
+module Domain.Types.Booking.BookingLocation where
 
+import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates)
 import Beckn.Types.Id
-import Data.Aeson
-import Data.OpenApi (ToSchema)
-import Data.Time
-import EulerHS.Prelude hiding (id, state)
+import Beckn.Utils.GenericPretty (PrettyShow)
 
 data BookingLocation = BookingLocation
   { id :: Id BookingLocation,
@@ -27,7 +25,7 @@ data LocationAddress = LocationAddress
     areaCode :: Maybe Text,
     area :: Maybe Text
   }
-  deriving (Generic, Show, Eq)
+  deriving (Generic, Show, Eq, PrettyShow)
 
 data BookingLocationAPIEntity = BookingLocationAPIEntity
   { lat :: Double,

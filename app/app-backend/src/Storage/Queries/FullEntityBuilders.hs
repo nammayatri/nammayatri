@@ -6,9 +6,8 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Domain.Types.Booking as Booking
 import Domain.Types.Quote as Quote
-import qualified Storage.Queries.RentalSlab as QRentalSlab
-import qualified Storage.Queries.TripTerms as QTripTerms
 import Storage.Tabular.Booking as Booking
+import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.DriverOffer
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.Instances as Quote
@@ -26,14 +25,13 @@ buildFullQuote (quoteT@QuoteT {..}, mbTripTermsT, mbRentalSlab, mbDriverOffer) =
     AUTO -> MaybeT $ pure (Quote.DriverOfferDetailsT <$> mbDriverOffer)
   return $ extractSolidType @Quote (quoteT, mbTripTermsT, quoteDetailsT)
 
-buildFullBooking :: Transactionable m => BookingT -> DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
-  mbTripTermsT <- forM tripTermsId $ MaybeT . QTripTerms.findById' . fromKey
+buildFullBooking ::
+  Transactionable m =>
+  (BookingT, BookingLocationT, Maybe BookingLocationT, Maybe TripTermsT, Maybe RentalSlabT) ->
+  DTypeBuilder m (Maybe (SolidType FullBookingT))
+buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbTripTermsT, mbRentalSlab) = runMaybeT $ do
   bookingDetails <- case fareProductType of
-    ONE_WAY -> return Booking.OneWayDetailsT
-    RENTAL -> do
-      rentalSlabId' <- MaybeT . pure $ rentalSlabId -- Throw an error here if Nothing?
-      rentalSlabT <- MaybeT $ QRentalSlab.findById' (fromKey rentalSlabId')
-      return $ Booking.RentalDetailsT rentalSlabT
+    ONE_WAY -> MaybeT $ pure (Booking.OneWayDetailsT <$> mbToLocT)
+    RENTAL -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalSlab)
     AUTO -> MaybeT $ pure Nothing -- no ride booking available for auto trips
-  return $ extractSolidType @Booking (bookingT, mbTripTermsT, bookingDetails)
+  return $ extractSolidType @Booking (bookingT, fromLocT, mbTripTermsT, bookingDetails)

@@ -12,12 +12,11 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.BookingLocation as DLoc
+import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Vehicle as Veh
 import SharedLogic.FareCalculator.OneWayFareCalculator
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Organization as QOrg
@@ -97,14 +96,12 @@ initOneWayTrip req oneWayReq transporterId now = do
       owDetails =
         DRB.OneWayDetails $
           DRB.OneWayBookingDetails
-            { DRB.toLocationId = toLoc.id,
+            { DRB.toLocation = toLoc,
               DRB.estimatedDistance = distance
             }
   fromLoc <- buildRBLoc req.fromLocation now
-  booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare owDetails fromLoc.id now
+  booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare owDetails fromLoc now
   DB.runTransaction $ do
-    QBLoc.create fromLoc
-    QBLoc.create toLoc
     QRB.create booking
   return booking
 
@@ -128,9 +125,8 @@ initRentalTrip req rentalReq transporterId now = do
   rentalFarePolicy <- QRFP.findByOffer transporterId req.vehicleVariant rentalReq.distance rentalReq.duration >>= fromMaybeM NoFarePolicy
   let rentDetails = DRB.RentalDetails $ DRB.RentalBookingDetails {rentalFarePolicyId = rentalFarePolicy.id}
   fromLoc <- buildRBLoc req.fromLocation now
-  booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare rentDetails fromLoc.id now
+  booking <- buildBooking req transporterId estimatedFare discount estimatedTotalFare rentDetails fromLoc now
   DB.runTransaction $ do
-    QBLoc.create fromLoc
     QRB.create booking
   return booking
 
@@ -169,10 +165,10 @@ buildBooking ::
   Maybe Amount ->
   Amount ->
   DRB.BookingDetails ->
-  Id DLoc.BookingLocation ->
+  DLoc.BookingLocation ->
   UTCTime ->
   m DRB.Booking
-buildBooking req orgId estimatedFare discount estimatedTotalFare bookingDetails fromLocationId now = do
+buildBooking req orgId estimatedFare discount estimatedTotalFare bookingDetails fromLocation now = do
   id <- generateGUID
   return $
     DRB.Booking
@@ -181,7 +177,7 @@ buildBooking req orgId estimatedFare discount estimatedTotalFare bookingDetails 
         providerId = orgId,
         startTime = req.startTime,
         riderId = Nothing,
-        fromLocationId = fromLocationId,
+        fromLocation,
         bapId = req.bapId,
         bapUri = req.bapUri,
         estimatedFare = estimatedFare,

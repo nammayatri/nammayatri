@@ -3,22 +3,30 @@ module Storage.Queries.Booking where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Domain.Types.Booking as Booking
+import Domain.Types.Booking.Type as Booking
 import Domain.Types.Organization
 import Domain.Types.Person
 import Domain.Types.RiderDetails (RiderDetails)
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking as Booking
+import Storage.Tabular.Booking.BookingLocation as Loc
+import Storage.Tabular.Booking.RentalBooking as RentalBooking
 import Storage.Tabular.Ride as Ride
 import Utils.Common
 
 create :: Booking -> SqlDB ()
 create booking = do
-  Esq.withFullEntity booking $ \(bookingT, bookingDetailsT) -> do
-    Esq.create' bookingT
+  Esq.withFullEntity booking $ \(bookingT, fromLocT, bookingDetailsT) -> do
+    -- order of creating make sense
     case bookingDetailsT of
-      Booking.OneWayDetailsT -> pure ()
-      Booking.RentalDetailsT rentalDetails -> Esq.create' rentalDetails
+      Booking.OneWayDetailsT toLocT -> do
+        Esq.create' fromLocT
+        Esq.create' toLocT
+        Esq.create' bookingT
+      Booking.RentalDetailsT rentalBooking -> do
+        Esq.create' fromLocT
+        Esq.create' bookingT
+        Esq.create' rentalBooking
 
 updateStatus :: Id Booking -> BookingStatus -> SqlDB ()
 updateStatus rbId rbStatus = do
@@ -42,18 +50,43 @@ updateRiderId rbId riderId = do
       ]
     where_ $ tbl ^. BookingTId ==. val (toKey rbId)
 
+fullBookingTable ::
+  From
+    ( Table BookingT
+        :& Table Loc.BookingLocationT
+        :& MbTable Loc.BookingLocationT
+        :& MbTable RentalBooking.RentalBookingT
+    )
+fullBookingTable =
+  table @BookingT
+    `innerJoin` table @Loc.BookingLocationT
+      `Esq.on` ( \(booking :& loc1) ->
+                   booking ^. BookingFromLocationId ==. loc1 ^. Loc.BookingLocationTId
+               )
+    `leftJoin` table @Loc.BookingLocationT
+      `Esq.on` ( \(booking :& _ :& mbLoc2) ->
+                   booking ^. BookingToLocationId ==. mbLoc2 ?. Loc.BookingLocationTId
+               )
+    `leftJoin` table @RentalBooking.RentalBookingT
+      `Esq.on` ( \(booking :& _ :& _ :& mbRentalBooking) ->
+                   just (booking ^. BookingTId) ==. mbRentalBooking ?. RentalBooking.RentalBookingBookingId
+               )
+
 findById :: Transactionable m => Id Booking -> m (Maybe Booking)
 findById bookingId = Esq.buildDType $ do
-  booking <- Esq.findById' bookingId
-  join <$> mapM buildFullBooking booking
+  mbFullBookingT <- Esq.findOne' $ do
+    (booking :& fromLoc :& mbToLoc :& mbRentalBooking) <- from fullBookingTable
+    where_ $ booking ^. BookingTId ==. val (toKey bookingId)
+    pure (booking, fromLoc, mbToLoc, mbRentalBooking)
+  join <$> mapM buildFullBooking mbFullBookingT
 
 findAllByOrg :: Transactionable m => Id Organization -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
 findAllByOrg orgId mbLimit mbOffset mbIsOnlyActive = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbIsOnlyActive
-  bookingT <- Esq.findAll' $ do
-    booking <- from $ table @BookingT
+  fullBookingsT <- Esq.findAll' $ do
+    (booking :& fromLoc :& mbToLoc :& mbRentalBooking) <- from fullBookingTable
     where_ $
       booking ^. BookingProviderId ==. val (toKey orgId)
         &&. not_ (booking ^. BookingStatus `in_` valList [Booking.CONFIRMED, Booking.AWAITING_REASSIGNMENT])
@@ -61,20 +94,20 @@ findAllByOrg orgId mbLimit mbOffset mbIsOnlyActive = Esq.buildDType $ do
     orderBy [desc $ booking ^. BookingCreatedAt]
     limit limitVal
     offset offsetVal
-    return booking
-  catMaybes <$> mapM buildFullBooking bookingT
+    pure (booking, fromLoc, mbToLoc, mbRentalBooking)
+  catMaybes <$> mapM buildFullBooking fullBookingsT
 
 findAllByDriver :: Transactionable m => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
 findAllByDriver driverId mbLimit mbOffset mbIsOnlyActive = Esq.buildDType $ do
   let limitVal = fromIntegral $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbIsOnlyActive
-  bookingT <- Esq.findAll' $ do
-    (booking :& ride) <-
+  fullBookingsT <- Esq.findAll' $ do
+    (booking :& fromLoc :& mbToLoc :& mbRentalBooking :& ride) <-
       from $
-        table @BookingT
+        fullBookingTable
           `innerJoin` table @RideT
-            `Esq.on` ( \(booking :& ride) ->
+            `Esq.on` ( \(booking :& _ :& _ :& _ :& ride) ->
                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
     where_ $
@@ -83,8 +116,8 @@ findAllByDriver driverId mbLimit mbOffset mbIsOnlyActive = Esq.buildDType $ do
     orderBy [desc $ booking ^. BookingCreatedAt]
     limit limitVal
     offset offsetVal
-    return booking
-  catMaybes <$> mapM buildFullBooking bookingT
+    pure (booking, fromLoc, mbToLoc, mbRentalBooking)
+  catMaybes <$> mapM buildFullBooking fullBookingsT
 
 increaseReallocationsCounter :: Id Booking -> SqlDB ()
 increaseReallocationsCounter rbId = do

@@ -397,7 +397,7 @@ fareBreakupSum = testCase "Sum of fare breakup should be equal to total fare" $ 
       distance
       startTime
   let totalFare = fareSumWithDiscount fareParams
-  fareBreakups <- buildOneWayFareBreakups fareParams "rideBookingId"
+  fareBreakups <- buildOneWayFareBreakups fareParams "bookingId"
   sum (fareBreakups <&> (.amount)) `shouldBe` totalFare
   where
     startTime = mockTime 19

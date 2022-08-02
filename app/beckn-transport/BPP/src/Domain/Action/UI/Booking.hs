@@ -27,7 +27,7 @@ import Data.OpenApi (ToSchema (..))
 import Domain.Types.AllocationEvent
 import qualified Domain.Types.AllocationEvent as AllocationEvent
 import qualified Domain.Types.Booking as SRB
-import Domain.Types.BookingLocation as DBLoc
+import Domain.Types.Booking.BookingLocation as DBLoc
 import qualified Domain.Types.Person as SP
 import Domain.Types.RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
@@ -35,7 +35,6 @@ import EulerHS.Prelude hiding (id)
 import Product.BecknProvider.BP (buildRideReq)
 import qualified Storage.Queries.AllocationEvent as AllocationEvent
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.DriverLocation as QDrLoc
 import qualified Storage.Queries.NotificationStatus as QNotificationStatus
 import qualified Storage.Queries.Organization as QOrg
@@ -116,13 +115,11 @@ getRideInfo bookingId personId = do
         QDrLoc.findById driver.id
           >>= fromMaybeM LocationNotFound
       let driverLatLong = getCoordinates driverLocation
-      fromLocation <-
-        QBLoc.findById booking.fromLocationId
-          >>= fromMaybeM LocationNotFound
+      let fromLocation = booking.fromLocation
       let fromLatLong = getCoordinates fromLocation
-      toLocation <- case booking.bookingDetails of
-        SRB.OneWayDetails details -> QBLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound . Just
-        SRB.RentalDetails _ -> pure Nothing
+      let toLocation = case booking.bookingDetails of
+            SRB.OneWayDetails details -> Just details.toLocation
+            SRB.RentalDetails _ -> Nothing
       distanceDuration <- MapSearch.getDistance (Just MapSearch.CAR) driverLatLong fromLatLong
       return $
         GetRideInfoRes $

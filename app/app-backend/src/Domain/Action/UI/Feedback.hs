@@ -3,7 +3,7 @@ module Domain.Action.UI.Feedback where
 import qualified App.Types as App
 import Beckn.Prelude
 import Beckn.Types.Id
-import qualified Domain.Types.Booking as DRideBooking
+import qualified Domain.Types.Booking as DBooking
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import qualified Types.API.Feedback as API
@@ -11,7 +11,7 @@ import Types.Error
 import Utils.Common
 
 data DRatingReq = DRatingReq
-  { bppBookingId :: Id DRideBooking.BPPBooking,
+  { bppBookingId :: Id DBooking.BPPBooking,
     ratingValue :: Int,
     providerId :: Text,
     providerUrl :: BaseUrl

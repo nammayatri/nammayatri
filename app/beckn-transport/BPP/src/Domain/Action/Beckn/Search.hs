@@ -15,12 +15,11 @@ import Beckn.Types.Common
 import Beckn.Types.Id
 import Data.Traversable
 import qualified Domain.Types.Organization as DOrg
-import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Organization as QOrg
-import qualified Storage.Queries.SearchReqLocation as QLoc
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Tools.Metrics as Metrics
 import Types.Error
@@ -67,11 +66,9 @@ search transporterId req@DSearchReq {..} = do
   validity <- getValidTime now pickupTime
   fromLocation <- buildSearchReqLoc now pickupLocation
   mbToLocation <- buildSearchReqLoc now `traverse` mbDropLocation
-  searchRequest <- buildSearchRequest req transporter.id now validity fromLocation.id (mbToLocation <&> (.id))
+  searchRequest <- buildSearchRequest req transporter.id now validity fromLocation mbToLocation
   Esq.runTransaction $ do
     --These things are used only for analitics
-    QLoc.create fromLocation
-    whenJust mbToLocation QLoc.create
     QSearchRequest.create searchRequest
   pure DSearchRes {..}
 
@@ -104,10 +101,10 @@ buildSearchRequest ::
   Id DOrg.Organization ->
   UTCTime ->
   UTCTime ->
-  Id DLoc.SearchReqLocation ->
-  Maybe (Id DLoc.SearchReqLocation) ->
+  DLoc.SearchReqLocation ->
+  Maybe DLoc.SearchReqLocation ->
   m DSR.SearchRequest
-buildSearchRequest DSearchReq {..} transporterId now validity fromLocationId mbToLocationId = do
+buildSearchRequest DSearchReq {..} transporterId now validity fromLocation mbToLocation = do
   uuid <- generateGUID
   pure
     DSR.SearchRequest
@@ -116,8 +113,8 @@ buildSearchRequest DSearchReq {..} transporterId now validity fromLocationId mbT
         startTime = pickupTime,
         validTill = validity,
         providerId = transporterId,
-        fromLocationId = fromLocationId,
-        toLocationId = mbToLocationId,
+        fromLocation = fromLocation,
+        toLocation = mbToLocation,
         bapId = bapId,
         bapUri = bapUri,
         createdAt = now

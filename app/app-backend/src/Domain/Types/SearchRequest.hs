@@ -7,7 +7,7 @@ import Beckn.Types.Common (HighPrecMeters)
 import Beckn.Types.Id
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
-import qualified Domain.Types.SearchReqLocation as DLoc
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED
   deriving (Show, Eq, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -17,8 +17,8 @@ data SearchRequest = SearchRequest
     startTime :: UTCTime,
     validTill :: UTCTime,
     riderId :: Id DP.Person,
-    fromLocationId :: Id DLoc.SearchReqLocation,
-    toLocationId :: Maybe (Id DLoc.SearchReqLocation),
+    fromLocation :: DLoc.SearchReqLocation,
+    toLocation :: Maybe DLoc.SearchReqLocation,
     distance :: Maybe HighPrecMeters,
     merchantId :: Id DMerchant.Merchant, -- remove when searchRequest will not be used in CustomerSupport
     createdAt :: UTCTime

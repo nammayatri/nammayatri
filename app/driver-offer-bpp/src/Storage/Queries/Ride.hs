@@ -7,7 +7,7 @@ import Domain.Types.Booking as Booking
 import Domain.Types.Organization
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
-import Storage.Queries.Booking (baseBookingQuery)
+import Storage.Queries.Booking (baseBookingTable)
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Ride as Ride
 import Utils.Common
@@ -41,7 +41,7 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
   res <- Esq.findAll' $ do
     (booking :& fromLocation :& toLocation :& fareParams :& ride) <-
       from $
-        baseBookingQuery
+        baseBookingTable
           `innerJoin` table @RideT
             `Esq.on` ( \(booking :& _ :& _ :& _ :& ride) ->
                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId

@@ -10,7 +10,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
-import qualified Domain.Types.BookingLocation as DLoc
+import qualified Domain.Types.Booking.BookingLocation as DLoc
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RentalSlab as DRentalSlab
@@ -49,7 +49,7 @@ data Booking = Booking
     providerMobileNumber :: Text,
     startTime :: UTCTime,
     riderId :: Id DPerson.Person,
-    fromLocationId :: Id DLoc.BookingLocation,
+    fromLocation :: DLoc.BookingLocation,
     estimatedFare :: Amount,
     discount :: Maybe Amount,
     estimatedTotalFare :: Amount,
@@ -66,7 +66,7 @@ data BookingDetails = OneWayDetails OneWayBookingDetails | RentalDetails DRental
   deriving (Show)
 
 data OneWayBookingDetails = OneWayBookingDetails
-  { toLocationId :: Id DLoc.BookingLocation,
+  { toLocation :: DLoc.BookingLocation,
     distance :: HighPrecMeters
   }
   deriving (Show)

@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Storage.Queries.FullEntityBuilders where
 
 import Beckn.Prelude
@@ -7,12 +9,13 @@ import Domain.Types.Booking.Type as Booking
 import qualified Domain.Types.FarePolicy.FareProduct as Domain
 import Domain.Types.FarePolicy.OneWayFarePolicy
 import Domain.Types.Quote as Quote
-import qualified Storage.Queries.Booking.RentalBooking as QRentalBooking
 import qualified Storage.Queries.FarePolicy.Discount as QDisc
 import qualified Storage.Queries.FarePolicy.OneWayFarePolicy.PerExtraKmRate as QExtraKmRate
 import qualified Storage.Queries.Quote.OneWayQuote as QOneWayQuote
 import qualified Storage.Queries.Quote.RentalQuote as QRentalQuote
 import Storage.Tabular.Booking as Booking
+import Storage.Tabular.Booking.BookingLocation (BookingLocationT)
+import Storage.Tabular.Booking.RentalBooking (RentalBookingT)
 import Storage.Tabular.FarePolicy.OneWayFarePolicy
 import Storage.Tabular.Quote as Quote
 import Storage.Tabular.Quote.RentalQuote (RentalQuoteT (..))
@@ -38,11 +41,12 @@ buildFullQuote quoteT@QuoteT {..} = runMaybeT $ do
       return $ Quote.OneWayDetailsT oneWayQuoteT
   return $ extractSolidType @Quote (quoteT, quoteDetails)
 
-buildFullBooking :: Transactionable m => BookingT -> DTypeBuilder m (Maybe (SolidType FullBookingT))
-buildFullBooking bookingT@BookingT {..} = runMaybeT $ do
+buildFullBooking ::
+  Transactionable m =>
+  (BookingT, BookingLocationT, Maybe BookingLocationT, Maybe RentalBookingT) ->
+  DTypeBuilder m (Maybe (SolidType FullBookingT))
+buildFullBooking (bookingT@BookingT {..}, fromLocT, mbToLocT, mbRentalBookingT) = runMaybeT $ do
   bookingDetailsT <- case toLocationId of
-    Nothing -> do
-      rentalBooking <- MaybeT $ QRentalBooking.findByBookingId' (Id id)
-      return $ Booking.RentalDetailsT rentalBooking
-    Just _ -> return Booking.OneWayDetailsT
-  return $ extractSolidType @Booking (bookingT, bookingDetailsT)
+    Nothing -> MaybeT $ pure (Booking.RentalDetailsT <$> mbRentalBookingT)
+    Just _ -> MaybeT $ pure (Booking.OneWayDetailsT <$> mbToLocT)
+  return $ extractSolidType @Booking (bookingT, fromLocT, bookingDetailsT)

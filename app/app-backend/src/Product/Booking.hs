@@ -3,14 +3,13 @@ module Product.Booking where
 import App.Types
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.BookingLocation as SLoc
+import qualified Domain.Types.Booking.BookingLocation as SLoc
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.BookingLocation as QLoc
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import qualified Types.API.Booking as API
@@ -30,12 +29,11 @@ bookingList personId mbLimit mbOffset mbOnlyActive = withFlowHandlerAPI $ do
 
 buildBookingStatusRes :: EsqDBFlow m r => SRB.Booking -> m API.BookingStatusRes
 buildBookingStatusRes booking = do
-  fromLocation <- QLoc.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
   rideAPIEntityList <-
     QRide.findAllByRBId booking.id
       <&> fmap SRide.makeRideAPIEntity
   fareBreakups <- QFareBreakup.findAllByBookingId booking.id
-  bookingDetails <- buildBookingAPIDetails booking.bookingDetails
+  let bookingDetails = mkBookingAPIDetails booking.bookingDetails
 
   return $
     API.BookingStatusRes
@@ -46,7 +44,7 @@ buildBookingStatusRes booking = do
         estimatedFare = booking.estimatedFare,
         discount = booking.discount,
         estimatedTotalFare = booking.estimatedTotalFare,
-        fromLocation = SLoc.makeBookingLocationAPIEntity fromLocation,
+        fromLocation = SLoc.makeBookingLocationAPIEntity booking.fromLocation,
         rideList = rideAPIEntityList,
         tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
         fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
@@ -55,14 +53,12 @@ buildBookingStatusRes booking = do
         updatedAt = booking.updatedAt
       }
 
-buildBookingAPIDetails :: EsqDBFlow m r => SRB.BookingDetails -> m API.BookingAPIDetails
-buildBookingAPIDetails = \case
-  SRB.OneWayDetails SRB.OneWayBookingDetails {..} -> do
-    toLocation' <- QLoc.findById toLocationId >>= fromMaybeM LocationNotFound
-    pure $
-      API.OneWayAPIDetails
-        API.OneWayBookingAPIDetails
-          { toLocation = SLoc.makeBookingLocationAPIEntity toLocation'
-          }
-  SRB.RentalDetails DRentalSlab.RentalSlab {..} -> do
-    pure $ API.RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}
+mkBookingAPIDetails :: SRB.BookingDetails -> API.BookingAPIDetails
+mkBookingAPIDetails = \case
+  SRB.OneWayDetails SRB.OneWayBookingDetails {..} ->
+    API.OneWayAPIDetails
+      API.OneWayBookingAPIDetails
+        { toLocation = SLoc.makeBookingLocationAPIEntity toLocation
+        }
+  SRB.RentalDetails DRentalSlab.RentalSlab {..} ->
+    API.RentalAPIDetails DRentalSlab.RentalSlabAPIEntity {..}

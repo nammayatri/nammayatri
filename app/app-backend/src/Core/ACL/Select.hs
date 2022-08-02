@@ -31,8 +31,8 @@ castVariant SUV = Common.SUV
 
 mkOrder :: DSelect.DSelectReq -> Select.Order
 mkOrder req = do
-  let from = req.fromLocation
-      mbTo = req.toLocation
+  let from = req.searchRequest.fromLocation
+      mbTo = req.searchRequest.toLocation
       items =
         (: []) $
           Select.OrderItem

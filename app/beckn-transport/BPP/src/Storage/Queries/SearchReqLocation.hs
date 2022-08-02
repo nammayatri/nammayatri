@@ -6,8 +6,8 @@ module Storage.Queries.SearchReqLocation where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Id
-import Domain.Types.SearchReqLocation
-import Storage.Tabular.SearchReqLocation ()
+import Domain.Types.SearchRequest.SearchReqLocation
+import Storage.Tabular.SearchRequest.SearchReqLocation ()
 
 create :: SearchReqLocation -> SqlDB ()
 create = Esq.create

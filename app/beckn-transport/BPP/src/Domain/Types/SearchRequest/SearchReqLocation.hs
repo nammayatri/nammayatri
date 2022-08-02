@@ -1,4 +1,4 @@
-module Domain.Types.SearchReqLocation where
+module Domain.Types.SearchRequest.SearchReqLocation where
 
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates)
 import Beckn.Types.Id

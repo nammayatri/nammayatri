@@ -10,6 +10,7 @@ import Domain.Types.Organization
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.Vehicle
+import Storage.Queries.Booking
 import Storage.Queries.FullEntityBuilders
 import Storage.Tabular.Booking as Booking
 import Storage.Tabular.Person as Person
@@ -53,11 +54,11 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
       isOnlyActive = Just True == mbOnlyActive
   res <- Esq.findAll' $ do
-    (ride :& booking) <-
+    (ride :& (booking :& fromLoc :& mbToLoc :& mbRentalBooking)) <-
       from $
         table @RideT
-          `innerJoin` table @BookingT
-            `Esq.on` ( \(ride :& booking) ->
+          `innerJoin` fullBookingTable
+            `Esq.on` ( \(ride :& (booking :& _ :& _ :& _)) ->
                          ride ^. Ride.RideBookingId ==. booking ^. Booking.BookingTId
                      )
     where_ $
@@ -66,10 +67,10 @@ findAllByDriverId driverId mbLimit mbOffset mbOnlyActive = Esq.buildDType $ do
     orderBy [desc $ ride ^. RideCreatedAt]
     limit limitVal
     offset offsetVal
-    return (ride, booking)
+    return (ride, (booking, fromLoc, mbToLoc, mbRentalBooking))
   fmap catMaybes $
-    for res $ \(rideT :: RideT, bookingT) -> do
-      fullBooking <- buildFullBooking bookingT
+    for res $ \(rideT :: RideT, fullBookingT) -> do
+      fullBooking <- buildFullBooking fullBookingT
       return $ (extractSolidType rideT,) <$> fullBooking
 
 findAllRideAPIEntityDataByRBId :: Transactionable m => Id Booking -> m [(Ride, Maybe Vehicle, Maybe Person)]

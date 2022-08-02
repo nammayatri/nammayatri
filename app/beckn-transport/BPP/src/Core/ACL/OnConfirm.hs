@@ -5,7 +5,7 @@ import Beckn.Types.Amount (Amount)
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
 import qualified Domain.Action.Beckn.Confirm as DConfirm
-import qualified Domain.Types.BookingLocation as DBL
+import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Vehicle as Veh
 
 mkOnConfirmMessage :: DConfirm.DConfirmRes -> OnConfirm.OnConfirmMessage

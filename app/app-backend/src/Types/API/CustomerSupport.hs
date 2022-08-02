@@ -3,7 +3,7 @@ module Types.API.CustomerSupport where
 import Data.OpenApi (ToSchema)
 import Data.Time
 import Domain.Types.Booking (Booking)
-import Domain.Types.BookingLocation
+import Domain.Types.Booking.BookingLocation
 import qualified Domain.Types.Person as P
 import EulerHS.Prelude hiding (id)
 import Types.API.Booking (BookingStatusRes)
@@ -17,7 +17,7 @@ data OrderDetails = OrderDetails
     updatedAt :: UTCTime,
     startTime :: UTCTime,
     endTime :: Maybe UTCTime,
-    fromLocation :: Maybe BookingLocationAPIEntity,
+    fromLocation :: BookingLocationAPIEntity,
     toLocation :: Maybe BookingLocationAPIEntity,
     travellerName :: Maybe Text,
     travellerPhone :: Maybe Text,

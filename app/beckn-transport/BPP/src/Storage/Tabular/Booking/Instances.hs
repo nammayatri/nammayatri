@@ -7,6 +7,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.Booking.Type as Domain
+import Storage.Tabular.Booking.BookingLocation
 import Storage.Tabular.Booking.RentalBooking
 import Storage.Tabular.Booking.Table
 import Storage.Tabular.FarePolicy.FareProduct ()
@@ -14,23 +15,24 @@ import Storage.Tabular.Vehicle ()
 import Types.Error
 import Utils.Common hiding (id)
 
-data BookingDetailsT = OneWayDetailsT | RentalDetailsT RentalBookingT
+data BookingDetailsT = OneWayDetailsT BookingLocationT | RentalDetailsT RentalBookingT
 
-type FullBookingT = (BookingT, BookingDetailsT)
+type FullBookingT = (BookingT, BookingLocationT, BookingDetailsT)
 
 instance TType FullBookingT Domain.Booking where
-  fromTType (BookingT {..}, bookingDetails_) = do
+  fromTType (BookingT {..}, fromLocT, bookingDetailsT) = do
     pUrl <- parseBaseUrl bapUri
-    bookingDetails <- case bookingDetails_ of
-      OneWayDetailsT -> do
-        toLocationId' <- fromKey <$> toLocationId & fromMaybeM (BookingFieldNotPresent "estimatedDistance")
+    fromLocation <- fromTType fromLocT
+    bookingDetails <- case bookingDetailsT of
+      OneWayDetailsT toLocT -> do
+        toLocation <- fromTType toLocT
         estimatedDistance' <-
           estimatedDistance & fromMaybeM (BookingFieldNotPresent "estimatedDistance")
         pure $
           Domain.OneWayDetails
             Domain.OneWayBookingDetails
               { estimatedDistance = HighPrecMeters estimatedDistance',
-                toLocationId = toLocationId'
+                toLocation
               }
       RentalDetailsT rentalBookingT -> do
         return . Domain.RentalDetails $ fromRentalBookingTType rentalBookingT
@@ -39,27 +41,30 @@ instance TType FullBookingT Domain.Booking where
       Domain.Booking
         { id = Id id,
           riderId = fromKey <$> riderId,
-          fromLocationId = fromKey fromLocationId,
           providerId = fromKey providerId,
           bapUri = pUrl,
           ..
         }
   toTType Domain.Booking {..} = do
     let (detailsT, toLocationId, estimatedDistance) = case bookingDetails of
-          Domain.OneWayDetails details -> (OneWayDetailsT, Just details.toLocationId, Just details.estimatedDistance)
-          Domain.RentalDetails details -> (RentalDetailsT $ toRentalBookingTType id details, Nothing, Nothing)
+          Domain.OneWayDetails details -> do
+            let toLocT = toTType details.toLocation
+            (OneWayDetailsT toLocT, Just . toKey $ details.toLocation.id, Just details.estimatedDistance)
+          Domain.RentalDetails details -> do
+            let rentalBookingT = toRentalBookingTType id details
+            (RentalDetailsT rentalBookingT, Nothing, Nothing)
     let bookingT =
           BookingT
             { id = getId id,
               riderId = toKey <$> riderId,
-              fromLocationId = toKey fromLocationId,
-              toLocationId = toKey <$> toLocationId,
+              fromLocationId = toKey fromLocation.id,
               estimatedDistance = getHighPrecMeters <$> estimatedDistance,
               providerId = toKey providerId,
               bapUri = showBaseUrl bapUri,
               ..
             }
-    (bookingT, detailsT)
+    let fromLocT = toTType fromLocation
+    (bookingT, fromLocT, detailsT)
 
 fromRentalBookingTType :: RentalBookingT -> Domain.RentalBookingDetails
 fromRentalBookingTType RentalBookingT {..} = do

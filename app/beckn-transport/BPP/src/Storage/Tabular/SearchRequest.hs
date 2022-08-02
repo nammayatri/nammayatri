@@ -12,7 +12,8 @@ import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
 import qualified Domain.Types.SearchRequest as Domain
 import Storage.Tabular.Organization (OrganizationTId)
-import Storage.Tabular.SearchReqLocation (SearchReqLocationTId)
+import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationTId)
+import qualified Storage.Tabular.SearchRequest.SearchReqLocation as SLoc
 
 derivePersistField "Domain.SearchRequestStatus"
 
@@ -39,24 +40,30 @@ instance TEntityKey SearchRequestT where
   fromKey (SearchRequestTKey _id) = Id _id
   toKey (Id id) = SearchRequestTKey id
 
-instance TType SearchRequestT Domain.SearchRequest where
-  fromTType SearchRequestT {..} = do
+type FullSearchRequestT = (SearchRequestT, SLoc.SearchReqLocationT, Maybe SLoc.SearchReqLocationT)
+
+instance TType FullSearchRequestT Domain.SearchRequest where
+  fromTType (SearchRequestT {..}, fromLoc, mbToLoc) = do
     pUrl <- parseBaseUrl bapUri
+    fromLocation <- fromTType fromLoc
+    toLocation <- mapM fromTType mbToLoc
     return $
       Domain.SearchRequest
         { id = Id id,
           providerId = fromKey providerId,
-          fromLocationId = fromKey fromLocationId,
-          toLocationId = fromKey <$> toLocationId,
           bapUri = pUrl,
           ..
         }
-  toTType Domain.SearchRequest {..} =
-    SearchRequestT
-      { id = getId id,
-        providerId = toKey providerId,
-        fromLocationId = toKey fromLocationId,
-        toLocationId = toKey <$> toLocationId,
-        bapUri = showBaseUrl bapUri,
-        ..
-      }
+  toTType Domain.SearchRequest {..} = do
+    let fromLoc = toTType fromLocation
+        mbToLoc = toTType <$> toLocation
+        searchReq =
+          SearchRequestT
+            { id = getId id,
+              providerId = toKey providerId,
+              fromLocationId = toKey fromLocation.id,
+              toLocationId = toKey <$> (toLocation <&> (.id)),
+              bapUri = showBaseUrl bapUri,
+              ..
+            }
+    (searchReq, fromLoc, mbToLoc)

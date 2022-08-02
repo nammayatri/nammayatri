@@ -14,7 +14,6 @@ import Beckn.Types.MapSearch (LatLong (LatLong))
 import qualified Beckn.Types.MapSearch as MapSearch
 import qualified Data.List.NonEmpty as NE
 import qualified Domain.Types.Booking as SRB
-import qualified Domain.Types.BookingLocation as DBLoc
 import Domain.Types.DriverPool
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Organization as SOrg
@@ -23,7 +22,6 @@ import qualified Domain.Types.Vehicle as SV
 import qualified Domain.Types.Vehicle as Vehicle
 import EulerHS.Prelude hiding (id)
 import qualified Storage.Queries.Booking as QBooking
-import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TransporterConfig as QTConf
@@ -70,7 +68,7 @@ getDriverPool bookingId =
       booking <- QBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       let vehicleVariant = booking.vehicleVariant
           orgId = booking.providerId
-      pickupLoc <- QBLoc.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
+      let pickupLoc = booking.fromLocation
       let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
           fareProductType = SRB.getFareProductType booking.bookingDetails
       mkSortedDriverPool . map mkDriverPoolItem <$> calculateDriverPool pickupLatLong orgId (Just vehicleVariant) fareProductType
@@ -81,20 +79,19 @@ recalculateDriverPool ::
     CoreMetrics m,
     HasGoogleMaps m r
   ) =>
-  Id DBLoc.BookingLocation ->
-  Id SRB.Booking ->
-  Id SOrg.Organization ->
-  SV.Variant ->
-  SFP.FareProductType ->
+  SRB.Booking ->
   m [DriverPoolResult]
-recalculateDriverPool pickupPoint bookingId transporterId vehicleVariant fareProductType = do
-  pickupLoc <- QBLoc.findById pickupPoint >>= fromMaybeM LocationNotFound
+recalculateDriverPool booking = do
+  let pickupLoc = booking.fromLocation
+      transporterId = booking.providerId
+      vehicleVariant = booking.vehicleVariant
+      fareProductType = SRB.getFareProductType booking.bookingDetails
   let pickupLatLong = LatLong pickupLoc.lat pickupLoc.lon
   driverPoolResults <- calculateDriverPool pickupLatLong transporterId (Just vehicleVariant) fareProductType
-  cancelledDrivers <- QRide.findAllCancelledByRBId bookingId <&> map (cast . (.driverId))
+  cancelledDrivers <- QRide.findAllCancelledByRBId booking.id <&> map (cast . (.driverId))
   let filteredDriverPoolResults = [x | x <- driverPoolResults, x.driverId `notElem` cancelledDrivers]
       filteredDriverPool = map mkDriverPoolItem filteredDriverPoolResults
-  setExRedis (driverPoolKey bookingId) filteredDriverPool (60 * 10)
+  setExRedis (driverPoolKey booking.id) filteredDriverPool (60 * 10)
   return filteredDriverPoolResults
 
 calculateDriverPool ::

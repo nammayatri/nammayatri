@@ -7,7 +7,7 @@ import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
 import qualified Domain.Action.Beckn.OnInit as DOnInit
-import qualified Domain.Types.BookingLocation as DBL
+import qualified Domain.Types.Booking.BookingLocation as DBL
 import EulerHS.Prelude hiding (id)
 import ExternalAPI.Flow
 import Utils.Common
@@ -29,7 +29,7 @@ mkConfirmMessage res =
     { order =
         Confirm.Order
           { id = getId res.bppBookingId,
-            fulfillment = mkFulfillment res.fromLocationAddress res.toLocationAddress,
+            fulfillment = mkFulfillment res.fromLocationAddress res.mbToLocationAddress,
             customer =
               Confirm.OrderCustomer
                 { contact =

@@ -8,9 +8,8 @@ import Beckn.Types.Id
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.BookingLocation as DBL
+import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Storage.Queries.Booking as QRideB
-import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.Person as QP
 import Types.Error
 import Utils.Common
@@ -30,7 +29,7 @@ data OnInitRes = OnInitRes
     bppId :: Text,
     bppUrl :: BaseUrl,
     fromLocationAddress :: DBL.LocationAddress,
-    toLocationAddress :: Maybe DBL.LocationAddress,
+    mbToLocationAddress :: Maybe DBL.LocationAddress,
     estimatedTotalFare :: Amount,
     riderPhoneCountryCode :: Text,
     riderPhoneNumber :: Text
@@ -47,17 +46,17 @@ onInit req = do
   riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <- decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
-  fromLocationAddress <- QBLoc.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
-  toLocationAddress <- case booking.bookingDetails of
-    DRB.RentalDetails _ -> return Nothing
-    DRB.OneWayDetails details -> QBLoc.findById details.toLocationId >>= fromMaybeM LocationNotFound <&> Just
+  let fromLocation = booking.fromLocation
+  let mbToLocation = case booking.bookingDetails of
+        DRB.RentalDetails _ -> Nothing
+        DRB.OneWayDetails details -> Just details.toLocation
   return $
     OnInitRes
       { bookingId = booking.id,
         bppId = booking.providerId,
         bppUrl = booking.providerUrl,
         estimatedTotalFare = booking.estimatedTotalFare,
-        fromLocationAddress = fromLocationAddress.address,
-        toLocationAddress = toLocationAddress <&> (.address),
+        fromLocationAddress = fromLocation.address,
+        mbToLocationAddress = mbToLocation <&> (.address),
         ..
       }

@@ -5,7 +5,7 @@ import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.App
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
-import qualified Domain.Types.Booking.Type as DRB
+import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Organization as Org
 import Domain.Types.Person as SP
 import Domain.Types.Rating as Rating
@@ -38,11 +38,11 @@ ratingImpl ::
   DRatingReq ->
   m ()
 ratingImpl transporterId req = do
-  rideBooking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
-  unless (rideBooking.providerId == transporterId) $ throwError AccessDenied
+  booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+  unless (booking.providerId == transporterId) $ throwError AccessDenied
   ride <-
-    QRide.findActiveByRBId rideBooking.id
-      >>= fromMaybeM (RideNotFound rideBooking.id.getId)
+    QRide.findActiveByRBId booking.id
+      >>= fromMaybeM (RideNotFound booking.id.getId)
   let driverId = ride.driverId
   unless (ride.status == Ride.COMPLETED) $
     throwError $ RideInvalidStatus "Ride is not ready for rating."

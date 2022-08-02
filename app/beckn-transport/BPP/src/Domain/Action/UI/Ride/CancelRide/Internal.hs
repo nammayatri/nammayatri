@@ -49,8 +49,7 @@ cancelRide rideId bookingCReason = do
       >>= fromMaybeM (OrgNotFound transporterId.getId)
   if isCancelledByDriver
     then do
-      let fareProductType = SRB.getFareProductType booking.bookingDetails
-      driverPool <- recalculateDriverPool booking.fromLocationId booking.id booking.providerId booking.vehicleVariant fareProductType
+      driverPool <- recalculateDriverPool booking
       Esq.runTransaction $ traverse_ (QBE.logDriverInPoolEvent SB.ON_REALLOCATION (Just booking.id)) driverPool
       reallocateRideTransaction transporter.shortId booking.id ride bookingCReason
     else cancelRideTransaction booking.id ride bookingCReason

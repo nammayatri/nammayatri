@@ -14,7 +14,7 @@ import Test.Tasty.HUnit
 -- This tests should check, that notifications are sent to first drivers in pool, that are nearest
 
 booking01Id :: Id SRB.Booking
-booking01Id = Id "rideBooking01"
+booking01Id = Id "booking01"
 
 driverPool1 :: [DriverPoolItem]
 driverPool1 =

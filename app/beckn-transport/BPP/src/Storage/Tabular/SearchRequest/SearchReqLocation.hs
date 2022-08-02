@@ -5,12 +5,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.Tabular.SearchReqLocation where
+module Storage.Tabular.SearchRequest.SearchReqLocation where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
-import qualified Domain.Types.SearchReqLocation as Domain
+import qualified Domain.Types.SearchRequest.SearchReqLocation as Domain
 
 mkPersist
   defaultSqlSettings

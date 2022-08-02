@@ -2,9 +2,9 @@ module Domain.Action.UI.Search.Common where
 
 import Beckn.Types.Id
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.SearchReqLocation as Location
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import EulerHS.Prelude hiding (state)
 import qualified Storage.Queries.Person as QPerson
 import Tools.Metrics (CoreMetrics)
@@ -33,8 +33,8 @@ buildSearchRequest personId pickup mbDrop mbDistance now = do
         startTime = now,
         validTill = validTill,
         riderId = personId,
-        fromLocationId = pickup.id,
-        toLocationId = mbDrop <&> (.id),
+        fromLocation = pickup,
+        toLocation = mbDrop,
         distance = mbDistance,
         merchantId = person.merchantId,
         createdAt = now

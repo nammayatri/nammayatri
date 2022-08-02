@@ -7,9 +7,9 @@ import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.Aeson
 import Data.OpenApi
+import Domain.Types.Booking.BookingLocation
+import qualified Domain.Types.Booking.BookingLocation as DLoc
 import Domain.Types.Booking.Type
-import Domain.Types.BookingLocation
-import qualified Domain.Types.BookingLocation as DLoc
 import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
@@ -17,7 +17,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id)
-import qualified Storage.Queries.BookingLocation as QBLoc
 import qualified Storage.Queries.FarePolicy.FareBreakup as QFareBreakup
 import qualified Storage.Queries.FarePolicy.RentalFarePolicy as QRentalFP
 import qualified Storage.Queries.Ride as QRide
@@ -67,7 +66,6 @@ data RentalBookingDetailsAPIEntity = RentalBookingDetailsAPIEntity
 
 buildBookingAPIEntity :: (EsqDBFlow m r, EncFlow m r) => Booking -> m BookingAPIEntity
 buildBookingAPIEntity booking = do
-  fromLocation <- QBLoc.findById booking.fromLocationId >>= fromMaybeM LocationNotFound
   let rbStatus = booking.status
   now <- getCurrentTime
   rideAPIEntityList <- mapM (buildRideAPIEntity now) =<< QRide.findAllRideAPIEntityDataByRBId booking.id
@@ -81,7 +79,7 @@ buildBookingAPIEntity booking = do
         estimatedFare = booking.estimatedFare,
         discount = booking.discount,
         estimatedTotalFare = booking.estimatedTotalFare,
-        fromLocation = DLoc.makeBookingLocationAPIEntity fromLocation,
+        fromLocation = DLoc.makeBookingLocationAPIEntity booking.fromLocation,
         rideList = rideAPIEntityList,
         fareBreakup = DFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
         bookingDetails,
@@ -99,11 +97,10 @@ buildBookingAPIEntity booking = do
     buildBookingAPIDetails :: EsqDBFlow m r => BookingDetails -> m (BookingDetailsAPIEntity, [Text])
     buildBookingAPIDetails = \case
       OneWayDetails OneWayBookingDetails {..} -> do
-        toLocation' <- QBLoc.findById toLocationId >>= fromMaybeM LocationNotFound
         let details =
               OneWayDetailsAPIEntity
                 OneWayBookingDetailsAPIEntity
-                  { toLocation = makeBookingLocationAPIEntity toLocation'
+                  { toLocation = makeBookingLocationAPIEntity toLocation
                   }
         pure (details, [])
       RentalDetails (RentalBookingDetails rentalFarePolicyId) -> do

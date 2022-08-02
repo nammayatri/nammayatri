@@ -8,14 +8,13 @@ import Beckn.Types.Id
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as SQuote
-import qualified Domain.Types.SearchReqLocation as Location
 import qualified Domain.Types.SearchRequest as SSR
+import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import EulerHS.Prelude hiding (id)
 import qualified Product.MetroOffer as Metro
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Quote as QRentalQuote
-import qualified Storage.Queries.SearchReqLocation as Location
 import qualified Storage.Queries.SearchRequest as QSR
 import Types.API.MetroOffer (MetroOffer (..))
 import qualified Types.API.Quote as API
@@ -25,14 +24,12 @@ import Utils.Common
 getQuotes :: Id SSR.SearchRequest -> Id Person.Person -> FlowHandler API.GetQuotesRes
 getQuotes searchRequestId _ = withFlowHandlerAPI $ do
   searchRequest <- QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-  fromLocation <- Location.findById searchRequest.fromLocationId >>= fromMaybeM LocationNotFound
-  mbToLocation <- forM (searchRequest.toLocationId) (Location.findById >=> fromMaybeM LocationNotFound)
   offers <- getOffers searchRequest
   estimates <- getEstimates searchRequestId
   return $
     API.GetQuotesRes
-      { fromLocation = Location.makeSearchReqLocationAPIEntity fromLocation,
-        toLocation = Location.makeSearchReqLocationAPIEntity <$> mbToLocation,
+      { fromLocation = Location.makeSearchReqLocationAPIEntity searchRequest.fromLocation,
+        toLocation = Location.makeSearchReqLocationAPIEntity <$> searchRequest.toLocation,
         quotes = offers,
         estimates
       }
@@ -40,7 +37,7 @@ getQuotes searchRequestId _ = withFlowHandlerAPI $ do
 getOffers :: (HedisFlow m r, EsqDBFlow m r) => SSR.SearchRequest -> m [API.OfferRes]
 getOffers searchRequest = do
   -- ONE_WAY and RENTAL cases
-  case searchRequest.toLocationId of
+  case searchRequest.toLocation of
     Just _ -> do
       quoteList <- QQuote.findAllByRequestId searchRequest.id
       let quotes = API.OnDemandCab . SQuote.makeQuoteAPIEntity <$> sortByNearestDriverDistance quoteList

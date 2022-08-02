@@ -14,8 +14,8 @@ import qualified Domain.Types.BusinessEvent as SB
 import qualified Domain.Types.FarePolicy.FareProduct as SFP
 import qualified Domain.Types.Organization as DOrg
 import qualified Domain.Types.Quote as DQuote
-import qualified Domain.Types.SearchReqLocation as DLoc
 import qualified Domain.Types.SearchRequest as DSearchRequest
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle as DVeh
 import EulerHS.Prelude hiding (id, state)
 import qualified SharedLogic.DriverPool as DrPool

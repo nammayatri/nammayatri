@@ -11,7 +11,7 @@ where
 import Beckn.Types.Common
 import Beckn.Types.Id
 import qualified Core.ACL.OnUpdate as ACL
-import qualified Domain.Types.Booking.Type as SRB
+import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
 import qualified Domain.Types.Organization as SOrg

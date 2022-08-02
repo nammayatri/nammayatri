@@ -5,7 +5,7 @@ import Beckn.Types.Id
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import Data.Time (UTCTime)
 import Domain.Types.Booking (Booking, BookingStatus)
-import Domain.Types.BookingLocation (BookingLocationAPIEntity)
+import Domain.Types.Booking.BookingLocation (BookingLocationAPIEntity)
 import Domain.Types.FareBreakup (FareBreakupAPIEntity)
 import qualified Domain.Types.RentalSlab as DRentalSlab
 import Domain.Types.Ride (RideAPIEntity)
