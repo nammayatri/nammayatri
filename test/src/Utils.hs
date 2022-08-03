@@ -79,6 +79,10 @@ pollFilteredList :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> (a -> Boo
 pollFilteredList description filterFunc action =
   pollDesc description $ nonEmpty . filter filterFunc <$> action
 
+pollFilteredMList :: (HasCallStack, MonadIO m, MonadCatch m) => Text -> (a -> m Bool) -> m [a] -> m (NonEmpty a)
+pollFilteredMList description filterFunc action =
+  pollDesc description $ nonEmpty <$> (action >>= filterM filterFunc)
+
 runFlow :: (MonadIO m, Log (FlowR env)) => Text -> env -> FlowR env a -> m a
 runFlow tag appEnv flow = do
   liftIO $

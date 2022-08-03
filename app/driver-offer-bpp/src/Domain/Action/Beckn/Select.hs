@@ -37,7 +37,7 @@ handler :: Id DOrg.Organization -> DSelectReq -> Flow ()
 handler orgId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
-  driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId
+  driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False
 
   distance <-
     metersToHighPrecMeters . (.distance)
@@ -72,7 +72,6 @@ handler orgId sReq = do
         SearchRequestForDriver
           { id = guid,
             searchRequestId = searchRequest.id,
-            messageId = searchRequest.messageId,
             startTime = searchRequest.startTime,
             searchRequestValidTill = searchRequest.validTill,
             driverId = cast driver.driverId,
@@ -88,7 +87,7 @@ buildSearchRequest ::
   ( MonadTime m,
     MonadGuid m,
     MonadReader r m,
-    HasField "searchRequestExpirationSeconds" r Int
+    HasField "searchRequestExpirationSeconds" r NominalDiffTime
   ) =>
   DLoc.SearchReqLocation ->
   DLoc.SearchReqLocation ->
@@ -99,13 +98,12 @@ buildSearchRequest from to orgId sReq = do
   id_ <- Id <$> generateGUID
   createdAt_ <- getCurrentTime
   searchRequestExpirationSeconds <- asks (.searchRequestExpirationSeconds)
-  let validTill_ = fromIntegral searchRequestExpirationSeconds `addUTCTime` createdAt_
+  let validTill_ = searchRequestExpirationSeconds `addUTCTime` createdAt_
   pure
     DSearchReq.SearchRequest
       { id = id_,
         transactionId = fromMaybe "" sReq.transactionId,
         messageId = sReq.messageId,
-        status = DSearchReq.Active,
         startTime = sReq.pickupTime,
         validTill = validTill_,
         providerId = orgId,

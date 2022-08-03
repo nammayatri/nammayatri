@@ -1,8 +1,9 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Environment where
 
 import Beckn.External.Encryption (EncTools)
+import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config
 import Beckn.Storage.Esqueleto.Config
 import Beckn.Storage.Hedis
@@ -101,8 +102,8 @@ data AppEnv = AppEnv
     googleMapsKey :: Text,
     defaultRadiusOfSearch :: Meters,
     transporterMetrics :: TransporterMetricsContainer,
-    searchRequestExpirationSeconds :: Int,
-    driverQuoteExpirationSeconds :: Int
+    searchRequestExpirationSeconds :: NominalDiffTime,
+    driverQuoteExpirationSeconds :: NominalDiffTime
   }
   deriving (Generic)
 
@@ -111,7 +112,7 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.signatureExpiry)
 
 buildAppEnv :: AppCfg -> IO AppEnv
-buildAppEnv AppCfg {..} = do
+buildAppEnv cfg@AppCfg {..} = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
@@ -120,6 +121,8 @@ buildAppEnv AppCfg {..} = do
   hedisEnv <- connectHedis hedisCfg modifierFunc
   coreMetrics <- Metrics.registerCoreMetricsContainer
   transporterMetrics <- registerTransporterMetricsContainer
+  let searchRequestExpirationSeconds = fromIntegral cfg.searchRequestExpirationSeconds
+      driverQuoteExpirationSeconds = fromIntegral cfg.driverQuoteExpirationSeconds
   return AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

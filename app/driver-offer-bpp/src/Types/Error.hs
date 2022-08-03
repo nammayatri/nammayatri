@@ -171,19 +171,31 @@ instance IsHTTPError SearchRequestErrorARDU where
 instance IsAPIError SearchRequestErrorARDU
 
 --
-data OfferingError
+data DriverQuoteError
   = FoundActiveQuotes
+  | DriverOnRide
+  | DriverQuoteExpired
+  | NoSearchRequestForDriver
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''OfferingError
+instanceExceptionWithParent 'HTTPException ''DriverQuoteError
 
-instance IsBaseError OfferingError where
+instance IsBaseError DriverQuoteError where
   toMessage FoundActiveQuotes = Just "Failed to offer quote, there are other active quotes from this driver"
+  toMessage DriverOnRide = Just "Unable to offer a quote while being on ride"
+  toMessage DriverQuoteExpired = Just "Driver quote expired"
+  toMessage NoSearchRequestForDriver = Just "No search request for this driver"
 
-instance IsHTTPError OfferingError where
+instance IsHTTPError DriverQuoteError where
   toErrorCode = \case
     FoundActiveQuotes -> "FOUND_ACTIVE_QUOTES"
+    DriverOnRide -> "DRIVER_ON_RIDE"
+    DriverQuoteExpired -> "QUOTE_EXPIRED"
+    NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
   toHttpCode = \case
     FoundActiveQuotes -> E400
+    DriverOnRide -> E400
+    DriverQuoteExpired -> E400
+    NoSearchRequestForDriver -> E400
 
-instance IsAPIError OfferingError
+instance IsAPIError DriverQuoteError

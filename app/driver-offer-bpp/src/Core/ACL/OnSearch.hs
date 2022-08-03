@@ -43,7 +43,6 @@ mkOnSearchMessage res@DSearch.DSearchRes {..} = do
   let provider =
         OS.Provider
           { id = transporterInfo.shortId.getShortId,
---            descriptor = OS.Descriptor transporterInfo.shortId.getShortId,
             descriptor = OS.Descriptor {name = transporterInfo.name},
             locations = [],
             categories = [autoOneWayCategory],

@@ -16,12 +16,6 @@ import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.SearchRequest as QSR
 
--- fields that are not used because of stateful init API
---    vehicleVariant :: Veh.Variant,
---    fromLocation :: LatLong,
---    toLocation :: LatLong,
---    startTime :: UTCTime,
-
 data InitReq = InitReq
   { driverQuoteId :: Id DQuote.DriverQuote,
     bapId :: Text,
@@ -33,21 +27,21 @@ data InitRes = InitRes
     transporter :: DOrg.Organization
   }
 
--- FIXME: if the init request comes twice, this causes error
--- because of the unique keys violating
-mkBookingLocation :: DLoc.SearchReqLocation -> DLoc.BookingLocation
-mkBookingLocation DLoc.SearchReqLocation {..} = do
+buildBookingLocation :: (MonadGuid m) => DLoc.SearchReqLocation -> m DLoc.BookingLocation
+buildBookingLocation DLoc.SearchReqLocation {..} = do
   let address = DLoc.LocationAddress {..}
-  DLoc.BookingLocation
-    { id = cast id,
-      ..
-    }
+  guid <- generateGUIDText
+  pure
+    DLoc.BookingLocation
+      { id = Id guid,
+        ..
+      }
 
 handler :: (EsqDBFlow m r) => Id DOrg.Organization -> InitReq -> m InitRes
 handler orgId req = do
   transporter <- QOrg.findById orgId >>= fromMaybeM (OrgNotFound orgId.getId)
-  driverQuote <- QDQuote.findById req.driverQuoteId >>= fromMaybeM (QuoteNotFound req.driverQuoteId.getId)
   now <- getCurrentTime
+  driverQuote <- QDQuote.findById req.driverQuoteId >>= fromMaybeM (QuoteNotFound req.driverQuoteId.getId)
   when (driverQuote.validTill < now) $
     throwError $ QuoteExpired driverQuote.id.getId
   searchRequest <- QSR.findById driverQuote.searchRequestId >>= fromMaybeM (SearchRequestNotFound driverQuote.searchRequestId.getId)
@@ -59,6 +53,8 @@ handler orgId req = do
   where
     buildBooking searchRequest driverQuote now = do
       id <- Id <$> generateGUID
+      fromLocation <- buildBookingLocation searchRequest.fromLocation
+      toLocation <- buildBookingLocation searchRequest.toLocation
       pure
         DRB.Booking
           { quoteId = req.driverQuoteId,
@@ -72,8 +68,8 @@ handler orgId req = do
             estimatedDistance = HighPrecMeters $ driverQuote.distance,
             createdAt = now,
             updatedAt = now,
-            fromLocation = mkBookingLocation searchRequest.fromLocation,
-            toLocation = mkBookingLocation searchRequest.toLocation,
+            fromLocation,
+            toLocation,
             fareParams = driverQuote.fareParams,
             ..
           }

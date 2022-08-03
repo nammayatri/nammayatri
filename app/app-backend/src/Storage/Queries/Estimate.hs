@@ -28,7 +28,7 @@ createMany estimates =
 fullEstimateTable ::
   From
     ( Table EstimateT
-        :& MbTable TripTermsT
+        :& Esq.MbTable TripTermsT
     )
 fullEstimateTable =
   table @EstimateT

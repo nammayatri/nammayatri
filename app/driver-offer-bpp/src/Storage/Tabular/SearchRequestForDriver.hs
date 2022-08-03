@@ -24,7 +24,6 @@ mkPersist
     SearchRequestForDriverT sql=search_request_for_driver
       id Text
       searchRequestId SearchRequestTId
-      messageId Text
       startTime UTCTime
       distanceToPickup Meters
       durationToPickup Seconds
@@ -37,14 +36,6 @@ mkPersist
       Primary id
       deriving Generic
     |]
-
-deriving newtype instance PersistField Seconds
-
-deriving newtype instance PersistField Meters
-
-deriving newtype instance PersistFieldSql Seconds
-
-deriving newtype instance PersistFieldSql Meters
 
 instance TEntityKey SearchRequestForDriverT where
   type DomainKey SearchRequestForDriverT = Id Domain.SearchRequestForDriver

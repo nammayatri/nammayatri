@@ -149,7 +149,7 @@ validateUpdateDriverReq UpdateDriverReq {..} =
 type UpdateDriverRes = DriverInformationRes
 
 newtype GetNearbySearchRequestsRes = GetNearbySearchRequestsRes
-  { searchRequests :: [SearchRequestForDriverAPIEntity]
+  { searchRequestsForDriver :: [SearchRequestForDriverAPIEntity]
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema, PrettyShow)

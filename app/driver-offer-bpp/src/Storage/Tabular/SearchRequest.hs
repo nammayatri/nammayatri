@@ -14,8 +14,6 @@ import qualified Domain.Types.SearchRequest as Domain
 import Storage.Tabular.Organization (OrganizationTId)
 import Storage.Tabular.SearchRequest.SearchReqLocation (SearchReqLocationT, SearchReqLocationTId, mkDomainSearchReqLocation, mkTabularSearchReqLocation)
 
-derivePersistField "Domain.SearchRequestStatus"
-
 mkPersist
   defaultSqlSettings
   [defaultQQ|
@@ -23,7 +21,6 @@ mkPersist
       id Text
       transactionId Text
       messageId Text
-      status Domain.SearchRequestStatus
       startTime UTCTime
       validTill UTCTime
       providerId OrganizationTId

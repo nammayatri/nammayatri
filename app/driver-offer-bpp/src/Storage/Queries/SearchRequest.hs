@@ -26,8 +26,3 @@ findById searchRequestId = buildDType $
           )
       where_ $ sReq ^. SearchRequestTId ==. val (toKey searchRequestId)
       pure (sReq, sFromLoc, sToLoc)
-
-markAsInactive :: Id SearchRequest -> SqlDB ()
-markAsInactive searchReqId = Esq.update $ \p -> do
-  set p [SearchRequestStatus =. val Domain.Inactive]
-  where_ $ p ^. SearchRequestTId ==. val (toKey searchReqId)

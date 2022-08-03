@@ -3,14 +3,14 @@
 @driver-offer-bpp-host = http://localhost:8016
 
 # @name healthcheck
-GET {{driver-offer-bpp-host}}/v2
+GET {{driver-offer-bpp-host}}/ui
 
 ###
 
 @currentTime = 2022-03-03T23:37
 
 # @name updateInitial1
-POST {{driver-offer-bpp-host}}/v2/driver/location
+POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{token1}}
 content-type: application/json
 
@@ -29,7 +29,7 @@ content-type: application/json
 @currentTime = 2022-03-03T23:37
 
 # @name updateInitial2
-POST {{driver-offer-bpp-host}}/v2/driver/location
+POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{token2}}
 content-type: application/json
 
@@ -45,13 +45,13 @@ content-type: application/json
 ###
 
 # @name setActive
-POST {{driver-offer-bpp-host}}/v2/driver/setActivity?active=true
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
 content-type: application/json
 token: {{token1}}
 ###
 
-# @name setActive
-POST {{driver-offer-bpp-host}}/v2/driver/setActivity?active=true
+# @name setActive2
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
 content-type: application/json
 token: {{token2}}
 ###
@@ -106,29 +106,29 @@ token: {{app-token}}
 @searchId = {{search.response.body.searchId}}
 
 # @name quotes
-GET {{app-host}}/rideSearch/{{searchId}}/quotes
+GET {{app-host}}/rideSearch/{{searchId}}/results
 content-type: application/json
 token: {{app-token}}
 
 ###
 
 # @name select
-@quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
+@estimateId = {{quotes.response.body.estimates[0].id}}
 
-POST {{app-host}}/rideSearch/quotes/{{quoteId}}/select HTTP/1.1
+POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
 content-type: application/json
 token: {{app-token}}
 
 ###
 
 # @name nearbySearchRequest1
-GET {{driver-offer-bpp-host}}/v2/driver/nearbyRideRequest
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
 token: {{token1}}
 
 ###
 
 # @name offerQuote1
-POST {{driver-offer-bpp-host}}/v2/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
 token: {{token1}}
 content-type: application/json
 
@@ -141,7 +141,7 @@ content-type: application/json
 
 
 # @name selectedQuotes
-GET {{app-host}}/rideSearch/quotes/{{quoteId}}/select/list
+GET {{app-host}}/rideSearch/quotes/{{estimateId}}/select/list
 content-type: application/json
 token: {{app-token}}
 
@@ -180,13 +180,13 @@ token: {{app-token}}
 
 ###
 # @name nearbySearchRequest2
-GET {{driver-offer-bpp-host}}/v2/driver/nearbyRideRequest
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
 token: {{token2}}
 
 ###
 
 # @name offerQuote2
-POST {{driver-offer-bpp-host}}/v2/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
 token: {{token2}}
 content-type: application/json
 
@@ -206,7 +206,7 @@ token: {{app-token}}
 
 ###
 # @name driverList
-GET {{driver-offer-bpp-host}}/v2/driver/ride/list?limit=100&offset=0
+GET {{driver-offer-bpp-host}}/ui/driver/ride/list?limit=100&offset=0
 token: {{token1}}
 
 ###
@@ -214,7 +214,7 @@ token: {{token1}}
 @otp = {{list2.response.body.list[0].rideList[0].rideOtp}}
 
 # @name startRide
-POST {{driver-offer-bpp-host}}/v2/driver/ride/{{rideId}}/start
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/start
 token: {{token1}}
 content-type: application/json
 
@@ -232,7 +232,7 @@ content-type: application/json
 @currentTime = 2022-03-03T23:37
 
 # @name update1
-POST {{driver-offer-bpp-host}}/v2/driver/location
+POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{token1}}
 content-type: application/json
 
@@ -273,7 +273,7 @@ content-type: application/json
 ###
 
 # @name update2
-POST {{driver-offer-bpp-host}}/v2/driver/location
+POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{token1}}
 content-type: application/json
 
@@ -299,7 +299,7 @@ content-type: application/json
 ###
 
 # @name rideEnd
-POST {{driver-offer-bpp-host}}/v2/driver/ride/{{rideId}}/end
+POST {{driver-offer-bpp-host}}/ui/driver/ride/{{rideId}}/end
 token: {{token1}}
 content-type: application/json
 

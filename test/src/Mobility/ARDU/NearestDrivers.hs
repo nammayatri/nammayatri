@@ -25,21 +25,21 @@ testOrder :: IO ()
 testOrder = do
   res <-
     runARDUFlow "Test ordering" $
-      Q.getNearestDrivers Nothing pickupPoint 5000 org1 <&> getIds
+      Q.getNearestDrivers Nothing pickupPoint 5000 org1 False <&> getIds
   res `shouldBe` [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
 testInRadius = do
   res <-
     runARDUFlow "Test radius filtration" $
-      Q.getNearestDrivers Nothing pickupPoint 800 org1 <&> getIds
+      Q.getNearestDrivers Nothing pickupPoint 800 org1 False <&> getIds
   res `shouldBe` [closestDriver]
 
 testNotInRadius :: IO ()
 testNotInRadius = do
   res <-
     runARDUFlow "Test outside radius filtration" $
-      Q.getNearestDrivers Nothing pickupPoint 10 org1 <&> getIds
+      Q.getNearestDrivers Nothing pickupPoint 10 org1 False <&> getIds
   res `shouldBe` []
 
 getIds :: [Q.DriverPoolResult] -> [Text]

@@ -4,14 +4,14 @@
 @custToken2 = {{app-token2}}
 
 # @name healthcheck
-GET {{driver-offer-bpp-host}}/v2
+GET {{driver-offer-bpp-host}}/ui
 
 ###
 
 @currentTime = 2022-03-03T23:37
 
 # @name updateInitial
-POST {{driver-offer-bpp-host}}/v2/driver/location
+POST {{driver-offer-bpp-host}}/ui/driver/location
 token: {{token1}}
 content-type: application/json
 
@@ -28,7 +28,7 @@ content-type: application/json
 ###
 
 # @name setActive
-POST {{driver-offer-bpp-host}}/v2/driver/setActivity?active=true
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true
 content-type: application/json
 token: {{token1}}
 ###
@@ -83,16 +83,16 @@ token: {{custToken}}
 @searchId = {{search.response.body.searchId}}
 
 # @name quotes
-GET {{app-host}}/rideSearch/{{searchId}}/quotes
+GET {{app-host}}/rideSearch/{{searchId}}/results
 content-type: application/json
 token: {{custToken}}
 
 ###
 
 # @name select
-@quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
+@estimateId = {{quotes.response.body.estimates[0].id}}
 
-POST {{app-host}}/rideSearch/quotes/{{quoteId}}/select HTTP/1.1
+POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
 content-type: application/json
 token: {{custToken}}
 
@@ -100,7 +100,7 @@ token: {{custToken}}
 
 ###
 
-# @name search
+# @name search2
 POST {{app-host}}/rideSearch
 content-type: application/json
 token: {{custToken2}}
@@ -145,47 +145,47 @@ token: {{custToken2}}
 
 ###
 
-@searchId = {{search.response.body.searchId}}
+@searchId = {{search2.response.body.searchId}}
 
-# @name quotes
-GET {{app-host}}/rideSearch/{{searchId}}/quotes
+# @name quotes2
+GET {{app-host}}/rideSearch/{{searchId}}/results
 content-type: application/json
 token: {{custToken2}}
 
 ###
 
-# @name select
-@quoteId = {{quotes.response.body.quotes[0].onDemandCab.id}}
+# @name select2
+@estimateId = {{quotes2.response.body.estimates[0].id}}
 
-POST {{app-host}}/rideSearch/quotes/{{quoteId}}/select HTTP/1.1
+POST {{app-host}}/estimate/{{estimateId}}/select HTTP/1.1
 content-type: application/json
 token: {{custToken2}}
 
 ###
 
 # @name nearbySearchRequest
-GET {{driver-offer-bpp-host}}/v2/driver/nearbyRideRequest
+GET {{driver-offer-bpp-host}}/ui/driver/nearbyRideRequest
 token: {{token1}}
 
 ###
 
 # @name offerQuote
-POST {{driver-offer-bpp-host}}/v2/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
 token: {{token1}}
 content-type: application/json
 
 {
-    "offeredFare": 30.5,
+    "offeredFare": 30,
     "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[0].searchRequestId}}"
 }
 
 ###
 # @name offerQuote
-POST {{driver-offer-bpp-host}}/v2/driver/searchRequest/quote/offer
+POST {{driver-offer-bpp-host}}/ui/driver/searchRequest/quote/offer
 token: {{token1}}
 content-type: application/json
 
 {
-    "offeredFare": 30.5,
+    "offeredFare": 30,
     "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[1].searchRequestId}}"
 }

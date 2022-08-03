@@ -15,6 +15,7 @@ import Beckn.External.Encryption
 import qualified Beckn.External.FCM.Types as FCM
 import qualified Beckn.External.MyValueFirst.Flow as SF
 import qualified Beckn.External.MyValueFirst.Types as SMS
+import Beckn.Prelude (NominalDiffTime)
 import Beckn.Sms.Config (SmsConfig)
 import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Redis.Queries as Redis
@@ -41,6 +42,7 @@ import ExternalAPI.Flow
 import GHC.Records.Extra
 import Product.FareCalculator.Flow (calculateFare)
 import qualified Product.Registration as Registration
+import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -321,14 +323,17 @@ offerQuote ::
 offerQuote driverId req = withFlowHandlerAPI $ do
   logDebug $ "offered fare: " <> show req.offeredFare
   sReq <- QSReq.findById req.searchRequestId >>= fromMaybeM (SearchRequestNotFound req.searchRequestId.getId)
-  when (sReq.status == DSReq.Inactive) $ throwError $ SearchRequestNotRelevant sReq.id.getId
+  now <- getCurrentTime
+  when (sReq.validTill < now) $ throwError SearchRequestExpired
   let mbOfferedFareAmount = fmap realToFrac req.offeredFare
   organization <- QOrg.findById sReq.providerId >>= fromMaybeM (OrgDoesNotExist sReq.providerId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   whenM (QDrQt.thereAreActiveQuotes driverId) (throwError FoundActiveQuotes)
+  driverInfo <- QDrInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
+  when driverInfo.onRide $ throwError DriverOnRide
   sReqFD <-
     QSRD.findByDriverAndSearchReq driverId sReq.id
-      >>= fromMaybeM (InvalidRequest "no search request for driver")
+      >>= fromMaybeM NoSearchRequestForDriver
   farePolicy <- findFarePolicyByOrgAndVariant organization.id sReqFD.vehicleVariant >>= fromMaybeM NoFarePolicy
   whenJust mbOfferedFareAmount $ \off ->
     unless (isAllowedExtraFee farePolicy.driverExtraFeeList off) $
@@ -346,7 +351,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
   pure Success
   where
     buildDriverQuote ::
-      HasFlowEnv m r '["driverQuoteExpirationSeconds" ::: Int] =>
+      (MonadFlow m, MonadReader r m, HasField "driverQuoteExpirationSeconds" r NominalDiffTime) =>
       SP.Person ->
       DSReq.SearchRequest ->
       SearchRequestForDriver ->
@@ -356,7 +361,6 @@ offerQuote driverId req = withFlowHandlerAPI $ do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
-      let validTill = fromIntegral driverQuoteExpirationSeconds `addUTCTime` now
       pure
         DDrQuote.DriverQuote
           { id = guid,
@@ -371,7 +375,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
             durationToPickup = sd.durationToPickup,
             createdAt = now,
             updatedAt = now,
-            validTill,
+            validTill = addUTCTime driverQuoteExpirationSeconds now,
             fareParams
           }
 

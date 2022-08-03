@@ -6,6 +6,8 @@ module TestMain where
 import qualified "app-backend" App as AppBackend
 import qualified "beckn-gateway" App as Gateway
 import qualified "beckn-transport" App as TransporterBackend
+import qualified "beckn-transport-allocator" App as Allocator
+import qualified "beckn-transport-driver-tracking-health-check" App as DriverHC
 import qualified "driver-offer-bpp" App as DriverOfferBpp
 import qualified "mock-fcm" App as MockFcm
 import qualified "mock-public-transport-bpp" App as MockPublicTransportBpp
@@ -14,8 +16,6 @@ import qualified "mock-sms" App as MockSms
 import qualified "public-transport-bap" App as PublicTransport
 import qualified "public-transport-search-consumer" App as PublicTransportSearchConsumer
 import qualified "search-result-aggregator" App as SearchResultAggregator
-import qualified "beckn-transport" App.Allocator as Allocator
-import qualified "beckn-transport" App.DriverTrackingHealthcheck as DriverHC
 import qualified "app-backend" App.Types as AppBackend
 import qualified "beckn-transport" App.Types as TransporterBackend
 import Beckn.Exit (exitDBMigrationFailure)
@@ -76,8 +76,8 @@ specs :: IO TestTree
 specs =
   specs'
     [ Transporter.Mobility.mkTestTree,
-      Mobility.ARDU.mkTestTree
-        PublicTransport.mkTestTree
+      Mobility.ARDU.mkTestTree,
+      PublicTransport.mkTestTree
     ]
 
 specs' :: [IO TestTree] -> IO TestTree

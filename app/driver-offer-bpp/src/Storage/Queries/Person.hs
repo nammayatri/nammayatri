@@ -190,8 +190,9 @@ getNearestDrivers ::
   LatLong ->
   Integer ->
   Id Organization ->
+  Bool ->
   m [DriverPoolResult]
-getNearestDrivers mbVariant LatLong {..} radiusMeters orgId = do
+getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide = do
   mbDriverPositionInfoExpiry <- asks (.driverPositionInfoExpiry)
   now <- getCurrentTime
   res <- Esq.findAll $ do
@@ -216,7 +217,7 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters orgId = do
         person ^. PersonRole ==. val Person.DRIVER
           &&. person ^. PersonOrganizationId ==. val (Just $ toKey orgId)
           &&. driverInfo ^. DriverInformationActive
-          &&. not_ (driverInfo ^. DriverInformationOnRide)
+          &&. (if onlyNotOnRide then not_ (driverInfo ^. DriverInformationOnRide) else val True)
           &&. ( val (Mb.isNothing mbDriverPositionInfoExpiry)
                   ||. (location ^. DriverLocationUpdatedAt +. Esq.interval [Esq.SECOND $ maybe 0 getSeconds mbDriverPositionInfoExpiry] >=. val now)
               )

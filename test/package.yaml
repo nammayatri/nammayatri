@@ -104,7 +104,7 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -fhide-source-paths
-    # - -Werror
+  - -Werror
   - -Wno-unrecognised-pragmas
   - -fplugin=RecordDotPreprocessor
   - -threaded

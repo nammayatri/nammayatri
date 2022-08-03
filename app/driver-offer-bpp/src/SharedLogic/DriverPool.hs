@@ -29,8 +29,9 @@ calculateDriverPool ::
   Maybe Variant ->
   LatLong ->
   Id SOrg.Organization ->
+  Bool ->
   m [GoogleMaps.GetDistanceResult QP.DriverPoolResult LatLong]
-calculateDriverPool variant pickupLatLong orgId = do
+calculateDriverPool variant pickupLatLong orgId onlyNotOnRide = do
   radius <- fromIntegral <$> asks (.defaultRadiusOfSearch)
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
@@ -39,6 +40,7 @@ calculateDriverPool variant pickupLatLong orgId = do
         pickupLatLong
         radius
         orgId
+        onlyNotOnRide
   logPretty DEBUG "approxDriverPool" approxDriverPool
   case approxDriverPool of
     [] -> pure []

@@ -13,7 +13,6 @@ import qualified "app-backend" Domain.Types.Estimate as AbeEstimate
 import qualified "app-backend" Domain.Types.Quote as AbeQuote
 import qualified "app-backend" Domain.Types.RegistrationToken as AppSRT
 import qualified "app-backend" Domain.Types.Ride as BRide
---import qualified "app-backend" Domain.Types.SelectedQuote as AbeSelQuote
 import EulerHS.Prelude
 import Mobility.AppBackend.Fixtures
 import qualified "app-backend" Product.Cancel as CancelAPI
@@ -37,12 +36,12 @@ mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
 
-appConfirmRide :: Text -> Id AbeQuote.Quote -> DConfirm.ConfirmReq -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :: Text -> Id AbeQuote.Quote -> DConfirm.ConfirmAPIReq -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.ConfirmAPI)
 
-confirmAddress :: DConfirm.ConfirmLocationReq
+confirmAddress :: DConfirm.ConfirmLocationAPIEntity
 confirmAddress =
-  DConfirm.ConfirmLocationReq
+  DConfirm.ConfirmLocationAPIEntity
     { door = Just "#817",
       building = Just "Juspay Apartments",
       street = Just "27th Main",
@@ -53,9 +52,9 @@ confirmAddress =
       state = Just "Karnataka"
     }
 
-mkAppConfirmReq :: DConfirm.ConfirmReq
+mkAppConfirmReq :: DConfirm.ConfirmAPIReq
 mkAppConfirmReq =
-  DConfirm.ConfirmReq
+  DConfirm.ConfirmAPIReq
     { fromLocation = confirmAddress,
       toLocation = Just confirmAddress
     }
@@ -68,7 +67,8 @@ callAppFeedback ratingValue rideId =
   let request =
         AppFeedback.FeedbackReq
           { rideId = rideId,
-            rating = ratingValue
+            rating = ratingValue,
+            feedbackDetails = "driver is so qt!"
           }
    in appFeedback appRegistrationToken request
 

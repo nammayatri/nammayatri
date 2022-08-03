@@ -47,4 +47,4 @@ driverOffersOnAnIrrelevantSearchRequest clients = withBecknClients clients $ do
   void $ Utils.confirmWithCheck appRegistrationToken arduDriver2 selectedQuoteId
   --
   eithRes <- Utils.offerQuoteEither arduDriver2 defaultAllowedDriverFee searchReqForSecondDriver.searchRequestId
-  shouldReturnErrorCode "error on nonrelevant search request" "SEARCH_REQUEST_NOT_RELEVANT" eithRes
+  shouldReturnErrorCode "error on nonrelevant search request" "NO_SEARCH_REQUEST_FOR_DRIVER" eithRes

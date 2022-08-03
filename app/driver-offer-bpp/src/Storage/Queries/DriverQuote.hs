@@ -4,7 +4,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Utils.Common (HasPrettyLogger, logPretty)
+import Beckn.Utils.Common (HasPrettyLogger, addUTCTime, logPretty)
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSReq
@@ -44,7 +44,8 @@ setInactiveByRequestId searchReqId = Esq.update $ \p -> do
   where_ $ p ^. DriverQuoteSearchRequestId ==. val (toKey searchReqId)
 
 findActiveQuotesByDriverId :: (Transactionable m, MonadTime m) => Id Person -> m [Domain.DriverQuote]
-findActiveQuotesByDriverId driverId = (getCurrentTime >>=) $ \now -> buildDType $
+findActiveQuotesByDriverId driverId = (getCurrentTime >>=) $ \now -> buildDType $ do
+  let delayToAvoidRaces = 2 -- seconds
   fmap (fmap extractSolidType) $
     Esq.findAll' $ do
       (dQuote :& farePars) <-
@@ -52,7 +53,7 @@ findActiveQuotesByDriverId driverId = (getCurrentTime >>=) $ \now -> buildDType 
       where_ $
         dQuote ^. DriverQuoteDriverId ==. val (toKey driverId)
           &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
-          &&. dQuote ^. DriverQuoteValidTill >. val now
+          &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
       pure (dQuote, farePars)
 
 thereAreActiveQuotes :: (Transactionable m, MonadTime m, HasPrettyLogger m r) => Id Person -> m Bool
