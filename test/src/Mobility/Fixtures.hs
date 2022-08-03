@@ -83,12 +83,12 @@ mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
 
-appConfirmRide :: Text -> Id AbeQuote.Quote -> DConfirm.ConfirmReq -> ClientM DConfirm.ConfirmRes
+appConfirmRide :: Text -> Id AbeQuote.Quote -> DConfirm.ConfirmAPIReq -> ClientM DConfirm.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.ConfirmAPI)
 
-confirmAddress :: DConfirm.ConfirmLocationReq
+confirmAddress :: DConfirm.ConfirmLocationAPIEntity
 confirmAddress =
-  DConfirm.ConfirmLocationReq
+  DConfirm.ConfirmLocationAPIEntity
     { door = Just "#817",
       building = Just "Juspay Apartments",
       street = Just "27th Main",
@@ -99,11 +99,11 @@ confirmAddress =
       state = Just "Karnataka"
     }
 
-mkAppConfirmReq :: DConfirm.ConfirmReq
+mkAppConfirmReq :: DConfirm.ConfirmAPIReq
 mkAppConfirmReq =
-  DConfirm.ConfirmReq
+  DConfirm.ConfirmAPIReq
     { fromLocation = confirmAddress,
-      mbToLocation = Just confirmAddress
+      toLocation = Just confirmAddress
     }
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess

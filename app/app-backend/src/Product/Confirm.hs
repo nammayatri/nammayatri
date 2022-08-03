@@ -1,8 +1,8 @@
 module Product.Confirm
   ( confirm,
     ConfirmAPI,
-    DConfirm.ConfirmReq (..),
-    DConfirm.ConfirmLocationReq (..),
+    DConfirm.ConfirmAPIReq (..),
+    DConfirm.ConfirmLocationAPIEntity (..),
     ConfirmRes (..),
     onConfirm,
   )
@@ -32,7 +32,7 @@ type ConfirmAPI =
     :> "quotes"
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
-    :> ReqBody '[JSON] DConfirm.ConfirmReq
+    :> ReqBody '[JSON] DConfirm.ConfirmAPIReq
     :> Post '[JSON] ConfirmRes
 
 newtype ConfirmRes = ConfirmRes
@@ -44,7 +44,7 @@ newtype ConfirmRes = ConfirmRes
 confirm ::
   Id SP.Person ->
   Id Quote.Quote ->
-  DConfirm.ConfirmReq ->
+  DConfirm.ConfirmAPIReq ->
   FlowHandler ConfirmRes
 confirm personId quoteId req =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
