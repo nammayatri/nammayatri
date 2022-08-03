@@ -133,6 +133,7 @@ onUpdate RideCompletedReq {..} = do
             }
   breakups <- traverse (buildFareBreakup booking.id) fareBreakups
   DB.runTransaction $ do
+    QRB.updateStatus booking.id SRB.COMPLETED
     QRide.updateMultiple updRide.id updRide
     QFareBreakup.createMany breakups
   Notify.notifyOnRideCompleted booking ride

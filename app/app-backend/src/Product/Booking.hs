@@ -35,13 +35,6 @@ buildBookingStatusRes booking = do
       <&> fmap SRide.makeRideAPIEntity
   fareBreakups <- QFareBreakup.findAllByBookingId booking.id
   let bookingDetails = mkBookingAPIDetails booking.bookingDetails
-  let timeTimeInMinutes =
-        if isNothing (ride.rideStartTime) || isNothing (ride.rideEndTime)
-          then Nothing
-          else do
-            startTime <- ride.rideStartTime
-            endTime <- ride.rideEndTime
-            Just (nominalDiffTimeToSeconds (diffUTCTime endTime startTime))
   return $
     API.BookingStatusRes
       { id = booking.id,
@@ -58,10 +51,16 @@ buildBookingStatusRes booking = do
         bookingDetails,
         rideStartTime = ride.rideStartTime,
         rideEndTime = ride.rideEndTime,
-        duration = timeTimeInMinutes,
+        duration = getRideDuration ride,
         createdAt = booking.createdAt,
         updatedAt = booking.updatedAt
       }
+  where
+    getRideDuration :: SRide.Ride -> Maybe Seconds
+    getRideDuration ride = do
+      startTime <- ride.rideStartTime
+      endTime <- ride.rideEndTime
+      return $ nominalDiffTimeToSeconds $ diffUTCTime endTime startTime
 
 mkBookingAPIDetails :: SRB.BookingDetails -> API.BookingAPIDetails
 mkBookingAPIDetails = \case
