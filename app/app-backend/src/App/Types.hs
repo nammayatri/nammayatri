@@ -153,9 +153,9 @@ instance AuthenticatingEntity AppEnv where
   getSignatureExpiry = (.signatureExpiry)
 
 instance Registry Flow where
-  registryLookup =
+  registryLookup registryUrl =
     Registry.withSubscriberCache $
-      Registry.whitelisting isWhiteListed <=< Registry.registryLookup
+      Registry.whitelisting isWhiteListed <=< Registry.registryLookup registryUrl
     where
       isWhiteListed subscriberId = findOrgByShortId (ShortId subscriberId) <&> isJust
 

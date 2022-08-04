@@ -143,7 +143,7 @@ type FlowServer api = FlowServerR AppEnv api
 type Flow = FlowR AppEnv
 
 instance Registry Flow where
-  registryLookup = Registry.withSubscriberCache Registry.registryLookup
+  registryLookup registryUrl = Registry.withSubscriberCache $ Registry.registryLookup registryUrl
 
 cacheRegistryKey :: Text
 cacheRegistryKey = "driver-offer-bpp:registry"

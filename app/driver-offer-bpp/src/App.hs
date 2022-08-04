@@ -10,7 +10,6 @@ import Beckn.Types.Flow
 import Beckn.Utils.App
 import Beckn.Utils.Dhall
 import qualified Beckn.Utils.FlowLogging as L
-import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import Environment
 import EulerHS.Prelude
@@ -24,6 +23,7 @@ import Network.Wai.Handler.Warp
   )
 import qualified Storage.Queries.Organization as Storage
 import System.Environment (lookupEnv)
+import Tools.SignatureAuth
 import Utils.Common
 
 runDriverOfferBpp :: (AppCfg -> AppCfg) -> IO ()
@@ -55,7 +55,7 @@ runDriverOfferBpp' appCfg = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map ((.shortId.getShortId) &&& (.uniqueKeyId)) allProviders
-        flowRt' <- modFlowRtWithAuthManagers flowRt appEnv allShortIds
+        flowRt' <- modFlowRtWithAuthManagersWithRegistryUrl flowRt appEnv allShortIds
 
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections $ appCfg.redisCfg)
