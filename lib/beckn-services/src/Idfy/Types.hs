@@ -1,3 +1,3 @@
-module S3.Types where
+module Idfy.Types where
 
 import Prelude

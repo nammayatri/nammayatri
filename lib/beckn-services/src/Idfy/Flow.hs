@@ -1,3 +1,3 @@
-module S3.Flow where
+module Idfy.Flow where
 
 import Prelude
