@@ -36,7 +36,9 @@ handleDLVerification req personId dl = do
     Nothing -> do
       dlId <- L.generateGUID
       let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
-      dlEntity <- mkDriverDrivingLicenseEntry dlId personId (Just req.driverDateOfBirth) (Just req.driverLicenseNumber) idfyReqId now
+      let image = "img" :: Text
+      let result = "res" :: Text
+      dlEntity <- mkDriverDrivingLicenseEntry dlId personId (Just req.driverDateOfBirth) (Just req.driverLicenseNumber) idfyReqId image result now
       runTransaction $ QDDL.create dlEntity
       return ()
     Just dlRecord -> do
@@ -52,7 +54,9 @@ handleRCVerification req personId rc = do
     Nothing -> do
       rcId <- L.generateGUID
       let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
-      rcEntity <- mkVehicleRegistrationCertEntry rcId personId (Just req.vehicleRegistrationCertNumber) idfyReqId now
+      let image = "img" :: Text
+      let result = "res" :: Text
+      rcEntity <- mkVehicleRegistrationCertEntry rcId personId (Just req.vehicleRegistrationCertNumber) idfyReqId image result now
       runTransaction $ QVR.create rcEntity
       return ()
     Just rcRecord -> do
@@ -61,8 +65,8 @@ handleRCVerification req personId rc = do
         let idfyReqId = "idfy_req_id" :: Text -- replace by idfy api call
         runTransaction $ QVR.resetRCRequest personId (Just req.driverLicenseNumber) idfyReqId now
 
-mkVehicleRegistrationCertEntry :: EncFlow m r => Text -> Id SP.Person -> Maybe Text -> Text -> UTCTime -> m DVR.VehicleRegistrationCert
-mkVehicleRegistrationCertEntry opId personId rcNumber reqID time = do
+mkVehicleRegistrationCertEntry :: EncFlow m r => Text -> Id SP.Person -> Maybe Text -> Text -> Text ->Text-> UTCTime -> m DVR.VehicleRegistrationCert
+mkVehicleRegistrationCertEntry opId personId rcNumber  reqID img res time = do
   vrc <- mapM encrypt rcNumber
   return $
     DVR.VehicleRegistrationCert
@@ -73,20 +77,26 @@ mkVehicleRegistrationCertEntry opId personId rcNumber reqID time = do
         permitNumber = Nothing,
         permitStart = Nothing,
         permitExpiry = Nothing,
+        pucExpiry = Nothing,
         vehicleClass = Nothing,
-        request_id = reqID,
+        vehicleColor = Nothing,
+        vehicleManufacturer = Nothing,
+        vehicleModel = Nothing,
+        rcImageS3Path = img,
+        idfyRequestId = reqID,
         vehicleNumber = Nothing,
         insuranceValidity = Nothing,
         idfyStatus = DVR.IN_PROGRESS,
         verificationStatus = DVR.PENDING,
+        verificationRespDump = res,
         createdAt = time,
         updatedAt = time,
         consentTimestamp = time,
         consent = True
       }
 
-mkDriverDrivingLicenseEntry :: EncFlow m r => Text -> Id SP.Person -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> m DDL.DriverDrivingLicense
-mkDriverDrivingLicenseEntry opId personId dob dlNumber reqId time = do
+mkDriverDrivingLicenseEntry :: EncFlow m r => Text -> Id SP.Person -> Maybe UTCTime -> Maybe Text  -> Text -> Text -> Text ->UTCTime -> m DDL.DriverDrivingLicense
+mkDriverDrivingLicenseEntry opId personId dob dlNumber reqId img res time = do
   ddl <- mapM encrypt dlNumber
   return $
     DDL.DriverDrivingLicense
@@ -99,8 +109,10 @@ mkDriverDrivingLicenseEntry opId personId dob dlNumber reqId time = do
         classOfVehicle = Nothing,
         idfyStatus = DVR.IN_PROGRESS,
         verificationStatus = DVR.PENDING,
-        driverVerificationStatus = DVR.PENDING,
-        request_id = reqId,
+        verificationRespDump = res,
+        dlImage1S3Path = img,
+        dlImage2S3Path = img,
+        idfyRequestId= reqId,
         consent = True,
         createdAt = time,
         updatedAt = time,

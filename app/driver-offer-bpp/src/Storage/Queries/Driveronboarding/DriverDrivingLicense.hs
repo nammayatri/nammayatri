@@ -1,5 +1,4 @@
 {-# LANGUAGE TypeApplications #-}
-
 module Storage.Queries.Driveronboarding.DriverDrivingLicense where
 
 import Beckn.Prelude
@@ -31,7 +30,7 @@ findByDId personid = do
     return driverDriving
 
 updateDLDetails :: Text -> Maybe UTCTime -> Maybe UTCTime -> IdfyStatus -> VerificationStatus -> Maybe [COV] -> UTCTime -> SqlDB () -- [COV] changed to Maybe [COV]
-updateDLDetails requestId start expiry idfyStatus verificationStatus cov now = do
+updateDLDetails idfyRequestId start expiry idfyStatus verificationStatus cov now = do
   Esq.update $ \tbl -> do
     set
       tbl
@@ -42,16 +41,16 @@ updateDLDetails requestId start expiry idfyStatus verificationStatus cov now = d
         DriverDrivingLicenseVerificationStatus =. val verificationStatus,
         DriverDrivingLicenseUpdatedAt =. val now
       ]
-    where_ $ tbl ^. DriverDrivingLicenseRequest_id ==. val requestId
+    where_ $ tbl ^. DriverDrivingLicenseIdfyRequestId ==. val idfyRequestId
 
 resetDLRequest :: Id Person -> Maybe Text -> Maybe UTCTime -> Text -> UTCTime -> SqlDB ()
-resetDLRequest driverId dlNumber dob requestId now = do
+resetDLRequest driverId dlNumber dob idfyRequestId now = do
   Esq.update $ \tbl -> do
     set
       tbl
       [ DriverDrivingLicenseDriverLicenseNumber =. val dlNumber,
         DriverDrivingLicenseDriverDob =. val dob,
-        DriverDrivingLicenseRequest_id =. val requestId,
+        DriverDrivingLicenseIdfyRequestId =. val idfyRequestId,
         DriverDrivingLicenseClassOfVehicle =. val Nothing,
         DriverDrivingLicenseDriverLicenseStart =. val Nothing,
         DriverDrivingLicenseDriverLicenseExpiry =. val Nothing,

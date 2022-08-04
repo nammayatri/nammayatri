@@ -6,7 +6,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Storage.Tabular.Driveronboarding.DriverDrivingLicense where
-
 import Beckn.External.Encryption
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
@@ -32,9 +31,11 @@ mkPersist
       driverLicenseExpiry UTCTime Maybe
       classOfVehicle [COV] Maybe
       idfyStatus IdfyStatus
+      verificationRespDump Text 
       verificationStatus VerificationStatus
-      driverVerificationStatus VerificationStatus
-      request_id Text
+      idfyRequestId Text
+      dlImage1S3Path Text
+      dlImage2S3Path Text
       consent Bool
       consentTimestamp UTCTime
       createdAt UTCTime

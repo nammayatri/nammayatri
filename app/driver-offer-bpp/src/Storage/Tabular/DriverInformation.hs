@@ -22,6 +22,7 @@ mkPersist
       active Bool
       onRide Bool
       enabled Bool
+      verified Bool
       createdAt UTCTime
       updatedAt UTCTime
       Primary driverId

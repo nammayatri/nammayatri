@@ -64,6 +64,7 @@ createDriverDetails personId = do
             active = False,
             onRide = False,
             enabled = False,
+            verified = False,
             createdAt = now,
             updatedAt = now
           }

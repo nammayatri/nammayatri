@@ -30,12 +30,18 @@ mkPersist
       permitNumber Text Maybe
       permitStart UTCTime Maybe
       permitExpiry UTCTime Maybe
-      insuranceValidity  UTCTime Maybe
+      pucExpiry UTCTime Maybe
       vehicleClass Domain.COV Maybe
       vehicleNumber Text Maybe
+      vehicleColor Text Maybe 
+      vehicleManufacturer Text Maybe
+      vehicleModel Text Maybe
+      insuranceValidity  UTCTime Maybe
+      idfyRequestId Text 
+      verificationRespDump Text
       idfyStatus Domain.IdfyStatus
       verificationStatus Domain.VerificationStatus
-      request_id Text
+      rcImageS3Path Text
       consent Bool
       consentTimestamp UTCTime
       createdAt UTCTime

@@ -30,7 +30,7 @@ findByPId personid = do
     return vechileRegCert
 
 updateRCDetails :: Text -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> Maybe UTCTime -> IdfyStatus -> VerificationStatus -> Maybe COV -> UTCTime -> SqlDB ()
-updateRCDetails requestId permitStart permitValidity fitnessExpiry insuranceValidity idfyStatus verificationStatus cov now = do
+updateRCDetails idfyRequestId permitStart permitValidity fitnessExpiry insuranceValidity idfyStatus verificationStatus cov now = do
   Esq.update $ \tbl -> do
     set
       tbl
@@ -43,15 +43,15 @@ updateRCDetails requestId permitStart permitValidity fitnessExpiry insuranceVali
         VehicleRegistrationCertVerificationStatus =. val verificationStatus,
         VehicleRegistrationCertUpdatedAt =. val now
       ]
-    where_ $ tbl ^. VehicleRegistrationCertRequest_id ==. val requestId
+    where_ $ tbl ^. VehicleRegistrationCertIdfyRequestId ==. val idfyRequestId
 
 resetRCRequest :: Id Person -> Maybe Text -> Text -> UTCTime -> SqlDB ()
-resetRCRequest driverId rcNumber requestId now = do
+resetRCRequest driverId rcNumber idfyRequestId now = do
   Esq.update $ \tbl -> do
     set
       tbl
       [ VehicleRegistrationCertVehicleRegistrationCertNumber =. val rcNumber,
-        VehicleRegistrationCertRequest_id =. val requestId,
+        VehicleRegistrationCertIdfyRequestId =. val idfyRequestId,
         VehicleRegistrationCertIdfyStatus =. val IN_PROGRESS,
         VehicleRegistrationCertVerificationStatus =. val PENDING,
         VehicleRegistrationCertVehicleClass =. val Nothing,

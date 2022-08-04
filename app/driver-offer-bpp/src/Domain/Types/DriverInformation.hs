@@ -10,6 +10,7 @@ data DriverInformation = DriverInformation
     active :: Bool,
     onRide :: Bool,
     enabled :: Bool,
+    verified :: Bool,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
