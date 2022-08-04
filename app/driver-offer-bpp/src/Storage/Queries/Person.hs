@@ -4,6 +4,7 @@ module Storage.Queries.Person where
 
 import Beckn.External.Encryption
 import Beckn.External.FCM.Types (FCMRecipientToken)
+import qualified Beckn.External.FCM.Types as FCM
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import Beckn.Storage.Esqueleto as Esq
@@ -174,6 +175,8 @@ updateAverageRating personId newAverageRating = do
 
 data DriverPoolResult = DriverPoolResult
   { driverId :: Id Driver,
+    driverDeviceToken :: Maybe FCM.FCMRecipientToken,
+    onRide :: Bool,
     distanceToDriver :: Double,
     vehicle :: Vehicle,
     lat :: Double,
@@ -224,19 +227,21 @@ getNearestDrivers mbVariant LatLong {..} radiusMeters orgId onlyNotOnRide = do
           &&. whenJust_ mbVariant (\var -> vehicle ^. VehicleVariant ==. val var)
       return
         ( person ^. PersonTId,
+          person ^. PersonDeviceToken,
+          driverInfo ^. DriverInformationOnRide,
           location ^. DriverLocationPoint <->. Esq.getPoint (val lat, val lon),
           location ^. DriverLocationLat,
           location ^. DriverLocationLon,
           vehicle
         )
-    (personId, dist, dlat, dlon, vehicleVariant) <- from withTable
+    (personId, mbDeviceToken, onRide, dist, dlat, dlon, vehicleVariant) <- from withTable
     where_ $ dist <. val (fromIntegral radiusMeters)
     orderBy [asc dist]
-    return (personId, dist, vehicleVariant, dlat, dlon)
+    return (personId, mbDeviceToken, onRide, dist, vehicleVariant, dlat, dlon)
   return $ makeDriverPoolResult <$> res
   where
-    makeDriverPoolResult (personId, dist, vehicleVariant, dlat, dlon) =
-      DriverPoolResult (cast personId) dist vehicleVariant dlat dlon
+    makeDriverPoolResult (personId, mbDeviceToken, onRide, dist, vehicleVariant, dlat, dlon) =
+      DriverPoolResult (cast personId) mbDeviceToken onRide dist vehicleVariant dlat dlon
 
 setRegisteredTrue :: Id Person -> SqlDB ()
 setRegisteredTrue personId = do

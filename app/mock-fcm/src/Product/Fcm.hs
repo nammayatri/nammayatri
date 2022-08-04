@@ -17,7 +17,9 @@ sendFcm ::
   FlowHandler FCMResponse
 sendFcm _authToken (FCMRequest ntf) = withFlowHandler $ do
   to <- ntf.fcmToken & fromMaybeM (InvalidRequest "No token")
-  log INFO $ "Message for " <> encodeToText to <> ": " <> encodeToText ntf
+  --  uncomment this if u like it more
+  --  log INFO $ "Message for " <> encodeToText to <> ": " <> encodeToText ntf
+  logPretty INFO ("Message for " <> encodeToText to) ntf
   asks notificationsMap >>= liftIO . (`modifyMVar_` (pure . set to))
   return $ FCMResponse Nothing Nothing
   where

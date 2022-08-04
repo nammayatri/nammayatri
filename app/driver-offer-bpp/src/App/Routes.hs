@@ -1,9 +1,9 @@
 module App.Routes where
 
 import App.Routes.FarePolicy
+import qualified Beckn.Storage.Redis.Queries as Redis
 import Beckn.Types.APISuccess
 import Beckn.Types.App
-import Beckn.Types.Core.Ack (AckResponse)
 import qualified Beckn.Types.Core.Taxi.API.Cancel as API
 import qualified Beckn.Types.Core.Taxi.API.Confirm as API
 import qualified Beckn.Types.Core.Taxi.API.Init as API
@@ -11,7 +11,10 @@ import qualified Beckn.Types.Core.Taxi.API.Rating as API
 import qualified Beckn.Types.Core.Taxi.API.Search as API
 import qualified Beckn.Types.Core.Taxi.API.Select as API
 import qualified Beckn.Types.Core.Taxi.API.Track as API
+import Beckn.Types.Error (PersonError (PersonNotFound))
 import Beckn.Types.Id
+import Beckn.Utils.Common
+import Beckn.Utils.JWT (JWToken (JWToken))
 import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi
 import Domain.Types.Organization (Organization)
@@ -44,6 +47,7 @@ import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.OpenApi
+import qualified Storage.Queries.Person as QDriver
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Driver as DriverAPI
 import Types.API.Driveronboarding.DriverOnBoarding
@@ -56,6 +60,7 @@ import qualified Types.API.Ride as RideAPI
 import Types.API.Transporter
 import Types.API.Vehicle
 import Utils.Auth (AdminTokenAuth, TokenAuth)
+import qualified Utils.Notifications as Notify
 
 type DriverOfferAPI =
   MainAPI
@@ -83,9 +88,27 @@ type UIAPI =
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
 
+{-
+to be imported with test code below
+import qualified Utils.Notifications as Notify
+import qualified Beckn.Storage.Redis.Queries as Redis
+import Beckn.Types.Error (PersonError (PersonNotFound))
+import Beckn.Utils.JWT (JWToken (JWToken))
+import qualified Storage.Queries.Person as QDriver
+
+-}
+notificationTestingEndpoint :: FlowHandler Text
+notificationTestingEndpoint = withFlowHandlerAPI $ do
+  Redis.setKeyRedis "beckn:fcm_token" $ JWToken "token" 3000000000 "tokenType"
+  let personId = "favorit-auto1-0000000000000000000000"
+  driver <- QDriver.findById (Id personId) >>= fromMaybeM (PersonNotFound "person_id")
+  Notify.notifyDriverNewAllocation (Id "booking_id" :: Id ()) driver.id driver.deviceToken
+  pure "App is UP"
+
 uiServer :: FlowServer UIAPI
 uiServer =
-  pure "App is UP"
+  notificationTestingEndpoint
+    --  pure "App is UP"
     :<|> registrationFlow
     :<|> orgAdminFlow
     :<|> driverFlow

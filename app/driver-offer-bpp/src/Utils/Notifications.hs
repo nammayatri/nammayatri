@@ -11,7 +11,41 @@ import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
+import Domain.Types.SearchRequestForDriver (SearchRequestForDriver)
 import EulerHS.Prelude
+
+notifyOnNewSearchRequestAvailable ::
+  ( FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  SearchRequestForDriver ->
+  m ()
+notifyOnNewSearchRequestAvailable personId mbDeviceToken sReq = do
+  FCM.notifyPerson notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  where
+    notifType = FCM.NEW_RIDE_AVAILABLE
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = notifType,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.SearchRequest,
+          fcmEntityIds = sReq.searchRequestId.getId,
+          fcmNotificationJSON = FCM.createAndroidNotification title body notifType
+        }
+    title = FCMNotificationTitle "New ride available for offering"
+    body =
+      FCMNotificationBody $
+        unwords
+          [ "A new ride for",
+            showTimeIst sReq.startTime,
+            "is available",
+            show sReq.distanceToPickup.getMeters,
+            "meters away from you. Estimated base fare is",
+            show (floor @_ @Int sReq.baseFare) <> ", estimated distance is ",
+            show $ floor @_ @Int sReq.distance
+          ]
 
 -- | Send FCM "cancel" notification to driver
 notifyOnCancel ::

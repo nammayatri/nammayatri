@@ -21,6 +21,7 @@ import SharedLogic.DriverPool
 import Storage.Queries.Person
 import qualified Storage.Queries.SearchRequest as QSReq
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
+import qualified Utils.Notifications as Notify
 
 data DSelectReq = DSelectReq
   { messageId :: Text,
@@ -56,6 +57,10 @@ handler orgId sReq = do
   Esq.runTransaction $ do
     QSReq.create searchReq
     mapM_ QSRD.create searchRequestsForDrivers
+  let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
+  forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) ->
+    when (not dPoolRes.origin.onRide) $
+      Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken sReqFD
   where
     buildSearchRequestForDriver ::
       (MonadFlow m) =>
@@ -68,20 +73,21 @@ handler orgId sReq = do
       guid <- generateGUID
       now <- getCurrentTime
       let driver = gdRes.origin
-      pure
-        SearchRequestForDriver
-          { id = guid,
-            searchRequestId = searchRequest.id,
-            startTime = searchRequest.startTime,
-            searchRequestValidTill = searchRequest.validTill,
-            driverId = cast driver.driverId,
-            vehicleVariant = driver.vehicle.variant,
-            distanceToPickup = gdRes.distance,
-            durationToPickup = gdRes.duration,
-            baseFare = baseFare_,
-            createdAt = now,
-            ..
-          }
+      let searchRequestForDriver =
+            SearchRequestForDriver
+              { id = guid,
+                searchRequestId = searchRequest.id,
+                startTime = searchRequest.startTime,
+                searchRequestValidTill = searchRequest.validTill,
+                driverId = cast driver.driverId,
+                vehicleVariant = driver.vehicle.variant,
+                distanceToPickup = gdRes.distance,
+                durationToPickup = gdRes.duration,
+                baseFare = baseFare_,
+                createdAt = now,
+                ..
+              }
+      pure searchRequestForDriver
 
 buildSearchRequest ::
   ( MonadTime m,
