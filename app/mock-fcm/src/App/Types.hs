@@ -23,7 +23,7 @@ data AppEnv = AppEnv
   { port :: Int,
     loggerConfig :: LoggerConfig,
     graceTerminationPeriod :: Seconds,
-    notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage]),
+    notificationsMap :: MVar (Map.Map FCMRecipientToken [FCMMessage Value]),
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv
   }

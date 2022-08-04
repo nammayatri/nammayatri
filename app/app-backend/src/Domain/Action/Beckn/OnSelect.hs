@@ -16,9 +16,12 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as QQuote
+import qualified Storage.Queries.SearchRequest as QSearchReq
 import Types.Error
 import Utils.Common
+import qualified Utils.Notifications as Notify
 
 data DOnSelectReq = DOnSelectReq
   { estimateId :: Id DEstimate.Estimate,
@@ -58,12 +61,18 @@ onSelect ::
   Flow ()
 onSelect DOnSelectReq {..} = do
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  searchRequest <-
+    QSearchReq.findById estimate.requestId
+      >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
+  let personId = searchRequest.riderId
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
   quotes <- traverse (buildSelectedQuote estimate providerInfo now) quotesInfo
   logPretty DEBUG "quotes" quotes
   whenM (duplicateCheckCond (quotesInfo <&> (.quoteDetails.bppDriverQuoteId)) providerInfo.providerId) $
     throwError $ InvalidRequest "Duplicate OnSelect quote"
   DB.runTransaction $ QQuote.createMany quotes
+  Notify.notifyOnDriverOfferIncoming estimateId quotes person
   where
     duplicateCheckCond :: EsqDBFlow m r => [Id DQuote.BPPQuote] -> Text -> m Bool
     duplicateCheckCond [] _ = return False

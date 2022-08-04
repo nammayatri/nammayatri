@@ -33,6 +33,7 @@ notifyOnCancel booking personId mbDeviceToken cancellationSource = do
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
           fcmEntityIds = getId booking.id,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -80,6 +81,7 @@ notifyOnRegistration regToken personId =
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Organization,
           fcmEntityIds = getId tokenId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED
         }
     title = FCMNotificationTitle $ T.pack "Registration Completed!"
@@ -137,6 +139,7 @@ sendNotificationToDriver displayOption priority notificationType notificationTit
           fcmShowNotification = displayOption,
           fcmEntityIds = getId driverId,
           fcmEntityType = FCM.Person,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body notificationType
         }
     title = FCM.FCMNotificationTitle notificationTitle
@@ -167,6 +170,7 @@ notifyDriverNewAllocation bookingId personId =
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
           fcmEntityIds = getId bookingId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST
         }
 
@@ -194,6 +198,7 @@ notifyRideNotAssigned bookingId personId =
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
           fcmEntityIds = getId bookingId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST_UNASSIGNED
         }
 
@@ -219,6 +224,7 @@ notifyFarePolicyChange coordinatorId =
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
           fcmEntityIds = getId coordinatorId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.FARE_POLICY_CHANGED
         }
 
@@ -244,5 +250,6 @@ notifyDiscountChange coordinatorId =
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
           fcmEntityIds = getId coordinatorId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DISCOUNT_CHANGED
         }

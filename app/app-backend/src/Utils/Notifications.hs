@@ -7,7 +7,9 @@ import Beckn.Types.Id
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import Domain.Types.Estimate (Estimate)
 import Domain.Types.Person as Person
+import Domain.Types.Quote (makeQuoteAPIEntity)
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
@@ -17,6 +19,34 @@ import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Metrics
 import Utils.Common
+
+notifyOnDriverOfferIncoming ::
+  ( EsqDBFlow m r,
+    FCMFlow m r,
+    CoreMetrics m
+  ) =>
+  Id Estimate ->
+  [DQuote.Quote] ->
+  Person.Person ->
+  m ()
+notifyOnDriverOfferIncoming estimateId quotes person = do
+  let notificationData =
+        FCM.FCMData
+          { fcmNotificationType = FCM.DRIVER_QUOTE_INCOMING,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Product,
+            fcmEntityIds = estimateId.getId,
+            fcmEntityData = map makeQuoteAPIEntity quotes,
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_QUOTE_INCOMING
+          }
+      title = FCMNotificationTitle "New driver offers incoming!"
+      body =
+        FCMNotificationBody $
+          unwords
+            [ "There are new driver offers!",
+              "Check the app for details"
+            ]
+  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideAssigned ::
   ( EsqDBFlow m r,
@@ -37,6 +67,7 @@ notifyOnRideAssigned booking ride = do
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
             fcmEntityIds = getId rideId,
+            fcmEntityData = (),
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ASSIGNMENT
           }
       title = FCMNotificationTitle $ T.pack "Driver assigned!"
@@ -67,6 +98,7 @@ notifyOnRideStarted booking ride = do
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
             fcmEntityIds = getId rideId,
+            fcmEntityData = (),
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_STARTED
           }
       title = FCMNotificationTitle $ T.pack "Trip started!"
@@ -97,6 +129,7 @@ notifyOnRideCompleted booking ride = do
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
             fcmEntityIds = getId rideId,
+            fcmEntityData = (),
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.TRIP_FINISHED
           }
       title = FCMNotificationTitle $ T.pack "Trip finished!"
@@ -127,6 +160,7 @@ notifyOnExpiration searchReq = do
                 fcmShowNotification = FCM.SHOW,
                 fcmEntityType = FCM.SearchRequest,
                 fcmEntityIds = getId searchRequestId,
+                fcmEntityData = (),
                 fcmNotificationJSON = FCM.createAndroidNotification title body FCM.EXPIRED_CASE
               }
           title = FCMNotificationTitle $ T.pack "Ride expired!"
@@ -155,6 +189,7 @@ notifyOnRegistration regToken personId mbDeviceToken =
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Organization,
             fcmEntityIds = getId tokenId,
+            fcmEntityData = (),
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED
           }
       title = FCMNotificationTitle $ T.pack "Registration Completed!"
@@ -177,6 +212,7 @@ notifyOnBookingCancelled booking cancellationSource = do
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
           fcmEntityIds = getId booking.id,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title (body orgName) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -224,6 +260,7 @@ notifyOnBookingReallocated booking = do
             fcmShowNotification = FCM.SHOW,
             fcmEntityType = FCM.Product,
             fcmEntityIds = getId booking.id,
+            fcmEntityData = (),
             fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
           }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -257,5 +294,6 @@ notifyOnQuoteReceived quote = do
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
           fcmEntityIds = getId quote.requestId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REALLOCATE_PRODUCT
         }

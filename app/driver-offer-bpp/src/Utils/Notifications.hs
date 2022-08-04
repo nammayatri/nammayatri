@@ -11,7 +11,7 @@ import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
-import Domain.Types.SearchRequestForDriver (SearchRequestForDriver)
+import Domain.Types.SearchRequestForDriver (SearchRequestForDriver, mkSearchRequestForDriverAPIEntity)
 import EulerHS.Prelude
 
 notifyOnNewSearchRequestAvailable ::
@@ -25,6 +25,7 @@ notifyOnNewSearchRequestAvailable ::
 notifyOnNewSearchRequestAvailable personId mbDeviceToken sReq = do
   FCM.notifyPerson notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
+    entityData = mkSearchRequestForDriverAPIEntity sReq
     notifType = FCM.NEW_RIDE_AVAILABLE
     notificationData =
       FCM.FCMData
@@ -32,6 +33,7 @@ notifyOnNewSearchRequestAvailable personId mbDeviceToken sReq = do
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.SearchRequest,
           fcmEntityIds = sReq.searchRequestId.getId,
+          fcmEntityData = Just entityData,
           fcmNotificationJSON = FCM.createAndroidNotification title body notifType
         }
     title = FCMNotificationTitle "New ride available for offering"
@@ -43,8 +45,9 @@ notifyOnNewSearchRequestAvailable personId mbDeviceToken sReq = do
             "is available",
             show sReq.distanceToPickup.getMeters,
             "meters away from you. Estimated base fare is",
-            show (floor @_ @Int sReq.baseFare) <> ", estimated distance is ",
-            show $ floor @_ @Int sReq.distance
+            show (floor @_ @Int sReq.baseFare) <> " INR, estimated distance is",
+            show $ floor @_ @Int sReq.distance,
+            "meters"
           ]
 
 -- | Send FCM "cancel" notification to driver
@@ -67,6 +70,7 @@ notifyOnCancel booking personId mbDeviceToken cancellationSource = do
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
           fcmEntityIds = getId booking.id,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title (body cancellationText) FCM.CANCELLED_PRODUCT
         }
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
@@ -114,6 +118,7 @@ notifyOnRegistration regToken personId =
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Organization,
           fcmEntityIds = getId tokenId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.REGISTRATION_APPROVED
         }
     title = FCMNotificationTitle $ T.pack "Registration Completed!"
@@ -169,8 +174,9 @@ sendNotificationToDriver displayOption priority notificationType notificationTit
       FCM.FCMData
         { fcmNotificationType = notificationType,
           fcmShowNotification = displayOption,
-          fcmEntityIds = getId driverId,
           fcmEntityType = FCM.Person,
+          fcmEntityIds = getId driverId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body notificationType
         }
     title = FCM.FCMNotificationTitle notificationTitle
@@ -201,6 +207,7 @@ notifyDriverNewAllocation bookingId personId =
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Product,
           fcmEntityIds = getId bookingId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.ALLOCATION_REQUEST
         }
 
@@ -226,6 +233,7 @@ notifyFarePolicyChange coordinatorId =
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
           fcmEntityIds = getId coordinatorId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.FARE_POLICY_CHANGED
         }
 
@@ -251,5 +259,6 @@ notifyDiscountChange coordinatorId =
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.Person,
           fcmEntityIds = getId coordinatorId,
+          fcmEntityData = (),
           fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DISCOUNT_CHANGED
         }

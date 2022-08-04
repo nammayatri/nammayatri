@@ -139,7 +139,7 @@ content-type: application/json
 
 {
     "offeredFare": 30,
-    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequests[0].searchRequestId}}"
+    "searchRequestId": "{{nearbySearchRequest.response.body.searchRequestsForDriver[0].searchRequestId}}"
 }
 
 ###

@@ -56,8 +56,7 @@ baseFareSum fareParams = do
     * sum
       ( catMaybes
           [ Just fareParams.baseFare,
-            fareParams.extraKmFare,
-            fareParams.driverSelectedFare
+            fareParams.extraKmFare
           ]
       )
 
