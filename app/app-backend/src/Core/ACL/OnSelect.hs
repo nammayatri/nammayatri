@@ -72,7 +72,6 @@ buildQuoteInfo item = do
   validatePrices estimatedFare estimatedTotalFare
   -- if we get here, the discount >= 0, estimatedFare >= estimatedTotalFare
   let discount = if estimatedTotalFare == estimatedFare then Nothing else Just $ estimatedFare - estimatedTotalFare
-
   pure
     DOnSelect.QuoteInfo
       { vehicleVariant = castVehicleVariant vehicleVariant,
@@ -83,7 +82,7 @@ buildQuoteInfo item = do
       OnSelect.SEDAN -> SEDAN
       OnSelect.SUV -> SUV
       OnSelect.HATCHBACK -> HATCHBACK
-      OnSelect.AUTO -> AUTO
+      OnSelect.AUTO_RICKSHAW -> AUTO_RICKSHAW
 
 buildDriverOfferQuoteDetails ::
   (MonadThrow m, Log m) =>

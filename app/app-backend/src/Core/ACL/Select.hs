@@ -24,7 +24,7 @@ buildSelectReq dSelectReq = do
   pure $ BecknReq context $ Select.SelectMessage order
 
 castVariant :: VehicleVariant -> Common.VehicleVariant
-castVariant AUTO = Common.AUTO
+castVariant AUTO_RICKSHAW = Common.AUTO_RICKSHAW
 castVariant HATCHBACK = Common.HATCHBACK
 castVariant SEDAN = Common.SEDAN
 castVariant SUV = Common.SUV

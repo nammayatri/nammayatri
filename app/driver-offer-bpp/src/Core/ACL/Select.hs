@@ -45,7 +45,7 @@ buildSelectReq subscriber req = do
       }
 
 castVariant :: OS.VehicleVariant -> Variant
-castVariant OS.AUTO = AUTO_VARIANT
+castVariant OS.AUTO_RICKSHAW = AUTO_RICKSHAW
 castVariant OS.SEDAN = SEDAN
 castVariant OS.HATCHBACK = HATCHBACK
 castVariant OS.SUV = SUV

@@ -7,7 +7,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Utils.GenericPretty
 
-data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO
+data VehicleVariant = SEDAN | SUV | HATCHBACK | AUTO_RICKSHAW
   deriving
     ( Show,
       Eq,

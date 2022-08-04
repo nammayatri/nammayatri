@@ -69,7 +69,8 @@ logOnSearchEvent (BecknCallbackReq context (leftToMaybe -> mbErr)) = do
   let errorCode = (.code) <$> mbErr
   let errorMessage = (.message) =<< mbErr
   runTransaction $
-    OnSearchEvent.create $ OnSearchEvent {..}
+    OnSearchEvent.create $
+      OnSearchEvent {..}
 
 buildEstimateOrQuoteInfo ::
   (MonadThrow m, Log m) =>
@@ -98,7 +99,7 @@ buildEstimateOrQuoteInfo item = do
       OnSearch.SEDAN -> VehVar.SEDAN
       OnSearch.SUV -> VehVar.SUV
       OnSearch.HATCHBACK -> VehVar.HATCHBACK
-      OnSearch.AUTO -> VehVar.AUTO
+      OnSearch.AUTO_RICKSHAW -> VehVar.AUTO_RICKSHAW
 
 buildOneWayQuoteDetails ::
   (MonadThrow m, Log m) =>
