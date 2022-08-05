@@ -15,6 +15,7 @@ in  { driverAllowedDelay = +300
     , nwAddress = appCfg.nwAddress
     , fcmJsonPath = appCfg.fcmJsonPath
     , fcmUrl = appCfg.fcmUrl
+    , fcmTokenKeyPrefix = "FIXME"
     , encTools = appCfg.encTools
     , driverInactiveDelay = +86400
     , smsCfg =  appCfg.smsCfg

@@ -61,7 +61,6 @@ data OnUpdateFareBreakup = OnUpdateFareBreakup
 
 onUpdate ::
   ( EsqDBFlow m r,
-    FCMFlow m r,
     CoreMetrics m,
     HasBapInfo r m,
     HasFlowEnv

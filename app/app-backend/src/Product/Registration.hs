@@ -141,7 +141,7 @@ verify tokenId req = withFlowHandlerAPI $ do
     when isNewPerson $
       Person.setIsNewFalse person.id
   when isNewPerson $
-    Notify.notifyOnRegistration regToken person.id deviceToken
+    Notify.notifyOnRegistration regToken person deviceToken
   updPerson <- Person.findById (Id entityId) >>= fromMaybeM (PersonDoesNotExist entityId)
   decPerson <- decrypt updPerson
   let personAPIEntity = SP.makePersonAPIEntity decPerson

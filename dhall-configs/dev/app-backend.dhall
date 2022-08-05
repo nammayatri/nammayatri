@@ -107,7 +107,6 @@ in
 , signatureExpiry = common.signatureExpiry
 , searchConfirmExpiry = Some +600
 , searchRequestExpiry = Some +600
-, fcmJsonPath = common.fcmJsonPath
 , exotelCfg = Some common.exotelCfg
 , migrationPath = Some (env:APP_BACKEND_MIGRATION_PATH as Text ? "dev/migrations/app-backend")
 , autoMigrate = True
@@ -117,7 +116,6 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
-, fcmUrl = common.fcmUrl
 , graphhopperUrl = common.graphhopperUrl
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90

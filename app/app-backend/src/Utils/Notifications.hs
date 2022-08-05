@@ -2,12 +2,14 @@ module Utils.Notifications where
 
 import qualified Beckn.External.FCM.Flow as FCM
 import Beckn.External.FCM.Types as FCM
+import Beckn.Storage.Esqueleto
 import Beckn.Types.Error
 import Beckn.Types.Id
 import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Estimate (Estimate)
+import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.Quote (makeQuoteAPIEntity)
 import qualified Domain.Types.Quote as DQuote
@@ -15,14 +17,20 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
+import Storage.Queries.Merchant (withMerchantConfig)
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Metrics
 import Utils.Common
 
+getFCMConfig ::
+  (MonadFlow m, Transactionable m) =>
+  Id Merchant ->
+  m FCM.FCMConfig
+getFCMConfig = withMerchantConfig $ \full -> FCM.FCMConfig full.fcmUrl full.fcmJsonPath full.fcmRedisTokenKeyPrefix
+
 notifyOnDriverOfferIncoming ::
   ( EsqDBFlow m r,
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   Id Estimate ->
@@ -30,6 +38,8 @@ notifyOnDriverOfferIncoming ::
   Person.Person ->
   m ()
 notifyOnDriverOfferIncoming estimateId quotes person = do
+  config <- getFCMConfig person.merchantId
+
   let notificationData =
         FCM.FCMData
           { fcmNotificationType = FCM.DRIVER_QUOTE_INCOMING,
@@ -46,11 +56,10 @@ notifyOnDriverOfferIncoming estimateId quotes person = do
             [ "There are new driver offers!",
               "Check the app for details"
             ]
-  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideAssigned ::
   ( EsqDBFlow m r,
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -61,6 +70,7 @@ notifyOnRideAssigned booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  config <- getFCMConfig person.merchantId
   let notificationData =
         FCM.FCMData
           { fcmNotificationType = FCM.DRIVER_ASSIGNMENT,
@@ -77,11 +87,10 @@ notifyOnRideAssigned booking ride = do
             [ driverName,
               "will be your driver for this trip."
             ]
-  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideStarted ::
   ( EsqDBFlow m r,
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -92,6 +101,7 @@ notifyOnRideStarted booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  config <- getFCMConfig person.merchantId
   let notificationData =
         FCM.FCMData
           { fcmNotificationType = FCM.TRIP_STARTED,
@@ -108,11 +118,10 @@ notifyOnRideStarted booking ride = do
             [ driverName,
               "has started your trip. Please enjoy the ride!"
             ]
-  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnRideCompleted ::
   ( EsqDBFlow m r,
-    FCMFlow m r,
     CoreMetrics m
   ) =>
   SRB.Booking ->
@@ -123,6 +132,7 @@ notifyOnRideCompleted booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  config <- getFCMConfig person.merchantId
   let notificationData =
         FCM.FCMData
           { fcmNotificationType = FCM.TRIP_FINISHED,
@@ -139,11 +149,10 @@ notifyOnRideCompleted booking ride = do
             [ "Hope you enjoyed your trip with",
               driverName
             ]
-  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
 
 notifyOnExpiration ::
-  ( FCMFlow m r,
-    EsqDBFlow m r,
+  ( EsqDBFlow m r,
     CoreMetrics m
   ) =>
   SearchRequest ->
@@ -170,18 +179,20 @@ notifyOnExpiration searchReq = do
                 [ "Your ride has expired as you did not confirm any offer.",
                   "Please book again to continue."
                 ]
-      FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
+      config <- getFCMConfig p.merchantId
+      FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient p.id.getId p.deviceToken
     _ -> pure ()
 
 notifyOnRegistration ::
-  ( FCMFlow m r,
-    CoreMetrics m
+  ( CoreMetrics m,
+    EsqDBFlow m r
   ) =>
   RegistrationToken ->
-  Id Person ->
+  Person ->
   Maybe FCM.FCMRecipientToken ->
   m ()
-notifyOnRegistration regToken personId mbDeviceToken =
+notifyOnRegistration regToken person mbDeviceToken = do
+  config <- getFCMConfig person.merchantId
   let tokenId = RegToken.id regToken
       notificationData =
         FCM.FCMData
@@ -199,12 +210,13 @@ notifyOnRegistration regToken personId mbDeviceToken =
             [ "Welcome to Yatri.",
               "Click here to book your first ride with us."
             ]
-   in FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient personId.getId mbDeviceToken
+   in FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId mbDeviceToken
 
-notifyOnBookingCancelled :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.Booking -> SBCR.CancellationSource -> m ()
+notifyOnBookingCancelled :: (CoreMetrics m, EsqDBFlow m r) => SRB.Booking -> SBCR.CancellationSource -> m ()
 notifyOnBookingCancelled booking cancellationSource = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  FCM.notifyPerson (notificationData $ booking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  config <- getFCMConfig person.merchantId
+  FCM.notifyPerson config (notificationData $ booking.providerName) $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
     notificationData orgName =
       FCM.FCMData
@@ -218,7 +230,6 @@ notifyOnBookingCancelled booking cancellationSource = do
     title = FCMNotificationTitle $ T.pack "Ride cancelled!"
     body orgName =
       FCMNotificationBody $ getCancellationText orgName
-    -- reasonMsg = encodeToText reason
     getCancellationText orgName = case cancellationSource of
       SBCR.ByUser ->
         unwords
@@ -253,11 +264,12 @@ notifyOnBookingCancelled booking cancellationSource = do
             "Please book again to get another ride."
           ]
 
-notifyOnBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.Booking -> m ()
+notifyOnBookingReallocated :: (CoreMetrics m, EsqDBFlow m r) => SRB.Booking -> m ()
 notifyOnBookingReallocated booking = do
   person <- Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   notificationData <- buildNotificationData
-  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  config <- getFCMConfig person.merchantId
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
     buildNotificationData = do
       body <- buildBody
@@ -281,20 +293,21 @@ notifyOnBookingReallocated booking = do
             "Please wait until we allocate other driver."
           ]
 
-notifyOnQuoteReceived :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => DQuote.Quote -> m ()
+notifyOnQuoteReceived :: (CoreMetrics m, EsqDBFlow m r) => DQuote.Quote -> m ()
 notifyOnQuoteReceived quote = do
   searchRequest <- QSearchReq.findById quote.requestId >>= fromMaybeM (SearchRequestDoesNotExist quote.requestId.getId)
   person <- Person.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
+  config <- getFCMConfig person.merchantId
   let notificationData = mkNotificationData
-  FCM.notifyPerson notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
+  FCM.notifyPerson config notificationData $ FCM.FCMNotificationRecipient person.id.getId person.deviceToken
   where
     mkNotificationData = do
       let title = FCMNotificationTitle $ T.pack "Quote received!"
           body =
             FCMNotificationBody $
               unwords
-                [ "New quote recived with price",
-                  show (quote.estimatedFare) <> "."
+                [ "New quote received with price",
+                  show quote.estimatedFare <> "."
                 ]
       FCM.FCMData
         { fcmNotificationType = FCM.QUOTE_RECEIVED,

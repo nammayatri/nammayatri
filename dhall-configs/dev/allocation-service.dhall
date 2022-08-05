@@ -30,8 +30,9 @@ in  { appCfg = appCfg
               //  { logFilePath = "/tmp/allocation-service.log", logRawSql = False }
     , kafkaProducerCfg = appCfg.kafkaProducerCfg
     , nwAddress = appCfg.nwAddress
-    , fcmJsonPath = appCfg.fcmJsonPath
     , fcmUrl = appCfg.fcmUrl
+    , fcmJsonPath = appCfg.fcmJsonPath
+    , fcmTokenKeyPrefix = "transporter-allocator"
     , exotelCfg = appCfg.exotelCfg
     , defaultRadiusOfSearch = appCfg.defaultRadiusOfSearch
     , driverPositionInfoExpiry = appCfg.driverPositionInfoExpiry

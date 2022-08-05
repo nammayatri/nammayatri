@@ -6,6 +6,10 @@
 GET {{driver-offer-bpp-host}}/ui
 
 ###
+# @name healthcheck
+GET {{app-host}}
+
+###
 
 @currentTime = 2022-03-03T23:37
 
@@ -311,5 +315,5 @@ content-type: application/json
 {
   "rideId": "{{bapRideId}}",
   "rating" : 5,
-  "feedbackDetails" : "ride was awesome"
+  "feedbackDetails": "The driver is so cute"
 }

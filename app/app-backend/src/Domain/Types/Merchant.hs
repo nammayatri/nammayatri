@@ -7,6 +7,9 @@ data Merchant = Merchant
   { id :: Id Merchant,
     shortId :: ShortId Merchant,
     exoPhone :: Maybe Text,
-    exoPhoneCountryCode :: Maybe Text
+    exoPhoneCountryCode :: Maybe Text,
+    fcmUrl :: BaseUrl,
+    fcmJsonPath :: Maybe Text,
+    fcmRedisTokenKeyPrefix :: Text
   }
   deriving (Generic)

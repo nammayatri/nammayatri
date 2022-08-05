@@ -20,6 +20,9 @@ mkPersist
       shortId Text
       exoPhone Text Maybe
       exoPhoneCountryCode Text Maybe
+      fcmUrl Text
+      fcmJsonPath Text Maybe
+      fcmRedisTokenKeyPrefix Text
       Primary id
       Unique MerchantShortId
       deriving Generic
@@ -32,15 +35,18 @@ instance TEntityKey MerchantT where
 
 instance TType MerchantT Domain.Merchant where
   fromTType MerchantT {..} = do
+    fcmUrl_ <- parseBaseUrl fcmUrl
     return $
       Domain.Merchant
         { id = Id id,
           shortId = ShortId shortId,
+          fcmUrl = fcmUrl_,
           ..
         }
   toTType Domain.Merchant {..} =
     MerchantT
       { id = getId id,
         shortId = getShortId shortId,
+        fcmUrl = showBaseUrl fcmUrl,
         ..
       }

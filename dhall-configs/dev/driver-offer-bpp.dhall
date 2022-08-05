@@ -92,6 +92,7 @@ in
 , httpClientOptions = common.httpClientOptions
 , fcmUrl = common.fcmUrl
 , fcmJsonPath = common.fcmJsonPath
+, fcmTokenKeyPrefix = "ardu-bpp"
 , apiRateLimitOptions = apiRateLimitOptions
 , inviteSmsTemplate = "Welcome to the Yatri platform! Your agency ({#org#}) has added you as a driver. Start getting rides by installing the app: https://bit.ly/3wgLTcU"
 , otpSmsTemplate = "<#> Your OTP for login to Yatri App is {#otp#} {#hash#}"

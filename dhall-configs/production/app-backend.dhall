@@ -112,7 +112,6 @@ in
 , signatureExpiry = common.signatureExpiry
 , searchConfirmExpiry = Some +600
 , searchRequestExpiry = Some +600
-, fcmJsonPath = common.fcmJsonPath
 , exotelCfg = Some common.exotelCfg
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
@@ -122,7 +121,6 @@ in
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey
-, fcmUrl = common.fcmUrl
 , graphhopperUrl = common.graphhopperUrl
 , metricsSearchDurationTimeout = +45
 , graceTerminationPeriod = +90

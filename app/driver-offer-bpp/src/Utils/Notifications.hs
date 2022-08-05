@@ -23,7 +23,7 @@ notifyOnNewSearchRequestAvailable ::
   SearchRequestForDriverAPIEntity ->
   m ()
 notifyOnNewSearchRequestAvailable personId mbDeviceToken entityData = do
-  FCM.notifyPerson notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonDefault notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notifType = FCM.NEW_RIDE_AVAILABLE
     notificationData =
@@ -61,7 +61,7 @@ notifyOnCancel ::
   m ()
 notifyOnCancel booking personId mbDeviceToken cancellationSource = do
   cancellationText <- getCancellationText
-  FCM.notifyPerson (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
+  FCM.notifyPersonDefault (notificationData cancellationText) $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
     notificationData cancellationText =
       FCM.FCMData
@@ -116,7 +116,7 @@ notifyOnRegistration ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyOnRegistration regToken personId =
-  FCM.notifyPerson notificationData . FCMNotificationRecipient personId.getId
+  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient personId.getId
   where
     tokenId = RegToken.id regToken
     notificationData =
@@ -175,7 +175,7 @@ sendNotificationToDriver ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 sendNotificationToDriver displayOption priority notificationType notificationTitle message driverId =
-  FCM.notifyPersonWithPriority priority notificationData . FCMNotificationRecipient driverId.getId
+  FCM.notifyPersonWithPriorityDefault priority notificationData . FCMNotificationRecipient driverId.getId
   where
     notificationData =
       FCM.FCMData
@@ -199,7 +199,7 @@ notifyDriverNewAllocation ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyDriverNewAllocation bookingId personId =
-  FCM.notifyPersonWithPriority (Just FCM.HIGH) notificationData . FCMNotificationRecipient personId.getId
+  FCM.notifyPersonWithPriorityDefault (Just FCM.HIGH) notificationData . FCMNotificationRecipient personId.getId
   where
     title = FCM.FCMNotificationTitle "New allocation request."
     body =
@@ -226,7 +226,7 @@ notifyFarePolicyChange ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyFarePolicyChange coordinatorId =
-  FCM.notifyPerson notificationData . FCMNotificationRecipient coordinatorId.getId
+  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient coordinatorId.getId
   where
     title = FCM.FCMNotificationTitle "Fare policy changed."
     body =
@@ -252,7 +252,7 @@ notifyDiscountChange ::
   Maybe FCM.FCMRecipientToken ->
   m ()
 notifyDiscountChange coordinatorId =
-  FCM.notifyPerson notificationData . FCMNotificationRecipient coordinatorId.getId
+  FCM.notifyPersonDefault notificationData . FCMNotificationRecipient coordinatorId.getId
   where
     title = FCM.FCMNotificationTitle "Discount updated."
     body =

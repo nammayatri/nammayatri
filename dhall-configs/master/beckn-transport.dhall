@@ -77,7 +77,6 @@ in
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , caseExpiry = Some +7200
-, fcmJsonPath = common.fcmJsonPath
 , exotelCfg = Some common.exotelCfg
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
@@ -88,6 +87,8 @@ in
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey
 , fcmUrl = common.fcmUrl
+, fcmJsonPath = common.fcmJsonPath
+, fcmTokenKeyPrefix = "FIXME"
 , graphhopperUrl = common.graphhopperUrl
 , graceTerminationPeriod = +90
 , defaultRadiusOfSearch = +5000 -- meters
