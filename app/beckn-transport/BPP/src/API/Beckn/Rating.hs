@@ -26,7 +26,7 @@ ratingImpl ::
   SignatureAuthResult ->
   Rating.RatingReq ->
   FlowHandler AckResponse
-ratingImpl transporterId (SignatureAuthResult _ subscriber) req =
+ratingImpl transporterId (SignatureAuthResult _ subscriber _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "ratingAPI" "Received rating API call."
     dRatingReq <- ACL.buildRatingReq subscriber req

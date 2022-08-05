@@ -31,7 +31,7 @@ confirm ::
   SignatureAuthResult ->
   Confirm.ConfirmReq ->
   FlowHandler AckResponse
-confirm transporterId (SignatureAuthResult _ subscriber) req =
+confirm transporterId (SignatureAuthResult _ subscriber _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "confirm API Flow" "Reached"
     dConfirmReq <- ACL.buildConfirmReq subscriber req

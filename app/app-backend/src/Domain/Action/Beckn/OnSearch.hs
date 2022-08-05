@@ -13,6 +13,7 @@ import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (id, state)
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Merchant as QMerch
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import qualified Tools.Metrics as Metrics
@@ -65,18 +66,25 @@ data RentalQuoteDetails = RentalQuoteDetails
   }
 
 searchCb ::
+  BaseUrl ->
   Text ->
   Maybe DOnSearchReq ->
   Flow ()
-searchCb transactionId mbReq = do
+searchCb registryUrl transactionId mbReq = do
   Metrics.finishSearchMetrics transactionId -- move it to api handler or acl?
-  whenJust mbReq searchCbService
+  whenJust mbReq (searchCbService registryUrl)
 
 searchCbService ::
+  BaseUrl ->
   DOnSearchReq ->
   Flow ()
-searchCbService DOnSearchReq {..} = do
+searchCbService registryUrl DOnSearchReq {..} = do
   _searchRequest <- QSearchReq.findById requestId >>= fromMaybeM (SearchRequestDoesNotExist requestId.getId)
+
+  -- TODO: this supposed to be temporary solution. Check if we still need it
+  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
+  unless (_searchRequest.merchantId == merchant.id) $ throwError AccessDenied
+
   now <- getCurrentTime
   estimates <- traverse (buildEstimate requestId providerInfo now) estimatesInfo
   quotes <- traverse (buildQuote requestId providerInfo now) quotesInfo

@@ -32,11 +32,11 @@ search ::
     CoreMetrics m,
     HasBapInfo r m
   ) =>
+  BaseUrl ->
   API.SearchReq ->
   m API.SearchRes
-search req = do
-  url <- asks (.gatewayUrl)
-  callBecknAPIWithSignature "search" API.searchAPI url req
+search gatewayUrl req = do
+  callBecknAPIWithSignature "search" API.searchAPI gatewayUrl req
 
 searchMetro ::
   ( HasField "gatewayUrl" r BaseUrl,

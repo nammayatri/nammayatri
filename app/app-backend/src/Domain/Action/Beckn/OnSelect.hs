@@ -16,9 +16,10 @@ import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Merchant as QMerch
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Quote as QQuote
-import qualified Storage.Queries.SearchRequest as QSearchReq
+import qualified Storage.Queries.SearchRequest as QSR
 import Types.Error
 import Utils.Common
 import qualified Utils.Notifications as Notify
@@ -57,13 +58,19 @@ data DriverOfferQuoteDetails = DriverOfferQuoteDetails
   deriving (Generic, Show)
 
 onSelect ::
+  BaseUrl ->
   DOnSelectReq ->
   Flow ()
-onSelect DOnSelectReq {..} = do
+onSelect registryUrl DOnSelectReq {..} = do
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   searchRequest <-
-    QSearchReq.findById estimate.requestId
+    QSR.findById estimate.requestId
       >>= fromMaybeM (SearchRequestDoesNotExist estimate.requestId.getId)
+
+  -- TODO: this supposed to be temporary solution. Check if we still need it
+  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
+  unless (searchRequest.merchantId == merchant.id) $ throwError AccessDenied
+
   let personId = searchRequest.riderId
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime

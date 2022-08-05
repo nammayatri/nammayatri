@@ -29,7 +29,7 @@ oneWaySearch personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   (searchRes, dSearchReq) <- DOneWaySearch.search personId req
   fork "search cabs" . withRetry $ do
     becknTaxiReq <- TaxiACL.buildOneWaySearchReq dSearchReq
-    void $ ExternalAPI.search becknTaxiReq
+    void $ ExternalAPI.search dSearchReq.gatewayUrl becknTaxiReq
   fork "search metro" . withRetry $ do
     becknMetroReq <- MetroACL.buildSearchReq dSearchReq
     ExternalAPI.searchMetro becknMetroReq
@@ -42,7 +42,7 @@ rentalSearch personId req = withFlowHandlerAPI . withPersonIdLogTag personId $ d
   fork "search rental" . withRetry $ do
     -- do we need fork here?
     becknReq <- TaxiACL.buildRentalSearchReq dSearchReq
-    void $ ExternalAPI.search becknReq
+    void $ ExternalAPI.search dSearchReq.gatewayUrl becknReq
   pure searchRes
 
 searchCb ::
@@ -50,7 +50,7 @@ searchCb ::
   SignatureAuthResult ->
   OnSearch.OnSearchReq ->
   FlowHandler AckResponse
-searchCb _ _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+searchCb (SignatureAuthResult _ _ registryUrl) _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSearchReq <- TaxiACL.buildOnSearchReq req
-  DOnSearch.searchCb req.context.message_id mbDOnSearchReq
+  DOnSearch.searchCb registryUrl req.context.message_id mbDOnSearchReq
   pure Ack

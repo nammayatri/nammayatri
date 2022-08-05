@@ -26,13 +26,16 @@ data DSearchReq = DSearchReq
   { origin :: API.SearchReqLocation,
     destination :: API.SearchReqLocation,
     searchId :: Id DSearchReq.SearchRequest,
-    now :: UTCTime
+    now :: UTCTime,
+    --TODO: This supposed to be temporary solution. Check if we still need it
+    gatewayUrl :: BaseUrl
   }
 
 search :: Id Person.Person -> API.OneWaySearchReq -> Flow (API.SearchRes, DSearchReq)
 search personId req = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  validateServiceability person
+  merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+  validateServiceability merchant.geofencingConfig
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   toLocation <- DSearch.buildSearchReqLoc req.destination
   now <- getCurrentTime
@@ -48,13 +51,12 @@ search personId req = do
           { origin = req.origin,
             destination = req.destination,
             searchId = searchRequest.id,
-            now = now
+            now = now,
+            gatewayUrl = merchant.gatewayUrl
           }
   return (API.SearchRes $ searchRequest.id, dSearchReq)
   where
-    validateServiceability person = do
-      let merchId = person.merchantId
-      geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
+    validateServiceability geoConfig =
       unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps (Just req.destination.gps)) $
         throwError RideNotServiceable
 

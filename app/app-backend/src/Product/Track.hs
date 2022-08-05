@@ -41,7 +41,7 @@ onTrack ::
   SignatureAuthResult ->
   API.OnTrackReq ->
   FlowHandler AckResponse
-onTrack _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onTrack (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnTrackReq <- ACL.buildOnTrackReq req
-  whenJust mbDOnTrackReq DOnTrack.onTrack
+  whenJust mbDOnTrackReq (DOnTrack.onTrack registryUrl)
   pure Ack

@@ -13,7 +13,7 @@ onUpdate ::
   SignatureAuthResult ->
   OnUpdate.OnUpdateReq ->
   FlowHandler AckResponse
-onUpdate _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onUpdate (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnUpdateReq <- ACL.buildOnUpdateReq req
-  whenJust mbDOnUpdateReq DOnUpdate.onUpdate
+  whenJust mbDOnUpdateReq (DOnUpdate.onUpdate registryUrl)
   pure Ack

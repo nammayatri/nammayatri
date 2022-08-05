@@ -5,6 +5,32 @@
 
 packages:
 - completed:
+    subdir: app/gateway
+    name: beckn-gateway
+    version: 0.1.0.0
+    git: git@bitbucket.org:juspay/beckn-gateway.git
+    pantry-tree:
+      size: 1038
+      sha256: 12c1949ee983198e68206722bd35ee7e34d97183162eafb9ffcc40b8856ff574
+    commit: acae806fe60c0afab0cfeb76703a104281ddd2f6
+  original:
+    subdir: app/gateway
+    git: git@bitbucket.org:juspay/beckn-gateway.git
+    commit: acae806fe60c0afab0cfeb76703a104281ddd2f6
+- completed:
+    subdir: app/mock-registry
+    name: mock-registry
+    version: 0.1.0.0
+    git: git@bitbucket.org:juspay/beckn-gateway.git
+    pantry-tree:
+      size: 662
+      sha256: 1c47a74a14a8099d0a18383429850672bdd68ddc863ce3d442caa01cf3f9afb1
+    commit: acae806fe60c0afab0cfeb76703a104281ddd2f6
+  original:
+    subdir: app/mock-registry
+    git: git@bitbucket.org:juspay/beckn-gateway.git
+    commit: acae806fe60c0afab0cfeb76703a104281ddd2f6
+- completed:
     subdir: core
     name: passetto-core
     version: 0.1.0

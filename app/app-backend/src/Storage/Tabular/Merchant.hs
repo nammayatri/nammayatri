@@ -28,6 +28,8 @@ mkPersist
       fcmRedisTokenKeyPrefix Text
       originRestriction GeoRestriction
       destinationRestriction GeoRestriction
+      gatewayUrl Text
+      registryUrl Text
       Primary id
       Unique MerchantShortId
       deriving Generic
@@ -52,10 +54,14 @@ instance TType MerchantT Domain.Merchant where
             { origin = originRestriction,
               destination = destinationRestriction
             }
+    gwUrl <- parseBaseUrl gatewayUrl
+    regUrl <- parseBaseUrl registryUrl
     return $
       Domain.Merchant
         { id = Id id,
           shortId = ShortId shortId,
+          registryUrl = regUrl,
+          gatewayUrl = gwUrl,
           ..
         }
   toTType Domain.Merchant {..} = do
@@ -68,5 +74,7 @@ instance TType MerchantT Domain.Merchant where
         fcmRedisTokenKeyPrefix = fcmTokenKeyPrefix,
         originRestriction = origin,
         destinationRestriction = destination,
+        gatewayUrl = showBaseUrl gatewayUrl,
+        registryUrl = showBaseUrl registryUrl,
         ..
       }

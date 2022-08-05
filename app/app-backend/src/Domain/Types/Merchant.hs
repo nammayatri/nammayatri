@@ -4,7 +4,6 @@ import Beckn.External.FCM.Types
 import Beckn.Prelude
 import Beckn.Types.Geofencing
 import Beckn.Types.Id
-import Beckn.Utils.GenericPretty (PrettyShow)
 
 data Merchant = Merchant
   { id :: Id Merchant,
@@ -12,6 +11,8 @@ data Merchant = Merchant
     exoPhone :: Maybe Text,
     exoPhoneCountryCode :: Maybe Text,
     fcmConfig :: FCMConfig,
-    geofencingConfig :: GeofencingConfig
+    geofencingConfig :: GeofencingConfig,
+    gatewayUrl :: BaseUrl,
+    registryUrl :: BaseUrl
   }
-  deriving (Generic, PrettyShow, Show)
+  deriving (Generic)

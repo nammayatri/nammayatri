@@ -30,9 +30,9 @@ onSelect ::
   SignatureAuthResult ->
   OnSelect.OnSelectReq ->
   FlowHandler AckResponse
-onSelect _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onSelect (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnSelectReq <- ACL.buildOnSelectReq req
-  whenJust mbDOnSelectReq DOnSelect.onSelect
+  whenJust mbDOnSelectReq (DOnSelect.onSelect registryUrl)
   pure Ack
 
 selectList :: Id DPerson.Person -> Id DEstimate.Estimate -> FlowHandler SelectListRes

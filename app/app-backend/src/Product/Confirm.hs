@@ -57,7 +57,7 @@ onConfirm ::
   SignatureAuthResult ->
   OnConfirm.OnConfirmReq ->
   FlowHandler AckResponse
-onConfirm _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onConfirm (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnConfirmReq <- ACL.buildOnConfirmReq req
-  whenJust mbDOnConfirmReq DOnConfirm.onConfirm
+  whenJust mbDOnConfirmReq (DOnConfirm.onConfirm registryUrl)
   pure Ack

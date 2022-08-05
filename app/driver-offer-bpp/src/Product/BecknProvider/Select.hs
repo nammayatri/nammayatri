@@ -16,7 +16,7 @@ select ::
   SignatureAuthResult ->
   Select.SelectReq ->
   FlowHandler AckResponse
-select transporterId (SignatureAuthResult _ subscriber) req =
+select transporterId (SignatureAuthResult _ subscriber _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Select API Flow" "Reached"
     dSelectReq <- ACL.buildSelectReq subscriber req

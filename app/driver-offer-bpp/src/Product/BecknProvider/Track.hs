@@ -20,7 +20,7 @@ track ::
   SignatureAuthResult ->
   Track.TrackReq ->
   FlowHandler AckResponse
-track transporterId (SignatureAuthResult _ subscriber) req =
+track transporterId (SignatureAuthResult _ subscriber _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "track API Flow" "Reached"
     dTrackReq <- ACL.buildTrackReq subscriber req

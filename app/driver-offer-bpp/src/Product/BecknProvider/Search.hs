@@ -22,7 +22,7 @@ search ::
   SignatureAuthResult ->
   Search.SearchReq ->
   FlowHandler AckResponse
-search transporterId (SignatureAuthResult _ subscriber) (SignatureAuthResult _ gateway) req =
+search transporterId (SignatureAuthResult _ subscriber _) (SignatureAuthResult _ gateway _) req =
   withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Search API Flow" "Reached"
     dSearchReq <- ACL.buildSearchReq subscriber req

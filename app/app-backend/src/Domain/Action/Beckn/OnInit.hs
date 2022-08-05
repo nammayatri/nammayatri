@@ -10,6 +10,7 @@ import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.LocationAddress as DBL
 import qualified Storage.Queries.Booking as QRideB
+import qualified Storage.Queries.Merchant as QMerch
 import qualified Storage.Queries.Person as QP
 import Types.Error
 import Utils.Common
@@ -36,8 +37,14 @@ data OnInitRes = OnInitRes
   }
   deriving (Generic, Show, PrettyShow)
 
-onInit :: (EsqDBFlow m r, EncFlow m r) => OnInitReq -> m OnInitRes
-onInit req = do
+onInit :: (EsqDBFlow m r, EncFlow m r) => BaseUrl -> OnInitReq -> m OnInitRes
+onInit registryUrl req = do
+  bookingOld <- QRideB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
+
+  -- TODO: this supposed to be temporary solution. Check if we still need it
+  merchant <- QMerch.findByRegistryUrl registryUrl >>= fromMaybeM (InvalidRequest "No merchant which works with passed registry.")
+  unless (bookingOld.merchantId == merchant.id) $ throwError AccessDenied
+
   DB.runTransaction $ do
     QRideB.updateBPPBookingId req.bookingId req.bppBookingId
     QRideB.updatePaymentInfo req.bookingId req.estimatedFare req.discount req.estimatedTotalFare

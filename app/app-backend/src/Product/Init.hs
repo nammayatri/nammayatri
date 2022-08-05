@@ -17,9 +17,9 @@ onInit ::
   SignatureAuthResult ->
   OnInit.OnInitReq ->
   FlowHandler AckResponse
-onInit _ req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
+onInit (SignatureAuthResult _ _ registryUrl) req = withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
   mbDOnInitReq <- TaxiACL.buildOnInitReq req
   whenJust mbDOnInitReq $ \onInitReq -> do
-    onInitRes <- DOnInit.onInit onInitReq
+    onInitRes <- DOnInit.onInit registryUrl onInitReq
     void . ExternalAPI.confirm onInitRes.bppUrl =<< ACL.buildConfirmReq onInitRes
   pure Ack
