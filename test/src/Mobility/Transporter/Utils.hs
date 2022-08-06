@@ -138,7 +138,7 @@ initWithCheck appToken quoteId = do
 
 confirmWithCheck :: Text -> DriverTestData -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, DUB.RideInfo)
 confirmWithCheck appToken driver quoteId = do
-  bBookingId <- fmap (.bookingId) $ callBAP $ API.appConfirmRide appToken quoteId $ API.mkAppConfirmReq
+  bBookingId <- fmap (.bookingId) $ callBAP $ API.appConfirmRide appToken quoteId API.mkAppConfirmReq
   void . pollDesc "confirm result" $ do
     initRB <- getBAPBooking bBookingId
     initRB.bppBookingId `shouldSatisfy` isJust
