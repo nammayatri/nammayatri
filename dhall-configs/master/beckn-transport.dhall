@@ -106,4 +106,5 @@ in
 , encTools = encTools
 , kafkaProducerCfg = kafkaProducerCfg
 , selfUIUrl = "https://api.sandbox.beckn.juspay.in/dev/bpp/cab/v2/"
+, schedulingReserveTime = +1800
 }

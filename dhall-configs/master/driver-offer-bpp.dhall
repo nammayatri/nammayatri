@@ -1,11 +1,12 @@
 let common = ./common.dhall
+
 let sec = ./secrets/driver-offer-bpp.dhall
 
-let GeoRestriction = < Unrestricted | Regions : List Text>
+let GeoRestriction = < Unrestricted | Regions : List Text >
 
 let postgresConfig =
   { connectHost = "beckn-integ-v2.ctiuwghisbi9.ap-south-1.rds.amazonaws.com"
-  , connectPort = 5434
+  , connectPort = 5432
   , connectUser = sec.dbUserId
   , connectPassword = sec.dbPassword
   , connectDatabase = "atlas_driver_offer_bpp_v2"
@@ -32,8 +33,8 @@ let rcfg =
 
 let smsConfig =
   { sessionConfig = common.smsSessionConfig
-  , credConfig = {
-      username = common.smsUserName
+  , credConfig =
+    { username = common.smsUserName
     , password = common.smsPassword
     , otpHash = sec.smsOtpHash
     }
@@ -66,23 +67,28 @@ in
 
 { esqDBCfg = esqDBCfg
 , redisCfg = rcfg
+, hedisCfg = rcfg
 , port = +8016
 , metricsPort = +9997
 , hostName = "juspay.in"
-, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/dobpp/cab/v1"
+, nwAddress = "https://api.sandbox.beckn.juspay.in/dev/dobpp/beckn"
+, selfUIUrl = "https://api.sandbox.beckn.juspay.in/dev/dobpp/ui"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
-, loggerConfig = common.loggerConfig // {logFilePath = "/tmp/driver-offer-bpp.log"}
+, loggerConfig = common.loggerConfig //  { logFilePath = "/tmp/driver-offer-bpp.log", logRawSql = False }
+, updateLocationRefreshPeriod = +1
+, updateLocationAllowedDelay = +60
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey
 , graceTerminationPeriod = +90
 , registryUrl = common.registryUrl
 , encTools = encTools
 , authTokenCacheExpiry = +600
+, minimumDriverRatesCount = +5
 , disableSignatureAuth = False
 , httpClientOptions = common.httpClientOptions
 , fcmUrl = common.fcmUrl
