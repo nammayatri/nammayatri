@@ -67,7 +67,7 @@ extra-deps:
       - app/mock-registry
   # - ../beckn-shared-kernel/lib/beckn-core
   - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
-    commit: ab93412e97644ff4ef73ab612b1e0e3ff6b83f80
+    commit: ee3f2ec89e6b1be248c2bed627954830d3b28a9c
     subdirs:
       - lib/beckn-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs
@@ -147,8 +147,6 @@ extra-deps:
   # Needed for gcc11 support in Kafka
   - c2hs-0.28.8@sha256:980c1a91c93e492d5412e904f2500b2ace34a421e8509529b6d98d89c51f9a2e,9208
   - language-c-0.9.0.1@sha256:7a1c57e8f9c29e94bcd5c748d99e4479a73bd8560cc0affd838f3b2d1bbc0384,4893
-
-
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
