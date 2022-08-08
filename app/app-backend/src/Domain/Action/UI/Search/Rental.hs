@@ -10,6 +10,8 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as DSearchReq
 import EulerHS.Prelude hiding (id, state)
 import Storage.Queries.Geometry
+import qualified Storage.Queries.Merchant as QMerchant
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Tools.Metrics as Metrics
 import qualified Types.API.Search as API
@@ -24,10 +26,11 @@ data DSearchReq = DSearchReq
 
 search :: Id Person.Person -> API.RentalSearchReq -> Flow (API.SearchRes, DSearchReq)
 search personId req = do
-  validateServiceability
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  validateServiceability person
   fromLocation <- DSearch.buildSearchReqLoc req.origin
   now <- getCurrentTime
-  searchRequest <- DSearch.buildSearchRequest personId fromLocation Nothing Nothing now
+  searchRequest <- DSearch.buildSearchRequest person fromLocation Nothing Nothing now
   Metrics.incrementSearchRequestCount
   let txnId = getId (searchRequest.id)
   Metrics.startSearchMetrics txnId
@@ -41,6 +44,8 @@ search personId req = do
           }
   return (API.SearchRes $ searchRequest.id, dSearchReq)
   where
-    validateServiceability = do
-      unlessM (rideServiceable someGeometriesContain req.origin.gps Nothing) $
+    validateServiceability person = do
+      let merchId = person.merchantId
+      geoConfig <- fmap (.geofencingConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
+      unlessM (rideServiceable geoConfig someGeometriesContain req.origin.gps Nothing) $
         throwError RideNotServiceable

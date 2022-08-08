@@ -22,7 +22,6 @@ import Beckn.Types.Cache
 import Beckn.Types.Common
 import Beckn.Types.Credentials (PrivateKey)
 import Beckn.Types.Flow
-import Beckn.Types.Geofencing
 import Beckn.Types.Id (ShortId (..))
 import Beckn.Types.Registry
 import Beckn.Types.SlidingWindowLimiter
@@ -62,7 +61,6 @@ data AppCfg = AppCfg
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
-    geofencingConfig :: GeofencingConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     graphhopperUrl :: BaseUrl,
@@ -97,7 +95,6 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
-    geofencingConfig :: GeofencingConfig,
     googleMapsUrl :: BaseUrl,
     googleMapsKey :: Text,
     graphhopperUrl :: BaseUrl,

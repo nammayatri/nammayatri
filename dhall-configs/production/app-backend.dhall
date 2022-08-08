@@ -55,11 +55,6 @@ let sesConfig =
     }
   }
 
-let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Ernakulam"]
-, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
-}
-
 let gwUri = "https://gateway-1.beckn.nsdl.co.in"
 
 let providerUri = "https://api.beckn.juspay.in/transport/v2"
@@ -117,7 +112,6 @@ in
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
-, geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey

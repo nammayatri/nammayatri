@@ -55,11 +55,6 @@ let sesConfig =
     }
   }
 
-let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Ernakulam"]
-, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
-}
-
 let nsdlGatewayUrl = "https://pilot-gateway-1.beckn.nsdl.co.in"
 let juspayGatewayUrl = "https://api.sandbox.beckn.juspay.in/gateway/v1"
 
@@ -118,7 +113,6 @@ in
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
-, geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 , googleMapsUrl = "https://maps.googleapis.com/maps/api/"
 , googleMapsKey = common.googleMapsKey

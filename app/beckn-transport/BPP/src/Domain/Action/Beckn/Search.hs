@@ -54,7 +54,7 @@ search transporterId req@DSearchReq {..} = do
   unless transporter.enabled $ throwError AgencyDisabled
   let pickupLatLong = getCoordinates pickupLocation
   let mbDropoffLatLong = getCoordinates <$> mbDropLocation
-  unlessM (rideServiceable QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
+  unlessM (rideServiceableDefault QGeometry.someGeometriesContain pickupLatLong mbDropoffLatLong) $
     throwError RideNotServiceable
   whenJustM
     (QSearchRequest.findByMsgIdAndBapIdAndBppId messageId bapId transporter.id)

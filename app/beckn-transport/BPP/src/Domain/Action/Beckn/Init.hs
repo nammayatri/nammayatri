@@ -3,7 +3,7 @@ module Domain.Action.Beckn.Init where
 import Beckn.External.GoogleMaps.Types
 import Beckn.Prelude
 import qualified Beckn.Product.MapSearch as MapSearch
-import Beckn.Serviceability (rideServiceable)
+import Beckn.Serviceability
 import qualified Beckn.Storage.Esqueleto as DB
 import Beckn.Tools.Metrics.CoreMetrics
 import Beckn.Types.Amount (Amount)
@@ -84,7 +84,7 @@ initOneWayTrip ::
   UTCTime ->
   m DRB.Booking
 initOneWayTrip req oneWayReq transporterId now = do
-  unlessM (rideServiceable QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
+  unlessM (rideServiceableDefault QGeometry.someGeometriesContain req.fromLocation (Just oneWayReq.toLocation)) $
     throwError RideNotServiceable
   distance <-
     metersToHighPrecMeters . (.distance) <$> MapSearch.getDistance (Just MapSearch.CAR) req.fromLocation oneWayReq.toLocation
@@ -117,7 +117,7 @@ initRentalTrip ::
   UTCTime ->
   m DRB.Booking
 initRentalTrip req rentalReq transporterId now = do
-  unlessM (rideServiceable QGeometry.someGeometriesContain req.fromLocation Nothing) $
+  unlessM (rideServiceableDefault QGeometry.someGeometriesContain req.fromLocation Nothing) $
     throwError RideNotServiceable
   let estimatedFare = 0
       discount = Nothing

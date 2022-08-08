@@ -55,11 +55,6 @@ let sesConfig =
     }
   }
 
-let geofencingConfig =
-{ origin = GeoRestriction.Regions ["Ernakulam"]
-, destination = GeoRestriction.Regions ["Ernakulam", "Kerala"]
-}
-
 let gwUri = "http://localhost:8015/v1"
 
 let providerUri = "http://localhost:8014/v2"
@@ -112,7 +107,6 @@ in
 , autoMigrate = True
 , coreVersion = "0.9.3"
 , domainVersion = "0.9.3"
-, geofencingConfig = geofencingConfig
 , loggerConfig = common.loggerConfig // {logFilePath = "/tmp/app-backend.log"}
 , googleMapsUrl = common.googleMapsUrl
 , googleMapsKey = common.googleMapsKey

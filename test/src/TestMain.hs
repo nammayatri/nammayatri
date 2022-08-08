@@ -19,8 +19,8 @@ import qualified "search-result-aggregator" App as SearchResultAggregator
 import qualified "app-backend" App.Types as AppBackend
 import qualified "beckn-transport" App.Types as TransporterBackend
 import Beckn.Exit (exitDBMigrationFailure)
+import qualified Beckn.Storage.Esqueleto as Esq
 import qualified Beckn.Storage.Esqueleto.Migration as Esq
-import Beckn.Types.Geofencing
 import Beckn.Types.Logging (LoggerConfig)
 import Beckn.Utils.App (handleLeft)
 import Beckn.Utils.Dhall (readDhallConfigDefault)
@@ -30,6 +30,7 @@ import EulerHS.Prelude
 import GHC.Records.Extra (HasField)
 import qualified Mobility.ARDU.Fixtures as ARDU
 import qualified Mobility.ARDU.Spec as Mobility.ARDU
+import Mobility.AppBackend.Queries
 import qualified Mobility.Transporter.Fixtures as Transporter
 import qualified Mobility.Transporter.Spec as Transporter.Mobility
 import PublicTransport.Common
@@ -39,6 +40,7 @@ import System.Environment as Env (setEnv)
 import System.Posix
 import Test.Tasty
 import TestSilentIOLogger ()
+import Utils (runAppFlow)
 
 main :: IO ()
 main = do
@@ -100,11 +102,11 @@ specs' trees = do
             & #rideAllocationExpiry .~ 18,
         DriverHC.runDriverHealthcheck hideLogging,
         Gateway.runGateway hideLogging,
-        AppBackend.runAppBackend $
-          \cfg ->
-            cfg & hideLogging
-              & #geofencingConfig . #origin .~ Regions ["Ernakulam", "Kochi"]
-              & #geofencingConfig . #destination .~ Regions ["Kerala", "Kochi"],
+        do
+          runAppFlow "" $ Esq.runTransaction $ updateOrigAndDestRestriction ["Ernakulam", "Kochi"] ["Kerala", "Kochi"]
+          AppBackend.runAppBackend $
+            \cfg ->
+              cfg & hideLogging,
         TransporterBackend.runTransporterBackendApp $ \cfg ->
           cfg & hideLogging
             & #updateLocationRefreshPeriod .~ Transporter.timeBetweenLocationUpdates,

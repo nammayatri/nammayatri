@@ -17,17 +17,19 @@ import Domain.Types.RegistrationToken as RegToken
 import qualified Domain.Types.Ride as SRide
 import Domain.Types.SearchRequest as SearchRequest
 import EulerHS.Prelude
-import Storage.Queries.Merchant (withMerchantConfig)
+import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Metrics
+import Types.Error
 import Utils.Common
 
 getFCMConfig ::
   (MonadFlow m, Transactionable m) =>
   Id Merchant ->
   m FCM.FCMConfig
-getFCMConfig = withMerchantConfig $ \full -> FCM.FCMConfig full.fcmUrl full.fcmJsonPath full.fcmRedisTokenKeyPrefix
+getFCMConfig merchId = do
+  fmap (.fcmConfig) $ QMerchant.findById merchId >>= fromMaybeM (MerchantNotFound merchId.getId)
 
 notifyOnDriverOfferIncoming ::
   ( EsqDBFlow m r,
