@@ -33,6 +33,7 @@ packages:
   - app/beckn-transport/BPP
   - app/beckn-transport/Allocator
   - app/beckn-transport/DriverTrackingHealthCheck
+  - app/beckn-transport/Scheduler
   - app/driver-offer-bpp
   - app/app-backend
   - app/search-result-aggregator

@@ -51,6 +51,12 @@ cradle:
     - path: "app/beckn-transport/Allocator/server/Main.hs"
       component: "beckn-transport-allocator:exe:beckn-transport-btm-exe"
 
+    - path: "app/beckn-transport/Scheduler/src"
+      component: "beckn-transport-scheduler:lib"
+
+    - path: "app/beckn-transport/Scheduler/server/Main.hs"
+      component: "beckn-transport-scheduler:exe:transporter-scheduler-exe"
+
     - path: "app/beckn-transport/DriverTrackingHealthCheck/src"
       component: "beckn-transport-driver-tracking-health-check:lib"
 

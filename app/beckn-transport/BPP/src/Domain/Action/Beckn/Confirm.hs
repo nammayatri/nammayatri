@@ -6,11 +6,9 @@ module Domain.Action.Beckn.Confirm
   )
 where
 
-import App.Scheduler
 import Beckn.External.Encryption (encrypt)
 import Beckn.External.GoogleMaps.Types
 import Beckn.Prelude
-import Beckn.Scheduler
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Amount (Amount)
 import Beckn.Types.Id
@@ -27,6 +25,7 @@ import qualified Domain.Types.RideRequest as RideRequest
 import qualified Domain.Types.RideRequest as SRideRequest
 import qualified Domain.Types.RiderDetails as SRD
 import qualified SharedLogic.DriverPool as DrPool
+import SharedLogic.Schedule
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -144,14 +143,6 @@ confirm transporterId subscriber req = do
   Esq.runTransaction $ QBE.logRideConfirmedEvent booking.id
   return res
   where
-    createScheduleRentalRideRequestJob scheduledAt jobData =
-      void $
-        createJobByTime scheduledAt $
-          JobEntry
-            { jobType = AllocateRental,
-              jobData = jobData,
-              maxErrors = 5
-            }
     buildRideReq bookingId shortOrgId now = do
       guid <- generateGUID
       pure

@@ -1,24 +1,8 @@
 let common = ../generic/common.dhall
 let sec = ./secrets/beckn-transport.dhall
+let transporter = ./beckn-transport.dhall
 
 let JobType = < AllocateRental | FakeType >
-
-let postgresConfig =
-  { connectHost = "adb.primary.beckn.juspay.net"
-  , connectPort = 5432
-  , connectUser = sec.dbUserId
-  , connectPassword = sec.dbPassword
-  , connectDatabase = "atlas_transporter"
-  }
-
-let esqDBCfg =
-  { connectHost = postgresConfig.connectHost
-  , connectPort = postgresConfig.connectPort
-  , connectUser = postgresConfig.connectUser
-  , connectPassword = postgresConfig.connectPassword
-  , connectDatabase = postgresConfig.connectDatabase
-  , connectSchemaName = "atlas_transporter"
-  }
 
 let rcfg =
   { connectHost = "cache.primary.beckn.juspay.net"
@@ -32,7 +16,7 @@ let rcfg =
 
 in
 { loggerConfig = common.loggerConfig // { logRawSql = False, logFilePath = "/tmp/transporter-scheduler.log" }
-, esqDBCfg = esqDBCfg
+, esqDBCfg = transporter.esqDBCfg
 , metricsPort = +8054
 , hedisCfg = rcfg
 , hedisPrefix = "transporter-scheduler"

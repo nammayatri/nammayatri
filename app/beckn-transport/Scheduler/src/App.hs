@@ -1,33 +1,29 @@
-module App.Scheduler where
+module App where
 
 import Beckn.Mock.App (runMock)
 import Beckn.Prelude
 import Beckn.Scheduler
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Storage.Esqueleto.Config (EsqDBEnv, HasEsqEnv, prepareEsqDBEnv)
-import Beckn.Types.Id (Id (Id), ShortId)
-import Beckn.Utils.Common (HasPrettyLogger, LogLevel (DEBUG), MonadGuid (generateGUIDText), MonadTime (getCurrentTime), logInfo, logPretty)
+import Beckn.Types.Id (Id (Id))
+import Beckn.Utils.Common
 import Beckn.Utils.Dhall
-import Beckn.Utils.IOLogging (LoggerConfig, LoggerEnv, prepareLoggerEnv)
+import Beckn.Utils.IOLogging (LoggerEnv, prepareLoggerEnv)
 import qualified Control.Monad.Catch as C
 import Data.String.Conversions (cs)
-import qualified Domain.Types.Booking as DRB
-import Domain.Types.Organization (Organization)
 import qualified Domain.Types.RideRequest as RideRequest
-import Environment (AppCfg, Log (withLogTag))
+import SharedLogic.Schedule
 import qualified Storage.Queries.RideRequest as RideRequest
 import System.Environment (lookupEnv)
 
 runTransporterScheduler ::
   (SchedulerConfig JobType -> SchedulerConfig JobType) ->
-  (AppCfg -> AppCfg) ->
   IO ()
-runTransporterScheduler configModifier transporterConfigModifier = do
+runTransporterScheduler configModifier = do
   appCfg <- configModifier <$> readDhallConfigDefault "transporter-scheduler"
   hostname <- fmap cs <$> lookupEnv "POD_NAME" :: IO (Maybe Text)
-  appCfgTransporter <- transporterConfigModifier <$> readDhallConfigDefault "beckn-transport"
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
-  esqDBEnv <- prepareEsqDBEnv appCfgTransporter.esqDBCfg loggerEnv
+  esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   let loggerConfig = appCfg.loggerConfig
   let handlerEnv = HandlerEnv {..}
   runScheduler appCfg $ schedulerHandlerList handlerEnv
@@ -37,9 +33,6 @@ schedulerHandlerList env =
   [ (AllocateRental, JobHandler $ \x -> runMock env $ allocateRentalRide x)
   ]
 
-data JobType = AllocateRental | FakeType
-  deriving (Generic, FromDhall, Eq, Ord, Show, FromJSON, ToJSON)
-
 data HandlerEnv = HandlerEnv
   { loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
@@ -47,12 +40,6 @@ data HandlerEnv = HandlerEnv
   }
 
 --------------------------------------
-
-data AllocateRentalJobData = AllocateRentalJobData
-  { bookingId :: Id DRB.Booking,
-    shortOrgId :: ShortId Organization
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 allocateRentalRide ::
   (HasEsqEnv m r, Log m, HasPrettyLogger m r, C.MonadCatch m, MonadGuid m) =>

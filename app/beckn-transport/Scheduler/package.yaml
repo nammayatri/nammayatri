@@ -1,4 +1,4 @@
-name: beckn-transport
+name: beckn-transport-scheduler
 version: 0.1.0.0
 github: "juspay/beckn"
 license: AllRightsReserved
@@ -102,37 +102,18 @@ library:
     - -fhide-source-paths
     - -Werror
   dependencies:
+    - beckn-transport
     - beckn-core
     - beckn-spec
 
 executables:
-  beckn-transport-exe:
+  transporter-scheduler-exe:
     main: Main.hs
-    source-dirs: server/BPP
+    source-dirs: server/Scheduler
     ghc-options:
       - -threaded
       - -rtsopts
       - '"-with-rtsopts=-N -T"'
     dependencies:
-      - beckn-transport
+      - beckn-transport-scheduler
       - beckn-core
-      - beckn-spec
-
-tests:
-  beckn-transport-tests:
-    main: Main.hs
-    source-dirs:
-      - test/app
-      - test/src
-    dependencies:
-      - beckn-transport
-      - beckn-core
-      - beckn-spec
-      - tasty
-      - tasty-hunit
-      - tasty-hspec
-      - QuickCheck
-      - tasty-quickcheck
-    ghc-options:
-      - -Wall
-      - -Werror
