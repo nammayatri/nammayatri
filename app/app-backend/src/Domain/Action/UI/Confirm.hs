@@ -1,7 +1,5 @@
 module Domain.Action.UI.Confirm
   ( confirm,
-    ConfirmAPIReq (..),
-    ConfirmLocationAPIEntity (..),
     ConfirmRes (..),
     ConfirmQuoteDetails (..),
   )
@@ -26,26 +24,6 @@ import qualified Storage.Queries.SearchRequest as QSReq
 import Types.Error
 import Utils.Common
 
--- API types
-
-data ConfirmAPIReq = ConfirmAPIReq
-  { fromLocation :: ConfirmLocationAPIEntity,
-    toLocation :: Maybe ConfirmLocationAPIEntity
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
-data ConfirmLocationAPIEntity = ConfirmLocationAPIEntity
-  { street :: Maybe Text,
-    door :: Maybe Text,
-    city :: Maybe Text,
-    state :: Maybe Text,
-    country :: Maybe Text,
-    building :: Maybe Text,
-    areaCode :: Maybe Text,
-    area :: Maybe Text
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
 -- domain types
 
 data ConfirmRes = ConfirmRes
@@ -66,8 +44,8 @@ data ConfirmQuoteDetails
   | ConfirmAutoDetails (Id DQuote.BPPQuote)
   deriving (Show, Generic)
 
-confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> ConfirmAPIReq -> m ConfirmRes
-confirm personId quoteId req = do
+confirm :: EsqDBFlow m r => Id DP.Person -> Id DQuote.Quote -> m ConfirmRes
+confirm personId quoteId = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   now <- getCurrentTime
   searchRequest <- QSReq.findById quote.requestId >>= fromMaybeM (SearchRequestNotFound quote.requestId.getId)
@@ -82,8 +60,8 @@ confirm personId quoteId req = do
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
-  bFromLocation <- buildBookingLocation now (fromLocation, req.fromLocation)
-  mbBToLocation <- buildBookingLocation now `mapM` ((,) <$> mbToLocation <*> req.toLocation)
+  bFromLocation <- buildBookingLocation now fromLocation
+  mbBToLocation <- traverse (buildBookingLocation now) mbToLocation
   booking <- buildBooking searchRequest quote bFromLocation mbBToLocation now
   let details = mkConfirmQuoteDetails quote.quoteDetails
   DB.runTransaction $ do
@@ -106,15 +84,14 @@ confirm personId quoteId req = do
       DQuote.RentalDetails RentalSlab {..} -> ConfirmRentalDetails $ RentalSlabAPIEntity {..}
       DQuote.DriverOfferDetails driverOffer -> ConfirmAutoDetails driverOffer.bppQuoteId
 
-buildBookingLocation :: MonadGuid m => UTCTime -> (DSRLoc.SearchReqLocation, ConfirmLocationAPIEntity) -> m DBL.BookingLocation
-buildBookingLocation now (searchReqLocation, ConfirmLocationAPIEntity {..}) = do
+buildBookingLocation :: MonadGuid m => UTCTime -> DSRLoc.SearchReqLocation -> m DBL.BookingLocation
+buildBookingLocation now DSRLoc.SearchReqLocation {..} = do
   locId <- generateGUID
-  let address = DBL.LocationAddress {..}
   return
     DBL.BookingLocation
       { id = locId,
-        lat = searchReqLocation.lat,
-        lon = searchReqLocation.lon,
+        lat,
+        lon,
         address,
         createdAt = now,
         updatedAt = now

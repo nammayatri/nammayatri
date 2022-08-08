@@ -7,7 +7,7 @@ import Beckn.Types.Core.ReqTypes
 import qualified Beckn.Types.Core.Taxi.Confirm as Confirm
 import Beckn.Types.Id
 import qualified Domain.Action.Beckn.OnInit as DOnInit
-import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.LocationAddress as DBL
 import EulerHS.Prelude hiding (id)
 import ExternalAPI.Flow
 import Utils.Common

@@ -10,6 +10,7 @@ module Storage.Tabular.SearchRequest.SearchReqLocation where
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Id
+import qualified Domain.Types.LocationAddress as Domain
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Domain
 
 mkPersist
@@ -19,6 +20,14 @@ mkPersist
       id Text
       lat Double
       lon Double
+      street Text Maybe
+      door Text Maybe
+      city Text Maybe
+      state Text Maybe
+      country Text Maybe
+      building Text Maybe
+      areaCode Text Maybe
+      area Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id
@@ -32,12 +41,14 @@ instance TEntityKey SearchReqLocationT where
 
 instance TType SearchReqLocationT Domain.SearchReqLocation where
   fromTType SearchReqLocationT {..} = do
+    let address = Domain.LocationAddress {..}
     return $
       Domain.SearchReqLocation
         { id = Id id,
           ..
         }
-  toTType Domain.SearchReqLocation {..} =
+  toTType Domain.SearchReqLocation {..} = do
+    let Domain.LocationAddress {..} = address
     SearchReqLocationT
       { id = getId id,
         ..

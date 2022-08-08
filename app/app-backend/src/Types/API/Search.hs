@@ -6,6 +6,7 @@ import Beckn.Types.MapSearch (LatLong)
 import Data.Aeson
 import Data.OpenApi
 import qualified Data.OpenApi as OpenApi
+import Domain.Types.LocationAddress
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Tools.JSON as J
 
@@ -53,8 +54,9 @@ data RentalSearchReq = RentalSearchReq
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
-newtype SearchReqLocation = SearchReqLocation
-  { gps :: LatLong
+data SearchReqLocation = SearchReqLocation
+  { gps :: LatLong,
+    address :: LocationAddress
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

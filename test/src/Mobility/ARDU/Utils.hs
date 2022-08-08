@@ -158,7 +158,7 @@ getQuotesByEstimateId appToken estimateId =
 
 confirmWithCheck :: Text -> DriverTestData -> Id AppQuote.Quote -> ClientsM (Id AppRB.Booking, TRB.Booking, TRide.Ride)
 confirmWithCheck appToken _driver quoteId = do
-  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId BapAPI.mkAppConfirmReq
+  bBookingId <- fmap (.bookingId) $ callBAP $ BapAPI.appConfirmRide appToken quoteId
 
   void . pollDesc "booking exists" $ do
     initRB <- getBAPBooking bBookingId

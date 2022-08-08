@@ -1,8 +1,6 @@
 module Product.Confirm
   ( confirm,
     ConfirmAPI,
-    DConfirm.ConfirmAPIReq (..),
-    DConfirm.ConfirmLocationAPIEntity (..),
     ConfirmRes (..),
     onConfirm,
   )
@@ -16,7 +14,6 @@ import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Init as ACL
 import qualified Core.ACL.OnConfirm as ACL
 import qualified Domain.Action.Beckn.OnConfirm as DOnConfirm
-import qualified Domain.Action.UI.Confirm as DCOnfirm
 import qualified Domain.Action.UI.Confirm as DConfirm
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Person as SP
@@ -32,7 +29,6 @@ type ConfirmAPI =
     :> "quotes"
     :> Capture "quoteId" (Id Quote.Quote)
     :> "confirm"
-    :> ReqBody '[JSON] DConfirm.ConfirmAPIReq
     :> Post '[JSON] ConfirmRes
 
 newtype ConfirmRes = ConfirmRes
@@ -44,11 +40,10 @@ newtype ConfirmRes = ConfirmRes
 confirm ::
   Id SP.Person ->
   Id Quote.Quote ->
-  DConfirm.ConfirmAPIReq ->
   FlowHandler ConfirmRes
-confirm personId quoteId req =
+confirm personId quoteId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
-    dConfirmRes <- DCOnfirm.confirm personId quoteId req
+    dConfirmRes <- DConfirm.confirm personId quoteId
     void . ExternalAPI.init dConfirmRes.providerUrl =<< ACL.buildInitReq dConfirmRes
     return $
       ConfirmRes

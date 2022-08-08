@@ -57,6 +57,7 @@ buildSearchReqLoc API.SearchReqLocation {..} = do
       { id = locId,
         lat = gps.lat,
         lon = gps.lon,
+        address = address,
         createdAt = now,
         updatedAt = now
       }

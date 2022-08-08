@@ -3,7 +3,7 @@ module Domain.Types.Booking.BookingLocation where
 import Beckn.Prelude
 import Beckn.Product.MapSearch.GoogleMaps (HasCoordinates)
 import Beckn.Types.Id
-import Beckn.Utils.GenericPretty (PrettyShow)
+import Domain.Types.LocationAddress
 
 data BookingLocation = BookingLocation
   { id :: Id BookingLocation,
@@ -14,18 +14,6 @@ data BookingLocation = BookingLocation
     updatedAt :: UTCTime
   }
   deriving (Generic, Show, Eq, HasCoordinates)
-
-data LocationAddress = LocationAddress
-  { street :: Maybe Text,
-    door :: Maybe Text,
-    city :: Maybe Text,
-    state :: Maybe Text,
-    country :: Maybe Text,
-    building :: Maybe Text,
-    areaCode :: Maybe Text,
-    area :: Maybe Text
-  }
-  deriving (Generic, Show, Eq, PrettyShow)
 
 data BookingLocationAPIEntity = BookingLocationAPIEntity
   { lat :: Double,

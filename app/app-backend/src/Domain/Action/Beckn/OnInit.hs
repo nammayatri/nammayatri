@@ -8,7 +8,7 @@ import Beckn.Types.Id
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Booking (BPPBooking, Booking)
 import qualified Domain.Types.Booking as DRB
-import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.LocationAddress as DBL
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import Types.Error

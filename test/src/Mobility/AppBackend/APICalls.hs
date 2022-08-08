@@ -6,7 +6,6 @@ import Beckn.Types.APISuccess
 import Beckn.Types.App
 import Beckn.Types.Id
 import qualified "app-backend" Domain.Action.UI.Cancel as CancelAPI
-import qualified "app-backend" Domain.Action.UI.Confirm as DConfirm
 import qualified "app-backend" Domain.Types.Booking as BRB
 import qualified "app-backend" Domain.Types.CancellationReason as AbeCRC
 import qualified "app-backend" Domain.Types.Estimate as AbeEstimate
@@ -36,28 +35,8 @@ mkAppCancelReq :: AbeCRC.CancellationStage -> CancelAPI.CancelReq
 mkAppCancelReq stage =
   CancelAPI.CancelReq (AbeCRC.CancellationReasonCode "OTHER") stage Nothing
 
-appConfirmRide :: Text -> Id AbeQuote.Quote -> DConfirm.ConfirmAPIReq -> ClientM ConfirmAPI.ConfirmRes
+appConfirmRide :: Text -> Id AbeQuote.Quote -> ClientM ConfirmAPI.ConfirmRes
 appConfirmRide = client (Proxy :: Proxy ConfirmAPI.ConfirmAPI)
-
-confirmAddress :: DConfirm.ConfirmLocationAPIEntity
-confirmAddress =
-  DConfirm.ConfirmLocationAPIEntity
-    { door = Just "#817",
-      building = Just "Juspay Apartments",
-      street = Just "27th Main",
-      area = Just "8th Block Koramangala",
-      city = Just "Bangalore",
-      country = Just "India",
-      areaCode = Just "560047",
-      state = Just "Karnataka"
-    }
-
-mkAppConfirmReq :: DConfirm.ConfirmAPIReq
-mkAppConfirmReq =
-  DConfirm.ConfirmAPIReq
-    { fromLocation = confirmAddress,
-      toLocation = Just confirmAddress
-    }
 
 appFeedback :: Text -> AppFeedback.FeedbackReq -> ClientM APISuccess
 appFeedback = client (Proxy :: Proxy AbeRoutes.FeedbackAPI)
