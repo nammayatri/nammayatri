@@ -314,7 +314,24 @@ getNearbySearchRequests driverId = withFlowHandlerAPI $ do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   _ <- person.organizationId & fromMaybeM (PersonFieldNotPresent "organization_id")
   nearbyReqs <- QSRD.findByDriver driverId
-  pure $ GetNearbySearchRequestsRes $ map mkSearchRequestForDriverAPIEntity nearbyReqs
+  searchRequestForDriverAPIEntity <- mapM buildSearchRequestForDriverAPIEntity nearbyReqs
+  return $ GetNearbySearchRequestsRes searchRequestForDriverAPIEntity
+  where
+    buildSearchRequestForDriverAPIEntity nearbyReq = do
+      let sId = nearbyReq.searchRequestId
+      searchRequest <- QSReq.findById sId >>= fromMaybeM (SearchRequestNotFound sId.getId)
+      return
+        SearchRequestForDriverAPIEntity
+          { searchRequestId = sId,
+            startTime = nearbyReq.startTime,
+            searchRequestValidTill = nearbyReq.searchRequestValidTill,
+            distanceToPickup = nearbyReq.distanceToPickup,
+            durationToPickup = nearbyReq.durationToPickup,
+            baseFare = nearbyReq.baseFare,
+            fromLocation = searchRequest.fromLocation,
+            toLocation = searchRequest.toLocation,
+            distance = nearbyReq.distance
+          }
 
 isAllowedExtraFee :: [Amount] -> Amount -> Bool
 isAllowedExtraFee list val = let eps = 0.1 in any (\x -> abs (x - val) < eps) list

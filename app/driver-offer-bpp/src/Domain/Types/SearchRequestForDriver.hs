@@ -6,6 +6,7 @@ import Beckn.Types.Id
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Domain.Types.Person
 import Domain.Types.SearchRequest
+import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import qualified Domain.Types.Vehicle.Variant as Variant
 
 data SearchRequestForDriver = SearchRequestForDriver
@@ -25,12 +26,13 @@ data SearchRequestForDriver = SearchRequestForDriver
 
 data SearchRequestForDriverAPIEntity = SearchRequestForDriverAPIEntity
   { searchRequestId :: Id SearchRequest,
+    startTime :: UTCTime,
     searchRequestValidTill :: UTCTime,
     distanceToPickup :: Meters,
     durationToPickup :: Seconds,
-    baseFare :: Double
+    baseFare :: Double,
+    fromLocation :: DLoc.SearchReqLocation,
+    toLocation :: DLoc.SearchReqLocation,
+    distance :: Double
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
-
-mkSearchRequestForDriverAPIEntity :: SearchRequestForDriver -> SearchRequestForDriverAPIEntity
-mkSearchRequestForDriverAPIEntity SearchRequestForDriver {..} = SearchRequestForDriverAPIEntity {..}

@@ -21,7 +21,7 @@ data SearchReqLocation = SearchReqLocation
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Generic, PrettyShow, Show)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show, PrettyShow)
 
 data SearchReqLocationAPIEntity = SearchReqLocationAPIEntity
   { lat :: Double,

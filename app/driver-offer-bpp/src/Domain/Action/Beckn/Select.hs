@@ -39,7 +39,6 @@ handler orgId sReq = do
   fromLocation <- buildSearchReqLocation sReq.pickupLocation
   toLocation <- buildSearchReqLocation sReq.dropLocation
   driverPool <- calculateDriverPool (Just sReq.variant) (getCoordinates fromLocation) orgId False
-
   distance <-
     metersToHighPrecMeters . (.distance)
       <$> GoogleMaps.getDistance (Just MapSearch.CAR) (getCoordinates fromLocation) (getCoordinates toLocation) Nothing
@@ -59,8 +58,20 @@ handler orgId sReq = do
     mapM_ QSRD.create searchRequestsForDrivers
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   forM_ driverPoolZipSearchRequests $ \(dPoolRes, sReqFD) ->
-    when (not dPoolRes.origin.onRide) $
-      Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken sReqFD
+    when (not dPoolRes.origin.onRide) $ do
+      let entityData =
+            SearchRequestForDriverAPIEntity
+              { searchRequestId = searchReq.id,
+                startTime = sReqFD.startTime,
+                searchRequestValidTill = sReqFD.searchRequestValidTill,
+                distanceToPickup = sReqFD.distanceToPickup,
+                durationToPickup = sReqFD.durationToPickup,
+                baseFare = baseFare,
+                fromLocation = fromLocation,
+                toLocation = toLocation,
+                distance = sReqFD.distance
+              }
+      Notify.notifyOnNewSearchRequestAvailable sReqFD.driverId dPoolRes.origin.driverDeviceToken entityData
   where
     buildSearchRequestForDriver ::
       (MonadFlow m) =>

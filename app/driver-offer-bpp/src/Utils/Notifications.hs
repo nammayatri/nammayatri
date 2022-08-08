@@ -11,7 +11,7 @@ import Domain.Types.Booking (Booking)
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.Person as Person
 import Domain.Types.RegistrationToken as RegToken
-import Domain.Types.SearchRequestForDriver (SearchRequestForDriver, mkSearchRequestForDriverAPIEntity)
+import Domain.Types.SearchRequestForDriver
 import EulerHS.Prelude
 
 notifyOnNewSearchRequestAvailable ::
@@ -20,19 +20,18 @@ notifyOnNewSearchRequestAvailable ::
   ) =>
   Id Person ->
   Maybe FCM.FCMRecipientToken ->
-  SearchRequestForDriver ->
+  SearchRequestForDriverAPIEntity ->
   m ()
-notifyOnNewSearchRequestAvailable personId mbDeviceToken sReq = do
+notifyOnNewSearchRequestAvailable personId mbDeviceToken entityData = do
   FCM.notifyPerson notificationData $ FCMNotificationRecipient personId.getId mbDeviceToken
   where
-    entityData = mkSearchRequestForDriverAPIEntity sReq
     notifType = FCM.NEW_RIDE_AVAILABLE
     notificationData =
       FCM.FCMData
         { fcmNotificationType = notifType,
           fcmShowNotification = FCM.SHOW,
           fcmEntityType = FCM.SearchRequest,
-          fcmEntityIds = sReq.searchRequestId.getId,
+          fcmEntityIds = entityData.searchRequestId.getId,
           fcmEntityData = Just entityData,
           fcmNotificationJSON = FCM.createAndroidNotification title body notifType
         }
@@ -41,12 +40,12 @@ notifyOnNewSearchRequestAvailable personId mbDeviceToken sReq = do
       FCMNotificationBody $
         unwords
           [ "A new ride for",
-            showTimeIst sReq.startTime,
+            showTimeIst entityData.startTime,
             "is available",
-            show sReq.distanceToPickup.getMeters,
+            show entityData.distanceToPickup.getMeters,
             "meters away from you. Estimated base fare is",
-            show (floor @_ @Int sReq.baseFare) <> " INR, estimated distance is",
-            show $ floor @_ @Int sReq.distance,
+            show (floor @_ @Int entityData.baseFare) <> " INR, estimated distance is",
+            show $ floor @_ @Int entityData.distance,
             "meters"
           ]
 
