@@ -16,6 +16,7 @@ import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.SearchRequestForDriver
 import Domain.Types.Vehicle.Variant (Variant)
 import Environment
+import Product.FareCalculator.Calculator
 import Product.FareCalculator.Flow
 import SharedLogic.DriverPool
 import Storage.Queries.Person
@@ -45,7 +46,7 @@ handler orgId sReq = do
 
   fareParams <- calculateFare orgId sReq.variant distance sReq.pickupTime Nothing
   searchReq <- buildSearchRequest fromLocation toLocation orgId sReq
-  let baseFare = amountToDouble $ fareSum fareParams
+  let baseFare = amountToDouble $ fareSumRounded fareParams
   logDebug $
     "search request id=" <> show searchReq.id
       <> "; estimated distance = "

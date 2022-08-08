@@ -15,7 +15,7 @@ mkOnConfirmMessage now res = do
   let vehicleVariant = Common.castVariant res.booking.vehicleVariant
   let itemCode = OnConfirm.ItemCode OnConfirm.ONE_WAY_TRIP vehicleVariant Nothing Nothing
       fareParams = booking.fareParams
-      totalFare = fareSum fareParams
+      totalFare = fareSumRounded fareParams
       totalFareDecimal = amountToDecimalValue totalFare
       currency = "INR"
   OnConfirm.OnConfirmMessage

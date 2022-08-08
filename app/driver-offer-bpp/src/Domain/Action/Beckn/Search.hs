@@ -17,6 +17,7 @@ import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DLoc
 import Domain.Types.Vehicle.Variant as Variant
 import Environment
+import Product.FareCalculator.Calculator
 import Product.FareCalculator.Flow
 import SharedLogic.DriverPool
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -85,7 +86,7 @@ mkEstimate ::
 mkEstimate org dSReq dist g = do
   let variant = g.origin.vehicle.variant
   fareParams <- calculateFare org.id variant dist dSReq.pickupTime Nothing
-  let baseFare = fareSum fareParams
+  let baseFare = fareSumRounded fareParams
   logDebug $ "baseFare: " <> show (amountToString baseFare)
   logDebug $ "distance: " <> show g.distance
   pure

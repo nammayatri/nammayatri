@@ -1,6 +1,12 @@
 {-# LANGUAGE DerivingStrategies #-}
 
-module Product.FareCalculator.Calculator where
+module Product.FareCalculator.Calculator
+  ( mkBreakupList,
+    fareSumRounded,
+    baseFareSumRounded,
+    calculateFareParameters,
+  )
+where
 
 import Beckn.Prelude
 import Beckn.Types.Amount
@@ -12,7 +18,7 @@ import Data.Time
     minutesToTimeZone,
     utcToLocalTime,
   )
-import Domain.Types.FareParams
+import Domain.Types.FareParams.Internal
 import Domain.Types.FarePolicy
 import Utils.Common
 
@@ -23,31 +29,36 @@ type Distance = HighPrecMeters
 mkBreakupList :: (Amount -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkBreakupList mkPrice mkBreakupItem fareParams = do
   -- TODO: what should be here?
-  let dayPartRate = calculateDayPartRate fareParams
+  let mkRoundedPrice = mkPrice . roundToPowerOfTen 0
+
+      dayPartRate = calculateDayPartRate fareParams
       fareForPickupFinal = fareParams.baseFare * dayPartRate
       fareForPickupCaption = mconcat ["Base fare: ", amountToString fareForPickupFinal, " INR"]
-      fareForPickupItem = mkBreakupItem fareForPickupCaption (mkPrice fareForPickupFinal)
+      fareForPickupItem = mkBreakupItem fareForPickupCaption (mkRoundedPrice fareForPickupFinal)
 
       mbExtraKmFare = fareParams.extraKmFare <&> (* dayPartRate)
       extraDistanceFareCaption extraKmFare = mconcat ["Extra distance fare: ", amountToString extraKmFare, " INR"]
       extraDistanceFareItem =
         mbExtraKmFare <&> \extraKmFare ->
-          mkBreakupItem (extraDistanceFareCaption extraKmFare) (mkPrice extraKmFare)
+          mkBreakupItem (extraDistanceFareCaption extraKmFare) (mkRoundedPrice extraKmFare)
 
       mkSelectedFareCaption selFare = mconcat ["Fare selected by driver: ", amountToString selFare, " INR"]
       mbSelectedFareItem =
         fareParams.driverSelectedFare <&> \selFare ->
-          mkBreakupItem (mkSelectedFareCaption selFare) (mkPrice selFare)
+          mkBreakupItem (mkSelectedFareCaption selFare) (mkRoundedPrice selFare)
 
       totalFareFinal = fareSum fareParams
       totalFareCaption = mconcat ["Total fare: ", amountToString totalFareFinal, " INR"]
-      totalFareItem = mkBreakupItem totalFareCaption $ mkPrice totalFareFinal
+      totalFareItem = mkBreakupItem totalFareCaption $ mkRoundedPrice totalFareFinal
   catMaybes [Just totalFareItem, Just fareForPickupItem, extraDistanceFareItem, mbSelectedFareItem]
 
 -- TODO: make some tests for it
 fareSum :: FareParameters -> Amount
 fareSum fareParams = do
-  baseFareSum fareParams + fromMaybe 0 fareParams.driverSelectedFare
+  roundToPowerOfTen 0 $ baseFareSum fareParams + fromMaybe 0 fareParams.driverSelectedFare
+
+fareSumRounded :: FareParameters -> Amount
+fareSumRounded = roundToPowerOfTen 0 . fareSum
 
 baseFareSum :: FareParameters -> Amount
 baseFareSum fareParams = do
@@ -59,6 +70,9 @@ baseFareSum fareParams = do
             fareParams.extraKmFare
           ]
       )
+
+baseFareSumRounded :: FareParameters -> Amount
+baseFareSumRounded = roundToPowerOfTen 0 . baseFareSum
 
 calculateDayPartRate :: FareParameters -> Amount
 calculateDayPartRate fareParams = do

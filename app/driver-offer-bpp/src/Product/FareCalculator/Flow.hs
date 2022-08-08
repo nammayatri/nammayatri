@@ -2,7 +2,6 @@ module Product.FareCalculator.Flow
   ( ServiceHandle (..),
     calculateFare,
     doCalculateFare,
-    fareSum,
   )
 where
 
@@ -16,7 +15,6 @@ import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (id)
 import Product.FareCalculator.Calculator
   ( calculateFareParameters,
-    fareSum,
   )
 import qualified Storage.Queries.FarePolicy as FarePolicyS
 import Types.Error

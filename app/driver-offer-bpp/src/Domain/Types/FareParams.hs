@@ -1,14 +1,3 @@
-module Domain.Types.FareParams where
+module Domain.Types.FareParams (module Reexport) where
 
-import Beckn.Prelude
-import Beckn.Types.Amount
-import Beckn.Utils.GenericPretty (PrettyShow)
-
-data FareParameters = FareParameters
-  { baseFare :: Amount,
-    extraKmFare :: Maybe Amount,
-    driverSelectedFare :: Maybe Amount,
-    nightShiftRate :: Maybe Amount,
-    nightCoefIncluded :: Bool
-  }
-  deriving (Generic, Show, Eq, PrettyShow)
+import Domain.Types.FareParams.Internal as Reexport (FareParameters)
