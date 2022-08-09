@@ -42,7 +42,6 @@ import ExternalAPI.Flow
 import GHC.Records.Extra
 import Product.FareCalculator.Calculator
 import Product.FareCalculator.Flow (calculateFare)
-import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDrInfo
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverQuote as QDrQt
@@ -116,7 +115,6 @@ createDriverDetails personId = do
 
 getInformation :: Id SP.Person -> FlowHandler DriverAPI.DriverInformationRes
 getInformation personId = withFlowHandlerAPI $ do
-  _ <- Registration.checkPersonExists $ getId personId
   let driverId = cast personId
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound

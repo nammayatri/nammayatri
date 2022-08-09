@@ -2,6 +2,7 @@ module App.Routes where
 
 import qualified API.Beckn as Beckn
 import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import App.Routes.FarePolicy
 import Beckn.Types.APISuccess
@@ -11,7 +12,6 @@ import Beckn.Utils.Common
 import Data.OpenApi
 import Domain.Types.Organization (Organization)
 import Domain.Types.Person as SP
-import qualified Domain.Types.RegistrationToken as SRT
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
@@ -24,7 +24,6 @@ import qualified Product.DriverOnboarding.Status as DriverOnboarding
 import qualified Product.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
-import qualified Product.Registration as Registration
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
@@ -37,7 +36,6 @@ import qualified Types.API.DriverOnboarding.VehicleRegistrationCertificate as Dr
 import Types.API.Idfy
 import Types.API.Location as Location
 import qualified Types.API.OrgAdmin as OrgAdminAPI
-import Types.API.Registration
 import Types.API.Transporter
 import Types.API.Vehicle
 import Utils.Auth (AdminTokenAuth, TokenAuth)
@@ -53,7 +51,7 @@ type MainAPI =
 type UIAPI =
   "ui"
     :> ( HealthCheckAPI
-          :<|> RegistrationAPI
+          :<|> Registration.API
           :<|> DriverOnboardingAPI
           :<|> OrgAdminAPI
           :<|> DriverAPI
@@ -74,7 +72,7 @@ driverOfferAPI = Proxy
 uiServer :: FlowServer UIAPI
 uiServer =
   pure "App is UP"
-    :<|> registrationFlow
+    :<|> Registration.handler
     :<|> driverOnboardingFlow
     :<|> orgAdminFlow
     :<|> driverFlow
@@ -97,31 +95,6 @@ driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =
   mainServer
     :<|> writeSwaggerJSONFlow
-
----- Registration Flow ------
-type RegistrationAPI =
-  "auth"
-    :> ( ReqBody '[JSON] AuthReq
-           :> Post '[JSON] AuthRes
-           :<|> Capture "authId" (Id SRT.RegistrationToken)
-             :> "verify"
-             :> ReqBody '[JSON] AuthVerifyReq
-             :> Post '[JSON] AuthVerifyRes
-           :<|> "otp"
-             :> Capture "authId" (Id SRT.RegistrationToken)
-             :> "resend"
-             :> Post '[JSON] ResendAuthRes
-           :<|> "logout"
-             :> TokenAuth
-             :> Post '[JSON] APISuccess
-       )
-
-registrationFlow :: FlowServer RegistrationAPI
-registrationFlow =
-  Registration.auth
-    :<|> Registration.verify
-    :<|> Registration.resend
-    :<|> Registration.logout
 
 type DriverOnboardingAPI =
   "driver" :> "register"
@@ -157,7 +130,7 @@ driverOnboardingFlow =
              :<|> DriverOnboarding.validateRCImage
          )
     :<|> DriverOnboarding.statusHandler
-
+    
 type OrgAdminAPI =
   "orgAdmin" :> "profile"
     :> AdminTokenAuth
