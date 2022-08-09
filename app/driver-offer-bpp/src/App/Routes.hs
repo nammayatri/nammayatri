@@ -1,6 +1,7 @@
 module App.Routes where
 
 import qualified API.Beckn as Beckn
+import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Ride as Ride
 import App.Routes.FarePolicy
 import Beckn.Types.APISuccess
@@ -16,7 +17,6 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
 import qualified Product.Call as Call
-import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Driver as Driver
 import qualified Product.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Product.DriverOnboarding.Idfy as Idfy
@@ -30,7 +30,6 @@ import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.OpenApi
 import qualified Types.API.Call as CallAPI
-import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Driver as DriverAPI
 import qualified Types.API.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Types.API.DriverOnboarding.Status as DriverOnboarding
@@ -66,7 +65,7 @@ type UIAPI =
           :<|> Ride.API
           :<|> CallAPIs
           :<|> IdfyHandlerAPI
-          :<|> CancellationReasonAPI
+          :<|> CancellationReason.API
        )
 
 driverOfferAPI :: Proxy DriverOfferAPI
@@ -87,7 +86,7 @@ uiServer =
     :<|> Ride.handler
     :<|> callFlow
     :<|> idfyHandlerFlow
-    :<|> cancellationReasonFlow
+    :<|> CancellationReason.handler
 
 mainServer :: FlowServer MainAPI
 mainServer =
@@ -344,16 +343,6 @@ callFlow =
     :<|> Call.directCallStatusCallback
 
 -- :<|> Call.getCallStatus
-
-type CancellationReasonAPI =
-  "cancellationReason"
-    :> ( "list"
-           :> TokenAuth
-           :> Get '[JSON] CancellationReasonAPI.ListRes
-       )
-
-cancellationReasonFlow :: FlowServer CancellationReasonAPI
-cancellationReasonFlow = CancellationReason.list
 
 type HealthCheckAPI = Get '[JSON] Text
 
