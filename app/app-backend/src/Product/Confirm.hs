@@ -10,6 +10,7 @@ import App.Types
 import Beckn.Prelude hiding (init)
 import qualified Beckn.Types.Core.Taxi.API.OnConfirm as OnConfirm
 import Beckn.Types.Id
+import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (BecknAPICallError)
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Init as ACL
 import qualified Core.ACL.OnConfirm as ACL
@@ -22,7 +23,6 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import Servant
 import Utils.Auth
 import Utils.Common
-import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (BecknAPICallError)
 
 type ConfirmAPI =
   "rideSearch"
@@ -46,7 +46,7 @@ confirm personId quoteId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dConfirmRes <- DConfirm.confirm personId quoteId
     becknInitReq <- ACL.buildInitReq dConfirmRes
-    handle (\(_ :: BecknAPICallError)   -> DConfirm.cancelBooking dConfirmRes.booking) $
+    handle (\(_ :: BecknAPICallError) -> DConfirm.cancelBooking dConfirmRes.booking) $
       void $ ExternalAPI.init dConfirmRes.providerUrl becknInitReq
     return $
       ConfirmRes

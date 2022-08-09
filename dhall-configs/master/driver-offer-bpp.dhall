@@ -101,4 +101,5 @@ in
 , searchRequestExpirationSeconds = +3600
 , driverQuoteExpirationSeconds = +15
 , defaultRadiusOfSearch = +5000 -- meters
+, driverUnlockDelay = +2 -- seconds
 }

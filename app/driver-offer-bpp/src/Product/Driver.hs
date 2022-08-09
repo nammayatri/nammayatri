@@ -348,7 +348,8 @@ offerQuote driverId req = withFlowHandlerAPI $ do
   let mbOfferedFareAmount = fmap realToFrac req.offeredFare
   organization <- QOrg.findById sReq.providerId >>= fromMaybeM (OrgDoesNotExist sReq.providerId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  whenM (QDrQt.thereAreActiveQuotes driverId) (throwError FoundActiveQuotes)
+  driverUnlockDelay <- asks (.driverUnlockDelay)
+  whenM (QDrQt.thereAreActiveQuotes driverId driverUnlockDelay) (throwError FoundActiveQuotes)
   driverInfo <- QDrInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
   when driverInfo.onRide $ throwError DriverOnRide
   sReqFD <-

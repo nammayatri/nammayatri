@@ -63,7 +63,8 @@ data AppCfg = AppCfg
     redisCfg :: T.RedisConfig,
     searchRequestExpirationSeconds :: Int,
     driverQuoteExpirationSeconds :: Int,
-    httpClientOptions :: HttpClientOptions
+    httpClientOptions :: HttpClientOptions,
+    driverUnlockDelay :: Seconds
   }
   deriving (Generic, FromDhall)
 
@@ -103,7 +104,8 @@ data AppEnv = AppEnv
     defaultRadiusOfSearch :: Meters,
     transporterMetrics :: TransporterMetricsContainer,
     searchRequestExpirationSeconds :: NominalDiffTime,
-    driverQuoteExpirationSeconds :: NominalDiffTime
+    driverQuoteExpirationSeconds :: NominalDiffTime,
+    driverUnlockDelay :: Seconds
   }
   deriving (Generic)
 
