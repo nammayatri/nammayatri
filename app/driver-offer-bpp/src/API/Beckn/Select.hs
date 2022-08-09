@@ -1,15 +1,24 @@
-module Product.BecknProvider.Select (select) where
+module API.Beckn.Select (API, handler) where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import Beckn.Types.Id
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Select as ACL
 import qualified Domain.Action.Beckn.Select as DSelect
 import qualified Domain.Types.Organization as Org
 import Environment
+import Servant
 import Utils.Common
+
+type API =
+  Capture "orgId" (Id Org.Organization)
+    :> SignatureAuth "Authorization"
+    :> Select.SelectAPI
+
+handler :: FlowServer API
+handler = select
 
 select ::
   Id Org.Organization ->

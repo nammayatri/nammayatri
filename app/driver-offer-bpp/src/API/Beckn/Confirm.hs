@@ -1,18 +1,27 @@
-module Product.BecknProvider.Confirm (confirm) where
+module API.Beckn.Confirm (API, handler) where
 
 import Beckn.Prelude
 import Beckn.Types.Core.Ack
 import qualified Beckn.Types.Core.Taxi.API.Confirm as Confirm
 import Beckn.Types.Id
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Confirm as ACL
 import qualified Core.ACL.OnConfirm as ACL
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Organization as Org
 import Environment
 import ExternalAPI.Flow as ExternalAPI
-import qualified Product.BecknProvider.BP as BP
+import Servant
+import qualified SharedLogic.CallBAP as BP
 import Utils.Common
+
+type API =
+  Capture "orgId" (Id Org.Organization)
+    :> SignatureAuth "Authorization"
+    :> Confirm.ConfirmAPI
+
+handler :: FlowServer API
+handler = confirm
 
 confirm ::
   Id Org.Organization ->

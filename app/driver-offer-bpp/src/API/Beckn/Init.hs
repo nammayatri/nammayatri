@@ -1,4 +1,4 @@
-module Product.BecknProvider.Init (init) where
+module API.Beckn.Init (API, handler) where
 
 import Beckn.Prelude hiding (init)
 import Beckn.Types.Core.Ack
@@ -6,14 +6,23 @@ import qualified Beckn.Types.Core.Context as Context
 import qualified Beckn.Types.Core.Taxi.API.Init as Init
 import Beckn.Types.Core.Taxi.API.OnInit as OnInit
 import Beckn.Types.Id
-import Beckn.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
+import Beckn.Utils.Servant.SignatureAuth
 import qualified Core.ACL.Init as ACL
 import qualified Core.ACL.OnInit as ACL
 import qualified Domain.Action.Beckn.Init as DInit
 import qualified Domain.Types.Organization as Org
 import Environment
 import ExternalAPI.Flow as ExternalAPI
+import Servant
 import Utils.Common
+
+type API =
+  Capture "orgId" (Id Org.Organization)
+    :> SignatureAuth "Authorization"
+    :> Init.InitAPI
+
+handler :: FlowServer API
+handler = init
 
 init ::
   Id Org.Organization ->

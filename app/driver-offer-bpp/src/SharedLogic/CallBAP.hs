@@ -1,4 +1,4 @@
-module Product.BecknProvider.BP
+module SharedLogic.CallBAP
   ( sendRideAssignedUpdateToBAP,
     sendRideStartedUpdateToBAP,
     sendRideCompletedUpdateToBAP,

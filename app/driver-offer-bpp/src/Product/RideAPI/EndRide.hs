@@ -9,9 +9,9 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as Ride
 import Environment (FlowHandler)
 import EulerHS.Prelude hiding (id)
-import Product.BecknProvider.BP
 import qualified Product.FareCalculator.Flow as Fare
 import qualified Product.RideAPI.Handlers.EndRide as Handler
+import SharedLogic.CallBAP
 import SharedLogic.LocationUpdates
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as DriverInformation

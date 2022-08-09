@@ -10,8 +10,8 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified Product.BecknProvider.BP as BP
 import qualified Product.RideAPI.Handlers.CancelRide as Handler
+import qualified SharedLogic.CallBAP as BP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as DriverInformation

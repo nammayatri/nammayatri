@@ -1,18 +1,11 @@
 module App.Routes where
 
+import qualified API.Beckn as Beckn
 import App.Routes.FarePolicy
 import Beckn.Types.APISuccess
 import Beckn.Types.App
-import qualified Beckn.Types.Core.Taxi.API.Cancel as API
-import qualified Beckn.Types.Core.Taxi.API.Confirm as API
-import qualified Beckn.Types.Core.Taxi.API.Init as API
-import qualified Beckn.Types.Core.Taxi.API.Rating as API
-import qualified Beckn.Types.Core.Taxi.API.Search as API
-import qualified Beckn.Types.Core.Taxi.API.Select as API
-import qualified Beckn.Types.Core.Taxi.API.Track as API
 import Beckn.Types.Id
 import Beckn.Utils.Common
-import Beckn.Utils.Servant.SignatureAuth
 import Data.OpenApi
 import Domain.Types.Organization (Organization)
 import Domain.Types.Person as SP
@@ -21,13 +14,6 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
-import qualified Product.BecknProvider.Cancel as BP
-import qualified Product.BecknProvider.Confirm as BP
-import Product.BecknProvider.Init as BP
-import Product.BecknProvider.Rating as BP
-import Product.BecknProvider.Search as BP
-import Product.BecknProvider.Select as BP
-import qualified Product.BecknProvider.Track as BP
 import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Driver as Driver
@@ -66,25 +52,27 @@ type DriverOfferAPI =
     :<|> SwaggerAPI
 
 type MainAPI =
-  "ui" :> UIAPI
-    :<|> "beckn" :> OrgBecknAPI
+  UIAPI
+    :<|> Beckn.API
 
 type UIAPI =
-  HealthCheckAPI
-    :<|> RegistrationAPI
-    :<|> DriverOnboardingAPI
-    :<|> OrgAdminAPI
-    :<|> DriverAPI
-    :<|> VehicleAPI
-    :<|> OrganizationAPI
-    :<|> FarePolicyAPI
-    :<|> LocationAPI
-    :<|> RouteAPI
-    :<|> RideAPI
-    :<|> CallAPIs
-    :<|> IdfyHandlerAPI
-    :<|> RideAPI
-    :<|> CancellationReasonAPI
+  "ui"
+    :> ( HealthCheckAPI
+          :<|> RegistrationAPI
+          :<|> DriverOnboardingAPI
+          :<|> OrgAdminAPI
+          :<|> DriverAPI
+          :<|> VehicleAPI
+          :<|> OrganizationAPI
+          :<|> FarePolicyAPI
+          :<|> LocationAPI
+          :<|> RouteAPI
+          :<|> RideAPI
+          :<|> CallAPIs
+          :<|> IdfyHandlerAPI
+          :<|> RideAPI
+          :<|> CancellationReasonAPI
+       )
 
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
@@ -110,7 +98,7 @@ uiServer =
 mainServer :: FlowServer MainAPI
 mainServer =
   uiServer
-    :<|> orgBecknApiFlow
+    :<|> Beckn.handler
 
 driverOfferServer :: FlowServer DriverOfferAPI
 driverOfferServer =
@@ -394,29 +382,6 @@ callFlow =
     :<|> Call.directCallStatusCallback
 
 -- :<|> Call.getCallStatus
-
-type OrgBecknAPI =
-  Capture "orgId" (Id Organization)
-    :> SignatureAuth "Authorization"
-    :> ( SignatureAuth "X-Gateway-Authorization"
-           :> API.SearchAPI
-           :<|> API.SelectAPI
-           :<|> API.InitAPI
-           :<|> API.ConfirmAPI
-           :<|> API.TrackAPI
-           :<|> API.CancelAPI
-           :<|> API.RatingAPI
-       )
-
-orgBecknApiFlow :: FlowServer OrgBecknAPI
-orgBecknApiFlow orgId aurhRes =
-  BP.search orgId aurhRes
-    :<|> BP.select orgId aurhRes
-    :<|> BP.init orgId aurhRes
-    :<|> BP.confirm orgId aurhRes
-    :<|> BP.track orgId aurhRes
-    :<|> BP.cancel orgId aurhRes
-    :<|> BP.rating orgId aurhRes
 
 type CancellationReasonAPI =
   "cancellationReason"

@@ -14,7 +14,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Organization as Org
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
-import qualified Product.BecknProvider.BP as BP
+import qualified SharedLogic.CallBAP as BP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverInformation as QDriverInfo
