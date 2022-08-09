@@ -4,7 +4,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.Common
 import Beckn.Types.Id
-import Beckn.Utils.Common (HasPrettyLogger, addUTCTime, logPretty, secondsToNominalDiffTime)
+import Beckn.Utils.Common (addUTCTime, secondsToNominalDiffTime)
 import qualified Domain.Types.DriverQuote as Domain
 import Domain.Types.Person
 import qualified Domain.Types.SearchRequest as DSReq
@@ -55,9 +55,3 @@ findActiveQuotesByDriverId driverId driverUnlockDelay = (getCurrentTime >>=) $ \
           &&. dQuote ^. DriverQuoteStatus ==. val Domain.Active
           &&. dQuote ^. DriverQuoteValidTill >. val (addUTCTime delayToAvoidRaces now)
       pure (dQuote, farePars)
-
-thereAreActiveQuotes :: (Transactionable m, MonadTime m, HasPrettyLogger m r) => Id Person -> Seconds -> m Bool
-thereAreActiveQuotes driverId driverUnlockDelay = do
-  activeQuotes <- findActiveQuotesByDriverId driverId driverUnlockDelay
-  logPretty DEBUG ("active quotes for driverId = " <> driverId.getId) activeQuotes
-  pure $ not $ null activeQuotes

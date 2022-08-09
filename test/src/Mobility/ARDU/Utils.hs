@@ -1,5 +1,6 @@
 module Mobility.ARDU.Utils (module Mobility.ARDU.Utils) where
 
+import qualified "driver-offer-bpp" API.UI.Driver as TDriver
 import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess)
@@ -36,7 +37,6 @@ import qualified "driver-offer-bpp" Storage.Queries.DriverInformation as QTDrInf
 import "driver-offer-bpp" Storage.Queries.DriverLocation
 import qualified "driver-offer-bpp" Storage.Queries.Ride as TQRide
 import qualified "driver-offer-bpp" Storage.Queries.SearchRequest as QSReq
-import qualified "driver-offer-bpp" Types.API.Driver as TDriver
 import qualified "app-backend" Types.API.Search as AppSearch
 import Utils
 

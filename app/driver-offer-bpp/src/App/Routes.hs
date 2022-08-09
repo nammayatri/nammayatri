@@ -2,11 +2,10 @@ module App.Routes where
 
 import qualified API.Beckn as Beckn
 import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.Driver as Driver
 import qualified API.UI.Registration as Registration
 import qualified API.UI.Ride as Ride
 import App.Routes.FarePolicy
-import Beckn.Types.APISuccess
-import Beckn.Types.App
 import Beckn.Types.Id
 import Beckn.Utils.Common
 import Data.OpenApi
@@ -17,7 +16,6 @@ import qualified Domain.Types.Vehicle.Variant as Variant
 import Environment
 import EulerHS.Prelude
 import qualified Product.Call as Call
-import qualified Product.Driver as Driver
 import qualified Product.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Product.DriverOnboarding.Idfy as Idfy
 import qualified Product.DriverOnboarding.Status as DriverOnboarding
@@ -29,7 +27,6 @@ import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.OpenApi
 import qualified Types.API.Call as CallAPI
-import qualified Types.API.Driver as DriverAPI
 import qualified Types.API.DriverOnboarding.DriverLicense as DriverOnboarding
 import qualified Types.API.DriverOnboarding.Status as DriverOnboarding
 import qualified Types.API.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
@@ -54,7 +51,7 @@ type UIAPI =
           :<|> Registration.API
           :<|> DriverOnboardingAPI
           :<|> OrgAdminAPI
-          :<|> DriverAPI
+          :<|> Driver.API
           :<|> VehicleAPI
           :<|> OrganizationAPI
           :<|> FarePolicyAPI
@@ -75,7 +72,7 @@ uiServer =
     :<|> Registration.handler
     :<|> driverOnboardingFlow
     :<|> orgAdminFlow
-    :<|> driverFlow
+    :<|> Driver.handler
     :<|> vehicleFlow
     :<|> organizationFlow
     :<|> farePolicyFlow
@@ -143,65 +140,6 @@ orgAdminFlow :: FlowServer OrgAdminAPI
 orgAdminFlow =
   OrgAdmin.getProfile
     :<|> OrgAdmin.updateProfile
-
-type DriverAPI =
-  "org" :> "driver"
-    :> ( AdminTokenAuth
-           :> ReqBody '[JSON] DriverAPI.OnboardDriverReq
-           :> Post '[JSON] DriverAPI.OnboardDriverRes
-           :<|> "list"
-             :> AdminTokenAuth
-             :> QueryParam "searchString" Text
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
-             :> Get '[JSON] DriverAPI.ListDriverRes
-           :<|> AdminTokenAuth
-             :> Capture "driverId" (Id Person)
-             :> MandatoryQueryParam "enabled" Bool
-             :> Post '[JSON] APISuccess
-           :<|> AdminTokenAuth
-             :> Capture "driverId" (Id Person)
-             :> Delete '[JSON] APISuccess
-       )
-    :<|> "driver"
-      :> ( "setActivity"
-             :> TokenAuth
-             :> MandatoryQueryParam "active" Bool
-             :> Post '[JSON] APISuccess
-             :<|> "nearbyRideRequest"
-               :> ( TokenAuth
-                      :> Get '[JSON] DriverAPI.GetNearbySearchRequestsRes
-                  )
-             :<|> "searchRequest"
-               :> ( TokenAuth
-                      :> "quote"
-                      :> "offer"
-                      :> ReqBody '[JSON] DriverAPI.DriverOfferReq
-                      :> Post '[JSON] APISuccess
-                  )
-             :<|> "profile"
-               :> ( TokenAuth
-                      :> Get '[JSON] DriverAPI.DriverInformationRes
-                      :<|> TokenAuth
-                        :> ReqBody '[JSON] DriverAPI.UpdateDriverReq
-                        :> Post '[JSON] DriverAPI.UpdateDriverRes
-                  )
-         )
-
-driverFlow :: FlowServer DriverAPI
-driverFlow =
-  ( Driver.createDriver
-      :<|> Driver.listDriver
-      :<|> Driver.changeDriverEnableState
-      :<|> Driver.deleteDriver
-  )
-    :<|> ( Driver.setActivity
-             :<|> Driver.getNearbySearchRequests
-             :<|> Driver.offerQuote
-             :<|> ( Driver.getInformation
-                      :<|> Driver.updateDriver
-                  )
-         )
 
 -- Following is vehicle flow
 type VehicleAPI =

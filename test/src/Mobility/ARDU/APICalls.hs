@@ -1,5 +1,6 @@
 module Mobility.ARDU.APICalls where
 
+import qualified "driver-offer-bpp" API.UI.Driver as DriverAPI
 import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
 import "driver-offer-bpp" App.Routes as DrOfRoutes
 import Beckn.Types.APISuccess
@@ -11,7 +12,6 @@ import qualified "driver-offer-bpp" Domain.Types.Ride as TRide
 import EulerHS.Prelude
 import Servant hiding (Context)
 import Servant.Client
-import qualified "driver-offer-bpp" Types.API.Driver as DriverAPI
 import "driver-offer-bpp" Types.API.Location
 
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
@@ -34,7 +34,7 @@ setDriverOnline :: Text -> Bool -> ClientM APISuccess
            :<|> ( getDriverInfo
                     :<|> _
                   )
-         ) = client (Proxy :: Proxy DrOfRoutes.DriverAPI)
+         ) = client (Proxy :: Proxy DriverAPI.API)
 
 buildStartRideReq :: Text -> LatLong -> RideAPI.StartRideReq
 buildStartRideReq otp initialPoint =
