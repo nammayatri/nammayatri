@@ -22,6 +22,7 @@ import qualified ExternalAPI.Flow as ExternalAPI
 import Servant
 import Utils.Auth
 import Utils.Common
+import Beckn.Utils.Error.BaseError.HTTPError.BecknAPIError (BecknAPICallError)
 
 type ConfirmAPI =
   "rideSearch"
@@ -44,10 +45,12 @@ confirm ::
 confirm personId quoteId =
   withFlowHandlerAPI . withPersonIdLogTag personId $ do
     dConfirmRes <- DConfirm.confirm personId quoteId
-    void . ExternalAPI.init dConfirmRes.providerUrl =<< ACL.buildInitReq dConfirmRes
+    becknInitReq <- ACL.buildInitReq dConfirmRes
+    handle (\(_ :: BecknAPICallError)   -> DConfirm.cancelBooking dConfirmRes.booking) $
+      void $ ExternalAPI.init dConfirmRes.providerUrl becknInitReq
     return $
       ConfirmRes
-        { bookingId = dConfirmRes.bookingId
+        { bookingId = dConfirmRes.booking.id
         }
 
 onConfirm ::

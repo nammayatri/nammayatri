@@ -28,3 +28,4 @@ mkCancelMessage res = Cancel.CancelMessage res.bppBookingId.getId $ castCancella
       SBCR.ByDriver -> Cancel.ByDriver
       SBCR.ByOrganization -> Cancel.ByOrganization
       SBCR.ByAllocator -> Cancel.ByAllocator
+      SBCR.ByApplication -> Cancel.ByApplication

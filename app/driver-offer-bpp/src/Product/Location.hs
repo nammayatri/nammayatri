@@ -1,7 +1,7 @@
 module Product.Location where
 
 import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
-import Beckn.Prelude
+import Beckn.Prelude hiding (Handler)
 import qualified Beckn.Product.MapSearch.GoogleMaps as GoogleMaps
 import qualified Beckn.Storage.Esqueleto as Esq
 import Beckn.Types.APISuccess (APISuccess (..))

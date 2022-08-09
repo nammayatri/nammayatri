@@ -14,12 +14,16 @@ import Data.String.Conversions
 import qualified Data.Text as T
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Organization as DOrg
+import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DRD
+import qualified Product.BecknProvider.BP as BP
 import Servant.Client (BaseUrl (..))
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Booking.BookingLocation as QBL
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -54,7 +58,8 @@ handler ::
     HasPrettyLogger m r,
     EncFlow m r,
     CoreMetrics m,
-    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfUIUrl" ::: BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Subscriber.Subscriber ->
   Id DOrg.Organization ->
@@ -63,15 +68,16 @@ handler ::
 handler subscriber transporterId req = do
   booking <- QRB.findById req.bookingId >>= fromMaybeM (BookingDoesNotExist req.bookingId.getId)
   driverQuote <- QDQ.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
-  now <- getCurrentTime
-  when (driverQuote.validTill < now) $
-    throwError $ QuoteExpired driverQuote.id.getId
   driver <- QPerson.findById driverQuote.driverId >>= fromMaybeM (PersonNotFound driverQuote.driverId.getId)
   let transporterId' = booking.providerId
   transporter <-
     QOrg.findById transporterId'
       >>= fromMaybeM (OrgNotFound transporterId'.getId)
   unless (transporterId' == transporterId) $ throwError AccessDenied
+  now <- getCurrentTime
+  when (driverQuote.validTill < now) $ do
+    cancelBooking booking driver transporter
+    throwError $ QuoteExpired driverQuote.id.getId
   let bapOrgId = booking.bapId
   unless (subscriber.subscriber_id == bapOrgId) $ throwError AccessDenied
   (riderDetails, isNewRider) <- getRiderDetails req.customerMobileCountryCode req.customerPhoneNumber now
@@ -158,3 +164,43 @@ getRiderDetails customerMobileCountryCode customerPhoneNumber now =
             createdAt = now,
             updatedAt = now
           }
+
+cancelBooking ::
+  ( FCMFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    CoreMetrics m
+  ) =>
+  DRB.Booking ->
+  DPerson.Person ->
+  DOrg.Organization ->
+  m ()
+cancelBooking booking driver transporter = do
+  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
+  bookingCancellationReason <- buildBookingCancellationReason booking.id driver.id
+  Esq.runTransaction $ do
+    QRB.updateStatus booking.id DRB.CANCELLED
+    QBCR.create bookingCancellationReason
+  fork "cancelBooking - Notify BAP" $ do
+    BP.sendBookingCancelledUpdateToBAP booking transporter DBCR.ByApplication
+  fork "cancelRide - Notify driver" $ do
+    Notify.notifyOnCancel booking driver.id driver.deviceToken DBCR.ByApplication
+
+buildBookingCancellationReason ::
+  MonadFlow m =>
+  Id DRB.Booking ->
+  Id DPerson.Person ->
+  m DBCR.BookingCancellationReason
+buildBookingCancellationReason bookingId driverId = do
+  guid <- generateGUID
+  return
+    DBCR.BookingCancellationReason
+      { id = guid,
+        driverId = Just driverId,
+        bookingId,
+        rideId = Nothing,
+        source = DBCR.ByApplication,
+        reasonCode = Nothing,
+        additionalInfo = Nothing
+      }

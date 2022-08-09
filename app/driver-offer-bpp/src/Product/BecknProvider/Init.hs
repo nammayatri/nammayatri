@@ -21,7 +21,7 @@ init ::
   Init.InitReq ->
   FlowHandler AckResponse
 init transporterId (SignatureAuthResult _ subscriber) req =
-  withFlowHandlerAPI . withTransactionIdLogTag req $ do
+  withFlowHandlerBecknAPI . withTransactionIdLogTag req $ do
     logTagInfo "Init API Flow" "Reached"
     dInitReq <- ACL.buildInitReq subscriber req
     let context = req.context

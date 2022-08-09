@@ -19,7 +19,7 @@ buildInitReq ::
 buildInitReq res = do
   bapURIs <- asks (.bapSelfURIs)
   bapIDs <- asks (.bapSelfIds)
-  context <- buildTaxiContext Context.INIT res.bookingId.getId Nothing bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl)
+  context <- buildTaxiContext Context.INIT res.booking.id.getId Nothing bapIDs.cabs bapURIs.cabs (Just res.providerId) (Just res.providerUrl)
   initMessage <- buildInitMessage res
   pure $ BecknReq context initMessage
 

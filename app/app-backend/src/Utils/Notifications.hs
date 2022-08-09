@@ -245,6 +245,13 @@ notifyOnBookingCancelled booking cancellationSource = do
             "was cancelled as we could not find a driver.",
             "Please book again to get another ride."
           ]
+      SBCR.ByApplication ->
+        unwords
+          [ "The ride for",
+            showTimeIst (booking.startTime),
+            "was cancelled because quote was not confirmed.",
+            "Please book again to get another ride."
+          ]
 
 notifyOnBookingReallocated :: (CoreMetrics m, FCMFlow m r, EsqDBFlow m r) => SRB.Booking -> m ()
 notifyOnBookingReallocated booking = do

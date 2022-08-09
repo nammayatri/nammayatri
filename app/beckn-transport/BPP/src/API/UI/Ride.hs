@@ -74,9 +74,9 @@ handler =
 
 startRide :: Id SP.Person -> Id SRide.Ride -> SHandler.StartRideReq -> FlowHandler APISuccess.APISuccess
 startRide personId rideId req = withFlowHandlerAPI $ do
-  SHandler.startRideHandler handle personId (cast rideId) req
+  SHandler.startRideHandler shandle personId (cast rideId) req
   where
-    handle =
+    shandle =
       SHandler.ServiceHandle
         { findById = QPerson.findById,
           findBookingById = QRB.findById,
@@ -91,9 +91,9 @@ startRide personId rideId req = withFlowHandlerAPI $ do
 
 endRide :: Id SP.Person -> Id SRide.Ride -> EHandler.EndRideReq -> FlowHandler APISuccess.APISuccess
 endRide personId rideId req = withFlowHandlerAPI $ do
-  EHandler.endRideHandler handle personId rideId req
+  EHandler.endRideHandler shandle personId rideId req
   where
-    handle =
+    shandle =
       EHandler.ServiceHandle
         { findById = QPerson.findById,
           findBookingById = QRB.findById,
@@ -114,9 +114,9 @@ endRide personId rideId req = withFlowHandlerAPI $ do
 
 cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess
 cancelRide personId rideId req = withFlowHandlerAPI $ do
-  CHandler.cancelRideHandler handle personId rideId req
+  CHandler.cancelRideHandler shandle personId rideId req
   where
-    handle =
+    shandle =
       CHandler.ServiceHandle
         { findRideById = QRide.findById,
           findById = QPerson.findById,

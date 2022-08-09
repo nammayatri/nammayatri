@@ -9,7 +9,7 @@ module Domain.Action.UI.Location.UpdateLocation
 where
 
 import App.Types
-import Beckn.Prelude
+import Beckn.Prelude hiding (Handler)
 import Beckn.Types.APISuccess (APISuccess (..))
 import Beckn.Types.Common
 import Beckn.Types.Error

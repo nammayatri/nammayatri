@@ -138,3 +138,4 @@ castCancellationSource = \case
   SBCR.ByDriver -> BookingCancelledOU.ByDriver
   SBCR.ByOrganization -> BookingCancelledOU.ByOrganization
   SBCR.ByAllocator -> BookingCancelledOU.ByAllocator
+  SBCR.ByApplication -> BookingCancelledOU.ByApplication

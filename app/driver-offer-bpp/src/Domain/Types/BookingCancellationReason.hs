@@ -25,4 +25,5 @@ data CancellationSource
   | ByDriver
   | ByOrganization
   | ByAllocator
+  | ByApplication
   deriving (Show, Eq, Ord, Read, Generic)

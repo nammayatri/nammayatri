@@ -97,6 +97,14 @@ notifyOnCancel booking personId mbDeviceToken cancellationSource = do
               showTimeIst (booking.startTime) <> ".",
               "Check the app for more details."
             ]
+      SBCR.ByApplication ->
+        return $
+          unwords
+            [ "The ride for",
+              showTimeIst (booking.startTime),
+              "was cancelled because quote was not confirmed.",
+              "Please book again to get another ride."
+            ]
       _ -> throwError (InternalError "Unexpected cancellation reason.")
 
 notifyOnRegistration ::

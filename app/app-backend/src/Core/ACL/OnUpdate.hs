@@ -91,3 +91,4 @@ castCancellationSource = \case
   OnUpdate.ByDriver -> SBCR.ByDriver
   OnUpdate.ByOrganization -> SBCR.ByOrganization
   OnUpdate.ByAllocator -> SBCR.ByAllocator
+  OnUpdate.ByApplication -> SBCR.ByApplication

@@ -1,5 +1,6 @@
 module Domain.Action.UI.Confirm
   ( confirm,
+    cancelBooking,
     ConfirmRes (..),
     ConfirmQuoteDetails (..),
   )
@@ -12,6 +13,7 @@ import Beckn.Types.Id
 import Beckn.Types.MapSearch (LatLong (..))
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.Booking.BookingLocation as DBL
+import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import Domain.Types.RentalSlab
@@ -19,10 +21,13 @@ import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.SearchRequest.SearchReqLocation as DSRLoc
 import Domain.Types.VehicleVariant (VehicleVariant)
 import qualified Storage.Queries.Booking as QRideB
+import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSReq
+import Tools.Metrics (CoreMetrics)
 import Types.Error
 import Utils.Common
+import qualified Utils.Notifications as Notify
 
 -- domain types
 
@@ -34,7 +39,7 @@ data ConfirmRes = ConfirmRes
     vehicleVariant :: VehicleVariant,
     quoteDetails :: ConfirmQuoteDetails,
     startTime :: UTCTime,
-    bookingId :: Id DRB.Booking
+    booking :: DRB.Booking
   }
   deriving (Show, Generic)
 
@@ -68,7 +73,7 @@ confirm personId quoteId = do
     QRideB.create booking
   return $
     ConfirmRes
-      { bookingId = booking.id,
+      { booking,
         providerId = quote.providerId,
         providerUrl = quote.providerUrl,
         fromLoc = LatLong {lat = fromLocation.lat, lon = fromLocation.lon},
@@ -140,3 +145,30 @@ buildBooking searchRequest quote fromLoc mbToLoc now = do
       toLocation <- mbToLoc & fromMaybeM (InternalError "toLocation is null for one way search request")
       distance <- searchRequest.distance & fromMaybeM (InternalError "distance is null for one way search request")
       pure DRB.OneWayBookingDetails {..}
+
+-- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
+cancelBooking :: (EsqDBFlow m r, CoreMetrics m, FCMFlow m r) => DRB.Booking -> m ()
+cancelBooking booking = do
+  logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
+  bookingCancellationReason <- buildBookingCancellationReason booking.id
+  DB.runTransaction $ do
+    QRideB.updateStatus booking.id DRB.CANCELLED
+    QBCR.create bookingCancellationReason
+  Notify.notifyOnBookingCancelled booking DBCR.ByApplication
+
+buildBookingCancellationReason ::
+  MonadFlow m =>
+  Id DRB.Booking ->
+  m DBCR.BookingCancellationReason
+buildBookingCancellationReason bookingId = do
+  guid <- generateGUID
+  return
+    DBCR.BookingCancellationReason
+      { id = guid,
+        bookingId = bookingId,
+        rideId = Nothing,
+        source = DBCR.ByApplication,
+        reasonCode = Nothing,
+        reasonStage = Nothing,
+        additionalInfo = Nothing
+      }
