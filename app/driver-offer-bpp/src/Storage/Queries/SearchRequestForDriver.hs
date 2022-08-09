@@ -27,7 +27,7 @@ findByDriver driverId = do
     sReq <- from $ table @SearchRequestForDriverT
     where_ $
       sReq ^. SearchRequestForDriverDriverId ==. val (toKey driverId)
-        &&. sReq ^. SearchRequestForDriverSearchRequestValidTill <. val now
+        &&. sReq ^. SearchRequestForDriverSearchRequestValidTill >. val now
     orderBy [desc $ sReq ^. SearchRequestForDriverSearchRequestValidTill]
     pure sReq
 
