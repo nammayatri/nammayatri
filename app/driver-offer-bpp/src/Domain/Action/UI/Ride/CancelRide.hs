@@ -1,17 +1,27 @@
-module Product.RideAPI.Handlers.CancelRide where
+module Domain.Action.UI.Ride.CancelRide
+  ( CancelRideReq (..),
+    ServiceHandle (..),
+    cancelRideHandler,
+  )
+where
 
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
+import Data.OpenApi
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import Domain.Types.CancellationReason
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import EulerHS.Prelude
-import Types.API.Ride (CancelRideReq (..))
 import Types.Error
 import Utils.Common
 
-type MonadHandler m = (MonadThrow m, Log m, MonadGuid m)
+data CancelRideReq = CancelRideReq
+  { reasonCode :: CancellationReasonCode,
+    additionalInfo :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data ServiceHandle m = ServiceHandle
   { findRideById :: Id SRide.Ride -> m (Maybe SRide.Ride),
@@ -19,7 +29,7 @@ data ServiceHandle m = ServiceHandle
     cancelRide :: Id SRide.Ride -> SBCR.BookingCancellationReason -> m ()
   }
 
-cancelRideHandler :: MonadHandler m => ServiceHandle m -> Id Person.Person -> Id SRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
+cancelRideHandler :: (MonadThrow m, Log m, MonadGuid m) => ServiceHandle m -> Id Person.Person -> Id SRide.Ride -> CancelRideReq -> m APISuccess.APISuccess
 cancelRideHandler ServiceHandle {..} personId rideId req = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (isValidRide ride) $ throwError $ RideInvalidStatus "This ride cannot be canceled"

@@ -1,10 +1,16 @@
-module Product.RideAPI.Handlers.EndRide where
+module Domain.Action.UI.Ride.EndRide
+  ( EndRideReq (..),
+    ServiceHandle (..),
+    endRideHandler,
+  )
+where
 
 import Beckn.Prelude (roundToIntegral)
 import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Types.MapSearch
+import Data.OpenApi
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverLocation as DrLoc
 import Domain.Types.FareParams as Fare
@@ -14,16 +20,20 @@ import qualified Domain.Types.Ride as Ride
 import Domain.Types.Vehicle.Variant (Variant)
 import EulerHS.Prelude hiding (pi)
 import Product.FareCalculator.Calculator as Fare
-import Types.API.Ride (EndRideReq)
 import Types.App (Driver)
 import Types.Error
 import Utils.Common
+
+newtype EndRideReq = EndRideReq
+  { point :: LatLong
+  }
+  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 data ServiceHandle m = ServiceHandle
   { findById :: Id Person.Person -> m (Maybe Person.Person),
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
-    endRideTransaction :: Id SRB.Booking -> Ride.Ride -> Id Driver -> m (),
+    endRide :: Id SRB.Booking -> Ride.Ride -> Id Driver -> m (),
     notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> Money -> m (),
     calculateFare ::
       Id Organization ->
@@ -68,7 +78,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
              fare = Just fare
             }
 
-  endRideTransaction booking.id updRide (cast driverId)
+  endRide booking.id updRide (cast driverId)
 
   notifyCompleteToBAP booking updRide booking.fareParams booking.estimatedFare
 

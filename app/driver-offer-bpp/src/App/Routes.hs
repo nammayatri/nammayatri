@@ -1,6 +1,7 @@
 module App.Routes where
 
 import qualified API.Beckn as Beckn
+import qualified API.UI.Ride as Ride
 import App.Routes.FarePolicy
 import Beckn.Types.APISuccess
 import Beckn.Types.App
@@ -24,10 +25,6 @@ import qualified Product.DriverOnboarding.VehicleRegistrationCertificate as Driv
 import qualified Product.Location as Location
 import qualified Product.OrgAdmin as OrgAdmin
 import qualified Product.Registration as Registration
-import qualified Product.Ride as Ride
-import qualified Product.RideAPI.CancelRide as RideAPI.CancelRide
-import qualified Product.RideAPI.EndRide as RideAPI.EndRide
-import qualified Product.RideAPI.StartRide as RideAPI.StartRide
 import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
@@ -42,7 +39,6 @@ import Types.API.Idfy
 import Types.API.Location as Location
 import qualified Types.API.OrgAdmin as OrgAdminAPI
 import Types.API.Registration
-import qualified Types.API.Ride as RideAPI
 import Types.API.Transporter
 import Types.API.Vehicle
 import Utils.Auth (AdminTokenAuth, TokenAuth)
@@ -67,10 +63,9 @@ type UIAPI =
           :<|> FarePolicyAPI
           :<|> LocationAPI
           :<|> RouteAPI
-          :<|> RideAPI
+          :<|> Ride.API
           :<|> CallAPIs
           :<|> IdfyHandlerAPI
-          :<|> RideAPI
           :<|> CancellationReasonAPI
        )
 
@@ -89,10 +84,9 @@ uiServer =
     :<|> farePolicyFlow
     :<|> locationFlow
     :<|> routeFlow
-    :<|> rideFlow
+    :<|> Ride.handler
     :<|> callFlow
     :<|> idfyHandlerFlow
-    :<|> rideFlow
     :<|> cancellationReasonFlow
 
 mainServer :: FlowServer MainAPI
@@ -317,38 +311,6 @@ idfyHandlerFlow :: FlowServer IdfyHandlerAPI
 idfyHandlerFlow =
   Idfy.idfyDrivingLicense --update handler
     :<|> Idfy.idfyRCLicense --update handler
-
-type RideAPI =
-  "driver" :> "ride"
-    :> ( "list"
-           :> TokenAuth
-           :> QueryParam "limit" Integer
-           :> QueryParam "offset" Integer
-           :> QueryParam "onlyActive" Bool
-           :> Get '[JSON] RideAPI.DriverRideListRes
-           :<|> TokenAuth
-           :> Capture "rideId" (Id DRide.Ride)
-           :> "start"
-           :> ReqBody '[JSON] RideAPI.StartRideReq
-           :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-           :> Capture "rideId" (Id DRide.Ride)
-           :> "end"
-           :> ReqBody '[JSON] RideAPI.EndRideReq
-           :> Post '[JSON] APISuccess
-           :<|> TokenAuth
-           :> Capture "rideId" (Id DRide.Ride)
-           :> "cancel"
-           :> ReqBody '[JSON] RideAPI.CancelRideReq
-           :> Post '[JSON] APISuccess
-       )
-
-rideFlow :: FlowServer RideAPI
-rideFlow =
-  Ride.listDriverRides
-    :<|> RideAPI.StartRide.startRide
-    :<|> RideAPI.EndRide.endRide
-    :<|> RideAPI.CancelRide.cancelRide
 
 -------- Direct call (Exotel) APIs
 type CallAPIs =

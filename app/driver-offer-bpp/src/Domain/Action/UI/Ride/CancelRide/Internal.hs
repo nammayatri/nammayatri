@@ -1,16 +1,12 @@
-module Product.RideAPI.CancelRide (cancelRide) where
+module Domain.Action.UI.Ride.CancelRide.Internal (cancelRideImpl) where
 
 import Beckn.External.GoogleMaps.Types
 import qualified Beckn.Storage.Esqueleto as Esq
-import qualified Beckn.Types.APISuccess as APISuccess
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
-import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as SRide
-import Environment
 import EulerHS.Prelude hiding (id)
-import qualified Product.RideAPI.Handlers.CancelRide as Handler
 import qualified SharedLogic.CallBAP as BP
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -20,25 +16,9 @@ import qualified Storage.Queries.Organization as QOrg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics
-import Types.API.Ride (CancelRideReq)
 import Types.Error
 import Utils.Common
 import qualified Utils.Notifications as Notify
-
-cancelRide :: Id SP.Person -> Id SRide.Ride -> CancelRideReq -> FlowHandler APISuccess.APISuccess
-cancelRide personId rideId req = withFlowHandlerAPI $ do
-  Handler.cancelRideHandler handle personId rideId req
-  where
-    handle =
-      Handler.ServiceHandle
-        { findRideById = QRide.findById,
-          findById = QPerson.findById,
-          cancelRide = cancelRideImpl
-        }
-
--------------------------------------------------------------------------------------------------
---------------------------TODO: Move later-------------------------------------------------------
--------------------------------------------------------------------------------------------------
 
 cancelRideImpl ::
   ( EsqDBFlow m r,

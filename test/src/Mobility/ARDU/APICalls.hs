@@ -1,5 +1,6 @@
 module Mobility.ARDU.APICalls where
 
+import qualified "driver-offer-bpp" API.UI.Ride as RideAPI
 import "driver-offer-bpp" App.Routes as DrOfRoutes
 import Beckn.Types.APISuccess
 import Beckn.Types.App
@@ -12,12 +13,11 @@ import Servant hiding (Context)
 import Servant.Client
 import qualified "driver-offer-bpp" Types.API.Driver as DriverAPI
 import "driver-offer-bpp" Types.API.Location
-import qualified "driver-offer-bpp" Types.API.Ride as RideAPI
 
 rideStart :: Text -> Id TRide.Ride -> RideAPI.StartRideReq -> ClientM APISuccess
 rideEnd :: Text -> Id TRide.Ride -> RideAPI.EndRideReq -> ClientM APISuccess
 rideCancel :: Text -> Id TRide.Ride -> RideAPI.CancelRideReq -> ClientM APISuccess
-_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy DrOfRoutes.RideAPI)
+_ :<|> rideStart :<|> rideEnd :<|> rideCancel = client (Proxy :: Proxy RideAPI.API)
 
 getDriverInfo :: Text -> ClientM DriverAPI.DriverInformationRes
 getNearbySearchRequests :: RegToken -> ClientM DriverAPI.GetNearbySearchRequestsRes
