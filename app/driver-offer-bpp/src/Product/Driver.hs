@@ -40,6 +40,7 @@ import Environment
 import EulerHS.Prelude hiding (id, state)
 import ExternalAPI.Flow
 import GHC.Records.Extra
+import Product.FareCalculator.Calculator
 import Product.FareCalculator.Flow (calculateFare)
 import qualified Product.Registration as Registration
 import qualified Storage.Queries.DriverInformation as QDrInfo
@@ -383,6 +384,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
       guid <- generateGUID
       now <- getCurrentTime
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
+      let estimatedFare = fareSumRounded fareParams
       pure
         DDrQuote.DriverQuote
           { id = guid,
@@ -398,6 +400,7 @@ offerQuote driverId req = withFlowHandlerAPI $ do
             createdAt = now,
             updatedAt = now,
             validTill = addUTCTime driverQuoteExpirationSeconds now,
+            estimatedFare,
             fareParams
           }
 

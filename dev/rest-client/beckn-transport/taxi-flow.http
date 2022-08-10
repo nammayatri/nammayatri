@@ -195,7 +195,7 @@ token: {{token}}
 
 ###
 
-@bppBookingId = eef7c2a4-d3a1-4831-a072-613708aa934f
+@bppBookingId = 9495b4af-4bcf-4d15-b434-4ba6b5f8ccbd
 # this should be taken from the transporter BPP database
 # select id from booking where status = 'CONFIRMED';
 

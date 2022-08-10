@@ -1,5 +1,5 @@
 module SharedLogic.FareCalculator.OneWayFareCalculator.Flow
-  ( OneWayFareParameters (..),
+  ( OneWayFareParameters,
     ServiceHandle (..),
     calculateFare,
     doCalculateFare,
@@ -9,6 +9,7 @@ module SharedLogic.FareCalculator.OneWayFareCalculator.Flow
   )
 where
 
+import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -77,21 +78,21 @@ buildOneWayFareBreakups fareParams bookingId = do
 buildBaseFareBreakup :: MonadGuid m => OneWayFareParameters -> Id Booking -> m FareBreakup
 buildBaseFareBreakup OneWayFareParameters {..} bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = nightShiftRate * baseFare
-      description = "Base fare is " <> amountToString amount <> " rupees"
+  let amount = roundToUnits $ nightShiftRate * baseFare
+      description = "Base fare is " <> showRounded amount <> " rupees"
   pure FareBreakup {..}
 
 buildDistanceFareBreakup :: MonadGuid m => OneWayFareParameters -> Id Booking -> m FareBreakup
 buildDistanceFareBreakup OneWayFareParameters {..} bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = nightShiftRate * distanceFare
-      description = "Distance fare is " <> amountToString amount <> " rupees"
+  let amount = roundToUnits $ nightShiftRate * distanceFare
+      description = "Distance fare is " <> showRounded amount <> " rupees"
   pure FareBreakup {..}
 
 buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id Booking -> m (Maybe FareBreakup)
 buildDiscountFareBreakup mbDiscount bookingId = do
   forM mbDiscount $ \discount -> do
     id <- Id <$> generateGUIDText
-    let amount = negate discount -- this amount should be always below zero
-        description = "Discount is " <> amountToString discount <> " rupees"
+    let amount = roundToUnits $ negate discount -- this amount should be always below zero
+        description = "Discount is " <> showRounded discount <> " rupees"
     pure FareBreakup {..}

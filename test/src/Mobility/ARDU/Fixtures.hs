@@ -26,4 +26,4 @@ arduDriver2 =
     }
 
 defaultAllowedDriverFee :: Double
-defaultAllowedDriverFee = 30
+defaultAllowedDriverFee = 30.5

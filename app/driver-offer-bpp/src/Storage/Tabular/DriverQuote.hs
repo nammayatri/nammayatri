@@ -9,6 +9,7 @@ module Storage.Tabular.DriverQuote where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common (Meters (..), Seconds (..))
 import Beckn.Types.Id
 import qualified Domain.Types.DriverQuote as Domain
@@ -37,6 +38,7 @@ mkPersist
       validTill UTCTime
       createdAt UTCTime
       updatedAt UTCTime
+      estimatedFare Amount
       fareParametersId Fare.FareParametersTId
 
       Primary id

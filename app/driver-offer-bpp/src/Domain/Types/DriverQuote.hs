@@ -3,6 +3,7 @@
 module Domain.Types.DriverQuote where
 
 import Beckn.Prelude
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common
 import Beckn.Types.Id
 import Beckn.Utils.GenericPretty
@@ -29,6 +30,7 @@ data DriverQuote = DriverQuote
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     validTill :: UTCTime,
+    estimatedFare :: Amount,
     fareParams :: Params.FareParameters
   }
   deriving (Generic, Show, PrettyShow)

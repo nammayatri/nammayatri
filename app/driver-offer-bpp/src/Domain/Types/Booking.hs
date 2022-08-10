@@ -1,5 +1,6 @@
 module Domain.Types.Booking where
 
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import Data.Aeson
@@ -47,6 +48,7 @@ data Booking = Booking
     toLocation :: DLoc.BookingLocation,
     vehicleVariant :: DVeh.Variant,
     estimatedDistance :: HighPrecMeters,
+    estimatedFare :: Amount,
     fareParams :: FareParameters,
     createdAt :: UTCTime,
     updatedAt :: UTCTime

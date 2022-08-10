@@ -70,6 +70,7 @@ handler orgId req = do
             updatedAt = now,
             fromLocation,
             toLocation,
+            estimatedFare = driverQuote.estimatedFare,
             fareParams = driverQuote.fareParams,
             ..
           }

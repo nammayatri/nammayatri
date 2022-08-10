@@ -9,6 +9,7 @@ module Storage.Tabular.Booking where
 
 import Beckn.Prelude
 import Beckn.Storage.Esqueleto
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common hiding (id)
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as Domain
@@ -40,6 +41,7 @@ mkPersist
       estimatedDistance Double
       createdAt UTCTime
       updatedAt UTCTime
+      estimatedFare Amount
       fareParametersId Fare.FareParametersTId
 
       Primary id

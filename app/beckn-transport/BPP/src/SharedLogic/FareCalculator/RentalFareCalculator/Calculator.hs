@@ -1,7 +1,14 @@
 {-# LANGUAGE DerivingStrategies #-}
 
-module SharedLogic.FareCalculator.RentalFareCalculator.Calculator where
+module SharedLogic.FareCalculator.RentalFareCalculator.Calculator
+  ( RentalFareParameters,
+    calculateRentalFareParameters,
+    rentalFareSum,
+    rentalFareSumWithDiscount,
+  )
+where
 
+import Beckn.Prelude (roundToUnits)
 import Beckn.Types.Amount (Amount (..))
 import Beckn.Types.Common
 import Beckn.Utils.Common
@@ -33,12 +40,12 @@ data RentalFareParameters = RentalFareParameters
 rentalFareSum :: RentalFareParameters -> Amount
 rentalFareSum RentalFareParameters {..} = do
   let nextDaysFare' = fromMaybe 0 nextDaysFare
-  baseFare + extraDistanceFare + extraTimeFare + nextDaysFare'
+  roundToUnits $ baseFare + extraDistanceFare + extraTimeFare + nextDaysFare'
 
 rentalFareSumWithDiscount :: RentalFareParameters -> Amount
 rentalFareSumWithDiscount fp@RentalFareParameters {..} = do
   let fareSumm = rentalFareSum fp
-  max 0 $ maybe fareSumm (fareSumm -) discount
+  roundToUnits $ max 0 $ maybe fareSumm (fareSumm -) discount
 
 calculateRentalFareParameters ::
   DRentalFP.RentalFarePolicy ->

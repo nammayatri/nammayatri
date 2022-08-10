@@ -26,7 +26,7 @@ CREATE TEMPORARY TABLE tmp_variants (variant text NOT NULL);
 INSERT INTO tmp_variants VALUES ('SUV'), ('SEDAN'), ('HATCHBACK'), ('AUTO_VARIANT');
 
 INSERT INTO atlas_driver_offer_bpp.fare_policy_new
-SELECT md5(random()::text || clock_timestamp()::text)::uuid, fp.organization_id, v.variant, 10, 3000, 12, 120, '{10, 20, 30}',
+SELECT md5(random()::text || clock_timestamp()::text)::uuid, fp.organization_id, v.variant, 10, 3000, 12, 120, '{11.5, 20.5, 30.5}',
        fp.night_shift_start, fp.night_shift_end, fp.night_shift_rate, current_timestamp, current_timestamp
 FROM atlas_driver_offer_bpp.fare_policy fp, tmp_variants as v;
 

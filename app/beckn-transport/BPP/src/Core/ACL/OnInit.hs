@@ -3,6 +3,7 @@ module Core.ACL.OnInit (mkOnInitMessage) where
 import Beckn.Prelude
 import Beckn.Types.Amount
 import qualified Beckn.Types.Core.Taxi.OnInit as OnInit
+import Core.ACL.Common
 import qualified Domain.Action.Beckn.Init as DInit
 
 mkOnInitMessage :: DInit.InitRes -> OnInit.OnInitMessage
@@ -27,8 +28,8 @@ mkPrice :: Amount -> Amount -> OnInit.QuotePrice
 mkPrice estimatedFare estimatedTotalFare =
   OnInit.QuotePrice
     { currency = "INR",
-      value = realToFrac estimatedFare,
-      offered_value = realToFrac estimatedTotalFare
+      value = amountToRoundedDecimal estimatedFare,
+      offered_value = amountToRoundedDecimal estimatedTotalFare
     }
 
 mkBreakup :: Amount -> Maybe Amount -> [OnInit.BreakupItem]
@@ -40,7 +41,7 @@ mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList m
           price =
             OnInit.BreakupItemPrice
               { currency = "INR",
-                value = realToFrac estimatedFare
+                value = amountToRoundedDecimal estimatedFare
               }
         }
 
@@ -51,7 +52,7 @@ mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList m
             price =
               OnInit.BreakupItemPrice
                 { currency = "INR",
-                  value = realToFrac discount
+                  value = amountToRoundedDecimal discount
                 }
           }
 
@@ -61,7 +62,7 @@ mkPayment estimatedTotalFare =
     { collected_by = "BAP",
       params =
         OnInit.PaymentParams
-          { amount = realToFrac estimatedTotalFare,
+          { amount = amountToRoundedDecimal estimatedTotalFare,
             currency = "INR"
           },
       time = OnInit.TimeDuration "P2D",

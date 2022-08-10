@@ -5,6 +5,7 @@ module Core.ACL.OnUpdate
 where
 
 import Beckn.Prelude
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common
 import qualified Beckn.Types.Core.Taxi.OnUpdate as OnUpdate
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.BookingCancelledEvent as BookingCancelledOU
@@ -33,6 +34,7 @@ data OnUpdateBuildReq
       }
   | RideCompletedBuildReq
       { ride :: DRide.Ride,
+        finalFare :: Amount,
         fareParams :: Fare.FareParameters
       }
   | BookingCancelledBuildReq
@@ -103,7 +105,7 @@ buildOnUpdateMessage req@RideCompletedBuildReq {} = do
             value = fare,
             computed_value = fare
           }
-      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . amountToDecimalValue) OnUpdate.BreakupItem req.fareParams
+      breakup = mkBreakupList (OnUpdate.BreakupPrice currency . realToFrac) OnUpdate.BreakupItem req.fareParams
   return $
     OnUpdate.OnUpdateMessage $
       OnUpdate.RideCompleted

@@ -10,7 +10,7 @@ import Beckn.Prelude
 import Beckn.Storage.Esqueleto
 import Beckn.Types.Amount
 import Beckn.Types.Id
-import qualified Domain.Types.FareParams.Internal as Domain
+import qualified Domain.Types.FareParams as Domain
 import Storage.Tabular.Vehicle ()
 
 mkPersist

@@ -6,6 +6,7 @@ module Product.BecknProvider.BP
   )
 where
 
+import Beckn.Types.Amount (Amount)
 import Beckn.Types.Common
 import qualified Core.ACL.OnUpdate as ACL
 import qualified Domain.Types.Booking as SRB
@@ -67,12 +68,13 @@ sendRideCompletedUpdateToBAP ::
   SRB.Booking ->
   SRide.Ride ->
   Fare.FareParameters ->
+  Amount ->
   m ()
-sendRideCompletedUpdateToBAP booking ride fareParams = do
+sendRideCompletedUpdateToBAP booking ride fareParams finalFare = do
   transporter <-
     QOrg.findById booking.providerId
       >>= fromMaybeM (OrgNotFound booking.providerId.getId)
-  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams}
+  let rideCompletedBuildReq = ACL.RideCompletedBuildReq {ride, fareParams, finalFare}
   rideCompletedMsg <- ACL.buildOnUpdateMessage rideCompletedBuildReq
   void $ callOnUpdate transporter booking rideCompletedMsg
 

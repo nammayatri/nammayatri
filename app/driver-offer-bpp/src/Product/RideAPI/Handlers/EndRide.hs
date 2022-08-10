@@ -24,7 +24,7 @@ data ServiceHandle m = ServiceHandle
     findBookingById :: Id SRB.Booking -> m (Maybe SRB.Booking),
     findRideById :: Id Ride.Ride -> m (Maybe Ride.Ride),
     endRideTransaction :: Id SRB.Booking -> Ride.Ride -> Id Driver -> m (),
-    notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> m (),
+    notifyCompleteToBAP :: SRB.Booking -> Ride.Ride -> Fare.FareParameters -> Amount -> m (),
     calculateFare ::
       Id Organization ->
       Variant ->
@@ -70,7 +70,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
 
   endRideTransaction booking.id updRide (cast driverId)
 
-  notifyCompleteToBAP booking updRide booking.fareParams
+  notifyCompleteToBAP booking updRide booking.fareParams booking.estimatedFare
 
   return APISuccess.Success
   where
@@ -80,7 +80,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
           oldDistance = booking.estimatedDistance
 
       -- maybe compare only distance fare?
-      let estimatedBaseFare = fareSumRounded booking.fareParams
+      let estimatedBaseFare = booking.estimatedFare
 
       fareParams <- calculateFare transporterId booking.vehicleVariant actualDistance booking.startTime booking.fareParams.driverSelectedFare
       let updatedBaseFare = Fare.fareSumRounded fareParams
@@ -88,7 +88,7 @@ endRideHandler ServiceHandle {..} requestorId rideId req = do
       let fareDiff = updatedBaseFare - estimatedBaseFare
       logTagInfo "Fare recalculation" $
         "Fare difference: "
-          <> show (amountToDouble fareDiff)
+          <> show (realToFrac @_ @Double fareDiff)
           <> ", Distance difference: "
           <> show distanceDiff
       putDiffMetric fareDiff distanceDiff

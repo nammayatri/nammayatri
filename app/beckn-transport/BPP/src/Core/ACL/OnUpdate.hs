@@ -14,6 +14,7 @@ import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideCompletedEvent
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.RideStartedEvent as RideStartedOU
 import Beckn.Types.Id
 import Beckn.Utils.Common
+import Core.ACL.Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.FarePolicy.FareBreakup as DFareBreakup
@@ -98,8 +99,8 @@ buildOnUpdateMessage RideStartedBuildReq {..} = do
             fulfillment = RideStartedOU.FulfillmentInfo ride.id.getId
           }
 buildOnUpdateMessage RideCompletedBuildReq {..} = do
-  fare <- realToFrac <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
-  totalFare <- realToFrac <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
+  fare <- amountToRoundedDecimal <$> ride.fare & fromMaybeM (InternalError "Ride fare is not present.")
+  totalFare <- amountToRoundedDecimal <$> ride.totalFare & fromMaybeM (InternalError "Total ride fare is not present.")
   chargeableDistance <- fmap realToFrac ride.chargeableDistance & fromMaybeM (InternalError "Chargeable ride distance is not present.")
   let price =
         RideCompletedOU.QuotePrice
@@ -133,7 +134,7 @@ buildOnUpdateMessage RideCompletedBuildReq {..} = do
           price =
             RideCompletedOU.BreakupPrice
               { currency = "INR",
-                value = realToFrac amount
+                value = amountToRoundedDecimal amount
               }
         }
 buildOnUpdateMessage BookingCancelledBuildReq {..} = do

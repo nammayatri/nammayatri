@@ -4,6 +4,7 @@ import Beckn.Prelude
 import Beckn.Types.Amount (Amount)
 import qualified Beckn.Types.Core.Taxi.OnConfirm as OnConfirm
 import Beckn.Types.Id
+import Core.ACL.Common
 import qualified Domain.Action.Beckn.Confirm as DConfirm
 import qualified Domain.Types.Booking.BookingLocation as DBL
 import qualified Domain.Types.Vehicle as Veh
@@ -85,8 +86,8 @@ mkPrice :: Amount -> Amount -> OnConfirm.QuotePrice
 mkPrice estimatedFare estimatedTotalFare =
   OnConfirm.QuotePrice
     { currency = "INR",
-      value = realToFrac estimatedFare,
-      offered_value = realToFrac estimatedTotalFare
+      value = amountToRoundedDecimal estimatedFare,
+      offered_value = amountToRoundedDecimal estimatedTotalFare
     }
 
 mkBreakup :: Amount -> Maybe Amount -> [OnConfirm.BreakupItem]
@@ -98,7 +99,7 @@ mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList m
           price =
             OnConfirm.BreakupItemPrice
               { currency = "INR",
-                value = realToFrac estimatedFare
+                value = amountToRoundedDecimal estimatedFare
               }
         }
 
@@ -109,7 +110,7 @@ mkBreakup estimatedFare mbDiscount = [estimatedFareBreakupItem] <> maybeToList m
             price =
               OnConfirm.BreakupItemPrice
                 { currency = "INR",
-                  value = realToFrac discount
+                  value = amountToRoundedDecimal discount
                 }
           }
 
@@ -119,7 +120,7 @@ mkPayment estimatedTotalFare =
     { collected_by = "BAP",
       params =
         OnConfirm.PaymentParams
-          { amount = realToFrac estimatedTotalFare,
+          { amount = amountToRoundedDecimal estimatedTotalFare,
             currency = "INR"
           },
       time = OnConfirm.TimeDuration "P2D",

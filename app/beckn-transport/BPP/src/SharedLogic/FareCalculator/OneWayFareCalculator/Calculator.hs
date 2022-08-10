@@ -1,7 +1,15 @@
 {-# LANGUAGE DerivingStrategies #-}
 
-module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator where
+module SharedLogic.FareCalculator.OneWayFareCalculator.Calculator
+  ( OneWayFareParameters (..),
+    TripStartTime,
+    fareSum,
+    fareSumWithDiscount,
+    calculateFareParameters,
+  )
+where
 
+import Beckn.Prelude
 import Beckn.Types.Amount (Amount (..))
 import Beckn.Types.Common
 import Beckn.Utils.Common
@@ -30,12 +38,12 @@ data OneWayFareParameters = OneWayFareParameters
 
 fareSum :: OneWayFareParameters -> Amount
 fareSum OneWayFareParameters {..} =
-  nightShiftRate * (baseFare + distanceFare)
+  roundToUnits $ nightShiftRate * (baseFare + distanceFare)
 
 fareSumWithDiscount :: OneWayFareParameters -> Amount
 fareSumWithDiscount fp@OneWayFareParameters {..} = do
   let fareSumm = fareSum fp
-  max 0 $ maybe fareSumm (fareSumm -) discount
+  roundToUnits $ max 0 $ maybe fareSumm (fareSumm -) discount
 
 calculateFareParameters ::
   OneWayFarePolicy ->

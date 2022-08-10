@@ -1,5 +1,5 @@
 module SharedLogic.FareCalculator.RentalFareCalculator.Flow
-  ( RentalFareParameters (..),
+  ( RentalFareParameters,
     ServiceHandle (..),
     calculateRentalFare,
     doCalculateRentalFare,
@@ -9,6 +9,7 @@ module SharedLogic.FareCalculator.RentalFareCalculator.Flow
   )
 where
 
+import Beckn.Prelude
 import Beckn.Types.Amount
 import Beckn.Types.Id
 import Beckn.Utils.Common
@@ -17,7 +18,7 @@ import Domain.Types.FarePolicy.FareBreakup
 import qualified Domain.Types.FarePolicy.RentalFarePolicy as DRentalFP
 import EulerHS.Prelude hiding (id)
 import SharedLogic.FareCalculator.RentalFareCalculator.Calculator
-  ( RentalFareParameters (..),
+  ( RentalFareParameters,
     calculateRentalFareParameters,
     rentalFareSum,
     rentalFareSumWithDiscount,
@@ -81,51 +82,51 @@ buildRentalFareBreakups fareParams bookingId = do
 buildBaseFareBreakup :: MonadGuid m => RentalFareParameters -> Id Booking -> m FareBreakup
 buildBaseFareBreakup fareParams bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = fareParams.baseFare
+  let amount = roundToUnits fareParams.baseFare
       description =
         "Base fare for "
           <> show fareParams.farePolicy.baseDistance
           <> " km and "
           <> show fareParams.farePolicy.baseDuration
           <> " hours is "
-          <> show amount
+          <> showRounded amount
           <> " rupees"
   pure FareBreakup {..}
 
 buildExtraDistanceFareBreakup :: MonadGuid m => RentalFareParameters -> Id Booking -> m FareBreakup
 buildExtraDistanceFareBreakup fareParams bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = fareParams.extraDistanceFare
+  let amount = roundToUnits fareParams.extraDistanceFare
       description =
         "Extra distance fare with fare policy "
-          <> show fareParams.farePolicy.extraKmFare
+          <> showRounded fareParams.farePolicy.extraKmFare
           <> " rupees per km is "
-          <> show amount
+          <> showRounded amount
           <> " rupees"
   pure FareBreakup {..}
 
 buildExtraTimeFareBreakup :: MonadGuid m => RentalFareParameters -> Id Booking -> m FareBreakup
 buildExtraTimeFareBreakup fareParams bookingId = do
   id <- Id <$> generateGUIDText
-  let amount = fareParams.extraTimeFare
+  let amount = roundToUnits fareParams.extraTimeFare
       description =
         "Extra time fare with fare policy "
-          <> show fareParams.farePolicy.extraMinuteFare
+          <> showRounded fareParams.farePolicy.extraMinuteFare
           <> " rupees per minute is "
-          <> show amount
+          <> showRounded amount
           <> " rupees"
   pure FareBreakup {..}
 
 buildNextDaysFareBreakup :: MonadGuid m => RentalFareParameters -> Id Booking -> m (Maybe FareBreakup)
 buildNextDaysFareBreakup fareParams bookingId = do
-  let mbAmount = fareParams.nextDaysFare
+  let mbAmount = roundToUnits <$> fareParams.nextDaysFare
   forM mbAmount $ \amount -> do
     id <- Id <$> generateGUIDText
     let description =
           "Next days fare with fare policy "
-            <> show fareParams.farePolicy.driverAllowanceForDay
+            <> showRounded (fromMaybe 0 fareParams.farePolicy.driverAllowanceForDay)
             <> " rupees per next day is "
-            <> show amount
+            <> showRounded amount
             <> " rupees"
     pure FareBreakup {..}
 
@@ -133,6 +134,6 @@ buildDiscountFareBreakup :: MonadGuid m => Maybe Amount -> Id Booking -> m (Mayb
 buildDiscountFareBreakup mbDiscount bookingId = do
   forM mbDiscount $ \discount -> do
     id <- Id <$> generateGUIDText
-    let amount = negate discount -- this amount should be always below zero
-        description = "Discount is " <> show discount <> " rupees"
+    let amount = roundToUnits $ negate discount -- this amount should be always below zero
+        description = "Discount is " <> showRounded discount <> " rupees"
     pure FareBreakup {..}
