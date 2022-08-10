@@ -356,7 +356,7 @@ type RouteAPI =
     :> Post '[JSON] Location.Response
 
 routeApiFlow :: FlowServer RouteAPI
-routeApiFlow = Location.getRoute'
+routeApiFlow = Location.getRoute
 
 -------- Serviceability----------
 type ServiceabilityAPI =

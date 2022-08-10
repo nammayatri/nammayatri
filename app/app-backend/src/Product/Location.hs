@@ -8,6 +8,5 @@ import EulerHS.Prelude
 import qualified Types.API.Location as Location
 import Utils.Common
 
-
-getRoute' :: Id Person.Person -> Location.Request -> FlowHandler Location.Response
-getRoute' personId = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleMaps.getRoutes'
+getRoute :: Id Person.Person -> Location.Request -> FlowHandler Location.Response
+getRoute personId = withFlowHandlerAPI . withPersonIdLogTag personId . GoogleMaps.getRoutes
