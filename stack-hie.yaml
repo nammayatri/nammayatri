@@ -71,7 +71,7 @@ extra-deps:
       - app/mock-registry
   # - ../beckn-shared-kernel/lib/beckn-core
   - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
-    commit: ab93412e97644ff4ef73ab612b1e0e3ff6b83f80
+    commit: 9900a41d8399a5ed20aeaa9618e2c845e1caa0b2
     subdirs:
       - lib/beckn-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs
