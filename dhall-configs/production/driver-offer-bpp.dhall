@@ -63,6 +63,7 @@ in
 , selfUIUrl = "https://api.beckn.juspay.in/dobpp/ui"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
+, s3Config = common.s3Config
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"

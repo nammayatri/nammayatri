@@ -81,6 +81,7 @@ dependencies:
   - either
   - persistent
   - text-conversions
+  - beckn-services
 
 ghc-options:
   - -fwrite-ide-info

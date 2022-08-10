@@ -50,6 +50,7 @@ packages:
   - app/mock-public-transport-bpp
   - app/scheduler-example
   - lib/beckn-spec
+  - lib/beckn-services
   - test
 # Dependency packages to be pulled from upstream that are not in the resolver.
 # These entries can reference officially published versions as well as
@@ -72,7 +73,7 @@ extra-deps:
       - app/mock-registry
   # - ../beckn-shared-kernel/lib/beckn-core
   - git: git@bitbucket.org:juspay/beckn-shared-kernel.git
-    commit: 0b0a503fd7120a7726dec8411b601d63849b62c0
+    commit: eb224fb9584c3ab693505934298503651152bd94
     subdirs:
       - lib/beckn-core
   - git: ssh://git@bitbucket.org/juspay/passetto-hs

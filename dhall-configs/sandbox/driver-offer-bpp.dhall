@@ -74,6 +74,7 @@ in
 , selfUIUrl = "https://api.beckn.juspay.in/dobpp/ui"
 , signingKey = sec.signingKey
 , signatureExpiry = common.signatureExpiry
+, s3Config = common.exotelCfg
 , migrationPath = None Text
 , autoMigrate = common.autoMigrate
 , coreVersion = "0.9.3"

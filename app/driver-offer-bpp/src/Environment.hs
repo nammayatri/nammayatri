@@ -24,6 +24,7 @@ import Beckn.Utils.Servant.Client
 import Beckn.Utils.Servant.SignatureAuth
 import qualified Data.Text as T
 import EulerHS.Prelude
+import S3.Types
 import System.Environment (lookupEnv)
 import Tools.Metrics.TransporterBPPMetrics.Types
 
@@ -37,6 +38,7 @@ data AppCfg = AppCfg
     selfUIUrl :: BaseUrl,
     signingKey :: PrivateKey,
     signatureExpiry :: Seconds,
+    s3Config :: S3Config,
     migrationPath :: Maybe FilePath,
     autoMigrate :: Bool,
     coreVersion :: Text,
@@ -78,6 +80,7 @@ data AppEnv = AppEnv
     coreVersion :: Text,
     domainVersion :: Text,
     loggerConfig :: LoggerConfig,
+    s3Config :: S3Config,
     graceTerminationPeriod :: Seconds,
     registryUrl :: BaseUrl,
     updateLocationRefreshPeriod :: Seconds,
@@ -141,6 +144,12 @@ type FlowHandler = FlowHandlerR AppEnv
 type FlowServer api = FlowServerR AppEnv api
 
 type Flow = FlowR AppEnv
+
+instance S3AuthenticatingEntity AppEnv where
+  getSecretAccessKey = (.s3Config.secretAccessKey)
+  getAccessKeyId = (.s3Config.accessKeyId)
+  getBucketName = (.s3Config.bucketName)
+  getRegion = (.s3Config.region)
 
 instance Registry Flow where
   registryLookup registryUrl = Registry.withSubscriberCache $ Registry.registryLookup registryUrl

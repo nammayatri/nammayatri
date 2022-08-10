@@ -11,6 +11,7 @@ in { defaultPoolConfig = globalCommon.defaultPoolConfig
    , LogLevel = globalCommon.LogLevel
    , ExotelCfg = globalCommon.ExotelCfg
    , exotelCfg = sec.exotelCfg
+   , s3Config = sec.s3Config
    , signatureExpiry = globalCommon.signatureExpiry
    , httpClientOptions = globalCommon.httpClientOptions
    , smsUserName = sec.smsUserName

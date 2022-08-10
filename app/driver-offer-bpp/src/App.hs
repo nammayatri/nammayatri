@@ -21,6 +21,7 @@ import Network.Wai.Handler.Warp
     setInstallShutdownHandler,
     setPort,
   )
+import S3.SignatureAuth
 import qualified Storage.Queries.Organization as Storage
 import System.Environment (lookupEnv)
 import Tools.SignatureAuth
@@ -55,7 +56,12 @@ runDriverOfferBpp' appCfg = do
           try Storage.loadAllProviders
             >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
         let allShortIds = map ((.shortId.getShortId) &&& (.uniqueKeyId)) allProviders
-        flowRt' <- modFlowRtWithAuthManagersWithRegistryUrl flowRt appEnv allShortIds
+        flowRt' <-
+          addAuthManagersToFlowRt
+            flowRt
+            [ prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds,
+              prepareS3AuthManager flowRt appEnv
+            ]
 
         logInfo "Initializing Redis Connections..."
         try (prepareRedisConnections $ appCfg.redisCfg)

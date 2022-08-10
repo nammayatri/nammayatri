@@ -7,10 +7,18 @@ let exotelCfg =
   , callerId = "xxxxxxx"
   }
 
+let s3Config =
+  { secretAccessKey = "xxxxxxx"
+  , accessKeyId = "xxxxxxx"
+  , bucketName = "xxxxxxx"
+  , region = "xxxxxxx"
+  }
+
 in
 
 { smsUserName = "xxxxxxx"
 , smsPassword = "yyyyyyy"
 , exotelCfg = exotelCfg
+, s3Config = s3Config
 , googleMapsKey = "xxxxxxx"
 }
