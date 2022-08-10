@@ -28,12 +28,8 @@ data DRatingReq = DRatingReq
 ratingImpl ::
   ( EsqDBFlow m r,
     EncFlow m r,
-    HasFlowEnv
-      m
-      r
-      '["minimumDriverRatesCount" ::: Int],
-    CoreMetrics
-      m
+    HasFlowEnv m r '["minimumDriverRatesCount" ::: Int],
+    CoreMetrics m
   ) =>
   Id Org.Organization ->
   DRatingReq ->

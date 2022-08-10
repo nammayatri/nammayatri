@@ -4,6 +4,7 @@ import qualified App.Types as App
 import Beckn.Prelude
 import Beckn.Types.Id
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.Ride as DRide
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import qualified Types.API.Feedback as API
@@ -25,6 +26,7 @@ feedback request = do
   let rideId = request.rideId
       feedbackDetails = request.feedbackDetails
   ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus "Feedback available only for completed rides.")
   booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   pure
