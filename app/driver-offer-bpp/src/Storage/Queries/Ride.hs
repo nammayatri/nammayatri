@@ -67,6 +67,17 @@ getInProgressByDriverId driverId =
         &&. ride ^. RideStatus ==. val Ride.INPROGRESS
     return ride
 
+getActiveByDriverId :: Transactionable m => Id Person -> m (Maybe Ride)
+getActiveByDriverId driverId =
+  findOne $ do
+    ride <- from $ table @RideT
+    where_ $
+      ride ^. RideDriverId ==. val (toKey driverId)
+        &&. ( ride ^. RideStatus ==. val Ride.INPROGRESS
+                ||. ride ^. RideStatus ==. val Ride.NEW
+            )
+    return ride
+
 updateStatus ::
   Id Ride ->
   RideStatus ->

@@ -86,6 +86,7 @@ dependencies:
   - string-conversions
   - either
   - persistent
+  - text-conversions
 
 ghc-options:
   - -fwrite-ide-info

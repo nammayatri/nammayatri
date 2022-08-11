@@ -28,6 +28,7 @@ import Product.BecknProvider.Rating as BP
 import Product.BecknProvider.Search as BP
 import Product.BecknProvider.Select as BP
 import qualified Product.BecknProvider.Track as BP
+import qualified Product.Call as Call
 import qualified Product.CancellationReason as CancellationReason
 import qualified Product.Driver as Driver
 import Product.DriveronBoarding.DriverOnBoarding as DO
@@ -44,6 +45,7 @@ import qualified Product.Transporter as Transporter
 import qualified Product.Vehicle as Vehicle
 import Servant
 import Servant.OpenApi
+import qualified Types.API.Call as CallAPI
 import qualified Types.API.CancellationReason as CancellationReasonAPI
 import qualified Types.API.Driver as DriverAPI
 import Types.API.Driveronboarding.DriverOnBoarding
@@ -75,6 +77,7 @@ type UIAPI =
     :<|> FarePolicyAPI
     :<|> LocationAPI
     :<|> RideAPI
+    :<|> CallAPIs
     :<|> IdfyHandlerAPI
     :<|> OnBoardingAPI
     :<|> RideAPI
@@ -94,6 +97,7 @@ uiServer =
     :<|> farePolicyFlow
     :<|> locationFlow
     :<|> rideFlow
+    :<|> callFlow
     :<|> idfyHandlerFlow
     :<|> onBoardingAPIFlow
     :<|> rideFlow
@@ -309,6 +313,39 @@ rideFlow =
     :<|> RideAPI.StartRide.startRide
     :<|> RideAPI.EndRide.endRide
     :<|> RideAPI.CancelRide.cancelRide
+
+-------- Direct call (Exotel) APIs
+type CallAPIs =
+  "exotel"
+    :> "call"
+    :> ( "customer"
+           :> "number"
+           :> MandatoryQueryParam "CallSid" Text
+           :> MandatoryQueryParam "CallFrom" Text
+           :> MandatoryQueryParam "CallTo" Text
+           :> MandatoryQueryParam "CallStatus" Text
+           :> Get '[JSON] CallAPI.MobileNumberResp
+           :<|> "statusCallback"
+           :> MandatoryQueryParam "CallSid" Text
+           :> MandatoryQueryParam "DialCallStatus" Text
+           :> MandatoryQueryParam "RecordingUrl" Text
+           :> QueryParam "Legs[0][OnCallDuration]" Int
+           :> Get '[JSON] CallAPI.CallCallbackRes
+       )
+
+-- :<|> "ride"
+--   :> Capture "rideId" (Id DRide.Ride)
+--   :> "call"
+--   :> "status"
+--   :> TokenAuth
+--   :> Get '[JSON] CallAPI.GetCallStatusRes
+
+callFlow :: FlowServer CallAPIs
+callFlow =
+  Call.getCustomerMobileNumber
+    :<|> Call.directCallStatusCallback
+
+-- :<|> Call.getCallStatus
 
 type OrgBecknAPI =
   Capture "orgId" (Id Organization)
