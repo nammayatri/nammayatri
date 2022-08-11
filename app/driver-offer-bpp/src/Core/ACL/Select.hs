@@ -1,5 +1,6 @@
 module Core.ACL.Select where
 
+import qualified Beckn.External.GoogleMaps.Types as GoogleMaps
 import Beckn.Prelude
 import Beckn.Product.Validation.Context
 import qualified Beckn.Types.Core.Context as Context
@@ -8,13 +9,18 @@ import qualified Beckn.Types.Core.Taxi.Common.ItemCode as OS
 import qualified Beckn.Types.Core.Taxi.Select as Select
 import qualified Beckn.Types.Registry.Subscriber as Subscriber
 import qualified Domain.Action.Beckn.Select as DSelect
+import qualified Domain.Action.UI.GoogleMaps as GoogleMaps
 import qualified Domain.Types.SearchRequest.SearchReqLocation as Location
 import Domain.Types.Vehicle.Variant
+import Tools.Metrics (CoreMetrics)
 import Types.Error
 import Utils.Common
 
 buildSelectReq ::
-  (HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text]) =>
+  ( HasFlowEnv m r ["coreVersion" ::: Text, "domainVersion" ::: Text],
+    GoogleMaps.HasGoogleMaps m r,
+    CoreMetrics m
+  ) =>
   Subscriber.Subscriber ->
   Select.SelectReq ->
   m DSelect.DSelectReq
@@ -32,15 +38,17 @@ buildSelectReq subscriber req = do
   item <- case order.items of
     [item] -> pure item
     _ -> throwError $ InvalidRequest "There should be only one item"
+  pickupLocation <- mkLocation pickup.location
+  dropLocation <- mkLocation dropOff.location
   pure
     DSelect.DSelectReq
       { messageId = messageId,
         transactionId = context.transaction_id,
         bapId = subscriber.subscriber_id,
         bapUri = subscriber.subscriber_url,
-        pickupLocation = mkLocation pickup.location,
+        pickupLocation,
         pickupTime = pickup.time.timestamp,
-        dropLocation = mkLocation dropOff.location,
+        dropLocation,
         variant = castVariant item.descriptor.code.vehicleVariant
       }
 
@@ -50,16 +58,24 @@ castVariant OS.SEDAN = SEDAN
 castVariant OS.HATCHBACK = HATCHBACK
 castVariant OS.SUV = SUV
 
-mkLocation :: Select.Location -> Location.SearchReqLocationAPIEntity
-mkLocation (Select.Location Select.Gps {..}) =
-  Location.SearchReqLocationAPIEntity
-    { areaCode = Nothing,
-      street = Nothing,
-      door = Nothing,
-      city = Nothing,
-      state = Nothing,
-      country = Nothing,
-      building = Nothing,
-      area = Nothing,
-      ..
-    }
+mkLocation ::
+  ( MonadFlow m,
+    GoogleMaps.HasGoogleMaps m r,
+    CoreMetrics m
+  ) =>
+  Select.Location ->
+  m Location.SearchReqLocationAPIEntity
+mkLocation (Select.Location Select.Gps {..}) = do
+  placeNameResp <- GoogleMaps.getPlaceName (show lat <> "," <> show lon)
+  pure
+    Location.SearchReqLocationAPIEntity
+      { areaCode = Nothing,
+        street = Nothing,
+        door = Nothing,
+        city = Nothing,
+        state = Nothing,
+        country = Nothing,
+        building = Nothing,
+        area = Just $ head $ placeNameResp.results <&> (.formatted_address),
+        ..
+      }
