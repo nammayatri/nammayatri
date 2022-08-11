@@ -58,15 +58,6 @@ ADD
 ADD
    CONSTRAINT ride_booking_to_location_id_fkey FOREIGN KEY (to_location_id) REFERENCES atlas_app.booking_location(id);
 
-ALTER TABLE
-   atlas_app.search_request_location DROP COLUMN city,
-   DROP COLUMN state,
-   DROP COLUMN country,
-   DROP COLUMN street,
-   DROP COLUMN door,
-   DROP COLUMN building,
-   DROP COLUMN area_code,
-   DROP COLUMN area;
 
 ALTER TABLE
    atlas_app.rental_quote
