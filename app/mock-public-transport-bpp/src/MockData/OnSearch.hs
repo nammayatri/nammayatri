@@ -1,7 +1,7 @@
 module MockData.OnSearch where
 
 import Beckn.Types.Amount
-import Beckn.Types.Core.Migration.Gps
+import Beckn.Types.Core.Gps
 import "public-transport-bap" Core.Spec.Common.Price
 import "public-transport-bap" Core.Spec.OnSearch
 import Data.Time.Clock
@@ -110,7 +110,7 @@ fareEkmEmb2 = buildFare "2" routeEkmEmbId 30
 
 buildFare :: Text -> Text -> Amount -> Fare
 buildFare id route_id amount = do
-  let price = Price "INR" amount
+  let price = Price "INR" $ realToFrac amount
   Fare {..}
 
 mockDepartures :: UTCTime -> [Departure]

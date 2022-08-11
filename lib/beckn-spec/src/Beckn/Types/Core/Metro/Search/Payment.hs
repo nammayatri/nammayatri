@@ -6,26 +6,29 @@ module Beckn.Types.Core.Metro.Search.Payment
   )
 where
 
-import Beckn.Types.Core.Migration.DecimalValue (DecimalValue)
-import Beckn.Types.Core.Migration.Time (Time)
+import Beckn.Types.Core.DecimalValue (DecimalValue)
+import Beckn.Types.Core.Metro.Search.Time (Time)
 import Beckn.Utils.Example
 import Beckn.Utils.JSON
-import Data.Aeson (Value (..), object, withObject, (.:), (.=))
+import Data.Aeson ((.:), (.=), Value (..), object, withObject)
 import Data.Aeson.Types (typeMismatch)
 import Data.HashMap.Strict (delete)
 import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (State, (.=))
+import EulerHS.Prelude hiding ((.=), State)
 import Servant.Client (BaseUrl)
 
-data Payment = Payment
-  { uri :: Maybe BaseUrl,
-    tl_method :: Maybe TLMethod,
-    params :: Maybe Params,
-    _type :: Maybe PaymentType,
-    status :: Maybe Status,
-    time :: Maybe Time
-  }
-  deriving (Generic, Show, ToSchema)
+data Payment
+  = Payment
+      { uri :: Maybe BaseUrl,
+        tl_method :: Maybe TLMethod,
+        params :: Maybe Params,
+        _type :: Maybe PaymentType,
+        status :: Maybe Status,
+        time :: Maybe Time
+      }
+  deriving (Generic, Show)
+
+-- , ToSchema)
 
 data TLMethod = HttpGet | HttpPost
   deriving (Generic, Show, ToSchema)
@@ -39,13 +42,14 @@ instance ToJSON TLMethod where
   toJSON HttpGet = String "http/get"
   toJSON HttpPost = String "http/post"
 
-data Params = Params
-  { transaction_id :: Maybe Text,
-    transaction_status :: Maybe Text,
-    amount :: Maybe DecimalValue,
-    currency :: Text,
-    additional :: HashMap Text Text
-  }
+data Params
+  = Params
+      { transaction_id :: Maybe Text,
+        transaction_status :: Maybe Text,
+        amount :: Maybe DecimalValue,
+        currency :: Text,
+        additional :: HashMap Text Text
+      }
   deriving (Generic, Eq, Show, ToSchema)
 
 instance FromJSON Params where
@@ -75,11 +79,12 @@ instance ToJSON Params where
           "currency" .= currency
         ]
 
-data BankAccount = BankAccount
-  { ifsc_code :: Maybe Text,
-    account_number :: Maybe Text,
-    account_holder_name :: Maybe Text
-  }
+data BankAccount
+  = BankAccount
+      { ifsc_code :: Maybe Text,
+        account_number :: Maybe Text,
+        account_holder_name :: Maybe Text
+      }
   deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
 data PaymentType

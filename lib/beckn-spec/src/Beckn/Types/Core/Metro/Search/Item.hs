@@ -4,7 +4,7 @@ import Beckn.Types.Core.Metro.Search.Descriptor (Descriptor)
 import Beckn.Types.Core.Metro.Search.Price (Price)
 import Beckn.Types.Core.Metro.Search.Tags (Tags)
 import Beckn.Types.Core.Metro.Search.Time (Time)
-import Data.OpenApi (ToSchema)
+-- import Data.OpenApi (ToSchema)
 import EulerHS.Prelude hiding (id)
 
 data Item = Item
@@ -20,4 +20,6 @@ data Item = Item
     recommended :: Maybe Bool,
     tags :: Maybe Tags
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+-- , ToSchema)

@@ -22,7 +22,9 @@ data Intent = Intent
     item :: Maybe Item,
     tags :: Maybe Tags
   }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+-- , ToSchema)
 
 emptyIntent :: Intent
 emptyIntent =

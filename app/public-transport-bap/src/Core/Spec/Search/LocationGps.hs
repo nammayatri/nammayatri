@@ -1,6 +1,6 @@
 module Core.Spec.Search.LocationGps where
 
-import Beckn.Types.Core.Migration.Gps
+import Beckn.Types.Core.Gps
 import Beckn.Utils.GenericPretty (PrettyShow)
 import Beckn.Utils.Schema
 import Data.Aeson
