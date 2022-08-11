@@ -14,7 +14,7 @@ import Utils.Common
 data DRatingReq = DRatingReq
   { bppBookingId :: Id DBooking.BPPBooking,
     ratingValue :: Int,
-    feedbackDetails :: Text,
+    feedbackDetails :: Maybe Text,
     providerId :: Text,
     providerUrl :: BaseUrl
   }

@@ -12,7 +12,7 @@ import Utils.Common
 create :: Rating -> SqlDB ()
 create = Esq.create
 
-updateRating :: Id Rating -> Id Person -> Int -> Text -> SqlDB ()
+updateRating :: Id Rating -> Id Person -> Int -> Maybe Text -> SqlDB ()
 updateRating ratingId driverId newRatingValue newFeedbackDetails = do
   now <- getCurrentTime
   Esq.update $ \tbl -> do

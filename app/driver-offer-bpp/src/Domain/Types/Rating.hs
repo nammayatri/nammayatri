@@ -13,7 +13,7 @@ data Rating = Rating
     rideId :: Id Ride,
     driverId :: Id Person,
     ratingValue :: Int,
-    feedbackDetails :: Text,
+    feedbackDetails :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }

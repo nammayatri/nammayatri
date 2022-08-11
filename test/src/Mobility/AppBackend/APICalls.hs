@@ -47,7 +47,7 @@ callAppFeedback ratingValue rideId =
         AppFeedback.FeedbackReq
           { rideId = rideId,
             rating = ratingValue,
-            feedbackDetails = "driver is so qt!"
+            feedbackDetails = Just "driver is so qt!"
           }
    in appFeedback appRegistrationToken request
 

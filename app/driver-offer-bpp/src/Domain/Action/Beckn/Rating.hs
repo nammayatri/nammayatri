@@ -20,7 +20,7 @@ import Utils.Common
 data DRatingReq = DRatingReq
   { bookingId :: Id DBooking.Booking,
     ratingValue :: Int,
-    feedbackDetails :: Text
+    feedbackDetails :: Maybe Text
   }
 
 handler :: DRatingReq -> Flow ()
@@ -65,7 +65,7 @@ calculateAverageRating personId = do
     logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ " , rating is " +|| newAverage ||+ ""
     Esq.runTransaction $ QP.updateAverageRating personId newAverage
 
-buildRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> Text -> m Rating.Rating
+buildRating :: MonadFlow m => Id Ride.Ride -> Id SP.Person -> Int -> Maybe Text -> m Rating.Rating
 buildRating rideId driverId ratingValue feedbackDetails = do
   id <- Id <$> L.generateGUID
   now <- getCurrentTime
