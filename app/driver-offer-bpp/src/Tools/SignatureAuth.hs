@@ -3,13 +3,14 @@
 
 module Tools.SignatureAuth where
 
+import Beckn.Prelude
 import Beckn.Types.Common
 import Beckn.Utils.Common
 import Beckn.Utils.IOLogging (HasLog)
 import Beckn.Utils.Servant.SignatureAuth
+import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import EulerHS.Prelude
 import qualified EulerHS.Runtime as R
 import qualified Network.HTTP.Client as Http
 
@@ -18,7 +19,7 @@ import qualified Network.HTTP.Client as Http
 prepareAuthManagerWithRegistryUrl ::
   ( HasLog r,
     AuthenticatingEntity r,
-    HasField "registryUrl" r Text
+    HasField "registryUrl" r BaseUrl
   ) =>
   R.FlowRuntime ->
   r ->
@@ -33,10 +34,13 @@ prepareAuthManagerWithRegistryUrl flowRt appEnv signHeaders subscriberId uniqueK
   where
     addRegistryUrl req = do
       let headers = Http.requestHeaders req
-      req {Http.requestHeaders = (registryUrlHeader, encodeUtf8 appEnv.registryUrl) : headers}
+      req {Http.requestHeaders = (registryUrlHeader, encodeUtf8 $ showBaseUrl appEnv.registryUrl) : headers}
 
 prepareAuthManagersWithRegistryUrl ::
-  (AuthenticatingEntity r, HasLog r) =>
+  ( AuthenticatingEntity r,
+    HasLog r,
+    HasField "registryUrl" r BaseUrl
+  ) =>
   R.FlowRuntime ->
   r ->
   [(Text, Text)] ->
@@ -45,21 +49,22 @@ prepareAuthManagersWithRegistryUrl flowRt appEnv allShortIds = do
   flip foldMap allShortIds \(shortId, uniqueKeyId) ->
     Map.singleton
       (signatureAuthManagerKey <> "-" <> T.unpack shortId)
-      (prepareAuthManager flowRt appEnv ["Authorization"] shortId uniqueKeyId)
+      (prepareAuthManagerWithRegistryUrl flowRt appEnv ["Authorization"] shortId uniqueKeyId)
 
 modFlowRtWithAuthManagersWithRegistryUrl ::
   ( AuthenticatingEntity r,
     HasHttpClientOptions r c,
     MonadReader r m,
     HasLog r,
-    MonadFlow m
+    MonadFlow m,
+    HasField "registryUrl" r BaseUrl
   ) =>
   R.FlowRuntime ->
   r ->
   [(Text, Text)] ->
   m R.FlowRuntime
 modFlowRtWithAuthManagersWithRegistryUrl flowRt appEnv orgShortIds = do
-  let managersSettings = prepareAuthManagers flowRt appEnv orgShortIds
+  let managersSettings = prepareAuthManagersWithRegistryUrl flowRt appEnv orgShortIds
   managers <- createManagers managersSettings
   logInfo $ "Loaded http managers - " <> show orgShortIds
   pure $ flowRt {R._httpClientManagers = managers}
